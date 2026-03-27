@@ -1,0 +1,135 @@
+%% Master Script - Fidelity Level IV
+% Written by Casey Chamberlain
+% Feb 2nd, 2026
+%
+% Purpose: Script intended to enable rapid comparison of students'
+% preliminary designs.
+
+% Parameters:
+% Performance constraints
+% Mission segments
+% Aircraft specs
+%    Geometry
+%    Engine
+
+% Outputs:
+% Constraint analysis
+%    Constraint diagram
+%    Optimum design configuration
+%         Min TW
+%         Optimum W/S
+% Weight estimation
+%    TOGW
+%    Empty
+%    Fuel
+% Comparison:
+%    Design performance
+%    Exceeding requirements
+%    Cost
+
+
+% Outputs from the "combination" script:
+% High-level parameters: TOGW, wing area, sea level static thrust, fuel
+% burn
+
+
+
+%% ----------------------------------------------------------------------
+% Functional script starts here
+
+%% ----------------------------------------------------------------------
+% Utilities
+% clear
+function Master_Script_IV(Design, Mission, Requirements, Constraints)
+% Set up the path
+level = "IV"; % Added this to minimize manual changes between fidelity levels
+path = cd + "\Level_" + level + "_Fidelity";
+addpath(path + "\"); % Adds the "Level_N_Fidelity" folder
+addpath(path + "\Constraint_Analysis\")
+addpath(path + "\F16\")
+addpath(cd + "\Operator\")
+addpath(cd + "\Utilities\")
+addpath(path + "\Weight_Estimation\")
+addpath(path + "\Volume_Est\")
+
+
+% Utilities - what was this supposed to do, again? Ask Sarojini.
+% weightestimationfunction = @(a) (a+1);
+% aerodynamics = @(aero_est_N)
+% propulsion = @(propulsion_est_N)
+
+% Load mission profiles
+[missiondata] = Mission_Profiles(Mission);
+
+% Load designs
+[Designgeo_wings, Designgeo_fuselage, Designgeo_propulsion, DesignTable_weights] = Import_Design(Design);
+
+% Load requirements
+[Requirements] = Import_Requirements(Requirements);
+
+% Load constraints
+[Constraints] = Import_Constraints(Constraints);
+
+
+
+
+%% ----------------------------------------------------------------------
+% Get constraint diagram (pass constraints table)
+[T0_W0, W0_Sref, optimal_WS, min_TW] = Constraint_Estimates(Constraints);
+% Design diagram outputs: T0/W0, W0/S_ref
+% don't produce diagram during optimization
+
+
+
+%% ----------------------------------------------------------------------
+% Get TOGW, empty weight, fuel burn
+[Weight_Results] = weight_est_IV(missiondata, Constraints, Designgeo_wings, Designgeo_fuselage, Designgeo_propulsion, min_TW, optimal_WS, DesignTable_weights);
+% Divorce mission fuel analysis from this
+
+% Future - add state vector (x-bar = [u; v; w; p; q; r; x; y; z; phi;
+% theta; psi])
+
+%% ----------------------------------------------------------------------
+% Drag polar IV
+% [CD0, K] = Drag_Polar_III(S_wr, AR, e);
+[DragResults] = Drag_Polar_IV(Designgeo_wings, Designgeo_fuselage, Designgeo_propulsion, Weight_Results, missiondata, Requirements); % Just call the script
+
+
+%% ----------------------------------------------------------------------
+% Sizing
+[S_ref, T0] = Sizing_script(T0_W0, W0_Sref, Weight_Results.MTOW);
+% Sizing outputs: S_ref, T0
+
+% Fuel volume check
+[internalvolume] = fuelcheck(Designgeo_fuselage, Weight_Results.total_fuel_used, Designgeo_wings, Weight_Results);
+
+
+%% ----------------------------------------------------------------------
+% Final outputs:
+% TOGW, wing area, sea level static thrust, fuel burn
+
+
+% Confirmation output
+disp("S_ref: " + S_ref + " ft^2")
+disp("T_0: " + T0 + " lbf")
+disp("W_0: " + Weight_Results.MTOW + " lbf")
+disp("Fuel burned: " + Weight_Results.total_fuel_used + " lbf")
+disp("Fuel volume: " + internalvolume.fuelvolume + " gal")
+disp("Internal volume est: " + internalvolume.internalvolume + " gal")
+disp("CD0 sub: " + DragResults.CD0_sub)
+disp("CD0 sup: " + DragResults.CD0_sup)
+disp("M_DD: " + DragResults.M_DD)
+
+
+%% ----------------------------------------------------------------------
+% Design comparison
+% Score each design's performance relative to the requirements
+
+
+
+
+%% ----------------------------------------------------------------------
+% Output scoreboard
+
+
+end
