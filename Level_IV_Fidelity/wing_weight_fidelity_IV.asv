@@ -1,7 +1,0 @@
-function [outputArg1,outputArg2] = wing_weight_fidelity_IV(W_dg, N_z, S_w, AR, tc_root, lambda, Lambda_qc, S_csw)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
-
-
-
-end
