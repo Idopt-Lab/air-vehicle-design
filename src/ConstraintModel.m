@@ -1,4 +1,4 @@
-classdef (Abstract) ConstraintModel
+classdef (Abstract) ConstraintModel < handle
      %CONSTRAINTMODEL Summary of this class goes here
      %   Detailed explanation goes here
 

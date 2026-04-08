@@ -17,18 +17,18 @@ classdef F16ConstraintEst < ConstraintModel
      end
 
      methods
-          function initconstraints(obj, design)
-               get_constraints(obj, design, design.constraints)
+          function initconstraints(constraint_obj, design)
+               get_constraints(constraint_obj, design, design.constraints)
           end
 
-          function Constraint_Results = constraint_est(obj, design)
+          function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_est(constraint_obj, design)
 
-               get_constraints(obj, design, design.constraints)
-               [obj.TW_table, obj.T_Wto_takeoff] = createThrustLoadingTable(obj, design, design.constraints, design.constraints.aero_constraints, design.constraints.thrust, obj.Wto_S_range, design.constraints("Takeoff",:));
-               [obj.optimal_WS, obj.min_TW] = solveOptimalPoint(obj, obj.TW_table, obj.T_Wto_takeoff, obj.Wto_S_range);
-               obj.Wto_S_landing = landing_constraint(obj, design.constraints("Landing",:));
-               plotConstraintDiagram(obj, obj.Wto_S_range, obj.TW_table, obj.T_Wto_takeoff, obj.Wto_S_landing, obj.optimal_WS, obj.min_TW, design.constraints.Row(:));
-               showResultTable(obj, obj.TW_table, design.constraints.Row(:), obj.Wto_S_range);
+               get_constraints(constraint_obj, design, design.constraints)
+               [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, design, design.constraints, design.constraints.aero_constraints, design.constraints.thrust, constraint_obj.Wto_S_range, design.constraints("Takeoff",:));
+               [constraint_obj.optimal_WS, constraint_obj.min_TW] = solveOptimalPoint(constraint_obj, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_range);
+               constraint_obj.Wto_S_landing = landing_constraint(constraint_obj, design.constraints("Landing",:));
+               plotConstraintDiagram(constraint_obj, constraint_obj.Wto_S_range, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_landing, constraint_obj.optimal_WS, constraint_obj.min_TW, design.constraints.Row(:));
+               showResultTable(constraint_obj, constraint_obj.TW_table, design.constraints.Row(:), constraint_obj.Wto_S_range);
           end
      end
 
@@ -36,7 +36,7 @@ classdef F16ConstraintEst < ConstraintModel
      methods (Access = private)
 
           % Get consstraints
-          function get_constraints(obj, design, extracted_constraints)
+          function get_constraints(obj, design, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0");
                e_constraints = extracted_constraints(:, "e");
                q_constraints = extracted_constraints(:, "q (lbf/ft^2)");

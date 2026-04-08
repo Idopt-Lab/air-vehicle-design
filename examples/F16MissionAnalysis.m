@@ -59,7 +59,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                W_fixed = missiondata.Startup("Payload, fixed (lbf)");
 
                % W_S = 104.59;
-               W_S = design.constraints.optimal_WS;
+               W_S = obj.optimal_WS;
                W_TO = 45000;
                tol = 1e-3;
                max_iteration = 40;
