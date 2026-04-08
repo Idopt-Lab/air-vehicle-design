@@ -20,7 +20,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
                actually_estimate_weight(weight_obj, design)
           end
 
-          % Size the tail
+          % Size the tail (probably can go with some geometry class)
           function size_tail(weight_obj, design)
                [design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT")] = Tail_Sizing(design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), design.geom.wings.Main("Planform area (ft^2)"), design.geom.fuselage.Total("Length (ft)"), design.geom.wings.Main("Mean geometric chord"))
 
