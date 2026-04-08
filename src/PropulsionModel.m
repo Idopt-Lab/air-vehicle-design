@@ -3,7 +3,7 @@ classdef (Abstract) PropulsionModel < handle
      %   Detailed explanation goes here
 
      properties (Abstract)
-          Property1
+          enginestats
      end
 
      methods (Abstract)
