@@ -3,7 +3,7 @@ classdef F16ConstraintEst < ConstraintModel
      %   Detailed explanation goes here
      % YTup
 
-     properties
+     properties % So these are the CONSTRAINT RESULTS, compared to the CONSTRAINTS THEMSELVES IN THE DESIGN!!!
           Wto_S_range = 20:7:160
           TW_table
           T_Wto_takeoff
@@ -11,13 +11,13 @@ classdef F16ConstraintEst < ConstraintModel
           min_TW
           Landing
           Wto_S_landing
-          T0_W0
-          W0_S_ref
+          T0_W0 = min_TW;
+          W0_S_ref = optimal_WS;
           T_Wto_required
      end
 
      methods
-          
+
           % do a complete constraint analysis
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_est(constraint_obj, design)
 
