@@ -13,13 +13,17 @@ classdef F16ConstraintEst < ConstraintModel
           Wto_S_landing
           T0_W0
           W0_S_ref
-          Constraints
-          constraintNames
           T_Wto_required
      end
 
      methods
+          function initconstraints(obj, design)
+               get_constraints(obj, design, design.constraints)
+          end
+
           function Constraint_Results = constraint_est(obj, design)
+
+               get_constraints(obj, design, design.constraints)
                [obj.TW_table, obj.T_Wto_takeoff] = createThrustLoadingTable(obj, design, design.constraints, design.constraints.aero_constraints, design.constraints.thrust, obj.Wto_S_range, design.constraints("Takeoff",:));
                [obj.optimal_WS, obj.min_TW] = solveOptimalPoint(obj, obj.TW_table, obj.T_Wto_takeoff, obj.Wto_S_range);
                obj.Wto_S_landing = landing_constraint(obj, design.constraints("Landing",:));
@@ -31,11 +35,24 @@ classdef F16ConstraintEst < ConstraintModel
      % HELPER METHODS
      methods (Access = private)
 
-          % Get constraint names
-          % function constraintNames = get_constraint_names(obj, design)
-          %
-          %
-          % end
+          % Get consstraints
+          function get_constraints(obj, design, extracted_constraints)
+               CD0_constraints = extracted_constraints(:, "CD0");
+               e_constraints = extracted_constraints(:, "e");
+               q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
+               V_constraints = extracted_constraints(:, "V (ft/s)");
+               K1_constraints = extracted_constraints(:, "K1");
+               PS_constraints = extracted_constraints(:, "PS_ft_s_");
+               design.constraints.aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
+
+               thrust1 = extracted_constraints(:, "alpha_dry");
+               thrust2 = extracted_constraints(:, "AB_");
+               thrust3 = extracted_constraints(:, "throttleLapse");
+               design.constraints.thrust = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
+
+               % design.constraints.TO = extracted_constraints("Takeoff",:);
+
+          end
 
           % Create thrust loading table
           function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(obj, design, constraints, aero, thrust, Wto_S_range, TO)
