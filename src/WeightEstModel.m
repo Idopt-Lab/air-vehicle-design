@@ -4,6 +4,11 @@ classdef (Abstract) WeightEstModel < handle
 
      properties (Abstract)
           MTOW
+          wings
+          tail
+          subsystems
+          engine
+          landinggear
           eps % Error tolerance
      end
 

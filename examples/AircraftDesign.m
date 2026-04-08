@@ -29,5 +29,15 @@ classdef AircraftDesign < handle
      methods
           function obj = AircraftDesign()
           end
+
+          % Set W_TO guess (lbf) (just in case you need this)
+          function set_W_TO_guess(obj, guess)
+               obj.WeightResults.W_TO = guess;
+          end
+
+          % Set T0 guess (lbf) (just in case you need this)
+          function set_T0_guess(obj, guess)
+               obj.PropulsionResults.T0 = guess;
+          end
      end
 end
