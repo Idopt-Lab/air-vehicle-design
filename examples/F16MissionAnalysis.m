@@ -79,9 +79,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
           end
 
-          function mission_fuel = run_mission_analysis(obj, design)
-               segment_names = get_segment_names(obj, design);
-               mission_fuel = compute_mission_fuel_weight(obj, design)
+          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design)
+               % segment_names = get_segment_names(obj, design, obj.missiondata);
+               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, mission_obj.missiondata);
 
 
 
@@ -96,7 +96,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           % Arguments should be design-specific geometric or aerodynamic
           % properties extracted from objects (... which are themselves the
           % design).
-          function segment_names = get_segment_names(obj, design)
+          function segment_names = get_segment_names(obj, design, missiondata)
                segment_names = string(missiondata.Properties.VariableNames);
 
                for i=1:lenght(segment_names)
@@ -109,7 +109,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
 
           % This is where we actually compute the fuel for the mission
-          function mission_fuel = compute_mission_fuel_weight(obj, design)
+          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, missiondata)
                AR = design.geom.wings.Main("Aspect ratio");
                L_fus = design.geom.fuselage.Fuselage("Length (ft)");
                D_fus = design.geom.fuselage.Fuselage("Max width (ft)");
@@ -126,13 +126,13 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                W_fixed = missiondata.Startup("Payload, fixed (lbf)");
 
                % W_S = 104.59;
-               W_S = obj.optimal_WS;
+               W_S = constraint_obj.optimal_WS;
                W_TO = 45000;
                tol = 1e-3;
                max_iteration = 40;
                results = [];
                S_ref = 0;
-               T_W = min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
+               T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
 
                %% ----------------------------------------------------------------------
 
@@ -154,7 +154,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     % Get thrust at takeoff
                     T0 = T_W*W_TO; % Fidelity III
 
-                    [enginestats] = propulsion_est_IV(T0, mission.Dash.Dash("Mach number"), BPR);
+                    [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
 
                     %% ----------------------------------------------------------------------
                     % OEW update from wing and engine change
@@ -166,19 +166,19 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     [W_startup, f1] = segment_startup(W_TO);
                     [W_taxi, f2] = segment_taxi(W_startup);
                     [W_Takeoff, f3] = segment_takeoff(W_taxi);
-                    [W_Climb, f4]   = segment_climb(W_TO, W_Takeoff, mission.Climb.Climb("Mach number"), S_ref, mission.Cruise.Cruise("CD0"), mission.Cruise.Cruise("e"), AR, mission.Loiter.Loiter("TSFC"), mission.Climb.Climb("Altitude (ft)"), T0);
-                    [W_Cruise, f5]  = segment_cruise(W_Climb, W_S, mission.Cruise.Cruise("TSFC"), mission.Cruise.Cruise("Range (ft)"), mission.Cruise.Cruise("Mach number"), mission.Cruise.Cruise("a (ft/s)"), mission.Cruise.Cruise("q (lbf/ft^2)"), mission.Cruise.Cruise("CD0"), mission.Cruise.Cruise("e"), AR, W_TO, S_ref);
-                    [W_Dash, f6]    = segment_dash(W_Cruise, S_ref, W_TO, mission.Dash.Dash("q (lbf/ft^2)"), mission.Dash.Dash("CD0"), mission.Dash.Dash("e"), AR, mission.Dash.Dash("TSFC"), mission.Dash.Dash("Range (ft)"), mission.Dash.Dash("Mach number") * mission.Dash.Dash("a (ft/s)"));
-                    [W_Combat, f7]  = segment_combat(W_Dash, mission.Combat.Combat("Time (min)"), mission.Combat.Combat("TSFC"), mission.Combat.Combat("Payload, drop (lbf)"), mission.Combat.Combat("CD0"), mission.Combat.Combat("e"), AR, W_TO, mission.Combat.Combat("q (lbf/ft^2)"), S_ref);
-                    [W_Cruise2, f8] = segment_cruise(W_Combat, W_S, mission.Cruise_1.Cruise_1("TSFC"), mission.Cruise_1.Cruise_1("Range (ft)"), mission.Cruise_1.Cruise_1("Mach number"), mission.Cruise_1.Cruise_1("a (ft/s)"), mission.Cruise_1.Cruise_1("q (lbf/ft^2)"), mission.Cruise_1.Cruise_1("CD0"), mission.Cruise_1.Cruise_1("e"), AR, W_TO, S_ref);
-                    [W_Loiter, f9]  = segment_loiter(W_TO, W_Cruise2, S_ref, mission.Loiter.Loiter("q (lbf/ft^2)"), mission.Loiter.Loiter("CD0"), mission.Loiter.Loiter("e"), AR, mission.Loiter.Loiter("Time (min)"), mission.Loiter.Loiter("TSFC"));
+                    [W_Climb, f4]   = segment_climb(W_TO, W_Takeoff, missiondata.Climb("Mach number"), S_ref, missiondata.Cruise("CD0"), missiondata.Cruise("e"), AR, missiondata.Loiter("TSFC"), missiondata.Climb("Altitude (ft)"), T0);
+                    [W_Cruise, f5]  = segment_cruise(W_Climb, W_S, missiondata.Cruise("TSFC"), missiondata.Cruise("Range (ft)"), missiondata.Cruise("Mach number"), missiondata.Cruise("a (ft/s)"), missiondata.Cruise("q (lbf/ft^2)"), missiondata.Cruise("CD0"), missiondata.Cruise("e"), AR, W_TO, S_ref);
+                    [W_Dash, f6]    = segment_dash(W_Cruise, S_ref, W_TO, missiondata.Dash("q (lbf/ft^2)"), missiondata.Dash("CD0"), missiondata.Dash("e"), AR, missiondata.Dash("TSFC"), missiondata.Dash("Range (ft)"), missiondata.Dash("Mach number") * missiondata.Dash("a (ft/s)"));
+                    [W_Combat, f7]  = segment_combat(W_Dash, missiondata.Combat("Time (min)"), missiondata.Combat("TSFC"), missiondata.Combat("Payload, drop (lbf)"), missiondata.Combat("CD0"), missiondata.Combat("e"), AR, W_TO, missiondata.Combat("q (lbf/ft^2)"), S_ref);
+                    [W_Cruise2, f8] = segment_cruise(W_Combat, W_S, missiondata.Cruise_1("TSFC"), missiondata.Cruise_1("Range (ft)"), missiondata.Cruise_1("Mach number"), missiondata.Cruise_1("a (ft/s)"), missiondata.Cruise_1("q (lbf/ft^2)"), missiondata.Cruise_1("CD0"), missiondata.Cruise_1("e"), AR, W_TO, S_ref);
+                    [W_Loiter, f9]  = segment_loiter(W_TO, W_Cruise2, S_ref, missiondata.Loiter("q (lbf/ft^2)"), missiondata.Loiter("CD0"), missiondata.Loiter("e"), AR, missiondata.Loiter("Time (min)"), missiondata.Loiter("TSFC"));
                     [W_Landing, f10]         = segment_landing(W_Loiter, W_TO);
                     total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10;
                     fuel_fraction = total_fuel_used * 1.06 / W_TO;
 
                     % Compute empty weight
                     W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-                    [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed);
+                    [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
 
                     % OEW - update new OEW fraction
                     empty_weight_fraction = empty_weight/W_TO;
@@ -197,6 +197,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     W_TO = W_TO_new;
                     S_ref = S_ref;
                end
+               mission_fuel = total_fuel_used;
                S_ref = S_ref;
                beta = 1 - (total_fuel_used / (2 * W_TO));
                results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});

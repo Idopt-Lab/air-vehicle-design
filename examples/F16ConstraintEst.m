@@ -11,8 +11,8 @@ classdef F16ConstraintEst < ConstraintModel
           min_TW
           Landing
           Wto_S_landing
-          T0_W0 = min_TW;
-          W0_S_ref = optimal_WS;
+          T0_W0
+          W0_S_ref
           T_Wto_required
      end
 
