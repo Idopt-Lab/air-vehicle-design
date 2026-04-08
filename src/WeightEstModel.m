@@ -4,12 +4,14 @@ classdef (Abstract) WeightEstModel < handle
 
      properties (Abstract)
           MTOW
-          total_fuel_used
           eps % Error tolerance
      end
 
      methods (Abstract)
           MTOW = compute_MTOW(input)
+          [output1, output2] = size_tail(input)
+          [output] = get_subsystem_weight(input)
+          [output] = get_engine_weight(input)
 
      end
 end
