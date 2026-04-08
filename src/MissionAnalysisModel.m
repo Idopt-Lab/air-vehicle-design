@@ -8,11 +8,13 @@ classdef (Abstract) MissionAnalysisModel < handle
      properties (Abstract)
           % What the heck do I put here?
           % MTOW
+          missiondata
           mission_fuel
           eps
      end
 
      methods (Abstract)
+          missiondata = get_mission_data(input)
           mission_fuel = run_mission_analysis(input)
           % [W_out, fuel_used] = segment_climb(W_TO, W_in, Mach, S, CD0, e, AR, TSFC, h, T0)
           % [W_out, fuel_used] = segment_combat(W_in, time, TSFC, payload, CD0, e, AR, W_TO, q,  S_ref)
