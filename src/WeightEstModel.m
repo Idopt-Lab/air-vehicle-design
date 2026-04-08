@@ -1,4 +1,4 @@
-classdef (Abstract) WeightEstModel
+classdef (Abstract) WeightEstModel < handle
      %WEIGHTESTMODEL Summary of this class goes here
      %   Detailed explanation goes here
 
