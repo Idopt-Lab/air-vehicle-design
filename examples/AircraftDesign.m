@@ -1,6 +1,7 @@
 classdef AircraftDesign < handle
      %AIRCRAFTDESIGN Summary of this class goes here
      %   Detailed explanation goes here
+     % Treat this like the entire PHYSICAL AIRCRAFT.
 
      properties
           Name
