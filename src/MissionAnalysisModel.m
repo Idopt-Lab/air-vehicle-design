@@ -1,10 +1,13 @@
 classdef (Abstract) MissionAnalysisModel < handle
      %MISSIONANALYSISMODEL Summary of this class goes here
      %   Detailed explanation goes here
+     % THIS IS FOR ESTIMATING MISSION FUEL
+     % MISSION FUEL, NOT MTOW
+     % BUT MISSION FUEL IS IMPORTANT FOR ESTIMATING MTOW
 
      properties (Abstract)
           % What the heck do I put here?
-          MTOW
+          % MTOW
           mission_fuel
           eps
      end
