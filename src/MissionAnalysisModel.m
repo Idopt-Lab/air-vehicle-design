@@ -14,8 +14,8 @@ classdef (Abstract) MissionAnalysisModel < handle
      end
 
      methods (Abstract)
-          missiondata = get_mission_data(input)
-          mission_fuel = run_mission_analysis(input)
+          missiondata = get_mission_data(mission_obj, Chosen_Mission)
+          mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design)
           % [W_out, fuel_used] = segment_climb(W_TO, W_in, Mach, S, CD0, e, AR, TSFC, h, T0)
           % [W_out, fuel_used] = segment_combat(W_in, time, TSFC, payload, CD0, e, AR, W_TO, q,  S_ref)
           % [W_out, fuel_used] = segment_cruise(W_in, W_S, TSFC, Distance, Mach, a, q, CD0, e, AR, W_TO, S)

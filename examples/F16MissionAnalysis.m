@@ -14,9 +14,31 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           % "WeightEstimation". Don't overcomplicate it.
 
           % Assign data to "missiondata" property
-          function missiondata = get_mission_data(obj, design, Chosen_Mission)
+          function get_mission_data(obj, design, Chosen_Mission)
+               obj.missiondata = construct_mission_data(obj, design, Chosen_Mission);
+          end
 
-               file_name = "Mission_Profile.xlsx";
+          % Compute mission fuel weight
+          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design)
+               % segment_names = get_segment_names(obj, design, obj.missiondata);
+               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, mission_obj.missiondata);
+          end
+
+     end
+
+     %% ----------------------------------------------------------
+     % HELPER FUNCTIONS
+
+     methods (Access = private)
+          % Arguments should be design-specific geometric or aerodynamic
+          % properties extracted from objects (... which are themselves the
+          % design).
+
+
+
+          function output = construct_mission_data(obj, design, Chosen_Mission)
+
+                file_name = "Mission_Profile.xlsx";
                mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission data!
 
                % Mission segments should scan row F8 until it encounters a blank
@@ -77,25 +99,13 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                atmospheredata = array2table(atmospheredata,"VariableNames", mission_table.Properties.VariableNames, "RowNames", {'Temp (R)', 'a (ft/s)', 'P (psi)', 'rho (slug/ft^3)', 'nu (ft^2/s)', 'mu slugs/(ft*s)', 'V (ft/s)', 'q (lbf/ft^2)'});
                missiondata = [mission_table;atmospheredata];
 
-          end
-
-          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design)
-               % segment_names = get_segment_names(obj, design, obj.missiondata);
-               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, mission_obj.missiondata);
-
-
+               output = missiondata;
 
           end
 
-     end
 
-     %% ----------------------------------------------------------
-     % HELPER FUNCTIONS
 
-     methods (Access = private)
-          % Arguments should be design-specific geometric or aerodynamic
-          % properties extracted from objects (... which are themselves the
-          % design).
+
           function segment_names = get_segment_names(obj, design, missiondata)
                segment_names = string(missiondata.Properties.VariableNames);
 

@@ -68,4 +68,8 @@ classdef AircraftDesign < handle
                obj.PropulsionResults.T0 = guess;
           end
      end
+
+     methods (Static)
+
+     end
 end
