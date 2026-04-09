@@ -13,43 +13,8 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           % Decide if weight estimation goes in "MissionAnalysis" or
           % "WeightEstimation". Don't overcomplicate it.
 
-          function obj = F16MissionAnalysis(chosenMission)
-               arguments
-                    chosenMission string = ""
-               end
-
-               if chosenMission == ""
-                    return
-               end
-
-               obj.missiondata = get_mission_data(obj, chosenMission);
-          end
-
-          % Assign data to "missiondata" property (probably an extra layer
-          % I can remove)
-          function missiondata = get_mission_data(obj, Chosen_Mission)
-               obj.missiondata = construct_mission_data(obj, Chosen_Mission);
-          end
-
-          % Compute mission fuel weight
-          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, geom_obj, propulsion_obj, design, weight_obj)
-               % segment_names = get_segment_names(obj, design, obj.missiondata);
-               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, propulsion_obj, design, mission_obj.missiondata, weight_obj);
-          end
-
-     end
-
-     %% ----------------------------------------------------------
-     % HELPER FUNCTIONS
-
-     methods (Access = private)
-          % Arguments should be design-specific geometric or aerodynamic
-          % properties extracted from objects (... which are themselves the
-          % design).
-
-
-
-          function output = construct_mission_data(obj, Chosen_Mission)
+          % Assign data to "missiondata" property
+          function missiondata = get_mission_data(obj, design, Chosen_Mission)
 
                file_name = "Mission_Profile.xlsx";
                mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission data!
@@ -63,8 +28,27 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                segment_count = length(mission_table.Properties.VariableNames);
                rowcount = length(mission_table.Properties.RowNames);
 
+               % Pre-allocate mission_segments for a nanosecond speed advantage (it's
+               % worth it) (it's not lol)
+               % mission_segments = strings(1, segment_count);
+               % altitudes = zeros(1, segment_count);
+
+               % Acquire segment names
+               % Load segment names into an array or something (IN ORDER)
+               % mission_segments(:) = string(mission_data.Properties.VariableNames(:));
+
                %% OBTAIN SEGMENT INFO
                % Extract rows from mission table
+               % Load segment altitudes
+               % altitudes(:) = table2array(mission_data("Altitude (ft)", mission_segments(:)));
+               % payloads(:) = table2array(mission_data("Payload (lbf)", mission_segments(:))); % Payloads (all/relevant)
+               % turns(:) = table2array(mission_data("Turns", mission_segments(:))); % Combat turns (combat)
+               % range(:) = table2array(mission_data("Range (nm)", mission_segments(:))); % Segment range (cruise)
+               % loiter_time(:) = table2array(mission_data("Loiter time (hrs)", mission_segments(:))); % Loitering time (loiter)
+
+               % Cannot do this iteratively without expanding mission_data table to
+               % incorporate new entries, first.
+               % Make a new cell
                for i=1:segment_count % For each segment...
                     alt = mission_table{"Altitude (ft)", i}; % Get the altitude (ft)
                     [Temp, a, P, rho, nu, mu] = atmosisa(alt*0.3048); % Acquire atmospheric data (Kelvin, m/s, Pascals, kg/m^3, m^2/s, kg/(m*s)
@@ -91,15 +75,27 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                % Concatenate new table onto mission table
                atmospheredata = array2table(atmospheredata,"VariableNames", mission_table.Properties.VariableNames, "RowNames", {'Temp (R)', 'a (ft/s)', 'P (psi)', 'rho (slug/ft^3)', 'nu (ft^2/s)', 'mu slugs/(ft*s)', 'V (ft/s)', 'q (lbf/ft^2)'});
-               missiondata = [mission_table;atmospheredata];
-
-               output = missiondata;
+               obj.missiondata = [mission_table;atmospheredata];
 
           end
 
+          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj)
+               % segment_names = get_segment_names(obj, design, obj.missiondata);
+               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, mission_obj.missiondata, geometry_obj, propulsion_obj, weight_obj);
 
 
 
+          end
+
+     end
+
+     %% ----------------------------------------------------------
+     % HELPER FUNCTIONS
+
+     methods (Access = private)
+          % Arguments should be design-specific geometric or aerodynamic
+          % properties extracted from objects (... which are themselves the
+          % design).
           function segment_names = get_segment_names(obj, design, missiondata)
                segment_names = string(missiondata.Properties.VariableNames);
 
@@ -113,7 +109,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
 
           % This is where we actually compute the fuel for the mission
-          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, propulsion_obj, design, missiondata, weight_obj)
+          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, missiondata, geometry_obj, propulsion_obj, weight_obj)
                AR = design.geom.wings.Main("Aspect ratio");
                L_fus = design.geom.fuselage.Fuselage("Length (ft)");
                D_fus = design.geom.fuselage.Fuselage("Max width (ft)");
@@ -131,7 +127,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                % W_S = 104.59;
                W_S = constraint_obj.optimal_WS;
-               W_TO = design.WeightResults.W_TO;
+               W_TO = 45000;
+               design.WeightResults.W_TO = W_TO;
+               design.set_W_TO_guess(W_TO);
                tol = 1e-3;
                max_iteration = 40;
                results = [];
@@ -141,30 +139,28 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                %% ----------------------------------------------------------------------
 
                for iteration = 1:max_iteration
-                    design.geom.S_ref = W_TO / W_S;
+                    S_ref = W_TO / W_S;
                     total_fuel_used = 0;
 
                     %% ----------------------------------------------------------------------
                     % Size the tail
                     % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    % [design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);[design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);
-                    [S_VT, S_HT] = geom_obj.size_tail(design);
-
+                    [S_VT, S_HT] = geometry_obj.size_tail(design);
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
                     % c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                     % d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-                    % S_wet = 10^(c) * design.WeightResults.W_TO^(d); % ft^2
-                    S_wet = geom_obj.get_S_wet(design); % Update the design object property AFTER the entire loop's complete
+                    % S_wet = 10^(c) * W_TO^(d); % ft^2
+                    S_wet = geometry_obj.get_S_wet(design);
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
-                    T0 = T_W*W_TO; % Fidelity III % Update the design object property AFTER the entire loop's complete
+                    T0 = T_W*W_TO; % Fidelity III
 
-                    % [enginestats] = propulsion_obj.get_propulsion_stats(design.PropulsionResults.T0, missiondata.Dash("Mach number"), BPR);
-                    [design.PropulsionResults.enginestats] = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
-
+                    % [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
+                    design.PropulsionResults.enginestats = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
+                    weight_obj.get_engine_weight(propulsion_obj, mission_obj, design);
                     %% ----------------------------------------------------------------------
                     % OEW update from wing and engine change
                     % WingDelta = WingDensity * (S_ref - W_TO/(W_S));
@@ -187,8 +183,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                     % Compute empty weight
                     W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-                    % [empty_weight] = weights.Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
-                    [empty_weight] = weight_obj.get_OEW(propulsion_obj, mission_obj, design);
+                    [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
+                    % [empty_weight] = weight_obj.get_OEW(propulsion_obj, mission_obj, design, W_TO);
+                    % empty_weight = empty_weight.total;
 
                     % OEW - update new OEW fraction
                     empty_weight_fraction = empty_weight/W_TO;
@@ -204,13 +201,14 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     if abs(difference) < tol
                          break;
                     end
-                    design.WeightResults.W_TO = W_TO_new;
-                    design.geom.S_ref = S_ref;
+                    W_TO = W_TO_new;
+                    design.WeightResults.W_TO = W_TO;
+                    S_ref = S_ref;
                end
                mission_fuel = total_fuel_used;
-               design.geom.S_ref = S_ref;
+               S_ref = S_ref;
                beta = 1 - (total_fuel_used / (2 * W_TO));
-               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
+               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'})
           end
 
 

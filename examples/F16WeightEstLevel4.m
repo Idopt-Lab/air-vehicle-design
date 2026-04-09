@@ -41,9 +41,12 @@ classdef F16WeightEstLevel4 < WeightEstModel
           end
 
           % Estimate OEW
-          function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design)
-               design.geom.S_wet = compute_S_wet(weight_obj, design.WeightResults.W_TO);
-               design.WeightResults.OEW = compute_OEW_IV(weight_obj, design.WeightResults.W_TO, design.geom.wings.Main("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)"), design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.S_wet, design.PropulsionResults.T_cruise, design.weights, design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.VerticalTail("c_VT"), design.WeightResults.eng_weight.W_engine_installed);
+          function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design, W_TO)
+               design.geom.S_wet = compute_S_wet(weight_obj, W_TO);
+               design.PropulsionResults = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
+               design.WeightResults.eng_weight = design.PropulsionResults.W;
+               design.WeightResults.OEW = compute_OEW_IV(weight_obj, W_TO, design.geom.wings.Main("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)"), design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.S_wet, design.PropulsionResults.T_cruise, design.weights, design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.VerticalTail("c_VT"), design.WeightResults.eng_weight);
+               output = design.WeightResults.OEW;
           end
 
 
