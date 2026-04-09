@@ -166,12 +166,13 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     %% ----------------------------------------------------------------------
                     % Size the tail
                     [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
+                    [S_VT, S_HT] = F16GeometryStuff.Tail_Sizing(design)
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
                     c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                     d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-                    S_wet = 10^(c) * W_TO^(d); % ft^2
+                    S_wet = 10^(c) * design.WeightResults.W_TO^(d); % ft^2
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
