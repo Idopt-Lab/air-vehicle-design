@@ -32,9 +32,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           end
 
           % Compute mission fuel weight
-          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, geom_obj, design)
+          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, geom_obj, propulsion_obj, design, weight_obj)
                % segment_names = get_segment_names(obj, design, obj.missiondata);
-               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, design, mission_obj.missiondata);
+               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, propulsion_obj, design, mission_obj.missiondata, weight_obj);
           end
 
      end
@@ -113,7 +113,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
 
           % This is where we actually compute the fuel for the mission
-          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, design, missiondata)
+          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, propulsion_obj, design, missiondata, weight_obj)
                AR = design.geom.wings.Main("Aspect ratio");
                L_fus = design.geom.fuselage.Fuselage("Length (ft)");
                D_fus = design.geom.fuselage.Fuselage("Max width (ft)");
@@ -141,13 +141,13 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                %% ----------------------------------------------------------------------
 
                for iteration = 1:max_iteration
-                    design.geom.S_ref = W_TO / W_S;
+                    design.geom.S_ref = design.WeightResults.W_TO / W_S;
                     total_fuel_used = 0;
 
                     %% ----------------------------------------------------------------------
                     % Size the tail
                     % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    [design.geom.VerticalTail("Planform area (ft^2)"), design.geom.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);
+                    [design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
@@ -158,9 +158,10 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
-                    design.propulsion.T0 = T_W*W_TO; % Fidelity III
+                    design.PropulsionResults.T0 = T_W*W_TO; % Fidelity III
 
-                    [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
+                    % [enginestats] = propulsion_obj.get_propulsion_stats(design.PropulsionResults.T0, missiondata.Dash("Mach number"), BPR);
+                    [design.PropulsionResults.enginestats] = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
 
                     %% ----------------------------------------------------------------------
                     % OEW update from wing and engine change
