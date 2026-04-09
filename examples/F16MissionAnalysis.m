@@ -166,7 +166,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     %% ----------------------------------------------------------------------
                     % Size the tail
                     % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    [S_VT, S_HT] = F16GeometryStuff.Tail_Sizing(design);
+                    [design.geom.VerticalTail.S_VT, design.geom.HorizontalTail.S_HT] = F16GeometryStuff.Tail_Sizing(design);
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas

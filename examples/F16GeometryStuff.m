@@ -15,14 +15,14 @@ classdef F16GeometryStuff < GeometryEstModel
           % Size the tail
           function [S_ht, S_vt] = size_tail(obj, design)
                design.geom.S_wet = get_S_wet(obj, design);
-               [S_ht, S_vt] = Tail_Sizing_IV(design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), design.geom.S_wet, design.geom.fuselage.Total("length (ft)"), design.geom.wings.Main("Mean geometric chord"));
+               [S_ht, S_vt] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), design.geom.S_wet, design.geom.fuselage.Total("Length (ft)"), design.geom.wings.Main("Mean geometric chord"));
           end
      end
 
      methods (Access = private)
 
           % Size the tail
-          function [S_ht, S_vt] = Tail_Sizing_IV(c_VT, c_HT, b_W, S_W, L_fus, Cbar_W)
+          function [S_ht, S_vt] = Tail_Sizing_IV(obj, c_VT, c_HT, b_W, S_W, L_fus, Cbar_W)
 
                % Assuming tail located 90% down fuselage
                L_VT = L_fus*0.8;
