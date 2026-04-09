@@ -75,7 +75,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                % Concatenate new table onto mission table
                atmospheredata = array2table(atmospheredata,"VariableNames", mission_table.Properties.VariableNames, "RowNames", {'Temp (R)', 'a (ft/s)', 'P (psi)', 'rho (slug/ft^3)', 'nu (ft^2/s)', 'mu slugs/(ft*s)', 'V (ft/s)', 'q (lbf/ft^2)'});
-               obj.missiondata = [mission_table;atmospheredata];
+               missiondata = [mission_table;atmospheredata];
 
           end
 

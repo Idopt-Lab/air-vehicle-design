@@ -27,7 +27,35 @@ classdef AircraftDesign < handle
      end
 
      methods
-          function obj = AircraftDesign()
+          function obj = AircraftDesign(name, opts)
+               arguments
+                    name                  string = ""
+                    opts.RequirementsName string = "Requirements"
+                    opts.ConstraintsName  string = "Constraints"
+                    opts.MissionName      string = ""
+                    opts.AutoLoad        logical = true
+               end
+
+               % Important: allow zero-input construction
+               if name == ""
+                    return
+               end
+
+               obj.Name = name;
+
+               if opts.AutoLoad
+                    [obj.geom.wings, obj.geom.fuselage, obj.propulsion, obj.weights] = Import_Design(obj.Name);
+                    obj.requirements = Import_Requirements(opts.RequirementsName);
+                    obj.constraints  = Import_Constraints(opts.ConstraintsName);
+
+                    if opts.MissionName ~= ""
+                         % mission_obj.missiondata = Mission_Profiles(opts.MissionName);
+                         % or:
+                         mission_obj = F16MissionAnalysis();
+                         mission_obj.missiondata = mission_obj.get_mission_data(obj, opts.MissionName);
+                    end
+               end
+
           end
 
           % Set W_TO guess (lbf) (just in case you need this)
