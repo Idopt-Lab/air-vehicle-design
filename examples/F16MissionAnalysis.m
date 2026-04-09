@@ -4,7 +4,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
      properties
 
-          missiondata % This is all the mission information. Altitudes, aerodynamics, etc.
+          missiondata % This is all the mission_obj information. Altitudes, aerodynamics, etc.
           mission_fuel
           eps
      end
@@ -17,7 +17,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           function missiondata = get_mission_data(obj, design, Chosen_Mission)
 
                file_name = "Mission_Profile.xlsx";
-               mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission data!
+               mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission_obj data!
 
                % Mission segments should scan row F8 until it encounters a blank
                mission_table = readtable(file_name, 'Sheet', mission_name, 'ReadRowNames', true);
@@ -109,7 +109,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
 
           % This is where we actually compute the fuel for the mission
-          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, missiondata, geometry_obj, propulsion_obj, weight_obj)
+          function total_fuel_used = compute_mission_fuel_weight(mission_obj, constraint_obj, design, missiondata, geometry_obj, propulsion_obj, weight_obj)
                AR = design.geom.wings.Main("Aspect ratio");
                L_fus = design.geom.fuselage.Fuselage("Length (ft)");
                D_fus = design.geom.fuselage.Fuselage("Max width (ft)");
@@ -144,23 +144,20 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                     %% ----------------------------------------------------------------------
                     % Size the tail
-                    % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    [S_VT, S_HT] = geometry_obj.size_tail(design);
+                    [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
-                    % c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-                    % d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-                    % S_wet = 10^(c) * W_TO^(d); % ft^2
-                    S_wet = geometry_obj.get_S_wet(design);
+                    c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
+                    d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
+                    S_wet = 10^(c) * W_TO^(d); % ft^2
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
                     T0 = T_W*W_TO; % Fidelity III
 
-                    % [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
-                    design.PropulsionResults.enginestats = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
-                    weight_obj.get_engine_weight(propulsion_obj, mission_obj, design);
+                    [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
+
                     %% ----------------------------------------------------------------------
                     % OEW update from wing and engine change
                     % WingDelta = WingDensity * (S_ref - W_TO/(W_S));
@@ -184,8 +181,6 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     % Compute empty weight
                     W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
                     [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
-                    % [empty_weight] = weight_obj.get_OEW(propulsion_obj, mission_obj, design, W_TO);
-                    % empty_weight = empty_weight.total;
 
                     % OEW - update new OEW fraction
                     empty_weight_fraction = empty_weight/W_TO;
@@ -202,14 +197,14 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                          break;
                     end
                     W_TO = W_TO_new;
-                    design.WeightResults.W_TO = W_TO;
                     S_ref = S_ref;
                end
-               mission_fuel = total_fuel_used;
                S_ref = S_ref;
                beta = 1 - (total_fuel_used / (2 * W_TO));
-               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'})
+               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
+               disp(results_table)
           end
+
 
 
 

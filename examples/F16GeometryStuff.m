@@ -15,7 +15,7 @@ classdef F16GeometryStuff < GeometryEstModel
           % Size the tail
           function [S_ht, S_vt] = size_tail(obj, design)
                S_wet = get_S_wet(obj, design);
-               [S_ht, S_vt] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), S_wet, design.geom.fuselage.Total("Length (ft)"), design.geom.wings.Main("Mean geometric chord"));
+               [S_ht, S_vt] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), S_wet, design.geom.fuselage.Fuselage("Length (ft)"), design.geom.wings.Main("Mean geometric chord"));
           end
      end
 
