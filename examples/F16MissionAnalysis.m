@@ -203,6 +203,8 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                beta = 1 - (total_fuel_used / (2 * W_TO));
                results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
                disp(results_table)
+               design.WeightResults.W_TO_est = W_TO;
+               design.WeightResults.W_fuel = total_fuel_used;
           end
 
 
