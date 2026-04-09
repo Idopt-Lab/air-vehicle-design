@@ -131,7 +131,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                % W_S = 104.59;
                W_S = constraint_obj.optimal_WS;
-               W_TO = 45000;
+               W_TO = design.WeightResults.W_TO;
                tol = 1e-3;
                max_iteration = 40;
                results = [];
@@ -141,7 +141,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                %% ----------------------------------------------------------------------
 
                for iteration = 1:max_iteration
-                    S_ref = W_TO / W_S;
+                    design.geom.S_ref = W_TO / W_S;
                     total_fuel_used = 0;
 
                     %% ----------------------------------------------------------------------
@@ -158,7 +158,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
-                    T0 = T_W*W_TO; % Fidelity III
+                    design.propulsion.T0 = T_W*W_TO; % Fidelity III
 
                     [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
 
@@ -200,11 +200,11 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     if abs(difference) < tol
                          break;
                     end
-                    W_TO = W_TO_new;
-                    S_ref = S_ref;
+                    design.WeightResults.W_TO = W_TO_new;
+                    design.geom.S_ref = S_ref;
                end
                mission_fuel = total_fuel_used;
-               S_ref = S_ref;
+               design.geom.S_ref = S_ref;
                beta = 1 - (total_fuel_used / (2 * W_TO));
                results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
           end
