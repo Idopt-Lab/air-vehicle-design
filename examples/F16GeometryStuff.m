@@ -8,14 +8,14 @@ classdef F16GeometryStuff < GeometryEstModel
 
      methods
           % Estimate the wetted area of the aircraft
-          function get_S_wet(obj, design)
-               design.geom.S_wet = calc_S_wet_III(design.WeightResults.W_TO);
+          function output = get_S_wet(obj, design)
+               output = calc_S_wet_III(obj, design.WeightResults.W_TO);
           end
 
           % Size the tail
-          function size_tail(obj, design)
-               design.geom.S_wet = get_S_wet(design.WeightResults.W_TO);
-               [design.geom.S_ht, design.geom.S_vt] = Tail_Sizing_IV(design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), design.geom.S_wet, design.geom.fuselage.Total("length (ft)"), design.geom.wings.Main("Mean geometric chord"));
+          function [S_ht, S_vt] = size_tail(obj, design)
+               design.geom.S_wet = get_S_wet(obj, design);
+               [S_ht, S_vt] = Tail_Sizing_IV(design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), design.geom.S_wet, design.geom.fuselage.Total("length (ft)"), design.geom.wings.Main("Mean geometric chord"));
           end
      end
 
@@ -35,7 +35,7 @@ classdef F16GeometryStuff < GeometryEstModel
           end
 
           % Estimate wetted area of the design
-          function S_wet = calc_S_wet_III(W_TO)
+          function S_wet = calc_S_wet_III(obj, W_TO)
                %% ----------------------------------------------------------------------
                % Estimate wetted areas
                c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
