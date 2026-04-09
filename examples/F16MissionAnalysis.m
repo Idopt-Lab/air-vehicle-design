@@ -13,9 +13,22 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           % Decide if weight estimation goes in "MissionAnalysis" or
           % "WeightEstimation". Don't overcomplicate it.
 
-          % Assign data to "missiondata" property
-          function get_mission_data(obj, design, Chosen_Mission)
-               obj.missiondata = construct_mission_data(obj, design, Chosen_Mission);
+          function obj = F16MissionAnalysis(chosenMission)
+               arguments
+                    chosenMission string = ""
+               end
+
+               if chosenMission == ""
+                    return
+               end
+
+               obj.missiondata = get_mission_data(obj, chosenMission);
+          end
+
+          % Assign data to "missiondata" property (probably an extra layer
+          % I can remove)
+          function missiondata = get_mission_data(obj, Chosen_Mission)
+               obj.missiondata = construct_mission_data(obj, Chosen_Mission);
           end
 
           % Compute mission fuel weight
@@ -36,9 +49,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
 
 
-          function output = construct_mission_data(obj, design, Chosen_Mission)
+          function output = construct_mission_data(obj, Chosen_Mission)
 
-                file_name = "Mission_Profile.xlsx";
+               file_name = "Mission_Profile.xlsx";
                mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission data!
 
                % Mission segments should scan row F8 until it encounters a blank

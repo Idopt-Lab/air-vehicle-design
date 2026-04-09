@@ -48,11 +48,13 @@ classdef AircraftDesign < handle
                     obj.requirements = Import_Requirements(opts.RequirementsName);
                     obj.constraints  = Import_Constraints(opts.ConstraintsName);
 
+                    % Come back to this. This is supposed to create a
+                    % mission object automatically.
                     if opts.MissionName ~= ""
                          % mission_obj.missiondata = Mission_Profiles(opts.MissionName);
                          % or:
-                         mission_obj = F16MissionAnalysis();
-                         mission_obj.missiondata = mission_obj.get_mission_data(obj, opts.MissionName);
+                         mission_obj.missiondata = F16MissionAnalysis(opts.MissionName);
+                         % mission_obj.missiondata = mission_obj.get_mission_data(obj, opts.MissionName);
                     end
                end
 
@@ -70,6 +72,34 @@ classdef AircraftDesign < handle
      end
 
      methods (Static)
+          function mission = createMission(missionName)
+               arguments
+                    missionName string
+               end
 
+               mission = F16MissionAnalysis(missionName);
+          end
+
+          function [design, mission] = create(name, opts)
+               arguments
+                    name string
+                    opts.DesignFile       string = ""
+                    opts.RequirementsName string = "Requirements"
+                    opts.ConstraintsName  string = "Constraints"
+                    opts.MissionName      string = ""
+               end
+
+               design = AircraftDesign( ...
+                    name, ...
+                    DesignFile       = opts.DesignFile, ...
+                    RequirementsName = opts.RequirementsName, ...
+                    ConstraintsName  = opts.ConstraintsName);
+
+               if opts.MissionName == ""
+                    mission = [];
+               else
+                    mission = AircraftDesign.createMission(opts.MissionName);
+               end
+          end
      end
 end
