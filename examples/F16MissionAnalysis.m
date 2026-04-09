@@ -141,24 +141,26 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                %% ----------------------------------------------------------------------
 
                for iteration = 1:max_iteration
-                    design.geom.S_ref = design.WeightResults.W_TO / W_S;
+                    design.geom.S_ref = W_TO / W_S;
                     total_fuel_used = 0;
 
                     %% ----------------------------------------------------------------------
                     % Size the tail
                     % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    [design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);
+                    % [design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);[design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);
+                    [S_VT, S_HT] = geom_obj.size_tail(design);
+
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
                     % c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                     % d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
                     % S_wet = 10^(c) * design.WeightResults.W_TO^(d); % ft^2
-                    design.geom.S_wet = geom_obj.get_S_wet(design);
+                    S_wet = geom_obj.get_S_wet(design); % Update the design object property AFTER the entire loop's complete
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
-                    design.PropulsionResults.T0 = T_W*W_TO; % Fidelity III
+                    T0 = T_W*W_TO; % Fidelity III % Update the design object property AFTER the entire loop's complete
 
                     % [enginestats] = propulsion_obj.get_propulsion_stats(design.PropulsionResults.T0, missiondata.Dash("Mach number"), BPR);
                     [design.PropulsionResults.enginestats] = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
@@ -185,7 +187,8 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                     % Compute empty weight
                     W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-                    [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
+                    % [empty_weight] = weights.Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
+                    [empty_weight] = weight_obj.get_OEW(propulsion_obj, mission_obj, design);
 
                     % OEW - update new OEW fraction
                     empty_weight_fraction = empty_weight/W_TO;
