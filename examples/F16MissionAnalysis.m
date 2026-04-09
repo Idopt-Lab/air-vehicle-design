@@ -32,9 +32,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           end
 
           % Compute mission fuel weight
-          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design)
+          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, geom_obj, design)
                % segment_names = get_segment_names(obj, design, obj.missiondata);
-               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, mission_obj.missiondata);
+               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, design, mission_obj.missiondata);
           end
 
      end
@@ -63,27 +63,8 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                segment_count = length(mission_table.Properties.VariableNames);
                rowcount = length(mission_table.Properties.RowNames);
 
-               % Pre-allocate mission_segments for a nanosecond speed advantage (it's
-               % worth it) (it's not lol)
-               % mission_segments = strings(1, segment_count);
-               % altitudes = zeros(1, segment_count);
-
-               % Acquire segment names
-               % Load segment names into an array or something (IN ORDER)
-               % mission_segments(:) = string(mission_data.Properties.VariableNames(:));
-
                %% OBTAIN SEGMENT INFO
                % Extract rows from mission table
-               % Load segment altitudes
-               % altitudes(:) = table2array(mission_data("Altitude (ft)", mission_segments(:)));
-               % payloads(:) = table2array(mission_data("Payload (lbf)", mission_segments(:))); % Payloads (all/relevant)
-               % turns(:) = table2array(mission_data("Turns", mission_segments(:))); % Combat turns (combat)
-               % range(:) = table2array(mission_data("Range (nm)", mission_segments(:))); % Segment range (cruise)
-               % loiter_time(:) = table2array(mission_data("Loiter time (hrs)", mission_segments(:))); % Loitering time (loiter)
-
-               % Cannot do this iteratively without expanding mission_data table to
-               % incorporate new entries, first.
-               % Make a new cell
                for i=1:segment_count % For each segment...
                     alt = mission_table{"Altitude (ft)", i}; % Get the altitude (ft)
                     [Temp, a, P, rho, nu, mu] = atmosisa(alt*0.3048); % Acquire atmospheric data (Kelvin, m/s, Pascals, kg/m^3, m^2/s, kg/(m*s)
@@ -132,7 +113,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
 
           % This is where we actually compute the fuel for the mission
-          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, missiondata)
+          function mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, geom_obj, design, missiondata)
                AR = design.geom.wings.Main("Aspect ratio");
                L_fus = design.geom.fuselage.Fuselage("Length (ft)");
                D_fus = design.geom.fuselage.Fuselage("Max width (ft)");
@@ -166,13 +147,14 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     %% ----------------------------------------------------------------------
                     % Size the tail
                     % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    [design.geom.VerticalTail.S_VT, design.geom.HorizontalTail.S_HT] = F16GeometryStuff.Tail_Sizing(design);
+                    [design.geom.VerticalTail("Planform area (ft^2)"), design.geom.HorizontalTail("Planform area (ft^2)")] = geom_obj.size_tail(design);
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
-                    c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-                    d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-                    S_wet = 10^(c) * design.WeightResults.W_TO^(d); % ft^2
+                    % c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
+                    % d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
+                    % S_wet = 10^(c) * design.WeightResults.W_TO^(d); % ft^2
+                    design.geom.S_wet = geom_obj.get_S_wet(design);
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
