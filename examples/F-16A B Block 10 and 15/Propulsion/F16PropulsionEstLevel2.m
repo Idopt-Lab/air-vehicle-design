@@ -12,14 +12,49 @@ classdef F16PropulsionEstLevel2 < PropulsionModel
           function output = get_propulsion_stats(obj, mission_obj, design)
                % Decompose object arguments into necessary components.
                % Initialize "missiondata" if it hasn't been already
+               % So this gets the T_SL_W_TO for... ALL mission segments.
 
                % Get aerodynamic components
-               q = mission_obj.missiondata
+               % Extract mission segment names
+               mission_segments = get_segment_names(mission_obj.missiondata);
+
+               % Extract segment values
+               segment_values = get_segment_values(mission_obj.missiondata, mission_segments, design.geom.wings);
+
                output = propulsion_est_level_II(obj, );
           end
      end
 
+
+
+
+
      methods (Access = private)
+
+
+          % Extract segment values
+          function segment_values = get_segment_values(missiondata, mission_segments, wings)
+               AR = wings.Main.AspectRatio;
+
+
+               for i=1:length(mission_segments)
+                    q = missiondata.(mission_segments(i)).qlbfft2;
+                    CD0 = missiondata.(mission_segments(i)).CD0;
+                    e = missiondata.(mission_segments(i)).e;
+                    % Need alpha, beta
+                    % Alpha depends on T_alt/T_SL
+                    K1 = 1/(pi*e*AR);
+                    K2 = 0;
+                    V = missiondata.(mission_segments(i)).Vfts;
+                    
+                    segment_values = [q, CD0, e, K1, K2, V]; % I feel like this should be stored somewhere else
+               end
+          end
+
+          % Get segment names
+          function mission_segments = get_segment_names(missiondata)
+               mission_segments = string(missiondata.meta.outerLabels.fields);
+          end
 
 
           % Estimate engine properties

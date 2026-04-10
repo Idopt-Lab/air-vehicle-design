@@ -4,8 +4,8 @@ classdef F16AeroLevel2 < AerodynamicsModel
      % Level 1 aerodynamics equations go here.
 
      properties
-          e_osw = 0;
-          LD_cruise = 0;
+          e_osw;
+          LD_cruise;
      end
 
      methods
