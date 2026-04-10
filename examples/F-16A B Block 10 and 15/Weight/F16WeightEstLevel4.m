@@ -16,8 +16,40 @@ classdef F16WeightEstLevel4 < WeightEstModel
      methods
 
           % CALL THIS TO ACTUALLY ESTIMATE THE DESIGN WEIGHT
-          function MTOW = estimate_design_weight(weight_obj, mission_obj, design)
-               MTOW = weight_est_IV(weight_obj, design);
+          function MTOW = estimate_design_weight(weight_obj, mission_obj, design, constraint_obj, geometry_obj, propulsion_obj)
+
+
+               for iteration = 1:max_iteration
+
+                    % Get mission fuel, first
+                    total_fuel_used = mission_obj.run_mission_analysis(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj);
+
+                    % Then compute the weight
+                    W_TO = weight_est_IV(weight_obj, design);
+
+                    % Iterate
+
+                    % complete iteration loop, return MTOW and such
+                    W_TO_new = total_fuel_used + W_fixed + empty_weight;
+
+                    difference = W_TO_new - W_TO;
+                    percent_diff = 100 * difference / W_TO;
+
+                    results(end+1, :) = [W_TO, W_fixed, fuel_fraction, empty_weight_fraction, empty_weight, W_TO_new, difference, percent_diff];
+
+                    if abs(difference) < tol
+                         break;
+                    end
+                    W_TO = W_TO_new;
+                    S_ref = S_ref;
+               end
+               S_ref = S_ref;
+               beta = 1 - (total_fuel_used / (2 * W_TO));
+               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
+               disp(results_table)
+               design.WeightResults.W_TO_est = W_TO;
+               design.WeightResults.W_fuel = total_fuel_used;
+               design.geom.wings.Main.PlanformAreaft2 = S_ref;
           end
 
           % Estimate subsystem weight
@@ -63,17 +95,12 @@ classdef F16WeightEstLevel4 < WeightEstModel
                eng_weight.W_total = eng_weight.W_dry + eng_weight.W_oil + eng_weight.W_rev + eng_weight.W_control + eng_weight.W_start;
           end
 
-          function output = weight_est_IV(weight_obj, mission_obj, geometry_obj, propulsion_obj, design)
-
-               % Get mission fuel weight
-               total_fuel_used = mission_obj.run_mission_analysis(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj);
-
-
+          function output = weight_est_IV(weight_obj, design)
 
 
                % Compute empty weight
-               % W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-               [empty_weight] = compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed);
+               W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
+               [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
 
                % OEW - update new OEW fraction
                empty_weight_fraction = empty_weight/W_TO;

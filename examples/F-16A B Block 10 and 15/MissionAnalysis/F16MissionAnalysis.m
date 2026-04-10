@@ -127,7 +127,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)
                     [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-                    
+
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
                     c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
