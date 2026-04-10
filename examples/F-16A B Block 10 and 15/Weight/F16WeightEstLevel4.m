@@ -45,7 +45,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
                design.geom.S_wet = compute_S_wet(weight_obj, W_TO);
                design.PropulsionResults = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
                design.WeightResults.eng_weight = design.PropulsionResults.W;
-               design.WeightResults.OEW = compute_OEW_IV(weight_obj, W_TO, design.geom.wings.Main.Planformareaft2, design.geom.wings.HorizontalTail.Planformareaft2, design.geom.wings.VerticalTail.Planformareaft2, design.geom.S_wet, design.PropulsionResults.T_cruise, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, design.WeightResults.eng_weight);
+               design.WeightResults.OEW = compute_OEW_IV(weight_obj, W_TO, design.geom.wings.Main.PlanformAreaft2, design.geom.wings.HorizontalTail.PlanformAreaft2, design.geom.wings.VerticalTail.PlanformAreaft2, design.geom.S_wet, design.PropulsionResults.T_cruise, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, design.WeightResults.eng_weight);
                output = design.WeightResults.OEW;
           end
 
@@ -126,9 +126,9 @@ classdef F16WeightEstLevel4 < WeightEstModel
 
                % Sub-functions for handling component weights. Estimates.
                % Equations: Raymer, 6th edition, section 15.3.1. Fighter/Attack jet.
-               OEW.W_Wing = wing_weight_IV(W_TO, DesignTable_weight{"Nz",2}, S_ref, DesignTable_weight{"AR", 2}, DesignTable_weight{"t/c",2}, DesignTable_weight{"lambda_w",2}, DesignTable_weight{"Lambda qc",2}, DesignTable_weight{"Scsw",2}, DesignTable_weight{"Kdw",2}, DesignTable_weight{"Kvs",2});
-               OEW.W_tail = tail_weight_IV(DesignTable_weight{"Fw",2}, DesignTable_weight{"Bh",2}, W_TO, DesignTable_weight{"Nz",2}, S_HT, DesignTable_weight{"Krht",2}, DesignTable_weight{"Ht",2}, DesignTable_weight{"Hv",2}, S_VT, DesignTable_weight{"M",2}, DesignTable_weight{"Lt",2}, DesignTable_weight{"Sr",2}, DesignTable_weight{"Arv",2}, DesignTable_weight{"lambda_vt",2}, DesignTable_weight{"Lambda qc",2});
-               OEW.W_fuselage = fuselage_weight_IV(DesignTable_weight{"Kdwf",2}, W_TO, DesignTable_weight{"Nz",2}, DesignTable_weight{"L",2}, DesignTable_weight{"D",2}, DesignTable_weight{"W",2});
+               OEW.W_Wing = wing_weight_IV(W_TO, DesignTable_weight.Coefficients.Nz, S_ref, DesignTable_weight.Coefficients.AR, DesignTable_weight.Coefficients.tc, DesignTable_weight.Coefficients.lambda_w, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.Scsw, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
+               OEW.W_tail = tail_weight_IV(DesignTable_weight.Coefficients.Fw, DesignTable_weight.Coefficients.Bh, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, DesignTable_weight.Coefficients.Arv, DesignTable_weight.Coefficients.lambda_vt, DesignTable_weight.Coefficients.LambdaQc);
+               OEW.W_fuselage = fuselage_weight_IV(DesignTable_weight.Coefficients.Kdwf, W_TO, DesignTable_weight.Coefficients.Nz, DesignTable_weight.Coefficients.L, DesignTable_weight.Coefficients.D, DesignTable_weight.Coefficients.W);
                OEW.W_subsystems = subsystem_weight_IV(weight_obj, DesignTable_weight, W_TO, T0, W_engine_installed);
                % W_engine_installed = 1.3*Engine_Sizing(T0);
 
@@ -177,40 +177,40 @@ classdef F16WeightEstLevel4 < WeightEstModel
                % THIS CALCULATES THE TOTAL WEIGHT OF ALL SUBSYSTEMS
                % Need to extract required information simply without spaghettifying the code.
 
-               subsystems.W_landinggear = landinggear(DesignTable_weight{"Kcb",2}, DesignTable_weight{"Ktpg",2}, DesignTable_weight{"Wl",2}, DesignTable_weight{"Nl",2}, DesignTable_weight{"Lm",2}, DesignTable_weight{"Nnw",2}, DesignTable_weight{"Ln",2});
+               subsystems.W_landinggear = landinggear(DesignTable_weight.Coefficients.Kcb, DesignTable_weight.Coefficients.Ktpg, DesignTable_weight.Coefficients.Wl, DesignTable_weight.Coefficients.Nl, DesignTable_weight.Coefficients.Lm, DesignTable_weight.Coefficients.Nnw, DesignTable_weight.Coefficients.Ln);
 
-               subsystems.W_engine_systems = engine_systems_weights(DesignTable_weight{"Nen",2}, T0, DesignTable_weight{"Nz",2}, W_engine_installed, DesignTable_weight{"De",2}, DesignTable_weight{"Lsh",2}, DesignTable_weight{"Lec",2}, T0);
+               subsystems.W_engine_systems = engine_systems_weights(DesignTable_weight.Coefficients.Nen, T0, DesignTable_weight.Coefficients.Nz, W_engine_installed, DesignTable_weight.Coefficients.De, DesignTable_weight.Coefficients.Lsh, DesignTable_weight.Coefficients.Lec, T0);
 
-               subsystems.W_firewall = 1.13*DesignTable_weight{"Sfw",2}; % eq 15.8, 6th ed
+               subsystems.W_firewall = 1.13*DesignTable_weight.Coefficients.Sfw; % eq 15.8, 6th ed
 
-               subsystems.W_air_induction_system = 13.29 * DesignTable_weight{"Kvg",2} *DesignTable_weight{"Ld",2}^(0.643) * DesignTable_weight{"Kd",2}^(0.182) *DesignTable_weight{"Nen",2}^(0.1498) * (DesignTable_weight{"Ls",2}/DesignTable_weight{"Ld",2})^(-0.373) * DesignTable_weight{"De",2};
+               subsystems.W_air_induction_system = 13.29 * DesignTable_weight.Coefficients.Kvg *DesignTable_weight.Coefficients.Ld^(0.643) * DesignTable_weight.Coefficients.Kd^(0.182) *DesignTable_weight.Coefficients.Nen^(0.1498) * (DesignTable_weight.Coefficients.Ls/DesignTable_weight.Coefficients.Ld)^(-0.373) * DesignTable_weight.Coefficients.De;
                % eq 15.10, 6th ed
 
-               subsystems.W_tailpipe = 3.5*DesignTable_weight{"De",2}*DesignTable_weight{"Ltp",2}*DesignTable_weight{"Nen",2};
+               subsystems.W_tailpipe = 3.5*DesignTable_weight.Coefficients.De*DesignTable_weight.Coefficients.Ltp*DesignTable_weight.Coefficients.Nen;
                % eq 15.11, 6th ed
 
-               subsystems.W_fuelsystem_and_tanks = 7.45*DesignTable_weight{"Vt",2}^(0.47)*(1 + DesignTable_weight{"Vi",2}/DesignTable_weight{"Vt",2})^(-0.095) * (1 + DesignTable_weight{"VP",2}/DesignTable_weight{"Vt",2})*DesignTable_weight{"Nt",2}^(0.066) * DesignTable_weight{"Nen",2}^(0.052) * (T0 *DesignTable_weight{"SFC",2}/1000)^(0.249);
+               subsystems.W_fuelsystem_and_tanks = 7.45*DesignTable_weight.Coefficients.Vt^(0.47)*(1 + DesignTable_weight.Coefficients.Vi/DesignTable_weight.Coefficients.Vt)^(-0.095) * (1 + DesignTable_weight.Coefficients.VP/DesignTable_weight.Coefficients.Vt)*DesignTable_weight.Coefficients.Nt^(0.066) * DesignTable_weight.Coefficients.Nen^(0.052) * (T0 *DesignTable_weight.Coefficients.SFC/1000)^(0.249);
                % eq 15.16, 6th ed
 
-               subsystems.W_flight_controls = 36.28*DesignTable_weight{"M",2}^(0.003) * DesignTable_weight{"Scs",2}^(0.489) * DesignTable_weight{"Ns",2}^(0.484) * DesignTable_weight{"Nc",2}^(0.127);
+               subsystems.W_flight_controls = 36.28*DesignTable_weight.Coefficients.M^(0.003) * DesignTable_weight.Coefficients.Scs^(0.489) * DesignTable_weight.Coefficients.Ns^(0.484) * DesignTable_weight.Coefficients.Nc^(0.127);
                % eq 15.17, 6th ed
 
-               subsystems.W_instruments = 8.0 + 36.37*DesignTable_weight{"Nen",2}^(0.676) * DesignTable_weight{"Nt",2}^(0.237) +26.4*(1 + DesignTable_weight{"Nci",2})^(1.356);
+               subsystems.W_instruments = 8.0 + 36.37*DesignTable_weight.Coefficients.Nen^(0.676) * DesignTable_weight.Coefficients.Nt^(0.237) +26.4*(1 + DesignTable_weight.Coefficients.Nci)^(1.356);
                % eq 15.18, 6th ed
 
-               subsystems.W_hydraulics = 37.23 * DesignTable_weight{"Kvsh",2} * DesignTable_weight{"Nu",2}^(0.664);
+               subsystems.W_hydraulics = 37.23 * DesignTable_weight.Coefficients.Kvsh * DesignTable_weight.Coefficients.Nu^(0.664);
                % eq 15.19, 6th ed
 
-               subsystems.W_electrical = 172.2 *DesignTable_weight{"Kmc",2} * DesignTable_weight{"Rkva",2}^(0.152) * DesignTable_weight{"Nc",2}^(0.10) * DesignTable_weight{"La",2}^(0.10) * DesignTable_weight{"Ngen",2}^(0.091);
+               subsystems.W_electrical = 172.2 *DesignTable_weight.Coefficients.Kmc * DesignTable_weight.Coefficients.Rkva^(0.152) * DesignTable_weight.Coefficients.Nc^(0.10) * DesignTable_weight.Coefficients.La^(0.10) * DesignTable_weight.Coefficients.Ngen^(0.091);
                % eq 15.20, 6th ed
 
-               subsystems.W_avionics = 2.117 * DesignTable_weight{"Wuav",2}^(0.933);
+               subsystems.W_avionics = 2.117 * DesignTable_weight.Coefficients.Wuav^(0.933);
                % eq 15.21, 6th ed
 
-               subsystems.W_furnishings = 217.6 * DesignTable_weight{"Nc",2}; % Include seats
+               subsystems.W_furnishings = 217.6 * DesignTable_weight.Coefficients.Nc; % Include seats
                % eq 15.22, 6th ed
 
-               subsystems.W_AC_and_antiice = 201.6 * ((DesignTable_weight{"Wuav",2} +200 * DesignTable_weight{"Nc",2})/1000)^(0.735);
+               subsystems.W_AC_and_antiice = 201.6 * ((DesignTable_weight.Coefficients.Wuav +200 * DesignTable_weight.Coefficients.Nc)/1000)^(0.735);
                % eq 15.23, 6th ed
 
                subsystems.W_handling_gear = 3.2*10^(-4) * W_TO; % eq 15.24, 6th edition

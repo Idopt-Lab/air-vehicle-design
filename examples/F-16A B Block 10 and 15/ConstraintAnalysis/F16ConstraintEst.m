@@ -19,10 +19,10 @@ classdef F16ConstraintEst < ConstraintModel
      methods
 
           % do a complete constraint analysis
-          function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_est(constraint_obj, design)
+          function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj, design)
 
-               initconstraints(constraint_obj, design)
-               get_constraints(constraint_obj, design, design.constraints)
+               [design.constraints.aero, design.constraints.thrust] = initconstraints(constraint_obj, design);
+               [design.constraints.aero, design.constraints.thrust] = get_constraints(constraint_obj, design, design.constraints); % Why do I have two functions that do the same thing?
                [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, design, design.constraints, design.constraints.aero_constraints, design.constraints.thrust, constraint_obj.Wto_S_range, design.constraints("Takeoff",:));
                [constraint_obj.optimal_WS, constraint_obj.min_TW] = solveOptimalPoint(constraint_obj, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_range);
                constraint_obj.Wto_S_landing = landing_constraint(constraint_obj, design.constraints("Landing",:));
@@ -31,8 +31,8 @@ classdef F16ConstraintEst < ConstraintModel
           end
 
           % Initialize constraints
-          function initconstraints(constraint_obj, design)
-               get_constraints(constraint_obj, design, design.constraints)
+          function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj, design)
+               [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, design, design.constraints);
           end
      end
 
@@ -40,19 +40,19 @@ classdef F16ConstraintEst < ConstraintModel
      methods (Access = private)
 
           % Get consstraints
-          function get_constraints(obj, design, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
+          function [aero_constraints, thrust_constraints] = get_constraints(obj, design, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0");
                e_constraints = extracted_constraints(:, "e");
                q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
                V_constraints = extracted_constraints(:, "V (ft/s)");
                K1_constraints = extracted_constraints(:, "K1");
                PS_constraints = extracted_constraints(:, "PS_ft_s_");
-               design.constraints.aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
+               aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
 
                thrust1 = extracted_constraints(:, "alpha_dry");
                thrust2 = extracted_constraints(:, "AB_");
                thrust3 = extracted_constraints(:, "throttleLapse");
-               design.constraints.thrust = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
+               thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
 
                % design.constraints.TO = extracted_constraints("Takeoff",:);
 

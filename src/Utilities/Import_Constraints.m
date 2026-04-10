@@ -36,6 +36,6 @@ end
 % Concatenate new table onto constraints table
 atmospheredata = array2table(atmospheredata,"RowNames", Constraints.Properties.RowNames, "VariableNames", {'Temp (R)', 'a (ft/s)', 'P (psi)', 'rho (lb/ft^3)', 'nu (ft^2/s)', 'mu slugs/(ft*s)', 'V (ft/s)', 'q (lbf/ft^2)'});
 Constraints = [Constraints, atmospheredata];
-Constraints = tableToNestedStruct(Constraints, Orientation="variables");
+% Constraints = tableToNestedStruct(Constraints, Orientation="variables");
 
 end
