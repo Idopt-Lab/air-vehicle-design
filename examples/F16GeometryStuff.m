@@ -36,8 +36,6 @@ classdef F16GeometryStuff < GeometryEstModel
 
           % Estimate wetted area of the design
           function S_wet = calc_S_wet_III(obj, W_TO)
-               %% ----------------------------------------------------------------------
-               % Estimate wetted areas
                c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
                S_wet = 10^(c) * W_TO^(d); % ft^2

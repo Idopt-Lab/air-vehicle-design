@@ -17,7 +17,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
 
           % CALL THIS TO ACTUALLY ESTIMATE THE DESIGN WEIGHT
           function [MTOW] = estimate_design_weight(weight_obj, mission_obj, design)
-               actually_estimate_weight(weight_obj, design)
+               weight_est_IV(weight_obj, design)
           end
 
           % Size the tail (probably can go with some geometry class)
@@ -79,7 +79,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
                output = S_wet;
           end
 
-          function output = actually_estimate_weight(weight_obj, design)
+          function output = weight_est_IV(weight_obj, design)
 
                S_ref = W_TO / W_S;
                total_fuel_used = 0;
