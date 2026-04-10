@@ -8,6 +8,7 @@ file_name = "Requirements.xlsx";
 req_table = readtable(file_name, 'Sheet', Requirements, 'ReadRowNames', true);
 % Try cleaning up all cells
 
-Requirements = req_table;
+Requirements = tableToNestedStruct(req_table, Orientation="variables");
+
 
 end

@@ -14,7 +14,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           % "WeightEstimation". Don't overcomplicate it.
 
           % Assign data to "missiondata" property
-          function missiondata = get_mission_data(obj, design, Chosen_Mission)
+          function output = get_mission_data(obj, design, Chosen_Mission)
 
                file_name = "Mission_Profile.xlsx";
                mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission_obj data!
@@ -54,7 +54,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
                % Concatenate new table onto mission table
                atmospheredata = array2table(atmospheredata,"VariableNames", mission_table.Properties.VariableNames, "RowNames", {'Temp (R)', 'a (ft/s)', 'P (psi)', 'rho (slug/ft^3)', 'nu (ft^2/s)', 'mu slugs/(ft*s)', 'V (ft/s)', 'q (lbf/ft^2)'});
-               obj.missiondata = [mission_table;atmospheredata];
+               output = [mission_table;atmospheredata];
+
+               output = tableToNestedStruct(output, Orientation="variables");
 
           end
 

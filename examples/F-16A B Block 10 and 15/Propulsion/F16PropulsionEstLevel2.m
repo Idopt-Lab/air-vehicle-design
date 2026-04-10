@@ -11,6 +11,10 @@ classdef F16PropulsionEstLevel2 < PropulsionModel
           % Estimate engine properties
           function output = get_propulsion_stats(obj, mission_obj, design)
                % Decompose object arguments into necessary components.
+               % Initialize "missiondata" if it hasn't been already
+
+               % Get aerodynamic components
+               q = mission_obj.missiondata
                output = propulsion_est_level_II(obj, );
           end
      end

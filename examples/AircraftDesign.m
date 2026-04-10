@@ -50,12 +50,12 @@ classdef AircraftDesign < handle
 
                     % Come back to this. This is supposed to create a
                     % mission object automatically.
-                    if opts.MissionName ~= ""
-                         % mission_obj.missiondata = Mission_Profiles(opts.MissionName);
-                         % or:
-                         mission_obj.missiondata = F16MissionAnalysis(opts.MissionName);
-                         % mission_obj.missiondata = mission_obj.get_mission_data(obj, opts.MissionName);
-                    end
+                    % if opts.MissionName ~= ""
+                    %      % mission_obj.missiondata = Mission_Profiles(opts.MissionName);
+                    %      % or:
+                    %      % mission_obj.missiondata = F16MissionAnalysis(opts.MissionName);
+                    %      % mission_obj.missiondata = mission_obj.get_mission_data(obj, opts.MissionName);
+                    % end
                end
 
           end

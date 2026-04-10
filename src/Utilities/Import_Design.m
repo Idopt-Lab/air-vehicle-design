@@ -18,5 +18,10 @@ DesignTable_propulsion = readtable(DesignName, 'Sheet', 'Propulsion', 'ReadRowNa
 DesignTable_weights = readtable(DesignName, 'Sheet', 'Weights', 'ReadRowNames', true);
 % Test for each one callable
 
+DesignTable_wings = tableToNestedStruct(DesignTable_wings, Orientation="variables");
+DesignTable_fuselage = tableToNestedStruct(DesignTable_fuselage, Orientation="variables");
+DesignTable_propulsion = tableToNestedStruct(DesignTable_propulsion, Orientation="rows");
+DesignTable_weights = tableToNestedStruct(DesignTable_weights, Orientation="variables");
+
 
 end
