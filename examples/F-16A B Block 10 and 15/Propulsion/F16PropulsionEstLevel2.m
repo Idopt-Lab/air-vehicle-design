@@ -1,6 +1,7 @@
 classdef F16PropulsionEstLevel2 < PropulsionModel
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
+     % This is supposed to use Mattingly's "Master Equation"
 
      properties
           enginestats
@@ -8,7 +9,7 @@ classdef F16PropulsionEstLevel2 < PropulsionModel
 
      methods
           % Estimate engine properties
-          function output = get_propulsion_stats(obj, weight_obj, mission_obj, design)
+          function output = get_propulsion_stats(obj, mission_obj, design)
                % Decompose object arguments into necessary components.
                output = propulsion_est_level_II(obj, );
           end
@@ -21,6 +22,9 @@ classdef F16PropulsionEstLevel2 < PropulsionModel
           function [T_SL_W_TO] = propulsion_est_level_II(obj, q, CD0, alpha, beta, K_1, K_2, W_TO, S_ref, V)
                % Using equations from Mattingly
                % (So-called "Master Equation")
+               % Recall, beta = W_(instant)/W_TO
+               % alpha = T_(instant)/T_SL (T_[instant] is the max thrust
+               % available at that instant)
 
                % Some substitutes to shorten the equation
                A = q*CD0/alpha;
