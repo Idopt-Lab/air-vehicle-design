@@ -22,7 +22,7 @@ classdef F16PropulsionEstLevel2 < PropulsionModel
                e = design.constraints.e;
                h = design.constraints.Altitude_ft_;
                V = design.constraints.("V (ft/s)");
-               delta_t = 1; % Placeholder value (time increment, units unknown)
+               delta_t = 0; % Placeholder value (time increment, units unknown)
                n = design.constraints.n;
                S_ref = design.geom.wings.Main.PlanformAreaft2;
 
