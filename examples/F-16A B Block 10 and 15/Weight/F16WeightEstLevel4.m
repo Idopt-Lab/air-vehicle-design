@@ -22,7 +22,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
 
           % Size the tail (probably can go with some geometry class)
           function size_tail(weight_obj, design)
-               [design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT")] = Tail_Sizing(design.geom.wings.VerticalTail("c_VT"), design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.Main("Span (ft)"), design.geom.wings.Main("Planform area (ft^2)"), design.geom.fuselage.Total("Length (ft)"), design.geom.wings.Main("Mean geometric chord"))
+               [design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT] = Tail_Sizing(design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, design.geom.wings.Main.Planformareaft2, design.geom.fuselage.Total.Lengthft, design.geom.wings.Main.Meangeometricchord)
 
           end
 
@@ -45,7 +45,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
                design.geom.S_wet = compute_S_wet(weight_obj, W_TO);
                design.PropulsionResults = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
                design.WeightResults.eng_weight = design.PropulsionResults.W;
-               design.WeightResults.OEW = compute_OEW_IV(weight_obj, W_TO, design.geom.wings.Main("Planform area (ft^2)"), design.geom.wings.HorizontalTail("Planform area (ft^2)"), design.geom.wings.VerticalTail("Planform area (ft^2)"), design.geom.S_wet, design.PropulsionResults.T_cruise, design.weights, design.geom.wings.HorizontalTail("c_HT"), design.geom.wings.VerticalTail("c_VT"), design.WeightResults.eng_weight);
+               design.WeightResults.OEW = compute_OEW_IV(weight_obj, W_TO, design.geom.wings.Main.Planformareaft2, design.geom.wings.HorizontalTail.Planformareaft2, design.geom.wings.VerticalTail.Planformareaft2, design.geom.S_wet, design.PropulsionResults.T_cruise, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, design.WeightResults.eng_weight);
                output = design.WeightResults.OEW;
           end
 

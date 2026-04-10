@@ -77,6 +77,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
           % Arguments should be design-specific geometric or aerodynamic
           % properties extracted from objects (... which are themselves the
           % design).
+          % I probably don't even need this any more.
           function segment_names = get_segment_names(obj, design, missiondata)
                segment_names = string(missiondata.Properties.VariableNames);
 
