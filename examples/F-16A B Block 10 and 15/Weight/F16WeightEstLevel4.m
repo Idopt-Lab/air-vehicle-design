@@ -63,24 +63,17 @@ classdef F16WeightEstLevel4 < WeightEstModel
                eng_weight.W_total = eng_weight.W_dry + eng_weight.W_oil + eng_weight.W_rev + eng_weight.W_control + eng_weight.W_start;
           end
 
-          function output = weight_est_IV(weight_obj, design)
+          function output = weight_est_IV(weight_obj, mission_obj, geometry_obj, propulsion_obj, design)
 
-               S_ref = W_TO / W_S;
-               total_fuel_used = 0;
+               % Get mission fuel weight
+               total_fuel_used = mission_obj.run_mission_analysis(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj);
 
-               %% ----------------------------------------------------------------------
-               % Size the tail
-               % [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
 
-               %% ----------------------------------------------------------------------
-               % Get thrust at takeoff
-               T0 = T_W*W_TO; % Fidelity III
 
-               % [enginestats] = propulsion_est_IV(T0, missiondata.Dash("Mach number"), BPR);
 
                % Compute empty weight
-               W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-               [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed);
+               % W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
+               [empty_weight] = compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed);
 
                % OEW - update new OEW fraction
                empty_weight_fraction = empty_weight/W_TO;

@@ -125,9 +125,9 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     total_fuel_used = 0;
 
                     %% ----------------------------------------------------------------------
-                    % Size the tail
+                    % Size the tail (should be a geometry thing)
                     [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
-
+                    
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
                     c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
@@ -138,7 +138,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     % Get thrust at takeoff
                     T0 = T_W*W_TO; % Fidelity III
 
-                    [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
+                    % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
 
                     %% ----------------------------------------------------------------------
                     % OEW update from wing and engine change
@@ -159,6 +159,11 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     [W_Landing, f10]         = segment_landing(W_Loiter, W_TO);
                     total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10;
                     fuel_fraction = total_fuel_used * 1.06 / W_TO;
+
+                    % NOW return the total fuel weight!
+
+                    % Everything below here should be in the "weight
+                    % estimation" class!
 
                     % Compute empty weight
                     W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
