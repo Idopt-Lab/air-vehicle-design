@@ -9,8 +9,8 @@ classdef AircraftDesign < handle
           propulsion
           weights
           % missiondata % Aircraft design doesn't need mission data
-          requirements
-          constraints
+          requirements % Should divorce this from AircraftDesign
+          constraints % Should also divorce this from AircraftDesign
 
           % S_wet= 1337; % Wetted area, whole aircraft
           % S_ref = 300; % REference area (ft^2)

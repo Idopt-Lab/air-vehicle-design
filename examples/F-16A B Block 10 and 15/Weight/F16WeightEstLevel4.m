@@ -16,14 +16,8 @@ classdef F16WeightEstLevel4 < WeightEstModel
      methods
 
           % CALL THIS TO ACTUALLY ESTIMATE THE DESIGN WEIGHT
-          function [MTOW] = estimate_design_weight(weight_obj, mission_obj, design)
-               weight_est_IV(weight_obj, design)
-          end
-
-          % Size the tail (probably can go with some geometry class)
-          function size_tail(weight_obj, design)
-               [design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT] = Tail_Sizing(design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, design.geom.wings.Main.Planformareaft2, design.geom.fuselage.Total.Lengthft, design.geom.wings.Main.Meangeometricchord)
-
+          function MTOW = estimate_design_weight(weight_obj, mission_obj, design)
+               MTOW = weight_est_IV(weight_obj, design);
           end
 
           % Estimate subsystem weight
@@ -58,7 +52,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
 
      methods (Access = private)
 
-          function output = compute_engine_installed_weight(weight_obj, Thrust)
+          function eng_weight = compute_engine_installed_weight(weight_obj, Thrust)
 
                eng_weight.W_dry = 0.521*Thrust^0.9; % eq 7.13
                eng_weight.W_oil = 0.082*Thrust^0.65; % eq 7.14
@@ -67,16 +61,6 @@ classdef F16WeightEstLevel4 < WeightEstModel
                eng_weight.W_start = 9.33*(eng_weight.W_dry/1000)^1.078; % eq 7.17 (7.18?) (Technically Roskam)
 
                eng_weight.W_total = eng_weight.W_dry + eng_weight.W_oil + eng_weight.W_rev + eng_weight.W_control + eng_weight.W_start;
-               output = eng_weight;
-          end
-
-          function output = compute_S_wet(weight_obj, W_TO)
-               %% ----------------------------------------------------------------------
-               % Estimate wetted areas
-               c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-               d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-               S_wet = 10^(c) * W_TO^(d); % ft^2
-               output = S_wet;
           end
 
           function output = weight_est_IV(weight_obj, design)
@@ -111,7 +95,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
           end
 
           % Get OEW
-          function output = compute_OEW_IV(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed)
+          function OEW = compute_OEW_IV(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed)
                %COMPUTE_OEW Summary of this function goes here
                %   Detailed explanation goes here
                % Ref area should be EXPOSED planform area!
@@ -134,7 +118,6 @@ classdef F16WeightEstLevel4 < WeightEstModel
 
                % OEW = W_Wing + W_tail + W_fuselage + W_subsystems + W_extra; % sum the weights
                OEW.total = OEW.W_Wing + OEW.W_tail + OEW.W_fuselage + OEW.W_subsystems.total;
-               output = OEW;
           end
 
 
@@ -162,18 +145,11 @@ classdef F16WeightEstLevel4 < WeightEstModel
 
           end
 
-          % Size the tail
-          function [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W)
-
-
-
-          end
-
 
 
 
           % Compute subsystem weight
-          function [output] = subsystem_weight_IV(weight_obj, DesignTable_weight, W_TO, T0, W_engine_installed)
+          function subsystems = subsystem_weight_IV(weight_obj, DesignTable_weight, W_TO, T0, W_engine_installed)
                % THIS CALCULATES THE TOTAL WEIGHT OF ALL SUBSYSTEMS
                % Need to extract required information simply without spaghettifying the code.
 
@@ -217,9 +193,6 @@ classdef F16WeightEstLevel4 < WeightEstModel
                % eq 15.24, 6th ed
 
                subsystems.total = subsystems.W_landinggear + subsystems.W_engine_systems + subsystems.W_firewall + subsystems.W_air_induction_system + subsystems.W_tailpipe + subsystems.W_fuelsystem_and_tanks + subsystems.W_flight_controls + subsystems.W_instruments + subsystems.W_hydraulics + subsystems.W_electrical + subsystems.W_avionics + subsystems.W_furnishings + subsystems.W_AC_and_antiice + subsystems.W_handling_gear;
-
-               output = subsystems;
-
           end
 
 
