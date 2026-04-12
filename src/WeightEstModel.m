@@ -13,7 +13,7 @@ classdef (Abstract) WeightEstModel < handle
      end
 
      methods (Abstract)
-          MTOW = estimate_design_weight(input)
+          % MTOW = estimate_design_weight(input)
           [output] = get_subsystem_weight(input)
           [output] = get_engine_weight(input)
           [output] = get_OEW(input)
