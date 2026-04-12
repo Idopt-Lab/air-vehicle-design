@@ -3,8 +3,6 @@ classdef (Abstract) AerodynamicsModel
      %   Detailed explanation goes here
 
      properties (Abstract) % Initialization not allowed
-          e_osw
-          DragResults
      end
 
 

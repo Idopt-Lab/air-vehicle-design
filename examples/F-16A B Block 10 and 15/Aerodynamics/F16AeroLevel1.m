@@ -2,10 +2,11 @@ classdef F16AeroLevel1 < AerodynamicsModel
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
+     % Remember, you can separate FUNCTION classes (classes with just
+     % functions) from DATA STORAGE CLASSES (classes that just store data).
+     % I think WeaponGenerator2 did that.
 
      properties
-          e_osw = 0;
-          LD_cruise = 0;
      end
 
      methods
