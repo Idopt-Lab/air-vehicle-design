@@ -31,17 +31,16 @@ classdef F16WeightEstLevel4 < WeightEstModel
           % Estimate engine weight (installed)
           function output = get_engine_weight(weight_obj, propulsion_obj, mission_obj, design)
                propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
-               weight_obj.engine = weight_obj.compute_engine_installed_weight(propulsion_obj.enginestats.T_cruise);
+               weight_obj.engine = weight_obj.compute_engine_installed_weight(propulsion_obj.T0);
                weight_obj.engine.installed = 1.3*weight_obj.engine.W_total;
                output = weight_obj.engine.W_total;
           end
 
           % Estimate OEW
           function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design, geometry_obj, W_TO)
-               geometry_obj.S_wet = geometry_obj.get_S_wet(W_TO); % Get S_wet in case it isn't already.
                propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
-               weight_obj.get_engine_weight(propulsion_obj, mission_obj, design);
-               weight_obj.OEW = compute_OEW_IV(weight_obj, W_TO, geometry_obj.S_ref, geometry_obj.S_HT, geometry_obj.S_VT, geometry_obj.S_wet, propulsion_obj.enginestats.T_cruise, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
+               % weight_obj.get_engine_weight(propulsion_obj, mission_obj, design);
+               weight_obj.OEW = compute_OEW_IV(weight_obj, W_TO, geometry_obj.S_ref, geometry_obj.S_HT, geometry_obj.S_VT, geometry_obj.S_wet, propulsion_obj.T0, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
 
@@ -81,7 +80,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
                OEW.W_tail = tail_weight_IV(DesignTable_weight.Coefficients.Fw, DesignTable_weight.Coefficients.Bh, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, DesignTable_weight.Coefficients.Arv, DesignTable_weight.Coefficients.lambda_vt, DesignTable_weight.Coefficients.LambdaQc);
                OEW.W_fuselage = fuselage_weight_IV(DesignTable_weight.Coefficients.Kdwf, W_TO, DesignTable_weight.Coefficients.Nz, DesignTable_weight.Coefficients.L, DesignTable_weight.Coefficients.D, DesignTable_weight.Coefficients.W);
                OEW.W_subsystems = subsystem_weight_IV(weight_obj, DesignTable_weight, W_TO, T0, W_engine_installed);
-               % W_engine_installed = 1.3*Engine_Sizing(T0);
+               % weight_obj.engine.W_engine_installed = 1.3*Engine_Sizing(T0);
 
                % OEW = W_Wing + W_tail + W_fuselage + W_subsystems + W_extra; % sum the weights
                OEW.total = OEW.W_Wing + OEW.W_tail + OEW.W_fuselage + OEW.W_subsystems.total;
@@ -96,6 +95,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
                eng_weight.W_start = 9.33*(eng_weight.W_dry/1000)^1.078; % eq 7.17 (7.18?) (Technically Roskam)
 
                eng_weight.W_total = eng_weight.W_dry + eng_weight.W_oil + eng_weight.W_rev + eng_weight.W_control + eng_weight.W_start;
+               eng_weight.W_installed = 1.3*eng_weight.W_total;
           end
 
           % function output = weight_est_IV(weight_obj, design)

@@ -3,11 +3,11 @@ classdef Sizing
      %   Detailed explanation goes here
 
      properties
-          Property1
+          results_table
      end
 
      methods
-          function size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj)
+          function [results_table] = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj)
 
                % This is where we actually compute the fuel for the mission
                AR = design.geom.wings.Main.AspectRatio;
@@ -80,13 +80,12 @@ classdef Sizing
                          break;
                     end
                     weight_obj.W_TO = W_TO_new;
+                    W_TO = W_TO_new;
                     geometry_obj.S_ref = geometry_obj.S_ref;
                end
                beta = 1 - (total_fuel_used / (2 * W_TO));
                results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
                disp(results_table)
-
-
           end
 
 
