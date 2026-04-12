@@ -125,14 +125,13 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     total_fuel_used = 0;
 
                     %% ----------------------------------------------------------------------
-                    % Size the tail (should be a geometry thing)
-                    [S_VT, S_HT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W);
+                    % Estimate wetted areas
+                    S_wet = geometry_obj.get_S_wet(W_TO);
 
                     %% ----------------------------------------------------------------------
-                    % Estimate wetted areas
-                    c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-                    d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-                    S_wet = 10^(c) * W_TO^(d); % ft^2
+                    % Size the tail (should be a geometry thing)
+                    [S_VT, S_HT] = geometry_obj.size_tail(design, W_TO, S_ref);
+
 
                     %% ----------------------------------------------------------------------
                     % Get thrust at takeoff
@@ -148,7 +147,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                     % Loop stuff - should automate segment naming extraction
                     % (future)
                     [W_startup, f1] = segment_startup(W_TO);
-                    [W_taxi, f2] = segment_taxi(W_startup);
+                    [W_taxi, f2]    = segment_taxi(W_startup);
                     [W_Takeoff, f3] = segment_takeoff(W_taxi);
                     [W_Climb, f4]   = segment_climb(W_TO, W_Takeoff, missiondata.Climb.MachNumber, S_ref, missiondata.Cruise.CD0, missiondata.Cruise.e, AR, missiondata.Loiter.TSFC, missiondata.Climb.Altitudeft, T0);
                     [W_Cruise, f5]  = segment_cruise(W_Climb, W_S, missiondata.Cruise.TSFC, missiondata.Cruise.Rangeft, missiondata.Cruise.MachNumber, missiondata.Cruise.afts, missiondata.Cruise.qlbfft2, missiondata.Cruise.CD0, missiondata.Cruise.e, AR, W_TO, S_ref);

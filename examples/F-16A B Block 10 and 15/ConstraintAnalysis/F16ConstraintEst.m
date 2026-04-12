@@ -23,7 +23,7 @@ classdef F16ConstraintEst < ConstraintModel
 
                [design.constraints.aero, design.constraints.thrust] = initconstraints(constraint_obj, design);
                [design.constraints.aero, design.constraints.thrust] = get_constraints(constraint_obj, design, design.constraints); % Why do I have two functions that do the same thing?
-               [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, design, design.constraints, design.constraints.aero_constraints, design.constraints.thrust, constraint_obj.Wto_S_range, design.constraints("Takeoff",:));
+               [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, design, design.constraints, design.constraints.aero, design.constraints.thrust, constraint_obj.Wto_S_range, design.constraints("Takeoff",:));
                [constraint_obj.optimal_WS, constraint_obj.min_TW] = solveOptimalPoint(constraint_obj, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_range);
                constraint_obj.Wto_S_landing = landing_constraint(constraint_obj, design.constraints("Landing",:));
                plotConstraintDiagram(constraint_obj, constraint_obj.Wto_S_range, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_landing, constraint_obj.optimal_WS, constraint_obj.min_TW, design.constraints.Row(:));
