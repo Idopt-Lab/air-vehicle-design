@@ -69,6 +69,7 @@ classdef AircraftDesign < handle
           function set_T0_guess(obj, guess)
                obj.PropulsionResults.T0 = guess;
           end
+          
      end
 
      methods (Static)

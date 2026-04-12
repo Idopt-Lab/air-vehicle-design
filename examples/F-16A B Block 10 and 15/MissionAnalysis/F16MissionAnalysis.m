@@ -60,13 +60,73 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
           end
 
-          function mission_fuel = run_mission_analysis(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj)
-               % segment_names = get_segment_names(obj, design, obj.missiondata);
-               mission_fuel = compute_mission_fuel_weight(mission_obj, constraint_obj, design, mission_obj.missiondata, geometry_obj, propulsion_obj, weight_obj);
+          % Compute mission fuel
+          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj)
+               % This is where we actually compute the fuel for the mission
+               AR = design.geom.wings.Main.AspectRatio;
 
+               % W_S = 104.59;
+               W_S = constraint_obj.optimal_WS;
+               W_TO = weight_obj.W_TO;
+               T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
+               S_ref = geometry_obj.S_ref;
+               T0 = propulsion_obj.T0;
+               
+               % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
 
+               % OEW update from wing and engine change
+               % WingDelta = WingDensity * (S_ref - W_TO/(W_S));
+               % EngineDelta = W_Engine - Engine_Sizing(T_W*W_TO);
 
+               % Loop stuff - should automate segment naming extraction
+               % (future)
+               [W_startup, f1] = segment_startup(W_TO);
+               [W_taxi, f2]    = segment_taxi(W_startup);
+               [W_Takeoff, f3] = segment_takeoff(W_taxi);
+               [W_Climb, f4]   = segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, mission_obj.missiondata.Loiter.TSFC, mission_obj.missiondata.Climb.Altitudeft, T0);
+               [W_Cruise, f5]  = segment_cruise(W_Climb, W_S, mission_obj.missiondata.Cruise.TSFC, mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
+               [W_Dash, f6]    = segment_dash(W_Cruise, S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, mission_obj.missiondata.Dash.CD0, mission_obj.missiondata.Dash.e, AR, mission_obj.missiondata.Dash.TSFC, mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
+               [W_Combat, f7]  = segment_combat(W_Dash, mission_obj.missiondata.Combat.Timemin, mission_obj.missiondata.Combat.TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, mission_obj.missiondata.Combat.CD0, mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
+               [W_Cruise2, f8] = segment_cruise(W_Combat, W_S, mission_obj.missiondata.Cruise_1.TSFC, mission_obj.missiondata.Cruise_1.Rangeft, mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.afts, mission_obj.missiondata.Cruise_1.qlbfft2, mission_obj.missiondata.Cruise_1.CD0, mission_obj.missiondata.Cruise_1.e, AR, W_TO, S_ref);
+               [W_Loiter, f9]  = segment_loiter(W_TO, W_Cruise2, S_ref, mission_obj.missiondata.Loiter.qlbfft2, mission_obj.missiondata.Loiter.CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, mission_obj.missiondata.Loiter.TSFC);
+               [W_Landing, f10]         = segment_landing(W_Loiter, W_TO);
+               total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10;
+               fuel_fraction = total_fuel_used * 1.06 / W_TO;
+
+               % NOW return the total fuel weight!
+
+               % Everything below here should be in the "weight
+               % estimation" class!
+
+               % % Compute empty weight
+               % W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
+               % [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed); % Convert this to use the F16WeightEst class!
+               %
+               % % OEW - update new OEW fraction
+               % empty_weight_fraction = empty_weight/W_TO;
+               %
+               % % W_TO_new = W_fixed / (1 - fuel_fraction - empty_weight_fraction);
+               % W_TO_new = total_fuel_used + W_fixed + empty_weight;
+               %
+               % difference = W_TO_new - W_TO;
+               % percent_diff = 100 * difference / W_TO;
+               %
+               % results(end+1, :) = [W_TO, W_fixed, fuel_fraction, empty_weight_fraction, empty_weight, W_TO_new, difference, percent_diff];
+               %
+               % if abs(difference) < tol
+               %      break;
+               % end
+               % W_TO = W_TO_new;
+               % S_ref = S_ref;
           end
+          % MOVE THIS TO THE "GET_MTOW" FUNCTION
+          % S_ref = S_ref;
+          % beta = 1 - (total_fuel_used / (2 * W_TO));
+          % results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
+          % disp(results_table)
+          % design.WeightResults.W_TO_est = W_TO;
+          % design.WeightResults.W_fuel = total_fuel_used;
+          % end
 
      end
 
@@ -88,110 +148,6 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
           end
 
-
-
-          % This is where we actually compute the fuel for the mission
-          function total_fuel_used = compute_mission_fuel_weight(mission_obj, constraint_obj, design, missiondata, geometry_obj, propulsion_obj, weight_obj)
-               AR = design.geom.wings.Main.AspectRatio;
-               L_fus = design.geom.fuselage.Fuselage.Lengthft;
-               D_fus = design.geom.fuselage.Fuselage.MaxWidthft;
-               c_root = design.geom.wings.Main.RootChordLengthft;
-               b_W = design.geom.wings.Main.Spanft;
-               Cbar_W = design.geom.wings.Main.MeanGeometricChord;
-               lambda = design.geom.wings.Main.TaperRatio;
-               Lambda_qc = design.geom.wings.Main.TaperRatioQc;
-               tc_root = design.geom.wings.Main.tc;
-               c_VT = design.geom.wings.VerticalTail.c_VT;
-               c_HT = design.geom.wings.HorizontalTail.c_HT;
-               BPR = design.propulsion.BypassRatio.BypassRatio;
-
-               W_fixed = missiondata.Startup.PayloadFixedlbf;
-
-               % W_S = 104.59;
-               W_S = constraint_obj.optimal_WS;
-               W_TO = 45000;
-               design.WeightResults.W_TO = W_TO;
-               design.set_W_TO_guess(W_TO);
-               tol = 1e-3;
-               max_iteration = 40;
-               results = [];
-               S_ref = 0;
-               T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
-
-               %% ----------------------------------------------------------------------
-
-               for iteration = 1:max_iteration
-                    S_ref = W_TO / W_S;
-                    total_fuel_used = 0;
-
-                    %% ----------------------------------------------------------------------
-                    % Estimate wetted areas
-                    S_wet = geometry_obj.get_S_wet(W_TO);
-
-                    %% ----------------------------------------------------------------------
-                    % Size the tail (should be a geometry thing)
-                    [S_VT, S_HT] = geometry_obj.size_tail(design, W_TO, S_ref);
-
-
-                    %% ----------------------------------------------------------------------
-                    % Get thrust at takeoff
-                    T0 = T_W*W_TO; % Fidelity III
-
-                    % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
-
-                    %% ----------------------------------------------------------------------
-                    % OEW update from wing and engine change
-                    % WingDelta = WingDensity * (S_ref - W_TO/(W_S));
-                    % EngineDelta = W_Engine - Engine_Sizing(T_W*W_TO);
-
-                    % Loop stuff - should automate segment naming extraction
-                    % (future)
-                    [W_startup, f1] = segment_startup(W_TO);
-                    [W_taxi, f2]    = segment_taxi(W_startup);
-                    [W_Takeoff, f3] = segment_takeoff(W_taxi);
-                    [W_Climb, f4]   = segment_climb(W_TO, W_Takeoff, missiondata.Climb.MachNumber, S_ref, missiondata.Cruise.CD0, missiondata.Cruise.e, AR, missiondata.Loiter.TSFC, missiondata.Climb.Altitudeft, T0);
-                    [W_Cruise, f5]  = segment_cruise(W_Climb, W_S, missiondata.Cruise.TSFC, missiondata.Cruise.Rangeft, missiondata.Cruise.MachNumber, missiondata.Cruise.afts, missiondata.Cruise.qlbfft2, missiondata.Cruise.CD0, missiondata.Cruise.e, AR, W_TO, S_ref);
-                    [W_Dash, f6]    = segment_dash(W_Cruise, S_ref, W_TO, missiondata.Dash.qlbfft2, missiondata.Dash.CD0, missiondata.Dash.e, AR, missiondata.Dash.TSFC, missiondata.Dash.Rangeft, missiondata.Dash.MachNumber * missiondata.Dash.afts);
-                    [W_Combat, f7]  = segment_combat(W_Dash, missiondata.Combat.Timemin, missiondata.Combat.TSFC, missiondata.Combat.PayloadDroplbf, missiondata.Combat.CD0, missiondata.Combat.e, AR, W_TO, missiondata.Combat.qlbfft2, S_ref);
-                    [W_Cruise2, f8] = segment_cruise(W_Combat, W_S, missiondata.Cruise_1.TSFC, missiondata.Cruise_1.Rangeft, missiondata.Cruise_1.MachNumber, missiondata.Cruise_1.afts, missiondata.Cruise_1.qlbfft2, missiondata.Cruise_1.CD0, missiondata.Cruise_1.e, AR, W_TO, S_ref);
-                    [W_Loiter, f9]  = segment_loiter(W_TO, W_Cruise2, S_ref, missiondata.Loiter.qlbfft2, missiondata.Loiter.CD0, missiondata.Loiter.e, AR, missiondata.Loiter.Timemin, missiondata.Loiter.TSFC);
-                    [W_Landing, f10]         = segment_landing(W_Loiter, W_TO);
-                    total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10;
-                    fuel_fraction = total_fuel_used * 1.06 / W_TO;
-
-                    % NOW return the total fuel weight!
-
-                    % Everything below here should be in the "weight
-                    % estimation" class!
-
-                    % Compute empty weight
-                    W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-                    [empty_weight] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed); % Convert this to use the F16WeightEst class!
-
-                    % OEW - update new OEW fraction
-                    empty_weight_fraction = empty_weight/W_TO;
-
-                    % W_TO_new = W_fixed / (1 - fuel_fraction - empty_weight_fraction);
-                    W_TO_new = total_fuel_used + W_fixed + empty_weight;
-
-                    difference = W_TO_new - W_TO;
-                    percent_diff = 100 * difference / W_TO;
-
-                    results(end+1, :) = [W_TO, W_fixed, fuel_fraction, empty_weight_fraction, empty_weight, W_TO_new, difference, percent_diff];
-
-                    if abs(difference) < tol
-                         break;
-                    end
-                    W_TO = W_TO_new;
-                    S_ref = S_ref;
-               end
-               S_ref = S_ref;
-               beta = 1 - (total_fuel_used / (2 * W_TO));
-               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
-               disp(results_table)
-               design.WeightResults.W_TO_est = W_TO;
-               design.WeightResults.W_fuel = total_fuel_used;
-          end
 
 
 

@@ -5,6 +5,7 @@ classdef F16PropulsionEstLevel1 < PropulsionModel
      properties
           enginestats
           TSFC
+          T0
      end
 
      methods
