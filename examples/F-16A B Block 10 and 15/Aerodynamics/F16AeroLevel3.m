@@ -20,9 +20,17 @@ classdef F16AeroLevel3 < AerodynamicsModel
           K
           K1
           K2
+          R_components
+          R_cutoff
+          k
      end
 
      methods
+
+          % Set skin roughness value
+          function k = set_skin_roughness(aero_obj, k)
+               aero_obj.k = k;
+          end
 
           % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
           % Account for biplanes? (Raymer, 6th edi, p 444)
@@ -73,35 +81,58 @@ classdef F16AeroLevel3 < AerodynamicsModel
                aero_obj.Cf = Cf;
           end
 
-          % Get CD0
-          function CD = get_drag(aero_obj, geometry_obj)
+          % Get drag results
+          function CD = get_drag(aero_obj, geometry_obj, design, mission_obj)
+               % Atmosphere_data = atmosphere information for the instant
+               % you're computing.
+               % You can use this for mission segments or just a point
+               % analysis.
+               % Right now, it's just for the entire mission.
 
                % Using component drag buildup method
                % Get Reynolds numbers
-               R_components = get_component_Reynolds_numbers(aero_obj, geometry_obj)
+               segments = mission_obj.missiondata.meta.outerLabels.fields;
+               seg_count = length(mission_obj.missiondata.meta.outerLabels.fields);
+               for i = 1:seg_count
+                    segment = segments{i};
+
+                    atmosphere_data.rho = mission_obj.missiondata.(segment).rhoslugft3;
+                    atmosphere_data.h_ft = mission_obj.missiondata.(segment).Altitudeft;
+                    M = mission_obj.missiondata.(segment).MachNumber;
+                    atmosphere_data.mu = mission_obj.missiondata.(segment).muSlugsfts;
+                    atmosphere_data.a = mission_obj.missiondata.(segment).afts;
+                    atmosphere_data.V = atmosphere_data.a*M;
+
+                    aero_obj.R_components.(segment) = get_component_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment);
+                    aero_obj.R_cutoff.(segment) = get_cutoff_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment, M);
+               end
 
           end
+
+
 
           % Get Reynolds number
           % Split: if user gives all atmospheric properties, use them.
           % Otherwise, use atmosisa
-          function R = get_Reynolds_number(aero_obj, ref_length, rho, M, mu, h_ft)
+          function R = get_Reynolds_number(aero_obj, ref_length, rho, V, mu)
 
-               % Case 1: user supplied rho and mu directly
-               if ~isempty(rho) && ~isempty(mu)
-                    R = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu);
-                    return
-               end
 
-               % Case 2: user supplied altitude, so compute atmosphere
-               if ~isempty(h)
-                    R = compute_Reynolds_number_alt(aero_obj, ref_length, M, h_ft)
-                    return
-               end
-
-               error(['Insufficient inputs. Provide either:' newline ...
-                    '  1) "rho" and "mu", or' newline ...
-                    '  2) "Altitude".']);
+               R = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu);
+               % % Case 1: user supplied rho and mu directly
+               % if ~isempty(rho) && ~isempty(mu)
+               %      R = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu);
+               %      return
+               % end
+               %
+               % % Case 2: user supplied altitude, so compute atmosphere
+               % if ~isempty(h)
+               %      R = compute_Reynolds_number_alt(aero_obj, ref_length, M, h_ft);
+               %      return
+               % end
+               %
+               % error(['Insufficient inputs. Provide either:' newline ...
+               %      '  1) "rho" and "mu", or' newline ...
+               %      '  2) "Altitude".']);
           end
 
      end
@@ -140,16 +171,47 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
 
+
+          %% COMPONENT DRAG BUILDUP METHOD
+
+
           % Get Reynolds number of each component
-          function R_components = get_component_Reynolds_numbers(aero_obj, geometry_obj)
-               R_fuselage = get_Reynolds_number
+          function R_components = get_component_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment)
+               % Update these to use the GEOMETRY object!
+               % Loop through mission segments & design components!!!
+               % I think I can use this "mission segment extractor" up one
+               % layer higher.
+               rho = atmosphere_data.rho;
+               V = atmosphere_data.V;
+               mu = atmosphere_data.mu;
+
+               R_components.R_fuselage = get_Reynolds_number(aero_obj, design.geom.fuselage.Fuselage.Lengthft, rho, V, mu);
+               R_components.R_mainwings = get_Reynolds_number(aero_obj, design.geom.wings.Main.AverageChord, rho, V, mu);
+               R_components.R_HT = get_Reynolds_number(aero_obj, design.geom.wings.HorizontalTail.AverageChord, rho, V, mu);
+               R_components.R_VT = get_Reynolds_number(aero_obj, design.geom.wings.VerticalTail.AverageChord, rho, V, mu);
+          end
 
 
+          % Get cutoff reynolds number for each component
+          function R_cutoff = get_cutoff_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment, M)
+               % Update these to use the GEOMETRY object!
+               % Loop through mission segments & design components!!!
+
+               if M<0.87
+                    R_cutoff.R_cutoff_fuselage = get_R_cutoff_sub(aero_obj, design.geom.fuselage.Fuselage.Lengthft);
+                    R_cutoff.R_cutoff_mainwings = get_R_cutoff_sub(aero_obj, design.geom.wings.Main.AverageChord);
+                    R_cutoff.R_cutoff_HT = get_R_cutoff_sub(aero_obj, design.geom.wings.HorizontalTail.AverageChord);
+                    R_cutoff.R_cutoff_VT = get_R_cutoff_sub(aero_obj, design.geom.wings.VerticalTail.AverageChord);
+               else
+                    R_cutoff.R_cutoff_fuselage = get_R_cutoff_sup(aero_obj, design.geom.fuselage.Fuselage.Lengthft, M);
+                    R_cutoff.R_cutoff_mainwings = get_R_cutoff_sup(aero_obj, design.geom.wings.Main.AverageChord, M);
+                    R_cutoff.R_cutoff_HT = get_R_cutoff_sup(aero_obj, design.geom.wings.HorizontalTail.AverageChord, M);
+                    R_cutoff.R_cutoff_VT = get_R_cutoff_sup(aero_obj, design.geom.wings.VerticalTail.AverageChord, M);
+               end
           end
 
 
 
-          %% COMPONENT DRAG BUILDUP METHOD
 
           % Get form factor (component drag buildup)
           function ff = get_form_factor(aero_obj, l, A_max)
@@ -180,12 +242,12 @@ classdef F16AeroLevel3 < AerodynamicsModel
           %% ESTIMATE REYNOLDS NUMBER OF COMPONENT
           % Get cutoff reynolds number (subsonic)
           function R_cutoff_sub = get_R_cutoff_sub(aero_obj, ref_length)
-               R_cutoff_sub =  (38.21*(ref_length/k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
+               R_cutoff_sub =  (38.21*(ref_length/aero_obj.k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
           end
 
           % Cutoff reynolds number (supersonic)
           function R_cutoff_sup = get_R_cutoff_sup(aero_obj, ref_length, Mach)
-               R_cutoff_sup = (44.62*(ref_length/k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
+               R_cutoff_sup = (44.62*(ref_length/aero_obj.k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
           end
 
           %% SKIN FRICTION COEFFICIENTS - COMPONENTS
