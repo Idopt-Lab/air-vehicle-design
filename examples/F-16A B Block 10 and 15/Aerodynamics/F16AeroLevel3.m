@@ -8,6 +8,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
      %    - lift
      %    - Mach drag divergence
      %    - Sears-Haack stuff?
+     % USE STUFF FROM AERO LEVEL 4 YOU'VE ALREADY DONE THIS
 
      properties
           e_osw
@@ -82,7 +83,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
           % Get drag results
-          function CD = get_drag(aero_obj, geometry_obj, design, mission_obj)
+          function DragResultsOrWhatever = get_drag(aero_obj, geometry_obj, design, mission_obj)
                % Atmosphere_data = atmosphere information for the instant
                % you're computing.
                % You can use this for mission segments or just a point
@@ -103,36 +104,12 @@ classdef F16AeroLevel3 < AerodynamicsModel
                     atmosphere_data.a = mission_obj.missiondata.(segment).afts;
                     atmosphere_data.V = atmosphere_data.a*M;
 
+                    % Assemble structs containing component Reynolds
+                    % numbers
                     aero_obj.R_components.(segment) = get_component_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment);
                     aero_obj.R_cutoff.(segment) = get_cutoff_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment, M);
                end
 
-          end
-
-
-
-          % Get Reynolds number
-          % Split: if user gives all atmospheric properties, use them.
-          % Otherwise, use atmosisa
-          function R = get_Reynolds_number(aero_obj, ref_length, rho, V, mu)
-
-
-               R = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu);
-               % % Case 1: user supplied rho and mu directly
-               % if ~isempty(rho) && ~isempty(mu)
-               %      R = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu);
-               %      return
-               % end
-               %
-               % % Case 2: user supplied altitude, so compute atmosphere
-               % if ~isempty(h)
-               %      R = compute_Reynolds_number_alt(aero_obj, ref_length, M, h_ft);
-               %      return
-               % end
-               %
-               % error(['Insufficient inputs. Provide either:' newline ...
-               %      '  1) "rho" and "mu", or' newline ...
-               %      '  2) "Altitude".']);
           end
 
      end
@@ -144,12 +121,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
 
      methods (Access = private)
-
-          %% COMPUTING REYNOLDS NUMBER
-          % Given V, rho, dynamic viscosity (mu)
-          function output = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu)
-               output = (rho*V*ref_length/mu);
-          end
 
           % Given Mach number and altitude (ft)
           function output = compute_Reynolds_number_alt(aero_obj, ref_length, M, h_ft)
@@ -185,10 +156,10 @@ classdef F16AeroLevel3 < AerodynamicsModel
                V = atmosphere_data.V;
                mu = atmosphere_data.mu;
 
-               R_components.R_fuselage = get_Reynolds_number(aero_obj, design.geom.fuselage.Fuselage.Lengthft, rho, V, mu);
-               R_components.R_mainwings = get_Reynolds_number(aero_obj, design.geom.wings.Main.AverageChord, rho, V, mu);
-               R_components.R_HT = get_Reynolds_number(aero_obj, design.geom.wings.HorizontalTail.AverageChord, rho, V, mu);
-               R_components.R_VT = get_Reynolds_number(aero_obj, design.geom.wings.VerticalTail.AverageChord, rho, V, mu);
+               R_components.R_fuselage = R(aero_obj, design.geom.fuselage.Fuselage.Lengthft, rho, V, mu);
+               R_components.R_mainwings = R(aero_obj, design.geom.wings.Main.AverageChord, rho, V, mu);
+               R_components.R_HT = R(aero_obj, design.geom.wings.HorizontalTail.AverageChord, rho, V, mu);
+               R_components.R_VT = R(aero_obj, design.geom.wings.VerticalTail.AverageChord, rho, V, mu);
           end
 
 
@@ -198,15 +169,15 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Loop through mission segments & design components!!!
 
                if M<0.87
-                    R_cutoff.R_cutoff_fuselage = get_R_cutoff_sub(aero_obj, design.geom.fuselage.Fuselage.Lengthft);
-                    R_cutoff.R_cutoff_mainwings = get_R_cutoff_sub(aero_obj, design.geom.wings.Main.AverageChord);
-                    R_cutoff.R_cutoff_HT = get_R_cutoff_sub(aero_obj, design.geom.wings.HorizontalTail.AverageChord);
-                    R_cutoff.R_cutoff_VT = get_R_cutoff_sub(aero_obj, design.geom.wings.VerticalTail.AverageChord);
+                    R_cutoff.R_cutoff_fuselage = R_cutoff_sub(aero_obj, design.geom.fuselage.Fuselage.Lengthft, aero_obj.k);
+                    R_cutoff.R_cutoff_mainwings = R_cutoff_sub(aero_obj, design.geom.wings.Main.AverageChord, aero_obj.k);
+                    R_cutoff.R_cutoff_HT = R_cutoff_sub(aero_obj, design.geom.wings.HorizontalTail.AverageChord, aero_obj.k);
+                    R_cutoff.R_cutoff_VT = R_cutoff_sub(aero_obj, design.geom.wings.VerticalTail.AverageChord, aero_obj.k);
                else
-                    R_cutoff.R_cutoff_fuselage = get_R_cutoff_sup(aero_obj, design.geom.fuselage.Fuselage.Lengthft, M);
-                    R_cutoff.R_cutoff_mainwings = get_R_cutoff_sup(aero_obj, design.geom.wings.Main.AverageChord, M);
-                    R_cutoff.R_cutoff_HT = get_R_cutoff_sup(aero_obj, design.geom.wings.HorizontalTail.AverageChord, M);
-                    R_cutoff.R_cutoff_VT = get_R_cutoff_sup(aero_obj, design.geom.wings.VerticalTail.AverageChord, M);
+                    R_cutoff.R_cutoff_fuselage = R_cutoff_sup(aero_obj, design.geom.fuselage.Fuselage.Lengthft, M, aero_obj.k);
+                    R_cutoff.R_cutoff_mainwings = R_cutoff_sup(aero_obj, design.geom.wings.Main.AverageChord, M, aero_obj.k);
+                    R_cutoff.R_cutoff_HT = R_cutoff_sup(aero_obj, design.geom.wings.HorizontalTail.AverageChord, M, aero_obj.k);
+                    R_cutoff.R_cutoff_VT = R_cutoff_sup(aero_obj, design.geom.wings.VerticalTail.AverageChord, M, aero_obj.k);
                end
           end
 
@@ -214,62 +185,94 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
 
           % Get form factor (component drag buildup)
-          function ff = get_form_factor(aero_obj, l, A_max)
-               ff = (l/(sqrt((4/pi)*A_max)));
+                   % Form factor
+          % f
+          function output = f(l, d, A_max)
+               output = (l/(sqrt((4/pi)*A_max))); % Raymer, eq 12.33, 6th edition
           end
 
-          %% Get flat-plate skin-friction coefficients
-          % Components: wings, tails, struts, pylons
-          function FF_1 = get_FF_1(aero_obj, x_c, t_c, M, Lambda_m)
-               FF_1 = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cos(Lambda_m)^0.28); % Raymer, eq 12.30, 6th edition
+          % Flat-plat skin friction coefficient.
+          % For wings, tails struts, pylons
+          function output = FF_1(x_c, t_c, M, Lambda_m)
+               output = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cos(Lambda_m)^0.28);
+               % Raymer, eq 12.30, 6th edition
           end
 
-          % Components: Fuselage, smooth canopy
-          function FF_2 = get_FF_2(aero_obj, l, d, A_max)
-               FF_2 = (0.9 + 5/(f(l,d,A_max)^(1.5)) + f(l,d,A_max)/400); % Raymer, eq 12.31, 6th edition
+          % Flat-plate skin friction coefficient.
+          % Fuselage, smooth canopy
+          function output = FF_2(l, d, A_max)
+               output = (0.9 + 5 / (obj.f(l,d,A_max)^(1.5)) + obj.f(l,d,A_max)/400);
           end
+          % Raymer, eq 12.31, 6th edition
 
-          % Components: Boundary layer diverters (double/single wedge,
+          % Flat-plate skin friction coefficient
+          % Nacelle and smooth external store
+          function output = FF_3(l, d, A_max)
+               output = (1 + (0.35 / obj.f(l,d,A_max)));
+          end
+          % Raymer, eq 12.32, 6th edition
+
+          % Boundary layer diverters (double wedge, single wedge,
           % respectively)
-          function FF_doublewedge = get_FF_doublewedge(aero_obj, d, l)
-               FF_doublewedge = (1 + (d/l)); % Raymer, eq 12.34, 6th edition
+          function output = FF_doublewedge(d,l)
+               output = (1+(d/l)); % Raymer, eq 12.34, 6th edition
           end
 
-          function FF_singlewedge = get_FF_singlewedge(aero_obj, d, l)
-               FF_singlewedge = (1 + ((2*d)/l)); % Raymer, eq 12.35, 6th edition
+          function output = FF_singlewedge(d,l)
+               output = (1 + ((2*d)/l)); % Raymer, eq 12.35, 6th edition
           end
 
-          %% ESTIMATE REYNOLDS NUMBER OF COMPONENT
-          % Get cutoff reynolds number (subsonic)
-          function R_cutoff_sub = get_R_cutoff_sub(aero_obj, ref_length)
-               R_cutoff_sub =  (38.21*(ref_length/aero_obj.k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
+          function output = R_cutoff_sub(aero_obj, ref_length, k)
+               output = (38.21*(ref_length/k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
           end
 
-          % Cutoff reynolds number (supersonic)
-          function R_cutoff_sup = get_R_cutoff_sup(aero_obj, ref_length, Mach)
-               R_cutoff_sup = (44.62*(ref_length/aero_obj.k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
+          function output = R_cutoff_sup(aero_obj, ref_length, Mach, k)
+               output = (44.62*(ref_length/k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
           end
 
-          %% SKIN FRICTION COEFFICIENTS - COMPONENTS
-          % Get Cf for:
-          % LAMINAR REGIONS
-          function Cf_lam = get_Cf_lam(aero_obj, R)
-               Cf_lam = (1.328/(sqrt(R)));
+          function output = R(aero_obj, ref_length, rho, V, mu)
+               output = (rho*V*ref_length/mu); % Raymer, eq 12.25, 6th edition
           end
 
-          % TURBULENT REGIONS
-          function Cf_turb = get_Cf_turb(aero_obj, R, Mach)
-               Cf_turb = (0.455/(((log(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
+          function output = Cf_lam(R)
+               output = (1.328/(sqrt(R))); % eq 12.26, 6th ed
           end
 
-          %% INTERFERENCE FACTORS
-          % This will change per design.
-          % User should provide a list or something.
-          % User should provide a struct of interference factors labeled
-          % using the method: Q_componentname
-          % Q_fuselage, Q_BLDiverter, Q_tail, Q_misc, Q_wing
-          function Q_factors = get_Q_factors(aero_obj, struct)
-               Q_factors = struct;
+          function output = Cf_turb(R, Mach)
+               output = (0.455/(((log(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
+               % eq 12.27, 6th ed
+          end
+
+          function output = Dq_upsweep(u,A_max)
+               output = (3.83*u^(2.5)*A_max); % eq 12.36
+          end
+
+          function output = Dq_base_sub(M, A_base)
+               output = ((0.139 + 0.419*(M - 0.161)^2)*A_base); % eq 12.37
+          end
+
+          function output = Dq_base_sup(M, A_base)
+               output = ((0.064 + 0.042*(M - 3.84)^2)*A_base); % eq 12.38
+          end
+
+          function output = Dq_windmillingjet(A_engine_front_face)
+               output = (0.3*A_engine_front_face); % eq 12.40
+          end
+
+          function output = Dq_searshaack(A_max, l)
+               output = (9*pi/2 * (A_max/l)^2); % eq 12.44, 6thh ed
+          end
+
+          function output = Dq_wave(E_WD, M, Lambda_LE_deg, A_max, l)
+               output = (E_WD*(1-0.386*(M-1.2)^(0.57)*(1 - (pi*Lambda_le_deg^0.77)/100))*(Dq_searshaack(A_max, l))); % eq 12.45, 6th ed
+          end
+
+          function output = e_straight(aero_obj, AR)
+               output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
+          end
+
+          function output = e_swept(aero_obj, AR, Lambda_le_deg)
+               output = (4.61*(1-0.045*AR^(0.68))*cos(Lambda_le_deg*pi/180)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
           end
 
 
