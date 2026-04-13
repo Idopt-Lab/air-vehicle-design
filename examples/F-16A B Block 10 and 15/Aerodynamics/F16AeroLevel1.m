@@ -13,7 +13,8 @@ classdef F16AeroLevel1 < AerodynamicsModel
 
      properties
           e_osw
-          CL_max
+          CL
+          CD
           CD0
           K
           K1 % Might need additional abstract classes for each fidelity level

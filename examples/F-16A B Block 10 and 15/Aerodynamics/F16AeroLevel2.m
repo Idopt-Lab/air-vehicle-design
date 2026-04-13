@@ -8,8 +8,12 @@ classdef F16AeroLevel2 < AerodynamicsModel
 
      properties
           e_osw
+          Cf
+          CL
           CL_max
           CD0
+          CD
+          K
           K1
           K2
      end
@@ -17,15 +21,14 @@ classdef F16AeroLevel2 < AerodynamicsModel
      methods
 
           % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
-          function e_osw = compute_e_osw(aero_obj, e_osw)
-               % Level 1: Should be hard-coded or whatever. Independent of
-               % design geometry.
+          function e_osw = get_e_osw(aero_obj, e_osw)
+               % Level 2: Actually compute this?
                aero_obj.e_osw = e_osw;
           end
 
           % Compute K
-          function K1 = compute_K1(aero_obj, e_osw, AR)
-               aero_obj.K1 = 1/(pi*AR*e_osw);
+          function K = compute_K(aero_obj, e_osw, AR)
+               aero_obj.K = 1/(pi*AR*e_osw);
           end
 
           function output = compute_LoverD_cruise(input1)
@@ -36,12 +39,18 @@ classdef F16AeroLevel2 < AerodynamicsModel
                output = input1;
           end
 
-          % Compute CD0
-          function CD = compute_drag(aero_obj, design, mission_obj, requirements_obj)
+          % Get Cf (should be tabulated by user or the program? Stick with
+          % user, for now)
+          function Cf = get_Cf(aero_obj, Cf)
+               aero_obj.Cf = Cf;
+          end
 
-               Cf = 0.0035; % Skin friction coefficient. Take from table (... which should be loaded into design).
-               CD0 = Cf * S_wet/S_ref;
+          % Get CD0
+          function CD = get_drag(aero_obj, geometry_obj)
 
+               aero_obj.CD0 = aero_obj.Cf * geometry_obj.S_wet/geometry_obj.S_ref;
+
+               aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
                
           end
 

@@ -4,7 +4,8 @@ classdef (Abstract) AerodynamicsModel
 
      properties (Abstract) % Initialization not allowed
           e_osw
-          CL_max
+          CL
+          CD
           CD0
           K1
           K2
