@@ -6,26 +6,33 @@ classdef F16AeroLevel1 < AerodynamicsModel
      % functions) from DATA STORAGE CLASSES (classes that just store data).
      % I think WeaponGenerator2 did that.
 
+     % Level 1 fidelity: estimation based on aircraft type. So, the user
+     % tabulates the value, then enters that here (e.g., CD0, K, etc).
+     % alternatively, I can have the user specify the aircraft type, then
+     % pull values from a pre-configured table. That... might work.
+
      properties
           e_osw
           CL_max
           CD0
-          K1
+          K
+          K1 % Might need additional abstract classes for each fidelity level
           K2
      end
 
      methods
 
           % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
-          function e_osw = compute_e_osw(aero_obj, e_osw)
+          function e_osw = get_e_osw(aero_obj, e_osw)
                % Level 1: Should be hard-coded or whatever. Independent of
                % design geometry.
                aero_obj.e_osw = e_osw;
           end
 
-          % Compute K
-          function K1 = compute_K1(aero_obj, e_osw, AR)
-               aero_obj.K1 = 1/(pi*AR*e_osw);
+          % Get K value (gross estimate, tabulated)
+          function K = get_K(aero_obj, K)
+               % aero_obj.K1 = 1/(pi*AR*e_osw);
+               aero_obj.K = K;
           end
 
           function output = compute_LoverD_cruise(input1)
@@ -37,11 +44,13 @@ classdef F16AeroLevel1 < AerodynamicsModel
           end
 
           % Compute CD0
-          function CD = compute_drag(aero_obj, design, mission_obj, requirements_obj)
+          % User must have tabulated these values beforehand: CD0, CL
+          function DragResults = get_drag(aero_obj, CD0, CL)
 
-               Cf = 0.0035; % Skin friction coefficient. Take from table (... which should be loaded into design).
-               CD0 = Cf * S_wet/S_ref;
+               aero_obj.CD0 = CD0;
+               aero_obj.CL = CL;
 
+               aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
           end
 
      end

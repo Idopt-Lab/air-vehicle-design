@@ -12,8 +12,8 @@ classdef (Abstract) AerodynamicsModel
 
 
      methods (Abstract)
-          e_osw = compute_e_osw(obj, Aircraft, Mission, Requirements)
-          CD = compute_drag(obj, Aircraft, Mission, Requirements)
+          e_osw = get_e_osw(aero_obj, Aircraft, Mission, Requirements)
+          DragResults = get_drag(aero_obj, geometry_obj, CD0, CL, Cf)
           % obj = aircraftname?, aircraft = excel book thing
      end
 end
