@@ -1,4 +1,4 @@
-classdef (Abstract) AerodynamicsModel
+classdef (Abstract) AerodynamicsModel < handle
      %AerodynamicsModel Summary of this class goes here
      %   Detailed explanation goes here
 
