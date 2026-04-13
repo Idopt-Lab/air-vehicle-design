@@ -75,7 +75,7 @@ M = 0.5;
 rho_drag_polar = rho_drag_polar*0.00194032033; % Convert from kg/m^3 to imperial
 a_drag_polar = a_drag_polar*0.3048; % Convert from m/s to ft/s
 V = a_drag_polar*M;
-mu = 1.69*10^(-4); % Kinematic viscosity at desired conditions
+mu = 1.69*10^(-4); % Dynamic viscosity at desired conditions
 
 R = @(ref_length, V) (rho_drag_polar*V*ref_length/mu); % Raymer, eq 12.25, 6th edition
 % Ref length = characteristic length

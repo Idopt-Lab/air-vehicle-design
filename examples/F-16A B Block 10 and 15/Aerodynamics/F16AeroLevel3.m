@@ -76,17 +76,80 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % Get CD0
           function CD = get_drag(aero_obj, geometry_obj)
 
-               aero_obj.CD0 = aero_obj.Cf * geometry_obj.S_wet/geometry_obj.S_ref;
+               % Using component drag buildup method
+               % Get Reynolds numbers
+               R_components = get_component_Reynolds_numbers(aero_obj, geometry_obj)
 
-               aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
+          end
 
+          % Get Reynolds number
+          % Split: if user gives all atmospheric properties, use them.
+          % Otherwise, use atmosisa
+          function R = get_Reynolds_number(aero_obj, ref_length, rho, M, mu, h_ft)
+
+               % Case 1: user supplied rho and mu directly
+               if ~isempty(rho) && ~isempty(mu)
+                    R = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu);
+                    return
+               end
+
+               % Case 2: user supplied altitude, so compute atmosphere
+               if ~isempty(h)
+                    R = compute_Reynolds_number_alt(aero_obj, ref_length, M, h_ft)
+                    return
+               end
+
+               error(['Insufficient inputs. Provide either:' newline ...
+                    '  1) "rho" and "mu", or' newline ...
+                    '  2) "Altitude".']);
           end
 
      end
 
+
+
+
+
+
+
      methods (Access = private)
-          function K1 = get_K1_subsonic
+
+          %% COMPUTING REYNOLDS NUMBER
+          % Given V, rho, dynamic viscosity (mu)
+          function output = compute_Reynolds_number(aero_obj, ref_length, rho, V, mu)
+               output = (rho*V*ref_length/mu);
           end
+
+          % Given Mach number and altitude (ft)
+          function output = compute_Reynolds_number_alt(aero_obj, ref_length, M, h_ft)
+               [T, a, ~, rho] = atmosisa(h_ft*0.3048);
+               rho = rho*0.00194032033; % Convert from kg/m^3 to imperial
+               a = a*0.3048; % Convert from m/s to ft/s
+               V = a*M;
+               T = T*1.8; % Convert Kelvin to Rankine
+               mu = compute_dynamicviscosity(T);   % dynamic viscosity
+               output = rho*V*ref_length/mu;
+          end
+
+          % Compute dynamic viscosity (mu) (should probably be in utilities...)
+          function mu = compute_dynamicviscosity(aero_obj, T)
+               % Using Sutherland's Formula
+               T_0 = 518.7; % Rankine
+               mu_0 = 3.62*10^(-7); % (lb*s)/(ft^2)
+               mu = mu_0 * (T/T_0)^(1.5) * ((T_0 + 198.72)/(T + 198.72));
+          end
+
+
+          % Get Reynolds number of each component
+          function R_components = get_component_Reynolds_numbers(aero_obj, geometry_obj)
+               R_fuselage = get_Reynolds_number
+
+
+          end
+
+
+
+          %% COMPONENT DRAG BUILDUP METHOD
 
           % Get form factor (component drag buildup)
           function ff = get_form_factor(aero_obj, l, A_max)
@@ -129,7 +192,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % Get Cf for:
           % LAMINAR REGIONS
           function Cf_lam = get_Cf_lam(aero_obj, R)
-               Cf_lam = (1.328/(sqrt(R));
+               Cf_lam = (1.328/(sqrt(R)));
           end
 
           % TURBULENT REGIONS
@@ -140,6 +203,12 @@ classdef F16AeroLevel3 < AerodynamicsModel
           %% INTERFERENCE FACTORS
           % This will change per design.
           % User should provide a list or something.
+          % User should provide a struct of interference factors labeled
+          % using the method: Q_componentname
+          % Q_fuselage, Q_BLDiverter, Q_tail, Q_misc, Q_wing
+          function Q_factors = get_Q_factors(aero_obj, struct)
+               Q_factors = struct;
+          end
 
 
      end
