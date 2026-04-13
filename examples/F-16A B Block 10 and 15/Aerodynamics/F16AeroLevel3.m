@@ -44,9 +44,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Lambda_LE must be in DEGREES!!!
 
                % Subsonic:
-               K1 = 1/(pi*AR*e_osw); % eq 12.50
-               aero_obj.K1.subsonic = K1;
-          
+               aero_obj.K1.subsonic = 1/(pi*AR*e_osw); % eq 12.50
+
                % Supersonic:
                aero_obj.K1.supersonic = (AR*(M^2 - 1)*cosd(Lambda_LE_degrees))/(4*AR*sqrt(M^2 - 1) - 2);
                % eq 12.51
@@ -65,8 +64,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
                aero_obj.CL_minD = CL_alpha*(-1*aero_obj.alpha_L0_deg/2); % Brandt, cell G20
           end
 
-          % Compute 
-          
+          % Compute
+
 
           % Get Cf (should be tabulated by user or the program? Stick with
           % user, for now)
@@ -86,6 +85,64 @@ classdef F16AeroLevel3 < AerodynamicsModel
      end
 
      methods (Access = private)
+          function K1 = get_K1_subsonic
+          end
+
+          % Get form factor (component drag buildup)
+          function ff = get_form_factor(aero_obj, l, A_max)
+               ff = (l/(sqrt((4/pi)*A_max)));
+          end
+
+          %% Get flat-plate skin-friction coefficients
+          % Components: wings, tails, struts, pylons
+          function FF_1 = get_FF_1(aero_obj, x_c, t_c, M, Lambda_m)
+               FF_1 = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cos(Lambda_m)^0.28); % Raymer, eq 12.30, 6th edition
+          end
+
+          % Components: Fuselage, smooth canopy
+          function FF_2 = get_FF_2(aero_obj, l, d, A_max)
+               FF_2 = (0.9 + 5/(f(l,d,A_max)^(1.5)) + f(l,d,A_max)/400); % Raymer, eq 12.31, 6th edition
+          end
+
+          % Components: Boundary layer diverters (double/single wedge,
+          % respectively)
+          function FF_doublewedge = get_FF_doublewedge(aero_obj, d, l)
+               FF_doublewedge = (1 + (d/l)); % Raymer, eq 12.34, 6th edition
+          end
+
+          function FF_singlewedge = get_FF_singlewedge(aero_obj, d, l)
+               FF_singlewedge = (1 + ((2*d)/l)); % Raymer, eq 12.35, 6th edition
+          end
+
+          %% ESTIMATE REYNOLDS NUMBER OF COMPONENT
+          % Get cutoff reynolds number (subsonic)
+          function R_cutoff_sub = get_R_cutoff_sub(aero_obj, ref_length)
+               R_cutoff_sub =  (38.21*(ref_length/k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
+          end
+
+          % Cutoff reynolds number (supersonic)
+          function R_cutoff_sup = get_R_cutoff_sup(aero_obj, ref_length, Mach)
+               R_cutoff_sup = (44.62*(ref_length/k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
+          end
+
+          %% SKIN FRICTION COEFFICIENTS - COMPONENTS
+          % Get Cf for:
+          % LAMINAR REGIONS
+          function Cf_lam = get_Cf_lam(aero_obj, R)
+               Cf_lam = (1.328/(sqrt(R));
+          end
+
+          % TURBULENT REGIONS
+          function Cf_turb = get_Cf_turb(aero_obj, R, Mach)
+               Cf_turb = (0.455/(((log(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
+          end
+
+          %% INTERFERENCE FACTORS
+          % This will change per design.
+          % User should provide a list or something.
+
 
      end
+
+
 end
