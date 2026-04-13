@@ -36,14 +36,6 @@ classdef F16AeroLevel1 < AerodynamicsModel
                aero_obj.K = K;
           end
 
-          function output = compute_LoverD_cruise(input1)
-               output = input1;
-          end
-
-          function output = compute_LD_revised(input1)
-               output = input1;
-          end
-
           % Compute CD0
           % User must have tabulated these values beforehand: CD0, CL
           function DragResults = get_drag(aero_obj, CD0, CL)
@@ -52,6 +44,14 @@ classdef F16AeroLevel1 < AerodynamicsModel
                aero_obj.CL = CL;
 
                aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
+          end
+
+          %% FOR MISSION ANALYSIS
+          % Compute L/D
+          function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
+               W_by_W_TO = W / W_TO;
+               W_by_S = W_by_W_TO * W_S;
+               LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
           end
 
      end

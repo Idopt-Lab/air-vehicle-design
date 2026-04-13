@@ -31,14 +31,6 @@ classdef F16AeroLevel2 < AerodynamicsModel
                aero_obj.K = 1/(pi*AR*e_osw);
           end
 
-          function output = compute_LoverD_cruise(input1)
-               output = input1;
-          end
-
-          function output = compute_LD_revised(input1)
-               output = input1;
-          end
-
           % Get Cf (should be tabulated by user or the program? Stick with
           % user, for now)
           function Cf = get_Cf(aero_obj, Cf)
@@ -51,7 +43,16 @@ classdef F16AeroLevel2 < AerodynamicsModel
                aero_obj.CD0 = aero_obj.Cf * geometry_obj.S_wet/geometry_obj.S_ref;
 
                aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
-               
+
+          end
+
+          %% FOR MISSION ANALYSIS
+          % Compute L/D (using revised method) (I should probably store
+          % mission segment results somewhere...)
+          function [LD_ratio] = compute_revised_LD_ratio(W, q, S, CD0, e, AR)
+               CL = 2*W/(q*S);
+               K = 1/(pi*e*AR);
+               LD_ratio = CL/(CD0 + K * CL^2);
           end
 
      end
