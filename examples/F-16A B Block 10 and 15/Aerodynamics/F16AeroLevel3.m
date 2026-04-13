@@ -39,9 +39,9 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Level 3: Actually compute this
                % Discern between straight and swept wings.
                if Lambda_LE > 30 % Can I add a section for function handles?
-                    aero_obj.e_osw = 4.61*(1 - 0.045*AR^(0.68)) * cosd(Lambda_LE)^(0.15) - 3.1;
+                    aero_obj.e_osw = e_swept(aero_obj, AR, Lambda_LE);
                elseif (0 <= Lambda_LE) && (Lambda_LE < 30)
-                    aero_obj.e_osw = 1.78*(1 - 0.045*AR^(0.68)) - 0.64;
+                    aero_obj.e_osw = e_straight(aero_obj, AR);
                else
                     error("Error handler, get e_osw level 3.")
                end
@@ -73,13 +73,11 @@ classdef F16AeroLevel3 < AerodynamicsModel
                aero_obj.CL_minD = CL_alpha*(-1*aero_obj.alpha_L0_deg/2); % Brandt, cell G20
           end
 
-          % Compute
-
 
           % Get Cf (should be tabulated by user or the program? Stick with
           % user, for now)
           function Cf = get_Cf(aero_obj, Cf)
-               aero_obj.Cf = Cf;
+               % Differentiate between TURBULENT and LAMINAR RE
           end
 
           % Get drag results
