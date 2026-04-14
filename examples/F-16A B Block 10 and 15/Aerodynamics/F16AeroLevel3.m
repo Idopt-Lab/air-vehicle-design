@@ -7,7 +7,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
      %    - drag (CD, CD0 [sub & sup])
      %    - lift
      %    - Mach drag divergence
-     %    - Sears-Haack stuff?
+     %    - Sears-Haack stuff? (Should probably leave that to Level IV)
      % USE STUFF FROM AERO LEVEL 4 YOU'VE ALREADY DONE THIS
 
      properties
@@ -87,6 +87,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % You can use this for mission segments or just a point
                % analysis.
                % Right now, it's just for the entire mission.
+               % Should determine which segment has the highest drag, then
+               % return that.
 
                % Using component drag buildup method
                % Get Reynolds numbers
@@ -104,8 +106,29 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
                     % Assemble structs containing component Reynolds
                     % numbers
-                    aero_obj.R_components.(segment) = get_component_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment);
-                    aero_obj.R_cutoff.(segment) = get_cutoff_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment, M);
+                    aero_obj.R_components.(segment) = get_component_Reynolds_numbers(aero_obj, design, atmosphere_data);
+                    aero_obj.R_cutoff.(segment) = get_cutoff_Reynolds_numbers(aero_obj, design, M);
+                    % Obtain skin friction coefficients
+                    aero_obj.Cf.lam.(segment) = get_component_Cf_lam(aero_obj, aero_obj.R_components.(segment));
+                    aero_obj.Cf.turb.(segment) = get_component_Cf_turb(aero_obj, aero_obj.R_components.(segment), M);
+
+                    % Check if should use "cutoff" or computed Reynolds number
+                    % for turbulent.
+                    if aero_obj.R_cutoff.(segment).R_cutoff_fuselage < aero_obj.R_components.(segment).R_fuselage
+                         aero_obj.Cf.turb.(segment).Cf_fuselage = Cf_turb(aero_obj, aero_obj.R_cutoff.(segment).R_cutoff_fuselage, M);
+                    end
+
+                    if aero_obj.R_cutoff.(segment).R_cutoff_mainwings < aero_obj.R_components.(segment).R_mainwings
+                         aero_obj.Cf.turb.(segment).Cf_mainwings = Cf_turb(aero_obj, aero_obj.R_cutoff.(segment).R_cutoff_mainwings, M);
+                    end
+
+                    if aero_obj.R_cutoff.(segment).R_cutoff_HT < aero_obj.R_components.(segment).R_HT
+                         aero_obj.Cf.turb.(segment).Cf_HT = Cf_turb(aero_obj, aero_obj.R_cutoff.(segment).R_cutoff_HT, M);
+                    end
+
+                    if aero_obj.R_cutoff.(segment).R_cutoff_VT < aero_obj.R_components.(segment).R_VT
+                         aero_obj.Cf.turb.(segment).Cf_VT = Cf_turb(aero_obj, aero_obj.R_cutoff.(segment).R_cutoff_VT, M);
+                    end
                end
 
           end
@@ -143,9 +166,26 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
           %% COMPONENT DRAG BUILDUP METHOD
 
+          % Getting component skin friction coefficients
+          % LAMINAR
+          function Cf_lam_comp = get_component_Cf_lam(aero_obj, R)
+               Cf_lam_comp.Cf_fuselage = Cf_lam(aero_obj, R.R_fuselage);
+               Cf_lam_comp.Cf_mainwings = Cf_lam(aero_obj, R.R_mainwings);
+               Cf_lam_comp.Cf_HT = Cf_lam(aero_obj, R.R_HT);
+               Cf_lam_comp.Cf_VT = Cf_lam(aero_obj, R.R_VT);
+          end
+
+          % TURBULENT
+          function Cf_turb_comp = get_component_Cf_turb(aero_obj, R, M)
+               Cf_turb_comp.Cf_fuselage = Cf_turb(aero_obj, R.R_fuselage, M);
+               Cf_turb_comp.Cf_mainwings = Cf_turb(aero_obj, R.R_mainwings, M);
+               Cf_turb_comp.Cf_HT = Cf_turb(aero_obj, R.R_HT, M);
+               Cf_turb_comp.Cf_VT = Cf_turb(aero_obj, R.R_VT, M);
+          end
+
 
           % Get Reynolds number of each component
-          function R_components = get_component_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment)
+          function R_components = get_component_Reynolds_numbers(aero_obj, design, atmosphere_data)
                % Update these to use the GEOMETRY object!
                % Loop through mission segments & design components!!!
                % I think I can use this "mission segment extractor" up one
@@ -162,7 +202,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
 
           % Get cutoff reynolds number for each component
-          function R_cutoff = get_cutoff_Reynolds_numbers(aero_obj, geometry_obj, design, atmosphere_data, segment, M)
+          function R_cutoff = get_cutoff_Reynolds_numbers(aero_obj, design, M)
                % Update these to use the GEOMETRY object!
                % Loop through mission segments & design components!!!
 
@@ -183,7 +223,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
 
           % Get form factor (component drag buildup)
-                   % Form factor
+          % Form factor
           % f
           function output = f(l, d, A_max)
                output = (l/(sqrt((4/pi)*A_max))); % Raymer, eq 12.33, 6th edition
@@ -232,36 +272,36 @@ classdef F16AeroLevel3 < AerodynamicsModel
                output = (rho*V*ref_length/mu); % Raymer, eq 12.25, 6th edition
           end
 
-          function output = Cf_lam(R)
+          function output = Cf_lam(aero_obj, R)
                output = (1.328/(sqrt(R))); % eq 12.26, 6th ed
           end
 
-          function output = Cf_turb(R, Mach)
+          function output = Cf_turb(aero_obj, R, Mach)
                output = (0.455/(((log(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
                % eq 12.27, 6th ed
           end
 
-          function output = Dq_upsweep(u,A_max)
+          function output = Dq_upsweep(aero_obj, u,A_max)
                output = (3.83*u^(2.5)*A_max); % eq 12.36
           end
 
-          function output = Dq_base_sub(M, A_base)
+          function output = Dq_base_sub(aero_obj, M, A_base)
                output = ((0.139 + 0.419*(M - 0.161)^2)*A_base); % eq 12.37
           end
 
-          function output = Dq_base_sup(M, A_base)
+          function output = Dq_base_sup(aero_obj, M, A_base)
                output = ((0.064 + 0.042*(M - 3.84)^2)*A_base); % eq 12.38
           end
 
-          function output = Dq_windmillingjet(A_engine_front_face)
+          function output = Dq_windmillingjet(aero_obj, A_engine_front_face)
                output = (0.3*A_engine_front_face); % eq 12.40
           end
 
-          function output = Dq_searshaack(A_max, l)
+          function output = Dq_searshaack(aero_obj, A_max, l)
                output = (9*pi/2 * (A_max/l)^2); % eq 12.44, 6thh ed
           end
 
-          function output = Dq_wave(E_WD, M, Lambda_LE_deg, A_max, l)
+          function output = Dq_wave(aero_obj, E_WD, M, Lambda_LE_deg, A_max, l)
                output = (E_WD*(1-0.386*(M-1.2)^(0.57)*(1 - (pi*Lambda_le_deg^0.77)/100))*(Dq_searshaack(A_max, l))); % eq 12.45, 6th ed
           end
 
