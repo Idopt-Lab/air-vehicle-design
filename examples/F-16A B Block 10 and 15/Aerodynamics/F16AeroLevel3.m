@@ -107,12 +107,20 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
 
 
-          % Can't I just pass the exact component I need?
           function CD0 = get_CD0(aero_obj, statevector, ref_length, Q_component, S_wet_component, S_ref_component)
                % Arguments:
                % aero_obj = aerodynamics object
                % statevector = [u; h] -> [Mach number, altitude (ft)]
                % (ASL)
+               % ref_length = reference length (ft)
+               % Q_component = Interference factor (dimensionless, usually
+               % 1.0 - 1.2
+               % S_wet_component = wetted area of component
+               % S_ref_component = reference area of component
+
+               % Ouptuts:
+               % CD0 = Zero-lift drag coefficient for given component and
+               % state vector
 
                M = statevector(1);
                h_ft = statevector(2);
@@ -123,37 +131,11 @@ classdef F16AeroLevel3 < AerodynamicsModel
                mu = output(2);
                rho = output(3);
 
-
-               % % Component S_wet (move these to geometry, later)
-               % SW_wings = 2.1*geometry_obj.S_ref; % Placeholder/assumption (wetted area is about twice the planform area
-               % SW_HT = 2.1*geometry_obj.S_HT;
-               % SW_VT = 2.1*geometry_obj.S_VT;
-               % SW_struts = 0;
-               % SW_pylons = 0; % Placeholder value of 0 temporary
-
-               % % Initialize some Q factors (revise this later)
-               % aero_obj.Q.Q_fuselage = 1.0;
-               % aero_obj.Q.Q_BLDiverter = 1.0;
-               % aero_obj.Q.Q_tail = 1.05;
-               % aero_obj.Q.Q_misc = 1.01; % Flat assumption for simplicity - all other things add 1% to drag.
-               % aero_obj.Q.Q_wing = 1.0;
-
-               % Compute reynolds number of entire design at the given state
-               % Get the list of design components?
-               % There's gotta be a way to loop through the design
-               % components in a way that's NOT BULLSHIT!
-
+               % Compute the component's reynolds number at the given state
                R_component = R(aero_obj, ref_length, rho, V, mu);
-               % aero_obj.R_components.mainwings = R(aero_obj, design.geom.wings.Main.AverageChord, rho, V, mu);
-               % aero_obj.R_components.HT = R(aero_obj, design.geom.wings.HorizontalTail.AverageChord, rho, V, mu);
-               % aero_obj.R_components.VT = R(aero_obj, design.geom.wings.VerticalTail.AverageChord, rho, V, mu);
 
                % Get cutoff Reynolds number
                R_cutoff = get_R_cutoff(aero_obj, ref_length, M);
-               % aero_obj.R_cutoff.fuselage = get_R_cutoff(aero_obj, design.geom.fuselage.Fuselage.Lengthft, M);
-               % aero_obj.R_cutoff.mainwings = get_R_cutoff(aero_obj, design.geom.wings.Main.AverageChord, M);
-               % aero_obj.R_cutoff.HT = get_R_cutoff(aero_obj, design.geom.wings.HorizontalTail.AverageChord, M);
-               % aero_obj.R_cutoff.VT = get_R_cutoff(aero_obj, design.geom.wings.VerticalTail.AverageChord, M);
 
                % Next, compute the skin friction coefficient for each component
                [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R_component, M);
