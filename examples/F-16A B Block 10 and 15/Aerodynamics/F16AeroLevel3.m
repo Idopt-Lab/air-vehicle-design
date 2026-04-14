@@ -107,14 +107,12 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
 
 
-          function CD0 = get_CD0(aero_obj, statevector, ref_length, Q_component, S_wet_component, S_ref_component)
+          function CD0_component = get_component_CD0(aero_obj, statevector, ref_length, Q_component, S_wet_component, S_ref_component)
                % Arguments:
                % aero_obj = aerodynamics object
-               % statevector = [u; h] -> [Mach number, altitude (ft)]
-               % (ASL)
+               % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
                % ref_length = reference length (ft)
-               % Q_component = Interference factor (dimensionless, usually
-               % 1.0 - 1.2
+               % Q_component = Interference factor (dimensionless, usually 1.0 - 1.2
                % S_wet_component = wetted area of component
                % S_ref_component = reference area of component
 
@@ -153,10 +151,20 @@ classdef F16AeroLevel3 < AerodynamicsModel
                CD_misc = 0;
                CD_LandP = 0;
 
-               CD0 = Component_Drag_val/S_ref_component + CD_misc + CD_LandP;
+               % Now compute the CD0
+               CD0_component = Component_Drag_val/S_ref_component + CD_misc + CD_LandP;
           end
 
 
+
+          % Get design CD0
+          function CD0_design = get_design_CD0(aero_obj, statevector, design, component_list)
+
+               % Get CD0 of all components
+               CD0_components = get_component_CD0(aero_obj, statevector, component_ref_length, Q_component, S_wet_component, S_ref_component);
+
+               CD0_design = CD0_components + CD_misc + CD_LandP;
+          end
 
 
           % Get drag results
@@ -184,7 +192,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
 
-          % Given Mach number and altitude (ft)
+          % Get velocity, mu, and rho, given Mach number and altitude
           function output = get_V_and_mu(aero_obj, M, h_ft)
                [T, a, ~, rho] = atmosisa(h_ft*0.3048);
                rho = rho*0.00194032033; % Convert from kg/m^3 to imperial
