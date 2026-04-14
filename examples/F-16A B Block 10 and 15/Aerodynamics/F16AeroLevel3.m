@@ -64,8 +64,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
           % Compute K2
-          function K2 = compute_K2(aero_obj)
-               aero_obj.K2.subsonic = -2 * aero_obj.K1.subsonic * aero_obj.CL_minD; % Brandt, cell G17
+          function K2 = compute_K2(aero_obj, K1, CL_minD)
+               aero_obj.K2.subsonic = -2 * K1.subsonic * CL_minD; % Brandt, cell G17
                aero_obj.K2.supersonic = 0;
           end
 
@@ -101,13 +101,47 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
           % Get component drag value (whatever that is, Raymer won't
           % specify it)
-          function Component_Drag = get_component_drag(aero_obj, Cf, Q, S_wet)
-               Component_Drag = Cf*Q*S_wet;
+          function Component_Drag = get_component_drag(aero_obj, Cf, Q, S_wet, FF)
+               Component_Drag = Cf*Q*S_wet*FF;
           end
 
 
+          % Compute form factor (wrapper?)
+          function FF = get_FF(aero_obj, component_type, component_specs, M)
 
-          function CD0_component = get_component_CD0(aero_obj, statevector, ref_length, Q_component, S_wet_component, S_ref_component)
+               % Compute form factor
+               if (component_type == "wing") || (component_type == "tail") || (component_type == "strut") || (component_type == "pylon")
+                    x_c = component_specs.xc;
+                    t_c = component_specs.tc;
+                    Lambda_m = component_specs.Lambda_m;
+                    FF = FF_1(aero_obj, x_c, t_c, M, Lambda_m);
+               elseif (component_type == "fuselage") || (component_type == "smooth canopy")
+                    l = component_specs.l;
+                    d = component_specs.d;
+                    A_max = component_specs.A_max;
+                    FF = FF_2(aero_obj, l, d, A_max);
+               elseif (component_type == "nacelle") || (component_type == "smooth external store")
+                    l = component_specs.l;
+                    d = component_specs.d;
+                    A_max = component_specs.A_max;
+                    FF = FF_3(aero_obj, l, d, A_max);
+               elseif (component_type == "double wedge")
+                    l = component_specs.l;
+                    d = component_specs.d;
+                    FF = FF_doublewedge(d, l);
+               elseif (component_type == "single wedge")
+                    l = component_specs.l;
+                    d = component_specs.d;
+                    FF = FF_singlewedge(d, l);
+               else
+                    error("Couldn't identify part. Use: wing, tail, strut, pylon, fuselage, smooth canopy, nacelle, smooth external store, double wedge, single wedge.")
+               end
+          end
+
+
+          % Compute the dimensionless "component drag value" for the
+          % user-specified component.
+          function component_drag_val = get_component_drag_val(aero_obj, statevector, ref_length, Q_component, S_wet_component, component_type, component_specs)
                % Arguments:
                % aero_obj = aerodynamics object
                % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
@@ -143,27 +177,83 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
                % Get the average Cf
                Cf_avg = computeavgcf(aero_obj, R_component, R_cutoff, Cf_turb_result, Cf_lam_result);
+               Cf_component = Cf_avg;
+
+               % Get form factor
+               FF_component = get_FF(aero_obj, component_type, component_specs, M);
 
                % Compute the component drag
-               Component_Drag_val = get_component_drag(aero_obj, Cf_avg, Q_component, S_wet_component);
-
-               % Hard-code some values (these aren't for level III)
-               CD_misc = 0;
-               CD_LandP = 0;
+               component_drag_val = Cf_component*FF_component*Q_component*S_wet_component;
 
                % Now compute the CD0
-               CD0_component = Component_Drag_val/S_ref_component + CD_misc + CD_LandP;
+               % THIS ISN'T ACTUALLY THE CD0 THIS IS THE NUMERATOR FOR THE
+               % CD0 EQUATION FOR THE ENTIRE DESIGN
+               % Remember this is the NUMERATOR for the final calculation
+          end
+
+          % Get component D/q
+          function Dq_component = get_component_Dq(aero_obj, statevector)
           end
 
 
 
           % Get design CD0
-          function CD0_design = get_design_CD0(aero_obj, statevector, design, component_list)
+          function CD0_design = get_design_CD0(aero_obj, statevector, design, geometry_obj, S_ref)
 
-               % Get CD0 of all components
-               CD0_components = get_component_CD0(aero_obj, statevector, component_ref_length, Q_component, S_wet_component, S_ref_component);
+               % Check if super/subsonic conditions:
+               if statevector(1) >= 0.87
+                    % Supersonic
+               elseif statevector(2) < 0.87
+                    % Subsonic
+               else
+                    error("Mach number must be > 0.")
+               end
 
-               CD0_design = CD0_components + CD_misc + CD_LandP;
+               % High-level outline:
+               % Get CD0 of all components (probably use a loop or
+               % something) (PICK UP HERE NEXT TIME)
+               % Get component drag values for: fuselage, main wings, and
+               % tail
+               fuselage_specs.l = design.geom.fuselage.Fuselage.Lengthft;
+               fuselage_specs.d = design.geom.fuselage.Fuselage.MaxWidthft;
+               fuselage_specs.A_max = pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2;
+
+               wings_specs.xc = design.geom.wings.Main.xc;
+               wings_specs.tc = design.geom.wings.Main.tc;
+               wings_specs.Lambda_m = design.geom.wings.Main.SweepLEDeg; % Use Lambda_m instead of LE
+
+               HT_specs.xc = design.geom.wings.HorizontalTail.xc;
+               HT_specs.tc = design.geom.wings.HorizontalTail.tc;
+               HT_specs.Lambda_m = design.geom.wings.HorizontalTail.SweepLEDeg; % Use Lambda_m instead of LE
+
+               VT_specs.xc = design.geom.wings.VerticalTail.xc;
+               VT_specs.tc = design.geom.wings.VerticalTail.tc;
+               VT_specs.Lambda_m = design.geom.wings.VerticalTail.SweepLEDeg; % Use Lambda_m instead of LE
+
+
+               component_drag_value.fuselage = get_component_drag_val(aero_obj, statevector, design.geom.fuselage.Fuselage.Lengthft, 1.00, geometry_obj.S_wet, "fuselage", fuselage_specs);
+               component_drag_value.mainwings = get_component_drag_val(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.S_wet, "wing", wings_specs); % Produces a complex value.
+               component_drag_value.HT = get_component_drag_val(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.S_HT*2.1, "tail", HT_specs);
+               component_drag_value.VT = get_component_drag_val(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.S_VT*2.1, "tail", VT_specs);
+
+               % Get total component drag value
+               component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
+
+               % Get CD_misc
+               CD_misc = get_CD_misc();
+
+               % Get CD_LandP
+               CD_LandP = get_CD_LandP();
+
+               % Get CD_wave
+               CD_wave = get_CD_wave();
+
+               % Subsonic
+               CD0_design.CD0_design_sub = component_drag_value.total/S_ref + CD_misc + CD_LandP;
+
+               % Supersonic
+               CD0_design.CD0_design_sup = component_drag_value.total/S_ref + CD_misc + CD_LandP + CD_wave;
+
           end
 
 
@@ -246,8 +336,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
           % Flat-plate skin friction coefficient
           % Nacelle and smooth external store
-          function output = FF_3(l, d, A_max)
-               output = (1 + (0.35 / obj.f(l,d,A_max)));
+          function output = FF_3(aero_obj, l, d, A_max)
+               output = (1 + (0.35 / aero_obj.f(l,d,A_max)));
           end
           % Raymer, eq 12.32, 6th edition
 

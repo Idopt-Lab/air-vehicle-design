@@ -14,7 +14,7 @@ classdef (Abstract) AerodynamicsModel < handle
 
      methods (Abstract)
           e_osw = get_e_osw(aero_obj, Aircraft, Mission, Requirements)
-          DragResults = get_CD0(aero_obj, statevector, geometry_obj, design)
+          DragResults = get_design_CD0(aero_obj, statevector, geometry_obj, design)
           DragResults = get_drag(aero_obj, statevector, CD0, CL, Cf)
           % obj = aircraftname?, aircraft = excel book thing
      end
