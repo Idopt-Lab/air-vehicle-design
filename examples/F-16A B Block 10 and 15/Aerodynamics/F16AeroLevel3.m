@@ -77,9 +77,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
 
-
-
-
           % Get Cf (should return turb and lam)
           function [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R, M)
                % Differentiate between TURBULENT and LAMINAR RE
@@ -89,6 +86,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Turbulent:
                Cf_turb_result = Cf_turb(aero_obj, R, M);
           end
+
 
           % Get R_cutoff (differentiate between sub and supersonic)
           function R_cutoff = get_R_cutoff(aero_obj, ref_length, M)
@@ -153,7 +151,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Ouptuts:
                % CD0 = Zero-lift drag coefficient for given component and
                % state vector
-
                M = statevector(1);
                h_ft = statevector(2);
 
@@ -191,24 +188,106 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Remember this is the NUMERATOR for the final calculation
           end
 
-          % Get component D/q
-          function Dq_component = get_component_Dq(aero_obj, statevector)
-          end
+          % Get design CD0 (wrapper)
+          function CD0_design = get_design_CD0(aero_obj, statevector, design, geometry_obj, propulsion_obj, S_ref)
 
-
-
-          % Get design CD0
-          function CD0_design = get_design_CD0(aero_obj, statevector, design, geometry_obj, S_ref)
+               M = statevector(1);
+               h_ft = statevector(2);
 
                % Check if super/subsonic conditions:
-               if statevector(1) >= 0.87
-                    % Supersonic
-               elseif statevector(2) < 0.87
-                    % Subsonic
+               if M >= 0.87
+                    % Supersonic (Q & FF = 1.0)
+                    Q = 1.0;
+                    FF = 1.0;
+                    CD0_design = get_design_CD0_sup(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
+               elseif M < 0.87
+                    % Subsonic (Q & FF =/= 1.0)
+                    CD0_design = get_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion);
                else
                     error("Mach number must be > 0.")
                end
 
+
+          end
+
+          % Get design CD0 (subsonic)
+          function output = get_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj)
+
+               M = statevector(1);
+               % h_ft = statevector(2);
+
+               % Get component drag values
+
+               % Compute component "drag values" (the numerator in the CD0
+               % equation)
+               component_drag_value = get_component_drag_values(aero_obj, design, statevector, geometry_obj);
+
+               % Now for the miscellaneous components:
+               % Get CD0_misc for each component
+               CD0_misc = compute_CD0_misc(aero_obj, design, propulsion_obj);
+
+               % Leakages and protuberances:
+               % Get CD0_LandP
+               CD0_LandP = compute_CD0_LandP(aero_obj, S_ref);
+
+               % Subsonic
+               output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total;
+          end
+
+
+          % Get CD0 for a given component (leakage and protuberance model)
+          function component_CD0 = get_CD0_LandP(aero_obj, component_Dq, S_ref)
+               component_CD0 = get_component_CD0_from_Dq(aero_obj, component_Dq, S_ref);
+               % Recall that D/q * q = drag force
+               % D/q divided by S_ref = CD0_component
+          end
+
+          function output = get_component_CD0_from_Dq(aero_obj, component_Dq, S_ref)
+               output = component_Dq/S_ref;
+          end
+
+
+          % Get drag results
+          function DragResults = get_drag(aero_obj, geometry_obj, design, mission_obj, state_input)
+               % This does nothing right now
+
+               % Compute component CD0
+
+               % Compute CDi
+
+               % Compute CD
+
+               % Compute D for given state
+          end
+
+     end
+
+
+
+
+
+
+
+     methods (Access = private)
+
+          % Get CD0_LandP values
+          function output = compute_CD0_LandP(aero_obj, S_ref)
+               CD0_LandP.gun = get_CD0_LandP(aero_obj, 0.20, S_ref);
+               CD0_LandP.hook = get_CD0_LandP(aero_obj, 0.10, S_ref);
+               CD0_LandP.total = CD0_LandP.gun + CD0_LandP.hook;
+               output = CD0_LandP;
+          end
+
+          % Get CD0_misc values
+          function output = compute_CD0_misc(aero_obj, design, propulsion_obj)
+               CD0_misc.windmillingjet = Dq_windmillingjet(aero_obj, pi*(propulsion_obj.enginestats.D/2)^2)/S_ref;
+               CD0_misc.upsweep = Dq_upsweep(aero_obj, 0.01, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2)/S_ref;
+               CD0_misc.total = CD0_misc.windmillingjet + CD0_misc.upsweep;
+               output = CD0_misc;
+          end
+
+          % Get component drag values
+          function output = get_component_drag_values(aero_obj, design, statevector, geometry_obj)
                % High-level outline:
                % Get CD0 of all components (probably use a loop or
                % something) (PICK UP HERE NEXT TIME)
@@ -230,7 +309,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
                VT_specs.tc = design.geom.wings.VerticalTail.tc;
                VT_specs.Lambda_m = design.geom.wings.VerticalTail.SweepLEDeg; % Use Lambda_m instead of LE
 
-
                component_drag_value.fuselage = get_component_drag_val(aero_obj, statevector, design.geom.fuselage.Fuselage.Lengthft, 1.00, geometry_obj.S_wet, "fuselage", fuselage_specs);
                component_drag_value.mainwings = get_component_drag_val(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.S_wet, "wing", wings_specs); % Produces a complex value.
                component_drag_value.HT = get_component_drag_val(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.S_HT*2.1, "tail", HT_specs);
@@ -239,45 +317,17 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Get total component drag value
                component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
 
-               % Get CD_misc
-               CD_misc = get_CD_misc();
-
-               % Get CD_LandP
-               CD_LandP = get_CD_LandP();
-
-               % Get CD_wave
-               CD_wave = get_CD_wave();
-
-               % Subsonic
-               CD0_design.CD0_design_sub = component_drag_value.total/S_ref + CD_misc + CD_LandP;
-
-               % Supersonic
-               CD0_design.CD0_design_sup = component_drag_value.total/S_ref + CD_misc + CD_LandP + CD_wave;
-
+               output = component_drag_value;
           end
-
-
-          % Get drag results
-          function DragResults = get_drag(aero_obj, geometry_obj, design, mission_obj, state_input)
-               % This does nothing right now
-          end
-
-     end
-
-
-
-
-
-
-
-     methods (Access = private)
 
           % Determing which Cf_turb to use
           % If R_cuttoff < R, recompute Cf_turb using R_cutoff. Otherwise,
           % use Cf_turb calculated with R.
-          function Cf_turb_result = get_Cf_turb(aero_obj, Cf_turb_result, R, R_cutoff, M)
+          function output = get_Cf_turb(aero_obj, Cf_turb_result, R, R_cutoff, M)
                if R_cutoff < R
-                    Cf_turb_result = Cf_turb(aero_obj, R_cutoff, M);
+                    output = Cf_turb(aero_obj, R_cutoff, M);
+               else
+                    output = Cf_turb_result;
                end
           end
 
@@ -323,7 +373,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % Flat-plat skin friction coefficient.
           % For wings, tails struts, pylons
           function output = FF_1(aero_obj, x_c, t_c, M, Lambda_m)
-               output = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cos(Lambda_m)^0.28);
+               output = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cosd(Lambda_m)^0.28);
                % Raymer, eq 12.30, 6th edition
           end
 
@@ -372,7 +422,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % eq 12.27, 6th ed
           end
 
-          function output = Dq_upsweep(aero_obj, u,A_max)
+          function output = Dq_upsweep(aero_obj, u, A_max)
                output = (3.83*u^(2.5)*A_max); % eq 12.36
           end
 
