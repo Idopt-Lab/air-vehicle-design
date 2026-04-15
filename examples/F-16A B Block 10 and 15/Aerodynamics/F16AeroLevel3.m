@@ -271,7 +271,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           function DragResults = get_drag(aero_obj, geometry_obj, design, mission_obj, state_input)
                % This does nothing right now
 
-               % Compute component CD0
+               % Compute design CD0
 
                % Compute CDi
 
