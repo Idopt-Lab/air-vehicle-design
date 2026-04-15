@@ -46,6 +46,23 @@ classdef F16AeroLevel3 < AerodynamicsModel
                e_osw = aero_obj.e_osw;
           end
 
+          % Get drag results (mega wrapper)
+          function DragResults = get_drag(aero_obj, geometry_obj, design, mission_obj, propulsion_obj, state_input)
+               % This does nothing right now
+
+               % Compute design CD0 (SHOULD be done)
+               DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.S_ref, propulsion_obj);
+
+               % Compute CDi (next)
+               DragResults.CDi_design = get_design_CDi();
+
+               % Compute CD (not yet implemented)
+               DragResults.CD_design = get_design_CD();
+
+               % Compute D for given state (not yet implemented)
+               DragResults.D_design = deg_design_D();
+          end
+
           % Get Cf (should return turb and lam) (wrapper)
           function [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R, M)
                % Differentiate between TURBULENT and LAMINAR RE
@@ -136,7 +153,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Wave drag for entire design:
                CD0_wave = compute_CD0_wave(aero_obj, M, design.geom.wings.Main.SweepLEDeg, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2, design.geom.fuselage.Total.Lengthft, geometry_obj.S_ref);
 
-               % Supersonic
+               % Supersonic CD0: eq 12.41, Raymer 6th edition.
                output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total + CD0_wave;
 
           end
@@ -161,7 +178,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Get CD0_LandP
                CD0_LandP = compute_CD0_LandP(aero_obj, S_ref);
 
-               % Subsonic
+               % Subsonic CD0: eq 12.24, Raymer 6th edition
                output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total;
           end
 
@@ -265,19 +282,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % THIS ISN'T ACTUALLY THE CD0 THIS IS THE NUMERATOR FOR THE
                % CD0 EQUATION FOR THE ENTIRE DESIGN
                % Remember this is the NUMERATOR for the final calculation
-          end
-
-          % Get drag results (mega wrapper)
-          function DragResults = get_drag(aero_obj, geometry_obj, design, mission_obj, state_input)
-               % This does nothing right now
-
-               % Compute design CD0
-
-               % Compute CDi
-
-               % Compute CD
-
-               % Compute D for given state
           end
 
           % Set skin roughness value
