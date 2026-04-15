@@ -60,7 +60,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % (wrapper)
           function R_cutoff = get_R_cutoff(aero_obj, ref_length, M)
                if M > 0.87
-                    R_cutoff = R_cutoff_sup(aero_obj, ref_length, Mach, aero_obj.k);
+                    R_cutoff = R_cutoff_sup(aero_obj, ref_length, M, aero_obj.k);
                elseif M <= 0.87
                     R_cutoff = R_cutoff_sub(aero_obj, ref_length, aero_obj.k);
                end
@@ -101,14 +101,14 @@ classdef F16AeroLevel3 < AerodynamicsModel
                M = statevector(1);
                h_ft = statevector(2);
                % Check if super/subsonic conditions:
-               if M >= 0.87
+               if M >= 1.2
                     % Supersonic (Q & FF = 1.0)
                     Q = 1.0;
                     FF = 1.0;
-                    CD0_design = get_design_CD0_sup(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
-               elseif M < 0.87
+                    CD0_design = compute_design_CD0_sup(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
+               elseif M < 1.0
                     % Subsonic (Q & FF =/= 1.0)
-                    CD0_design = get_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
+                    CD0_design = compute_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
                else
                     error("Mach number must be > 0.")
                end
@@ -116,13 +116,33 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
           % Get design CD0 (supersonic) (wrapper)
           function output = compute_design_CD0_sup(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj)
-
                M = statevector(1);
+               % h_ft = statevector(2);
+
+               % Get component drag values
+
+               % Compute component "drag values" (the numerator in the CD0
+               % equation)
+               component_drag_value = get_component_drag_values_supersonic(aero_obj, design, statevector, geometry_obj);
+
+               % Now for the miscellaneous components:
+               % Get CD0_misc for each component
+               CD0_misc = compute_CD0_misc(aero_obj, design, propulsion_obj, S_ref);
+
+               % Leakages and protuberances:
+               % Get CD0_LandP
+               CD0_LandP = compute_CD0_LandP(aero_obj, S_ref);
+
+               % Wave drag for entire design:
+               CD0_wave = compute_CD0_wave(aero_obj, M, design.geom.wings.Main.SweepLEDeg, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2, design.geom.fuselage.Total.Lengthft, geometry_obj.S_ref);
+
+               % Supersonic
+               output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total + CD0_wave;
 
           end
 
           % Get design CD0 (subsonic) (wrapper)
-          function output = get_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj)
+          function output = compute_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj)
 
                M = statevector(1);
                % h_ft = statevector(2);
@@ -131,7 +151,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
                % Compute component "drag values" (the numerator in the CD0
                % equation)
-               component_drag_value = get_component_drag_values(aero_obj, design, statevector, geometry_obj);
+               component_drag_value = get_component_drag_values_sub(aero_obj, design, statevector, geometry_obj);
 
                % Now for the miscellaneous components:
                % Get CD0_misc for each component
@@ -186,6 +206,57 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
                % Get form factor
                FF_component = get_FF(aero_obj, component_type, component_specs, M);
+
+               % Compute the component drag
+               output = get_component_drag(aero_obj, Cf_component, Q_component, S_wet_component, FF_component);
+
+               % Now compute the CD0
+               % THIS ISN'T ACTUALLY THE CD0 THIS IS THE NUMERATOR FOR THE
+               % CD0 EQUATION FOR THE ENTIRE DESIGN
+               % Remember this is the NUMERATOR for the final calculation
+          end
+
+          % Compute dimensionless "component drag value" for supersonic
+          % case
+          function output = get_component_drag_val_supersonic(aero_obj, statevector, ref_length, Q_component, S_wet_component, component_type, component_specs)
+               % Arguments:
+               % aero_obj = aerodynamics object
+               % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
+               % ref_length = reference length (ft)
+               % Q_component = Interference factor (dimensionless, usually 1.0 - 1.2
+               % S_wet_component = wetted area of component
+               % S_ref_component = reference area of component
+
+               % Ouptuts:
+               % CD0 = Zero-lift drag coefficient for given component and
+               % state vector
+               M = statevector(1);
+               h_ft = statevector(2);
+
+               % Extract V and mu from altitude
+               bingus = get_V_and_mu(aero_obj, M, h_ft);
+               V = bingus(1);
+               mu = bingus(2);
+               rho = bingus(3);
+
+               % Compute the component's reynolds number at the given state
+               R_component = R(aero_obj, ref_length, rho, V, mu);
+
+               % Get cutoff Reynolds number
+               R_cutoff = get_R_cutoff(aero_obj, ref_length, M);
+
+               % Next, compute the skin friction coefficient for each component
+               [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R_component, M);
+
+               % Determine which CF_turb to use
+               Cf_turb_result = get_Cf_turb(aero_obj, Cf_turb_result, R_component, R_cutoff, M);
+
+               % Get the average Cf
+               Cf_avg = computeavgcf(aero_obj, R_component, R_cutoff, Cf_turb_result, Cf_lam_result);
+               Cf_component = Cf_avg;
+
+               % Get form factor
+               FF_component = 1.0;
 
                % Compute the component drag
                output = get_component_drag(aero_obj, Cf_component, Q_component, S_wet_component, FF_component);
@@ -260,6 +331,13 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
      methods (Access = private)
 
+          % Get CD0_wave values
+          function output = compute_CD0_wave(aero_obj, M, Lambda_LE_deg, A_max, l, S_ref)
+               Dq_wave_value = Dq_wave(aero_obj, 2.2, M, Lambda_LE_deg, A_max, l);
+               CD0_wave = Dq_wave_value/S_ref;
+               output = CD0_wave;
+          end
+
           % Get CD0_LandP values
           function output = compute_CD0_LandP(aero_obj, S_ref)
                CD0_LandP.gun = get_CD0_LandP(aero_obj, 0.20, S_ref);
@@ -276,8 +354,43 @@ classdef F16AeroLevel3 < AerodynamicsModel
                output = CD0_misc;
           end
 
-          % Get component drag values
-          function output = get_component_drag_values(aero_obj, design, statevector, geometry_obj)
+          % Get component drag values (supersonic)
+          function output = get_component_drag_values_supersonic(aero_obj, design, statevector, geometry_obj)
+               % High-level outline:
+               % Get CD0 of all components (probably use a loop or
+               % something) (PICK UP HERE NEXT TIME)
+               % Get component drag values for: fuselage, main wings, and
+               % tail
+               fuselage_specs.l = design.geom.fuselage.Fuselage.Lengthft;
+               fuselage_specs.d = design.geom.fuselage.Fuselage.MaxWidthft;
+               fuselage_specs.A_max = pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2;
+
+               wings_specs.xc = design.geom.wings.Main.xc;
+               wings_specs.tc = design.geom.wings.Main.tc;
+               wings_specs.Lambda_m = design.geom.wings.Main.SweepLEDeg; % Use Lambda_m instead of LE
+
+               HT_specs.xc = design.geom.wings.HorizontalTail.xc;
+               HT_specs.tc = design.geom.wings.HorizontalTail.tc;
+               HT_specs.Lambda_m = design.geom.wings.HorizontalTail.SweepLEDeg; % Use Lambda_m instead of LE
+
+               VT_specs.xc = design.geom.wings.VerticalTail.xc;
+               VT_specs.tc = design.geom.wings.VerticalTail.tc;
+               VT_specs.Lambda_m = design.geom.wings.VerticalTail.SweepLEDeg; % Use Lambda_m instead of LE
+
+               component_drag_value.fuselage = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.fuselage.Fuselage.Lengthft, 1.00, geometry_obj.S_wet, "fuselage", fuselage_specs);
+               component_drag_value.mainwings = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.S_wet, "wing", wings_specs); % Produces a complex value.
+               component_drag_value.HT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.S_HT*2.1, "tail", HT_specs);
+               component_drag_value.VT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.S_VT*2.1, "tail", VT_specs);
+
+               % Get total component drag value
+               component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
+
+               output = component_drag_value;
+          end
+
+
+          % Get component drag values (subsonic)
+          function output = get_component_drag_values_sub(aero_obj, design, statevector, geometry_obj)
                % High-level outline:
                % Get CD0 of all components (probably use a loop or
                % something) (PICK UP HERE NEXT TIME)
@@ -427,15 +540,16 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
           function output = Dq_wave(aero_obj, E_WD, M, Lambda_LE_deg, A_max, l)
-               output = (E_WD*(1-0.386*(M-1.2)^(0.57)*(1 - (pi*Lambda_le_deg^0.77)/100))*(Dq_searshaack(A_max, l))); % eq 12.45, 6th ed
+               output = (E_WD*(1-0.2*(M-1.2)^(0.57)*(1 - (pi*(Lambda_LE_deg^0.77))/100))*(Dq_searshaack(aero_obj, A_max, l))); % eq 12.45, 6th ed
+               % Using 0.2 instead of 0.386 due to Raymer's recommendation.
           end
 
           function output = e_straight(aero_obj, AR)
                output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
           end
 
-          function output = e_swept(aero_obj, AR, Lambda_le_deg)
-               output = (4.61*(1-0.045*AR^(0.68))*cos(Lambda_le_deg*pi/180)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
+          function output = e_swept(aero_obj, AR, Lambda_LE_deg)
+               output = (4.61*(1-0.045*AR^(0.68))*cosd(Lambda_LE_deg)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
           end
 
      end
