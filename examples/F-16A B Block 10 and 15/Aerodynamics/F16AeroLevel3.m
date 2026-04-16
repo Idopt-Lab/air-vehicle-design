@@ -47,7 +47,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
           % Get drag results (mega wrapper)
-          function DragResults = get_drag(aero_obj, geometry_obj, design, mission_obj, propulsion_obj, state_input)
+          function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, state_input)
                % This does nothing right now
 
                % Compute design CD0 (SHOULD be done)
