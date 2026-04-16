@@ -8,6 +8,7 @@ classdef F16GeometryStuff < GeometryEstModel
           % I should definitely use structs for this. Organize into wings,
           % tails, fuselage.
           S_wet
+          S_exposed
           S_HT
           S_VT
           L_VT

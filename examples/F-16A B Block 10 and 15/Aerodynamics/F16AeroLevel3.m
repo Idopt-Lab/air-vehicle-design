@@ -11,13 +11,21 @@ classdef F16AeroLevel3 < AerodynamicsModel
      % USE STUFF FROM AERO LEVEL 4 YOU'VE ALREADY DONE THIS
 
      properties
+          % Are these for the entire design, or for a specific component?
+          % I could pick the "component" interpretation. That would be
+          % specific enough to stop overthinking stuff.
+          % Each "object" could be an individual part of the design.
+          airfoiltype % either "cambered" or "uncambered." Leave empty if NOT AIRFOIL.
           e_osw
           alpha_L0_deg
           Cf
           CL
+          CL_alpha
           CL_max
+          CL_minD
           CD0
           CD
+          D
           K
           K1
           K2
@@ -46,25 +54,162 @@ classdef F16AeroLevel3 < AerodynamicsModel
                e_osw = aero_obj.e_osw;
           end
 
-          % Get drag results (mega wrapper)
-          function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, state_input)
-               % This does nothing right now
+          % Get drag results (mega wrapper) (for an entire design)
+          % I think it'd be easier if I refactored this to compute drag for
+          % specific components.
+          % That could push the design-wide computation to a higher level,
+          % leaving this area more room and more specificity. Good.
+          function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
 
-               % Compute design CD0 (SHOULD be done)
+               % Compute design CD0 (done)
                DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.S_ref, propulsion_obj);
 
-               % Compute CDi (next)
-               DragResults.CDi_design = get_design_CDi();
+               % Compute CDi (done)
+               DragResults.CDi_design = get_design_CDi(aero_obj, state_input, geometry_obj.S_ref, aero_obj.e_osw, design.geom.wings.Main.AspectRatio, W);
 
-               % Compute CD (not yet implemented)
-               DragResults.CD_design = get_design_CD();
+               % Is this for the entire design, or one component? Confirm?
+               % Get CL_alpha
+               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.S_exposed, geometry_obj.S_ref, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.AspectRatio, design.geom.fuselage.Fuselage.MaxWidthft, design.geom.wings.Main.Spanft);
 
-               % Compute D for given state (not yet implemented)
-               DragResults.D_design = deg_design_D();
+               % Is this for the entire design, or one component? Confirm?
+               % Compute CL_minD (done)
+               DragResults.CL_minD = compute_CL_minD(aero_obj, aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
+
+               % Compute CD (done?) (double-check results later)
+               DragResults.CD_design = compute_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, aero_obj.CL_minD, airfoiltype, state_input);
+
+               % Compute D for given state (done)
+               DragResults.D_design = compute_design_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
+          end
+
+          % Get design drag
+          function output = compute_design_D(aero_obj, statevector, CD, S_ref)
+               q = compute_q(aero_obj, statevector);
+               aero_obj.D = CD*q*S_ref;
+               output = aero_obj.D;
+          end
+
+          % Get CD
+          % I could probably move "get_design_CD0" and "get_design_CDi"
+          % into here...
+          function output = compute_design_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector)
+               if airfoiltype == "uncambered"
+                    % Uncambered:
+                    aero_obj.CD = CD0 + CDi;
+               elseif airfoiltype == "cambered"
+                    % Cambered:
+                    M = statevector(1);
+                    if M >= 1.0
+                         aero_obj.CD = CD0 + aero_obj.K1.supersonic*(CL - CL_minD)^2;
+                    elseif M < 1.0
+                         aero_obj.CD = CD0 + aero_obj.K1.subsonic*(CL - CL_minD)^2;
+                    end
+               else
+                    error("Error handler, compute_design_CD, F16AeroLevel3.")
+               end
+               output = aero_obj.CD;
+          end
+
+          % Get CL_minD
+          function output = compute_CL_minD(aero_obj, CL_alpha, alpha_L0_deg)
+               alpha_L0_rad = deg2rad(alpha_L0_deg);
+               aero_obj.CL_minD = CL_alpha*(-1*alpha_L0_rad/2);
+               output = aero_obj.CL_minD;
+          end
+
+          % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
+          % (divide result by 57.3 to get something close to Brandt's
+          % CL_alpha values) (I THINK it's the "wing" one).
+          function output = get_CL_alpha(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t, Lambda_LE_deg, AR, fuselage_width, b)
+               M = statevector(1);
+               Lambda_LE_rad = deg2rad(Lambda_LE_deg);
+               if M>=(1/cos(Lambda_LE_rad))
+                    % Supersonic (leading edge is purely in supersonic
+                    % flow):
+                    aero_obj.CL_alpha = compute_CL_alpha_supersonic(aero_obj, M);
+               elseif M<(1/cos(Lambda_LE_rad))
+                    % Subsonic:
+                    aero_obj.CL_alpha = compute_CL_alpha_subsonic(aero_obj, S_exposed, S_ref, Lambda_max_t, M, AR, fuselage_width, b);
+               else
+                    error("Error handler, get_CL_alpha, F16AeroLevel3.")
+               end
+               output = aero_obj.CL_alpha;
+          end
+
+          % Compute CL_alpha, subsonic
+          function output = compute_CL_alpha_subsonic(aero_obj, S_exposed, S_ref, Lambda_max_t, M, AR, d, b)
+               beta = sqrt(1 - M^2);
+               % If cl_alpha not given, assume eta = 0.95
+               % eta = cl_alpha/(2*pi/beta);
+               eta = 1.0;
+               F = compute_F(aero_obj, d, b);
+               output = (2*pi*AR)/(2 + sqrt(4 + ( ((AR^2 * beta^2)/eta^2)) * (1 + (tand(Lambda_max_t)^2/(beta^2)))))* (S_exposed/S_ref)*F;
+          end
+
+          % Compute fuselage lift factor
+          function output = compute_F(aero_obj, d, b)
+               output = 1.07*(1 + d/b);
+          end
+
+          % Compute CL_alpha, supersonic
+          function output = compute_CL_alpha_supersonic(aero_obj, M)
+               beta = sqrt(M^2 - 1);
+               output = 4/beta;
           end
 
           % Get design CDi for some given state (wrapper)
-          function CDi_design = get_design_CDi
+          % I should differentiate usage between "get" and "compute."
+          % "get" = "wrapper"
+          % "compute" = "non-wrapper"
+          function CDi_design = get_design_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
+               M = statevector(1);
+               % Check if sup/subsonic:
+               if M >=1.0
+                    % Supersonic
+                    alpha_deg = statevector(3);
+                    q = compute_q(aero_obj, statevector);
+                    aero_obj.CL = compute_CL(aero_obj, L, q, S_ref);
+                    CDi_design = compute_CDi_supersonic(aero_obj, aero_obj.CL, alpha_deg);
+               elseif M<1.0
+                    % Subsonic
+                    q = compute_q(aero_obj, statevector);
+                    aero_obj.CL = compute_CL(aero_obj, L, q, S_ref);
+                    CDi_design = compute_CDi_subsonic(aero_obj, aero_obj.CL, e_osw, AR);
+               else
+                    error("Error handler, get_design_CDi, F16AeroLevel3.")
+               end
+          end
+
+          % Compute CDi (subsonic case)
+          function output = compute_CDi_subsonic(aero_obj, CL, e_osw, AR)
+               CDi = ( (CL^2) / (pi * e_osw * AR));
+               output = CDi;
+          end
+
+          % Compute CDi (supersonic case)
+          function output = compute_CDi_supersonic(aero_obj, CL, alpha_deg)
+               CDi = CL*sind(alpha_deg);
+               output = CDi;
+          end
+
+
+          % Get CL for some given state
+          function output = compute_CL(aero_obj, L, q, S_ref)
+               aero_obj.CL = L/(q*S_ref);
+               output = aero_obj.CL;
+          end
+
+          % Get dynamic pressure for some given state
+          function output = compute_q(aero_obj, statevector)
+               M = statevector(1);
+               h_ft = statevector(2);
+               [T,a,P,rho,nu,mu] = atmosisa(h_ft*0.3048);
+               a = a*3.2808399; % Convert from m/s -> ft/s
+               V = a*M; % Get velocity (ft/s)
+               rho = rho*0.00194032033; % Convert from kg/m^3 -> imperial units
+               q = 0.5*rho*V^2; % lbf/ft^2
+               output = q;
+          end
 
           % Get Cf (should return turb and lam) (wrapper)
           function [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R, M)
@@ -309,13 +454,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
                aero_obj.K2.supersonic = 0;
           end
 
-          % Compute CL_minD
-          % Can I automate the computation of alpha_L0?
-          function CL_minD = compute_CL_minD(aero_obj, alpha_L0_deg)
-               aero_obj.alpha_L0_deg = alpha_L0_deg;
-               aero_obj.CL_minD = CL_alpha*(-1*aero_obj.alpha_L0_deg/2); % Brandt, cell G20
-          end
-
           % Get component drag value (whatever that is, Raymer won't
           % specify it)
           function Component_Drag = get_component_drag(aero_obj, Cf, Q, S_wet, FF)
@@ -444,7 +582,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           function output = get_V_and_mu(aero_obj, M, h_ft)
                [T, a, ~, rho] = atmosisa(h_ft*0.3048);
                rho = rho*0.00194032033; % Convert from kg/m^3 to imperial
-               a = a*0.3048; % Convert from m/s to ft/s
+               a = a*3.2808399; % Convert from m/s -> ft/s
                V = a*M;
                T = T*1.8; % Convert Kelvin to Rankine
                mu = compute_dynamicviscosity(aero_obj, T);   % dynamic viscosity
