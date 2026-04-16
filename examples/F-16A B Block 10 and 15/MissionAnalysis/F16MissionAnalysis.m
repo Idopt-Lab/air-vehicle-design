@@ -69,7 +69,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
                W_S = constraint_obj.optimal_WS;
                W_TO = weight_obj.W_TO;
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
-               S_ref = geometry_obj.S_ref;
+               S_ref = geometry_obj.mainwings.S_ref;
                T0 = propulsion_obj.T0;
                
                % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);

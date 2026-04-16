@@ -7,17 +7,17 @@ classdef F16GeometryStuff < GeometryEstModel
           % vertical), fuselage, etc?
           % I should definitely use structs for this. Organize into wings,
           % tails, fuselage.
-          S_wet
-          S_exposed
-          S_HT
-          S_VT
-          L_VT
-          L_HT
-          c_VT
-          c_HT
-          S_ref
-          L_fus
-          MeanGeometricChord
+          % S_wet
+          % S_exposed
+          % S_HT
+          % S_VT
+          % L_VT
+          % L_HT
+          % c_VT
+          % c_HT
+          % S_ref
+          % L_fus
+          % MeanGeometricChord
 
           mainwings
           HT
@@ -36,6 +36,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_exposed', [], ...
                     'S_wet', [], ...
                     'b', [], ...
+                    'c_root', [], ...
                     'MeanGeometricChord', [], ...
                     'airfoil type', []);
 
@@ -44,7 +45,8 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_exposed', [], ...
                     'S_wet', [], ...
                     'b', [], ...
-                    'c', [], ...
+                    'c_root', [], ...
+                    'MeanGeometricChord', [], ...
                     'airfoil type', []);
 
                obj.VT = struct( ...
@@ -53,6 +55,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_wet', [], ...
                     'b', [], ...
                     'c_root', [], ...
+                    'MeanGeometricChord', [], ...
                     'airfoil type', []);
 
                obj.strakes = struct( ...
@@ -61,6 +64,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_wet', [], ...
                     'b', [], ...
                     'c_root', [], ...
+                    'MeanGeometricChord', [], ...
                     'airfoil type', []);
 
                obj.fuselage = struct( ...
@@ -73,6 +77,8 @@ classdef F16GeometryStuff < GeometryEstModel
                obj.design = struct(...
                     'S_wet', []);
           end
+
+          % Add functions for estimating control surface sizing
 
           % Estimate the wetted area of the aircraft
           function output = get_S_wet(obj, W_TO)
@@ -104,7 +110,7 @@ classdef F16GeometryStuff < GeometryEstModel
 
                S_VT = c_VT*b_W*S_ref/obj.VT.L; % eq 6.28, 2nd edition
 
-               S_HT = c_HT*Cbar_W*S_ref/obj.L_HT; % eq 6.29, 2nd edition
+               S_HT = c_HT*Cbar_W*S_ref/obj.HT.L; % eq 6.29, 2nd edition
 
                obj.VT.S_ref = S_VT;
                obj.HT.S_ref = S_HT;

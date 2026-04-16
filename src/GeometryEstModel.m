@@ -3,11 +3,12 @@ classdef (Abstract) GeometryEstModel < handle
      %   Detailed explanation goes here
 
      properties (Abstract)
-          S_wet
-          S_HT
-          S_VT
-          L_VT
-          L_HT
+          mainwings
+          HT
+          VT
+          fuselage
+          strakes
+          design
      end
 
      methods (Abstract)

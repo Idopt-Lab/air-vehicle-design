@@ -40,7 +40,7 @@ classdef F16WeightEstLevel4 < WeightEstModel
           function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design, geometry_obj, W_TO)
                propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(weight_obj, mission_obj, design);
                % weight_obj.get_engine_weight(propulsion_obj, mission_obj, design);
-               weight_obj.OEW = compute_OEW_IV(weight_obj, W_TO, geometry_obj.S_ref, geometry_obj.S_HT, geometry_obj.S_VT, geometry_obj.S_wet, propulsion_obj.T0, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
+               weight_obj.OEW = compute_OEW_IV(weight_obj, W_TO, geometry_obj.mainwings.S_ref, geometry_obj.HT.S_ref, geometry_obj.VT.S_ref, geometry_obj.design.S_wet, propulsion_obj.T0, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
 
