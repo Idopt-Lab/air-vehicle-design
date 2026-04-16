@@ -70,7 +70,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
                % Get CL_alpha
-               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.S_exposed, geometry_obj.S_ref, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.AspectRatio, design.geom.fuselage.Fuselage.MaxWidthft, design.geom.wings.Main.Spanft);
+               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.AspectRatio, design.geom.fuselage.Fuselage.MaxWidthft, design.geom.wings.Main.Spanft);
 
                % Is this for the entire design, or one component? Confirm?
                % Compute CL_minD (done)
