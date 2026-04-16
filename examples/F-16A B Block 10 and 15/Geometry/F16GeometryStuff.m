@@ -24,6 +24,7 @@ classdef F16GeometryStuff < GeometryEstModel
           VT
           fuselage
           strakes
+          design
      end
 
      methods
@@ -63,13 +64,17 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_wet', [], ...
                     'L', [], ...
                     'MeanGeometricChord', []);
+
+               obj.design = struct(...
+                    'S_wet', []);
           end
 
           % Estimate the wetted area of the aircraft
-          function S_wet = get_S_wet(obj, W_TO)
+          function output = get_S_wet(obj, W_TO)
                c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-               S_wet = 10^(c) * W_TO^(d); % ft^2
+               obj.design.S_wet = 10^(c) * W_TO^(d); % ft^2
+               output = obj.design.S_wet;
           end
 
           % Size the tail
@@ -89,15 +94,15 @@ classdef F16GeometryStuff < GeometryEstModel
                L_VT = L_fus*0.8;
                L_HT = L_fus*0.8; % Allow operator to adjust this, later.
 
-               obj.L_VT = L_VT;
-               obj.L_HT = L_HT;
+               obj.VT.L = L_VT;
+               obj.HT.L = L_HT;
 
-               S_VT = c_VT*b_W*S_ref/obj.L_VT; % eq 6.28, 2nd edition
+               S_VT = c_VT*b_W*S_ref/obj.VT.L; % eq 6.28, 2nd edition
 
                S_HT = c_HT*Cbar_W*S_ref/obj.L_HT; % eq 6.29, 2nd edition
 
-               obj.S_VT = S_VT;
-               obj.S_HT = S_HT;
+               obj.VT.S_ref = S_VT;
+               obj.HT.S_ref = S_HT;
 
           end
      end
