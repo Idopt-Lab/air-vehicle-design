@@ -19,12 +19,11 @@ classdef F16GeometryStuff < GeometryEstModel
           L_fus
           MeanGeometricChord
 
-          % mainwings
-          % HT
-          % VT
-          % fuselage
-          % strakes
-          % MeanGeometricChord
+          mainwings
+          HT
+          VT
+          fuselage
+          strakes
      end
 
      methods
