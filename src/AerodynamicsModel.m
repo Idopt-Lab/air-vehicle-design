@@ -15,7 +15,7 @@ classdef (Abstract) AerodynamicsModel < handle
      methods (Abstract)
           % These should be like wrappers!
           e_osw = get_e_osw(aero_obj, Aircraft, Mission, Requirements)
-          CD0_design = get_design_CD0(aero_obj, statevector, geometry_obj, design)
+          CD0 = get_design_CD0(aero_obj, statevector, geometry_obj, design)
           CD = get_design_CD(aero_obj, statevector, geometry_obj);
           DragResults = get_design_drag(aero_obj, statevector, CD0, CL, Cf) % THE MEGA WRAPPER :O
           % obj = aircraftname?, aircraft = excel book thing

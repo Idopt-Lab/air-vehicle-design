@@ -54,6 +54,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
                e_osw = aero_obj.e_osw;
           end
 
+          % Compute Mach drag divergence
+
           % Get drag results (mega wrapper) (for an entire design)
           % I think it'd be easier if I refactored this to compute drag for
           % specific components.
@@ -654,9 +656,11 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % eq 12.27, 6th ed
           end
 
-          function output = Dq_upsweep(aero_obj, u, A_max)
+          function output = Dq_upsweep(aero_obj, u, A_max) 
                output = (3.83*u^(2.5)*A_max); % eq 12.36
           end
+          % What's upsweep?
+          % I dunno, what about you? AAAYY
 
           function output = Dq_base_sub(aero_obj, M, A_base)
                output = ((0.139 + 0.419*(M - 0.161)^2)*A_base); % eq 12.37

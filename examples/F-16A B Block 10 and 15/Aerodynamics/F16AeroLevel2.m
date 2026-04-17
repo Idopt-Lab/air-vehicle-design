@@ -71,8 +71,8 @@ classdef F16AeroLevel2 < AerodynamicsModel
 
           % Get CD0
           function output = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
-               aero_obj.CD0_design = Cf * S_wet_aircraft/S_ref;
-               output = aero_obj.CD0_design;
+               aero_obj.CD0 = Cf * S_wet_aircraft/S_ref;
+               output = aero_obj.CD0;
           end
 
           %% FOR MISSION ANALYSIS
