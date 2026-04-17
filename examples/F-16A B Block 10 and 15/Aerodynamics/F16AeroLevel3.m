@@ -59,7 +59,10 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % specific components.
           % That could push the design-wide computation to a higher level,
           % leaving this area more room and more specificity. Good.
-          function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
+          function DragResults = get_design_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
+
+               % Compute q
+               q = AerodynamicsModel.compute_q(aero_obj, state_input);
 
                % Compute design CD0 (done)
                DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
@@ -77,10 +80,11 @@ classdef F16AeroLevel3 < AerodynamicsModel
                DragResults.CL_minD = compute_CL_minD(aero_obj, aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
 
                % Compute CD (done?) (double-check results later)
-               DragResults.CD_design = compute_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, aero_obj.CL_minD, airfoiltype, state_input);
+               DragResults.CD_design = get_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, aero_obj.CL_minD, airfoiltype, state_input);
 
                % Compute D for given state (done)
-               DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
+               % DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
+               DragResults.D_design = AerodynamicsModel.compute_D(aero_obj, q, DragResults.CD_design, geometry_obj.mainwings.S_ref);
           end
 
           % Get design drag
@@ -93,7 +97,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % Get CD
           % I could probably move "get_design_CD0" and "get_design_CDi"
           % into here...
-          function output = compute_design_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector)
+          function output = get_design_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector)
                if airfoiltype == "uncambered"
                     % Uncambered:
                     aero_obj.CD = CD0 + CDi;
@@ -541,26 +545,26 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % something) (PICK UP HERE NEXT TIME)
                % Get component drag values for: fuselage, main wings, and
                % tail
-               fuselage_specs.l = design.geom.fuselage.Fuselage.Lengthft;
-               fuselage_specs.d = design.geom.fuselage.Fuselage.MaxWidthft;
-               fuselage_specs.A_max = pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2;
+               fuselage_specs.l = geometry_obj.fuselage.L;
+               fuselage_specs.d = geometry_obj.fuselage.W_max;
+               fuselage_specs.A_max = pi*(fuselage_specs.d/2)^2;
 
-               wings_specs.xc = design.geom.wings.Main.xc;
-               wings_specs.tc = design.geom.wings.Main.tc;
-               wings_specs.Lambda_m = design.geom.wings.Main.SweepLEDeg; % Use Lambda_m instead of LE
+               wings_specs.xc = geometry_obj.mainwings.xc;
+               wings_specs.tc = geometry_obj.mainwings.tc;
+               wings_specs.Lambda_m = geometry_obj.mainwings.LE_sweep; % Use Lambda_m instead of LE
 
-               HT_specs.xc = design.geom.wings.HorizontalTail.xc;
-               HT_specs.tc = design.geom.wings.HorizontalTail.tc;
-               HT_specs.Lambda_m = design.geom.wings.HorizontalTail.SweepLEDeg; % Use Lambda_m instead of LE
+               HT_specs.xc = geometry_obj.HT.xc;
+               HT_specs.tc = geometry_obj.HT.tc;
+               HT_specs.Lambda_m = geometry_obj.HT.LE_sweep; % Use Lambda_m instead of LE
 
-               VT_specs.xc = design.geom.wings.VerticalTail.xc;
-               VT_specs.tc = design.geom.wings.VerticalTail.tc;
-               VT_specs.Lambda_m = design.geom.wings.VerticalTail.SweepLEDeg; % Use Lambda_m instead of LE
+               VT_specs.xc = geometry_obj.VT.xc;
+               VT_specs.tc = geometry_obj.VT.tc;
+               VT_specs.Lambda_m = geometry_obj.VT.LE_sweep; % Use Lambda_m instead of LE
 
-               component_drag_value.fuselage = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.fuselage.Fuselage.Lengthft, 1.00, geometry_obj.S_wet, "fuselage", fuselage_specs);
-               component_drag_value.mainwings = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.S_wet, "wing", wings_specs); % Produces a complex value.
-               component_drag_value.HT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.S_HT*2.1, "tail", HT_specs);
-               component_drag_value.VT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.S_VT*2.1, "tail", VT_specs);
+               component_drag_value.fuselage = get_component_drag_val_subsonic(aero_obj, statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet, "fuselage", fuselage_specs);
+               component_drag_value.mainwings = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet, "wing", wings_specs); % Produces a complex value.
+               component_drag_value.HT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.HT.S_ref*2.1, "tail", HT_specs);
+               component_drag_value.VT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.VT.S_ref*2.1, "tail", VT_specs);
 
                % Get total component drag value
                component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;

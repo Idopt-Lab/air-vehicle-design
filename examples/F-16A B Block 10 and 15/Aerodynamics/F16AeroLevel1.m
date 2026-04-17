@@ -38,7 +38,7 @@ classdef F16AeroLevel1 < AerodynamicsModel
 
           % Compute CD0
           % User must have tabulated these values beforehand: CD0, CL
-          function DragResults = get_drag(aero_obj, CD0, CL)
+          function DragResults = get_design_drag(aero_obj, CD0, CL)
 
                aero_obj.CD0 = CD0;
                aero_obj.CL = CL;
@@ -49,6 +49,9 @@ classdef F16AeroLevel1 < AerodynamicsModel
           % Get design drag
           function DragResults = get_design_CD0(input)
 
+          end
+
+          function output =  get_design_CD()
           end
 
           %% FOR MISSION ANALYSIS

@@ -16,6 +16,7 @@ classdef F16AeroLevel2 < AerodynamicsModel
           K
           K1
           K2
+          DragResults
      end
 
      methods
@@ -28,7 +29,8 @@ classdef F16AeroLevel2 < AerodynamicsModel
 
           % Compute K
           function K = compute_K(aero_obj, e_osw, AR)
-               aero_obj.K = 1/(pi*AR*e_osw);
+               K = 1/(pi*AR*e_osw);
+               aero_obj.K = K;
           end
 
           % Get Cf (should be tabulated by user or the program? Stick with
@@ -38,17 +40,31 @@ classdef F16AeroLevel2 < AerodynamicsModel
           end
 
           % Get CD0
-          function CD = get_drag(aero_obj, geometry_obj)
+          function DragResults = get_design_drag(aero_obj, geometry_obj)
 
-               aero_obj.CD0 = aero_obj.Cf * geometry_obj.S_wet/geometry_obj.S_ref;
+               DragResults.CD0 = get_design_CD0(aero_obj, aero_obj.Cf, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
 
-               aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
+               DragResults.CD = DragResults.CD0 + aero_obj.K*aero_obj.CL^2;
 
           end
 
-          % Get CD0
-          function DragResults = get_design_CD0(input)
+          % Compute CL
+          function output = compute_CL(aero_obj, statevector, W, S_ref)
+               q = compute_q(aero_obj, statevector);
+               CL = 1;
+          end
 
+          % Get CD
+          function output = get_design_CD(aero_obj, statevector, K)
+               CL = compute_CL(aero_obj, statevector, W, S_ref)
+               CD = CD0 + K*CL^2;
+               output = CD;
+          end
+
+          % Get CD0
+          function output = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
+               CD0_design = Cf * S_wet_aircraft/S_ref;
+               output = CD0_design;
           end
 
           %% FOR MISSION ANALYSIS
