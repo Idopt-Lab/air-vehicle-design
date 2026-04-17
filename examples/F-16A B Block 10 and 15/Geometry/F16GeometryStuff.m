@@ -92,6 +92,8 @@ classdef F16GeometryStuff < GeometryEstModel
 
                obj.design = struct(...
                     'S_wet', []);
+
+               % Now load the design's geometry!
           end
 
           % Add functions for estimating control surface sizing
