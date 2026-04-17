@@ -51,7 +51,10 @@ classdef F16AeroLevel1 < AerodynamicsModel
 
           end
 
-          function output =  get_design_CD()
+          % Get design CD
+          function output = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+               aero_obj.CD = CD0 + K*CL^2;
+               output = aero_obj.CD;
           end
 
           %% FOR MISSION ANALYSIS
