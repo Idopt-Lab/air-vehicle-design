@@ -12,7 +12,7 @@ classdef (Abstract) GeometryEstModel < handle
      end
 
      methods (Abstract)
-          output = get_S_wet(obj, design)
+          output = get_design_S_wet(obj, design)
           [s_ht, S_vt] = size_tail(obj, design)
      end
 end

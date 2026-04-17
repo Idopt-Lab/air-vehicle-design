@@ -28,6 +28,12 @@ classdef (Abstract) AerodynamicsModel < handle
                output = CL;
           end
 
+          % Get design drag
+          function output = compute_D(aero_obj, q, CD, S_ref)
+               D = CD*q*S_ref;
+               output = D;
+          end
+
           % Get dynamic pressure for some given state
           function output = compute_q(aero_obj, statevector)
                M = statevector(1);
@@ -39,11 +45,6 @@ classdef (Abstract) AerodynamicsModel < handle
                q = 0.5*rho*V^2; % lbf/ft^2
                output = q;
           end
-
-          % Get design drag
-          function output = compute_D(aero_obj, q, CD, S_ref)
-               D = CD*q*S_ref;
-               output = D;
-          end
+          
      end
 end

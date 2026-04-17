@@ -80,7 +80,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
                DragResults.CL_minD = compute_CL_minD(aero_obj, aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
 
                % Compute CD (done?) (double-check results later)
-               DragResults.CD_design = get_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, aero_obj.CL_minD, airfoiltype, state_input);
+               aero_obj.K1 = compute_K1(aero_obj, aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
+               DragResults.CD_design = get_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
 
                % Compute D for given state (done)
                % DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
@@ -97,7 +98,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % Get CD
           % I could probably move "get_design_CD0" and "get_design_CDi"
           % into here...
-          function output = get_design_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector)
+          function output = get_design_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector, K1)
                if airfoiltype == "uncambered"
                     % Uncambered:
                     aero_obj.CD = CD0 + CDi;
@@ -105,9 +106,9 @@ classdef F16AeroLevel3 < AerodynamicsModel
                     % Cambered:
                     M = statevector(1);
                     if M >= 1.0
-                         aero_obj.CD = CD0 + aero_obj.K1.supersonic*(CL - CL_minD)^2;
+                         aero_obj.CD = CD0 + K1.supersonic*(CL - CL_minD)^2;
                     elseif M < 1.0
-                         aero_obj.CD = CD0 + aero_obj.K1.subsonic*(CL - CL_minD)^2;
+                         aero_obj.CD = CD0 + K1.subsonic*(CL - CL_minD)^2;
                     end
                else
                     error("Error handler, compute_design_CD, F16AeroLevel3.")
@@ -304,7 +305,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                CD0_LandP = compute_CD0_LandP(aero_obj, S_ref);
 
                % Wave drag for entire design:
-               CD0_wave = compute_CD0_wave(aero_obj, M, design.geom.wings.Main.SweepLEDeg, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2, design.geom.fuselage.Total.Lengthft, geometry_obj.S_ref);
+               CD0_wave = compute_CD0_wave(aero_obj, M, geometry_obj.mainwings.LE_sweep, pi*(geometry_obj.fuselage.W_max/2)^2, geometry_obj.fuselage.L, S_ref);
 
                % Supersonic CD0: eq 12.41, Raymer 6th edition.
                output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total + CD0_wave;
@@ -442,15 +443,19 @@ classdef F16AeroLevel3 < AerodynamicsModel
           end
 
           % Compute K1
-          function K1 = compute_K1(aero_obj, e_osw, AR, M, Lambda_LE_degrees)
+          function output = compute_K1(aero_obj, e_osw, AR, M, Lambda_LE_degrees)
                % Lambda_LE must be in DEGREES!!!
 
                % Subsonic:
-               aero_obj.K1.subsonic = 1/(pi*AR*e_osw); % eq 12.50
+               K1.subsonic = 1/(pi*AR*e_osw); % eq 12.50
 
                % Supersonic:
-               aero_obj.K1.supersonic = (AR*(M^2 - 1)*cosd(Lambda_LE_degrees))/(4*AR*sqrt(M^2 - 1) - 2);
+               K1.supersonic = (AR*(M^2 - 1)*cosd(Lambda_LE_degrees))/(4*AR*sqrt(M^2 - 1) - 2);
                % eq 12.51
+
+               aero_obj.K1 = K1;
+
+               output = K1;
           end
 
           % Compute K2
@@ -510,26 +515,26 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % something) (PICK UP HERE NEXT TIME)
                % Get component drag values for: fuselage, main wings, and
                % tail
-               fuselage_specs.l = design.geom.fuselage.Fuselage.Lengthft;
-               fuselage_specs.d = design.geom.fuselage.Fuselage.MaxWidthft;
-               fuselage_specs.A_max = pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2;
+               fuselage_specs.l = geometry_obj.fuselage.L;
+               fuselage_specs.d = geometry_obj.fuselage.W_max;
+               fuselage_specs.A_max = pi*(fuselage_specs.d/2)^2;
 
-               wings_specs.xc = design.geom.wings.Main.xc;
-               wings_specs.tc = design.geom.wings.Main.tc;
-               wings_specs.Lambda_m = design.geom.wings.Main.SweepLEDeg; % Use Lambda_m instead of LE
+               wings_specs.xc = geometry_obj.mainwings.xc;
+               wings_specs.tc = geometry_obj.mainwings.tc;
+               wings_specs.Lambda_m = geometry_obj.mainwings.LE_sweep; % Use Lambda_m instead of LE
 
-               HT_specs.xc = design.geom.wings.HorizontalTail.xc;
-               HT_specs.tc = design.geom.wings.HorizontalTail.tc;
-               HT_specs.Lambda_m = design.geom.wings.HorizontalTail.SweepLEDeg; % Use Lambda_m instead of LE
+               HT_specs.xc = geometry_obj.HT.xc;
+               HT_specs.tc = geometry_obj.HT.tc;
+               HT_specs.Lambda_m = geometry_obj.HT.LE_sweep; % Use Lambda_m instead of LE
 
-               VT_specs.xc = design.geom.wings.VerticalTail.xc;
-               VT_specs.tc = design.geom.wings.VerticalTail.tc;
-               VT_specs.Lambda_m = design.geom.wings.VerticalTail.SweepLEDeg; % Use Lambda_m instead of LE
+               VT_specs.xc = geometry_obj.VT.xc;
+               VT_specs.tc = geometry_obj.VT.tc;
+               VT_specs.Lambda_m = geometry_obj.VT.LE_sweep; % Use Lambda_m instead of LE
 
-               component_drag_value.fuselage = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.fuselage.Fuselage.Lengthft, 1.00, geometry_obj.S_wet);
-               component_drag_value.mainwings = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.S_wet);
-               component_drag_value.HT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.S_HT*2.1);
-               component_drag_value.VT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.S_VT*2.1);
+               component_drag_value.fuselage = get_component_drag_val_supersonic(aero_obj, statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet);
+               component_drag_value.mainwings = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet);
+               component_drag_value.HT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.HT.S_ref*2.1);
+               component_drag_value.VT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.VT.S_ref*2.1);
 
                % Get total component drag value
                component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
@@ -563,8 +568,8 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
                component_drag_value.fuselage = get_component_drag_val_subsonic(aero_obj, statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet, "fuselage", fuselage_specs);
                component_drag_value.mainwings = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet, "wing", wings_specs); % Produces a complex value.
-               component_drag_value.HT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.HT.S_ref*2.1, "tail", HT_specs);
-               component_drag_value.VT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.VT.S_ref*2.1, "tail", VT_specs);
+               component_drag_value.HT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.05, geometry_obj.HT.S_ref*2.1, "tail", HT_specs);
+               component_drag_value.VT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.05, geometry_obj.VT.S_ref*2.1, "tail", VT_specs);
 
                % Get total component drag value
                component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;

@@ -55,11 +55,11 @@ classdef F16AeroLevel2 < AerodynamicsModel
           end
 
           % Get CD
-          function output = get_design_CD(aero_obj, statevector, K)
-               CL = compute_CL(aero_obj, statevector, W, S_ref)
-               CD = CD0 + K*CL^2;
-               output = CD;
-          end
+          % function output = get_design_CD(aero_obj, statevector, K)
+          %      CL = compute_CL(aero_obj, statevector, W, S_ref)
+          %      CD = CD0 + K*CL^2;
+          %      output = CD;
+          % end
 
           % Get CD0
           function output = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
