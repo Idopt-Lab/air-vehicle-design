@@ -111,7 +111,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                output = aero_obj.CD;
           end
 
-          % Get CL_minD
+          % Get CL_minD (using brandt's equation)
           function output = compute_CL_minD(aero_obj, CL_alpha, alpha_L0_deg)
                alpha_L0_rad = deg2rad(alpha_L0_deg);
                aero_obj.CL_minD = CL_alpha*(-1*alpha_L0_rad/2);

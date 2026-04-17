@@ -20,7 +20,7 @@ classdef F16AeroLevel2 < AerodynamicsModel
 
      methods
 
-          % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
+          % Compute Oswald span efficiency factor
           function e_osw = get_e_osw(aero_obj, e_osw)
                % Level 2: Actually compute this?
                aero_obj.e_osw = e_osw;

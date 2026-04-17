@@ -43,7 +43,7 @@ classdef Sizing
 
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)
-                    [geometry_obj.VT.S_ref, geometry_obj.HT.S_ref] = geometry_obj.size_tail(design, weight_obj.W_TO, geometry_obj.mainwings.S_ref);
+                    [geometry_obj.VT.S_ref, geometry_obj.HT.S_ref] = geometry_obj.size_tail(design, geometry_obj.mainwings.S_ref);
 
 
                     %% ----------------------------------------------------------------------
