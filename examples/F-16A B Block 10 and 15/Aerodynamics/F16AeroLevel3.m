@@ -62,10 +62,10 @@ classdef F16AeroLevel3 < AerodynamicsModel
           function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
 
                % Compute design CD0 (done)
-               DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.S_ref, propulsion_obj);
+               DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
 
                % Compute CDi (done)
-               DragResults.CDi_design = get_design_CDi(aero_obj, state_input, geometry_obj.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
+               DragResults.CDi_design = get_design_CDi(aero_obj, state_input, geometry_obj.mainwings.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
 
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
