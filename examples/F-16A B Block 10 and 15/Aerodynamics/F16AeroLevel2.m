@@ -40,26 +40,31 @@ classdef F16AeroLevel2 < AerodynamicsModel
           end
 
           % Get CD0
-          function DragResults = get_design_drag(aero_obj, geometry_obj)
+          function DragResults = get_design_drag(aero_obj, geometry_obj, state_input)
+               W = state_input(4);
 
+               % Get q
+               q = AerodynamicsModel.compute_q(aero_obj, state_input);
+
+               % Get CL
+               aero_obj.CL = AerodynamicsModel.compute_CL(aero_obj, W, q, geometry_obj.mainwings.S_ref);
+
+               % Get CD0
                DragResults.CD0 = get_design_CD0(aero_obj, aero_obj.Cf, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
 
-               DragResults.CD = DragResults.CD0 + aero_obj.K*aero_obj.CL^2;
+               % Compute K
+               aero_obj.compute_K(aero_obj.e_osw, geometry_obj.mainwings.AR)
+
+               % Compute the CD
+               DragResults.CD = get_design_CD(aero_obj, DragResults.CD0, aero_obj.K, aero_obj.CL);
 
           end
 
-          % Compute CL
-          function output = compute_CL(aero_obj, statevector, W, S_ref)
-               q = compute_q(aero_obj, statevector);
-               CL = 1;
+          % Get design CD
+          function output = get_design_CD(aero_obj, CD0, K, CL)
+               aero_obj.CD = CD0 + K*CL^2;
+               output = aero_obj.CD;
           end
-
-          % Get CD
-          % function output = get_design_CD(aero_obj, statevector, K)
-          %      CL = compute_CL(aero_obj, statevector, W, S_ref)
-          %      CD = CD0 + K*CL^2;
-          %      output = CD;
-          % end
 
           % Get CD0
           function output = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
@@ -76,5 +81,8 @@ classdef F16AeroLevel2 < AerodynamicsModel
                LD_ratio = CL/(CD0 + K * CL^2);
           end
 
+     end
+
+     methods (Access = private)
      end
 end

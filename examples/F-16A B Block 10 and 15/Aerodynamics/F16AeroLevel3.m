@@ -169,17 +169,17 @@ classdef F16AeroLevel3 < AerodynamicsModel
           % "compute" = "non-wrapper"
           function CDi_design = get_design_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
                M = statevector(1);
+               q = AerodynamicsModel.compute_q(aero_obj, statevector);
+
                % Check if sup/subsonic:
                if M >=1.0
                     % Supersonic
                     alpha_deg = statevector(3);
-                    q = compute_q(aero_obj, statevector);
-                    aero_obj.CL = compute_CL(aero_obj, L, q, S_ref);
+                    aero_obj.CL = AerodynamicsModel.compute_CL(aero_obj, L, q, S_ref);
                     CDi_design = compute_CDi_supersonic(aero_obj, aero_obj.CL, alpha_deg);
                elseif M<1.0
                     % Subsonic
-                    q = compute_q(aero_obj, statevector);
-                    aero_obj.CL = compute_CL(aero_obj, L, q, S_ref);
+                    aero_obj.CL = AerodynamicsModel.compute_CL(aero_obj, L, q, S_ref);
                     CDi_design = compute_CDi_subsonic(aero_obj, aero_obj.CL, e_osw, AR);
                else
                     error("Error handler, get_design_CDi, F16AeroLevel3.")
@@ -196,25 +196,6 @@ classdef F16AeroLevel3 < AerodynamicsModel
           function output = compute_CDi_supersonic(aero_obj, CL, alpha_deg)
                CDi = CL*sind(alpha_deg);
                output = CDi;
-          end
-
-
-          % Get CL for some given state
-          function output = compute_CL(aero_obj, L, q, S_ref)
-               aero_obj.CL = L/(q*S_ref);
-               output = aero_obj.CL;
-          end
-
-          % Get dynamic pressure for some given state
-          function output = compute_q(aero_obj, statevector)
-               M = statevector(1);
-               h_ft = statevector(2);
-               [T,a,P,rho,nu,mu] = atmosisa(h_ft*0.3048);
-               a = a*3.2808399; % Convert from m/s -> ft/s
-               V = a*M; % Get velocity (ft/s)
-               rho = rho*0.00194032033; % Convert from kg/m^3 -> imperial units
-               q = 0.5*rho*V^2; % lbf/ft^2
-               output = q;
           end
 
           % Get Cf (should return turb and lam) (wrapper)
