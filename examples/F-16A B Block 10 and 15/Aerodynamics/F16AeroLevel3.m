@@ -65,12 +65,12 @@ classdef F16AeroLevel3 < AerodynamicsModel
                DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.S_ref, propulsion_obj);
 
                % Compute CDi (done)
-               DragResults.CDi_design = get_design_CDi(aero_obj, state_input, geometry_obj.S_ref, aero_obj.e_osw, design.geom.wings.Main.AspectRatio, W);
+               DragResults.CDi_design = get_design_CDi(aero_obj, state_input, geometry_obj.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
 
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
                % Get CL_alpha
-               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.SweepLEDeg, design.geom.wings.Main.AspectRatio, design.geom.fuselage.Fuselage.MaxWidthft, design.geom.wings.Main.Spanft);
+               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
 
                % Is this for the entire design, or one component? Confirm?
                % Compute CL_minD (done)

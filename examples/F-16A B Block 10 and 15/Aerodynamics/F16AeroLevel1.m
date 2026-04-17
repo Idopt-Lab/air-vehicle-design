@@ -46,6 +46,11 @@ classdef F16AeroLevel1 < AerodynamicsModel
                aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
           end
 
+          % Get design drag
+          function DragResults = get_design_CD0(input)
+
+          end
+
           %% FOR MISSION ANALYSIS
           % Compute L/D
           function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)

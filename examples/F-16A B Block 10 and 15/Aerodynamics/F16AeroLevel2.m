@@ -46,6 +46,11 @@ classdef F16AeroLevel2 < AerodynamicsModel
 
           end
 
+          % Get CD0
+          function DragResults = get_design_CD0(input)
+
+          end
+
           %% FOR MISSION ANALYSIS
           % Compute L/D (using revised method) (I should probably store
           % mission segment results somewhere...)
