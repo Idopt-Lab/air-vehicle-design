@@ -39,7 +39,7 @@ classdef Sizing
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
-                    S_wet = geometry_obj.get_S_wet(W_TO);
+                    S_wet = geometry_obj.get_design_S_wet(W_TO);
 
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)

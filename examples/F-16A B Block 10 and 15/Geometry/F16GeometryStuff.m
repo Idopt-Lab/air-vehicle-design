@@ -97,7 +97,7 @@ classdef F16GeometryStuff < GeometryEstModel
           % Add functions for estimating control surface sizing
 
           % Estimate the wetted area of the aircraft
-          function output = get_S_wet(obj, W_TO)
+          function output = get_design_S_wet(obj, W_TO)
                c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
                obj.design.S_wet = 10^(c) * W_TO^(d); % ft^2
@@ -107,6 +107,11 @@ classdef F16GeometryStuff < GeometryEstModel
           % Size the tail
           function [S_HT, S_VT] = size_tail(obj, design, S_ref)
                [S_HT, S_VT] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, S_ref, design.geom.fuselage.Fuselage.Lengthft, design.geom.wings.Main.MeanGeometricChord);
+          end
+
+          % Estimate exposed wetted areas (lifting surfaces)
+          function output = S_wet_est(obj, S_exposed, tc)
+               output = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
           end
      end
 
