@@ -80,11 +80,11 @@ classdef F16AeroLevel3 < AerodynamicsModel
                DragResults.CD_design = compute_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, aero_obj.CL_minD, airfoiltype, state_input);
 
                % Compute D for given state (done)
-               DragResults.D_design = compute_design_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
+               DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
           end
 
           % Get design drag
-          function output = compute_design_D(aero_obj, statevector, CD, S_ref)
+          function output = compute_D(aero_obj, statevector, CD, S_ref)
                q = compute_q(aero_obj, statevector);
                aero_obj.D = CD*q*S_ref;
                output = aero_obj.D;
