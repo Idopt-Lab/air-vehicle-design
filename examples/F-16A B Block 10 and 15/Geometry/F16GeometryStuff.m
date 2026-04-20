@@ -30,7 +30,7 @@ classdef F16GeometryStuff < GeometryEstModel
      methods
 
 
-          function obj = F16GeometryStuff()
+          function obj = F16GeometryStuff(design)
                obj.mainwings = struct( ...
                     'S_ref', [], ...
                     'S_exposed', [], ...
@@ -94,6 +94,108 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_wet', []);
 
                % Now load the design's geometry!
+               if nargin > 0 && ~isempty(design)
+                    obj.loaddesigngeometry(design)
+               end
+          end
+
+          % Load design geometry for initial calculations
+          function loaddesigngeometry(geometry_obj, design)
+               % ---------- Main wing ----------
+               if isfield(design.geom.wings, 'Main')
+                    wing = design.geom.wings.Main;
+
+                    if isfield(wing, 'PlanformAreaft2')
+                         obj.mainwings.S_ref = wing.PlanformAreaft2;
+                    end
+                    if isfield(wing, 'Spanft')
+                         obj.mainwings.b = wing.Spanft;
+                    end
+                    if isfield(wing, 'RootChordLengthft')
+                         obj.mainwings.c_root = wing.RootChordLengthft;
+                    end
+                    if isfield(wing, 'MeanGeometricChord')
+                         obj.mainwings.MeanGeometricChord = wing.MeanGeometricChord;
+                    end
+                    if isfield(wing, 'SweepLEDeg')
+                         obj.mainwings.LE_sweep = wing.SweepLEDeg;
+                    end
+                    if isfield(wing, 'AspectRatio')
+                         obj.mainwings.AR = wing.AspectRatio;
+                    end
+                    if isfield(wing, 'xc')
+                         obj.mainwings.xc = wing.xc;
+                    end
+                    if isfield(wing, 'tc')
+                         obj.mainwings.tc = wing.tc;
+                    end
+               end
+
+               % ---------- Horizontal tail ----------
+               if isfield(design.geom.wings, 'HorizontalTail')
+                    ht = design.geom.wings.HorizontalTail;
+
+                    if isfield(ht, 'Spanft')
+                         obj.HT.b = ht.Spanft;
+                    end
+                    if isfield(ht, 'RootChordLengthft')
+                         obj.HT.c_root = ht.RootChordLengthft;
+                    end
+                    if isfield(ht, 'MeanGeometricChord')
+                         obj.HT.MeanGeometricChord = ht.MeanGeometricChord;
+                    end
+                    if isfield(ht, 'SweepLEDeg')
+                         obj.HT.LE_sweep = ht.SweepLEDeg;
+                    end
+                    if isfield(ht, 'AspectRatio')
+                         obj.HT.AR = ht.AspectRatio;
+                    end
+                    if isfield(ht, 'xc')
+                         obj.HT.xc = ht.xc;
+                    end
+                    if isfield(ht, 'tc')
+                         obj.HT.tc = ht.tc;
+                    end
+               end
+
+               % ---------- Vertical tail ----------
+               if isfield(design.geom.wings, 'VerticalTail')
+                    vt = design.geom.wings.VerticalTail;
+
+                    if isfield(vt, 'Spanft')
+                         obj.VT.b = vt.Spanft;
+                    end
+                    if isfield(vt, 'RootChordLengthft')
+                         obj.VT.c_root = vt.RootChordLengthft;
+                    end
+                    if isfield(vt, 'MeanGeometricChord')
+                         obj.VT.MeanGeometricChord = vt.MeanGeometricChord;
+                    end
+                    if isfield(vt, 'SweepLEDeg')
+                         obj.VT.LE_sweep = vt.SweepLEDeg;
+                    end
+                    if isfield(vt, 'AspectRatio')
+                         obj.VT.AR = vt.AspectRatio;
+                    end
+                    if isfield(vt, 'xc')
+                         obj.VT.xc = vt.xc;
+                    end
+                    if isfield(vt, 'tc')
+                         obj.VT.tc = vt.tc;
+                    end
+               end
+
+               % ---------- Fuselage ----------
+               if isfield(design.geom, 'fuselage') && isfield(design.geom.fuselage, 'Fuselage')
+                    fus = design.geom.fuselage.Fuselage;
+
+                    if isfield(fus, 'Lengthft')
+                         obj.fuselage.L = fus.Lengthft;
+                    end
+                    if isfield(fus, 'MaxWidthft')
+                         obj.fuselage.W_max = fus.MaxWidthft;
+                    end
+               end
           end
 
           % Add functions for estimating control surface sizing
