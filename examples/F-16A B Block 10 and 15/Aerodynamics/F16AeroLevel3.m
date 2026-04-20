@@ -39,9 +39,10 @@ classdef F16AeroLevel3 < AerodynamicsModel
 
      methods
           % constructor
-          function obj = F16AeroLevel3()
+          function obj = F16AeroLevel3(geometry_obj)
                % Set to "smooth paint"
                obj.k = set_skin_roughness(obj, 2.08*10^(-5));
+               obj.e_osw = get_e_osw(obj, geometry_obj.mainwings.AR, geometry_obj.mainwings.LE_sweep);
           end
 
           % Compute Oswald span efficiency factor (wrapper)
