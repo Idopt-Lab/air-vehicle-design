@@ -55,6 +55,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
+                    'exposed_halfspan', [], ...
                     'airfoil_type', []);
 
                obj.VT = struct( ...
@@ -68,6 +69,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
+                    'exposed_halfspan', [], ...
                     'airfoil_type', []);
 
                obj.strakes = struct( ...
@@ -81,6 +83,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
+                    'exposed_halfspan', [], ...
                     'airfoil_type', []);
 
                obj.fuselage = struct( ...
@@ -129,6 +132,12 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(wing, 'tc')
                          obj.mainwings.tc = wing.tc;
                     end
+                    if isfield(wing, 'ExposedHalfspan')
+                         obj.mainwings.ExposedHalfspan = wing.ExposedHalfspan;
+                    end
+                    if isfield(wing, 'ExposedRootchord')
+                         obj.mainwings.ExposedRootchord = wing.ExposedRootchord;
+                    end
                end
 
                % ---------- Horizontal tail ----------
@@ -156,6 +165,12 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(ht, 'tc')
                          obj.HT.tc = ht.tc;
                     end
+                    if isfield(ht, 'ExposedHalfspan')
+                         obj.ht.ExposedHalfspan = ht.ExposedHalfspan;
+                    end
+                    if isfield(ht, 'ExposedRootchord')
+                         obj.ht.ExposedRootchord = ht.ExposedRootchord;
+                    end
                end
 
                % ---------- Vertical tail ----------
@@ -182,6 +197,12 @@ classdef F16GeometryStuff < GeometryEstModel
                     end
                     if isfield(vt, 'tc')
                          obj.VT.tc = vt.tc;
+                    end
+                    if isfield(vt, 'ExposedHalfspan')
+                         obj.vt.ExposedHalfspan = vt.ExposedHalfspan;
+                    end
+                    if isfield(vt, 'ExposedRootchord')
+                         obj.vt.ExposedRootchord = vt.ExposedRootchord;
                     end
                end
 
@@ -211,6 +232,12 @@ classdef F16GeometryStuff < GeometryEstModel
           % Size the tail
           function [S_HT, S_VT] = size_tail(obj, design, S_ref)
                [S_HT, S_VT] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, S_ref, design.geom.fuselage.Fuselage.Lengthft, design.geom.wings.Main.MeanGeometricChord);
+          end
+
+          % Estimate exposed surface area (lifting surface)
+          % Source: Brandt, "F16A", "Geom" sheet, cell H7.
+          function output = get_S_exposed(geometry_obj, tip_length, exposed_rc, exposed_halfspan)
+               output = exposed_halfspan*(exposed_rc + tip_length);
           end
 
           % Estimate exposed wetted areas (lifting surfaces)
