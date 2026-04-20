@@ -10,6 +10,11 @@ classdef F16MissionAnalysis < MissionAnalysisModel
      end
 
      methods
+          % Constructor
+          function obj = F16MissionAnalysis(design, Chosen_Mission)
+               obj.missiondata = get_mission_data(obj, design, Chosen_Mission);
+          end
+
           % Decide if weight estimation goes in "MissionAnalysis" or
           % "WeightEstimation". Don't overcomplicate it.
 

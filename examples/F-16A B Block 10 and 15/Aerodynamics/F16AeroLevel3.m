@@ -38,6 +38,11 @@ classdef F16AeroLevel3 < AerodynamicsModel
      end
 
      methods
+          % constructor
+          function obj = F16AeroLevel3()
+               % Set to "smooth paint"
+               obj.k = set_skin_roughness(obj, 2.08*10^(-5));
+          end
 
           % Compute Oswald span efficiency factor (wrapper)
           % Account for biplanes? (Raymer, 6th edi, p 444)
@@ -75,7 +80,7 @@ classdef F16AeroLevel3 < AerodynamicsModel
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
                % Get CL_alpha
-               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               aero_obj.CL_alpha = get_CL_alpha(aero_obj, state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.Sweep_qc_deg, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
 
                % Is this for the entire design, or one component? Confirm?
                % Compute CL_minD (done)
