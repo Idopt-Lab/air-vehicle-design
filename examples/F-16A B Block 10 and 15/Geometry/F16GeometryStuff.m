@@ -39,6 +39,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'c_root', [], ...
                     'MeanGeometricChord', [], ...
                     'LE_sweep', [], ...
+                    'QC_sweep', [], ...
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
@@ -55,6 +56,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'c_root', [], ...
                     'MeanGeometricChord', [], ...
                     'LE_sweep', [], ...
+                    'QC_sweep', [], ...
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
@@ -71,6 +73,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'c_root', [], ...
                     'MeanGeometricChord', [], ...
                     'LE_sweep', [], ...
+                    'QC_sweep', [], ...
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
@@ -87,6 +90,7 @@ classdef F16GeometryStuff < GeometryEstModel
                     'c_root', [], ...
                     'MeanGeometricChord', [], ...
                     'LE_sweep', [], ...
+                    'QC_sweep', [], ...
                     'AR', [], ...
                     'xc', [], ...
                     'tc', [], ...
@@ -100,15 +104,31 @@ classdef F16GeometryStuff < GeometryEstModel
                     'S_exposed', [], ...
                     'S_wet', [], ...
                     'L', [], ...
-                    'W_max', []);
+                    'W_max', [], ...
+                    'h_max', []);
 
                obj.design = struct(...
-                    'S_wet', []);
+                    'S_wet', [],...
+                    'W_max', [], ...
+                    'total_length', []);
 
                % Now load the design's geometry!
                if nargin > 0 && ~isempty(design)
                     obj.loaddesigngeometry(design)
                end
+
+               % Get S_exposed for each component
+               obj.mainwings.S_exposed = get_S_exposed(obj, obj.mainwings.tip_chord, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
+               obj.HT.S_exposed = get_S_exposed(obj, obj.HT.tip_chord, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
+               obj.VT.S_exposed = get_S_exposed(obj, obj.VT.tip_chord, obj.VT.exposed_rc, obj.VT.exposed_halfspan);
+
+               % Get S_wet for each component
+               obj.mainwings.S_wet = get_S_wet_wing(obj, obj.mainwings.S_exposed, obj.mainwings.tc);
+               obj.HT.S_wet = get_S_wet_wing(obj, obj.HT.S_exposed, obj.HT.tc);
+               obj.VT.S_wet = get_S_wet_wing(obj, obj.VT.S_exposed, obj.VT.tc);
+               obj.fuselage.S_wet = get_S_wet_fuselage(obj, obj.design.total_length, obj.fuselage.W_max, obj.fuselage.h_max);
+               % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
+
           end
 
           % Load design geometry for initial calculations
@@ -150,6 +170,9 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(wing, 'TipChordLengthft')
                          obj.mainwings.tip_chord = wing.TipChordLengthft;
                     end
+                    if isfield(wing, 'AngleOfQuarterchordLinerad')
+                         obj.mainwings.QC_sweep = rad2deg(wing.AngleOfQuarterchordLinerad)
+                    end
                end
 
                % ---------- Horizontal tail ----------
@@ -186,6 +209,9 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(ht, 'TipChordLengthft')
                          obj.HT.tip_chord = ht.TipChordLengthft;
                     end
+                    if isfield(ht, 'AngleOfQuarterchordLinerad')
+                         obj.HT.QC_sweep = rad2deg(ht.AngleOfQuarterchordLinerad);
+                    end
                end
 
                % ---------- Vertical tail ----------
@@ -216,11 +242,14 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(vt, 'ExposedHalfspan')
                          obj.VT.exposed_halfspan = vt.ExposedHalfspan;
                     end
-                    if isfield(vt, 'ExposedRootchord')
+                    if isfield(vt, 'ExposedRootChord')
                          obj.VT.exposed_rc = vt.ExposedRootChord;
                     end
                     if isfield(vt, 'TipChordLengthft')
                          obj.VT.tip_chord = vt.TipChordLengthft;
+                    end
+                    if isfield(vt, 'AngleOfQuarterchordLinerad')
+                         obj.VT.QC_sweep = rad2deg(vt.AngleOfQuarterchordLinerad);
                     end
                end
 
@@ -234,7 +263,23 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(fus, 'MaxWidthft')
                          obj.fuselage.W_max = fus.MaxWidthft;
                     end
+                    if isfield(fus, 'MaxHeightft')
+                         obj.fuselage.h_max = fus.MaxHeightft;
+                    end
                end
+
+               % ---------- Design ----------
+               if isfield(design.geom, 'fuselage') && isfield(design.geom.fuselage, 'Fuselage')
+                    tot = design.geom.fuselage.Total;
+
+                    if isfield(tot, 'Lengthft')
+                         obj.design.total_length = tot.Lengthft;
+                    end
+                    if isfield(tot, 'MaxWidthft')
+                         obj.design.W_max = tot.MaxWidthft;
+                    end
+               end
+
           end
 
           % Add functions for estimating control surface sizing
@@ -259,8 +304,14 @@ classdef F16GeometryStuff < GeometryEstModel
           end
 
           % Estimate exposed wetted areas (lifting surfaces)
-          function output = S_wet_est(geometry_obj, S_exposed, tc)
+          function output = get_S_wet_wing(geometry_obj, S_exposed, tc)
                output = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
+          end
+
+          % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
+          % cone approximation)
+          function output = get_S_wet_fuselage(geometry_obj, fuselage_length, fuselage_max_width, max_height)
+               output = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
           end
 
           % Estimate wing sweep at quarter-chord (deg)

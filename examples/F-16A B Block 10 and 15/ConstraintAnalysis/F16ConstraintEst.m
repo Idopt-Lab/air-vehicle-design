@@ -18,6 +18,11 @@ classdef F16ConstraintEst < ConstraintModel
 
      methods
 
+          % Constructor for my sanity
+          function obj = F16ConstraintEst(obj, design)
+               constraint_analysis(obj, design);
+          end
+
           % do a complete constraint analysis
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj, design)
 
