@@ -147,6 +147,9 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(wing, 'ExposedRootChord')
                          obj.mainwings.exposed_rc = wing.ExposedRootChord;
                     end
+                    if isfield(wing, 'TipChordLengthft')
+                         obj.mainwings.tip_chord = wing.TipChordLengthft;
+                    end
                end
 
                % ---------- Horizontal tail ----------
@@ -180,6 +183,9 @@ classdef F16GeometryStuff < GeometryEstModel
                     if isfield(ht, 'ExposedRootChord')
                          obj.HT.exposed_rc = ht.ExposedRootChord;
                     end
+                    if isfield(ht, 'TipChordLengthft')
+                         obj.HT.tip_chord = ht.TipChordLengthft;
+                    end
                end
 
                % ---------- Vertical tail ----------
@@ -212,6 +218,9 @@ classdef F16GeometryStuff < GeometryEstModel
                     end
                     if isfield(vt, 'ExposedRootchord')
                          obj.VT.exposed_rc = vt.ExposedRootChord;
+                    end
+                    if isfield(vt, 'TipChordLengthft')
+                         obj.VT.tip_chord = vt.TipChordLengthft;
                     end
                end
 
