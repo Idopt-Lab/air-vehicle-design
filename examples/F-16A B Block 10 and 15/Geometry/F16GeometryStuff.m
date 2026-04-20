@@ -100,7 +100,7 @@ classdef F16GeometryStuff < GeometryEstModel
           end
 
           % Load design geometry for initial calculations
-          function loaddesigngeometry(geometry_obj, design)
+          function loaddesigngeometry(obj, design)
                % ---------- Main wing ----------
                if isfield(design.geom.wings, 'Main')
                     wing = design.geom.wings.Main;
