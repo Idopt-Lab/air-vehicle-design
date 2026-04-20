@@ -259,8 +259,13 @@ classdef F16GeometryStuff < GeometryEstModel
           end
 
           % Estimate exposed wetted areas (lifting surfaces)
-          function output = S_wet_est(obj, S_exposed, tc)
+          function output = S_wet_est(geometry_obj, S_exposed, tc)
                output = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
+          end
+
+          % Estimate wing sweep at quarter-chord (deg)
+          function output = get_sweep_qc(geometry_obj, b, LE_sweep_deg, root_chord, tip_chord)
+               output = atand(tand(LE_sweep_deg) - (root_chord - tip_chord)/(2*b));
           end
      end
 
