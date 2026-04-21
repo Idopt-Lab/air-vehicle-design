@@ -13,11 +13,8 @@ classdef F16MissionAnalysis2 < MissionAnalysisModel
      methods
           % Constructor
           function obj = F16MissionAnalysis2(design, Chosen_Mission)
-               obj.missiondata = get_mission_data(obj, design, Chosen_Mission);
+               obj.missiondata = get_mission_data(obj, Chosen_Mission);
           end
-
-          % Decide if weight estimation goes in "MissionAnalysis" or
-          % "WeightEstimation". Don't overcomplicate it.
 
           % Compute mission fuel
           function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj)
