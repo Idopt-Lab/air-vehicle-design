@@ -1,6 +1,7 @@
-classdef F16MissionAnalysis < MissionAnalysisModel
+classdef F16MissionAnalysis4 < MissionAnalysisModel
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
+     % Higher fidelity level than 3
 
      properties
 
@@ -11,7 +12,7 @@ classdef F16MissionAnalysis < MissionAnalysisModel
 
      methods
           % Constructor
-          function obj = F16MissionAnalysis(design, Chosen_Mission)
+          function obj = F16MissionAnalysis4(design, Chosen_Mission)
                obj.missiondata = get_mission_data(obj, design, Chosen_Mission);
           end
 

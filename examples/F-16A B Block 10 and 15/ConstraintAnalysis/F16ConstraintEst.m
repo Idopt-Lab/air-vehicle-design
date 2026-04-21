@@ -14,6 +14,7 @@ classdef F16ConstraintEst < ConstraintModel
           T0_W0
           W0_S_ref
           T_Wto_required
+          constraints
      end
 
      methods

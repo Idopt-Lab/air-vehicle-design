@@ -9,20 +9,6 @@ classdef Sizing
      methods
           function size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj)
 
-               % This is where we actually compute the fuel for the mission
-               AR = design.geom.wings.Main.AspectRatio;
-               L_fus = design.geom.fuselage.Fuselage.Lengthft;
-               D_fus = design.geom.fuselage.Fuselage.MaxWidthft;
-               c_root = design.geom.wings.Main.RootChordLengthft;
-               b_W = design.geom.wings.Main.Spanft;
-               Cbar_W = design.geom.wings.Main.MeanGeometricChord;
-               lambda = design.geom.wings.Main.TaperRatio;
-               Lambda_qc = design.geom.wings.Main.TaperRatioQc;
-               tc_root = design.geom.wings.Main.tc;
-               c_VT = design.geom.wings.VerticalTail.c_VT;
-               c_HT = design.geom.wings.HorizontalTail.c_HT;
-               BPR = design.propulsion.BypassRatio.BypassRatio;
-
                weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
 
                % W_S = 104.59;

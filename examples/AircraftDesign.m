@@ -78,7 +78,7 @@ classdef AircraftDesign < handle
                     missionName string
                end
 
-               mission = F16MissionAnalysis(missionName);
+               mission = F16MissionAnalysis3(missionName);
           end
 
           function [design, mission] = create(name, opts)
