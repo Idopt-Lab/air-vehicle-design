@@ -17,6 +17,5 @@ classdef (Abstract) WeightEstModel < handle
           [output] = get_subsystem_weight(input)
           [output] = get_engine_weight(input)
           [output] = get_OEW(input)
-
      end
 end
