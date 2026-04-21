@@ -1,7 +1,6 @@
-classdef F16WeightEstLevel2 < WeightEstModel
-     %F16WEIGHTESTLEVEL2 Summary of this class goes here
+classdef F16WeightEstLevel1 < WeightEstModel
+     %F16WEIGHTESTLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
-     % This is NOT purely component-level.
 
      properties
           MTOW
@@ -15,9 +14,8 @@ classdef F16WeightEstLevel2 < WeightEstModel
      end
 
      methods
-          % Constructor
-          % function obj = F16WeightEstLevel2(inputArg1,inputArg2)
-          %      %F16WEIGHTESTLEVEL2 Construct an instance of this class
+          % function obj = F16WeightEstLevel1(inputArg1,inputArg2)
+          %      %F16WEIGHTESTLEVEL1 Construct an instance of this class
           %      %   Detailed explanation goes here
           %      obj.Property1 = inputArg1 + inputArg2;
           % end
@@ -35,18 +33,18 @@ classdef F16WeightEstLevel2 < WeightEstModel
                disp("This isn't implemented for this fidelity level")
                output = null;
           end
+          % I may need to remove this reference for lower-fidelity sizing
+          % classes (<3)
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
-          function output = get_OEW(weight_obj, W0, AR, T, S_ref, M_max, K_vs)
+          function output = get_OEW(weight_obj, W_TO)
                % Hard-coding some values (placeholders)
-               a = -0.02;
-               b = 2.16;
-               c1 = -0.10;
-               c2 = 0.20;
-               c3 = 0.04;
-               c4 = -0.10;
-               c5 = 0.08;
-               output = (a + b*W0^(c1) * AR^(c2) * (T/W0)^(c3) * (W0/S_ref)^(c4) * M_max^(c5))*K_vs;
+               a = 2.34;
+               b = -0.13;
+
+               OEW_frac = a*W_TO^b;
+
+               output = OEW_frac*W_TO;
           end
      end
 end

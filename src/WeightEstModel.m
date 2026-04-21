@@ -10,6 +10,7 @@ classdef (Abstract) WeightEstModel < handle
           engine
           landinggear
           eps % Error tolerance
+          W_fixed
      end
 
      methods (Abstract)
