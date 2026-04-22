@@ -104,25 +104,6 @@ classdef F16WeightEstLevel3 < WeightEstModel
                eng_weight.W_installed = 1.3*eng_weight.W_total;
           end
 
-          % function output = weight_est_IV(weight_obj, design)
-          %
-          %
-          %      % Compute empty weight
-          %      W_engine_installed = 1.3*Engine_Sizing(T0); % Installed engine weight (lbf) (table 15.2, Raymer, 6th ed)
-          %      [OEW] = Compute_OEW_IV(W_TO, S_ref, S_HT, S_VT, S_wet, T0, design.weights, c_HT, c_VT, W_engine_installed);
-          %
-          %      % OEW - update new OEW fraction
-          %      empty_weight_fraction = OEW/W_TO;
-          %
-          %      % W_TO_new = W_fixed / (1 - fuel_fraction - empty_weight_fraction);
-          %      W_TO_new = total_fuel_used + W_fixed + OEW;
-          %
-          %      difference = W_TO_new - W_TO;
-          %      percent_diff = 100 * difference / W_TO;
-          %
-          %
-          % end
-
           function [W_fuselage] = fuselage_weight_III(weight_obj, K_dwf, W_dg, N_z, L, D, W)
                %UNTITLED Summary of this function goes here
                %   Detailed explanation goes here
