@@ -35,7 +35,7 @@ classdef MissionAnalysis3 < MissionAnalysisModel
 
                % Loop stuff - should automate segment naming extraction
                % (future)
-               [W_startup, f1] = segment_startup(W_TO);
+               [W_startup, f1] = mission_obj.segment_startup(W_TO);
                [W_taxi, f2]    = segment_taxi(W_startup);
                [W_Takeoff, f3] = segment_takeoff(W_taxi);
                [W_Climb, f4]   = segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, mission_obj.missiondata.Loiter.TSFC, mission_obj.missiondata.Climb.Altitudeft, T0);
