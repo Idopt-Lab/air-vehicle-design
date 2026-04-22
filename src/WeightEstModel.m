@@ -8,7 +8,7 @@ classdef (Abstract) WeightEstModel < handle
           tail
           subsystems
           engine
-          landinggear
+          % landinggear
           eps % Error tolerance
           W_fixed
      end

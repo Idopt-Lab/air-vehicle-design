@@ -10,7 +10,7 @@ classdef WeightEstLevel3 < WeightEstModel
           tail
           subsystems
           engine
-          landinggear
+          landinggear_weight
           W_TO_guess = 45000
           W_TO
           W_fixed
@@ -147,9 +147,9 @@ classdef WeightEstLevel3 < WeightEstModel
                % THIS CALCULATES THE TOTAL WEIGHT OF ALL SUBSYSTEMS
                % Need to extract required information simply without spaghettifying the code.
 
-               subsystems.W_landinggear = landinggear(DesignTable_weight.Coefficients.Kcb, DesignTable_weight.Coefficients.Ktpg, DesignTable_weight.Coefficients.Wl, DesignTable_weight.Coefficients.Nl, DesignTable_weight.Coefficients.Lm, DesignTable_weight.Coefficients.Nnw, DesignTable_weight.Coefficients.Ln);
+               subsystems.W_landinggear = weight_obj.landinggear(DesignTable_weight.Coefficients.Kcb, DesignTable_weight.Coefficients.Ktpg, DesignTable_weight.Coefficients.Wl, DesignTable_weight.Coefficients.Nl, DesignTable_weight.Coefficients.Lm, DesignTable_weight.Coefficients.Nnw, DesignTable_weight.Coefficients.Ln);
 
-               subsystems.W_engine_systems = engine_systems_weights(DesignTable_weight.Coefficients.Nen, T0, DesignTable_weight.Coefficients.Nz, W_engine_installed, DesignTable_weight.Coefficients.De, DesignTable_weight.Coefficients.Lsh, DesignTable_weight.Coefficients.Lec, T0);
+               subsystems.W_engine_systems = weight_obj.engine_systems_weights(DesignTable_weight.Coefficients.Nen, T0, DesignTable_weight.Coefficients.Nz, W_engine_installed, DesignTable_weight.Coefficients.De, DesignTable_weight.Coefficients.Lsh, DesignTable_weight.Coefficients.Lec, T0);
 
                subsystems.W_firewall = 1.13*DesignTable_weight.Coefficients.Sfw; % eq 15.8, 6th ed
 
@@ -187,6 +187,34 @@ classdef WeightEstLevel3 < WeightEstModel
                % eq 15.24, 6th ed
 
                subsystems.total = subsystems.W_landinggear + subsystems.W_engine_systems + subsystems.W_firewall + subsystems.W_air_induction_system + subsystems.W_tailpipe + subsystems.W_fuelsystem_and_tanks + subsystems.W_flight_controls + subsystems.W_instruments + subsystems.W_hydraulics + subsystems.W_electrical + subsystems.W_avionics + subsystems.W_furnishings + subsystems.W_AC_and_antiice + subsystems.W_handling_gear;
+          end
+
+          function [W_landinggear] = landinggear(weight_obj, K_cb, K_tpg, W_l, N_l, L_m, N_nw, L_n)
+               % THIS IIS WHERE SOME MAGIC HAPPENS LOL
+
+               W_main_gear = K_cb*K_tpg * (W_l * N_l)^(0.25) * L_m^(0.973); % eq 15.5, 6th ed
+
+               W_nose_gear = (W_l * N_l)^(0.290) * L_n^(0.5) * N_nw^(0.525); % eq 15.6, 6th ed
+
+               W_landinggear = W_main_gear + W_nose_gear;
+          end
+
+          function [W_eng_sys] = engine_systems_weights(weight_obj, N_en, T, N_z, W_en, D_e, L_sh, L_ec, T_e)
+               %UNTITLED Summary of this function goes here
+               %   Detailed explanation goes here
+
+               W_engine_mounts = 0.013*N_en^(0.795) * T^(0.579) * N_z; % eq 15.7, 6th ed
+
+               W_engine_section = 0.01*W_en^(0.717) * N_en * N_z; % eq 15.9, 6th ed
+
+               W_engine_cooling = 4.55*D_e*L_sh*N_en; % eq 15.12, 6th ed
+
+               W_oil_cooling = 37.82*N_en^(1.008)*L_ec^(0.222); % eq 15.13, 6th ed
+
+               W_starter_pneumatic = 0.025*T_e^(0.760)*N_en^(0.72); % eq 15.15, 6th ed
+
+               W_eng_sys = W_engine_mounts + W_engine_section + W_engine_cooling + W_oil_cooling + W_starter_pneumatic;
+
           end
 
 
