@@ -13,7 +13,7 @@ classdef F16MissionAnalysis4 < MissionAnalysisModel
      methods
           % Constructor
           function obj = F16MissionAnalysis4(design, Chosen_Mission)
-               obj.missiondata = get_mission_data(obj, Chosen_Mission);
+               obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
           end
 
           % Compute mission fuel

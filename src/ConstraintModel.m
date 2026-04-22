@@ -13,7 +13,12 @@ classdef (Abstract) ConstraintModel < handle
           W0_S_ref
      end
 
-     methods
+     methods (Abstract) % Bare minimum requirements
           Constraint_Results = constraint_est(obj, design)
+     end
+
+     methods (Access = private) % Commonly shared functions
+          % Importing the constraints
+          
      end
 end
