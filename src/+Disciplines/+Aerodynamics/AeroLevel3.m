@@ -267,7 +267,7 @@ classdef AeroLevel3 < AerodynamicsModel
                     Q = 1.0;
                     FF = 1.0;
                     CD0_design = compute_design_CD0_sup(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
-               elseif M < 1.0
+               elseif (M < 1.0) && (0.0 < M)
                     % Subsonic (Q & FF =/= 1.0)
                     CD0_design = compute_design_CD0_sub(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj);
                else
