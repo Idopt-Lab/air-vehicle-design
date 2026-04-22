@@ -10,7 +10,9 @@ classdef AircraftDesign < handle
           weights
           % missiondata % Aircraft design doesn't need mission data
           requirements % Should divorce this from AircraftDesign
+          requirements_filename
           constraints % Should also divorce this from AircraftDesign
+          constraints_filename
 
           % S_wet= 1337; % Wetted area, whole aircraft
           % S_ref = 300; % REference area (ft^2)
@@ -30,8 +32,8 @@ classdef AircraftDesign < handle
           function obj = AircraftDesign(name, opts)
                arguments
                     name                  string = ""
-                    opts.RequirementsName string = "Requirements"
-                    opts.ConstraintsName  string = "Constraints"
+                    opts.RequirementsName string = ""
+                    opts.ConstraintsName  string = ""
                     opts.MissionName      string = ""
                     opts.AutoLoad        logical = true
                end
@@ -47,6 +49,7 @@ classdef AircraftDesign < handle
                     [obj.geom.wings, obj.geom.fuselage, obj.propulsion, obj.weights] = Import_Design(obj.Name);
                     obj.requirements = Import_Requirements(opts.RequirementsName);
                     obj.constraints  = Import_Constraints(opts.ConstraintsName);
+                    obj.constraints_filename = opts.ConstraintsName;
 
                     % Come back to this. This is supposed to create a
                     % mission object automatically.

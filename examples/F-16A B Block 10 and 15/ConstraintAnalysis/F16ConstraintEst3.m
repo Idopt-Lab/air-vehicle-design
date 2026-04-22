@@ -21,7 +21,7 @@ classdef F16ConstraintEst3 < ConstraintModel
 
           % Constructor for my sanity
           function obj = F16ConstraintEst3(constraint_obj, design)
-               obj.constraints = ConstraintModel.get_design_constraints(constraint_obj, design.constraintfile);
+               obj.constraints = ConstraintModel.get_design_constraints(constraint_obj, design.constraint_filename);
           end
 
           % do a complete constraint analysis
