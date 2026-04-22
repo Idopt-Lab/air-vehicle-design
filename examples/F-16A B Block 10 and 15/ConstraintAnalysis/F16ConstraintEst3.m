@@ -1,4 +1,4 @@
-classdef F16ConstraintEst < ConstraintModel
+classdef F16ConstraintEst3 < ConstraintModel
      %F16CONSTRAINTEST Summary of this class goes here
      %   Detailed explanation goes here
      % YTup
@@ -20,8 +20,8 @@ classdef F16ConstraintEst < ConstraintModel
      methods
 
           % Constructor for my sanity
-          function obj = F16ConstraintEst(design)
-               obj.constraint_analysis(design);
+          function obj = F16ConstraintEst3(constraint_obj, design)
+               obj.constraints = ConstraintModel.get_design_constraints(constraint_obj, design.constraintfile);
           end
 
           % do a complete constraint analysis
