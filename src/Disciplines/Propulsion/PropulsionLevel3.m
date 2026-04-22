@@ -1,4 +1,4 @@
-classdef PropulsionEstLevel3 < PropulsionModel
+classdef PropulsionLevel3 < PropulsionModel
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -11,7 +11,7 @@ classdef PropulsionEstLevel3 < PropulsionModel
      methods
 
           % Constructor
-          function obj = PropulsionEstLevel3(mission_obj, design)
+          function obj = PropulsionLevel3(mission_obj, design)
                obj.enginestats = get_propulsion_stats(obj, mission_obj, design);
           end
 

@@ -1,4 +1,4 @@
-classdef WeightEstLevel2 < WeightEstModel
+classdef WeightLevel2 < WeightEstModel
      %F16WEIGHTESTLEVEL2 Summary of this class goes here
      %   Detailed explanation goes here
      % This is NOT purely component-level.

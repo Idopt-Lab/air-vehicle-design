@@ -1,4 +1,4 @@
-classdef WeightEstLevel1 < WeightEstModel
+classdef WeightLevel1 < WeightEstModel
      %F16WEIGHTESTLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
 

@@ -1,4 +1,4 @@
-classdef ConstraintEst3 < ConstraintModel
+classdef ConstraintAnalysisClass < ConstraintModel
      %F16CONSTRAINTEST Summary of this class goes here
      %   Detailed explanation goes here
      % YTup
@@ -21,7 +21,7 @@ classdef ConstraintEst3 < ConstraintModel
      methods
 
           % Constructor for my sanity
-          function obj = ConstraintEst3(design)
+          function obj = ConstraintAnalysisClass(design)
                obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
           end
 
