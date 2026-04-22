@@ -1,32 +1,25 @@
-classdef (Abstract) AeroUtils < handle
+classdef AeroUtils
      %AerodynamicsModel Summary of this class goes here
      %   Detailed explanation goes here
 
      % This contains common functions I expect all Aero classes/objects to
      % use.
 
-     properties (Abstract) % Initialization not allowed
-     end
-
-
-     methods (Abstract)
-     end
-
      methods (Static)
           % Get CL for some given state
-          function output = compute_CL(aero_obj, L, q, S_ref)
+          function output = compute_CL(L, q, S_ref)
                CL = L/(q*S_ref);
                output = CL;
           end
 
           % Get design drag
-          function output = compute_D(aero_obj, q, CD, S_ref)
+          function output = compute_D(q, CD, S_ref)
                D = CD*q*S_ref;
                output = D;
           end
 
           % Get dynamic pressure for some given state
-          function output = compute_q(aero_obj, statevector)
+          function output = compute_q(statevector)
                M = statevector(1);
                h_ft = statevector(2);
                [T,a,P,rho,nu,mu] = atmosisa(h_ft*0.3048);

@@ -71,7 +71,7 @@ classdef AeroLevel3 < AerodynamicsModelLevel3
           function DragResults = get_design_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
 
                % Compute q
-               q = AeroUtils.compute_q(aero_obj, state_input);
+               q = AeroUtils.compute_q(state_input);
 
                % Compute design CD0 (done)
                DragResults.CD0_design = get_design_CD0(aero_obj, state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
@@ -94,7 +94,7 @@ classdef AeroLevel3 < AerodynamicsModelLevel3
 
                % Compute D for given state (done)
                % DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
-               DragResults.D_design = AeroUtils.compute_D(aero_obj, q, DragResults.CD_design, geometry_obj.mainwings.S_ref);
+               DragResults.D_design = AeroUtils.compute_D(q, DragResults.CD_design, geometry_obj.mainwings.S_ref);
           end
 
           % Get design drag
@@ -178,17 +178,17 @@ classdef AeroLevel3 < AerodynamicsModelLevel3
           % "compute" = "non-wrapper"
           function CDi_design = get_design_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
                M = statevector(1);
-               q = AeroUtils.compute_q(aero_obj, statevector);
+               q = AeroUtils.compute_q(statevector);
 
                % Check if sup/subsonic:
                if M >=1.0
                     % Supersonic
                     alpha_deg = statevector(3);
-                    aero_obj.CL = AeroUtils.compute_CL(aero_obj, L, q, S_ref);
+                    aero_obj.CL = AeroUtils.compute_CL(L, q, S_ref);
                     CDi_design = compute_CDi_supersonic(aero_obj, aero_obj.CL, alpha_deg);
                elseif M<1.0
                     % Subsonic
-                    aero_obj.CL = AeroUtils.compute_CL(aero_obj, L, q, S_ref);
+                    aero_obj.CL = AeroUtils.compute_CL(L, q, S_ref);
                     CDi_design = compute_CDi_subsonic(aero_obj, aero_obj.CL, e_osw, AR);
                else
                     error("Error handler, get_design_CDi, AeroLevel3.")

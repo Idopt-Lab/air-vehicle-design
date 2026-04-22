@@ -44,10 +44,10 @@ classdef AeroLevel2 < AerodynamicsModelLevel2
                W = state_input(4);
 
                % Get q
-               q = AeroUtils.compute_q(aero_obj, state_input);
+               q = AeroUtils.compute_q(state_input);
 
                % Get CL
-               aero_obj.CL = AeroUtils.compute_CL(aero_obj, W, q, geometry_obj.mainwings.S_ref);
+               aero_obj.CL = AeroUtils.compute_CL(W, q, geometry_obj.mainwings.S_ref);
 
                % Get CD0
                DragResults.CD0 = get_design_CD0(aero_obj, aero_obj.Cf, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
@@ -59,7 +59,7 @@ classdef AeroLevel2 < AerodynamicsModelLevel2
                DragResults.CD = get_design_CD(aero_obj, DragResults.CD0, aero_obj.K, aero_obj.CL);
 
                % Compute the drag
-               DragResults.D = AeroUtils.compute_D(aero_obj, q, DragResults.CD, geometry_obj.mainwings.S_ref);
+               DragResults.D = AeroUtils.compute_D(q, DragResults.CD, geometry_obj.mainwings.S_ref);
 
           end
 
