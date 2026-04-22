@@ -14,17 +14,17 @@ classdef (Abstract) ConstraintModel < handle
      end
 
      methods (Abstract) % Bare minimum requirements
-          Constraint_Results = constraint_est(obj, design)
+          Constraint_Results = constraint_analysis(obj, design)
      end
 
-     methods (Access = private) % Commonly shared functions
+     methods (Static) % Commonly shared functions
           % Importing the constraints
           function output = get_design_constraints(constraint_obj, filename)
                % Load information from Excel sheet
-               file_name = "Constraints.xlsx";
+               file_name = filename;
 
                % Mission segments should scan row F8 until it encounters a blank
-               Constraints = readtable(file_name, 'Sheet', Constraints, 'ReadRowNames', true);
+               Constraints = readtable(file_name, 'Sheet', file_name, 'ReadRowNames', true);
                % Try cleaning up all cells
 
                for i=1:length(Constraints{:,1}) % For each constraint...
