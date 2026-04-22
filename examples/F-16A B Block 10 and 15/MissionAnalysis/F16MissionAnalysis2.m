@@ -86,7 +86,7 @@ classdef F16MissionAnalysis2 < MissionAnalysisModel
           end
 
 
-          % Climb segment - revised
+          % Climb segment - un-revise this.
           function [W_out, fuel_used] = segment_climb(W_TO, W_in, Mach, S, CD0, e, AR, TSFC, h, T0)
                g = 32.2; % Acceleration due to gravity (ft/s^2)
                r_e = 20902231; % Radius of Earth (and your mom) (ft)
