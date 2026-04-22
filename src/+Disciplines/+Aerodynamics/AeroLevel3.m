@@ -146,7 +146,7 @@ classdef AeroLevel3 < AerodynamicsModel
                     % Subsonic:
                     aero_obj.CL_alpha = compute_CL_alpha_subsonic(aero_obj, S_exposed, S_ref, Lambda_max_t, M, AR, fuselage_width, b);
                else
-                    error("Error handler, get_CL_alpha, F16AeroLevel3.")
+                    error("Error handler, get_CL_alpha, AeroLevel3.")
                end
                output = aero_obj.CL_alpha;
           end
