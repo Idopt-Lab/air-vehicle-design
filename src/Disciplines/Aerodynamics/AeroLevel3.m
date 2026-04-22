@@ -99,7 +99,7 @@ classdef AeroLevel3 < AerodynamicsModelLevel3
 
           % Get design drag
           function output = compute_D(aero_obj, statevector, CD, S_ref)
-               q = compute_q(aero_obj, statevector);
+               q = AeroUtils.compute_q(aero_obj, statevector);
                aero_obj.D = CD*q*S_ref;
                output = aero_obj.D;
           end
