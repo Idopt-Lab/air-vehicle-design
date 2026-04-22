@@ -1,4 +1,4 @@
-classdef (Abstract) PropulsionModel < handle
+classdef (Abstract) PropulsionModelLevel3 < handle
      %PROPULSIONMODEL Summary of this class goes here
      %   Detailed explanation goes here
 

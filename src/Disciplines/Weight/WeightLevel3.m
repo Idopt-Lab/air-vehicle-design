@@ -1,4 +1,4 @@
-classdef WeightLevel3 < WeightEstModel
+classdef WeightLevel3 < WeightModelLevel3
      %F16WEIGHTESTLEVEL4 Summary of this class goes here
      %   Detailed explanation goes here
      % THIS SHOULD GET THE OEW AND SUCH

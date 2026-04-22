@@ -1,4 +1,4 @@
-classdef (Abstract) GeometryEstModel < handle
+classdef (Abstract) GeometryModelLevel3 < handle
      %GEOMETRYEST Summary of this class goes here
      %   Detailed explanation goes here
 

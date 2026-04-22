@@ -1,4 +1,4 @@
-classdef PropulsionLevel2 < PropulsionModel
+classdef PropulsionLevel2 < PropulsionModelLevel3
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
      % This is supposed to use Mattingly's "Master Equation"

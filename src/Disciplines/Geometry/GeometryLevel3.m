@@ -1,4 +1,4 @@
-classdef GeometryLevel3 < GeometryEstModel
+classdef GeometryLevel3 < GeometryModelLevel3
      %F16GEOMETRYSTUFF Summary of this class goes here
      %   Detailed explanation goes here
 

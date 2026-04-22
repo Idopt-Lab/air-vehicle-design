@@ -1,4 +1,4 @@
-classdef PropulsionLevel4 < PropulsionModel
+classdef PropulsionLevel4 < PropulsionModelLevel3
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 

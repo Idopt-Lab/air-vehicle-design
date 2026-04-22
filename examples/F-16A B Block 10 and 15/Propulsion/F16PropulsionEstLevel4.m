@@ -1,4 +1,4 @@
-classdef F16PropulsionEstLevel4 < PropulsionModel
+classdef F16PropulsionEstLevel4 < PropulsionModelLevel3
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 
