@@ -22,7 +22,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
 
           % Constructor for my sanity
           function obj = ConstraintAnalysisClass(design)
-               obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
+               obj.constraints_table = ConstraintUtils.get_design_constraints(obj, design.constraints_filename);
           end
 
           % do a complete constraint analysis

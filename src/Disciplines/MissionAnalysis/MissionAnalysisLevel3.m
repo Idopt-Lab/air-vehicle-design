@@ -48,15 +48,6 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10;
                fuel_fraction = total_fuel_used * 1.06 / W_TO;
           end
-          % MOVE THIS TO THE "GET_MTOW" FUNCTION
-          % S_ref = S_ref;
-          % beta = 1 - (total_fuel_used / (2 * W_TO));
-          % results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
-          % disp(results_table)
-          % design.WeightResults.W_TO_est = W_TO;
-          % design.WeightResults.W_fuel = total_fuel_used;
-          % end
-
      end
 
      %% ----------------------------------------------------------
@@ -69,12 +60,10 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
           % I probably don't even need this any more.
           function segment_names = get_segment_names(mission_obj, design, missiondata)
                segment_names = string(missiondata.Properties.VariableNames);
-
                for i=1:lenght(segment_names)
                     current_segment = segment_names(i);
                     mission.(current_segment) = missiondata(:, (current_segment));
                end
-
           end
 
 
