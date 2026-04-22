@@ -191,7 +191,7 @@ classdef AeroLevel3 < AerodynamicsModel
                     aero_obj.CL = AerodynamicsModel.compute_CL(aero_obj, L, q, S_ref);
                     CDi_design = compute_CDi_subsonic(aero_obj, aero_obj.CL, e_osw, AR);
                else
-                    error("Error handler, get_design_CDi, F16AeroLevel3.")
+                    error("Error handler, get_design_CDi, AeroLevel3.")
                end
           end
 
