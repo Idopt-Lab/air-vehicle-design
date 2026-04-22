@@ -1,4 +1,4 @@
-classdef AeroLevel4 < AerodynamicsModel
+classdef AeroLevel4 < AerodynamicsModelLevel3
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 4 aerodyanmics equations go here

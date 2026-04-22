@@ -1,4 +1,4 @@
-classdef F16AeroLevel2 < AerodynamicsModel
+classdef F16AeroLevel2 < AerodynamicsModelLevel3
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
@@ -44,10 +44,10 @@ classdef F16AeroLevel2 < AerodynamicsModel
                W = state_input(4);
 
                % Get q
-               q = AerodynamicsModel.compute_q(aero_obj, state_input);
+               q = AerodynamicsModelLevel3.compute_q(aero_obj, state_input);
 
                % Get CL
-               aero_obj.CL = AerodynamicsModel.compute_CL(aero_obj, W, q, geometry_obj.mainwings.S_ref);
+               aero_obj.CL = AerodynamicsModelLevel3.compute_CL(aero_obj, W, q, geometry_obj.mainwings.S_ref);
 
                % Get CD0
                DragResults.CD0 = get_design_CD0(aero_obj, aero_obj.Cf, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
@@ -59,7 +59,7 @@ classdef F16AeroLevel2 < AerodynamicsModel
                DragResults.CD = get_design_CD(aero_obj, DragResults.CD0, aero_obj.K, aero_obj.CL);
 
                % Compute the drag
-               DragResults.D = AerodynamicsModel.compute_D(aero_obj, q, DragResults.CD, geometry_obj.mainwings.S_ref);
+               DragResults.D = AerodynamicsModelLevel3.compute_D(aero_obj, q, DragResults.CD, geometry_obj.mainwings.S_ref);
 
           end
 
