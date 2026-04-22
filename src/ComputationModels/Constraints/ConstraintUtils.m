@@ -4,7 +4,7 @@ classdef ConstraintUtils
 
      methods (Static) % Commonly shared functions
           % Importing the constraints
-          function output = get_design_constraints(constraint_obj, filename)
+          function output = get_design_constraints(filename)
                % Load information from Excel sheet
                file_name = filename;
 
