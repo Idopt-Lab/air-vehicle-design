@@ -16,13 +16,15 @@ classdef F16WeightEstLevel3 < WeightEstModel
           W_fixed
           total_fuel_used
           fuel_fraction
+          weight_coefficients
           eps % Error tolerance
      end
 
      methods
           % Constructor
-          function obj = F16WeightEstLevel3()
-               
+          function obj = F16WeightEstLevel3(design)
+               obj.W_fixed = design.weights.Weights.Fixedlbf;
+               obj.weight_coefficients = design.weights.Coefficients;
           end
 
           % Estimate subsystem weight
