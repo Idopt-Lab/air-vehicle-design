@@ -16,8 +16,8 @@ classdef F16PropulsionEstLevel3 < PropulsionModel
           end
 
           % Estimate engine properties
-          function enginestats = get_propulsion_stats(obj, mission_obj, design)
-               enginestats = propulsion_est_level_III_ab(obj, design.propulsion.ThrustseaLevellbf.Dry, mission_obj.missiondata.Dash.MachNumber, design.propulsion.BypassRatio.BypassRatio);
+          function enginestats = get_propulsion_stats(propulsion_obj, mission_obj, design)
+               enginestats = propulsion_est_level_III_ab(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, mission_obj.missiondata.Dash.MachNumber, design.propulsion.BypassRatio.BypassRatio);
                % There are multiple versions of equations (afterburning,
                % nonafterburning). Consider adding those, too.
                % Also I need to stop using the tables for value extraction
