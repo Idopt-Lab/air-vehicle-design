@@ -28,18 +28,18 @@ classdef F16ConstraintEst3 < ConstraintModel
           % do a complete constraint analysis
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj)
 
-               [constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust] = initconstraints(constraint_obj, design);
-               [constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust] = get_constraints(constraint_obj, design, design.constraints); % Why do I have two functions that do the same thing?
-               [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, design, design.constraints, constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust, constraint_obj.Wto_S_range, constraint_obj.constraints_table("Takeoff",:));
+               [constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust] = initconstraints(constraint_obj);
+               % [constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust] = get_constraints(constraint_obj, design, design.constraints); % Why do I have two functions that do the same thing?
+               [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraint_obj.constraints_table, constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust, constraint_obj.Wto_S_range, constraint_obj.constraints_table("Takeoff",:));
                [constraint_obj.optimal_WS, constraint_obj.min_TW] = solveOptimalPoint(constraint_obj, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_range);
                constraint_obj.Wto_S_landing = landing_constraint(constraint_obj, constraint_obj.constraints_table("Landing",:));
                plotConstraintDiagram(constraint_obj, constraint_obj.Wto_S_range, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_landing, constraint_obj.optimal_WS, constraint_obj.min_TW, constraint_obj.constraints_table.Row(:));
-               showResultTable(constraint_obj, constraint_obj.TW_table, design.constraints.Row(:), constraint_obj.Wto_S_range);
+               showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
           end
 
           % Initialize constraints
-          function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj, design)
-               [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, design, design.constraints);
+          function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
+               [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
           end
      end
 
@@ -47,7 +47,7 @@ classdef F16ConstraintEst3 < ConstraintModel
      methods (Access = private)
 
           % Get consstraints
-          function [aero_constraints, thrust_constraints] = get_constraints(obj, design, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
+          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0");
                e_constraints = extracted_constraints(:, "e");
                q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
@@ -66,16 +66,16 @@ classdef F16ConstraintEst3 < ConstraintModel
           end
 
           % Create thrust loading table
-          function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(obj, design, constraints, aero, thrust, Wto_S_range, TO)
-               num_constraints = length(design.constraints.Row(:));
+          function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero, thrust, Wto_S_range, TO)
+               num_constraints = length(constraints.Row(:));
                TW_table = zeros(num_constraints, length(Wto_S_range));
 
                for i = 1:num_constraints
-                    name = design.constraints.Row{i};
-                    TW_table(i, :) = computeWingLoading(obj, constraints(name,:), aero(name,:), thrust(name,:), Wto_S_range);
+                    name = constraint_obj.constraints_table.Row{i};
+                    TW_table(i, :) = computeWingLoading(constraint_obj, constraints(name,:), aero(name,:), thrust(name,:), Wto_S_range);
                end
                %
-               T_Wto_takeoff = takeoff_constraint(obj, Wto_S_range, TO);
+               T_Wto_takeoff = takeoff_constraint(constraint_obj, Wto_S_range, TO);
           end
 
           % Solve for the optimal point
