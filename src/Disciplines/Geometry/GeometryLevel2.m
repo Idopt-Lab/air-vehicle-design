@@ -1,4 +1,4 @@
-classdef GeometryLevel3 < GeometryModelLevel3
+classdef GeometryLevel2 < GeometryModelLevel2
      %F16GEOMETRYSTUFF Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -19,7 +19,7 @@ classdef GeometryLevel3 < GeometryModelLevel3
      methods
 
 
-          function obj = GeometryLevel3(design)
+          function obj = GeometryLevel2(design)
                obj.mainwings = struct( ...
                     'S_ref', [], ...
                     'S_exposed', [], ...
@@ -107,15 +107,15 @@ classdef GeometryLevel3 < GeometryModelLevel3
                end
 
                % Get S_exposed for each component
-               obj.mainwings.S_exposed = get_S_exposed(obj, obj.mainwings.tip_chord, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
-               obj.HT.S_exposed = get_S_exposed(obj, obj.HT.tip_chord, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
-               obj.VT.S_exposed = get_S_exposed(obj, obj.VT.tip_chord, obj.VT.exposed_rc, obj.VT.exposed_halfspan);
+               obj.mainwings.S_exposed = obj.get_S_exposed_wing(obj.mainwings.tip_chord, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
+               obj.HT.S_exposed = obj.get_S_exposed_wing(obj.HT.tip_chord, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
+               obj.VT.S_exposed = obj.get_S_exposed_wing(obj.VT.tip_chord, obj.VT.exposed_rc, obj.VT.exposed_halfspan);
 
                % Get S_wet for each component
-               obj.mainwings.S_wet = get_S_wet_wing(obj, obj.mainwings.S_exposed, obj.mainwings.tc);
-               obj.HT.S_wet = get_S_wet_wing(obj, obj.HT.S_exposed, obj.HT.tc);
-               obj.VT.S_wet = get_S_wet_wing(obj, obj.VT.S_exposed, obj.VT.tc);
-               obj.fuselage.S_wet = get_S_wet_fuselage(obj, obj.design.total_length, obj.fuselage.W_max, obj.fuselage.h_max);
+               obj.mainwings.S_wet = obj.get_S_wet_wing(obj.mainwings.S_exposed, obj.mainwings.tc);
+               obj.HT.S_wet = obj.get_S_wet_wing(obj.HT.S_exposed, obj.HT.tc);
+               obj.VT.S_wet = obj.get_S_wet_wing(obj.VT.S_exposed, obj.VT.tc);
+               obj.fuselage.S_wet = obj.compute_S_wet_body(design.geom.fuselage.Fuselage.Areasideft2, design.geom.fuselage.Fuselage.Areatopft2);
                % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
 
           end
@@ -124,61 +124,48 @@ classdef GeometryLevel3 < GeometryModelLevel3
 
           % Estimate the wetted area of the aircraft
           function output = get_design_S_wet(obj, W_TO)
-               c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-               d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
+               % (Have a way to use different coefficients for different
+               % aircraft types!)
+               c = -0.1289; % Coefficient for fighter aircraft, given for S_wet equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
+               d = 0.7506; % Coefficient for fighter aicraft, given for S_wet equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
                obj.design.S_wet = 10^(c) * W_TO^(d); % ft^2
                output = obj.design.S_wet;
           end
 
-          % Size the tail
-          function [S_HT, S_VT] = size_tail(obj, design, S_ref)
-               [S_HT, S_VT] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, S_ref, design.geom.fuselage.Fuselage.Lengthft, design.geom.wings.Main.MeanGeometricChord);
-          end
-
           % Estimate exposed surface area (lifting surface)
           % Source: Brandt, "F16A", "Geom" sheet, cell H7.
-          function output = get_S_exposed(geometry_obj, tip_length, exposed_rc, exposed_halfspan)
+          function output = get_S_exposed_wing(geometry_obj, tip_length, exposed_rc, exposed_halfspan)
                output = exposed_halfspan*(exposed_rc + tip_length);
           end
 
-          % Estimate exposed wetted areas (lifting surfaces)
-          function output = get_S_wet_wing(geometry_obj, S_exposed, tc)
-               output = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
+          % Estimate exposed wetted areas (lifting surfaces) (Wrapper)
+          function S_wet_wing = get_S_wet_wing(geometry_obj, S_exposed, tc)
+               if tc <= 0.05
+                    S_wet_wing = geometry_obj.compute_S_wet_wing_lowtc(S_exposed);
+               elseif tc > 0.05
+                    S_wet_wing = geometry_obj.compute_S_wet_wing_hightc(S_exposed, tc);
+               end
           end
 
-          % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
-          % cone approximation)
-          function output = get_S_wet_fuselage(geometry_obj, fuselage_length, fuselage_max_width, max_height)
-               output = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
-          end
-
-          % Estimate wing sweep at quarter-chord (deg)
-          function output = get_sweep_qc(geometry_obj, b, LE_sweep_deg, root_chord, tip_chord)
-               output = atand(tand(LE_sweep_deg) - (root_chord - tip_chord)/(2*b));
+          % Estimate wetted area (body)
+          % "Body" = "fuselage + nose cone + whatever isn't the wings from
+          % a silouetted side-view"
+          % "Fuselage" = "the fuselage"
+          function output = compute_S_wet_body(geometry_obj, A_top, A_side)
+               output = 3.4*(A_top + A_side)/2; % Raymer, 6th ed, eq 7.13
           end
      end
 
      methods (Access = private)
 
-          % Size the tail
-          function [S_HT, S_VT] = Tail_Sizing_IV(obj, c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W)
+          % Compute S_wet for wings with low tc
+          function output = compute_S_wet_wing_lowtc(geometry_obj, S_exposed)
+               output = 2.003*S_exposed; % Raymer, 6th ed, eq 7.11
+          end
 
-               % NOTE: S_REF IS USED BUT ITS SUPPOSED TO BE S_REF OF THE
-               % MAIN WINGS
-               % Assuming tail located 90% down fuselage
-               L_VT = L_fus*0.8;
-               L_HT = L_fus*0.8; % Allow operator to adjust this, later.
-
-               obj.VT.L = L_VT;
-               obj.HT.L = L_HT;
-
-               S_VT = c_VT*b_W*S_ref/obj.VT.L; % eq 6.28, 2nd edition
-
-               S_HT = c_HT*Cbar_W*S_ref/obj.HT.L; % eq 6.29, 2nd edition
-
-               obj.VT.S_ref = S_VT;
-               obj.HT.S_ref = S_HT;
-
+          % Compute S_wet for wings with high tc
+          function output = compute_S_wet_wing_hightc(geometry_obj, S_exposed, tc)
+               output = S_exposed*(1.977 + 0.52*tc);
           end
      end
 end
