@@ -165,6 +165,52 @@ classdef GeometryLevel1 < GeometryModelLevel1
           function output = compute_fus_len(geometry_obj, a, C, W_TO)
                output = a*W_TO^(C); % Raymer, 6th ed, table 6.3
           end
+
+          % Estimate tail properties based on historical trend of aircraft
+          % types
+          % This is probably better for stability and control
+          function [c_HT, c_VT] = est_tail_propers(geometry_obj, aircraft_type)
+               if aircraft_type == "Sailplane"
+                    c_HT = 0.50;
+                    c_VT = 0.02;
+               elseif (aircraft_type == "Homebuilt")
+                    c_HT = 0.50;
+                    c_VT = 0.04;
+               elseif aircraft_type == "General aviation - single engine"
+                    c_HT = 0.70;
+                    c_VT = 0.04;
+               elseif aircraft_type == "General aviation - twin engine"
+                    c_HT = 0.80;
+                    c_VT = 0.07;
+               elseif aircraft_type == "Agricultural"
+                    c_HT = 0.50;
+                    c_VT = 0.04;
+               elseif aircraft_type == "Twin turboprop"
+                    c_HT = 0.90;
+                    c_VT = 0.08;
+               elseif aircraft_type == "Flying boat"
+                    c_HT = 0.70;
+                    c_VT = 0.06;
+               elseif aircraft_type == "Jet trainer"
+                    c_HT = 0.70;
+                    c_VT = 0.06;
+               elseif aircraft_type == "Jet fighter"
+                    c_HT = 0.40;
+                    c_VT = 0.07; % 0.07 - 0.12, longer fuselage -> higher value
+               elseif (aircraft_type == "Military cargo") || (aircraft_type == "Military bomber")
+                    c_HT = 1.00;
+                    c_VT = 0.08;
+               elseif (aircraft_type == "Jet transport")
+                    c_HT = 1.00;
+                    c_VT = 0.09;
+               else
+                    error("Unrecognized aircraft type.") % Include list of acceptable parameters
+               end
+
+               geometry_obj.HT.c_HT = c_HT;
+               geometry_obj.VT.c_VT = c_VT;
+
+          end
      end
 
      methods (Access = private)
