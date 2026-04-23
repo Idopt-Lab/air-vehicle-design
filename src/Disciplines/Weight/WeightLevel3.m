@@ -17,7 +17,6 @@ classdef WeightLevel3 < WeightModelLevel3
           total_fuel_used
           fuel_fraction
           weight_coefficients
-          eps % Error tolerance
      end
 
      methods

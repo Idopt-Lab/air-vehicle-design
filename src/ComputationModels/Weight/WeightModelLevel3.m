@@ -4,6 +4,7 @@ classdef (Abstract) WeightModelLevel3 < handle
 
      properties (Abstract)
           MTOW
+          OEW
           wings
           tail
           subsystems

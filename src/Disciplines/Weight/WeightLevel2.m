@@ -5,12 +5,7 @@ classdef WeightLevel2 < WeightModelLevel3
 
      properties
           MTOW
-          wings
-          tail
-          subsystems
-          engine
-          landinggear
-          eps % Error tolerance
+          OEW
           W_fixed
      end
 
@@ -21,20 +16,6 @@ classdef WeightLevel2 < WeightModelLevel3
           %      %   Detailed explanation goes here
           %      obj.Property1 = inputArg1 + inputArg2;
           % end
-
-          % Estimate subsystem weight
-          function output = get_subsystem_weight(weight_obj)
-               % This isn't implemented for this fidelity level
-               disp("This isn't implemented for this fidelity level")
-               output = null;
-          end
-
-          % Estimate engine weight
-          function output = get_engine_weight(weight_obj)
-               % Some sort of regression that estimates engine weight.
-               disp("This isn't implemented for this fidelity level")
-               output = null;
-          end
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
           function output = get_OEW(weight_obj, W0, AR, T, S_ref, M_max, K_vs)
