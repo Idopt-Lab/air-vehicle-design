@@ -98,18 +98,6 @@ classdef GeometryLevel1 < GeometryModelLevel1
                     GeometryUtils.loaddesigngeometry(obj, design)
                end
 
-               % Get S_exposed for each component
-               obj.mainwings.S_exposed = get_S_exposed(obj, obj.mainwings.tip_chord, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
-               obj.HT.S_exposed = get_S_exposed(obj, obj.HT.tip_chord, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
-               obj.VT.S_exposed = get_S_exposed(obj, obj.VT.tip_chord, obj.VT.exposed_rc, obj.VT.exposed_halfspan);
-
-               % Get S_wet for each component
-               obj.mainwings.S_wet = get_S_wet_wing(obj, obj.mainwings.S_exposed, obj.mainwings.tc);
-               obj.HT.S_wet = get_S_wet_wing(obj, obj.HT.S_exposed, obj.HT.tc);
-               obj.VT.S_wet = get_S_wet_wing(obj, obj.VT.S_exposed, obj.VT.tc);
-               obj.fuselage.S_wet = get_S_wet_fuselage(obj, obj.design.total_length, obj.fuselage.W_max, obj.fuselage.h_max);
-               % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
-
           end
 
           function L_fuselage = get_fus_len(geometry_obj, aircraft_type, W_TO)
