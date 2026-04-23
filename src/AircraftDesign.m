@@ -6,8 +6,10 @@ classdef AircraftDesign < handle
      properties
           Name
           geom
+          general
           propulsion
           weights
+          type
           % missiondata % Aircraft design doesn't need mission data
           requirements % Should divorce this from AircraftDesign
           requirements_filename
@@ -46,10 +48,13 @@ classdef AircraftDesign < handle
                obj.Name = name;
 
                if opts.AutoLoad
-                    [obj.geom.wings, obj.geom.fuselage, obj.propulsion, obj.weights] = Import_Design(obj.Name);
+                    [obj.geom.wings, obj.geom.fuselage, obj.propulsion, obj.weights, obj.general] = Import_Design(obj.Name);
                     obj.requirements = Import_Requirements(opts.RequirementsName);
                     % obj.constraints  = Import_Constraints(opts.ConstraintsName);
                     obj.constraints_filename = opts.ConstraintsName;
+
+                    % Sort through "general" stuff
+                    obj.type = obj.general.Type;
 
                     % Come back to this. This is supposed to create a
                     % mission object automatically.
