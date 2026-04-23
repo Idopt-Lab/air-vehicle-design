@@ -196,6 +196,15 @@ classdef GeometryLevel1 < GeometryModelLevel1
                geometry_obj.VT.c_root = c_VT;
 
           end
+
+          % Estimate the main wing's reference area based on W_TO and
+          % desired wing loading.
+          function S_ref_mainwing = get_wing_area(geometry_obj, W_TO, WS_desired)
+               geometry_obj.mainwings.S_ref = W_TO/(1/WS_desired);
+               S_ref_mainwing = geometry_obj.mainwings.S_ref;
+          end
+
+
      end
 
      methods (Access = private)
