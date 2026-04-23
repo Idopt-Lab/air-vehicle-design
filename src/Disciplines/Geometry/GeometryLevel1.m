@@ -204,6 +204,37 @@ classdef GeometryLevel1 < GeometryModelLevel1
                S_ref_mainwing = geometry_obj.mainwings.S_ref;
           end
 
+          % Estimate tail AR and lambda
+          function [HT, VT] = tab_tail_AR_lambda(geometry_obj, aircraft_type, tail_type)
+               if aircraft_type == "Fighter"
+                    HT.AR = 3;
+                    HT.lambda = 0.2;
+                    VT.AR = 0.6;
+                    VT.lambda = 0.2;
+               elseif aircraft_type == "Sailplane"
+                    HT.AR = 6;
+                    HT.lambda = 0.3;
+                    VT.AR = 1.5;
+                    VT.lambda = 0.4;
+               elseif (aircraft_type ~= "Fighter") || (aircraft_type ~= "Sailplane")
+                    HT.AR = 3;
+                    HT.lambda = 0.3;
+                    VT.AR = 1.3;
+                    VT.lambda = 0.3;
+               elseif (tail_type == "T-tail")
+                    HT.AR = 0;
+                    HT.lambda = 0;
+                    VT.AR = 0.7;
+                    VT.lambda = 0.6;
+               else
+                    error("Couldn't identify aircraft or tail type.")
+               end
+
+               geometry_obj.HT = HT;
+               geometry_obj.VT = VT;
+          end
+
+
 
      end
 
