@@ -79,7 +79,8 @@ classdef GeometryLevel1 < GeometryModelLevel1
                % Now load the design's geometry!
                if nargin > 0 && ~isempty(design)
                     GeometryUtils.loaddesigngeometry(obj, design)
-                    obj.est_tail_propers(design.Type); % Incorporate this
+                    obj.est_tail_propers(design.type); % Incorporate this
+                    obj.get_fus_len(design.type, design.weights.Weights.WTO_guess);
                end
 
           end
