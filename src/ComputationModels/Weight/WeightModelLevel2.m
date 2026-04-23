@@ -9,7 +9,6 @@ classdef (Abstract) WeightModelLevel2 < handle
      end
 
      methods (Abstract)
-          % MTOW = estimate_design_weight(input)
           OEW = get_OEW(weight_obj, W0, AR, T, S_ref, M_max, K_vs)
      end
 end

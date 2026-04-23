@@ -5,16 +5,16 @@ classdef WeightLevel1 < WeightModelLevel3
      properties
           MTOW
           OEW
+          OEW_frac
           W_TO
           W_fixed
      end
 
      methods
-          % function obj = F16WeightEstLevel1(inputArg1,inputArg2)
-          %      %F16WEIGHTESTLEVEL1 Construct an instance of this class
-          %      %   Detailed explanation goes here
-          %      obj.Property1 = inputArg1 + inputArg2;
-          % end
+          % Constructor
+          function obj = WeightLevel1(design)
+               obj.W_fixed = design.weights.Weights.Fixedlbf;
+          end
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
           function output = get_OEW(weight_obj, W_TO)
@@ -22,9 +22,11 @@ classdef WeightLevel1 < WeightModelLevel3
                a = 2.34;
                b = -0.13;
 
-               OEW_frac = a*W_TO^b;
+               weight_obj.OEW_frac = a*W_TO^b;
 
-               output = OEW_frac*W_TO;
+               weight_obj.OEW = weight_obj.OEW_frac*W_TO;
+
+               output = weight_obj.OEW;
           end
      end
 end

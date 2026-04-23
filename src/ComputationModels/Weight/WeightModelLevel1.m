@@ -5,11 +5,12 @@ classdef (Abstract) WeightModelLevel1 < handle
      properties
           MTOW
           OEW
+          OEW_frac
           W_TO
           W_fixed
      end
 
      methods (Abstract)
-          output = get_OEW(weight_obj, W_TO)
+          OEW = get_OEW(weight_obj, W_TO)
      end
 end

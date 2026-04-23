@@ -5,12 +5,14 @@ classdef (Abstract) WeightModelLevel3 < handle
      properties (Abstract)
           MTOW
           OEW
+          OEW_frac
           wings
           tail
           subsystems
           engine
-          % landinggear
-          eps % Error tolerance
+          landinggear_weight
+          W_TO_guess
+          W_TO
           W_fixed
      end
 
