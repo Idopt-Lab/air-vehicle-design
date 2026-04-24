@@ -71,23 +71,45 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           %% For low_bpr_turbofan/jet, theta0<=TR
           % Get thrust (dry)
-          function output = get_thrust_dry(propulsion_obj, t_sl_dry, delta_0, F1, M0, E)
-               output = t_sl_dry*delta_0*(1 - F1*M0^(E));
+          function output = get_thrust_dry(propulsion_obj, t_sl_dry, delta_0, F1, M0, E, F2, theta_0, TR)
+               if theta_0<=TR
+                    output = t_sl_dry*delta_0*(1 - F1*M0^(E));
+               elseif theta_0>TR
+                    output = t_sl_dry*delta_0*(1 - F1*M0^(E) - (F2 *(theta_0 - TR)/(theta_0)));
+               end
           end
 
           % Get TSFC (dry)
-          function output = get_TSFC_dry(propulsion_obj, TSFC_sl_dry, M, thrust, thrust_sl)
-               output = TSFC_sl_dry*(1.0 + 0.35*(M - 0.0))*(thrust/thrust_sl)^(0.5);
+          function output = get_TSFC_dry(propulsion_obj, theta_0, TSFC_sl_dry, M, thrust, thrust_sl, TR)
+               if theta_0 <= TR
+                    output = TSFC_sl_dry*(1.0 + 0.35*(M - 0.0))*(thrust/thrust_sl)^(0.5);
+               elseif theta_0 > TR
+                    output = TSFC_sl_dry*(1.0 + 0.35*M)*(thrust/thrust_sl)^(0.5);
+               else
+                    error("Error handler.")
+               end
           end
 
           % Get thrust (wet)
-          function output = get_thrust_wet(propulsion_obj, t_sl_wet, delta_0, F1, M0, E)
-               output = t_sl_wet*delta_0*(1 - F1*M0^(E));
+          function output = get_thrust_wet(propulsion_obj, t_sl_wet, delta_0, F1, M0, E, theta_0, TR, F2)
+               if theta_0<=TR
+                    output = t_sl_wet*delta_0*(1 - F1*M0^(E));
+               elseif theta_0>TR
+                    output = t_sl_wet*delta_0*(1 - F1*M0^(E) - (F2*(theta_0 - TR)/theta_0));
+               else
+                    error("Error handler.")
+               end
           end
 
           % Get TSFC (wet)
-          function output = get_TSFC_wet(propulsion_obj, TSFC_sl_wet, M, thrust, thrust_sl)
-               output = TSFC_sl_wet*(1.0 + 0.35*(M - 0.4))*(thrust/thrust_sl)^(0.5);
+          function output = get_TSFC_wet(propulsion_obj, TSFC_sl_wet, M, thrust, thrust_sl, theta_0, TR)
+               if theta_0 <= TR
+                    output = TSFC_sl_wet*(1.0 + 0.35*(M - 0.4))*(thrust/thrust_sl)^(0.5);
+               elseif theta_0 > TR
+                    output = TSFC_sl_wet*(1.0 + 0.35*abs(M - 0.4))*(thrust/thrust_sl)^(0.5);
+               else
+                    error("Error handler.")
+               end
           end
      end
 
