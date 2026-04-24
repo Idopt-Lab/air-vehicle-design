@@ -14,7 +14,7 @@ DesignTable_fuselage = readtable(DesignName, 'Sheet', 'Fuselage', 'ReadRowNames'
 DesignTable_propulsion = readtable(DesignName, 'Sheet', 'Propulsion', 'ReadRowNames', true);
 
 % Import general design information.
-general_raw = readcell(DesignName, 'Sheet', 'General', 'Range', 'C6:D20');
+general_raw = readcell(DesignName, 'Sheet', 'General', 'Range', 'C6:G20');
 
 DesignTable_general = struct();
 

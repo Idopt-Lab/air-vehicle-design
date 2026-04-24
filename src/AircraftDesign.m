@@ -8,6 +8,7 @@ classdef AircraftDesign < handle
           geom
           general
           propulsion
+          propulsion_type
           weights
           type
           % missiondata % Aircraft design doesn't need mission data
@@ -55,6 +56,7 @@ classdef AircraftDesign < handle
 
                     % Sort through "general" stuff
                     obj.type = obj.general.Type;
+                    obj.propulsion_type = obj.general.engineType;
 
                     % Come back to this. This is supposed to create a
                     % mission object automatically.

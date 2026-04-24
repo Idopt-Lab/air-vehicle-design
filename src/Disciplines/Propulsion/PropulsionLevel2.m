@@ -13,7 +13,7 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
           % Estimate installed TSFC (preliminary) (wrapper) (1/hr)
           function output = get_TSFC_installed(propulsion_obj, engine_type, state_input, theta, mil_or_max_power)
                M0 = state_input(1);
-               engine_type = propulsion_obj.classify_engine_type(engine_type);
+               engine_type = propulsion_obj.classify_engine_type(engine_type); % "normalize" engine type input.
                if (engine_type == "high_bypass_turbofan")
                     if M0 < 0.9
                          TSFC = propulsion_obj.comp_TSFC_highBPRturbofan(M0, theta);
