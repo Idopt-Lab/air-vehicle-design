@@ -25,7 +25,6 @@ classdef (Abstract) AerodynamicsModelLevel3 < handle
           DragResults
      end
 
-
      methods (Abstract)
           % These should be like wrappers!
           e_osw = get_e_osw(aero_obj, AR, Lambda_LE)
