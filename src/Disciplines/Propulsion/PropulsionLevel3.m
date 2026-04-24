@@ -44,6 +44,9 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
                output = eng_scale;
           end
+
+          % Compute TSFC
+          function output = get_TSFC(propulsion_obj
      end
 
      methods (Access = private)
