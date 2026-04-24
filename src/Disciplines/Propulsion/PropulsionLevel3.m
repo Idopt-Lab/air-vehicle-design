@@ -34,6 +34,16 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                     error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
                end
           end
+
+          % Scale engine
+          function output = scale_engine(propulsion_obj, L_actual, D_actual, W_actual, T_actual, T_required)
+               eng_scale.SF = T_actual/T_required;
+               eng_scale.L = L_actual*SF^(0.4); % Raymer, 6th ed, eq 10.1
+               eng_scale.D = D_actual*SF^(0.5); % Raymer, 6th ed, eq 10.2
+               eng_scale.W = W_actual*SF^(1.1); % Raymer, 6th ed, eq 10.3
+
+               output = eng_scale;
+          end
      end
 
      methods (Access = private)
