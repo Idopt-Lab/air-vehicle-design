@@ -17,7 +17,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           % Estimate engine properties
           function enginestats = get_propulsion_stats(propulsion_obj, requirements_obj, design)
-               enginestats = get_engine_stats(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, design.requirements.MaxMach.Mach, design.propulsion.BypassRatio.BypassRatio, design.general.isafterburning);
+               enginestats = get_engine_stats(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, requirements_obj.requirements.MaxMach.Mach, design.propulsion.BypassRatio.BypassRatio, design.general.isafterburning);
                % There are multiple versions of equations (afterburning,
                % nonafterburning). Consider adding those, too.
                % Also I need to stop using the tables for value extraction
