@@ -9,6 +9,7 @@ classdef (Abstract) PropulsionModelLevel3 < handle
      end
 
      methods (Abstract)
-          enginestats = get_propulsion_stats(propulsion_obj, mission_obj, design)
+          output = get_propulsion_stats(propulsion_obj, mission_obj, design)
+          enginestats = get_engine_stats(propulsion_obj, T, M, BPR, isafterburning)
      end
 end

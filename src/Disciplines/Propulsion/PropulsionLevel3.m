@@ -17,11 +17,22 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           % Estimate engine properties
           function enginestats = get_propulsion_stats(propulsion_obj, mission_obj, design)
-               enginestats = propulsion_est_level_III_ab(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, mission_obj.missiondata.Dash.MachNumber, design.propulsion.BypassRatio.BypassRatio);
+               enginestats = get_engine_stats(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, mission_obj.missiondata.Dash.MachNumber, design.propulsion.BypassRatio.BypassRatio);
                % There are multiple versions of equations (afterburning,
                % nonafterburning). Consider adding those, too.
                % Also I need to stop using the tables for value extraction
                % since they take up SO MUCH VISUAL SPACE!!!
+          end
+
+          % Estimate engine properties
+          function output = get_engine_stats(propulsion_obj, T, M, BPR, isafterburning)
+               if (isafterburning == "Y")
+                    output = propulsion_obj.compute_eng_stats_ab(T, M, BPR);
+               elseif (isafterburning == "N")
+                    output = propulsion_obj.compute_eng_stats_noab(T, M, BPR);
+               else
+                    error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
+               end
           end
      end
 
@@ -30,7 +41,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           % Estimate engine properties (AFTERBURNING ENGINE, IMPERIAL
           % UNITS)
-          function [enginestats] = propulsion_est_level_III_ab(obj, T, M, BPR)
+          function [enginestats] = compute_eng_stats_ab(propulsion_obj, T, M, BPR)
                % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
                % 10.15
 
@@ -59,7 +70,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           % Estimate engine properties (NONAFTERBURNING ENGINE, IMPERIAL
           % UNITS)
-          function [enginestats] = propulsion_est_level_III_nonab(obj, T, M, BPR)
+          function [enginestats] = compute_eng_stats_noab(propulsion_obj, T, M, BPR)
                % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
                % 10.15
 
