@@ -10,11 +10,18 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
 
      methods
 
+          % Get theta (wrapper)
+          function output = get_theta(propulsion_obj, state_input)
+               h_ft = state_input(2);
+               [T] = atmosisa(h_ft*0.3048);
+               output = PropulsionUtils.theta(T);
+          end
+
+
           % Estimate installed TSFC (preliminary) (wrapper) (1/hr)
           function output = get_TSFC_installed(propulsion_obj, engine_type, state_input, mil_or_max_power)
                M0 = state_input(1);
-               h_ft = state_input(2);
-               theta = PropulsionUtils.theta(h_ft);
+               theta = propulsion_obj.get_theta(state_input);
                engine_type = propulsion_obj.classify_engine_type(engine_type); % "normalize" engine type input.
                if (engine_type == "high_bypass_turbofan")
                     if M0 < 0.9

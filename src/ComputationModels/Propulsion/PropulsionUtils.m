@@ -9,9 +9,12 @@ classdef PropulsionUtils
 
      methods (Static)
 
-          function output = theta(h_ft)
-               [T] = atmosisa(h_ft*0.3048);
-               output = T/PropulsionUtils.T_std;
+          function output = theta(T_kelvin)
+               output = T_kelvin/PropulsionUtils.T_std;
+          end
+
+          function output = delta(P_kPa)
+               output = P_kPa/PropulsionUtils.P_std;
           end
      end
 end

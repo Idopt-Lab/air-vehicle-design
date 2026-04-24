@@ -45,8 +45,50 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                output = eng_scale;
           end
 
-          % Compute TSFC
-          function output = get_TSFC(propulsion_obj
+          % Compute TSFC (wrapper)
+          function output = get_TSFC(propulsion_obj, state_input)
+               M0 = state_input(1);
+               h_ft = state_input(2);
+               theta = propulsion_obj.get_theta(state_input);
+               delta = propulsion_obj.get_delta(state_input);
+               theta_0 = propulsion_obj.get_theta_0(theta, gamma, M0);
+               delta_0 = propulsion_obj.get_delta_0(delta, gamma, M0);
+          end
+
+          % Get theta (wrapper)
+          function output = get_theta(propulsion_obj, state_input)
+               h_ft = state_input(2);
+               [T] = atmosisa(h_ft*0.3048);
+               output = PropulsionUtils.theta(T);
+          end
+
+          % Get delta (wrapper)
+          function output = get_delta(propulsion_obj, state_input)
+               h_ft = state_input(2);
+               [T, a, P] = atmosisa(h_ft*0.3048);
+               output = PropulsionUtils.delta(P/1000);
+          end
+
+          %% For low_bpr_turbofan/jet, theta0<=TR
+          % Get thrust (dry)
+          function output = get_thrust_dry(propulsion_obj, t_sl_dry, delta_0, F1, M0, E)
+               output = t_sl_dry*delta_0*(1 - F1*M0^(E));
+          end
+
+          % Get TSFC (dry)
+          function output = get_TSFC_dry(propulsion_obj, TSFC_sl_dry, M, thrust, thrust_sl)
+               output = TSFC_sl_dry*(1.0 + 0.35*(M - 0.0))*(thrust/thrust_sl)^(0.5);
+          end
+
+          % Get thrust (wet)
+          function output = get_thrust_wet(propulsion_obj, t_sl_wet, delta_0, F1, M0, E)
+               output = t_sl_wet*delta_0*(1 - F1*M0^(E));
+          end
+
+          % Get TSFC (wet)
+          function output = get_TSFC_wet(propulsion_obj, TSFC_sl_wet, M, thrust, thrust_sl)
+               output = TSFC_sl_wet*(1.0 + 0.35*(M - 0.4))*(thrust/thrust_sl)^(0.5);
+          end
      end
 
      methods (Access = private)
@@ -106,6 +148,16 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                enginestats.SFC_maxT = SFC_maxT(BPR)*(1/3600);
                enginestats.T_cruise = T_cruise(T, BPR);
                enginestats.SFC_cruise = SFC_cruise(BPR)*(1/3600);
+          end
+
+          % Get theta_0
+          function output = compute_theta_0(propulsion_obj, theta, gamma, M_0)
+               output = theta*(1 + ((gamma-1)/2) * M_0^2);
+          end
+
+          % Get delta_0
+          function output = compute_delta_0(propulsion_obj, delta, gamma, M_0)
+               output = delta*(1 + ((gamma-1)/2) * M_0^2);
           end
 
 
