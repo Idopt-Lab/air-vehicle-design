@@ -11,13 +11,13 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
      methods
 
           % Constructor
-          function obj = PropulsionLevel3(mission_obj, design)
-               obj.enginestats = get_propulsion_stats(obj, mission_obj, design);
+          function obj = PropulsionLevel3(requirements_obj, design)
+               obj.enginestats = get_propulsion_stats(obj, requirements_obj, design);
           end
 
           % Estimate engine properties
-          function enginestats = get_propulsion_stats(propulsion_obj, mission_obj, design)
-               enginestats = get_engine_stats(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, mission_obj.missiondata.Dash.MachNumber, design.propulsion.BypassRatio.BypassRatio);
+          function enginestats = get_propulsion_stats(propulsion_obj, requirements_obj, design)
+               enginestats = get_engine_stats(propulsion_obj, design.propulsion.ThrustseaLevellbf.Dry, design.requirements.MaxMach.Mach, design.propulsion.BypassRatio.BypassRatio, design.general.isafterburning);
                % There are multiple versions of equations (afterburning,
                % nonafterburning). Consider adding those, too.
                % Also I need to stop using the tables for value extraction
@@ -65,7 +65,6 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                enginestats.SFC_maxT = SFC_maxT(BPR)*(1/3600);
                enginestats.T_cruise = T_cruise(T, BPR);
                enginestats.SFC_cruise = SFC_cruise(BPR)*(1/3600);
-
           end
 
           % Estimate engine properties (NONAFTERBURNING ENGINE, IMPERIAL
@@ -94,9 +93,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                enginestats.SFC_maxT = SFC_maxT(BPR)*(1/3600);
                enginestats.T_cruise = T_cruise(T, BPR);
                enginestats.SFC_cruise = SFC_cruise(BPR)*(1/3600);
-
           end
-
 
 
      end
