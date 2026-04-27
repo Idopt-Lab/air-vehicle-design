@@ -6,9 +6,19 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
      properties
           enginestats
           TSFC
+          T0
+          t_sl_dry
+          t_sl_wet
      end
 
      methods
+
+          % Constructor
+          function obj = PropulsionLevel2(design)
+               obj.t_sl_dry = design.propulsion.ThrustseaLevellbf.Dry;
+               obj.t_sl_wet = design.propulsion.ThrustseaLevellbf.Wet;
+          end
+
 
           % Get theta (wrapper)
           function output = get_theta(propulsion_obj, state_input)

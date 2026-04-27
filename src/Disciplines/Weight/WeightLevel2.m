@@ -8,17 +8,23 @@ classdef WeightLevel2 < WeightModelLevel2
           OEW
           OEW_frac
           W_TO
+          W_TO_guess
           W_fixed
+          total_fuel_used
+          fuel_fraction
+          K_vs
      end
 
      methods
           % Constructor
           function obj = WeightLevel2(design)
                obj.W_fixed = design.weights.Weights.Fixedlbf;
+               obj.W_TO_guess = design.weights.Weights.WTO_guess;
+               obj.K_vs = design.weights.Coefficients.Kvs;
           end
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
-          function output = get_OEW(weight_obj, W0, AR, T, S_ref, M_max, K_vs)
+          function output = get_OEW(weight_obj, W_TO, W0, AR, T, S_ref, M_max, K_vs)
                % Hard-coding some values (placeholders)
                a = -0.02;
                b = 2.16;
@@ -27,7 +33,7 @@ classdef WeightLevel2 < WeightModelLevel2
                c3 = 0.04;
                c4 = -0.10;
                c5 = 0.08;
-               output = (a + b*W0^(c1) * AR^(c2) * (T/W0)^(c3) * (W0/S_ref)^(c4) * M_max^(c5))*K_vs;
+               output = W_TO*(a + b*W0^(c1) * AR^(c2) * (T/W0)^(c3) * (W0/S_ref)^(c4) * M_max^(c5))*K_vs;
           end
      end
 end

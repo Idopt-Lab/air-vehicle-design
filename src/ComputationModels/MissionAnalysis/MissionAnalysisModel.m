@@ -6,8 +6,6 @@ classdef (Abstract) MissionAnalysisModel < handle
      % BUT MISSION FUEL IS IMPORTANT FOR ESTIMATING MTOW
 
      properties (Abstract)
-          % What the heck do I put here?
-          % MTOW
           missiondata
           mission_fuel
           eps
