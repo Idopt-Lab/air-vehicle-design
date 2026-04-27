@@ -5,6 +5,7 @@ classdef PropulsionUtils
      properties (Constant)
           T_std = 273.15; % Kelvin
           P_std = 100; %kPa
+          gamma = 1.4;
      end
 
      methods (Static)
