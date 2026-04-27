@@ -46,7 +46,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
           end
 
           % Compute TSFC (wrapper)
-          function output = get_TSFC(propulsion_obj, state_input, isdryorwet)
+          function output = get_TSFC(propulsion_obj, state_input, isdryorwet, thrust_sl, TR)
                M0 = state_input(1);
                h_ft = state_input(2);
                theta = propulsion_obj.get_theta(state_input);
@@ -55,8 +55,11 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                delta_0 = propulsion_obj.get_delta_0(delta, gamma, M0);
                if isdryorwet=="dry"
                     % Compute TSFC for dry config
+                    thrust = propulsion_obj.get_thrust_dry(t_sl_dry, delta_0, F1, M0, E, F2, theta_0, TR);
+                    output = propulsion_obj.get_TSFC_dry(theta_0, TSFC_sl_dry, M0, thrust, thrust_sl, TR);
                elseif isdryorwet == "wet"
                     % Compute TSFC for wet config
+                    output = get_TSFC_wet(propulsion_obj, theta_0, TSFC_sl_dry, M0, thrust, thrust_sl, TR);
                else
                     error("Error handler. Must be 'dry' or 'wet'.")
                end
