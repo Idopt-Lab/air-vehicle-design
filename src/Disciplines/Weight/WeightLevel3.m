@@ -6,6 +6,7 @@ classdef WeightLevel3 < WeightModelLevel3
      properties
           MTOW
           OEW
+          OEW_frac
           wings
           tail
           subsystems
@@ -27,24 +28,24 @@ classdef WeightLevel3 < WeightModelLevel3
           end
 
           % Estimate subsystem weight
-          function output = get_subsystem_weight(weight_obj, mission_obj, propulsion_obj, design)
+          function output = get_subsystem_weight(weight_obj, propulsion_obj, design, requirements_obj)
                % Need W_TO
-               propulsion_obj.get_propulsion_stats(mission_obj, design);
+               propulsion_obj.get_propulsion_stats(requirements_obj, design);
                weight_obj.subsystems = weight_obj.subsystem_weight_III(design.weights, weight_obj.W_TO, propulsion_obj.T0, weight_obj.engine.W_installed);
           end
 
           % Estimate engine weight (installed)
-          function output = get_engine_weight(weight_obj, propulsion_obj, mission_obj, design)
-               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(mission_obj, design);
+          function output = get_engine_weight(weight_obj, propulsion_obj, design, requirements_obj)
+               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
                weight_obj.engine = weight_obj.compute_engine_installed_weight(propulsion_obj.T0);
                weight_obj.engine.installed = 1.3*weight_obj.engine.W_total;
                output = weight_obj.engine.W_total;
           end
 
           % Estimate OEW
-          function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design, geometry_obj, W_TO)
-               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(mission_obj, design);
-               get_engine_weight(weight_obj, propulsion_obj, mission_obj, design);
+          function output = get_OEW(weight_obj, propulsion_obj, design, geometry_obj, W_TO, requirements_obj)
+               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
+               weight_obj.get_engine_weight(propulsion_obj, design, requirements_obj);
                weight_obj.OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj.mainwings.S_ref, geometry_obj.HT.S_ref, geometry_obj.VT.S_ref, geometry_obj.design.S_wet, propulsion_obj.T0, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
