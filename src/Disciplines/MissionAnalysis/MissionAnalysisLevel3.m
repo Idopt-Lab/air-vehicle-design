@@ -6,12 +6,14 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
           missiondata % This is all the mission_obj information. Altitudes, aerodynamics, etc.
           mission_fuel
+          mission_states
      end
 
      methods
           % Constructor
           function obj = MissionAnalysisLevel3(Chosen_Mission)
                obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
+               obj.mission_states = obj.generate_mission_states;
           end
 
           % Compute mission fuel
@@ -28,15 +30,15 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
                % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
 
-               % Generate mission state vectors
-               state_vector = mission_obj.generate_mission_states;
+               % % Generate mission state vectors
+               % state_vector = mission_obj.generate_mission_states;
 
                % Loop stuff - should automate segment naming extraction
                % (future)
                [W_startup, f1] = mission_obj.segment_startup(W_TO);
                [W_taxi, f2]    = mission_obj.segment_taxi(W_startup);
                [W_Takeoff, f3] = mission_obj.segment_takeoff(W_taxi);
-               [W_Climb, f4]   = mission_obj.segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Climb.MachNumber, mission_obj.missiondata.Climb.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
+               [W_Climb, f4]   = mission_obj.segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC(mission_obj.mission_states(:,4), "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
                [W_Cruise, f5]  = mission_obj.segment_cruise(W_Climb, W_S, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
                [W_Dash, f6]    = mission_obj.segment_dash(W_Cruise, S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, mission_obj.missiondata.Dash.CD0, mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
                [W_Combat, f7]  = mission_obj.segment_combat(W_Dash, mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Combat.PayloadDroplbf, mission_obj.missiondata.Combat.CD0, mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
@@ -57,11 +59,11 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                % State vector = [Mach, altitude, alpha, instantaneous weight] (per segment)
                segment_names = fieldnames(mission_obj.missiondata);
                segment_count = length(segment_names);
-               state_vector = zeros(2, segment_count);
+               state_vector = zeros(2, segment_count-1); % Trim the last column because it's just "meta"
 
                % Extract Mach number & altitude from each segment
-               for i=1:segment_count
-                    segment_name = segment_names(i);
+               for i=1:segment_count-1
+                    segment_name = segment_names{i};
                     state_vector(1) = mission_obj.missiondata.(segment_name).MachNumber;
                     state_vector(2) = mission_obj.missiondata.(segment_name).Altitudeft;
                end

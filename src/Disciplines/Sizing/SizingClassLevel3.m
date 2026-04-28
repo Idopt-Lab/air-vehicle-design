@@ -20,6 +20,8 @@ classdef SizingClassLevel3
                results = [];
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                total_fuel_used = 0;
+               % Generate mission state vectors
+               % mission_obj.state_vector = mission_obj.generate_mission_states;
                for iteration = 1:max_iteration
                     geometry_obj.mainwings.S_ref = W_TO / W_S;
 
