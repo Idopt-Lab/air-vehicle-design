@@ -64,8 +64,8 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                % Extract Mach number & altitude from each segment
                for i=1:segment_count-1
                     segment_name = segment_names{i};
-                    state_vector(1) = mission_obj.missiondata.(segment_name).MachNumber;
-                    state_vector(2) = mission_obj.missiondata.(segment_name).Altitudeft;
+                    state_vector(1,i) = mission_obj.missiondata.(segment_name).MachNumber;
+                    state_vector(2,i) = mission_obj.missiondata.(segment_name).Altitudeft;
                end
           end
 
