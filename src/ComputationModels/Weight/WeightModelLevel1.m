@@ -11,6 +11,6 @@ classdef (Abstract) WeightModelLevel1 < handle
      end
 
      methods (Abstract)
-          OEW = get_OEW(weight_obj, W_TO)
+          OEW = get_OEW(weight_obj, design_type, W_TO)
      end
 end
