@@ -54,6 +54,8 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
      % HELPER FUNCTIONS
 
      methods (Access = private)
+% For loop - loops through 
+
           % Generate mission state vector
           function state_vector = generate_mission_states(mission_obj)
                % State vector = [Mach, altitude, alpha, instantaneous weight] (per segment)

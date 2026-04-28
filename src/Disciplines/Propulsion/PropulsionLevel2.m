@@ -32,7 +32,7 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
           function output = get_TSFC_installed(propulsion_obj, engine_type, state_input, mil_or_max_power)
                M0 = state_input(1);
                theta = propulsion_obj.get_theta(state_input);
-               engine_type = propulsion_obj.classify_engine_type(engine_type); % "normalize" engine type input.
+               engine_type = PropulsionUtils.classify_engine_type(engine_type); % "normalize" engine type input.
                if (engine_type == "high_bypass_turbofan")
                     if M0 < 0.9
                          TSFC = propulsion_obj.comp_TSFC_highBPRturbofan(M0, theta);
@@ -92,33 +92,6 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
                output = (0.18 + 0.8*M_0)*sqrt(theta);
           end
 
-          % Normalize engine type inputs
-          % Code from ChatGPT
-          function engine_type_out = classify_engine_type(propulsion_obj, engine_type_in)
-               s = lower(string(engine_type_in));
-               s = replace(s, "-", " ");
-               s = replace(s, "_", " ");
-               s = strip(s);
-               s = regexprep(s, "\s+", " ");
-
-               if contains(s, "turboprop")
-                    engine_type_out = "turboprop";
-
-               elseif contains(s, "turbojet")
-                    engine_type_out = "turbojet";
-
-               elseif contains(s, "turbofan")
-                    if contains(s, "high bypass") || contains(s, "high bpr")
-                         engine_type_out = "high_bypass_turbofan";
-                    elseif contains(s, "low bypass") || contains(s, "low bpr")
-                         engine_type_out = "low_bypass_mixed_turbofan";
-                    else
-                         error("Turbofan detected, but bypass class was unclear.")
-                    end
-
-               else
-                    error("Could not identify engine type from input: " + string(engine_type_in))
-               end
-          end
+          
      end
 end

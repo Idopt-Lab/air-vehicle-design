@@ -1,4 +1,4 @@
-classdef PropulsionLevel1 < PropulsionModelLevel3
+classdef PropulsionLevel1
      %F16PROPULSIONESTLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -10,25 +10,37 @@ classdef PropulsionLevel1 < PropulsionModelLevel3
 
      methods
 
-          % Should estimate TSFC via historical regression or something
-          % Do I want to create the historical regression here, or should I
-          % expect the user to enter it from their own work?
-          function enginestats = get_propulsion_stats(obj, TSFC)
-               TSFC = get_TSFC(obj, TSFC);
+          % Constructor
+          function obj = PropulsionLevel1(design)
+               engine_type = PropulsionUtils.classify_engine_type(design.propulsion_type);
+               obj.TSFC = obj.get_TSFC(engine_type);
           end
 
-          % Get TSFC
-          function TSFC = get_TSFC(obj, TSFC)
-               TSFC = compute_TSFC(obj, TSFC);
-          end
+          % Get TSFC (1/sec)
+          function TSFC = get_TSFC(propulsion_obj, engine_type)
 
-     end
-
-     methods (Access = private)
-
-          % "Compute" TSFC.
-          function TSFC = compute_TSFC(obj, TSFC)
-               TSFC = TSFC;
+               % Need to normalize input here, too
+               if (engine_type == "turbojet")
+                    TSFC.cruise = 0.9 * (1/3600);
+                    TSFC.loiter = 0.8 * (1/3600);
+               elseif (engine_type == "low_bypass_mixed_turbofan")
+                    TSFC.cruise = 0.8 * (1/3600);
+                    TSFC.loiter = 0.7 * (1/3600);
+               elseif (engine_type == "high_bypass_mixed_turbofan")
+                    TSFC.cruise = 0.5 * (1/3600);
+                    TSFC.loiter = 0.4 * (1/3600);
+               elseif (engine_type == "Piston_prop_fixed_pitch")
+                    TSFC.cruise = 0.4 * (1/3600);
+                    TSFC.loiter = 0.5 * (1/3600);
+               elseif (engine_type == "Piston_prop_variable_pitch")
+                    TSFC.cruise = 0.4 * (1/3600);
+                    TSFC.loiter = 0.5 * (1/3600);
+               elseif (engine_type == "turboprop")
+                    TSFC.cruise = 0.9 * (1/3600);
+                    TSFC.loiter = 0.8 * (1/3600);
+               else
+                    error("Error handler reached.")
+               end
           end
 
      end
