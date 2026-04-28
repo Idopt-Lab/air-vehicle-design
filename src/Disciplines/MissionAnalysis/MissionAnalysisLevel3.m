@@ -28,9 +28,7 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
                % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
 
-               % OEW update from wing and engine change
-               % WingDelta = WingDensity * (S_ref - W_TO/(W_S));
-               % EngineDelta = W_Engine - Engine_Sizing(T_W*W_TO);
+               % Generate mission state vectors
 
                % Loop stuff - should automate segment naming extraction
                % (future)
@@ -53,6 +51,17 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
      % HELPER FUNCTIONS
 
      methods (Access = private)
+          % Generate mission state vector
+          function output = generate_mission_states(mission_obj)
+               % State vector = [Mach, altitude, alpha, instantaneous weight] (per segment)
+               segment_count = length(fieldnames(mission_obj.missiondata));
+               state_vector = zeros(5, segment_count);
+
+               % Extract Mach number & altitude from each segment
+               for i=1:segment_count
+                    
+
+
           % Arguments should be design-specific geometric or aerodynamic
           % properties extracted from objects (... which are themselves the
           % design).
