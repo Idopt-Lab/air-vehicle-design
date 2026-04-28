@@ -29,6 +29,7 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
 
                % Generate mission state vectors
+               state_vector = mission_obj.generate_mission_states;
 
                % Loop stuff - should automate segment naming extraction
                % (future)
@@ -52,15 +53,19 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
      methods (Access = private)
           % Generate mission state vector
-          function output = generate_mission_states(mission_obj)
+          function state_vector = generate_mission_states(mission_obj)
                % State vector = [Mach, altitude, alpha, instantaneous weight] (per segment)
-               segment_count = length(fieldnames(mission_obj.missiondata));
-               state_vector = zeros(5, segment_count);
+               segment_names = fieldnames(mission_obj.missiondata);
+               segment_count = length(segment_names);
+               state_vector = zeros(2, segment_count);
 
                % Extract Mach number & altitude from each segment
                for i=1:segment_count
-                    
-
+                    segment_name = segment_names(i);
+                    state_vector(1) = mission_obj.missiondata.(segment_name).MachNumber;
+                    state_vector(2) = mission_obj.missiondata.(segment_name).Altitudeft;
+               end
+          end
 
           % Arguments should be design-specific geometric or aerodynamic
           % properties extracted from objects (... which are themselves the
