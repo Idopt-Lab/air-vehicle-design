@@ -8,7 +8,6 @@ classdef (Abstract) MissionAnalysisModel < handle
      properties (Abstract)
           missiondata
           mission_fuel
-          eps
      end
 
      methods (Abstract)

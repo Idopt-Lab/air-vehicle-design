@@ -76,11 +76,11 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
 
 
           function [WF] = compute_weightfraction(mission_obj, TSFC, R, Vend, LD_ratio)
-               WF = exp(-((R * TSFC*(1/3600)) / (Vend * LD_ratio)));
+               WF = exp(-((R * TSFC) / (Vend * LD_ratio)));
           end
 
 
-          % Climb segment - un-revise this.
+          % Climb segment - un-revised.
           function [W_out, fuel_used] = segment_climb(mission_obj, W_TO, W_in, Mach, S, CD0, e, AR, TSFC, h, T0)
                WF_Climb = 1.0065 - 0.0325 * Mach;
                fuel_used = (1 - WF_Climb) * W_in;
@@ -89,15 +89,15 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
 
 
 
-
+          % Combat segment - un-revised
           function [W_out, fuel_used] = segment_combat(mission_obj, W_in, time, TSFC, payload, CD0, e, AR, W_TO, q,  W_S)
                LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
-               WF = exp(-(time * 60 * TSFC*(1/3600) / LD));
+               WF = exp(-(time * 60 * TSFC / LD));
                fuel_used = W_in*(1-WF);
                W_out = W_in - fuel_used - payload;
           end
 
-
+          % Cruise segment - un-revised
           function [W_out, fuel_used] = segment_cruise(mission_obj, W_in, W_S, TSFC, Distance, Mach, a, q, CD0, e, AR, W_TO, S)
                V = Mach * a;
                LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
@@ -122,7 +122,7 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
 
           function [W_out, fuel_used] = segment_loiter(mission_obj, W_TO, W_in, W_S, q, CD0, e, AR, time, TSFC)
                LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
-               WF = exp(-(time * 60 * TSFC*(1/3600) / LD));
+               WF = exp(-(time * 60 * TSFC / LD));
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end

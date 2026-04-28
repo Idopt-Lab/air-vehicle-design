@@ -64,6 +64,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                else
                     error("Error handler. Must be 'dry' or 'wet'.")
                end
+               output = output/3600; % Convert TSFC from 1/hr -> 1/sec
           end
 
           % Get theta (wrapper)

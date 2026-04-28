@@ -28,7 +28,7 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
           end
 
 
-          % Estimate installed TSFC (preliminary) (wrapper) (1/hr)
+          % Estimate installed TSFC (preliminary) (wrapper) (1/sec)
           function output = get_TSFC_installed(propulsion_obj, engine_type, state_input, mil_or_max_power)
                M0 = state_input(1);
                theta = propulsion_obj.get_theta(state_input);
@@ -49,7 +49,7 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
                else
                     error("Could not identify engine type." + newline + "Accepted types:" + newline + "High bypass turbofan" + newline + "Low bypass mixed turbofan" + newline + "turbojet" + newline + "turboprop")
                end
-               output = TSFC;
+               output = TSFC/3600;
           end
      end
 
