@@ -82,22 +82,24 @@ classdef AeroLevel1 < AerodynamicsModelLevel3
                output = LDmax_loiter;
           end
 
-          %% Tabulate L/Dmax for the design
+          %% L/Dmax for the design
+          % Estimate L/Dmax
           function output = get_LDmax(aero_obj, design_type)
                % Determine K_LD
                K_LD = aero_obj.tab_K_LD(design_type);
                AR_wetted = aero_obj.compute_AR_wetted(AR, S_wet, S_ref);
-               LDmax = K_LD*sqrt(AR_wetted);
+               LDmax = K_LD*sqrt(AR_wetted); % Raymer, 6th edi, eq 3.12
                output = LDmax;
           end
 
           % Compute AR wetted
           function output = compute_AR_wetted(aero_obj, AR, S_wet, S_ref)
-               AR_wetted = AR/(S_wet/S_ref);
+               AR_wetted = AR/(S_wet/S_ref); % Raymer, 6th ed, eq 3.11
                output = AR_wetted;
           end
 
           % Tabulate K_LD
+          % Raymer, 6th ed, page 40
           function output = tab_K_LD(aero_obj, design_type)
                if (design_type == "civil jet")
                     K_LD = 15.5;
