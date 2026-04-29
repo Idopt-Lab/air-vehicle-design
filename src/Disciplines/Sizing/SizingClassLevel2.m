@@ -7,7 +7,7 @@ classdef SizingClassLevel2
      end
 
      methods
-          function size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj)
+          function size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
 
                weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
 
