@@ -58,12 +58,34 @@ classdef AeroLevel1 < AerodynamicsModelLevel3
           end
 
           %% FOR MISSION ANALYSIS
-          % Compute L/D
-          function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
-               W_by_W_TO = W / W_TO;
-               W_by_S = W_by_W_TO * W_S;
-               LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
+          % Tabulate L/Dmax (cruise)
+          function output = get_LDmax_cruise(aero_obj, LDmax, enginetype)
+               if (enginetype == "jet")
+                    LDmax_cruise = 0.866*LDmax;
+               elseif (enginetype == "prop")
+                    LDmax_cruise = LDmax;
+               else
+                    error("Error handler.")
+               end
+               output = LDmax_cruise;
           end
+
+          % Tabulate L/Dmax (loiter)
+          function output = get_LDmax_loiter(aero_obj, LDmax, enginetype)
+               if (enginetype == "jet")
+                    LDmax_loiter = LDmax;
+               elseif (enginetype == "prop")
+                    LDmax_loiter = 0.866*LDmax;
+               else
+                    error("Error handler.")
+               end
+               output = LDmax_loiter;
+          end
+
+          %% Tabulate L/Dmax for the design
+          function output = get_LDmax(aero_obj, design_type, design_lookalike, IsSubSonic, wettedAR)
+               
+
 
      end
 end
