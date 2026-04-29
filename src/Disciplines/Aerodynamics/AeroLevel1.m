@@ -118,8 +118,6 @@ classdef AeroLevel1 < AerodynamicsModelLevel3
                end
                output = K_LD;
           end
-
-
+          
      end
-
 end

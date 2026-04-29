@@ -30,8 +30,6 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
 
                % Loop stuff - should automate segment naming extraction
                % (future)
-               % [W_startup, f1] = segment_startup(W_TO);
-               % [W_taxi, f2]    = segment_taxi(W_startup);
                [W_Takeoff, f1] = mission_obj.segment_takeoff(W_TO);
                [W_Climb, f2]   = mission_obj.segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC_installed(design.propulsion_type, [mission_obj.missiondata.Climb.MachNumber, mission_obj.missiondata.Climb.Altitudeft, 0, W_Takeoff], "mil"), mission_obj.missiondata.Climb.Altitudeft, T0);
                [W_Cruise, f3]  = mission_obj.segment_cruise(W_Climb, W_S, mission_obj.missiondata.Cruise.TSFC, mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, mission_obj.missiondata.Cruise.CD0, mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
@@ -68,13 +66,20 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
 
 
 
-          function [LD_ratio] = compute_LD_ratio(mission_obj, W, W_TO, q, CD0, W_S, e, AR)
-               W_by_W_TO = W / W_TO;
-               W_by_S = W_by_W_TO * W_S;
-               LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
+          % Get LD ratio (wrapper)
+          function [LD_ratio] = compute_LD_ratio(mission_obj, aero_obj, segment_name)
+               design_type = design.general.Type;
+               if (segment_name == "Cruise") || (segment_name == "Combat")
+                    LD_ratio = aero_obj.get_LDmax(design_type);
+               elseif (segment_name == "Loiter")
+                    LD_ratio = aero_obj.get_LDmax(design_type);
+               else
+                    error("Error handler.")
+               end    
           end
 
 
+          % Computing weight fraction (should go in "weight" class?
           function [WF] = compute_weightfraction(mission_obj, TSFC, R, Vend, LD_ratio)
                WF = exp(-((R * TSFC) / (Vend * LD_ratio)));
           end
@@ -91,7 +96,7 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
 
           % Combat segment - un-revised
           function [W_out, fuel_used] = segment_combat(mission_obj, W_in, time, TSFC, payload, CD0, e, AR, W_TO, q,  W_S)
-               LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
+               LD = mission_obj.compute_LD_ratio(aero_obj, segment_name);
                WF = exp(-(time * 60 * TSFC / LD));
                fuel_used = W_in*(1-WF);
                W_out = W_in - fuel_used - payload;
@@ -100,51 +105,40 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
           % Cruise segment - un-revised
           function [W_out, fuel_used] = segment_cruise(mission_obj, W_in, W_S, TSFC, Distance, Mach, a, q, CD0, e, AR, W_TO, S)
                V = Mach * a;
-               LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
+               LD = mission_obj.compute_LD_ratio(aero_obj, segment_name);
                WF = mission_obj.compute_weightfraction(TSFC, Distance, V, LD);
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
 
           end
 
+          % Dash segment
           function [W_out, fuel_used] = segment_dash(mission_obj, W_in, W_S, W_TO, q, CD0, e, AR, TSFC, Distance, V)
-               LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
+               LD = mission_obj.compute_LD_ratio(aero_obj, segment_name);
                WF = mission_obj.compute_weightfraction(TSFC, Distance, V, LD);
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
+          % Landing segment
           function [W_out, fuel_used] = segment_landing(mission_obj, W_in, W_TO)
                WF = 0.995;
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
+          % Loiter segment
           function [W_out, fuel_used] = segment_loiter(mission_obj, W_TO, W_in, W_S, q, CD0, e, AR, time, TSFC)
-               LD = mission_obj.compute_LD_ratio(W_in, W_TO, q, CD0, W_S, e, AR);
+               LD = mission_obj.compute_LD_ratio(aero_obj, segment_name);
                WF = exp(-(time * 60 * TSFC / LD));
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
-
-          function [W_out, fuel_used] = segment_startup(mission_obj, W_in)
-               WF = 0.99;
-               W_out = W_in*WF;
-               fuel_used = W_in - W_out;
-          end
-
-
+          % Takeoff segment
           function [W_out, fuel_used] = segment_takeoff(mission_obj, W_in)
                WF = 0.95;
                W_out = W_in * WF;
-               fuel_used = W_in - W_out;
-          end
-
-
-          function [W_out, fuel_used] = segment_taxi(mission_obj, W_in)
-               WF = 0.98;
-               W_out = W_in*WF;
                fuel_used = W_in - W_out;
           end
      end
