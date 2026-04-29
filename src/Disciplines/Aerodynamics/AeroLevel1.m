@@ -84,8 +84,34 @@ classdef AeroLevel1 < AerodynamicsModelLevel3
 
           %% Tabulate L/Dmax for the design
           function output = get_LDmax(aero_obj, design_type, design_lookalike, IsSubSonic, wettedAR)
-               
+               % Determine K_LD
+               K_LD = aero_obj.tab_K_LD(design_type);
+               AR_wetted = aero_obj.compute_AR_wetted(AR, S_wet, S_ref);
+               LDmax = K_LD*sqrt(AR_wetted);
+               output = LDmax;
+          end
+
+          % Tabulate K_LD
+          function output = tab_K_LD(aero_obj, design_type)
+               if (design_type == "civil jet")
+                    K_LD = 15.5;
+               elseif (design_type == "military jet")
+                    K_LD = 14;
+               elseif (design_type == "retractable prop")
+                    K_LD = 11;
+               elseif (design_type == "nonretractable prop")
+                    K_LD = 9;
+               elseif (design_type == "high-AR aircraft")
+                    K_LD = 13;
+               elseif (design_type == "sailplane")
+                    K_LD = 15;
+               else
+                    error("Error handler.")
+               end
+               output = K_LD;
+          end
 
 
      end
+
 end
