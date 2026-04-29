@@ -32,7 +32,7 @@ classdef WeightLevel1 < WeightModelLevel1
                elseif (design_type == "Sailplane_powered")
                     a = 0.91;
                     c = -0.05;
-               elseif (design_type == "Homebuilt_metalorwood")
+               elseif (design_type == "Homebuilt_metalorwood") || (design_type == "homebuilt_metal") || (design_type == "homebuilt_wood")
                     a = 1.19;
                     c = -0.09;
                elseif (design_type == "Homebuilt_composite")
