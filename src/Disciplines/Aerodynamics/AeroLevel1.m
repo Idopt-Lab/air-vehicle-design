@@ -83,12 +83,18 @@ classdef AeroLevel1 < AerodynamicsModelLevel3
           end
 
           %% Tabulate L/Dmax for the design
-          function output = get_LDmax(aero_obj, design_type, design_lookalike, IsSubSonic, wettedAR)
+          function output = get_LDmax(aero_obj, design_type)
                % Determine K_LD
                K_LD = aero_obj.tab_K_LD(design_type);
                AR_wetted = aero_obj.compute_AR_wetted(AR, S_wet, S_ref);
                LDmax = K_LD*sqrt(AR_wetted);
                output = LDmax;
+          end
+
+          % Compute AR wetted
+          function output = compute_AR_wetted(aero_obj, AR, S_wet, S_ref)
+               AR_wetted = AR/(S_wet/S_ref);
+               output = AR_wetted;
           end
 
           % Tabulate K_LD
