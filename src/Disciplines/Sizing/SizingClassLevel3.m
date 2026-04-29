@@ -1,4 +1,4 @@
-classdef SizingClassLevel3
+classdef SizingClassLevel3 < SizingModel
      %SIZING Summary of this class goes here
      %   Detailed explanation goes here
 
