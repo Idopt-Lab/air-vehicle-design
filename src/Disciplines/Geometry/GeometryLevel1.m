@@ -234,6 +234,16 @@ classdef GeometryLevel1 < GeometryModelLevel1
                geometry_obj.VT = VT;
           end
 
+          % Estimate the wetted area of the aircraft
+          function output = get_design_S_wet(obj, W_TO)
+               % (Have a way to use different coefficients for different
+               % aircraft types!)
+               c = -0.1289; % Coefficient for fighter aircraft, given for S_wet equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
+               d = 0.7506; % Coefficient for fighter aicraft, given for S_wet equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
+               obj.design.S_wet = 10^(c) * W_TO^(d); % ft^2
+               output = obj.design.S_wet;
+          end
+
 
 
      end

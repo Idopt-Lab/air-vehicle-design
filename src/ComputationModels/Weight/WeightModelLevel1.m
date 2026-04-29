@@ -2,7 +2,7 @@ classdef (Abstract) WeightModelLevel1 < handle
      %WEIGHTMODELLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
 
-     properties
+     properties (Abstract)
           MTOW
           OEW
           OEW_frac

@@ -7,13 +7,20 @@ classdef WeightLevel1 < WeightModelLevel1
           OEW
           OEW_frac
           W_TO
+          W_TO_guess
           W_fixed
+          total_fuel_used
+          fuel_fraction
+          K_vs
      end
 
      methods
           % Constructor
           function obj = WeightLevel1(design)
                obj.W_fixed = design.weights.Weights.Fixedlbf;
+               obj.W_TO_guess = design.weights.Weights.WTO_guess;
+               obj.coefficients = design.weights.Coefficients;
+               obj.K_vs = design.weights.Coefficients.Kvs;
           end
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
@@ -49,7 +56,7 @@ classdef WeightLevel1 < WeightModelLevel1
                elseif (design_type == "jet_trainer")
                     a = 1.59;
                     c = -0.10;
-               elseif (design_type == "jet_fighter")
+               elseif (design_type == "jet_fighter") || (design_type == "Jet fighter")
                     a = 2.34;
                     c = -0.13;
                elseif (design_type == "Military_cargo") || (design_type == "Military_bomber")

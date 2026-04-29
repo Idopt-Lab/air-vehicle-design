@@ -20,6 +20,8 @@ classdef PropulsionLevel1
           function TSFC = get_TSFC(propulsion_obj, engine_type)
 
                % Need to normalize input here, too
+               engine_type = PropulsionUtils.classify_engine_type(engine_type);
+
                if (engine_type == "turbojet")
                     TSFC.cruise = 0.9 * (1/3600);
                     TSFC.loiter = 0.8 * (1/3600);
@@ -39,8 +41,10 @@ classdef PropulsionLevel1
                     TSFC.cruise = 0.9 * (1/3600);
                     TSFC.loiter = 0.8 * (1/3600);
                else
-                    error("Error handler reached.")
+                    error("Couldn't identify engine type.")
                end
+
+               propulsion_obj.TSFC = TSFC;
           end
 
      end
