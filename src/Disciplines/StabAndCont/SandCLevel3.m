@@ -160,7 +160,31 @@ classdef SandCLevel3 < SandCModelLevel3
                output = (K_fus*W_f^2*L_f)/(c*S_w);
           end
 
-          
+          %% Engine stuff
+          % Normal force due to the turning of the air at an inlet front
+          % face (jet engine)
+          function output = compute_Fp_jet(stability_obj, m_dot, V, alpha_p)
+               % alpha_p = turning angle
+               output = m_dot*V*tand(alpha_p);
+          end
+
+          function output = compute_m_dot(stability_obj, rho, V, A_inlet)
+               output = rho*V*A_inlet;
+          end
+
+          function output = compute_Fp_alpha_jet(stability_obj, m_dot, V)
+               output = m_dot*V;
+          end
+
+          % Now for props
+          function output = compute_Fp_alpha_prop(stability_obj, q, rho, V, D, N_B, A_p, delta_CN_blade_delta_alpha, T)
+               thrust_function = stabilitY_obj.compute_thrust_function(T, rho, V, D);
+               output = q*N_B*A_p*delta_CN_blade_delta_alpha*thrust_function;
+          end
+
+
+
+
 
 
 
@@ -189,6 +213,11 @@ classdef SandCLevel3 < SandCModelLevel3
      end
 
      methods (Access = private)
+
+          % Compute thrust function (???) Raymer 6th ed fig 16.16
+          function output = compute_thrust_function(stability_obj, T, rho, V, D)
+               output = T/(rho*V^2*D^2);
+          end
 
           % Compute downwash angle derivative, subsonic
           function output = compute_downwash_angle_deriv_subsonic(stability_obj, delta_eps_delta_alpha_M0, CL_alpha, CL_alpha_M0)
