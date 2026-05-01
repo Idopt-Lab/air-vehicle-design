@@ -140,6 +140,22 @@ classdef SandCLevel3 < SandCModelLevel3
                output = downwash_angle_derivative;
           end
 
+          % Upwash:
+          function output = compute_upwash_angle_change(stability_obj, delta_epsilon_u_delta_alpha)
+               output = 1 + delta_epsilon_u_delta_alpha;
+          end
+
+          % Downwash:
+          function output = compute_downwash_angle_change(stability_obj, delta_epsilon_delta_alpha)
+               output = 1 - delta_epsilon_delta_alpha;
+          end
+
+          %% Tail angle of attack
+          function output = compute_alpha_h(stability_obj, alpha, i_w, delta_epsilon_delta_alpha, i_h, delta_alpha_0L)
+               output = (alpha + i_w)*(1 - delta_epsilon_delta_alpha) + (i_h - i_w) + delta_alpha_0L;
+          end
+          
+
 
 
 
