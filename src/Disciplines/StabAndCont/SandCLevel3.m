@@ -15,6 +15,16 @@ classdef SandCLevel3 < SandCModelLevel3
                obj.Property1 = inputArg1 + inputArg2;
           end
 
+          % Get the static margin
+          function output = get_static_margin(stability_obj, geometry_obj)
+
+               Xbar_acw = stability_obj.get_CG();
+
+               Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_alpha, q, delta_alpha_p_delta_alpha, Xbar_p);
+
+               output = stability_obj.compute_SM(Xbar_np, Xbar_cg);
+          end
+
           % Estimate longitudinal location of CG
           function output = get_CG(stability_obj, weight_obj)
                % Function accepts arguments of weight. Uses longitudinal
