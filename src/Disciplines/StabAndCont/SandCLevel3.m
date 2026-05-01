@@ -22,6 +22,7 @@ classdef SandCLevel3 < SandCModelLevel3
 
           end
 
+          %% MAC equations are sourced from Brandt
           % Get MAC of a wing
           function output = get_MAC(stability_obj, c_root, lambda)
                output = (2/3)*c_root*((1+lambda+lambda^2)/(1+lambda));
