@@ -154,8 +154,13 @@ classdef SandCLevel3 < SandCModelLevel3
           function output = compute_alpha_h(stability_obj, alpha, i_w, delta_epsilon_delta_alpha, i_h, delta_alpha_0L)
                output = (alpha + i_w)*(1 - delta_epsilon_delta_alpha) + (i_h - i_w) + delta_alpha_0L;
           end
-          
 
+          %% Fuselage and nacelle pitching moment (per deg)
+          function output = compute_cm_alpha_fuselage(stability_obj, K_fus, W_f, L_f, c, S_w)
+               output = (K_fus*W_f^2*L_f)/(c*S_w);
+          end
+
+          
 
 
 
