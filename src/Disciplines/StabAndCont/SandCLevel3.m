@@ -12,7 +12,7 @@ classdef SandCLevel3 < SandCModelLevel3
           function obj = SandCLevel3(design)
                %SANDCLEVEL3 Construct an instance of this class
                %   Detailed explanation goes here
-               obj.Property1 = inputArg1 + inputArg2;
+               % obj.Property1 = inputArg1 + inputArg2;
           end
 
           % Get the static margin (wrapper)
@@ -35,13 +35,25 @@ classdef SandCLevel3 < SandCModelLevel3
 
                delta_alpha_h_delta_alpha = stability_obj.get_delta_alpha_h_delta_alpha(statevector(1), CL_alpha, CL_alpha_M0, geometry_obj.mainwings.AR);
 
-               F_palpha = stability_obj.get_Fp_alpha_jet(statevector, geometry_obj.propulsion.inlet_area);
+               F_palpha = stability_obj.get_Fp_alpha_jet(statevector, design.propulsion.InletArea.InletArea);
+
+               q = AeroUtils.compute_q(statevector);
+
+               delta_alpha_p_delta_alpha = stability_obj.compute_delta_alpha_p_delta_alpha(i_w, epsilon);
+
+               % Xbar_p = stability_obj.compute_Xbar_p();
+               Xbar_p = 0; % Hardcoded temporarily.
 
                Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p);
 
                Xbar_cg = stability_obj.get_cg(weight_obj);
 
                output = stability_obj.compute_SM(Xbar_np, Xbar_cg);
+          end
+
+          % Compute delta_alpha_p_delta_alpha
+          function output = compute_delta_alpha_p_delta_alpha(stability_obj, i_w, epsilon)
+               output = i_w - epsilon; % Raymer, 6th ed, fig 16.3
           end
 
           % Get Fp_alpha_jet (wrapper)
@@ -100,6 +112,10 @@ classdef SandCLevel3 < SandCModelLevel3
                % Function accepts arguments of weight. Uses longitudinal
                % location of weight components to estimate CG location
 
+          end
+
+          % Compute neutral point
+          function NP = get_NP()
           end
 
           % Compute pitching moment coefficient

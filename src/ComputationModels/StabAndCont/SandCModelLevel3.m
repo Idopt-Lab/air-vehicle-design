@@ -11,7 +11,7 @@ classdef (Abstract) SandCModelLevel3 < handle
      methods (Abstract)
           CG = get_CG()
           NP = get_NP()
-          C_of_L = get_C_of_L()
+          % C_of_L = get_C_of_L()
           SM = get_static_margin()
      end
 end
