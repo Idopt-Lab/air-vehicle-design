@@ -33,13 +33,31 @@ classdef SandCLevel3 < SandCModelLevel3
 
                eta_h = stability_obj.get_eta_h(statevector, geometry_obj.HT.S_ref);
 
-               delta_alpha_h_delta_alpha = stability_obj.get_
+               delta_alpha_h_delta_alpha = stability_obj.get_delta_alpha_h_delta_alpha(statevector(1), CL_alpha, CL_alpha_M0, geometry_obj.mainwings.AR);
 
-               Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_alpha, q, delta_alpha_p_delta_alpha, Xbar_p);
+               F_palpha = stability_obj.get_Fp_alpha_jet(statevector, geometry_obj.propulsion.inlet_area);
+
+               Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p);
 
                Xbar_cg = stability_obj.get_cg(weight_obj);
 
                output = stability_obj.compute_SM(Xbar_np, Xbar_cg);
+          end
+
+          % Get Fp_alpha_jet (wrapper)
+          function output = get_Fp_alpha_jet(stability_obj, statevector, inlet_area)
+               [T,a,p,rho,nu,mu] = atmosisa(statevector(2)*0.3048)
+               rho = rho*0.00194032033; % Convert from kg/m^3 -> imperial units
+               a = a*3.2808;
+               V = M*a;
+               m_dot = stability_obj.compute_m_dot(statevector, V, rho, inlet_area);
+               Fp_alpha = stability_obj.compute_Fp_alpha_jet(m_dot, V);
+               output = Fp_alpha;
+          end
+
+
+          function output = compute_m_dot(stability_obj, V, rho, A_inlet)
+               output = rho*V*A_inlet;
           end
 
           % Get delta_alpha_u_delta_alpha (upwash)
@@ -48,7 +66,7 @@ classdef SandCLevel3 < SandCModelLevel3
           end
 
           % Get delta_alpha_h_delta_alpha (downwash)
-          function output = get_delta_alpha_h_delta_alpha(stability_obj, M)
+          function output = get_delta_alpha_h_delta_alpha(stability_obj, M, CL_alpha, CL_alpha_M0, AR)
                if (M>=1.0) % Is supersonic
                     delta_epsilon_delta_alpha = stability_obj.compute_delta_epsilon_delta_alpha_supersonic(CL_alpha, AR);
                elseif (M<1.0) % Is subsonic
@@ -233,10 +251,6 @@ classdef SandCLevel3 < SandCModelLevel3
           function output = compute_Fp_jet(stability_obj, m_dot, V, alpha_p)
                % alpha_p = turning angle
                output = m_dot*V*tand(alpha_p);
-          end
-
-          function output = compute_m_dot(stability_obj, rho, V, A_inlet)
-               output = rho*V*A_inlet;
           end
 
           function output = compute_Fp_alpha_jet(stability_obj, m_dot, V)
