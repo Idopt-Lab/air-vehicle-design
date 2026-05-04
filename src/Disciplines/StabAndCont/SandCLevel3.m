@@ -15,14 +15,66 @@ classdef SandCLevel3 < SandCModelLevel3
                obj.Property1 = inputArg1 + inputArg2;
           end
 
-          % Get the static margin
-          function output = get_static_margin(stability_obj, geometry_obj)
+          % Get the static margin (wrapper)
+          function output = get_static_margin(stability_obj, geometry_obj, weight_obj, aero_obj, statevector)
+               S_h = geometry_obj.HT.S_ref;
+               S_w = geometry_obj.mainwings.S_ref;
 
-               Xbar_acw = stability_obj.get_CG();
+
+               Xbar_acw = stability_obj.compute_Xbar_ac(geometry_obj.mainwing.c_root, geometry_obj.mainwing.lambda);
+               Xbar_ach = stability_obj.compute_Xbar_ac(geometry_obj.HT.c_root, geometry_obj.HT.lambda);
+
+               % FIGURE OUT WHAT "C" IS!!!!!! Wing mean chord (assuming
+               % "main")
+               C_malphafus = stability_obj.compute_cm_alpha_fuselage(K_fus, geometry_obj.fuselage.W_max, geometry_obj.fuselage.L, c, geometry_obj.fuselage.S_wet);
+
+               CL_alpha = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwing.S_exposed, geometry_obj.mainwing.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               CL_alphah = aero_obj.get_CL_alpha(statevector, geometry_obj.HT.S_exposed, geometry_obj.HT.S_ref, geometry_obj.HT.QC_sweep, geometry_obj.HT.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.HT.b);
+
+               eta_h = stability_obj.get_eta_h(statevector, geometry_obj.HT.S_ref);
+
+               delta_alpha_h_delta_alpha = stability_obj.get_
 
                Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_alpha, q, delta_alpha_p_delta_alpha, Xbar_p);
 
+               Xbar_cg = stability_obj.get_cg(weight_obj);
+
                output = stability_obj.compute_SM(Xbar_np, Xbar_cg);
+          end
+
+          % Get delta_alpha_u_delta_alpha (upwash)
+          function output = get_delta_alpha_u_delta_alpha(stability_obj, delta_epsilon_u_delta_alpha)
+               output = 1 + delta_epsilon_u_delta_alpha;
+          end
+
+          % Get delta_alpha_h_delta_alpha (downwash)
+          function output = get_delta_alpha_h_delta_alpha(stability_obj, M)
+               if (M>=1.0) % Is supersonic
+                    delta_epsilon_delta_alpha = stability_obj.compute_delta_epsilon_delta_alpha_supersonic(CL_alpha, AR);
+               elseif (M<1.0) % Is subsonic
+                    delta_epsilon_delta_alpha = stability_obj.compute_delta_epsilon_delta_alpha_subsonic(delta_epsilon_delta_alpha_M0, CL_alpha, CL_alpha_M0);
+               else
+                    error("Error handler. Sub/supersonic logic end.")
+               end
+               output = 1 - delta_epsilon_delta_alpha;
+          end
+
+          % Compute delta_epsilon_delta_alpha (subsonic)
+          function output = compute_delta_epsilon_delta_alpha_subsonic(delta_epsilon_delta_alpha_M0, CL_alpha, CL_alpha_M0)
+               output = (delta_epsilon_delta_alpha_M0)*(CL_alpha)/(CL_alpha_M0);
+          end
+
+          % Compute delta_epsilon_delta_alpha (supersonic)
+          function output = compute_delta_epsilon_delta_alpha_supersonic(CL_alpha, AR)
+               output = (1.62*CL_alpha)/(pi*AR);
+          end
+
+          % Get eta_h
+          function output = get_eta_h(stability_obj, statevector, S_ref_ht)
+               q = AeroUtils.compute_q(statevector);
+               q_h = AeroUtils.compute_q(statevector);
+               output = q_h/q;
+               output = 0.9; % HARDCODED FOR NOW
           end
 
           % Estimate longitudinal location of CG
@@ -84,6 +136,11 @@ classdef SandCLevel3 < SandCModelLevel3
 
           function output = compute_x_ac(stability_obj, x_c4, delta_x_ac, S_wing)
                output = x_c4 + delta_x_ac*sqrt(S_wing);
+          end
+
+          % Compute mean aerodyanmic center
+          function output = compute_Xbar_ac(stability_obj, c_root, lambda)
+               output = (2/3)*c_root*((1 + lambda + lambda^2)/(1+lambda));
           end
 
           % Compute delta_x_ac
@@ -167,7 +224,7 @@ classdef SandCLevel3 < SandCModelLevel3
 
           %% Fuselage and nacelle pitching moment (per deg)
           function output = compute_cm_alpha_fuselage(stability_obj, K_fus, W_f, L_f, c, S_w)
-               output = (K_fus*W_f^2*L_f)/(c*S_w);
+               output = (K_fus*W_f^2*L_f)/(c*S_w); % Raymer 6th ed, eq 16.25
           end
 
           %% Engine stuff

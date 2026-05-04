@@ -43,7 +43,10 @@ classdef GeometryUtils
                          geometry_obj.mainwings.tip_chord = wing.TipChordLengthft;
                     end
                     if isfield(wing, 'AngleOfQuarterchordLinerad')
-                         geometry_obj.mainwings.QC_sweep = rad2deg(wing.AngleOfQuarterchordLinerad)
+                         geometry_obj.mainwings.QC_sweep = rad2deg(wing.AngleOfQuarterchordLinerad);
+                    end
+                    if isfield(wing, 'TaperRatio')
+                         geometry_obj.mainwings.lambda = wing.TaperRatio;
                     end
                end
 
@@ -84,6 +87,9 @@ classdef GeometryUtils
                     if isfield(ht, 'AngleOfQuarterchordLinerad')
                          geometry_obj.HT.QC_sweep = rad2deg(ht.AngleOfQuarterchordLinerad);
                     end
+                    if isfield(ht, 'TaperRatio')
+                         geometry_obj.HT.lambda = ht.TaperRatio;
+                    end
                end
 
                % ---------- Vertical tail ----------
@@ -122,6 +128,9 @@ classdef GeometryUtils
                     end
                     if isfield(vt, 'AngleOfQuarterchordLinerad')
                          geometry_obj.VT.QC_sweep = rad2deg(vt.AngleOfQuarterchordLinerad);
+                    end
+                    if isfield(vt, 'TaperRatio')
+                         geometry_obj.VT.lambda = vt.TaperRatio;
                     end
                end
 
