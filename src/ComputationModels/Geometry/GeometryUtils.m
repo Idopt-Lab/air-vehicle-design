@@ -96,6 +96,9 @@ classdef GeometryUtils
                     if isfield(ht, 'xLocation')
                          geometry_obj.HT.x_loc = ht.xLocation;
                     end
+                    if isfield(ht, 'c_HT')
+                         geometry_obj.HT.c_HT = ht.c_HT;
+                    end
                end
 
                % ---------- Vertical tail ----------
@@ -140,6 +143,9 @@ classdef GeometryUtils
                     end
                     if isfield(vt, 'xLocation')
                          geometry_obj.VT.x_loc = vt.xLocation;
+                    end
+                    if isfield(vt, 'c_VT')
+                         geometry_obj.VT.c_VT = vt.c_VT;
                     end
                end
 

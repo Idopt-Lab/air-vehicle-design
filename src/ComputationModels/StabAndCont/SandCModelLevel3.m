@@ -9,8 +9,8 @@ classdef (Abstract) SandCModelLevel3 < handle
      end
 
      methods (Abstract)
-          CG = get_CG()
-          NP = get_NP()
+          CG = get_cg()
+          NP = get_np()
           % C_of_L = get_C_of_L()
           SM = get_static_margin()
      end
