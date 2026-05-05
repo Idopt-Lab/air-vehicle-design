@@ -48,6 +48,9 @@ classdef GeometryUtils
                     if isfield(wing, 'TaperRatio')
                          geometry_obj.mainwings.lambda = wing.TaperRatio;
                     end
+                    if isfield(wing, 'xLocation')
+                         geometry_obj.mainwings.x_loc = wing.xLocation;
+                    end
                end
 
                % ---------- Horizontal tail ----------
@@ -90,6 +93,9 @@ classdef GeometryUtils
                     if isfield(ht, 'TaperRatio')
                          geometry_obj.HT.lambda = ht.TaperRatio;
                     end
+                    if isfield(ht, 'xLocation')
+                         geometry_obj.HT.x_loc = ht.xLocation;
+                    end
                end
 
                % ---------- Vertical tail ----------
@@ -131,6 +137,9 @@ classdef GeometryUtils
                     end
                     if isfield(vt, 'TaperRatio')
                          geometry_obj.VT.lambda = vt.TaperRatio;
+                    end
+                    if isfield(vt, 'xLocation')
+                         geometry_obj.VT.x_loc = vt.xLocation;
                     end
                end
 

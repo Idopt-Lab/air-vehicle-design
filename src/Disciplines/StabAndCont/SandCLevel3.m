@@ -21,14 +21,14 @@ classdef SandCLevel3 < SandCModelLevel3
                S_w = geometry_obj.mainwings.S_ref;
 
 
-               Xbar_acw = stability_obj.compute_Xbar_ac(geometry_obj.mainwing.c_root, geometry_obj.mainwing.lambda);
+               Xbar_acw = stability_obj.compute_Xbar_ac(geometry_obj.mainwings.c_root, geometry_obj.mainwings.lambda);
                Xbar_ach = stability_obj.compute_Xbar_ac(geometry_obj.HT.c_root, geometry_obj.HT.lambda);
 
                % FIGURE OUT WHAT "C" IS!!!!!! Wing mean chord (assuming
                % "main")
                C_malphafus = stability_obj.compute_cm_alpha_fuselage(K_fus, geometry_obj.fuselage.W_max, geometry_obj.fuselage.L, c, geometry_obj.fuselage.S_wet);
 
-               CL_alpha = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwing.S_exposed, geometry_obj.mainwing.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               CL_alpha = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
                CL_alphah = aero_obj.get_CL_alpha(statevector, geometry_obj.HT.S_exposed, geometry_obj.HT.S_ref, geometry_obj.HT.QC_sweep, geometry_obj.HT.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.HT.b);
 
                eta_h = stability_obj.get_eta_h(statevector, geometry_obj.HT.S_ref);
@@ -49,6 +49,11 @@ classdef SandCLevel3 < SandCModelLevel3
                Xbar_cg = stability_obj.get_cg(weight_obj);
 
                output = stability_obj.compute_SM(Xbar_np, Xbar_cg);
+          end
+
+          % Get quarter-chord x-location
+          function output = get_qc_x_location(stability_obj, x_loc, c_root)
+               output = x_loc + 0.25*c_root;
           end
 
           % Compute delta_alpha_p_delta_alpha
