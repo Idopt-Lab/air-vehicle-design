@@ -126,10 +126,19 @@ classdef SandCLevel3 < SandCModelLevel3
           end
 
           % Estimate longitudinal location of CG
-          function output = get_cg(stability_obj, weight_obj)
+          function output = get_cg(stability_obj, component_weight_list, component_x_locations)
                % Function accepts arguments of weight. Uses longitudinal
                % location of weight components to estimate CG location
+               % CG loc = weight*x_loc/total_number
+               % Loop through entire thing
+               % Get numerator first
+               weight_length = length(component_weight_list);
+               numerator = 0;
+               for i=1:weight_length
+                    numerator = numerator + component_weight_list(i)*component_x_locations(i);
+               end
 
+               output = numerator/weight_length;
           end
 
           % Compute neutral point
