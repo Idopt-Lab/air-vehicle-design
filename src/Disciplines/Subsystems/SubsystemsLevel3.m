@@ -41,6 +41,7 @@ classdef SubsystemsLevel3 < SubsystemsModelLevel3
                % Estimate the total volume occupied by the avionics
                % Assume avionics have average density of 30-45 lb/ft^3
                dens = 37;
+               % Using Raymer, 6th ed, table 11.6
                if (aircraft_type == "General aviation - single engine")
                     W_avionics = 0.01*W_empty;
                elseif (aircraft_type == "Light twin")
