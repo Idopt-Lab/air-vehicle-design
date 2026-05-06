@@ -36,9 +36,32 @@ classdef SubsystemsLevel3 < SubsystemsModelLevel3
                output = internal_vol.total;
           end
 
-          % Estimate avionics volume occupation
-          function output = compute_avionics_volume(subsys_obj, avionics)
+          % Estimate avionics volume occupation (returns ft^3)
+          function output = compute_avionics_volume(subsys_obj, aircraft_type, W_empty)
                % Estimate the total volume occupied by the avionics
+               % Assume avionics have average density of 30-45 lb/ft^3
+               dens = 37;
+               if (aircraft_type == "General aviation - single engine")
+                    W_avionics = 0.01*W_empty;
+               elseif (aircraft_type == "Light twin")
+                    W_avionics = 0.02*W_empty;
+               elseif (aircraft_type == "Turboprop transport")
+                    W_avionics = 0.02*W_empty;
+               elseif (aircraft_type == "Business jet")
+                    W_avionics = 0.04*W_empty;
+               elseif (aircraft_type == "Jet transport")
+                    W_avionics = 0.01*W_empty;
+               elseif (aircraft_type == "Fighter")
+                    W_avionics = 0.03*W_empty;
+               elseif (aircraft_type == "Bomber")
+                    W_avionics = 0.06*W_empty;
+               elseif (aircraft_type == "Jet trainer")
+                    W_avionics = 0.03*W_empty;
+               else
+                    error("Error handler.")
+               end
+               vol_avionics = W_avionics/dens;
+               output = vol_avionics;
           end
 
           % ADD FUEL VOLUME CHECK
@@ -46,9 +69,9 @@ classdef SubsystemsLevel3 < SubsystemsModelLevel3
                % Determine if there's enough space inside the vehicle for
                % fuel (account for avionics occupation)
                if (internal_vol < fuel_vol)
-                    IsSufficientFuelVolume = False;
+                    IsSufficientFuelVolume = false;
                elseif (internal_vol >= fuel_vol)
-                    IsSufficientFuelVolume = True;
+                    IsSufficientFuelVolume = true;
                else
                     error("Error handler.")
                end
