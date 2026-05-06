@@ -133,12 +133,13 @@ classdef SandCLevel3 < SandCModelLevel3
                % Loop through entire thing
                % Get numerator first
                weight_length = length(component_weight_list);
-               numerator = 0;
+               totalweight = sum(component_weight_list);
+               moment_arms = 0;
                for i=1:weight_length
-                    numerator = numerator + component_weight_list(i)*component_x_locations(i);
+                    moment_arms = moment_arms + component_weight_list(i)*component_x_locations(i);
                end
 
-               output = numerator/weight_length;
+               output = moment_arms/totalweight;
           end
 
           % Compute neutral point
