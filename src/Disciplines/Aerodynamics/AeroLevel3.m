@@ -132,6 +132,16 @@ classdef AeroLevel3 < AerodynamicsModelLevel3
                output = aero_obj.CL_minD;
           end
 
+          % Get CL_alpha for wing + body
+          function output = compute_CL_alpha_wb(aero_obj, CL_alpha_HT, CL_alpha_strakes, delta_epsilon_delta_alpha, S_HT, S_ref)
+               output = CL_alpha_strakes + CL_alpha_HT*(1-delta_epsilon_delta_alpha)*(S_HT/S_ref);
+          end
+
+          % Get CL_alpha, accounting for strakes
+          function output = compute_CL_alpha_strakes(aero_obj, CL_alpha_w, S_ref, S_strakes)
+               output = CL_alpha_w * (S_ref + S_strakes)/S_ref;
+          end
+
           % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
           % (divide result by 57.3 to get something close to Brandt's
           % CL_alpha values) (I THINK it's the "wing" one).

@@ -19,7 +19,7 @@ classdef SandCLevel3 < SandCModelLevel3
           end
 
           % Get the static margin (wrapper)
-          function output = get_static_margin(stability_obj, geometry_obj, weight_obj, aero_obj, design, statevector)
+          function output = get_static_margin(stability_obj, geometry_obj, weight_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations)
                S_h = geometry_obj.HT.S_ref;
                S_w = geometry_obj.mainwings.S_ref;
 
@@ -30,37 +30,45 @@ classdef SandCLevel3 < SandCModelLevel3
                % FIGURE OUT WHAT "C" IS!!!!!! Wing mean chord (assuming
                % "main")
                K_fus = design.geom.wings.Main.Kfus;
-               C_malphafus = stability_obj.compute_cm_alpha_fuselage(K_fus, geometry_obj.fuselage.W_max, geometry_obj.fuselage.L, geometry_obj.mainwings.MeanGeometricChord, geometry_obj.fuselage.S_wet);
+               C_malphafus = stability_obj.compute_cm_alpha_fuselage(K_fus, geometry_obj.fuselage.W_max, geometry_obj.fuselage.L, geometry_obj.mainwings.MeanGeometricChord, geometry_obj.mainwings.S_ref);
 
                CL_alpha = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               % CL_alpha_b = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
                CL_alpha_M0 = aero_obj.get_CL_alpha([0.0, statevector(2)], geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
-
-               CL_alphah = aero_obj.get_CL_alpha(statevector, geometry_obj.HT.S_exposed, geometry_obj.HT.S_ref, geometry_obj.HT.QC_sweep, geometry_obj.HT.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.HT.b);
+               CL_alphah = aero_obj.get_CL_alpha(statevector, geometry_obj.HT.S_exposed, geometry_obj.HT.S_ref, geometry_obj.HT.QC_sweep, geometry_obj.HT.LE_sweep, geometry_obj.HT.AR, geometry_obj.fuselage.W_max, geometry_obj.HT.b);
+               CL_alpha_strakes = aero_obj.compute_CL_alpha_strakes(CL_alpha, geometry_obj.mainwings.S_ref, 20);
+               delta_epsilon_delta_alpha_M0 = stability_obj.compute_zeromach_downwash(CL_alpha_M0, geometry_obj.mainwings.AR);
+               delta_epsilon_delta_alpha = stability_obj.get_delta_epsilon_delta_alpha(statevector(1), CL_alpha, CL_alpha_M0, geometry_obj.mainwings.AR, delta_epsilon_delta_alpha_M0);
+               CL_alpha_wb = aero_obj.compute_CL_alpha_wb(CL_alphah, CL_alpha_strakes, delta_epsilon_delta_alpha, geometry_obj.HT.S_ref, geometry_obj.mainwings.S_ref);
+               CL_alpha = CL_alpha_wb;
 
                eta_h = stability_obj.get_eta_h(statevector, geometry_obj.HT.S_ref);
 
-               delta_epsilon_delta_alpha_M0 = stability_obj.compute_delta_epsilon_delta_alpha_subsonic(0, CL_alpha, CL_alpha_M0);
                delta_alpha_h_delta_alpha = stability_obj.get_delta_alpha_h_delta_alpha(statevector(1), CL_alpha, CL_alpha_M0, geometry_obj.mainwings.AR, delta_epsilon_delta_alpha_M0);
 
                F_palpha = stability_obj.get_Fp_alpha_jet(statevector, design.propulsion.InletArea.InletArea);
 
                q = AeroUtils.compute_q(statevector);
 
-               i_w = 0; % Assume 0 for now (angle of incidence? induced angle of attack?)
+               i_w = 1; % Assume 0 for now (angle of incidence? induced angle of attack?)
                epsilon = 0;
                delta_alpha_p_delta_alpha = stability_obj.compute_delta_alpha_p_delta_alpha(i_w, epsilon);
 
                % Xbar_p = stability_obj.compute_Xbar_p();
-               Xbar_p = 0; % Hardcoded temporarily.
+               Xbar_p = 33.775; % Hardcoded temporarily.
 
                Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p);
 
-               Xbar_cg = stability_obj.get_cg(weight_obj);
+               Xbar_cg = stability_obj.get_cg(component_weight_list, component_weight_x_locations);
 
-               output = stability_obj.compute_SM(Xbar_np, Xbar_cg);
+               output = stability_obj.compute_SM(Xbar_np, Xbar_cg, geometry_obj.mainwings.MeanGeometricChord);
           end
 
-          % Get cg
+          % Compute zero-mach downwash angle
+          function output = compute_zeromach_downwash(stabilitY_obj, CL_alpha_M0, AR)
+               delta_epsilon_delta_alpha_M0 = (2*CL_alpha_M0)/(pi*AR);
+               output = delta_epsilon_delta_alpha_M0;
+          end
 
 
           % Get quarter-chord x-location
@@ -97,6 +105,12 @@ classdef SandCLevel3 < SandCModelLevel3
 
           % Get delta_alpha_h_delta_alpha (downwash)
           function output = get_delta_alpha_h_delta_alpha(stability_obj, M, CL_alpha, CL_alpha_M0, AR, delta_epsilon_delta_alpha_M0)
+               delta_epsilon_delta_alpha = stability_obj.get_delta_epsilon_delta_alpha(M, CL_alpha, CL_alpha_M0, AR, delta_epsilon_delta_alpha_M0);
+               output = 1 - delta_epsilon_delta_alpha;
+          end
+
+          % Get delta_epsilon_delta_alpha
+          function output = get_delta_epsilon_delta_alpha(stability_obj, M, CL_alpha, CL_alpha_M0, AR, delta_epsilon_delta_alpha_M0)
                if (M>=1.0) % Is supersonic
                     delta_epsilon_delta_alpha = stability_obj.compute_delta_epsilon_delta_alpha_supersonic(CL_alpha, AR);
                elseif (M<1.0) % Is subsonic
@@ -104,7 +118,7 @@ classdef SandCLevel3 < SandCModelLevel3
                else
                     error("Error handler. Sub/supersonic logic end.")
                end
-               output = 1 - delta_epsilon_delta_alpha;
+               output = delta_epsilon_delta_alpha;
           end
 
           % Compute delta_epsilon_delta_alpha (subsonic)
@@ -180,8 +194,10 @@ classdef SandCLevel3 < SandCModelLevel3
 
           % Compute the neutral point
           function output = compute_Xbar_np(stability_obj, CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p)
-               output = ( (CL_alpha*Xbar_acw - C_malphafus + (eta_h*(S_h/S_w)*CL_alphah*delta_alpha_h_delta_alpha*Xbar_ach) + ((F_palpha/(q*S_w))*delta_alpha_p_delta_alpha*Xbar_p)))/(CL_alpha + eta_h*(S_h/S_w)*CL_alphah*(delta_alpha_h_delta_alpha) + (F_palpha/(q*S_w))*delta_alpha_p_delta_alpha);
+               output = ( ((CL_alpha/57.3)*Xbar_acw - C_malphafus + (eta_h*(S_h/S_w)*CL_alphah/57.3*delta_alpha_h_delta_alpha*Xbar_ach) + ((F_palpha/(q*S_w))*delta_alpha_p_delta_alpha*Xbar_p)))/(CL_alpha/57.3 + eta_h*(S_h/S_w)*CL_alphah/57.3*(delta_alpha_h_delta_alpha) + (F_palpha/(q*S_w))*delta_alpha_p_delta_alpha);
           end
+          % Dividing CL_alphas by 57.3 somehow gives reasonable results for
+          % F-16. Probably something to do with radian/degrees conversions.
 
           % Estimate the CM_alpha
           function output = estimate_Cm_alpha(stability_obj, CL_alpha, Xbar_np, Xbar_cg)
@@ -189,8 +205,8 @@ classdef SandCLevel3 < SandCModelLevel3
           end
 
           % Compute the static margin
-          function output = compute_SM(stability_obj, Xbar_np, Xbar_cg)
-               output = Xbar_np - Xbar_cg;
+          function output = compute_SM(stability_obj, Xbar_np, Xbar_cg, c_bar)
+               output = ((Xbar_np - Xbar_cg)/c_bar)/100;
           end
 
           %% AERODYNAMIC CENTERS
