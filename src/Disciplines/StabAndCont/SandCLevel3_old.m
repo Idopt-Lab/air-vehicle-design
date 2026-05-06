@@ -1,4 +1,4 @@
-classdef SandCLevel3 < SandCModelLevel3
+classdef SandCLevel3_old < SandCModelLevel3
      %SANDCLEVEL3 Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -10,12 +10,26 @@ classdef SandCLevel3 < SandCModelLevel3
      end
 
      methods
-          function obj = SandCLevel3(design)
+          function obj = SandCLevel3_old(design)
                %SANDCLEVEL3 Construct an instance of this class
                %   Detailed explanation goes here
                % obj.Property1 = inputArg1 + inputArg2;
                % Import component weight and locations from design file
                obj.weightlocations = SandCUtils.get_design_weights(obj, design);
+          end
+
+          % Stability check
+          function output = check_static_stability(stability_obj, SM)
+
+               if (SM < 0)
+                    IsStaticStable = false;
+               elseif (SM >= 0)
+                    IsStaticStable = true;
+               else
+                    error("Error handler.")
+               end
+
+               output = IsStaticStable;
           end
 
           % Get the static margin (wrapper)
@@ -56,6 +70,8 @@ classdef SandCLevel3 < SandCModelLevel3
 
                % Xbar_p = stability_obj.compute_Xbar_p();
                Xbar_p = 33.775; % Hardcoded temporarily.
+               % That's the thrust mass location for the F-16. Move this,
+               % later.
 
                Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p);
 
