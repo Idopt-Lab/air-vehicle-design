@@ -36,6 +36,20 @@ classdef SubsystemsLevel3 < SubsystemsModelLevel3
                output = internal_vol.total;
           end
 
+          % ADD FUEL VOLUME CHECK
+          function output = checkfuelvol(subsys_obj, internal_vol, fuel_vol)
+               % Determine if there's enough space inside the vehicle for
+               % fuel (account for avionics occupation)
+               if (internal_vol < fuel_vol)
+                    IsSufficientFuelVolume = False;
+               elseif (internal_vol >= fuel_vol)
+                    IsSufficientFuelVolume = True;
+               else
+                    error("Error handler.")
+               end
+               output = IsSufficientFuelVolume;
+          end
+
           function [fuselage_vol] = compute_fuselage_vol(subsys_obj, A_top, A_side, L)
                %FUSELAGE_VOL_III Summary of this function goes here
                fuselage_vol = 3.4*((A_top)*(A_side))/(4*L); % ft^3 (Raymer, eq 7.14, 6th ed)

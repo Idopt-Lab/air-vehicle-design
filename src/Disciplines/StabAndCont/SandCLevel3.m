@@ -6,6 +6,7 @@ classdef SandCLevel3 < SandCModelLevel3
           CG
           NP
           C_of_L
+          weightlocations
      end
 
      methods
@@ -13,7 +14,8 @@ classdef SandCLevel3 < SandCModelLevel3
                %SANDCLEVEL3 Construct an instance of this class
                %   Detailed explanation goes here
                % obj.Property1 = inputArg1 + inputArg2;
-
+               % Import component weight and locations from design file
+               obj.weightlocations = design.
           end
 
           % Get the static margin (wrapper)
