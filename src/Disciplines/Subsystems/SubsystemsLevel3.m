@@ -36,6 +36,11 @@ classdef SubsystemsLevel3 < SubsystemsModelLevel3
                output = internal_vol.total;
           end
 
+          % Estimate avionics volume occupation
+          function output = compute_avionics_volume(subsys_obj, avionics)
+               % Estimate the total volume occupied by the avionics
+          end
+
           % ADD FUEL VOLUME CHECK
           function output = checkfuelvol(subsys_obj, internal_vol, fuel_vol)
                % Determine if there's enough space inside the vehicle for
