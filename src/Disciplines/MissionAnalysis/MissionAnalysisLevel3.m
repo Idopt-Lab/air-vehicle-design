@@ -123,7 +123,7 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                gh = gh.*g;
 
                % Extract density at current altitude
-               [~, ~, ~, rho] = atmosisa(current_h);
+               [~, ~, ~, rho] = atmosisa(current_h*0.3048);
                rho = rho*0.00194032033; % Convert kg/m^3 into slugs/ft^3
 
                V = zeros(1,n);
