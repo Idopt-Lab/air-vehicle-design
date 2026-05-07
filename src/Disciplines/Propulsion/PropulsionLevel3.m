@@ -60,7 +60,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                elseif isdryorwet == "wet"
                     % Compute TSFC for wet config
                     thrust = propulsion_obj.get_thrust_wet(thrust_sl, delta_0, F1, M0, E, theta_0, TR, F2);
-                    output = get_TSFC_wet(propulsion_obj, theta_0, TSFC_sl, M0, thrust, thrust_sl, TR);
+                    output = get_TSFC_wet(propulsion_obj, TSFC_sl, M0, thrust, thrust_sl, theta_0, TR);
                else
                     error("Error handler. Must be 'dry' or 'wet'.")
                end
