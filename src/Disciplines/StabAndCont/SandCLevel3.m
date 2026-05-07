@@ -1,4 +1,4 @@
-classdef SandCLevel3_old < SandCModelLevel3
+classdef SandCLevel3 < SandCModelLevel3
      %SANDCLEVEL3 Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -6,11 +6,12 @@ classdef SandCLevel3_old < SandCModelLevel3
           CG
           NP
           C_of_L
+          StaticStability
           weightlocations
      end
 
      methods
-          function obj = SandCLevel3_old(design)
+          function obj = SandCLevel3(design)
                %SANDCLEVEL3 Construct an instance of this class
                %   Detailed explanation goes here
                % obj.Property1 = inputArg1 + inputArg2;
@@ -19,21 +20,95 @@ classdef SandCLevel3_old < SandCModelLevel3
           end
 
           % Stability check
-          function output = check_static_stability(stability_obj, SM)
-
-               if (SM < 0)
-                    IsStaticStable = false;
-               elseif (SM >= 0)
-                    IsStaticStable = true;
-               else
-                    error("Error handler.")
+          % Positive static margin means the CG is ahead of the neutral point.
+          % For the usual aircraft sign convention, this should correspond to
+          % C_m_alpha < 0. The first output stays logical for backward
+          % compatibility with older calls that expected true/false only.
+          function [IsStaticStable, StabilityResults] = check_static_stability(stability_obj, SM, Cm_alpha, tolerance)
+               if nargin < 3
+                    Cm_alpha = [];
+               end
+               if nargin < 4 || isempty(tolerance)
+                    tolerance = 0;
                end
 
-               output = IsStaticStable;
+               if isempty(SM) || ~isnumeric(SM) || ~isfinite(SM)
+                    error("Static margin must be a finite numeric value.")
+               end
+
+               if isempty(Cm_alpha)
+                    Cm_alpha = NaN;
+               elseif ~isnumeric(Cm_alpha) || ~isfinite(Cm_alpha)
+                    error("C_m_alpha must be empty or a finite numeric value.")
+               end
+
+               if SM > tolerance
+                    stable_by_SM = true;
+                    neutral_by_SM = false;
+               elseif SM < -tolerance
+                    stable_by_SM = false;
+                    neutral_by_SM = false;
+               else
+                    stable_by_SM = false;
+                    neutral_by_SM = true;
+               end
+
+               if isnan(Cm_alpha)
+                    stable_by_Cm_alpha = [];
+                    neutral_by_Cm_alpha = [];
+               elseif Cm_alpha < -tolerance
+                    stable_by_Cm_alpha = true;
+                    neutral_by_Cm_alpha = false;
+               elseif Cm_alpha > tolerance
+                    stable_by_Cm_alpha = false;
+                    neutral_by_Cm_alpha = false;
+               else
+                    stable_by_Cm_alpha = false;
+                    neutral_by_Cm_alpha = true;
+               end
+
+               if isempty(stable_by_Cm_alpha)
+                    IsStaticStable = stable_by_SM;
+                    IsNeutral = neutral_by_SM;
+               else
+                    IsStaticStable = stable_by_SM && stable_by_Cm_alpha;
+                    IsNeutral = neutral_by_SM || neutral_by_Cm_alpha;
+               end
+
+               IsUnstable = (~IsStaticStable) && (~IsNeutral);
+
+               if IsStaticStable
+                    assessment = "Stable";
+                    reason = "Static margin is positive and C_m_alpha is negative.";
+               elseif IsNeutral
+                    assessment = "Neutrally stable";
+                    reason = "Static margin or C_m_alpha is within the specified tolerance of zero.";
+               else
+                    assessment = "Unstable";
+                    if SM < -tolerance
+                         reason = "Static margin is negative, so the CG is aft of the neutral point.";
+                    elseif ~isnan(Cm_alpha) && Cm_alpha > tolerance
+                         reason = "C_m_alpha is positive, so the pitching moment increases with angle of attack.";
+                    else
+                         reason = "Static-stability criteria were not satisfied.";
+                    end
+               end
+
+               StabilityResults = struct();
+               StabilityResults.IsStaticStable = IsStaticStable;
+               StabilityResults.IsNeutral = IsNeutral;
+               StabilityResults.IsUnstable = IsUnstable;
+               StabilityResults.Assessment = assessment;
+               StabilityResults.Reason = reason;
+               StabilityResults.SM = SM;
+               StabilityResults.Cm_alpha = Cm_alpha;
+               StabilityResults.Tolerance = tolerance;
+
+               stability_obj.StaticStability = StabilityResults;
           end
 
           % Get the static margin (wrapper)
-          function output = get_static_margin(stability_obj, geometry_obj, weight_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations)
+          function [SM, StabilityResults] = get_static_margin(stability_obj, geometry_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations, i_w, epsilon)
                S_h = geometry_obj.HT.S_ref;
                S_w = geometry_obj.mainwings.S_ref;
 
@@ -64,8 +139,8 @@ classdef SandCLevel3_old < SandCModelLevel3
 
                q = AeroUtils.compute_q(statevector);
 
-               i_w = 1; % Assume 0 for now (angle of incidence? induced angle of attack?)
-               epsilon = 0;
+               % i_w = 0; % Assume 0 for now (angle of incidence? induced angle of attack?)
+               % epsilon = 0;
                delta_alpha_p_delta_alpha = stability_obj.compute_delta_alpha_p_delta_alpha(i_w, epsilon);
 
                % Xbar_p = stability_obj.compute_Xbar_p();
@@ -77,11 +152,34 @@ classdef SandCLevel3_old < SandCModelLevel3
 
                Xbar_cg = stability_obj.get_cg(component_weight_list, component_weight_x_locations);
 
-               output = stability_obj.compute_SM(Xbar_np, Xbar_cg, geometry_obj.mainwings.MeanGeometricChord);
+               SM = stability_obj.compute_SM(Xbar_np, Xbar_cg, geometry_obj.mainwings.MeanGeometricChord);
+               Cm_alpha = stability_obj.estimate_Cm_alpha(CL_alpha, Xbar_np, Xbar_cg);
+
+               [IsStaticStable, StabilityResults] = stability_obj.check_static_stability(SM, Cm_alpha);
+
+               stability_obj.NP = Xbar_np;
+               stability_obj.CG = Xbar_cg;
+               StabilityResults.NP = Xbar_np;
+               StabilityResults.CG = Xbar_cg;
+               StabilityResults.CL_alpha = CL_alpha;
+               StabilityResults.CL_alpha_tail = CL_alphah;
+               StabilityResults.eta_h = eta_h;
+               StabilityResults.delta_epsilon_delta_alpha = delta_epsilon_delta_alpha;
+               StabilityResults.delta_alpha_h_delta_alpha = delta_alpha_h_delta_alpha;
+               StabilityResults.q = q;
+               StabilityResults.IsStaticStable = IsStaticStable;
+
+               stability_obj.StaticStability = StabilityResults;
+          end
+
+          % Get complete longitudinal static-stability results.
+          % This is a convenience wrapper around get_static_margin.
+          function StabilityResults = get_static_stability(stability_obj, geometry_obj, weight_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations)
+               [~, StabilityResults] = stability_obj.get_static_margin(geometry_obj, weight_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations);
           end
 
           % Compute zero-mach downwash angle
-          function output = compute_zeromach_downwash(stabilitY_obj, CL_alpha_M0, AR)
+          function output = compute_zeromach_downwash(stability_obj, CL_alpha_M0, AR)
                delta_epsilon_delta_alpha_M0 = (2*CL_alpha_M0)/(pi*AR);
                output = delta_epsilon_delta_alpha_M0;
           end
@@ -220,6 +318,42 @@ classdef SandCLevel3_old < SandCModelLevel3
                output = -1*CL_alpha*(Xbar_np - Xbar_cg);
           end
 
+          % Check longitudinal static stability directly from C_m_alpha.
+          % Stable: C_m_alpha < 0. Neutral: C_m_alpha == 0 within tolerance.
+          function [IsStaticStable, CmAlphaResults] = check_Cm_alpha_static_stability(stability_obj, Cm_alpha, tolerance)
+               if nargin < 3 || isempty(tolerance)
+                    tolerance = 0;
+               end
+
+               if isempty(Cm_alpha) || ~isnumeric(Cm_alpha) || ~isfinite(Cm_alpha)
+                    error("C_m_alpha must be a finite numeric value.")
+               end
+
+               IsStaticStable = Cm_alpha < -tolerance;
+               IsNeutral = abs(Cm_alpha) <= tolerance;
+               IsUnstable = Cm_alpha > tolerance;
+
+               if IsStaticStable
+                    assessment = "Stable";
+                    reason = "C_m_alpha is negative.";
+               elseif IsNeutral
+                    assessment = "Neutrally stable";
+                    reason = "C_m_alpha is within the specified tolerance of zero.";
+               else
+                    assessment = "Unstable";
+                    reason = "C_m_alpha is positive.";
+               end
+
+               CmAlphaResults = struct();
+               CmAlphaResults.IsStaticStable = IsStaticStable;
+               CmAlphaResults.IsNeutral = IsNeutral;
+               CmAlphaResults.IsUnstable = IsUnstable;
+               CmAlphaResults.Assessment = assessment;
+               CmAlphaResults.Reason = reason;
+               CmAlphaResults.Cm_alpha = Cm_alpha;
+               CmAlphaResults.Tolerance = tolerance;
+          end
+
           % Compute the static margin
           function output = compute_SM(stability_obj, Xbar_np, Xbar_cg, c_bar)
                output = ((Xbar_np - Xbar_cg)/c_bar)/100;
@@ -239,7 +373,9 @@ classdef SandCLevel3_old < SandCModelLevel3
 
           % Compute delta_x_ac
           function output = get_delta_x_ac(stability_obj, M)
-               if (0.4 < M) || (M < 1.1)
+               if M < 0.4
+                    delta_x_ac = 0;
+               elseif (0.4 <= M) && (M <= 1.1)
                     delta_x_ac = stability_obj.compute_delta_x_ac_subsonic(M);
                elseif (M > 1.1)
                     delta_x_ac = stability_obj.compute_delta_x_ac_supersonic(M);
@@ -294,7 +430,7 @@ classdef SandCLevel3_old < SandCModelLevel3
                if (1.0 <= M)
                     downwash_angle_derivative = stability_obj.compute_downwash_angle_deriv_supersonic(CL_alpha, AR);
                elseif (M < 1.0)
-                    downwash_angle_derivative = stability_obj.compute_downwash_angle_derivative_subsonic(delta_eps_delta_alpha_M0, CL_alpha, CL_alpha_M0);
+                    downwash_angle_derivative = stability_obj.compute_downwash_angle_deriv_subsonic(delta_eps_delta_alpha_M0, CL_alpha, CL_alpha_M0);
                else
                     error("Error handler.")
                end
@@ -335,7 +471,7 @@ classdef SandCLevel3_old < SandCModelLevel3
 
           % Now for props
           function output = compute_Fp_alpha_prop(stability_obj, q, rho, V, D, N_B, A_p, delta_CN_blade_delta_alpha, T)
-               thrust_function = stabilitY_obj.compute_thrust_function(T, rho, V, D);
+               thrust_function = stability_obj.compute_thrust_function(T, rho, V, D);
                output = q*N_B*A_p*delta_CN_blade_delta_alpha*thrust_function;
           end
 
