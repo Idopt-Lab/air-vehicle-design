@@ -19,7 +19,6 @@ classdef WeightLevel1 < WeightModelLevel1
           function obj = WeightLevel1(design)
                obj.W_fixed = design.weights.Weights.Fixedlbf;
                obj.W_TO_guess = design.weights.Weights.WTO_guess;
-               obj.coefficients = design.weights.Coefficients;
                obj.K_vs = design.weights.Coefficients.Kvs;
           end
 
