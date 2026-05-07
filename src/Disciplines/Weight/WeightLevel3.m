@@ -46,7 +46,7 @@ classdef WeightLevel3 < WeightModelLevel3
           function output = get_OEW(weight_obj, propulsion_obj, design, geometry_obj, W_TO, requirements_obj)
                propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
                weight_obj.get_engine_weight(propulsion_obj, design, requirements_obj);
-               weight_obj.OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj.mainwings.S_ref, geometry_obj.HT.S_ref, geometry_obj.VT.S_ref, geometry_obj.design.S_wet, propulsion_obj.T0, design.weights, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.VerticalTail.c_VT, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
+               weight_obj.OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj.mainwings.S_ref, geometry_obj.HT.S_ref, geometry_obj.VT.S_ref, geometry_obj.design.S_wet, propulsion_obj.T0, design.weights, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
 
@@ -67,7 +67,7 @@ classdef WeightLevel3 < WeightModelLevel3
 
 
           % Get OEW
-          function OEW = compute_OEW_III(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, c_HT, c_VT, W_engine_installed)
+          function OEW = compute_OEW_III(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, W_engine_installed)
                %COMPUTE_OEW Summary of this function goes here
                %   Detailed explanation goes here
                % Ref area should be EXPOSED planform area!
@@ -83,7 +83,7 @@ classdef WeightLevel3 < WeightModelLevel3
                % Sub-functions for handling component weights. Estimates.
                % Equations: Raymer, 6th edition, section 15.3.1. Fighter/Attack jet.
                OEW.W_Wing = weight_obj.wing_weight_III(W_TO, DesignTable_weight.Coefficients.Nz, S_ref, DesignTable_weight.Coefficients.AR, DesignTable_weight.Coefficients.tc, DesignTable_weight.Coefficients.lambda_w, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.Scsw, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
-               OEW.W_tail = weight_obj.tail_weight_III(DesignTable_weight.Coefficients.Fw, DesignTable_weight.Coefficients.Bh, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, DesignTable_weight.Coefficients.Arv, DesignTable_weight.Coefficients.lambda_vt, DesignTable_weight.Coefficients.LambdaQc);
+               OEW.W_tail = weight_obj.tail_weight_III(DesignTable_weight.Coefficients.Fw, DesignTable_weight.Coefficients.Bh, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, DesignTable_weight.Coefficients.Arv, DesignTable_weight.Coefficients.lambda_vt, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.HtHv);
                OEW.W_fuselage = weight_obj.fuselage_weight_III(DesignTable_weight.Coefficients.Kdwf, W_TO, DesignTable_weight.Coefficients.Nz, DesignTable_weight.Coefficients.L, DesignTable_weight.Coefficients.D, DesignTable_weight.Coefficients.W);
                OEW.W_subsystems = weight_obj.subsystem_weight_III(DesignTable_weight, W_TO, T0, W_engine_installed);
                % weight_obj.engine.W_engine_installed = 1.3*Engine_Sizing(T0);
@@ -122,18 +122,25 @@ classdef WeightLevel3 < WeightModelLevel3
 
                % W_wing = 0.0051*(W_dg * N_z)^(0.557)*(S_w^(0.649))*(AR^(0.5))*(tc_root)^(-0.4)*(1+lambda)^(0.1)*(cos(Lambda_qc))^(-1)*S_csw^(0.1);
 
-               W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*S_w^(0.622)*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cos(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
+               W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*S_w^(0.622)*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cosd(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
 
           end
 
           % Estimate tail weight
-          function [W_tail] = tail_weight_III(weight_obj, F_w, B_h, W_dg, N_z, S_ht, K_rht, H_t, H_v, S_vt, M, L_t, S_r, A_vt, lambda, Lambda_VT)
+          function [W_tail] = tail_weight_III(weight_obj, F_w, B_h, W_dg, N_z, S_ht, K_rht, H_t, H_v, S_vt, M, L_t, S_r, A_vt, lambda, Lambda_VT, Ht_Hv)
                %UNTITLED Summary of this function goes here
                %   Detailed explanation goes here
 
                W_HT = 3.316*(1 + F_w/B_h)^(-2.0) * ((W_dg * N_z)/(1000))^(0.260) * S_ht^(0.806); % eq 15.2, 6th edition
+               % if (isnan(H_t/H_v)==true)
+               %      W_VT = 0.452*K_rht*(1 + 0)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda)^(0.25)*cos(Lambda_VT*pi/180)^(-0.323); % eq 15.3, 6th edition
+               % elseif (isnan(H_t/H_v)==false)
+               %      W_VT = 0.452*K_rht*(1 + H_t/H_v)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda)^(0.25)*cos(Lambda_VT*pi/180)^(-0.323); % eq 15.3, 6th edition
+               % else
+               %      error("Error handler.")
+               % end
 
-               W_VT = 0.452*K_rht*(1 + H_t/H_v)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda)^(0.25)*cos(Lambda_VT*pi/180)^(-0.323); % eq 15.3, 6th edition
+               W_VT = 0.452*K_rht*(1 + Ht_Hv)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda)^(0.25)*cos(Lambda_VT*pi/180)^(-0.323); % eq 15.3, 6th edition
 
                W_tail = W_HT + W_VT;
 

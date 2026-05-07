@@ -25,13 +25,19 @@ classdef SizingClassLevel3 < SizingModel
                for iteration = 1:max_iteration
                     geometry_obj.mainwings.S_ref = W_TO / W_S;
 
+                    % Reconstruct main wings
+                    geometry_obj.reconstruct_mainwings(geometry_obj.mainwings.S_ref);
+
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
-                    S_wet = geometry_obj.get_design_S_wet(W_TO);
+                    geometry_obj.design.S_wet = geometry_obj.get_design_S_wet(W_TO);
 
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)
                     [geometry_obj.HT.S_ref, geometry_obj.VT.S_ref] = geometry_obj.size_tail(design, geometry_obj.mainwings.S_ref);
+
+                    % Reconstruct tail
+                    geometry_obj.reconstruct_tailwings(geometry_obj.HT.S_ref, geometry_obj.VT.S_ref);
 
 
                     %% ----------------------------------------------------------------------

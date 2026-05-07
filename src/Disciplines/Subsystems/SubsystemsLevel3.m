@@ -94,7 +94,7 @@ classdef SubsystemsLevel3 < SubsystemsModelLevel3
                t_avg = 0.7 * (c_tip * tc_tip + c_root * tc_root)/2; % ft
 
                MFV = 0.3*S_ref*t_avg; % ft^3
-
+               MFV = MFV*7.48051948; % Convert ft^3 to gal
           end
 
           function output = get_fuel_volume(subsys_obj, fuel_weight, fuel_type)

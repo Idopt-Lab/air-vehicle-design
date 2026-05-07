@@ -19,7 +19,8 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
           % Compute mission fuel
           function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
                % This is where we actually compute the fuel for the mission
-               AR = design.geom.wings.Main.AspectRatio;
+               % AR = design.geom.wings.Main.AspectRatio;
+               AR = geometry_obj.mainwings.AR;
 
                % W_S = 104.59;
                W_S = constraint_obj.optimal_WS;

@@ -132,6 +132,30 @@ classdef GeometryLevel3 < GeometryModelLevel3
                [obj.HT.S_ref, obj.VT.S_ref] = obj.Tail_Sizing_IV(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
           end
 
+          % Recompute main wing dimensions using S_ref
+          function output = reconstruct_mainwings(geometry_obj, S_ref)
+               geometry_obj.mainwings.b = sqrt(geometry_obj.mainwings.AR*S_ref);
+               geometry_obj.mainwings.c_root = (2 * geometry_obj.mainwings.S_ref)/(geometry_obj.mainwings.b*(1 + geometry_obj.mainwings.lambda));
+               geometry_obj.mainwings.tip_chord = geometry_obj.mainwings.lambda * geometry_obj.mainwings.c_root;
+               geometry_obj.mainwings.S_exposed = geometry_obj.get_S_exposed(geometry_obj.mainwings.tip_chord, geometry_obj.mainwings.exposed_rc, geometry_obj.mainwings.exposed_halfspan);
+               geometry_obj.mainwings.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.tc);
+          end
+
+          % Recompute horizontal and vertical tail dimensions using S_ref
+          function output = reconstruct_tailwings(geometry_obj, S_HT, S_VT)
+               geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
+               geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
+               geometry_obj.HT.tip_chord = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
+               geometry_obj.HT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.HT.tip_chord, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
+               geometry_obj.HT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
+
+               geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
+               geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
+               geometry_obj.VT.tip_chord = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
+               geometry_obj.VT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.VT.tip_chord, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
+               geometry_obj.VT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
+          end
+
           % Add functions for estimating control surface sizing
 
           % Estimate the wetted area of the aircraft

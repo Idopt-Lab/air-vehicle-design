@@ -669,7 +669,7 @@ classdef AeroLevel3 < AerodynamicsModelLevel3
           end
 
           function output = Cf_turb(aero_obj, R, Mach)
-               output = (0.455/(((log(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
+               output = (0.455/(((log10(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
                % eq 12.27, 6th ed
           end
 
