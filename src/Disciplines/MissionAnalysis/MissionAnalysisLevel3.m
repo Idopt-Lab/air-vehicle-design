@@ -31,22 +31,55 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
                % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
 
+               % Automate segment extraction
+               segmentnames = fields(mission_obj.missiondata);
+               fuelburnedarray = zeros(1,length(segmentnames));
+               W_array = zeros(1, length(segmentnames));
+
+               W_array(1) = W_TO;
+
+               for i=1:length(segmentnames)
+                    currentsegment = segmentnames{i};
+                    if (currentsegment == "startup") || (currentsegment == "Startup")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_startup(W_array(i));
+                    elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_taxi(W_array(i-1));
+                    elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i-1));
+                    elseif (currentsegment == "climb") || (currentsegment == "Climb")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_TO, W_array(i-1), mission_obj.missiondata.Climb.MachNumber, S_ref, aero_obj.get_design_CD0(mission_obj.mission_states(:,4), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC(mission_obj.mission_states(:,4), "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
+                    elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(W_array(i-1), propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,5), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, S_ref);
+                    elseif (currentsegment == "dash") || (currentsegment == "Dash")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(W_array(i-1), S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,6), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
+                    elseif (currentsegment == "combat") || (currentsegment == "Combat")
+                         [W_arraY(i), fuelburnedarray(i)] = mission_obj.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Combat.PayloadDroplbf, aero_obj.get_design_CD0(mission_obj.mission_states(:,7), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
+                    elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), S_ref, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,9), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0));
+                    elseif (currentsegment == "landing") || (currentsegment == "Landing")
+                         [W_array(i), fuelburnedarray{i}] = mission_obj.segment_landing(W_array(i-1), W_TO);
+                    else
+                         error("Couldn't identify mission segment name. (Startup, Taxi, Takeoff, Climb, Cruise, Dash, Combat, Loiter, Landing).")
+                    end
+               end
+
+
                % % Generate mission state vectors
                % state_vector = mission_obj.generate_mission_states;
 
                % Loop stuff - should automate segment naming extraction
                % (future)
-               [W_startup, f1] = mission_obj.segment_startup(W_TO);
-               [W_taxi, f2]    = mission_obj.segment_taxi(W_startup);
-               [W_Takeoff, f3] = mission_obj.segment_takeoff(W_taxi);
-               [W_Climb, f4]   = mission_obj.segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, aero_obj.get_design_CD0(mission_obj.mission_states(:,4), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC(mission_obj.mission_states(:,4), "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
-               [W_Cruise, f5]  = mission_obj.segment_cruise(W_Climb, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,5), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, S_ref);
-               [W_Dash, f6]    = mission_obj.segment_dash(W_Cruise, S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,6), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
-               [W_Combat, f7]  = mission_obj.segment_combat(W_Dash, mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Combat.PayloadDroplbf, aero_obj.get_design_CD0(mission_obj.mission_states(:,7), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
-               [W_Cruise2, f8] = mission_obj.segment_cruise(W_Combat, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise_1.Rangeft, mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.afts, mission_obj.missiondata.Cruise_1.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,8), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise_1.e, AR, S_ref);
-               [W_Loiter, f9]  = mission_obj.segment_loiter(W_TO, W_Cruise2, S_ref, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,9), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0));
-               [W_Landing, f10]         = mission_obj.segment_landing(W_Loiter, W_TO);
-               total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10;
+               % [W_startup, f1] = mission_obj.segment_startup(W_TO);
+               % [W_taxi, f2]    = mission_obj.segment_taxi(W_startup);
+               % [W_Takeoff, f3] = mission_obj.segment_takeoff(W_taxi);
+               % [W_Climb, f4]   = mission_obj.segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, aero_obj.get_design_CD0(mission_obj.mission_states(:,4), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC(mission_obj.mission_states(:,4), "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
+               % [W_Cruise, f5]  = mission_obj.segment_cruise(W_Climb, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,5), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, S_ref);
+               % [W_Dash, f6]    = mission_obj.segment_dash(W_Cruise, S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,6), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
+               % [W_Combat, f7]  = mission_obj.segment_combat(W_Dash, mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Combat.PayloadDroplbf, aero_obj.get_design_CD0(mission_obj.mission_states(:,7), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
+               % [W_Cruise2, f8] = mission_obj.segment_cruise(W_Combat, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise_1.Rangeft, mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.afts, mission_obj.missiondata.Cruise_1.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,8), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise_1.e, AR, S_ref);
+               % [W_Loiter, f9]  = mission_obj.segment_loiter(W_TO, W_Cruise2, S_ref, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,9), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0));
+               % [W_Landing, f10]         = mission_obj.segment_landing(W_Loiter, W_TO);
+               total_fuel_used = sum(fuelburnedarray);
                fuel_fraction = total_fuel_used * 1.06 / W_TO;
           end
      end
@@ -55,7 +88,7 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
      % HELPER FUNCTIONS
 
      methods (Access = private)
-% For loop - loops through 
+          % For loop - loops through
 
           % Generate mission state vector
           function state_vector = generate_mission_states(mission_obj)
