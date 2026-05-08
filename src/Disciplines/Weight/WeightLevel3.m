@@ -46,7 +46,7 @@ classdef WeightLevel3 < WeightModelLevel3
           function output = get_OEW(weight_obj, propulsion_obj, design, geometry_obj, W_TO, requirements_obj)
                propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
                weight_obj.get_engine_weight(propulsion_obj, design, requirements_obj);
-               weight_obj.OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj.mainwings.S_ref, geometry_obj.HT.S_ref, geometry_obj.VT.S_ref, geometry_obj.design.S_wet, propulsion_obj.T0, design.weights, weight_obj.engine.installed); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
+               weight_obj.OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj.mainwings.S_ref, geometry_obj.HT.S_ref, geometry_obj.VT.S_ref, geometry_obj.design.S_wet, propulsion_obj.T0, design.weights, weight_obj.engine.installed, geometry_obj); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
 
@@ -82,15 +82,10 @@ classdef WeightLevel3 < WeightModelLevel3
 
 
           % Get OEW
-          function OEW = compute_OEW_III(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, W_engine_installed)
+          function OEW = compute_OEW_III(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, W_engine_installed, geometry_obj)
                %COMPUTE_OEW Summary of this function goes here
                %   Detailed explanation goes here
                % Ref area should be EXPOSED planform area!
-               % W_Wing = WingDensity * S_ref; % Replace with new wing weight model (accepts arguments of AR and e and other stuff)
-               % N_z = 9.0; % Ultimate load factor
-               % tc_root = 0.4; % Thickness-to-chord ratio, root
-               % Lambda_qc = 0.2275; % taper ratio of quarter chord
-               % S_csw = 150; % Surface area of control surfaces (FIGURE THIS OUT <<<<<<<<<<<<<<<<<<<<<)
 
                % Using Raymer, 6th edition, section 15.3.1 equations for component
                % weights.
@@ -137,12 +132,12 @@ classdef WeightLevel3 < WeightModelLevel3
 
                % W_wing = 0.0051*(W_dg * N_z)^(0.557)*(S_w^(0.649))*(AR^(0.5))*(tc_root)^(-0.4)*(1+lambda)^(0.1)*(cos(Lambda_qc))^(-1)*S_csw^(0.1);
 
-               W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*S_w^(0.622)*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cosd(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
+               W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*(S_w^(0.622))*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cosd(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
 
           end
 
           % Estimate tail weight
-          function [W_tail] = tail_weight_III(weight_obj, F_w, B_h, W_dg, N_z, S_ht, K_rht, H_t, H_v, S_vt, M, L_t, S_r, A_vt, lambda, Lambda_VT, Ht_Hv)
+          function [W_tail] = tail_weight_III(weight_obj, F_w, B_h, W_dg, N_z, S_ht, K_rht, H_t, H_v, S_vt, M, L_t, S_r, A_vt, lambda_vt, Lambda_VT, Ht_Hv)
                %UNTITLED Summary of this function goes here
                %   Detailed explanation goes here
 
@@ -155,7 +150,8 @@ classdef WeightLevel3 < WeightModelLevel3
                %      error("Error handler.")
                % end
 
-               W_VT = 0.452*K_rht*(1 + Ht_Hv)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda)^(0.25)*cos(Lambda_VT*pi/180)^(-0.323); % eq 15.3, 6th edition
+               % Recompute control surface area!
+               W_VT = 0.452*K_rht*(1 + Ht_Hv)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda_vt)^(0.25)*cosd(Lambda_VT)^(-0.323); % eq 15.3, 6th edition
 
                W_tail = W_HT + W_VT;
 
