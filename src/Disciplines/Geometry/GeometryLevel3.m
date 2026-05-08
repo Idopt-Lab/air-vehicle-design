@@ -178,7 +178,18 @@ classdef GeometryLevel3 < GeometryModelLevel3
                S_control = (deltaCL_req * S_ref) / ...
                     (0.9 * K_f * dcl_ddelta_airfoil * delta_max_rad * cosd(Lambda_HL_deg));
           end
-          
+
+          function L_hinge = compute_hinge_length_from_stations(y_in, y_out, Lambda_h_deg)
+               % Computes hinge length from projected span and hinge-line sweep.
+               %
+               % y_in: inboard span station [ft]
+               % y_out: outboard span station [ft]
+               % Lambda_h_deg: hinge-line sweep angle [deg]
+
+               b_control = abs(y_out - y_in);
+               L_hinge = b_control / cosd(Lambda_h_deg);
+          end
+
           % Estimate the wetted area of the aircraft
           function output = get_design_S_wet(obj, W_TO)
                c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.

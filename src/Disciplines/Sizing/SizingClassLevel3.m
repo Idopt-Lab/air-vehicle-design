@@ -53,15 +53,16 @@ classdef SizingClassLevel3 < SizingModel
                     % Then compute the empty weight
                     weight_obj.OEW = weight_obj.get_OEW(propulsion_obj, design, geometry_obj, weight_obj.W_TO, requirements_obj);
 
+                    weight_obj.OEW.W_all_else_empty = weight_obj.compute_W_all_else_empty(W_TO, design.type);
+                    weight_obj.OEW.total = weight_obj.OEW.total + weight_obj.OEW.W_all_else_empty;
+
                     weight_obj.OEW_frac = weight_obj.OEW.total/weight_obj.W_TO;
 
                     % W_TO_new = W_fixed / (1 - fuel_fraction - empty_weight_fraction);
                     % W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW.total;
-                    
-                    W_all_else_empty = weight_obj.compute_W_all_else_empty(W_TO, design.type);
 
                     % complete iteration loop, return MTOW and such
-                    W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW.total + W_all_else_empty;
+                    W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW.total;
 
                     difference = W_TO_new - weight_obj.W_TO;
                     percent_diff = 100 * difference / weight_obj.W_TO;

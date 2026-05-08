@@ -32,6 +32,7 @@ classdef WeightLevel3 < WeightModelLevel3
                % Need W_TO
                propulsion_obj.get_propulsion_stats(requirements_obj, design);
                weight_obj.subsystems = weight_obj.subsystem_weight_III(design.weights, weight_obj.W_TO, propulsion_obj.T0, weight_obj.engine.W_installed);
+               output = weight_obj.subsystems;
           end
 
           % Estimate engine weight (installed)
@@ -208,7 +209,6 @@ classdef WeightLevel3 < WeightModelLevel3
           end
 
           function [W_landinggear] = landinggear(weight_obj, K_cb, K_tpg, W_l, N_l, L_m, N_nw, L_n)
-               % THIS IIS WHERE SOME MAGIC HAPPENS LOL
 
                W_main_gear = K_cb*K_tpg * (W_l * N_l)^(0.25) * L_m^(0.973); % eq 15.5, 6th ed
 
