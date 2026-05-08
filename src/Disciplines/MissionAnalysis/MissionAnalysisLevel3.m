@@ -58,6 +58,8 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), S_ref, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,9), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0));
                     elseif (currentsegment == "landing") || (currentsegment == "Landing")
                          [W_array(i), fuelburnedarray{i}] = mission_obj.segment_landing(W_array(i-1), W_TO);
+                    elseif (currentsegment == "meta")
+                         % Loop complete
                     else
                          error("Couldn't identify mission segment name. (Startup, Taxi, Takeoff, Climb, Cruise, Dash, Combat, Loiter, Landing).")
                     end
