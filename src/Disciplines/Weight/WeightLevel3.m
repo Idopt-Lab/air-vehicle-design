@@ -57,6 +57,21 @@ classdef WeightLevel3 < WeightModelLevel3
           end
 
 
+          % Compute all-else empty weight
+          function output = compute_W_all_else_empty(weight_obj, W_TO, aircraft_type)
+               if (aircraft_type == "Jet fighter")
+                    W_all_else_empty = 0.17*W_TO;
+               elseif (aircraft_type == "Transport") || (aircraft_type == "Bomber")
+                    W_all_else_empty = 0.17*W_TO;
+               elseif (aircraft_type == "General aviation")
+                    W_all_else_empty = 0.1*W_TO;
+               else
+                    error("Couldn't identify aircraft type (fighter, transport, bomber, general aviation).")
+               end
+               output = W_all_else_empty;
+          end
+
+
      end
 
 
