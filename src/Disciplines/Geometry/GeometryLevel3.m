@@ -156,8 +156,29 @@ classdef GeometryLevel3 < GeometryModelLevel3
                geometry_obj.VT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
           end
 
-          % Add functions for estimating control surface sizing
+          % size control surfaces
+          function S_control = size_control_surface_raymer( ...
+                    deltaCL_req, ...
+                    S_ref, ...
+                    K_f, ...
+                    dcl_ddelta_airfoil, ...
+                    delta_max_deg, ...
+                    Lambda_HL_deg)
 
+               % Raymer-style plain-flap/control-surface sizing.
+               % deltaCL_req: required section/surface lift coefficient increment
+               % S_ref: parent reference area, e.g. S_h for elevator, S_v for rudder, S_w for flap/aileron
+               % K_f: empirical correction factor
+               % dcl_ddelta_airfoil: 2D lift increment per radian of deflection
+               % delta_max_deg: maximum control deflection in degrees
+               % Lambda_HL_deg: hinge-line sweep angle in degrees
+
+               delta_max_rad = deg2rad(delta_max_deg);
+
+               S_control = (deltaCL_req * S_ref) / ...
+                    (0.9 * K_f * dcl_ddelta_airfoil * delta_max_rad * cosd(Lambda_HL_deg));
+          end
+          
           % Estimate the wetted area of the aircraft
           function output = get_design_S_wet(obj, W_TO)
                c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
