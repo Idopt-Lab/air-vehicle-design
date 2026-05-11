@@ -1,4 +1,4 @@
-classdef SizingClassLevel2
+classdef SizingClassLevel2 < SizingModel
      %SIZING Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -38,7 +38,7 @@ classdef SizingClassLevel2
 
                     %% -------------------------------------------------
                     % Get mission fuel
-                    [weight_obj.total_fuel_used, weight_obj.fuel_fraction] = mission_obj.get_mission_fuel(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj);
+                    [weight_obj.total_fuel_used, weight_obj.fuel_fraction] = mission_obj.get_mission_fuel(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj);
 
 
                     % Compute design weight
