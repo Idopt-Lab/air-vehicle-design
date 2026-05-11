@@ -1,4 +1,4 @@
-classdef SizingModel
+classdef SizingModel < handle
      %SIZINGMODEL Summary of this class goes here
      %   Detailed explanation goes here
 

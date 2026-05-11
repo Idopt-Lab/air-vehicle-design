@@ -9,6 +9,7 @@ classdef WeightLevel3 < WeightModelLevel3
           OEW_frac
           wings
           tail
+          fuselage
           subsystems
           engine
           landinggear_weight
@@ -100,6 +101,10 @@ classdef WeightLevel3 < WeightModelLevel3
                % weight_obj.engine.W_engine_installed = 1.3*Engine_Sizing(T0);
 
                % OEW = W_Wing + W_tail + W_fuselage + W_subsystems + W_extra; % sum the weights
+               weight_obj.wings = OEW.W_Wing;
+               weight_obj.tail = OEW.W_tail;
+               weight_obj.fuselage = OEW.W_fuselage;
+               weight_obj.subsystems = OEW.W_subsystems;
                OEW.total = OEW.W_Wing + OEW.W_tail + OEW.W_fuselage + OEW.W_subsystems.total;
           end
 

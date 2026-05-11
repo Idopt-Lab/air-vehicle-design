@@ -76,7 +76,7 @@ classdef SizingClassLevel3 < SizingModel
                     W_TO = W_TO_new;
                     geometry_obj.mainwings.S_ref = geometry_obj.mainwings.S_ref;
                end
-               beta = 1 - (total_fuel_used / (2 * W_TO));
+               % beta = 1 - (total_fuel_used / (2 * W_TO));
                obj.results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
                disp(obj.results_table)
           end
