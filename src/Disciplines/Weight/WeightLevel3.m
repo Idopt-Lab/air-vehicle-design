@@ -133,8 +133,8 @@ classdef WeightLevel3 < WeightModelLevel3
 
                % W_wing = 0.0051*(W_dg * N_z)^(0.557)*(S_w^(0.649))*(AR^(0.5))*(tc_root)^(-0.4)*(1+lambda)^(0.1)*(cos(Lambda_qc))^(-1)*S_csw^(0.1);
 
-               W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*(S_w^(0.622))*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cosd(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
-
+               % W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*(S_w^(0.622))*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cosd(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
+               W_wing = 19.29*( ( (K_vs*N_z*W_dg) / (tc_root) )*( (tand(Lambda_qc) - ( 2*(1 - lambda))/(AR*(1 + lambda)) )^2 + 1.0)*10^(-6) )^(0.464)*((1 + lambda)*AR)^(0.70)*(S_w)^0.58; % Nicolai Eq. 20.1b
           end
 
           % Estimate tail weight
