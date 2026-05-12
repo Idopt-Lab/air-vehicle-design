@@ -47,10 +47,6 @@ classdef ConstraintAnalysisClass < ConstraintModel
                plotConstraintDiagram(constraint_obj, constraint_obj.Wto_S_range, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_landing, constraint_obj.optimal_WS, constraint_obj.min_TW, constraint_obj.constraints_table.Row(:));
                showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
           end
-     end
-
-     % HELPER METHODS
-     methods (Access = private)
 
           % Get consstraints
           function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
@@ -190,6 +186,13 @@ classdef ConstraintAnalysisClass < ConstraintModel
           % Wto_S_landing = landing_constraint(input)
           % plotconstraintDiagram(input)
           % showResultTable(input)
+
+     end
+
+     % HELPER METHODS
+     methods (Access = private)
+
+
 
      end
 end

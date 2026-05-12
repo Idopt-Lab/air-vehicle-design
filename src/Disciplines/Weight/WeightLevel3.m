@@ -9,6 +9,7 @@ classdef WeightLevel3 < WeightModelLevel3
           OEW_frac
           wings
           tail
+          strakes
           fuselage
           subsystems
           engine
@@ -73,41 +74,6 @@ classdef WeightLevel3 < WeightModelLevel3
                output = W_all_else_empty;
           end
 
-
-     end
-
-
-     %% ------------------------------------------------------------
-
-
-     methods (Access = private)
-
-
-          % Get OEW
-          function OEW = compute_OEW_III(weight_obj, W_TO, S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, W_engine_installed, geometry_obj)
-               %COMPUTE_OEW Summary of this function goes here
-               %   Detailed explanation goes here
-               % Ref area should be EXPOSED planform area!
-
-               % Using Raymer, 6th edition, section 15.3.1 equations for component
-               % weights.
-
-               % Sub-functions for handling component weights. Estimates.
-               % Equations: Raymer, 6th edition, section 15.3.1. Fighter/Attack jet.
-               OEW.W_Wing = weight_obj.wing_weight_III(W_TO, DesignTable_weight.Coefficients.Nz, S_ref, DesignTable_weight.Coefficients.AR, DesignTable_weight.Coefficients.tc, DesignTable_weight.Coefficients.lambda_w, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.Scsw, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
-               OEW.W_tail = weight_obj.tail_weight_III(DesignTable_weight.Coefficients.Fw, DesignTable_weight.Coefficients.Bh, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, DesignTable_weight.Coefficients.Arv, DesignTable_weight.Coefficients.lambda_vt, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.HtHv);
-               OEW.W_fuselage = weight_obj.fuselage_weight_III(DesignTable_weight.Coefficients.Kdwf, W_TO, DesignTable_weight.Coefficients.Nz, DesignTable_weight.Coefficients.L, DesignTable_weight.Coefficients.D, DesignTable_weight.Coefficients.W);
-               OEW.W_subsystems = weight_obj.subsystem_weight_III(DesignTable_weight, W_TO, T0, W_engine_installed);
-               % weight_obj.engine.W_engine_installed = 1.3*Engine_Sizing(T0);
-
-               % OEW = W_Wing + W_tail + W_fuselage + W_subsystems + W_extra; % sum the weights
-               weight_obj.wings = OEW.W_Wing;
-               weight_obj.tail = OEW.W_tail;
-               weight_obj.fuselage = OEW.W_fuselage;
-               weight_obj.subsystems = OEW.W_subsystems;
-               OEW.total = OEW.W_Wing + OEW.W_tail + OEW.W_fuselage + OEW.W_subsystems.total;
-          end
-
           function eng_weight = compute_engine_installed_weight(weight_obj, Thrust)
 
                eng_weight.W_dry = 0.521*Thrust^0.9; % eq 7.13
@@ -123,11 +89,8 @@ classdef WeightLevel3 < WeightModelLevel3
           function [W_fuselage] = fuselage_weight_III(weight_obj, K_dwf, W_dg, N_z, L, D, W)
                %UNTITLED Summary of this function goes here
                %   Detailed explanation goes here
-
                % W_wing = 0.0051*(W_dg * N_z)^(0.557)*(S_w^(0.649))*(AR^(0.5))*(tc_root)^(-0.4)*(1+lambda)^(0.1)*(cos(Lambda_qc))^(-1)*S_csw^(0.1);
-
                W_fuselage = 0.499 * K_dwf * W_dg^(0.35) * N_z^(0.25) * L^(0.5) * D^(0.849) * W^(0.685);
-
           end
 
 
@@ -135,11 +98,9 @@ classdef WeightLevel3 < WeightModelLevel3
           function [W_wing] = wing_weight_III(weight_obj, W_dg, N_z, S_w, AR, tc_root, lambda, Lambda_qc, S_csw, K_dw, K_vs)
                %UNTITLED Summary of this function goes here
                %   Detailed explanation goes here
-
                % W_wing = 0.0051*(W_dg * N_z)^(0.557)*(S_w^(0.649))*(AR^(0.5))*(tc_root)^(-0.4)*(1+lambda)^(0.1)*(cos(Lambda_qc))^(-1)*S_csw^(0.1);
-
                % W_wing = 0.0103*K_dw*K_vs*(W_dg*N_z)^(0.5)*(S_w^(0.622))*AR^(0.785)*(tc_root) * (1+lambda)^(0.05)*cosd(Lambda_qc)^(-1.0)*S_csw^(0.04); % eq 15.1
-               W_wing = 19.29*( ( (K_vs*N_z*W_dg) / (tc_root) )*( (tand(Lambda_qc) - ( 2*(1 - lambda))/(AR*(1 + lambda)) )^2 + 1.0)*10^(-6) )^(0.464)*((1 + lambda)*AR)^(0.70)*(S_w)^0.58; % Nicolai Eq. 20.1b
+               W_wing = 3.08*( ( (K_vs*N_z*W_dg) / (tc_root) )*( (tand(Lambda_qc) - ( 2*(1 - lambda))/(AR*(1 + lambda)) )^2 + 1.0)*10^(-6) )^(0.593)*((1 + lambda)*AR)^(0.89)*(S_w)^0.741; % Nicolai Eq. 20.1a
           end
 
           % Estimate tail weight
@@ -157,7 +118,7 @@ classdef WeightLevel3 < WeightModelLevel3
                % end
 
                % Recompute control surface area!
-               W_VT = 0.452*K_rht*(1 + Ht_Hv)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda_vt)^(0.25)*cosd(Lambda_VT)^(-0.323); % eq 15.3, 6th edition
+               W_VT = 0.452*K_rht*(1 + H_t/H_v)^(0.5) * (W_dg*N_z)^(0.488)*S_vt^(0.718)*M^(0.341) * L_t^(-1.0)*(1+S_r/S_vt)^(0.348)*A_vt^(0.223) * (1+lambda_vt)^(0.25)*cosd(Lambda_VT)^(-0.323); % eq 15.3, 6th edition
 
                W_tail = W_HT + W_VT;
 
@@ -239,6 +200,15 @@ classdef WeightLevel3 < WeightModelLevel3
                W_eng_sys = W_engine_mounts + W_engine_section + W_engine_cooling + W_oil_cooling + W_starter_pneumatic;
 
           end
+
+
+     end
+
+
+     %% ------------------------------------------------------------
+
+
+     methods (Access = private)
 
 
      end

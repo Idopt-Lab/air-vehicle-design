@@ -130,6 +130,13 @@ classdef GeometryLevel3 < GeometryModelLevel3
 
                % Load the planform area of tail
                [obj.HT.S_ref, obj.VT.S_ref] = obj.Tail_Sizing_IV(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
+
+               % Load the planform area of any strakes
+               obj.strakes.S_ref = design.geom.wings.Strakes.PlanformAreaft2;
+               obj.strakes.tc = design.geom.wings.Strakes.tc;
+               obj.strakes.LE_sweep = design.geom.wings.Strakes.SweepLEDeg;
+               obj.strakes.AR = design.geom.wings.Strakes.AspectRatio;
+               obj.strakes.lambda = design.geom.wings.Strakes.TaperRatio;
           end
 
           % Recompute main wing dimensions using S_ref
