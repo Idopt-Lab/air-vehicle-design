@@ -22,12 +22,23 @@ classdef (Abstract) MissionAnalysisModel < handle
                mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission_obj data!
 
                % Mission segments should scan row F8 until it encounters a blank
-               mission_table = readtable(file_name, 'Sheet', mission_name, 'ReadRowNames', true);
+               mission_table = readtable(file_name, 'Sheet', mission_name, 'ReadRowNames', true, 'ReadVariableNames',true);
                % Try cleaning up all cells
+
+               % Extract "IsDryOrWet"
+               raw = readcell(file_name, "Sheet", mission_name);
+               rowLabels = string(raw(:,1));
+               idx = strcmpi(strtrim(rowLabels), "Dry Or Wet");
+               dryWetRow = raw(idx, 2:end);
+               dryWetText = string(dryWetRow);
+               dryWetText = strrep(dryWetText, """", "");
+               dryWetText = strtrim(dryWetText);
+               dryWetText = cellstr(dryWetText);
 
 
                % Extract some data from the mission segment setup
                segment_count = length(mission_table.Properties.VariableNames);
+               segments = mission_table.Properties.VariableNames
                rowcount = length(mission_table.Properties.RowNames);
 
                for i=1:segment_count % For each segment...
@@ -46,7 +57,7 @@ classdef (Abstract) MissionAnalysisModel < handle
 
                     % Compute aerodynamic stuff
                     V = mission_table{"Mach number",i}*a;
-                    q = 0.5*rho*(V^2);
+                    q = AeroUtils.compute_q([mission_table{"Mach number",i}, alt]);
 
                     % add data to corresponding segment
                     atmospheredata(:,i) = [Temp, a, P, rho, nu, mu, V, q]';
@@ -59,6 +70,11 @@ classdef (Abstract) MissionAnalysisModel < handle
                output = [mission_table;atmospheredata];
 
                output = tableToNestedStruct(output, Orientation="variables");
+
+               for i=1:segment_count
+                    current_segment = mission_table.Properties.VariableNames{i};
+                    output.(current_segment).DryOrWet = dryWetText{i};
+               end
 
           end
 

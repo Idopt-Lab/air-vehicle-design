@@ -53,11 +53,11 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                delta = propulsion_obj.get_delta(state_input);
                theta_0 = propulsion_obj.compute_theta_0(theta, PropulsionUtils.gamma, M0);
                delta_0 = propulsion_obj.compute_delta_0(delta, PropulsionUtils.gamma, M0);
-               if isdryorwet=="dry"
+               if (isdryorwet=="dry") || (isdryorwet=="Dry")
                     % Compute TSFC for dry config
                     thrust = propulsion_obj.get_thrust_dry(thrust_sl, delta_0, F1, M0, E, F2, theta_0, TR);
                     output = propulsion_obj.get_TSFC_dry(theta_0, TSFC_sl, M0, thrust, thrust_sl, TR);
-               elseif isdryorwet == "wet"
+               elseif (isdryorwet == "wet") || (isdryorwet == "Wet")
                     % Compute TSFC for wet config
                     thrust = propulsion_obj.get_thrust_wet(thrust_sl, delta_0, F1, M0, E, theta_0, TR, F2);
                     output = get_TSFC_wet(propulsion_obj, TSFC_sl, M0, thrust, thrust_sl, theta_0, TR);

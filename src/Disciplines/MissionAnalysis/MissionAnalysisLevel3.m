@@ -29,7 +29,17 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                S_ref = geometry_obj.mainwings.S_ref;
                T0 = propulsion_obj.T0;
 
-               % [enginestats] = propulsion_est_IV(T0, missiondata.Dash.MachNumber, BPR);
+               t_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
+               t_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
+               TSFC_sl_perhour_dry = design.propulsion.TSFCseaLevelperHour.Dry;
+               TSFC_sl_perhour_wet = design.propulsion.TSFCseaLevelperHour.Wet;
+               E_dry = design.propulsion.E.Dry;
+               E_wet = design.propulsion.E.Wet;
+               F1_dry = design.propulsion.F1.Dry;
+               F1_wet = design.propulsion.F1.Wet;
+               F2_dry = design.propulsion.F2.Dry;
+               F2_wet = design.propulsion.F2.Wet;
+               TR = 1.0;
 
                % Automate segment extraction
                segmentnames = fields(mission_obj.missiondata);
@@ -45,6 +55,25 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                     currentsegment = erase(currentsegment, '_');
                     currentsegment = erase(currentsegment, {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'});
 
+                    % Extract necessary info from current segment
+                    % Checks if current segment is "meta" (artefact from
+                    % table -> struct conversion.
+                    if (currentsegment == "meta")
+                         break
+                    else
+                         M = mission_obj.missiondata.(currentsegment).MachNumber;
+                         alt = mission_obj.missiondata.(currentsegment).Altitudeft;
+                         q = mission_obj.missiondata.(currentsegment).qlbfft2;
+                         a = mission_obj.missiondata.(currentsegment).afts;
+                         CD0 = aero_obj.get_design_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
+                         IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
+                         if (IsDryOrWet == "Dry")
+                              TSFC = propulsion_obj.get_TSFC([M, alt], IsDryOrWet, t_SL_dry, TSFC_sl_perhour_dry, E_dry, F1_dry, F2_dry, TR);
+                         elseif (IsDryOrWet == "Wet")
+                              TSFC = propulsion_obj.get_TSFC([M, alt], IsDryOrWet, t_SL_wet, TSFC_sl_perhour_wet, E_wet, F1_wet, F2_wet, TR);
+                         end
+                    end
+
                     if (currentsegment == "startup") || (currentsegment == "Startup")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_startup(W_array(i));
                     elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
@@ -52,15 +81,15 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                     elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i-1));
                     elseif (currentsegment == "climb") || (currentsegment == "Climb")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_TO, W_array(i-1), mission_obj.missiondata.Climb.MachNumber, S_ref, aero_obj.get_design_CD0(mission_obj.mission_states(:,4), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC(mission_obj.mission_states(:,4), "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0, mission_obj.missiondata.Cruise.e, AR, TSFC, alt, T0);
                     elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(W_array(i-1), propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,5), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, S_ref);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(W_array(i-1), TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0, mission_obj.missiondata.Cruise.e, AR, S_ref);
                     elseif (currentsegment == "dash") || (currentsegment == "Dash")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(W_array(i-1), S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,6), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(W_array(i-1), S_ref, W_TO, q, CD0, mission_obj.missiondata.Dash.e, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
                     elseif (currentsegment == "combat") || (currentsegment == "Combat")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Combat.PayloadDroplbf, aero_obj.get_design_CD0(mission_obj.mission_states(:,7), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0, mission_obj.missiondata.Combat.e, AR, W_TO, q, S_ref);
                     elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), S_ref, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,9), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0));
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), S_ref, q, CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
                     elseif (currentsegment == "landing") || (currentsegment == "Landing")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_landing(W_array(i-1), W_TO);
                     elseif (currentsegment == "descent") || (currentsegment == "Descent")
