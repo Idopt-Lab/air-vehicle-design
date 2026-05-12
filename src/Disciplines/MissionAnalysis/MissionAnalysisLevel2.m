@@ -64,7 +64,7 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
                          end
                     end
                     if (currentsegment == "startup") || (currentsegment == "Startup")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i));
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_startup(W_array(i));
                     elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_taxi(W_array(i-1));
                     elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
