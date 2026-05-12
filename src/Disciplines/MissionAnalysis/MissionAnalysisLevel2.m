@@ -26,7 +26,9 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
                W_TO = weight_obj.W_TO;
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                S_ref = geometry_obj.mainwings.S_ref;
+               S_wet_aircraft = geometry_obj.design.S_wet;
                T0 = propulsion_obj.T0;
+               engine_type = design.propulsion_type;
                % Automate segment extraction
                segmentnames = fields(mission_obj.missiondata);
                fuelburnedarray = zeros(1,length(segmentnames));
@@ -41,6 +43,26 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
                     currentsegment = erase(currentsegment, '_');
                     currentsegment = erase(currentsegment, {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'});
 
+                    % Extract necessary info from current segment
+                    % Checks if current segment is "meta" (artefact from
+                    % table -> struct conversion.
+                    if (currentsegment == "meta")
+                         break
+                    else
+                         M = mission_obj.missiondata.(currentsegment).MachNumber;
+                         alt = mission_obj.missiondata.(currentsegment).Altitudeft;
+                         q = mission_obj.missiondata.(currentsegment).qlbfft2;
+                         a = mission_obj.missiondata.(currentsegment).afts;
+                         CD0 = aero_obj.get_design_CD0(aero_obj.Cf, S_wet_aircraft, S_ref);
+                         IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
+                         if (IsDryOrWet == "Dry")
+                              IsDryOrWet = "mil";
+                              TSFC = propulsion_obj.get_TSFC_installed(engine_type, [M, alt], IsDryOrWet);
+                         elseif (IsDryOrWet == "Wet")
+                              IsDryOrWet = "max";
+                              TSFC = propulsion_obj.get_TSFC_installed(engine_type, [M, alt], IsDryOrWet);
+                         end
+                    end
                     if (currentsegment == "startup") || (currentsegment == "Startup")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i));
                     elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
@@ -48,15 +70,15 @@ classdef MissionAnalysisLevel2 < MissionAnalysisModel
                     elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i-1));
                     elseif (currentsegment == "climb") || (currentsegment == "Climb")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_TO, W_array(i-1), mission_obj.missiondata.Climb.MachNumber, S_ref, aero_obj.get_design_CD0(aero_obj.Cf, geometry_obj.design.S_wet, S_ref), mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC_installed(design.propulsion_type, [mission_obj.missiondata.Climb.MachNumber, mission_obj.missiondata.Climb.Altitudeft, 0, W_array(i-1)], "mil"), mission_obj.missiondata.Climb.Altitudeft, T0);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0, mission_obj.missiondata.Cruise.e, AR, TSFC, alt, T0);
                     elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(W_array(i-1), W_S, mission_obj.missiondata.Cruise.TSFC, mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, aero_obj.get_design_CD0(aero_obj.Cf, geometry_obj.design.S_wet, S_ref), mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(W_array(i-1), W_S, TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0, mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
                     elseif (currentsegment == "dash") || (currentsegment == "Dash")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(W_array(i-1), W_S, W_TO, mission_obj.missiondata.Dash.qlbfft2, aero_obj.get_design_CD0(aero_obj.Cf, geometry_obj.design.S_wet, S_ref), mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC_installed(design.propulsion_type, [mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft, 0, W_array(i-1)], "max"), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(W_array(i-1), W_S, W_TO, q, CD0, mission_obj.missiondata.Dash.e, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
                     elseif (currentsegment == "combat") || (currentsegment == "Combat")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC_installed(design.propulsion_type, [mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft, 0, W_array(i-1)], "max"), mission_obj.missiondata.Combat.PayloadDroplbf, aero_obj.get_design_CD0(aero_obj.Cf, geometry_obj.design.S_wet, S_ref), mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, W_S);
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0, mission_obj.missiondata.Combat.e, AR, W_TO, q, W_S);
                     elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), W_S, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(aero_obj.Cf, geometry_obj.design.S_wet, S_ref), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC_installed(design.propulsion_type, [mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft, 0, W_array(i-1)], "mil"));
+                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), W_S, q, CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
                     elseif (currentsegment == "landing") || (currentsegment == "Landing")
                          [W_array(i), fuelburnedarray(i)] = mission_obj.segment_landing(W_array(i-1), W_TO);
                     elseif (currentsegment == "descent") || (currentsegment == "Descent")

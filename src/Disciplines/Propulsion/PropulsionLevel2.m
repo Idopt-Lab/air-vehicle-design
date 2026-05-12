@@ -34,7 +34,7 @@ classdef PropulsionLevel2 < PropulsionModelLevel2
                theta = propulsion_obj.get_theta(state_input);
                engine_type = PropulsionUtils.classify_engine_type(engine_type); % "normalize" engine type input.
                if (engine_type == "high_bypass_turbofan")
-                    if M0 < 0.9
+                    if M0 <= 0.9
                          TSFC = propulsion_obj.comp_TSFC_highBPRturbofan(M0, theta);
                     else
                          warning("Cannot use high-BPR turbofan for M > 0.9.")
