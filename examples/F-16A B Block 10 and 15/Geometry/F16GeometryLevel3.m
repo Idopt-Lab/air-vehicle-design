@@ -36,7 +36,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                     'tc', [], ...
                     'exposed_halfspan', [], ...
                     'exposed_rc', [], ...
-                    'tip_chord', [], ...
+                    'c_tip', [], ...
                     'lambda', [], ...
                     'x_loc', [], ...
                     'airfoil_type', []);
@@ -55,7 +55,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                     'tc', [], ...
                     'exposed_halfspan', [], ...
                     'exposed_rc', [], ...
-                    'tip_chord', [], ...
+                    'c_tip', [], ...
                     'lambda', [], ...
                     'x_loc', [], ...
                     'c_HT', [], ...
@@ -75,7 +75,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                     'tc', [], ...
                     'exposed_halfspan', [], ...
                     'exposed_rc', [], ...
-                    'tip_chord', [], ...
+                    'c_tip', [], ...
                     'lambda', [], ...
                     'x_loc', [], ...
                     'c_VT', [], ...
@@ -95,7 +95,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                     'tc', [], ...
                     'exposed_halfspan', [], ...
                     'exposed_rc', [], ...
-                    'tip_chord', [], ...
+                    'c_tip', [], ...
                     'lambda', [], ...
                     'x_loc', [], ...
                     'airfoil_type', []);
@@ -119,9 +119,9 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                end
 
                % Get S_exposed for each component
-               obj.mainwings.S_exposed = GeometryLevel3.get_S_exposed(obj.mainwings.tip_chord, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
-               obj.HT.S_exposed = GeometryLevel3.get_S_exposed(obj.HT.tip_chord, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
-               obj.VT.S_exposed = GeometryLevel3.get_S_exposed(obj.VT.tip_chord, obj.VT.exposed_rc, obj.VT.exposed_halfspan);
+               obj.mainwings.S_exposed = GeometryLevel3.get_S_exposed(obj.mainwings.c_tip, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
+               obj.HT.S_exposed = GeometryLevel3.get_S_exposed(obj.HT.c_tip, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
+               obj.VT.S_exposed = GeometryLevel3.get_S_exposed(obj.VT.c_tip, obj.VT.exposed_rc, obj.VT.exposed_halfspan);
 
                % Get S_wet for each component
                obj.mainwings.S_wet = GeometryLevel3.get_S_wet_wing(obj.mainwings.S_exposed, obj.mainwings.tc);
@@ -131,7 +131,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
 
                % Load the planform area of tail
-               [obj.HT.S_ref, obj.VT.S_ref] = obj.Tail_Sizing_IV(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
+               [obj.HT.S_ref, obj.VT.S_ref] = GeometryLevel3.Tail_Sizing(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
 
                % Load the planform area of any strakes
                obj.strakes.S_ref = design.geom.wings.Strakes.PlanformAreaft2;
@@ -147,8 +147,8 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           function output = reconstruct_mainwings(geometry_obj, S_ref)
                geometry_obj.mainwings.b = sqrt(geometry_obj.mainwings.AR*S_ref);
                geometry_obj.mainwings.c_root = (2 * geometry_obj.mainwings.S_ref)/(geometry_obj.mainwings.b*(1 + geometry_obj.mainwings.lambda));
-               geometry_obj.mainwings.tip_chord = geometry_obj.mainwings.lambda * geometry_obj.mainwings.c_root;
-               geometry_obj.mainwings.S_exposed = geometry_obj.get_S_exposed(geometry_obj.mainwings.tip_chord, geometry_obj.mainwings.exposed_rc, geometry_obj.mainwings.exposed_halfspan);
+               geometry_obj.mainwings.c_tip = geometry_obj.mainwings.lambda * geometry_obj.mainwings.c_root;
+               geometry_obj.mainwings.S_exposed = geometry_obj.get_S_exposed(geometry_obj.mainwings.c_tip, geometry_obj.mainwings.exposed_rc, geometry_obj.mainwings.exposed_halfspan);
                geometry_obj.mainwings.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.tc);
           end
 
@@ -156,14 +156,14 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           function output = reconstruct_tailwings(geometry_obj, S_HT, S_VT)
                geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
                geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
-               geometry_obj.HT.tip_chord = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
-               geometry_obj.HT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.HT.tip_chord, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
+               geometry_obj.HT.c_tip = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
+               geometry_obj.HT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
                geometry_obj.HT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
 
                geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
                geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
-               geometry_obj.VT.tip_chord = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
-               geometry_obj.VT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.VT.tip_chord, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
+               geometry_obj.VT.c_tip = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
+               geometry_obj.VT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
                geometry_obj.VT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
           end
 
@@ -209,8 +209,13 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           end
 
           % Size the tail
-          function [S_HT, S_VT] = size_tail(obj, design, S_ref)
-               [S_HT, S_VT] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, S_ref, design.geom.fuselage.Fuselage.Lengthft, design.geom.wings.Main.MeanGeometricChord);
+          function [S_HT, S_VT] = size_tail(geometry_obj, design, S_ref)
+               b_w = geometry_obj.mainwings.b;
+               c_VT = geometry_obj.VT.c_VT;
+               c_HT = geometry_obj.HT.c_HT;
+               L_fus = geometry_obj.fuselage.L;
+               cbar_geo_w = design.geom.wings.Main.MeanGeometricChord;
+               [S_HT, S_VT] = GeometryLevel3.Tail_Sizing(c_VT, c_HT, b_w, S_ref, L_fus, cbar_geo_w);
           end
 
           % Estimate exposed surface area (lifting surface)
@@ -231,30 +236,11 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           end
 
           % Estimate wing sweep at quarter-chord (deg)
-          function qc_sweep = get_sweep_qc(b, LE_sweep_deg, root_chord, tip_chord)
-               qc_sweep = atand(tand(LE_sweep_deg) - (root_chord - tip_chord)/(2*b));
+          function qc_sweep = get_sweep_qc(b, LE_sweep_deg, root_chord, c_tip)
+               qc_sweep = atand(tand(LE_sweep_deg) - (root_chord - c_tip)/(2*b));
           end
      end
      methods (Access = private)
-          % Size the tail
-          function [S_HT, S_VT] = Tail_Sizing_IV(obj, c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W)
-
-               % NOTE: S_REF IS USED BUT ITS SUPPOSED TO BE S_REF OF THE
-               % MAIN WINGS
-               % Assuming tail located 90% down fuselage
-               L_VT = L_fus*0.8;
-               L_HT = L_fus*0.8; % Allow operator to adjust this, later.
-
-               obj.VT.L = L_VT;
-               obj.HT.L = L_HT;
-
-               S_VT = c_VT*b_W*S_ref/obj.VT.L; % eq 6.28, 2nd edition
-
-               S_HT = c_HT*Cbar_W*S_ref/obj.HT.L; % eq 6.29, 2nd edition
-
-               obj.VT.S_ref = S_VT;
-               obj.HT.S_ref = S_HT;
-
-          end
+          
      end
 end

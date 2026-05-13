@@ -40,8 +40,8 @@ classdef F16WeightEstLevel3 < WeightModelLevel3
           end
 
           % Estimate engine weight (installed)
-          function output = get_engine_weight(weight_obj, propulsion_obj, design, requirements_obj)
-               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
+          function output = get_engine_weight(weight_obj, propulsion_obj, requirements_obj)
+               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj);
                engine = WeightLevel3.compute_engine_installed_weight(propulsion_obj.T0);
                engine.W_installed = 1.3*engine.W_total;
                output = engine;
@@ -49,8 +49,8 @@ classdef F16WeightEstLevel3 < WeightModelLevel3
 
           % Estimate OEW
           function output = get_OEW(weight_obj, propulsion_obj, design, geometry_obj, W_TO, requirements_obj)
-               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
-               weight_obj.engine = weight_obj.get_engine_weight(propulsion_obj, design, requirements_obj);
+               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj);
+               weight_obj.engine = weight_obj.get_engine_weight(propulsion_obj, requirements_obj);
                weight_obj.OEW = weight_obj.compute_OEW(W_TO, geometry_obj, design.weights, propulsion_obj.T0); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end

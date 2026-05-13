@@ -17,32 +17,6 @@ classdef GeometryLevel3 < GeometryModelLevel3
 
      methods (Static)
 
-          % Recompute main wing dimensions using S_ref
-          % This should return a struct instead of directly updating the
-          % geometry objects.
-          function output = reconstruct_mainwings(S_ref)
-               geometry_obj.mainwings.b = sqrt(geometry_obj.mainwings.AR*S_ref);
-               geometry_obj.mainwings.c_root = (2 * geometry_obj.mainwings.S_ref)/(geometry_obj.mainwings.b*(1 + geometry_obj.mainwings.lambda));
-               geometry_obj.mainwings.tip_chord = geometry_obj.mainwings.lambda * geometry_obj.mainwings.c_root;
-               geometry_obj.mainwings.S_exposed = geometry_obj.get_S_exposed(geometry_obj.mainwings.tip_chord, geometry_obj.mainwings.exposed_rc, geometry_obj.mainwings.exposed_halfspan);
-               geometry_obj.mainwings.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.tc);
-          end
-
-          % Recompute horizontal and vertical tail dimensions using S_ref
-          function output = reconstruct_tailwings(S_HT, S_VT)
-               geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
-               geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
-               geometry_obj.HT.tip_chord = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
-               geometry_obj.HT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.HT.tip_chord, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
-               geometry_obj.HT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
-
-               geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
-               geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
-               geometry_obj.VT.tip_chord = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
-               geometry_obj.VT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.VT.tip_chord, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
-               geometry_obj.VT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
-          end
-
           % size control surfaces
           function S_control = size_control_surface_raymer( ...
                     deltaCL_req, ...
@@ -84,11 +58,6 @@ classdef GeometryLevel3 < GeometryModelLevel3
                S_wet = 10^(c) * W_TO^(d); % ft^2
           end
 
-          % Size the tail
-          function [S_HT, S_VT] = size_tail(obj, design, S_ref)
-               [S_HT, S_VT] = Tail_Sizing_IV(obj, design.geom.wings.VerticalTail.c_VT, design.geom.wings.HorizontalTail.c_HT, design.geom.wings.Main.Spanft, S_ref, design.geom.fuselage.Fuselage.Lengthft, design.geom.wings.Main.MeanGeometricChord);
-          end
-
           % Estimate exposed surface area (lifting surface)
           % Source: Brandt, "F16A", "Geom" sheet, cell H7.
           function S_exposed = get_S_exposed(tip_length, exposed_rc, exposed_halfspan)
@@ -110,16 +79,13 @@ classdef GeometryLevel3 < GeometryModelLevel3
           function qc_sweep = get_sweep_qc(b, LE_sweep_deg, root_chord, tip_chord)
                qc_sweep = atand(tand(LE_sweep_deg) - (root_chord - tip_chord)/(2*b));
           end
-     end
-
-     methods (Access = private)
 
           % Size the tail
-          function [S_HT, S_VT] = Tail_Sizing_IV(obj, c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W)
+          function [S_HT, S_VT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W)
 
                % NOTE: S_REF IS USED BUT ITS SUPPOSED TO BE S_REF OF THE
                % MAIN WINGS
-               % Assuming tail located 90% down fuselage
+               % Assuming tail located 80% down fuselage
                L_VT = L_fus*0.8;
                L_HT = L_fus*0.8; % Allow operator to adjust this, later.
 
@@ -134,5 +100,8 @@ classdef GeometryLevel3 < GeometryModelLevel3
                obj.HT.S_ref = S_HT;
 
           end
+     end
+
+     methods (Access = private)
      end
 end

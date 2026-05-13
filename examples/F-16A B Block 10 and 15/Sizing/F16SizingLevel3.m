@@ -23,10 +23,11 @@ classdef F16SizingLevel3 < SizingModel
                % Generate mission state vectors
                % mission_obj.state_vector = mission_obj.generate_mission_states;
                for iteration = 1:max_iteration
-                    geometry_obj.mainwings.S_ref = W_TO / W_S;
+                    S_ref = W_TO / W_S;
+                    geometry_obj.mainwings.S_ref = S_ref;
 
                     % Reconstruct main wings
-                    geometry_obj.reconstruct_mainwings(geometry_obj.mainwings.S_ref);
+                    geometry_obj.reconstruct_mainwings(S_ref);
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
@@ -34,7 +35,7 @@ classdef F16SizingLevel3 < SizingModel
 
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)
-                    [geometry_obj.HT.S_ref, geometry_obj.VT.S_ref] = geometry_obj.size_tail(design, geometry_obj.mainwings.S_ref);
+                    [geometry_obj.HT.S_ref, geometry_obj.VT.S_ref] = geometry_obj.size_tail(design, S_ref);
 
                     % Reconstruct tail
                     geometry_obj.reconstruct_tailwings(geometry_obj.HT.S_ref, geometry_obj.VT.S_ref);

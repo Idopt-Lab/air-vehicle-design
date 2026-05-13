@@ -11,6 +11,10 @@ classdef AircraftDesign < handle
           propulsion_type
           weights
           type
+          wing_config
+          tail_config
+          fuselage_type
+          nose_shape
           % missiondata % Aircraft design doesn't need mission data
           requirements % Should divorce this from AircraftDesign
           requirements_filename

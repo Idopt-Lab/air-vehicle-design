@@ -7,7 +7,6 @@ classdef (Abstract) GeometryModelLevel3 < handle
           HT
           VT
           fuselage
-          strakes
           design
      end
 
