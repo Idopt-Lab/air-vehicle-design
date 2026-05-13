@@ -9,7 +9,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
      % to the "general low-level geometry class" than it is to try and fit
      % as many particularities into that same class. 
      % So what I'm saying is that Geometry should be very barebones, unless
-     % it's the user-end class that they creatt themselves.
+     % it's the user-end class that they create themselves.
 
      properties
           mainwings

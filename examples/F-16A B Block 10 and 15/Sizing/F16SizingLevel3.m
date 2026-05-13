@@ -1,4 +1,4 @@
-classdef Sizing
+classdef F16SizingLevel3 < SizingModel
      %SIZING Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -7,7 +7,7 @@ classdef Sizing
      end
 
      methods
-          function size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj)
+          function W_TO = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
 
                weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
 
@@ -20,16 +20,24 @@ classdef Sizing
                results = [];
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                total_fuel_used = 0;
+               % Generate mission state vectors
+               % mission_obj.state_vector = mission_obj.generate_mission_states;
                for iteration = 1:max_iteration
                     geometry_obj.mainwings.S_ref = W_TO / W_S;
 
+                    % Reconstruct main wings
+                    geometry_obj.reconstruct_mainwings(geometry_obj.mainwings.S_ref);
+
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
-                    S_wet = geometry_obj.get_design_S_wet(W_TO);
+                    geometry_obj.design.S_wet = geometry_obj.get_design_S_wet(W_TO);
 
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)
-                    [geometry_obj.VT.S_ref, geometry_obj.HT.S_ref] = geometry_obj.size_tail(design, geometry_obj.mainwings.S_ref);
+                    [geometry_obj.HT.S_ref, geometry_obj.VT.S_ref] = geometry_obj.size_tail(design, geometry_obj.mainwings.S_ref);
+
+                    % Reconstruct tail
+                    geometry_obj.reconstruct_tailwings(geometry_obj.HT.S_ref, geometry_obj.VT.S_ref);
 
 
                     %% ----------------------------------------------------------------------
@@ -38,21 +46,20 @@ classdef Sizing
 
                     %% -------------------------------------------------
                     % Get mission fuel
-                    [weight_obj.total_fuel_used, weight_obj.fuel_fraction] = mission_obj.get_mission_fuel(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj);
+                    [weight_obj.total_fuel_used, weight_obj.fuel_fraction] = mission_obj.get_mission_fuel(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj);
 
 
                     % Compute design weight
                     % Then compute the empty weight
-                    weight_obj.OEW = get_OEW(weight_obj, propulsion_obj, mission_obj, design, geometry_obj, weight_obj.W_TO);
+                    weight_obj.OEW = weight_obj.get_OEW(propulsion_obj, design, geometry_obj, weight_obj.W_TO, requirements_obj);
 
-                    empty_weight_fraction = weight_obj.OEW.total/weight_obj.W_TO;
+                    % weight_obj.OEW.W_all_else_empty = weight_obj.compute_W_all_else_empty(W_TO, design.type);
+                    % weight_obj.OEW.total = weight_obj.OEW.total + weight_obj.OEW.W_all_else_empty;
+
+                    weight_obj.OEW_frac = weight_obj.OEW.total/weight_obj.W_TO;
 
                     % W_TO_new = W_fixed / (1 - fuel_fraction - empty_weight_fraction);
-                    W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW.total;
-
-                    difference = W_TO_new - weight_obj.W_TO;
-                    percent_diff = 100 * difference / weight_obj.W_TO;
-                    % Iterate
+                    % W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW.total;
 
                     % complete iteration loop, return MTOW and such
                     W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW.total;
@@ -60,7 +67,7 @@ classdef Sizing
                     difference = W_TO_new - weight_obj.W_TO;
                     percent_diff = 100 * difference / weight_obj.W_TO;
 
-                    results(end+1, :) = [weight_obj.W_TO, weight_obj.W_fixed, weight_obj.fuel_fraction, empty_weight_fraction, weight_obj.OEW.total, W_TO_new, difference, percent_diff];
+                    results(end+1, :) = [weight_obj.W_TO, weight_obj.W_fixed, weight_obj.fuel_fraction, weight_obj.OEW_frac, weight_obj.OEW.total, W_TO_new, difference, percent_diff];
 
                     if abs(difference) < tol
                          break;
@@ -69,7 +76,7 @@ classdef Sizing
                     W_TO = W_TO_new;
                     geometry_obj.mainwings.S_ref = geometry_obj.mainwings.S_ref;
                end
-               beta = 1 - (total_fuel_used / (2 * W_TO));
+               % beta = 1 - (total_fuel_used / (2 * W_TO));
                obj.results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
                disp(obj.results_table)
           end
