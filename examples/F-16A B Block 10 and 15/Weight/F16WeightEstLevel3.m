@@ -8,6 +8,7 @@ classdef F16WeightEstLevel3 < WeightLevel3
           OEW
           wings
           tail
+          strakes
           subsystems
           engine
           landinggear
