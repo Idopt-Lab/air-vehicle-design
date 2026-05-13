@@ -8,9 +8,10 @@ classdef (Abstract) WeightModelLevel3 < handle
           OEW_frac
           wings
           tail
+          fuselage
           subsystems
           engine
-          landinggear_weight
+          landinggear
           W_TO_guess
           W_TO
           W_fixed
