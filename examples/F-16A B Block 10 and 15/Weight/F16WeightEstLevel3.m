@@ -48,12 +48,12 @@ classdef F16WeightEstLevel3 < WeightLevel3
           function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design, geometry_obj, W_TO)
                propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(mission_obj, design);
                get_engine_weight(weight_obj, propulsion_obj, mission_obj, design);
-               weight_obj.OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
+               weight_obj.OEW = weight_obj.compute_OEW(W_TO, geometry_obj, design.weights); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
 
           % Get OEW
-          function OEW = compute_OEW_III(weight_obj, W_TO, geometry_obj)
+          function OEW = compute_OEW(weight_obj, W_TO, geometry_obj, DesignTable_weight)
                % S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, W_engine_installed, geometry_obj)
                %COMPUTE_OEW Summary of this function goes here
                %   Detailed explanation goes here
@@ -73,38 +73,65 @@ classdef F16WeightEstLevel3 < WeightLevel3
                Sref_ht = geometry_obj.HT.S_ref;
                Sref_vt = geometry_obj.VT.S_ref;
 
+               % Control surfaces' planform areas
+               Scs_w = 69; % (fT) Hardcoded for now
+               Scs_ht = geometry_obj.HT.S_ref; % All-moving horizontal stabilizer
+               Scs_vt = 50;
+
+               % Spans (ft)
                b_w = geometry_obj.mainwings.b;
                b_strakes = geometry_obj.strakes.b;
                b_ht = geometry_obj.HT.b;
                b_vt = geometry_obj.VT.b;
 
+               % Leading edge sweep (deg)
                LEsweep_w = geometry_obj.mainwings.LE_sweep;
                LEsweep_strakes = geometry_obj.strakes.LE_sweep;
                LEsweep_ht = geometry_obj.HT.LE_sweep;
                LEsweep_vt = geometry_obj.VT.LE_sweep;
 
+               % Thickness-to-chord ratios (dimensionless)
                tc_w = geometry_obj.mainwings.tc;
                tc_strakes = geometry_obj.strakes.tc;
                tc_ht = geometry_obj.HT.tc;
                tc_vt = geometry_obj.VT.tc;
 
+               % Taper ratios (dimensionless)
                lambda_w = geometry_obj.mainwings.lambda;
+               lambda_strakes = geometry_obj.strakes.lambda;
                lambda_vt = geometry_obj.VT.lambda;
                lambda_ht = geometry_obj.HT.lambda;
 
-               L = geometry_obj.fuselage.L;
-               D = geometry_obj.fuselage.W_max;
-               H_max = geometry_obj.fuselage.h_max;
-               W = geometry_obj.fuselage.W_max;
+               % Quarter-chord sweep angled (deg)
+               LambdaQc_w = geometry_obj.mainwings.QC_sweep;
+               LambdaQc_vt = geometry_obj.VT.QC_sweep;
+               LambdaQc_ht = geometry_obj.HT.QC_sweep;
 
+               % Fuselage dimensions (ft)
+               L = geometry_obj.fuselage.L; % Length
+               D = geometry_obj.fuselage.W_max; % Max diameter
+               H_max = geometry_obj.fuselage.h_max; % Max height
+               W = geometry_obj.fuselage.W_max; % Max width
+
+               % Misc coefficients 
                Kvs = DesignTable_weight.Coefficients.Kvs;
+               Kdw = DesignTable_weight.Coefficients.Kdw;
+               Fw = DesignTable_weight.Coefficients.Kdw;
+               Krht = DesignTable_weight.Coefficients.Krht;
+               Ht = DesignTable_weight.Coefficients.Ht;
+               Hv = DesignTable_weight.Coefficients.Hv;
+               M = DesignTable_weight.Coefficients.M;
+               Lt = DesignTable_weight.Coefficients.Lt;
+               Sr = DesignTable_weight.Coefficients.Sr;
+               HtHv = DesignTable_weight.Coefficients.HtHv;
+               Kdwf = DesignTable_weight.Coefficients.Kdwf;
 
                % Sub-functions for handling component weights. Estimates.
                % Equations: Raymer, 6th edition, section 15.3.1. Fighter/Attack jet.
-               OEW.W_Wing = WeightLevel3.wing_weight_III(W_TO, Nz, S_ref, DesignTable_weight.Coefficients.AR, DesignTable_weight.Coefficients.tc, DesignTable_weight.Coefficients.lambda_w, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.Scsw, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
-               OEW.W_strakes = WeightLevel3.wing_weight_III(W_TO, Nz, geometry_obj.strakes.S_ref, geometry_obj.strakes.AR, geometry_obj.strakes.tc, geometry_obj.strakes.lambda, geometry_obj.strakes.LE_sweep, 0, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
-               OEW.W_tail = WeightLevel3.tail_weight_III(DesignTable_weight.Coefficients.Fw, b_ht, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, AR_vt, lambda_vt, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.HtHv);
-               OEW.W_fuselage = WeightLevel3.fuselage_weight_III(DesignTable_weight.Coefficients.Kdwf, W_TO, Nz, L, D, W);
+               OEW.W_Wing = WeightLevel3.wing_weight_III(W_TO, Nz, Sref_w, AR_w, tc_w, lambda_w, LambdaQc_w, Scs_w, Kdw, Kvs);
+               OEW.W_strakes = WeightLevel3.wing_weight_III(W_TO, Nz, Sref_strakes, AR_strakes, tc_strakes, lambda_strakes, LEsweep_strakes, 0, Kdw, Kvs);
+               OEW.W_tail = WeightLevel3.tail_weight_III(Fw, b_ht, W_TO, Nz, Sref_ht, Krht, Ht, Hv, Sref_vt, M, Lt, Sr, AR_vt, lambda_vt, LambdaQc_vt, HtHv);
+               OEW.W_fuselage = WeightLevel3.fuselage_weight_III(Kdwf, W_TO, Nz, L, D, W);
                OEW.W_subsystems = WeightLevel3.subsystem_weight_III(DesignTable_weight, W_TO, T0, W_engine_installed);
                % weight_obj.engine.W_engine_installed =
                % 1.3*Engine_Sizing(T0);
