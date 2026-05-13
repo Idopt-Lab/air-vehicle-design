@@ -1,4 +1,4 @@
-classdef F16AeroLevel3 < AerodynamicsModelLevel3
+classdef F16AeroLevel3 < AeroLevel3
      %F16AEROLEVEL3 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 3 aerodynamics equations go here.

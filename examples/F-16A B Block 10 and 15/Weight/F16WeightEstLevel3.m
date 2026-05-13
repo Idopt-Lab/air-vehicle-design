@@ -1,4 +1,4 @@
-classdef F16WeightEstLevel3 < WeightModelLevel3
+classdef F16WeightEstLevel3 < WeightLevel3
      %F16WEIGHTESTLEVEL4 Summary of this class goes here
      %   Detailed explanation goes here
      % THIS SHOULD GET THE OEW AND SUCH
@@ -27,6 +27,7 @@ classdef F16WeightEstLevel3 < WeightModelLevel3
                obj.weight_coefficients = design.weights.Coefficients;
           end
 
+          
           % Estimate subsystem weight
           function output = get_subsystem_weight(weight_obj, mission_obj, propulsion_obj, design)
                % Need W_TO
@@ -99,11 +100,11 @@ classdef F16WeightEstLevel3 < WeightModelLevel3
 
                % Sub-functions for handling component weights. Estimates.
                % Equations: Raymer, 6th edition, section 15.3.1. Fighter/Attack jet.
-               OEW.W_Wing = weight_obj.wing_weight_III(W_TO, Nz, S_ref, DesignTable_weight.Coefficients.AR, DesignTable_weight.Coefficients.tc, DesignTable_weight.Coefficients.lambda_w, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.Scsw, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
-               OEW.W_strakes = weight_obj.wing_weight_III(W_TO, Nz, geometry_obj.strakes.S_ref, geometry_obj.strakes.AR, geometry_obj.strakes.tc, geometry_obj.strakes.lambda, geometry_obj.strakes.LE_sweep, 0, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
-               OEW.W_tail = weight_obj.tail_weight_III(DesignTable_weight.Coefficients.Fw, b_ht, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, AR_vt, lambda_vt, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.HtHv);
-               OEW.W_fuselage = weight_obj.fuselage_weight_III(DesignTable_weight.Coefficients.Kdwf, W_TO, Nz, L, D, W);
-               OEW.W_subsystems = weight_obj.subsystem_weight_III(DesignTable_weight, W_TO, T0, W_engine_installed);
+               OEW.W_Wing = WeightLevel3.wing_weight_III(W_TO, Nz, S_ref, DesignTable_weight.Coefficients.AR, DesignTable_weight.Coefficients.tc, DesignTable_weight.Coefficients.lambda_w, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.Scsw, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
+               OEW.W_strakes = WeightLevel3.wing_weight_III(W_TO, Nz, geometry_obj.strakes.S_ref, geometry_obj.strakes.AR, geometry_obj.strakes.tc, geometry_obj.strakes.lambda, geometry_obj.strakes.LE_sweep, 0, DesignTable_weight.Coefficients.Kdw, DesignTable_weight.Coefficients.Kvs);
+               OEW.W_tail = WeightLevel3.tail_weight_III(DesignTable_weight.Coefficients.Fw, b_ht, W_TO, DesignTable_weight.Coefficients.Nz, S_HT, DesignTable_weight.Coefficients.Krht, DesignTable_weight.Coefficients.Ht, DesignTable_weight.Coefficients.Hv, S_VT, DesignTable_weight.Coefficients.M, DesignTable_weight.Coefficients.Lt, DesignTable_weight.Coefficients.Sr, AR_vt, lambda_vt, DesignTable_weight.Coefficients.LambdaQc, DesignTable_weight.Coefficients.HtHv);
+               OEW.W_fuselage = WeightLevel3.fuselage_weight_III(DesignTable_weight.Coefficients.Kdwf, W_TO, Nz, L, D, W);
+               OEW.W_subsystems = WeightLevel3.subsystem_weight_III(DesignTable_weight, W_TO, T0, W_engine_installed);
                % weight_obj.engine.W_engine_installed =
                % 1.3*Engine_Sizing(T0);
 
