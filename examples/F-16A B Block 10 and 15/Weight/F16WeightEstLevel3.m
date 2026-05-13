@@ -1,4 +1,4 @@
-classdef F16WeightEstLevel3 < WeightLevel3
+classdef F16WeightEstLevel3 < handle
      %F16WEIGHTESTLEVEL4 Summary of this class goes here
      %   Detailed explanation goes here
      % THIS SHOULD GET THE OEW AND SUCH
@@ -6,8 +6,10 @@ classdef F16WeightEstLevel3 < WeightLevel3
      properties
           MTOW
           OEW
+          OEW_frac
           wings
           tail
+          fuselage
           strakes
           subsystems
           engine
@@ -30,30 +32,31 @@ classdef F16WeightEstLevel3 < WeightLevel3
 
           
           % Estimate subsystem weight
-          function output = get_subsystem_weight(weight_obj, mission_obj, propulsion_obj, design)
+          function output = get_subsystem_weight(weight_obj, propulsion_obj, design, requirements_obj)
                % Need W_TO
-               propulsion_obj.get_propulsion_stats(mission_obj, design);
+               propulsion_obj.get_propulsion_stats(requirements_obj, design);
                weight_obj.subsystems = weight_obj.subsystem_weight_III(design.weights, weight_obj.W_TO, propulsion_obj.T0, weight_obj.engine.W_installed);
+               output = weight_obj.subsystems;
           end
 
           % Estimate engine weight (installed)
-          function output = get_engine_weight(weight_obj, propulsion_obj, mission_obj, design)
-               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(mission_obj, design);
-               weight_obj.engine = weight_obj.compute_engine_installed_weight(propulsion_obj.T0);
-               weight_obj.engine.installed = 1.3*weight_obj.engine.W_total;
-               output = weight_obj.engine.W_total;
+          function output = get_engine_weight(weight_obj, propulsion_obj, design, requirements_obj)
+               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
+               engine = WeightLevel3.compute_engine_installed_weight(propulsion_obj.T0);
+               engine.W_installed = 1.3*engine.W_total;
+               output = engine;
           end
 
           % Estimate OEW
-          function output = get_OEW(weight_obj, propulsion_obj, mission_obj, design, geometry_obj, W_TO)
-               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(mission_obj, design);
-               get_engine_weight(weight_obj, propulsion_obj, mission_obj, design);
-               weight_obj.OEW = weight_obj.compute_OEW(W_TO, geometry_obj, design.weights); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
+          function output = get_OEW(weight_obj, propulsion_obj, design, geometry_obj, W_TO, requirements_obj)
+               propulsion_obj.enginestats = propulsion_obj.get_propulsion_stats(requirements_obj, design);
+               weight_obj.engine = weight_obj.get_engine_weight(propulsion_obj, design, requirements_obj);
+               weight_obj.OEW = weight_obj.compute_OEW(W_TO, geometry_obj, design.weights, propulsion_obj.T0); % Really this gets the empty weight of the design (wings, fuselage, subsystems)
                output = weight_obj.OEW;
           end
 
           % Get OEW
-          function OEW = compute_OEW(weight_obj, W_TO, geometry_obj, DesignTable_weight)
+          function OEW = compute_OEW(weight_obj, W_TO, geometry_obj, DesignTable_weight, T0)
                % S_ref, S_HT, S_VT, S_wet, T0, DesignTable_weight, W_engine_installed, geometry_obj)
                %COMPUTE_OEW Summary of this function goes here
                %   Detailed explanation goes here
@@ -132,7 +135,7 @@ classdef F16WeightEstLevel3 < WeightLevel3
                OEW.W_strakes = WeightLevel3.wing_weight_III(W_TO, Nz, Sref_strakes, AR_strakes, tc_strakes, lambda_strakes, LEsweep_strakes, 0, Kdw, Kvs);
                OEW.W_tail = WeightLevel3.tail_weight_III(Fw, b_ht, W_TO, Nz, Sref_ht, Krht, Ht, Hv, Sref_vt, M, Lt, Sr, AR_vt, lambda_vt, LambdaQc_vt, HtHv);
                OEW.W_fuselage = WeightLevel3.fuselage_weight_III(Kdwf, W_TO, Nz, L, D, W);
-               OEW.W_subsystems = WeightLevel3.subsystem_weight_III(DesignTable_weight, W_TO, T0, W_engine_installed);
+               OEW.W_subsystems = WeightLevel3.subsystem_weight_III(DesignTable_weight, W_TO, T0, weight_obj.engine.W_installed);
                % weight_obj.engine.W_engine_installed =
                % 1.3*Engine_Sizing(T0);
 
