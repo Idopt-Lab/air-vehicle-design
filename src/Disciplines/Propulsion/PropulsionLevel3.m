@@ -97,27 +97,27 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                output = eng_scale;
           end
 
-          % Compute TSFC (wrapper)
-          function output = get_TSFC(propulsion_obj, state_input, isdryorwet, thrust_sl, TSFC_sl, E, F1, F2, TR)
-               M0 = state_input(1);
-               h_ft = state_input(2);
-               theta = propulsion_obj.get_theta(state_input);
-               delta = propulsion_obj.get_delta(state_input);
-               theta_0 = propulsion_obj.compute_theta_0(theta, PropulsionUtils.gamma, M0);
-               delta_0 = propulsion_obj.compute_delta_0(delta, PropulsionUtils.gamma, M0);
-               if (isdryorwet=="dry") || (isdryorwet=="Dry")
-                    % Compute TSFC for dry config
-                    thrust = propulsion_obj.get_thrust_dry(thrust_sl, delta_0, F1, M0, E, F2, theta_0, TR);
-                    output = propulsion_obj.get_TSFC_dry(theta_0, TSFC_sl, M0, thrust, thrust_sl, TR);
-               elseif (isdryorwet == "wet") || (isdryorwet == "Wet")
-                    % Compute TSFC for wet config
-                    thrust = propulsion_obj.get_thrust_wet(thrust_sl, delta_0, F1, M0, E, theta_0, TR, F2);
-                    output = get_TSFC_wet(propulsion_obj, TSFC_sl, M0, thrust, thrust_sl, theta_0, TR);
-               else
-                    error("Error handler. Must be 'dry' or 'wet'.")
-               end
-               output = output/3600; % Convert TSFC from 1/hr -> 1/sec
-          end
+          % % Compute TSFC (wrapper)
+          % function output = get_TSFC(propulsion_obj, state_input, isdryorwet, thrust_sl, TSFC_sl, E, F1, F2, TR)
+          %      M0 = state_input(1);
+          %      h_ft = state_input(2);
+          %      theta = propulsion_obj.get_theta(state_input);
+          %      delta = propulsion_obj.get_delta(state_input);
+          %      theta_0 = propulsion_obj.compute_theta_0(theta, PropulsionUtils.gamma, M0);
+          %      delta_0 = propulsion_obj.compute_delta_0(delta, PropulsionUtils.gamma, M0);
+          %      if (isdryorwet=="dry") || (isdryorwet=="Dry")
+          %           % Compute TSFC for dry config
+          %           thrust = propulsion_obj.get_thrust_dry(thrust_sl, delta_0, F1, M0, E, F2, theta_0, TR);
+          %           output = propulsion_obj.get_TSFC_dry(theta_0, TSFC_sl, M0, thrust, thrust_sl, TR);
+          %      elseif (isdryorwet == "wet") || (isdryorwet == "Wet")
+          %           % Compute TSFC for wet config
+          %           thrust = propulsion_obj.get_thrust_wet(thrust_sl, delta_0, F1, M0, E, theta_0, TR, F2);
+          %           output = get_TSFC_wet(propulsion_obj, TSFC_sl, M0, thrust, thrust_sl, theta_0, TR);
+          %      else
+          %           error("Error handler. Must be 'dry' or 'wet'.")
+          %      end
+          %      output = output/3600; % Convert TSFC from 1/hr -> 1/sec
+          % end
 
           % Get theta (wrapper)
           function output = get_theta(state_input)
@@ -175,6 +175,102 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
                     error("Error handler.")
                end
           end
+
+          
+          %% SECTION FOR PROPS
+
+          % Compute advance ratio (PROP)
+          function J = compute_advance_ratio(V, n, D)
+               % V = Velocity (ft/s)
+               % n = Rotation speed (rev/s)
+               % D = Prop diameter (ft)
+
+               J = V/(n*D);
+          end
+
+          % Compute power coefficient (PROP)
+          function cp = compute_cp(P, rho, n, D)
+               % P = Power (ft*lb/s)
+               % rho = density (slugs/ft^3)
+               % n = Rotation speed (rev/s)
+               % D = Prop diameter (ft)
+
+               cp = P/(rho*n^3 * D^5);
+          end
+
+          % Compute thrust coefficient (PROP)
+          function ct = compute_ct(T, rho, n, D)
+               % T = thrust (lb)
+               % rho = Air density (slugs/ft^3)
+               % n = Rotation speed (rev/s)
+               % D = Prop diameter (ft)
+
+               ct = T/(rho*n^2 * D^4);
+          end
+
+          % Compute speed-power coefficient (PROP)
+          function cs = compute_cs(V, rho, P, n)
+               % V = Velocity (ft/s)
+               % rho = Air density (slugs/ft^3)
+               % P = Power (ft*lb/s)
+               % n = Rotation speed (rev/s)
+
+               cs = V^5 * sqrt(rho/(P*n^2));
+          end
+
+          % Activity factor (PROP)
+          function AF_perblade = compute_AF_perblade(c_root, lambda, D)
+               % c_root = Root chord of propeller (ft)
+               % lambda = taper ratio of propeller (dimensionless)
+               % D = Propeller diameter (ft)
+
+               AF_perblade = (10^5 * c_root)/(16*D) *(0.25 - (1 - lambda)*0.2);
+          end
+
+          % Propeller efficiency (PROP)
+          function eta_p = compute_prop_efficiency(T, V, P)
+               % T = thrust (lbf)
+               % V = Velocity (ft/s)
+               % P = Power (ft*lbf/s)
+
+               eta_p = (T*V)/P;
+          end
+
+          % Thrust (forward flight) (PROP)
+          function thrust = compute_prop_thrust_moving(P, eta_p, V)
+               % P = Power (ft*lbf/s)
+               % eta_p = Propeller efficiency
+               % V = Velocity (ft/s)
+
+               thrust = (P*eta_p)/V;
+          end
+
+          % Thrust (static) (PROP)
+          function thrust = compute_prop_thrust_static(P, cp, ct, D)
+               % P = Power (ft*lbf/s)
+               % cp = Power coefficient
+               % ct = Thrust coefficient
+               % D = Prop diameter (ft)
+
+               thrust = (ct/cp)*(P/(n*D));
+          end
+
+
+
+
+
+          %% SECTION FOR TURBOPROPS
+
+
+          %% SECTION FOR ELECTRIC
+
+
+          %% SECTION FOR HYBRID ELECTRIC
+
+
+          %% SECTION FOR MISC (NUCLEAR, ETC)
+
+
      end
 
      methods (Access = private)

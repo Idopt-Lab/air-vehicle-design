@@ -34,23 +34,23 @@ classdef F16PropulsionEstLevel3 < PropulsionModelLevel3
                enginestats = PropulsionLevel3.get_engine_stats(propulsion_obj.T_SL_wet, requirements_obj.requirements.MaxMach.Mach, propulsion_obj.BPR, propulsion_obj.isafterburning);
           end
 
-          % % Estimate engine properties
-          % function output = get_engine_stats(T, M, BPR, isafterburning)
-          %      if (isafterburning == "Y")
-          %           output = PropulsionLevel3.compute_eng_stats_ab(T, M, BPR);
-          %      elseif (isafterburning == "N")
-          %           output = PropulsionLevel3.compute_eng_stats_noab(T, M, BPR);
-          %      else
-          %           error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
-          %      end
-          % end
+          % Estimate engine properties
+          function output = get_engine_stats(T, M, BPR, isafterburning)
+               if (isafterburning == "Y")
+                    output = PropulsionLevel3.compute_eng_stats_ab(T, M, BPR);
+               elseif (isafterburning == "N")
+                    output = PropulsionLevel3.compute_eng_stats_noab(T, M, BPR);
+               else
+                    error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
+               end
+          end
 
           % Compute TSFC (wrapper)
           function output = get_TSFC(propulsion_obj, state_input, isdryorwet, thrust_sl, TSFC_sl, E, F1, F2, TR)
                M0 = state_input(1);
                h_ft = state_input(2);
-               theta = propulsion_obj.get_theta(state_input);
-               delta = propulsion_obj.get_delta(state_input);
+               theta = PropulsionLevel3.get_theta(state_input);
+               delta = PropulsionLevel3.get_delta(state_input);
                theta_0 = PropulsionLevel3.compute_theta_0(theta, PropulsionUtils.gamma, M0);
                delta_0 = PropulsionLevel3.compute_delta_0(delta, PropulsionUtils.gamma, M0);
                if (isdryorwet=="dry") || (isdryorwet=="Dry")
