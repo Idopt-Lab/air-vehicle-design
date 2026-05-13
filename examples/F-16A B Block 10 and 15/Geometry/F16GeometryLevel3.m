@@ -144,12 +144,12 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           % Recompute main wing dimensions using S_ref
           % This should return a struct instead of directly updating the
           % geometry objects.
-          function output = reconstruct_mainwings(geometry_obj, S_ref)
-               geometry_obj.mainwings.b = sqrt(geometry_obj.mainwings.AR*S_ref);
-               geometry_obj.mainwings.c_root = (2 * geometry_obj.mainwings.S_ref)/(geometry_obj.mainwings.b*(1 + geometry_obj.mainwings.lambda));
-               geometry_obj.mainwings.c_tip = geometry_obj.mainwings.lambda * geometry_obj.mainwings.c_root;
-               geometry_obj.mainwings.S_exposed = geometry_obj.get_S_exposed(geometry_obj.mainwings.c_tip, geometry_obj.mainwings.exposed_rc, geometry_obj.mainwings.exposed_halfspan);
-               geometry_obj.mainwings.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.tc);
+          function [b, c_root, c_tip, S_exposed, S_wet] = reconstruct_wings(geometry_obj, AR, lambda, S_ref, exposed_rc, exposed_halfspan, tc)
+               b = GeometryLevel3.compute_b(AR, S_ref);
+               c_root = GeometryLevel3.compute_c_root(S_ref, b, lambda);
+               c_tip = GeometryLevel3.compute_c_tip(lambda, c_root);
+               S_exposed = GeometryLevel3.get_S_exposed(c_tip, exposed_rc, exposed_halfspan);
+               S_wet = GeometryLevel3.get_S_wet_wing(S_exposed, tc);
           end
 
           % Recompute horizontal and vertical tail dimensions using S_ref
@@ -157,88 +157,88 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
                geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
                geometry_obj.HT.c_tip = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
-               geometry_obj.HT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
-               geometry_obj.HT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
+               geometry_obj.HT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
+               geometry_obj.HT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
 
                geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
                geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
                geometry_obj.VT.c_tip = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
-               geometry_obj.VT.S_exposed = geometry_obj.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
-               geometry_obj.VT.S_wet = geometry_obj.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
+               geometry_obj.VT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
+               geometry_obj.VT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
           end
 
-          % size control surfaces
-          function S_control = size_control_surface_raymer( ...
-                    deltaCL_req, ...
-                    S_ref, ...
-                    K_f, ...
-                    dcl_ddelta_airfoil, ...
-                    delta_max_deg, ...
-                    Lambda_HL_deg)
-
-               % Raymer-style plain-flap/control-surface sizing.
-               % deltaCL_req: required section/surface lift coefficient increment
-               % S_ref: parent reference area, e.g. S_h for elevator, S_v for rudder, S_w for flap/aileron
-               % K_f: empirical correction factor
-               % dcl_ddelta_airfoil: 2D lift increment per radian of deflection
-               % delta_max_deg: maximum control deflection in degrees
-               % Lambda_HL_deg: hinge-line sweep angle in degrees
-
-               delta_max_rad = deg2rad(delta_max_deg);
-
-               S_control = (deltaCL_req * S_ref) / ...
-                    (0.9 * K_f * dcl_ddelta_airfoil * delta_max_rad * cosd(Lambda_HL_deg));
-          end
-
-          function L_hinge = compute_hinge_length_from_stations(y_in, y_out, Lambda_h_deg)
-               % Computes hinge length from projected span and hinge-line sweep.
-               %
-               % y_in: inboard span station [ft]
-               % y_out: outboard span station [ft]
-               % Lambda_h_deg: hinge-line sweep angle [deg]
-
-               b_control = abs(y_out - y_in);
-               L_hinge = b_control / cosd(Lambda_h_deg);
-          end
-
-          % Estimate the wetted area of the aircraft
-          function S_wet = get_design_S_wet(geometry_obj, W_TO)
-               c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-               d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-               S_wet = 10^(c) * W_TO^(d); % ft^2
-          end
-
-          % Size the tail
-          function [S_HT, S_VT] = size_tail(geometry_obj, design, S_ref)
-               b_w = geometry_obj.mainwings.b;
-               c_VT = geometry_obj.VT.c_VT;
-               c_HT = geometry_obj.HT.c_HT;
-               L_fus = geometry_obj.fuselage.L;
-               cbar_geo_w = design.geom.wings.Main.MeanGeometricChord;
-               [S_HT, S_VT] = GeometryLevel3.Tail_Sizing(c_VT, c_HT, b_w, S_ref, L_fus, cbar_geo_w);
-          end
-
-          % Estimate exposed surface area (lifting surface)
-          % Source: Brandt, "F16A", "Geom" sheet, cell H7.
-          function S_exposed = get_S_exposed(geometry_obj, tip_length, exposed_rc, exposed_halfspan)
-               S_exposed = exposed_halfspan*(exposed_rc + tip_length);
-          end
-
-          % Estimate exposed wetted areas (lifting surfaces)
-          function S_exposed = get_S_wet_wing(geometry_obj, S_exposed, tc)
-               S_exposed = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
-          end
-
-          % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
-          % cone approximation)
-          function S_wet_fuselage = get_S_wet_fuselage(fuselage_length, fuselage_max_width, max_height)
-               S_wet_fuselage = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
-          end
-
-          % Estimate wing sweep at quarter-chord (deg)
-          function qc_sweep = get_sweep_qc(b, LE_sweep_deg, root_chord, c_tip)
-               qc_sweep = atand(tand(LE_sweep_deg) - (root_chord - c_tip)/(2*b));
-          end
+          % % size control surfaces
+          % function S_control = size_control_surface_raymer( ...
+          %           deltaCL_req, ...
+          %           S_ref, ...
+          %           K_f, ...
+          %           dcl_ddelta_airfoil, ...
+          %           delta_max_deg, ...
+          %           Lambda_HL_deg)
+          % 
+          %      % Raymer-style plain-flap/control-surface sizing.
+          %      % deltaCL_req: required section/surface lift coefficient increment
+          %      % S_ref: parent reference area, e.g. S_h for elevator, S_v for rudder, S_w for flap/aileron
+          %      % K_f: empirical correction factor
+          %      % dcl_ddelta_airfoil: 2D lift increment per radian of deflection
+          %      % delta_max_deg: maximum control deflection in degrees
+          %      % Lambda_HL_deg: hinge-line sweep angle in degrees
+          % 
+          %      delta_max_rad = deg2rad(delta_max_deg);
+          % 
+          %      S_control = (deltaCL_req * S_ref) / ...
+          %           (0.9 * K_f * dcl_ddelta_airfoil * delta_max_rad * cosd(Lambda_HL_deg));
+          % end
+          % 
+          % function L_hinge = compute_hinge_length_from_stations(y_in, y_out, Lambda_h_deg)
+          %      % Computes hinge length from projected span and hinge-line sweep.
+          %      %
+          %      % y_in: inboard span station [ft]
+          %      % y_out: outboard span station [ft]
+          %      % Lambda_h_deg: hinge-line sweep angle [deg]
+          % 
+          %      b_control = abs(y_out - y_in);
+          %      L_hinge = b_control / cosd(Lambda_h_deg);
+          % end
+          % 
+          % % Estimate the wetted area of the aircraft
+          % function S_wet = get_design_S_wet(geometry_obj, W_TO)
+          %      c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
+          %      d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
+          %      S_wet = 10^(c) * W_TO^(d); % ft^2
+          % end
+          % 
+          % % Size the tail
+          % function [S_HT, S_VT] = size_tail(geometry_obj, design, S_ref)
+          %      b_w = geometry_obj.mainwings.b;
+          %      c_VT = geometry_obj.VT.c_VT;
+          %      c_HT = geometry_obj.HT.c_HT;
+          %      L_fus = geometry_obj.fuselage.L;
+          %      cbar_geo_w = design.geom.wings.Main.MeanGeometricChord;
+          %      [S_HT, S_VT] = GeometryLevel3.Tail_Sizing(c_VT, c_HT, b_w, S_ref, L_fus, cbar_geo_w);
+          % end
+          % 
+          % % Estimate exposed surface area (lifting surface)
+          % % Source: Brandt, "F16A", "Geom" sheet, cell H7.
+          % function S_exposed = get_S_exposed(geometry_obj, tip_length, exposed_rc, exposed_halfspan)
+          %      S_exposed = exposed_halfspan*(exposed_rc + tip_length);
+          % end
+          % 
+          % % Estimate exposed wetted areas (lifting surfaces)
+          % function S_exposed = get_S_wet_wing(geometry_obj, S_exposed, tc)
+          %      S_exposed = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
+          % end
+          % 
+          % % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
+          % % cone approximation)
+          % function S_wet_fuselage = get_S_wet_fuselage(fuselage_length, fuselage_max_width, max_height)
+          %      S_wet_fuselage = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
+          % end
+          % 
+          % % Estimate wing sweep at quarter-chord (deg)
+          % function qc_sweep = get_sweep_qc(b, LE_sweep_deg, root_chord, c_tip)
+          %      qc_sweep = atand(tand(LE_sweep_deg) - (root_chord - c_tip)/(2*b));
+          % end
      end
      methods (Access = private)
           

@@ -1,166 +1,12 @@
-classdef MissionAnalysisLevel3 < MissionAnalysisModel
+classdef MissionAnalysisLevel3
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 
      properties
 
-          missiondata % This is all the mission_obj information. Altitudes, aerodynamics, etc.
-          mission_fuel
-          mission_states
      end
 
-     methods
-          % Constructor
-          function obj = MissionAnalysisLevel3(Chosen_Mission)
-               obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
-               obj.mission_states = obj.generate_mission_states;
-          end
-
-          % Compute mission fuel
-          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
-               % This is where we actually compute the fuel for the mission
-               % AR = design.geom.wings.Main.AspectRatio;
-               AR = geometry_obj.mainwings.AR;
-
-               % W_S = 104.59;
-               W_S = constraint_obj.optimal_WS;
-               W_TO = weight_obj.W_TO;
-               T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
-               S_ref = geometry_obj.mainwings.S_ref;
-               T0 = propulsion_obj.T0;
-
-               t_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
-               t_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
-               TSFC_sl_perhour_dry = design.propulsion.TSFCseaLevelperHour.Dry;
-               TSFC_sl_perhour_wet = design.propulsion.TSFCseaLevelperHour.Wet;
-               E_dry = design.propulsion.E.Dry;
-               E_wet = design.propulsion.E.Wet;
-               F1_dry = design.propulsion.F1.Dry;
-               F1_wet = design.propulsion.F1.Wet;
-               F2_dry = design.propulsion.F2.Dry;
-               F2_wet = design.propulsion.F2.Wet;
-               TR = 1.0;
-
-               % Automate segment extraction
-               segmentnames = fields(mission_obj.missiondata);
-               fuelburnedarray = zeros(1,length(segmentnames));
-               W_array = zeros(1, length(segmentnames));
-
-               W_array(1) = W_TO;
-
-               for i=1:length(segmentnames)
-                    currentsegment = segmentnames{i};
-                    % Clip extra letters from segment name, but don't store
-                    % the result permanently
-                    currentsegment = erase(currentsegment, '_');
-                    currentsegment = erase(currentsegment, {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'});
-
-                    % Extract necessary info from current segment
-                    % Checks if current segment is "meta" (artefact from
-                    % table -> struct conversion.
-                    if (currentsegment == "meta")
-                         break
-                    else
-                         M = mission_obj.missiondata.(currentsegment).MachNumber;
-                         alt = mission_obj.missiondata.(currentsegment).Altitudeft;
-                         q = mission_obj.missiondata.(currentsegment).qlbfft2;
-                         a = mission_obj.missiondata.(currentsegment).afts;
-                         CD0 = aero_obj.get_design_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
-                         IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
-                         if (IsDryOrWet == "Dry")
-                              TSFC = propulsion_obj.get_TSFC([M, alt], IsDryOrWet, t_SL_dry, TSFC_sl_perhour_dry, E_dry, F1_dry, F2_dry, TR);
-                         elseif (IsDryOrWet == "Wet")
-                              TSFC = propulsion_obj.get_TSFC([M, alt], IsDryOrWet, t_SL_wet, TSFC_sl_perhour_wet, E_wet, F1_wet, F2_wet, TR);
-                         end
-                    end
-
-                    if (currentsegment == "startup") || (currentsegment == "Startup")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_startup(W_array(i));
-                    elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_taxi(W_array(i-1));
-                    elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i-1));
-                    elseif (currentsegment == "climb") || (currentsegment == "Climb")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0, mission_obj.missiondata.Cruise.e, AR, TSFC, alt, T0);
-                    elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(W_array(i-1), TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0, mission_obj.missiondata.Cruise.e, AR, S_ref);
-                    elseif (currentsegment == "dash") || (currentsegment == "Dash")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(W_array(i-1), S_ref, W_TO, q, CD0, mission_obj.missiondata.Dash.e, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
-                    elseif (currentsegment == "combat") || (currentsegment == "Combat")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0, mission_obj.missiondata.Combat.e, AR, W_TO, q, S_ref);
-                    elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(W_TO, W_array(i-1), S_ref, q, CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
-                    elseif (currentsegment == "landing") || (currentsegment == "Landing")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_landing(W_array(i-1), W_TO);
-                    elseif (currentsegment == "descent") || (currentsegment == "Descent")
-                         % Not implemented yet
-                    elseif (currentsegment == "meta")
-                         % Loop complete
-                    else
-                         error("Couldn't identify mission segment name. (Startup, Taxi, Takeoff, Climb, Cruise, Dash, Combat, Loiter, Landing).")
-                    end
-               end
-
-
-               % % Generate mission state vectors
-               % state_vector = mission_obj.generate_mission_states;
-
-               % Loop stuff - should automate segment naming extraction
-               % (future)
-               % [W_startup, f1] = mission_obj.segment_startup(W_TO);
-               % [W_taxi, f2]    = mission_obj.segment_taxi(W_startup);
-               % [W_Takeoff, f3] = mission_obj.segment_takeoff(W_taxi);
-               % [W_Climb, f4]   = mission_obj.segment_climb(W_TO, W_Takeoff, mission_obj.missiondata.Climb.MachNumber, S_ref, aero_obj.get_design_CD0(mission_obj.mission_states(:,4), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, propulsion_obj.get_TSFC(mission_obj.mission_states(:,4), "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Climb.Altitudeft, T0);
-               % [W_Cruise, f5]  = mission_obj.segment_cruise(W_Climb, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, mission_obj.missiondata.Cruise.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,5), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise.e, AR, S_ref);
-               % [W_Dash, f6]    = mission_obj.segment_dash(W_Cruise, S_ref, W_TO, mission_obj.missiondata.Dash.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,6), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Dash.e, AR, propulsion_obj.get_TSFC([mission_obj.missiondata.Dash.MachNumber, mission_obj.missiondata.Dash.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts);
-               % [W_Combat, f7]  = mission_obj.segment_combat(W_Dash, mission_obj.missiondata.Combat.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Combat.MachNumber, mission_obj.missiondata.Combat.Altitudeft], "wet", design.propulsion.ThrustseaLevellbf.Wet, design.propulsion.TSFCseaLevelperHour.Wet, design.propulsion.E.Wet, design.propulsion.F1.Wet, design.propulsion.F2.Wet, 1.0), mission_obj.missiondata.Combat.PayloadDroplbf, aero_obj.get_design_CD0(mission_obj.mission_states(:,7), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Combat.e, AR, W_TO, mission_obj.missiondata.Combat.qlbfft2, S_ref);
-               % [W_Cruise2, f8] = mission_obj.segment_cruise(W_Combat, propulsion_obj.get_TSFC([mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0), mission_obj.missiondata.Cruise_1.Rangeft, mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.afts, mission_obj.missiondata.Cruise_1.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,8), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Cruise_1.e, AR, S_ref);
-               % [W_Loiter, f9]  = mission_obj.segment_loiter(W_TO, W_Cruise2, S_ref, mission_obj.missiondata.Loiter.qlbfft2, aero_obj.get_design_CD0(mission_obj.mission_states(:,9), design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj), mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.get_TSFC([mission_obj.missiondata.Loiter.MachNumber, mission_obj.missiondata.Loiter.Altitudeft], "dry", design.propulsion.ThrustseaLevellbf.Dry, design.propulsion.TSFCseaLevelperHour.Dry, design.propulsion.E.Dry, design.propulsion.F1.Dry, design.propulsion.F2.Dry, 1.0));
-               % [W_Landing, f10]         = mission_obj.segment_landing(W_Loiter, W_TO);
-               total_fuel_used = sum(fuelburnedarray);
-               mission_obj.mission_fuel = fuelburnedarray;
-               % total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6+ f7 +f8 + f9 + f10;
-               fuel_fraction = total_fuel_used * 1.06 / W_TO;
-          end
-     end
-
-     %% ----------------------------------------------------------
-     % HELPER FUNCTIONS
-
-     methods (Access = private)
-          % For loop - loops through
-
-          % Generate mission state vector
-          function state_vector = generate_mission_states(mission_obj)
-               % State vector = [Mach, altitude, alpha, instantaneous weight] (per segment)
-               segment_names = fieldnames(mission_obj.missiondata);
-               segment_count = length(segment_names);
-               state_vector = zeros(2, segment_count-1); % Trim the last column because it's just "meta"
-
-               % Extract Mach number & altitude from each segment
-               for i=1:segment_count-1
-                    segment_name = segment_names{i};
-                    state_vector(1,i) = mission_obj.missiondata.(segment_name).MachNumber;
-                    state_vector(2,i) = mission_obj.missiondata.(segment_name).Altitudeft;
-               end
-          end
-
-          % Arguments should be design-specific geometric or aerodynamic
-          % properties extracted from objects (... which are themselves the
-          % design).
-          % I probably don't even need this any more.
-          function segment_names = get_segment_names(mission_obj, design, missiondata)
-               segment_names = string(missiondata.Properties.VariableNames);
-               for i=1:lenght(segment_names)
-                    current_segment = segment_names(i);
-                    mission.(current_segment) = missiondata(:, (current_segment));
-               end
-          end
-
-
-
-
-
+     methods (Static)
 
           function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
                W_by_W_TO = W / W_TO;
@@ -168,22 +14,22 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
           end
 
-          function [LD_ratio] = compute_LD_revised(mission_obj, W, q, S, CD0, e, AR)
+          function [LD_ratio] = compute_LD_revised(W, q, S, CD0, e, AR)
                CL = 2*W/(q*S);
                K = 1/(pi*e*AR);
                LD_ratio = CL/(CD0 + K * CL^2);
           end
 
 
-          function [WF] = compute_weightfraction(mission_obj, TSFC, R, Vend, LD_ratio)
+          function [WF] = compute_weightfraction(TSFC, R, Vend, LD_ratio)
                WF = exp(-((R * TSFC) / (Vend * LD_ratio)));
           end
 
 
           % Climb segment - revised
-          function [W_out, fuel_used] = segment_climb(mission_obj, W_TO, W_in, Mach, S, CD0, e, AR, TSFC, h, T0)
+          function [W_out, fuel_used] = segment_climb(W_TO, W_in, Mach, S, CD0, e, AR, TSFC, h, T0)
                g = 32.2; % Acceleration due to gravity (ft/s^2)
-               r_e = 20902231; % Radius of Earth (and your mom) (ft)
+               r_e = 20902231; % Radius of Earth (ft)
                n = 20; % Number of segments
                % h = 40000; % desired climb altitude (ft)
                h_increments = linspace(0, h, n);
@@ -249,15 +95,15 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
 
 
-          function [W_out, fuel_used] = segment_combat(mission_obj, W_in, time, TSFC, payload, CD0, e, AR, W_TO, q,  S_ref)
-               LD = mission_obj.compute_LD_revised(W_in, q, S_ref, CD0, e, AR);
+          function [W_out, fuel_used] = segment_combat(W_in, time, TSFC, payload, CD0, e, AR, W_TO, q,  S_ref)
+               LD = MissionAnalysisLevel3.compute_LD_revised(W_in, q, S_ref, CD0, e, AR);
                WF = exp(-(time * 60 * TSFC / LD));
                fuel_used = W_in*(1-WF);
                W_out = W_in - fuel_used - payload;
           end
 
 
-          function [W_current, fuel_used] = segment_cruise(mission_obj, W_in, TSFC, Distance, Mach, a, q, CD0, e, AR, S)
+          function [W_current, fuel_used] = segment_cruise(W_in, TSFC, Distance, Mach, a, q, CD0, e, AR, S)
                n=20; % Number of segments
                seg_dist = Distance/n; % Divide the total distance into equi-spatial cruise segments.
                % Loop through the cruise segments
@@ -266,8 +112,8 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                V = Mach * a;
                % disp("Starting loop...")
                W_current = W_in;
-               LD = mission_obj.compute_LD_revised(W_current, q, S, CD0, e, AR);
-               W_out = mission_obj.compute_revised_w_out(W_current, seg_dist, TSFC, V, LD);
+               LD = MissionAnalysisLevel3.compute_LD_revised(W_current, q, S, CD0, e, AR);
+               W_out = MissionAnalysisLevel3.compute_revised_w_out(W_current, seg_dist, TSFC, V, LD);
                % WF = compute_weightfraction(TSFC, seg_dist, V, LD);
                fuel_used = W_in - W_out;
                % W_out = W_in - fuel_used;
@@ -275,8 +121,8 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
                for i=2:n
                     % seg_dist_i = seg_dist - Distance; % Increment the segment distance
                     % LD = compute_LD_ratio(q, CD0, W_in, W_TO, W_S, e, AR);
-                    LD = mission_obj.compute_LD_revised(W_current, q, S, CD0, e, AR);
-                    W_current = mission_obj.compute_revised_w_out(W_current, seg_dist, TSFC, V, LD);
+                    LD = MissionAnalysisLevel3.compute_LD_revised(W_current, q, S, CD0, e, AR);
+                    W_current = MissionAnalysisLevel3.compute_revised_w_out(W_current, seg_dist, TSFC, V, LD);
                     % WF = compute_weightfraction(TSFC, seg_dist, V, LD);
                     fuel_used = W_in - W_current;
                     % W_out = W_in - fuel_used;
@@ -287,49 +133,50 @@ classdef MissionAnalysisLevel3 < MissionAnalysisModel
 
           end
 
-          function [W_out, fuel_used] = segment_dash(mission_obj, W_in, S_ref, W_TO, q, CD0, e, AR, TSFC, Distance, V)
-               LD = mission_obj.compute_LD_revised(W_in, q, S_ref, CD0, e, AR);
-               WF = mission_obj.compute_weightfraction(TSFC, Distance, V, LD);
+          function [W_out, fuel_used] = segment_dash(W_in, S_ref, W_TO, q, CD0, e, AR, TSFC, Distance, V)
+               LD = MissionAnalysisLevel3.compute_LD_revised(W_in, q, S_ref, CD0, e, AR);
+               WF = MissionAnalysisLevel3.compute_weightfraction(TSFC, Distance, V, LD);
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
-          function [W_out, fuel_used] = segment_landing(mission_obj, W_in, W_TO)
+          function [W_out, fuel_used] = segment_landing(W_in, W_TO)
                WF = 0.995;
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
-          function [W_out, fuel_used] = segment_loiter(mission_obj, W_TO, W_in, S_ref, q, CD0, e, AR, time, TSFC)
-               LD = mission_obj.compute_LD_revised(W_in, q, S_ref, CD0, e, AR);
+          function [W_out, fuel_used] = segment_loiter(W_TO, W_in, S_ref, q, CD0, e, AR, time, TSFC)
+               LD = MissionAnalysisLevel3.compute_LD_revised(W_in, q, S_ref, CD0, e, AR);
                WF = exp(-(time * 60 * TSFC / LD));
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
 
-          function [W_out, fuel_used] = segment_startup(mission_obj, W_in)
+          function [W_out, fuel_used] = segment_startup(W_in)
                WF = 0.99;
                W_out = W_in*WF;
                fuel_used = W_in - W_out;
           end
 
 
-          function [W_out, fuel_used] = segment_takeoff(mission_obj, W_in)
+          function [W_out, fuel_used] = segment_takeoff(W_in)
                WF = 0.95;
                W_out = W_in * WF;
                fuel_used = W_in - W_out;
           end
 
 
-          function [W_out, fuel_used] = segment_taxi(mission_obj, W_in)
+          function [W_out, fuel_used] = segment_taxi(W_in)
                WF = 0.98;
                W_out = W_in*WF;
                fuel_used = W_in - W_out;
           end
 
-          function [W_out] = compute_revised_w_out(mission_obj, W_in, seg_dist, TSFC, V, LD)
+          function [W_out] = compute_revised_w_out(W_in, seg_dist, TSFC, V, LD)
                W_out = W_in * exp( -(seg_dist*TSFC)/(V*LD));
           end
+
      end
 end

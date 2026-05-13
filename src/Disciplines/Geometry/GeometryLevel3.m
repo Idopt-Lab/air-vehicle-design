@@ -17,6 +17,21 @@ classdef GeometryLevel3 < GeometryModelLevel3
 
      methods (Static)
 
+          % Compute wingspan from planform area
+          function b = compute_b(AR, S_ref)
+               b = sqrt(AR*S_ref);
+          end
+
+          % Compute c_root from wingspan, S_ref, and taper ratio
+          function c_root = compute_c_root(S_ref, b, lambda)
+               c_root = (2 * S_ref)/(b*(1 + lambda));
+          end
+
+          % Compute c_tip from taper ratio, and c_root
+          function c_tip = compute_c_tip(lambda, c_root)
+               c_tip = lambda*c_root;
+          end
+
           % size control surfaces
           function S_control = size_control_surface_raymer( ...
                     deltaCL_req, ...
@@ -81,7 +96,7 @@ classdef GeometryLevel3 < GeometryModelLevel3
           end
 
           % Size the tail
-          function [S_HT, S_VT] = Tail_Sizing(c_VT, c_HT, b_W, S_ref, L_fus, Cbar_W)
+          function [S_HT, S_VT] = Tail_Sizing(c_VT, c_HT, b_W, Sref_w, L_fus, Cbar_W)
 
                % NOTE: S_REF IS USED BUT ITS SUPPOSED TO BE S_REF OF THE
                % MAIN WINGS
@@ -92,9 +107,9 @@ classdef GeometryLevel3 < GeometryModelLevel3
                obj.VT.L = L_VT;
                obj.HT.L = L_HT;
 
-               S_VT = c_VT*b_W*S_ref/obj.VT.L; % eq 6.28, 2nd edition
+               S_VT = c_VT*b_W*Sref_w/obj.VT.L; % eq 6.28, 2nd edition
 
-               S_HT = c_HT*Cbar_W*S_ref/obj.HT.L; % eq 6.29, 2nd edition
+               S_HT = c_HT*Cbar_W*Sref_w/obj.HT.L; % eq 6.29, 2nd edition
 
                obj.VT.S_ref = S_VT;
                obj.HT.S_ref = S_HT;
