@@ -1,4 +1,4 @@
-classdef F16PropulsionEstLevel3 < PropulsionModelLevel3
+classdef F16PropulsionLevel3 < PropulsionModelLevel3
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -18,7 +18,7 @@ classdef F16PropulsionEstLevel3 < PropulsionModelLevel3
      methods
 
           % Constructor
-          function obj = F16PropulsionEstLevel3(requirements_obj, design)
+          function obj = F16PropulsionLevel3(requirements_obj, design)
                obj.enginetype = "low_bpr_turbofan";
                obj.T_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
                obj.T_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
