@@ -4,11 +4,10 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
 
      properties (Abstract) % Initialization not allowed
           e_osw
-          CL
-          CD
+          Cf
+          CL_max
           CD0
-          K1
-          K2
+          K
      end
 
 

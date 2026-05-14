@@ -1,4 +1,4 @@
-classdef F16AeroLevel2 < AerodynamicsModelLevel3
+classdef F16AeroLevel2 < AerodynamicsModelLevel2
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
@@ -9,17 +9,22 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel3
      properties
           e_osw
           Cf
-          CL
           CL_max
           CD0
-          CD
           K
-          K1
-          K2
-          DragResults
      end
 
      methods
+
+          % Constructor
+          function obj = F16AeroLevel2(geometry_obj)
+               AR = geometry_obj.mainwings.AR;
+
+               obj.e_osw = obj.get_e_osw(0.914); % This is excessive
+               obj.K = obj.get_K(obj.e_osw, AR);
+               obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
+               obj.CL_max = 1.5;
+          end
 
           % Compute Oswald span efficiency factor
           function e_osw = get_e_osw(aero_obj, e_osw)
@@ -28,51 +33,57 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel3
           end
 
           % Compute K
-          function K = compute_K(aero_obj, e_osw, AR)
-               K = 1/(pi*AR*e_osw);
-               aero_obj.K = K;
+          function K = get_K(aero_obj, e_osw, AR)
+               K = AeroLevel2.compute_K(e_osw, AR);
           end
 
           % Get Cf (should be tabulated by user or the program? Stick with
           % user, for now)
           function Cf = get_Cf(aero_obj, Cf)
-               aero_obj.Cf = Cf;
+               Cf = Cf;
           end
 
-          % Get CD0
+          % Get design drag
           function DragResults = get_design_drag(aero_obj, geometry_obj, state_input)
                W = state_input(4);
+               e_osw = aero_obj.e_osw;
+               S_ref = geometry_obj.mainwings.S_ref;
+               S_wet = geometry_obj.design.S_wet;
+               AR = geometry_obj.mainwings.AR;
 
                % Get q
-               q = AerodynamicsModelLevel3.compute_q(aero_obj, state_input);
+               q = AeroUtils.compute_q(state_input);
 
                % Get CL
-               aero_obj.CL = AerodynamicsModelLevel3.compute_CL(aero_obj, W, q, geometry_obj.mainwings.S_ref);
+               CL = AeroUtils.compute_CL(W, q, S_ref);
 
                % Get CD0
-               DragResults.CD0 = get_design_CD0(aero_obj, aero_obj.Cf, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
+               CD0 = aero_obj.get_design_CD0(aero_obj.Cf, S_wet, S_ref);
 
                % Compute K
-               aero_obj.compute_K(aero_obj.e_osw, geometry_obj.mainwings.AR);
+               % K = AeroLevel2.compute_K(e_osw, AR);
 
                % Compute the CD
-               DragResults.CD = get_design_CD(aero_obj, DragResults.CD0, aero_obj.K, aero_obj.CL);
+               CD = aero_obj.get_design_CD(CD0, aero_obj.K, CL);
 
                % Compute the drag
-               DragResults.D = AerodynamicsModelLevel3.compute_D(aero_obj, q, DragResults.CD, geometry_obj.mainwings.S_ref);
+               D = AeroLevel2.compute_D(q, CD, S_ref);
 
+               DragResults.CD0 = CD0;
+               DragResults.CD = CD;
+               DragResults.D = D;
           end
 
           % Get design CD
-          function output = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
-               aero_obj.CD = CD0 + K*CL^2;
-               output = aero_obj.CD;
+          function CD = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+               % CD = CD0 + K*CL^2;
+               CD = AeroLevel2.compute_CD(CD0, K, CL);
           end
 
           % Get CD0
-          function output = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
-               aero_obj.CD0 = Cf * S_wet_aircraft/S_ref;
-               output = aero_obj.CD0;
+          function CD0 = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
+               % CD0 = Cf * S_wet_aircraft/S_ref;
+               CD0 = AeroLevel2.compute_CD0(Cf, S_wet_aircraft, S_ref);
           end
 
           %% FOR MISSION ANALYSIS
