@@ -26,20 +26,24 @@ classdef F16PropulsionLevel3 < PropulsionModelLevel3
                obj.TSFC_SL_wet = design.propulsion.TSFCseaLevelperHour.Wet;
                obj.BPR = design.propulsion.BypassRatio.BypassRatio;
                obj.isafterburning = "Y";
-               obj.enginestats = obj.get_propulsion_stats(requirements_obj);
+               obj.enginestats.quantity = 1;
+               M = requirements_obj.requirements.MaxMach.Mach;
+               T = obj.T_SL_wet;
+               BPR = obj.BPR;
+               obj.enginestats = obj.get_engine_stats(T, M, BPR, "Y");
           end
 
-          % Estimate engine properties
-          function enginestats = get_propulsion_stats(propulsion_obj, requirements_obj)
-               enginestats = PropulsionLevel3.get_engine_stats(propulsion_obj.T_SL_wet, requirements_obj.requirements.MaxMach.Mach, propulsion_obj.BPR, propulsion_obj.isafterburning);
-          end
+          % % Estimate engine properties
+          % function enginestats = get_propulsion_stats(propulsion_obj, requirements_obj)
+          %      enginestats = PropulsionLevel3.get_engine_stats(propulsion_obj.T_SL_wet, requirements_obj.requirements.MaxMach.Mach, propulsion_obj.BPR, propulsion_obj.isafterburning);
+          % end
 
           % Estimate engine properties
-          function output = get_engine_stats(T, M, BPR, isafterburning)
+          function output = get_engine_stats(aero_obj, T, M, BPR, isafterburning)
                if (isafterburning == "Y")
-                    output = PropulsionLevel3.compute_eng_stats_ab(T, M, BPR);
+                    output = PropulsionLevel3.compute_jet_eng_stats_ab(T, M, BPR);
                elseif (isafterburning == "N")
-                    output = PropulsionLevel3.compute_eng_stats_noab(T, M, BPR);
+                    output = PropulsionLevel3.compute_jet_eng_stats_noab(T, M, BPR);
                else
                     error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
                end

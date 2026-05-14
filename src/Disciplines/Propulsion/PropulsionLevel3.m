@@ -10,20 +10,20 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
      methods (Static)
 
-          % Estimate engine properties
-          function output = get_engine_stats(T, M, BPR, isafterburning)
-               if (isafterburning == "Y")
-                    output = PropulsionLevel3.compute_eng_stats_ab(T, M, BPR);
-               elseif (isafterburning == "N")
-                    output = PropulsionLevel3.compute_eng_stats_noab(T, M, BPR);
-               else
-                    error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
-               end
-          end
+          % % Estimate engine properties
+          % function output = get_engine_stats(T, M, BPR, isafterburning)
+          %      if (isafterburning == "Y")
+          %           output = PropulsionLevel3.compute_eng_stats_ab(T, M, BPR);
+          %      elseif (isafterburning == "N")
+          %           output = PropulsionLevel3.compute_eng_stats_noab(T, M, BPR);
+          %      else
+          %           error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
+          %      end
+          % end
 
           % Estimate engine properties (AFTERBURNING ENGINE, IMPERIAL
           % UNITS)
-          function [enginestats] = compute_eng_stats_ab(T, M, BPR)
+          function [enginestats] = compute_jet_eng_stats_ab(T, M, BPR)
                % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
                % 10.15
 
@@ -51,7 +51,7 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           % Estimate engine properties (NONAFTERBURNING ENGINE, IMPERIAL
           % UNITS)
-          function [enginestats] = compute_eng_stats_noab(T, M, BPR)
+          function [enginestats] = compute_jet_eng_stats_noab(T, M, BPR)
                % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
                % 10.15
 
@@ -88,13 +88,11 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
           end
 
           % Scale engine
-          function output = scale_engine(L_actual, D_actual, W_actual, T_actual, T_required)
+          function eng_scale = scale_engine(L_actual, D_actual, W_actual, T_actual, T_required)
                eng_scale.SF = T_actual/T_required;
                eng_scale.L = L_actual*SF^(0.4); % Raymer, 6th ed, eq 10.1
                eng_scale.D = D_actual*SF^(0.5); % Raymer, 6th ed, eq 10.2
                eng_scale.W = W_actual*SF^(1.1); % Raymer, 6th ed, eq 10.3
-
-               output = eng_scale;
           end
 
           % % Compute TSFC (wrapper)
@@ -135,42 +133,42 @@ classdef PropulsionLevel3 < PropulsionModelLevel3
 
           %% For low_bpr_turbofan/jet, theta0<=TR
           % Get thrust (dry)
-          function output = get_thrust_dry(t_sl_dry, delta_0, F1, M0, E, F2, theta_0, TR)
+          function T_dry = get_thrust_dry(t_sl_dry, delta_0, F1, M0, E, F2, theta_0, TR)
                if theta_0<=TR
-                    output = t_sl_dry*delta_0*(1 - F1*M0^(E));
+                    T_dry = t_sl_dry*delta_0*(1 - F1*M0^(E));
                elseif theta_0>TR
-                    output = t_sl_dry*delta_0*(1 - F1*M0^(E) - (F2 *(theta_0 - TR)/(theta_0)));
+                    T_dry = t_sl_dry*delta_0*(1 - F1*M0^(E) - (F2 *(theta_0 - TR)/(theta_0)));
                end
           end
 
           % Get TSFC (dry)
-          function output = get_TSFC_dry(theta_0, TSFC_sl_dry, M, thrust, thrust_sl, TR)
+          function TSFC_dry = get_TSFC_dry(theta_0, TSFC_sl_dry, M, thrust, thrust_sl, TR)
                if theta_0 <= TR
-                    output = TSFC_sl_dry*(1.0 + 0.35*(M - 0.0))*(thrust/thrust_sl)^(0.5);
+                    TSFC_dry = TSFC_sl_dry*(1.0 + 0.35*(M - 0.0))*(thrust/thrust_sl)^(0.5);
                elseif theta_0 > TR
-                    output = TSFC_sl_dry*(1.0 + 0.35*M)*(thrust/thrust_sl)^(0.5);
+                    TSFC_dry = TSFC_sl_dry*(1.0 + 0.35*M)*(thrust/thrust_sl)^(0.5);
                else
                     error("Error handler.")
                end
           end
 
           % Get thrust (wet)
-          function output = get_thrust_wet(t_sl_wet, delta_0, F1, M0, E, theta_0, TR, F2)
+          function T_wet = get_thrust_wet(t_sl_wet, delta_0, F1, M0, E, theta_0, TR, F2)
                if theta_0<=TR
-                    output = t_sl_wet*delta_0*(1 - F1*M0^(E));
+                    T_wet = t_sl_wet*delta_0*(1 - F1*M0^(E));
                elseif theta_0>TR
-                    output = t_sl_wet*delta_0*(1 - F1*M0^(E) - (F2*(theta_0 - TR)/theta_0));
+                    T_wet = t_sl_wet*delta_0*(1 - F1*M0^(E) - (F2*(theta_0 - TR)/theta_0));
                else
                     error("Error handler.")
                end
           end
 
           % Get TSFC (wet)
-          function output = get_TSFC_wet(TSFC_sl_wet, M, thrust, thrust_sl, theta_0, TR)
+          function TSFC_wet = get_TSFC_wet(TSFC_sl_wet, M, thrust, thrust_sl, theta_0, TR)
                if theta_0 <= TR
-                    output = TSFC_sl_wet*(1.0 + 0.35*(M - 0.4))*(thrust/thrust_sl)^(0.5);
+                    TSFC_wet = TSFC_sl_wet*(1.0 + 0.35*(M - 0.4))*(thrust/thrust_sl)^(0.5);
                elseif theta_0 > TR
-                    output = TSFC_sl_wet*(1.0 + 0.35*abs(M - 0.4))*(thrust/thrust_sl)^(0.5);
+                    TSFC_wet = TSFC_sl_wet*(1.0 + 0.35*abs(M - 0.4))*(thrust/thrust_sl)^(0.5);
                else
                     error("Error handler.")
                end
