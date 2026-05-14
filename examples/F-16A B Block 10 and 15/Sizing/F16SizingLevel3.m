@@ -20,7 +20,7 @@ classdef F16SizingLevel3 < SizingModel
                results = [];
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                total_fuel_used = 0;
-               S_ref = geometry_obj.mainwings.S_ref;
+               S_ref = geometry_obj.mainwings.S_ref; % Comment out when done experimenting.
                % Generate mission state vectors
                % mission_obj.state_vector = mission_obj.generate_mission_states;
                for iteration = 1:max_iteration

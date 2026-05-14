@@ -118,6 +118,10 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                     GeometryUtils.loaddesigngeometry(obj, design)
                end
 
+               % Get S_ref for tails
+               obj.HT.S_ref = design.geom.wings.HorizontalTail.PlanformAreaft2;
+               obj.VT.S_ref = design.geom.wings.VerticalTail.PlanformAreaft2;
+
                % Get S_exposed for each component
                obj.mainwings.S_exposed = GeometryLevel3.get_S_exposed(obj.mainwings.c_tip, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
                obj.HT.S_exposed = GeometryLevel3.get_S_exposed(obj.HT.c_tip, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
@@ -131,7 +135,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
 
                % Load the planform area of tail
-               [obj.HT.S_ref, obj.VT.S_ref] = GeometryLevel3.Tail_Sizing(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
+               % [obj.HT.S_ref, obj.VT.S_ref] = GeometryLevel3.Tail_Sizing(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
 
                % Load the planform area of any strakes
                obj.strakes.S_ref = design.geom.wings.Strakes.PlanformAreaft2;
