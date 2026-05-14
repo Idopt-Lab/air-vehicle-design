@@ -20,12 +20,13 @@ classdef SizingClassLevel2 < SizingModel
                results = [];
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                total_fuel_used = 0;
+               S_ref = geometry_obj.mainwings.S_ref;
                for iteration = 1:max_iteration
-                    geometry_obj.mainwings.S_ref = W_TO / W_S;
+                    % geometry_obj.mainwings.S_ref = W_TO / W_S;
 
                     %% ----------------------------------------------------------------------
                     % Estimate wetted areas
-                    S_wet = geometry_obj.get_design_S_wet(W_TO);
+                    S_wet = geometry_obj.get_design_S_wet;
 
                     %% ----------------------------------------------------------------------
                     % Size the tail (should be a geometry thing)

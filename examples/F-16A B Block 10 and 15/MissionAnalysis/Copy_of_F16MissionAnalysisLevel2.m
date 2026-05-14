@@ -1,4 +1,4 @@
-classdef F16MissionAnalysis2 < MissionAnalysisModel
+classdef F16MissionAnalysisLevel2 < MissionAnalysisModel
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
      % Lower fidelity level than 3.
@@ -12,7 +12,7 @@ classdef F16MissionAnalysis2 < MissionAnalysisModel
 
      methods
           % Constructor
-          function obj = F16MissionAnalysis2(Chosen_Mission)
+          function obj = F16MissionAnalysisLevel2(Chosen_Mission)
                obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
           end
 

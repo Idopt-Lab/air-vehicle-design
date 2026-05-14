@@ -13,7 +13,7 @@ classdef GeometryLevel2
 
           % Add functions for estimating control surface sizing
 
-           % Estimate the wetted area of the aircraft
+          % Estimate the wetted area of the aircraft
           function [S_wet, c, d] = get_design_S_wet(aircraft_type, W_TO)
                % Source: Airplane Design, vol 1, Roskam, table 3.5
                if (aircraft_type == "Homebuilt")
@@ -56,21 +56,21 @@ classdef GeometryLevel2
                     error("Couldn't identify aircraft type.")
                end
                S_wet = 10^(c) * W_TO^(d); % ft^2
-               % (Aircraft Design, vol 1, Roskam, eq 3.22) 
+               % (Aircraft Design, vol 1, Roskam, eq 3.22)
           end
 
           % Estimate exposed surface area (lifting surface)
           % Source: Brandt, "F16A", "Geom" sheet, cell H7.
-          function output = get_S_exposed_wing(geometry_obj, tip_length, exposed_rc, exposed_halfspan)
+          function output = get_S_exposed_wing(tip_length, exposed_rc, exposed_halfspan)
                output = exposed_halfspan*(exposed_rc + tip_length);
           end
 
           % Estimate exposed wetted areas (lifting surfaces) (Wrapper)
-          function S_wet_wing = get_S_wet_wing(geometry_obj, S_exposed, tc)
+          function S_wet_wing = get_S_wet_wing(S_exposed, tc)
                if tc <= 0.05
-                    S_wet_wing = geometry_obj.compute_S_wet_wing_lowtc(S_exposed);
+                    S_wet_wing = GeometryLevel2.compute_S_wet_wing_lowtc(S_exposed);
                elseif tc > 0.05
-                    S_wet_wing = geometry_obj.compute_S_wet_wing_hightc(S_exposed, tc);
+                    S_wet_wing = GeometryLevel2.compute_S_wet_wing_hightc(S_exposed, tc);
                end
           end
 
@@ -78,20 +78,18 @@ classdef GeometryLevel2
           % "Body" = "fuselage + nose cone + whatever isn't the wings from
           % a silouetted side-view"
           % "Fuselage" = "the fuselage"
-          function output = compute_S_wet_body(A_top, A_side)
-               output = 3.4*(A_top + A_side)/2; % Raymer, 6th ed, eq 7.13
+          % I think this is better for level 1
+          function S_wet_body = compute_S_wet_body(A_top, A_side)
+               S_wet_body = 3.4*(A_top + A_side)/2; % Raymer, 6th ed, eq 7.13
           end
-     end
-
-     methods (Access = private)
 
           % Compute S_wet for wings with low tc
-          function output = compute_S_wet_wing_lowtc(geometry_obj, S_exposed)
+          function output = compute_S_wet_wing_lowtc(S_exposed)
                output = 2.003*S_exposed; % Raymer, 6th ed, eq 7.11
           end
 
           % Compute S_wet for wings with high tc
-          function output = compute_S_wet_wing_hightc(geometry_obj, S_exposed, tc)
+          function output = compute_S_wet_wing_hightc(S_exposed, tc)
                output = S_exposed*(1.977 + 0.52*tc);
           end
      end

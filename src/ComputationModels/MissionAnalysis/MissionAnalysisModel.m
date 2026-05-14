@@ -16,7 +16,7 @@ classdef (Abstract) MissionAnalysisModel < handle
 
      methods (Static) % Common code
           % Assign data to "missiondata" property
-          function output = get_mission_data(obj, Chosen_Mission)
+          function output = get_mission_data(Chosen_Mission)
 
                file_name = "Mission_Profile.xlsx";
                mission_name = Chosen_Mission; % This will be the SHEET the program checks for mission_obj data!

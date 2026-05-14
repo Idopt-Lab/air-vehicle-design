@@ -1,4 +1,4 @@
-classdef F16MissionAnalysis3 < MissionAnalysisModel
+classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -13,7 +13,7 @@ classdef F16MissionAnalysis3 < MissionAnalysisModel
      methods
           % Constructor
           % Constructor
-          function obj = F16MissionAnalysis3(Chosen_Mission)
+          function obj = F16MissionAnalysisLevel3(Chosen_Mission)
                obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
                obj.mission_states = obj.generate_mission_states;
           end
