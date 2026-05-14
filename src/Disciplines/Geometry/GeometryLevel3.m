@@ -1,4 +1,4 @@
-classdef GeometryLevel3 < GeometryModelLevel3
+classdef GeometryLevel3
      %F16GEOMETRYSTUFF Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -7,12 +7,6 @@ classdef GeometryLevel3 < GeometryModelLevel3
           % vertical), fuselage, etc?
           % I should definitely use structs for this. Organize into wings,
           % tails, fuselage.
-
-          mainwings
-          HT
-          VT
-          fuselage
-          design
      end
 
      methods (Static)
