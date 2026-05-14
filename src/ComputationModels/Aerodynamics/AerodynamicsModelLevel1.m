@@ -3,8 +3,16 @@ classdef AerodynamicsModelLevel1 < handle
      %   Detailed explanation goes here
 
      properties (Abstract)
+          e_osw
+          LD_max
+          AR_wet
+          K_LD
+          K
      end
 
      methods (Abstract)
+          LD_max = get_LD_max(aircraft_type)
+          AR_wet = get_AR_wet(b, S_wet)
+
      end
 end

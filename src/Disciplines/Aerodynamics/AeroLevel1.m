@@ -1,4 +1,4 @@
-classdef AeroLevel1 < AerodynamicsModelLevel1
+classdef AeroLevel1
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
@@ -12,54 +12,23 @@ classdef AeroLevel1 < AerodynamicsModelLevel1
      % pull values from a pre-configured table. That... might work.
 
      properties
-          e_osw
-          CL
-          CD
-          CD0
-          K
-          K1 % Might need additional abstract classes for each fidelity level
-          K2
      end
 
-     methods
-
-          % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
-          function e_osw = get_e_osw(aero_obj, e_osw)
-               % Level 1: Should be hard-coded or whatever. Independent of
-               % design geometry.
-               aero_obj.e_osw = e_osw;
-          end
+     methods (Static)
 
           % Get K value (gross estimate, tabulated)
-          function K = get_K(aero_obj, K)
-               % aero_obj.K1 = 1/(pi*AR*e_osw);
-               aero_obj.K = K;
+          function K = compute_K(AR, e_osw)
+               K = 1/(pi*AR*e_osw);
           end
 
-          % Compute CD0
-          % User must have tabulated these values beforehand: CD0, CL
-          function DragResults = get_design_drag(aero_obj, CD0, CL)
-
-               aero_obj.CD0 = CD0;
-               aero_obj.CL = CL;
-
-               aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
-          end
-
-          % Get design drag
-          function DragResults = get_design_CD0(input)
-
-          end
-
-          % Get design CD
-          function output = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
-               aero_obj.CD = CD0 + K*CL^2;
-               output = aero_obj.CD;
+          % Get CD
+          function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+               CD = CD0 + K*CL^2;
           end
 
           %% FOR MISSION ANALYSIS
           % Tabulate L/Dmax (cruise)
-          function output = get_LDmax_cruise(aero_obj, LDmax, enginetype)
+          function output = get_LDmax_cruise(LDmax, enginetype)
                if (enginetype == "jet")
                     LDmax_cruise = 0.866*LDmax;
                elseif (enginetype == "prop")
@@ -71,7 +40,7 @@ classdef AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Tabulate L/Dmax (loiter)
-          function output = get_LDmax_loiter(aero_obj, LDmax, enginetype)
+          function output = get_LDmax_loiter(LDmax, enginetype)
                if (enginetype == "jet")
                     LDmax_loiter = LDmax;
                elseif (enginetype == "prop")
@@ -82,25 +51,19 @@ classdef AeroLevel1 < AerodynamicsModelLevel1
                output = LDmax_loiter;
           end
 
-          %% L/Dmax for the design
-          % Estimate L/Dmax
-          function output = get_LDmax(aero_obj, geometry_obj, design_type)
-               % Determine K_LD
-               K_LD = aero_obj.tab_K_LD(design_type);
-               AR_wetted = aero_obj.compute_AR_wetted(geometry_obj.mainwings.AR, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
-               LDmax = K_LD*sqrt(AR_wetted); % Raymer, 6th edi, eq 3.12
-               output = LDmax;
+          % Compute LD_max
+          function LD_max = compute_LDmax(K_LD, AR_wetted)
+               LD_max = K_LD*sqrt(AR_wetted); % Raymer, 6th ed, eq 3.12
           end
 
           % Compute AR wetted
-          function output = compute_AR_wetted(aero_obj, AR, S_wet, S_ref)
-               AR_wetted = AR/(S_wet/S_ref); % Raymer, 6th ed, eq 3.11
-               output = AR_wetted;
+          function AR_wetted = compute_AR_wetted(b, S_wet)
+               AR_wetted = b^2/S_wet; % Raymer, 6th ed, eq 3.11
           end
 
           % Tabulate K_LD
           % Raymer, 6th ed, page 40
-          function output = tab_K_LD(aero_obj, design_type)
+          function K_LD = tab_K_LD(design_type)
                if (design_type == "civil jet")
                     K_LD = 15.5;
                elseif (design_type == "military jet") || (design_type == "Jet fighter")
@@ -116,7 +79,6 @@ classdef AeroLevel1 < AerodynamicsModelLevel1
                else
                     error("Error handler.")
                end
-               output = K_LD;
           end
           
      end

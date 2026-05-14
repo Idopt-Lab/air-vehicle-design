@@ -1,4 +1,4 @@
-classdef F16AeroLevel1 < AerodynamicsModelLevel3
+classdef F16AeroLevel1 < AerodynamicsModelLevel1
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
@@ -13,15 +13,34 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel3
 
      properties
           e_osw
-          CL
-          CD
-          CD0
+          LD_max
+          AR_wet
+          K_LD
           K
-          K1 % Might need additional abstract classes for each fidelity level
-          K2
      end
 
      methods
+
+          % Constructor
+          function obj = F16AeroLevel1(aircraft_type, geometry_obj, weight_obj)
+               obj.e_osw = 0.914;
+               AR = geometry_obj.mainwings.AR;
+               obj.K = obj.get_K(AR, obj.e_osw);
+               W_TO = weight_obj.W_TO_guess;
+               S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
+               obj.LD_max = obj.get_LDmax(aircraft_type, AR, S_wet, S_ref);
+          end
+
+          %% L/Dmax for the design
+          % Estimate L/Dmax
+          function LDmax = get_LDmax(aero_obj, aircraft_type, AR, S_wet, S_ref)
+               % Determine K_LD
+               K_LD = AeroLevel1.tab_K_LD(aircraft_type);
+               AR_wetted = AeroLevel1.compute_AR_wetted(AR, S_wet, S_ref);
+               LDmax = AeroLevel1.compute_LDmax(K_LD, AR_wetted);
+               aero_obj.K_LD = K_LD;
+               aero_obj.AR_wet = AR_wetted;
+          end
 
           % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
           function e_osw = get_e_osw(aero_obj, e_osw)
@@ -31,9 +50,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel3
           end
 
           % Get K value (gross estimate, tabulated)
-          function K = get_K(aero_obj, K)
+          function K = get_K(aero_obj, AR, e_osw)
                % aero_obj.K1 = 1/(pi*AR*e_osw);
-               aero_obj.K = K;
+               K = AeroLevel1.compute_K(AR, e_osw);
           end
 
           % Compute CD0
