@@ -153,19 +153,19 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           end
 
           % Recompute horizontal and vertical tail dimensions using S_ref
-          function output = reconstruct_tailwings(geometry_obj, S_HT, S_VT)
-               geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
-               geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
-               geometry_obj.HT.c_tip = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
-               geometry_obj.HT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
-               geometry_obj.HT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
-
-               geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
-               geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
-               geometry_obj.VT.c_tip = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
-               geometry_obj.VT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
-               geometry_obj.VT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
-          end
+          % function output = reconstruct_tailwings(geometry_obj, S_HT, S_VT)
+          %      geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
+          %      geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
+          %      geometry_obj.HT.c_tip = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
+          %      geometry_obj.HT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
+          %      geometry_obj.HT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
+          % 
+          %      geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
+          %      geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
+          %      geometry_obj.VT.c_tip = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
+          %      geometry_obj.VT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
+          %      geometry_obj.VT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
+          % end
 
           % % size control surfaces
           % function S_control = size_control_surface_raymer( ...
