@@ -1,4 +1,4 @@
-classdef F16WeightEstLevel3 < WeightModelLevel3
+classdef F16WeightLevel3 < WeightModelLevel3
      %F16WEIGHTESTLEVEL4 Summary of this class goes here
      %   Detailed explanation goes here
      % THIS SHOULD GET THE OEW AND SUCH
@@ -25,7 +25,7 @@ classdef F16WeightEstLevel3 < WeightModelLevel3
 
      methods
           % Constructor
-          function obj = F16WeightEstLevel3(design)
+          function obj = F16WeightLevel3(design)
                obj.W_fixed = design.weights.Weights.Fixedlbf;
                obj.weight_coefficients = design.weights.Coefficients;
           end

@@ -118,6 +118,10 @@ classdef ShrikeGeometryLevel3 < GeometryModelLevel3
                     GeometryUtils.loaddesigngeometry(obj, design)
                end
 
+               % Get S_ref for tails
+               obj.HT.S_ref = design.geom.wings.HorizontalTail.PlanformAreaft2;
+               obj.VT.S_ref = design.geom.wings.VerticalTail.PlanformAreaft2;
+
                % Get S_exposed for each component
                obj.mainwings.S_exposed = GeometryLevel3.get_S_exposed(obj.mainwings.c_tip, obj.mainwings.exposed_rc, obj.mainwings.exposed_halfspan);
                obj.HT.S_exposed = GeometryLevel3.get_S_exposed(obj.HT.c_tip, obj.HT.exposed_rc, obj.HT.exposed_halfspan);
@@ -131,8 +135,14 @@ classdef ShrikeGeometryLevel3 < GeometryModelLevel3
                % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
 
                % Load the planform area of tail
-               [obj.HT.S_ref, obj.VT.S_ref] = GeometryLevel3.Tail_Sizing(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
+               % [obj.HT.S_ref, obj.VT.S_ref] = GeometryLevel3.Tail_Sizing(obj.VT.c_VT, obj.HT.c_HT, obj.mainwings.b, obj.mainwings.S_ref, obj.fuselage.L, obj.mainwings.MeanGeometricChord);
 
+               % Load the planform area of any strakes
+               obj.strakes.S_ref = design.geom.wings.Strakes.PlanformAreaft2;
+               obj.strakes.tc = design.geom.wings.Strakes.tc;
+               obj.strakes.LE_sweep = design.geom.wings.Strakes.SweepLEDeg;
+               obj.strakes.AR = design.geom.wings.Strakes.AspectRatio;
+               obj.strakes.lambda = design.geom.wings.Strakes.TaperRatio;
           end
 
           % Recompute main wing dimensions using S_ref
@@ -147,19 +157,19 @@ classdef ShrikeGeometryLevel3 < GeometryModelLevel3
           end
 
           % Recompute horizontal and vertical tail dimensions using S_ref
-          function output = reconstruct_tailwings(geometry_obj, S_HT, S_VT)
-               geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
-               geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
-               geometry_obj.HT.c_tip = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
-               geometry_obj.HT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
-               geometry_obj.HT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
-
-               geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
-               geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
-               geometry_obj.VT.c_tip = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
-               geometry_obj.VT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
-               geometry_obj.VT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
-          end
+          % function output = reconstruct_tailwings(geometry_obj, S_HT, S_VT)
+          %      geometry_obj.HT.b = sqrt(geometry_obj.HT.AR*S_HT);
+          %      geometry_obj.HT.c_root = (2 * geometry_obj.HT.S_ref)/(geometry_obj.HT.b*(1 + geometry_obj.HT.lambda));
+          %      geometry_obj.HT.c_tip = geometry_obj.HT.lambda * geometry_obj.HT.c_root;
+          %      geometry_obj.HT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.HT.c_tip, geometry_obj.HT.exposed_rc, geometry_obj.HT.exposed_halfspan);
+          %      geometry_obj.HT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.HT.S_exposed, geometry_obj.HT.tc);
+          % 
+          %      geometry_obj.VT.b = sqrt(geometry_obj.VT.AR*S_VT);
+          %      geometry_obj.VT.c_root = (2 * geometry_obj.VT.S_ref)/(geometry_obj.VT.b*(1 + geometry_obj.VT.lambda));
+          %      geometry_obj.VT.c_tip = geometry_obj.VT.lambda * geometry_obj.VT.c_root;
+          %      geometry_obj.VT.S_exposed = GeometryLevel3.get_S_exposed(geometry_obj.VT.c_tip, geometry_obj.VT.exposed_rc, geometry_obj.VT.exposed_halfspan);
+          %      geometry_obj.VT.S_wet = GeometryLevel3.get_S_wet_wing(geometry_obj.VT.S_exposed, geometry_obj.VT.tc);
+          % end
 
           % % size control surfaces
           % function S_control = size_control_surface_raymer( ...

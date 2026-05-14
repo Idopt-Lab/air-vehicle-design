@@ -123,19 +123,5 @@ classdef ShrikeMissionAnalysisLevel3 < MissionAnalysisModel
                     state_vector(2,i) = mission_obj.missiondata.(segment_name).Altitudeft;
                end
           end
-
-          % Arguments should be design-specific geometric or aerodynamic
-          % properties extracted from objects (... which are themselves the
-          % design).
-          % I probably don't even need this any more.
-          function segment_names = get_segment_names(mission_obj, design, missiondata)
-               segment_names = string(missiondata.Properties.VariableNames);
-               for i=1:lenght(segment_names)
-                    current_segment = segment_names(i);
-                    mission.(current_segment) = missiondata(:, (current_segment));
-               end
-          end
-
-
      end
 end

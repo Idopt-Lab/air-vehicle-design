@@ -20,6 +20,7 @@ classdef ShrikeSizingLevel3 < SizingModel
                results = [];
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                total_fuel_used = 0;
+               S_ref = geometry_obj.mainwings.S_ref; % Comment out when done experimenting.
                % Generate mission state vectors
                % mission_obj.state_vector = mission_obj.generate_mission_states;
                for iteration = 1:max_iteration
@@ -29,8 +30,8 @@ classdef ShrikeSizingLevel3 < SizingModel
                     geometry_obj.design.S_wet = GeometryLevel3.get_design_S_wet(W_TO);
 
                     %% ----------------------------------------------------------------------
-                    S_ref = W_TO / W_S;
-                    geometry_obj.mainwings.S_ref = S_ref;
+                    % S_ref = W_TO / W_S;
+                    % geometry_obj.mainwings.S_ref = S_ref;
 
                     % Reconstruct main wings
                     [geometry_obj.mainwings.b, ...
