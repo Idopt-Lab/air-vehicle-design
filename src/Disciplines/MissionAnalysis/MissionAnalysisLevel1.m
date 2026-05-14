@@ -103,12 +103,8 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
                mission_obj.mission_fuel = total_fuel_used;
                fuel_fraction = total_fuel_used * 1.06 / W_TO;
           end
-     end
 
-     %% ----------------------------------------------------------
-     % HELPER FUNCTIONS
 
-     methods (Access = private)
           % Arguments should be design-specific geometric or aerodynamic
           % properties extracted from objects (... which are themselves the
           % design).

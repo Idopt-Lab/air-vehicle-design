@@ -34,6 +34,5 @@ classdef (Abstract) AerodynamicsModelLevel3 < handle
           CL_alpha = get_CL_alpha(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t, Lambda_LE_deg, AR, fuselage_width, b)
           CDi_design = get_design_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
           DragResults = get_design_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype) % THE MEGA WRAPPER :O
-          % obj = aircraftname?, aircraft = excel book thing
      end
 end
