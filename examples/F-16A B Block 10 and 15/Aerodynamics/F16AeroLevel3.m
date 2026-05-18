@@ -98,13 +98,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                DragResults.D_design = AeroUtils.compute_D(q, DragResults.CD_design, geometry_obj.mainwings.S_ref);
           end
 
-          % Get design drag
-          % function D = compute_D(statevector, CD, S_ref)
-          %      q = AeroUtils.compute_q(statevector);
-          %      % aero_obj.D = CD*q*S_ref;
-          %      D = AeroUtils.compute_D(q,CD,S_ref);
-          % end
-
           % Get CD
           % I could probably move "get_design_CD0" and "get_design_CDi"
           % into here...
@@ -133,16 +126,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                output = aero_obj.CL_minD;
           end
 
-          % % Get CL_alpha for wing + body
-          % function output = compute_CL_alpha_wb(aero_obj, CL_alpha_HT, CL_alpha_strakes, delta_epsilon_delta_alpha, S_HT, S_ref)
-          %      output = CL_alpha_strakes + CL_alpha_HT*(1-delta_epsilon_delta_alpha)*(S_HT/S_ref);
-          % end
-
-          % % Get CL_alpha, accounting for strakes
-          % function output = compute_CL_alpha_strakes(aero_obj, CL_alpha_w, S_ref, S_strakes)
-          %      output = CL_alpha_w * (S_ref + S_strakes)/S_ref;
-          % end
-
           % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
           % (divide result by 57.3 to get something close to Brandt's
           % CL_alpha values) (I THINK it's the "wing" one).
@@ -161,27 +144,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                end
                output = aero_obj.CL_alpha;
           end
-
-          % % Compute CL_alpha, subsonic
-          % function output = compute_CL_alpha_subsonic(aero_obj, S_exposed, S_ref, Lambda_max_t, M, AR, d, b)
-          %      beta = sqrt(1 - M^2);
-          %      % If cl_alpha not given, assume eta = 0.95
-          %      % eta = cl_alpha/(2*pi/beta);
-          %      eta = 1.0;
-          %      F = compute_F(aero_obj, d, b);
-          %      output = (2*pi*AR)/(2 + sqrt(4 + ( ((AR^2 * beta^2)/eta^2)) * (1 + (tand(Lambda_max_t)^2/(beta^2)))))* (S_exposed/S_ref)*F;
-          % end
-
-          % % Compute fuselage lift factor
-          % function output = compute_F(aero_obj, d, b)
-          %      output = 1.07*(1 + d/b);
-          % end
-
-          % % Compute CL_alpha, supersonic
-          % function output = compute_CL_alpha_supersonic(aero_obj, M)
-          %      beta = sqrt(M^2 - 1);
-          %      output = 4/beta;
-          % end
 
           % Get design CDi for some given state (wrapper)
           % I should differentiate usage between "get" and "compute."
@@ -206,18 +168,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                end
                aero_obj.CL = CL;
           end
-
-          % % Compute CDi (subsonic case)
-          % function output = compute_CDi_subsonic(aero_obj, CL, e_osw, AR)
-          %      CDi = ( (CL^2) / (pi * e_osw * AR));
-          %      output = CDi;
-          % end
-
-          % % Compute CDi (supersonic case)
-          % function output = compute_CDi_supersonic(aero_obj, CL, alpha_deg)
-          %      CDi = CL*sind(alpha_deg);
-          %      output = CDi;
-          % end
 
           % Get Cf (should return turb and lam) (wrapper)
           function [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R, M)
@@ -439,39 +389,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % Remember this is the NUMERATOR for the final calculation
           end
 
-          % % Set skin roughness value
-          % function k = set_skin_roughness(aero_obj, k)
-          %      aero_obj.k = k;
-          % end
-
-          % % Compute K1
-          % function output = compute_K1(aero_obj, e_osw, AR, M, Lambda_LE_degrees)
-          %      % Lambda_LE must be in DEGREES!!!
-          % 
-          %      % Subsonic:
-          %      K1.subsonic = 1/(pi*AR*e_osw); % eq 12.50
-          % 
-          %      % Supersonic:
-          %      K1.supersonic = (AR*(M^2 - 1)*cosd(Lambda_LE_degrees))/(4*AR*sqrt(M^2 - 1) - 2);
-          %      % eq 12.51
-          % 
-          %      aero_obj.K1 = K1;
-          % 
-          %      output = K1;
-          % end
-
-          % % Compute K2
-          % function K2 = compute_K2(aero_obj, K1, CL_minD)
-          %      aero_obj.K2.subsonic = -2 * K1.subsonic * CL_minD; % Brandt, cell G17
-          %      aero_obj.K2.supersonic = 0;
-          % end
-
-          % % Get component drag value (whatever that is, Raymer won't
-          % % specify it)
-          % function Component_Drag = get_component_drag(aero_obj, Cf, Q, S_wet, FF)
-          %      Component_Drag = Cf*Q*S_wet*FF;
-          % end
-
           % Get CD0 for a given component (leakage and protuberance model)
           function component_CD0 = get_CD0_LandP(aero_obj, component_Dq, S_ref)
                component_CD0 = AeroLevel3.get_component_CD0_from_Dq(component_Dq, S_ref);
@@ -479,21 +396,11 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % D/q divided by S_ref = CD0_component
           end
 
-          % function output = get_component_CD0_from_Dq(aero_obj, component_Dq, S_ref)
-          %      output = component_Dq/S_ref;
-          % end
-
      end
 
      methods (Access = private)
 
-          % % Get CD0_wave values
-          % function output = compute_CD0_wave(aero_obj, M, Lambda_LE_deg, A_max, l, S_ref)
-          %      Dq_wave_value = Dq_wave(aero_obj, 2.2, M, Lambda_LE_deg, A_max, l);
-          %      CD0_wave = Dq_wave_value/S_ref;
-          %      output = CD0_wave;
-          % end
-          % 
+
           % Get CD0_LandP values
           function CD0_LandP = compute_CD0_LandP(aero_obj, S_ref)
                CD0_LandP.gun = aero_obj.get_CD0_LandP(0.20, S_ref);
@@ -576,137 +483,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
                output = component_drag_value;
           end
-
-          % Determing which Cf_turb to use
-          % If R_cuttoff < R, recompute Cf_turb using R_cutoff. Otherwise,
-          % use Cf_turb calculated with R.
-          % function output = get_Cf_turb(aero_obj, Cf_turb_result, R, R_cutoff, M)
-          %      if R_cutoff < R
-          %           output = Cf_turb(aero_obj, R_cutoff, M);
-          %      else
-          %           output = Cf_turb_result;
-          %      end
-          % end
-
-          % % Get velocity, mu, and rho, given Mach number and altitude
-          % function output = get_V_and_mu(aero_obj, M, h_ft)
-          %      [T, a, ~, rho] = atmosisa(h_ft*0.3048);
-          %      rho = rho*0.00194032033; % Convert from kg/m^3 to imperial
-          %      a = a*3.2808399; % Convert from m/s -> ft/s
-          %      V = a*M;
-          %      T = T*1.8; % Convert Kelvin to Rankine
-          %      mu = compute_dynamicviscosity(aero_obj, T);   % dynamic viscosity
-          %      output = [V, mu, rho];
-          % end
-
-          % % Compute dynamic viscosity (mu) (should probably be in utilities...)
-          % function mu = compute_dynamicviscosity(aero_obj, T)
-          %      % Using Sutherland's Formula
-          %      T_0 = 518.7; % Rankine
-          %      mu_0 = 3.62*10^(-7); % (lb*s)/(ft^2)
-          %      mu = mu_0 * (T/T_0)^(1.5) * ((T_0 + 198.72)/(T + 198.72));
-          % end
-
-          %% COMPONENT DRAG BUILDUP METHOD
-
-          % % Compute average Cf
-          % function avg_Cf = computeavgcf(aero_obj, R, R_cutoff, Cf_turb, Cf_lam)
-          %      avg_Cf = ((abs(R - R_cutoff))/R_cutoff * Cf_turb + (abs(R - R_cutoff))/R_cutoff * Cf_lam)/2;
-          % end
-          % 
-          % % Get form factor (component drag buildup)
-          % % Form factor
-          % % f
-          % function output = f(aero_obj, l, d, A_max)
-          %      output = (l/(sqrt((4/pi)*A_max))); % Raymer, eq 12.33, 6th edition
-          % end
-          % 
-          % % Flat-plat skin friction coefficient.
-          % % For wings, tails struts, pylons
-          % function output = FF_1(aero_obj, x_c, t_c, M, Lambda_m)
-          %      output = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cosd(Lambda_m)^0.28);
-          %      % Raymer, eq 12.30, 6th edition
-          % end
-
-          % % Flat-plate skin friction coefficient.
-          % % Fuselage, smooth canopy
-          % function output = FF_2(aero_obj, l, d, A_max)
-          %      output = (0.9 + 5 / (aero_obj.f(l,d,A_max)^(1.5)) + aero_obj.f(l,d,A_max)/400);
-          % end
-          % % Raymer, eq 12.31, 6th edition
-          % 
-          % % Flat-plate skin friction coefficient
-          % % Nacelle and smooth external store
-          % function output = FF_3(aero_obj, l, d, A_max)
-          %      output = (1 + (0.35 / aero_obj.f(l,d,A_max)));
-          % end
-          % % Raymer, eq 12.32, 6th edition
-          % 
-          % % Boundary layer diverters (double wedge, single wedge,
-          % % respectively)
-          % function output = FF_doublewedge(d,l)
-          %      output = (1+(d/l)); % Raymer, eq 12.34, 6th edition
-          % end
-          % 
-          % function output = FF_singlewedge(d,l)
-          %      output = (1 + ((2*d)/l)); % Raymer, eq 12.35, 6th edition
-          % end
-          % 
-          % function output = R_cutoff_sub(aero_obj, ref_length, k)
-          %      output = (38.21*(ref_length/k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
-          % end
-          % 
-          % function output = R_cutoff_sup(aero_obj, ref_length, Mach, k)
-          %      output = (44.62*(ref_length/k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
-          % end
-          % 
-          % function output = R(aero_obj, ref_length, rho, V, mu)
-          %      output = (rho*V*ref_length/mu); % Raymer, eq 12.25, 6th edition
-          % end
-          % 
-          % function output = Cf_lam(aero_obj, R)
-          %      output = (1.328/(sqrt(R))); % eq 12.26, 6th ed
-          % end
-          % 
-          % function output = Cf_turb(aero_obj, R, Mach)
-          %      output = (0.455/(((log10(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
-          %      % eq 12.27, 6th ed
-          % end
-          % 
-          % function output = Dq_upsweep(aero_obj, u, A_max) 
-          %      output = (3.83*u^(2.5)*A_max); % eq 12.36
-          % end
-          % % What's upsweep?
-          % % I dunno, what about you? AAAYY
-          % 
-          % function output = Dq_base_sub(aero_obj, M, A_base)
-          %      output = ((0.139 + 0.419*(M - 0.161)^2)*A_base); % eq 12.37
-          % end
-          % 
-          % function output = Dq_base_sup(aero_obj, M, A_base)
-          %      output = ((0.064 + 0.042*(M - 3.84)^2)*A_base); % eq 12.38
-          % end
-          % 
-          % function output = Dq_windmillingjet(aero_obj, A_engine_front_face)
-          %      output = (0.3*A_engine_front_face); % eq 12.40
-          % end
-          % 
-          % function output = Dq_searshaack(aero_obj, A_max, l)
-          %      output = (9*pi/2 * (A_max/l)^2); % eq 12.44, 6thh ed
-          % end
-          % 
-          % function output = Dq_wave(aero_obj, E_WD, M, Lambda_LE_deg, A_max, l)
-          %      output = (E_WD*(1-0.2*(M-1.2)^(0.57)*(1 - (pi*(Lambda_LE_deg^0.77))/100))*(Dq_searshaack(aero_obj, A_max, l))); % eq 12.45, 6th ed
-          %      % Using 0.2 instead of 0.386 due to Raymer's recommendation.
-          % end
-          % 
-          % function output = e_straight(aero_obj, AR)
-          %      output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
-          % end
-          % 
-          % function output = e_swept(aero_obj, AR, Lambda_LE_deg)
-          %      output = (4.61*(1-0.045*AR^(0.68))*cosd(Lambda_LE_deg)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
-          % end
 
      end
 

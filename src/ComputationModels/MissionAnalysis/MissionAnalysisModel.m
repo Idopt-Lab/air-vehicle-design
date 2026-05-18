@@ -38,7 +38,7 @@ classdef (Abstract) MissionAnalysisModel < handle
 
                % Extract some data from the mission segment setup
                segment_count = length(mission_table.Properties.VariableNames);
-               segments = mission_table.Properties.VariableNames
+               segments = mission_table.Properties.VariableNames;
                rowcount = length(mission_table.Properties.RowNames);
 
                for i=1:segment_count % For each segment...

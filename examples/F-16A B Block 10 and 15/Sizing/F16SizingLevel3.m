@@ -30,8 +30,8 @@ classdef F16SizingLevel3 < SizingModel
                     geometry_obj.design.S_wet = GeometryLevel3.get_design_S_wet(W_TO);
 
                     %% ----------------------------------------------------------------------
-                    % S_ref = W_TO / W_S;
-                    % geometry_obj.mainwings.S_ref = S_ref;
+                    S_ref = W_TO / W_S;
+                    geometry_obj.mainwings.S_ref = S_ref;
 
                     % Reconstruct main wings
                     [geometry_obj.mainwings.b, ...
