@@ -1,4 +1,4 @@
-classdef MissionAnalysisLevel1 < MissionAnalysisModel
+classdef MissionAnalysisLevel1
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
      % Lower fidelity level than 3.
@@ -11,126 +11,14 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
           eps
      end
 
-     methods
-          % Constructor
-          function obj = MissionAnalysisLevel1(Chosen_Mission)
-               obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
-               obj.segment_names = fieldnames(obj.missiondata);
-          end
-
-          % Compute mission fuel
-          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
-               % This is where we actually compute the fuel for the mission
-               AR = design.geom.wings.Main.AspectRatio;
-
-               % W_S = 104.59;
-               W_S = constraint_obj.optimal_WS;
-               W_TO = weight_obj.W_TO;
-               T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
-               S_ref = geometry_obj.mainwings.S_ref;
-               T0 = propulsion_obj.T0;
-
-               % Automate segment stuff
-               segmentnames = fields(mission_obj.missiondata);
-               fuelburnedarray = zeros(1,length(segmentnames));
-               W_array = zeros(1, length(segmentnames));
-
-               W_array(1) = W_TO;
-
-               for i=1:length(segmentnames)
-                    currentsegment = segmentnames{i};
-                    % Clip extra letters from segment name, but don't store
-                    % the result permanently
-                    currentsegment = erase(currentsegment, '_');
-                    currentsegment = erase(currentsegment, {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'});
-
-                    % Extract necessary info from current segment
-                    % Checks if current segment is "meta" (artefact from
-                    % table -> struct conversion.
-                    if (currentsegment == "meta")
-                         break
-                    else
-                         M = mission_obj.missiondata.(currentsegment).MachNumber;
-                         alt = mission_obj.missiondata.(currentsegment).Altitudeft;
-                         q = mission_obj.missiondata.(currentsegment).qlbfft2;
-                         a = mission_obj.missiondata.(currentsegment).afts;
-                         CD0 = mission_obj.missiondata.(currentsegment).CD0;
-                         TSFC = mission_obj.missiondata.(currentsegment).TSFC;
-                    end
-                    if (currentsegment == "startup") || (currentsegment == "Startup")
-                         % [W_array(i), fuelburnedarray(i)] = mission_obj.segment_startup(W_array(i));
-                         % Skip these
-                         W_array(i) = W_TO;
-                    elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
-                         % [W_array(i), fuelburnedarray(i)] = mission_obj.segment_taxi(W_array(i-1));
-                         % Skip these
-                         W_array(i) = W_TO;
-                    elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_takeoff(W_array(i-1));
-                    elseif (currentsegment == "climb") || (currentsegment == "Climb")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_climb(W_array(i-1), M);
-                    elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_cruise(aero_obj, W_array(i-1), TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, design, geometry_obj);
-                    elseif (currentsegment == "dash") || (currentsegment == "Dash")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_dash(aero_obj, W_array(i-1), TSFC, mission_obj.missiondata.Dash.Rangeft, M * a, design, geometry_obj);
-                    elseif (currentsegment == "combat") || (currentsegment == "Combat")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_combat(aero_obj, W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, design, geometry_obj);
-                    elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_loiter(aero_obj, W_array(i-1), mission_obj.missiondata.Loiter.Timemin, TSFC, design, geometry_obj);
-                    elseif (currentsegment == "landing") || (currentsegment == "Landing")
-                         [W_array(i), fuelburnedarray(i)] = mission_obj.segment_landing(W_array(i-1));
-                    elseif (currentsegment == "descent") || (currentsegment == "Descent")
-                         % Not implemented yet
-                    elseif (currentsegment == "meta")
-                         % Loop complete
-                    else
-                         error("Couldn't identify mission segment name. (Startup, Taxi, Takeoff, Climb, Cruise, Dash, Combat, Loiter, Landing).")
-                    end
-               end
-
-               % Loop stuff - should automate segment naming extraction
-               % (future)
-               % [W_Takeoff, f1] = mission_obj.segment_takeoff(W_TO);
-               % [W_Climb, f2]   = mission_obj.segment_climb(W_Takeoff, mission_obj.missiondata.Climb.MachNumber);
-               % [W_Cruise, f3]  = mission_obj.segment_cruise(aero_obj, W_Climb, propulsion_obj.TSFC.cruise, mission_obj.missiondata.Cruise.Rangeft, mission_obj.missiondata.Cruise.MachNumber, mission_obj.missiondata.Cruise.afts, design, geometry_obj);
-               % [W_Dash, f4]    = mission_obj.segment_dash(aero_obj, W_Cruise, mission_obj.missiondata.Dash.TSFC, mission_obj.missiondata.Dash.Rangeft, mission_obj.missiondata.Dash.MachNumber * mission_obj.missiondata.Dash.afts, design, geometry_obj);
-               % [W_Combat, f5]  = mission_obj.segment_combat(aero_obj, W_Dash, mission_obj.missiondata.Combat.Timemin, mission_obj.missiondata.Combat.TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, design, geometry_obj);
-               % [W_Cruise2, f6] = mission_obj.segment_cruise(aero_obj, W_Combat, propulsion_obj.TSFC.cruise, mission_obj.missiondata.Cruise_1.Rangeft, mission_obj.missiondata.Cruise_1.MachNumber, mission_obj.missiondata.Cruise_1.afts, design, geometry_obj);
-               % [W_Loiter, f7]  = mission_obj.segment_loiter(aero_obj, W_Cruise2, mission_obj.missiondata.Loiter.Timemin, propulsion_obj.TSFC.loiter, design, geometry_obj);
-               % [W_Landing, f8] = mission_obj.segment_landing(W_Loiter);
-               % total_fuel_used = f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
-               total_fuel_used = sum(fuelburnedarray);
-               mission_obj.mission_fuel = total_fuel_used;
-               fuel_fraction = total_fuel_used * 1.06 / W_TO;
-          end
-
-
-          % Arguments should be design-specific geometric or aerodynamic
-          % properties extracted from objects (... which are themselves the
-          % design).
-          % I probably don't even need this any more.
-          function segment_names = get_segment_names(obj, design, missiondata)
-               segment_names = string(missiondata.Properties.VariableNames);
-
-               for i=1:lenght(segment_names)
-                    current_segment = segment_names(i);
-                    mission.(current_segment) = missiondata(:, (current_segment));
-               end
-
-          end
-
-
-
-
-
+     methods (Static)
 
           % Get LD ratio (wrapper)
-          function [LD_ratio] = compute_LD_ratio(mission_obj, aero_obj, geometry_obj, segment_name, design)
-               design_type = design.general.Type;
+          function [LD_ratio] = compute_LD_ratio(segment_name, LD)
                if (segment_name == "cruise") || (segment_name == "combat") || (segment_name == "dash")
-                    LD_ratio = aero_obj.get_LDmax(geometry_obj, design_type);
+                    LD_ratio = LD*0.866;
                elseif (segment_name == "loiter")
-                    LD_ratio = aero_obj.get_LDmax(geometry_obj, design_type);
+                    LD_ratio = LD;
                else
                     error("Error handler.")
                end
@@ -138,13 +26,13 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
 
 
           % Computing weight fraction (should go in "weight" class?
-          function [WF] = compute_weightfraction(mission_obj, TSFC, R, Vend, LD_ratio)
+          function [WF] = compute_weightfraction(TSFC, R, Vend, LD_ratio)
                WF = exp(-((R * TSFC) / (Vend * LD_ratio)));
           end
 
 
           % Climb segment - un-revised.
-          function [W_out, fuel_used] = segment_climb(mission_obj, W_in, Mach)
+          function [W_out, fuel_used] = segment_climb(W_in, Mach)
                WF_Climb = 1.0065 - 0.0325 * Mach;
                fuel_used = (1 - WF_Climb) * W_in;
                W_out = W_in - fuel_used;
@@ -153,47 +41,51 @@ classdef MissionAnalysisLevel1 < MissionAnalysisModel
 
 
           % Combat segment - un-revised
-          function [W_out, fuel_used] = segment_combat(mission_obj, aero_obj,  W_in, time, TSFC, payload, design, geometry_obj)
-               LD = mission_obj.compute_LD_ratio(aero_obj, geometry_obj, "combat", design);
-               WF = exp(-(time * 60 * TSFC / LD));
+          function [W_out, fuel_used] = segment_combat(W_in, time, TSFC, payload, LD)
+               % LD = MissionAnalysisLevel1.compute_LD_ratio(design_type, b, S_wet,  "combat");
+               LD_combat = MissionAnalysisLevel1.compute_LD_ratio("combat", LD);
+               WF = exp(-(time * 60 * TSFC / LD_combat));
                fuel_used = W_in*(1-WF);
                W_out = W_in - fuel_used - payload;
           end
 
           % Cruise segment - un-revised
-          function [W_out, fuel_used] = segment_cruise(mission_obj, aero_obj, W_in, TSFC, Distance, Mach, a, design, geometry_obj)
+          function [W_out, fuel_used] = segment_cruise(W_in, TSFC, Distance, Mach, a, LD)
                V = Mach * a;
-               LD = mission_obj.compute_LD_ratio(aero_obj, geometry_obj, "cruise", design);
-               WF = mission_obj.compute_weightfraction(TSFC, Distance, V, LD);
+               % LD = MissionAnalysisLevel1.compute_LD_ratio(design_type, b, S_wet,  "cruise");
+               LD_cruise = MissionAnalysisLevel1.compute_LD_ratio("dash", LD);
+               WF = MissionAnalysisLevel1.compute_weightfraction(TSFC, Distance, V, LD_cruise);
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
           % Dash segment
-          function [W_out, fuel_used] = segment_dash(mission_obj, aero_obj, W_in, TSFC, Distance, V, design, geometry_obj)
-               LD = mission_obj.compute_LD_ratio(aero_obj, geometry_obj, "dash", design);
-               WF = mission_obj.compute_weightfraction(TSFC, Distance, V, LD);
+          function [W_out, fuel_used] = segment_dash(W_in, TSFC, Distance, V, LD)
+               % LD = MissionAnalysisLevel1.compute_LD_ratio(design_type, b, S_wet,  "dash");
+               LD_dash = MissionAnalysisLevel1.compute_LD_ratio("dash", LD);
+               WF = MissionAnalysisLevel1.compute_weightfraction(TSFC, Distance, V, LD_dash);
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
           % Landing segment
-          function [W_out, fuel_used] = segment_landing(mission_obj, W_in)
+          function [W_out, fuel_used] = segment_landing(W_in)
                WF = 0.995;
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
           % Loiter segment
-          function [W_out, fuel_used] = segment_loiter(mission_obj, aero_obj, W_in, time, TSFC, design, geometry_obj)
-               LD = mission_obj.compute_LD_ratio(aero_obj, geometry_obj, "loiter", design);
-               WF = exp(-(time * 60 * TSFC / LD));
+          function [W_out, fuel_used] = segment_loiter(W_in, time, TSFC, LD)
+               % LD = MissionAnalysisLevel1.compute_LD_ratio(design_type, b, S_wet,  "loiter");
+               LD_loiter = MissionAnalysisLevel1.compute_LD_ratio("loiter", LD);
+               WF = exp(-(time * 60 * TSFC / LD_loiter));
                fuel_used = W_in * (1 - WF);
                W_out = W_in - fuel_used;
           end
 
           % Takeoff segment
-          function [W_out, fuel_used] = segment_takeoff(mission_obj, W_in)
+          function [W_out, fuel_used] = segment_takeoff(W_in)
                WF = 0.95;
                W_out = W_in * WF;
                fuel_used = W_in - W_out;

@@ -66,7 +66,7 @@ classdef AeroLevel1
           function K_LD = tab_K_LD(design_type)
                if (design_type == "civil jet")
                     K_LD = 15.5;
-               elseif (design_type == "military jet") || (design_type == "Jet fighter")
+               elseif (design_type == "military jet") || (design_type == "Jet fighter") || (design_type == "jet fighter")
                     K_LD = 14;
                elseif (design_type == "retractable prop")
                     K_LD = 11;

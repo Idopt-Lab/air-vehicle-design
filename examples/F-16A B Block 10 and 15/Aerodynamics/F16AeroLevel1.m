@@ -27,17 +27,18 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                AR = geometry_obj.mainwings.AR;
                obj.K = obj.get_K(AR, obj.e_osw);
                W_TO = weight_obj.W_TO_guess;
+               b = 30;
                S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
-               obj.LD_max = obj.get_LDmax(aircraft_type, AR, S_wet, S_ref);
+               obj.LD_max = obj.get_LDmax(aircraft_type, b, S_wet);
           end
 
           %% L/Dmax for the design
           % Estimate L/Dmax
-          function LDmax = get_LDmax(aero_obj, aircraft_type, AR, S_wet, S_ref)
+          function LDmax = get_LDmax(aero_obj, aircraft_type, b, S_wet)
                % Determine K_LD
                K_LD = AeroLevel1.tab_K_LD(aircraft_type);
-               AR_wetted = AeroLevel1.compute_AR_wetted(AR, S_wet, S_ref);
-               LDmax = AeroLevel1.compute_LDmax(K_LD, AR_wetted);
+               AR_wetted = aero_obj.get_AR_wet(b, S_wet);
+               LDmax = aero_obj.get_LD_max(K_LD, AR_wetted);
                aero_obj.K_LD = K_LD;
                aero_obj.AR_wet = AR_wetted;
           end
@@ -76,6 +77,16 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                output = aero_obj.CD;
           end
 
+          % Compute AR wetted
+          function AR_wetted = get_AR_wet(aero_obj, b, S_wet)
+               AR_wetted = AeroLevel1.compute_AR_wetted(b, S_wet);
+          end
+
+          % Compute LD max
+          function LD_max = get_LD_max(aero_obj, K_LD, AR_wetted)
+               LD_max = AeroLevel1.compute_LDmax(K_LD, AR_wetted);
+          end
+
           %% FOR MISSION ANALYSIS
           % Compute L/D
           function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
@@ -83,6 +94,8 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                W_by_S = W_by_W_TO * W_S;
                LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
           end
+
+
 
      end
 end
