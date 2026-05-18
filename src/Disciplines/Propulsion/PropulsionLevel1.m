@@ -8,16 +8,10 @@ classdef PropulsionLevel1
           T0
      end
 
-     methods
-
-          % Constructor
-          function obj = PropulsionLevel1(design)
-               engine_type = PropulsionUtils.classify_engine_type(design.propulsion_type);
-               obj.TSFC = obj.get_TSFC(engine_type);
-          end
+     methods (Static)
 
           % Get TSFC (1/sec)
-          function TSFC = get_TSFC(propulsion_obj, engine_type)
+          function TSFC = get_TSFC(engine_type)
 
                % Need to normalize input here, too
                engine_type = PropulsionUtils.classify_engine_type(engine_type);
