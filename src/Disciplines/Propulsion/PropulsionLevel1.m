@@ -38,7 +38,7 @@ classdef PropulsionLevel1
                     error("Couldn't identify engine type.")
                end
 
-               propulsion_obj.TSFC = TSFC;
+               TSFC = TSFC;
           end
 
      end

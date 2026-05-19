@@ -83,7 +83,7 @@ weight_obj       = WeightLevel2(design);
 mission_obj      = MissionAnalysisLevel2(missionName);
 constraint_obj   = ConstraintAnalysisClass(design);
 requirements_obj = Requirements(design);
-sizing_obj       = SizingClassLevel2();
+sizing_obj       = F16SizingLevel2();
 
 % ConstraintAnalysisClass may either populate its properties directly or, if
 % it behaves as a value class in your local inheritance tree, return the values

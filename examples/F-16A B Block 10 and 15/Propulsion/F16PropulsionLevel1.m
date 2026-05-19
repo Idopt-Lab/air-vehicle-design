@@ -15,6 +15,8 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
                obj.TSFC = obj.get_TSFC(engine_type);
           end
 
+          % For a level 1 estimate, we're using tabulated values based on
+          % both the type of aircraft and engine.
           function TSFC = get_TSFC(propulsion_obj, engine_type)
                TSFC = PropulsionLevel1.get_TSFC(engine_type);
           end

@@ -1,11 +1,8 @@
-classdef PropulsionLevel3 < PropulsionModelLevel3
+classdef PropulsionLevel3
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
 
      properties
-          enginestats
-          TSFC
-          T0
      end
 
      methods (Static)
