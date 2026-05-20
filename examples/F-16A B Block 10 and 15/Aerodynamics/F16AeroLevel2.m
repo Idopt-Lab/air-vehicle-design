@@ -67,7 +67,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                CD = aero_obj.get_design_CD(CD0, aero_obj.K, CL);
 
                % Compute the drag
-               D = AeroLevel2.compute_D(q, CD, S_ref);
+               D = AeroUtils.compute_D(q, CD, S_ref);
 
                DragResults.CD0 = CD0;
                DragResults.CD = CD;

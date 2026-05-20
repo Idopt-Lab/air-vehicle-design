@@ -6,12 +6,16 @@ classdef F16WeightLevel2 < WeightModelLevel2
      properties
           MTOW
           OEW
+          OEW_frac
           wings
           HT
           VT
           fuselage
           landinggear
           engine
+          W_TO
+          total_fuel_used
+          fuel_fraction
           W_TO_guess
           W_fixed
           K_vs
@@ -23,7 +27,7 @@ classdef F16WeightLevel2 < WeightModelLevel2
                obj.W_fixed = design.weights.Weights.Fixedlbf;
                obj.W_TO_guess = design.weights.Weights.WTO_guess;
                obj.K_vs = design.weights.Coefficients.Kvs;
-               aircraft_type = design.type;
+               aircraft_type = "fighter";
                obj.wings = obj.get_wing_weight(aircraft_type, geometry_obj.mainwings.S_exposed);
                obj.HT = obj.get_HT_weight(aircraft_type, geometry_obj.HT.S_exposed);
                obj.VT = obj.get_VT_weight(aircraft_type, geometry_obj.VT.S_exposed);
@@ -33,7 +37,7 @@ classdef F16WeightLevel2 < WeightModelLevel2
           end
 
           function OEW = get_OEW(weight_obj, aircraft_type, W_TO, W0, AR, T, S_ref_w, M_max, K_vs)
-               OEW = WeightLevel2.get_OEW(aircraft_type, W_TO, W0, AR, T, S_ref, M_max, K_vs);
+               OEW = WeightLevel2.get_OEW(aircraft_type, W_TO, W0, AR, T, S_ref_w, M_max, K_vs);
           end
 
           function W_wings = get_wing_weight(weight_obj, aircraft_type, S_exposed_planform)
