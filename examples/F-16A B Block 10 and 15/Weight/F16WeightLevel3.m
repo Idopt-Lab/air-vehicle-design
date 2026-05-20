@@ -12,6 +12,8 @@ classdef F16WeightLevel3 < WeightModelLevel3
           fuselage
           strakes
           subsystems
+          avionics
+          fuel_pumps
           engine
           landinggear
           W_TO_guess = 45000
@@ -133,7 +135,8 @@ classdef F16WeightLevel3 < WeightModelLevel3
                % Equations: Raymer, 6th edition, section 15.3.1. Fighter/Attack jet.
                OEW.W_Wing = WeightLevel3.wing_weight_III(W_TO, Nz, Sref_w, AR_w, tc_w, lambda_w, LambdaQc_w, Scs_w, Kdw, Kvs);
                OEW.W_strakes = WeightLevel3.wing_weight_III(W_TO, Nz, Sref_strakes, AR_strakes, tc_strakes, lambda_strakes, LEsweep_strakes, 0, Kdw, Kvs);
-               OEW.W_tail = WeightLevel3.tail_weight_III(Fw, b_ht, W_TO, Nz, Sref_ht, Krht, Ht, Hv, Sref_vt, M, Lt, Sr, AR_vt, lambda_vt, LambdaQc_vt, HtHv);
+               [OEW.W_HT, OEW.W_VT] = WeightLevel3.tail_weight_III(Fw, b_ht, W_TO, Nz, Sref_ht, Krht, Ht, Hv, Sref_vt, M, Lt, Sr, AR_vt, lambda_vt, LambdaQc_vt, HtHv);
+               OEW.W_tail = OEW.W_HT + OEW.W_VT;
                OEW.W_fuselage = WeightLevel3.fuselage_weight_III(Kdwf, W_TO, Nz, L, D, W);
                OEW.W_subsystems = WeightLevel3.subsystem_weight_III(DesignTable_weight, W_TO, T0, weight_obj.engine.W_installed);
                % weight_obj.engine.W_engine_installed =

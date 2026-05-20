@@ -14,7 +14,7 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
           % Constructor
           % Constructor
           function obj = F16MissionAnalysisLevel3(Chosen_Mission)
-               obj.missiondata = MissionAnalysisModel.get_mission_data(obj, Chosen_Mission);
+               obj.missiondata = MissionAnalysisModel.get_mission_data(Chosen_Mission);
                obj.mission_states = obj.generate_mission_states;
           end
 
