@@ -7,7 +7,7 @@ classdef F16SizingLevel2 < SizingModel
      end
 
      methods
-          function W_TO = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
+          function results_table = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
 
                weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
 
@@ -66,9 +66,10 @@ classdef F16SizingLevel2 < SizingModel
                     W_TO = W_TO_new;
                     geometry_obj.mainwings.S_ref = geometry_obj.mainwings.S_ref;
                end
-               beta = 1 - (total_fuel_used / (2 * W_TO));
-               obj.results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
-               disp(obj.results_table)
+               % beta = 1 - (total_fuel_used / (2 * W_TO));
+               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
+               obj.results_table = results_table;
+               % disp(obj.results_table)
           end
 
 

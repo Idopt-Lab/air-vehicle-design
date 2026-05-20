@@ -19,7 +19,7 @@ methods
           % Compute mission fuel
           function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
                % This is where we actually compute the fuel for the mission
-               AR = design.geom.wings.Main.AspectRatio;
+               AR = geometry_obj.mainwings.AR;
 
                % W_S = 104.59;
                W_S = constraint_obj.optimal_WS;
@@ -32,9 +32,8 @@ methods
                % Automate segment extraction
                segmentnames = fields(mission_obj.missiondata);
                fuelburnedarray = zeros(1,length(segmentnames));
-               W_array = zeros(1, length(segmentnames));
-
-               W_array(1) = W_TO;
+               W_segments = zeros(1, length(segmentnames));
+               W_segments(1) = W_TO;
 
                for i=1:length(segmentnames)
                     currentsegment = segmentnames{i};
@@ -64,23 +63,23 @@ methods
                          end
                     end
                     if (currentsegment == "startup") || (currentsegment == "Startup")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_startup(W_array(i));
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_startup(W_segments(i));
                     elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_taxi(W_array(i-1));
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_taxi(W_segments(i-1));
                     elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_takeoff(W_array(i-1));
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_takeoff(W_segments(i-1));
                     elseif (currentsegment == "climb") || (currentsegment == "Climb")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0, mission_obj.missiondata.Cruise.e, AR, TSFC, alt, T0);
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_climb(W_TO, W_segments(i-1), M, S_ref, CD0, mission_obj.missiondata.Cruise.e, AR, TSFC, alt, T0);
                     elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_cruise(W_array(i-1), W_S, TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0, mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_cruise(W_segments(i-1), W_S, TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0, mission_obj.missiondata.Cruise.e, AR, W_TO, S_ref);
                     elseif (currentsegment == "dash") || (currentsegment == "Dash")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_dash(W_array(i-1), W_S, W_TO, q, CD0, mission_obj.missiondata.Dash.e, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_dash(W_segments(i-1), W_S, W_TO, q, CD0, mission_obj.missiondata.Dash.e, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
                     elseif (currentsegment == "combat") || (currentsegment == "Combat")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0, mission_obj.missiondata.Combat.e, AR, W_TO, q, W_S);
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_combat(W_segments(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0, mission_obj.missiondata.Combat.e, AR, W_TO, q, W_S);
                     elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_loiter(W_TO, W_array(i-1), W_S, q, CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_loiter(W_TO, W_segments(i-1), W_S, q, CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
                     elseif (currentsegment == "landing") || (currentsegment == "Landing")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_landing(W_array(i-1), W_TO);
+                         [W_segments(i), fuelburnedarray(i)] = MissionAnalysisLevel2.segment_landing(W_segments(i-1), W_TO);
                     elseif (currentsegment == "descent") || (currentsegment == "Descent")
                          % Not implemented yet
                     elseif (currentsegment == "meta")
