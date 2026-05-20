@@ -7,7 +7,7 @@ classdef F16SizingLevel3 < SizingModel
      end
 
      methods
-          function W_TO = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
+          function results_table = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
 
                % Load wing stuff
                % Main wings
@@ -46,7 +46,6 @@ classdef F16SizingLevel3 < SizingModel
                max_iteration = 40;
                results = [];
                T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
-               total_fuel_used = 0;
                S_ref_w = geometry_obj.mainwings.S_ref; % Comment out when done experimenting.
                % Generate mission state vectors
                % mission_obj.state_vector = mission_obj.generate_mission_states;
@@ -127,7 +126,7 @@ classdef F16SizingLevel3 < SizingModel
                     difference = W_TO_new - weight_obj.W_TO;
                     percent_diff = 100 * difference / weight_obj.W_TO;
 
-                    results(end+1, :) = [weight_obj.W_TO, weight_obj.W_fixed, weight_obj.fuel_fraction, weight_obj.OEW_frac, weight_obj.OEW.total, W_TO_new, difference, percent_diff];
+                    results(end+1, :) = [weight_obj.W_TO, weight_obj.W_fixed, weight_obj.fuel_fraction, weight_obj.OEW_frac, weight_obj.OEW.total, W_TO_new, difference, percent_diff, S_ref_w, S_ref_ht, S_ref_vt];
 
                     if abs(difference) < tol
                          break;
@@ -137,8 +136,9 @@ classdef F16SizingLevel3 < SizingModel
                     geometry_obj.VT.S_ref = geometry_obj.VT.S_ref;
                end
                % beta = 1 - (total_fuel_used / (2 * W_TO));
-               obj.results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff'});
-               disp(obj.results_table)
+               results_table = array2table(results, 'VariableNames', {'WTO', 'W_fixed', 'Fuel_fraction', 'Empty_weight_fraction', 'Empty_weight', 'WTO_new', 'Difference', 'Percent_Diff', 'S_ref_w (ft^2)', 'S_ref_ht (ft^2)', 'S_ref_vt (ft^2)'});
+               obj.results_table = results_table;
+               % disp(obj.results_table)
           end
 
 
