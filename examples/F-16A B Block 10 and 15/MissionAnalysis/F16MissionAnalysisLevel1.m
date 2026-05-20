@@ -19,13 +19,12 @@ classdef F16MissionAnalysisLevel1 < MissionAnalysisModel
           end
 
           % Compute mission fuel
-          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
+          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, propulsion_obj, W_TO, LD_max)
                % This is where we actually compute the fuel for the mission
                % AR = design.geom.wings.Main.AspectRatio;
 
                % W_S = 104.59;
                % W_S = constraint_obj.optimal_WS;
-               W_TO = weight_obj.W_TO;
                % T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                % S_ref = geometry_obj.mainwings.S_ref;
                % T0 = propulsion_obj.T0;
@@ -37,8 +36,6 @@ classdef F16MissionAnalysisLevel1 < MissionAnalysisModel
                W_payload_drop = mission_obj.missiondata.Combat.PayloadDroplbf;
 
                W_array(1) = W_TO;
-
-               LD_max = aero_obj.LD_max;
 
                % Get TSFC values (these aren't really dynamic, since
                % they're level 1, so no need to update with each segment).

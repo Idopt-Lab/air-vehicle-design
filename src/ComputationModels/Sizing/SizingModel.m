@@ -3,7 +3,7 @@ classdef SizingModel < handle
      %   Detailed explanation goes here
 
      properties (Abstract)
-          results_table
+          
      end
 
      methods (Abstract)

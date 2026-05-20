@@ -3,7 +3,6 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
      %   Detailed explanation goes here
 
      properties
-          enginestats
           TSFC
           T0
      end
