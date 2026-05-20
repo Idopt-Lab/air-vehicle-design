@@ -11,31 +11,6 @@ classdef F16SizingLevel2 < SizingModel
 
                weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
 
-               % Load wing stuff
-               % Main wings
-               AR_w = geometry_obj.mainwings.AR;
-               lambda_w = geometry_obj.mainwings.lambda;
-               S_ref_w = geometry_obj.mainwings.S_ref;
-               exposed_rc_w = geometry_obj.mainwings.exposed_rc;
-               exposed_halfspan_w = geometry_obj.mainwings.exposed_halfspan;
-               tc_w = geometry_obj.mainwings.tc;
-
-               % Horizontal tail
-               AR_ht = geometry_obj.HT.AR;
-               lambda_ht = geometry_obj.HT.lambda;
-               S_ref_ht = geometry_obj.HT.S_ref;
-               exposed_rc_ht = geometry_obj.HT.exposed_rc;
-               exposed_halfspan_ht = geometry_obj.HT.exposed_halfspan;
-               tc_ht = geometry_obj.HT.tc;
-
-               % Vertical tail
-               AR_vt = geometry_obj.VT.AR;
-               lambda_vt = geometry_obj.VT.lambda;
-               S_ref_vt = geometry_obj.VT.S_ref;
-               exposed_rc_vt = geometry_obj.VT.exposed_rc;
-               exposed_halfspan_vt = geometry_obj.VT.exposed_halfspan;
-               tc_vt = geometry_obj.VT.tc;
-
                % W_S = 104.59;
                W_S = constraint_obj.optimal_WS;
                W_TO = weight_obj.W_TO_guess;

@@ -20,33 +20,33 @@ classdef PropulsionLevel2
           end
 
 
-          % % Estimate installed TSFC (preliminary) (wrapper) (1/sec)
-          % function output = get_TSFC_installed(engine_type, state_input, mil_or_max_power)
-          %      M0 = state_input(1);
-          %      theta = PropulsionLevel2.get_theta(state_input);
-          %      engine_type = PropulsionUtils.classify_engine_type(engine_type); % "normalize" engine type input.
-          %      if (engine_type == "high_bypass_turbofan")
-          %           if M0 <= 0.9
-          %                TSFC = PropulsionLevel2.comp_TSFC_highBPRturbofan(M0, theta);
-          %           else
-          %                warning("Cannot use high-BPR turbofan for M > 0.9.")
-          %                TSFC = PropulsionLevel2.comp_TSFC_highBPRturbofan(M0, theta);
-          %           end
-          %      elseif (engine_type == "low_bypass_mixed_turbofan")
-          %           TSFC = PropulsionLevel2.comp_TSFC_lowBPRmixedturbofan(M0, theta, mil_or_max_power);
-          %      elseif (engine_type == "turbojet")
-          %           TSFC = PropulsionLevel2.comp_TSFC_turbojet(M0, theta, mil_or_max_power);
-          %      elseif (engine_type == "turboprop")
-          %           TSFC = PropulsionLevel2.comp_TSFC_turboprop(M0, theta);
-          %      else
-          %           error("Could not identify engine type." + newline + "Accepted types:" + newline + "High bypass turbofan" + newline + "Low bypass mixed turbofan" + newline + "turbojet" + newline + "turboprop")
-          %      end
-          %      output = TSFC/3600;
-          % end
+          % Estimate installed TSFC (preliminary) (wrapper) (1/sec)
+          function output = get_TSFC_installed(engine_type, state_input, mil_or_max_power)
+               M0 = state_input(1);
+               theta = PropulsionLevel2.get_theta(state_input);
+               engine_type = PropulsionUtils.classify_engine_type(engine_type); % "normalize" engine type input.
+               if (engine_type == "high_bypass_turbofan")
+                    if M0 <= 0.9
+                         TSFC = PropulsionLevel2.comp_TSFC_highBPRturbofan(M0, theta);
+                    else
+                         warning("Cannot use high-BPR turbofan for M > 0.9.")
+                         TSFC = PropulsionLevel2.comp_TSFC_highBPRturbofan(M0, theta);
+                    end
+               elseif (engine_type == "low_bypass_mixed_turbofan")
+                    TSFC = PropulsionLevel2.comp_TSFC_lowBPRmixedturbofan(M0, theta, mil_or_max_power);
+               elseif (engine_type == "turbojet")
+                    TSFC = PropulsionLevel2.comp_TSFC_turbojet(M0, theta, mil_or_max_power);
+               elseif (engine_type == "turboprop")
+                    TSFC = PropulsionLevel2.comp_TSFC_turboprop(M0, theta);
+               else
+                    error("Could not identify engine type." + newline + "Accepted types:" + newline + "High bypass turbofan" + newline + "Low bypass mixed turbofan" + newline + "turbojet" + newline + "turboprop")
+               end
+               output = TSFC/3600;
+          end
 
 
           % Estimate engine properties (AFTERBURNING ENGINE, IMPERIAL
-          % UNITS)
+          % UNITS) (valid for 36000 ft)
           function [enginestats] = compute_jet_eng_stats_ab(T, M, BPR)
                % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
                % 10.15
@@ -102,29 +102,29 @@ classdef PropulsionLevel2
           end
 
 
-          % Estimate TSFC for a high-bypass-ratio turbofan engine
+          % Estimate TSFC for a high-bypass-ratio turbofan engine (Source: Aircraft Engine Design, Mattingly)
           % Valid: M_0 < 0.9
           function output = comp_TSFC_highBPRturbofan(M_0, theta)
                output = (0.45 + 0.54*M_0)*sqrt(theta);
           end
 
-          % Estimate TSFC for a low-BPR mixed turbofan engine
+          % Estimate TSFC for a low-BPR mixed turbofan engine (Source: Aircraft Engine Design, Mattingly)
           function output = comp_TSFC_lowBPRmixedturbofan(M_0, theta, mil_or_max_power)
                if (mil_or_max_power == "mil")
-                    output = (0.9 + 0.30*M_0)*sqrt(theta);
+                    output = (0.9 + 0.30*M_0)*sqrt(theta); % Eq 3.55a
                elseif (mil_or_max_power == "max")
-                    output = (1.6 + 0.27*M_0)*sqrt(theta);
+                    output = (1.6 + 0.27*M_0)*sqrt(theta); % Eq 3.55b
                else
                     error("mil_or_max_power - must be 'mil' or 'max'.")
                end
           end
 
-          % Estimate TSFC for a turbojet engine (Source: Brandt)
+          % Estimate TSFC for a turbojet engine (Source: Aircraft Engine Design, Mattingly)
           function output = comp_TSFC_turbojet(M_0, theta, mil_or_max_power)
                if (mil_or_max_power == "mil")
-                    output = (1.1 + 0.30*M_0)*sqrt(theta);
+                    output = (1.1 + 0.30*M_0)*sqrt(theta); % Eq 3.56a
                elseif (mil_or_max_power == "max")
-                    output = (1.5 + 0.23*M_0)*sqrt(theta);
+                    output = (1.5 + 0.23*M_0)*sqrt(theta); % Eq 3.56b
                else
                     error("mil_or_max_power - must be 'mil' or 'max'.")
                end
@@ -148,9 +148,9 @@ classdef PropulsionLevel2
 
           %% PROPS PROPS PROPS SECTION
 
-          % Estimate TSFC for a turboprop engine
+          % Estimate TSFC for a turboprop engine (Source: Aircraft Engine Design, Mattingly)
           function output = comp_TSFC_turboprop(M_0, theta)
-               output = (0.18 + 0.8*M_0)*sqrt(theta);
+               output = (0.18 + 0.8*M_0)*sqrt(theta); % Eq 3.57
           end
 
           % Prop tip speed (static)
