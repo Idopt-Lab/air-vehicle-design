@@ -6,6 +6,15 @@ classdef AeroUtils
      % use.
 
      methods (Static)
+          % Get e_osw for a design
+          function output = e_straight(AR)
+               output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
+          end
+
+          function output = e_swept(AR, Lambda_LE_deg)
+               output = (4.61*(1-0.045*AR^(0.68))*cosd(Lambda_LE_deg)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
+          end
+
           % Get CL for some given state
           function output = compute_CL(L, q, S_ref)
                CL = L/(q*S_ref);
@@ -40,6 +49,6 @@ classdef AeroUtils
           function CDi = compute_CDi_supersonic(CL, alpha_deg)
                CDi = CL*sind(alpha_deg);
           end
-          
+
      end
 end

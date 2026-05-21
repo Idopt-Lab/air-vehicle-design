@@ -23,11 +23,12 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
 
           % Constructor
           function obj = F16AeroLevel1(aircraft_type, geometry_obj, weight_obj)
-               obj.e_osw = 0.914;
                AR = geometry_obj.mainwings.AR;
+               Lambda_LE_deg = geometry_obj.mainwings.LE_sweep;
+               obj.e_osw = obj.get_e_osw(AR, Lambda_LE_deg);
                obj.K = obj.get_K(AR, obj.e_osw);
                W_TO = weight_obj.W_TO_guess;
-               b = 30;
+               b = geometry_obj.mainwings.b;
                S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
                obj.LD_max = obj.get_LDmax(aircraft_type, b, S_wet);
           end
@@ -43,11 +44,16 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                aero_obj.AR_wet = AR_wetted;
           end
 
-          % Compute Oswald span efficiency factor (WOOPDIE-DOO IT'S e!!!)
-          function e_osw = get_e_osw(aero_obj, e_osw)
-               % Level 1: Should be hard-coded or whatever. Independent of
-               % design geometry.
-               aero_obj.e_osw = e_osw;
+          % Compute Oswald span efficiency factor
+          function e_osw = get_e_osw(aero_obj, AR, Lambda_LE)
+               % Discern between straight and swept wings.
+               if Lambda_LE > 30 % Can I add a section for function handles?
+                    e_osw = AeroUtils.e_swept(AR, Lambda_LE);
+               elseif (0 <= Lambda_LE) && (Lambda_LE < 30)
+                    e_osw = AeroUtils.e_straight(AR);
+               else
+                    error("Error handler, get e_osw level 1.")
+               end
           end
 
           % Get K value (gross estimate, tabulated)
@@ -56,25 +62,22 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                K = AeroLevel1.compute_K(AR, e_osw);
           end
 
-          % Compute CD0
-          % User must have tabulated these values beforehand: CD0, CL
-          function DragResults = get_design_drag(aero_obj, CD0, CL)
+          % Compute design drag
+          function DragResults = get_design_drag(aero_obj, statevector, W, aircraft_type, n_engines, S_wet, S_ref)
 
-               aero_obj.CD0 = CD0;
-               aero_obj.CL = CL;
+               Cf = AeroLevel1.get_Cf(aircraft_type, n_engines);
+               CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
+               q = AeroUtils.compute_q(statevector);
+               CL = AeroUtils.compute_CL(W, q, S_ref);
+               CD = aero_obj.get_design_CD(CD0, aero_obj.K, CL);
 
-               aero_obj.CD = aero_obj.CD0 + aero_obj.K*aero_obj.CL^2;
-          end
-
-          % Get design drag
-          function DragResults = get_design_CD0(input)
-
+               DragResults.CD0 = CD0;
+               DragResults.CD = CD;
           end
 
           % Get design CD
-          function output = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
-               aero_obj.CD = CD0 + K*CL^2;
-               output = aero_obj.CD;
+          function CD = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+               CD = CD0 + K*CL^2;
           end
 
           % Compute AR wetted
@@ -87,13 +90,13 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                LD_max = AeroLevel1.compute_LDmax(K_LD, AR_wetted);
           end
 
-          %% FOR MISSION ANALYSIS
-          % Compute L/D
-          function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
-               W_by_W_TO = W / W_TO;
-               W_by_S = W_by_W_TO * W_S;
-               LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
-          end
+          % %% FOR MISSION ANALYSIS
+          % % Compute L/D
+          % function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
+          %      W_by_W_TO = W / W_TO;
+          %      W_by_S = W_by_W_TO * W_S;
+          %      LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
+          % end
 
 
 
