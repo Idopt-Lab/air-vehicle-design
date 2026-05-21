@@ -5,7 +5,7 @@ classdef PerformanceClass
 
      methods (Static)
 
-          %% GENERAL
+          %% GENERAL -----------------------------------------------
           % Weight rate of change as fuel burns
           % Raymer, 17.3, 6th ed
           function W_dot = compute_W_dot(SFC, T)
@@ -139,9 +139,144 @@ classdef PerformanceClass
 
 
 
+          %% LEVEL TURNING FLIGHT -----------------------------------------------
+
+          % Compute turn rate (rad/sec)
+          % Raymer, eq 17.52, 6th ed
+          function psi_dot = compute_turn_rate(g, n, V)
+               % Where:
+               % g = Local acceleration due to gravity
+               % n = Load factor
+               % V = Aircraft's velocity throughout the turn
+               % Outputs:
+               % psi_dot = turn rate (rad/sec)
+
+               psi_dot = g*sqrt(n^2 - 1)/V;
+          end
+
+          % Compute maximum load factor for sustained turn rate at a given
+          % flight condition
+          % Raymer, eq 17.54
+          function n_sus = compute_n_sus(q, K, W_S, T_W, CD0)
+               n_sus = sqrt(q/(K*W_S) * (T_W - (q*CD0)/(W_S)));
+          end
 
 
-          %% PROPS
+
+
+
+
+
+          %% GLIDING FLIGHT -----------------------------------------------
+
+          % Determine glide angle for some LD
+          % Raymer, eq 17.64, 6th ed
+          function gamma = compute_glide_angle(LD)
+               % Outputs:
+               % gamma = climb angle (deg)
+               gamma = atand(1/LD);
+          end
+
+          % Compute the maximum glide ratio (L/D)
+          % Raymer, eq 17.67, 6th ed
+          function LD_max = compute_max_glide_ratio(AR, e_osw, CD0)
+               LD_max = 0.5*sqrt((pi*AR*e_osw)/CD0);
+          end
+
+          % Compute sink rate
+          % Raymer, eq 17.70, 6th ed
+          function V_v = compute_sink_rate(W_S, gamma_deg, CD, rho, CL)
+               V_v = sqrt(W_S*(2*cosd(gamma_deg*CD^2)^3)/(rho*CL^3));
+          end
+
+          % Compute CL that gives the minimum sink rate
+          % Raymer, eq 17.72, 6th ed
+          function CL_min_sinkrate = compute_CL_min_sinkrate(CD0, K)
+               CL_min_sinkrate = sqrt(3*CD0/K);
+          end
+
+          % Compute Velocity that yields minimum sink rate
+          % Raymer, eq 17.73, 6th ed
+          function V_min_sinkrate = compute_V_min_sinkrate(W, rho, S_ref, K, CD0)
+               V_min_sinkrate = sqrt(2*W/(rho*S_ref) * sqrt(K/(3*CD0)));
+          end
+
+          % Compute minimum sink rate for some condition
+          % Raymer, eq 17.74, 6th ed
+          function sinkrate_min = compute_min_sinkrate(AR, e_osw, CD0)
+               sinkrate_min = sqrt(3*pi*AR*e_osw/(16*CD0));
+          end
+
+
+
+
+
+
+
+
+
+          %% CLIMBING AND DESCENDING FLIGHT -----------------------------------------------
+
+          % Thrust for steady climb
+          % Raymer, eq 17.36, 6th ed
+          function T_climb = compute_T_steady_climb(D, W, gamma_deg)
+               % Where:
+               % D = Drag
+               % W = Weight
+               % gamma = Climb angle (deg)
+               % Output:
+               % T_climb = thrust for steady/unaccelerated climb
+               T_climb = D + W*sind(gamma_deg);
+          end
+
+          % Lift for steady climb
+          % Raymer, eq 17.37, 6th ed
+          function L_climb = compute_L_steady_climb(W, gamma_deg)
+               L_climb = W*cosd(gamma_deg);
+          end
+
+          % Climb angle for unaccelerated climb (thrust known, climb angle
+          % isn't)
+          % Raymer, eq 17.38, 6th ed.
+          function gamma = compute_gamma(T_W, LD)
+               % Outputs:
+               % gamma = Climb angle (deg)
+               gamma = asind(T_W - 1/LD);
+          end
+
+          % Vertical velocity during unaccelerated climb
+          % Raymer, eq 17.39, 6th ed
+          function V_v = compute_V_v(V, gamma_deg)
+               V_v = V*sind(gamma_deg);
+          end
+
+          % Velocity required for steady climbing flight
+          % Raymer, eq 17.40, 6th ed
+          function V_climb = compute_V_climb(rho, CL, W_S, gamma_deg)
+               V_climb = sqrt(2/(rho*CL) * W_S*cosd(gamma_deg));
+          end
+
+          % T/W ratio required for a steady, unaccelerated climb at some
+          % climb angle, gamma.
+          % Raymer, eq 17.41, 6th ed
+          function TW_climb = compute_TW_climb_steady(gamma_deg, LD)
+               TW_climb = cosd(gamma_deg)/LD + sind(gamma_deg);
+          end
+
+          % Time to climb
+          % Raymer, eq 17.50, 6th ed
+          % function t_next = compute_time_to_climb(t_
+
+
+
+
+
+
+
+
+
+
+          %% PROPS -----------------------------------------------
 
           % Equivalent specific fuel consumption for piston-props
           % Raymer, eq 17.4, 6th ed
@@ -178,8 +313,24 @@ classdef PerformanceClass
                V_max_E = sqrt((2*W)/(rho*S_ref) * sqrt((K/(3*CD0))));
           end
 
+          % Best climb angle for prop
+          % Raymer, 17.44, 6th ed
+          function gamma = compute_gamma_best_prop(eta_p, V, W, D)
+               gamma = asind(550*eta_p/(V*W) - D/W);
+          end
 
-          %% JETS
+          % Best climb velocity for prop
+          % Raymer, 17.45, 6th ed
+          function V_v = compute_V_v_best_prop(eta_p, V, W, D)
+               V_v = 550*eta_p/W - D*V/W;
+          end
+
+
+
+
+
+
+          %% JETS -----------------------------------------------
 
           % Velocity for best range
           % Raymer, eq 17.25, 6th ed
@@ -199,8 +350,16 @@ classdef PerformanceClass
                D_best_R = q*S_ref*(CD0 + CD0/3);
           end
 
+          % Velocity for best climb rate at some altitude
+          % Raymer, eq 17.42, 6th ed
+          function V = compute_V_best_climb_jet(W_S, rho, CD0, T_W, K)
+               V = sqrt( (W_S)/(3*rho*CD0) * (T_W + sqrt(T_W^2 + 12*CD0*K)));
+          end
 
-          %% ELECTRIC
+
+
+
+          %% ELECTRIC -----------------------------------------------
           % Runtime (hours)
           function runtime_electric = compute_runtime_electric(m_b, E_sb, eta_b2s, P_used)
                % Where:
@@ -328,7 +487,7 @@ classdef PerformanceClass
 
 
 
-          %% OTHER
+          %% OTHER -----------------------------------------------
           % Hydrogen
 
           % Nuclear
