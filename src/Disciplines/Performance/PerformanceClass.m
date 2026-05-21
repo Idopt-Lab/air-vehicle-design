@@ -5,10 +5,114 @@ classdef PerformanceClass
 
      methods (Static)
 
+          %% GENERAL
+          % Raymer, eq 17.10, 6th ed
+          function V_level = compute_V_steady_level(rho, CL, W_S)
+               % Where:
+               % rho = air density
+               % CL = Lift coefficient
+               % W_S = Instantaneous wing loading
+               V_level = sqrt((2/(rho*CL)) * (W_S));
+          end
+
+          % Raymer, eq 17.11, 6th ed
+          function TW_level = compute_TW_steady_level(q, CD0, W_S, K)
+               % Where
+               % q = dynamic pressure
+               % CD0 = Zero-lift drag coefficient
+               % W_S = Wing loading
+               % K = 1/(pi*e_osw*AR)
+               TW_level = (q*CD0)/(W_S) + (W_S)*(K/q);
+          end
+
+          % Compute minimum velocity corresponding to lowest thrust/drag
+          % Raymer, eq 17.13, 6th ed
+          function V_min_T = compute_V_minT(W, rho, S_ref, K, CD0)
+               % Where:
+               % W = Instantaneous aircraft weight
+               % rho = Local medium density
+               % S_ref = Planform reference area
+               % K = 1/(pi*e_osw*AR)
+               % CD0 = Zero-lift drag coefficient
+               % You knew all that, didn't you?
+               V_min_T = sqrt( (2*W)/(rho*S_ref) *sqrt((K/(CD0))));
+          end
+
+          % Compute minimum CL corresponding to lowest thrust/drag
+          % Raymer, eq 17.14, 6th ed
+          function CL_min_T = compute_CL_minT(CD0, K)
+               CL_min_T = sqrt(CD0/K);
+          end
+
+          % Compute the minimum drag corresponding to lowest thrust/drag
+          % Raymer, eq 17.15, 6th ed
+          function D_min_T = compute_D_minT(q, S_ref, CD0, K)
+               D_min_T = q*S_ref*2*CD0;
+          end
+
+          % Compute minimum power required for steady, level flight
+          % Raymer, eq 17.17, 6th ed
+          function P_min = compute_P_min(rho, V, S_ref, CD0, K, W)
+               P_min = 0.5*rho*V^3*S_ref*CD0 + (K*W^2)/(0.5*rho*V*S_ref);
+          end
+
+          % Compute velocity at minimum power
+          % Raymer, eq 17.19, 6th ed
+          function V_min_P = compute_V_minP(W, rho, S_ref, K, CD0)
+               V_min_P = sqrt( (2*W)/(rho*S_ref) * sqrt(K/(3*CD0)));
+          end
+
+          % Compute CL at minimum power
+          % Raymer, eq 17.20, 6th ed
+          function CL_min_P = compute_CL_minP(CD0, K)
+               CL_min_P = sqrt(3*CD0/K);
+          end
+
+          % Compute D at minimum power
+          % Raymer, eq 17.21, 6th ed
+          function D_min_P = compute_D_minP(q, S_ref, CD0)
+               D_min_P = q*S_ref*4*CD0;
+          end
+
+
+
+
           %% PROPS
 
 
           %% JETS
+
+          % Range
+          % Raymer, eq 17.23, 6th ed
+          function R = compute_R_jet(V, SFC, LD, W_i, W_f)
+               % Where:
+               % V = Instantaneous velocity
+               % SFC = specific fuel consumption
+               % LD = Lift-to-drag ratio
+               % W_i = Initial weight
+               % W_f = Final weight
+               % Outputs:
+               % R = Cruise range (distance units)
+               R = (V/SFC)*LD*ln(W_i/W_f);
+          end
+
+          % Velocity for best range
+          % Raymer, eq 17.25, 6th ed
+          function V_best_R = compute_V_best_R_jet(W, rho, S_ref, K, CD0)
+               V_best_R = sqrt((2*W)/(rho*S_ref) * sqrt((3*K)/(CD0)));
+          end
+
+          % CL for best range
+          % Raymer, eq 17.26, 6th ed
+          function CL_best_R = compute_CL_best_R_jet(CD0, K)
+               CL_best_R = sqrt(CD0/(3*K));
+          end
+
+          % D for best range
+          % Raymer, eq 17.27, 6th ed
+          function D_best_R = compute_D_best_R_jet(q, S_ref, CD0)
+               D_best_R = q*S_ref*(CD0 + CD0/3);
+          end
 
 
           %% ELECTRIC
