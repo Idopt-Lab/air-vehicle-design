@@ -80,6 +80,66 @@ classdef AeroLevel1
                     error("Error handler.")
                end
           end
-          
+
+          % Equivalent aspect ratio
+          % Raymer, table 4.1, 6th edition
+          function equiv_AR = tabulate_equivAR(aircraft_type, engine_type, n_engines, LDbest, M_max)
+               if ((aircraft_type == "sailplane") && (engine_type == "none")) || (aircraft_type == "sailplane")
+                    equiv_AR = 0.19*(LDbest^(1.3));
+               elseif (engine_type == "propeller") || (engine_type == "prop")
+                    if (aircraft_type == "homebuilt")
+                         equiv_AR = 6.0;
+                    elseif (aircraft_type == "general aviation")
+                         if (n_engines == 1)
+                              equiv_AR = 7.6;
+                         elseif (n_engines == 2)
+                              equiv_AR = 7.8;
+                         else
+                              warning("Table lacks entry for engine count. Setting equiv_AR to 7.8.")
+                              equiv_AR = 7.8;
+                         end
+                    elseif (aircraft_type == "agricultural")
+                         equiv_AR = 7.5;
+                    elseif (aircraft_type == "turboprop")
+                         if (n_engines == 2)
+                              equiv_AR = 9.2;
+                         else
+                              warning("No entry for engine count. Setting equiv_AR = 9.2.")
+                              equiv_AR = 9.2;
+                         end
+                    else
+                         error(sprintf("Couldn't determine aircraft type.\nAccepted types for engine class 'propeller'/'prop': \n   * homebuilt \n   * general aviation \n   * agricultural \n   * turboprop"))
+                    end
+               elseif (engine_type == "jet")
+                    if (aircraft_type == "trainer")
+                         a = 4.737;
+                         c = -0.979;
+                    elseif (aircraft_type == "fighter") || (aircraft_type == "dogfighter")
+                         a = 5.416;
+                         c = -0.622;
+                    elseif (aircraft_type == "fighter") && (aircraft_type ~= "dogfighter") % e.g., interceptors, fighter-bombers, etc.
+                         a = 4.110;
+                         c = -0.622;
+                    elseif (aircraft_type == "military cargo") || (aircraft_type == "military bomber") || (aircraft_type == "cargo") || (aircraft_type == "bomber")
+                         a = 5.570;
+                         c = -1.075;
+                    elseif (aircraft_type == "transport")
+                         a = 8.75;
+                         c = 0;
+                    else
+                         error(sprintf("Couldn't determine aircraft type.\nAccepted types for engine class 'jet': \n   * trainer\n   * fighter/dogfighter/other\n   * military cargo/bomber\n   * transport"))
+                    end
+                    % Compute equivalent AR
+                    equiv_AR = AeroLevel1.compute_equiv_AR_jet(a, c, M_max);
+               else
+                    error(sprintf("Couldn't determine engine type.\nAccepted types:\n   * propeller\n   * jet\n   * none"))
+               end
+          end
+
+          % Compute equivalent AR for jet
+          function equiv_AR = compute_equiv_AR_jet(a, c, M_max)
+               equiv_AR = a*M_max^c;
+          end
+
      end
 end

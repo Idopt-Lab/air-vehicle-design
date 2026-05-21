@@ -1,15 +1,7 @@
 classdef MissionAnalysisLevel1
      %UNTITLED Summary of this class goes here
      %   Detailed explanation goes here
-     % Lower fidelity level than 3.
-
-     properties
-
-          missiondata % This is all the mission_obj information. Altitudes, aerodynamics, etc.
-          mission_fuel
-          segment_names
-          eps
-     end
+     % Lower fidelity level than 2.
 
      methods (Static)
 
