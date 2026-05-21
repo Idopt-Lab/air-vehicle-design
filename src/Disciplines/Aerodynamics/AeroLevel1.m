@@ -141,5 +141,44 @@ classdef AeroLevel1
                equiv_AR = a*M_max^c;
           end
 
+          % Estimate CD0
+          function CD0 = compute_CD0(Cf, S_wet, S_ref)
+               CD0 = Cf*S_wet/S_ref;
+          end
+
+          % Get equivalent skin friction coefficient
+          % Source: Raymer, Table 12.3, 6th edition
+          % Revise this to use more universal type recognition.
+          function Cf = get_Cf(aircraft_type, n_engines)
+               if (aircraft_type == "bomber")
+                    Cf = 0.0030;
+               elseif (aircraft_type == "civil transport")
+                    Cf = 0.0026;
+               elseif (aircraft_type == "military cargo")
+                    Cf = 0.0035;
+               elseif (aircraft_type == "air force fighter")
+                    Cf = 0.0035;
+               elseif (aircraft_type == "navy fighter")
+                    Cf = 0.0040;
+               elseif (aircraft_type == "supercruise aircraft")
+                    Cf = 0.0025;
+               elseif (aircraft_type == "light aircraft")
+                    if (0 < n_engines <= 1)
+                         Cf = 0.0055;
+                    elseif (1 < n_engines <= 2)
+                         Cf = 0.0045;
+                    else
+                         warning("More engines than the table expected. Setting Cf = 0.0045.")
+                         Cf = 0.0045;
+                    end
+               elseif (aircraft_type == "prop seaplane")
+                    Cf = 0.0065;
+               elseif (aircraft_type == "jet seaplane")
+                    Cf = 0.0040;
+               else
+                    error("Couldn't identify aircraft type.")
+               end
+          end
+
      end
 end
