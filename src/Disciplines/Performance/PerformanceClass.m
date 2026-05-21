@@ -235,6 +235,8 @@ classdef PerformanceClass
                V_w_inner = V_cg*(1 - b/(2*R)*cosd(phi_deg));
           end
 
+          
+
 
 
 
