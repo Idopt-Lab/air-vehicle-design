@@ -226,7 +226,7 @@ classdef PerformanceClass
           % Compute velocity of outer wing during a turn
           % Raymer, eq 17.82, 6th ed
           function V_w_out = compute_V_w_out(V_cg, Y, R, phi_deg)
-               V_w_out = V_cg*(1 + Y/R*cosd(phi_deg);
+               V_w_out = V_cg*(1 + Y/R*cosd(phi_deg));
           end
 
           % Compute velocity of innter wing during a turn
@@ -235,7 +235,7 @@ classdef PerformanceClass
                V_w_inner = V_cg*(1 - b/(2*R)*cosd(phi_deg));
           end
 
-          
+
 
 
 
