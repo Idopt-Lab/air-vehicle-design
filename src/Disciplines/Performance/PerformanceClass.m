@@ -6,6 +6,19 @@ classdef PerformanceClass
      methods (Static)
 
           %% GENERAL
+          % Weight rate of change as fuel burns
+          % Raymer, 17.3, 6th ed
+          function W_dot = compute_W_dot(SFC, T)
+               % Where:
+               % SFC = Specific fuel consumption
+               % T = thrust
+               % Outputs:
+               % W_dot = Rate at which the aircraft weight changes (mass or weight
+               % per unit time)
+               W_dot = -SFC*T;
+          end
+
+          % Velocity for steady level flight
           % Raymer, eq 17.10, 6th ed
           function V_level = compute_V_steady_level(rho, CL, W_S)
                % Where:
@@ -15,6 +28,7 @@ classdef PerformanceClass
                V_level = sqrt((2/(rho*CL)) * (W_S));
           end
 
+          % TW for steady, level flight
           % Raymer, eq 17.11, 6th ed
           function TW_level = compute_TW_steady_level(q, CD0, W_S, K)
                % Where
@@ -46,7 +60,7 @@ classdef PerformanceClass
 
           % Compute the minimum drag corresponding to lowest thrust/drag
           % Raymer, eq 17.15, 6th ed
-          function D_min_T = compute_D_minT(q, S_ref, CD0, K)
+          function D_min_T = compute_D_minT(q, S_ref, CD0)
                D_min_T = q*S_ref*2*CD0;
           end
 
@@ -74,17 +88,9 @@ classdef PerformanceClass
                D_min_P = q*S_ref*4*CD0;
           end
 
-
-
-
-          %% PROPS
-
-
-          %% JETS
-
           % Range
           % Raymer, eq 17.23, 6th ed
-          function R = compute_R_jet(V, SFC, LD, W_i, W_f)
+          function R = compute_R(V, SFC, LD, W_i, W_f)
                % Where:
                % V = Instantaneous velocity
                % SFC = specific fuel consumption
@@ -95,6 +101,85 @@ classdef PerformanceClass
                % R = Cruise range (distance units)
                R = (V/SFC)*LD*ln(W_i/W_f);
           end
+
+          % Endurance/loiter
+          % Raymer, eq 17.30, 6th ed
+          function E = compute_E(LD, SFC, W_i, W_f)
+               % Outputs:
+               % E = Endurance/loiter time (units of time)
+               E = LD*(1/SFC)*ln(W_i/W_f);
+          end
+
+          % Equivalent loiter time fro known cruise range and cruise
+          % velocity
+          % Raymer, eq 17.34, 6th ed
+          function E_loiter = compute_equiv_loiter(R_cruise, V_cruise)
+               % Where:
+               % R_cruise = Cruise range
+               % V_cruise = Cruise airspeed
+               % Outputs:
+               % E_loiter = Equivalent loiter time
+
+               E_loiter = 1.14*(R_cruise/V_cruise);
+          end
+
+          % Groundspeed along desired flight direction, if there's
+          % tailwind/headwind.
+          % Raymer, eq 17.35, 6th ed
+          function V_groundspeed = compute_V_groundspeed(V_airspeed, delta_tailwind_rad, V_wind)
+               % Where:
+               % V_airspeed = Airspeed velocity
+               % delta_tailwind = 180 deg - angle between V_airspeed &
+               % V_wind (RADIANS)
+               % V_wind = Velocity of wind
+               % Outputs:
+               % V_groundspeed = Speed along the ground
+               V_groundspeed = (V_airspeed * sin(pi - delta_tailwind_rad - asin(V_wind*(sin(delta_tailwind_rad)/V_airspeed))))/(sin(delta_tailwind_rad));
+          end
+
+
+
+
+
+          %% PROPS
+
+          % Equivalent specific fuel consumption for piston-props
+          % Raymer, eq 17.4, 6th ed
+          function SFC_prop = compute_SFC_prop(C_bhp, V, eta_p)
+               SFC_prop = C_bhp*V/(550*eta_p);
+               % The 550 is in bhp unless explicitly stated otherwise
+          end
+
+          % Propeller thrust
+          % Raymer, eq 17.5, 6th ed
+          function T_prop = compute_T_prop(eta_p, V)
+               T_prop = 550*eta_p/V;
+          end
+
+
+          % Range
+          % Raymer, eq 17.28, 6th ed
+          function R = compute_R_prop(eta_p, C_bhp, LD, W_i, W_f)
+               % Where:
+               % eta_p = Prop efficiency
+               % C_bhp = SFC for prop? IDK
+               % LD = Lift-to-drag ratio
+               % W_i = Initial weight
+               % W_f = final weight
+               % Output:
+               % R = Range (distance units)
+
+               R = (550*eta_p)/(C_bhp) * LD * ln(W_i/W_f);
+          end
+
+          % Velocity that maximizes loiter time
+          % Raymer, eq 17.33, 6th ed
+          function V_max_E = compute_V_maxE_prop(W, rho, S_ref, K, CD0)
+               V_max_E = sqrt((2*W)/(rho*S_ref) * sqrt((K/(3*CD0))));
+          end
+
+
+          %% JETS
 
           % Velocity for best range
           % Raymer, eq 17.25, 6th ed
