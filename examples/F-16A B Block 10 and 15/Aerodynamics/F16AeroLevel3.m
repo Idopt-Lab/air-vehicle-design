@@ -129,20 +129,20 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
           % (divide result by 57.3 to get something close to Brandt's
           % CL_alpha values) (I THINK it's the "wing" one).
-          function output = get_CL_alpha(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t, Lambda_LE_deg, AR, fuselage_width, b)
+          function CL_alpha = get_CL_alpha(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t, Lambda_LE_deg, AR, fuselage_width, b)
                M = statevector(1);
                Lambda_LE_rad = deg2rad(Lambda_LE_deg);
                if M>=(1/cos(Lambda_LE_rad))
                     % Supersonic (leading edge is purely in supersonic
                     % flow):
-                    aero_obj.CL_alpha = AeroLevel3.compute_CL_alpha_supersonic(M);
+                    CL_alpha = AeroLevel3.compute_CL_alpha_supersonic(M);
                elseif M<(1/cos(Lambda_LE_rad))
                     % Subsonic:
-                    aero_obj.CL_alpha = AeroLevel3.compute_CL_alpha_subsonic(S_exposed, S_ref, Lambda_max_t, M, AR, fuselage_width, b);
+                    CL_alpha = AeroLevel3.compute_CL_alpha_subsonic(S_exposed, S_ref, Lambda_max_t, M, AR, fuselage_width, b);
                else
                     error("Error handler, get_CL_alpha, AeroLevel3.")
                end
-               output = aero_obj.CL_alpha;
+               aero_obj.CL_alpha = CL_alpha;
           end
 
           % Get design CDi for some given state (wrapper)
@@ -158,11 +158,11 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     % Supersonic
                     alpha_deg = statevector(3);
                     CL = AeroUtils.compute_CL(L, q, S_ref);
-                    CDi_design = AeroLevel3.compute_CDi_supersonic(CL, alpha_deg);
+                    CDi_design = AeroUtils.compute_CDi_supersonic(CL, alpha_deg);
                elseif M<1.0
                     % Subsonic
                     CL = AeroUtils.compute_CL(L, q, S_ref);
-                    CDi_design = AeroLevel3.compute_CDi_subsonic(CL, e_osw, AR);
+                    CDi_design = AeroUtils.compute_CDi_subsonic(CL, e_osw, AR);
                else
                     error("Error handler, get_design_CDi, AeroLevel3.")
                end

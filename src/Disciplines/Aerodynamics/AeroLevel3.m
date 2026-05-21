@@ -197,15 +197,15 @@ classdef AeroLevel3
           %      end
           % end
 
-          % Compute CDi (subsonic case)
-          function CDi = compute_CDi_subsonic(CL, e_osw, AR)
-               CDi = ( (CL^2) / (pi * e_osw * AR));
-          end
-
-          % Compute CDi (supersonic case)
-          function CDi = compute_CDi_supersonic(CL, alpha_deg)
-               CDi = CL*sind(alpha_deg);
-          end
+          % % Compute CDi (subsonic case)
+          % function CDi = compute_CDi_subsonic(CL, e_osw, AR)
+          %      CDi = ( (CL^2) / (pi * e_osw * AR));
+          % end
+          % 
+          % % Compute CDi (supersonic case)
+          % function CDi = compute_CDi_supersonic(CL, alpha_deg)
+          %      CDi = CL*sind(alpha_deg);
+          % end
 
           % Get Cf (should return turb and lam) (wrapper)
           % function [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R, M)

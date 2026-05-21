@@ -29,6 +29,17 @@ classdef AeroUtils
                q = 0.5*rho*V^2; % lbf/ft^2
                output = q;
           end
+
+          % Compute CDi
+          % Compute CDi (subsonic case)
+          function CDi = compute_CDi_subsonic(CL, e_osw, AR)
+               CDi = ( (CL^2) / (pi * e_osw * AR));
+          end
+
+          % Compute CDi (supersonic case)
+          function CDi = compute_CDi_supersonic(CL, alpha_deg)
+               CDi = CL*sind(alpha_deg);
+          end
           
      end
 end
