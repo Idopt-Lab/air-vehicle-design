@@ -9,6 +9,9 @@ classdef AircraftDesign < handle
           general
           propulsion
           propulsion_type
+          n_engines
+          CivOrMil
+          role
           weights
           type
           wing_config
