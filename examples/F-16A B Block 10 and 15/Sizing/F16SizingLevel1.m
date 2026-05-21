@@ -9,7 +9,7 @@ classdef F16SizingLevel1 < SizingModel
 
      methods
           % function results_table = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, LD_max)
-          function W_TO_new = size_aircraft(obj, OEW, total_fuel_used, W_fixed)
+          function W_TO_new = compute_TOGW(obj, OEW, total_fuel_used, W_fixed)
                % weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
 
                % W_S = 104.59;
@@ -17,9 +17,9 @@ classdef F16SizingLevel1 < SizingModel
                % W_S = constraint_obj.optimal_WS;
                % W_TO = weight_obj.W_TO_guess;
                % weight_obj.W_TO = W_TO;
-               tol = 1e-3;
-               max_iteration = 40;
-               results = [];
+               % tol = 1e-3;
+               % max_iteration = 40;
+               % results = [];
                % T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
                % for iteration = 1:max_iteration
                % S_ref_w = W_TO/W_S;
