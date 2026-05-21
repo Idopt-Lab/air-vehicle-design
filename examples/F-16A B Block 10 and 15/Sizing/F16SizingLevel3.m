@@ -7,7 +7,7 @@ classdef F16SizingLevel3 < SizingModel
      end
 
      methods
-          function results_table = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
+          function results_table = compute_TOGW(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
 
                % Load wing stuff
                % Main wings

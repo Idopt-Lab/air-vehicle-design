@@ -7,6 +7,6 @@ classdef SizingModel < handle
      end
 
      methods (Abstract)
-          size_aircraft(sizing_obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj)
+          compute_TOGW(sizing_obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj)
      end
 end
