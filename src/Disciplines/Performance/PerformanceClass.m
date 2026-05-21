@@ -208,6 +208,36 @@ classdef PerformanceClass
           end
 
 
+          % TURNING GLIDING FLIGHT
+
+          % Gliding turn radius
+          % Raymer, eq 17.79, 6th ed
+          function R_turn = compute_R_turn_gliding(V, g, phi_deg)
+               % Where:
+               % V = Aircraft velocity
+               % g = Local acceleration due to gravity
+               % phi = Bank angle (deg)
+               % Output:
+               % R_turn = Turn radius during the glide
+
+               R_turn = V^2/(g * tand(phi_deg));
+          end
+
+          % Compute velocity of outer wing during a turn
+          % Raymer, eq 17.82, 6th ed
+          function V_w_out = compute_V_w_out(V_cg, Y, R, phi_deg)
+               V_w_out = V_cg*(1 + Y/R*cosd(phi_deg);
+          end
+
+          % Compute velocity of innter wing during a turn
+          % Raymer, eq 17.83, 6th ed
+          function V_w_inner = compute_V_w_inner(V_cg, b, R, phi_deg)
+               V_w_inner = V_cg*(1 - b/(2*R)*cosd(phi_deg));
+          end
+
+
+
+
 
 
 
