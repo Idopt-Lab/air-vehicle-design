@@ -1,0 +1,12 @@
+[project]
+name = "aircraft-rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "openconcept",
+]
+
+[tool.uv.sources]
+openconcept = { path = "openconcept", editable = true }

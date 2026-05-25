@@ -1,0 +1,3 @@
+[submodule "openconcept"]
+	path = openconcept
+	url = https://github.com/mdolab/openconcept.git
