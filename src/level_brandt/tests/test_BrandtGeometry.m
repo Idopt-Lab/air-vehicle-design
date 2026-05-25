@@ -24,12 +24,12 @@ fprintf('%-18s %14s %12s %12s %10s %8s\n', 'Component', 'Computed (ft^2)', 'GT (
 fprintf('%s\n', repmat('-', 1, 82));
 
 corrected_total_gt_ft2 = 1371.09 - 39.956;
-[pass_count, check_count] = printComparison('Wing', geom.geom.S_wet_wing_ft2, 392.020, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Strake', geom.geom.S_wet_strake_ft2, 39.956, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Pitch ctrl', geom.geom.S_wet_pitch_ctrl_ft2, 99.585, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Vert tail', geom.geom.S_wet_vert_tail_ft2, 81.689, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Nacelle', geom.geom.S_wet_nacelle_gt_ft2, 41.515, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Total', geom.geom.S_wet_total_accurate_ft2, corrected_total_gt_ft2, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Wing', geom.S_wet_wing_ft2, 392.020, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Strake', geom.S_wet_strake_ft2, 39.956, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Pitch ctrl', geom.S_wet_pitch_ctrl_ft2, 99.585, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Vert tail', geom.S_wet_vert_tail_ft2, 81.689, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Nacelle', geom.S_wet_nacelle_gt_ft2, 41.515, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Total', geom.S_wet_total_accurate_ft2, corrected_total_gt_ft2, tol_pct, pass_count, check_count);
 fprintf('Note: Excel B19 double-counts strake area; corrected GT total = 1371.09 - 39.956 = %.3f ft^2.\n', corrected_total_gt_ft2);
 
 %% Table 2: Aircraft dimensions
@@ -39,10 +39,10 @@ fprintf('%s\n', repmat('-', 1, 82));
 
 nacelle_length_gt_ft = 15.917;
 nacelle_diameter_gt_ft = 3.537;
-[pass_count, check_count] = printComparison('Aircraft length', geom.geom.aircraft_length_ft, 48.304, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Amax', geom.geom.Amax_ft2, 25.110, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Nacelle length', geom.geom.L_engine_ft, nacelle_length_gt_ft, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Nacelle diameter', geom.geom.D_engine_ft, nacelle_diameter_gt_ft, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Aircraft length', geom.aircraft_length_ft, 48.304, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Amax', geom.Amax_ft2, 25.110, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Nacelle length', geom.L_engine_ft, nacelle_length_gt_ft, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Nacelle diameter', geom.D_engine_ft, nacelle_diameter_gt_ft, tol_pct, pass_count, check_count);
 fprintf('Note: Nacelle GT values correspond to the workbook engine-sizing relationship D = sqrt(T_AB_SLS/1900), L = 4.5*D.\n');
 
 %% Table 3: Wing quarter-chord sweep
@@ -50,8 +50,8 @@ fprintf('\nTABLE 3: Wing Quarter-Chord Sweep\n');
 fprintf('%-18s %14s %12s %12s %10s %8s\n', 'Quantity', 'Computed', 'GT', 'Error', '% Error', 'Status');
 fprintf('%s\n', repmat('-', 1, 82));
 
-sweep_25c_deg = geom.inp.wing.sweep_LE_deg - atan2d(0.25 * (geom.geom.wing.c_root_ft - geom.geom.wing.c_tip_ft), geom.geom.wing.half_span_ft);
-sweep_25c_gt_deg = geom.inp.wing.sweep_LE_deg - atan2d(0.25 * (geom.geom.wing.c_root_ft - geom.geom.wing.c_tip_ft), geom.geom.wing.half_span_ft);
+sweep_25c_deg = geom.inp.wing.sweep_LE_deg - atan2d(0.25 * (geom.wing.c_root_ft - geom.wing.c_tip_ft), geom.wing.half_span_ft);
+sweep_25c_gt_deg = geom.inp.wing.sweep_LE_deg - atan2d(0.25 * (geom.wing.c_root_ft - geom.wing.c_tip_ft), geom.wing.half_span_ft);
 [pass_count, check_count] = printComparison('Sweep 25% c', sweep_25c_deg, sweep_25c_gt_deg, tol_pct, pass_count, check_count);
 fprintf('Note: Excel L45 is derived from the same formula, so this is a formula-consistency check.\n');
 
@@ -59,8 +59,8 @@ fprintf('Note: Excel L45 is derived from the same formula, so this is a formula-
 fprintf('\nTABLE 4: Fuselage Frame Spot Checks\n');
 fprintf('%-18s %14s %12s %12s %10s %8s\n', 'Quantity', 'Computed', 'GT', 'Error', '% Error', 'Status');
 fprintf('%s\n', repmat('-', 1, 82));
-[pass_count, check_count] = printComparison('Frame 1 perim', geom.geom.frame_perimeter(1), 5.178, tol_pct, pass_count, check_count);
-[pass_count, check_count] = printComparison('Frame 9 area',  geom.geom.frame_area(9),      22.572, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Frame 1 perim', geom.frame_perimeter(1), 5.178, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Frame 9 area',  geom.frame_area(9),      22.572, tol_pct, pass_count, check_count);
 fprintf('%-18s %14.3f %12s %12s %10s %8s\n', 'Frame 14 w',  geom.inp.fuselage.frame_w(14), '7.000', '--', '--', 'INPUT');
 fprintf('%-18s %14.3f %12s %12s %10s %8s\n', 'Frame 17 h',  geom.inp.fuselage.frame_h(17), '4.500', '--', '--', 'INPUT');
 fprintf('Note: Frame 1 perim from Excel G50=5.178; Frame 9 area from Excel H218=22.572.\n');
@@ -79,7 +79,7 @@ gt_total_areas = [1.8941, 4.4449, 6.8189, 13.2589, 16.8590, 29.2694, 30.2583, 32
 tol_cs_pct = 0.1;  % tight tolerance: Brandt's formula is deterministic
 n_cs_pass = 0; n_cs_total = 0;
 for k = 1:19  % frames 1-19; frame 20 excluded due to Excel bug (see note below)
-    comp  = geom.geom.frame_area_total(k);
+    comp  = geom.frame_area_total(k);
     gt_v  = gt_total_areas(k);
     err_p = 100 * (comp - gt_v) / gt_v;
     stat  = 'PASS'; if abs(err_p) >= tol_cs_pct, stat = 'FAIL'; end
@@ -90,14 +90,14 @@ for k = 1:19  % frames 1-19; frame 20 excluded due to Excel bug (see note below)
     check_count = check_count + 1;
 end
 fprintf('%-7d %10.3f %22.4f %14.4f %10s %10s\n', 20, geom.inp.fuselage.frame_x(20), ...
-    geom.geom.frame_area_total(20), gt_total_areas(20), '(excluded)', 'NOTE');
+    geom.frame_area_total(20), gt_total_areas(20), '(excluded)', 'NOTE');
 fprintf(['NOTE: Frame 20 (x=46.5 ft): Excel W column formula references F26 (width=2.0 ft)\n', ...
          '  instead of Main row53 (width=7.0 ft). Excel computed fuselage area = 4.63 ft^2,\n', ...
          '  MATLAB uses correct input width=7.0 ft, giving ~16.22 ft^2. Known Excel bug.\n']);
 fprintf('Cross-sectional area check: %d/%d PASS (tol = %.1f%%)\n', n_cs_pass, n_cs_total, tol_cs_pct);
 
 %% Volume check (TABLE 6)
-aircraft_volume_ft3    = trapz(geom.inp.fuselage.frame_x, geom.geom.frame_area_total);
+aircraft_volume_ft3    = trapz(geom.inp.fuselage.frame_x, geom.frame_area_total);
 gt_volume_ft3          = 1106.306;   % Geom S47 = trapz(C26:C45, H26:H45) in Excel
 [pass_count, check_count] = printComparison('Aircraft volume', aircraft_volume_ft3, gt_volume_ft3, tol_pct, pass_count, check_count);
 fprintf(['Note: Small volume error expected due to frame-20 Excel bug.\n', ...
@@ -116,14 +116,14 @@ end
 figure('Name', 'Validation: Whole-Aircraft CS Area', 'NumberTitle', 'off', 'Visible', 'off');
 hold on; grid on;
 x_frames = geom.inp.fuselage.frame_x;
-plot(x_frames, geom.geom.frame_area_total, 'b-o', 'LineWidth', 1.5, 'DisplayName', 'MATLAB Computed');
+plot(x_frames, geom.frame_area_total, 'b-o', 'LineWidth', 1.5, 'DisplayName', 'MATLAB Computed');
 plot(x_frames, gt_total_areas, 'r--^', 'LineWidth', 1.5, 'DisplayName', 'Excel GT (H26:H45)');
-plot(x_frames, geom.geom.frame_area, 'k:s', 'LineWidth', 1.2, 'DisplayName', 'Fuselage Only');
+plot(x_frames, geom.frame_area, 'k:s', 'LineWidth', 1.2, 'DisplayName', 'Fuselage Only');
 xlabel('x (ft)'); ylabel('Cross-Sectional Area (ft^2)');
 title('Whole-Aircraft Cross-Sectional Area: MATLAB vs Excel GT');
 legend('Location', 'northwest');
 for k = 1:numel(x_frames)
-    text(x_frames(k), geom.geom.frame_area_total(k) + 0.4, num2str(k), 'FontSize', 7, 'HorizontalAlignment', 'center');
+    text(x_frames(k), geom.frame_area_total(k) + 0.4, num2str(k), 'FontSize', 7, 'HorizontalAlignment', 'center');
 end
 plot_path = fullfile(script_dir, 'validation_area_profile.png');
 saveas(gcf, plot_path);
@@ -152,3 +152,4 @@ end
 check_count = check_count + 1;
 fprintf('%-18s %14.3f %12.3f %12.3f %10.3f %8s\n', label, computed, gt, error_value, error_pct, status);
 end
+
