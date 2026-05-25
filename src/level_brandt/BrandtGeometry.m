@@ -1,20 +1,18 @@
 classdef BrandtGeometry
-% BrandtGeometry   Faithful reimplementation of the Geom tab in Brandt-F16-A.xls.
-%
-% All methods are static (no instance state), matching the architecture of all
-% other BrandtXxx classes in this codebase.
+% BrandtGeometry   Brandt (1997) aircraft geometry — F-16A ground truth.
 %
 % QUICK START
-%   inp  = BrandtGeometry.loadInputs();               % load F-16A JSON
-%   geom = BrandtGeometry.compute(inp);                % run all Geom calculations
-%   BrandtGeometry.displayLiftingSurfaces(inp);        % Main A16:H27 — given inputs
-%   BrandtGeometry.displayLiftingSurfaces(inp, geom);  % Main A16:H27 — with computed
-%   BrandtGeometry.displayFuselageFrames(inp);         % Main A33:F53 frame table
-%   BrandtGeometry.displayFrameResults(inp, geom);     % per-frame computed table
-%   BrandtGeometry.displayGeomTable(inp, geom);        % Geom S22:AN48 area breakdown
-%   BrandtGeometry.compareFidelities(geom);            % simple vs accurate S_wet
-%   BrandtGeometry.plotGeometry(inp, geom);            % top-view + side-view plots
-%   BrandtGeometry.plotAreaProfile(inp, geom);         % area profile + half-aircraft
+%   geom = BrandtGeometry();                   % load default F-16A JSON, no compute
+%   geom = BrandtGeometry('path/to/file.json');% load from path
+%   geom.compute();                            % run all calculations
+%   geom.displayLiftingSurfaces();             % show given inputs
+%   geom.displayLiftingSurfaces(true);         % show given + computed
+%   geom.displayFuselageFrames();              % Main A33:F53 frame table
+%   geom.displayFrameResults();                % per-frame computed table
+%   geom.displayGeomTable();                   % Geom S22:AN48 area breakdown
+%   geom.compareFidelities();                  % simple vs accurate S_wet
+%   geom.plotGeometry();                       % top-view + side-view plots
+%   geom.plotAreaProfile();                    % area profile + half-aircraft
 %
 % GROUND-TRUTH VALUES (Brandt-F16-A.xls, Geom tab)
 %   Geom B3  = 730.422 ft^2  fuselage S_wet simple
@@ -26,71 +24,603 @@ classdef BrandtGeometry
 %   Geom B19 = 1371.09 ft^2  total S_wet
 %   Geom B20 =  25.11  ft^2  Amax
 
-    methods (Static)
+    properties
+        inp   % struct: raw inputs loaded from JSON (Main tab given values)
+        geom  % struct: computed results (populated by compute())
+    end
 
-        % ------------------------------------------------------------------ %
-        %  INPUT LOADING
-        % ------------------------------------------------------------------ %
+    methods
 
-        function inp = loadInputs(jsonPath)
-            % loadInputs   Load F-16A geometry inputs from JSON file.
-            %
-            %   inp = BrandtGeometry.loadInputs()           uses default path
-            %   inp = BrandtGeometry.loadInputs(jsonPath)   uses given path
-            if nargin < 1
-                here     = fileparts(mfilename('fullpath'));
-                jsonPath = fullfile(here, '..', '..', ...
+        function obj = BrandtGeometry(source)
+            % BrandtGeometry   Constructor. Loads inputs; does NOT compute.
+            %   geom = BrandtGeometry('path/to/f16a_geometry.json')
+            %   geom = BrandtGeometry(inp_struct)
+            if nargin == 0
+                here = fileparts(mfilename('fullpath'));
+                source = fullfile(here, '..', '..', ...
                     'examples', 'F-16A B Block 10 and 15', ...
                     'Ground-Truth', 'f16a_geometry.json');
             end
-            inp = jsondecode(fileread(jsonPath));
-
-            % Convert struct-array of frames to convenient numeric vectors
-            fr = inp.fuselage.frames;
-            inp.fuselage.frame_x      = vertcat(fr.x_ft)';
-            inp.fuselage.frame_zchine = vertcat(fr.z_chine_ft)';
-            inp.fuselage.frame_z      = vertcat(fr.z_ft)';
-            inp.fuselage.frame_w      = vertcat(fr.w_ft)';
-            inp.fuselage.frame_h      = vertcat(fr.h_ft)';
+            if ischar(source) || isstring(source)
+                raw = jsondecode(fileread(char(source)));
+            else
+                raw = source;
+            end
+            % Convert struct-array of frames to numeric vectors
+            fr = raw.fuselage.frames;
+            raw.fuselage.frame_x      = vertcat(fr.x_ft)';
+            raw.fuselage.frame_zchine = vertcat(fr.z_chine_ft)';
+            raw.fuselage.frame_z      = vertcat(fr.z_ft)';
+            raw.fuselage.frame_w      = vertcat(fr.w_ft)';
+            raw.fuselage.frame_h      = vertcat(fr.h_ft)';
+            obj.inp  = raw;
+            obj.geom = struct();
         end
 
-        % ------------------------------------------------------------------ %
-        %  MASTER COMPUTE
-        % ------------------------------------------------------------------ %
-
-        function geom = compute(inp)
-            % compute   Run all geometry calculations (replicates Geom tab).
-            geom = struct();
+        function obj = compute(obj)
+            % compute   Run all geometry calculations. Populates obj.geom.
+            g = struct();
 
             % 1. Nacelle/engine sizing (from Engn(s) tab formulas)
-            geom = BrandtGeometry.computeNacelle(inp, geom);
+            g = BrandtGeometry.computeNacelle(obj.inp, g);
 
             % 2. Lifting surface exposed geometry and S_wet (must precede
             %    aircraft_length: vert tail TE tip x is needed for Geom B21)
-            geom = BrandtGeometry.computeLiftingSurfaces(inp, geom);
+            g = BrandtGeometry.computeLiftingSurfaces(obj.inp, g);
 
             % 3. Aircraft total length (Geom B21 = 48.304 ft)
             %    max of: fuselage length | nozzle x | vert tail TE at tip
-            geom.aircraft_length_ft = max([inp.fuselage.length_ft, ...
-                geom.nozzle_x_ft, geom.vert_tail.x_te_tip_ft]);
+            g.aircraft_length_ft = max([obj.inp.fuselage.length_ft, ...
+                g.nozzle_x_ft, g.vert_tail.x_te_tip_ft]);
 
             % 4. Fuselage frame cross-section geometry (Geom rows 26-46)
-            geom = BrandtGeometry.computeFrameGeometry(inp, geom);
+            g = BrandtGeometry.computeFrameGeometry(obj.inp, g);
 
             % 5. Simple wetted areas (Geom B3, B4, B14-B17)
-            geom = BrandtGeometry.computeSwetSimple(inp, geom);
+            g = BrandtGeometry.computeSwetSimple(obj.inp, g);
 
             % 6. Accurate total S_wet (Geom D23 + lifting surfaces)
-            geom = BrandtGeometry.computeSwetAccurate(geom);
+            g = BrandtGeometry.computeSwetAccurate(g);
 
             % 7. Whole-aircraft cross-section areas and Amax (Geom H26:H47)
-            geom = BrandtGeometry.computeAmax(inp, geom);
+            g = BrandtGeometry.computeAmax(obj.inp, g);
+
+            obj.geom = g;
         end
 
         % ------------------------------------------------------------------ %
-        %  NACELLE SIZING  (Engn(s) tab)
+        %  DISPLAY: LIFTING SURFACES TABLE  (Main A16:H27)
         % ------------------------------------------------------------------ %
 
+        function displayLiftingSurfaces(obj, showComputed)
+            % displayLiftingSurfaces   Print lifting surface table (Main A16:H27).
+            %
+            %   geom.displayLiftingSurfaces()       given inputs only
+            %   geom.displayLiftingSurfaces(true)   + computed values
+            %
+            % Columns: Wing | Pitch Ctrl | Strake | Aileron | LE Flap | TE Flap | VT
+            % In input-only mode, cells not present in JSON are shown as '---'.
+            if nargin < 2, showComputed = false; end
+            inp  = obj.inp;
+            geom = obj.geom;
+            computedMode = showComputed && ~isempty(fieldnames(geom));
+
+            if computedMode
+                hdr = '=== Lifting Surface Geometry (Main A16:H27) — inputs + computed ===';
+            else
+                hdr = '=== Lifting Surface Inputs (Main A16:H27) — given values only ===';
+            end
+            fprintf('\n%s\n', hdr);
+            if ~computedMode
+                fprintf('  (--- = calculated value, not a given input)\n');
+            end
+
+            % ---- Assemble value matrices --------------------------------
+            % Columns: Wing PCtrl Strake Aileron LE_Flap TE_Flap VT
+            % Rows:    S AR Taper Sweep Airfoil tc xLE y z Dih
+            % NaN = not given (calculated); shown as '---' in input mode.
+            w  = inp.wing;   pc = inp.pitch_ctrl;  sk = inp.strake;
+            ai = inp.aileron; lf = inp.le_flap;   vt = inp.vert_tail;
+            if isfield(inp, 'te_flap'), tf = inp.te_flap;
+            else, tf = struct('S_ft2',24,'AR',10,'airfoil','NACA 0008','tc_ratio',0.08,...
+                              'y_ft',3.5,'z_ft',0.0,'dihedral_deg',0.0); end
+
+            % -- S (ft^2) row --
+            if computedMode
+                row_S = {w.S_ref_ft2, pc.S_ft2, sk.S_ft2, ai.S_ft2, ...
+                         geom.le_flap.S_ft2, tf.S_ft2, vt.S_ft2};
+            else
+                row_S = {w.S_ref_ft2, pc.S_ft2, sk.S_ft2, ai.S_ft2, ...
+                         NaN, tf.S_ft2, vt.S_ft2};   % LE Flap S is calculated
+            end
+
+            % -- AR row --
+            if computedMode
+                row_AR = {w.AR, pc.AR, sk.AR, ai.AR, ...
+                          geom.le_flap.AR, tf.AR, vt.AR};
+            else
+                row_AR = {w.AR, pc.AR, sk.AR, ai.AR, ...
+                          NaN, tf.AR, vt.AR};         % LE Flap AR is calculated
+            end
+
+            % -- Taper row --
+            if computedMode
+                row_tp = {w.taper, pc.taper, sk.taper, geom.aileron.taper, ...
+                          lf.taper, geom.te_flap.taper, vt.taper};
+            else
+                row_tp = {w.taper, pc.taper, sk.taper, NaN, ...
+                          lf.taper, NaN, vt.taper};  % Aileron & TE Flap calc
+            end
+
+            % -- Sweep LE (deg) row --
+            if computedMode
+                row_sw = {w.sweep_LE_deg, pc.sweep_LE_deg, sk.sweep_LE_deg, ...
+                          geom.aileron.sweep_LE_deg, lf.sweep_LE_deg, ...
+                          geom.te_flap.sweep_LE_deg, vt.sweep_LE_deg};
+            else
+                row_sw = {w.sweep_LE_deg, pc.sweep_LE_deg, sk.sweep_LE_deg, ...
+                          NaN, lf.sweep_LE_deg, NaN, vt.sweep_LE_deg};
+            end
+
+            % -- Airfoil (strip "NACA " prefix for compact display) --
+            af = @(s) strrep(s, 'NACA ', '');
+            row_af = {af(w.airfoil), af(pc.airfoil), af(sk.airfoil), ...
+                      af(ai.airfoil), af(lf.airfoil), af(tf.airfoil), af(vt.airfoil)};
+
+            % -- t/c row --
+            row_tc = {w.tc_ratio, pc.tc_ratio, sk.tc_ratio, ai.tc_ratio, ...
+                      lf.tc_ratio, tf.tc_ratio, vt.tc_ratio};
+
+            % -- x_LE (ft) row (wing uses x_apex, others use x_le or calc) --
+            if computedMode
+                row_xl = {w.x_apex_ft, pc.x_le_ft, sk.x_le_ft, ...
+                          geom.aileron.x_le_ft, geom.le_flap.x_le_ft, ...
+                          geom.te_flap.x_le_ft, vt.x_le_ft};
+            else
+                row_xl = {w.x_apex_ft, pc.x_le_ft, sk.x_le_ft, ...
+                          NaN, NaN, NaN, vt.x_le_ft};  % Ail/LF/TF calc
+            end
+
+            % -- y (ft) row  (Wing and PitchCtrl have no explicit y) --
+            row_y  = {NaN, NaN, sk.y_ft, ai.y_ft, lf.y_ft, tf.y_ft, vt.y_ft};
+
+            % -- z (ft) row --
+            row_z  = {w.z_ft, pc.z_ft, sk.z_ft, ai.z_ft, lf.z_ft, tf.z_ft, vt.z_le_ft};
+
+            % -- Dihedral (deg) row  (LE Flap has no dihedral field) --
+            row_dh = {w.dihedral_deg, pc.dihedral_deg, sk.dihedral_deg, ...
+                      ai.dihedral_deg, NaN, tf.dihedral_deg, vt.tilt_deg};
+
+            % ---- Print table --------------------------------------------
+            surfs = {'Wing','PitchCtrl','Strake','Aileron','LE Flap','TE Flap','VT'};
+            cw = 10;  % column width
+            sep = repmat('-', 1, 16 + 7*cw);
+
+            % Header
+            fprintf('\n%-16s', '');
+            for k = 1:7, fprintf('%*s', cw, surfs{k}); end
+            fprintf('\n%s\n', sep);
+
+            function printRow(label, cells, fmt)
+                fprintf('%-16s', label);
+                for k = 1:numel(cells)
+                    v = cells{k};
+                    if iscell(v) || ischar(v)
+                        % string cell
+                        fprintf('%*s', cw, v);
+                    elseif isnan(v)
+                        fprintf('%*s', cw, '---');
+                    else
+                        fprintf(fmt, v);
+                    end
+                end
+                fprintf('\n');
+            end
+
+            printRow('S (ft^2)',      row_S,  ['%' num2str(cw) '.1f']);
+            printRow('AR',            row_AR, ['%' num2str(cw) '.2f']);
+            printRow('Taper',         row_tp, ['%' num2str(cw) '.4f']);
+            printRow('Sweep LE (deg)',row_sw, ['%' num2str(cw) '.2f']);
+
+            % Airfoil: string row
+            fprintf('%-16s', 'Airfoil');
+            for k = 1:7, fprintf('%*s', cw, row_af{k}); end
+            fprintf('\n');
+
+            printRow('t/c',           row_tc, ['%' num2str(cw) '.3f']);
+            printRow('x_LE (ft)',     row_xl, ['%' num2str(cw) '.3f']);
+            printRow('y (ft)',        row_y,  ['%' num2str(cw) '.3f']);
+            printRow('z (ft)',        row_z,  ['%' num2str(cw) '.3f']);
+            printRow('Dihedral (deg)',row_dh, ['%' num2str(cw) '.2f']);
+            fprintf('%s\n\n', sep);
+        end
+
+        % ------------------------------------------------------------------ %
+        %  DISPLAY: GEOM CROSS-SECTION TABLE  (Geom S22:AN48)
+        % ------------------------------------------------------------------ %
+
+        function displayGeomTable(obj)
+            % displayGeomTable   Per-frame cross-section area breakdown.
+            %
+            % Replicates Geom S22:AN48: for each fuselage station shows the
+            % wetted area contribution and cross-section areas by component.
+            % Columns match Geom tab: U=dSwet, W=Fuse, Y=Wing, AA=PCtrl,
+            %   AC=VTail, AE=Nacelle, AG=Strake, AJ=Total (whole-aircraft A-Ao).
+            %
+            % Row totals: fuselage Swet (= D23), aircraft volume, centroid x.
+            inp  = obj.inp;
+            geom = obj.geom;
+
+            x  = inp.fuselage.frame_x;        % [1x20] frame x positions
+            nf = numel(x);
+            x_all = [0, x];                   % include nose
+
+            % Segment midpoints (Geom T column)
+            x_mid = zeros(1, nf);
+            for k = 1:nf
+                x_mid(k) = (x_all(k) + x_all(k+1)) / 2;
+            end
+
+            dS    = geom.fuselage_dSwet;      % [1x20] fuselage dSwet per segment
+            A_f   = geom.frame_area;          % fuselage CS area at each frame
+            A_w   = geom.frame_area_wing;
+            A_p   = geom.frame_area_pitch;
+            A_v   = geom.frame_area_vert;
+            A_n   = geom.frame_area_nac;
+            A_sk  = geom.frame_area_strake;
+            A_tot = geom.frame_area_total;
+
+            % Nacelle inlet area to subtract for Amax (Geom AJ = A - Ao)
+            Ao    = geom.n_engines * pi * geom.D_engine_ft^2 / 5.0;
+            A_adj = max(0, A_tot - Ao);
+
+            % ---- Print -----------------------------------------------
+            fprintf('\n=== Geom Cross-Section Breakdown (Geom S22:AN48) ===\n');
+            fprintf('  Ao (inlet subtraction) = %.3f ft^2\n\n', Ao);
+
+            hfmt = '%5s %7s %8s %8s %7s %7s %7s %7s %7s %8s\n';
+            rfmt = '%5d %7.3f %8.4f %8.4f %7.4f %7.4f %7.4f %7.4f %7.4f %8.4f\n';
+            sep  = repmat('-', 1, 78);
+
+            fprintf(hfmt, 'Frame','x_mid','dSwet','Fuse_A','Wing_A', ...
+                'Pitch_A','VT_A','Nac_A','Strk_A','Total_A');
+            fprintf(hfmt, '','(ft)','(ft^2)','(ft^2)','(ft^2)', ...
+                '(ft^2)','(ft^2)','(ft^2)','(ft^2)','(ft^2)');
+            fprintf('%s\n', sep);
+
+            for i = 1:nf
+                fprintf(rfmt, i, x_mid(i), dS(i), A_f(i), ...
+                    A_w(i), A_p(i), A_v(i), A_n(i), A_sk(i), A_adj(i));
+            end
+            fprintf('%s\n', sep);
+
+            % Volume via trapz over frame stations (approximate)
+            vol = trapz([0, x], [0, A_tot]);
+            cen_x = sum(x_mid .* dS) / sum(dS);
+
+            fprintf('%-5s %7s %8.3f %8s  (Geom D23 GT: 676.329 ft^2)\n', ...
+                'TOTAL','', sum(dS),'');
+            fprintf('  Centroid x = %.3f ft  |  Aircraft Volume approx %.1f ft^3\n', ...
+                cen_x, vol);
+            fprintf('  Amax = %.3f ft^2  (GT: 25.110 ft^2)\n\n', geom.Amax_ft2);
+        end
+
+        % ------------------------------------------------------------------ %
+        %  DISPLAY: FUSELAGE FRAME INPUT TABLE  (Main A33:F53)
+        % ------------------------------------------------------------------ %
+
+        function displayFuselageFrames(obj)
+            % displayFuselageFrames   Print given frame inputs for Main A33:F53.
+            inp = obj.inp;
+
+            fprintf('\n=== Fuselage Frame Inputs (Main A33:F53) ===\n');
+            fprintf('%5s %9s %11s %8s %8s %8s\n', ...
+                'Frame','x(ft)','z_chine(ft)','z(ft)','w(ft)','h(ft)');
+            fprintf('%s\n', repmat('-', 1, 58));
+
+            fr = inp.fuselage.frames;
+            for i = 1:numel(fr)
+                f = fr(i);
+                fprintf('%5d %9.3f %11.1f %8.1f %8.1f %8.3f\n', ...
+                    f.frame, f.x_ft, f.z_chine_ft, f.z_ft, f.w_ft, f.h_ft);
+            end
+            fprintf('\nFuselage: L=%.1f ft,  max_w=%.1f ft,  max_h=%.1f ft\n\n', ...
+                inp.fuselage.length_ft, inp.fuselage.max_width_ft, ...
+                inp.fuselage.max_height_ft);
+        end
+
+        % ------------------------------------------------------------------ %
+        %  DISPLAY: PER-FRAME COMPUTED GEOMETRY TABLE
+        % ------------------------------------------------------------------ %
+
+        function displayFrameResults(obj)
+            % displayFrameResults   Per-frame perimeter, area, and dS_wet.
+            inp  = obj.inp;
+            geom = obj.geom;
+
+            fprintf('\n=== Fuselage Frame Computed Geometry ===\n');
+            fprintf('%5s %9s %12s %10s %12s\n', ...
+                'Frame','x(ft)','Perim(ft)','Area(ft2)','dSwet(ft2)');
+            fprintf('%s\n', repmat('-', 1, 55));
+
+            for i = 1:numel(inp.fuselage.frames)
+                fprintf('%5d %9.3f %12.4f %10.4f %12.4f\n', ...
+                    i, geom.frame_x(i), geom.frame_perimeter(i), ...
+                    geom.frame_area(i), geom.fuselage_dSwet(i));
+            end
+            fprintf('\n  Accurate fuselage S_wet = %.3f ft^2  (Geom D23 GT: 676.329 ft^2)\n\n', ...
+                geom.S_wet_fuse_accurate_ft2);
+        end
+
+        % ------------------------------------------------------------------ %
+        %  DISPLAY: FIDELITY COMPARISON
+        % ------------------------------------------------------------------ %
+
+        function compareFidelities(obj)
+            % compareFidelities   Compare simple vs accurate S_wet vs Geom targets.
+            geom = obj.geom;
+
+            gt = struct('fuse_s', 730.422, 'fuse_a', 676.329, ...
+                'wing', 392.020, 'strake', 39.956, ...
+                'pitch', 99.585, 'vert', 81.689, ...
+                'nacelle', 41.515, 'total', 1371.09);
+
+            fprintf('\n=== Wetted Area Fidelity Comparison ===\n');
+            fprintf('%-16s %12s %14s %10s %8s\n', ...
+                'Component','Simple(ft2)','Accurate(ft2)','GT(ft2)','Err%');
+            fprintf('%s\n', repmat('-', 1, 68));
+
+            function printRow(name, s_val, a_val, gt_val)
+                err = (a_val - gt_val) / gt_val * 100;
+                fprintf('%-16s %12.3f %14.3f %10.3f %8.2f%%\n', ...
+                    name, s_val, a_val, gt_val, err);
+            end
+
+            printRow('Fuselage', geom.S_wet_fuse_simple_ft2, ...
+                geom.S_wet_fuse_accurate_ft2, gt.fuse_a);
+            printRow('Wing',       geom.S_wet_wing_ft2,       geom.S_wet_wing_ft2,       gt.wing);
+            printRow('Strake',     geom.S_wet_strake_ft2,     geom.S_wet_strake_ft2,     gt.strake);
+            printRow('Pitch Ctrl', geom.S_wet_pitch_ctrl_ft2, geom.S_wet_pitch_ctrl_ft2, gt.pitch);
+            printRow('Vert Tail',  geom.S_wet_vert_tail_ft2,  geom.S_wet_vert_tail_ft2,  gt.vert);
+            % Nacelle: simple = cylinder approx; accurate = GT Geom B4 = 41.515 ft^2
+            printRow('Nacelle (x2)', geom.S_wet_nacelle_simple_ft2, ...
+                geom.S_wet_nacelle_gt_ft2, gt.nacelle);
+            fprintf('   Note: nacelle accurate = GT; formula not visible in binary .xls\n');
+            fprintf('%s\n', repmat('-', 1, 68));
+            fprintf('%-16s %12.3f %14.3f %10.3f %8.2f%%\n', ...
+                'TOTAL', ...
+                geom.S_wet_total_simple_ft2, geom.S_wet_total_accurate_ft2, ...
+                gt.total, ...
+                (geom.S_wet_total_accurate_ft2 - gt.total) / gt.total * 100);
+
+            fprintf('\n  [Fuselage simple target = %.3f ft^2,  err = %.2f%%]\n', ...
+                gt.fuse_s, ...
+                (geom.S_wet_fuse_simple_ft2 - gt.fuse_s) / gt.fuse_s * 100);
+            fprintf('  Amax = %.3f ft^2  (GT: 25.110 ft^2,  err = %.2f%%)\n\n', ...
+                geom.Amax_ft2, (geom.Amax_ft2 - 25.110) / 25.110 * 100);
+        end
+
+        % ------------------------------------------------------------------ %
+        %  GEOMETRY PLOT: top view + side view
+        % ------------------------------------------------------------------ %
+
+        function plotGeometry(obj)
+            % plotGeometry   Top-view (xy) and side-view (xz) aircraft geometry.
+            %
+            % Color coding:
+            %   Blue    - wing (+ aileron/TE flap faint dashed)
+            %   Green   - pitch ctrl / stabilator
+            %   Magenta - strakes
+            %   Red     - vertical tail
+            %   Gray    - fuselage
+            %   Cyan    - leading edge flaps
+            %   Dark    - nacelle/inlet
+            inp  = obj.inp;
+            geom = obj.geom;
+
+            figure('Name','F-16A Geometry','NumberTitle','off', ...
+                   'Position',[100 100 1000 680]);
+
+            % ---- TOP VIEW -----------------------------------------------
+            ax1 = subplot(2, 1, 1);
+            hold(ax1, 'on'); grid(ax1, 'on'); axis(ax1, 'equal');
+            title(ax1, 'F-16A -- Top View (xy plane)');
+            xlabel(ax1, 'x  [ft]'); ylabel(ax1, 'y  [ft]');
+
+            % Wing -- straight TE (Brandt Geom K36:Q41)
+            hs_w       = geom.wing.half_span_ft;
+            x_te_w     = geom.wing.x_te_root_ft;   % 34.079 ft
+            x_le_tip_w = inp.wing.x_apex_ft + hs_w * tan(deg2rad(inp.wing.sweep_LE_deg));
+            xw = [inp.wing.x_apex_ft, x_le_tip_w, x_te_w, x_te_w];
+            yw = [0, hs_w, hs_w, 0];
+            fill(ax1,  xw,  yw, 'b', 'FaceAlpha',0.35, 'EdgeColor','b', 'DisplayName','Wing');
+            fill(ax1,  xw, -yw, 'b', 'FaceAlpha',0.35, 'EdgeColor','b', 'HandleVisibility','off');
+
+            % Pitch ctrl (stabilator)
+            BrandtGeometry.drawSurfaceTop(ax1, inp.pitch_ctrl.x_le_ft, ...
+                geom.pitch_ctrl.c_root_ft, geom.pitch_ctrl.c_tip_ft, ...
+                inp.pitch_ctrl.sweep_LE_deg, ...
+                inp.fuselage.max_width_ft/2, geom.pitch_ctrl.half_span_ft, 'g', 'Pitch Ctrl');
+
+            % Strake
+            BrandtGeometry.drawSurfaceTop(ax1, inp.strake.x_le_ft, ...
+                geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
+                inp.strake.sweep_LE_deg, ...
+                inp.strake.y_ft, geom.strake.half_span_ft, 'm', 'Strake');
+
+            % LE flap (inboard of wing, taper=1 -> rectangular)
+            lf = geom.le_flap;
+            x_lf_tip = lf.x_le_ft + lf.half_span_ft * tan(deg2rad(lf.sweep_LE_deg));
+            xlf = [lf.x_le_ft, x_lf_tip, x_lf_tip + lf.c_tip_ft, lf.x_le_ft + lf.c_root_ft];
+            ylf = [lf.y_root_ft, lf.y_root_ft + lf.half_span_ft, ...
+                   lf.y_root_ft + lf.half_span_ft, lf.y_root_ft];
+            fill(ax1,  xlf,  ylf, 'c', 'FaceAlpha',0.35, 'EdgeColor','c', 'DisplayName','LE Flap');
+            fill(ax1,  xlf, -ylf, 'c', 'FaceAlpha',0.35, 'EdgeColor','c', 'HandleVisibility','off');
+
+            % Fuselage top outline (width profile)
+            x_f = [0, inp.fuselage.frame_x, inp.fuselage.length_ft];
+            w_f = [0, inp.fuselage.frame_w, 0];
+            fill(ax1, [x_f, fliplr(x_f)], [w_f/2, -fliplr(w_f/2)], ...
+                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.45, 'DisplayName','Fuselage');
+
+            % Nacelle -- rectangular box (inlet to nozzle, width = D_engine)
+            r_n  = geom.D_engine_ft / 2;
+            x_in = inp.engine.inlet_x_ft;
+            x_nz = geom.nozzle_x_ft;
+            fill(ax1, [x_in x_nz x_nz x_in], [r_n r_n -r_n -r_n], ...
+                [0.45 0.45 0.45], 'FaceAlpha',0.3, 'EdgeColor',[0.3 0.3 0.3], ...
+                'DisplayName','Nacelle');
+
+            % Vert tail projected onto xy plane (centre-line projection)
+            plot(ax1, [inp.vert_tail.x_le_ft, geom.vert_tail.x_te_tip_ft], [0 0], ...
+                'r-', 'LineWidth',2, 'DisplayName','Vert Tail (proj)');
+
+            legend(ax1, 'Location','northeast');
+
+            % ---- SIDE VIEW ----------------------------------------------
+            ax2 = subplot(2, 1, 2);
+            hold(ax2, 'on'); grid(ax2, 'on'); axis(ax2, 'equal');
+            title(ax2, 'F-16A -- Side View (xz plane)');
+            xlabel(ax2, 'x  [ft]'); ylabel(ax2, 'z  [ft]');
+
+            % Fuselage side outline (z+-h/2 profile)
+            zc   = inp.fuselage.frame_z;
+            hf   = inp.fuselage.frame_h;
+            x_fr = [0, inp.fuselage.frame_x, inp.fuselage.length_ft];
+            zt_f = [zc(1)+hf(1)/2, zc+hf/2, 0];
+            zb_f = [zc(1)-hf(1)/2, zc-hf/2, 0];
+            fill(ax2, [x_fr, fliplr(x_fr)], [zt_f, fliplr(zb_f)], ...
+                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.45, 'DisplayName','Fuselage');
+
+            % Vertical tail -- Brandt Geom L163:Q167 trapezoid
+            xvt = [inp.vert_tail.x_le_ft, geom.vert_tail.x_le_tip_ft, ...
+                   geom.vert_tail.x_te_tip_ft, geom.vert_tail.x_te_root_ft];
+            zvt = [inp.vert_tail.z_le_ft, ...
+                   inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
+                   inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
+                   inp.vert_tail.z_le_ft];
+            fill(ax2, xvt, zvt, 'r', 'FaceAlpha',0.4, 'EdgeColor','r', 'DisplayName','Vert Tail');
+
+            % Wing root chord
+            plot(ax2, [inp.wing.x_apex_ft, geom.wing.x_te_root_ft], ...
+                [inp.wing.z_ft, inp.wing.z_ft], 'b-', 'LineWidth',2.5, ...
+                'DisplayName','Wing root chord');
+
+            % Pitch ctrl root chord
+            plot(ax2, [inp.pitch_ctrl.x_le_ft, ...
+                       inp.pitch_ctrl.x_le_ft + geom.pitch_ctrl.c_root_ft], ...
+                [inp.pitch_ctrl.z_ft, inp.pitch_ctrl.z_ft], 'g-', ...
+                'LineWidth',2.5, 'DisplayName','Pitch Ctrl root');
+
+            % Nacelle box in xz plane
+            dz_n = -inp.engine.inlet_dz_ft;
+            fill(ax2, [x_in x_nz x_nz x_in], ...
+                 [dz_n-r_n dz_n-r_n dz_n+r_n dz_n+r_n], ...
+                [0.45 0.45 0.45], 'FaceAlpha',0.3, 'EdgeColor',[0.3 0.3 0.3], ...
+                'DisplayName','Nacelle');
+
+            legend(ax2, 'Location','northeast');
+            ylim(ax2, [-5, 28]);
+        end
+
+        % ------------------------------------------------------------------ %
+        %  PLOT: CROSS-SECTIONAL AREA PROFILE  (Brandt Geom AJ/AM columns)
+        % ------------------------------------------------------------------ %
+
+        function plotAreaProfile(obj)
+            % plotAreaProfile   Half-aircraft top view and area-vs-x profile.
+            %
+            % Replicates Brandt Geom AJ (whole-aircraft A-Ao) and AM (Sears-Haack).
+            % Left:  half-aircraft top view (y>=0) with frame station vertical lines.
+            % Right: fuselage CS area, total adjusted area, Sears-Haack reference.
+            inp  = obj.inp;
+            geom = obj.geom;
+
+            figure('Name','F-16A Area Profile','NumberTitle','off', ...
+                   'Position',[150 150 1200 500]);
+
+            x_frames = inp.fuselage.frame_x;
+            A_fuse   = geom.frame_area;
+            A_tot    = geom.frame_area_total;
+            Ao       = geom.n_engines * pi * geom.D_engine_ft^2 / 5.0;
+            A_adj    = max(0, A_tot - Ao);   % Geom AJ column
+            Amax     = geom.Amax_ft2;
+            L_ac     = geom.aircraft_length_ft;
+
+            % Sears-Haack reference (Geom AM column)
+            x_sh = linspace(0, L_ac, 300);
+            A_SH = Amax .* (1 - (2*x_sh/L_ac - 1).^2).^(3/2);
+
+            % ---- Left: half-aircraft top view -------------------------
+            ax1 = subplot(1, 2, 1);
+            hold(ax1, 'on'); grid(ax1, 'on'); axis(ax1, 'equal');
+            title(ax1, 'Half-Aircraft Top View (y >= 0)');
+            xlabel(ax1, 'x  [ft]'); ylabel(ax1, 'y  [ft]');
+
+            x_f = [0, x_frames, inp.fuselage.length_ft];
+            w_f = [0, inp.fuselage.frame_w, 0];
+            fill(ax1, [x_f, fliplr(x_f)], [w_f/2, zeros(1,numel(x_f))], ...
+                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.50, ...
+                'DisplayName','Fuselage half');
+
+            hs_w = geom.wing.half_span_ft;
+            xw = [inp.wing.x_apex_ft, ...
+                  inp.wing.x_apex_ft + hs_w*tan(deg2rad(inp.wing.sweep_LE_deg)), ...
+                  geom.wing.x_te_root_ft, geom.wing.x_te_root_ft];
+            yw = [0, hs_w, hs_w, 0];
+            fill(ax1, xw, yw, 'b', 'FaceAlpha',0.3, 'EdgeColor','b', 'DisplayName','Wing');
+
+            BrandtGeometry.drawSurfaceTop(ax1, inp.strake.x_le_ft, ...
+                geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
+                inp.strake.sweep_LE_deg, inp.strake.y_ft, ...
+                geom.strake.half_span_ft, 'm', 'Strake');
+            % suppress mirrored left side from drawSurfaceTop
+            ch = get(ax1, 'Children');
+            if numel(ch) >= 1
+                set(ch(1), 'FaceAlpha',0.0, 'EdgeColor','none', ...
+                    'HandleVisibility','off');
+            end
+
+            ylim_top = hs_w * 1.05;
+            for k = 1:numel(x_frames)
+                plot(ax1, [x_frames(k) x_frames(k)], [0 ylim_top], ...
+                    ':', 'Color',[0.6 0.6 0.6], 'HandleVisibility','off');
+            end
+            ylim(ax1, [0, ylim_top]);
+            legend(ax1, 'Location','northeast');
+
+            % ---- Right: area vs x -------------------------------------
+            ax2 = subplot(1, 2, 2);
+            hold(ax2, 'on'); grid(ax2, 'on');
+            title(ax2, 'Whole-Aircraft Cross-Sectional Area vs x');
+            xlabel(ax2, 'x  [ft]'); ylabel(ax2, 'Area  [ft^2]');
+
+            x_plot   = [0, x_frames];
+            plot(ax2, x_plot, [0, A_fuse], 'k-o', 'LineWidth',1.5, ...
+                'MarkerSize',4, 'DisplayName','Fuselage A');
+            plot(ax2, x_plot, [0, A_adj],  'b-s', 'LineWidth',1.5, ...
+                'MarkerSize',4, 'DisplayName','Total A (A-Ao)');
+            plot(ax2, x_sh,   A_SH, 'r--', 'LineWidth',1.8, ...
+                'DisplayName', sprintf('Sears-Haack (A_{max}=%.2f ft^2)', Amax));
+
+            [~, idx_max] = max(A_adj);
+            plot(ax2, x_frames(idx_max), A_adj(idx_max), 'b^', ...
+                'MarkerSize',8, 'MarkerFaceColor','b', 'HandleVisibility','off');
+            text(ax2, x_frames(idx_max)+0.5, A_adj(idx_max), ...
+                sprintf(' A_{max}=%.2f ft^2', Amax), 'FontSize',9);
+
+            for k = 1:numel(x_frames)
+                plot(ax2, [x_frames(k) x_frames(k)], [0 Amax*1.1], ...
+                    ':', 'Color',[0.7 0.7 0.7], 'HandleVisibility','off');
+            end
+            legend(ax2, 'Location','northwest');
+            xlim(ax2, [0, L_ac * 1.02]);
+            ylim(ax2, [0, Amax * 1.2]);
+        end
+
+    end  % methods (instance)
+
+    methods (Static)
         function geom = computeNacelle(inp, geom)
             % computeNacelle   Derive nacelle geometry from engine thrust.
             %
@@ -555,528 +1085,6 @@ classdef BrandtGeometry
             A(mask) = geom.n_engines * A_cyl;
         end
 
-        % ------------------------------------------------------------------ %
-        %  DISPLAY: LIFTING SURFACES TABLE  (Main A16:H27)
-        % ------------------------------------------------------------------ %
-
-        function displayLiftingSurfaces(inp, geom)
-            % displayLiftingSurfaces   Print lifting surface table (Main A16:H27).
-            %
-            %   BrandtGeometry.displayLiftingSurfaces(inp)        given inputs only
-            %   BrandtGeometry.displayLiftingSurfaces(inp, geom)  + computed values
-            %
-            % Columns: Wing | Pitch Ctrl | Strake | Aileron | LE Flap | TE Flap | VT
-            % In input-only mode, cells not present in JSON are shown as '---'.
-
-            computedMode = (nargin >= 2);
-            if computedMode
-                hdr = '=== Lifting Surface Geometry (Main A16:H27) — inputs + computed ===';
-            else
-                hdr = '=== Lifting Surface Inputs (Main A16:H27) — given values only ===';
-            end
-            fprintf('\n%s\n', hdr);
-            if ~computedMode
-                fprintf('  (--- = calculated value, not a given input)\n');
-            end
-
-            % ---- Assemble value matrices --------------------------------
-            % Columns: Wing PCtrl Strake Aileron LE_Flap TE_Flap VT
-            % Rows:    S AR Taper Sweep Airfoil tc xLE y z Dih
-            % NaN = not given (calculated); shown as '---' in input mode.
-            w  = inp.wing;   pc = inp.pitch_ctrl;  sk = inp.strake;
-            ai = inp.aileron; lf = inp.le_flap;   vt = inp.vert_tail;
-            if isfield(inp, 'te_flap'), tf = inp.te_flap;
-            else, tf = struct('S_ft2',24,'AR',10,'airfoil','NACA 0008','tc_ratio',0.08,...
-                              'y_ft',3.5,'z_ft',0.0,'dihedral_deg',0.0); end
-
-            % -- S (ft²) row --
-            if computedMode
-                row_S = {w.S_ref_ft2, pc.S_ft2, sk.S_ft2, ai.S_ft2, ...
-                         geom.le_flap.S_ft2, tf.S_ft2, vt.S_ft2};
-            else
-                row_S = {w.S_ref_ft2, pc.S_ft2, sk.S_ft2, ai.S_ft2, ...
-                         NaN, tf.S_ft2, vt.S_ft2};   % LE Flap S is calculated
-            end
-
-            % -- AR row --
-            if computedMode
-                row_AR = {w.AR, pc.AR, sk.AR, ai.AR, ...
-                          geom.le_flap.AR, tf.AR, vt.AR};
-            else
-                row_AR = {w.AR, pc.AR, sk.AR, ai.AR, ...
-                          NaN, tf.AR, vt.AR};         % LE Flap AR is calculated
-            end
-
-            % -- Taper row --
-            if computedMode
-                row_tp = {w.taper, pc.taper, sk.taper, geom.aileron.taper, ...
-                          lf.taper, geom.te_flap.taper, vt.taper};
-            else
-                row_tp = {w.taper, pc.taper, sk.taper, NaN, ...
-                          lf.taper, NaN, vt.taper};  % Aileron & TE Flap calc
-            end
-
-            % -- Sweep LE (°) row --
-            if computedMode
-                row_sw = {w.sweep_LE_deg, pc.sweep_LE_deg, sk.sweep_LE_deg, ...
-                          geom.aileron.sweep_LE_deg, lf.sweep_LE_deg, ...
-                          geom.te_flap.sweep_LE_deg, vt.sweep_LE_deg};
-            else
-                row_sw = {w.sweep_LE_deg, pc.sweep_LE_deg, sk.sweep_LE_deg, ...
-                          NaN, lf.sweep_LE_deg, NaN, vt.sweep_LE_deg};
-            end
-
-            % -- Airfoil (strip "NACA " prefix for compact display) --
-            af = @(s) strrep(s, 'NACA ', '');
-            row_af = {af(w.airfoil), af(pc.airfoil), af(sk.airfoil), ...
-                      af(ai.airfoil), af(lf.airfoil), af(tf.airfoil), af(vt.airfoil)};
-
-            % -- t/c row --
-            row_tc = {w.tc_ratio, pc.tc_ratio, sk.tc_ratio, ai.tc_ratio, ...
-                      lf.tc_ratio, tf.tc_ratio, vt.tc_ratio};
-
-            % -- x_LE (ft) row (wing uses x_apex, others use x_le or calc) --
-            if computedMode
-                row_xl = {w.x_apex_ft, pc.x_le_ft, sk.x_le_ft, ...
-                          geom.aileron.x_le_ft, geom.le_flap.x_le_ft, ...
-                          geom.te_flap.x_le_ft, vt.x_le_ft};
-            else
-                row_xl = {w.x_apex_ft, pc.x_le_ft, sk.x_le_ft, ...
-                          NaN, NaN, NaN, vt.x_le_ft};  % Ail/LF/TF calc
-            end
-
-            % -- y (ft) row  (Wing and PitchCtrl have no explicit y) --
-            row_y  = {NaN, NaN, sk.y_ft, ai.y_ft, lf.y_ft, tf.y_ft, vt.y_ft};
-
-            % -- z (ft) row --
-            row_z  = {w.z_ft, pc.z_ft, sk.z_ft, ai.z_ft, lf.z_ft, tf.z_ft, vt.z_le_ft};
-
-            % -- Dihedral (°) row  (LE Flap has no dihedral field) --
-            row_dh = {w.dihedral_deg, pc.dihedral_deg, sk.dihedral_deg, ...
-                      ai.dihedral_deg, NaN, tf.dihedral_deg, vt.tilt_deg};
-
-            % ---- Print table --------------------------------------------
-            surfs = {'Wing','PitchCtrl','Strake','Aileron','LE Flap','TE Flap','VT'};
-            cw = 10;  % column width
-            sep = repmat('-', 1, 16 + 7*cw);
-
-            % Header
-            fprintf('\n%-16s', '');
-            for k = 1:7, fprintf('%*s', cw, surfs{k}); end
-            fprintf('\n%s\n', sep);
-
-            function printRow(label, cells, fmt)
-                fprintf('%-16s', label);
-                for k = 1:numel(cells)
-                    v = cells{k};
-                    if iscell(v) || ischar(v)
-                        % string cell
-                        fprintf('%*s', cw, v);
-                    elseif isnan(v)
-                        fprintf('%*s', cw, '---');
-                    else
-                        fprintf(fmt, v);
-                    end
-                end
-                fprintf('\n');
-            end
-
-            printRow('S (ft²)',       row_S,  ['%' num2str(cw) '.1f']);
-            printRow('AR',            row_AR, ['%' num2str(cw) '.2f']);
-            printRow('Taper',         row_tp, ['%' num2str(cw) '.4f']);
-            printRow('Sweep LE (°)',  row_sw, ['%' num2str(cw) '.2f']);
-
-            % Airfoil: string row
-            fprintf('%-16s', 'Airfoil');
-            for k = 1:7, fprintf('%*s', cw, row_af{k}); end
-            fprintf('\n');
-
-            printRow('t/c',           row_tc, ['%' num2str(cw) '.3f']);
-            printRow('x_LE (ft)',     row_xl, ['%' num2str(cw) '.3f']);
-            printRow('y (ft)',        row_y,  ['%' num2str(cw) '.3f']);
-            printRow('z (ft)',        row_z,  ['%' num2str(cw) '.3f']);
-            printRow('Dihedral (°)',  row_dh, ['%' num2str(cw) '.2f']);
-            fprintf('%s\n\n', sep);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  DISPLAY: GEOM CROSS-SECTION TABLE  (Geom S22:AN48)
-        % ------------------------------------------------------------------ %
-
-        function displayGeomTable(inp, geom)
-            % displayGeomTable   Per-frame cross-section area breakdown.
-            %
-            % Replicates Geom S22:AN48: for each fuselage station shows the
-            % wetted area contribution and cross-section areas by component.
-            % Columns match Geom tab: U=dSwet, W=Fuse, Y=Wing, AA=PCtrl,
-            %   AC=VTail, AE=Nacelle, AG=Strake, AJ=Total (whole-aircraft A-Ao).
-            %
-            % Row totals: fuselage Swet (= D23), aircraft volume, centroid x.
-
-            x  = inp.fuselage.frame_x;        % [1×20] frame x positions
-            nf = numel(x);
-            x_all = [0, x];                   % include nose
-
-            % Segment midpoints (Geom T column)
-            x_mid = zeros(1, nf);
-            for k = 1:nf
-                x_mid(k) = (x_all(k) + x_all(k+1)) / 2;
-            end
-
-            dS    = geom.fuselage_dSwet;      % [1×20] fuselage dSwet per segment
-            A_f   = geom.frame_area;          % fuselage CS area at each frame
-            A_w   = geom.frame_area_wing;
-            A_p   = geom.frame_area_pitch;
-            A_v   = geom.frame_area_vert;
-            A_n   = geom.frame_area_nac;
-            A_sk  = geom.frame_area_strake;
-            A_tot = geom.frame_area_total;
-
-            % Nacelle inlet area to subtract for Amax (Geom AJ = A - Ao)
-            Ao    = geom.n_engines * pi * geom.D_engine_ft^2 / 5.0;
-            A_adj = max(0, A_tot - Ao);
-
-            % ---- Print -----------------------------------------------
-            fprintf('\n=== Geom Cross-Section Breakdown (Geom S22:AN48) ===\n');
-            fprintf('  Ao (inlet subtraction) = %.3f ft²\n\n', Ao);
-
-            hfmt = '%5s %7s %8s %8s %7s %7s %7s %7s %7s %8s\n';
-            rfmt = '%5d %7.3f %8.4f %8.4f %7.4f %7.4f %7.4f %7.4f %7.4f %8.4f\n';
-            sep  = repmat('-', 1, 78);
-
-            fprintf(hfmt, 'Frame','x_mid','dSwet','Fuse_A','Wing_A', ...
-                'Pitch_A','VT_A','Nac_A','Strk_A','Total_A');
-            fprintf(hfmt, '','(ft)','(ft²)','(ft²)','(ft²)', ...
-                '(ft²)','(ft²)','(ft²)','(ft²)','(ft²)');
-            fprintf('%s\n', sep);
-
-            for i = 1:nf
-                fprintf(rfmt, i, x_mid(i), dS(i), A_f(i), ...
-                    A_w(i), A_p(i), A_v(i), A_n(i), A_sk(i), A_adj(i));
-            end
-            fprintf('%s\n', sep);
-
-            % Volume via trapz over frame stations (approximate)
-            vol = trapz([0, x], [0, A_tot]);
-            cen_x = sum(x_mid .* dS) / sum(dS);
-
-            fprintf('%-5s %7s %8.3f %8s  (Geom D23 GT: 676.329 ft²)\n', ...
-                'TOTAL','', sum(dS),'');
-            fprintf('  Centroid x = %.3f ft  |  Aircraft Volume ≈ %.1f ft³\n', ...
-                cen_x, vol);
-            fprintf('  Amax = %.3f ft²  (GT: 25.110 ft²)\n\n', geom.Amax_ft2);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  DISPLAY: FUSELAGE FRAME INPUT TABLE  (Main A33:F53)
-        % ------------------------------------------------------------------ %
-
-        function displayFuselageFrames(inp)
-            % displayFuselageFrames   Print given frame inputs for Main A33:F53.
-
-            fprintf('\n=== Fuselage Frame Inputs (Main A33:F53) ===\n');
-            fprintf('%5s %9s %11s %8s %8s %8s\n', ...
-                'Frame','x(ft)','z_chine(ft)','z(ft)','w(ft)','h(ft)');
-            fprintf('%s\n', repmat('-', 1, 58));
-
-            fr = inp.fuselage.frames;
-            for i = 1:numel(fr)
-                f = fr(i);
-                fprintf('%5d %9.3f %11.1f %8.1f %8.1f %8.3f\n', ...
-                    f.frame, f.x_ft, f.z_chine_ft, f.z_ft, f.w_ft, f.h_ft);
-            end
-            fprintf('\nFuselage: L=%.1f ft,  max_w=%.1f ft,  max_h=%.1f ft\n\n', ...
-                inp.fuselage.length_ft, inp.fuselage.max_width_ft, ...
-                inp.fuselage.max_height_ft);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  DISPLAY: PER-FRAME COMPUTED GEOMETRY TABLE
-        % ------------------------------------------------------------------ %
-
-        function displayFrameResults(inp, geom)
-            % displayFrameResults   Per-frame perimeter, area, and dS_wet.
-
-            fprintf('\n=== Fuselage Frame Computed Geometry ===\n');
-            fprintf('%5s %9s %12s %10s %12s\n', ...
-                'Frame','x(ft)','Perim(ft)','Area(ft2)','dSwet(ft2)');
-            fprintf('%s\n', repmat('-', 1, 55));
-
-            for i = 1:numel(inp.fuselage.frames)
-                fprintf('%5d %9.3f %12.4f %10.4f %12.4f\n', ...
-                    i, geom.frame_x(i), geom.frame_perimeter(i), ...
-                    geom.frame_area(i), geom.fuselage_dSwet(i));
-            end
-            fprintf('\n  Accurate fuselage S_wet = %.3f ft^2  (Geom D23 GT: 676.329 ft^2)\n\n', ...
-                geom.S_wet_fuse_accurate_ft2);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  DISPLAY: FIDELITY COMPARISON
-        % ------------------------------------------------------------------ %
-
-        function compareFidelities(geom)
-            % compareFidelities   Compare simple vs accurate S_wet vs Geom targets.
-
-            gt = struct('fuse_s', 730.422, 'fuse_a', 676.329, ...
-                'wing', 392.020, 'strake', 39.956, ...
-                'pitch', 99.585, 'vert', 81.689, ...
-                'nacelle', 41.515, 'total', 1371.09);
-
-            fprintf('\n=== Wetted Area Fidelity Comparison ===\n');
-            fprintf('%-16s %12s %14s %10s %8s\n', ...
-                'Component','Simple(ft2)','Accurate(ft2)','GT(ft2)','Err%');
-            fprintf('%s\n', repmat('-', 1, 68));
-
-            function printRow(name, s_val, a_val, gt_val)
-                err = (a_val - gt_val) / gt_val * 100;
-                fprintf('%-16s %12.3f %14.3f %10.3f %8.2f%%\n', ...
-                    name, s_val, a_val, gt_val, err);
-            end
-
-            printRow('Fuselage', geom.S_wet_fuse_simple_ft2, ...
-                geom.S_wet_fuse_accurate_ft2, gt.fuse_a);
-            printRow('Wing',       geom.S_wet_wing_ft2,       geom.S_wet_wing_ft2,       gt.wing);
-            printRow('Strake',     geom.S_wet_strake_ft2,     geom.S_wet_strake_ft2,     gt.strake);
-            printRow('Pitch Ctrl', geom.S_wet_pitch_ctrl_ft2, geom.S_wet_pitch_ctrl_ft2, gt.pitch);
-            printRow('Vert Tail',  geom.S_wet_vert_tail_ft2,  geom.S_wet_vert_tail_ft2,  gt.vert);
-            % Nacelle: simple = cylinder approx (non-zero after aircraft_length fix)
-            %          accurate = GT Geom B4 = 41.515 ft² (formula unresolvable from binary .xls)
-            printRow('Nacelle (×2)', geom.S_wet_nacelle_simple_ft2, ...
-                geom.S_wet_nacelle_gt_ft2, gt.nacelle);
-            fprintf('   Note: nacelle accurate = GT; formula not visible in binary .xls\n');
-            fprintf('%s\n', repmat('-', 1, 68));
-            fprintf('%-16s %12.3f %14.3f %10.3f %8.2f%%\n', ...
-                'TOTAL', ...
-                geom.S_wet_total_simple_ft2, geom.S_wet_total_accurate_ft2, ...
-                gt.total, ...
-                (geom.S_wet_total_accurate_ft2 - gt.total) / gt.total * 100);
-
-            fprintf('\n  [Fuselage simple target = %.3f ft^2,  err = %.2f%%]\n', ...
-                gt.fuse_s, ...
-                (geom.S_wet_fuse_simple_ft2 - gt.fuse_s) / gt.fuse_s * 100);
-            fprintf('  Amax = %.3f ft^2  (GT: 25.110 ft^2,  err = %.2f%%)\n\n', ...
-                geom.Amax_ft2, (geom.Amax_ft2 - 25.110) / 25.110 * 100);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  GEOMETRY PLOT: top view + side view
-        % ------------------------------------------------------------------ %
-
-        function plotGeometry(inp, geom)
-            % plotGeometry   Top-view (xy) and side-view (xz) aircraft geometry.
-            %
-            % Color coding:
-            %   Blue    - wing (+ aileron/TE flap faint dashed)
-            %   Green   - pitch ctrl / stabilator
-            %   Magenta - strakes
-            %   Red     - vertical tail
-            %   Gray    - fuselage
-            %   Cyan    - leading edge flaps
-            %   Dark    - nacelle/inlet
-
-            figure('Name','F-16A Geometry','NumberTitle','off', ...
-                   'Position',[100 100 1000 680]);
-
-            % ---- TOP VIEW -----------------------------------------------
-            ax1 = subplot(2, 1, 1);
-            hold(ax1, 'on'); grid(ax1, 'on'); axis(ax1, 'equal');
-            title(ax1, 'F-16A — Top View (xy plane)');
-            xlabel(ax1, 'x  [ft]'); ylabel(ax1, 'y  [ft]');
-
-            % Wing — straight TE (Brandt Geom K36:Q41)
-            hs_w       = geom.wing.half_span_ft;
-            x_te_w     = geom.wing.x_te_root_ft;   % 34.079 ft
-            x_le_tip_w = inp.wing.x_apex_ft + hs_w * tan(deg2rad(inp.wing.sweep_LE_deg));
-            xw = [inp.wing.x_apex_ft, x_le_tip_w, x_te_w, x_te_w];
-            yw = [0, hs_w, hs_w, 0];
-            fill(ax1,  xw,  yw, 'b', 'FaceAlpha',0.35, 'EdgeColor','b', 'DisplayName','Wing');
-            fill(ax1,  xw, -yw, 'b', 'FaceAlpha',0.35, 'EdgeColor','b', 'HandleVisibility','off');
-
-            % Pitch ctrl (stabilator)
-            BrandtGeometry.drawSurfaceTop(ax1, inp.pitch_ctrl.x_le_ft, ...
-                geom.pitch_ctrl.c_root_ft, geom.pitch_ctrl.c_tip_ft, ...
-                inp.pitch_ctrl.sweep_LE_deg, ...
-                inp.fuselage.max_width_ft/2, geom.pitch_ctrl.half_span_ft, 'g', 'Pitch Ctrl');
-
-            % Strake
-            BrandtGeometry.drawSurfaceTop(ax1, inp.strake.x_le_ft, ...
-                geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
-                inp.strake.sweep_LE_deg, ...
-                inp.strake.y_ft, geom.strake.half_span_ft, 'm', 'Strake');
-
-            % LE flap (inboard of wing, taper=1 → rectangular)
-            lf = geom.le_flap;
-            x_lf_tip = lf.x_le_ft + lf.half_span_ft * tan(deg2rad(lf.sweep_LE_deg));
-            xlf = [lf.x_le_ft, x_lf_tip, x_lf_tip + lf.c_tip_ft, lf.x_le_ft + lf.c_root_ft];
-            ylf = [lf.y_root_ft, lf.y_root_ft + lf.half_span_ft, ...
-                   lf.y_root_ft + lf.half_span_ft, lf.y_root_ft];
-            fill(ax1,  xlf,  ylf, 'c', 'FaceAlpha',0.35, 'EdgeColor','c', 'DisplayName','LE Flap');
-            fill(ax1,  xlf, -ylf, 'c', 'FaceAlpha',0.35, 'EdgeColor','c', 'HandleVisibility','off');
-
-            % Fuselage top outline (width profile)
-            x_f = [0, inp.fuselage.frame_x, inp.fuselage.length_ft];
-            w_f = [0, inp.fuselage.frame_w, 0];
-            fill(ax1, [x_f, fliplr(x_f)], [w_f/2, -fliplr(w_f/2)], ...
-                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.45, 'DisplayName','Fuselage');
-
-            % Nacelle — rectangular box (inlet to nozzle, width = D_engine)
-            r_n  = geom.D_engine_ft / 2;
-            x_in = inp.engine.inlet_x_ft;
-            x_nz = geom.nozzle_x_ft;
-            fill(ax1, [x_in x_nz x_nz x_in], [r_n r_n -r_n -r_n], ...
-                [0.45 0.45 0.45], 'FaceAlpha',0.3, 'EdgeColor',[0.3 0.3 0.3], ...
-                'DisplayName','Nacelle');
-
-            % Vert tail projected onto xy plane (centre-line projection)
-            plot(ax1, [inp.vert_tail.x_le_ft, geom.vert_tail.x_te_tip_ft], [0 0], ...
-                'r-', 'LineWidth',2, 'DisplayName','Vert Tail (proj)');
-
-            legend(ax1, 'Location','northeast');
-
-            % ---- SIDE VIEW ----------------------------------------------
-            ax2 = subplot(2, 1, 2);
-            hold(ax2, 'on'); grid(ax2, 'on'); axis(ax2, 'equal');
-            title(ax2, 'F-16A — Side View (xz plane)');
-            xlabel(ax2, 'x  [ft]'); ylabel(ax2, 'z  [ft]');
-
-            % Fuselage side outline (z±h/2 profile)
-            zc   = inp.fuselage.frame_z;
-            hf   = inp.fuselage.frame_h;
-            x_fr = [0, inp.fuselage.frame_x, inp.fuselage.length_ft];
-            zt_f = [zc(1)+hf(1)/2, zc+hf/2, 0];
-            zb_f = [zc(1)-hf(1)/2, zc-hf/2, 0];
-            fill(ax2, [x_fr, fliplr(x_fr)], [zt_f, fliplr(zb_f)], ...
-                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.45, 'DisplayName','Fuselage');
-
-            % Vertical tail — Brandt Geom L163:Q167 trapezoid
-            xvt = [inp.vert_tail.x_le_ft, geom.vert_tail.x_le_tip_ft, ...
-                   geom.vert_tail.x_te_tip_ft, geom.vert_tail.x_te_root_ft];
-            zvt = [inp.vert_tail.z_le_ft, ...
-                   inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
-                   inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
-                   inp.vert_tail.z_le_ft];
-            fill(ax2, xvt, zvt, 'r', 'FaceAlpha',0.4, 'EdgeColor','r', 'DisplayName','Vert Tail');
-
-            % Wing root chord
-            plot(ax2, [inp.wing.x_apex_ft, geom.wing.x_te_root_ft], ...
-                [inp.wing.z_ft, inp.wing.z_ft], 'b-', 'LineWidth',2.5, ...
-                'DisplayName','Wing root chord');
-
-            % Pitch ctrl root chord
-            plot(ax2, [inp.pitch_ctrl.x_le_ft, ...
-                       inp.pitch_ctrl.x_le_ft + geom.pitch_ctrl.c_root_ft], ...
-                [inp.pitch_ctrl.z_ft, inp.pitch_ctrl.z_ft], 'g-', ...
-                'LineWidth',2.5, 'DisplayName','Pitch Ctrl root');
-
-            % Nacelle box in xz plane
-            dz_n = -inp.engine.inlet_dz_ft;
-            fill(ax2, [x_in x_nz x_nz x_in], ...
-                 [dz_n-r_n dz_n-r_n dz_n+r_n dz_n+r_n], ...
-                [0.45 0.45 0.45], 'FaceAlpha',0.3, 'EdgeColor',[0.3 0.3 0.3], ...
-                'DisplayName','Nacelle');
-
-            legend(ax2, 'Location','northeast');
-            ylim(ax2, [-5, 28]);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  PLOT: CROSS-SECTIONAL AREA PROFILE  (Brandt Geom AJ/AM columns)
-        % ------------------------------------------------------------------ %
-
-        function plotAreaProfile(inp, geom)
-            % plotAreaProfile   Half-aircraft top view and area-vs-x profile.
-            %
-            % Replicates Brandt Geom AJ (whole-aircraft A−Ao) and AM (Sears-Haack).
-            % Left:  half-aircraft top view (y≥0) with frame station vertical lines.
-            % Right: fuselage CS area, total adjusted area, Sears-Haack reference.
-
-            figure('Name','F-16A Area Profile','NumberTitle','off', ...
-                   'Position',[150 150 1200 500]);
-
-            x_frames = inp.fuselage.frame_x;
-            A_fuse   = geom.frame_area;
-            A_tot    = geom.frame_area_total;
-            Ao       = geom.n_engines * pi * geom.D_engine_ft^2 / 5.0;
-            A_adj    = max(0, A_tot - Ao);   % Geom AJ column
-            Amax     = geom.Amax_ft2;
-            L_ac     = geom.aircraft_length_ft;
-
-            % Sears-Haack reference (Geom AM column)
-            x_sh = linspace(0, L_ac, 300);
-            A_SH = Amax .* (1 - (2*x_sh/L_ac - 1).^2).^(3/2);
-
-            % ---- Left: half-aircraft top view -------------------------
-            ax1 = subplot(1, 2, 1);
-            hold(ax1, 'on'); grid(ax1, 'on'); axis(ax1, 'equal');
-            title(ax1, 'Half-Aircraft Top View (y ≥ 0)');
-            xlabel(ax1, 'x  [ft]'); ylabel(ax1, 'y  [ft]');
-
-            x_f = [0, x_frames, inp.fuselage.length_ft];
-            w_f = [0, inp.fuselage.frame_w, 0];
-            fill(ax1, [x_f, fliplr(x_f)], [w_f/2, zeros(1,numel(x_f))], ...
-                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.50, ...
-                'DisplayName','Fuselage half');
-
-            hs_w = geom.wing.half_span_ft;
-            xw = [inp.wing.x_apex_ft, ...
-                  inp.wing.x_apex_ft + hs_w*tan(deg2rad(inp.wing.sweep_LE_deg)), ...
-                  geom.wing.x_te_root_ft, geom.wing.x_te_root_ft];
-            yw = [0, hs_w, hs_w, 0];
-            fill(ax1, xw, yw, 'b', 'FaceAlpha',0.3, 'EdgeColor','b', 'DisplayName','Wing');
-
-            BrandtGeometry.drawSurfaceTop(ax1, inp.strake.x_le_ft, ...
-                geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
-                inp.strake.sweep_LE_deg, inp.strake.y_ft, ...
-                geom.strake.half_span_ft, 'm', 'Strake');
-            % suppress mirrored left side from drawSurfaceTop
-            ch = get(ax1, 'Children');
-            if numel(ch) >= 1
-                set(ch(1), 'FaceAlpha',0.0, 'EdgeColor','none', ...
-                    'HandleVisibility','off');
-            end
-
-            ylim_top = hs_w * 1.05;
-            for k = 1:numel(x_frames)
-                plot(ax1, [x_frames(k) x_frames(k)], [0 ylim_top], ...
-                    ':', 'Color',[0.6 0.6 0.6], 'HandleVisibility','off');
-            end
-            ylim(ax1, [0, ylim_top]);
-            legend(ax1, 'Location','northeast');
-
-            % ---- Right: area vs x -------------------------------------
-            ax2 = subplot(1, 2, 2);
-            hold(ax2, 'on'); grid(ax2, 'on');
-            title(ax2, 'Whole-Aircraft Cross-Sectional Area vs x');
-            xlabel(ax2, 'x  [ft]'); ylabel(ax2, 'Area  [ft²]');
-
-            x_plot   = [0, x_frames];
-            plot(ax2, x_plot, [0, A_fuse], 'k-o', 'LineWidth',1.5, ...
-                'MarkerSize',4, 'DisplayName','Fuselage A');
-            plot(ax2, x_plot, [0, A_adj],  'b-s', 'LineWidth',1.5, ...
-                'MarkerSize',4, 'DisplayName','Total A (A−Ao)');
-            plot(ax2, x_sh,   A_SH, 'r--', 'LineWidth',1.8, ...
-                'DisplayName', sprintf('Sears-Haack (A_{max}=%.2f ft²)', Amax));
-
-            [~, idx_max] = max(A_adj);
-            plot(ax2, x_frames(idx_max), A_adj(idx_max), 'b^', ...
-                'MarkerSize',8, 'MarkerFaceColor','b', 'HandleVisibility','off');
-            text(ax2, x_frames(idx_max)+0.5, A_adj(idx_max), ...
-                sprintf(' A_{max}=%.2f ft²', Amax), 'FontSize',9);
-
-            for k = 1:numel(x_frames)
-                plot(ax2, [x_frames(k) x_frames(k)], [0 Amax*1.1], ...
-                    ':', 'Color',[0.7 0.7 0.7], 'HandleVisibility','off');
-            end
-            legend(ax2, 'Location','northwest');
-            xlim(ax2, [0, L_ac * 1.02]);
-            ylim(ax2, [0, Amax * 1.2]);
-        end
-
-        % ------------------------------------------------------------------ %
-        %  PLOT HELPER: draw trapezoidal surface in top-view (xy)
-        % ------------------------------------------------------------------ %
-
         function drawSurfaceTop(ax, x_le_root, c_root, c_tip, sweep_deg, ...
                 y_root, half_span, color, label)
             % drawSurfaceTop   Fill trapezoidal planform in xy-plane (bilateral).
@@ -1094,6 +1102,5 @@ classdef BrandtGeometry
             fill(ax,  xr, -yr, color, 'FaceAlpha',0.35, 'EdgeColor',color, ...
                 'HandleVisibility','off');
         end
-
     end  % methods (Static)
 end  % classdef BrandtGeometry
