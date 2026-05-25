@@ -54,7 +54,8 @@
     "airfoil":        "NACA 0008",
     "tc_ratio":       0.08,
     "y_ft":           3.5,
-    "z_ft":           0.0
+    "z_ft":           0.0,
+    "dihedral_deg":   0.0
   },
 
   "le_flap": {

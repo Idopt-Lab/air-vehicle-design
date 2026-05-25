@@ -1,18 +1,18 @@
-classdef BrandtGeometry
+classdef BrandtGeometry < handle
 % BrandtGeometry   Brandt (1997) aircraft geometry — F-16A ground truth.
 %
-% QUICK START
-%   geom = BrandtGeometry();                   % load default F-16A JSON, no compute
+% QUICK START (handle class — no reassignment needed)
+%   geom = BrandtGeometry();                   % load default F-16A JSON
 %   geom = BrandtGeometry('path/to/file.json');% load from path
-%   geom.compute();                            % run all calculations
-%   geom.displayLiftingSurfaces();             % show given inputs
+%   geom.compute();                            % run all calculations (in-place)
+%   geom.displayLiftingSurfaces();             % show given inputs (works before compute)
 %   geom.displayLiftingSurfaces(true);         % show given + computed
-%   geom.displayFuselageFrames();              % Main A33:F53 frame table
-%   geom.displayFrameResults();                % per-frame computed table
-%   geom.displayGeomTable();                   % Geom S22:AN48 area breakdown
-%   geom.compareFidelities();                  % simple vs accurate S_wet
-%   geom.plotGeometry();                       % top-view + side-view plots
-%   geom.plotAreaProfile();                    % area profile + half-aircraft
+%   geom.displayFuselageFrames();              % Main A33:F53 frame table (works before compute)
+%   geom.displayFrameResults();                % per-frame computed table (requires compute)
+%   geom.displayGeomTable();                   % Geom S22:AN48 area breakdown (requires compute)
+%   geom.compareFidelities();                  % simple vs accurate S_wet (requires compute)
+%   geom.plotGeometry();                       % top-view + side-view plots (requires compute)
+%   geom.plotAreaProfile();                    % area profile + half-aircraft (requires compute)
 %
 % GROUND-TRUTH VALUES (Brandt-F16-A.xls, Geom tab)
 %   Geom B3  = 730.422 ft^2  fuselage S_wet simple
@@ -25,8 +25,12 @@ classdef BrandtGeometry
 %   Geom B20 =  25.11  ft^2  Amax
 
     properties
-        inp   % struct: raw inputs loaded from JSON (Main tab given values)
-        geom  % struct: computed results (populated by compute())
+        inp  (1,1) struct    % raw inputs loaded from JSON (Main tab given values)
+        geom (1,1) struct    % computed results (populated by compute())
+    end
+
+    properties (Access = private)
+        computed_ (1,1) logical = false
     end
 
     methods
@@ -54,38 +58,37 @@ classdef BrandtGeometry
             raw.fuselage.frame_w      = vertcat(fr.w_ft)';
             raw.fuselage.frame_h      = vertcat(fr.h_ft)';
             obj.inp  = raw;
-            obj.geom = struct();
+            obj.geom = BrandtGeometry.initGeomSchema();
         end
 
-        function obj = compute(obj)
-            % compute   Run all geometry calculations. Populates obj.geom.
-            g = struct();
+        function compute(obj)
+            % compute   Run all geometry calculations. Populates obj.geom in-place.
 
             % 1. Nacelle/engine sizing (from Engn(s) tab formulas)
-            g = BrandtGeometry.computeNacelle(obj.inp, g);
+            obj.computeNacelle();
 
             % 2. Lifting surface exposed geometry and S_wet (must precede
             %    aircraft_length: vert tail TE tip x is needed for Geom B21)
-            g = BrandtGeometry.computeLiftingSurfaces(obj.inp, g);
+            obj.computeLiftingSurfaces();
 
             % 3. Aircraft total length (Geom B21 = 48.304 ft)
             %    max of: fuselage length | nozzle x | vert tail TE at tip
-            g.aircraft_length_ft = max([obj.inp.fuselage.length_ft, ...
-                g.nozzle_x_ft, g.vert_tail.x_te_tip_ft]);
+            obj.geom.aircraft_length_ft = max([obj.inp.fuselage.length_ft, ...
+                obj.geom.nozzle_x_ft, obj.geom.vert_tail.x_te_tip_ft]);
 
             % 4. Fuselage frame cross-section geometry (Geom rows 26-46)
-            g = BrandtGeometry.computeFrameGeometry(obj.inp, g);
+            obj.computeFrameGeometry();
 
             % 5. Simple wetted areas (Geom B3, B4, B14-B17)
-            g = BrandtGeometry.computeSwetSimple(obj.inp, g);
+            obj.computeSwetSimple();
 
             % 6. Accurate total S_wet (Geom D23 + lifting surfaces)
-            g = BrandtGeometry.computeSwetAccurate(g);
+            obj.computeSwetAccurate();
 
             % 7. Whole-aircraft cross-section areas and Amax (Geom H26:H47)
-            g = BrandtGeometry.computeAmax(obj.inp, g);
+            obj.computeAmax();
 
-            obj.geom = g;
+            obj.computed_ = true;
         end
 
         % ------------------------------------------------------------------ %
@@ -103,7 +106,7 @@ classdef BrandtGeometry
             if nargin < 2, showComputed = false; end
             inp  = obj.inp;
             geom = obj.geom;
-            computedMode = showComputed && ~isempty(fieldnames(geom));
+            computedMode = showComputed && obj.computed_;
 
             if computedMode
                 hdr = '=== Lifting Surface Geometry (Main A16:H27) — inputs + computed ===';
@@ -248,6 +251,7 @@ classdef BrandtGeometry
             %   AC=VTail, AE=Nacelle, AG=Strake, AJ=Total (whole-aircraft A-Ao).
             %
             % Row totals: fuselage Swet (= D23), aircraft volume, centroid x.
+            obj.requireComputed('displayGeomTable');
             inp  = obj.inp;
             geom = obj.geom;
 
@@ -335,6 +339,7 @@ classdef BrandtGeometry
 
         function displayFrameResults(obj)
             % displayFrameResults   Per-frame perimeter, area, and dS_wet.
+            obj.requireComputed('displayFrameResults');
             inp  = obj.inp;
             geom = obj.geom;
 
@@ -358,6 +363,7 @@ classdef BrandtGeometry
 
         function compareFidelities(obj)
             % compareFidelities   Compare simple vs accurate S_wet vs Geom targets.
+            obj.requireComputed('compareFidelities');
             geom = obj.geom;
 
             gt = struct('fuse_s', 730.422, 'fuse_a', 676.329, ...
@@ -415,6 +421,7 @@ classdef BrandtGeometry
             %   Gray    - fuselage
             %   Cyan    - leading edge flaps
             %   Dark    - nacelle/inlet
+            obj.requireComputed('plotGeometry');
             inp  = obj.inp;
             geom = obj.geom;
 
@@ -533,6 +540,7 @@ classdef BrandtGeometry
             % Replicates Brandt Geom AJ (whole-aircraft A-Ao) and AM (Sears-Haack).
             % Left:  half-aircraft top view (y>=0) with frame station vertical lines.
             % Right: fuselage CS area, total adjusted area, Sears-Haack reference.
+            obj.requireComputed('plotAreaProfile');
             inp  = obj.inp;
             geom = obj.geom;
 
@@ -620,28 +628,38 @@ classdef BrandtGeometry
 
     end  % methods (instance)
 
-    methods (Static)
-        function geom = computeNacelle(inp, geom)
+    methods (Access = private)
+
+        function requireComputed(obj, callerName)
+            if nargin < 2, callerName = 'this method'; end
+            if ~obj.computed_
+                error('BrandtGeometry:notComputed', ...
+                      '%s requires compute() to be called first. Run: geom.compute()', ...
+                      callerName);
+            end
+        end
+
+        function computeNacelle(obj)
             % computeNacelle   Derive nacelle geometry from engine thrust.
             %
             % Source: Engn(s) tab.  All values are CALCULATED, not given inputs.
             %   D_engine = sqrt(T_AB_SLS / 1900)    [Geom H3 -> 3.537 ft]
             %   L_engine = 4.5 * D_engine            [AB engine formula]
             %   nozzle_x = inlet_x + L_engine        [Geom H3 = 29.917 ft]
-            T = inp.engine.T_AB_SLS_lb;
+            T = obj.inp.engine.T_AB_SLS_lb;
             D = sqrt(T / 1900);
             L = 4.5 * D;
-            geom.D_engine_ft  = D;
-            geom.L_engine_ft  = L;
-            geom.nozzle_x_ft  = inp.engine.inlet_x_ft + L;
-            geom.n_engines    = inp.engine.n_engines;
+            obj.geom.D_engine_ft  = D;
+            obj.geom.L_engine_ft  = L;
+            obj.geom.nozzle_x_ft  = obj.inp.engine.inlet_x_ft + L;
+            obj.geom.n_engines    = obj.inp.engine.n_engines;
         end
 
         % ------------------------------------------------------------------ %
         %  LIFTING SURFACE EXPOSED GEOMETRY  (Geom rows 6-17)
         % ------------------------------------------------------------------ %
 
-        function geom = computeLiftingSurfaces(inp, geom)
+        function computeLiftingSurfaces(obj)
             % computeLiftingSurfaces   Exposed spans/chords/areas and S_wet.
             %
             % S_wet formula (Raymer, verified against Geom tab):
@@ -658,11 +676,11 @@ classdef BrandtGeometry
             %   S_exp_vt   = (c_exp_root_vt + c_tip_vt)/2 * hs_exp_vt  [single panel]
             %   where fh = fuselage max_height/2 = 2.5 ft (Main D31 / 2)
 
-            fw = inp.fuselage.max_width_ft  / 2;    % 3.5 ft
-            fh = inp.fuselage.max_height_ft / 2;    % 2.5 ft
+            fw = obj.inp.fuselage.max_width_ft  / 2;    % 3.5 ft
+            fh = obj.inp.fuselage.max_height_ft / 2;    % 2.5 ft
 
             % --- Wing (Main B18:B27) ---
-            w        = inp.wing;
+            w        = obj.inp.wing;
             b_w      = sqrt(w.S_ref_ft2 * w.AR);   % 30.0 ft
             hs_w     = b_w / 2;                     % 15.0 ft
             cr_w     = 2 * w.S_ref_ft2 / (b_w * (1 + w.taper));
@@ -671,16 +689,16 @@ classdef BrandtGeometry
             hse_w    = hs_w - fw;
             Se_w     = (ce_w + ct_w) / 2 * hse_w * 2;
 
-            geom.wing.c_root_ft        = cr_w;
-            geom.wing.c_tip_ft         = ct_w;
-            geom.wing.c_exp_root_ft    = ce_w;
-            geom.wing.half_span_ft     = hs_w;
-            geom.wing.half_span_exp_ft = hse_w;
-            geom.wing.S_exposed_ft2    = Se_w;
-            geom.wing.S_wet_ft2        = Se_w * (1.977 + 0.52 * w.tc_ratio);
+            obj.geom.wing.c_root_ft        = cr_w;
+            obj.geom.wing.c_tip_ft         = ct_w;
+            obj.geom.wing.c_exp_root_ft    = ce_w;
+            obj.geom.wing.half_span_ft     = hs_w;
+            obj.geom.wing.half_span_exp_ft = hse_w;
+            obj.geom.wing.S_exposed_ft2    = Se_w;
+            obj.geom.wing.S_wet_ft2        = Se_w * (1.977 + 0.52 * w.tc_ratio);
 
             % --- Pitch control / stabilator (Main C18:C27) ---
-            pc       = inp.pitch_ctrl;
+            pc       = obj.inp.pitch_ctrl;
             b_pc     = sqrt(pc.S_ft2 * pc.AR);
             hs_pc    = b_pc / 2;
             cr_pc    = 2 * pc.S_ft2 / (b_pc * (1 + pc.taper));
@@ -689,32 +707,32 @@ classdef BrandtGeometry
             hse_pc   = hs_pc - fw;
             Se_pc    = (ce_pc + ct_pc) / 2 * hse_pc * 2;
 
-            geom.pitch_ctrl.c_root_ft        = cr_pc;
-            geom.pitch_ctrl.c_tip_ft         = ct_pc;
-            geom.pitch_ctrl.c_exp_root_ft    = ce_pc;
-            geom.pitch_ctrl.half_span_ft     = hs_pc;
-            geom.pitch_ctrl.half_span_exp_ft = hse_pc;
-            geom.pitch_ctrl.S_exposed_ft2    = Se_pc;
-            geom.pitch_ctrl.S_wet_ft2        = Se_pc * (1.977 + 0.52 * pc.tc_ratio);
+            obj.geom.pitch_ctrl.c_root_ft        = cr_pc;
+            obj.geom.pitch_ctrl.c_tip_ft         = ct_pc;
+            obj.geom.pitch_ctrl.c_exp_root_ft    = ce_pc;
+            obj.geom.pitch_ctrl.half_span_ft     = hs_pc;
+            obj.geom.pitch_ctrl.half_span_exp_ft = hse_pc;
+            obj.geom.pitch_ctrl.S_exposed_ft2    = Se_pc;
+            obj.geom.pitch_ctrl.S_wet_ft2        = Se_pc * (1.977 + 0.52 * pc.tc_ratio);
 
             % --- Strake (Main D18:D27) ---
             % Root at y_ft = 2.0 ft (outside fuselage body); S_ref = fully exposed.
-            sk       = inp.strake;
+            sk       = obj.inp.strake;
             b_sk     = sqrt(sk.S_ft2 * sk.AR);
             hs_sk    = b_sk / 2;
             cr_sk    = 2 * sk.S_ft2 / (b_sk * (1 + sk.taper));   % taper=0 -> delta
             ct_sk    = sk.taper * cr_sk;                           % = 0
 
-            geom.strake.c_root_ft    = cr_sk;
-            geom.strake.c_tip_ft     = ct_sk;
-            geom.strake.half_span_ft = hs_sk;
-            geom.strake.S_exposed_ft2= sk.S_ft2;    % entire strake is exposed
-            geom.strake.S_wet_ft2    = sk.S_ft2 * (1.977 + 0.52 * sk.tc_ratio);
+            obj.geom.strake.c_root_ft    = cr_sk;
+            obj.geom.strake.c_tip_ft     = ct_sk;
+            obj.geom.strake.half_span_ft = hs_sk;
+            obj.geom.strake.S_exposed_ft2= sk.S_ft2;    % entire strake is exposed
+            obj.geom.strake.S_wet_ft2    = sk.S_ft2 * (1.977 + 0.52 * sk.tc_ratio);
 
             % --- Vertical tail (Main H18:H27) ---
             % Single panel; span = full b_vt; fuselage subtraction uses fh (half-height).
             % Verified: Se_vt = 40.89 ft^2 -> S_wet = 81.686 ~ 81.689 ft^2 (Geom B17).
-            vt       = inp.vert_tail;
+            vt       = obj.inp.vert_tail;
             b_vt     = sqrt(vt.S_ft2 * vt.AR);      % full span (root-to-tip)
             cr_vt    = 2 * vt.S_ft2 / (b_vt * (1 + vt.taper));
             ct_vt    = vt.taper * cr_vt;
@@ -722,25 +740,25 @@ classdef BrandtGeometry
             bse_vt   = b_vt - fh;                   % exposed span
             Se_vt    = (ce_vt + ct_vt) / 2 * bse_vt; % single panel
 
-            geom.vert_tail.c_root_ft     = cr_vt;
-            geom.vert_tail.c_tip_ft      = ct_vt;
-            geom.vert_tail.c_exp_root_ft = ce_vt;
-            geom.vert_tail.span_ft       = b_vt;
-            geom.vert_tail.span_exp_ft   = bse_vt;
-            geom.vert_tail.S_exposed_ft2 = Se_vt;
-            geom.vert_tail.S_wet_ft2     = Se_vt * (1.977 + 0.52 * vt.tc_ratio);
+            obj.geom.vert_tail.c_root_ft     = cr_vt;
+            obj.geom.vert_tail.c_tip_ft      = ct_vt;
+            obj.geom.vert_tail.c_exp_root_ft = ce_vt;
+            obj.geom.vert_tail.span_ft       = b_vt;
+            obj.geom.vert_tail.span_exp_ft   = bse_vt;
+            obj.geom.vert_tail.S_exposed_ft2 = Se_vt;
+            obj.geom.vert_tail.S_wet_ft2     = Se_vt * (1.977 + 0.52 * vt.tc_ratio);
 
             % Vert tail plot coordinates (Geom P163:Q167, used for aircraft_length)
             x_le_vt_tip  = vt.x_le_ft + b_vt * tan(deg2rad(vt.sweep_LE_deg));
             x_te_vt_root = vt.x_le_ft + cr_vt;
             x_te_vt_tip  = x_le_vt_tip + ct_vt;   % Geom L165 = 48.304 ft
-            geom.vert_tail.x_le_tip_ft  = x_le_vt_tip;
-            geom.vert_tail.x_te_root_ft = x_te_vt_root;
-            geom.vert_tail.x_te_tip_ft  = x_te_vt_tip;
+            obj.geom.vert_tail.x_le_tip_ft  = x_le_vt_tip;
+            obj.geom.vert_tail.x_te_root_ft = x_te_vt_root;
+            obj.geom.vert_tail.x_te_tip_ft  = x_te_vt_tip;
 
             % --- Wing trailing-edge x (straight TE, Main B27 sweep ≈ 0°) ---
-            x_te_root_w = inp.wing.x_apex_ft + cr_w;   % = 34.079 ft
-            geom.wing.x_te_root_ft = x_te_root_w;
+            x_te_root_w = obj.inp.wing.x_apex_ft + cr_w;   % = 34.079 ft
+            obj.geom.wing.x_te_root_ft = x_te_root_w;
 
             % --- Aileron / Elevon  (Main E18:E27) ---
             % Given: S, AR, airfoil, t/c, y_ft, z_ft, dihedral_deg
@@ -748,7 +766,7 @@ classdef BrandtGeometry
             % Method: wing TE is straight (Main B27 ≈ 0°); aileron TE aligns
             % with wing TE.  Taper approximated from wing chord ratio at the
             % aileron span boundaries (matches Excel to within ~5%).
-            ai    = inp.aileron;
+            ai    = obj.inp.aileron;
             b_ai  = sqrt(ai.S_ft2 * ai.AR);            % total bilateral span = 15.492 ft
             hs_ai = b_ai / 2;                           % per-side half-span  = 7.746 ft
             y_ai_tip = ai.y_ft + hs_ai;                 % outer y-station     = 11.246 ft
@@ -761,66 +779,66 @@ classdef BrandtGeometry
             x_le_ai_tip = x_te_root_w - ct_ai;
             sweep_ai_deg = atan2d(x_le_ai_tip - x_le_ai, hs_ai); % ≈ 6.9° (Excel: 6.88°)
 
-            geom.aileron.S_ft2        = ai.S_ft2;
-            geom.aileron.AR           = ai.AR;
-            geom.aileron.taper        = taper_ai;
-            geom.aileron.sweep_LE_deg = sweep_ai_deg;
-            geom.aileron.c_root_ft    = cr_ai;
-            geom.aileron.c_tip_ft     = ct_ai;
-            geom.aileron.half_span_ft = hs_ai;
-            geom.aileron.y_root_ft    = ai.y_ft;
-            geom.aileron.y_tip_ft     = y_ai_tip;
-            geom.aileron.x_le_ft      = x_le_ai;
-            geom.aileron.x_le_tip_ft  = x_le_ai_tip;
-            geom.aileron.x_te_root_ft = x_te_root_w;
+            obj.geom.aileron.S_ft2        = ai.S_ft2;
+            obj.geom.aileron.AR           = ai.AR;
+            obj.geom.aileron.taper        = taper_ai;
+            obj.geom.aileron.sweep_LE_deg = sweep_ai_deg;
+            obj.geom.aileron.c_root_ft    = cr_ai;
+            obj.geom.aileron.c_tip_ft     = ct_ai;
+            obj.geom.aileron.half_span_ft = hs_ai;
+            obj.geom.aileron.y_root_ft    = ai.y_ft;
+            obj.geom.aileron.y_tip_ft     = y_ai_tip;
+            obj.geom.aileron.x_le_ft      = x_le_ai;
+            obj.geom.aileron.x_le_tip_ft  = x_le_ai_tip;
+            obj.geom.aileron.x_te_root_ft = x_te_root_w;
 
             % --- LE Flap  (Main F18:F27) ---
             % Given: airfoil, t/c, taper=1.0, sweep_LE=40°, y=3.5, z=0
             % Calculated: S=21.314 ft², AR=12.410, x_le=20.723 ft (Excel F18,F19,F23)
             % Note: S and AR formulas are not visible in the binary .xls; GT values used.
-            lf    = inp.le_flap;
-            x_le_lf = inp.wing.x_apex_ft + lf.y_ft * tan(deg2rad(lf.sweep_LE_deg));
+            lf    = obj.inp.le_flap;
+            x_le_lf = obj.inp.wing.x_apex_ft + lf.y_ft * tan(deg2rad(lf.sweep_LE_deg));
             S_lf  = 21.314;                             % Geom Main F18 (GT, calc)
             AR_lf = 12.410;                             % Geom Main F19 (GT, calc)
             b_lf  = sqrt(S_lf * AR_lf);
             hs_lf = b_lf / 2;
             c_lf  = S_lf / b_lf;                       % constant chord (taper=1)
 
-            geom.le_flap.S_ft2        = S_lf;
-            geom.le_flap.AR           = AR_lf;
-            geom.le_flap.taper        = lf.taper;       % 1.0 (given)
-            geom.le_flap.sweep_LE_deg = lf.sweep_LE_deg;% 40.0 (given)
-            geom.le_flap.c_root_ft    = c_lf;
-            geom.le_flap.c_tip_ft     = c_lf;
-            geom.le_flap.half_span_ft = hs_lf;
-            geom.le_flap.y_root_ft    = lf.y_ft;
-            geom.le_flap.x_le_ft      = x_le_lf;       % = 20.723 ft (Excel F23, calc)
+            obj.geom.le_flap.S_ft2        = S_lf;
+            obj.geom.le_flap.AR           = AR_lf;
+            obj.geom.le_flap.taper        = lf.taper;       % 1.0 (given)
+            obj.geom.le_flap.sweep_LE_deg = lf.sweep_LE_deg;% 40.0 (given)
+            obj.geom.le_flap.c_root_ft    = c_lf;
+            obj.geom.le_flap.c_tip_ft     = c_lf;
+            obj.geom.le_flap.half_span_ft = hs_lf;
+            obj.geom.le_flap.y_root_ft    = lf.y_ft;
+            obj.geom.le_flap.x_le_ft      = x_le_lf;       % = 20.723 ft (Excel F23, calc)
 
             % --- TE Flap  (Main G18:G27) ---
             % Given: S=24, AR=10, airfoil, t/c, y=3.5, z=0, dihedral=0
             % Calculated: taper, sweep_LE, x_le — same formulas as aileron (Excel G20-G23)
-            if isfield(inp, 'te_flap')
-                tf = inp.te_flap;
+            if isfield(obj.inp, 'te_flap')
+                tf = obj.inp.te_flap;
             else
                 tf = struct('S_ft2',24,'AR',10,'airfoil','NACA 0008','tc_ratio',0.08,...
                     'y_ft',3.5,'z_ft',0.0,'dihedral_deg',0.0);
             end
-            geom.te_flap.S_ft2        = tf.S_ft2;
-            geom.te_flap.AR           = tf.AR;
-            geom.te_flap.taper        = taper_ai;       % same as aileron (Excel G20)
-            geom.te_flap.sweep_LE_deg = sweep_ai_deg;   % same as aileron (Excel G21)
-            geom.te_flap.c_root_ft    = cr_ai;
-            geom.te_flap.c_tip_ft     = ct_ai;
-            geom.te_flap.half_span_ft = hs_ai;
-            geom.te_flap.y_root_ft    = tf.y_ft;
-            geom.te_flap.x_le_ft      = x_le_ai;       % same as aileron (Excel G23)
+            obj.geom.te_flap.S_ft2        = tf.S_ft2;
+            obj.geom.te_flap.AR           = tf.AR;
+            obj.geom.te_flap.taper        = taper_ai;       % same as aileron (Excel G20)
+            obj.geom.te_flap.sweep_LE_deg = sweep_ai_deg;   % same as aileron (Excel G21)
+            obj.geom.te_flap.c_root_ft    = cr_ai;
+            obj.geom.te_flap.c_tip_ft     = ct_ai;
+            obj.geom.te_flap.half_span_ft = hs_ai;
+            obj.geom.te_flap.y_root_ft    = tf.y_ft;
+            obj.geom.te_flap.x_le_ft      = x_le_ai;       % same as aileron (Excel G23)
         end
 
         % ------------------------------------------------------------------ %
         %  FUSELAGE FRAME CROSS-SECTION GEOMETRY  (Geom rows 26-46)
         % ------------------------------------------------------------------ %
 
-        function geom = computeFrameGeometry(inp, geom)
+        function computeFrameGeometry(obj)
             % computeFrameGeometry   Per-frame perimeter, area, and wetted area.
             %
             % Cross-section shape model (verified against Geom rows 51-61):
@@ -839,11 +857,11 @@ classdef BrandtGeometry
             %   here). This implementation gives ~675 ft^2 using correct dimensions.
 
             n_pts = 6;
-            x    = inp.fuselage.frame_x;
-            zc   = inp.fuselage.frame_zchine;
-            zctr = inp.fuselage.frame_z;
-            w    = inp.fuselage.frame_w;
-            h    = inp.fuselage.frame_h;
+            x    = obj.inp.fuselage.frame_x;
+            zc   = obj.inp.fuselage.frame_zchine;
+            zctr = obj.inp.fuselage.frame_z;
+            w    = obj.inp.fuselage.frame_w;
+            h    = obj.inp.fuselage.frame_h;
             nf   = numel(x);
 
             P = zeros(1, nf);
@@ -862,12 +880,129 @@ classdef BrandtGeometry
                 dS(k) = (P_all(k) + P_all(k+1)) / 2 * (x_all(k+1) - x_all(k));
             end
 
-            geom.frame_x                 = x;
-            geom.frame_perimeter         = P;
-            geom.frame_area              = A;
-            geom.fuselage_dSwet          = dS;
-            geom.S_wet_fuse_accurate_ft2 = sum(dS);
+            obj.geom.frame_x                 = x;
+            obj.geom.frame_perimeter         = P;
+            obj.geom.frame_area              = A;
+            obj.geom.fuselage_dSwet          = dS;
+            obj.geom.S_wet_fuse_accurate_ft2 = sum(dS);
         end
+
+        % ------------------------------------------------------------------ %
+        %  SIMPLE WETTED AREAS  (Geom column B)
+        % ------------------------------------------------------------------ %
+
+        function computeSwetSimple(obj)
+            % computeSwetSimple   Low-fidelity wetted areas (Geom column B).
+            %
+            % Fuselage (Geom B3):
+            %   S_wet = (5/6)*pi*D_avg*L_fuse,  D_avg = (max_w + max_h)/2
+            %   "1/3-cone + 2/3-cylinder" approximation.  GT: 730.422 ft^2.
+            %
+            % Nacelle (Geom B4):
+            %   Formula could not be confirmed from binary .xls file.
+            %   Implementation: N*pi*D_eng*(aircraft_length - fuse_length).
+            %   This gives ~20 ft^2 vs GT = 41.515 ft^2.  See readme_geom.md.
+
+            L     = obj.inp.fuselage.length_ft;
+            D_avg = (obj.inp.fuselage.max_width_ft + obj.inp.fuselage.max_height_ft) / 2;
+            obj.geom.S_wet_fuse_simple_ft2    = (5/6) * pi * D_avg * L;
+
+            L_exp = max(0, obj.geom.aircraft_length_ft - L);
+            obj.geom.S_wet_nacelle_simple_ft2 = obj.geom.n_engines * pi * obj.geom.D_engine_ft * L_exp;
+            obj.geom.S_wet_nacelle_gt_ft2     = 41.515;  % Geom B4 ground truth
+
+            % Lifting surfaces (Geom B14-B17) - same formula for both fidelities
+            obj.geom.S_wet_wing_ft2       = obj.geom.wing.S_wet_ft2;
+            obj.geom.S_wet_strake_ft2     = obj.geom.strake.S_wet_ft2;
+            obj.geom.S_wet_pitch_ctrl_ft2 = obj.geom.pitch_ctrl.S_wet_ft2;
+            obj.geom.S_wet_vert_tail_ft2  = obj.geom.vert_tail.S_wet_ft2;
+
+            obj.geom.S_wet_total_simple_ft2 = obj.geom.S_wet_fuse_simple_ft2 ...
+                + obj.geom.S_wet_nacelle_simple_ft2 ...
+                + obj.geom.S_wet_wing_ft2 ...
+                + obj.geom.S_wet_strake_ft2 ...
+                + obj.geom.S_wet_pitch_ctrl_ft2 ...
+                + obj.geom.S_wet_vert_tail_ft2;
+        end
+
+        % ------------------------------------------------------------------ %
+        %  ACCURATE TOTAL S_WET  (Geom D23 + B14-B17 + nacelle GT)
+        % ------------------------------------------------------------------ %
+
+        function computeSwetAccurate(obj)
+            % computeSwetAccurate   High-fidelity total S_wet.
+            %
+            % Combines per-frame fuselage integration (D23) with the same lifting-
+            % surface S_wet values (B14-B17) and the nacelle ground-truth (B4).
+            % Target total: Geom B19 = 1371.09 ft^2.
+            obj.geom.S_wet_total_accurate_ft2 = obj.geom.S_wet_fuse_accurate_ft2 ...
+                + obj.geom.S_wet_nacelle_gt_ft2 ...
+                + obj.geom.S_wet_wing_ft2 ...
+                + obj.geom.S_wet_strake_ft2 ...
+                + obj.geom.S_wet_pitch_ctrl_ft2 ...
+                + obj.geom.S_wet_vert_tail_ft2;
+        end
+
+        % ------------------------------------------------------------------ %
+        %  AMAX  (Geom H47)
+        % ------------------------------------------------------------------ %
+
+        function computeAmax(obj)
+            % computeAmax   Maximum whole-aircraft cross-section area.
+            %
+            % Replicates Geom H26:H47.  At each frame station the whole-aircraft
+            % area is the sum of fuselage (W col), wing (Y), pitch ctrl (AA),
+            % vert tail (AC), nacelle (AE), and strake (AG) cross-sections.
+            %
+            %   Amax = MAX(H26:H45) - N_eng*pi*D_eng^2/5
+            %
+            % The -N*pi*D^2/5 term removes the internal engine inlet from the
+            % external wetted cross-section.  GT: 25.11 ft^2.
+
+            x_fr = obj.geom.frame_x;
+
+            A_fuse   = obj.geom.frame_area;
+
+            A_wing   = BrandtGeometry.liftingSurfaceArea(x_fr, ...
+                obj.inp.wing.x_apex_ft, obj.geom.wing.c_root_ft, obj.geom.wing.c_tip_ft, ...
+                obj.inp.wing.sweep_LE_deg, obj.inp.wing.tc_ratio, ...
+                obj.inp.fuselage.max_width_ft/2, obj.geom.wing.half_span_ft, 'horiz');
+
+            A_pitch  = BrandtGeometry.liftingSurfaceArea(x_fr, ...
+                obj.inp.pitch_ctrl.x_le_ft, obj.geom.pitch_ctrl.c_root_ft, ...
+                obj.geom.pitch_ctrl.c_tip_ft, obj.inp.pitch_ctrl.sweep_LE_deg, ...
+                obj.inp.pitch_ctrl.tc_ratio, ...
+                obj.inp.fuselage.max_width_ft/2, obj.geom.pitch_ctrl.half_span_ft, 'horiz');
+
+            A_vert   = BrandtGeometry.liftingSurfaceArea(x_fr, ...
+                obj.inp.vert_tail.x_le_ft, obj.geom.vert_tail.c_root_ft, ...
+                obj.geom.vert_tail.c_tip_ft, obj.inp.vert_tail.sweep_LE_deg, ...
+                obj.inp.vert_tail.tc_ratio, ...
+                0, obj.geom.vert_tail.span_ft, 'vert');
+
+            A_strake = BrandtGeometry.liftingSurfaceArea(x_fr, ...
+                obj.inp.strake.x_le_ft, obj.geom.strake.c_root_ft, obj.geom.strake.c_tip_ft, ...
+                obj.inp.strake.sweep_LE_deg, obj.inp.strake.tc_ratio, ...
+                obj.inp.strake.y_ft, obj.geom.strake.half_span_ft, 'horiz');
+
+            A_nac = BrandtGeometry.nacelleFrameArea(obj.inp.engine, obj.geom, x_fr);
+
+            A_total = A_fuse + A_wing + A_pitch + A_vert + A_strake + A_nac;
+
+            obj.geom.frame_area_wing   = A_wing;
+            obj.geom.frame_area_pitch  = A_pitch;
+            obj.geom.frame_area_vert   = A_vert;
+            obj.geom.frame_area_strake = A_strake;
+            obj.geom.frame_area_nac    = A_nac;
+            obj.geom.frame_area_total  = A_total;
+
+            obj.geom.Amax_ft2 = max(A_total) - ...
+                obj.geom.n_engines * pi * obj.geom.D_engine_ft^2 / 5.0;
+        end
+
+    end  % methods (Access = private)
+
+    methods (Static)
 
         % ------------------------------------------------------------------ %
         %  CROSS-SECTION SHAPE (single fuselage frame)
@@ -904,122 +1039,14 @@ classdef BrandtGeometry
             A      = 2 * A_half;
         end
 
-        % ------------------------------------------------------------------ %
-        %  SIMPLE WETTED AREAS  (Geom column B)
-        % ------------------------------------------------------------------ %
-
-        function geom = computeSwetSimple(inp, geom)
-            % computeSwetSimple   Low-fidelity wetted areas (Geom column B).
-            %
-            % Fuselage (Geom B3):
-            %   S_wet = (5/6)*pi*D_avg*L_fuse,  D_avg = (max_w + max_h)/2
-            %   "1/3-cone + 2/3-cylinder" approximation.  GT: 730.422 ft^2.
-            %
-            % Nacelle (Geom B4):
-            %   Formula could not be confirmed from binary .xls file.
-            %   Implementation: N*pi*D_eng*(aircraft_length - fuse_length).
-            %   This gives ~20 ft^2 vs GT = 41.515 ft^2.  See readme_geom.md.
-
-            L     = inp.fuselage.length_ft;
-            D_avg = (inp.fuselage.max_width_ft + inp.fuselage.max_height_ft) / 2;
-            geom.S_wet_fuse_simple_ft2    = (5/6) * pi * D_avg * L;
-
-            L_exp = max(0, geom.aircraft_length_ft - L);
-            geom.S_wet_nacelle_simple_ft2 = geom.n_engines * pi * geom.D_engine_ft * L_exp;
-            geom.S_wet_nacelle_gt_ft2     = 41.515;  % Geom B4 ground truth
-
-            % Lifting surfaces (Geom B14-B17) - same formula for both fidelities
-            geom.S_wet_wing_ft2       = geom.wing.S_wet_ft2;
-            geom.S_wet_strake_ft2     = geom.strake.S_wet_ft2;
-            geom.S_wet_pitch_ctrl_ft2 = geom.pitch_ctrl.S_wet_ft2;
-            geom.S_wet_vert_tail_ft2  = geom.vert_tail.S_wet_ft2;
-
-            geom.S_wet_total_simple_ft2 = geom.S_wet_fuse_simple_ft2 ...
-                + geom.S_wet_nacelle_simple_ft2 ...
-                + geom.S_wet_wing_ft2 ...
-                + geom.S_wet_strake_ft2 ...
-                + geom.S_wet_pitch_ctrl_ft2 ...
-                + geom.S_wet_vert_tail_ft2;
+        function t = nacaHalfThickness(xi, tc)
+            % nacaHalfThickness   NACA 4/5-digit half-thickness (normalised to chord).
+            %   t = (tc/0.20)*(0.2969*sqrt(xi) - 0.1260*xi - 0.3516*xi^2
+            %                  + 0.2843*xi^3  - 0.1015*xi^4)
+            xi = max(0, min(1, xi));
+            t  = (tc / 0.20) * (0.2969*sqrt(xi) - 0.1260*xi ...
+                - 0.3516*xi^2 + 0.2843*xi^3 - 0.1015*xi^4);
         end
-
-        % ------------------------------------------------------------------ %
-        %  ACCURATE TOTAL S_WET  (Geom D23 + B14-B17 + nacelle GT)
-        % ------------------------------------------------------------------ %
-
-        function geom = computeSwetAccurate(geom)
-            % computeSwetAccurate   High-fidelity total S_wet.
-            %
-            % Combines per-frame fuselage integration (D23) with the same lifting-
-            % surface S_wet values (B14-B17) and the nacelle ground-truth (B4).
-            % Target total: Geom B19 = 1371.09 ft^2.
-            geom.S_wet_total_accurate_ft2 = geom.S_wet_fuse_accurate_ft2 ...
-                + geom.S_wet_nacelle_gt_ft2 ...
-                + geom.S_wet_wing_ft2 ...
-                + geom.S_wet_strake_ft2 ...
-                + geom.S_wet_pitch_ctrl_ft2 ...
-                + geom.S_wet_vert_tail_ft2;
-        end
-
-        % ------------------------------------------------------------------ %
-        %  AMAX  (Geom H47)
-        % ------------------------------------------------------------------ %
-
-        function geom = computeAmax(inp, geom)
-            % computeAmax   Maximum whole-aircraft cross-section area.
-            %
-            % Replicates Geom H26:H47.  At each frame station the whole-aircraft
-            % area is the sum of fuselage (W col), wing (Y), pitch ctrl (AA),
-            % vert tail (AC), nacelle (AE), and strake (AG) cross-sections.
-            %
-            %   Amax = MAX(H26:H45) - N_eng*pi*D_eng^2/5
-            %
-            % The -N*pi*D^2/5 term removes the internal engine inlet from the
-            % external wetted cross-section.  GT: 25.11 ft^2.
-
-            x_fr = geom.frame_x;
-
-            A_fuse   = geom.frame_area;
-
-            A_wing   = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                inp.wing.x_apex_ft, geom.wing.c_root_ft, geom.wing.c_tip_ft, ...
-                inp.wing.sweep_LE_deg, inp.wing.tc_ratio, ...
-                inp.fuselage.max_width_ft/2, geom.wing.half_span_ft, 'horiz');
-
-            A_pitch  = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                inp.pitch_ctrl.x_le_ft, geom.pitch_ctrl.c_root_ft, ...
-                geom.pitch_ctrl.c_tip_ft, inp.pitch_ctrl.sweep_LE_deg, ...
-                inp.pitch_ctrl.tc_ratio, ...
-                inp.fuselage.max_width_ft/2, geom.pitch_ctrl.half_span_ft, 'horiz');
-
-            A_vert   = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                inp.vert_tail.x_le_ft, geom.vert_tail.c_root_ft, ...
-                geom.vert_tail.c_tip_ft, inp.vert_tail.sweep_LE_deg, ...
-                inp.vert_tail.tc_ratio, ...
-                0, geom.vert_tail.span_ft, 'vert');
-
-            A_strake = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                inp.strake.x_le_ft, geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
-                inp.strake.sweep_LE_deg, inp.strake.tc_ratio, ...
-                inp.strake.y_ft, geom.strake.half_span_ft, 'horiz');
-
-            A_nac = BrandtGeometry.nacelleFrameArea(inp, geom, x_fr);
-
-            A_total = A_fuse + A_wing + A_pitch + A_vert + A_strake + A_nac;
-
-            geom.frame_area_wing   = A_wing;
-            geom.frame_area_pitch  = A_pitch;
-            geom.frame_area_vert   = A_vert;
-            geom.frame_area_strake = A_strake;
-            geom.frame_area_nac    = A_nac;
-            geom.frame_area_total  = A_total;
-
-            geom.Amax_ft2 = max(A_total) - ...
-                geom.n_engines * pi * geom.D_engine_ft^2 / 5.0;
-        end
-
-        % ------------------------------------------------------------------ %
-        %  LIFTING SURFACE CROSS-SECTION AREA AT EACH FRAME  (helper)
-        % ------------------------------------------------------------------ %
 
         function A = liftingSurfaceArea(x_stations, x_le_root, c_root, c_tip, ...
                 sweep_LE_deg, tc, y_root, half_span, orientation)
@@ -1063,22 +1090,13 @@ classdef BrandtGeometry
             end
         end
 
-        function t = nacaHalfThickness(xi, tc)
-            % nacaHalfThickness   NACA 4/5-digit half-thickness (normalised to chord).
-            %   t = (tc/0.20)*(0.2969*sqrt(xi) - 0.1260*xi - 0.3516*xi^2
-            %                  + 0.2843*xi^3  - 0.1015*xi^4)
-            xi = max(0, min(1, xi));
-            t  = (tc / 0.20) * (0.2969*sqrt(xi) - 0.1260*xi ...
-                - 0.3516*xi^2 + 0.2843*xi^3 - 0.1015*xi^4);
-        end
-
-        function A = nacelleFrameArea(inp, geom, x_stations)
+        function A = nacelleFrameArea(engine, geom, x_stations)
             % nacelleFrameArea   Nacelle cross-section at each frame station.
             %
             % Modelled as a cylinder of diameter D_engine from inlet_x to nozzle_x.
             % Source: Geom AE column; Geom H3 = nozzle_x = 29.917 ft.
             A_cyl = pi / 4 * geom.D_engine_ft^2;
-            x_in  = inp.engine.inlet_x_ft;
+            x_in  = engine.inlet_x_ft;
             x_noz = geom.nozzle_x_ft;
             A     = zeros(1, numel(x_stations));
             mask  = x_stations >= x_in & x_stations <= x_noz;
@@ -1102,5 +1120,122 @@ classdef BrandtGeometry
             fill(ax,  xr, -yr, color, 'FaceAlpha',0.35, 'EdgeColor',color, ...
                 'HandleVisibility','off');
         end
+
     end  % methods (Static)
+
+    methods (Static, Access = private)
+
+        function g = initGeomSchema()
+            % initGeomSchema   Pre-allocate obj.geom with all typed fields.
+            % Every field compute() will write must be declared here.
+
+            % Scalar fields
+            g.D_engine_ft               = 0.0;
+            g.L_engine_ft               = 0.0;
+            g.nozzle_x_ft               = 0.0;
+            g.n_engines                 = 0;
+            g.aircraft_length_ft        = 0.0;
+            g.S_wet_fuse_simple_ft2     = 0.0;
+            g.S_wet_nacelle_simple_ft2  = 0.0;
+            g.S_wet_nacelle_gt_ft2      = 0.0;
+            g.S_wet_wing_ft2            = 0.0;
+            g.S_wet_strake_ft2          = 0.0;
+            g.S_wet_pitch_ctrl_ft2      = 0.0;
+            g.S_wet_vert_tail_ft2       = 0.0;
+            g.S_wet_total_simple_ft2    = 0.0;
+            g.S_wet_fuse_accurate_ft2   = 0.0;
+            g.S_wet_total_accurate_ft2  = 0.0;
+            g.Amax_ft2                  = 0.0;
+
+            % Wing sub-struct
+            g.wing.c_root_ft        = 0.0;
+            g.wing.c_tip_ft         = 0.0;
+            g.wing.c_exp_root_ft    = 0.0;
+            g.wing.half_span_ft     = 0.0;
+            g.wing.half_span_exp_ft = 0.0;
+            g.wing.S_exposed_ft2    = 0.0;
+            g.wing.S_wet_ft2        = 0.0;
+            g.wing.x_te_root_ft     = 0.0;
+
+            % pitch_ctrl sub-struct
+            g.pitch_ctrl.c_root_ft        = 0.0;
+            g.pitch_ctrl.c_tip_ft         = 0.0;
+            g.pitch_ctrl.c_exp_root_ft    = 0.0;
+            g.pitch_ctrl.half_span_ft     = 0.0;
+            g.pitch_ctrl.half_span_exp_ft = 0.0;
+            g.pitch_ctrl.S_exposed_ft2    = 0.0;
+            g.pitch_ctrl.S_wet_ft2        = 0.0;
+
+            % strake sub-struct
+            g.strake.c_root_ft     = 0.0;
+            g.strake.c_tip_ft      = 0.0;
+            g.strake.half_span_ft  = 0.0;
+            g.strake.S_exposed_ft2 = 0.0;
+            g.strake.S_wet_ft2     = 0.0;
+
+            % vert_tail sub-struct
+            g.vert_tail.c_root_ft     = 0.0;
+            g.vert_tail.c_tip_ft      = 0.0;
+            g.vert_tail.c_exp_root_ft = 0.0;
+            g.vert_tail.span_ft       = 0.0;
+            g.vert_tail.span_exp_ft   = 0.0;
+            g.vert_tail.S_exposed_ft2 = 0.0;
+            g.vert_tail.S_wet_ft2     = 0.0;
+            g.vert_tail.x_le_tip_ft   = 0.0;
+            g.vert_tail.x_te_root_ft  = 0.0;
+            g.vert_tail.x_te_tip_ft   = 0.0;
+
+            % aileron sub-struct
+            g.aileron.S_ft2        = 0.0;
+            g.aileron.AR           = 0.0;
+            g.aileron.taper        = 0.0;
+            g.aileron.sweep_LE_deg = 0.0;
+            g.aileron.c_root_ft    = 0.0;
+            g.aileron.c_tip_ft     = 0.0;
+            g.aileron.half_span_ft = 0.0;
+            g.aileron.y_root_ft    = 0.0;
+            g.aileron.y_tip_ft     = 0.0;
+            g.aileron.x_le_ft      = 0.0;
+            g.aileron.x_le_tip_ft  = 0.0;
+            g.aileron.x_te_root_ft = 0.0;
+
+            % le_flap sub-struct
+            g.le_flap.S_ft2        = 0.0;
+            g.le_flap.AR           = 0.0;
+            g.le_flap.taper        = 0.0;
+            g.le_flap.sweep_LE_deg = 0.0;
+            g.le_flap.c_root_ft    = 0.0;
+            g.le_flap.c_tip_ft     = 0.0;
+            g.le_flap.half_span_ft = 0.0;
+            g.le_flap.y_root_ft    = 0.0;
+            g.le_flap.x_le_ft      = 0.0;
+
+            % te_flap sub-struct
+            g.te_flap.S_ft2        = 0.0;
+            g.te_flap.AR           = 0.0;
+            g.te_flap.taper        = 0.0;
+            g.te_flap.sweep_LE_deg = 0.0;
+            g.te_flap.c_root_ft    = 0.0;
+            g.te_flap.c_tip_ft     = 0.0;
+            g.te_flap.half_span_ft = 0.0;
+            g.te_flap.y_root_ft    = 0.0;
+            g.te_flap.x_le_ft      = 0.0;
+
+            % Frame arrays (20 frames)
+            g.frame_x           = zeros(1, 20);
+            g.frame_perimeter   = zeros(1, 20);
+            g.frame_area        = zeros(1, 20);
+            g.frame_area_wing   = zeros(1, 20);
+            g.frame_area_pitch  = zeros(1, 20);
+            g.frame_area_vert   = zeros(1, 20);
+            g.frame_area_strake = zeros(1, 20);
+            g.frame_area_nac    = zeros(1, 20);
+            g.frame_area_total  = zeros(1, 20);
+
+            % dSwet array (20 segments: one per fuselage segment, x_all has 21 pts)
+            g.fuselage_dSwet    = zeros(1, 20);
+        end
+
+    end  % methods (Static, Access = private)
+
 end  % classdef BrandtGeometry
