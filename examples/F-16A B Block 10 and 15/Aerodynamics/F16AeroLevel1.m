@@ -80,9 +80,10 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get K value (gross estimate, tabulated)
-          function K = get_K(aero_obj, AR, e_osw)
+          function [K1, K2] = get_K(aero_obj, AR, e_osw, M, LE_sweep_deg, CLminD)
                % aero_obj.K1 = 1/(pi*AR*e_osw);
-               K = AeroLevel1.compute_K(AR, e_osw);
+               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               K2 = aero_obj.compute_K2(M, K1, CLminD);
           end
 
           % Compute design drag

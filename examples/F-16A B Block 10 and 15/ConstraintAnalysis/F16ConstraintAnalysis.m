@@ -1,4 +1,4 @@
-classdef F16ConstraintEst3 < ConstraintModel
+classdef F16ConstraintAnalysis < ConstraintModel
      %F16CONSTRAINTEST Summary of this class goes here
      %   Detailed explanation goes here
      % YTup
@@ -21,8 +21,9 @@ classdef F16ConstraintEst3 < ConstraintModel
      methods
 
           % Constructor for my sanity
-          function obj = F16ConstraintEst3(design)
-               obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
+          % function obj = F16ConstraintEst3(design)
+          function obj = F16ConstraintAnalysis()
+               % obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
           end
 
           %
@@ -58,8 +59,9 @@ classdef F16ConstraintEst3 < ConstraintModel
                V = AeroUtils.compute_airspeed(statevector);
                q = AeroUtils.compute_q(state_vector);
                e_osw = aero_obj.get_e_osw(AR, LE_sweep_deg);
-               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
-               K2 = aero_obj.compute_K2(M, K1, CLminD);
+               [K1, K2] = aero_obj.get_K(AR, e_osw, M, LE_sweep_deg, CLminD);
+               % K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               % K2 = aero_obj.compute_K2(M, K1, CLminD);
                CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
 
                aero_constraints.CD0 = CD0;
