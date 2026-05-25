@@ -45,7 +45,7 @@ classdef F16ConstraintEst3 < ConstraintModel
           end
 
           % Compute aerodynamic constraints (K1, K2, CD0)
-          function aero_constraints = get_aero_constraints(constraint_obj, state_vector)
+          function aero_constraints = get_aero_constraints(constraint_obj, state_vector, AR, LE_sweep_deg, CLminD, Cf, S_wet, S_ref)
                % state_vector = array of altitude and Mach numbers
                % corresponding to each constraint
 
@@ -53,8 +53,28 @@ classdef F16ConstraintEst3 < ConstraintModel
                for i=1:length(state_vector)
                     % Compute e, K1, K2, CD0 for that constraint
                     % Store it in the aero_constraints struct
-                    K1 = aero_obj.get_K
+                    M = state_vector(1);
+                    h_alt = state_vector(2);
+                    V = AeroUtils.compute_airspeed(statevector);
+                    q = AeroUtils.compute_q(state_vector);
+                    e_osw = aero_obj.get_e_osw(AR, LE_sweep_deg);
+                    K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+                    K2 = aero_obj.compute_K2(M, K1, CLminD);
+                    CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
 
+                    aero_constraints.CD0 = CD0;
+                    aero_constraints.K1 = K1;
+                    aero_constraints.K2 = K2;
+                    aero_constraints.e_osw = e_osw;
+                    aero_constraints.V = V;
+                    aero_constraints.q = q;
+               end
+          end
+
+          % Get thrust constraints
+          function thrust_constraints = get_thrust_constraints
+
+          end
 
 
           % Get constraints

@@ -10,6 +10,13 @@ classdef PropulsionUtils
 
      methods (Static)
 
+          % Compute alpha
+
+
+          % Compute throttle lapse
+
+          
+
           % Normalize engine type inputs
           % Code from ChatGPT
           function engine_type_out = classify_engine_type(engine_type_in)
