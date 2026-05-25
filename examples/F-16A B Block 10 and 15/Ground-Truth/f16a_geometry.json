@@ -59,11 +59,25 @@
 
   "le_flap": {
     "_source": "Main!F18:F27 — leading-edge flap; S/AR/x_le calculated from wing geometry",
+    "_calc":          "S_ft2, AR, x_le_ft are CALCULATED (Main F18, F19, F23)",
     "airfoil":        "NACA 0012",
     "tc_ratio":       0.12,
     "taper":          1.0,
+    "sweep_LE_deg":   40.0,
     "y_ft":           3.5,
     "z_ft":           0.0
+  },
+
+  "te_flap": {
+    "_source": "Main!G18:G27 — trailing edge flap; taper/sweep/x_le calculated from wing",
+    "_calc":          "taper, sweep_LE_deg, x_le_ft are CALCULATED (Main G20, G21, G23)",
+    "S_ft2":          24.0,
+    "AR":             10.0,
+    "airfoil":        "NACA 0008",
+    "tc_ratio":       0.08,
+    "y_ft":           3.5,
+    "z_ft":           0.0,
+    "dihedral_deg":   0.0
   },
 
   "vert_tail": {
