@@ -44,12 +44,18 @@ The `WeightEstimationStrategy` + `RaymerWeightEstimation` pair in `src/Disciplin
 
 All new abstract/concrete pairs follow this pattern. **Do not invent new patterns** without an ADR written to `.squad/decisions/inbox/bishop-{slug}.md`.
 
+**BrandtGeometry pattern** (instance-based, no inheritance):
+  geom = BrandtGeometry(jsonPath)  % constructor: loads inputs, stores on obj
+  geom.compute()                   % populates all result properties on obj
+  geom.displayLiftingSurfaces()    % instance method reads from obj properties
+  geom.plotGeometry()              % instance method reads from obj properties
+
 ## Current Architecture Debts I Must Track
 
 1. **Cross-layer inheritance**: `AeroLevel4 < AerodynamicsModelLevel3`, `WeightLevel4 < WeightModelLevel3` cross from `Disciplines/` into `ComputationModels/`. Fix: migrate base classes into `Disciplines/` and remove `ComputationModels/` dependencies.
 2. **Aircraft type string ambiguity**: `"Jet fighter"` vs `"jet fighter"` — define canonical `AircraftType` constant `"jet_fighter"` used by all levels.
-3. **Static-only classes**: Level I/II classes have only `methods (Static)` — document this as an intentional decision with an ADR.
-4. **`level_brandt` isolation**: `src/level_brandt/` must be a standalone classdef with all static methods, no inheritance from `Disciplines/` or `ComputationModels/`.
+3. **OOP-first principle**: Classes MUST use proper instance-based OOP with constructors, instance properties, and instance methods. Static methods are acceptable ONLY for pure utility functions that take no object state (e.g., mathematical helpers, unit conversions). Any class that holds data or computes results from stored state MUST be an instantiable class, not a bag of static methods.
+4. **`level_brandt` isolation**: `src/level_brandt/` must be a standalone classdef — instantiable with a constructor, instance properties, and instance methods. No inheritance from `Disciplines/` or `ComputationModels/`. Static methods only for pure stateless utilities.
 
 ## Discipline Interface Contract (from `discipline-interfaces.md`)
 
