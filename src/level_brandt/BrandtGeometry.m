@@ -8,7 +8,7 @@ classdef BrandtGeometry < handle
 %   geom.displayLiftingSurfaces();             % show given inputs (works before compute)
 %   geom.displayLiftingSurfaces(true);         % show given + computed
 %   geom.displayFuselageFrames();              % Main A33:F53 frame table (works before compute)
-%   geom.displayFrameResults();                % per-frame computed table (requires compute)
+%   geom.displayAreas();                       % per-frame area build-up (requires compute)
 %   geom.displayGeomTable();                   % Geom S22:AN48 area breakdown (requires compute)
 %   geom.compareFidelities();                  % simple vs accurate S_wet (requires compute)
 %   geom.plotGeometry();                       % top-view + side-view plots (requires compute)
@@ -334,27 +334,30 @@ classdef BrandtGeometry < handle
         end
 
         % ------------------------------------------------------------------ %
-        %  DISPLAY: PER-FRAME COMPUTED GEOMETRY TABLE
+        %  DISPLAY: PER-FRAME AREA BUILD-UP
         % ------------------------------------------------------------------ %
 
-        function displayFrameResults(obj)
-            % displayFrameResults   Per-frame perimeter, area, and dS_wet.
-            obj.requireComputed('displayFrameResults');
-            inp  = obj.inp;
+        function displayAreas(obj)
+            % displayAreas   Per-frame whole-aircraft area build-up.
+            obj.requireComputed('displayAreas');
             geom = obj.geom;
+            nfrm = numel(geom.frame_x);
 
-            fprintf('\n=== Fuselage Frame Computed Geometry ===\n');
-            fprintf('%5s %9s %12s %10s %12s\n', ...
-                'Frame','x(ft)','Perim(ft)','Area(ft2)','dSwet(ft2)');
-            fprintf('%s\n', repmat('-', 1, 55));
+            fprintf('\n=== Whole-Aircraft Cross-Section Area Build-Up ===\n');
+            fprintf('%5s %8s %13s %13s %14s %11s %12s %15s %13s\n', ...
+                'Frame', 'x(ft)', 'Fuse_A(ft2)', 'Wing_A(ft2)', 'PCtrl_A(ft2)', ...
+                'VT_A(ft2)', 'Nac_A(ft2)', 'Strake_A(ft2)', 'Total_A(ft2)');
+            fprintf('%s\n', repmat('-', 1, 118));
 
-            for i = 1:numel(inp.fuselage.frames)
-                fprintf('%5d %9.3f %12.4f %10.4f %12.4f\n', ...
-                    i, geom.frame_x(i), geom.frame_perimeter(i), ...
-                    geom.frame_area(i), geom.fuselage_dSwet(i));
+            for i = 1:nfrm
+                fprintf('%5d %8.3f %13.3f %13.3f %14.3f %11.3f %12.3f %15.3f %13.3f\n', ...
+                    i, geom.frame_x(i), geom.frame_area(i), geom.frame_area_wing(i), ...
+                    geom.frame_area_pitch(i), geom.frame_area_vert(i), ...
+                    geom.frame_area_nac(i), geom.frame_area_strake(i), ...
+                    geom.frame_area_total(i));
             end
-            fprintf('\n  Accurate fuselage S_wet = %.3f ft^2  (Geom D23 GT: 676.329 ft^2)\n\n', ...
-                geom.S_wet_fuse_accurate_ft2);
+
+            fprintf('\nAmax = %.3f ft^2 (GT: 25.11 ft^2)\n\n', geom.Amax_ft2);
         end
 
         % ------------------------------------------------------------------ %
@@ -411,219 +414,213 @@ classdef BrandtGeometry < handle
         % ------------------------------------------------------------------ %
 
         function plotGeometry(obj)
-            % plotGeometry   Top-view (xy) and side-view (xz) aircraft geometry.
-            %
-            % Color coding:
-            %   Blue    - wing (+ aileron/TE flap faint dashed)
-            %   Green   - pitch ctrl / stabilator
-            %   Magenta - strakes
-            %   Red     - vertical tail
-            %   Gray    - fuselage
-            %   Cyan    - leading edge flaps
-            %   Dark    - nacelle/inlet
+            % plotGeometry   Plot Excel-faithful top and side geometry views.
             obj.requireComputed('plotGeometry');
             inp  = obj.inp;
             geom = obj.geom;
 
-            figure('Name','F-16A Geometry','NumberTitle','off', ...
-                   'Position',[100 100 1000 680]);
+            fuse_half_w = inp.fuselage.max_width_ft / 2;
+            x_fuse = [0, geom.frame_x, inp.fuselage.length_ft];
+            y_half = [0, inp.fuselage.frame_w / 2, 0];
+            z_top_fuse = [inp.fuselage.frame_z(1) + inp.fuselage.frame_h(1) / 2, ...
+                inp.fuselage.frame_z + inp.fuselage.frame_h / 2, 0];
+            z_bot_fuse = [inp.fuselage.frame_z(1) - inp.fuselage.frame_h(1) / 2, ...
+                inp.fuselage.frame_z - inp.fuselage.frame_h / 2, 0];
 
-            % ---- TOP VIEW -----------------------------------------------
-            ax1 = subplot(2, 1, 1);
-            hold(ax1, 'on'); grid(ax1, 'on'); axis(ax1, 'equal');
-            title(ax1, 'F-16A -- Top View (xy plane)');
-            xlabel(ax1, 'x  [ft]'); ylabel(ax1, 'y  [ft]');
-
-            % Wing -- straight TE (Brandt Geom K36:Q41)
-            hs_w       = geom.wing.half_span_ft;
-            x_te_w     = geom.wing.x_te_root_ft;   % 34.079 ft
-            x_le_tip_w = inp.wing.x_apex_ft + hs_w * tan(deg2rad(inp.wing.sweep_LE_deg));
-            xw = [inp.wing.x_apex_ft, x_le_tip_w, x_te_w, x_te_w];
-            yw = [0, hs_w, hs_w, 0];
-            fill(ax1,  xw,  yw, 'b', 'FaceAlpha',0.35, 'EdgeColor','b', 'DisplayName','Wing');
-            fill(ax1,  xw, -yw, 'b', 'FaceAlpha',0.35, 'EdgeColor','b', 'HandleVisibility','off');
-
-            % Pitch ctrl (stabilator)
-            BrandtGeometry.drawSurfaceTop(ax1, inp.pitch_ctrl.x_le_ft, ...
+            [x_wing, y_wing] = topTrapezoid(inp.wing.x_apex_ft, ...
+                geom.wing.c_root_ft, geom.wing.c_tip_ft, ...
+                inp.wing.sweep_LE_deg, fuse_half_w, geom.wing.half_span_ft);
+            [x_pitch, y_pitch] = topTrapezoid(inp.pitch_ctrl.x_le_ft, ...
                 geom.pitch_ctrl.c_root_ft, geom.pitch_ctrl.c_tip_ft, ...
-                inp.pitch_ctrl.sweep_LE_deg, ...
-                inp.fuselage.max_width_ft/2, geom.pitch_ctrl.half_span_ft, 'g', 'Pitch Ctrl');
-
-            % Strake
-            BrandtGeometry.drawSurfaceTop(ax1, inp.strake.x_le_ft, ...
+                inp.pitch_ctrl.sweep_LE_deg, fuse_half_w, geom.pitch_ctrl.half_span_ft);
+            [x_strake, y_strake] = topTrapezoid(inp.strake.x_le_ft, ...
                 geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
-                inp.strake.sweep_LE_deg, ...
-                inp.strake.y_ft, geom.strake.half_span_ft, 'm', 'Strake');
+                inp.strake.sweep_LE_deg, inp.strake.y_ft, geom.strake.half_span_ft);
+            [x_le_flap, y_le_flap] = topTrapezoid(geom.le_flap.x_le_ft, ...
+                geom.le_flap.c_root_ft, geom.le_flap.c_tip_ft, ...
+                geom.le_flap.sweep_LE_deg, geom.le_flap.y_root_ft, ...
+                geom.le_flap.y_root_ft + geom.le_flap.half_span_ft);
+            [x_te_flap, y_te_flap] = topTrapezoid(geom.te_flap.x_le_ft, ...
+                geom.te_flap.c_root_ft, geom.te_flap.c_tip_ft, ...
+                geom.te_flap.sweep_LE_deg, geom.te_flap.y_root_ft, ...
+                geom.te_flap.y_root_ft + geom.te_flap.half_span_ft);
 
-            % LE flap (inboard of wing, taper=1 -> rectangular)
-            lf = geom.le_flap;
-            x_lf_tip = lf.x_le_ft + lf.half_span_ft * tan(deg2rad(lf.sweep_LE_deg));
-            xlf = [lf.x_le_ft, x_lf_tip, x_lf_tip + lf.c_tip_ft, lf.x_le_ft + lf.c_root_ft];
-            ylf = [lf.y_root_ft, lf.y_root_ft + lf.half_span_ft, ...
-                   lf.y_root_ft + lf.half_span_ft, lf.y_root_ft];
-            fill(ax1,  xlf,  ylf, 'c', 'FaceAlpha',0.35, 'EdgeColor','c', 'DisplayName','LE Flap');
-            fill(ax1,  xlf, -ylf, 'c', 'FaceAlpha',0.35, 'EdgeColor','c', 'HandleVisibility','off');
+            x_aileron = [geom.aileron.x_le_ft, geom.aileron.x_le_tip_ft, ...
+                geom.aileron.x_le_tip_ft + geom.aileron.c_tip_ft, geom.aileron.x_te_root_ft];
+            y_aileron = [geom.aileron.y_root_ft, geom.aileron.y_tip_ft, ...
+                geom.aileron.y_tip_ft, geom.aileron.y_root_ft];
 
-            % Fuselage top outline (width profile)
-            x_f = [0, inp.fuselage.frame_x, inp.fuselage.length_ft];
-            w_f = [0, inp.fuselage.frame_w, 0];
-            fill(ax1, [x_f, fliplr(x_f)], [w_f/2, -fliplr(w_f/2)], ...
-                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.45, 'DisplayName','Fuselage');
+            x_vt = [inp.vert_tail.x_le_ft, geom.vert_tail.x_le_tip_ft, ...
+                geom.vert_tail.x_te_tip_ft, geom.vert_tail.x_te_root_ft];
+            z_vt = [inp.vert_tail.z_le_ft, inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
+                inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, inp.vert_tail.z_le_ft];
 
-            % Nacelle -- rectangular box (inlet to nozzle, width = D_engine)
-            r_n  = geom.D_engine_ft / 2;
             x_in = inp.engine.inlet_x_ft;
             x_nz = geom.nozzle_x_ft;
-            fill(ax1, [x_in x_nz x_nz x_in], [r_n r_n -r_n -r_n], ...
-                [0.45 0.45 0.45], 'FaceAlpha',0.3, 'EdgeColor',[0.3 0.3 0.3], ...
-                'DisplayName','Nacelle');
-
-            % Vert tail projected onto xy plane (centre-line projection)
-            plot(ax1, [inp.vert_tail.x_le_ft, geom.vert_tail.x_te_tip_ft], [0 0], ...
-                'r-', 'LineWidth',2, 'DisplayName','Vert Tail (proj)');
-
-            legend(ax1, 'Location','northeast');
-
-            % ---- SIDE VIEW ----------------------------------------------
-            ax2 = subplot(2, 1, 2);
-            hold(ax2, 'on'); grid(ax2, 'on'); axis(ax2, 'equal');
-            title(ax2, 'F-16A -- Side View (xz plane)');
-            xlabel(ax2, 'x  [ft]'); ylabel(ax2, 'z  [ft]');
-
-            % Fuselage side outline (z+-h/2 profile)
-            zc   = inp.fuselage.frame_z;
-            hf   = inp.fuselage.frame_h;
-            x_fr = [0, inp.fuselage.frame_x, inp.fuselage.length_ft];
-            zt_f = [zc(1)+hf(1)/2, zc+hf/2, 0];
-            zb_f = [zc(1)-hf(1)/2, zc-hf/2, 0];
-            fill(ax2, [x_fr, fliplr(x_fr)], [zt_f, fliplr(zb_f)], ...
-                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.45, 'DisplayName','Fuselage');
-
-            % Vertical tail -- Brandt Geom L163:Q167 trapezoid
-            xvt = [inp.vert_tail.x_le_ft, geom.vert_tail.x_le_tip_ft, ...
-                   geom.vert_tail.x_te_tip_ft, geom.vert_tail.x_te_root_ft];
-            zvt = [inp.vert_tail.z_le_ft, ...
-                   inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
-                   inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, ...
-                   inp.vert_tail.z_le_ft];
-            fill(ax2, xvt, zvt, 'r', 'FaceAlpha',0.4, 'EdgeColor','r', 'DisplayName','Vert Tail');
-
-            % Wing root chord
-            plot(ax2, [inp.wing.x_apex_ft, geom.wing.x_te_root_ft], ...
-                [inp.wing.z_ft, inp.wing.z_ft], 'b-', 'LineWidth',2.5, ...
-                'DisplayName','Wing root chord');
-
-            % Pitch ctrl root chord
-            plot(ax2, [inp.pitch_ctrl.x_le_ft, ...
-                       inp.pitch_ctrl.x_le_ft + geom.pitch_ctrl.c_root_ft], ...
-                [inp.pitch_ctrl.z_ft, inp.pitch_ctrl.z_ft], 'g-', ...
-                'LineWidth',2.5, 'DisplayName','Pitch Ctrl root');
-
-            % Nacelle box in xz plane
+            r_n = geom.D_engine_ft / 2;
             dz_n = -inp.engine.inlet_dz_ft;
-            fill(ax2, [x_in x_nz x_nz x_in], ...
-                 [dz_n-r_n dz_n-r_n dz_n+r_n dz_n+r_n], ...
-                [0.45 0.45 0.45], 'FaceAlpha',0.3, 'EdgeColor',[0.3 0.3 0.3], ...
-                'DisplayName','Nacelle');
 
-            legend(ax2, 'Location','northeast');
-            ylim(ax2, [-5, 28]);
+            figure('Name', 'F-16A Geometry', 'NumberTitle', 'off', ...
+                'Position', [100 100 1100 760]);
+
+            ax1 = subplot(2, 1, 1);
+            hold(ax1, 'on');
+            grid(ax1, 'on');
+            axis(ax1, 'equal');
+            title(ax1, 'F-16A — Top View');
+            xlabel(ax1, 'x (ft)');
+            ylabel(ax1, 'y (ft)');
+
+            fill(ax1, [x_fuse, fliplr(x_fuse)], [y_half, -fliplr(y_half)], ...
+                [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'k', ...
+                'DisplayName', 'Fuselage');
+            fillMirroredTop(ax1, x_wing, y_wing, 'b', 0.35, 'Wing');
+            fillMirroredTop(ax1, x_aileron, y_aileron, [0.4 0.9 1.0], 0.2, 'Aileron');
+            fillMirroredTop(ax1, x_le_flap, y_le_flap, 'c', 0.3, 'LE Flap');
+            fillMirroredTop(ax1, x_te_flap, y_te_flap, [0.4 0.9 1.0], 0.2, 'TE Flap');
+            fillMirroredTop(ax1, x_pitch, y_pitch, 'g', 0.35, 'Pitch Ctrl');
+            fillMirroredTop(ax1, x_strake, y_strake, 'm', 0.35, 'Strake');
+            fill(ax1, [x_in x_nz x_nz x_in], [r_n r_n -r_n -r_n], ...
+                [0.4 0.4 0.4], 'FaceAlpha', 0.3, 'EdgeColor', [0.25 0.25 0.25], ...
+                'DisplayName', 'Nacelle');
+            plot(ax1, [inp.vert_tail.x_le_ft, geom.vert_tail.x_te_tip_ft], [0 0], ...
+                'r-', 'LineWidth', 2.0, 'DisplayName', 'Vert Tail');
+            legend(ax1, 'Location', 'eastoutside');
+            xlim(ax1, [0, geom.aircraft_length_ft * 1.02]);
+
+            ax2 = subplot(2, 1, 2);
+            hold(ax2, 'on');
+            grid(ax2, 'on');
+            axis(ax2, 'equal');
+            title(ax2, 'F-16A — Side View');
+            xlabel(ax2, 'x (ft)');
+            ylabel(ax2, 'z (ft)');
+
+            fill(ax2, [x_fuse, fliplr(x_fuse)], [z_top_fuse, fliplr(z_bot_fuse)], ...
+                [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'k', ...
+                'DisplayName', 'Fuselage');
+            fill(ax2, x_vt, z_vt, 'r', 'FaceAlpha', 0.35, 'EdgeColor', 'r', ...
+                'DisplayName', 'Vert Tail');
+            plot(ax2, [inp.wing.x_apex_ft, geom.wing.x_te_root_ft], ...
+                [inp.wing.z_ft, inp.wing.z_ft], 'b-', 'LineWidth', 2.0, ...
+                'DisplayName', 'Wing');
+            plot(ax2, [inp.pitch_ctrl.x_le_ft, inp.pitch_ctrl.x_le_ft + geom.pitch_ctrl.c_root_ft], ...
+                [inp.pitch_ctrl.z_ft, inp.pitch_ctrl.z_ft], 'g-', 'LineWidth', 2.0, ...
+                'DisplayName', 'Pitch Ctrl');
+            plot(ax2, [geom.aileron.x_le_ft, geom.aileron.x_te_root_ft], ...
+                [inp.aileron.z_ft, inp.aileron.z_ft], '-', 'Color', [0.4 0.9 1.0], ...
+                'LineWidth', 2.0, 'DisplayName', 'Aileron');
+            fill(ax2, [x_in x_nz x_nz x_in], [dz_n - r_n, dz_n - r_n, dz_n + r_n, dz_n + r_n], ...
+                [0.4 0.4 0.4], 'FaceAlpha', 0.3, 'EdgeColor', [0.25 0.25 0.25], ...
+                'DisplayName', 'Nacelle');
+            legend(ax2, 'Location', 'eastoutside');
+            xlim(ax2, [0, geom.aircraft_length_ft * 1.02]);
+
+            function [xp, yp] = topTrapezoid(x_le_root, c_root, c_tip, sweep_deg, y_root, y_tip)
+                x_le_tip = x_le_root + (y_tip - y_root) * tand(sweep_deg);
+                x_te_root = x_le_root + c_root;
+                x_te_tip = x_le_tip + c_tip;
+                xp = [x_le_root, x_le_tip, x_te_tip, x_te_root];
+                yp = [y_root, y_tip, y_tip, y_root];
+            end
+
+            function fillMirroredTop(ax, xp, yp, faceColor, faceAlpha, labelText)
+                fill(ax, xp, yp, faceColor, 'FaceAlpha', faceAlpha, ...
+                    'EdgeColor', faceColor, 'DisplayName', labelText);
+                fill(ax, xp, -yp, faceColor, 'FaceAlpha', faceAlpha, ...
+                    'EdgeColor', faceColor, 'HandleVisibility', 'off');
+            end
         end
 
         % ------------------------------------------------------------------ %
-        %  PLOT: CROSS-SECTIONAL AREA PROFILE  (Brandt Geom AJ/AM columns)
+        %  PLOT: CROSS-SECTIONAL AREA PROFILE  (Brandt Geom H26:H45 + AM)
         % ------------------------------------------------------------------ %
 
         function plotAreaProfile(obj)
-            % plotAreaProfile   Half-aircraft top view and area-vs-x profile.
-            %
-            % Replicates Brandt Geom AJ (whole-aircraft A-Ao) and AM (Sears-Haack).
-            % Left:  half-aircraft top view (y>=0) with frame station vertical lines.
-            % Right: fuselage CS area, total adjusted area, Sears-Haack reference.
+            % plotAreaProfile   Half-aircraft top view and whole-aircraft area profile.
             obj.requireComputed('plotAreaProfile');
             inp  = obj.inp;
             geom = obj.geom;
 
-            figure('Name','F-16A Area Profile','NumberTitle','off', ...
-                   'Position',[150 150 1200 500]);
-
             x_frames = inp.fuselage.frame_x;
             A_fuse   = geom.frame_area;
             A_tot    = geom.frame_area_total;
-            Ao       = geom.n_engines * pi * geom.D_engine_ft^2 / 5.0;
-            A_adj    = max(0, A_tot - Ao);   % Geom AJ column
             Amax     = geom.Amax_ft2;
             L_ac     = geom.aircraft_length_ft;
+            x_sh     = linspace(0, L_ac, 300);
+            A_SH     = Amax .* (1 - (2 * x_sh / L_ac - 1) .^ 2) .^ (3 / 2);
 
-            % Sears-Haack reference (Geom AM column)
-            x_sh = linspace(0, L_ac, 300);
-            A_SH = Amax .* (1 - (2*x_sh/L_ac - 1).^2).^(3/2);
-
-            % ---- Left: half-aircraft top view -------------------------
-            ax1 = subplot(1, 2, 1);
-            hold(ax1, 'on'); grid(ax1, 'on'); axis(ax1, 'equal');
-            title(ax1, 'Half-Aircraft Top View (y >= 0)');
-            xlabel(ax1, 'x  [ft]'); ylabel(ax1, 'y  [ft]');
-
-            x_f = [0, x_frames, inp.fuselage.length_ft];
-            w_f = [0, inp.fuselage.frame_w, 0];
-            fill(ax1, [x_f, fliplr(x_f)], [w_f/2, zeros(1,numel(x_f))], ...
-                [0.80 0.80 0.80], 'EdgeColor','k', 'FaceAlpha',0.50, ...
-                'DisplayName','Fuselage half');
-
-            hs_w = geom.wing.half_span_ft;
-            xw = [inp.wing.x_apex_ft, ...
-                  inp.wing.x_apex_ft + hs_w*tan(deg2rad(inp.wing.sweep_LE_deg)), ...
-                  geom.wing.x_te_root_ft, geom.wing.x_te_root_ft];
-            yw = [0, hs_w, hs_w, 0];
-            fill(ax1, xw, yw, 'b', 'FaceAlpha',0.3, 'EdgeColor','b', 'DisplayName','Wing');
-
-            BrandtGeometry.drawSurfaceTop(ax1, inp.strake.x_le_ft, ...
+            x_fuse = [0, x_frames, inp.fuselage.length_ft];
+            y_half = [0, inp.fuselage.frame_w / 2, 0];
+            [x_wing, y_wing] = topTrapezoid(inp.wing.x_apex_ft, ...
+                geom.wing.c_root_ft, geom.wing.c_tip_ft, ...
+                inp.wing.sweep_LE_deg, inp.fuselage.max_width_ft / 2, geom.wing.half_span_ft);
+            [x_strake, y_strake] = topTrapezoid(inp.strake.x_le_ft, ...
                 geom.strake.c_root_ft, geom.strake.c_tip_ft, ...
-                inp.strake.sweep_LE_deg, inp.strake.y_ft, ...
-                geom.strake.half_span_ft, 'm', 'Strake');
-            % suppress mirrored left side from drawSurfaceTop
-            ch = get(ax1, 'Children');
-            if numel(ch) >= 1
-                set(ch(1), 'FaceAlpha',0.0, 'EdgeColor','none', ...
-                    'HandleVisibility','off');
-            end
+                inp.strake.sweep_LE_deg, inp.strake.y_ft, geom.strake.half_span_ft);
 
-            ylim_top = hs_w * 1.05;
+            figure('Name', 'F-16A Area Profile', 'NumberTitle', 'off', ...
+                'Position', [150 150 1200 500]);
+
+            ax1 = subplot(1, 2, 1);
+            hold(ax1, 'on');
+            grid(ax1, 'on');
+            axis(ax1, 'equal');
+            title(ax1, 'Half-Aircraft Top View');
+            xlabel(ax1, 'x (ft)');
+            ylabel(ax1, 'y (ft)');
+            fill(ax1, [x_fuse, fliplr(x_fuse)], [y_half, zeros(1, numel(x_fuse))], ...
+                [0.8 0.8 0.8], 'EdgeColor', 'k', 'FaceAlpha', 0.5, ...
+                'DisplayName', 'Fuselage');
+            fill(ax1, x_wing, y_wing, 'b', 'FaceAlpha', 0.3, 'EdgeColor', 'b', ...
+                'DisplayName', 'Wing');
+            fill(ax1, x_strake, y_strake, 'm', 'FaceAlpha', 0.35, 'EdgeColor', 'm', ...
+                'DisplayName', 'Strake');
+
+            ylim_top = geom.wing.half_span_ft * 1.05;
             for k = 1:numel(x_frames)
-                plot(ax1, [x_frames(k) x_frames(k)], [0 ylim_top], ...
-                    ':', 'Color',[0.6 0.6 0.6], 'HandleVisibility','off');
+                plot(ax1, [x_frames(k) x_frames(k)], [0 ylim_top], ':', ...
+                    'Color', [0.6 0.6 0.6], 'HandleVisibility', 'off');
             end
+            xlim(ax1, [0, L_ac * 1.02]);
             ylim(ax1, [0, ylim_top]);
-            legend(ax1, 'Location','northeast');
+            legend(ax1, 'Location', 'northeast');
 
-            % ---- Right: area vs x -------------------------------------
             ax2 = subplot(1, 2, 2);
-            hold(ax2, 'on'); grid(ax2, 'on');
-            title(ax2, 'Whole-Aircraft Cross-Sectional Area vs x');
-            xlabel(ax2, 'x  [ft]'); ylabel(ax2, 'Area  [ft^2]');
+            hold(ax2, 'on');
+            grid(ax2, 'on');
+            title(ax2, 'Cross-Sectional Area Profile');
+            xlabel(ax2, 'x (ft)');
+            ylabel(ax2, 'Area (ft^2)');
+            plot(ax2, x_frames, A_fuse, 'k-o', 'LineWidth', 1.5, ...
+                'MarkerSize', 4, 'DisplayName', 'Fuselage');
+            plot(ax2, x_frames, A_tot, 'b-s', 'LineWidth', 1.5, ...
+                'MarkerSize', 4, 'DisplayName', 'Total');
+            plot(ax2, x_sh, A_SH, 'r--', 'LineWidth', 1.8, ...
+                'DisplayName', 'Sears-Haack');
 
-            x_plot   = [0, x_frames];
-            plot(ax2, x_plot, [0, A_fuse], 'k-o', 'LineWidth',1.5, ...
-                'MarkerSize',4, 'DisplayName','Fuselage A');
-            plot(ax2, x_plot, [0, A_adj],  'b-s', 'LineWidth',1.5, ...
-                'MarkerSize',4, 'DisplayName','Total A (A-Ao)');
-            plot(ax2, x_sh,   A_SH, 'r--', 'LineWidth',1.8, ...
-                'DisplayName', sprintf('Sears-Haack (A_{max}=%.2f ft^2)', Amax));
+            [A_tot_max, idx_max] = max(A_tot);
+            plot(ax2, x_frames(idx_max), A_tot_max, 'b^', 'MarkerSize', 8, ...
+                'MarkerFaceColor', 'b', 'HandleVisibility', 'off');
+            text(ax2, x_frames(idx_max) + 0.5, A_tot_max, ...
+                sprintf(' A_{max}=%.2f ft^2', Amax), 'FontSize', 9);
 
-            [~, idx_max] = max(A_adj);
-            plot(ax2, x_frames(idx_max), A_adj(idx_max), 'b^', ...
-                'MarkerSize',8, 'MarkerFaceColor','b', 'HandleVisibility','off');
-            text(ax2, x_frames(idx_max)+0.5, A_adj(idx_max), ...
-                sprintf(' A_{max}=%.2f ft^2', Amax), 'FontSize',9);
-
+            y_lim_max = 1.1 * max([A_fuse, A_tot, A_SH, 1]);
             for k = 1:numel(x_frames)
-                plot(ax2, [x_frames(k) x_frames(k)], [0 Amax*1.1], ...
-                    ':', 'Color',[0.7 0.7 0.7], 'HandleVisibility','off');
+                plot(ax2, [x_frames(k) x_frames(k)], [0 y_lim_max], ':', ...
+                    'Color', [0.7 0.7 0.7], 'HandleVisibility', 'off');
             end
-            legend(ax2, 'Location','northwest');
+            legend(ax2, 'Location', 'northwest');
             xlim(ax2, [0, L_ac * 1.02]);
-            ylim(ax2, [0, Amax * 1.2]);
+            ylim(ax2, [0, y_lim_max]);
+
+            function [xp, yp] = topTrapezoid(x_le_root, c_root, c_tip, sweep_deg, y_root, y_tip)
+                x_le_tip = x_le_root + (y_tip - y_root) * tand(sweep_deg);
+                x_te_root = x_le_root + c_root;
+                x_te_tip = x_le_tip + c_tip;
+                xp = [x_le_root, x_le_tip, x_te_tip, x_te_root];
+                yp = [y_root, y_tip, y_tip, y_root];
+            end
         end
 
     end  % methods (instance)
@@ -1103,23 +1100,6 @@ classdef BrandtGeometry < handle
             A(mask) = geom.n_engines * A_cyl;
         end
 
-        function drawSurfaceTop(ax, x_le_root, c_root, c_tip, sweep_deg, ...
-                y_root, half_span, color, label)
-            % drawSurfaceTop   Fill trapezoidal planform in xy-plane (bilateral).
-
-            sw       = deg2rad(sweep_deg);
-            x_le_tip = x_le_root + (half_span - y_root) * tan(sw);
-            x_te_tip = x_le_tip  + c_tip;
-            x_te_root= x_le_root + c_root;
-
-            xr = [x_le_root, x_le_tip, x_te_tip, x_te_root];
-            yr = [y_root,    half_span, half_span, y_root   ];
-
-            fill(ax,  xr,  yr, color, 'FaceAlpha',0.35, 'EdgeColor',color, ...
-                'DisplayName',label);
-            fill(ax,  xr, -yr, color, 'FaceAlpha',0.35, 'EdgeColor',color, ...
-                'HandleVisibility','off');
-        end
 
     end  % methods (Static)
 

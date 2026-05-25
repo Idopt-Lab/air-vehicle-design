@@ -3,16 +3,18 @@
 > Single source of truth: `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`  
 > Every value, formula, and fidelity choice described here traces back to a specific cell in that workbook.
 
+> ⚠️ NOTE: The Brandt Excel sheet has an error. In the computation of Whole Aircraft S_wet, cell B19, the strake wetted area is double-counted. The formula `B19 = D23 + B4 + B14 + B15 + B16 + B17 + K21` includes both `B15` (strake S_wet) and `K21` (also strake S_wet). The MATLAB implementation does **not** replicate this bug.
+
 ---
 
 ## 1. File Organisation
 
 | File | Role |
 |------|------|
-| `src/level_brandt/BrandtGeometry.m` | MATLAB static-method class replicating the **Geom** tab |
+| `src/level_brandt/BrandtGeometry.m` | MATLAB handle class replicating the **Geom** tab |
 | `examples/.../f16a_geometry.json` | All given input values extracted from **Main** tab |
 
-All methods in `BrandtGeometry` are `static` – no instance state – consistent with the other `BrandtXxx` classes in this codebase.
+`BrandtGeometry` is a handle class: `compute()` and all display/plot helpers mutate or inspect `obj` in place after construction.
 
 ---
 
