@@ -19,7 +19,7 @@ classdef F16MissionAnalysisLevel1 < MissionAnalysisModel
           end
 
           % Compute mission fuel
-          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, propulsion_obj, W_TO, LD_max)
+          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, propulsion_obj, missiondata, W_TO, LD_max)
                % This is where we actually compute the fuel for the mission
                % AR = design.geom.wings.Main.AspectRatio;
 
@@ -30,10 +30,10 @@ classdef F16MissionAnalysisLevel1 < MissionAnalysisModel
                % T0 = propulsion_obj.T0;
 
                % Automate segment stuff
-               segmentnames = fields(mission_obj.missiondata);
+               segmentnames = fields(missiondata);
                fuelburnedarray = zeros(1,length(segmentnames));
                W_array = zeros(1, length(segmentnames));
-               W_payload_drop = mission_obj.missiondata.Combat.PayloadDroplbf;
+               W_payload_drop = missiondata.Combat.PayloadDroplbf;
 
                W_array(1) = W_TO;
 
@@ -57,10 +57,10 @@ classdef F16MissionAnalysisLevel1 < MissionAnalysisModel
                     if (currentsegment == "meta")
                          break
                     else
-                         M = mission_obj.missiondata.(currentsegment).MachNumber;
-                         alt = mission_obj.missiondata.(currentsegment).Altitudeft;
-                         q = mission_obj.missiondata.(currentsegment).qlbfft2;
-                         a = mission_obj.missiondata.(currentsegment).afts;
+                         M = missiondata.(currentsegment).MachNumber;
+                         alt = missiondata.(currentsegment).Altitudeft;
+                         q = missiondata.(currentsegment).qlbfft2;
+                         a = missiondata.(currentsegment).afts;
                          % CD0 = mission_obj.missiondata.(currentsegment).CD0;
                          % TSFC = mission_obj.missiondata.(currentsegment).TSFC;
                     end

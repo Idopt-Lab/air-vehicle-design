@@ -48,17 +48,17 @@ classdef F16ConstraintEst3 < ConstraintModel
 
           % Get consstraints
           function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
-               CD0_constraints = extracted_constraints(:, "CD0");
-               e_constraints = extracted_constraints(:, "e");
+               CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
+               e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
                q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
                V_constraints = extracted_constraints(:, "V (ft/s)");
-               K1_constraints = extracted_constraints(:, "K1");
+               K1_constraints = extracted_constraints(:, "K1"); % Switch to computation from aero
                PS_constraints = extracted_constraints(:, "PS_ft_s_");
                aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
 
-               thrust1 = extracted_constraints(:, "alpha_dry");
+               thrust1 = extracted_constraints(:, "alpha_dry"); % Should compute in propulsion class
                thrust2 = extracted_constraints(:, "AB_");
-               thrust3 = extracted_constraints(:, "throttleLapse");
+               thrust3 = extracted_constraints(:, "throttleLapse"); % Should compute in propulsion class
                thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
 
                % design.constraints.TO = extracted_constraints("Takeoff",:);
@@ -91,8 +91,8 @@ classdef F16ConstraintEst3 < ConstraintModel
                Distance = Landing.Distance_ft_;
                beta = Landing.W_Wto;
                rho = Landing.("rho (lb/ft^3)");
-               CLmax = Landing.CLmax;
-               CD0 = Landing.CD0;
+               CLmax = Landing.CLmax; % CL max should definitely be an aero class output
+               CD0 = Landing.CD0; % CD0 should definitely be an aero class output
                mu = Landing.SurfaceFrictionCoefficient_mu_;
 
                Wto_S = (Distance * rho * g * (mu * CLmax + 0.83 * CD0)) / (1.69 * beta);

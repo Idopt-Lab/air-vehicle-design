@@ -207,6 +207,8 @@ classdef F16GeometryLevel2 < GeometryModelLevel2
           function S_exposed_wing = get_S_exposed_wing(geometry_obj, tc, exposed_rc, exposed_halfspan)
                S_exposed_wing = GeometryLevel2.get_S_exposed_wing(tc, exposed_rc, exposed_halfspan);
           end
+
+          % Tail sizing begins here
      end
      methods (Access = private)
 
