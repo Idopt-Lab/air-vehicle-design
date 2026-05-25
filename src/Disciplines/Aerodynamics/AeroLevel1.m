@@ -16,11 +16,6 @@ classdef AeroLevel1
 
      methods (Static)
 
-          % Get K value (gross estimate, tabulated)
-          function K = compute_K(AR, e_osw)
-               K = 1/(pi*AR*e_osw);
-          end
-
           % Get CD
           function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
                CD = CD0 + K*CL^2;

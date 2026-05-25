@@ -7,7 +7,8 @@ classdef AerodynamicsModelLevel1 < handle
           LD_max
           AR_wet
           K_LD
-          K
+          K1
+          K2
      end
 
      methods (Abstract)

@@ -10,6 +10,24 @@ classdef PropulsionUtils
 
      methods (Static)
 
+          % Compute lapse rate, alpha
+          function alpha = compute_alpha(T_min, T_max, alpha_dry, alpha_AB, AB_percent)
+               alpha = (alpha_dry*T_min + AB_percent*(alpha_AB*T_max - alpha_dry*T_min))/T_max;
+          end
+
+          % Compute throttle ratio (also known as theta_0)
+          function TR = compute_TR(theta, gamma, M0)
+               TR = theta*(1 + (gamma-1)/2 * (M0^2));
+          end
+
+          % Compute dry/wet lapse rate (this computes "alpha_dry" or
+          % "alpha_wet" for a given engine at some given thrust config.
+          function alpha_dryorwet = compute_alpha_dryorwet(T_alt, T_SL)
+               alpha_dryorwet = T_alt/T_SL;
+          end
+
+
+
           % Normalize engine type inputs
           % Code from ChatGPT
           function engine_type_out = classify_engine_type(engine_type_in)

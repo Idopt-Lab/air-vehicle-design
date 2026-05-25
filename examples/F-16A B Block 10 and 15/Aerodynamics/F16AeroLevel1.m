@@ -16,7 +16,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           LD_max
           AR_wet
           K_LD
-          K
+          K1
+          K2
+          Cf
      end
 
      methods
@@ -26,12 +28,35 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                AR = geometry_obj.mainwings.AR;
                Lambda_LE_deg = geometry_obj.mainwings.LE_sweep;
                obj.e_osw = obj.get_e_osw(AR, Lambda_LE_deg);
-               obj.K = obj.get_K(AR, obj.e_osw);
+               % [obj.K1, obj.K2] = obj.get_K(AR, obj.e_osw, M, LE_sweep_deg, CLminD);
                W_TO = weight_obj.W_TO_guess;
                b = geometry_obj.mainwings.b;
                S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
                obj.LD_max = obj.get_LDmax(aircraft_type, b, S_wet);
           end
+
+          % Compute K1
+          function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
+               if (0.0 < M < 1.0)
+                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+               elseif (1.0 <= M)
+                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+               else
+                    error("Error handler.")
+               end
+          end
+
+          % Compute K2
+          function K2 = compute_K2(aero_obj, M, K1, CLminD)
+               if (0.0 < M <1.0)
+                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+               elseif (1.0 <= M)
+                    K2 = AeroUtils.compute_K2_sup();
+               else
+                    error("Error handler.")
+               end
+          end
+
 
           %% L/Dmax for the design
           % Estimate L/Dmax
@@ -57,9 +82,10 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get K value (gross estimate, tabulated)
-          function K = get_K(aero_obj, AR, e_osw)
+          function [K1, K2] = get_K(aero_obj, AR, e_osw, M, LE_sweep_deg, CLminD)
                % aero_obj.K1 = 1/(pi*AR*e_osw);
-               K = AeroLevel1.compute_K(AR, e_osw);
+               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               K2 = aero_obj.compute_K2(M, K1, CLminD);
           end
 
           % Compute design drag

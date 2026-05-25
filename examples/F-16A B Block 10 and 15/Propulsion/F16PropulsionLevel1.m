@@ -5,12 +5,16 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
      properties
           TSFC
           T0
+          T_SL_dry
+          T_SL_wet;
      end
 
      methods
           % Constructor
           function obj = F16PropulsionLevel1(design)
                engine_type = PropulsionUtils.classify_engine_type(design.propulsion_type);
+               obj.T_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
+               obj.T_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
                obj.TSFC = obj.get_TSFC(engine_type);
           end
 

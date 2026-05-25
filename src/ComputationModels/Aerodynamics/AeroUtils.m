@@ -6,6 +6,26 @@ classdef AeroUtils
      % use.
 
      methods (Static)
+          % Get K1 subsonic value (Source: Brandt)
+          function K1 = compute_K1_sub(AR, e_osw)
+               K1 = 1/(pi*AR*e_osw);
+          end
+
+          % Get K1 supersonic value (Source: Brandt)
+          function K1 = compute_K1_sup(AR, M, LE_sweep_deg)
+               K1 = ((AR*(M^2 - 1))/(4*AR*sqrt(M^2 - 1)-2))*cosd(LE_sweep_deg);
+          end
+
+          % Get K2 subsonic value (Source: Brandt)
+          function K2 = compute_K2_sub(K1, CLminD)
+               K2 = -2*K1*CLminD;
+          end
+
+          % Get K2 supersonic value (Source: Brandt)
+          function K2 = compute_K2_sup()
+               K2 = 0; % This is always zero
+          end
+
           % Get e_osw for a design
           function output = e_straight(AR)
                output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
@@ -37,6 +57,15 @@ classdef AeroUtils
                rho = rho*0.00194032033; % Convert from kg/m^3 -> imperial units
                q = 0.5*rho*V^2; % lbf/ft^2
                output = q;
+          end
+
+          % Get airspeed for some given state
+          function V = compute_airspeed(statevector)
+               M = statevector(1);
+               h_ft = statevector(2);
+               [T,a,P,rho,nu,mu] = atmosisa(h_ft*0.3048);
+               a = a*3.2808399; % Convert from m/s -> ft/s
+               V = a*M; % Get velocity (ft/s)
           end
 
           % Compute CDi

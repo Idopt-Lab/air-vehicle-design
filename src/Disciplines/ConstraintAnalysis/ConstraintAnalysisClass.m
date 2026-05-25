@@ -18,7 +18,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
           constraints_struct
      end
 
-     methods
+     methods (Static)
 
           % Constructor for my sanity
           function obj = ConstraintAnalysisClass(design)
@@ -48,7 +48,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
                showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
           end
 
-          % Get consstraints
+          % Get constraints
           function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0");
                e_constraints = extracted_constraints(:, "e");
@@ -88,16 +88,10 @@ classdef ConstraintAnalysisClass < ConstraintModel
           end
 
           % Solve for landing constraints
-          function Wto_S = landing_constraint(obj, Landing)
+          function Wto_S = landing_constraint(distance, beta, rho, CLmax, CD0, mu)
                g = 32.174;
-               Distance = Landing.Distance_ft_;
-               beta = Landing.W_Wto;
-               rho = Landing.("rho (lb/ft^3)");
-               CLmax = Landing.CLmax;
-               CD0 = Landing.CD0;
-               mu = Landing.SurfaceFrictionCoefficient_mu_;
 
-               Wto_S = (Distance * rho * g * (mu * CLmax + 0.83 * CD0)) / (1.69 * beta);
+               Wto_S = (distance * rho * g * (mu * CLmax + 0.83 * CD0)) / (1.69 * beta);
           end
 
           % Generate the constraint diagram
@@ -127,19 +121,18 @@ classdef ConstraintAnalysisClass < ConstraintModel
           end
 
 
-          %% ---------------------------------------------------
           % Master Equation
-          function T_Wto = computeWingLoading(obj, constraints, aero, thrust, Wto_S)
-               beta = constraints.W_Wto;
-               alpha = thrust.throttleLapse;
-               n = constraints.n;
-               q = aero.("q (lbf/ft^2)");
-               V = aero.("V (ft/s)");
-               CD0 = aero.("CD0"); % Values should emerge from calculations performed here
-               % Validate functionality independence of fidelity level (should work
-               % for all)
-               K1 = aero.K1;
-               Ps = constraints.PS_ft_s_;
+          function T_Wto = computeWingLoading(Wto_S, beta, alpha, n, q, V, CD0, K1, Ps)
+               % beta = constraints.W_Wto;
+               % alpha = thrust.throttleLapse;
+               % n = constraints.n;
+               % q = aero.("q (lbf/ft^2)");
+               % V = aero.("V (ft/s)");
+               % CD0 = aero.("CD0"); % Values should emerge from calculations performed here
+               % % Validate functionality independence of fidelity level (should work
+               % % for all)
+               % K1 = aero.K1;
+               % Ps = constraints.PS_ft_s_;
 
                if isnan(Ps)==1
                     Ps = 0;
@@ -155,18 +148,10 @@ classdef ConstraintAnalysisClass < ConstraintModel
 
           %% ---------------------------------------------------
           % Takeoff Constraint
-          function T_Wto = takeoff_constraint(obj, Wto_S, TO)
+          function T_Wto = takeoff_constraint(Wto_S, V_Vstall, beta, alpha, rho, CLmax, distance, CD0, mu)
                g = 32.174;
-               V_Vstall = TO.Vstall;
-               beta = TO.W_Wto;
-               alpha = TO.throttleLapse;
-               rho = TO.("rho (lb/ft^3)");
-               CLmax = TO.CLmax;
-               Distance = TO.Distance_ft_;
-               CD0 = TO.CD0;
-               mu = TO.SurfaceFrictionCoefficient_mu_;
 
-               term1 = V_Vstall^2 * beta^2 .* Wto_S ./ (alpha * rho * CLmax * g * Distance);
+               term1 = V_Vstall^2 * beta^2 .* Wto_S ./ (alpha * rho * CLmax * g * distance);
                term2 = 0.7 * CD0 / (beta * CLmax) + mu;
                T_Wto = term1 + term2;
           end

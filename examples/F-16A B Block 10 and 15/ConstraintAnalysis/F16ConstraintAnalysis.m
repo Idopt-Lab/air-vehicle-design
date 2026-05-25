@@ -1,4 +1,4 @@
-classdef F16ConstraintEst3 < ConstraintModel
+classdef F16ConstraintAnalysis < ConstraintModel
      %F16CONSTRAINTEST Summary of this class goes here
      %   Detailed explanation goes here
      % YTup
@@ -21,9 +21,12 @@ classdef F16ConstraintEst3 < ConstraintModel
      methods
 
           % Constructor for my sanity
-          function obj = F16ConstraintEst3(design)
-               obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
+          % function obj = F16ConstraintEst3(design)
+          function obj = F16ConstraintAnalysis()
+               % obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
           end
+
+          %
 
           % do a complete constraint analysis
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj)
@@ -38,32 +41,72 @@ classdef F16ConstraintEst3 < ConstraintModel
           end
 
           % Initialize constraints
-          function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
-               [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
+          % function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
+          %      [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
+          % end
+
+          % Compute aerodynamic constraints for a given state input
+          function aero_constraints = get_aero_constraints(constraint_obj, state_vector, AR, e_osw, LE_sweep_deg, CLminD, Cf, S_wet, S_ref, K1, K2)
+               % state_vector = array of altitude and Mach numbers
+               % corresponding to each constraint
+
+               % Loop through entire state vector
+
+               % Compute e, K1, K2, CD0 for that constraint
+               % Store it in the aero_constraints struct
+               M = state_vector(1);
+               h_alt = state_vector(2);
+               V = AeroUtils.compute_airspeed(state_vector);
+               q = AeroUtils.compute_q(state_vector);
+               % K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               % K2 = aero_obj.compute_K2(M, K1, CLminD);
+               CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
+
+               aero_constraints.CD0 = CD0;
+               aero_constraints.K1 = K1;
+               aero_constraints.K2 = K2;
+               aero_constraints.e_osw = e_osw;
+               aero_constraints.V = V;
+               aero_constraints.q = q;
+
           end
-     end
 
-     % HELPER METHODS
-     methods (Access = private)
+          % Get thrust constraints
+          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_)
 
-          % Get consstraints
-          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
-               CD0_constraints = extracted_constraints(:, "CD0");
-               e_constraints = extracted_constraints(:, "e");
-               q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
-               V_constraints = extracted_constraints(:, "V (ft/s)");
-               K1_constraints = extracted_constraints(:, "K1");
-               PS_constraints = extracted_constraints(:, "PS_ft_s_");
-               aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
+               M = state_vector(1);
+               h_alt = state_vector(2);
 
-               thrust1 = extracted_constraints(:, "alpha_dry");
-               thrust2 = extracted_constraints(:, "AB_");
-               thrust3 = extracted_constraints(:, "throttleLapse");
-               thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
+               [T_kelvin] = atmosisa(h_alt*0.3048);
 
-               % design.constraints.TO = extracted_constraints("Takeoff",:);
+               alpha = PropulsionUtils.compute_alpha(T_min, T_max, alpha_dry, alpha_AB, AB_percent);
+               theta = PropulsionUtils.theta(T_kelvin);
+               TR = PropulsionUtils.compute_TR(theta, gamma, M);
 
+               thrust_constraints.alpha = alpha;
+               thrust_constraints.AB_ = AB_;
+               thrust_constraints.TR = TR;
           end
+
+
+          % % Get constraints
+          % function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
+          %      CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
+          %      e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
+          %      q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
+          %      V_constraints = extracted_constraints(:, "V (ft/s)");
+          %      K1_constraints = extracted_constraints(:, "K1"); % Switch to computation from aero
+          %      PS_constraints = extracted_constraints(:, "PS_ft_s_");
+          %      aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
+          % 
+          %      thrust1 = extracted_constraints(:, "alpha_dry"); % Should compute in propulsion class
+          %      thrust2 = extracted_constraints(:, "AB_");
+          %      thrust3 = extracted_constraints(:, "throttleLapse"); % Should compute in propulsion class
+          %      thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
+          % 
+          %      % design.constraints.TO = extracted_constraints("Takeoff",:);
+          % 
+          % end
 
           % Create thrust loading table
           function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero, thrust, Wto_S_range, TO)
@@ -91,8 +134,8 @@ classdef F16ConstraintEst3 < ConstraintModel
                Distance = Landing.Distance_ft_;
                beta = Landing.W_Wto;
                rho = Landing.("rho (lb/ft^3)");
-               CLmax = Landing.CLmax;
-               CD0 = Landing.CD0;
+               CLmax = Landing.CLmax; % CL max should definitely be an aero class output
+               CD0 = Landing.CD0; % CD0 should definitely be an aero class output
                mu = Landing.SurfaceFrictionCoefficient_mu_;
 
                Wto_S = (Distance * rho * g * (mu * CLmax + 0.83 * CD0)) / (1.69 * beta);
