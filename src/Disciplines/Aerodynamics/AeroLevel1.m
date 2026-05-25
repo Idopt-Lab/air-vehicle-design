@@ -16,9 +16,24 @@ classdef AeroLevel1
 
      methods (Static)
 
-          % Get K value (gross estimate, tabulated)
-          function K = compute_K(AR, e_osw)
-               K = 1/(pi*AR*e_osw);
+          % Get K1 subsonic value
+          function K1 = compute_K1_sub(AR, e_osw)
+               K1 = 1/(pi*AR*e_osw);
+          end
+
+          % Get K1 supersonic value
+          function K1 = compute_K1_sup(AR, M, LE_sweep_deg)
+               K1 = ((AR*(M^2 - 1))/(4*AR*sqrt(M^2 - 1)-2))*cosd(LE_sweep_deg);
+          end
+
+          % Get K2 subsonic value
+          function K2 = compute_K2_sub(K1, CLminD)
+               K2 = -2*K1*CLminD;
+          end
+
+          % Get K2 supersonic value
+          function K2 = compute_K2_sup()
+               K2 = 0; % This is always zero
           end
 
           % Get CD

@@ -25,6 +25,8 @@ classdef F16ConstraintEst3 < ConstraintModel
                obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
           end
 
+          % 
+
           % do a complete constraint analysis
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj)
 
@@ -41,13 +43,22 @@ classdef F16ConstraintEst3 < ConstraintModel
           function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
                [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
           end
-     end
 
-     % HELPER METHODS
-     methods (Access = private)
+          % Compute aerodynamic constraints (K1, K2, CD0)
+          function aero_constraints = get_aero_constraints(constraint_obj, state_vector)
+               % state_vector = array of altitude and Mach numbers
+               % corresponding to each constraint
 
-          % Get consstraints
-          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
+               % Loop through entire state vector
+               for i=1:length(state_vector)
+                    % Compute e, K1, K2, CD0 for that constraint
+                    % Store it in the aero_constraints struct
+                    K1 = aero_obj.get_K
+
+
+
+          % Get constraints
+          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, state_vector) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
                e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
                q_constraints = extracted_constraints(:, "q (lbf/ft^2)");

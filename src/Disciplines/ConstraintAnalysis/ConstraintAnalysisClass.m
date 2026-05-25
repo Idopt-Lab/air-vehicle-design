@@ -18,7 +18,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
           constraints_struct
      end
 
-     methods
+     methods (Static)
 
           % Constructor for my sanity
           function obj = ConstraintAnalysisClass(design)
@@ -48,7 +48,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
                showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
           end
 
-          % Get consstraints
+          % Get constraints
           function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0");
                e_constraints = extracted_constraints(:, "e");
