@@ -25,7 +25,7 @@ classdef F16ConstraintEst3 < ConstraintModel
                obj.constraints_table = ConstraintModel.get_design_constraints(obj, design.constraints_filename);
           end
 
-          % 
+          %
 
           % do a complete constraint analysis
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj)
@@ -50,35 +50,47 @@ classdef F16ConstraintEst3 < ConstraintModel
                % corresponding to each constraint
 
                % Loop through entire state vector
-               for i=1:length(state_vector)
-                    % Compute e, K1, K2, CD0 for that constraint
-                    % Store it in the aero_constraints struct
-                    M = state_vector(1);
-                    h_alt = state_vector(2);
-                    V = AeroUtils.compute_airspeed(statevector);
-                    q = AeroUtils.compute_q(state_vector);
-                    e_osw = aero_obj.get_e_osw(AR, LE_sweep_deg);
-                    K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
-                    K2 = aero_obj.compute_K2(M, K1, CLminD);
-                    CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
 
-                    aero_constraints.CD0 = CD0;
-                    aero_constraints.K1 = K1;
-                    aero_constraints.K2 = K2;
-                    aero_constraints.e_osw = e_osw;
-                    aero_constraints.V = V;
-                    aero_constraints.q = q;
-               end
+               % Compute e, K1, K2, CD0 for that constraint
+               % Store it in the aero_constraints struct
+               M = state_vector(1);
+               h_alt = state_vector(2);
+               V = AeroUtils.compute_airspeed(statevector);
+               q = AeroUtils.compute_q(state_vector);
+               e_osw = aero_obj.get_e_osw(AR, LE_sweep_deg);
+               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               K2 = aero_obj.compute_K2(M, K1, CLminD);
+               CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
+
+               aero_constraints.CD0 = CD0;
+               aero_constraints.K1 = K1;
+               aero_constraints.K2 = K2;
+               aero_constraints.e_osw = e_osw;
+               aero_constraints.V = V;
+               aero_constraints.q = q;
+
           end
 
           % Get thrust constraints
-          function thrust_constraints = get_thrust_constraints
+          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_)
 
+               M = state_vector(1);
+               h_alt = state_vector(2);
+
+               [T_kelvin] = atmosisa(h_alt*0.3048);
+
+               alpha = PropulsionUtils.compute_alpha(T_min, T_max, alpha_dry, alpha_AB, AB_percent);
+               theta = PropulsionUtils.theta(T_kelvin);
+               TR = PropulsionUtils.compute_TR(theta, gamma, M);
+
+               thrust_constraints.alpha = alpha;
+               thrust_constraints.AB_ = AB_;
+               thrust_constraints.TR = TR;
           end
 
 
           % Get constraints
-          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, state_vector) % I think this is a messy way to do it, but can't think of another way.
+          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
                CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
                e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
                q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
