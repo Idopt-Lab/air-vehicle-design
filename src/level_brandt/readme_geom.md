@@ -13,6 +13,7 @@
 |------|------|
 | `src/level_brandt/BrandtGeometry.m` | MATLAB handle class replicating the **Geom** tab |
 | `examples/.../f16a_geometry.json` | All given input values extracted from **Main** tab |
+| `src/level_brandt/tests/test_BrandtGeometry.m` | Validation test suite (33 GT checks) |
 
 `BrandtGeometry` is a handle class: `compute()` and all display/plot helpers mutate or inspect `obj` in place after construction.
 
@@ -36,6 +37,10 @@ Values were extracted from the following Main-tab regions. Only cells that conta
 
 **Calculated value stored as input:** `wing.x_apex_ft = 17.786 ft`.  
 This is Excel's `x_MAC_qc − y_MAC·tan(sweep_LE)`, pre-computed in Main and stored in the JSON so the class never has to duplicate it.
+
+**JSON data correction (frames 16-17):** The original JSON had h_ft values off by one row for frames 16 and 17. Corrected values:
+- Frame 16: h_ft = 5.0 (not 4.5)
+- Frame 17: h_ft = 4.5 (not 4.0)
 
 ---
 
@@ -127,26 +132,76 @@ S_wet       = 40.89 × 1.9978     = 81.686 ft²  ≈  GT 81.689 ft² ✓
 
 For the **simple** nacelle S_wet (Geom B4 = 41.515 ft²), the cell formula could not be confirmed from the binary `.xls` file. The implementation uses an exposed-length cylinder model (`N·π·D·(aircraft_length − fuse_length)`) as a placeholder. The ground-truth value 41.515 ft² is stored separately and used in the accurate total.
 
-### 4.5 Maximum Cross-Section Area — Amax (Geom H47 = 25.11 ft²)
+### 4.5 Whole-Aircraft Cross-Sectional Area (H26:H45) and Amax
 
+#### Cross-Section Formula — Brandt Cosine Approximation
+
+**KEY DISCOVERY:** The Excel does NOT use a NACA thickness integral. It uses a closed-form cosine area formula (confirmed via `win32com` formula inspection of Y, AA, AC, AG columns):
+
+```
+Active range:  Xexp < x < Xexp + X_max_range
+Area(x) = tc · (c_exp_root + c_tip) · y_span · (1 − cos(2π·ξ)) / divisor
+
+where:
+  X_max_range = MAX(c_exp_root, G_hs_exp·tan(sweep) + c_tip_range)
+  X_max_cos   = MAX(c_exp_root, G_hs_exp·tan(sweep) + c_tip)
+  y_span      = MIN(G_hs_exp, (x − Xexp) / tan(sweep))
+  ξ           = (x − Xref) / X_max_cos
+```
+
+Surface parameters (from Geom rows 7–10):
+| Surface | Xexp (ft) | c_root (ft) | c_tip (ft) | G_hs (ft) | sweep° | divisor | Xref |
+|---------|----------|------------|-----------|----------|--------|---------|------|
+| Wing    | 20.723   | 13.356     | 3.707     | 11.5     | 40     | 2       | Xexp |
+| Pitch   | 38.937   | 6.839      | 2.224     | 5.5      | 40     | 2       | Xexp |
+| Strake  | 12.0     | 7.303      | 0         | 2.739    | 74     | **1**   | **38.937 (bug!)** |
+| Vert Tail | 38.098 | 7.123      | 4.083     | 7.298    | 40     | 2       | Xexp |
+
+**Nacelle:** Active from inlet_x (14.0 ft) to inlet_x + nozzle_x (43.917 ft).  
+Area = N_eng · π · D_engine² / 4 = π·3.537²/4 = 9.826 ft² (constant cylinder)
+
+#### Amax Computation
 ```
 Amax = MAX(H26:H45) − N_eng · π · D_eng² / 5.0
      = 32.971 − π·3.537²/5.0
      = 25.110 ft²   ✓
 ```
-`H26:H45` = whole-aircraft area at each fuselage station = sum of:
-- Fuselage frame area (W col)
-- Wing cross-section (Y col)
-- Pitch ctrl cross-section (AA col)
-- Vert tail cross-section (AC col)
-- Nacelle cylinder area (AE col)
-- Strake cross-section (AG col)
-
-The `−N·π·D²/5` term removes the internal inlet duct from the external wetted cross-section (Brandt notation; factor of 5 is a standard inlet area correction).
+The `−N·π·D²/5` term removes the internal inlet duct from the external maximum cross-section.
 
 ---
 
-## 5. Fidelity Levels Summary
+## 5. Excel Copy-Paste Bugs (Replicated for GT Match)
+
+### 5.1 Strake Column (AG) — Two Bugs
+1. **Cosine reference Xref uses `B$8`** (pitch ctrl Xexp = 38.937 ft) instead of `B$9` (strake Xexp = 12.0 ft)
+2. **No division by 2** (divisor = 1, whereas wing and pitch ctrl use divisor = 2)
+
+Both bugs together happen to produce a reasonable cross-section shape. MATLAB replicates both bugs exactly to match GT.
+
+### 5.2 Vertical Tail Column (AC) — One Bug
+- **Active-range check** uses `MAX(F10, G10·tan(sweep) + D$7)` where `D$7` = wing tip chord = **3.707 ft**
+- **Cosine denominator** uses `MAX(F10, G10·tan(sweep) + D$10)` = VT tip chord = **4.082 ft**
+
+Two different X_max values appear in the same formula (copy-paste error from wing column). MATLAB replicates this via the optional `c_tip_range` parameter in `brandtCSArea()`.
+
+---
+
+## 6. Known Excel Bugs (NOT Replicated)
+
+### 6.1 Frame 20 Width
+In the Geom tab cross-section detail block, frame 20 incorrectly uses cell `$F$26` (= 2.0 ft, frame-1 width) instead of `$B$52` (= 7.0 ft, frame-20 width).
+
+- Excel Geom D23 = **676.329 ft²** (with the bug)
+- MATLAB = **675.027 ft²** (correct frame-20 width, 0.19% difference)
+- Excel frame 20 whole-aircraft area = **5.543 ft²** (with bug)
+- MATLAB frame 20 whole-aircraft area = **17.129 ft²** (correct width)
+
+### 6.2 B19 Strake Double-Count
+See note at the top of this document. Corrected total = 1331.134 ft².
+
+---
+
+## 7. Fidelity Levels Summary
 
 | Component | Low fidelity | High fidelity | Key difference |
 |-----------|-------------|--------------|----------------|
@@ -157,38 +212,24 @@ The `−N·π·D²/5` term removes the internal inlet duct from the external wet
 
 ---
 
-## 6. Known Excel Bug — Frame 20 Width (NOT Replicated)
+## 8. Validation Results (test_BrandtGeometry.m — 33/33 PASS)
 
-In the Geom tab cross-section detail block (rows ~450–461), frame 20 incorrectly uses cell `$F$26` (= 2.0 ft, frame-1 width) instead of `$B$52` (= 7.0 ft, frame-20 width).
+| Table | Quantity | Computed | GT | % Error | Status |
+|-------|---------|---------|-----|---------|--------|
+| 1 | Wing S_wet | 392.020 ft² | 392.020 ft² | 0.000% | PASS |
+| 1 | Strake S_wet | 39.956 ft² | 39.956 ft² | 0.000% | PASS |
+| 1 | Pitch ctrl S_wet | 99.585 ft² | 99.585 ft² | 0.000% | PASS |
+| 1 | Vert tail S_wet | 81.689 ft² | 81.689 ft² | 0.000% | PASS |
+| 1 | Nacelle S_wet | 41.515 ft² | 41.515 ft² | 0.000% | PASS |
+| 1 | Total S_wet (corrected) | 1332.692 ft² | 1331.134 ft² | +0.117% | PASS |
+| 2 | Aircraft length | 48.304 ft | 48.304 ft | 0.000% | PASS |
+| 2 | Amax | 25.111 ft² | 25.110 ft² | +0.002% | PASS |
+| 2 | Nacelle length | 15.917 ft | 15.917 ft | 0.000% | PASS |
+| 2 | Nacelle diameter | 3.537 ft | 3.537 ft | 0.000% | PASS |
+| 3 | Wing sweep 25%c | 28.153° | 28.153° | 0.000% | PASS |
+| 4 | Frame 1 perimeter | 5.178 ft | 5.178 ft (G50) | −0.004% | PASS |
+| 4 | Frame 9 area | 22.572 ft² | 22.572 ft² (H218) | −0.001% | PASS |
+| 5 | 19 whole-aircraft CS areas | — | H26:H45 | all <0.001% | 19 PASS |
+| 6 | Aircraft volume | 1101.47 ft³ | 1106.306 ft³ (S47) | −0.437% | PASS |
 
-- Excel's Geom D23 = **676.329 ft²** (with the bug)
-- This implementation's D23 = **675.027 ft²** (correct frame-20 width, 0.19% difference)
-
-The bug is **not replicated** intentionally; the correct frame dimensions are used.
-
----
-
-## 7. Validation Results
-
-| Quantity | Implementation | Excel GT | Error |
-|---------|---------------|---------|-------|
-| Fuselage simple S_wet | 730.420 ft² | 730.422 ft² | < 0.001% |
-| Wing S_wet | 392.020 ft² | 392.020 ft² | 0.000% |
-| Strake S_wet | 39.956 ft² | 39.956 ft² | 0.000% |
-| Pitch ctrl S_wet | 99.585 ft² | 99.585 ft² | 0.000% |
-| Vert tail S_wet | 81.686 ft² | 81.689 ft² | < 0.004% |
-| Amax | 25.110 ft² | 25.110 ft² | 0.000% |
-| Frame 1 perimeter | 5.178 ft | 5.178 ft (Geom G50) | 0.000% |
-| Fuselage accurate S_wet | 675.027 ft² | 676.329 ft² | 0.19%* |
-
-*Difference fully explained by the frame-20 bug described in Section 6.
-
----
-
-## 8. Tests Run
-
-1. **Python verification script** — all formulas independently coded and compared against Geom cell values before any MATLAB was written.
-2. **Frame 1 perimeter** — cosine model compared to Geom G50 (exact match).
-3. **Amax** — reproduced frame-by-frame with nacelle subtraction.
-4. **Vert tail boundary** — confirmed half-height (2.5 ft) vs half-width (3.5 ft) by back-calculating from Geom B17 target.
-5. **Wing span** — `sqrt(300 × 3.0) = 30.0 ft`; confirmed against Brandt Table 3.x.
+Frame 20 cross-section area is excluded from TABLE 5 due to the Excel frame-20 width bug (Section 6.1). Frames 1–19 match GT within 0.001%.

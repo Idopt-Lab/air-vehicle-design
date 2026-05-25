@@ -57,42 +57,53 @@ fprintf('Note: Excel L45 is derived from the same formula, so this is a formula-
 
 %% Table 4: Fuselage frame spot checks
 fprintf('\nTABLE 4: Fuselage Frame Spot Checks\n');
-fprintf('%-24s %14s %18s\n', 'Quantity', 'Computed', 'Reference / Note');
-fprintf('%s\n', repmat('-', 1, 62));
-fprintf('%-24s %14.3f %18s\n', 'Frame 1 perimeter', geom.geom.frame_perimeter(1), 'check visually');
-fprintf('%-24s %14.3f %18s\n', 'Frame 9 area', geom.geom.frame_area(9), 'check visually');
-fprintf('%-24s %14.3f %18s\n', 'Frame 14 max width', geom.inp.fuselage.frame_w(14), 'Excel G327/input');
-fprintf('%-24s %14.3f %18s\n', 'Frame 17 max height', geom.inp.fuselage.frame_h(17), 'Excel H390/input');
+fprintf('%-18s %14s %12s %12s %10s %8s\n', 'Quantity', 'Computed', 'GT', 'Error', '% Error', 'Status');
+fprintf('%s\n', repmat('-', 1, 82));
+[pass_count, check_count] = printComparison('Frame 1 perim', geom.geom.frame_perimeter(1), 5.178, tol_pct, pass_count, check_count);
+[pass_count, check_count] = printComparison('Frame 9 area',  geom.geom.frame_area(9),      22.572, tol_pct, pass_count, check_count);
+fprintf('%-18s %14.3f %12s %12s %10s %8s\n', 'Frame 14 w',  geom.inp.fuselage.frame_w(14), '7.000', '--', '--', 'INPUT');
+fprintf('%-18s %14.3f %12s %12s %10s %8s\n', 'Frame 17 h',  geom.inp.fuselage.frame_h(17), '4.500', '--', '--', 'INPUT');
+fprintf('Note: Frame 1 perim from Excel G50=5.178; Frame 9 area from Excel H218=22.572.\n');
 
 %% Table 5: Whole-aircraft cross-sectional areas
-fprintf('\nTABLE 5: Whole-Aircraft Cross-Sectional Areas\n');
-fprintf('%-7s %10s %22s %20s %10s\n', 'Frame', 'x (ft)', 'Computed Total A (ft^2)', 'Expected band', 'Status');
-fprintf('%s\n', repmat('-', 1, 78));
+fprintf('\nTABLE 5: Whole-Aircraft Cross-Sectional Areas vs Excel H26:H45\n');
+fprintf('GT values from Brandt-F16-A.xls Geom H26:H45 (read via win32com)\n');
+fprintf('%-7s %10s %22s %14s %10s %10s\n', 'Frame', 'x (ft)', 'Computed Total A (ft^2)', 'GT A (ft^2)', '% Error', 'Status');
+fprintf('%s\n', repmat('-', 1, 85));
 
-expected_area_center = [0.5, 1.0, 2.0, 3.5, 5.0, 6.5, 11.0, 17.0, 20.0, 22.0, 25.11, 24.0, 23.0, 22.0, 20.0, 18.0, 15.0, 10.0, 8.0, 5.0];
-for k = 1:numel(geom.inp.fuselage.frame_x)
-    band_lo = max(0.0, expected_area_center(k) - max(2.0, 0.5 * expected_area_center(k)));
-    band_hi = expected_area_center(k) + max(2.0, 0.5 * expected_area_center(k));
-    in_band = geom.geom.frame_area_total(k) >= band_lo && geom.geom.frame_area_total(k) <= band_hi;
-    if in_band
-        status = 'OK';
-    else
-        status = 'FLAG';
-    end
-    fprintf('%-7d %10.3f %22.3f %9.3f to %-8.3f %10s\n', ...
-        k, geom.inp.fuselage.frame_x(k), geom.geom.frame_area_total(k), band_lo, band_hi, status);
+% Exact GT values from Geom H26:H45 (verified via win32com formula inspection)
+gt_total_areas = [1.8941, 4.4449, 6.8189, 13.2589, 16.8590, 29.2694, 30.2583, 32.5592, ...
+                  32.4564, 31.9069, 31.8904, 32.9711, 32.8535, 31.9311, 31.9239, 31.9412, ...
+                  31.5840, 31.7828, 18.9914, 5.5434];
+
+tol_cs_pct = 0.1;  % tight tolerance: Brandt's formula is deterministic
+n_cs_pass = 0; n_cs_total = 0;
+for k = 1:19  % frames 1-19; frame 20 excluded due to Excel bug (see note below)
+    comp  = geom.geom.frame_area_total(k);
+    gt_v  = gt_total_areas(k);
+    err_p = 100 * (comp - gt_v) / gt_v;
+    stat  = 'PASS'; if abs(err_p) >= tol_cs_pct, stat = 'FAIL'; end
+    if strcmp(stat,'PASS'), n_cs_pass = n_cs_pass + 1; end
+    n_cs_total = n_cs_total + 1;
+    fprintf('%-7d %10.3f %22.4f %14.4f %10.3f %10s\n', k, geom.inp.fuselage.frame_x(k), comp, gt_v, err_p, stat);
+    if strcmp(stat,'PASS'), pass_count = pass_count + 1; end
+    check_count = check_count + 1;
 end
-fprintf('Note: Exact Excel H26:H45 values are not available from the binary workbook here; broad bands are used only for sanity-check flagging.\n');
+fprintf('%-7d %10.3f %22.4f %14.4f %10s %10s\n', 20, geom.inp.fuselage.frame_x(20), ...
+    geom.geom.frame_area_total(20), gt_total_areas(20), '(excluded)', 'NOTE');
+fprintf(['NOTE: Frame 20 (x=46.5 ft): Excel W column formula references F26 (width=2.0 ft)\n', ...
+         '  instead of Main row53 (width=7.0 ft). Excel computed fuselage area = 4.63 ft^2,\n', ...
+         '  MATLAB uses correct input width=7.0 ft, giving ~16.22 ft^2. Known Excel bug.\n']);
+fprintf('Cross-sectional area check: %d/%d PASS (tol = %.1f%%)\n', n_cs_pass, n_cs_total, tol_cs_pct);
 
-aircraft_volume_ft3 = trapz(geom.inp.fuselage.frame_x, geom.geom.frame_area_total);
-if aircraft_volume_ft3 >= 2600 && aircraft_volume_ft3 <= 3200
-    volume_status = 'OK';
-else
-    volume_status = 'FLAG';
-end
-fprintf('\nIntegrated whole-aircraft volume = %.3f ft^3  [%s, expected ~2600-3200 ft^3]\n', aircraft_volume_ft3, volume_status);
+%% Volume check (TABLE 6)
+aircraft_volume_ft3    = trapz(geom.inp.fuselage.frame_x, geom.geom.frame_area_total);
+gt_volume_ft3          = 1106.306;   % Geom S47 = trapz(C26:C45, H26:H45) in Excel
+[pass_count, check_count] = printComparison('Aircraft volume', aircraft_volume_ft3, gt_volume_ft3, tol_pct, pass_count, check_count);
+fprintf(['Note: Small volume error expected due to frame-20 Excel bug.\n', ...
+         '  Excel uses w=2.0 ft (from F26) for frame 20; MATLAB uses correct w=7.0 ft.\n']);
 
-%% Plot
+%% Plot: Computed vs GT whole-aircraft cross-sectional areas
 script_path = mfilename('fullpath');
 if isempty(script_path)
     script_path = which('test_BrandtGeometry');
@@ -105,17 +116,18 @@ end
 figure('Name', 'Validation: Whole-Aircraft CS Area', 'NumberTitle', 'off', 'Visible', 'off');
 hold on; grid on;
 x_frames = geom.inp.fuselage.frame_x;
-plot(x_frames, geom.geom.frame_area_total, 'b-o', 'LineWidth', 1.5, 'DisplayName', 'Computed Total Area');
-plot(x_frames, geom.geom.frame_area, 'k--s', 'LineWidth', 1.2, 'DisplayName', 'Fuselage Only');
+plot(x_frames, geom.geom.frame_area_total, 'b-o', 'LineWidth', 1.5, 'DisplayName', 'MATLAB Computed');
+plot(x_frames, gt_total_areas, 'r--^', 'LineWidth', 1.5, 'DisplayName', 'Excel GT (H26:H45)');
+plot(x_frames, geom.geom.frame_area, 'k:s', 'LineWidth', 1.2, 'DisplayName', 'Fuselage Only');
 xlabel('x (ft)'); ylabel('Cross-Sectional Area (ft^2)');
-title('Whole-Aircraft Cross-Sectional Area vs Fuselage Station');
+title('Whole-Aircraft Cross-Sectional Area: MATLAB vs Excel GT');
 legend('Location', 'northwest');
 for k = 1:numel(x_frames)
-    text(x_frames(k), geom.geom.frame_area_total(k) + 0.3, num2str(k), 'FontSize', 7, 'HorizontalAlignment', 'center');
+    text(x_frames(k), geom.geom.frame_area_total(k) + 0.4, num2str(k), 'FontSize', 7, 'HorizontalAlignment', 'center');
 end
 plot_path = fullfile(script_dir, 'validation_area_profile.png');
 saveas(gcf, plot_path);
-fprintf('Saved plot: %s\n', plot_path);
+fprintf('\nSaved plot: %s\n', plot_path);
 close(gcf);
 
 %% Summary

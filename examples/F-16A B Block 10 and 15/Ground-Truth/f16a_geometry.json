@@ -116,8 +116,8 @@
       {"frame": 13, "x_ft": 31.525, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 6.5, "h_ft": 5.0},
       {"frame": 14, "x_ft": 33.95,  "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 5.0},
       {"frame": 15, "x_ft": 36.375, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 5.0},
-      {"frame": 16, "x_ft": 38.8,   "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.5},
-      {"frame": 17, "x_ft": 41.225, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.0},
+      {"frame": 16, "x_ft": 38.8,   "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 5.0},
+      {"frame": 17, "x_ft": 41.225, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.5},
       {"frame": 18, "x_ft": 43.65,  "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.0},
       {"frame": 19, "x_ft": 46.075, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.0},
       {"frame": 20, "x_ft": 46.5,   "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 3.67}

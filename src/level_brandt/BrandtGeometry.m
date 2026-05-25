@@ -456,7 +456,7 @@ classdef BrandtGeometry < handle
                 inp.vert_tail.z_le_ft + geom.vert_tail.span_ft, inp.vert_tail.z_le_ft];
 
             x_in = inp.engine.inlet_x_ft;
-            x_nz = geom.nozzle_x_ft;
+            x_nz = inp.engine.inlet_x_ft + geom.nozzle_x_ft;  % nacelle end = inlet_x + H3 = 43.917 ft
             r_n = geom.D_engine_ft / 2;
             dz_n = -inp.engine.inlet_dz_ft;
 
@@ -640,9 +640,15 @@ classdef BrandtGeometry < handle
             % computeNacelle   Derive nacelle geometry from engine thrust.
             %
             % Source: Engn(s) tab.  All values are CALCULATED, not given inputs.
-            %   D_engine = sqrt(T_AB_SLS / 1900)    [Geom H3 -> 3.537 ft]
-            %   L_engine = 4.5 * D_engine            [AB engine formula]
-            %   nozzle_x = inlet_x + L_engine        [Geom H3 = 29.917 ft]
+            %   D_engine  = sqrt(T_AB_SLS / 1900)   [Geom H4 = 3.537 ft]
+            %   L_engine  = 4.5 * D_engine           [AB engine formula = 15.917 ft]
+            %   nozzle_x  = inlet_x + L_engine       [Geom H3 = 29.917 ft, labelled "Length"]
+            %
+            % NOTE: In the AE (nacelle cross-section) column of Geom, the nacelle
+            % cylinder extends from inlet_x to (inlet_x + nozzle_x_ft) = 43.917 ft,
+            % NOT to nozzle_x_ft = 29.917 ft.  Geom H3 is the nozzle x-position from
+            % the nose (= inlet_x + L_engine), and is reused as the nacelle length in
+            % the AE formula: nacelle_end = inlet_x + H3.  See nacelleFrameArea().
             T = obj.inp.engine.T_AB_SLS_lb;
             D = sqrt(T / 1900);
             L = 4.5 * D;
@@ -951,37 +957,59 @@ classdef BrandtGeometry < handle
             % area is the sum of fuselage (W col), wing (Y), pitch ctrl (AA),
             % vert tail (AC), nacelle (AE), and strake (AG) cross-sections.
             %
+            % Each lifting surface uses Brandt's cosine approximation formula
+            % (NOT the NACA 4/5-digit thickness integral) -- verified against the
+            % Excel via win32com formula inspection.  See brandtCSArea() below.
+            %
             %   Amax = MAX(H26:H45) - N_eng*pi*D_eng^2/5
             %
             % The -N*pi*D^2/5 term removes the internal engine inlet from the
             % external wetted cross-section.  GT: 25.11 ft^2.
 
-            x_fr = obj.geom.frame_x;
+            x_fr   = obj.geom.frame_x;
+            A_fuse = obj.geom.frame_area;
 
-            A_fuse   = obj.geom.frame_area;
+            fw = obj.inp.fuselage.max_width_ft / 2;   % fuselage half-width  = 3.5 ft
+            fh = obj.inp.fuselage.max_height_ft / 2;  % fuselage half-height = 2.5 ft
 
-            A_wing   = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                obj.inp.wing.x_apex_ft, obj.geom.wing.c_root_ft, obj.geom.wing.c_tip_ft, ...
-                obj.inp.wing.sweep_LE_deg, obj.inp.wing.tc_ratio, ...
-                obj.inp.fuselage.max_width_ft/2, obj.geom.wing.half_span_ft, 'horiz');
+            % --- Wing (Geom row 7, Y column) ---
+            % Xexp = x_apex + fw*tan(sweep) = 20.723 ft  [Geom B7]
+            % Formula: tc*(c_exp_root+c_tip)*y_span*(1-cos(2pi*xi))/2
+            Xexp_w = obj.inp.wing.x_apex_ft + fw * tand(obj.inp.wing.sweep_LE_deg);
+            A_wing = BrandtGeometry.brandtCSArea(x_fr, ...
+                Xexp_w, obj.geom.wing.c_exp_root_ft, obj.geom.wing.c_tip_ft, ...
+                obj.geom.wing.half_span_exp_ft, obj.inp.wing.sweep_LE_deg, ...
+                obj.inp.wing.tc_ratio, Xexp_w, 2);
 
-            A_pitch  = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                obj.inp.pitch_ctrl.x_le_ft, obj.geom.pitch_ctrl.c_root_ft, ...
-                obj.geom.pitch_ctrl.c_tip_ft, obj.inp.pitch_ctrl.sweep_LE_deg, ...
-                obj.inp.pitch_ctrl.tc_ratio, ...
-                obj.inp.fuselage.max_width_ft/2, obj.geom.pitch_ctrl.half_span_ft, 'horiz');
+            % --- Pitch Control Surface (Geom row 8, AA column) ---
+            % Xexp = x_le_ft + fw*tan(sweep) = 38.937 ft  [Geom B8]
+            Xexp_pc = obj.inp.pitch_ctrl.x_le_ft + fw * tand(obj.inp.pitch_ctrl.sweep_LE_deg);
+            A_pitch = BrandtGeometry.brandtCSArea(x_fr, ...
+                Xexp_pc, obj.geom.pitch_ctrl.c_exp_root_ft, obj.geom.pitch_ctrl.c_tip_ft, ...
+                obj.geom.pitch_ctrl.half_span_exp_ft, obj.inp.pitch_ctrl.sweep_LE_deg, ...
+                obj.inp.pitch_ctrl.tc_ratio, Xexp_pc, 2);
 
-            A_vert   = BrandtGeometry.liftingSurfaceArea(x_fr, ...
-                obj.inp.vert_tail.x_le_ft, obj.geom.vert_tail.c_root_ft, ...
-                obj.geom.vert_tail.c_tip_ft, obj.inp.vert_tail.sweep_LE_deg, ...
-                obj.inp.vert_tail.tc_ratio, ...
-                0, obj.geom.vert_tail.span_ft, 'vert');
+            % --- Vertical Tail (Geom row 10, AC column) ---
+            % Xexp = x_le_ft + fh*tan(sweep) = 38.098 ft  [Geom B10]
+            % Excel formula bug: active-range X_max uses wing tip chord D$7 (3.707 ft)
+            % instead of VT tip chord D$10 (4.082 ft).  c_tip_range = D7 replicates this.
+            Xexp_vt     = obj.inp.vert_tail.x_le_ft + fh * tand(obj.inp.vert_tail.sweep_LE_deg);
+            c_tip_range = obj.geom.wing.c_tip_ft;   % D$7 (wing tip) used in VT range check
+            A_vert = BrandtGeometry.brandtCSArea(x_fr, ...
+                Xexp_vt, obj.geom.vert_tail.c_exp_root_ft, obj.geom.vert_tail.c_tip_ft, ...
+                obj.geom.vert_tail.span_exp_ft, obj.inp.vert_tail.sweep_LE_deg, ...
+                obj.inp.vert_tail.tc_ratio, Xexp_vt, 2, c_tip_range);
 
-            A_strake = BrandtGeometry.liftingSurfaceArea(x_fr, ...
+            % --- Strake (Geom row 9, AG column) ---
+            % Excel formula bugs replicated exactly to match GT:
+            %   1. Cosine xi uses B$8 (Xexp_pc = 38.937 ft) not B$9 (strake Xexp = 12.0 ft)
+            %   2. No division by 2 (divisor = 1)
+            A_strake = BrandtGeometry.brandtCSArea(x_fr, ...
                 obj.inp.strake.x_le_ft, obj.geom.strake.c_root_ft, obj.geom.strake.c_tip_ft, ...
-                obj.inp.strake.sweep_LE_deg, obj.inp.strake.tc_ratio, ...
-                obj.inp.strake.y_ft, obj.geom.strake.half_span_ft, 'horiz');
+                obj.geom.strake.half_span_ft, obj.inp.strake.sweep_LE_deg, ...
+                obj.inp.strake.tc_ratio, Xexp_pc, 1);  % Xref=Xexp_pc (Excel bug), divisor=1
 
+            % --- Nacelle (Geom AE column) ---
             A_nac = BrandtGeometry.nacelleFrameArea(obj.inp.engine, obj.geom, x_fr);
 
             A_total = A_fuse + A_wing + A_pitch + A_vert + A_strake + A_nac;
@@ -1045,12 +1073,71 @@ classdef BrandtGeometry < handle
                 - 0.3516*xi^2 + 0.2843*xi^3 - 0.1015*xi^4);
         end
 
+        function A = brandtCSArea(x_stations, Xexp, c_exp_root, c_tip, G_hs_exp, ...
+                sweep_deg, tc, Xref, divisor, c_tip_range)
+            % brandtCSArea  Brandt's cosine cross-section area formula (Geom tab).
+            %
+            % Replicates the Excel column formulas (Y/AA/AC/AG columns, rows 26-45).
+            % Verified via win32com formula inspection.
+            %
+            % Formula active for Xexp < x < Xexp + X_max_range:
+            %
+            %   A = tc * (c_exp_root + c_tip) * y_span * (1-cos(2*pi*xi)) / divisor
+            %
+            % where:
+            %   X_max_range = MAX(c_exp_root, G_hs_exp*tan(sweep) + c_tip_range)
+            %   X_max_cos   = MAX(c_exp_root, G_hs_exp*tan(sweep) + c_tip)
+            %   y_span      = MIN(G_hs_exp, (x-Xexp)/tan(sweep))
+            %   xi          = (x - Xref) / X_max_cos
+            %
+            % For most surfaces: Xref = Xexp, c_tip_range = c_tip, divisor = 2.
+            %
+            % Excel copy-paste bugs replicated exactly:
+            %   Strake (AG col): Xref = pitch_ctrl Xexp (B$8), divisor = 1
+            %   Vert tail (AC col): c_tip_range = wing tip chord (D$7), not VT c_tip
+            %
+            % Inputs:
+            %   x_stations  - [1xN] fuselage x-positions [ft]
+            %   Xexp        - exposed root LE x [ft]          (Geom B col)
+            %   c_exp_root  - exposed root chord [ft]         (Geom F col)
+            %   c_tip       - tip chord [ft]                  (Geom D col)
+            %   G_hs_exp    - exposed half-span or span [ft]  (Geom G col)
+            %   sweep_deg   - LE sweep [deg]
+            %   tc          - airfoil t/c ratio
+            %   Xref        - x reference for cosine; normally = Xexp
+            %   divisor     - 2 for wing/pitch_ctrl/vert_tail; 1 for strake
+            %   c_tip_range - (optional) c_tip override for X_max range check;
+            %                 normally = c_tip; vert tail passes wing c_tip D$7
+
+            if nargin < 10
+                c_tip_range = c_tip;
+            end
+
+            tan_sw      = tand(sweep_deg);
+            X_max_range = max(c_exp_root, G_hs_exp * tan_sw + c_tip_range);
+            X_max_cos   = max(c_exp_root, G_hs_exp * tan_sw + c_tip);
+            n           = numel(x_stations);
+            A           = zeros(1, n);
+            for i = 1:n
+                x = x_stations(i);
+                if x <= Xexp || x >= Xexp + X_max_range
+                    continue
+                end
+                y_span = min(G_hs_exp, (x - Xexp) / tan_sw);
+                xi     = (x - Xref) / X_max_cos;
+                A(i)   = tc * (c_exp_root + c_tip) * y_span * (1 - cos(2*pi*xi)) / divisor;
+            end
+        end
+
         function A = liftingSurfaceArea(x_stations, x_le_root, c_root, c_tip, ...
                 sweep_LE_deg, tc, y_root, half_span, orientation)
             % liftingSurfaceArea   Cross-section area of a surface at each x station.
             %
             % Integrates the local NACA 4/5-digit airfoil thickness over the span
             % at each fuselage station.
+            %
+            % NOTE: Brandt's Excel does NOT use this method; it uses brandtCSArea().
+            % This function is retained for comparison / higher-fidelity reference only.
             %
             %   orientation = 'horiz' : bilateral (left+right, result *2)
             %                 'vert'  : single panel (no mirror)
@@ -1090,11 +1177,17 @@ classdef BrandtGeometry < handle
         function A = nacelleFrameArea(engine, geom, x_stations)
             % nacelleFrameArea   Nacelle cross-section at each frame station.
             %
-            % Modelled as a cylinder of diameter D_engine from inlet_x to nozzle_x.
-            % Source: Geom AE column; Geom H3 = nozzle_x = 29.917 ft.
+            % Modelled as a cylinder of diameter D_engine.
+            % Geom AE column extends nacelle from inlet_x to (inlet_x + H3):
+            %   x_in  = inlet_x_ft         = 14.0   ft  (Main/JSON)
+            %   x_noz = inlet_x + H3       = 14 + 29.917 = 43.917 ft
+            %   H3    = nozzle_x_ft        = inlet_x + 4.5*D = 29.917 ft  (Geom H3)
+            % NOTE: The nacelle cylinder end is NOT at H3 = 29.917 ft, but at
+            % inlet_x + H3 = 43.917 ft.  H3 is the nozzle x-position from the
+            % nose; the nacelle cross-section extends another inlet_x beyond that.
             A_cyl = pi / 4 * geom.D_engine_ft^2;
             x_in  = engine.inlet_x_ft;
-            x_noz = geom.nozzle_x_ft;
+            x_noz = engine.inlet_x_ft + geom.nozzle_x_ft;   % = 14 + 29.917 = 43.917 ft
             A     = zeros(1, numel(x_stations));
             mask  = x_stations >= x_in & x_stations <= x_noz;
             A(mask) = geom.n_engines * A_cyl;
