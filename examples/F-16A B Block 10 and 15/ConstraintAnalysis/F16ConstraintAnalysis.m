@@ -41,12 +41,12 @@ classdef F16ConstraintAnalysis < ConstraintModel
           end
 
           % Initialize constraints
-          function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
-               [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
-          end
+          % function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
+          %      [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
+          % end
 
-          % Compute aerodynamic constraints (K1, K2, CD0)
-          function aero_constraints = get_aero_constraints(constraint_obj, state_vector, AR, LE_sweep_deg, CLminD, Cf, S_wet, S_ref)
+          % Compute aerodynamic constraints for a given state input
+          function aero_constraints = get_aero_constraints(constraint_obj, state_vector, AR, e_osw, LE_sweep_deg, CLminD, Cf, S_wet, S_ref, K1, K2)
                % state_vector = array of altitude and Mach numbers
                % corresponding to each constraint
 
@@ -56,10 +56,8 @@ classdef F16ConstraintAnalysis < ConstraintModel
                % Store it in the aero_constraints struct
                M = state_vector(1);
                h_alt = state_vector(2);
-               V = AeroUtils.compute_airspeed(statevector);
+               V = AeroUtils.compute_airspeed(state_vector);
                q = AeroUtils.compute_q(state_vector);
-               e_osw = aero_obj.get_e_osw(AR, LE_sweep_deg);
-               [K1, K2] = aero_obj.get_K(AR, e_osw, M, LE_sweep_deg, CLminD);
                % K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
                % K2 = aero_obj.compute_K2(M, K1, CLminD);
                CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
@@ -91,24 +89,24 @@ classdef F16ConstraintAnalysis < ConstraintModel
           end
 
 
-          % Get constraints
-          function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
-               CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
-               e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
-               q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
-               V_constraints = extracted_constraints(:, "V (ft/s)");
-               K1_constraints = extracted_constraints(:, "K1"); % Switch to computation from aero
-               PS_constraints = extracted_constraints(:, "PS_ft_s_");
-               aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
-
-               thrust1 = extracted_constraints(:, "alpha_dry"); % Should compute in propulsion class
-               thrust2 = extracted_constraints(:, "AB_");
-               thrust3 = extracted_constraints(:, "throttleLapse"); % Should compute in propulsion class
-               thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
-
-               % design.constraints.TO = extracted_constraints("Takeoff",:);
-
-          end
+          % % Get constraints
+          % function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
+          %      CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
+          %      e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
+          %      q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
+          %      V_constraints = extracted_constraints(:, "V (ft/s)");
+          %      K1_constraints = extracted_constraints(:, "K1"); % Switch to computation from aero
+          %      PS_constraints = extracted_constraints(:, "PS_ft_s_");
+          %      aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
+          % 
+          %      thrust1 = extracted_constraints(:, "alpha_dry"); % Should compute in propulsion class
+          %      thrust2 = extracted_constraints(:, "AB_");
+          %      thrust3 = extracted_constraints(:, "throttleLapse"); % Should compute in propulsion class
+          %      thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
+          % 
+          %      % design.constraints.TO = extracted_constraints("Takeoff",:);
+          % 
+          % end
 
           % Create thrust loading table
           function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero, thrust, Wto_S_range, TO)

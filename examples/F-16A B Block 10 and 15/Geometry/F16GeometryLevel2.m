@@ -209,6 +209,17 @@ classdef F16GeometryLevel2 < GeometryModelLevel2
           end
 
           % Tail sizing begins here
+          function [c_HT, c_VT] = est_tail_propers(geometry_obj, aircraft_type)
+               [c_HT, c_VT] = GeometryLevel1.est_tail_propers("jet fighter");
+          end
+
+          function S_ref_mainwing = get_wing_area(geometry_obj, W_TO, WS_desired)
+               S_ref_mainwing = GeometryLevel1.compute_wing_area(W_TO, WS_desired);
+          end
+
+          function [HT, VT] = tab_tail_AR_lambda(geometry_obj, aircraft_type, tail_type)
+               [HT, VT] = GeometryLevel1.tab_tail_AR_lambda("fighter", "conventional");
+          end
      end
      methods (Access = private)
 

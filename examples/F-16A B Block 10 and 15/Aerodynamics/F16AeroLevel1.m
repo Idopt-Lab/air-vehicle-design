@@ -16,7 +16,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           LD_max
           AR_wet
           K_LD
-          K
+          K1
+          K2
+          Cf
      end
 
      methods
@@ -26,7 +28,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                AR = geometry_obj.mainwings.AR;
                Lambda_LE_deg = geometry_obj.mainwings.LE_sweep;
                obj.e_osw = obj.get_e_osw(AR, Lambda_LE_deg);
-               obj.K = obj.get_K(AR, obj.e_osw);
+               % [obj.K1, obj.K2] = obj.get_K(AR, obj.e_osw, M, LE_sweep_deg, CLminD);
                W_TO = weight_obj.W_TO_guess;
                b = geometry_obj.mainwings.b;
                S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);

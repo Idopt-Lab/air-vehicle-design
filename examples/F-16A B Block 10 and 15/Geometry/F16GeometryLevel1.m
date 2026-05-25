@@ -97,18 +97,8 @@ classdef F16GeometryLevel1 < GeometryModelLevel1
                L_fuselage = GeometryLevel1.get_fus_len(aircraft_type, W_TO);
           end
 
-          % Definitely move this to L2
-          function [c_HT, c_VT] = est_tail_propers(geometry_obj, aircraft_type)
-               [c_HT, c_VT] = GeometryLevel1.est_tail_propers("jet fighter");
-          end
-
-          function S_ref_mainwing = get_wing_area(geometry_obj, W_TO, WS_desired)
-               S_ref_mainwing = GeometryLevel1.compute_wing_area(W_TO, WS_desired);
-          end
-
-          % Definitely move this to L2
-          function [HT, VT] = tab_tail_AR_lambda(geometry_obj, aircraft_type, tail_type)
-               [HT, VT] = GeometryLevel1.tab_tail_AR_lambda("fighter", "conventional");
+          function S_wet = get_design_S_wet(geometry_obj, aircraft_type, W_TO)
+               S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
           end
      end
 end

@@ -92,5 +92,75 @@ classdef GeometryLevel2
           function output = compute_S_wet_wing_hightc(S_exposed, tc)
                output = S_exposed*(1.977 + 0.52*tc);
           end
+
+
+          % Estimate tail properties based on historical trend of aircraft
+          % types
+          % This is probably better for stability and control
+          function [c_HT, c_VT] = est_tail_propers(aircraft_type)
+               if aircraft_type == "sailplane"
+                    c_HT = 0.50;
+                    c_VT = 0.02;
+               elseif (aircraft_type == "homebuilt")
+                    c_HT = 0.50;
+                    c_VT = 0.04;
+               elseif aircraft_type == "general aviation - single engine"
+                    c_HT = 0.70;
+                    c_VT = 0.04;
+               elseif aircraft_type == "general aviation - twin engine"
+                    c_HT = 0.80;
+                    c_VT = 0.07;
+               elseif aircraft_type == "agricultural"
+                    c_HT = 0.50;
+                    c_VT = 0.04;
+               elseif aircraft_type == "twin turboprop"
+                    c_HT = 0.90;
+                    c_VT = 0.08;
+               elseif aircraft_type == "flying boat"
+                    c_HT = 0.70;
+                    c_VT = 0.06;
+               elseif aircraft_type == "jet trainer"
+                    c_HT = 0.70;
+                    c_VT = 0.06;
+               elseif aircraft_type == "jet fighter"
+                    c_HT = 0.40;
+                    c_VT = 0.07; % 0.07 - 0.12, longer fuselage -> higher value
+               elseif (aircraft_type == "military cargo") || (aircraft_type == "military bomber")
+                    c_HT = 1.00;
+                    c_VT = 0.08;
+               elseif (aircraft_type == "jet transport")
+                    c_HT = 1.00;
+                    c_VT = 0.09;
+               else
+                    error("Unrecognized aircraft type.") % Include list of acceptable parameters
+               end
+          end
+
+          % Estimate tail AR and lambda
+          function [HT, VT] = tab_tail_AR_lambda(aircraft_type, tail_type)
+               if aircraft_type == "fighter"
+                    HT.AR = 3;
+                    HT.lambda = 0.2;
+                    VT.AR = 0.6;
+                    VT.lambda = 0.2;
+               elseif aircraft_type == "sailplane"
+                    HT.AR = 6;
+                    HT.lambda = 0.3;
+                    VT.AR = 1.5;
+                    VT.lambda = 0.4;
+               elseif (aircraft_type ~= "fighter") || (aircraft_type ~= "sailplane")
+                    HT.AR = 3;
+                    HT.lambda = 0.3;
+                    VT.AR = 1.3;
+                    VT.lambda = 0.3;
+               elseif (tail_type == "T-tail")
+                    HT.AR = 0;
+                    HT.lambda = 0;
+                    VT.AR = 0.7;
+                    VT.lambda = 0.6;
+               else
+                    error("Couldn't identify aircraft or tail type.")
+               end
+          end
      end
 end
