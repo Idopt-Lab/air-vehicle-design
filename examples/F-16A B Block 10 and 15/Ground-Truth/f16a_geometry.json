@@ -4,7 +4,19 @@
 
   "aircraft": {
     "name": "F-16A Block 10/15",
-    "n_engines": 1
+    "n_engines": 1,
+    "Mcrit": 0.873
+  },
+
+  "aero": {
+    "_source": "Aero tab J16:K26 (Cfe table), M4:Q10 (F-16 values); Miss tab CD0/k1/k2",
+    "_note_Cfe": "Cfe_eff back-calculated from Miss!CD0_cruise=0.0270 and S_wet=1371.09 ft2, S_ref=300 ft2",
+    "_note_Cfe_tab": "Cfe_tab is J3 in Aero tab — selected from the Cfe lookup table for CDmin prediction; gives Aero!G3=0.01691",
+    "_note_computed": "e_oswald, k1, k2 are COMPUTED by BrandtAerodynamics — not given inputs",
+    "Cfe":          0.005908,
+    "Cfe_tab":      0.003700,
+    "CD0_takeoff":  0.0520,
+    "Ewd":          2.2
   },
 
   "wing": {
@@ -132,6 +144,7 @@
     "TSFC_mil_per_hr": 0.70,
     "TSFC_AB_per_hr":  2.20,
     "inlet_x_ft":      14.0,
-    "inlet_dz_ft":     1.5
+    "inlet_dz_ft":     1.5,
+    "TSFC_install_factor": 1.08
   }
 }
