@@ -99,6 +99,14 @@ classdef PropulsionUtils
           end
 
 
+          %% MISCELLANEOUS
+
+          % Compute thrust given some lapse rate
+          function output = thrust_from_lapse(alpha, T_SL)
+               output = alpha*T_SL;
+          end
+
+
 
 
 

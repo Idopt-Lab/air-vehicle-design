@@ -4,6 +4,7 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
 
      properties
           TSFC
+          TR
           T0
           T_SL_dry
           T_SL_wet;
@@ -16,6 +17,7 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
                obj.T_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
                obj.T_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
                obj.TSFC = obj.get_TSFC(engine_type);
+               obj.TR = 1.0;
           end
 
           % For a level 1 estimate, we're using tabulated values based on
@@ -44,13 +46,15 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
                     % Get delta_0
                     delta_0 = PropulsionUtils.delta_0(delta, gamma, M_0);
 
-                    % Get TR
+                    % Get TR if not already computed (should be stored in
+                    % properties)
+                    % If TR is unknown, set to 1.0
 
                     % Compute alpha
                     if (maxormilpower == "Max") || (maxormilpower == "max")
-                         alpha = PropulsionUtils.compute_alpha_lowBPR_turbofan_maxpower(delta_0, theta_0, TR);
+                         alpha = PropulsionUtils.compute_alpha_lowBPR_turbofan_maxpower(delta_0, theta_0, propulsion_obj.TR);
                     elseif (maxormilpower == "Mil") || (maxormilpower == "mil")
-                         alpha = PropulsionUtils.compute_alpha_lowBPR_turbofan_milpower(delta_0, theta_0, TR);
+                         alpha = PropulsionUtils.compute_alpha_lowBPR_turbofan_milpower(delta_0, theta_0, propulsion_obj.TR);
                     end
                else
                     error("Error handler.")
