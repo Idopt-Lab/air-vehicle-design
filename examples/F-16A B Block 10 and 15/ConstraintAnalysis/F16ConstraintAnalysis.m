@@ -46,7 +46,7 @@ classdef F16ConstraintAnalysis < ConstraintModel
           % end
 
           % Compute aerodynamic constraints for a given state input
-          function aero_constraints = get_aero_constraints(constraint_obj, state_vector, AR, e_osw, LE_sweep_deg, CLminD, Cf, S_wet, S_ref, K1, K2)
+          function [e_osw, CD0, V, q] = get_aero_constraints(constraint_obj, state_vector, e_osw, Cf, S_wet, S_ref)
                % state_vector = array of altitude and Mach numbers
                % corresponding to each constraint
 
@@ -63,17 +63,15 @@ classdef F16ConstraintAnalysis < ConstraintModel
                CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
                % Problem: CD0 will be computed differently between levels 1, 2, and 3. Account for this in later builds.
 
-               aero_constraints.CD0 = CD0;
-               aero_constraints.K1 = K1;
-               aero_constraints.K2 = K2;
-               aero_constraints.e_osw = e_osw;
-               aero_constraints.V = V;
-               aero_constraints.q = q;
+               % aero_constraints.CD0 = CD0;
+               % aero_constraints.e_osw = e_osw;
+               % aero_constraints.V = V;
+               % aero_constraints.q = q;
 
           end
 
           % Get thrust constraints
-          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_percent, propulsion_obj)
+          function [alpha, alpha_dry, alpha_wet] = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_percent, propulsion_obj)
 
                M = state_vector(1);
                h_alt = state_vector(2);
@@ -90,9 +88,9 @@ classdef F16ConstraintAnalysis < ConstraintModel
                % theta = PropulsionUtils.theta(T_kelvin);
                % TR = PropulsionUtils.compute_TR(theta, gamma, M);
 
-               thrust_constraints.alpha = alpha;
-               thrust_constraints.alpha_dry = alpha_dry;
-               thrust_constraints.alpha_wet = alpha_wet;
+               % thrust_constraints.alpha = alpha;
+               % thrust_constraints.alpha_dry = alpha_dry;
+               % thrust_constraints.alpha_wet = alpha_wet;
                % thrust_constraints.AB_ = AB_percent;
                % thrust_constraints.TR = TR;
           end
@@ -118,13 +116,13 @@ classdef F16ConstraintAnalysis < ConstraintModel
           % end
 
           % Create thrust loading table
-          function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero, thrust, Wto_S_range, TO)
-               num_constraints = length(constraints.Row(:));
+          function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero_constraints, thrust_constraints, Wto_S_range, TO)
+               num_constraints = length(aero_constraints.Row(:));
                TW_table = zeros(num_constraints, length(Wto_S_range));
 
                for i = 1:num_constraints
                     name = constraint_obj.constraints_table.Row{i};
-                    TW_table(i, :) = computeWingLoading(constraint_obj, constraints(name,:), aero(name,:), thrust(name,:), Wto_S_range);
+                    TW_table(i, :) = computeWingLoading(constraint_obj, constraints(name,:), aero_constraints(name,:), thrust_constraints(name,:), Wto_S_range);
                end
                %
                T_Wto_takeoff = takeoff_constraint(constraint_obj, Wto_S_range, TO);
