@@ -103,18 +103,45 @@ Vasquez must reproduce each cell value to within ±1%.
 
 ## Sheet: Engn(s)
 
-| Cell | Description | Value | MATLAB |
-|------|-------------|-------|--------|
-| Engn!T_mil_SLS | Mil thrust SLS (lb) | 15,000 | `BrandtEngine.T_mil_SLS` |
-| Engn!T_AB_SLS | AB thrust SLS (lb) | 23,770 | `BrandtEngine.T_AB_SLS` |
-| Engn!TSFC_mil | Mil TSFC (hr⁻¹) | 0.70 | `BrandtEngine.TSFC_mil` |
-| Engn!TSFC_AB | AB TSFC (hr⁻¹) | 2.20 | `BrandtEngine.TSFC_AB` |
-| Engn!D_nac | Nacelle diameter (ft) | 3.537 | `BrandtEngine.D_nacelle_ft` |
-| Engn!L_nac | Nacelle length (ft) | 15.917 | `BrandtEngine.L_nacelle_ft` |
-| Engn!alpha_dry | α dry, 40k ft M=0.87 | 0.1417 | `BrandtEngine.thrust_lapse_mil(40000, 0.87)` |
-| Engn!alpha_AB | α AB, 40k ft M=0.87 | 0.2755 | `BrandtEngine.thrust_lapse_AB(40000, 0.87)` |
+### SLS parameters
 
-> **Installed TSFC correction:** multiply all Mattingly values by 1.08
+| Cell           | Description             | Value  | MATLAB                        |
+|----------------|-------------------------|--------|-------------------------------|
+| Engn!T_mil_SLS | Dry (mil) thrust SLS    | 15,000 | `BrandtEngine.T_sl_dry`       |
+| Engn!T_AB_SLS  | AB thrust SLS           | 23,770 | `BrandtEngine.T_sl_AB`        |
+| Engn!TSFC_mil  | Dry TSFC (SLS, M=0)     | 0.70   | `BrandtEngine.TSFC_sl_dry`    |
+| Engn!TSFC_AB   | AB TSFC (ref, M=0.4)    | 2.20   | `BrandtEngine.TSFC_sl_AB`     |
+| Engn!S1        | Throttle ratio TR        | 1.0    | `BrandtEngine.TR`             |
+
+### Thrust equations (Engn(s) rows 4–7)
+
+Thrust and TSFC are functions of altitude and Mach via standard atmosphere ratios θ, θ₀, δ, δ₀.
+See `readme_prop.md` for the full equation listing.
+
+| Quantity         | Method signature                          | Returns        |
+|------------------|-------------------------------------------|----------------|
+| Dry thrust+TSFC  | `eng.thrust_dry(altitude_ft, mach)`       | `[T_lbf, tsfc_1_per_hr]` |
+| AB thrust+TSFC   | `eng.thrust_AB(altitude_ft, mach)`        | `[T_lbf, tsfc_1_per_hr]` |
+| Atm ratios       | `BrandtEngine.atmosphereRatios(alt_ft, M)`| `[theta, theta0, delta, delta0]` |
+
+### Nacelle geometry (computed in BrandtGeometry)
+
+| Cell       | Description          | Value  | MATLAB                        |
+|------------|----------------------|--------|-------------------------------|
+| Engn!D_nac | Nacelle diameter (ft)| 3.537  | `BrandtGeometry.D_engine_ft`  |
+| Engn!L_nac | Nacelle length (ft)  | 15.917 | `BrandtGeometry.L_engine_ft`  |
+
+> Nacelle sizing formula (AB aircraft): `D = sqrt(T_sl_AB / 1900)`, `L = 4.5 × D`
+
+### Engine weight (BrandtWeight)
+
+| Cell        | Description          | Value     | MATLAB                  |
+|-------------|----------------------|-----------|-------------------------|
+| Wt!W_eng    | Engine weight (lb)   | 4730.23   | `BrandtWeight.W_engine` |
+
+> Weight formula (AB aircraft): `W_engine = 0.199 × T_sl_AB`
+
+> **Installed TSFC:** the stored values (0.70, 2.20 hr⁻¹) already include the 1.08× correction factor.
 
 ## Sheet: Miss
 
