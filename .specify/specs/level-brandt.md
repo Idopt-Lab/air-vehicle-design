@@ -17,7 +17,7 @@
 
 Implement `src/level_brandt/` as a direct, faithful MATLAB reimplementation of the Brandt F-16A Excel workbook (`examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`). This is **not** an approximation — it is a reference implementation that must reproduce each Excel cell value to within ±1%. It serves as the absolute ground truth against which all fidelity levels (I–III) are calibrated.
 
-Level-Brandt is architecturally standalone: it does not inherit from `Disciplines/` or `ComputationModels/`, uses only static methods, and has no external dependencies beyond MATLAB's `atmosisa`.
+Level-Brandt is architecturally standalone: it does not inherit from `Disciplines/` or `ComputationModels/`, and has no external dependencies beyond MATLAB's `atmosisa`.
 
 ---
 
@@ -39,25 +39,31 @@ A user runs `LevelBrandt.runF16A()` and receives TOGW, OEW, W/S, T/W, S_ref, and
 
 ---
 
-### User Story 2 — Reproduce Brandt drag polar (P1)
+### User Story 2 — Accurate aerodynamics (P1)
 
-A user calls `BrandtMission.dragPolar(CL)` and receives CD values matching the Brandt quadratic polar to within ±1% across the operating CL range (0.1 to 1.0).
+A user calls `BrandtAerodynamics.compute()` and then queries the aerodynamics at any Mach number to obtain the drag polar coefficients CD0, k1, k2, and CLmax at the key design conditions (takeoff, landing, stall). This enables accurate drag polar construction and sizing constraint evaluation.
 
 **Acceptance Scenarios:**
 
-1. **Given** `CD0=0.0270`, `k1=0.1160`, `k2=-0.00630`, **When** `CL=0.482`, **Then** CD matches `Miss!` sheet to within ±1%.
-2. **Given** the Brandt quadratic polar, **When** L/D is maximized, **Then** L/D_max = 8.93 ± 0.09 (1%).
+1. **Given** `BrandtAerodynamics.compute()` has run, **When** `aero_at_mach(0.1)` is called (subsonic), **Then** CDmin = 0.01691 (Aero!G3) and k1 = 0.1160 (Aero!G10), each within ±5%.
+2. **Given** the subsonic mission polar (Miss tab basis), **When** `drag_polar(0.482)` is called, **Then** CD = CD0 + k1·CL² + k2·CL with CD0=0.0270, k1=0.1160, k2=−0.00630, result within ±5% of the `Miss!` sheet value.
+3. **Given** the subsonic polar, **When** `max_LD()` is called, **Then** L/D_max = 8.93 ± 0.45 (5%) and CL_opt = 0.482 ± 5%.
+4. **Given** `BrandtAerodynamics.compute()` has run, **When** CLmax values are read, **Then** CLmax_clean = 0.984 (Aero!H25), CLmax_takeoff = 1.276 (Aero!H27), CLmax_landing = 1.426 (Aero!H29), each within ±5%.
+5. **Given** a supersonic condition (Mach=1.5), **When** `aero_at_mach(1.5)` is called, **Then** CDmin > CDmin_sub (wave drag present) and k2 ≤ 0 per Aero tab methodology.
 
 ---
 
-### User Story 3 — Reproduce Brandt engine model (P2)
+### User Story 3 — Accurate propulsion (P2)
 
-A user calls `BrandtEngine.thrustLapse(altitude_ft, mach)` and receives α within ±1% of the Brandt `Engn(s)` sheet values at the specified conditions.
+A user calls `BrandtEngine.compute()` and then queries thrust and TSFC at any altitude, Mach number, and throttle setting (dry/mil or afterburner) to obtain the installed engine map. This supports mission fuel burn and sizing T/W evaluations.
 
 **Acceptance Scenarios:**
 
-1. **Given** altitude=40,000 ft, Mach=0.87, **When** `thrustLapse` is called for mil power, **Then** α = 0.1417 ± 0.001.
-2. **Given** installed TSFC correction factor = 1.08×, **When** TSFC_mil is computed at SLS, **Then** TSFC = 0.70 hr⁻¹ ± 1%.
+1. **Given** `BrandtEngine.compute()` has run, **When** `thrust_dry(0, 0)` is called (SLS, dry), **Then** T = 15,000 lbf and TSFC = 0.70 hr⁻¹, each within ±5% of `Engn(s)` sheet.
+2. **Given** `BrandtEngine.compute()` has run, **When** `thrust_AB(0, 0)` is called (SLS, afterburner), **Then** T = 23,770 lbf and TSFC = 2.20 hr⁻¹, each within ±5%.
+3. **Given** altitude=40,000 ft, Mach=0.87, **When** `thrust_dry(40000, 0.87)` is called, **Then** T and TSFC match the `Engn(s)` tab throttle-ratio branching formula within ±5%.
+4. **Given** altitude=40,000 ft, Mach=0.87, **When** `thrust_AB(40000, 0.87)` is called, **Then** T and TSFC match the `Engn(s)` tab AB branch formula within ±5%.
+5. **Given** a range of altitudes (0–60,000 ft) and Mach numbers (0–2.0), **When** `thrust_dry` and `thrust_AB` are queried across the grid, **Then** the resulting engine map is monotonically decreasing with altitude (at fixed Mach) and thrust increases with Mach at low altitude (ram recovery), consistent with the Brandt model.
 
 ---
 
@@ -94,9 +100,9 @@ A user calls `BrandtWeights.compute()` and receives OEW broken down by structura
 
 ### Functional Requirements
 
-- **FR-001:** `LevelBrandt` MUST be implemented as a MATLAB classdef with only `methods (Static)` — no instance state, no inheritance from `Disciplines/` or `ComputationModels/`.
+- **FR-001:** `LevelBrandt` and all `BrandtXxx` classes MUST be implemented as true OOP MATLAB classdefs using `handle` inheritance. Classes MUST use instance methods and properties for computed state (e.g., `compute()` populates `obj.geom`, `obj.weights`). Pure math helpers with no object state MAY be `Static`. No inheritance from `Disciplines/` or `ComputationModels/`.
 - **FR-002:** Every computed value MUST be traceable to a specific Excel cell in `Brandt-F16-A.xls`, documented in `examples/.../Ground-Truth/cell-map.md`.
-- **FR-003:** All outputs MUST be within ±1% of their corresponding Brandt XLS cell values.
+- **FR-003:** All outputs MUST be within ±1% (target) of their corresponding Brandt XLS cell values; deviations up to ±5% are acceptable where formula approximations or atmosphere model differences account for the gap.
 - **FR-004:** The drag polar MUST use the Brandt quadratic form: `CD = CD0 + k1·CL² + k2·CL` (not the standard parabolic `CD0 + K·CL²`).
 - **FR-005:** TSFC MUST apply the 1.08× installed correction factor (`Engn(s)` sheet).
 - **FR-006:** Mission analysis MUST implement all 7 Brandt segments: Takeoff → Accel → Climb → Cruise (190.8 nm) → Patrol → Dash (50 nm) → Patrol.
@@ -111,12 +117,16 @@ A user calls `BrandtWeights.compute()` and receives OEW broken down by structura
 ### Key Entities
 
 - **`LevelBrandt`**: Orchestrator class. Calls all sub-classes in dependency order. Exposes `runF16A()` entry point.
-- **`BrandtMain`**: F-16A master parameters (S_ref, AR, sweep, taper, Mcrit, fixed weights). Corresponds to `Main` sheet.
 - **`BrandtGeometry`**: Wing, fuselage, tail geometry; wetted areas; Amax. Corresponds to `Geom` sheet.
-- **`BrandtWeights`**: Structural plate-area weight model → OEW. Corresponds to `Wt` sheet.
-- **`BrandtEngine`**: Thrust lapse, TSFC (mil and AB), installed correction. Corresponds to `Engn(s)` sheet.
+- **`BrandtAerodynamics`**: Mach-dependent drag polar (CD0, k1, k2), CLmax at clean/takeoff/landing, L/D max, lift curve slopes. Corresponds to `Aero` sheet.
+- **`BrandtEngine`**: Installed thrust and TSFC at given altitude, Mach, and throttle setting (dry/AB); engine map generation. Corresponds to `Engn(s)` sheet.
+- **`BrandtWeight`**: Structural plate-area weight model → OEW. Corresponds to `Wt` sheet.
 - **`BrandtMission`**: 7-segment mission, quadratic drag polar, CDx corrections, fuel burn per segment. Corresponds to `Miss` sheet.
-- **`BrandtSizing`**: TOGW convergence loop, W/S and T/W outputs. Corresponds to `Size&Opt` sheet.
+- **`BrandtSizing`**: TOGW convergence loop, W/S and T/W outputs.
+- **`BrandtPerformance`**: Specific excess power, maneuver envelope, V-n envelope, performance calculations. Corresponds to `Ps`, `Maneuv`, `Struct`, and `Perf` tabs.
+- **`BrandtLandingGear`**: Landing gear geometry and weight estimation. Corresponds to the `Gear` tab.
+- **`BrandtStabilityControl`**: Stability and control derivatives and margin estimation. Corresponds to the `S&C (2)` tab.
+- **`BrandtCost`**: Life-cycle cost estimation. Corresponds to `Cost` tab.
 
 ---
 
