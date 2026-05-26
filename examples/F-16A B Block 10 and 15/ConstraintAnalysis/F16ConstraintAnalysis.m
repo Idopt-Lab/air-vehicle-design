@@ -154,7 +154,7 @@ classdef F16ConstraintAnalysis < ConstraintModel
                figure('Name', 'Constraint Diagram'); hold on;
                colors = lines(length(constraints));
 
-               for i = 1:length(constraints)
+               for i = 1:length(constraints)-2
                     plot(Wto_S_range, TW_table(i, :), 'LineWidth', 2, 'DisplayName', constraints{i}, 'Color', colors(i,:));
                end
 
