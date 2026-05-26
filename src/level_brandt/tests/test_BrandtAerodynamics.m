@@ -276,12 +276,22 @@ classdef test_BrandtAerodynamics < matlab.unittest.TestCase
                 'drag_polar(CL=0) = CD0 exactly');
         end
 
-        function testDragPolarLDmaxConsistency(tc)
-            % L/D at CL_opt should equal LD_max within 2% (Brandt ignores k2 in LD_max formula)
-            CD_opt = tc.aero.drag_polar(tc.aero.CL_opt);
-            LD     = tc.aero.CL_opt / CD_opt;
-            tc.verifyEqual(LD, tc.aero.LD_max, 'RelTol', 0.02, ...
-                'L/D at CL_opt ≈ LD_max (Brandt simplified formula ignores k2)');
+        function testLDmaxSimplifiedSelfConsistency(tc)
+            % LD_max = 0.5/sqrt(CD0*k1) and CL_opt = sqrt(CD0/k1) are derived together.
+            % Evaluating the SIMPLIFIED polar (no k2 term) at CL_opt must recover LD_max exactly.
+            CD_simplified = tc.aero.CD0 + tc.aero.k1 * tc.aero.CL_opt^2;
+            LD_simplified  = tc.aero.CL_opt / CD_simplified;
+            tc.verifyEqual(LD_simplified, tc.aero.LD_max, 'RelTol', 1e-6, ...
+                'Simplified L/D at CL_opt = LD_max (algebraic identity, k2 excluded)');
+        end
+
+        function testDragPolarFullLDExceedsSimplified(tc)
+            % The FULL polar at CL_opt includes k2 < 0, which reduces CD below the
+            % simplified estimate, so actual L/D must be strictly greater than LD_max.
+            CD_full = tc.aero.drag_polar(tc.aero.CL_opt);
+            LD_full = tc.aero.CL_opt / CD_full;
+            tc.verifyGreaterThan(LD_full, tc.aero.LD_max, ...
+                'Full-polar L/D at CL_opt > LD_max (k2<0 reduces CD, improving L/D)');
         end
 
         function testDragPolarTakeoffHigherThanCruise(tc)
