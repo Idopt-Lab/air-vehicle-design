@@ -72,19 +72,25 @@ classdef F16ConstraintAnalysis < ConstraintModel
           end
 
           % Get thrust constraints
-          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_)
+          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_percent)
 
                M = state_vector(1);
                h_alt = state_vector(2);
 
                [T_kelvin] = atmosisa(h_alt*0.3048);
 
-               alpha = PropulsionUtils.compute_alpha(T_min, T_max, alpha_dry, alpha_AB, AB_percent);
+               if (AB_percent < 1.00)
+                    alpha_dry = propulsion_obj.get_alpha(state_vector, "mil");
+               elseif (AB_percent == 1.00)
+                    alpha_wet = propulsion_obj.get_alpha(state_vector, "max");
+               end
+
+               alpha = PropulsionUtils.compute_alpha(T_min, T_max, alpha_dry, alpha_wet, AB_percent);
                theta = PropulsionUtils.theta(T_kelvin);
                TR = PropulsionUtils.compute_TR(theta, gamma, M);
 
                thrust_constraints.alpha = alpha;
-               thrust_constraints.AB_ = AB_;
+               thrust_constraints.AB_ = AB_percent;
                thrust_constraints.TR = TR;
           end
 
@@ -98,14 +104,14 @@ classdef F16ConstraintAnalysis < ConstraintModel
           %      K1_constraints = extracted_constraints(:, "K1"); % Switch to computation from aero
           %      PS_constraints = extracted_constraints(:, "PS_ft_s_");
           %      aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
-          % 
+          %
           %      thrust1 = extracted_constraints(:, "alpha_dry"); % Should compute in propulsion class
           %      thrust2 = extracted_constraints(:, "AB_");
           %      thrust3 = extracted_constraints(:, "throttleLapse"); % Should compute in propulsion class
           %      thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
-          % 
+          %
           %      % design.constraints.TO = extracted_constraints("Takeoff",:);
-          % 
+          %
           % end
 
           % Create thrust loading table

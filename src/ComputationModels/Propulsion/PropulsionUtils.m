@@ -43,7 +43,7 @@ classdef PropulsionUtils
 
           % Low BPR mixed turbofan
           % Source: Aircraft Engine Design, 2nd ed, Mattingly, 2.54a
-          function alpha = compute_alpha_lowBPR_turbofan_maxpower(delta_0, theta_0, TR, maxormilpower)
+          function alpha = compute_alpha_lowBPR_turbofan_maxpower(delta_0, theta_0, TR)
                if (theta_0 <= TR)
                     alpha = delta_0; % 2.54a
                elseif (theta_0 > TR)
@@ -98,7 +98,7 @@ classdef PropulsionUtils
                end
           end
 
-          
+
 
 
 
@@ -139,6 +139,14 @@ classdef PropulsionUtils
 
                function output = delta(P_kPa)
                     output = P_kPa/PropulsionUtils.P_std;
+               end
+
+               function output = theta_0(theta, gamma, M_0)
+                    output = theta*(1 + (gamma-1)/2 * M_0^2);
+               end
+
+               function output = delta_0(delta, gamma, M_0)
+                    output = delta*(1+ (gamma-1)/2 *M_0^2)^((gamma)/(gamma-1));
                end
           end
      end
