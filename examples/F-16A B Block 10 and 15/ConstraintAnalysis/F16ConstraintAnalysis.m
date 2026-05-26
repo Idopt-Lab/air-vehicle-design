@@ -72,14 +72,14 @@ classdef F16ConstraintAnalysis < ConstraintModel
           end
 
           % Get thrust constraints
-          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_percent)
+          function thrust_constraints = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_percent, propulsion_obj)
 
                M = state_vector(1);
                h_alt = state_vector(2);
 
                [T_kelvin] = atmosisa(h_alt*0.3048);
 
-               if (AB_percent < 1.00)
+               if (0.0 < AB_percent < 1.00)
                     alpha_dry = propulsion_obj.get_alpha(state_vector, "mil");
                elseif (AB_percent == 1.00)
                     alpha_wet = propulsion_obj.get_alpha(state_vector, "max");

@@ -27,7 +27,7 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
           % Compute thrust lapse rate
           function alpha = get_alpha(propulsion_obj, statevector, maxormilpower)
                % Check if "maxormilpower" is valid
-               if (maxormilpower ~= "max") || (maxormilpower ~= "Max") || (maxormilpower ~= "mil") || (maxormilpower ~= "Mil")
+               if ((maxormilpower ~= "max") && (maxormilpower ~= "Max")) && ((maxormilpower ~= "mil") && (maxormilpower ~= "Mil"))
                     error("maxormilpower must be 'Max' or 'Mil'.")
                elseif (maxormilpower == "max") || (maxormilpower == "Max") || (maxormilpower == "mil") || (maxormilpower == "Mil")
                     M_0 = statevector(1);
@@ -43,6 +43,8 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
                     delta = PropulsionUtils.delta(P_kPa);
                     % Get delta_0
                     delta_0 = PropulsionUtils.delta_0(delta, gamma, M_0);
+
+                    % Get TR
 
                     % Compute alpha
                     if (maxormilpower == "Max") || (maxormilpower == "max")

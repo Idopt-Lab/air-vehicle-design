@@ -15,9 +15,9 @@ classdef PropulsionUtils
                alpha = (alpha_dry*T_min + AB_percent*(alpha_AB*T_max - alpha_dry*T_min))/T_max;
           end
 
-          % Compute throttle ratio (also known as theta_0)
-          function TR = compute_TR(theta, gamma, M0)
-               TR = theta*(1 + (gamma-1)/2 * (M0^2));
+          % Compute throttle ratio
+          function TR = compute_TR(T_t_4_max, T_t_4_SL)
+               TR = T_t_4_max/T_t_4_SL;
           end
 
           % Compute dry/wet lapse rate (this computes "alpha_dry" or
@@ -149,4 +149,4 @@ classdef PropulsionUtils
                     output = delta*(1+ (gamma-1)/2 *M_0^2)^((gamma)/(gamma-1));
                end
           end
-     end
+end
