@@ -37,6 +37,8 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           FF
           Q
           DragResults
+          CL_max_TO = 1.27567
+          CL_max_Land = 1.42591
      end
 
      methods
@@ -407,7 +409,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                CD0_LandP.hook = aero_obj.get_CD0_LandP(0.10, S_ref);
                CD0_LandP.total = CD0_LandP.gun + CD0_LandP.hook;
           end
-          % 
+          %
           % % Get CD0_misc values
           function CD0_misc = compute_CD0_misc(aero_obj, design, propulsion_obj, S_ref)
                CD0_misc.windmillingjet = AeroLevel3.Dq_windmillingjet(pi*(propulsion_obj.enginestats.D/2)^2)/S_ref;

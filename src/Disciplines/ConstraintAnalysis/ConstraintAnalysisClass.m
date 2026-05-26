@@ -1,4 +1,4 @@
-classdef ConstraintAnalysisClass < ConstraintModel
+classdef ConstraintAnalysisClass
      %F16CONSTRAINTEST Summary of this class goes here
      %   Detailed explanation goes here
      % YTup
@@ -21,9 +21,9 @@ classdef ConstraintAnalysisClass < ConstraintModel
      methods (Static)
 
           % Constructor for my sanity
-          function obj = ConstraintAnalysisClass(design)
-               obj.constraints_table = ConstraintUtils.get_design_constraints(design.constraints_filename);
-          end
+          % function obj = ConstraintAnalysisClass(design)
+          %      obj.constraints_table = ConstraintUtils.get_design_constraints(design.constraints_filename);
+          % end
 
           % Perform a complete analysis for the given set of constraints.
           function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj)
@@ -134,11 +134,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
                % K1 = aero.K1;
                % Ps = constraints.PS_ft_s_;
 
-               if isnan(Ps)==1
-                    Ps = 0;
-               end
-
-               z = (n * beta) ./ q;
+               z = (n .* beta) ./ q;
                induced = K1 .* (z.^2) .* Wto_S;
                linear_drag = CD0 ./ Wto_S;
                parasite = Ps ./ V;
@@ -151,7 +147,7 @@ classdef ConstraintAnalysisClass < ConstraintModel
           function T_Wto = takeoff_constraint(Wto_S, V_Vstall, beta, alpha, rho, CLmax, distance, CD0, mu)
                g = 32.174;
 
-               term1 = V_Vstall^2 * beta^2 .* Wto_S ./ (alpha * rho * CLmax * g * distance);
+               term1 = V_Vstall.^2 .* beta^2 .* Wto_S ./ (alpha * rho * CLmax * g * distance);
                term2 = 0.7 * CD0 / (beta * CLmax) + mu;
                T_Wto = term1 + term2;
           end

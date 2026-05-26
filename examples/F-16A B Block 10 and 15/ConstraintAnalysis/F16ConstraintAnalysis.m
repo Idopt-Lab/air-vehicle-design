@@ -116,16 +116,15 @@ classdef F16ConstraintAnalysis < ConstraintModel
           % end
 
           % Create thrust loading table
-          function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero_constraints, thrust_constraints, Wto_S_range, TO)
+          function [TW_table] = createThrustLoadingTable(constraint_obj, aero_constraints, beta, alpha, n, q, V, CD0, K1, Ps, Wto_S_range)
                num_constraints = length(aero_constraints.Row(:));
                TW_table = zeros(num_constraints, length(Wto_S_range));
 
                for i = 1:num_constraints
-                    name = constraint_obj.constraints_table.Row{i};
-                    TW_table(i, :) = computeWingLoading(constraint_obj, constraints(name,:), aero_constraints(name,:), thrust_constraints(name,:), Wto_S_range);
+                    TW_table(i, :) = ConstraintAnalysisClass.computeWingLoading(Wto_S_range, beta(i), alpha(i), n(i), q(i), V(i), CD0(i), K1(i), Ps(i));
                end
                %
-               T_Wto_takeoff = takeoff_constraint(constraint_obj, Wto_S_range, TO);
+               % T_Wto_takeoff = ConstraintAnalysisClass.takeoff_constraint(Wto_S_range, V_stall, beta, alpha, rho, CL_max, distance, CD0, mu);
           end
 
           % Solve for the optimal point

@@ -79,5 +79,10 @@ classdef AeroUtils
                CDi = CL*sind(alpha_deg);
           end
 
+          % Compute V_stall (this is more performance than aero I think).
+          function output = V_stall(W_S, CL_max, rho)
+               output = sqrt(W_S*(1/(0.5*rho*CL_max)));
+          end
+
      end
 end
