@@ -1,2 +1,9 @@
 .venv/
 .envrc
+__pycache__/
+*.pyc
+*.egg-info/
+*_out/
+outputs/
+docs/*.txt
+openmdao_checks.out
