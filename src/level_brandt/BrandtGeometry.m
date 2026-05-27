@@ -2,17 +2,17 @@ classdef BrandtGeometry < handle
 % BrandtGeometry   Brandt (1997) aircraft geometry — F-16A ground truth.
 %
 % QUICK START (handle class — no reassignment needed)
-%   geom = BrandtGeometry();                   % load default F-16A JSON
-%   geom = BrandtGeometry('path/to/file.json');% load from path
-%   geom.compute();                            % run all calculations (in-place)
-%   geom.displayLiftingSurfaces();             % show given inputs (works before compute)
-%   geom.displayLiftingSurfaces(true);         % show given + computed
-%   geom.displayFuselageFrames();              % Main A33:F53 frame table (works before compute)
-%   geom.displayAreas();                       % per-frame area build-up (requires compute)
-%   geom.displayGeomTable();                   % Geom S22:AN48 area breakdown (requires compute)
-%   geom.compareFidelities();                  % simple vs accurate S_wet (requires compute)
-%   geom.plotGeometry();                       % top-view + side-view plots (requires compute)
-%   geom.plotAreaProfile();                    % area profile + half-aircraft (requires compute)
+%   geom = BrandtGeometry();                    % load default F-16A JSON
+%   geom = BrandtGeometry('path/to/file.json'); % load from path
+%   geom.analyze();                             % run all calculations (in-place)
+%   geom.displayLiftingSurfaces();              % show given inputs (works before analyze)
+%   geom.displayLiftingSurfaces(true);          % show given + analyzed
+%   geom.displayFuselageFrames();               % Main A33:F53 frame table (works before analyze)
+%   geom.displayAreas();                        % per-frame area build-up (requires analyze)
+%   geom.displayGeomTable();                    % Geom S22:AN48 area breakdown (requires analyze)
+%   geom.compareFidelities();                   % simple vs accurate S_wet (requires analyze)
+%   geom.plotGeometry();                        % top-view + side-view plots (requires analyze)
+%   geom.plotAreaProfile();                     % area profile + half-aircraft (requires analyze)
 %
 % GROUND-TRUTH VALUES (Brandt-F16-A.xls, Geom tab)
 %   Geom B3  = 730.422 ft^2  fuselage S_wet simple
@@ -65,10 +65,7 @@ classdef BrandtGeometry < handle
         frame_area_nac    (1,:) double
         frame_area_total  (1,:) double
         fuselage_dSwet    (1,:) double
-    end
-
-    properties (Access = private)
-        computed_ (1,1) logical = false
+        analyzed_ (1,1) logical = false
     end
 
     methods
@@ -99,8 +96,8 @@ classdef BrandtGeometry < handle
             obj.initializeComputedFields();
         end
 
-        function compute(obj)
-            % compute   Run all geometry calculations. Populates object fields in-place.
+        function analyze(obj)
+            % analyze   Run all geometry calculations. Populates object fields in-place.
 
             % 1. Nacelle/engine sizing (from Engn(s) tab formulas)
             obj.computeNacelle();
@@ -126,7 +123,7 @@ classdef BrandtGeometry < handle
             % 7. Whole-aircraft cross-section areas and Amax (Geom H26:H47)
             obj.computeAmax();
 
-            obj.computed_ = true;
+            obj.analyzed_ = true;
         end
 
         % ------------------------------------------------------------------ %
@@ -143,7 +140,7 @@ classdef BrandtGeometry < handle
             % In input-only mode, cells not present in JSON are shown as '---'.
             if nargin < 2, showComputed = false; end
             inp  = obj.inp;
-            computedMode = showComputed && obj.computed_;
+            computedMode = showComputed && obj.analyzed_;
 
             if computedMode
                 hdr = '=== Lifting Surface Geometry (Main A16:H27) — inputs + computed ===';
@@ -288,7 +285,7 @@ classdef BrandtGeometry < handle
             %   AC=VTail, AE=Nacelle, AG=Strake, AJ=Total (whole-aircraft A-Ao).
             %
             % Row totals: fuselage Swet (= D23), aircraft volume, centroid x.
-            obj.requireComputed('displayGeomTable');
+            obj.requireAnalyzed('displayGeomTable');
             inp  = obj.inp;
 
             x  = inp.fuselage.frame_x;        % [1x20] frame x positions
@@ -375,7 +372,7 @@ classdef BrandtGeometry < handle
 
         function displayAreas(obj)
             % displayAreas   Per-frame whole-aircraft area build-up.
-            obj.requireComputed('displayAreas');
+            obj.requireAnalyzed('displayAreas');
             nfrm = numel(obj.frame_x);
 
             fprintf('\n=== Whole-Aircraft Cross-Section Area Build-Up ===\n');
@@ -401,7 +398,7 @@ classdef BrandtGeometry < handle
 
         function compareFidelities(obj)
             % compareFidelities   Compare simple vs accurate S_wet vs Geom targets.
-            obj.requireComputed('compareFidelities');
+            obj.requireAnalyzed('compareFidelities');
 
             gt = struct('fuse_s', 730.422, 'fuse_a', 676.329, ...
                 'wing', 392.020, 'strake', 39.956, ...
@@ -659,11 +656,11 @@ classdef BrandtGeometry < handle
 
     methods (Access = private)
 
-        function requireComputed(obj, callerName)
+        function requireAnalyzed(obj, callerName)
             if nargin < 2, callerName = 'this method'; end
-            if ~obj.computed_
-                error('BrandtGeometry:notComputed', ...
-                      '%s requires compute() to be called first. Run: geom.compute()', ...
+            if ~obj.analyzed_
+                error('BrandtGeometry:notAnalyzed', ...
+                      '%s requires analyze() to be called first. Run: geom.analyze()', ...
                       callerName);
             end
         end

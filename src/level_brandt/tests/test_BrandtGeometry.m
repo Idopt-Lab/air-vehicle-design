@@ -11,13 +11,13 @@ classdef test_BrandtGeometry < matlab.unittest.TestCase
 %   runtests('test_BrandtGeometry/testWingSwet')
 
     properties (Access = private)
-        geom   % shared BrandtGeometry instance — computed once before any test
+        geom   % shared BrandtGeometry instance — analyzed once before any test
     end
 
     methods (TestClassSetup)
         function buildGeometry(tc)
             g = BrandtGeometry();
-            g.compute();
+            g.analyze();
             tc.geom = g;
         end
     end

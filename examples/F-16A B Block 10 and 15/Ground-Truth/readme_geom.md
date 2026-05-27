@@ -15,7 +15,7 @@
 | `examples/.../f16a_geometry.json` | All given input values extracted from **Main** tab |
 | `src/level_brandt/tests/test_BrandtGeometry.m` | Validation test suite (33 GT checks) |
 
-`BrandtGeometry` is a handle class: `compute()` and all display/plot helpers mutate or inspect `obj` in place after construction.
+`BrandtGeometry` is a handle class: `analyze()` and all display/plot helpers mutate or inspect `obj` in place after construction.
 
 ---
 
