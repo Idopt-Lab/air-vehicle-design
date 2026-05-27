@@ -54,27 +54,42 @@ classdef test_BrandtEngine < matlab.unittest.TestCase
             % run() returns struct with correct fields
             r = tc.eng.run(0, 0, 0.0);  % SLS, dry
             tc.verifyTrue(isfield(r, 'alpha'));
+            tc.verifyTrue(isfield(r, 'alpha_AB_ref'));
             tc.verifyTrue(isfield(r, 'T'));
             tc.verifyTrue(isfield(r, 'TSFC'));
         end
         function testRunDrySLSValues(tc)
             % run() at SLS, dry: T=15000, alpha~1, TSFC=0.70
+            % alpha_AB_ref = T_sl_dry/T_sl_AB = 15000/23770 = 0.6311
             r = tc.eng.run(0, 0, 0.0);
-            tc.verifyEqual(r.T,    15000.0, 'RelTol', 0.01);
-            tc.verifyEqual(r.TSFC, 0.70,    'RelTol', 0.01);
-            tc.verifyEqual(r.alpha, 1.0,    'RelTol', 0.01);
+            tc.verifyEqual(r.T,            15000.0, 'RelTol', 0.01);
+            tc.verifyEqual(r.TSFC,         0.70,    'RelTol', 0.01);
+            tc.verifyEqual(r.alpha,        1.0,     'RelTol', 0.01);
+            tc.verifyEqual(r.alpha_AB_ref, 15000/23770, 'RelTol', 0.01);
         end
         function testRunABSLSValues(tc)
-            % run() at SLS, full AB: T=23770
+            % run() at SLS, full AB: T=23770, alpha_AB_ref=1.0
             r = tc.eng.run(0, 0, 1.0);
-            tc.verifyEqual(r.T, 23770.0, 'RelTol', 0.01);
+            tc.verifyEqual(r.T,            23770.0, 'RelTol', 0.01);
+            tc.verifyEqual(r.alpha_AB_ref, 1.0,     'RelTol', 0.01);
         end
         function testRunDualReturn(tc)
             % Properties updated by run() match returned struct
             r = tc.eng.run(20000, 0.8, 0.0);
-            tc.verifyEqual(tc.eng.run_T_lb,  r.T);
-            tc.verifyEqual(tc.eng.run_TSFC,  r.TSFC);
-            tc.verifyEqual(tc.eng.run_alpha, r.alpha);
+            tc.verifyEqual(tc.eng.run_T_lb,         r.T);
+            tc.verifyEqual(tc.eng.run_TSFC,         r.TSFC);
+            tc.verifyEqual(tc.eng.run_alpha,        r.alpha);
+            tc.verifyEqual(tc.eng.run_alpha_AB_ref, r.alpha_AB_ref);
+        end
+        function testAlphaABRefLessThanAlphaDry(tc)
+            % At SLS dry, alpha=1 but alpha_AB_ref < 1 (since T_sl_AB > T_sl_dry)
+            r = tc.eng.run(0, 0, 0.0);
+            tc.verifyLessThan(r.alpha_AB_ref, r.alpha);
+        end
+        function testAlphaABRefEqualsOneAtFullABSLS(tc)
+            % At SLS full AB, alpha_AB_ref should equal 1.0
+            r = tc.eng.run(0, 0, 1.0);
+            tc.verifyEqual(r.alpha_AB_ref, 1.0, 'RelTol', 0.01);
         end
         function testRunPartialAB(tc)
             % Partial AB (50%) gives T between dry and full AB

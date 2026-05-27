@@ -154,10 +154,13 @@ T   = eng.run_T_lb;    % same value
 | `run_mach` | Mach at last `run()` call | — |
 | `run_AB_p` | Afterburner fraction at last `run()` call | [0,1] |
 | `run_alpha` | Normalised thrust lapse `T / (T_sl_dry × n_engines)` | — |
+| `run_alpha_AB_ref` | Normalised thrust lapse `T / (T_sl_AB × n_engines)` — **Miss tab convention**, used by BrandtMission | — |
 | `run_T_lb` | Installed thrust | lbf |
 | `run_TSFC` | Installed TSFC | 1/hr |
 
 ---
+
+> **Cross-discipline note (FR-016):** `run_alpha_AB_ref` was added to expose `T / (T_sl_AB × n_engines)` — the normalisation used internally by the Miss tab — so that `BrandtMission` does not re-implement thrust lapse logic. This follows the project rule: if a consuming class needs a value from another discipline, extend that discipline's `run()` output struct rather than duplicating the computation.
 
 ## MATLAB Implementation
 

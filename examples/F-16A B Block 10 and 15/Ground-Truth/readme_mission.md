@@ -25,10 +25,10 @@ BrandtGeometry  ──►  BrandtAerodynamics  ──►  BrandtMission
 BrandtEngine    ──────────────────────────────►
 ```
 
-All three must have `compute()` called before constructing `BrandtMission`.
+All three must have `analyze()` called before constructing `BrandtMission`.
 
-`W_TO_lb` is now a **required parameter of `compute()`** (not read from JSON).
-This supports the sizing loop: call `miss.compute(W_TO_lb)` with successive weight
+`W_TO_lb` is now a **required parameter of `run()`** (not read from JSON).
+This supports the sizing loop: call `miss.run(W_TO_lb)` with successive weight
 guesses without rebuilding the object.
 
 ---
@@ -36,15 +36,15 @@ guesses without rebuilding the object.
 ## Usage
 
 ```matlab
-geom = BrandtGeometry();  geom.compute();
-aero = BrandtAerodynamics(geom);  aero.compute();
-eng  = BrandtEngine();             eng.compute();
+geom = BrandtGeometry();  geom.analyze();
+aero = BrandtAerodynamics(geom);  aero.analyze();
+eng  = BrandtEngine();             eng.analyze();
 miss = BrandtMission(aero, eng, geom);
-miss.compute(31377.0);   % W_TO_lb [lb] — required, from sizing loop
+miss.run(31377.0);   % W_TO_lb [lb] — required, from sizing loop
 miss.displayMissionTable();
 ```
 
-Key outputs after `compute()`:
+Key outputs after `run()`: 
 
 | Property          | Description                          |
 |-------------------|--------------------------------------|
@@ -58,6 +58,45 @@ Key outputs after `compute()`:
 | `dW_Wto(i)`       | ΔW/W_TO fuel fraction for seg i      |
 
 ---
+
+## Discipline Interface Pattern
+
+All Level-Brandt classes follow a standardized three-tier interface:
+
+| Method | Purpose | Inputs |
+|--------|---------|--------|
+| `Constructor` | Load JSON, initialize properties to NaN | Fixed external inputs only |
+| `analyze(design_vars)` | Compute design-variable-dependent quantities | Design variables (outer optimization loop) |
+| `run(state, control, options)` | Evaluate discipline outputs for flight conditions | State/control variables (inner nonlinear solve) |
+
+### Standard State and Control Vectors
+
+The `state_vector` is the standard 12×1 flight dynamics state vector:
+
+  x = [u, v, w, p, q, r, φ, θ, ψ, x_E, y_E, h]
+
+where [u, v, w] are body-axis velocities, [p, q, r] angular rates,
+[φ, θ, ψ] Euler angles, and [x_E, y_E, h] position/altitude.
+
+The `control_vector` is aircraft-configuration-dependent and is determined
+once a control system architecture is specified (e.g., throttle, elevator,
+aileron, rudder, flap deflections).
+
+At Level-Brandt fidelity, disciplines use named scalar arguments drawn from
+these conceptual vectors — not the full 12×1 state — for clarity and
+simplicity. See each class for its specific mapping.
+
+### run() Dual-Return Contract
+
+All `run()` methods BOTH return results AND store them as instance properties:
+```matlab
+% Functional style (for optimizers):
+results = obj.run(state, control);
+
+% Inspection style (for debugging):
+obj.run(state, control);
+value = obj.property_name;  % same value
+```
 
 ## Mission Segment Sequence
 
@@ -91,7 +130,7 @@ JSON Inputs (segment_names, altitude_ft, mach_end, pct_AB, CDx,
              dist_nm_given, time_min_given, drop_payload_lb)
      │
      ▼
-compute(W_TO_lb)                      ← W_TO_lb from sizing loop
+run(W_TO_lb)                          ← W_TO_lb from sizing loop
      │
      ├─── W/S = W_TO_lb / S_ref       (from BrandtGeometry)
      ├─── T/W = T_sl_AB / W_TO_lb    (from BrandtEngine)

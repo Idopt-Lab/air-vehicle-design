@@ -29,7 +29,7 @@ classdef BrandtMission < handle
 %   cT_dry = install × TSFC_sl_dry × (1 + 0.35×|M|)    × sqrt(θ)
 %   cT_AB  = install × TSFC_sl_AB  × (1 + 0.35×|M-0.4|)× sqrt(θ)
 %   cT     = cT_dry + (%AB/100) × (cT_AB - cT_dry)
-%   where θ = T_ISA(h) / 518.69 (static temperature ratio in Rankine)
+%   where θ = T_ISA(h) / 288.15 (static temperature ratio, K from atmosisa)
 %   install = 1.08 (from Miss!C25 = Main!C25)
 %
 %   For CLIMB segments (altitude changes), cT is AVERAGED between start
@@ -86,11 +86,11 @@ classdef BrandtMission < handle
 %   CDo = CDo_base + CDx  (CDx from JSON per segment)
 %
 % Usage:
-%   geom = BrandtGeometry();  geom.compute();
-%   aero = BrandtAerodynamics(geom);  aero.compute();
-%   eng  = BrandtEngine();            eng.compute();
+%   geom = BrandtGeometry();  geom.analyze();
+%   aero = BrandtAerodynamics(geom);  aero.analyze();
+%   eng  = BrandtEngine();            eng.analyze();
 %   miss = BrandtMission(aero, eng, geom);
-%   miss.compute(31377.0);   % W_TO_lb required — from sizing loop or JSON
+%   miss.run(31377.0);   % W_TO_lb required — from sizing loop or JSON
 %   miss.displayMissionTable();
 
     properties
@@ -133,9 +133,9 @@ classdef BrandtMission < handle
         % BrandtMission  Constructor — loads JSON inputs, stores handles.
         %
         % Args:
-        %   aeroObj  BrandtAerodynamics (must have compute() called)
-        %   engObj   BrandtEngine       (must have compute() called)
-        %   geomObj  BrandtGeometry     (must have compute() called)
+        %   aeroObj  BrandtAerodynamics (must have analyze() called)
+        %   engObj   BrandtEngine       (must have analyze() called)
+        %   geomObj  BrandtGeometry     (must have analyze() called)
             obj.aero_ = aeroObj;
             obj.eng_  = engObj;
             obj.geom_ = geomObj;
@@ -165,9 +165,19 @@ classdef BrandtMission < handle
             obj.dW_Wto   = nan(1, n);
         end
 
+        function analyze(obj)
+        % Validate that all dependency objects are properly analyzed before running.
+        % analyze() is a design-variable pass — at Brandt level, the mission profile
+        % (altitudes, Mach numbers, etc.) is fixed by the JSON inputs loaded at construction.
+            if ~obj.aero_.analyzed_ || ~obj.eng_.analyzed_ || ~obj.geom_.analyzed_
+                error('LevelBrandt:notAnalyzed', ...
+                    'All dependency objects (aero, eng, geom) must have analyze() called first.');
+            end
+        end
+
         % ─────────────────────────────────────────────────────────────────
-        function compute(obj, W_TO_lb)
-        % compute  Run the full mission analysis, populating all outputs.
+        function run(obj, W_TO_lb)
+        % run  Run the full mission analysis, populating all outputs.
         %
         % W_TO_lb : takeoff gross weight [lb] — required parameter.
         %           Pass from sizing loop; JSON value (31377.0 lb) used for
@@ -175,7 +185,7 @@ classdef BrandtMission < handle
         %
         % Iterates over all 14 segments in sequence.  Each segment
         % consumes the weight fraction output from the previous one.
-            obj.requireReady_();
+            obj.analyze();
 
             n     = numel(obj.inp.segment_names);
             W_TO  = W_TO_lb;
@@ -193,7 +203,9 @@ classdef BrandtMission < handle
             % Takeoff segment is index 1, Accel is index 2 in obj.inp.segment_names.
             [V_accel_end,   ~] = obj.velocity_(obj.alt_ft(2), obj.mach_end(2));
             [V_accel_start, ~] = obj.velocity_(obj.alt_ft(1), obj.mach_end(1));
-            q_accel_43 = 0.5 * obj.isa_rho_(obj.alt_ft(2)) * ...
+            [~, ~, ~, rho_accel_si] = atmosisa(obj.alt_ft(2) * 0.3048);
+            rho_accel  = rho_accel_si / 515.379;   % kg/m³ → slug/ft³
+            q_accel_43 = 0.5 * rho_accel * ...
                          ((V_accel_end + V_accel_start) / 2)^2;  % = 344.0 psf (Miss!C43)
 
             for i = 1:n
@@ -285,6 +297,7 @@ classdef BrandtMission < handle
             % (matches Miss!O6 formula which uses Miss!B12 = W_frac after takeoff)
             obj.landing_dist_ft = obj.landingDist_(W_frac_after_TO, W_TO);
 
+            obj.validate_run_();
             obj.computed_ = true;
         end
 
@@ -292,7 +305,7 @@ classdef BrandtMission < handle
         function T = displayMissionTable(obj)
         % displayMissionTable  Return (and print) mission summary as MATLAB table.
         %
-        % Computed values are NaN until compute() is called.
+        % Computed values are NaN until run() is called.
         % Columns match Main!J32:Y45 layout.
             n    = numel(obj.inp.segment_names);
             names = obj.inp.segment_names(:);
@@ -352,8 +365,9 @@ classdef BrandtMission < handle
         % install factor = 1.08 (Miss!C25 = Main!C25, duct/installation loss)
             install = obj.inp.install_factor;  % 1.08
 
-            % ISA static temperature ratio θ (imperial: T_SL = 518.69 °R)
-            theta = obj.isa_theta_(alt_ft);
+            % ISA static temperature ratio θ via atmosisa (T in K, T_SL = 288.15 K)
+            [T_K, ~, ~, ~] = atmosisa(alt_ft * 0.3048);
+            theta = T_K / 288.15;
 
             cT_dry = install .* obj.eng_.TSFC_sl_dry ...
                      .* (1 + 0.35 .* abs(mach)) .* sqrt(theta);
@@ -361,79 +375,6 @@ classdef BrandtMission < handle
                      .* (1 + 0.35 .* abs(mach - 0.4)) .* sqrt(theta);
 
             cT = cT_dry + (pct_AB / 100) .* (cT_AB - cT_dry);
-        end
-
-        % ── Thrust lapse (Engn(s) New model — same as BrandtEngine) ───
-        function alpha_norm = thrust_lapse_norm_(obj, alt_ft, mach, pct_AB)
-        % thrust_lapse_norm_  Normalised thrust lapse T / T_sl_AB.
-        %
-        % Miss tab rows 41–42:
-        %   α_dry_norm = (T_sl_dry/T_sl_AB) × δ₀ × (1−0.3M−corr_dry)
-        %   α_AB_norm  =                           δ₀ × (1−0.1√M−corr_AB)
-        %   α_norm     = α_dry_norm + (pct_AB/100)×(α_AB_norm − α_dry_norm)
-        %
-        % The correction terms prevent negative thrust above the throttle
-        % ratio temperature (TR=1).  Uses BrandtEngine.atmosphereRatios()
-        % for delta0 and theta0 (consistent with Miss tab rows 36–39).
-            [theta, theta0, ~, delta0] = BrandtEngine.atmosphereRatios(alt_ft, mach);
-            TR = obj.eng_.TR;
-
-            corr_dry = max(0, 1.7 .* (theta0 - TR) ./ theta0);
-            corr_AB  = max(0, 2.2 .* (theta0 - TR) ./ theta0);
-
-            % Miss!B41 uses D4=0.3, F4=1 from Engn(s) tab; here M^F4 = M^1 = M
-            alpha_dry_raw  = delta0 .* (1 - 0.3 .* mach - corr_dry);
-            alpha_AB_raw   = delta0 .* (1 - 0.1 .* sqrt(mach) - corr_AB);
-
-            % Normalise to T_sl_AB (Miss tab convention)
-            ratio = obj.eng_.T_sl_dry / obj.eng_.T_sl_AB;  % = 15000/23770 = 0.6311
-            alpha_dry_norm = ratio .* alpha_dry_raw;
-            alpha_AB_norm  = alpha_AB_raw;  % AB lapse already normalised to T_sl_AB
-
-            alpha_norm = alpha_dry_norm + (pct_AB / 100) .* (alpha_AB_norm - alpha_dry_norm);
-        end
-
-        % ── ISA temperature ratio θ ────────────────────────────────────
-        function theta = isa_theta_(~, alt_ft)
-        % isa_theta_  Static temperature ratio θ = T_ISA(h) / T_SL_std.
-        %
-        % Imperial ISA: troposphere T = 518.69 − 0.00356×h [°R],
-        % stratosphere T = 389.99 °R for h ≥ 36152 ft.
-        % T_SL_std = 518.69 °R = 288.15 K.
-        % Matches Miss tab row 23 (temperature) and row 36 (theta).
-            T_SL   = 518.69;         % °R
-            T_strat = 389.99;        % °R
-            h_tp    = 36152;         % tropopause altitude [ft]
-
-            T = (alt_ft < h_tp) .* (T_SL - 0.00356 .* alt_ft) ...
-              + (alt_ft >= h_tp) .* T_strat;
-            theta = T ./ T_SL;
-        end
-
-        % ── ISA density ────────────────────────────────────────────────
-        function rho = isa_rho_(~, alt_ft)
-        % isa_rho_  Air density from imperial ISA [slug/ft³].
-        %
-        % Troposphere (h < 36152 ft):
-        %   ρ = 0.002377 × (T/518.69)^(g/(lapse×R)−1) = (T/518.69)^4.270
-        % Stratosphere (h ≥ 36152 ft):
-        %   ρ = 0.000706 × exp(−32.2/1716 × (h−36152)/389.99)
-        % Matches Miss tab row 22 (density).
-            rho_SL  = 0.002377;
-            T_SL    = 518.69;
-            T_strat = 389.99;
-            lapse   = 0.00356;   % °R/ft
-            R       = 1716;      % ft²/(s²·°R)
-            g       = 32.2;      % ft/s²
-            h_tp    = 36152;
-
-            exp_trop = g / (lapse * R) - 1;    % = 4.270 (Excel: -(1+32.2/(-0.00356*1716)) = 4.270)
-            T_trop   = T_SL - lapse .* min(alt_ft, h_tp);
-
-            rho_trop  = rho_SL .* (T_trop / T_SL).^exp_trop;
-            rho_strat = 0.000706 .* exp(-g / R .* (alt_ft - h_tp) ./ T_strat);
-
-            rho = (alt_ft < h_tp) .* rho_trop + (alt_ft >= h_tp) .* rho_strat;
         end
 
         % ── Aerodynamics per segment ───────────────────────────────────
@@ -465,18 +406,11 @@ classdef BrandtMission < handle
         function [V, a] = velocity_(~, alt_ft, mach)
         % velocity_  True airspeed [ft/s] and speed of sound [ft/s].
         %
-        % a = sqrt(γ R T) = sqrt(1.4 × 1716 × T_ISA)
+        % Uses atmosisa (altitude in metres) for ISA speed of sound.
+        % a [ft/s] = a_SI [m/s] / 0.3048.
         % Matches Miss tab row 31 (sound speed) and row 32 (TAS).
-            gamma = 1.4;
-            R     = 1716;          % ft²/(s²·°R)
-            T_SL  = 518.69;
-            T_strat = 389.99;
-            lapse   = 0.00356;
-            h_tp    = 36152;
-
-            T = (alt_ft < h_tp) .* (T_SL - lapse .* alt_ft) ...
-              + (alt_ft >= h_tp) .* T_strat;
-            a = sqrt(gamma .* R .* T);
+            [~, a_ms, ~, ~] = atmosisa(alt_ft .* 0.3048);
+            a = a_ms ./ 0.3048;   % m/s → ft/s
             V = mach .* a;
         end
 
@@ -509,8 +443,10 @@ classdef BrandtMission < handle
             [V_end, ~]   = obj.velocity_(alt_end, M_end);
             [V_start, ~] = obj.velocity_(alt_start, M_start);
 
-            rho_end   = obj.isa_rho_(alt_end);
-            rho_start = obj.isa_rho_(alt_start);
+            [~, ~, ~, rho_end_si]   = atmosisa(alt_end   * 0.3048);
+            [~, ~, ~, rho_start_si] = atmosisa(alt_start * 0.3048);
+            rho_end   = rho_end_si   / 515.379;   % kg/m³ → slug/ft³
+            rho_start = rho_start_si / 515.379;
             q_end   = 0.5 * rho_end   * V_end^2;
             q_start = 0.5 * rho_start * V_start^2;
 
@@ -518,8 +454,8 @@ classdef BrandtMission < handle
             if ~isnan(q_end_override),   q_end   = q_end_override;   end
             if ~isnan(q_start_override), q_start = q_start_override; end
 
-            alpha_end   = obj.thrust_lapse_norm_(alt_end,   M_end,   pct_AB_end);
-            alpha_start = obj.thrust_lapse_norm_(alt_start, M_start, pct_AB_end);
+            alpha_end   = obj.eng_.run(alt_end,   M_end,   pct_AB_end / 100).alpha_AB_ref;
+            alpha_start = obj.eng_.run(alt_start, M_start, pct_AB_end / 100).alpha_AB_ref;
 
             [CDo_end, k1_end, k2_end]     = obj.aero_at_(M_end,   cdx_end);
             [CDo_start, k1_start, k2_start] = obj.aero_at_(M_start, cdx_start);
@@ -557,7 +493,8 @@ classdef BrandtMission < handle
         %   t = V_liftoff / (g × TW × alpha_TO) / 60
         %   alpha_TO = thrust lapse at takeoff conditions (B40 = 0.9640 at 100%AB)
             g        = 32.2;           % ft/s²
-            rho_SL   = obj.isa_rho_(0);
+            [~, ~, ~, rho_SL_si] = atmosisa(0);
+            rho_SL = rho_SL_si / 515.379;   % kg/m³ → slug/ft³
             CLmax_TO = obj.inp.CLmax_TO;
             n_eng    = obj.eng_.n_engines;
             W_TO     = W_TO_lb;
@@ -586,8 +523,8 @@ classdef BrandtMission < handle
             dW = term1 + term2 + term3;
 
             % Time: V_liftoff / (g × TW × alpha_TO) / 60  [Miss!B8]
-            % alpha_TO = thrust lapse at 100%AB, h=0, M_TO (= Miss!B40)
-            alpha_TO = obj.thrust_lapse_norm_(0, M_TO, 100);
+            % alpha_TO = thrust lapse at 100%AB, h=0, M_TO (= Miss!B40), normalised to T_sl_AB
+            alpha_TO = obj.eng_.run(0, M_TO, 1.0).alpha_AB_ref;
             t = V_liftoff / (g * TW * alpha_TO) / 60;
 
             % Ground-roll distance: WS/TW × liftoff_factor² / rho_SL / CLmax / g
@@ -631,9 +568,9 @@ classdef BrandtMission < handle
             t = obj.time_from_Ps_(alt_start, M_start, alt_end, M_end, ...
                 W_frac, pct_AB, cdx_start, cdx, WS, TW, NaN, q_accel_43_in);
 
-            % TSFC and thrust lapse at END conditions
+            % TSFC and thrust lapse at END conditions (normalised to T_sl_AB per Miss tab)
             cT_end  = obj.tsfc_old_(alt_end, M_end, pct_AB);
-            alpha_C = obj.thrust_lapse_norm_(alt_end, M_end, pct_AB);
+            alpha_C = obj.eng_.run(alt_end, M_end, pct_AB / 100).alpha_AB_ref;
 
             dW   = alpha_C * TW * cT_end * t / 60;
             [V_end, ~] = obj.velocity_(alt_end, M_end);
@@ -688,8 +625,10 @@ classdef BrandtMission < handle
 
             [V_end, ~]   = obj.velocity_(alt_end, M_end);
             [V_start, ~] = obj.velocity_(alt_start, M_start);
-            rho_end      = obj.isa_rho_(alt_end);
-            rho_start    = obj.isa_rho_(alt_start);
+            [~, ~, ~, rho_end_si]   = atmosisa(alt_end   * 0.3048);
+            [~, ~, ~, rho_start_si] = atmosisa(alt_start * 0.3048);
+            rho_end   = rho_end_si   / 515.379;   % kg/m³ → slug/ft³
+            rho_start = rho_start_si / 515.379;
             q_end        = 0.5 * rho_end   * V_end^2;
             % q_start: use override (e.g. Accel C43) when provided; else standard formula
             if ~isnan(q_prev_in)
@@ -806,7 +745,7 @@ classdef BrandtMission < handle
             t   = obj.inp.time_min_given(idx);     % 2.0 min
 
             cT_combat    = obj.tsfc_old_(alt_end, M_end, pct_AB);
-            alpha_combat = obj.thrust_lapse_norm_(alt_end, M_end, pct_AB);
+            alpha_combat = obj.eng_.run(alt_end, M_end, pct_AB / 100).alpha_AB_ref;
 
             T_avail = obj.eng_.T_sl_AB * obj.eng_.n_engines * alpha_combat;
 
@@ -841,7 +780,8 @@ classdef BrandtMission < handle
         function d_ft = landingDist_(obj, W_frac_after_TO, W_TO)
         % landingDist_  Compute landing distance [ft] from Miss!O6 formula.
             g    = 32.2;
-            rho_SL   = obj.isa_rho_(0);
+            [~, ~, ~, rho_SL_si] = atmosisa(0);
+            rho_SL = rho_SL_si / 515.379;   % kg/m³ → slug/ft³
             S        = obj.geom_.inp.wing.S_ref_ft2;
             CLmax_l  = obj.inp.CLmax_land;
             CLmax_TO = obj.inp.CLmax_TO;
@@ -901,21 +841,12 @@ classdef BrandtMission < handle
             t = t_alt + t_vel;
         end
 
-        % ── Guard ─────────────────────────────────────────────────────
-        function requireReady_(obj)
-            if ~obj.eng_.computed_
-                error('LevelBrandt:notComputed', ...
-                    'BrandtEngine must be computed before BrandtMission.');
-            end
-            if ~obj.aero_.computed_
-                error('LevelBrandt:notComputed', ...
-                    'BrandtAerodynamics must be computed before BrandtMission.');
-            end
-            % BrandtGeometry.computed_ is private; verify by checking a computed field
-            if isnan(obj.geom_.inp.wing.S_ref_ft2)
-                error('LevelBrandt:notComputed', ...
-                    'BrandtGeometry must be computed before BrandtMission.');
-            end
+        % ── Run validation ─────────────────────────────────────────────
+        function validate_run_(obj)
+            assert(~isnan(obj.total_fuel_lb),   'LevelBrandt:nanOutput', 'total_fuel_lb is NaN');
+            assert(~isnan(obj.total_time_min),  'LevelBrandt:nanOutput', 'total_time_min is NaN');
+            assert(~isnan(obj.landing_dist_ft), 'LevelBrandt:nanOutput', 'landing_dist_ft is NaN');
+            assert(obj.total_fuel_lb > 0, 'LevelBrandt:invalidOutput', 'total_fuel_lb must be positive');
         end
     end
 end

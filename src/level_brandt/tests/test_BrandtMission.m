@@ -5,7 +5,7 @@ classdef test_BrandtMission < matlab.unittest.TestCase
 %   Or:  results = run(test_BrandtMission)
 
     properties (Access = private)
-        miss  % BrandtMission handle after compute()
+        miss  % BrandtMission handle after run()
     end
 
     methods (TestClassSetup)
@@ -13,11 +13,11 @@ classdef test_BrandtMission < matlab.unittest.TestCase
             % Build full dependency chain and run mission analysis.
             % W_TO_lb = 31377.0 lb (from f16a_geometry.json, Miss tab baseline)
             addpath(fullfile(fileparts(fileparts(mfilename('fullpath'))), '..'));
-            geom = BrandtGeometry(); geom.compute();
-            aero = BrandtAerodynamics(geom); aero.compute();
-            eng  = BrandtEngine();           eng.compute();
+            geom = BrandtGeometry(); geom.analyze();
+            aero = BrandtAerodynamics(geom); aero.analyze();
+            eng  = BrandtEngine();           eng.analyze();
             tc.miss = BrandtMission(aero, eng, geom);
-            tc.miss.compute(31377.0);   % W_TO_lb as function input
+            tc.miss.run(31377.0);   % W_TO_lb as function input
         end
     end
 
