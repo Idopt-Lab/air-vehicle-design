@@ -145,6 +145,42 @@
     "TSFC_AB_per_hr":  2.20,
     "inlet_x_ft":      14.0,
     "inlet_dz_ft":     1.5,
-    "TSFC_install_factor": 1.08
+    "TSFC_install_factor": 1.08,
+    "TR": 1.0
+  },
+
+  "mission": {
+    "_source": "Main!J32:Y45 (inputs/outputs), Miss!A2:P13 (calculations)",
+    "_notes": [
+      "14 mission segments: Takeoff through Landing.",
+      "altitude_ft/mach_end are CONDITIONS at END of each segment.",
+      "For Takeoff, mach_end is V_liftoff/a_SL = 0.282 (= 1.2 × V_stall/a_SL).",
+      "pct_AB: afterburner percentage 0–100.",
+      "CDx: extra drag increment added to CDo (landing gear, external stores, etc.).",
+      "dist_nm_given: prescribed range for cruise/dash/egress segments; null = computed.",
+      "time_min_given: prescribed duration for combat/loiter segments; 0 = computed.",
+      "drop_payload_lb: payload jettisoned during segment (e.g., combat weapons release).",
+      "W_TO_lb is the take-off gross weight used as the sizing baseline.",
+      "CLmax_TO and CLmax_land come from Main!L9 and Main!L10.",
+      "mu_rolling (ground friction) from Main!V12; mu_braking from Main!V13.",
+      "approach_factor (1.3) and liftoff_factor (1.2) are standard Brandt values (Main!U13, Main!U12).",
+      "Validation targets (Miss tab): O9=6000.43 lb total fuel, O8=94.06 min total time, O6=2884.95 ft landing."
+    ],
+    "W_TO_lb":          31377.0,
+    "CLmax_TO":         1.2757,
+    "CLmax_land":       1.4259,
+    "mu_rolling":       0.03,
+    "mu_braking":       0.5,
+    "liftoff_factor":   1.2,
+    "approach_factor":  1.3,
+    "warmup_fuel_per_engine_lb": 1000.0,
+    "segment_names":    ["Takeoff","Accel","Climb","Cruise","Patrol","Dash","Patrol2","Combat","Egress","Patrol3","Climb2","Cruise2","Loiter","Landing"],
+    "altitude_ft":      [0, 10000, 40000, 40000, 40000, 40000, 40000, 25000, 40000, 40000, 40000, 40000, 10000, 0],
+    "mach_end":         [0.282, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.30, 0.0],
+    "pct_AB":           [100, 0, 0, 0, 0, 50, 0, 50, 0, 0, 0, 0, 0, 0],
+    "CDx":              [0.035, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "dist_nm_given":    [null, null, null, 190.8, 0, 50, 0, null, 50, 0, null, 250, null, null],
+    "time_min_given":   [null, null, null, null, 0, null, 0, 2.0, null, 0, null, null, 20.0, null],
+    "drop_payload_lb":  [0, 0, 0, 0, 0, 0, 0, 4400, 0, 0, 0, 0, 0, 0]
   }
 }
