@@ -6,7 +6,8 @@ classdef F16PropulsionLevel2 < PropulsionModelLevel2
      properties
           enginestats
           TSFC
-          T0
+          T0 % Thrust at sea level from sizing (lbf)
+          T0_guess % Initial guess for thrust (lbf)
           T_SL_dry
           T_SL_wet
           TR = 1.0
@@ -22,6 +23,7 @@ classdef F16PropulsionLevel2 < PropulsionModelLevel2
                obj.TSFC.dry_sl = obj.get_TSFC("low bypass mixed turbofan", [0, 0], "max");
                obj.T_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
                obj.T_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
+               obj.T0_guess = 25000;
           end
 
           % Estimate installed TSFC (preliminary) (wrapper) (1/sec)

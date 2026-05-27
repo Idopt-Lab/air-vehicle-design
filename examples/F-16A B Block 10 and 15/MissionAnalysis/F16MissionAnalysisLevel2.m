@@ -17,18 +17,18 @@ methods
           end
 
           % Compute mission fuel
-          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
+          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, propulsion_obj, AR, W_TO, W_S, T_W, S_ref, S_wet_aircraft, T0, engine_type, aero_obj)
                % This is where we actually compute the fuel for the mission
-               AR = geometry_obj.mainwings.AR;
+               % AR = geometry_obj.mainwings.AR;
 
                % W_S = 104.59;
-               W_S = constraint_obj.optimal_WS;
-               W_TO = weight_obj.W_TO;
-               T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
-               S_ref = geometry_obj.mainwings.S_ref;
-               S_wet_aircraft = geometry_obj.design.S_wet;
-               T0 = propulsion_obj.T0;
-               engine_type = design.propulsion_type;
+               % W_S = constraint_obj.optimal_WS;
+               % W_TO = weight_obj.W_TO;
+               % T_W = constraint_obj.min_TW; % Desired thrust-to-weight ratio (figure out how to get this naturally later)
+               % S_ref = geometry_obj.mainwings.S_ref;
+               % S_wet_aircraft = geometry_obj.design.S_wet;
+               % T0 = propulsion_obj.T0;
+               % engine_type = design.propulsion_type;
                % Automate segment extraction
                segmentnames = fields(mission_obj.missiondata);
                fuelburnedarray = zeros(1,length(segmentnames));

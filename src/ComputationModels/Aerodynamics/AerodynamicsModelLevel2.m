@@ -3,13 +3,14 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
      %   Detailed explanation goes here
 
      properties (Abstract) % Initialization not allowed
-          e_osw
-          Cf
-          CL_max
-          CL_minD
-          CD0
-          K1
-          K2
+          e_osw % I have no idea what this is for (probably constraint analysis)
+          Cf % Needed for constraint analysis
+          CL_max % Needed for constraint analysis
+          CL_minD % Needed for constraint analysis
+          CD0 % Also constraint analysis
+          K % Needed for CD calculations
+          K1 % Needed for constraint analysis
+          K2 % Needed for constraint analysis
      end
 
 
