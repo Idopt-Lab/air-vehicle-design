@@ -9,6 +9,7 @@ classdef F16PropulsionLevel2 < PropulsionModelLevel2
           T0
           T_SL_dry
           T_SL_wet
+          TR = 1.0
      end
 
      methods
