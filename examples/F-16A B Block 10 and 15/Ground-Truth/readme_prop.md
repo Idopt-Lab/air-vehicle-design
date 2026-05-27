@@ -55,7 +55,7 @@ standard sea-level day total temperature.  At very high altitude or high Mach th
 total temperature ratio θ₀ can rise above 1.0, activating the correction.
 
 TR is an external input stored in `f16a_geometry.json` under `engine.TR` and read
-by `BrandtEngine.compute()`.
+by `BrandtEngine.analyze()`.
 
 ---
 
@@ -117,23 +117,81 @@ In both cases `sqrt(alpha) < 1` at altitude, so TSFC decreases with altitude
 
 ---
 
-## MATLAB Implementation
+## Discipline Interface (BrandtEngine)
 
-`BrandtEngine` merges the two θ₀ branches into a single expression using `max(0, ...)`,
-which evaluates to zero when θ₀ ≤ TR and to the actual excess when θ₀ > TR:
+`BrandtEngine` follows the three-tier Level-Brandt interface:
+
+| Method | Purpose | Key outputs |
+|--------|---------|-------------|
+| `BrandtEngine(json_path)` | Constructor — loads JSON; all properties = NaN | — |
+| `analyze()` | Design-variable pass — stores SLS params from JSON | T_sl_dry, T_sl_AB, TSFC_sl_dry, TSFC_sl_AB, TR, n_engines |
+| `run(altitude_ft, mach, AB_p)` | State/control pass — thrust and TSFC at condition | struct `{alpha, T_lb, TSFC}` |
 
 ```matlab
-% Dry — thrust_dry()
+eng = BrandtEngine('f16a_geometry.json');
+eng.analyze();                          % SLS parameters stored
+
+% Evaluate at 20,000 ft, M=0.8, dry (AB_p=0):
+r = eng.run(20000, 0.8, 0);            % returns struct AND stores to eng.run_*
+r.alpha   % thrust lapse T / (T_sl_dry * n_engines)
+r.T_lb    % installed thrust [lbf]
+r.TSFC    % installed TSFC [1/hr]
+
+% Inspection style:
+eng.run(20000, 0.8, 0);
+T   = eng.run_T_lb;    % same value
+```
+
+`state_vector` conceptual mapping: `[altitude_ft, mach]`.  
+`control_vector` conceptual mapping: `[AB_p]`.  
+`run()` always calls `validate_run_()` before returning — asserts no NaN in key outputs.
+
+### Stored `run_*` Properties
+
+| Property | Description | Units |
+|----------|-------------|-------|
+| `run_altitude_ft` | Altitude at last `run()` call | ft |
+| `run_mach` | Mach at last `run()` call | — |
+| `run_AB_p` | Afterburner fraction at last `run()` call | [0,1] |
+| `run_alpha` | Normalised thrust lapse `T / (T_sl_dry × n_engines)` | — |
+| `run_T_lb` | Installed thrust | lbf |
+| `run_TSFC` | Installed TSFC | 1/hr |
+
+---
+
+## MATLAB Implementation
+
+`BrandtEngine` exposes `run()` as the public API.
+`thrust_dry()` and `thrust_AB()` are **internal helpers** called by `run()`:
+
+```matlab
+% Public API
+prop_results = eng.run(altitude_ft, mach, AB_p)
+
+% Internal helpers (called by run, not for direct use)
+% thrust_dry() — dry branch
 correction = max(0, 1.7 .* (theta0 - TR) ./ theta0);
 alpha_dry  = delta0 .* (1 - 0.3.*M - correction);
 T_dry      = T_sl_dry .* n_engines .* alpha_dry;
 tsfc_dry   = TSFC_sl_dry .* (1 + 0.35.*abs(M)) .* sqrt(max(0, alpha_dry));
 
-% AB — thrust_AB()
+% thrust_AB() — afterburner branch
 correction = max(0, 2.2 .* (theta0 - TR) ./ theta0);
 alpha_AB   = delta0 .* (1 - 0.1.*sqrt(M) - correction);
 T_AB       = T_sl_AB .* n_engines .* alpha_AB;
 tsfc_AB    = TSFC_sl_AB .* (1 + 0.35.*abs(M - 0.4)) .* sqrt(max(0, alpha_AB));
+```
+
+### Partial Afterburner Blending
+
+`AB_p ∈ [0, 1]` linearly blends dry and AB branches (clamped to [0,1]):
+
+```matlab
+AB_p     = max(0, min(1, AB_p));
+T_total  = (1 - AB_p) .* T_dry  + AB_p .* T_AB;               % thrust blend
+wdot     = (1 - AB_p).*(tsfc_dry.*T_dry) + AB_p.*(tsfc_AB.*T_AB);  % fuel-flow blend
+tsfc_eff = wdot ./ T_total;                                    % effective TSFC
+alpha    = T_total ./ (T_sl_dry .* n_engines);                 % lapse (can exceed 1 with AB)
 ```
 
 ---
@@ -161,7 +219,7 @@ Implemented in `BrandtGeometry.computeNacelle()`.
 | AB (F-16A)     | `W_engine = 0.199 × T_sl_AB` | 4730.23 lb| Wt tab row 22|
 | Dry (reference)| `W_engine = 0.199 × T_sl_dry`| —         | Wt tab row 10|
 
-Implemented in `BrandtWeight.compute()`.
+Implemented in `BrandtWeight.analyze()`.
 
 ---
 

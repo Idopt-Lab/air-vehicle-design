@@ -1,100 +1,100 @@
-%% BrandtEngine validation script — theta/delta model
-% Replicates Engn(s) tab with standard atmosphere ratios (theta, theta0, delta, delta0).
-% NOTE: Full matlab.unittest conversion is deferred until propulsion unit tests are written.
+classdef test_BrandtEngine < matlab.unittest.TestCase
+% test_BrandtEngine  MATLAB unit tests for BrandtEngine.
 %
-% Run from repo root or any path containing the level_brandt sources:
-%   run('src/level_brandt/tests/test_BrandtEngine.m')
+% Run: results = runtests('src/level_brandt/tests/test_BrandtEngine.m')
+% Or:  results = run(test_BrandtEngine)
 
-clearvars; close all; clc;
+    properties (Access = private)
+        eng  % shared BrandtEngine after analyze()
+    end
 
-eng = BrandtEngine();
-eng.compute();
+    methods (TestClassSetup)
+        function buildEngine(tc)
+            addpath(fullfile(fileparts(fileparts(mfilename('fullpath'))), '..'));
+            tc.eng = BrandtEngine();
+            tc.eng.analyze();
+        end
+    end
 
-tol_pct    = 1.0;
-pass_count = 0;
-chk_count  = 0;
+    methods (Test)
+        % ── SLS parameters (loaded from JSON) ──────────────────────────
+        function testTslDry(tc)
+            tc.verifyEqual(tc.eng.T_sl_dry, 15000.0, 'RelTol', 0.01);
+        end
+        function testTslAB(tc)
+            tc.verifyEqual(tc.eng.T_sl_AB, 23770.0, 'RelTol', 0.01);
+        end
+        function testTSFCslDry(tc)
+            tc.verifyEqual(tc.eng.TSFC_sl_dry, 0.70, 'RelTol', 0.01);
+        end
+        function testTSFCslAB(tc)
+            tc.verifyEqual(tc.eng.TSFC_sl_AB, 2.20, 'RelTol', 0.01);
+        end
+        function testTR(tc)
+            tc.verifyEqual(tc.eng.TR, 1.0, 'RelTol', 0.01);
+        end
 
-fprintf('\n===================================================\n');
-fprintf(' BrandtEngine Validation — theta/delta model\n');
-fprintf(' Source: Brandt-F16-A.xls Engn(s) tab\n');
-fprintf('===================================================\n');
-fprintf('Tolerance: |%% error| < %.1f%%\n\n', tol_pct);
+        % ── SLS thrust recovery (h=0, M=0) ───────────────────────────
+        function testThrustDrySLS(tc)
+            % T_dry at SLS = T_sl_dry within 1%
+            [T, ~] = tc.eng.thrust_dry(0, 0);
+            tc.verifyEqual(T, 15000.0, 'RelTol', 0.01);
+        end
+        function testThrustABSLS(tc)
+            [T, ~] = tc.eng.thrust_AB(0, 0);
+            tc.verifyEqual(T, 23770.0, 'RelTol', 0.01);
+        end
+        function testTSFCdrySLS(tc)
+            [~, tsfc] = tc.eng.thrust_dry(0, 0);
+            tc.verifyEqual(tsfc, 0.70, 'RelTol', 0.01);
+        end
 
-%% TABLE 1: SLS parameters (read from JSON — exact match expected)
-fprintf('TABLE 1: SLS Engine Parameters\n');
-fprintf('%-26s  %12s  %10s  %6s\n', 'Parameter', 'Computed', 'GT', 'Status');
-fprintf('%s\n', repmat('-', 1, 60));
-[pass_count, chk_count] = pct('T_sl_dry  (lbf)',     eng.T_sl_dry,    15000.0, tol_pct, pass_count, chk_count);
-[pass_count, chk_count] = pct('T_sl_AB   (lbf)',     eng.T_sl_AB,     23770.0, tol_pct, pass_count, chk_count);
-[pass_count, chk_count] = pct('TSFC_sl_dry (1/hr)',  eng.TSFC_sl_dry, 0.70,    tol_pct, pass_count, chk_count);
-[pass_count, chk_count] = pct('TSFC_sl_AB  (1/hr)',  eng.TSFC_sl_AB,  2.20,    tol_pct, pass_count, chk_count);
-[pass_count, chk_count] = pct('TR',                  eng.TR,          1.0,     tol_pct, pass_count, chk_count);
-
-%% TABLE 2: SLS thrust recovery  (h=0 ft, M=0  →  alpha=1  →  T=T_sl)
-fprintf('\nTABLE 2: SLS Thrust Recovery  (h=0 ft, M=0)\n');
-fprintf('%-26s  %12s  %10s  %6s\n', 'Parameter', 'Computed', 'GT', 'Status');
-fprintf('%s\n', repmat('-', 1, 60));
-[T_dry_SLS,  tsfc_dry_SLS] = eng.thrust_dry(0, 0);
-[T_AB_SLS,   ~           ] = eng.thrust_AB(0, 0);
-[pass_count, chk_count] = pct('T_dry at SLS, M=0',      T_dry_SLS,    15000.0, tol_pct, pass_count, chk_count);
-[pass_count, chk_count] = pct('T_AB  at SLS, M=0',      T_AB_SLS,     23770.0, tol_pct, pass_count, chk_count);
-[pass_count, chk_count] = pct('tsfc_dry at SLS, M=0',   tsfc_dry_SLS, 0.70,    tol_pct, pass_count, chk_count);
-
-%% TABLE 3: Reference condition (40k ft, M=0.87) — informational only
-%   GT values are model-derived (no direct Excel cell for these quantities
-%   under the theta/delta model); run the code and inspect to update readme.
-fprintf('\nTABLE 3: Reference Condition  (40,000 ft, M = 0.87)  [informational]\n');
-alt_ref = 40000;   M_ref = 0.87;
-[~, theta0_ref, ~, delta0_ref] = BrandtEngine.atmosphereRatios(alt_ref, M_ref);
-[T_dry_ref,  tsfc_dry_ref] = eng.thrust_dry(alt_ref, M_ref);
-[T_AB_ref,   tsfc_AB_ref ] = eng.thrust_AB(alt_ref,  M_ref);
-fprintf('  theta0          = %.5f\n', theta0_ref);
-fprintf('  delta0          = %.5f\n', delta0_ref);
-fprintf('  T_dry           = %.1f lbf\n',  T_dry_ref);
-fprintf('  tsfc_dry        = %.4f 1/hr\n', tsfc_dry_ref);
-fprintf('  T_AB            = %.1f lbf\n',  T_AB_ref);
-fprintf('  tsfc_AB         = %.4f 1/hr\n', tsfc_AB_ref);
-
-%% TABLE 4: Physical sanity checks
-fprintf('\nTABLE 4: Physical Sanity\n');
-fprintf('%-40s  %16s  %6s\n', 'Check', 'Result', 'Status');
-fprintf('%s\n', repmat('-', 1, 66));
-
-[T_sl,  ~] = eng.thrust_dry(0,     0.5);
-[T_20k, ~] = eng.thrust_dry(20000, 0.5);
-[T_40k, ~] = eng.thrust_dry(40000, 0.5);
-chk('T_dry decreases with altitude', T_sl > T_20k && T_20k > T_40k, ...
-    sprintf('%.0f > %.0f > %.0f lbf', T_sl, T_20k, T_40k));
-
-[T_lo, ~] = eng.thrust_dry(20000, 0.2);
-[T_hi, ~] = eng.thrust_dry(20000, 1.0);
-chk('T_dry decreases with Mach (20k ft)', T_lo > T_hi, ...
-    sprintf('%.0f > %.0f lbf', T_lo, T_hi));
-
-[T_AB_chk,  ~] = eng.thrust_AB(30000, 0.8);
-[T_dry_chk, ~] = eng.thrust_dry(30000, 0.8);
-chk('T_AB > T_dry at (30k ft, M=0.8)', T_AB_chk > T_dry_chk, ...
-    sprintf('%.0f > %.0f lbf', T_AB_chk, T_dry_chk));
-
-%% Summary
-fprintf('\nPASS / FAIL: %d / %d\n', pass_count, chk_count);
-if pass_count == chk_count
-    fprintf('Result: PASS\n\n');
-else
-    fprintf('Result: REVIEW REQUIRED\n\n');
-end
-
-%% Helpers
-
-function [pc, cc] = pct(label, computed, gt, tol, pc, cc)
-    err = 100 * (computed - gt) / gt;
-    ok  = abs(err) < tol;
-    if ok, stat = 'PASS'; pc = pc + 1; else, stat = 'FAIL'; end
-    cc = cc + 1;
-    fprintf('%-26s  %12.6g  %10.6g  %6s\n', label, computed, gt, stat);
-end
-
-function chk(label, cond, detail)
-    if cond, stat = 'PASS'; else, stat = 'FAIL'; end
-    fprintf('%-40s  %16s  %6s\n', label, detail, stat);
+        % ── run() struct interface ─────────────────────────────────────
+        function testRunDryStruct(tc)
+            % run() returns struct with correct fields
+            r = tc.eng.run(0, 0, 0.0);  % SLS, dry
+            tc.verifyTrue(isfield(r, 'alpha'));
+            tc.verifyTrue(isfield(r, 'T'));
+            tc.verifyTrue(isfield(r, 'TSFC'));
+        end
+        function testRunDrySLSValues(tc)
+            % run() at SLS, dry: T=15000, alpha~1, TSFC=0.70
+            r = tc.eng.run(0, 0, 0.0);
+            tc.verifyEqual(r.T,    15000.0, 'RelTol', 0.01);
+            tc.verifyEqual(r.TSFC, 0.70,    'RelTol', 0.01);
+            tc.verifyEqual(r.alpha, 1.0,    'RelTol', 0.01);
+        end
+        function testRunABSLSValues(tc)
+            % run() at SLS, full AB: T=23770
+            r = tc.eng.run(0, 0, 1.0);
+            tc.verifyEqual(r.T, 23770.0, 'RelTol', 0.01);
+        end
+        function testRunDualReturn(tc)
+            % Properties updated by run() match returned struct
+            r = tc.eng.run(20000, 0.8, 0.0);
+            tc.verifyEqual(tc.eng.run_T_lb,  r.T);
+            tc.verifyEqual(tc.eng.run_TSFC,  r.TSFC);
+            tc.verifyEqual(tc.eng.run_alpha, r.alpha);
+        end
+        function testRunPartialAB(tc)
+            % Partial AB (50%) gives T between dry and full AB
+            [T_dry, ~] = tc.eng.thrust_dry(20000, 0.8);
+            [T_AB,  ~] = tc.eng.thrust_AB(20000,  0.8);
+            r = tc.eng.run(20000, 0.8, 0.5);
+            tc.verifyGreaterThan(r.T, T_dry);
+            tc.verifyLessThan(r.T, T_AB);
+        end
+        function testRunTDecreaseWithAlt(tc)
+            r_sl  = tc.eng.run(0,     0.5, 0.0);
+            r_20k = tc.eng.run(20000, 0.5, 0.0);
+            r_40k = tc.eng.run(40000, 0.5, 0.0);
+            tc.verifyGreaterThan(r_sl.T,  r_20k.T);
+            tc.verifyGreaterThan(r_20k.T, r_40k.T);
+        end
+        function testRunABGreaterThanDry(tc)
+            r_dry = tc.eng.run(30000, 0.8, 0.0);
+            r_AB  = tc.eng.run(30000, 0.8, 1.0);
+            tc.verifyGreaterThan(r_AB.T, r_dry.T);
+        end
+    end
 end
