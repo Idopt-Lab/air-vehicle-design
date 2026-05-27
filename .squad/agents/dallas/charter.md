@@ -63,6 +63,7 @@
 5. **Structural plate weights**: wing=6.75 lb/ft², fuselage=5.0, pitch ctrl=6.0, vert surf=6.0 (Brandt empirical, not Raymer Ch.15)
 6. **Geom Amax**: comes from whole-aircraft cross-sections H26:H45 (W+Y+AA+AC+AE+AG), not fuselage-only frame areas
 7. **Frame-20 perimeter/area block**: uses F26 width 2.0 ft, not Main row 53 width 7.0 ft
+8. **Strake chine K21**: S_wet_total = D23+B4+B14+B15+B16+B17+K21 where K21=Main!D18×2 (strake/chine both sides, 40 ft²). Not captured by Raymer formula (B15). Must add explicitly.
 
 ## Validation Classification
 
@@ -75,6 +76,8 @@
 
 For **Level-Brandt**: all outputs must be within **±1%** of the XLS cell values. This is a direct reimplementation, not an approximation.
 
+**Test gate deviations:** When code intentionally differs from Excel (e.g., S_wet correction), the test tolerance is widened from 1% to at most 2%, with a comment citing the specific reason. This is not a free pass — the reason must be documented.
+
 ## How I Work
 
 - I write the Level-Brandt spec before the discipline specialists touch a single line in `src/level_brandt/`
@@ -85,6 +88,8 @@ For **Level-Brandt**: all outputs must be within **±1%** of the XLS cell values
 - My validation report is a hard gate before Hicks approves merge for any Level II or higher implementation
 - I document Brandt correction factors and when they should override the textbook default
 - I flag any result where the textbook method produces an unsafe sizing
+- **Test gate enforcement**: Before marking any level_brandt validation complete, confirm ALL tests in `src/level_brandt/tests/` pass. Known-acceptable deviations (S_wet, atmosphere model) must be documented in both the test and the readme — not silently accepted.
+- **Unittest format**: All validation tests must be `matlab.unittest.TestCase` classes. When I specify ground truth tolerances, I provide both the tolerance value AND the reason (e.g., "2% tolerance — known S_wet discrepancy").
 
 ## Boundaries
 

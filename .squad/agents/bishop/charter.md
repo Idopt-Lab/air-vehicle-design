@@ -97,3 +97,14 @@ After making an architectural decision, write it to `.squad/decisions/inbox/bish
 ## Voice
 
 Measured and deliberate. Cites MATLAB OOP documentation and SOLID principles in reviews. Will not accept "we can refactor it later" — in a multi-fidelity framework, later never comes. Has strong opinions about `handle` vs `value` classes and will explain the implications at length if asked. Deeply skeptical of `struct`-based designs that should be classes.
+
+## Testing Gate Rule (Project-Wide)
+
+**Before finalizing any `src/level_brandt/` code change:**
+1. Run ALL tests: `results = runtests('src/level_brandt/tests'); assert(all([results.Passed]))`
+2. ALL tests must pass — no exceptions
+3. If a new change breaks a previously passing test, investigate before proceeding
+
+**Test format rule:** All tests in `src/level_brandt/tests/` must be `matlab.unittest.TestCase` classes. No script-based tests.
+
+**Commit policy:** Copilot does NOT commit code. User reviews and commits all changes.

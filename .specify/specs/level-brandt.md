@@ -113,6 +113,7 @@ A user calls `BrandtWeights.compute()` and receives OEW broken down by structura
 - **FR-011:** All units MUST be English: lbf, ft², ft, ft/s, slug/ft³. No SI anywhere in `level_brandt/`.
 - **FR-012:** Every equation MUST be cited in a code comment with the source (Brandt XLS cell reference or textbook citation).
 - **FR-013:** `LevelBrandt.runF16A()` MUST print a validation table: parameter | Brandt value | computed value | % difference.
+- **FR-014:** All tests in `src/level_brandt/tests/` must pass before any code change is considered final. Tests must use MATLAB's `matlab.unittest.TestCase` framework.
 
 ### Key Entities
 
@@ -136,8 +137,53 @@ A user calls `BrandtWeights.compute()` and receives OEW broken down by structura
 - **SC-002:** `LevelBrandt.runF16A()` runs to completion without error from a clean MATLAB session.
 - **SC-003:** The cell-map.md file fully covers all key output cells in the XLS.
 - **SC-004:** All `BrandtXxx` classes compile with zero errors and zero warnings in MATLAB R2023b or later.
-- **SC-005:** One MATLAB unit test file exists per `BrandtXxx` class, covering: physical bounds, F-16A spot check, error handling.
+- **SC-005:** One MATLAB unittest file (inheriting from `matlab.unittest.TestCase`) exists per `BrandtXxx` class, covering: physical bounds, F-16A spot check, error handling.
 - **SC-006:** An integration test runs `LevelBrandt.runF16A()` end-to-end and asserts all SC-001 tolerances programmatically.
+
+---
+
+## Testing Policy
+
+### Test Gate (Mandatory)
+
+Before finalizing any code change to `src/level_brandt/`, ALL tests in `src/level_brandt/tests/` MUST be run and ALL must pass. This ensures that previously cross-checked and vetted implementations remain correct.
+
+**How to run all tests:**
+```matlab
+% From MATLAB, with repo root on path:
+results = runtests('src/level_brandt/tests');
+assert(all([results.Passed]), 'Not all tests passed — see results table above');
+```
+
+If a test fails and the failure is NOT caused by the change being made, it must be investigated and resolved before proceeding.
+
+### Test Format (Mandatory)
+
+All tests in `src/level_brandt/tests/` MUST be MATLAB unittest classes inheriting from `matlab.unittest.TestCase`. Script-based tests are not acceptable.
+
+**Required pattern:**
+```matlab
+classdef test_BrandtXxx < matlab.unittest.TestCase
+    properties (Access = private)
+        obj  % shared fixture
+    end
+    methods (TestClassSetup)
+        function buildFixture(tc)
+            % Build and compute shared objects here
+        end
+    end
+    methods (Test)
+        function testSomeProperty(tc)
+            tc.verifyEqual(actual, expected, 'RelTol', 0.01);
+        end
+    end
+end
+```
+
+### Known Acceptable Deviations
+
+Some tests for `BrandtMission` use 2% tolerance (instead of 1%) for segments where the code intentionally differs from the Brandt Excel:
+- **Climb, Egress, Cruise2 fuel burns**: deviation traces to the known S_wet discrepancy (Excel double-counts strakes — documented in `readme_geom.md`). Code uses 1332.69 ft² (correct); Excel uses 1371.09 ft². This is intentional and acceptable per FR-003.
 
 ---
 
