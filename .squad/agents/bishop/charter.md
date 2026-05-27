@@ -44,11 +44,18 @@ The `WeightEstimationStrategy` + `RaymerWeightEstimation` pair in `src/Disciplin
 
 All new abstract/concrete pairs follow this pattern. **Do not invent new patterns** without an ADR written to `.squad/decisions/inbox/bishop-{slug}.md`.
 
-**BrandtGeometry pattern** (instance-based, no inheritance):
-  geom = BrandtGeometry(jsonPath)  % constructor: loads inputs, stores on obj
-  geom.compute()                   % populates all result properties on obj
-  geom.displayLiftingSurfaces()    % instance method reads from obj properties
-  geom.plotGeometry()              % instance method reads from obj properties
+**BrandtGeometry and Level-Brandt Discipline Pattern** (instance-based, three-tier interface):
+  1. **Constructor**: Loads external fixed inputs (e.g., `BrandtGeometry(jsonPath)`). Initializes all computed properties to NaN. No computation.
+  2. **`analyze(design_vars)`**: Computes design-variable-dependent quantities (outer optimization loop). Replaces the deprecated `compute()` method.
+  3. **`run(state, control, options)`**: Evaluates discipline outputs for given flight conditions (inner nonlinear solve/convergence loop). **Returns AND stores results** (dual-return contract). Always calls `validate_run_()` before returning.
+
+```matlab
+  geom = BrandtGeometry(jsonPath)        % constructor: loads inputs, init to NaN
+  geom.analyze(S_wing, AR)               % outer loop: design-variable pass
+  results = geom.run(mach, altitude)     % inner loop: returns struct AND stores to obj
+```
+
+**Naming rule**: `compute()` is FORBIDDEN — reserved by OpenMDAO. Use `analyze()` for design-variable passes (outer loop) and `run()` for state/control evaluation (inner loop).
 
 ## Current Architecture Debts I Must Track
 
@@ -108,3 +115,13 @@ Measured and deliberate. Cites MATLAB OOP documentation and SOLID principles in 
 **Test format rule:** All tests in `src/level_brandt/tests/` must be `matlab.unittest.TestCase` classes. No script-based tests.
 
 **Commit policy:** Copilot does NOT commit code. User reviews and commits all changes.
+
+## Cross-Discipline Output Struct Requirement (FR-016)
+
+If any class needs a value that is computed inside another discipline class and not yet exposed, the correct action is:
+1. **Extend the source discipline's `run()` output struct** to expose the needed value
+2. **Add a `run_*` property** (for dual-return) and include it in `validate_run_()`
+3. **Document** the new field in the discipline's readme
+4. **Add a test assertion** in the source discipline's test file
+
+Re-implementing cross-discipline logic in a consuming class is a **code-review rejection reason**. Example: `BrandtMission` needing thrust lapse normalised to `T_sl_AB` → extend `BrandtEngine.run()` with `alpha_AB_ref`, do NOT re-implement in `BrandtMission`.

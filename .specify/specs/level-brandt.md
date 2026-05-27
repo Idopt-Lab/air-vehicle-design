@@ -41,50 +41,50 @@ A user runs `LevelBrandt.runF16A()` and receives TOGW, OEW, W/S, T/W, S_ref, and
 
 ### User Story 2 — Accurate aerodynamics (P1)
 
-A user calls `BrandtAerodynamics.compute()` and then queries the aerodynamics at any Mach number to obtain the drag polar coefficients CD0, k1, k2, and CLmax at the key design conditions (takeoff, landing, stall). This enables accurate drag polar construction and sizing constraint evaluation.
+A user creates `BrandtAerodynamics`, calls `analyze(design_vars)` to precompute design-variable-dependent quantities, then calls `run(state_vector, control_vector)` to evaluate aerodynamics at flight conditions. This enables accurate drag polar construction and sizing constraint evaluation.
 
 **Acceptance Scenarios:**
 
-1. **Given** `BrandtAerodynamics.compute()` has run, **When** `aero_at_mach(0.1)` is called (subsonic), **Then** CDmin = 0.01691 (Aero!G3) and k1 = 0.1160 (Aero!G10), each within ±5%.
-2. **Given** the subsonic mission polar (Miss tab basis), **When** `drag_polar(0.482)` is called, **Then** CD = CD0 + k1·CL² + k2·CL with CD0=0.0270, k1=0.1160, k2=−0.00630, result within ±5% of the `Miss!` sheet value.
-3. **Given** the subsonic polar, **When** `max_LD()` is called, **Then** L/D_max = 8.93 ± 0.45 (5%) and CL_opt = 0.482 ± 5%.
-4. **Given** `BrandtAerodynamics.compute()` has run, **When** CLmax values are read, **Then** CLmax_clean = 0.984 (Aero!H25), CLmax_takeoff = 1.276 (Aero!H27), CLmax_landing = 1.426 (Aero!H29), each within ±5%.
-5. **Given** a supersonic condition (Mach=1.5), **When** `aero_at_mach(1.5)` is called, **Then** CDmin > CDmin_sub (wave drag present) and k2 ≤ 0 per Aero tab methodology.
+1. **Given** `BrandtAerodynamics.analyze(design_vars)` has run, **When** properties are queried, **Then** CDmin = 0.01691 (Aero!G3) and k1 = 0.1160 (Aero!G10), each within ±5%.
+2. **Given** the subsonic mission polar (Miss tab basis), **When** `run(state_vector, control_vector)` is called, **Then** returns struct with fields CD0, K1, K2, CLmax_clean, CLmax_TO, CLmax_land, LD_max; values within ±5% of `Miss!` sheet.
+3. **Given** the subsonic polar, **When** L/D_max is computed, **Then** L/D_max = 8.93 ± 0.45 (5%) and CL_opt = 0.482 ± 5%.
+4. **Given** `BrandtAerodynamics.analyze()` has completed, **When** CLmax values are read from properties, **Then** CLmax_clean = 0.984 (Aero!H25), CLmax_takeoff = 1.276 (Aero!H27), CLmax_landing = 1.426 (Aero!H29), each within ±5%.
+5. **Given** a supersonic condition in state_vector, **When** `run(state_vector, control_vector)` is called, **Then** CDmin > CDmin_sub (wave drag present) and k2 ≤ 0 per Aero tab methodology.
 
 ---
 
 ### User Story 3 — Accurate propulsion (P2)
 
-A user calls `BrandtEngine.compute()` and then queries thrust and TSFC at any altitude, Mach number, and throttle setting (dry/mil or afterburner) to obtain the installed engine map. This supports mission fuel burn and sizing T/W evaluations.
+A user creates `BrandtEngine`, calls `analyze(design_vars)` to precompute design-variable quantities, then calls `run(altitude_ft, mach, AB_flag, options)` to query thrust and TSFC at flight conditions. This supports mission fuel burn and sizing T/W evaluations.
 
 **Acceptance Scenarios:**
 
-1. **Given** `BrandtEngine.compute()` has run, **When** `thrust_dry(0, 0)` is called (SLS, dry), **Then** T = 15,000 lbf and TSFC = 0.70 hr⁻¹, each within ±5% of `Engn(s)` sheet.
-2. **Given** `BrandtEngine.compute()` has run, **When** `thrust_AB(0, 0)` is called (SLS, afterburner), **Then** T = 23,770 lbf and TSFC = 2.20 hr⁻¹, each within ±5%.
-3. **Given** altitude=40,000 ft, Mach=0.87, **When** `thrust_dry(40000, 0.87)` is called, **Then** T and TSFC match the `Engn(s)` tab throttle-ratio branching formula within ±5%.
-4. **Given** altitude=40,000 ft, Mach=0.87, **When** `thrust_AB(40000, 0.87)` is called, **Then** T and TSFC match the `Engn(s)` tab AB branch formula within ±5%.
-5. **Given** a range of altitudes (0–60,000 ft) and Mach numbers (0–2.0), **When** `thrust_dry` and `thrust_AB` are queried across the grid, **Then** the resulting engine map is monotonically decreasing with altitude (at fixed Mach) and thrust increases with Mach at low altitude (ram recovery), consistent with the Brandt model.
+1. **Given** `BrandtEngine.analyze(design_vars)` has run, **When** `run(0, 0, false)` is called (SLS, dry), **Then** returns struct with fields {alpha, T, TSFC} where T = 15,000 lbf and TSFC = 0.70 hr⁻¹, each within ±5% of `Engn(s)` sheet.
+2. **Given** `BrandtEngine.analyze(design_vars)` has run, **When** `run(0, 0, true)` is called (SLS, afterburner), **Then** returns struct with T = 23,770 lbf and TSFC = 2.20 hr⁻¹, each within ±5%.
+3. **Given** altitude=40,000 ft, Mach=0.87, dry throttle, **When** `run(40000, 0.87, false)` is called, **Then** T and TSFC match the `Engn(s)` tab throttle-ratio branching formula within ±5%.
+4. **Given** altitude=40,000 ft, Mach=0.87, afterburner, **When** `run(40000, 0.87, true)` is called, **Then** T and TSFC match the `Engn(s)` tab AB branch formula within ±5%.
+5. **Given** a range of altitudes (0–60,000 ft) and Mach numbers (0–2.0) with dry and AB settings, **When** `run()` is queried across the grid, **Then** the resulting engine map is monotonically decreasing with altitude (at fixed Mach) and thrust increases with Mach at low altitude (ram recovery), consistent with the Brandt model.
 
 ---
 
 ### User Story 4 — Reproduce Brandt geometry (P2)
 
-A user calls `BrandtGeometry.compute()` and receives wing geometry, wetted areas, and cross-sectional areas within ±1% of the Brandt `Geom` sheet.
+A user calls `BrandtGeometry.analyze(design_vars)` to precompute geometry, then queries wing geometry, wetted areas, and cross-sectional areas via `run()` within ±1% of the Brandt `Geom` sheet.
 
 **Acceptance Scenarios:**
 
-1. **Given** standard F-16A geometry inputs, **When** `BrandtGeometry.compute()` is called, **Then** S_wet = 1,371 ft² ± 14 ft² (1%).
+1. **Given** standard F-16A geometry inputs, **When** `BrandtGeometry.analyze(design_vars)` is called, **Then** S_wet = 1,371 ft² ± 14 ft² (1%).
 2. **Given** Amax computation, **When** whole-aircraft cross-sections are used (H26:H45), **Then** Amax matches `Geom!H47` to within ±1%.
 
 ---
 
 ### User Story 5 — Reproduce Brandt weight model (P3)
 
-A user calls `BrandtWeights.compute()` and receives OEW broken down by structural component, each within ±1% of the Brandt `Wt` sheet.
+A user calls `BrandtWeights.analyze(design_vars)` and receives OEW broken down by structural component, each within ±1% of the Brandt `Wt` sheet.
 
 **Acceptance Scenarios:**
 
-1. **Given** Brandt plate-area weights (wing=6.75 lb/ft², fuse=5.0 lb/ft², pitch ctrl=6.0 lb/ft², vert surf=6.0 lb/ft²), **When** `BrandtWeights.compute()` is called, **Then** each component weight matches `Wt` sheet to within ±1%.
+1. **Given** Brandt plate-area weights (wing=6.75 lb/ft², fuse=5.0 lb/ft², pitch ctrl=6.0 lb/ft², vert surf=6.0 lb/ft²), **When** `BrandtWeights.analyze(design_vars)` is called, **Then** each component weight matches `Wt` sheet to within ±1%.
 
 ---
 
@@ -114,6 +114,8 @@ A user calls `BrandtWeights.compute()` and receives OEW broken down by structura
 - **FR-012:** Every equation MUST be cited in a code comment with the source (Brandt XLS cell reference or textbook citation).
 - **FR-013:** `LevelBrandt.runF16A()` MUST print a validation table: parameter | Brandt value | computed value | % difference.
 - **FR-014:** All tests in `src/level_brandt/tests/` must pass before any code change is considered final. Tests must use MATLAB's `matlab.unittest.TestCase` framework.
+- **FR-015:** All discipline classes MUST implement the three-tier interface: (1) Constructor loads fixed external inputs and initializes all properties to NaN; (2) `analyze(design_vars)` computes design-variable-dependent quantities; (3) `run(state, control, options)` evaluates discipline outputs for flight conditions and MUST return AND store results (dual-return contract), always ending with `validate_run_()` call. The term `compute()` is FORBIDDEN as a method name (reserved by OpenMDAO).
+- **FR-016:** If an implementation requires a value that is computed inside another discipline's class (e.g., a differently-normalised thrust lapse), the correct action is to **extend that discipline's `run()` output struct** to expose the needed value — NOT to re-implement the computation locally. Document the added field in the discipline's readme and add a corresponding test assertion. Re-implementing cross-discipline logic in a consuming class is a code-review failure.
 
 ### Key Entities
 
@@ -138,6 +140,7 @@ A user calls `BrandtWeights.compute()` and receives OEW broken down by structura
 - **SC-003:** The cell-map.md file fully covers all key output cells in the XLS.
 - **SC-004:** All `BrandtXxx` classes compile with zero errors and zero warnings in MATLAB R2023b or later.
 - **SC-005:** One MATLAB unittest file (inheriting from `matlab.unittest.TestCase`) exists per `BrandtXxx` class, covering: physical bounds, F-16A spot check, error handling.
+- **SC-006:** Level-Brandt discipline interface pattern: Constructor (loads fixed external inputs, initializes to NaN) → `analyze(design_vars)` (design-variable pass) → `run(state, control, options)` (state/control evaluation with dual-return contract). At Level-Brandt fidelity, named scalar arguments replace full state/control vectors.
 - **SC-006:** An integration test runs `LevelBrandt.runF16A()` end-to-end and asserts all SC-001 tolerances programmatically.
 
 ---
@@ -178,6 +181,20 @@ classdef test_BrandtXxx < matlab.unittest.TestCase
         end
     end
 end
+```
+
+**Three-Tier Interface Contract Example:**
+```matlab
+% 1. Constructor: loads fixed inputs only
+geom = BrandtGeometry(jsonPath);  % obj properties initialized to NaN
+
+% 2. analyze(): design-variable pass
+geom.analyze(wing_area, fuselage_length);  % populates all computed geometry properties
+
+% 3. run(): state/control pass with dual-return
+results = geom.run(altitude_ft, mach);     % returns AND stores on obj
+% or equivalently:
+geom.run(altitude_ft, mach);               % results stored as obj.run_* properties
 ```
 
 ### Known Acceptable Deviations

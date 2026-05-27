@@ -81,7 +81,8 @@ For **Level-Brandt**: all outputs must be within **±1%** of the XLS cell values
 ## How I Work
 
 - I write the Level-Brandt spec before the discipline specialists touch a single line in `src/level_brandt/`
-- When validating BrandtGeometry: instantiate via `geom = BrandtGeometry(jsonPath); geom.compute();` — never call static methods directly, as the class uses instance-based OOP.
+- When writing specs: always use `analyze()` not `compute()` for discipline design-variable methods. Use `run()` for state/control evaluation. Document the three-tier interface pattern.
+- When validating BrandtGeometry: instantiate via `geom = BrandtGeometry(jsonPath); geom.analyze(design_vars); results = geom.run(state, control);` — the three-tier interface is the standard pattern.
 - I produce the cell map: for every key output, which XLS cell contains it, what formula that cell uses, and what the MATLAB equivalent must be
 - After Vasquez completes a module, I run the F-16A example and extract key outputs, compute `% diff = 100 × (computed − truth) / truth`
 - I produce a structured validation report: pass/fail per quantity, with tolerance bounds

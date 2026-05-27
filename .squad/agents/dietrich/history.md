@@ -76,3 +76,11 @@ Mission Analysis Specialist — owns compute_fuel and Breguet segments. Brandt u
   - Zero-fuel segments use `AbsTol = 5.0` lb; zero-time segments use `AbsTol = 0.01` min.
 - `readme_mission.md` created at `src/level_brandt/readme_mission.md`.
   - Documents all formulas, TSFC models, thrust lapse, known discrepancies, validation table.
+
+### 2026-05-27 — analyze()/run() interface refactor across Level-Brandt
+
+- Standardized the Brandt discipline API to a three-tier pattern: constructor loads JSON and initializes NaNs, `analyze()` performs design-point setup, and `run(...)` evaluates state/control-dependent outputs.
+- Refactored `BrandtGeometry`, `BrandtAerodynamics`, `BrandtEngine`, `BrandtWeight`, and `BrandtMission` to use `analyze()` instead of `compute()`. Geometry remains analyze-only at this fidelity; aero, engine, weight, and mission now expose `run()` interfaces aligned with Level-Brandt scalar state/control mappings.
+- Added dual-return `run()` behavior for aerodynamics and propulsion: each call both returns a struct and stores the same values on `run_*` properties, followed by lightweight `validate_run_()` NaN/validity guards.
+- Converted `test_BrandtEngine.m` from a script to a `matlab.unittest.TestCase` class and added new `run()` coverage for `BrandtAerodynamics` and `BrandtEngine`.
+- Updated `readme_geom.md` and `readme_mission.md` to document the new interface pattern, including mission `run(W_TO_lb)` usage and the shared analyze/run contract.

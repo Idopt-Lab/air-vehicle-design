@@ -86,9 +86,10 @@ prop.TSFC(state)        →  scalar
 4. **`compute_fuel` must accept `aero`, `prop`, `geom` objects** — never hardcode drag or TSFC values
 5. **Units are always English**: lbf for fuel, nm or ft for range/distance, hr for time
 6. **Fuel fraction must be < 1.0** — flag any segment fuel fraction > 0.30 as physically suspect
-7. **Test gate**: Before finalizing any BrandtMission or other level_brandt code, run ALL tests in `src/level_brandt/tests/` and verify all pass. If a test fails due to a known acceptable discrepancy (e.g., S_wet), document it with a comment in the test — do not ignore it silently.
-8. **MATLAB unittests**: All tests must use `matlab.unittest.TestCase` — never script-based tests.
-9. **No commits**: Do not commit code. User reviews and commits all changes.
+7. **Level-Brandt discipline interface**: All BrandtMission and future discipline classes use three-tier pattern: Constructor (loads fixed inputs, init to NaN) → `analyze(design_vars)` → `run(state, control, options)`. The term `compute()` is forbidden (OpenMDAO collision). `run()` always uses dual-return contract and ends with `validate_run_()`.
+8. **Test gate**: Before finalizing any BrandtMission or other level_brandt code, run ALL tests in `src/level_brandt/tests/` and verify all pass. If a test fails due to a known acceptable discrepancy (e.g., S_wet), document it with a comment in the test — do not ignore it silently.
+9. **MATLAB unittests**: All tests must use `matlab.unittest.TestCase` — never script-based tests.
+10. **No commits**: Do not commit code. User reviews and commits all changes.
 
 ## How I Work
 
