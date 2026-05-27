@@ -79,7 +79,7 @@ classdef F16ConstraintAnalysis < ConstraintModel
                [T_kelvin] = atmosisa(h_alt*0.3048);
 
                % if (0.0 < AB_percent < 1.00)
-                    alpha_dry = propulsion_obj.get_alpha(state_vector, "mil");
+                    alpha_dry = propulsion_obj.get_alpha([M, h_alt], "mil");
                % elseif (AB_percent == 1.00)
                     alpha_wet = propulsion_obj.get_alpha(state_vector, "max");
                % end

@@ -3,8 +3,8 @@ classdef PropulsionUtils
      %   Detailed explanation goes here
 
      properties (Constant)
-          T_std = 273.15; % Kelvin
-          P_std = 100; %kPa
+          T_std = 288.1500; % Kelvin
+          P_std = 101.325; %kPa
           gamma = 1.4;
      end
 
@@ -16,6 +16,7 @@ classdef PropulsionUtils
           end
 
           % Compute throttle ratio
+          % Source: Aircraft Engine Design, 2nd ed, Mattingly
           function TR = compute_TR(T_t_4_max, T_t_4_SL)
                TR = T_t_4_max/T_t_4_SL;
           end
@@ -41,7 +42,8 @@ classdef PropulsionUtils
                end
           end
 
-          % Low BPR mixed turbofan
+          % LOW BPR MIXED TURBOFAN
+          % Wet/max power
           % Source: Aircraft Engine Design, 2nd ed, Mattingly, 2.54a
           function alpha = compute_alpha_lowBPR_turbofan_maxpower(delta_0, theta_0, TR)
                if (theta_0 <= TR)
@@ -53,7 +55,7 @@ classdef PropulsionUtils
                end
           end
 
-          % Low BPR mixed turbofan
+          % Dry/mil power
           % Source: Aircraft Engine Design, 2nd ed, Mattingly, 2.54b
           function alpha = compute_alpha_lowBPR_turbofan_milpower(delta_0, theta_0, TR)
                if (theta_0 <= TR)
@@ -154,7 +156,7 @@ classdef PropulsionUtils
                end
 
                function output = delta_0(delta, gamma, M_0)
-                    output = delta*(1+ (gamma-1)/2 *M_0^2)^((gamma)/(gamma-1));
+                    output = delta*(1 + ((gamma-1)/2) * (M_0)^2)^((gamma)/(gamma-1));
                end
           end
 end

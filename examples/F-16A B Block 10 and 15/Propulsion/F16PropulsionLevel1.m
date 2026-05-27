@@ -5,7 +5,6 @@ classdef F16PropulsionLevel1 < PropulsionModelLevel1
      properties
           TSFC
           TR
-          T0
           T_SL_dry
           T_SL_wet;
      end

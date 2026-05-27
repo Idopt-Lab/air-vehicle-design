@@ -11,7 +11,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           Cf
           CL_max
           CD0
-          K
+          K % Raymer only has K, but Brandt has K1 and K2 for some reason.
           CL_max_TO = 1.27567
           CL_max_Land = 1.42591
      end
