@@ -6,6 +6,7 @@ classdef AerodynamicsModelLevel1 < handle
           e_osw
           LD_max
           AR_wet
+          CL_minD
           K_LD
           K1
           K2

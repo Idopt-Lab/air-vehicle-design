@@ -56,10 +56,10 @@ methods
                          IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
                          if (IsDryOrWet == "Dry")
                               IsDryOrWet = "mil";
-                              TSFC = propulsion_obj.get_TSFC_installed(engine_type, [M, alt], IsDryOrWet);
+                              TSFC = propulsion_obj.get_TSFC(engine_type, [M, alt], IsDryOrWet);
                          elseif (IsDryOrWet == "Wet")
                               IsDryOrWet = "max";
-                              TSFC = propulsion_obj.get_TSFC_installed(engine_type, [M, alt], IsDryOrWet);
+                              TSFC = propulsion_obj.get_TSFC(engine_type, [M, alt], IsDryOrWet);
                          end
                     end
                     if (currentsegment == "startup") || (currentsegment == "Startup")

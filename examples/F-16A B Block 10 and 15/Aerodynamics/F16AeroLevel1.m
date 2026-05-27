@@ -19,6 +19,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           K1
           K2
           Cf
+          CL_minD
           CL_max_TO = 1.27567
           CL_max_Land = 1.42591
      end

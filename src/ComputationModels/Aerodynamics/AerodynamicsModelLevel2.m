@@ -6,8 +6,10 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           e_osw
           Cf
           CL_max
+          CL_minD
           CD0
-          K
+          K1
+          K2
      end
 
 
