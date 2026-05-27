@@ -20,6 +20,8 @@ classdef F16PropulsionLevel2 < PropulsionModelLevel2
                % obj.t_sl_wet = design.propulsion.ThrustseaLevellbf.Wet;
                obj.TSFC.wet_sl = obj.get_TSFC("low bypass mixed turbofan", [0, 0], "max");
                obj.TSFC.dry_sl = obj.get_TSFC("low bypass mixed turbofan", [0, 0], "max");
+               obj.T_SL_dry = design.propulsion.ThrustseaLevellbf.Dry;
+               obj.T_SL_wet = design.propulsion.ThrustseaLevellbf.Wet;
           end
 
           % Estimate installed TSFC (preliminary) (wrapper) (1/sec)
