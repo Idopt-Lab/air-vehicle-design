@@ -11,17 +11,17 @@ classdef test_BrandtAerodynamics < matlab.unittest.TestCase
 %   table(results)
 
     properties (Access = private)
-        geom   % shared BrandtGeometry (computed once)
-        aero   % shared BrandtAerodynamics (computed once)
+        geom   % shared BrandtGeometry (analyzed once)
+        aero   % shared BrandtAerodynamics (analyzed once)
     end
 
     methods (TestClassSetup)
         function buildAerodynamics(tc)
             g = BrandtGeometry();
-            g.compute();
+            g.analyze();
             tc.geom = g;
             a = BrandtAerodynamics(g);
-            a.compute();
+            a.analyze();
             tc.aero = a;
         end
     end
@@ -215,6 +215,42 @@ classdef test_BrandtAerodynamics < matlab.unittest.TestCase
             [~, ~, ~, CDmin_MLEsup] = tc.aero.aero_at_mach(tc.aero.M_LE_super);
             tc.verifyGreaterThanOrEqual(CDmin_Mwave, CDmin_MLEsup, ...
                 'CDmin peaks at M_wave, decreases slightly toward M_LE_super (drag bucket)');
+        end
+
+        function testRunSubsonicStruct(tc)
+            % run(0.1) returns a struct with all required fields
+            r = tc.aero.run(0.1);
+            tc.verifyTrue(isstruct(r));
+            tc.verifyTrue(isfield(r, 'CD0'));
+            tc.verifyTrue(isfield(r, 'K1'));
+            tc.verifyTrue(isfield(r, 'K2'));
+            tc.verifyTrue(isfield(r, 'CLmax_clean'));
+            tc.verifyTrue(isfield(r, 'CLmax_TO'));
+            tc.verifyTrue(isfield(r, 'CLmax_land'));
+            tc.verifyTrue(isfield(r, 'LD_max'));
+        end
+
+        function testRunSubsonicValues(tc)
+            % run(0.1) subsonic values match aero_at_mach(0.1) — CDmin=0.01691
+            r = tc.aero.run(0.1);
+            tc.verifyEqual(r.CD0, 0.01691, 'RelTol', 0.05);  % Aero!G3
+            tc.verifyEqual(r.K1,  0.1160,  'RelTol', 0.02);  % Aero!G10
+        end
+
+        function testRunDualReturn(tc)
+            % Properties updated by run() match returned struct
+            r = tc.aero.run(0.5);
+            tc.verifyEqual(tc.aero.run_CD0, r.CD0);
+            tc.verifyEqual(tc.aero.run_K1,  r.K1);
+            tc.verifyEqual(tc.aero.run_mach, 0.5);
+        end
+
+        function testRunSupersonic(tc)
+            % run(1.5) returns increased CD0 (wave drag) and correct supersonic K1
+            r_sub  = tc.aero.run(0.1);
+            r_sup  = tc.aero.run(1.5);
+            tc.verifyGreaterThan(r_sup.CD0, r_sub.CD0, 'Supersonic CD0 must exceed subsonic');
+            tc.verifyEqual(r_sup.K2, 0.0, 'AbsTol', 1e-6, 'k2 should be 0 at M=1.5 (clamped)');
         end
 
     end

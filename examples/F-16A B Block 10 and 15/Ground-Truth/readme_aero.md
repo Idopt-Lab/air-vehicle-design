@@ -34,7 +34,7 @@ The S_wet value shown in the Excel Aero tab (Geom!B19 = 1371.09 ft²) double-cou
 area: the strake appears once as an exposed surface and once inside the fuselage integration region.
 See **readme_geom.md** for the full accounting.
 
-The MATLAB code (`BrandtAerodynamics.compute()`) pulls S_wet from the `BrandtGeometry` object property
+The MATLAB code (`BrandtAerodynamics.analyze()`) pulls S_wet from the `BrandtGeometry` object property
 `S_wet_total_accurate_ft2`, which replicates the same Excel formula and therefore carries the same
 double-count. Both the Excel and the code are internally consistent — the double-count is already
 embedded in the back-calculated Cfe_eff = 0.005908 stored in `f16a_geometry.json`.
@@ -144,9 +144,13 @@ Both k2 and e_oswald are **computed** — they are not read from the JSON.
 The two bases exist because the Aero tab shows Brandt's pure skin-friction prediction while
 the Mission tab uses the effective Cfe that matches real F-16A cruise drag.
 
-### Mach-Dependent Drag Polar — aero_at_mach(M) (Aero!A5:E10)
+### Mach-Dependent Drag Polar — run(mach) public API / aero_at_mach(M) internal (Aero!A5:E10)
 
-The `aero_at_mach(M)` method returns `[CDo, k1_m, k2_m, CDmin]` following the Aero-tab methodology:
+The public API is `run(mach)`, which returns an `aero_results` struct with fields:
+`CD0`, `K1`, `K2`, `CLmax_clean`, `CLmax_TO`, `CLmax_land`, `LD_max`.
+It also stores these as `run_CD0`, `run_K1`, etc. on the object (dual-return contract).
+Internally, `run(mach)` calls the private `aero_at_mach(M)` helper, which returns
+`[CDo, k1_m, k2_m, CDmin]` following the Aero-tab methodology:
 
 **Subsonic (M ≤ Mcrit):**
 ```
@@ -319,6 +323,37 @@ CLmax_takeoff = CLmax_clean + 0.66 × (CLmax_landing − CLmax_clean)
 | Clean         | 0.984 | H25   | CLα_total × (camber_digit + 15)            |
 | Takeoff       | 1.276 | H27   | Clean + 66% of (Landing − Clean) increment |
 | Landing       | 1.426 | H29   | MIN(trim_limited, from_flaps)              |
+
+---
+
+## Discipline Interface (BrandtAerodynamics)
+
+`BrandtAerodynamics` follows the three-tier Level-Brandt interface:
+
+| Method | Purpose | Key outputs |
+|--------|---------|-------------|
+| `BrandtAerodynamics(geom)` | Constructor — stores `BrandtGeometry` handle; all properties = NaN | — |
+| `analyze()` | Design-variable pass — Mach-independent quantities | CDmin_sub, k1, k2, CLmax_*, e0, Mach thresholds |
+| `run(mach)` | State/control pass — Mach-dependent polar | struct `{CD0, K1, K2, CLmax_clean, CLmax_TO, CLmax_land, LD_max}` |
+
+```matlab
+geom = BrandtGeometry();   geom.analyze();
+aero = BrandtAerodynamics(geom);
+aero.analyze();                         % CDmin_sub, k1, k2, CLmax_* computed and stored
+
+% Mach-dependent evaluation (dual-return contract):
+r = aero.run(0.85);                     % returns struct AND stores to aero.run_CD0, etc.
+r.CD0   % CDo at M=0.85
+r.LD_max
+
+% Inspection style:
+aero.run(0.85);
+cd0 = aero.run_CD0;   % same value
+```
+
+The `state_vector` conceptual mapping: `[mach]`.  
+The `control_vector` is empty at this fidelity level.  
+`run()` always calls `validate_run_()` before returning — asserts no NaN in key outputs.
 
 ---
 

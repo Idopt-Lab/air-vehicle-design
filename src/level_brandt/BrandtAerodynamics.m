@@ -2,21 +2,19 @@ classdef BrandtAerodynamics < handle
 % BrandtAerodynamics  Replicates Brandt-F16-A.xls Aero tab.
 %
 % Usage:
-%   geom = BrandtGeometry(); geom.compute();
+%   geom = BrandtGeometry(); geom.analyze();
 %   aero = BrandtAerodynamics(geom);
-%   aero.compute();
+%   aero.analyze();
 %
-%   % Subsonic drag polar (Miss tab basis, CD0=0.0270):
-%   CD = aero.drag_polar(CL);
-%   CD = aero.drag_polar_takeoff(CL);
-%
-%   % Mach-dependent polar (Aero tab A5:E10 basis, CDmin_sub=0.01691):
-%   [CDo, k1_m, k2_m, CDmin] = aero.aero_at_mach(mach);
-%
-%   % CLmax:
+%   % Design-point outputs after analyze():
 %   aero.CLmax_clean    % H25 = 0.984
 %   aero.CLmax_takeoff  % H27 = 1.276
 %   aero.CLmax_landing  % H29 = 1.426
+%
+%   % Mach-dependent run() dual-return interface:
+%   r = aero.run(0.87);
+%   r.CD0
+%   aero.run_CD0
 
     properties
         inp   (1,1) struct   % raw JSON inputs + geom reference
@@ -58,21 +56,31 @@ classdef BrandtAerodynamics < handle
         CLmax_takeoff (1,1) double = NaN   % Aero!H27 = 1.276
         CLmax_landing (1,1) double = NaN   % Aero!H29 = 1.426
 
-        computed_ (1,1) logical = false
+        % run() outputs (Mach-dependent, set by run(mach))
+        run_mach        (1,1) double = NaN
+        run_CD0         (1,1) double = NaN   % CDo at given Mach (at CL=0)
+        run_K1          (1,1) double = NaN   % k1 at given Mach
+        run_K2          (1,1) double = NaN   % k2 at given Mach
+        run_CLmax_clean (1,1) double = NaN   % same as CLmax_clean (Mach-independent)
+        run_CLmax_TO    (1,1) double = NaN   % same as CLmax_takeoff (Mach-independent)
+        run_CLmax_land  (1,1) double = NaN   % same as CLmax_landing (Mach-independent)
+        run_LD_max      (1,1) double = NaN   % LD_max at given Mach (Mach-dependent)
+
+        analyzed_ (1,1) logical = false
     end
 
     methods
         function obj = BrandtAerodynamics(brandtGeomObj)
-        % Load JSON and store reference to an already-computed BrandtGeometry.
-        % brandtGeomObj must have had compute() called before passing in.
+        % Load JSON and store reference to an already-analyzed BrandtGeometry.
+        % brandtGeomObj must have had analyze() called before passing in.
             json_path = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), ...
                 'examples', 'F-16A B Block 10 and 15', 'Ground-Truth', 'f16a_geometry.json');
             obj.inp = jsondecode(fileread(json_path));
             obj.inp.geom_ = brandtGeomObj;   % handle reference, not a copy
         end
 
-        function compute(obj)
-        % Compute all Aero-tab quantities in Brandt formula order.
+        function analyze(obj)
+        % Analyze all Aero-tab quantities in Brandt formula order.
 
             g   = obj.inp.geom_;          % BrandtGeometry handle
             w   = obj.inp.wing;
@@ -245,7 +253,43 @@ classdef BrandtAerodynamics < handle
             % Aero!H27: CLmax_takeoff = CLmax_clean + 0.66*(CLmax_landing - CLmax_clean)
             obj.CLmax_takeoff = obj.CLmax_clean + 0.66 * (obj.CLmax_landing - obj.CLmax_clean);
 
-            obj.computed_ = true;
+            obj.analyzed_ = true;
+        end
+
+        function aero_results = run(obj, mach)
+        % Evaluate Mach-dependent aerodynamics.
+        % Returns struct with fields: CD0, K1, K2, CLmax_clean, CLmax_TO, CLmax_land, LD_max
+        %
+        % Dual-return contract:
+        %   aero_results = aero_obj.run(mach);   % returns struct AND stores to run_* properties
+        %   aero_obj.run(mach);                  % equivalent — results accessible via aero_obj.run_CD0 etc.
+        %
+        % Level-Brandt mapping (Brandt fidelity):
+        %   state_vector   = [mach]  (altitude not used — CDmin only Mach-dependent here)
+        %   control_vector = []      (no control surface deflection at this fidelity)
+            obj.requireAnalyzed_();
+
+            [CDo, k1_m, k2_m, ~] = obj.aero_at_mach(mach);
+            LD_max_m = 0.5 / sqrt(CDo * k1_m);
+
+            obj.run_mach        = mach;
+            obj.run_CD0         = CDo;
+            obj.run_K1          = k1_m;
+            obj.run_K2          = k2_m;
+            obj.run_CLmax_clean = obj.CLmax_clean;
+            obj.run_CLmax_TO    = obj.CLmax_takeoff;
+            obj.run_CLmax_land  = obj.CLmax_landing;
+            obj.run_LD_max      = LD_max_m;
+
+            aero_results.CD0         = CDo;
+            aero_results.K1          = k1_m;
+            aero_results.K2          = k2_m;
+            aero_results.CLmax_clean = obj.CLmax_clean;
+            aero_results.CLmax_TO    = obj.CLmax_takeoff;
+            aero_results.CLmax_land  = obj.CLmax_landing;
+            aero_results.LD_max      = LD_max_m;
+
+            obj.validate_run_();
         end
 
         % ------------------------------------------------------------------ %
@@ -257,20 +301,20 @@ classdef BrandtAerodynamics < handle
         %
         % Input:  CL — scalar or vector
         % Output: CD — drag coefficient (same size as CL)
-            obj.requireComputed_();
+            obj.requireAnalyzed_();
             CD = obj.CD0 + obj.k1 .* CL.^2 + obj.k2 .* CL;
         end
 
         function CD = drag_polar_takeoff(obj, CL)
         % Takeoff drag polar: CD0_TO + k1*CL^2 + k2*CL  (Miss tab basis)
-            obj.requireComputed_();
+            obj.requireAnalyzed_();
             CD = obj.CD0_takeoff + obj.k1 .* CL.^2 + obj.k2 .* CL;
         end
 
         function [CL_opt, LD] = max_LD(obj)
         % Returns (CL, L/D) at maximum lift-to-drag ratio.
         % Brandt simplified formula (k2 ignored).
-            obj.requireComputed_();
+            obj.requireAnalyzed_();
             CL_opt = obj.CL_opt;
             LD     = obj.LD_max;
         end
@@ -292,7 +336,7 @@ classdef BrandtAerodynamics < handle
         %         CDmin— minimum drag coefficient (at CL_min_drag)
         %
         % Ground truth (Aero!A5:E10): M=0.1→CDmin=0.01691; M=M_wave→CDmin=0.04558
-            obj.requireComputed_();
+            obj.requireAnalyzed_();
 
             Mcrit_      = obj.Mcrit;
             M_wave_     = obj.M_wave;
@@ -358,10 +402,22 @@ classdef BrandtAerodynamics < handle
     end
 
     methods (Access = private)
-        function requireComputed_(obj)
-            if ~obj.computed_
-                error('LevelBrandt:notComputed', ...
-                    'Call compute() before accessing aerodynamics results.');
+        function validate_run_(obj)
+        % Lightweight NaN guard — catches logic errors during development.
+            fields = {'run_CD0','run_K1','run_LD_max','run_CLmax_clean'};
+            for i = 1:numel(fields)
+                assert(~isnan(obj.(fields{i})), ...
+                    'LevelBrandt:nanOutput', ...
+                    'BrandtAerodynamics.run() produced NaN in %s', fields{i});
+            end
+            assert(obj.run_CD0 > 0, 'LevelBrandt:invalidOutput', 'run_CD0 must be positive');
+            assert(obj.run_K1  > 0, 'LevelBrandt:invalidOutput', 'run_K1 must be positive');
+        end
+
+        function requireAnalyzed_(obj)
+            if ~obj.analyzed_
+                error('LevelBrandt:notAnalyzed', ...
+                    'Call analyze() before accessing aerodynamics results.');
             end
         end
     end
