@@ -95,6 +95,32 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                end
           end
 
+          % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
+          % (divide result by 57.3 to get something close to Brandt's
+          % CL_alpha values) (I THINK it's the "wing" one).
+          function CL_alpha = CL_alpha_Raymer(statevector, S_exposed, S_ref, Lambda_max_t_rad, Lambda_LE_deg, AR, fuselage_width, b)
+               M = statevector(1);
+               Lambda_LE_rad = deg2rad(Lambda_LE_deg);
+               if M>=(1/cos(Lambda_LE_rad))
+                    % Supersonic (leading edge is purely in supersonic
+                    % flow):
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sup(M);
+               elseif M<(1/cos(Lambda_LE_rad))
+                    % Subsonic:
+                    F = AeroLevel3.F(fuselage_width, b);
+                    beta = AeroLevel3.beta_mach(M);
+                    eta = AeroLevel3.eta_mach(cl_alpha, beta);
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_rad);
+               else
+                    error("Error handler, get_CL_alpha, AeroLevel3.")
+               end
+          end
+
+
+
+
+
+
           % Compute Mach drag divergence
 
           % Get drag results (mega wrapper) (for an entire design)
