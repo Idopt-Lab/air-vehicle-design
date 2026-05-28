@@ -4,6 +4,7 @@ classdef F16PropulsionLevel2 < PropulsionModelLevel2
      % This is supposed to use Mattingly's "Master Equation"
 
      properties
+          enginetype
           enginestats
           TSFC
           T0 % Thrust at sea level from sizing (lbf)

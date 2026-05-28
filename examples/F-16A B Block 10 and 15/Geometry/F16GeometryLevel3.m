@@ -129,6 +129,10 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                obj.strakes.exposed_halfspan = design.geom.wings.Strakes.ExposedHalfspan;
                obj.strakes.exposed_rc = design.geom.wings.Strakes.ExposedRootChord;
 
+               % Get the tip lengths of the tails
+               obj.HT.c_tip = design.geom.wings.HorizontalTail.TipChordLengthft;
+               obj.VT.c_tip = design.geom.wings.VerticalTail.TipChordLengthft;
+
                % Get S_ref for tails
                obj.HT.S_ref = design.geom.wings.HorizontalTail.PlanformAreaft2;
                obj.VT.S_ref = design.geom.wings.VerticalTail.PlanformAreaft2;
@@ -231,7 +235,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                S_wet_w = geometry_obj.mainwings.S_wet;
                S_wet_strake = geometry_obj.strakes.S_wet;
                S_wet_VT = geometry_obj.VT.S_wet;
-               S_wet_HT = geomtry_obj.HT.S_wet;
+               S_wet_HT = geometry_obj.HT.S_wet;
                S_wet_fuselage = geometry_obj.fuselage.S_wet;
 
                % Get total wetted area

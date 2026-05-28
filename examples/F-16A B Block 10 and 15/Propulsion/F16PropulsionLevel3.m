@@ -5,14 +5,16 @@ classdef F16PropulsionLevel3 < PropulsionModelLevel3
      properties
           enginetype
           enginestats
+          TSFC
+          T0 % Thrust at sea level from sizing (lbf)
+          T0_guess % Initial guess for thrust (lbf)
           T_SL_dry
           T_SL_wet
           TSFC_SL_dry
           TSFC_SL_wet
+          TR = 1.0
           isafterburning
           BPR
-          TSFC
-          T0
      end
 
      methods
@@ -71,6 +73,41 @@ classdef F16PropulsionLevel3 < PropulsionModelLevel3
                output = output/3600; % Convert TSFC from 1/hr -> 1/sec
           end
 
+          % Compute thrust lapse rate
+          function alpha = get_alpha(propulsion_obj, statevector, maxormilpower)
+               % Check if "maxormilpower" is valid
+               if ((maxormilpower ~= "max") && (maxormilpower ~= "Max")) && ((maxormilpower ~= "mil") && (maxormilpower ~= "Mil"))
+                    error("maxormilpower must be 'Max' or 'Mil'.")
+               elseif (maxormilpower == "max") || (maxormilpower == "Max") || (maxormilpower == "mil") || (maxormilpower == "Mil")
+                    M_0 = statevector(1);
+                    h_ft = statevector(2);
+                    gamma = 1.4;
+                    [T_kelvin, a, P] = atmosisa(h_ft*0.3048);
+                    P_kPa = P/1000; % Convert pascals to kilopascals
+                    % Get theta
+                    theta = PropulsionUtils.theta(T_kelvin);
+                    % Get theta_0
+                    theta_0 = PropulsionUtils.theta_0(theta, gamma, M_0);
+                    % Get delta
+                    delta = PropulsionUtils.delta(P_kPa);
+                    % Get delta_0
+                    delta_0 = PropulsionUtils.delta_0(delta, gamma, M_0);
+
+                    % Get TR if not already computed (should be stored in
+                    % properties)
+                    % If TR is unknown, set to 1.0
+
+                    % Compute alpha
+                    if (maxormilpower == "Max") || (maxormilpower == "max")
+                         alpha = PropulsionUtils.compute_alpha_lowBPR_turbofan_maxpower(delta_0, theta_0, propulsion_obj.TR);
+                    elseif (maxormilpower == "Mil") || (maxormilpower == "mil")
+                         alpha = PropulsionUtils.compute_alpha_lowBPR_turbofan_milpower(delta_0, theta_0, propulsion_obj.TR);
+                    end
+               else
+                    error("Error handler.")
+               end
+          end
+
           % Get theta (wrapper)
           function output = get_theta(propulsion_obj, state_input)
                h_ft = state_input(2);
@@ -94,7 +131,7 @@ classdef F16PropulsionLevel3 < PropulsionModelLevel3
           %           output = t_sl_dry*delta_0*(1 - F1*M0^(E) - (F2 *(theta_0 - TR)/(theta_0)));
           %      end
           % end
-          % 
+          %
           % % Get TSFC (dry)
           % function output = get_TSFC_dry(propulsion_obj, theta_0, TSFC_sl_dry, M, thrust, thrust_sl, TR)
           %      if theta_0 <= TR
@@ -105,7 +142,7 @@ classdef F16PropulsionLevel3 < PropulsionModelLevel3
           %           error("Error handler.")
           %      end
           % end
-          % 
+          %
           % % Get thrust (wet)
           % function output = get_thrust_wet(propulsion_obj, t_sl_wet, delta_0, F1, M0, E, theta_0, TR, F2)
           %      if theta_0<=TR
@@ -116,7 +153,7 @@ classdef F16PropulsionLevel3 < PropulsionModelLevel3
           %           error("Error handler.")
           %      end
           % end
-          % 
+          %
           % % Get TSFC (wet)
           % function output = get_TSFC_wet(propulsion_obj, TSFC_sl_wet, M, thrust, thrust_sl, theta_0, TR)
           %      if theta_0 <= TR
