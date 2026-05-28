@@ -98,7 +98,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
           % (divide result by 57.3 to get something close to Brandt's
           % CL_alpha values) (I THINK it's the "wing" one).
-          function CL_alpha = CL_alpha_Raymer(statevector, S_exposed, S_ref, Lambda_max_t_rad, Lambda_LE_deg, AR, fuselage_width, b)
+          function CL_alpha = CL_alpha_Raymer(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t_rad, Lambda_LE_deg, AR, fuselage_width, b)
                M = statevector(1);
                Lambda_LE_rad = deg2rad(Lambda_LE_deg);
                if M>=(1/cos(Lambda_LE_rad))
@@ -149,7 +149,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
 
                % Compute CD (done?) (double-check results later)
-               aero_obj.K1 = AeroLevel3.compute_K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
+               aero_obj.K1 = AeroLevel3.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
                DragResults.CD_design = get_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
 
                % Compute D for given state (done)
@@ -349,7 +349,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Compute the dimensionless "component drag value" for the
           % user-specified component.
-          function component_drag_value = get_component_drag_val_subsonic(aero_obj, statevector, ref_length, Q_component, S_wet_component, component_type, component_specs)
+          function [component_drag_value, Cf_component] = get_component_drag_val_subsonic(aero_obj, statevector, ref_length, Q_component, S_wet_component, component_type, component_specs)
                % Arguments:
                % aero_obj = aerodynamics object
                % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
@@ -399,7 +399,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Compute dimensionless "component drag value" for supersonic
           % case
-          function component_drag_value = get_component_drag_val_supersonic(aero_obj, statevector, ref_length, Q_component, S_wet_component)
+          function [component_drag_value, Cf_component] = get_component_drag_val_supersonic(aero_obj, statevector, ref_length, Q_component, S_wet_component)
                % Arguments:
                % aero_obj = aerodynamics object
                % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
@@ -497,10 +497,13 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                VT_specs.tc = geometry_obj.VT.tc;
                VT_specs.Lambda_m = geometry_obj.VT.LE_sweep; % Use Lambda_m instead of LE
 
-               component_drag_value.fuselage = aero_obj.get_component_drag_val_supersonic(statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet);
-               component_drag_value.mainwings = aero_obj.get_component_drag_val_supersonic(statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet);
-               component_drag_value.HT = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.HT.MeanGeometricChord, 1.00, geometry_obj.HT.S_wet);
-               component_drag_value.VT = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.VT.MeanGeometricChord, 1.00, geometry_obj.VT.S_wet);
+               [component_drag_value.fuselage, Cf.fuselage] = aero_obj.get_component_drag_val_supersonic(statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet);
+               [component_drag_value.mainwings, Cf.mainwings] = aero_obj.get_component_drag_val_supersonic(statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet);
+               [component_drag_value.HT, Cf.HT] = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.HT.MeanGeometricChord, 1.00, geometry_obj.HT.S_wet);
+               [component_drag_value.VT, Cf.VT] = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.VT.MeanGeometricChord, 1.00, geometry_obj.VT.S_wet);
+
+               % Get total skin friction coefficient
+               aero_obj.Cf = Cf.fuselage + Cf.mainwings + Cf.HT + Cf.VT;
 
                % Get total component drag value
                component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
