@@ -21,6 +21,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           Cf
           CL
           CL_alpha
+          cl_alpha = 1.0 % Assumed value (arbitrary)
           CL_max
           CL_minD
           CD
@@ -37,8 +38,8 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           FF
           Q
           DragResults
-          CL_max_TO = 1.27567
-          CL_max_Land = 1.42591
+          CL_max_TO = 1.27567 % Should definitely calculate this
+          CL_max_Land = 1.42591 % Should definitely calculate this
      end
 
      methods
@@ -98,7 +99,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
           % (divide result by 57.3 to get something close to Brandt's
           % CL_alpha values) (I THINK it's the "wing" one).
-          function CL_alpha = CL_alpha_Raymer(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t_rad, Lambda_LE_deg, AR, fuselage_width, b)
+          function CL_alpha = CL_alpha_Raymer(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t_rad, Lambda_LE_deg, AR, fuselage_width, b, cl_alpha)
                M = statevector(1);
                Lambda_LE_rad = deg2rad(Lambda_LE_deg);
                if M>=(1/cos(Lambda_LE_rad))
@@ -109,8 +110,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     % Subsonic:
                     F = AeroLevel3.F(fuselage_width, b);
                     beta = AeroLevel3.beta_mach(M);
-                    eta = AeroLevel3.eta_mach(cl_alpha, beta);
-                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_rad);
+                    % eta = AeroLevel3.eta_mach(cl_alpha, beta);
+                    eta = 0.95; % Raymer: if it's unknown, we may assume 0.95.
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_rad, beta, eta);
                else
                     error("Error handler, get_CL_alpha, AeroLevel3.")
                end
@@ -142,8 +144,8 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
                % Get CL_alpha
-               aero_obj.CL_alpha = aero_obj.get_CL_alpha(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
-
+               aero_obj.CL_alpha = aero_obj.CL_alpha_Raymer(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               
                % Is this for the entire design, or one component? Confirm?
                % Compute CL_minD (done)
                DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
@@ -193,11 +195,14 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                Lambda_LE_rad = deg2rad(Lambda_LE_deg);
                if M>=(1/cos(Lambda_LE_rad))
                     % Supersonic (leading edge is purely in supersonic
-                    % flow):
-                    CL_alpha = AeroLevel3.compute_CL_alpha_supersonic(M);
+                    % flow)
+                    beta = AeroLevel3.beta_mach(M);
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sup(beta);
                elseif M<(1/cos(Lambda_LE_rad))
                     % Subsonic:
-                    CL_alpha = AeroLevel3.compute_CL_alpha_subsonic(S_exposed, S_ref, Lambda_max_t, M, AR, fuselage_width, b);
+                    beta = sqrt(1-M^2); % Raymer, 6th ed, eq 12.7
+                    F = AeroLevel3.F(fuselage_width, b);
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t, beta, eta);
                else
                     error("Error handler, get_CL_alpha, AeroLevel3.")
                end
