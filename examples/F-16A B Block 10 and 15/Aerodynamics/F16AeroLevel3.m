@@ -48,7 +48,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                AR = geometry_obj.mainwings.AR;
                LE_sweep_deg = geometry_obj.mainwings.LE_sweep;
                obj.alpha_L0_deg = design.geom.wings.Main.alphaL0;
-               obj.e_osw = get_e_osw(obj, AR, LE_sweep);
+               obj.e_osw = get_e_osw(obj, AR, LE_sweep_deg);
           end
 
           % Compute Oswald span efficiency factor (wrapper)
