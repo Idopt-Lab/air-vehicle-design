@@ -45,8 +45,10 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % constructor
           function obj = F16AeroLevel3(geometry_obj, design)
                obj.k = 2.08*10^(-5); % Set skin roughness to "smooth paint"
-               obj.e_osw = get_e_osw(obj, geometry_obj.mainwings.AR, geometry_obj.mainwings.LE_sweep);
+               AR = geometry_obj.mainwings.AR;
+               LE_sweep_deg = geometry_obj.mainwings.LE_sweep;
                obj.alpha_L0_deg = design.geom.wings.Main.alphaL0;
+               obj.e_osw = get_e_osw(obj, AR, LE_sweep);
           end
 
           % Compute Oswald span efficiency factor (wrapper)
@@ -62,6 +64,35 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     error("Error handler, get e_osw level 3.")
                end
                aero_obj.e_osw = e_osw;
+          end
+
+          % Get K value (gross estimate)
+          function [K1, K2] = get_K(aero_obj, AR, e_osw, M, LE_sweep_deg, CLminD)
+               aero_obj.K = 1/(pi*AR*e_osw);
+               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               K2 = aero_obj.compute_K2(M, K1, CLminD);
+          end
+
+          % Compute K1
+          function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
+               if (0.0 < M) && (M < 1.0)
+                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+               elseif (M >= 1.0)
+                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+               else
+                    error("Error handler.")
+               end
+          end
+
+          % Compute K2
+          function K2 = compute_K2(aero_obj, M, K1, CLminD)
+               if (0.0 < M) && (M < 1.0)
+                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+               elseif (M >= 1.0)
+                    K2 = AeroUtils.compute_K2_sup();
+               else
+                    error("Error handler.")
+               end
           end
 
           % Compute Mach drag divergence
