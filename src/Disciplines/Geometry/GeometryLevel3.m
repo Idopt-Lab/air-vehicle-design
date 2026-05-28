@@ -78,11 +78,11 @@ classdef GeometryLevel3
                S_exposed = S_exposed*(1.977 + 0.52*tc); % Brandt, "Geom" sheet, cell B13
           end
 
-          % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
-          % cone approximation)
-          function S_wet_fuselage = get_S_wet_fuselage(fuselage_length, fuselage_max_width, max_height)
-               S_wet_fuselage = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
-          end
+          % % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
+          % % cone approximation)
+          % function S_wet_fuselage = get_S_wet_fuselage(fuselage_length, fuselage_max_width, max_height)
+          %      S_wet_fuselage = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
+          % end
 
           % Estimate wing sweep at quarter-chord (deg)
           function qc_sweep = get_sweep_qc(b, LE_sweep_deg, root_chord, tip_chord)
@@ -98,15 +98,15 @@ classdef GeometryLevel3
                L_VT = L_fus*0.8;
                L_HT = L_fus*0.8; % Allow operator to adjust this, later.
 
-               obj.VT.L = L_VT;
-               obj.HT.L = L_HT;
+               % obj.VT.L = L_VT;
+               % obj.HT.L = L_HT;
 
-               S_VT = c_VT*b_W*Sref_w/obj.VT.L; % eq 6.28, 2nd edition
+               S_VT = c_VT*b_W*Sref_w/L_VT; % eq 6.28, 2nd edition
 
-               S_HT = c_HT*Cbar_W*Sref_w/obj.HT.L; % eq 6.29, 2nd edition
+               S_HT = c_HT*Cbar_W*Sref_w/L_HT; % eq 6.29, 2nd edition
 
-               obj.VT.S_ref = S_VT;
-               obj.HT.S_ref = S_HT;
+               % obj.VT.S_ref = S_VT;
+               % obj.HT.S_ref = S_HT;
 
           end
      end

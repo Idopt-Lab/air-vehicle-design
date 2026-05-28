@@ -143,7 +143,7 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                obj.mainwings.S_wet = GeometryLevel3.get_S_wet_wing(obj.mainwings.S_exposed, obj.mainwings.tc);
                obj.HT.S_wet = GeometryLevel3.get_S_wet_wing(obj.HT.S_exposed, obj.HT.tc);
                obj.VT.S_wet = GeometryLevel3.get_S_wet_wing(obj.VT.S_exposed, obj.VT.tc);
-               obj.fuselage.S_wet = GeometryLevel3.get_S_wet_fuselage(obj.design.total_length, obj.fuselage.W_max, obj.fuselage.h_max);
+               obj.fuselage.S_wet = obj.get_S_wet_fuselage(obj.design.total_length, obj.fuselage.W_max, obj.fuselage.h_max);
                obj.strakes.S_wet = GeometryLevel3.get_S_wet_wing(obj.strakes.S_exposed, obj.strakes.tc);
                % obj.fuselage.S_wet = get_S_wet_fuselage(obj, 46.50, 7.0, obj.fuselage.h_max);
 
@@ -214,11 +214,36 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           % end
           %
           % % Estimate the wetted area of the aircraft
-          % function S_wet = get_design_S_wet(geometry_obj, W_TO)
-          %      c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-          %      d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-          %      S_wet = 10^(c) * W_TO^(d); % ft^2
-          % end
+          function S_wet = get_design_S_wet(geometry_obj, W_TO)
+               % c = -0.1289; % Coefficient for fighter aircraft, given for S_wetrest equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
+               % d = 0.7506; % Coefficient for fighter aicraft, given for S_wetrest equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
+               % S_wet = 10^(c) * W_TO^(d); % ft^2
+               S_wet = GeometryLevel3.get_design_S_wet(W_TO);
+               % Component-level analysis... so sum the exposed wetted areas of
+               % wings, strakes, tail, fuselage, nose.
+               % Get exposed areas
+               S_exp_w = geometry_obj.mainwings.S_exposed;
+               S_exp_strake = geometry_obj.strakes.S_exposed;
+               S_exp_VT = geometry_obj.VT.S_exposed;
+               S_exp_HT = geometry_obj.HT.S_exposed;
+
+               % Get wetted areas of the exposed areas
+               S_wet_w = geometry_obj.mainwings.S_wet;
+               S_wet_strake = geometry_obj.strakes.S_wet;
+               S_wet_VT = geometry_obj.VT.S_wet;
+               S_wet_HT = geomtry_obj.HT.S_wet;
+               S_wet_fuselage = geometry_obj.fuselage.S_wet;
+
+               % Get total wetted area
+               S_wet = S_wet_w + S_wet_strake + S_wet_VT + S_wet_HT + S_wet_fuselage;
+          end
+
+          % Estimate wetted area (fuselage) (Brandt's 2/3 cylinder + 1/3
+          % cone approximation)
+          % This is here because it's unique to the F-16.
+          function S_wet_fuselage = get_S_wet_fuselage(geometry_obj, fuselage_length, fuselage_max_width, max_height)
+               S_wet_fuselage = (5/6) * fuselage_length * (fuselage_max_width + max_height)*2*pi/4;
+          end
           %
           % % Size the tail
           % function [S_HT, S_VT] = size_tail(geometry_obj, design, S_ref)
