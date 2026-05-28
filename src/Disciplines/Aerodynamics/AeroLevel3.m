@@ -157,7 +157,7 @@ classdef AeroLevel3
 
 
           % HIGH LIFT DEVICES
-          
+
           % Estimate Delta_CL_max with a flap deployed
           % Raymer, 6th ed, eq 12.21
           function output = Delta_CL_max_flapdown(liftdevicetype, liftdevicename, S_flapped, S_ref, Lambda_hingeline_deg, device_chordlength, wing_chordlength)
@@ -401,7 +401,12 @@ classdef AeroLevel3
 
           % Compute average Cf
           function avg_Cf = computeavgcf(R, R_cutoff, Cf_turb, Cf_lam)
-               avg_Cf = ((abs(R - R_cutoff))/R_cutoff * Cf_turb + (abs(R - R_cutoff))/R_cutoff * Cf_lam)/2;
+               % Get the percentage of flow that is turbulent
+               f_turb = R/R_cutoff;
+               % Get the percent of flow that's laminar
+               f_lam = 1 - f_turb;
+               % avg_Cf = ((abs(R - R_cutoff))/R_cutoff * Cf_turb + (abs(R - R_cutoff))/R_cutoff * Cf_lam)/2;
+               avg_Cf = f_lam*Cf_lam + f_turb*Cf_turb;
           end
 
           % Get form factor (component drag buildup)

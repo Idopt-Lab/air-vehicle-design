@@ -129,7 +129,9 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                obj.strakes.exposed_halfspan = design.geom.wings.Strakes.ExposedHalfspan;
                obj.strakes.exposed_rc = design.geom.wings.Strakes.ExposedRootChord;
 
-               % Get the tip lengths of the tails
+               % Get the tip lengths of the wings
+               obj.mainwings.c_tip = design.geom.wings.Main.TipChordLengthft;
+               obj.strakes.c_tip = design.geom.wings.Strakes.TipChordLengthft;
                obj.HT.c_tip = design.geom.wings.HorizontalTail.TipChordLengthft;
                obj.VT.c_tip = design.geom.wings.VerticalTail.TipChordLengthft;
 
@@ -237,6 +239,8 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
                S_wet_VT = geometry_obj.VT.S_wet;
                S_wet_HT = geometry_obj.HT.S_wet;
                S_wet_fuselage = geometry_obj.fuselage.S_wet;
+
+               % Where's the engine inlet?
 
                % Get total wetted area
                S_wet = S_wet_w + S_wet_strake + S_wet_VT + S_wet_HT + S_wet_fuselage;
