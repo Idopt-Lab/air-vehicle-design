@@ -276,7 +276,7 @@ classdef MissionAnalysisLevel1
                rangeMode = "mean";
                % Set to "mean" for consistent values.
 
-               aircrafttype = MissionAnalysisLevel1.normalize_aircraft_type(aircrafttype);
+               aircrafttype = L1utils.normalize_aircraft_type(aircrafttype);
                segment = MissionAnalysisLevel1.normalize_segment(segment);
                rangeMode = lower(strtrim(string(rangeMode)));
 
@@ -292,7 +292,7 @@ classdef MissionAnalysisLevel1
 
                     for j = 1:numel(segmentNames)
                          value = MissionAnalysisLevel1.fuelFractions{row, j};
-                         output.(segmentNames(j)) = MissionAnalysisLevel1.resolve_range(value, rangeMode);
+                         output.(segmentNames(j)) = L1utils.resolve_range(value, rangeMode);
                     end
 
                     return
@@ -305,7 +305,7 @@ classdef MissionAnalysisLevel1
                end
 
                value = MissionAnalysisLevel1.fuelFractions{row, col};
-               output = MissionAnalysisLevel1.resolve_range(value, rangeMode);
+               output = L1utils.resolve_range(value, rangeMode);
           end
 
 
@@ -340,7 +340,7 @@ classdef MissionAnalysisLevel1
                % end
                rangeMode = "mean";
 
-               aircrafttype = MissionAnalysisLevel1.normalize_aircraft_type(aircrafttype);
+               aircrafttype = L1utils.normalize_aircraft_type(aircrafttype);
                phase = MissionAnalysisLevel1.normalize_phase(phase);
                quantity = MissionAnalysisLevel1.normalize_quantity(quantity);
                rangeMode = lower(strtrim(string(rangeMode)));
@@ -354,15 +354,15 @@ classdef MissionAnalysisLevel1
 
 
                % Build output struct for selected aircraft row.
-               data.cruise.LD    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_LD{row}, rangeMode);
-               data.cruise.cj    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_cj{row}, rangeMode);
-               data.cruise.cp    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_cp{row}, rangeMode);
-               data.cruise.eta_p = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_eta_p{row}, rangeMode);
+               data.cruise.LD    = L1utils.resolve_range(MissionAnalysisLevel1.cruise_LD{row}, rangeMode);
+               data.cruise.cj    = L1utils.resolve_range(MissionAnalysisLevel1.cruise_cj{row}, rangeMode);
+               data.cruise.cp    = L1utils.resolve_range(MissionAnalysisLevel1.cruise_cp{row}, rangeMode);
+               data.cruise.eta_p = L1utils.resolve_range(MissionAnalysisLevel1.cruise_eta_p{row}, rangeMode);
 
-               data.loiter.LD    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_LD{row}, rangeMode);
-               data.loiter.cj    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_cj{row}, rangeMode);
-               data.loiter.cp    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_cp{row}, rangeMode);
-               data.loiter.eta_p = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_eta_p{row}, rangeMode);
+               data.loiter.LD    = L1utils.resolve_range(MissionAnalysisLevel1.loiter_LD{row}, rangeMode);
+               data.loiter.cj    = L1utils.resolve_range(MissionAnalysisLevel1.loiter_cj{row}, rangeMode);
+               data.loiter.cp    = L1utils.resolve_range(MissionAnalysisLevel1.loiter_cp{row}, rangeMode);
+               data.loiter.eta_p = L1utils.resolve_range(MissionAnalysisLevel1.loiter_eta_p{row}, rangeMode);
 
                % Return full aircraft data if no phase requested.
                if phase == ""
@@ -452,61 +452,61 @@ classdef MissionAnalysisLevel1
                end
           end
 
-          function aircrafttype = normalize_aircraft_type(aircrafttype)
-
-               aircrafttype = lower(strtrim(string(aircrafttype)));
-
-               aircrafttype = replace(aircrafttype, "-", "_");
-               aircrafttype = replace(aircrafttype, " ", "_");
-               aircrafttype = replace(aircrafttype, "'", "");
-
-               if any(aircrafttype == ["homebuilt"])
-                    aircrafttype = "homebuilt";
-
-               elseif any(aircrafttype == ["single_engine", "single_engine_prop", ...
-                         "single_engine_propeller"])
-                    aircrafttype = "single_engine";
-
-               elseif any(aircrafttype == ["twin_engine", "twin_engine_prop", ...
-                         "twin_engine_propeller"])
-                    aircrafttype = "twin_engine";
-
-               elseif any(aircrafttype == ["agricultural", "agricultural_aircraft"])
-                    aircrafttype = "agricultural";
-
-               elseif any(aircrafttype == ["business_jet", "business_jets"])
-                    aircrafttype = "business_jet";
-
-               elseif any(aircrafttype == ["regional_tbp", "regional_tbps", ...
-                         "regional_turboprop"])
-                    aircrafttype = "regional_tbp";
-
-               elseif any(aircrafttype == ["transport_jet", "transport_jets", "jet_transport"])
-                    aircrafttype = "transport_jet";
-
-               elseif any(aircrafttype == ["military_trainer", "military_trainers"])
-                    aircrafttype = "military_trainer";
-
-               elseif any(aircrafttype == ["fighter", "fighters", "jet_fighter"])
-                    aircrafttype = "fighter";
-
-               elseif any(aircrafttype == ["mil_patrol_bomb_transport", ...
-                         "military_patrol", ...
-                         "bomber", ...
-                         "military_bomber", ...
-                         "military_transport", ...
-                         "patrol_bomb_transport"])
-                    aircrafttype = "mil_patrol_bomb_transport";
-
-               elseif any(aircrafttype == ["flying_boat", "flying_boats", ...
-                         "amphibious", "float_airplane", ...
-                         "float_airplanes"])
-                    aircrafttype = "flying_boat_amphibious_float";
-
-               elseif any(aircrafttype == ["supersonic_cruise"])
-                    aircrafttype = "supersonic_cruise";
-               end
-          end
+          % function aircrafttype = normalize_aircraft_type(aircrafttype)
+          % 
+          %      aircrafttype = lower(strtrim(string(aircrafttype)));
+          % 
+          %      aircrafttype = replace(aircrafttype, "-", "_");
+          %      aircrafttype = replace(aircrafttype, " ", "_");
+          %      aircrafttype = replace(aircrafttype, "'", "");
+          % 
+          %      if any(aircrafttype == ["homebuilt"])
+          %           aircrafttype = "homebuilt";
+          % 
+          %      elseif any(aircrafttype == ["single_engine", "single_engine_prop", ...
+          %                "single_engine_propeller"])
+          %           aircrafttype = "single_engine";
+          % 
+          %      elseif any(aircrafttype == ["twin_engine", "twin_engine_prop", ...
+          %                "twin_engine_propeller"])
+          %           aircrafttype = "twin_engine";
+          % 
+          %      elseif any(aircrafttype == ["agricultural", "agricultural_aircraft"])
+          %           aircrafttype = "agricultural";
+          % 
+          %      elseif any(aircrafttype == ["business_jet", "business_jets"])
+          %           aircrafttype = "business_jet";
+          % 
+          %      elseif any(aircrafttype == ["regional_tbp", "regional_tbps", ...
+          %                "regional_turboprop"])
+          %           aircrafttype = "regional_tbp";
+          % 
+          %      elseif any(aircrafttype == ["transport_jet", "transport_jets", "jet_transport"])
+          %           aircrafttype = "transport_jet";
+          % 
+          %      elseif any(aircrafttype == ["military_trainer", "military_trainers"])
+          %           aircrafttype = "military_trainer";
+          % 
+          %      elseif any(aircrafttype == ["fighter", "fighters", "jet_fighter"])
+          %           aircrafttype = "fighter";
+          % 
+          %      elseif any(aircrafttype == ["mil_patrol_bomb_transport", ...
+          %                "military_patrol", ...
+          %                "bomber", ...
+          %                "military_bomber", ...
+          %                "military_transport", ...
+          %                "patrol_bomb_transport"])
+          %           aircrafttype = "mil_patrol_bomb_transport";
+          % 
+          %      elseif any(aircrafttype == ["flying_boat", "flying_boats", ...
+          %                "amphibious", "float_airplane", ...
+          %                "float_airplanes"])
+          %           aircrafttype = "flying_boat_amphibious_float";
+          % 
+          %      elseif any(aircrafttype == ["supersonic_cruise"])
+          %           aircrafttype = "supersonic_cruise";
+          %      end
+          % end
 
           function segment = normalize_segment(segment)
 
@@ -530,29 +530,29 @@ classdef MissionAnalysisLevel1
           end
 
 
-          function value = resolve_range(value, rangeMode)
-
-               if ~isnumeric(value) || isscalar(value)
-                    return
-               end
-
-               switch rangeMode
-                    case "range"
-                         % Return [min max]
-                         return
-
-                    case "min"
-                         value = min(value);
-
-                    case "max"
-                         value = max(value);
-
-                    case "mean"
-                         value = mean(value);
-
-                    otherwise
-                         error("rangeMode must be 'mean', 'min', 'max', or 'range'.");
-               end
-          end
+          % function value = resolve_range(value, rangeMode)
+          % 
+          %      if ~isnumeric(value) || isscalar(value)
+          %           return
+          %      end
+          % 
+          %      switch rangeMode
+          %           case "range"
+          %                % Return [min max]
+          %                return
+          % 
+          %           case "min"
+          %                value = min(value);
+          % 
+          %           case "max"
+          %                value = max(value);
+          % 
+          %           case "mean"
+          %                value = mean(value);
+          % 
+          %           otherwise
+          %                error("rangeMode must be 'mean', 'min', 'max', or 'range'.");
+          %      end
+          % end
      end
 end
