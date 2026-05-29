@@ -3,6 +3,49 @@ classdef MissionAnalysisLevel1
      %   Detailed explanation goes here
      % Lower fidelity level than 2.
 
+     properties (Constant)
+          aircraftTypes = [
+               "homebuilt"
+               "single_engine"
+               "twin_engine"
+               "agricultural"
+               "business_jet"
+               "regional_tbp"
+               "transport_jet"
+               "military_trainer"
+               "fighter"
+               "mil_patrol_bomb_transport"
+               "flying_boat_amphibious_float"
+               "supersonic_cruise"
+               ];
+
+          segmentNames = [
+               "engine_start_warmup"
+               "taxi"
+               "takeoff"
+               "climb"
+               "descent"
+               "landing_taxi_shutdown"
+               ];
+
+          % Use a cell array because two climb entries are ranges.
+          fuelFractions = {
+               0.998, 0.998, 0.998, 0.995,       0.995, 0.995;
+               0.995, 0.997, 0.998, 0.992,       0.993, 0.993;
+               0.992, 0.996, 0.996, 0.990,       0.992, 0.992;
+               0.996, 0.995, 0.996, 0.998,       0.999, 0.998;
+               0.990, 0.995, 0.995, 0.980,       0.990, 0.992;
+               0.990, 0.995, 0.995, 0.985,       0.985, 0.995;
+               0.990, 0.990, 0.995, 0.980,       0.990, 0.992;
+               0.990, 0.990, 0.990, 0.980,       0.990, 0.995;
+               0.990, 0.990, 0.990, [0.90 0.96], 0.990, 0.995;
+               0.990, 0.990, 0.995, 0.980,       0.990, 0.992;
+               0.992, 0.990, 0.996, 0.985,       0.990, 0.990;
+               0.990, 0.995, 0.995, [0.87 0.92], 0.985, 0.992;
+               };
+
+     end
+
      methods (Static)
 
           % Get LD ratio (wrapper)
@@ -81,6 +124,207 @@ classdef MissionAnalysisLevel1
                WF = 0.95;
                W_out = W_in * WF;
                fuel_used = W_in - W_out;
+          end
+
+
+
+          function output = tab_fuelfraction(aircrafttype, segment)
+               % Preliminary fuel-fractions based on aircraft type
+               % Source: Roskam, Airplane Design Part I, Table 2.1
+               %
+               % Usage:
+               %   ff = tab_fuelfraction("fighter", "takeoff")
+               %   ff = tab_fuelfraction("fighter", "climb", "mean")
+               %   ff_table = tab_fuelfraction("fighter")
+
+               if nargin < 2
+                    segment = "";
+               end
+
+               % if nargin < 3
+               %      rangeMode = "mean";
+               %      % Options for range entries:
+               %      % "mean", "min", "max", or "range"
+               % end
+               rangeMode = "mean";
+               % Set to "mean" for consistent values.
+
+               aircrafttype = MissionAnalysisLevel1.normalize_aircraft_type(aircrafttype);
+               segment = MissionAnalysisLevel1.normalize_segment(segment);
+               rangeMode = lower(strtrim(string(rangeMode)));
+
+               % aircraftTypes = [
+               %      "homebuilt"
+               %      "single_engine"
+               %      "twin_engine"
+               %      "agricultural"
+               %      "business_jet"
+               %      "regional_tbp"
+               %      "transport_jet"
+               %      "military_trainer"
+               %      "fighter"
+               %      "mil_patrol_bomb_transport"
+               %      "flying_boat_amphibious_float"
+               %      "supersonic_cruise"
+               %      ];
+               % 
+               % segmentNames = [
+               %      "engine_start_warmup"
+               %      "taxi"
+               %      "takeoff"
+               %      "climb"
+               %      "descent"
+               %      "landing_taxi_shutdown"
+               %      ];
+               % 
+               % % Use a cell array because two climb entries are ranges.
+               % fuelFractions = {
+               %      0.998, 0.998, 0.998, 0.995,       0.995, 0.995;
+               %      0.995, 0.997, 0.998, 0.992,       0.993, 0.993;
+               %      0.992, 0.996, 0.996, 0.990,       0.992, 0.992;
+               %      0.996, 0.995, 0.996, 0.998,       0.999, 0.998;
+               %      0.990, 0.995, 0.995, 0.980,       0.990, 0.992;
+               %      0.990, 0.995, 0.995, 0.985,       0.985, 0.995;
+               %      0.990, 0.990, 0.995, 0.980,       0.990, 0.992;
+               %      0.990, 0.990, 0.990, 0.980,       0.990, 0.995;
+               %      0.990, 0.990, 0.990, [0.90 0.96], 0.990, 0.995;
+               %      0.990, 0.990, 0.995, 0.980,       0.990, 0.992;
+               %      0.992, 0.990, 0.996, 0.985,       0.990, 0.990;
+               %      0.990, 0.995, 0.995, [0.87 0.92], 0.985, 0.992;
+               %      };
+
+               row = find(MissionAnalysisLevel1.aircraftTypes == aircrafttype, 1);
+
+               if isempty(row)
+                    error("Unrecognized aircraft type: %s", aircrafttype);
+               end
+
+               % If no segment is requested, return the full row as a struct.
+               if segment == ""
+                    output = struct();
+
+                    for j = 1:numel(segmentNames)
+                         value = MissionAnalysisLevel1.fuelFractions{row, j};
+                         output.(segmentNames(j)) = MissionAnalysisLevel1.resolve_range(value, rangeMode);
+                    end
+
+                    return
+               end
+
+               col = find(MissionAnalysisLevel1.segmentNames == segment, 1);
+
+               if isempty(col)
+                    error("Unrecognized mission segment: %s", segment);
+               end
+
+               value = MissionAnalysisLevel1.fuelFractions{row, col};
+               output = MissionAnalysisLevel1.resolve_range(value, rangeMode);
+          end
+     end
+
+     methods (Static, Access = private)
+
+
+          function aircrafttype = normalize_aircraft_type(aircrafttype)
+
+               aircrafttype = lower(strtrim(string(aircrafttype)));
+
+               aircrafttype = replace(aircrafttype, "-", "_");
+               aircrafttype = replace(aircrafttype, " ", "_");
+               aircrafttype = replace(aircrafttype, "'", "");
+
+               if any(aircrafttype == ["homebuilt"])
+                    aircrafttype = "homebuilt";
+
+               elseif any(aircrafttype == ["single_engine", "single_engine_prop", ...
+                         "single_engine_propeller"])
+                    aircrafttype = "single_engine";
+
+               elseif any(aircrafttype == ["twin_engine", "twin_engine_prop", ...
+                         "twin_engine_propeller"])
+                    aircrafttype = "twin_engine";
+
+               elseif any(aircrafttype == ["agricultural", "agricultural_aircraft"])
+                    aircrafttype = "agricultural";
+
+               elseif any(aircrafttype == ["business_jet", "business_jets"])
+                    aircrafttype = "business_jet";
+
+               elseif any(aircrafttype == ["regional_tbp", "regional_tbps", ...
+                         "regional_turboprop"])
+                    aircrafttype = "regional_tbp";
+
+               elseif any(aircrafttype == ["transport_jet", "transport_jets"])
+                    aircrafttype = "transport_jet";
+
+               elseif any(aircrafttype == ["military_trainer", "military_trainers"])
+                    aircrafttype = "military_trainer";
+
+               elseif any(aircrafttype == ["fighter", "fighters", "jet_fighter"])
+                    aircrafttype = "fighter";
+
+               elseif any(aircrafttype == ["mil_patrol_bomb_transport", ...
+                         "military_patrol", ...
+                         "military_bomber", ...
+                         "military_transport", ...
+                         "patrol_bomb_transport"])
+                    aircrafttype = "mil_patrol_bomb_transport";
+
+               elseif any(aircrafttype == ["flying_boat", "flying_boats", ...
+                         "amphibious", "float_airplane", ...
+                         "float_airplanes"])
+                    aircrafttype = "flying_boat_amphibious_float";
+
+               elseif any(aircrafttype == ["supersonic_cruise"])
+                    aircrafttype = "supersonic_cruise";
+               end
+          end
+
+          function segment = normalize_segment(segment)
+
+               segment = lower(strtrim(string(segment)));
+
+               segment = replace(segment, "-", "_");
+               segment = replace(segment, " ", "_");
+               segment = replace(segment, "/", "_");
+
+               if any(segment == ["engine_start", "start", "startup", ...
+                         "warmup", "warm_up", "engine_start_warmup"])
+                    segment = "engine_start_warmup";
+
+               elseif segment == "take_off"
+                    segment = "takeoff";
+
+               elseif any(segment == ["landing", "shutdown", "landing_taxi_shutdown", ...
+                         "landing_taxi_and_shutdown"])
+                    segment = "landing_taxi_shutdown";
+               end
+          end
+
+
+          function value = resolve_range(value, rangeMode)
+
+               if ~isnumeric(value) || isscalar(value)
+                    return
+               end
+
+               switch rangeMode
+                    case "range"
+                         % Return [min max]
+                         return
+
+                    case "min"
+                         value = min(value);
+
+                    case "max"
+                         value = max(value);
+
+                    case "mean"
+                         value = mean(value);
+
+                    otherwise
+                         error("rangeMode must be 'mean', 'min', 'max', or 'range'.");
+               end
           end
      end
 end
