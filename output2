@@ -1,0 +1,709 @@
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002706 sec).
+INFO: checking system...
+INFO:     system check complete (0.000088 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000746 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000474 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000229 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001251 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000269 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002984 sec).
+INFO: checking system...
+INFO:     system check complete (0.000093 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000796 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000434 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000183 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001633 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000346 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002730 sec).
+INFO: checking system...
+INFO:     system check complete (0.000082 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000705 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000458 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000165 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001186 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000201 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002806 sec).
+INFO: checking system...
+INFO:     system check complete (0.000099 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000807 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000440 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000182 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001164 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000222 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002788 sec).
+INFO: checking system...
+INFO:     system check complete (0.000115 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000908 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000609 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000220 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001593 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000270 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002977 sec).
+INFO: checking system...
+INFO:     system check complete (0.000113 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000849 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000458 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000195 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001230 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000252 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002882 sec).
+INFO: checking system...
+INFO:     system check complete (0.000100 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000738 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000474 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000171 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001306 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000277 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002699 sec).
+INFO: checking system...
+INFO:     system check complete (0.000098 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000735 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000493 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000176 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001192 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000295 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002887 sec).
+INFO: checking system...
+INFO:     system check complete (0.000088 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000740 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000438 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000163 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001163 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000250 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.003307 sec).
+INFO: checking system...
+INFO:     system check complete (0.000114 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000815 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000440 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000241 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001342 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000277 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000003 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.003135 sec).
+INFO: checking system...
+INFO:     system check complete (0.000098 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000792 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000456 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000191 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001473 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000307 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).
+NL: Newton 0 ; 4831398.69 1
+NL: Newton 1 ; 16538.9143 0.00342321456
+NL: Newton 2 ; 423.547179 8.76655408e-05
+NL: Newton 3 ; 26.7251284 5.53155104e-06
+NL: Newton 4 ; 0.00375976421 7.78193739e-10
+NL: Newton Converged
+=======================================================================
+MTOW: 10099.376230689242 lb
+OEW: 6471.539115423346 lb
+Fuel used: 1666.7345958167136 lb
+TOFL (over 35ft obstacle): 3054.612797991232 ft
+Progress bar for training data can be enabled by installing the tqdm Python package with "pip install tqdm"
+INFO: checking out_of_order...
+WARNING: The following systems are executed out-of-order:
+   In System 'analysis.climb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.cruise.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.descent.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.engineoutclimb.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.rotate.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v0v1.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1v0.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+   In System 'analysis.v1vr.acmodel.propmodel', subsystem 'eng2' executes out-of-order with respect to its source systems ['failedengine']
+
+INFO:     out_of_order check complete (0.002833 sec).
+INFO: checking system...
+INFO:     system check complete (0.000086 sec).
+INFO: checking solvers...
+WARNING: The following groups contain sub-cycles. Performance and/or convergence may improve
+if these sub-cycles are solved separately in their own group.
+
+'analysis' (FullMissionAnalysis)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['bfl', 'rotate', 'v0v1', 'v1v0', 'v1vr']
+   Cycle 1: ['cruise', 'descent']
+   Number of non-cycle subsystems: 3
+
+'analysis.v0v1' (GroundRollPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'atmos', 'gs', 'haccel', 'lift', 'ode_integ_phase', 'v1constraint']
+   Number of non-cycle subsystems: 3
+
+'analysis.rotate' (RobustRotationPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['acmodel', 'clcomp', 'climbangle', 'duration', 'transition', 'v2climb']
+   Number of non-cycle subsystems: 10
+
+'analysis.climb' (SteadyFlightPhase)  NL: NonlinearRunOnce (maxiter=1), LN: LinearRunOnce (maxiter=1):
+   Cycle 0: ['atmos', 'climbdt', 'gs', 'ode_integ_phase']
+   Cycle 1: ['acmodel', 'clcomp', 'haccel', 'lift', 'steadyflt']
+   Number of non-cycle subsystems: 1
+
+INFO:     solvers check complete (0.000753 sec).
+INFO: checking dup_inputs...
+INFO:     dup_inputs check complete (0.000416 sec).
+INFO: checking missing_recorders...
+WARNING: The Problem has no recorder of any kind attached
+INFO:     missing_recorders check complete (0.000163 sec).
+INFO: checking unserializable_options...
+INFO:     unserializable_options check complete (0.001146 sec).
+INFO: checking comp_has_no_outputs...
+INFO:     comp_has_no_outputs check complete (0.000215 sec).
+INFO: checking auto_ivc_warnings...
+INFO:     auto_ivc_warnings check complete (0.000001 sec).

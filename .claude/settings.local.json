@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:mcp.lakesideai.dev)",
+      "Bash(pip install *)",
+      "Bash(python3 *)",
+      "Bash(pip3 --version)",
+      "Bash(/Users/prakharmodi/Projects/aircraft-rag/.venv/bin/pip install *)",
+      "Bash(uv pip *)"
+    ]
+  }
+}
