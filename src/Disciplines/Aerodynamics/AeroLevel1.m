@@ -13,6 +13,7 @@ classdef AeroLevel1
 
      properties (Constant)
           CLmax_table = AeroLevel1.build_CLmax_table()
+          Delta_CD0 = AeroLevel1.build_DeltaCD0_table()
      end
 
      methods (Static)
@@ -307,6 +308,22 @@ classdef AeroLevel1
                          "cl_max_landing"])
                     condition = "landing";
                end
+          end
+
+          function output = build_DeltaCD0_table()
+
+               row = @(flapconfig, DeltaCD0, e_osw) table( ...
+                    string(flapconfig), ...
+                    {DeltaCD0}, ...
+                    {e_osw}, ...
+                    'VariableNames', {'flap config', 'Delta CD0', 'e Oswald'});
+
+               output = [
+                    row("Clean",                    [0 0], [0.8 0.85])
+                    row("Take-Off Flaps",           [0.010 0.020], [0.75 0.80])
+                    row("Landing Flaps",            [0.055 0.075], [0.70 0.75])
+                    row("Landing Gear",             [0.015 0.025], NaN)
+                    ];
           end
 
 
