@@ -44,6 +44,133 @@ classdef MissionAnalysisLevel1
                0.990, 0.995, 0.995, [0.87 0.92], 0.985, 0.992;
                };
 
+          % ---------------------------------------------------------------------
+          % Roskam Table 2.2 data
+          % Cell arrays are used because most entries are ranges and some are NaN.
+          % NaN means the table gives no value for that aircraft/phase/quantity.
+          % ---------------------------------------------------------------------
+
+          cruise_LD = {
+               [8 10]
+               [8 10]
+               [8 10]
+               [5 7]
+               [10 12]
+               [11 13]
+               [13 15]
+               [8 10]
+               [4 7]
+               [13 15]
+               [10 12]
+               [4 6]
+               };
+
+          cruise_cj = {
+               NaN
+               NaN
+               NaN
+               NaN
+               [0.5 0.9]
+               NaN
+               [0.5 0.9]
+               [0.5 1.0]
+               [0.6 1.4]
+               [0.5 0.9]
+               [0.5 0.9]
+               [0.7 1.5]
+               }; % LBS/LBS/HR
+
+          cruise_cp = {
+               [0.6 0.8]
+               [0.5 0.7]
+               [0.5 0.7]
+               [0.5 0.7]
+               NaN
+               [0.4 0.6]
+               NaN
+               [0.4 0.6]
+               [0.5 0.7]
+               [0.4 0.7]
+               [0.5 0.7]
+               NaN
+               }; % LBS/HP/HR
+
+          cruise_eta_p = {
+               0.70
+               0.80
+               0.82
+               0.82
+               NaN
+               0.85
+               NaN
+               0.82
+               0.82
+               0.82
+               0.82
+               NaN
+               };
+
+          loiter_LD = {
+               [10 12]
+               [10 12]
+               [9 11]
+               [8 10]
+               [12 14]
+               [14 16]
+               [14 18]
+               [10 14]
+               [6 9]
+               [14 18]
+               [13 15]
+               [7 9]
+               };
+
+          loiter_cj = {
+               NaN
+               NaN
+               NaN
+               NaN
+               [0.4 0.6]
+               NaN
+               [0.4 0.6]
+               [0.4 0.6]
+               [0.6 0.8]
+               [0.4 0.6]
+               [0.4 0.6]
+               [0.6 0.8]
+               }; % LBS/LBS/HR
+
+          loiter_cp = {
+               [0.5 0.7]
+               [0.5 0.7]
+               [0.5 0.7]
+               [0.5 0.7]
+               NaN
+               [0.5 0.7]
+               NaN
+               [0.5 0.7]
+               [0.5 0.7]
+               [0.5 0.7]
+               [0.5 0.7]
+               NaN
+               }; % LBS/HP/HR
+
+          loiter_eta_p = {
+               0.60
+               0.70
+               0.72
+               0.72
+               NaN
+               0.77
+               NaN
+               0.77
+               0.77
+               0.77
+               0.77
+               NaN
+               };
+
+
      end
 
      methods (Static)
@@ -153,46 +280,6 @@ classdef MissionAnalysisLevel1
                segment = MissionAnalysisLevel1.normalize_segment(segment);
                rangeMode = lower(strtrim(string(rangeMode)));
 
-               % aircraftTypes = [
-               %      "homebuilt"
-               %      "single_engine"
-               %      "twin_engine"
-               %      "agricultural"
-               %      "business_jet"
-               %      "regional_tbp"
-               %      "transport_jet"
-               %      "military_trainer"
-               %      "fighter"
-               %      "mil_patrol_bomb_transport"
-               %      "flying_boat_amphibious_float"
-               %      "supersonic_cruise"
-               %      ];
-               % 
-               % segmentNames = [
-               %      "engine_start_warmup"
-               %      "taxi"
-               %      "takeoff"
-               %      "climb"
-               %      "descent"
-               %      "landing_taxi_shutdown"
-               %      ];
-               % 
-               % % Use a cell array because two climb entries are ranges.
-               % fuelFractions = {
-               %      0.998, 0.998, 0.998, 0.995,       0.995, 0.995;
-               %      0.995, 0.997, 0.998, 0.992,       0.993, 0.993;
-               %      0.992, 0.996, 0.996, 0.990,       0.992, 0.992;
-               %      0.996, 0.995, 0.996, 0.998,       0.999, 0.998;
-               %      0.990, 0.995, 0.995, 0.980,       0.990, 0.992;
-               %      0.990, 0.995, 0.995, 0.985,       0.985, 0.995;
-               %      0.990, 0.990, 0.995, 0.980,       0.990, 0.992;
-               %      0.990, 0.990, 0.990, 0.980,       0.990, 0.995;
-               %      0.990, 0.990, 0.990, [0.90 0.96], 0.990, 0.995;
-               %      0.990, 0.990, 0.995, 0.980,       0.990, 0.992;
-               %      0.992, 0.990, 0.996, 0.985,       0.990, 0.990;
-               %      0.990, 0.995, 0.995, [0.87 0.92], 0.985, 0.992;
-               %      };
-
                row = find(MissionAnalysisLevel1.aircraftTypes == aircrafttype, 1);
 
                if isempty(row)
@@ -220,10 +307,150 @@ classdef MissionAnalysisLevel1
                value = MissionAnalysisLevel1.fuelFractions{row, col};
                output = MissionAnalysisLevel1.resolve_range(value, rangeMode);
           end
+
+
+
+
+          function output = tab_missionphase_values(aircrafttype, phase, quantity)
+               % Preliminary cruise/loiter values based on aircraft type
+               % Source: Roskam, Airplane Design Part I, Table 2.2
+               %
+               % Table values:
+               %   LD    = lift-to-drag ratio [-]
+               %   cj    = jet TSFC [lb/lb/hr]
+               %   cp    = propeller TSFC [lb/hp/hr]
+               %   eta_p = propeller efficiency [-]
+               %
+               % Usage:
+               %   value = tab_missionphase_values("fighter", "cruise", "LD")
+               %   value = tab_missionphase_values("fighter", "cruise", "cj", "range")
+               %   data  = tab_missionphase_values("fighter", "loiter")
+               %   data  = tab_missionphase_values("fighter")
+               if nargin < 2
+                    phase = "";
+               end
+
+               if nargin < 3
+                    quantity = "";
+               end
+
+               % if nargin < 4
+               %     rangeMode = "mean";
+               %     % Options: "mean", "min", "max", "range"
+               % end
+               rangeMode = "mean";
+
+               aircrafttype = MissionAnalysisLevel1.normalize_aircraft_type(aircrafttype);
+               phase = MissionAnalysisLevel1.normalize_phase(phase);
+               quantity = MissionAnalysisLevel1.normalize_quantity(quantity);
+               rangeMode = lower(strtrim(string(rangeMode)));
+
+               row = find(MissionAnalysisLevel1.aircraftTypes == aircrafttype, 1);
+
+               if isempty(row)
+                    error("Unrecognized aircraft type: %s", aircrafttype);
+               end
+
+
+
+               % Build output struct for selected aircraft row.
+               data.cruise.LD    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_LD{row}, rangeMode);
+               data.cruise.cj    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_cj{row}, rangeMode);
+               data.cruise.cp    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_cp{row}, rangeMode);
+               data.cruise.eta_p = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.cruise_eta_p{row}, rangeMode);
+
+               data.loiter.LD    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_LD{row}, rangeMode);
+               data.loiter.cj    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_cj{row}, rangeMode);
+               data.loiter.cp    = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_cp{row}, rangeMode);
+               data.loiter.eta_p = MissionAnalysisLevel1.resolve_range(MissionAnalysisLevel1.loiter_eta_p{row}, rangeMode);
+
+               % Return full aircraft data if no phase requested.
+               if phase == ""
+                    output = data;
+                    return
+               end
+
+               % Return all quantities for selected phase if no quantity requested.
+               if quantity == ""
+                    output = data.(char(phase));
+                    return
+               end
+
+               % Optional convenience: return both TSFC columns if quantity == "tsfc".
+               if quantity == "tsfc"
+                    output.cj = data.(char(phase)).cj;
+                    output.cp = data.(char(phase)).cp;
+                    return
+               end
+
+               output = data.(char(phase)).(char(quantity));
+          end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
      end
+
+
+
+
+
+     %% ============ STATIC PRIVATE METHODS ============
 
      methods (Static, Access = private)
 
+
+          function phase = normalize_phase(phase)
+
+               phase = lower(strtrim(string(phase)));
+               phase = replace(phase, "-", "_");
+               phase = replace(phase, " ", "_");
+
+               if any(phase == ["cr", "cruise"])
+                    phase = "cruise";
+
+               elseif any(phase == ["ltr", "loiter"])
+                    phase = "loiter";
+               end
+          end
+
+
+          function quantity = normalize_quantity(quantity)
+
+               quantity = lower(strtrim(string(quantity)));
+               quantity = replace(quantity, "-", "_");
+               quantity = replace(quantity, " ", "_");
+               quantity = replace(quantity, "/", "");
+
+               if any(quantity == ["ld", "l_d", "lift_drag", "lift_to_drag"])
+                    quantity = "LD";
+
+               elseif any(quantity == ["cj", "c_j", "jet_tsfc", "tsfc_jet"])
+                    quantity = "cj";
+
+               elseif any(quantity == ["cp", "c_p", "prop_tsfc", "tsfc_prop"])
+                    quantity = "cp";
+
+               elseif any(quantity == ["eta", "eta_p", "prop_efficiency", ...
+                         "propeller_efficiency"])
+                    quantity = "eta_p";
+
+               elseif any(quantity == ["tsfc"])
+                    quantity = "tsfc";
+               end
+          end
 
           function aircrafttype = normalize_aircraft_type(aircrafttype)
 
@@ -254,7 +481,7 @@ classdef MissionAnalysisLevel1
                          "regional_turboprop"])
                     aircrafttype = "regional_tbp";
 
-               elseif any(aircrafttype == ["transport_jet", "transport_jets"])
+               elseif any(aircrafttype == ["transport_jet", "transport_jets", "jet_transport"])
                     aircrafttype = "transport_jet";
 
                elseif any(aircrafttype == ["military_trainer", "military_trainers"])
@@ -265,6 +492,7 @@ classdef MissionAnalysisLevel1
 
                elseif any(aircrafttype == ["mil_patrol_bomb_transport", ...
                          "military_patrol", ...
+                         "bomber", ...
                          "military_bomber", ...
                          "military_transport", ...
                          "patrol_bomb_transport"])
