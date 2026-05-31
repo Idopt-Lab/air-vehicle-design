@@ -1,4 +1,5 @@
 .venv/
+the-hangar/
 .envrc
 __pycache__/
 *.pyc
