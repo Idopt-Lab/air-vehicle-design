@@ -3,11 +3,91 @@ classdef SizingClassLevel1
      %   Detailed explanation goes here
 
      properties (Constant)
-          % results_table
+          % Existing table
           W_L_W_TO_table = SizingClassLevel1.landingweightratiotable();
+
+          % Absolute ceiling lookup table
+          % Source: Roskam, Airplane Design Part I, Table 3.7
+          h_abs_table = SizingClassLevel1.absoluteceilingtable();
      end
 
      methods (Static)
+
+
+          function output = tab_absoluteceiling(aircrafttype, subtype, valueType)
+               % Typical absolute ceiling lookup
+               % Source: Roskam, Airplane Design Part I, Table 3.7
+               %
+               % Table values in Roskam are h_abs (ft) x 10^-3.
+               % This function returns values in ft.
+               %
+               % Usage:
+               %   h = SizingClassLevel1.tab_absoluteceiling("fighter", "", "range")
+               %   h = SizingClassLevel1.tab_absoluteceiling("jet", "commercial", "average")
+               %   h = SizingClassLevel1.tab_absoluteceiling("piston prop", "supercharged")
+               %   data = SizingClassLevel1.tab_absoluteceiling("fighter")
+
+               if nargin < 2
+                    subtype = "";
+               end
+
+               if nargin < 3
+                    valueType = "";
+               end
+
+               aircrafttype = SizingClassLevel1.normalize_absoluteceiling_type(aircrafttype);
+               subtype = SizingClassLevel1.normalize_absoluteceiling_subtype(subtype);
+               valueType = lower(strtrim(string(valueType)));
+
+               if subtype == ""
+                    subtype = SizingClassLevel1.default_absoluteceiling_subtype(aircrafttype);
+               end
+
+               T = SizingClassLevel1.h_abs_table;
+
+               idx = T.AircraftType == aircrafttype & T.Subtype == subtype;
+
+               if ~any(idx)
+                    availableSubtypes = T.Subtype(T.AircraftType == aircrafttype);
+
+                    if isempty(availableSubtypes)
+                         error("Unrecognized aircraft type: %s", aircrafttype);
+                    else
+                         error("Unrecognized subtype '%s' for aircraft type '%s'. Available subtypes: %s", ...
+                              subtype, aircrafttype, strjoin(availableSubtypes, ", "));
+                    end
+               end
+
+               row = T(idx, :);
+
+               output = struct();
+               output.aircrafttype = row.AircraftType;
+               output.subtype = row.Subtype;
+               output.h_abs_min_ft = row.h_abs_min_ft;
+               output.h_abs_avg_ft = row.h_abs_avg_ft;
+               output.h_abs_max_ft = row.h_abs_max_ft;
+
+               if valueType == ""
+                    return
+               end
+
+               switch valueType
+                    case {"min", "minimum"}
+                         output = row.h_abs_min_ft;
+
+                    case {"avg", "average", "mean", "nominal"}
+                         output = row.h_abs_avg_ft;
+
+                    case {"max", "maximum"}
+                         output = row.h_abs_max_ft;
+
+                    case {"range"}
+                         output = [row.h_abs_min_ft, row.h_abs_max_ft];
+
+                    otherwise
+                         error("valueType must be 'minimum', 'average', 'maximum', or 'range'.");
+               end
+          end
 
           % Size to FAR 23 Take-off distance requirements (TAKE-OFF PARAMETER, FAR 23
           % = TOP 23)
@@ -175,7 +255,7 @@ classdef SizingClassLevel1
                output = 1.2*V_S_L;
           end
 
-          
+
           % Carrier-based aircraft
           % Compute approach speed from stall speed
           % Source: Roskam, Airplane Design Vol I, eq 3.18
@@ -184,18 +264,21 @@ classdef SizingClassLevel1
           end
 
 
-          % Analytical method for computing take-off weight sensitivities
 
-          
+
+
+
+
+
 
 
 
 
 
           % function W_TO = size_aircraft(obj, design, geometry_obj, mission_obj, weight_obj, propulsion_obj, constraint_obj, requirements_obj, aero_obj)
-          % 
+          %
           %      weight_obj.W_fixed = mission_obj.missiondata.Startup.PayloadFixedlbf;
-          % 
+          %
           %      % W_S = 104.59;
           %      W_S = constraint_obj.optimal_WS;
           %      W_TO = weight_obj.W_TO_guess;
@@ -207,46 +290,46 @@ classdef SizingClassLevel1
           %      total_fuel_used = 0;
           %      for iteration = 1:max_iteration
           %           geometry_obj.mainwings.S_ref = W_TO / W_S;
-          % 
+          %
           %           %% ----------------------------------------------------------------------
           %           % Estimate wetted areas
           %           geometry_obj.design.S_wet = geometry_obj.get_design_S_wet(W_TO);
-          % 
+          %
           %           %% ----------------------------------------------------------------------
           %           % Size the tail (should be a geometry thing)
           %           % [geometry_obj.VT.S_ref, geometry_obj.HT.S_ref] = geometry_obj.size_tail(design, geometry_obj.mainwings.S_ref);
-          % 
-          % 
+          %
+          %
           %           %% ----------------------------------------------------------------------
           %           % Get thrust at takeoff
           %           propulsion_obj.T0 = T_W*W_TO; % Fidelity III
-          % 
+          %
           %           %% -------------------------------------------------
           %           % Get mission fuel
           %           [weight_obj.total_fuel_used, weight_obj.fuel_fraction] = mission_obj.get_mission_fuel(constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj);
-          % 
-          % 
+          %
+          %
           %           % Compute design weight
           %           % Then compute the empty weight
           %           weight_obj.OEW = weight_obj.get_OEW(design.type, W_TO);
-          % 
+          %
           %           weight_obj.OEW_frac = weight_obj.OEW/weight_obj.W_TO;
-          % 
+          %
           %           % W_TO_new = W_fixed / (1 - fuel_fraction - empty_weight_fraction);
           %           W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW;
-          % 
+          %
           %           difference = W_TO_new - weight_obj.W_TO;
           %           percent_diff = 100 * difference / weight_obj.W_TO;
           %           % Iterate
-          % 
+          %
           %           % complete iteration loop, return MTOW and such
           %           W_TO_new = weight_obj.total_fuel_used + weight_obj.W_fixed + weight_obj.OEW;
-          % 
+          %
           %           difference = W_TO_new - weight_obj.W_TO;
           %           percent_diff = 100 * difference / weight_obj.W_TO;
-          % 
+          %
           %           results(end+1, :) = [weight_obj.W_TO, weight_obj.W_fixed, weight_obj.fuel_fraction, weight_obj.OEW_frac, weight_obj.OEW, W_TO_new, difference, percent_diff];
-          % 
+          %
           %           if abs(difference) < tol
           %                break;
           %           end
@@ -263,6 +346,158 @@ classdef SizingClassLevel1
      end
 
      methods (Static, Access = private)
+
+          function subtype = default_absoluteceiling_subtype(aircrafttype)
+
+               switch aircrafttype
+                    case "piston_prop"
+                         subtype = "normally_aspirated";
+
+                    case "jet"
+                         subtype = "commercial";
+
+                    case "turboprop_propfan"
+                         subtype = "commercial";
+
+                    case "supersonic_cruise"
+                         subtype = "jet";
+
+                    otherwise
+                         subtype = "default";
+               end
+          end
+
+
+          function subtype = normalize_absoluteceiling_subtype(subtype)
+
+               subtype = lower(strtrim(string(subtype)));
+               subtype = replace(subtype, "-", "_");
+               subtype = replace(subtype, " ", "_");
+               subtype = replace(subtype, "'", "");
+               subtype = replace(subtype, ".", "");
+               subtype = replace(subtype, ",", "");
+
+               if any(subtype == ["", "default"])
+                    subtype = "";
+
+               elseif any(subtype == ["normal", ...
+                         "normally_aspirated", ...
+                         "normallyaspirated"])
+                    subtype = "normally_aspirated";
+
+               elseif any(subtype == ["supercharged", ...
+                         "super_charge", ...
+                         "super_chargeed"])
+                    subtype = "supercharged";
+
+               elseif any(subtype == ["commercial", ...
+                         "civil"])
+                    subtype = "commercial";
+
+               elseif any(subtype == ["military", ...
+                         "mil"])
+                    subtype = "military";
+
+               elseif any(subtype == ["fighter", ...
+                         "fighters", ...
+                         "jet_fighter"])
+                    subtype = "fighter";
+
+               elseif any(subtype == ["military_trainer", ...
+                         "military_trainers", ...
+                         "trainer", ...
+                         "trainers"])
+                    subtype = "military_trainer";
+
+               elseif any(subtype == ["jet", ...
+                         "jets"])
+                    subtype = "jet";
+               end
+          end
+
+
+          function aircrafttype = normalize_absoluteceiling_type(aircrafttype)
+
+               aircrafttype = lower(strtrim(string(aircrafttype)));
+               aircrafttype = replace(aircrafttype, "-", "_");
+               aircrafttype = replace(aircrafttype, " ", "_");
+               aircrafttype = replace(aircrafttype, "'", "");
+               aircrafttype = replace(aircrafttype, ".", "");
+               aircrafttype = replace(aircrafttype, ",", "");
+
+               if any(aircrafttype == ["piston", ...
+                         "piston_prop", ...
+                         "piston_propeller", ...
+                         "propeller", ...
+                         "propeller_driven"])
+                    aircrafttype = "piston_prop";
+
+               elseif any(aircrafttype == ["jet", ...
+                         "turbojet", ...
+                         "turbofan", ...
+                         "turbojet_turbofan"])
+                    aircrafttype = "jet";
+
+               elseif any(aircrafttype == ["fighter", ...
+                         "fighters", ...
+                         "jet_fighter"])
+                    aircrafttype = "jet";
+
+               elseif any(aircrafttype == ["military_trainer", ...
+                         "military_trainers"])
+                    aircrafttype = "jet";
+
+               elseif any(aircrafttype == ["turboprop", ...
+                         "turboprops", ...
+                         "propfan", ...
+                         "propfans", ...
+                         "turboprop_propfan"])
+                    aircrafttype = "turboprop_propfan";
+
+               elseif any(aircrafttype == ["supersonic", ...
+                         "supersonic_cruise", ...
+                         "supersonic_cruise_airplane", ...
+                         "supersonic_cruise_airplanes"])
+                    aircrafttype = "supersonic_cruise";
+               end
+          end
+
+
+          function T = absoluteceilingtable()
+               % Typical values for absolute ceiling, h_abs
+               % Source: Roskam, Airplane Design Part I, Table 3.7
+               %
+               % Original table values are h_abs (ft) x 10^-3.
+               % Stored here in ft.
+
+               row = @(aircraftType, subtype, minVal, maxVal) table( ...
+                    string(aircraftType), ...
+                    string(subtype), ...
+                    minVal * 1000, ...
+                    mean([minVal, maxVal]) * 1000, ...
+                    maxVal * 1000, ...
+                    'VariableNames', {'AircraftType', 'Subtype', ...
+                    'h_abs_min_ft', 'h_abs_avg_ft', 'h_abs_max_ft'});
+
+               T = [
+                    % Airplanes with piston-propeller combinations
+                    row("piston_prop",       "normally_aspirated", 12, 18)
+                    row("piston_prop",       "supercharged",       15, 25)
+
+                    % Airplanes with turbojet or turbofan engines
+                    row("jet",               "commercial",         40, 50)
+                    row("jet",               "military",           40, 55)
+                    row("jet",               "fighter",            55, 75)
+                    row("jet",               "military_trainer",   35, 45)
+
+                    % Airplanes with turbopropeller or propfan engines
+                    row("turboprop_propfan", "commercial",         30, 45)
+                    row("turboprop_propfan", "military",           30, 50)
+
+                    % Supersonic cruise airplanes, jets
+                    row("supersonic_cruise", "jet",                55, 80)
+                    ];
+          end
 
           function T = landingweightratiotable()
 
