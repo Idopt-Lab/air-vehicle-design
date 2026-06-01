@@ -4,6 +4,12 @@ classdef WeightLevel1
 
      properties (Constant)
 
+          % Composite construction weight reduction factors
+          % Source: Roskam, Airplane Design Part I, Table 2.16
+          %
+          % W_comp / W_metal
+          composite_weight_reduction_table = WeightLevel1.compositeweightreductiontable();
+
           aircraftTypes = [
                "homebuilt"
                "homebuilt"
@@ -130,54 +136,54 @@ classdef WeightLevel1
 
           % % High-level types and their subtypes
           % types = {'homebuilt'; 'single engine'; 'twin engine'; 'agricultural'; 'business'; 'regional turboprop'; 'transport'; 'military trainer'; 'fighter'; 'military patrol'; 'military bomber'; 'military transport'; 'flying boat'; 'supersonic cruise'};
-          % 
+          %
           % % Subtypes and coefficients
           % homebuilt_subtypes = {'Personal fun'; 'transportation'; 'scaled fighters'; 'composite'};
           % homebuilt_coeffs_A = [0.3411; 0.3411; 0.5542; 0.8222];
           % homebuilt_coeffs_B = [0.9519; 0.9519; 0.8654; 0.8050];
-          % 
+          %
           % singleengine_subtypes = {'propeller driven'};
           % singleengine_coeffs_A = [-0.1440];
           % singleengine_coeffs_B = [1.1162];
-          % 
+          %
           % twinengine_subtypes = {'propeller driven'; 'composite'};
           % twinengine_coeffs_A = [0.0966; 0.1130];
           % twinengine_coeffs_B = [1.0298; 1.0403];
-          % 
+          %
           % agricultural_subtypes = {};
           % agricultural_coeffs_A = [-0.4398];
           % agrucultural_coeffs_B = [1.1946];
-          % 
+          %
           % businessjets_subtypes = {};
           % businessjets_coeffs_A = [0.2678];
           % businessjets_coeff_B = [0.9979];
-          % 
+          %
           % regionalturboprop_subtypes = {};
           % regionalturboprop_coeffs_A = [0.3774];
           % regionalturboprop_coeffs_B = [0.9647];
-          % 
+          %
           % transportjet_subtypes = {};
           % transportjet_coeffs_A = [0.0833];
           % transportjet_coeffs_B = [1.0383];
-          % 
+          %
           % militarytrainers_subtypes = {'jets'; 'turboprops'; 'turboprops w.o No.2'; 'piston'; 'prop'};
           % militarytrainers_coeffs_A = [0.6632; -1.4041; 0.1677; 0.5627; 0.5627];
           % militarytrainers_coeffs_B = [0.8640; 1.4660; 0.9978; 0.8761; 0.8761];
-          % 
+          %
           % fighters_subtypes = {'jets'; 'turboprops'};
           % fighterjet_subtypes = {'ext load'; 'clean'};
           % fightertbp_subtypes = {'ext load'};
           % fighters_coeffs_A = [0.5091; 0.1362; 0.2705];
           % fighters_coeffs_B = [0.9505; 1.0116; 0.9830];
-          % 
+          %
           % militarypatrolbombertransport_subtypes = {'jets'; 'turboprops'};
           % militarypatrolbombertransport_coeffs_A = [-0.2009; -0.4179];
           % militarypatrolbombertransport_coeffs_B = [1.1037; 1.1446];
-          % 
+          %
           % flyingboats_subtypes = {};
           % flyingboats_coeffs_A = [0.1703];
           % flyingboats_coeffs_B = [1.0083];
-          % 
+          %
           % supersoniccruise_subtypes = {};
           % supersoniccruise_coeffs_A = [0.4221];
           % supersoniccruise_coeffs_B = [0.9876];
@@ -185,6 +191,64 @@ classdef WeightLevel1
      end
 
      methods (Static)
+
+
+          function output = tab_compositeweightfactor(component, valueType)
+               % Composite construction weight reduction factor lookup.
+               % Source: Roskam, Airplane Design Part I, Table 2.16
+               %
+               % Returns W_comp / W_metal.
+               %
+               % Usage:
+               %   factor = WeightLevel1.tab_compositeweightfactor("fuselage", "average")
+               %   factor = WeightLevel1.tab_compositeweightfactor("air induction system", "range")
+               %   data   = WeightLevel1.tab_compositeweightfactor("landing gear")
+
+               if nargin < 2
+                    valueType = "";
+               end
+
+               component = WeightLevel1.normalize_composite_component(component);
+               valueType = lower(strtrim(string(valueType)));
+
+               T = WeightLevel1.composite_weight_reduction_table;
+
+               idx = T.Component == component;
+
+               if ~any(idx)
+                    error("Unrecognized composite component: %s", component);
+               end
+
+               row = T(idx, :);
+
+               output = struct();
+               output.component = row.Component;
+               output.structure_group = row.StructureGroup;
+               output.W_comp_W_metal_min = row.W_comp_W_metal_min;
+               output.W_comp_W_metal_avg = row.W_comp_W_metal_avg;
+               output.W_comp_W_metal_max = row.W_comp_W_metal_max;
+
+               if valueType == ""
+                    return
+               end
+
+               switch valueType
+                    case {"min", "minimum"}
+                         output = row.W_comp_W_metal_min;
+
+                    case {"avg", "average", "mean", "nominal"}
+                         output = row.W_comp_W_metal_avg;
+
+                    case {"max", "maximum"}
+                         output = row.W_comp_W_metal_max;
+
+                    case {"range"}
+                         output = [row.W_comp_W_metal_min, row.W_comp_W_metal_max];
+
+                    otherwise
+                         error("valueType must be 'minimum', 'average', 'maximum', or 'range'.");
+               end
+          end
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
           function [OEW, OEW_frac] = get_OEW(design_type, W_TO)
@@ -320,6 +384,88 @@ classdef WeightLevel1
      end
 
      methods (Static, Access = private)
+
+
+          function component = normalize_composite_component(component)
+
+               component = lower(strtrim(string(component)));
+               component = replace(component, "-", "_");
+               component = replace(component, "/", "_");
+               component = replace(component, ",", "");
+               component = replace(component, ".", "");
+               component = replace(component, " ", "_");
+
+               if any(component == ["fuselage"])
+                    component = "fuselage";
+
+               elseif any(component == ["wing", ...
+                         "wings", ...
+                         "vertical_tail", ...
+                         "vt", ...
+                         "canard", ...
+                         "horizontal_tail", ...
+                         "ht", ...
+                         "htail", ...
+                         "wing_vertical_tail_canard_htail", ...
+                         "wing_vertical_tail_canard_or_horizontal_tail"])
+                    component = "wing_vertical_tail_canard_htail";
+
+               elseif any(component == ["landing_gear", ...
+                         "gear", ...
+                         "main_gear", ...
+                         "nose_gear"])
+                    component = "landing_gear";
+
+               elseif any(component == ["flaps", ...
+                         "slats", ...
+                         "access_panels", ...
+                         "fairings", ...
+                         "flaps_slats_access_panels_fairings"])
+                    component = "flaps_slats_access_panels_fairings";
+
+               elseif any(component == ["interior", ...
+                         "furnishings", ...
+                         "interior_furnishings"])
+                    component = "interior_furnishings";
+
+               elseif any(component == ["air_induction", ...
+                         "air_induction_system", ...
+                         "induction_system", ...
+                         "inlet"])
+                    component = "air_induction_system";
+               end
+          end
+
+
+          function T = compositeweightreductiontable()
+               % Weight reduction data for composite construction.
+               % Source: Roskam, Airplane Design Part I, Table 2.16
+               %
+               % Values are W_comp / W_metal.
+
+               row = @(structureGroup, component, minVal, maxVal) table( ...
+                    string(structureGroup), ...
+                    string(component), ...
+                    minVal, ...
+                    mean([minVal, maxVal]), ...
+                    maxVal, ...
+                    'VariableNames', {'StructureGroup', 'Component', ...
+                    'W_comp_W_metal_min', ...
+                    'W_comp_W_metal_avg', ...
+                    'W_comp_W_metal_max'});
+
+               T = [
+                    % Primary structure
+                    row("primary_structure",   "fuselage",                         0.85, 0.85)
+                    row("primary_structure",   "wing_vertical_tail_canard_htail",  0.75, 0.75)
+                    row("primary_structure",   "landing_gear",                     0.88, 0.88)
+
+                    % Secondary structure
+                    row("secondary_structure", "flaps_slats_access_panels_fairings", 0.60, 0.60)
+                    row("secondary_structure", "interior_furnishings",              0.50, 0.50)
+                    row("secondary_structure", "air_induction_system",              0.70, 0.80)
+                    ];
+          end
 
           function subtype = default_emptyweight_subtype(aircrafttype)
 
