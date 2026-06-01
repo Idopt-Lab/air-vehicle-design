@@ -12,7 +12,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
      % pull values from a pre-configured table. That... might work.
 
      properties
-          e_osw
+          e_osw_clean
+          e_osw_TO
+          e_osw_Landing
           LD_max
           AR_wet
           K_LD
@@ -24,6 +26,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           CL_max_clean
           CL_max_TO
           CL_max_Land
+          Delta_CD0_TO
+          Delta_CD0_Landing
+          Delta_CD0_geardown
      end
 
      methods
@@ -32,7 +37,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           function obj = F16AeroLevel1(aircraft_type, geometry_obj, weight_obj)
                AR = geometry_obj.mainwings.AR;
                Lambda_LE_deg = geometry_obj.mainwings.LE_sweep;
-               obj.e_osw = obj.get_e_osw(AR, Lambda_LE_deg);
+               obj.e_osw_clean = obj.get_e_osw(AR, Lambda_LE_deg);
                % [obj.K1, obj.K2] = obj.get_K(AR, obj.e_osw, M, LE_sweep_deg, CLminD);
                W_TO = weight_obj.W_TO_guess;
                b = geometry_obj.mainwings.b;
@@ -119,6 +124,20 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           % Get CD0
           function output = get_CD0(aero_obj, Cf, S_wet, S_ref)
                output = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
+          end
+
+          % Get CDi
+          function output = get_CDi(aero_obj, statevector, CL, e_osw, AR)
+               M = statevector(1);
+               h_alt = statevector(2);
+               alpha_deg = statevector(3); % Angle of attack (deg)
+               if (0.0 < M) && (M <1.0)
+                    output = AeroUtils.compute_CDi_subsonic(CL, e_osw, AR);
+               elseif (1.0 <= M)
+                    output = AeroUtils.compute_CDi_supersonic(CL, alpha_deg);
+               else
+                    error("Error handler.")
+               end
           end
 
           % Compute AR wetted

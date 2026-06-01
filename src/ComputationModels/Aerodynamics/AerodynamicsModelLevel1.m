@@ -3,7 +3,9 @@ classdef AerodynamicsModelLevel1 < handle
      %   Detailed explanation goes here
 
      properties (Abstract)
-          e_osw
+          e_osw_clean % e, clean (no flaps, no gear down/out)
+          e_osw_TO % e, flaps in take-off config
+          e_osw_Landing % e, flaps in landing config
           LD_max
           AR_wet
           K_LD
@@ -15,6 +17,9 @@ classdef AerodynamicsModelLevel1 < handle
           CL_max_clean
           CL_max_TO
           CL_max_Land
+          Delta_CD0_TO % Change in CD0 due to flaps in take-off configuration
+          Delta_CD0_Landing % Change in CD0 due to flaps in landing config
+          Delta_CD0_geardown % Change in CD0 due to landing gear down/out
      end
 
      methods (Abstract)
@@ -26,6 +31,8 @@ classdef AerodynamicsModelLevel1 < handle
           K2 = compute_K2(M, K1, CLminD)
           CD = get_CD(CD0, K, CL)
           CD0 = get_CD0(Cf, S_wet, S_ref)
+          CDi = get_CDi(statevector, CL, e_osw, AR)
+          Delta_CD0 = get_Delta_CD0(aircraft_type, configuration)
 
      end
 end
