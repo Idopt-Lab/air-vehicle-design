@@ -72,7 +72,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get CL_max during takeoff
-          function output = get_CLmax_values(aero_obj, aircrafttype, condition, rangeMode)
+          function output = get_CL_max_values(aero_obj, aircrafttype, condition, rangeMode)
                output = AeroLevel1.tab_CLmax_values(aircrafttype, condition, rangeMode);
           end
 
