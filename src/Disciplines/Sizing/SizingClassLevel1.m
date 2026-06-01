@@ -9,9 +9,79 @@ classdef SizingClassLevel1
           % Absolute ceiling lookup table
           % Source: Roskam, Airplane Design Part I, Table 3.7
           h_abs_table = SizingClassLevel1.absoluteceilingtable();
+
+          % Ceiling definition / required climb-rate lookup table
+          % Source: Roskam, Airplane Design Part I, Table 3.8
+          ceiling_ROC_table = SizingClassLevel1.ceilingclimbratetable();
      end
 
      methods (Static)
+
+
+
+
+          function output = tab_ceilingclimbrate(ceilingtype, subtype, outputType)
+               % Minimum required climb-rate lookup for airplane ceilings.
+               % Source: Roskam, Airplane Design Part I, Table 3.8
+               %
+               % Usage:
+               %   data = SizingClassLevel1.tab_ceilingclimbrate("service")
+               %   data = SizingClassLevel1.tab_ceilingclimbrate("service", "commercial jet")
+               %   roc  = SizingClassLevel1.tab_ceilingclimbrate("service", "commercial jet", "rate")
+               %
+               % Output:
+               %   Minimum required climb rate in fpm.
+
+               if nargin < 2
+                    subtype = "";
+               end
+
+               if nargin < 3
+                    outputType = "";
+               end
+
+               ceilingtype = SizingClassLevel1.normalize_ceiling_type(ceilingtype);
+               subtype = SizingClassLevel1.normalize_ceiling_subtype(subtype);
+               outputType = lower(strtrim(string(outputType)));
+
+               T = SizingClassLevel1.ceiling_ROC_table;
+
+               idx = T.CeilingType == ceilingtype;
+
+               if subtype ~= ""
+                    idx = idx & T.Subtype == subtype;
+               end
+
+               if ~any(idx)
+                    availableSubtypes = T.Subtype(T.CeilingType == ceilingtype);
+
+                    if isempty(availableSubtypes)
+                         error("Unrecognized ceiling type: %s", ceilingtype);
+                    else
+                         error("Unrecognized subtype '%s' for ceiling type '%s'. Available subtypes: %s", ...
+                              subtype, ceilingtype, strjoin(availableSubtypes, ", "));
+                    end
+               end
+
+               rows = T(idx, :);
+
+               switch outputType
+                    case {"", "table", "data"}
+                         output = rows;
+
+                    case {"rate", "roc", "climbrate", "climb_rate", "fpm"}
+                         output = rows.MinRequiredClimbRate_fpm;
+
+                    case {"mach", "machcondition", "mach_condition"}
+                         output = rows.MachCondition;
+
+                    case {"power", "powercondition", "power_condition"}
+                         output = rows.PowerCondition;
+
+                    otherwise
+                         error("outputType must be '', 'table', 'rate', 'mach', or 'power'.");
+               end
+          end
 
 
           function output = tab_absoluteceiling(aircrafttype, subtype, valueType)
@@ -346,6 +416,119 @@ classdef SizingClassLevel1
      end
 
      methods (Static, Access = private)
+
+          function subtype = normalize_ceiling_subtype(subtype)
+
+               subtype = lower(strtrim(string(subtype)));
+               subtype = replace(subtype, "-", "_");
+               subtype = replace(subtype, "/", "_");
+               subtype = replace(subtype, " ", "_");
+               subtype = replace(subtype, "'", "");
+               subtype = replace(subtype, ".", "");
+               subtype = replace(subtype, ",", "");
+
+               if any(subtype == ["", "default"])
+                    subtype = "";
+
+               elseif any(subtype == ["commercial_piston", ...
+                         "commercial_piston_prop", ...
+                         "commercial_piston_propeller", ...
+                         "piston_prop", ...
+                         "piston_propeller"])
+                    subtype = "commercial_piston_propeller";
+
+               elseif any(subtype == ["commercial_jet", ...
+                         "commercial_turbojet", ...
+                         "commercial_turbofan", ...
+                         "jet"])
+                    subtype = "commercial_jet";
+
+               elseif any(subtype == ["military", ...
+                         "military_max", ...
+                         "military_max_power", ...
+                         "military_at_maximum_power"])
+                    subtype = "military_max_power";
+
+               elseif any(subtype == ["military_subsonic", ...
+                         "subsonic", ...
+                         "military_subsonic_max_power", ...
+                         "military_subsonic_maximum_power"])
+                    subtype = "military_subsonic_max_power";
+
+               elseif any(subtype == ["military_supersonic", ...
+                         "supersonic", ...
+                         "military_supersonic_max_power", ...
+                         "military_supersonic_maximum_power"])
+                    subtype = "military_supersonic_max_power";
+
+               elseif any(subtype == ["military_subsonic_max_cont_power", ...
+                         "military_subsonic_max_continuous_power", ...
+                         "subsonic_max_continuous_power"])
+                    subtype = "military_subsonic_max_continuous_power";
+
+               elseif any(subtype == ["military_supersonic_max_cont_power", ...
+                         "military_supersonic_max_continuous_power", ...
+                         "supersonic_max_continuous_power"])
+                    subtype = "military_supersonic_max_continuous_power";
+               end
+          end
+
+          function ceilingtype = normalize_ceiling_type(ceilingtype)
+
+               ceilingtype = lower(strtrim(string(ceilingtype)));
+               ceilingtype = replace(ceilingtype, "-", "_");
+               ceilingtype = replace(ceilingtype, " ", "_");
+               ceilingtype = replace(ceilingtype, "'", "");
+               ceilingtype = replace(ceilingtype, ".", "");
+               ceilingtype = replace(ceilingtype, ",", "");
+
+               if any(ceilingtype == ["absolute", "absolute_ceiling", "h_abs"])
+                    ceilingtype = "absolute";
+
+               elseif any(ceilingtype == ["service", "service_ceiling"])
+                    ceilingtype = "service";
+
+               elseif any(ceilingtype == ["combat", "combat_ceiling"])
+                    ceilingtype = "combat";
+
+               elseif any(ceilingtype == ["cruise", "cruise_ceiling"])
+                    ceilingtype = "cruise";
+               end
+          end
+
+          function T = ceilingclimbratetable()
+               % Definition of airplane ceilings.
+               % Source: Roskam, Airplane Design Part I, Table 3.8
+               %
+               % Minimum required climb rate is stored in fpm.
+
+               row = @(ceilingType, subtype, climbRate, machCondition, powerCondition) table( ...
+                    string(ceilingType), ...
+                    string(subtype), ...
+                    climbRate, ...
+                    string(machCondition), ...
+                    string(powerCondition), ...
+                    'VariableNames', {'CeilingType', 'Subtype', ...
+                    'MinRequiredClimbRate_fpm', ...
+                    'MachCondition', ...
+                    'PowerCondition'});
+
+               T = [
+                    row("absolute", "default", 0, "any", "any")
+
+                    row("service", "commercial_piston_propeller", 100, "any", "service")
+                    row("service", "commercial_jet",              500, "any", "service")
+                    row("service", "military_max_power",          100, "any", "maximum_power")
+
+                    row("combat",  "military_subsonic_max_power",   500, "M < 1", "maximum_power")
+                    row("combat",  "military_supersonic_max_power", 1000, "M > 1", "maximum_power")
+
+                    row("cruise",  "military_subsonic_max_continuous_power",   300, "M < 1", "maximum_continuous_power")
+                    row("cruise",  "military_supersonic_max_continuous_power", 1000, "M > 1", "maximum_continuous_power")
+                    ];
+          end
+
+
 
           function subtype = default_absoluteceiling_subtype(aircrafttype)
 
