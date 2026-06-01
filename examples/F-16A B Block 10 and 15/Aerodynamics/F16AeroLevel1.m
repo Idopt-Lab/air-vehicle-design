@@ -20,8 +20,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           K2
           Cf
           CL_minD
-          CL_max_TO = 1.27567
-          CL_max_Land = 1.42591
+          CL_max_clean
+          CL_max_TO
+          CL_max_Land
      end
 
      methods
@@ -36,6 +37,11 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                b = geometry_obj.mainwings.b;
                S_wet = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
                obj.LD_max = obj.get_LDmax(aircraft_type, b, S_wet);
+          end
+
+          % Get CL_max during takeoff
+          function output = get_CLmax_values(aero_obj, aircrafttype, condition, rangeMode)
+               output = AeroLevel1.tab_CLmax_values(aircrafttype, condition, rangeMode);
           end
 
           % Compute K1
@@ -107,6 +113,11 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           % Get design CD
           function CD = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
                CD = CD0 + K*CL^2;
+          end
+
+          % Get CD0
+          function output = get_CD0(aero_obj, Cf, S_wet, S_ref)
+               output = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
           end
 
           % Compute AR wetted

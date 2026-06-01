@@ -183,6 +183,9 @@ classdef SizingClassLevel1
                output = 1.15*V_S_PA;
           end
 
+
+          % Analytical method for computing take-off weight sensitivities
+
           
 
 
