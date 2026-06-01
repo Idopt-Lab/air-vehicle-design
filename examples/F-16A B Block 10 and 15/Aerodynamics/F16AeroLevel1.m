@@ -45,6 +45,27 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                obj.LD_max = obj.get_LDmax(aircraft_type, b, S_wet);
           end
 
+          % Get Delta_CD0 and e_osw change for flap configs
+          function [out1, out2] = get_Delta_CD0(aero_obj, configuration, rangeMode)
+               out1 = AeroLevel1.Delta_CD0(configuration, "Delta_CD0", rangeMode);
+               out2 = AeroLevel1.Delta_CD0(configuration, "e_osw", rangeMode);
+          end
+
+          % Get CL_minD
+          function output = get_CL_minD(aero_obj, airfoil_type, CL_min, CD0)
+               % First, check for which airfoil type
+               % If uncambered, CD0 = CD_min, which is CL_minD = 0
+               % If cambered, CL_minD = CL_min/CD_min, CD_min = CD where
+               % CL_=0.
+               if (airfoil_type == "uncambered")
+                    output = CD0;
+               elseif (airfoil_type == "cambered")
+                    output = CL_min/CD0;
+               else
+                    error("Error handler.")
+               end
+          end
+
           % Get CL_max during takeoff
           function output = get_CLmax_values(aero_obj, aircrafttype, condition, rangeMode)
                output = AeroLevel1.tab_CLmax_values(aircrafttype, condition, rangeMode);

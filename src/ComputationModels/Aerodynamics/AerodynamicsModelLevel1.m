@@ -9,7 +9,7 @@ classdef AerodynamicsModelLevel1 < handle
           LD_max
           AR_wet
           K_LD
-          K
+          K % This is just K = 1/(pi*e_osw*AR), which is K1 subsonic. Kept "just in case".
           K1
           K2
           Cf
@@ -32,7 +32,7 @@ classdef AerodynamicsModelLevel1 < handle
           CD = get_CD(CD0, K, CL)
           CD0 = get_CD0(Cf, S_wet, S_ref)
           CDi = get_CDi(statevector, CL, e_osw, AR)
-          Delta_CD0 = get_Delta_CD0(aircraft_type, configuration)
-
+          [Delta_CD0, e_osw] = get_Delta_CD0(configuration, rangeMode)
+          CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
      end
 end

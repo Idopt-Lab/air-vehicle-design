@@ -181,6 +181,61 @@ classdef AeroLevel1
 
 
           % Using Roskam's work here
+          function output = tab_DeltaCD0(flapconfig, quantity, rangeMode)
+               % Tabulate Delta_CD0 and optional Oswald efficiency factor by flap configuration.
+               %
+               % Usage:
+               %   dCD0 = AeroLevel1.tab_DeltaCD0("takeoff flaps")
+               %   dCD0 = AeroLevel1.tab_DeltaCD0("landing flaps", "Delta_CD0", "max")
+               %   e    = AeroLevel1.tab_DeltaCD0("clean", "e_osw", "range")
+               %   data = AeroLevel1.tab_DeltaCD0("landing gear", "all")
+
+               if nargin < 2
+                    quantity = "Delta_CD0";
+               end
+
+               if nargin < 3
+                    rangeMode = "mean";
+                    % Options: "mean", "min", "max", "range"
+               end
+
+               flapconfig = AeroLevel1.normalize_flapconfig(flapconfig);
+               quantity = AeroLevel1.normalize_DeltaCD0_quantity(quantity);
+               rangeMode = lower(strtrim(string(rangeMode)));
+
+               T = AeroLevel1.Delta_CD0;
+
+               idx = T.FlapConfig == flapconfig;
+
+               if ~any(idx)
+                    error("Unrecognized flap configuration: %s", flapconfig);
+               end
+
+               row = T(idx, :);
+
+               data = struct();
+               data.flapconfig = row.FlapConfig;
+               data.Delta_CD0 = L1utils.resolve_range(row.Delta_CD0{1}, rangeMode);
+               data.e_osw = L1utils.resolve_range(row.e_osw{1}, rangeMode);
+
+               if quantity == "all"
+                    output = data;
+                    return
+               end
+
+               switch quantity
+                    case "Delta_CD0"
+                         output = data.Delta_CD0;
+
+                    case "e_osw"
+                         output = data.e_osw;
+
+                    otherwise
+                         error("quantity must be 'Delta_CD0', 'e_osw', or 'all'.");
+               end
+          end
+
+
           function output = tab_CLmax_values(aircrafttype, condition, rangeMode)
                % Preliminary maximum lift coefficient lookup
                % Source: Roskam, Airplane Design Part I, Table 3.1
@@ -251,6 +306,59 @@ classdef AeroLevel1
 
      methods (Static, Access = private)
 
+          function quantity = normalize_DeltaCD0_quantity(quantity)
+
+               quantity = lower(strtrim(string(quantity)));
+               quantity = replace(quantity, "-", "_");
+               quantity = replace(quantity, " ", "_");
+
+               if any(quantity == ["all", "data", "table"])
+                    quantity = "all";
+
+               elseif any(quantity == ["dcd0", ...
+                         "delta_cd0", ...
+                         "delta_c_d0", ...
+                         "cd0_increment"])
+                    quantity = "Delta_CD0";
+
+               elseif any(quantity == ["e", ...
+                         "e_osw", ...
+                         "eosw", ...
+                         "oswald", ...
+                         "oswald_efficiency"])
+                    quantity = "e_osw";
+               end
+          end
+
+
+          function flapconfig = normalize_flapconfig(flapconfig)
+
+               flapconfig = lower(strtrim(string(flapconfig)));
+               flapconfig = replace(flapconfig, "-", "_");
+               flapconfig = replace(flapconfig, " ", "_");
+               flapconfig = replace(flapconfig, "/", "_");
+
+               if any(flapconfig == ["clean", "none", "no_flaps"])
+                    flapconfig = "clean";
+
+               elseif any(flapconfig == ["takeoff", ...
+                         "takeoff_flaps", ...
+                         "take_off", ...
+                         "take_off_flaps", ...
+                         "to_flaps"])
+                    flapconfig = "takeoff_flaps";
+
+               elseif any(flapconfig == ["landing", ...
+                         "landing_flaps", ...
+                         "land_flaps"])
+                    flapconfig = "landing_flaps";
+
+               elseif any(flapconfig == ["landing_gear", ...
+                         "gear", ...
+                         "lg"])
+                    flapconfig = "landing_gear";
+               end
+          end
 
           function T = build_CLmax_table()
 
@@ -316,13 +424,13 @@ classdef AeroLevel1
                     string(flapconfig), ...
                     {DeltaCD0}, ...
                     {e_osw}, ...
-                    'VariableNames', {'flap config', 'Delta CD0', 'e Oswald'});
+                    'VariableNames', {'FlapConfig', 'Delta_CD0', 'e_osw'});
 
                output = [
-                    row("Clean",                    [0 0], [0.8 0.85])
-                    row("Take-Off Flaps",           [0.010 0.020], [0.75 0.80])
-                    row("Landing Flaps",            [0.055 0.075], [0.70 0.75])
-                    row("Landing Gear",             [0.015 0.025], NaN)
+                    row("clean",          [0.000 0.000], [0.80 0.85])
+                    row("takeoff_flaps",  [0.010 0.020], [0.75 0.80])
+                    row("landing_flaps",  [0.055 0.075], [0.70 0.75])
+                    row("landing_gear",   [0.015 0.025], NaN)
                     ];
           end
 
