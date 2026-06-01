@@ -45,10 +45,15 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                obj.LD_max = obj.get_LDmax(aircraft_type, b, S_wet);
           end
 
+          % Get the skin friction coefficient
+          function output = tab_Cf(aero_obj, aircraft_type, n_engines)
+               output = AeroLevel1.get_Cf(aircraft_type, n_engines);
+          end
+
           % Get Delta_CD0 and e_osw change for flap configs
           function [out1, out2] = get_Delta_CD0(aero_obj, configuration, rangeMode)
-               out1 = AeroLevel1.Delta_CD0(configuration, "Delta_CD0", rangeMode);
-               out2 = AeroLevel1.Delta_CD0(configuration, "e_osw", rangeMode);
+               out1 = AeroLevel1.tab_DeltaCD0(configuration, "Delta_CD0", rangeMode);
+               out2 = AeroLevel1.tab_DeltaCD0(configuration, "e_osw", rangeMode);
           end
 
           % Get CL_minD
@@ -138,8 +143,8 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get design CD
-          function CD = get_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
-               CD = CD0 + K*CL^2;
+          function CD = get_CD(aero_obj, CD0, K, CL)
+               CD = CD0 + K.*CL.^2;
           end
 
           % Get CD0

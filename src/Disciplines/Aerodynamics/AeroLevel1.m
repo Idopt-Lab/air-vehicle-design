@@ -355,7 +355,8 @@ classdef AeroLevel1
 
                elseif any(flapconfig == ["landing_gear", ...
                          "gear", ...
-                         "lg"])
+                         "lg",...
+                         "geardown"])
                     flapconfig = "landing_gear";
                end
           end

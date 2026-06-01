@@ -37,7 +37,7 @@ classdef AeroUtils
 
           % Get CL for some given state
           function output = compute_CL(L, q, S_ref)
-               CL = L/(q*S_ref);
+               CL = L./(q.*S_ref);
                output = CL;
           end
 
@@ -49,13 +49,13 @@ classdef AeroUtils
 
           % Get dynamic pressure for some given state
           function output = compute_q(statevector)
-               M = statevector(1);
-               h_ft = statevector(2);
-               [T,a,P,rho,nu,mu] = atmosisa(h_ft*0.3048);
-               a = a*3.2808399; % Convert from m/s -> ft/s
-               V = a*M; % Get velocity (ft/s)
-               rho = rho*0.00194032033; % Convert from kg/m^3 -> imperial units
-               q = 0.5*rho*V^2; % lbf/ft^2
+               M = statevector(:, 1);
+               h_ft = statevector(:, 2);
+               [T,a,P,rho,nu,mu] = atmosisa(h_ft.*0.3048);
+               a = a.*3.2808399; % Convert from m/s -> ft/s
+               V = a.*M; % Get velocity (ft/s)
+               rho = rho.*0.00194032033; % Convert from kg/m^3 -> imperial units
+               q = 0.5.*rho.*V.^2; % lbf/ft^2
                output = q;
           end
 

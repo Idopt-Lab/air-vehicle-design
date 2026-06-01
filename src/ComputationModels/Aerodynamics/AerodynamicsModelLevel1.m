@@ -34,5 +34,6 @@ classdef AerodynamicsModelLevel1 < handle
           CDi = get_CDi(statevector, CL, e_osw, AR)
           [Delta_CD0, e_osw] = get_Delta_CD0(configuration, rangeMode)
           CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
+          Cf = tab_Cf(aircraft_type, n_engines)
      end
 end
