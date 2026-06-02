@@ -79,9 +79,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           % Compute K1
           function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
                if (0.0 < M) && (M < 1.0)
-                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+                    K1 = AeroLevel1.compute_K1_sub(AR, e_osw);
                elseif (M >= 1.0)
-                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+                    K1 = AeroLevel1.compute_K1_sup(AR, M, LE_sweep_deg);
                else
                     error("Error handler.")
                end
@@ -90,9 +90,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           % Compute K2
           function K2 = compute_K2(aero_obj, M, K1, CLminD)
                if (0.0 < M) && (M < 1.0)
-                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+                    K2 = AeroLevel1.compute_K2_sub(K1, CLminD);
                elseif (M >= 1.0)
-                    K2 = AeroUtils.compute_K2_sup();
+                    K2 = AeroLevel1.compute_K2_sup();
                else
                     error("Error handler.")
                end
@@ -114,9 +114,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           function e_osw = get_e_osw(aero_obj, AR, Lambda_LE)
                % Discern between straight and swept wings.
                if Lambda_LE > 30 % Can I add a section for function handles?
-                    e_osw = AeroUtils.e_swept(AR, Lambda_LE);
+                    e_osw = AeroLevel1.e_swept(AR, Lambda_LE);
                elseif (0 <= Lambda_LE) && (Lambda_LE < 30)
-                    e_osw = AeroUtils.e_straight(AR);
+                    e_osw = AeroLevel1.e_straight(AR);
                else
                     error("Error handler, get e_osw level 1.")
                end
@@ -158,9 +158,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                h_alt = statevector(2);
                alpha_deg = statevector(3); % Angle of attack (deg)
                if (0.0 < M) && (M <1.0)
-                    output = AeroUtils.compute_CDi_subsonic(CL, e_osw, AR);
+                    output = AeroLevel1.compute_CDi_subsonic(CL, e_osw, AR);
                elseif (1.0 <= M)
-                    output = AeroUtils.compute_CDi_supersonic(CL, alpha_deg);
+                    output = AeroLevel1.compute_CDi_supersonic(CL, alpha_deg);
                else
                     error("Error handler.")
                end

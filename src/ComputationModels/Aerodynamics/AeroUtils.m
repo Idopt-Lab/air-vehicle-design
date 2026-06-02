@@ -47,6 +47,17 @@ classdef AeroUtils
                output = D;
           end
 
+          % Compute CDi
+          % Compute CDi (subsonic case)
+          function CDi = compute_CDi_subsonic(CL, e_osw, AR)
+               CDi = ( (CL^2) / (pi * e_osw * AR));
+          end
+
+          % Compute CDi (supersonic case)
+          function CDi = compute_CDi_supersonic(CL, alpha_deg)
+               CDi = CL*sind(alpha_deg);
+          end
+
           % Get dynamic pressure for some given state
           function output = compute_q(statevector)
                M = statevector(:, 1);
@@ -66,17 +77,6 @@ classdef AeroUtils
                [T,a,P,rho,nu,mu] = atmosisa(h_ft*0.3048);
                a = a*3.2808399; % Convert from m/s -> ft/s
                V = a*M; % Get velocity (ft/s)
-          end
-
-          % Compute CDi
-          % Compute CDi (subsonic case)
-          function CDi = compute_CDi_subsonic(CL, e_osw, AR)
-               CDi = ( (CL^2) / (pi * e_osw * AR));
-          end
-
-          % Compute CDi (supersonic case)
-          function CDi = compute_CDi_supersonic(CL, alpha_deg)
-               CDi = CL*sind(alpha_deg);
           end
 
           % Compute V_stall (this is more performance than aero I think).
