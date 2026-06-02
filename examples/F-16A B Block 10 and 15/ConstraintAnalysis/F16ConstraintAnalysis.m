@@ -46,29 +46,29 @@ classdef F16ConstraintAnalysis < ConstraintModel
           % end
 
           % Compute aerodynamic constraints for a given state input
-          function [e_osw, CD0, V, q] = get_aero_constraints(constraint_obj, state_vector, e_osw, Cf, S_wet, S_ref)
-               % state_vector = array of altitude and Mach numbers
-               % corresponding to each constraint
-
-               % Loop through entire state vector
-
-               % Compute e, K1, K2, CD0 for that constraint
-               % Store it in the aero_constraints struct
-               M = state_vector(1);
-               h_alt = state_vector(2);
-               V = AeroUtils.compute_airspeed(state_vector);
-               q = AeroUtils.compute_q(state_vector);
-               % K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
-               % K2 = aero_obj.compute_K2(M, K1, CLminD);
-               CD0 = AeroLevel1.compute_CD0(Cf, S_wet, S_ref);
-               % Problem: CD0 will be computed differently between levels 1, 2, and 3. Account for this in later builds.
-
-               % aero_constraints.CD0 = CD0;
-               % aero_constraints.e_osw = e_osw;
-               % aero_constraints.V = V;
-               % aero_constraints.q = q;
-
-          end
+          % function [e_osw, CD0, V, q] = get_aero_constraints(constraint_obj, aero_obj, state_vector, e_osw, Cf, S_wet, S_ref)
+          %      % state_vector = array of altitude and Mach numbers
+          %      % corresponding to each constraint
+          % 
+          %      % Loop through entire state vector
+          % 
+          %      % Compute e, K1, K2, CD0 for that constraint
+          %      % Store it in the aero_constraints struct
+          %      M = state_vector(1);
+          %      h_alt = state_vector(2);
+          %      V = AeroUtils.compute_airspeed(state_vector);
+          %      q = AeroUtils.compute_q(state_vector);
+          %      % K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+          %      % K2 = aero_obj.compute_K2(M, K1, CLminD);
+          %      % CD0 = aero_obj.get_CD0(Cf, S_wet, S_ref);
+          %      % Problem: CD0 will be computed differently between levels 1, 2, and 3. Account for this in later builds.
+          % 
+          %      % aero_constraints.CD0 = CD0;
+          %      % aero_constraints.e_osw = e_osw;
+          %      % aero_constraints.V = V;
+          %      % aero_constraints.q = q;
+          % 
+          % end
 
           % Get thrust constraints
           function [alpha, alpha_dry, alpha_wet] = get_thrust_constraints(constraint_obj, state_vector, T_min, T_max, gamma, AB_percent, propulsion_obj)
@@ -85,35 +85,7 @@ classdef F16ConstraintAnalysis < ConstraintModel
                % end
 
                alpha = PropulsionUtils.compute_alpha(T_min, T_max, alpha_dry, alpha_wet, AB_percent);
-               % theta = PropulsionUtils.theta(T_kelvin);
-               % TR = PropulsionUtils.compute_TR(theta, gamma, M);
-
-               % thrust_constraints.alpha = alpha;
-               % thrust_constraints.alpha_dry = alpha_dry;
-               % thrust_constraints.alpha_wet = alpha_wet;
-               % thrust_constraints.AB_ = AB_percent;
-               % thrust_constraints.TR = TR;
           end
-
-
-          % % Get constraints
-          % function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
-          %      CD0_constraints = extracted_constraints(:, "CD0"); % Switch to computations from aero class
-          %      e_constraints = extracted_constraints(:, "e"); % switch to computation from aero
-          %      q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
-          %      V_constraints = extracted_constraints(:, "V (ft/s)");
-          %      K1_constraints = extracted_constraints(:, "K1"); % Switch to computation from aero
-          %      PS_constraints = extracted_constraints(:, "PS_ft_s_");
-          %      aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
-          %
-          %      thrust1 = extracted_constraints(:, "alpha_dry"); % Should compute in propulsion class
-          %      thrust2 = extracted_constraints(:, "AB_");
-          %      thrust3 = extracted_constraints(:, "throttleLapse"); % Should compute in propulsion class
-          %      thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
-          %
-          %      % design.constraints.TO = extracted_constraints("Takeoff",:);
-          %
-          % end
 
           % Create thrust loading table
           function [TW_table] = createThrustLoadingTable(constraint_obj, aero_constraints, beta, alpha, n, q, V, CD0, K1, Ps, Wto_S_range)

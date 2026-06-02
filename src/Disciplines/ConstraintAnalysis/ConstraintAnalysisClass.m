@@ -5,80 +5,9 @@ classdef ConstraintAnalysisClass
 
      properties (Constant) % So these are the CONSTRAINT RESULTS, compared to the CONSTRAINTS THEMSELVES IN THE DESIGN!!!
           Wto_S_range = 20:7:160
-          % TW_table
-          % T_Wto_takeoff
-          % optimal_WS
-          % min_TW
-          % Landing
-          % Wto_S_landing
-          % T0_W0
-          % W0_S_ref
-          % T_Wto_required
-          % constraints_table
-          % constraints_struct
      end
 
      methods (Static)
-
-          % Constructor for my sanity
-          % function obj = ConstraintAnalysisClass(design)
-          %      obj.constraints_table = ConstraintUtils.get_design_constraints(design.constraints_filename);
-          % end
-
-          % Perform a complete analysis for the given set of constraints.
-          % function [TW_table, T_Wto_takeoff, optimal_WS, min_TW, Landing, Wto_S_landing, T0_W0, W0_S_ref, T_Wto_required] = constraint_analysis(constraint_obj)
-          % 
-          %      [constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust] = initconstraints(constraint_obj);
-          %      % [constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust] = get_constraints(constraint_obj, design, design.constraints); % Why do I have two functions that do the same thing?
-          %      % [constraint_obj.TW_table, constraint_obj.T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraint_obj.constraints_table, constraint_obj.constraints_struct.aero, constraint_obj.constraints_struct.thrust, constraint_obj.Wto_S_range, constraint_obj.constraints_table("Takeoff",:));
-          %      % [constraint_obj.optimal_WS, constraint_obj.min_TW] = solveOptimalPoint(constraint_obj, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_range);
-          %      constraint_obj.Wto_S_landing = landing_constraint(constraint_obj, constraint_obj.constraints_table("Landing",:));
-          %      % plotConstraintDiagram(constraint_obj, constraint_obj.Wto_S_range, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_landing, constraint_obj.optimal_WS, constraint_obj.min_TW, constraint_obj.constraints_table.Row(:));
-          %      % showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
-          % end
-
-          % Initialize constraints
-          % function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
-          %      [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);
-          % end
-          % 
-          % % Show results
-          % function show_constraints(constraint_obj)
-          %      plotConstraintDiagram(constraint_obj, constraint_obj.Wto_S_range, constraint_obj.TW_table, constraint_obj.T_Wto_takeoff, constraint_obj.Wto_S_landing, constraint_obj.optimal_WS, constraint_obj.min_TW, constraint_obj.constraints_table.Row(:));
-          %      showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
-          % end
-
-          % Get constraints
-          % function [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, extracted_constraints) % I think this is a messy way to do it, but can't think of another way.
-          %      CD0_constraints = extracted_constraints(:, "CD0");
-          %      e_constraints = extracted_constraints(:, "e");
-          %      q_constraints = extracted_constraints(:, "q (lbf/ft^2)");
-          %      V_constraints = extracted_constraints(:, "V (ft/s)");
-          %      K1_constraints = extracted_constraints(:, "K1");
-          %      PS_constraints = extracted_constraints(:, "PS_ft_s_");
-          %      aero_constraints = [CD0_constraints, e_constraints, q_constraints, V_constraints, K1_constraints, PS_constraints];
-          % 
-          %      thrust1 = extracted_constraints(:, "alpha_dry");
-          %      thrust2 = extracted_constraints(:, "AB_");
-          %      thrust3 = extracted_constraints(:, "throttleLapse");
-          %      thrust_constraints = [thrust1, thrust2, thrust3]; % I could make this part more modular. How? Figure that out later.
-          % 
-          %      % design.constraints.TO = extracted_constraints("Takeoff",:);
-          % 
-          % end
-
-          % Create thrust loading table
-          % function [TW_table, T_Wto_takeoff] = createThrustLoadingTable(constraint_obj, constraints, aero, thrust, Wto_S_range, TO)
-          %      num_constraints = length(constraints.Row(:));
-          %      TW_table = zeros(num_constraints, length(Wto_S_range));
-          % 
-          %      for i = 1:num_constraints
-          %           name = constraint_obj.constraints_table.Row{i};
-          %           TW_table(i, :) = computeWingLoading(constraint_obj, constraints(name,:), aero(name,:), thrust(name,:), Wto_S_range);
-          %      end
-          %      %
-          %      T_Wto_takeoff = takeoff_constraint(constraint_obj, Wto_S_range, TO);
-          % end
 
           % % Solve for the optimal point
           % function [optimal_WS, min_TW] = solveOptimalPoint(obj, TW_table, T_Wto_takeoff, Wto_S_range)
@@ -93,32 +22,6 @@ classdef ConstraintAnalysisClass
 
                Wto_S = (distance * rho * g * (mu * CLmax + 0.83 * CD0)) / (1.69 * beta);
           end
-
-          % Generate the constraint diagram
-          %% ---------------------------------------------------
-          % Function: Plot constraint diagram
-          % function plotConstraintDiagram(obj, Wto_S_range, TW_table, T_Wto_takeoff, Wto_S_landing, optimal_WS, min_TW, constraints)
-          %      figure('Name', 'Constraint Diagram'); hold on;
-          %      colors = lines(length(constraints));
-          % 
-          %      for i = 1:length(constraints)
-          %           plot(Wto_S_range, TW_table(i, :), 'LineWidth', 2, 'DisplayName', constraints{i}, 'Color', colors(i,:));
-          %      end
-          % 
-          %      plot(Wto_S_range, T_Wto_takeoff, 'k-', 'LineWidth', 2, 'DisplayName', 'Takeoff');
-          %      xline(Wto_S_landing, '--k', 'LineWidth', 2, 'DisplayName', 'Landing');
-          % 
-          %      plot(optimal_WS, min_TW, 'ko', 'MarkerSize', 10, 'MarkerFaceColor', 'g', ...
-          %           'DisplayName', sprintf('Optimum (W/S=%.1f, T/W=%.2f)', optimal_WS, min_TW));
-          % 
-          %      % plot(Wto_S_range, Cost_est, 'g+', 'LineWidth', 2, 'DisplayName', 'Cost');
-          % 
-          %      xlabel('Wing Loading W/S [psf]');
-          %      ylabel('Thrust-to-Weight Ratio T/W');
-          %      title('Constraint Diagram with Optimal Design Point');
-          %      legend('Location', 'northeastoutside');
-          %      grid on;
-          % end
 
 
           % Master Equation
@@ -151,22 +54,6 @@ classdef ConstraintAnalysisClass
                term2 = 0.7 * CD0 / (beta * CLmax) + mu;
                T_Wto = term1 + term2;
           end
-
-          % Function: Show results table as a GUI element
-          % function showResultTable(obj, TW_table, constraintNames, Wto_S_range)
-          %      fig = figure('Name', 'T/W Table');
-          %      uitable(fig, ...
-          %           'Data', round(TW_table, 3), ...
-          %           'ColumnName', compose('W/S = %d', Wto_S_range), ...
-          %           'RowName', constraintNames, ...
-          %           'Units', 'normalized', ...
-          %           'Position', [0 0 1 1]);
-          % end
-
-          % [optimal_WS, min_TW] = solveOptimalPoint(input)
-          % Wto_S_landing = landing_constraint(input)
-          % plotconstraintDiagram(input)
-          % showResultTable(input)
 
      end
 

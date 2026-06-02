@@ -187,7 +187,7 @@ classdef GeometryLevel1
           end
      end
 
-     methods (Access = private)
+     methods (Static, Access = private)
 
           function T = build_fuselage_geometry_table()
                % Currently used geometric fuselage parameters.
