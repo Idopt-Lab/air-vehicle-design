@@ -77,16 +77,17 @@ classdef AeroLevel2
 
           % Flapped section lift curve slope
           % Source: Airplane Design, Roskam, eq 7.15
-          function output = cl_alpha_f(cl_alpha, cprime_c)
-               output = cl_alpha*cprime_c;
+          function output = cl_alpha_f(cl_alpha, cp_c)
+               output = cl_alpha*cp_c;
           end 
 
-          % Compute c'/c (the ratio of the wing+flap chord length over the
-          % the wing chord length)
-          % Source: Airplane Design, Roskam, eq 7.16
-          function output = cprime_c(z_fh, c, delta_f_deg)
-               output = 1+ 2*(z_fh/c)*tand(delta_f_deg/2);
-          end
+          % % This should go into geometry
+          % % Compute c'/c (the ratio of the wing+flap chord length over the
+          % % the wing chord length)
+          % % Source: Airplane Design, Roskam, eq 7.16
+          % function output = cp_c(z_fh, c, delta_f_deg)
+          %      output = 1+ 2*(z_fh/c)*tand(delta_f_deg/2);
+          % end
 
           % Estimate effect of leading-edge high-lift devices (substitute
           % for lack of experimental data)
@@ -94,7 +95,7 @@ classdef AeroLevel2
           function output = cl_max_with_LE_flap(cl_max_no_LE_flap, cpp_c)
                output = cl_max_no_LE_flap*cpp_c;
           end
-          
+
 
 
 

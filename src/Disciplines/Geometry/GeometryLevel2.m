@@ -11,6 +11,15 @@ classdef GeometryLevel2
 
      methods (Static)
 
+
+          % This should go into geometry
+          % Compute c'/c (the ratio of the wing+flap chord length over the
+          % the wing chord length)
+          % Source: Airplane Design, Roskam, eq 7.16
+          function output = cp_c(z_fh, c, delta_f_deg)
+               output = 1+ 2*(z_fh/c)*tand(delta_f_deg/2);
+          end
+
           function [L_fuselage, a, c] = get_fus_len(aircraft_type, W_TO)
                if aircraft_type == "sailplane - unpowered"
                     a = 0.86;
