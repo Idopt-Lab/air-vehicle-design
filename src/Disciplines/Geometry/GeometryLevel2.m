@@ -17,9 +17,63 @@ classdef GeometryLevel2
           % Source: Airplane Design Vol 2, Roska, eq 12.1
           function output = S_wet_planform(S_exp_plf, tc_r, tc_t, lambda)
                output = 2*S_exp_plf*(1+0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));
+          end
+
+          % Estimate planform perimeterr
+          % Source: Airplane Design Vol 2, Roskam, eq 12.2
+          function output = p_plf(c, tc)
+               output = 2*c*(1+0.25*tc);
+          end
+
+
+
+
+          % Estimate wetted area for fuselage
+          % Valid: fuselages with cylindrical mid-sections
+          % Source: Airplane Design Vol 2, Roskam, eq 12.3
+          function output = S_wet_fus_cyl(D_f, l_f, lambda_f)
+               output = pi*D_f*l_f*(1-2/lambda_f)^(2/3)*(1 + 1/lambda_f^2);
+          end
+
+          % For streamlined fueslage without a cylindrical mid-section:
+          % Source: Airplane Design Vol 2, Roskam, eq 12.4
+          function output = S_wet_fus_stream(D_f, l_f, l_n, lambda_f)
+               output = pi*D_f*l_f(0.5 + 0.135*l_n/l_f)^(2/3) *(1.015+0.3/lambda_f^1.5);
+          end
+
+
+          % Wetted areas for externally mounted nacelles
+
+          % Estimate wetted area for fan cowling
+          % Source: Airplane Design Vol 2, Roska, eq 12.5
+          function output = S_wet_fan_cowl(l_n, D_n, l_1, l_eta, D_hl)
+               output = l_n*D_n*(2 + 0.35*l_1/l_eta + 0.81*l_1*D_hl/l_eta * D_n);
           end 
 
+          % Estimate wetted area for gas generator
+          % Source: Airplane Design Vol 2, Roskam, eq 12.6
+          function output = S_wet_gas_gen(l_g, D_g, D_eg)
+               output = pi*l_g*D_g*(1 - (1/3)*(1- D_eg/D_g)*(1 - 0.18*(D_g/l_g)^(5/3)));
+          end
+
+          % Estimate wetted area for the plug
+          % Source: Airplane design Vol 2, Roskam, eq 12.7
+          function output = S_wet_plug(l_p, D_p)
+               output = 0.7*pi*l_p*D_p;
+          end
           
+
+
+
+
+
+
+          % Estimate fuselage finess ratio
+          % Source: Airplane Design Vol 2, Roskam, eq 12.4
+          function output = lambda_f(D_f, l_f)
+               output = D_f/l_f;
+          end
+
 
           % Tail sizing
           % Horizontal tail volume coefficient
@@ -61,51 +115,51 @@ classdef GeometryLevel2
                if aircraft_type == "sailplane - unpowered"
                     a = 0.86;
                     C = 0.48;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "sailplane - powered"
                     a = 0.71;
                     C = 0.48;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif (aircraft_type == "homebuilt - metal") || (aircraft_type == "homebuilt - wood")
                     a = 3.68;
                     C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "homebuilt - composite"
                     a = 3.50;
                     C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "general aviation - single engine"
                     a = 4.37;
                     C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "general aviation - twin engine"
                     a = 0.86;
                     C = 0.42;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "agricultural aircraft"
                     a = 4.04;
                     C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "twin turboprop"
                     a = 0.37;
                     C = 0.51;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "flying boat"
                     a = 1.05;
                     C = 0.40;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif aircraft_type == "jet trainer"
                     a = 0.79;
                     C = 0.41;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif (aircraft_type == "Jet fighter") || (aircraft_type == "jet fighter")
                     a = 0.93;
                     C = 0.39;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif (aircraft_type == "military cargo") || (aircraft_type == "military bomber")
                     a = 0.23;
                     C = 0.50;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
                elseif (aircraft_type == "jet transport")
                     a = 0.67;
                     C = 0.43;
