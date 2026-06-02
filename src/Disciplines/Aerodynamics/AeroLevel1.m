@@ -18,11 +18,36 @@ classdef AeroLevel1
 
      methods (Static)
 
+
+          % Estimate CL_max_w (clean)
+          % Source: Airplane Design Vol 2, Roskam, eq 7.3
+          function output = CL_max_w(k_lambda, cl_max_r, cl_max_t)
+               output = k_lambda*(cl_max_r + cl_max_t)/2;
+          end
+
+          % Determine if aircraf is "short-coupled" or "long-coupled"
+          % Source: Aircraft Design Vol 2, Roskam, page 168
+          function output = isShortOrLongCoupled(l_h, c_bar)
+               if (0.0 <= l_h/c_bar) && (l_h/c_bar < 3.0)
+                    output = "short coupled";
+               elseif (l_h/c_bar >= 5.0)
+                    output = "long coupled";
+               else
+                    output = "medium coupled";
+               end
+          end
+
+          % Correct for sweep effects using the "cosine rule"
+          % Source: Airplane Design Vol 2, Roskam, eq 7.2
+          % outputs CL_max_w_unswept
+          function output = CL_max_w_unswept(CL_max_w_swept, Lambda_qc)
+               output = CL_max_w_swept/cosd(Lambda_qc);
+          end
+
           % Get CD
           function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
                CD = CD0 + K*CL^2;
           end
-          
 
           %% FOR MISSION ANALYSIS
           % Tabulate L/Dmax (cruise)
