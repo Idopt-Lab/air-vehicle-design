@@ -8,9 +8,16 @@ classdef AeroLevel2
 
      properties (Constant)
           k_lambda = [0.88, 0.95]
+          k_ww = 1.85; % Part of the wing "buried" in the fuselage (Airplane Design Vol 3, Roskam, p 167)
      end
 
      methods (Static)
+
+          % Estimate L/D max
+          % Source: Airplane Design vol 3, Roskam, eq 4.3
+          function output = LD_max(AR, e_osw, CD0)
+               output = pi*AR*e_osw/(4*CD0)^(1/2);
+          end 
 
           % Estimate Delta_CL_max_TO
           % Source: Aircraft Design Vol 2, Roskam, eq 7.6
@@ -20,7 +27,7 @@ classdef AeroLevel2
 
           % Estimate Delta_CL_max_L (landing)
           % Source: Aircraft Design Vol 2, Roskam, eq 7.7
-          function output = Delta_CL_max_L(CL_max_L - CL_max)
+          function output = Delta_CL_max_L(CL_max_L, CL_max)
                output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
           end
 

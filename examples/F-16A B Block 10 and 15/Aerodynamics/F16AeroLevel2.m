@@ -7,15 +7,25 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      % I think WeaponGenerator2 did that.
 
      properties
-          e_osw
-          Cf
-          CL_minD
-          K % Raymer only has K, but Brandt has K1 and K2 for some reason.
+          e_osw_clean
+          e_osw_TO
+          e_osw_Landing
+          LD_max
+          AR_wet
+          K_LD
+          K
           K1
           K2
+          Cf
+          CL_minD
           CL_max_clean
           CL_max_TO
           CL_max_Land
+          Delta_CL_max_TO
+          Delta_CL_max_Land
+          Delta_CD0_TO
+          Delta_CD0_Landing
+          Delta_CD0_geardown
      end
 
      methods
@@ -27,6 +37,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                obj.e_osw = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
                obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
                obj.CL_max = 1.5;
+          end
+
+          % Get L/D max
+          function LD_max = get_LD_max(aero_obj, AR, e_osw, CD0)
+               LD_max = AeroLevel2.LD_max(AR, e_osw, CD0);
           end
 
           % Compute Oswald span efficiency factor (wrapper)

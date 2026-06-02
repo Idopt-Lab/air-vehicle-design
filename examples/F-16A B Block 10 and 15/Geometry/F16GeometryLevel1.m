@@ -6,7 +6,6 @@ classdef F16GeometryLevel1 < GeometryModelLevel1
           mainwings
           HT
           VT
-          strakes
           fuselage
           design
      end

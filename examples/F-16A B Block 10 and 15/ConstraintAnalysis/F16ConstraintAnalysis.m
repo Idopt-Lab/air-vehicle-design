@@ -9,13 +9,10 @@ classdef F16ConstraintAnalysis < ConstraintModel
           T_Wto_takeoff
           optimal_WS
           min_TW
-          Landing
           Wto_S_landing
-          T0_W0
           W0_S_ref
           T_Wto_required
           constraints_table
-          constraints_struct
      end
 
      methods
