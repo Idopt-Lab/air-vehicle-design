@@ -4,6 +4,10 @@ classdef WeightLevel1
 
      properties (Constant)
 
+          % C.G. range lookup table
+          % Source: Roskam, Airplane Design Part II, Table 10.3
+          cg_range_table = WeightLevel1.build_cg_range_table(); % These are TYPICAL CG RANGES
+
           % Composite construction weight reduction factors
           % Source: Roskam, Airplane Design Part I, Table 2.16
           %
@@ -191,6 +195,75 @@ classdef WeightLevel1
      end
 
      methods (Static)
+
+          function output = tab_cg_range(aircrafttype, valueType)
+               % Tabulate approximate C.G. range by aircraft type.
+               %
+               % Source: Roskam, Airplane Design Part II, Table 10.3
+               %
+               % Table values:
+               %   cg_range_in      = C.G. range in inches
+               %   cg_range_frac_cw = C.G. range as fraction of wing chord
+               %
+               % Usage:
+               %   data = WeightLevel1.tab_cg_range("fighter")
+               %   xcg  = WeightLevel1.tab_cg_range("fighter", "in")
+               %   frac = WeightLevel1.tab_cg_range("fighter", "frac_cw")
+               %   rng  = WeightLevel1.tab_cg_range("jet transport", "range")
+
+               if nargin < 2
+                    valueType = "";
+               end
+
+               aircrafttype = WeightLevel1.normalize_cg_aircraft_type(aircrafttype);
+               valueType = lower(strtrim(string(valueType)));
+
+               T = WeightLevel1.cg_range_table;
+
+               idx = T.AircraftType == aircrafttype;
+
+               if ~any(idx)
+                    error("Unrecognized aircraft type: %s", aircrafttype);
+               end
+
+               row = T(idx, :);
+
+               output = struct();
+               output.aircrafttype = row.AircraftType;
+
+               output.cg_range_in_min = row.cg_range_in_min;
+               output.cg_range_in_avg = row.cg_range_in_avg;
+               output.cg_range_in_max = row.cg_range_in_max;
+
+               output.cg_range_frac_cw_min = row.cg_range_frac_cw_min;
+               output.cg_range_frac_cw_avg = row.cg_range_frac_cw_avg;
+               output.cg_range_frac_cw_max = row.cg_range_frac_cw_max;
+
+               if valueType == ""
+                    return
+               end
+
+               switch valueType
+                    case {"in", "inch", "inches", "cg_range_in"}
+                         output = row.cg_range_in_avg;
+
+                    case {"frac", "frac_cw", "fraction", "fraction_cw", "cg_range_frac_cw"}
+                         output = row.cg_range_frac_cw_avg;
+
+                    case {"range_in", "in_range", "inches_range"}
+                         output = [row.cg_range_in_min, row.cg_range_in_max];
+
+                    case {"range_frac", "frac_range", "frac_cw_range"}
+                         output = [row.cg_range_frac_cw_min, row.cg_range_frac_cw_max];
+
+                    case {"range", "all_range"}
+                         output.cg_range_in = [row.cg_range_in_min, row.cg_range_in_max];
+                         output.cg_range_frac_cw = [row.cg_range_frac_cw_min, row.cg_range_frac_cw_max];
+
+                    otherwise
+                         error("valueType must be '', 'in', 'frac_cw', 'range_in', 'range_frac', or 'range'.");
+               end
+          end
 
 
           function output = tab_compositeweightfactor(component, valueType)
@@ -384,6 +457,127 @@ classdef WeightLevel1
      end
 
      methods (Static, Access = private)
+
+
+          function aircrafttype = normalize_cg_aircraft_type(aircrafttype)
+
+               aircrafttype = lower(strtrim(string(aircrafttype)));
+               aircrafttype = replace(aircrafttype, "-", "_");
+               aircrafttype = replace(aircrafttype, " ", "_");
+               aircrafttype = replace(aircrafttype, "'", "");
+               aircrafttype = replace(aircrafttype, ".", "");
+               aircrafttype = replace(aircrafttype, ",", "");
+
+               if any(aircrafttype == ["homebuilt", "homebuilts"])
+                    aircrafttype = "homebuilt";
+
+               elseif any(aircrafttype == ["single_engine", ...
+                         "single_engine_prop", ...
+                         "single_engine_propeller", ...
+                         "single_engine_propeller_driven"])
+                    aircrafttype = "single_engine_propeller";
+
+               elseif any(aircrafttype == ["twin_engine", ...
+                         "twin_engine_prop", ...
+                         "twin_engine_propeller", ...
+                         "twin_engine_propeller_driven"])
+                    aircrafttype = "twin_engine_propeller";
+
+               elseif any(aircrafttype == ["agricultural", ...
+                         "ag_airpl", ...
+                         "ag_airplane", ...
+                         "agricultural_airplane"])
+                    aircrafttype = "agricultural";
+
+               elseif any(aircrafttype == ["business_jet", ...
+                         "business_jets"])
+                    aircrafttype = "business_jet";
+
+               elseif any(aircrafttype == ["regional_tbp", ...
+                         "regional_tbp", ...
+                         "regional_turboprop", ...
+                         "regional_turbopropeller"])
+                    aircrafttype = "regional_tbp";
+
+               elseif any(aircrafttype == ["jet_transport", ...
+                         "jet_transp", ...
+                         "transport_jet", ...
+                         "transport_jets"])
+                    aircrafttype = "transport_jet";
+
+               elseif any(aircrafttype == ["military_trainer", ...
+                         "military_trainers", ...
+                         "trainer", ...
+                         "trainers"])
+                    aircrafttype = "military_trainer";
+
+               elseif any(aircrafttype == ["fighter", ...
+                         "fighters", ...
+                         "jet_fighter"])
+                    aircrafttype = "fighter";
+
+               elseif any(aircrafttype == ["mil_patrol_bomb_transport", ...
+                         "military_patrol_bomb_transport", ...
+                         "military_patrol", ...
+                         "military_bomber", ...
+                         "military_transport", ...
+                         "patrol_bomb_transport"])
+                    aircrafttype = "mil_patrol_bomb_transport";
+
+               elseif any(aircrafttype == ["flying_boat", ...
+                         "flying_boats", ...
+                         "amphibious", ...
+                         "float", ...
+                         "float_airplane", ...
+                         "float_airplanes", ...
+                         "flying_boat_amphibious_float"])
+                    aircrafttype = "flying_boat_amphibious_float";
+
+               elseif any(aircrafttype == ["supersonic", ...
+                         "supersonic_cruise", ...
+                         "supersonic_cruise_airplane"])
+                    aircrafttype = "supersonic_cruise";
+               end
+          end
+
+          function T = build_cg_range_table()
+               % Examples of center of gravity ranges.
+               % Source: Roskam, Airplane Design Part II, Table 10.3
+               %
+               % cg_range_in      = C.G. range in inches
+               % cg_range_frac_cw = C.G. range as fraction of wing chord
+
+               row = @(aircraftType, cgRangeIn, cgRangeFracCw) table( ...
+                    string(aircraftType), ...
+                    min(cgRangeIn), ...
+                    mean(cgRangeIn), ...
+                    max(cgRangeIn), ...
+                    min(cgRangeFracCw), ...
+                    mean(cgRangeFracCw), ...
+                    max(cgRangeFracCw), ...
+                    'VariableNames', {'AircraftType', ...
+                    'cg_range_in_min', ...
+                    'cg_range_in_avg', ...
+                    'cg_range_in_max', ...
+                    'cg_range_frac_cw_min', ...
+                    'cg_range_frac_cw_avg', ...
+                    'cg_range_frac_cw_max'});
+
+               T = [
+                    row("homebuilt",                    [5 5],       [0.10 0.10])
+                    row("single_engine_propeller",      [7 18],      [0.06 0.27])
+                    row("twin_engine_propeller",        [9 15],      [0.12 0.22])
+                    row("agricultural",                 [5 5],       [0.10 0.10])
+                    row("business_jet",                 [8 17],      [0.10 0.21])
+                    row("regional_tbp",                 [12 20],     [0.14 0.27])
+                    row("transport_jet",                [26 91],     [0.12 0.32])
+                    row("military_trainer",             [8 8],       [0.10 0.10])
+                    row("fighter",                      [15 15],     [0.20 0.20])
+                    row("mil_patrol_bomb_transport",    [26 90],     [0.30 0.30])
+                    row("flying_boat_amphibious_float", [7 28],      [0.25 0.25])
+                    row("supersonic_cruise",            [20 100],    [0.30 0.30])
+                    ];
+          end
 
 
           function component = normalize_composite_component(component)

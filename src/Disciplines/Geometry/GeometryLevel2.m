@@ -11,6 +11,43 @@ classdef GeometryLevel2
 
      methods (Static)
 
+          % Estimate wetted area for planforms
+          % Valid for straight tapered planforms (wing, tail, canard, fin,
+          % pylons)
+          % Source: Airplane Design Vol 2, Roska, eq 12.1
+          function output = S_wet_planform(S_exp_plf, tc_r, tc_t, lambda)
+               output = 2*S_exp_plf*(1+0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));
+          end 
+
+          
+
+          % Tail sizing
+          % Horizontal tail volume coefficient
+          % Source: Airplane Design Vol 2, Roskam, eq 8.1
+          function output = Vbar_h(x_h, S_h, S_ref, c_bar)
+               output = x_h*S_h/(S_ref*c_bar);
+          end
+
+          % Vertical tail volume coefficient
+          % Source: Airplane Design Vol 2, Roskam, eq 8.2
+          function output = Vbar_v(x_v, S_v, S_ref, b)
+               output = x_v*S_v/(S_ref*b);
+          end
+
+          % Horizontal tail reference area
+          % Source: Airplane Design Vol 2, Roskam, eq 8.3
+          function output = S_h(Vbar_h, S_ref, c_bar, x_h)
+               output = Vbar_h*S_ref*c_bar/x_h;
+          end
+
+          % Vertical tail reference area
+          % Source: Airplane Design Vol 2, Roskam, eq 8.4
+          function output = S_v(Vbar_v, S_ref, b, x_v)
+               output = Vbar_v*S_ref*b/x_v;
+          end
+
+
+
 
           % This should go into geometry
           % Compute c'/c (the ratio of the wing+flap chord length over the
