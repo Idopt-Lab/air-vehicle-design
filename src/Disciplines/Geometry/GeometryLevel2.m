@@ -11,6 +11,69 @@ classdef GeometryLevel2
 
      methods (Static)
 
+          function [L_fuselage, a, c] = get_fus_len(aircraft_type, W_TO)
+               if aircraft_type == "sailplane - unpowered"
+                    a = 0.86;
+                    C = 0.48;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "sailplane - powered"
+                    a = 0.71;
+                    C = 0.48;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif (aircraft_type == "homebuilt - metal") || (aircraft_type == "homebuilt - wood")
+                    a = 3.68;
+                    C = 0.23;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "homebuilt - composite"
+                    a = 3.50;
+                    C = 0.23;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "general aviation - single engine"
+                    a = 4.37;
+                    C = 0.23;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "general aviation - twin engine"
+                    a = 0.86;
+                    C = 0.42;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "agricultural aircraft"
+                    a = 4.04;
+                    C = 0.23;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "twin turboprop"
+                    a = 0.37;
+                    C = 0.51;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "flying boat"
+                    a = 1.05;
+                    C = 0.40;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif aircraft_type == "jet trainer"
+                    a = 0.79;
+                    C = 0.41;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif (aircraft_type == "Jet fighter") || (aircraft_type == "jet fighter")
+                    a = 0.93;
+                    C = 0.39;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif (aircraft_type == "military cargo") || (aircraft_type == "military bomber")
+                    a = 0.23;
+                    C = 0.50;
+                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
+               elseif (aircraft_type == "jet transport")
+                    a = 0.67;
+                    C = 0.43;
+                    L_fuselage = GeometryLevel2.compute_fus_len(a, C, W_TO);
+               else
+                    error("Unrecognized aircraft type. Accepted inputs: sailplane - unpowered, sailplane - powered, homebuilt - metal, homebuilt - wood, homebuilt - composite, general aviation - single engine, general aviation - twin engine, agricultural aircraft, twin turboprop, flying boat, jet trainer, jet fighter, military cargo, military bomber, jet transport.") % Include list of acceptable parameters
+               end
+          end
+
+          % Estimate fuselage length based on historical trend
+          function output = compute_fus_len(a, C, W_TO)
+               output = a*W_TO^(C); % Raymer, 6th ed, table 6.3
+          end
+
           % Add functions for estimating control surface sizing
 
           % Estimate the wetted area of the aircraft
