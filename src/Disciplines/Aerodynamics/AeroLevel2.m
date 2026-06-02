@@ -12,6 +12,8 @@ classdef AeroLevel2
 
      methods (Static)
 
+          
+
           % Get CD
           function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
                CD = CD0 + K*CL^2;
