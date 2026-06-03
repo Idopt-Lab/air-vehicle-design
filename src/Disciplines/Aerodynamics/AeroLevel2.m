@@ -19,6 +19,9 @@ classdef AeroLevel2
           function output = Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg)
                % Lambda_cbar_q_deg = Sweep at mean geometric chord (deg)
                % k_f = 0.14 (full-span flaps) or 0.28 (half-span flaps).
+               % "This induced drag increment is added to the drag due to
+               % lift for the total lift using the clean wing drag due to
+               % lift factor."
 
                output = k_f^2 * (Delta_CL_flap)^2 * cosd(Lambda_cbar_q_deg);
           end 
