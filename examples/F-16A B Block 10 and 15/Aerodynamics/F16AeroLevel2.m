@@ -10,7 +10,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      properties
           e_osw_clean
           e_osw_TO
-          e_osw_Landing
+          e_osw_L
           LD_max
           AR_wet
           K_LD

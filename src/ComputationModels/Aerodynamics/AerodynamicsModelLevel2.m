@@ -5,7 +5,7 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
      properties (Abstract) % Initialization not allowed
           e_osw_clean
           e_osw_TO
-          e_osw_Landing
+          e_osw_L
           LD_max
           AR_wet
           K_LD
