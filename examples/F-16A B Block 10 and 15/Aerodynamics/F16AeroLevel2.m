@@ -32,11 +32,14 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           Delta_CDi
      end
 
-     properties (Constant)
+     properties (Constant) % These should be values that are tabulated based on geometry.
           hld_TE = "plain"; % High-lift device, trailing edge
           hld_LE = "slat"; % High-lift device, leading edge
           delta_hld_TE_TO = 20; % High-lift device, trailing edge, take-off config (deg)
           delta_hld_TE_L = 60; % High-lift device, trailing edge, landing config (deg)
+          C1 = 0.5; % Tabulated from Fig 12.12, lambda = 0.23 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
+          CL_max_base = 0.91; % Tabulated from Fig 12.13 (Raymer, 6th ed) & (C1 + 1)*(AR/beta)*cosd(Lambda_LE_deg) = 2.76.
+          sharpness_param = 0.7720; % Computed from Table 12.1 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
      end
 
      methods
@@ -158,13 +161,13 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Wrapper
           % Raymer: "CL_max will increase if the wing is low-AR, or if it
           % has sufficient sweep & a sharp LE."
-          function CL_max = get_CL_max_values(aero_obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, Cl_max, CL_max_CL_max)
+          function CL_max = get_CL_max_values(aero_obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, Cl_max, CL_max_Cl_max)
                % Check if high or low AR
                AR_check = AeroUtils.AR_check(AR, 0.5, Lambda_LE_deg);
                if (AR_check == "Low")
                     CL_max = AeroLevel2.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
                elseif (AR_check == "High")
-                    CL_max = AeroLevel2.CL_max_clean_HighAR(Cl_max, CL_max_CL_max, Delta_CL_max);
+                    CL_max = AeroLevel2.CL_max_clean_HighAR(Cl_max, CL_max_Cl_max, Delta_CL_max);
                end
           end
 
