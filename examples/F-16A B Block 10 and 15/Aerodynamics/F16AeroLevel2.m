@@ -42,7 +42,17 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get Delta_CDi
-          function Delta_CDi = get_Delta_CDi
+          function Delta_CDi = get_Delta_CDi(aero_obj, areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q_deg)
+               if (areFlapsFullOrHalfSpan == ["full"])
+                    k_f = 0.14;
+               elseif (areFlapsFullOrHalfSpan == ["half"])
+                    k_f = 0.28;
+               else
+                    error("Error handler.")
+               end
+
+               Delta_CDi = AeroLevel2.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
+          end 
 
           % Get Delta_CD0
           function Delta_CD0 = get_Delta_CD0(aero_obj, flaptype, cf_c, S_flapped, S_ref, delta_flap_deg)
