@@ -25,6 +25,9 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           Delta_CD0_Landing
           Delta_CD0_geardown
           Delta_CDi
+          % I should definitely add the properties of high-lift devices'
+          % deflections for take-off and landing configurations, as well as
+          % properties for their types.
      end
 
 

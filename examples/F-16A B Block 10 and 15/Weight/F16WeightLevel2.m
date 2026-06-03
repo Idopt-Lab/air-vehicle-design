@@ -23,17 +23,8 @@ classdef F16WeightLevel2 < WeightModelLevel2
 
      methods
           % Constructor
-          function obj = F16WeightLevel2(design, geometry_obj)
-               obj.W_fixed = design.weights.Weights.Fixedlbf;
-               obj.W_TO_guess = design.weights.Weights.WTO_guess;
-               obj.K_vs = design.weights.Coefficients.Kvs;
-               aircraft_type = "fighter";
-               obj.wings = obj.get_wing_weight(aircraft_type, geometry_obj.mainwings.S_exposed);
-               obj.HT = obj.get_HT_weight(aircraft_type, geometry_obj.HT.S_exposed);
-               obj.VT = obj.get_VT_weight(aircraft_type, geometry_obj.VT.S_exposed);
-               obj.fuselage = obj.get_fuselage_weight(aircraft_type, geometry_obj.fuselage.S_wet);
-               obj.landinggear = obj.get_landinggear_weight(aircraft_type, false, obj.W_TO_guess);
-               obj.engine = obj.get_eng_installed_weight(aircraft_type, design.propulsion.Weight.Dry);
+          function obj = F16WeightLevel2()
+
           end
 
           function OEW = get_OEW(weight_obj, aircraft_type, W_TO, W0, AR, T, S_ref_w, M_max, K_vs)
