@@ -229,13 +229,13 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                CL = AeroUtils.compute_CL(W, q, S_ref);
 
                % Get CD0
-               CD0 = aero_obj.get_design_CD0(aero_obj.Cf, S_wet, S_ref);
+               CD0 = aero_obj.get_CD0(aero_obj.Cf, S_wet, S_ref);
 
                % Compute K
                % K = AeroLevel2.compute_K(e_osw, AR);
 
                % Compute the CD
-               CD = aero_obj.get_design_CD(CD0, aero_obj.K, CL);
+               CD = aero_obj.get_CD(CD0, aero_obj.K, CL);
 
                % Compute the drag
                D = AeroUtils.compute_D(q, CD, S_ref);
@@ -246,13 +246,13 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get design CD
-          function CD = get_design_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+          function CD = get_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
                % CD = CD0 + K*CL^2;
                CD = AeroLevel2.compute_CD(CD0, K, CL);
           end
 
           % Get CD0
-          function CD0 = get_design_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
+          function CD0 = get_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
                % CD0 = Cf * S_wet_aircraft/S_ref;
                CD0 = AeroLevel2.compute_CD0(Cf, S_wet_aircraft, S_ref);
           end
