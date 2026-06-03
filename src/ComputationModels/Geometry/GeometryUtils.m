@@ -3,6 +3,15 @@ classdef GeometryUtils
      %   Detailed explanation goes here
 
      methods (Static)
+
+          % An equation for computing the area of a trapezoidal wing so I don't go
+          % insane later
+          % Source: NASA
+          % (https://www.grc.nasa.gov/WWW/k-12/VirtualAero/BottleRocket/airplane/area.html)
+          function output = S_trapezoid(c_r, c_t, b)
+               output = (c_r+c_t)*b;
+          end
+
           % Load design geometry for initial calculations
           function loaddesigngeometry(geometry_obj, design)
                % ---------- Main wing ----------

@@ -18,6 +18,7 @@ classdef F16GeometryLevel2 < GeometryModelLevel2
           fuselage
           strakes
           design
+          S_flapped
      end
 
      methods
