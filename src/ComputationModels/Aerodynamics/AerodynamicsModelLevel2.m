@@ -13,8 +13,6 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           K1
           K2
           Cf
-          cl_max_TO
-          cl_max_L
           CL_minD
           CL_max_clean
           CL_max_TO
@@ -42,6 +40,7 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           CL_max_base
           sharpness_param
           CL_max_cl_max
+          cl_max % Should be taken directly from the chosen airfoil
      end
 
 

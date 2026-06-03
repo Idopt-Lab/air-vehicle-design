@@ -18,8 +18,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           K1
           K2
           Cf
-          cl_max_TO
-          cl_max_L
           CL_minD
           CL_max_clean
           CL_max_TO
@@ -45,6 +43,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           sharpness_param = 0.7720; % Computed from Table 12.1 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
           % Delta_CL_max % (Not using the one from Fig 12.14)
           CL_max_cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40.
+          cl_max = 1.0; % Obtained from page 14 of https://ntrs.nasa.gov/api/citations/19870017427/downloads/19870017427.pdf
      end
 
      methods
@@ -60,7 +59,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
           % Get cl_max
           function cl_max = geT_cl_max()
-               
+
           end
 
           % Get CDi
