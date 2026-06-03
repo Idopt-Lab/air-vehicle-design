@@ -34,6 +34,13 @@ classdef AeroLevel2
                output = CL_max_base + Delta_CL_max;
           end
 
+          % Estimate Delta_CL_max induced by a high-lift device
+          % Raymer, Aircraft Design: A Conceptual Approach, 6th ed, eq
+          % 12.21
+          function output = Delta_CL_max(Delta_Cl_max, S_flapped, S_ref, Lambda_HL)
+               output = 0.9*Delta_Cl_max*(S_flapped/S_ref)*cosd(Lambda_HL);
+          end
+
 
 
           % Estimate L/D max
@@ -42,18 +49,21 @@ classdef AeroLevel2
                output = pi*AR*e_osw/(4*CD0)^(1/2);
           end
 
+          % This might be better in L1
           % Estimate Delta_CL_max_TO
           % Source: Aircraft Design Vol 2, Roskam, eq 7.6
           function output = Delta_CL_max_TO(CL_max_TO, CL_max)
                output = 1.05*(CL_max_TO - CL_max);
           end
 
+          % This might be better in L1
           % Estimate Delta_CL_max_L (landing)
           % Source: Aircraft Design Vol 2, Roskam, eq 7.7
           function output = Delta_CL_max_L(CL_max_L, CL_max)
                output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
           end
 
+          % This might be better in L1
           % Estimate the required incrementatl section maximum lift
           % coefficient with the flaps down
           % Source: Airplane Design Vol 2, Roskam, eq 7.8

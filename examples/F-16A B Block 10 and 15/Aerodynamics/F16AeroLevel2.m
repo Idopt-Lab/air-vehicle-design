@@ -70,8 +70,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                end
           end
 
-
-
           % Get CL_minD
           function CL_minD = get_CL_minD()
 
