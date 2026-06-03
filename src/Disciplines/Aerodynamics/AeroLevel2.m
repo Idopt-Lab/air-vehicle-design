@@ -13,6 +13,16 @@ classdef AeroLevel2
 
      methods (Static)
 
+          % Estimate Delta_CDi resulting from flaps
+          % Source: Raymer, Aircraft Design: A Conceptual Approach, 6th ed,
+          % eq 12.62
+          function output = Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg)
+               % Lambda_cbar_q_deg = Sweep at mean geometric chord (deg)
+               % k_f = 0.14 (full-span flaps) or 0.28 (half-span flaps).
+
+               output = k_f^2 * (Delta_CL_flap)^2 * cosd(Lambda_cbar_q_deg);
+          end 
+
           % Estimate Delta_CD0 resulting from flaps deployed
           % Source: Raymer, Aircraft Design: A Conceptual Approach, 6th ed,
           % eq 12.61
