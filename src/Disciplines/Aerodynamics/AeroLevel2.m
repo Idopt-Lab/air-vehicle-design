@@ -15,7 +15,7 @@ classdef AeroLevel2
 
           % Estimate CL_max (clean) (valid for M<1, moderate sweep)
           % Raymer, 6th ed, eq 12.15
-          function output = CL_max_clean(cl_max, Lambda_qc_deg)
+          function output = CL_max_clean_subsonic(cl_max, Lambda_qc_deg)
                output = 0.9*cl_max*cosd(Lambda_qc_deg);
           end
 

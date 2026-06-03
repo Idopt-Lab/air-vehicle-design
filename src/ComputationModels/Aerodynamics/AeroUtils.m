@@ -13,9 +13,9 @@ classdef AeroUtils
                AR_comparison = 3/((C1+1) * cosd(Lambda_LE_deg));
                if (AR_in <= AR_comparison)
                     % Low AR
-                    output = "Low AR";
+                    output = "Low";
                else
-                    output = "High AR";
+                    output = "High";
                end
           end
 
