@@ -62,14 +62,14 @@ classdef AeroLevel2
           % function output = Delta_CL_max_L(CL_max_L, CL_max)
           %      output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
           % end
-          % 
-          % % This might be better in L1
-          % % Estimate the required incrementatl section maximum lift
-          % % coefficient with the flaps down
-          % % Source: Airplane Design Vol 2, Roskam, eq 7.8
-          % function output = Delta_cl_max(Delta_CL_max, S_ref, S_wf, K_Lambda)
-          %      output = Delta_CL_max*(S_ref/S_wf)/(K_Lambda);
-          % end
+          
+          % This might be better in L2
+          % Estimate the required incrementatl section maximum lift
+          % coefficient with the flaps down
+          % Source: Airplane Design Vol 2, Roskam, eq 7.8
+          function output = Delta_cl_max(Delta_CL_max, S_ref, S_wf, K_Lambda)
+               output = Delta_CL_max*(S_ref/S_wf)/(K_Lambda);
+          end
 
           % Estimate K_Lambda (effects of sweep angle)
           % Source: Airplane Design Vol 2, Roskam, eq 7.9
