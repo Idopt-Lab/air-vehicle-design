@@ -13,17 +13,16 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           K1
           K2
           Cf
-          Cl_max_TO
-          Cl_max_L
-          CL_max_Cl_max
+          cl_max_TO
+          cl_max_L
           CL_minD
           CL_max_clean
           CL_max_TO
           CL_max_L
           Delta_CL_max_TO
           Delta_CL_max_L
-          Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
-          Delta_Cl_max_L % Contribution from high-lift devices (landing config)
+          Delta_cl_max_TO % Contribution from high-lift devices (take-off config)
+          Delta_cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
           Delta_CD0_Landing
           Delta_CD0_geardown
@@ -31,6 +30,18 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           % I should definitely add the properties of high-lift devices'
           % deflections for take-off and landing configurations, as well as
           % properties for their types.
+     end
+
+     properties (Abstract, Constant)
+          hld_TE
+          hld_LE
+          delta_hld_TE_TO
+          delta_hld_TE_L
+          C1
+          C2
+          CL_max_base
+          sharpness_param
+          CL_max_cl_max
      end
 
 
@@ -49,8 +60,8 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           Cf = get_Cf(aircraft_type, n_engines) % Using L1 until a suitable replacement is found.
           CL_max = get_CL_max_values(aircraft_type, config, rangeMode) % This should get you the CL_max values you need (CL_max_TO, CL_max_Landing, etc)
           Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding) % This should be able to get you the Delta_CL_max values you need.
-          Delta_Cl_max = get_Delta_Cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_Cl_max_TO, Delta_Cl_max_L)
+          Delta_cl_max = get_Delta_cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_cl_max_TO, Delta_cl_max_L)
           Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q)
-          Cl_max = get_Cl_max()
+          cl_max = get_cl_max()
      end
 end

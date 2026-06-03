@@ -18,14 +18,16 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           K1
           K2
           Cf
+          cl_max_TO
+          cl_max_L
           CL_minD
           CL_max_clean
           CL_max_TO
           CL_max_L
           Delta_CL_max_TO
           Delta_CL_max_L
-          Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
-          Delta_Cl_max_L % Contribution from high-lift devices (landing config)
+          Delta_cl_max_TO % Contribution from high-lift devices (take-off config)
+          Delta_cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
           Delta_CD0_Landing
           Delta_CD0_geardown
@@ -42,7 +44,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           CL_max_base = 0.91; % Tabulated from Fig 12.13 (Raymer, 6th ed) & (C1 + 1)*(AR/beta)*cosd(Lambda_LE_deg) = 2.76.
           sharpness_param = 0.7720; % Computed from Table 12.1 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
           % Delta_CL_max % (Not using the one from Fig 12.14)
-          CL_max_Cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40
+          CL_max_cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40.
      end
 
      methods
@@ -54,6 +56,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.e_osw_clean = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
                % obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
                % obj.CL_max = 1.5;
+          end
+
+          % Get cl_max
+          function cl_max = geT_cl_max()
+               
           end
 
           % Get CDi
@@ -117,8 +124,8 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                end
           end
 
-          % Get Delta_Cl_max
-          function Delta_Cl_max = get_Delta_Cl_max_values(aero_obj, liftdevice, config, cp_c)
+          % Get Delta_cl_max
+          function Delta_cl_max = get_Delta_cl_max_values(aero_obj, liftdevice, config, cp_c)
                % liftdevice = Type of lift device ("plain", "split",
                % "slotted", "fowler", "double slotted", "triple slotted",
                % "fixed slat", "LE slat", "kruger slat", "slat")
@@ -127,22 +134,22 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % chord length)
 
                % Index the lift device
-               idx = AeroLevel2.Delta_Cl_max_table.("High-Lift Device")==liftdevice;
+               idx = AeroLevel2.Delta_cl_max_table.("High-Lift Device")==liftdevice;
 
-               % Extract the Delta_Cl_max
-               Delta_Cl_max = AeroLevel2.Delta_Cl_max_table{idx, 2};
+               % Extract the Delta_cl_max
+               Delta_cl_max = AeroLevel2.Delta_cl_max_table{idx, 2};
 
                % Apply modifiers if necessary
                if (ismember(liftdevice, ["fowler", "double slotted", "triple slotted", "slat"]))
-                    Delta_Cl_max = Delta_Cl_max*cp_c;
+                    Delta_cl_max = Delta_cl_max*cp_c;
                end
 
                % Apply take-off/landing modifiers
                % 60-80% of the tabulated value
                if ismember(config, ["takeoff", "TO"])
-                    Delta_Cl_max = Delta_Cl_max*0.6; % Leaving the modifier here in case I want to change one, later.
+                    Delta_cl_max = Delta_cl_max*0.6; % Leaving the modifier here in case I want to change one, later.
                elseif ismember(config, ["landing", "L"])
-                    Delta_Cl_max = Delta_Cl_max*0.8;
+                    Delta_cl_max = Delta_cl_max*0.8;
                end
           end
 
@@ -162,22 +169,22 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
 
           % Get Delta_CL_max values
-          function Delta_CL_max = get_Delta_CL_max_values(aero_obj, Delta_Cl_max, S_flapped, S_ref, Lambda_HL_deg)
+          function Delta_CL_max = get_Delta_CL_max_values(aero_obj, Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
                % Lambda_HL_deg = Angle of the flap's hinge line (deg)
-               Delta_CL_max = AeroLevel2.Delta_CL_max(Delta_Cl_max, S_flapped, S_ref, Lambda_HL_deg);
+               Delta_CL_max = AeroLevel2.Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg);
           end
 
           % Get CL_max values
           % Wrapper
           % Raymer: "CL_max will increase if the wing is low-AR, or if it
           % has sufficient sweep & a sharp LE."
-          function CL_max = get_CL_max_values(aero_obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, Cl_max, CL_max_Cl_max)
+          function CL_max = get_CL_max_values(aero_obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, cl_max, CL_max_cl_max)
                % Check if high or low AR
                AR_check = AeroUtils.AR_check(AR, aero_obj.C1, Lambda_LE_deg);
                if (AR_check == "Low")
                     CL_max = AeroLevel2.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
                elseif (AR_check == "High")
-                    CL_max = AeroLevel2.CL_max_clean_HighAR(Cl_max, CL_max_Cl_max, Delta_CL_max);
+                    CL_max = AeroLevel2.CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max);
                end
           end
 

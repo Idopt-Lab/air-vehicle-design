@@ -9,7 +9,7 @@ classdef AeroLevel2
      properties (Constant)
           k_lambda = [0.88, 0.95]
           k_ww = 1.85; % Part of the wing "buried" in the fuselage (Airplane Design Vol 3, Roskam, p 167)
-          Delta_Cl_max_table = table({'plain'; 'split'; 'slotted'; 'fowler'; 'double slotted'; 'triple slotted'; 'fixed slat'; 'leading-edge flap'; 'Kruger flap'; 'slat'}, [0.9; 0.9; 1.3; 1.3; 1.6; 1.9; 0.2; 0.3; 0.3; 0.4], 'VariableNames',["High-Lift Device", "Delta_Cl_max"]);     end
+          Delta_cl_max_table = table({'plain'; 'split'; 'slotted'; 'fowler'; 'double slotted'; 'triple slotted'; 'fixed slat'; 'leading-edge flap'; 'Kruger flap'; 'slat'}, [0.9; 0.9; 1.3; 1.3; 1.6; 1.9; 0.2; 0.3; 0.3; 0.4], 'VariableNames',["High-Lift Device", "Delta_cl_max"]);     end
 
      methods (Static)
 
@@ -81,9 +81,9 @@ classdef AeroLevel2
           % Estimate CL_max (clean) (HighAR, subsonic)
           % Valid: high AR, M<1
           % Raymer, 6th ed, eq 12.16
-          function output = CL_max_clean_HighAR(Cl_max, CL_max_Cl_max, Delta_CL_max)
-               % Cl_max = Airfoil lift coefficient at Mach 0.2
-               output = Cl_max*CL_max_Cl_max + Delta_CL_max;
+          function output = CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max)
+               % cl_max = Airfoil lift coefficient at Mach 0.2
+               output = cl_max*CL_max_cl_max + Delta_CL_max;
           end
 
           % Estimate CL_max (clean) (Low AR, subsonic)
@@ -96,8 +96,8 @@ classdef AeroLevel2
           % Estimate Delta_CL_max induced by a high-lift device
           % Raymer, Aircraft Design: A Conceptual Approach, 6th ed, eq
           % 12.21
-          function output = Delta_CL_max(Delta_Cl_max, S_flapped, S_ref, Lambda_HL)
-               output = 0.9*Delta_Cl_max*(S_flapped/S_ref)*cosd(Lambda_HL);
+          function output = Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL)
+               output = 0.9*Delta_cl_max*(S_flapped/S_ref)*cosd(Lambda_HL);
           end
 
 
