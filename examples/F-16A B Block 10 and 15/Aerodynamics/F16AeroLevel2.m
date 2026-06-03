@@ -39,6 +39,23 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                obj.CL_max = 1.5;
           end
 
+          % Get Delta_CL_max values
+          function Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding)
+               % CL_max_dirty = CL_max that isn't clean (e.g.,
+               % CL_max_takeoff, CL_max_landing, etc)
+               % Condition = "Landing" or "Takeoff"
+               if (isTakeoffOrLanding == ["landing", "L"])
+                    Delta_CL_max = AeroLevel2.Delta_CL_max_L(CL_max_dirty, CL_max_clean);
+               elseif (isTakeOffOrLanding == ["takeoff", "TO"])
+                    Delta_CL_max = AeroLevel2.Delta_CL_max_TO(CL_max_dirty, CL_max_clean);
+               else
+                    error("Error handler.")
+               end
+          end
+
+
+
+
           % Get L/D max
           function LD_max = get_LD_max(aero_obj, AR, e_osw, CD0)
                LD_max = AeroLevel2.LD_max(AR, e_osw, CD0);
