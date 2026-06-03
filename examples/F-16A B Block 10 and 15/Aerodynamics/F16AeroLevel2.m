@@ -1,10 +1,11 @@
 classdef F16AeroLevel2 < AerodynamicsModelLevel2
-     %F16AEROLEVEL1 Summary of this class goes here
-     %   Detailed explanation goes here
-     % Level 1 aerodynamics equations go here.
-     % Remember, you can separate FUNCTION classes (classes with just
-     % functions) from DATA STORAGE CLASSES (classes that just store data).
-     % I think WeaponGenerator2 did that.
+     %F16AEROLEVEL2
+     % This is an example that uses the given Aerodynamics discipline's
+     % base toolset (method functions in AeroLevel2) to predict various
+     % aerodynamic properties of the F-16A/B Block 10/15.
+     % It uses an abstract class (AerodynamicsModelLevel2) to help ensure
+     % that all minimum function requirements are met for sizing at level 2
+     % fidelity.
 
      properties
           e_osw_clean
@@ -34,10 +35,10 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      methods
 
           % Constructor
-          function obj = F16AeroLevel2(geometry_obj)
-               AR = geometry_obj.mainwings.AR;
-               Lambda_LE = geometry_obj.mainwings.LE_sweep;
-               obj.e_osw = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
+          function obj = F16AeroLevel2()
+               % AR = geometry_obj.mainwings.AR;
+               % Lambda_LE = geometry_obj.mainwings.LE_sweep;
+               % obj.e_osw_clean = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
                % obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
                % obj.CL_max = 1.5;
           end
