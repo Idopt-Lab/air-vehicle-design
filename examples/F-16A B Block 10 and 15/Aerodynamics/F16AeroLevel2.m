@@ -41,6 +41,9 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.CL_max = 1.5;
           end
 
+          % Get Delta_CDi
+          function Delta_CDi = get_Delta_CDi
+
           % Get Delta_CD0
           function Delta_CD0 = get_Delta_CD0(aero_obj, flaptype, cf_c, S_flapped, S_ref, delta_flap_deg)
                % Check which value of F_flap we should use.
