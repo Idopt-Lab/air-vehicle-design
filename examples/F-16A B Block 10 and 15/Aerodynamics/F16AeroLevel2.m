@@ -42,6 +42,21 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.CL_max = 1.5;
           end
 
+          % Get CDi
+          function CDi = get_CDi(aero_obj, statevector, CL, e_osw, AR)
+               M = statevector(1);
+               alpha_deg = statevector(3);
+
+               if (0.0 < M) && (M < 1.0)
+                    CDi = AeroUtils.compute_CDi_subsonic(CL, e_osw, AR);
+               elseif (1.0 <= M)
+                    CDi = AeroUtils.compute_CDi_supersonic(CL, alpha_deg);
+               else
+                    error("Error handler.")
+               end
+          end
+
+
           % Get Delta_CDi
           function Delta_CDi = get_Delta_CDi(aero_obj, areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q_deg)
                if (areFlapsFullOrHalfSpan == ["full"])
@@ -114,7 +129,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get Delta_CL_max values
-          function Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding)
+          function Delta_CL_max = get_Delta_CL_max_values(aero_obj, CL_max_dirty, CL_max_clean, isTakeoffOrLanding)
                % CL_max_dirty = CL_max that isn't clean (e.g.,
                % CL_max_takeoff, CL_max_landing, etc)
                % Condition = "Landing" or "Takeoff"
