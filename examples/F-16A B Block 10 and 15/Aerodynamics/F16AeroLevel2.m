@@ -23,6 +23,8 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           CL_max_Land
           Delta_CL_max_TO
           Delta_CL_max_Land
+          Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
+          Delta_Cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
           Delta_CD0_Landing
           Delta_CD0_geardown
@@ -35,8 +37,13 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                AR = geometry_obj.mainwings.AR;
                Lambda_LE = geometry_obj.mainwings.LE_sweep;
                obj.e_osw = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
-               obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
-               obj.CL_max = 1.5;
+               % obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
+               % obj.CL_max = 1.5;
+          end
+
+          % Get CL_minD
+          function CL_minD = get_CL_minD
+
           end
 
           % Get Delta_CL_max values
