@@ -21,7 +21,8 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           CL_minD
           CL_max_clean
           CL_max_TO
-          CL_max_Land
+          CL_max_L
+          Delta_CL_max
           Delta_CL_max_TO
           Delta_CL_max_L
           Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
