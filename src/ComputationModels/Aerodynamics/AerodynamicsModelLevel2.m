@@ -13,6 +13,9 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           K1
           K2
           Cf
+          Cl_max_TO
+          Cl_max_L
+          CL_max_Cl_max
           CL_minD
           CL_max_clean
           CL_max_TO
@@ -48,5 +51,6 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding) % This should be able to get you the Delta_CL_max values you need.
           Delta_Cl_max = get_Delta_Cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_Cl_max_TO, Delta_Cl_max_L)
           Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q)
+          Cl_max = get_Cl_max()
      end
 end

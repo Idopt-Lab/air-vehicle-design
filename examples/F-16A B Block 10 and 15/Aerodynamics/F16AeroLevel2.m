@@ -42,6 +42,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           CL_max_base = 0.91; % Tabulated from Fig 12.13 (Raymer, 6th ed) & (C1 + 1)*(AR/beta)*cosd(Lambda_LE_deg) = 2.76.
           sharpness_param = 0.7720; % Computed from Table 12.1 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
           % Delta_CL_max % (Not using the one from Fig 12.14)
+          CL_max_Cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40
      end
 
      methods
