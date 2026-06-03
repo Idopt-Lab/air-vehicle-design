@@ -9,7 +9,7 @@ classdef AeroLevel2
      properties (Constant)
           k_lambda = [0.88, 0.95]
           k_ww = 1.85; % Part of the wing "buried" in the fuselage (Airplane Design Vol 3, Roskam, p 167)
-     end
+          Delta_Cl_max_table = table({'plain'; 'split'; 'slotted'; 'fowler'; 'double slotted'; 'triple slotted'; 'fixed slat'; 'leading-edge flap'; 'Kruger flap'; 'slat'}, [0.9; 0.9; 1.3; 1.3; 1.6; 1.9; 0.2; 0.3; 0.3; 0.4], 'VariableNames',["High-Lift Device", "Delta_Cl_max"]);     end
 
      methods (Static)
 
@@ -40,7 +40,7 @@ classdef AeroLevel2
           % Source: Airplane Design vol 3, Roskam, eq 4.3
           function output = LD_max(AR, e_osw, CD0)
                output = pi*AR*e_osw/(4*CD0)^(1/2);
-          end 
+          end
 
           % Estimate Delta_CL_max_TO
           % Source: Aircraft Design Vol 2, Roskam, eq 7.6
@@ -109,7 +109,7 @@ classdef AeroLevel2
           % Source: Airplane Design, Roskam, eq 7.15
           function output = cl_alpha_f(cl_alpha, cp_c)
                output = cl_alpha*cp_c;
-          end 
+          end
 
           % % This should go into geometry
           % % Compute c'/c (the ratio of the wing+flap chord length over the

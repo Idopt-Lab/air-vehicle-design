@@ -41,8 +41,39 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.CL_max = 1.5;
           end
 
+          % Get Delta_Cl_max
+          function Delta_Cl_max = get_Delta_Cl_max_values(aero_obj, liftdevice, config, cp_c)
+               % liftdevice = Type of lift device ("plain", "split",
+               % "slotted", "fowler", "double slotted", "triple slotted",
+               % "fixed slat", "LE slat", "kruger slat", "slat")
+               % config = "takeoff", "TO", or "landing", "L".
+               % cp_c = c'/c (Total chord of wing + flap, over the wing's
+               % chord length)
+
+               % Index the lift device
+               idx = AeroLevel2.Delta_Cl_max_table.("High-Lift Device")==liftdevice;
+
+               % Extract the Delta_Cl_max
+               Delta_Cl_max = AeroLevel2.Delta_Cl_max_table{idx, 2};
+
+               % Apply modifiers if necessary
+               if (liftdevice == ["fowler", "double slotted", "triple slotted", "slat"])
+                    Delta_Cl_max = Delta_Cl_max*cp_c;
+               end
+
+               % Apply take-off/landing modifiers
+               % 60-80% of the tabulated value
+               if (config == ["takeoff", "TO"])
+                    Delta_Cl_max = Delta_Cl_max*0.8; % Leaving the modifier here in case I want to change one, later.
+               elseif (config == ["landing", "L"])
+                    Delta_Cl_max = Delta_Cl_max*0.8;
+               end
+          end
+
+
+
           % Get CL_minD
-          function CL_minD = get_CL_minD
+          function CL_minD = get_CL_minD()
 
           end
 
