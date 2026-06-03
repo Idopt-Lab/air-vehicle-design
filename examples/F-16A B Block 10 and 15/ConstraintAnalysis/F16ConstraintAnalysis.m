@@ -37,6 +37,26 @@ classdef F16ConstraintAnalysis < ConstraintModel
                showResultTable(constraint_obj, constraint_obj.TW_table, constraint_obj.constraints_table.Row(:), constraint_obj.Wto_S_range);
           end
 
+          % compute landing constraint
+          function Wto_S = landing_constraint(constraint_obj, distance, beta, rho, CLmax, CD0, mu)
+               Wto_S = ConstraintAnalysisClass.landing_constraint(distance, beta, rho, CLmax, CD0, mu);
+          end
+
+          % Compute wing loading or T/W ratio
+          function T_Wto = computeWingLoading(Wto_S, beta, alpha, n, q, V, CD0, K1, Ps)
+               T_Wto = ConstraintAnalysisClass.computeWingLoading(Wto_S, beta, alpha, n, q, V, CD0, K1, Ps);
+          end
+
+          % Compute takeoff constraint
+          function T_Wto = takeoff_constraint(Wto_S, V_Vstall, beta, alpha, rho, CLmax, distance, CD0, mu)
+               % V_Vstall IS NOT THE STALL VELOCITY, IT IS THE COEFFICIENT
+               % AT WHICH THE VELOCITY IS ABOVE STALL VELOCITY (so if
+               % V_takeoff is 30% above the stall speed, then V_Vstall =
+               % 1.3) (I know it's weird, I didn't write this equation).
+               T_Wto = ConstraintAnalysisClass.takeoff_constraint(Wto_S, V_Vstall, beta, alpha, rho, CLmax, distance, CD0, mu);
+          end
+          
+
           % Initialize constraints
           % function [aero_constraints, thrust_constraints] = initconstraints(constraint_obj)
           %      [aero_constraints, thrust_constraints] = get_constraints(constraint_obj, constraint_obj.constraints_table);

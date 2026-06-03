@@ -4,20 +4,13 @@ classdef (Abstract) ConstraintModel < handle
 
      properties (Abstract)
           Wto_S_range
-          TW_table
-          T_Wto_takeoff
           optimal_WS
           min_TW
-          Landing
-          Wto_S_landing
-          T0_W0
-          W0_S_ref
-          T_Wto_required
-          constraints_table
-          constraints_struct
      end
 
      methods (Abstract) % Bare minimum requirements
-          constraint_table = constraint_analysis(design)
+          Wto_S = landing_constraint(distance, beta, rho, CLmax, CD0, mu)
+          T_Wto = computeWingLoading(Wto_S, beta, alpha, n, q, V, CD0, K1, Ps) % I KNOW IT SAYS "COMPUTEWINGLOADING" BUT THE OUTPUT IS T/W RATIO.
+          T_Wto = takeoff_constraint(Wto_S, V_Vstall, beta, alpha, rho, CLmax, distance, CD0, mu)
      end
 end
