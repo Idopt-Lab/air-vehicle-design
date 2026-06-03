@@ -57,11 +57,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.CL_max = 1.5;
           end
 
-          % Get cl_max
-          function cl_max = geT_cl_max()
-
-          end
-
           % Get CDi
           function CDi = get_CDi(aero_obj, statevector, CL, e_osw, AR)
                M = statevector(1);
