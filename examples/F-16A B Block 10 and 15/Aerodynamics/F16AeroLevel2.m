@@ -32,6 +32,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           Delta_CDi
      end
 
+     properties (Constant)
+          hld_TE = "plain"; % High-lift device, trailing edge
+          hld_LE = "slat"; % High-lift device, leading edge
+     end
+
      methods
 
           % Constructor
@@ -168,7 +173,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Compute Oswald span efficiency factor (wrapper)
           % Account for biplanes? (Raymer, 6th edi, p 444)
           function e_osw = get_e_osw(aero_obj, AR, Lambda_LE)
-               % Level 3: Actually compute this
                % Discern between straight and swept wings.
                if Lambda_LE > 30 % Can I add a section for function handles?
                     e_osw = AeroLevel3.e_swept(AR, Lambda_LE);
@@ -177,7 +181,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                else
                     error("Error handler, get e_osw level 2.")
                end
-               aero_obj.e_osw = e_osw;
           end
 
           % Get K value (gross estimate)
