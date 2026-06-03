@@ -58,6 +58,13 @@ classdef AeroUtils
                CDi = CL*sind(alpha_deg);
           end
 
+          % Obtain CL_max for a desired stalling speed
+          % Source: Snorri Gudmundsson, General Aviation Aircraft Design,
+          % 2nd edition, Appendix B.
+          function output = CL_max_from_stall(q_stall, W_S)
+               output = (1/q_stall)*W_S;
+          end
+
           % Get dynamic pressure for some given state
           function output = compute_q(statevector)
                M = statevector(:, 1);

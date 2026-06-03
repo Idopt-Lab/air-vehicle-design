@@ -53,6 +53,9 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                end
           end
 
+          % Get CL_max values
+          function CL_max = get_CL_max_values(
+
 
 
 
