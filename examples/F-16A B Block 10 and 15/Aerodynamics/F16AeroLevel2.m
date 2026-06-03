@@ -54,7 +54,12 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get CL_max values
-          function CL_max = get_CL_max_values(
+          % Wrapper
+          % Raymer: "CL_max will increase if the wing is low-AR, or if it
+          % has sufficient sweep & a sharp LE."
+          function CL_max = get_CL_max_values(aero_obj, cl_max, Lambda_qc_deg)
+               CL_max = AeroLevel2.CL_max_clean(cl_max, Lambda_qc_deg);
+          end
 
 
 

@@ -13,6 +13,29 @@ classdef AeroLevel2
 
      methods (Static)
 
+          % Estimate CL_max (clean) (valid for M<1, moderate sweep)
+          % Raymer, 6th ed, eq 12.15
+          function output = CL_max_clean(cl_max, Lambda_qc_deg)
+               output = 0.9*cl_max*cosd(Lambda_qc_deg);
+          end
+
+          % Estimate CL_max (clean) (HighAR, subsonic)
+          % Valid: high AR, M<1
+          % Raymer, 6th ed, eq 12.16
+          function output = CL_max_clean_HighAR(Cl_max, CL_max_Cl_max, Delta_CL_max)
+               % Cl_max = Airfoil lift coefficient at Mach 0.2
+               output = Cl_max*CL_max_Cl_max + Delta_CL_max;
+          end
+
+          % Estimate CL_max (clean) (Low AR, subsonic)
+          % Valid: Low AR, subsonic
+          % Ramyer, 6th ed, eq 12.19
+          function output = CL_max_clean_LowAR(CL_max_base, Delta_CL_max)
+               output = CL_max_base + Delta_CL_max;
+          end
+
+
+
           % Estimate L/D max
           % Source: Airplane Design vol 3, Roskam, eq 4.3
           function output = LD_max(AR, e_osw, CD0)
