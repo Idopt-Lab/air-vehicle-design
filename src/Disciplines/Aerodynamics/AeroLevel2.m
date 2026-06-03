@@ -108,19 +108,19 @@ classdef AeroLevel2
                output = pi*AR*e_osw/(4*CD0)^(1/2);
           end
 
-          % % This might be better in L1
-          % % Estimate Delta_CL_max_TO
-          % % Source: Aircraft Design Vol 2, Roskam, eq 7.6
-          % function output = Delta_CL_max_TO(CL_max_TO, CL_max)
-          %      output = 1.05*(CL_max_TO - CL_max);
-          % end
+          % This might be better in L1
+          % Estimate Delta_CL_max_TO
+          % Source: Aircraft Design Vol 2, Roskam, eq 7.6
+          function output = Delta_CL_max_TO(CL_max_TO, CL_max)
+               output = 1.05*(CL_max_TO - CL_max);
+          end
 
-          % % This might be better in L1
-          % % Estimate Delta_CL_max_L (landing)
-          % % Source: Aircraft Design Vol 2, Roskam, eq 7.7
-          % function output = Delta_CL_max_L(CL_max_L, CL_max)
-          %      output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
-          % end
+          % This might be better in L1
+          % Estimate Delta_CL_max_L (landing)
+          % Source: Aircraft Design Vol 2, Roskam, eq 7.7
+          function output = Delta_CL_max_L(CL_max_L, CL_max)
+               output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
+          end
 
           % This might be better in L2
           % Estimate the required incrementatl section maximum lift

@@ -22,7 +22,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           CL_max_clean
           CL_max_TO
           CL_max_L
-          Delta_CL_max
           Delta_CL_max_TO
           Delta_CL_max_L
           Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
@@ -173,7 +172,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % has sufficient sweep & a sharp LE."
           function CL_max = get_CL_max_values(aero_obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, Cl_max, CL_max_Cl_max)
                % Check if high or low AR
-               AR_check = AeroUtils.AR_check(AR, 0.5, Lambda_LE_deg);
+               AR_check = AeroUtils.AR_check(AR, aero_obj.C1, Lambda_LE_deg);
                if (AR_check == "Low")
                     CL_max = AeroLevel2.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
                elseif (AR_check == "High")
