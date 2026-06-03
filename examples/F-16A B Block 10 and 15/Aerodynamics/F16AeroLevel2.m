@@ -47,8 +47,18 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get CL_minD
-          function CL_minD = get_CL_minD()
-
+          function output = get_CL_minD(aero_obj, airfoil_type, CL_min, CD0)
+               % First, check for which airfoil type
+               % If uncambered, CD0 = CD_min, which is CL_minD = 0
+               % If cambered, CL_minD = CL_min/CD_min, CD_min = CD where
+               % CL_=0.
+               if (airfoil_type == "uncambered")
+                    output = CD0;
+               elseif (airfoil_type == "cambered")
+                    output = CL_min/CD0;
+               else
+                    error("Error handler.")
+               end
           end
 
           % Get Delta_Cl_max
