@@ -78,7 +78,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                Delta_CDi = AeroLevel2.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
           end 
 
-          % Get Delta_CD0
+          % Get Delta_CD0 from flaps
           function Delta_CD0 = get_Delta_CD0(aero_obj, flaptype, cf_c, S_flapped, S_ref, delta_flap_deg)
                % Check which value of F_flap we should use.
                if (flaptype == "plain")
@@ -89,7 +89,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                     F_flap=(0.0144+0.0074)/2; % Averaged
                end
                Delta_CD0 = AeroLevel2.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
+          end
 
+          % Get Delta_CD0 from landing gear
+          function Delta_CD0_L = get_Delta_CD0_L(aero_obj)
+               Delta_CD0_L = AeroLevel1.tab_DeltaCD0("geardown", "Delta_CD0", "mean");
           end
 
           % Get CL_minD
