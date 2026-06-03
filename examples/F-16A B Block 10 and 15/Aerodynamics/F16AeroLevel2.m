@@ -28,6 +28,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           Delta_CD0_TO
           Delta_CD0_Landing
           Delta_CD0_geardown
+          Delta_CDi
      end
 
      methods
