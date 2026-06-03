@@ -209,10 +209,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                end
           end
 
-          % Get Cf (should be tabulated by user or the program? Stick with
-          % user, for now)
-          function Cf = get_Cf(aero_obj, Cf)
-               Cf = Cf;
+          % Get Cf
+          function Cf = get_Cf(aero_obj, aircraft_type, n_engines)
+               Cf = AeroLevel2.get_Cf(aircraft_type, n_engines);
+               % N.b: using L1's function for now until I can find a
+               % suitable L2 replacement.
           end
 
           % Get design drag
