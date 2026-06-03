@@ -23,7 +23,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           CL_max_TO
           CL_max_Land
           Delta_CL_max_TO
-          Delta_CL_max_Land
+          Delta_CL_max_L
           Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
           Delta_Cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
@@ -33,13 +33,15 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      end
 
      properties (Constant) % These should be values that are tabulated based on geometry.
-          hld_TE = "plain"; % High-lift device, trailing edge
-          hld_LE = "slat"; % High-lift device, leading edge
-          delta_hld_TE_TO = 20; % High-lift device, trailing edge, take-off config (deg)
-          delta_hld_TE_L = 60; % High-lift device, trailing edge, landing config (deg)
+          hld_TE = "plain"; % High-lift device, trailing edge (type)
+          hld_LE = "slat"; % High-lift device, leading edge (type)
+          delta_hld_TE_TO = 20; % Deflection of high-lift device, trailing edge, take-off config (deg)
+          delta_hld_TE_L = 60; % Deflection of high-lift device, trailing edge, landing config (deg)
           C1 = 0.5; % Tabulated from Fig 12.12, lambda = 0.23 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
+          C2 = 0.65; % Tabulatef from Fig 12.12, lambda = 0.23 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
           CL_max_base = 0.91; % Tabulated from Fig 12.13 (Raymer, 6th ed) & (C1 + 1)*(AR/beta)*cosd(Lambda_LE_deg) = 2.76.
           sharpness_param = 0.7720; % Computed from Table 12.1 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
+          % Delta_CL_max % (Not using the one from Fig 12.14)
      end
 
      methods
@@ -130,31 +132,38 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                Delta_Cl_max = AeroLevel2.Delta_Cl_max_table{idx, 2};
 
                % Apply modifiers if necessary
-               if (liftdevice == ["fowler", "double slotted", "triple slotted", "slat"])
+               if (ismember(liftdevice, ["fowler", "double slotted", "triple slotted", "slat"]))
                     Delta_Cl_max = Delta_Cl_max*cp_c;
                end
 
                % Apply take-off/landing modifiers
                % 60-80% of the tabulated value
-               if (config == ["takeoff", "TO"])
+               if ismember(config, ["takeoff", "TO"])
                     Delta_Cl_max = Delta_Cl_max*0.6; % Leaving the modifier here in case I want to change one, later.
-               elseif (config == ["landing", "L"])
+               elseif ismember(config, ["landing", "L"])
                     Delta_Cl_max = Delta_Cl_max*0.8;
                end
           end
 
+          % % Get Delta_CL_max values
+          % function Delta_CL_max = get_Delta_CL_max_values(aero_obj, CL_max_dirty, CL_max_clean, isTakeoffOrLanding)
+          %      % CL_max_dirty = CL_max that isn't clean (e.g.,
+          %      % CL_max_takeoff, CL_max_landing, etc)
+          %      % Condition = "Landing" or "Takeoff"
+          %      if (isTakeoffOrLanding == ["landing", "L"])
+          %           Delta_CL_max = AeroLevel2.Delta_CL_max_L(CL_max_dirty, CL_max_clean);
+          %      elseif (isTakeOffOrLanding == ["takeoff", "TO"])
+          %           Delta_CL_max = AeroLevel2.Delta_CL_max_TO(CL_max_dirty, CL_max_clean);
+          %      else
+          %           error("Error handler.")
+          %      end
+          % end
+
+
           % Get Delta_CL_max values
-          function Delta_CL_max = get_Delta_CL_max_values(aero_obj, CL_max_dirty, CL_max_clean, isTakeoffOrLanding)
-               % CL_max_dirty = CL_max that isn't clean (e.g.,
-               % CL_max_takeoff, CL_max_landing, etc)
-               % Condition = "Landing" or "Takeoff"
-               if (isTakeoffOrLanding == ["landing", "L"])
-                    Delta_CL_max = AeroLevel2.Delta_CL_max_L(CL_max_dirty, CL_max_clean);
-               elseif (isTakeOffOrLanding == ["takeoff", "TO"])
-                    Delta_CL_max = AeroLevel2.Delta_CL_max_TO(CL_max_dirty, CL_max_clean);
-               else
-                    error("Error handler.")
-               end
+          function Delta_CL_max = get_Delta_CL_max_values(aero_obj, Delta_Cl_max, S_flapped, S_ref, Lambda_HL_deg)
+               % Lambda_HL_deg = Angle of the flap's hinge line (deg)
+               Delta_CL_max = AeroLevel2.Delta_CL_max(Delta_Cl_max, S_flapped, S_ref, Lambda_HL_deg);
           end
 
           % Get CL_max values

@@ -88,7 +88,7 @@ classdef AeroLevel2
 
           % Estimate CL_max (clean) (Low AR, subsonic)
           % Valid: Low AR, subsonic
-          % Ramyer, 6th ed, eq 12.19
+          % Raymer, 6th ed, eq 12.19
           function output = CL_max_clean_LowAR(CL_max_base, Delta_CL_max)
                output = CL_max_base + Delta_CL_max;
           end

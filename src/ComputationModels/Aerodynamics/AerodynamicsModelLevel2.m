@@ -18,7 +18,7 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           CL_max_TO
           CL_max_Land
           Delta_CL_max_TO
-          Delta_CL_max_Land
+          Delta_CL_max_L
           Delta_Cl_max_TO % Contribution from high-lift devices (take-off config)
           Delta_Cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
