@@ -13,6 +13,16 @@ classdef AeroLevel2
 
      methods (Static)
 
+          % Estimate Delta_CD0 resulting from flaps deployed
+          % Source: Raymer, Aircraft Design: A Conceptual Approach, 6th ed,
+          % eq 12.61
+          function output = Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg)
+               % cf_c = Ratio of FLAP CHORD LENGTH (NOT TOTAL CHORD LENGTH (WING+FLAP)) over the WING CHORD
+               % LENGTH.
+               % delta_flap = flap deflection down (deg)
+               output = F_flap*(cf_c)*(S_flapped/S_ref)*(delta_flap_deg - 10);
+          end
+
           % Estimate CL_max (clean) (valid for M<1, moderate sweep)
           % Raymer, 6th ed, eq 12.15
           function output = CL_max_clean_subsonic(cl_max, Lambda_qc_deg)

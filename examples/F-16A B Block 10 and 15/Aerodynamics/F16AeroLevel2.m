@@ -41,6 +41,16 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.CL_max = 1.5;
           end
 
+          % Get Delta_CD0
+          function Delta_CD0 = get_Delta_CD0()
+
+          end
+
+          % Get CL_minD
+          function CL_minD = get_CL_minD()
+
+          end
+
           % Get Delta_Cl_max
           function Delta_Cl_max = get_Delta_Cl_max_values(aero_obj, liftdevice, config, cp_c)
                % liftdevice = Type of lift device ("plain", "split",
@@ -68,11 +78,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                elseif (config == ["landing", "L"])
                     Delta_Cl_max = Delta_Cl_max*0.8;
                end
-          end
-
-          % Get CL_minD
-          function CL_minD = get_CL_minD()
-
           end
 
           % Get Delta_CL_max values
