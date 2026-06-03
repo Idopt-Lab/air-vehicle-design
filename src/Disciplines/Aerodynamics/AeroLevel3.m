@@ -109,17 +109,17 @@ classdef AeroLevel3
           end
 
 
-          % Check if design is "low AR"
-          % Raymer, 6th ed, eq 12.18
-          function output = AR_check(AR_in,C1, Lambda_LE_deg)
-               AR_comparison = 3/((C1+1) * cosd(Lambda_LE_deg));
-               if (AR_in <= AR_comparison)
-                    % Low AR
-                    output = "Low AR";
-               else
-                    output = "High AR";
-               end
-          end
+          % % Check if design is "low AR"
+          % % Raymer, 6th ed, eq 12.18
+          % function output = AR_check(AR_in,C1, Lambda_LE_deg)
+          %      AR_comparison = 3/((C1+1) * cosd(Lambda_LE_deg));
+          %      if (AR_in <= AR_comparison)
+          %           % Low AR
+          %           output = "Low AR";
+          %      else
+          %           output = "High AR";
+          %      end
+          % end
 
 
           % Estimate CL_max_clean for high AR wings

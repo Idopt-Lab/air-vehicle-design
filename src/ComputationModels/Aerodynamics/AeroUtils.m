@@ -6,6 +6,19 @@ classdef AeroUtils
      % use.
 
      methods (Static)
+
+          % Check if design is "low AR"
+          % Raymer, 6th ed, eq 12.18
+          function output = AR_check(AR_in,C1, Lambda_LE_deg)
+               AR_comparison = 3/((C1+1) * cosd(Lambda_LE_deg));
+               if (AR_in <= AR_comparison)
+                    % Low AR
+                    output = "Low AR";
+               else
+                    output = "High AR";
+               end
+          end
+
           % Get K1 subsonic value (Source: Brandt)
           function K1 = compute_K1_sub(AR, e_osw)
                K1 = 1/(pi*AR*e_osw);
