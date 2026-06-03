@@ -42,7 +42,16 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get Delta_CD0
-          function Delta_CD0 = get_Delta_CD0()
+          function Delta_CD0 = get_Delta_CD0(aero_obj, flaptype, cf_c, S_flapped, S_ref, delta_flap_deg)
+               % Check which value of F_flap we should use.
+               if (flaptype == "plain")
+                    F_flap = 0.0144;
+               elseif (flaptype == "slotted")
+                    F_flap=0.0074;
+               else
+                    F_flap=(0.0144+0.0074)/2; % Averaged
+               end
+               Delta_CD0 = AeroLevel2.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
 
           end
 
@@ -84,7 +93,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % Apply take-off/landing modifiers
                % 60-80% of the tabulated value
                if (config == ["takeoff", "TO"])
-                    Delta_Cl_max = Delta_Cl_max*0.8; % Leaving the modifier here in case I want to change one, later.
+                    Delta_Cl_max = Delta_Cl_max*0.6; % Leaving the modifier here in case I want to change one, later.
                elseif (config == ["landing", "L"])
                     Delta_Cl_max = Delta_Cl_max*0.8;
                end
