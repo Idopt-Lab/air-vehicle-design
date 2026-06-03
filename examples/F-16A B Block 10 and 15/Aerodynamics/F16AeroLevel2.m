@@ -35,6 +35,8 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      properties (Constant)
           hld_TE = "plain"; % High-lift device, trailing edge
           hld_LE = "slat"; % High-lift device, leading edge
+          delta_hld_TE_TO = 20; % High-lift device, trailing edge, take-off config (deg)
+          delta_hld_TE_L = 60; % High-lift device, trailing edge, landing config (deg)
      end
 
      methods
