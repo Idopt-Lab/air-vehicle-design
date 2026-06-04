@@ -11,7 +11,9 @@ classdef AeroLevel1
      % alternatively, I can have the user specify the aircraft type, then
      % pull values from a pre-configured table. That... might work.
 
-     properties
+     properties (Constant)
+          CLmax_table = AeroLevel1.build_CLmax_table()
+          Delta_CD0 = AeroLevel1.build_DeltaCD0_table()
      end
 
      methods (Static)
@@ -175,5 +177,156 @@ classdef AeroLevel1
                end
           end
 
+
+
+
+          % Using Roskam's work here
+          function output = tab_CLmax_values(aircrafttype, condition, rangeMode)
+               % Preliminary maximum lift coefficient lookup
+               % Source: Roskam, Airplane Design Part I, Table 3.1
+               %
+               % Table values:
+               %   CL_max_clean : maximum lift coefficient, clean
+               %   CL_max_TO    : maximum lift coefficient, takeoff
+               %   CL_max_L     : maximum lift coefficient, landing
+               %
+               % Usage:
+               %   CL = tab_CLmax_values("fighter", "clean")
+               %   CL = tab_CLmax_values("fighter", "takeoff", "range")
+               %   CL = tab_CLmax_values("fighter", "landing", "max")
+               %   data = tab_CLmax_values("fighter")
+               if nargin < 2
+                    condition = "";
+               end
+
+               if nargin < 3
+                    rangeMode = "mean";
+                    % Options: "mean", "min", "max", "range"
+               end
+
+               aircrafttype = L1utils.normalize_aircraft_type(aircrafttype);
+               condition = AeroLevel1.normalize_CL_condition(condition);
+               rangeMode = lower(strtrim(string(rangeMode)));
+
+               CLTable = AeroLevel1.CLmax_table;
+
+               idx = CLTable.AircraftType == aircrafttype;
+
+               if ~any(idx)
+                    error("Unrecognized aircraft type: %s", aircrafttype);
+               end
+
+               row = CLTable(idx, :);
+
+               data = struct();
+               data.aircrafttype = row.AircraftType;
+               data.CL_max_clean = L1utils.resolve_range(row.CL_max_clean{1}, rangeMode);
+               data.CL_max_TO    = L1utils.resolve_range(row.CL_max_TO{1}, rangeMode);
+               data.CL_max_L     = L1utils.resolve_range(row.CL_max_L{1}, rangeMode);
+
+               % If no condition requested, return all values.
+               if condition == ""
+                    output = data;
+                    return
+               end
+
+               switch condition
+                    case "clean"
+                         output = data.CL_max_clean;
+
+                    case "takeoff"
+                         output = data.CL_max_TO;
+
+                    case "landing"
+                         output = data.CL_max_L;
+
+                    otherwise
+                         error("Unrecognized CL condition: %s", condition);
+               end
+          end
+
+
+
      end
+
+     methods (Static, Access = private)
+
+
+          function T = build_CLmax_table()
+
+               row = @(aircraftType, CL_clean, CL_TO, CL_L) table( ...
+                    string(aircraftType), ...
+                    {CL_clean}, ...
+                    {CL_TO}, ...
+                    {CL_L}, ...
+                    'VariableNames', {'AircraftType', 'CL_max_clean', 'CL_max_TO', 'CL_max_L'});
+
+               T = [
+                    row("homebuilt",                    [1.2 1.8], [1.2 1.8], [1.2 2.0])
+                    row("single_engine_propeller",      [1.3 1.9], [1.3 1.9], [1.6 2.3])
+                    row("twin_engine_propeller",        [1.2 1.8], [1.4 2.0], [1.6 2.5])
+                    row("agricultural",                 [1.3 1.9], [1.3 1.9], [1.3 1.9])
+                    row("business_jet",                 [1.4 1.8], [1.6 2.2], [1.6 2.6])
+                    row("regional_tbp",                 [1.5 1.9], [1.7 2.1], [1.9 3.3])
+                    row("transport_jet",                [1.2 1.8], [1.6 2.2], [1.8 2.8])
+                    row("military_trainer",             [1.2 1.8], [1.4 2.0], [1.6 2.2])
+                    row("fighter",                      [1.2 1.8], [1.4 2.0], [1.6 2.6])
+                    row("mil_patrol_bomb_transport",    [1.2 1.8], [1.6 2.2], [1.8 3.0])
+                    row("flying_boat_amphibious_float", [1.2 1.8], [1.6 2.2], [1.8 3.4])
+                    row("supersonic_cruise",            [1.2 1.8], [1.6 2.0], [1.8 2.2])
+                    ];
+          end
+
+          function condition = normalize_CL_condition(condition)
+
+               condition = lower(strtrim(string(condition)));
+               condition = replace(condition, "-", "_");
+               condition = replace(condition, " ", "_");
+
+               if any(condition == ["", "all"])
+                    condition = "";
+
+               elseif any(condition == ["clean", ...
+                         "clmax", ...
+                         "cl_max", ...
+                         "cl_max_clean"])
+                    condition = "clean";
+
+               elseif any(condition == ["to", ...
+                         "takeoff", ...
+                         "take_off", ...
+                         "clmax_to", ...
+                         "cl_max_to", ...
+                         "cl_max_takeoff"])
+                    condition = "takeoff";
+
+               elseif any(condition == ["l", ...
+                         "land", ...
+                         "landing", ...
+                         "clmax_l", ...
+                         "cl_max_l", ...
+                         "cl_max_landing"])
+                    condition = "landing";
+               end
+          end
+
+          function output = build_DeltaCD0_table()
+
+               row = @(flapconfig, DeltaCD0, e_osw) table( ...
+                    string(flapconfig), ...
+                    {DeltaCD0}, ...
+                    {e_osw}, ...
+                    'VariableNames', {'flap config', 'Delta CD0', 'e Oswald'});
+
+               output = [
+                    row("Clean",                    [0 0], [0.8 0.85])
+                    row("Take-Off Flaps",           [0.010 0.020], [0.75 0.80])
+                    row("Landing Flaps",            [0.055 0.075], [0.70 0.75])
+                    row("Landing Gear",             [0.015 0.025], NaN)
+                    ];
+          end
+
+
+     end
+
 end

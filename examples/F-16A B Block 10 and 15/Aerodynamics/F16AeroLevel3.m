@@ -21,6 +21,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           Cf
           CL
           CL_alpha
+          cl_alpha = 1.0 % Assumed value (arbitrary)
           CL_max
           CL_minD
           CD
@@ -37,14 +38,18 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           FF
           Q
           DragResults
+          CL_max_TO = 1.27567 % Should definitely calculate this
+          CL_max_Land = 1.42591 % Should definitely calculate this
      end
 
      methods
           % constructor
           function obj = F16AeroLevel3(geometry_obj, design)
                obj.k = 2.08*10^(-5); % Set skin roughness to "smooth paint"
-               obj.e_osw = get_e_osw(obj, geometry_obj.mainwings.AR, geometry_obj.mainwings.LE_sweep);
+               AR = geometry_obj.mainwings.AR;
+               LE_sweep_deg = geometry_obj.mainwings.LE_sweep;
                obj.alpha_L0_deg = design.geom.wings.Main.alphaL0;
+               obj.e_osw = get_e_osw(obj, AR, LE_sweep_deg);
           end
 
           % Compute Oswald span efficiency factor (wrapper)
@@ -61,6 +66,62 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                end
                aero_obj.e_osw = e_osw;
           end
+
+          % Get K value (gross estimate)
+          function [K1, K2] = get_K(aero_obj, AR, e_osw, M, LE_sweep_deg, CLminD)
+               aero_obj.K = 1/(pi*AR*e_osw);
+               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               K2 = aero_obj.compute_K2(M, K1, CLminD);
+          end
+
+          % Compute K1
+          function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
+               if (0.0 < M) && (M < 1.0)
+                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+               elseif (M >= 1.0)
+                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+               else
+                    error("Error handler.")
+               end
+          end
+
+          % Compute K2
+          function K2 = compute_K2(aero_obj, M, K1, CLminD)
+               if (0.0 < M) && (M < 1.0)
+                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+               elseif (M >= 1.0)
+                    K2 = AeroUtils.compute_K2_sup();
+               else
+                    error("Error handler.")
+               end
+          end
+
+          % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
+          % (divide result by 57.3 to get something close to Brandt's
+          % CL_alpha values) (I THINK it's the "wing" one).
+          function CL_alpha = CL_alpha_Raymer(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t_rad, Lambda_LE_deg, AR, fuselage_width, b, cl_alpha)
+               M = statevector(1);
+               Lambda_LE_rad = deg2rad(Lambda_LE_deg);
+               if M>=(1/cos(Lambda_LE_rad))
+                    % Supersonic (leading edge is purely in supersonic
+                    % flow):
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sup(M);
+               elseif M<(1/cos(Lambda_LE_rad))
+                    % Subsonic:
+                    F = AeroLevel3.F(fuselage_width, b);
+                    beta = AeroLevel3.beta_mach(M);
+                    % eta = AeroLevel3.eta_mach(cl_alpha, beta);
+                    eta = 0.95; % Raymer: if it's unknown, we may assume 0.95.
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_rad, beta, eta);
+               else
+                    error("Error handler, get_CL_alpha, AeroLevel3.")
+               end
+          end
+
+
+
+
+
 
           % Compute Mach drag divergence
 
@@ -83,14 +144,14 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
                % Get CL_alpha
-               aero_obj.CL_alpha = aero_obj.get_CL_alpha(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
-
+               aero_obj.CL_alpha = aero_obj.CL_alpha_Raymer(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               
                % Is this for the entire design, or one component? Confirm?
                % Compute CL_minD (done)
                DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
 
                % Compute CD (done?) (double-check results later)
-               aero_obj.K1 = AeroLevel3.compute_K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
+               aero_obj.K1 = AeroLevel3.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
                DragResults.CD_design = get_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
 
                % Compute D for given state (done)
@@ -134,11 +195,14 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                Lambda_LE_rad = deg2rad(Lambda_LE_deg);
                if M>=(1/cos(Lambda_LE_rad))
                     % Supersonic (leading edge is purely in supersonic
-                    % flow):
-                    CL_alpha = AeroLevel3.compute_CL_alpha_supersonic(M);
+                    % flow)
+                    beta = AeroLevel3.beta_mach(M);
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sup(beta);
                elseif M<(1/cos(Lambda_LE_rad))
                     % Subsonic:
-                    CL_alpha = AeroLevel3.compute_CL_alpha_subsonic(S_exposed, S_ref, Lambda_max_t, M, AR, fuselage_width, b);
+                    beta = sqrt(1-M^2); % Raymer, 6th ed, eq 12.7
+                    F = AeroLevel3.F(fuselage_width, b);
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t, beta, eta);
                else
                     error("Error handler, get_CL_alpha, AeroLevel3.")
                end
@@ -290,7 +354,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Compute the dimensionless "component drag value" for the
           % user-specified component.
-          function component_drag_value = get_component_drag_val_subsonic(aero_obj, statevector, ref_length, Q_component, S_wet_component, component_type, component_specs)
+          function [component_drag_value, Cf_component] = get_component_drag_val_subsonic(aero_obj, statevector, ref_length, Q_component, S_wet_component, component_type, component_specs)
                % Arguments:
                % aero_obj = aerodynamics object
                % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
@@ -340,7 +404,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Compute dimensionless "component drag value" for supersonic
           % case
-          function component_drag_value = get_component_drag_val_supersonic(aero_obj, statevector, ref_length, Q_component, S_wet_component)
+          function [component_drag_value, Cf_component] = get_component_drag_val_supersonic(aero_obj, statevector, ref_length, Q_component, S_wet_component)
                % Arguments:
                % aero_obj = aerodynamics object
                % statevector = [u; h] -> [Mach number, altitude (ft)] (ASL)
@@ -407,7 +471,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                CD0_LandP.hook = aero_obj.get_CD0_LandP(0.10, S_ref);
                CD0_LandP.total = CD0_LandP.gun + CD0_LandP.hook;
           end
-          % 
+          %
           % % Get CD0_misc values
           function CD0_misc = compute_CD0_misc(aero_obj, design, propulsion_obj, S_ref)
                CD0_misc.windmillingjet = AeroLevel3.Dq_windmillingjet(pi*(propulsion_obj.enginestats.D/2)^2)/S_ref;
@@ -438,10 +502,13 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                VT_specs.tc = geometry_obj.VT.tc;
                VT_specs.Lambda_m = geometry_obj.VT.LE_sweep; % Use Lambda_m instead of LE
 
-               component_drag_value.fuselage = aero_obj.get_component_drag_val_supersonic(statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet);
-               component_drag_value.mainwings = aero_obj.get_component_drag_val_supersonic(statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet);
-               component_drag_value.HT = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.HT.MeanGeometricChord, 1.00, geometry_obj.HT.S_wet);
-               component_drag_value.VT = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.VT.MeanGeometricChord, 1.00, geometry_obj.VT.S_wet);
+               [component_drag_value.fuselage, Cf.fuselage] = aero_obj.get_component_drag_val_supersonic(statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet);
+               [component_drag_value.mainwings, Cf.mainwings] = aero_obj.get_component_drag_val_supersonic(statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet);
+               [component_drag_value.HT, Cf.HT] = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.HT.MeanGeometricChord, 1.00, geometry_obj.HT.S_wet);
+               [component_drag_value.VT, Cf.VT] = aero_obj.get_component_drag_val_supersonic(statevector, geometry_obj.VT.MeanGeometricChord, 1.00, geometry_obj.VT.S_wet);
+
+               % Get total skin friction coefficient
+               aero_obj.Cf = Cf.fuselage + Cf.mainwings + Cf.HT + Cf.VT;
 
                % Get total component drag value
                component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;

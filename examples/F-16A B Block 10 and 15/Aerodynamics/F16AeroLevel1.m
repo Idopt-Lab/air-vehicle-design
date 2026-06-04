@@ -19,6 +19,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           K1
           K2
           Cf
+          CL_minD
+          CL_max_TO = 1.27567
+          CL_max_Land = 1.42591
      end
 
      methods
@@ -37,9 +40,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
 
           % Compute K1
           function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
-               if (0.0 < M < 1.0)
+               if (0.0 < M) && (M < 1.0)
                     K1 = AeroUtils.compute_K1_sub(AR, e_osw);
-               elseif (1.0 <= M)
+               elseif (M >= 1.0)
                     K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
                else
                     error("Error handler.")
@@ -48,9 +51,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
 
           % Compute K2
           function K2 = compute_K2(aero_obj, M, K1, CLminD)
-               if (0.0 < M <1.0)
+               if (0.0 < M) && (M < 1.0)
                     K2 = AeroUtils.compute_K2_sub(K1, CLminD);
-               elseif (1.0 <= M)
+               elseif (M >= 1.0)
                     K2 = AeroUtils.compute_K2_sup();
                else
                     error("Error handler.")

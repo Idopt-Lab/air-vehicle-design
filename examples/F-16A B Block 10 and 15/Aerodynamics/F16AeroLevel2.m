@@ -10,8 +10,13 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           e_osw
           Cf
           CL_max
+          CL_minD
           CD0
-          K
+          K % Raymer only has K, but Brandt has K1 and K2 for some reason.
+          K1
+          K2
+          CL_max_TO = 1.27567
+          CL_max_Land = 1.42591
      end
 
      methods
@@ -19,22 +24,54 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Constructor
           function obj = F16AeroLevel2(geometry_obj)
                AR = geometry_obj.mainwings.AR;
-
-               obj.e_osw = obj.get_e_osw(0.914); % This is excessive
-               obj.K = obj.get_K(obj.e_osw, AR);
+               Lambda_LE = geometry_obj.mainwings.LE_sweep;
+               obj.e_osw = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
                obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
                obj.CL_max = 1.5;
           end
 
-          % Compute Oswald span efficiency factor
-          function e_osw = get_e_osw(aero_obj, e_osw)
-               % Level 2: Actually compute this?
+          % Compute Oswald span efficiency factor (wrapper)
+          % Account for biplanes? (Raymer, 6th edi, p 444)
+          function e_osw = get_e_osw(aero_obj, AR, Lambda_LE)
+               % Level 3: Actually compute this
+               % Discern between straight and swept wings.
+               if Lambda_LE > 30 % Can I add a section for function handles?
+                    e_osw = AeroLevel3.e_swept(AR, Lambda_LE);
+               elseif (0 <= Lambda_LE) && (Lambda_LE < 30)
+                    e_osw = AeroLevel3.e_straight(AR);
+               else
+                    error("Error handler, get e_osw level 2.")
+               end
                aero_obj.e_osw = e_osw;
           end
 
-          % Compute K
-          function K = get_K(aero_obj, e_osw, AR)
-               K = AeroLevel2.compute_K(e_osw, AR);
+          % Get K value (gross estimate)
+          function [K1, K2] = get_K(aero_obj, AR, e_osw, M, LE_sweep_deg, CLminD)
+               aero_obj.K = 1/(pi*AR*e_osw);
+               K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
+               K2 = aero_obj.compute_K2(M, K1, CLminD);
+          end
+
+          % Compute K1
+          function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
+               if (0.0 < M) && (M < 1.0)
+                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+               elseif (M >= 1.0)
+                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+               else
+                    error("Error handler.")
+               end
+          end
+
+          % Compute K2
+          function K2 = compute_K2(aero_obj, M, K1, CLminD)
+               if (0.0 < M) && (M < 1.0)
+                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+               elseif (M >= 1.0)
+                    K2 = AeroUtils.compute_K2_sup();
+               else
+                    error("Error handler.")
+               end
           end
 
           % Get Cf (should be tabulated by user or the program? Stick with

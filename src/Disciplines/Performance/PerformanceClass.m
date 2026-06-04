@@ -5,6 +5,13 @@ classdef PerformanceClass
 
      methods (Static)
 
+
+          %% TAKEOFF -----------------------------------------------
+
+
+
+
+
           %% GENERAL -----------------------------------------------
           % Weight rate of change as fuel burns
           % Raymer, 17.3, 6th ed

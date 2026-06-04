@@ -7,6 +7,6 @@ classdef (Abstract) PropulsionModelLevel2 < handle
      end
 
      methods (Abstract)
-          TSFC = get_TSFC_installed(propulsion_obj, engine_type, state_input, theta, mil_or_max_power)
+          TSFC = get_TSFC(propulsion_obj, engine_type, state_input, theta, mil_or_max_power)
      end
 end
