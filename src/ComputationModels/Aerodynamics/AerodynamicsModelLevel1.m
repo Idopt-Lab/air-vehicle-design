@@ -17,6 +17,8 @@ classdef AerodynamicsModelLevel1 < handle
           CL_max_clean
           CL_max_TO
           CL_max_L
+          % I THINK I can squeeze Delta_CL_max into this. Consider this for
+          % later.
           Delta_CD0_TO % Change in CD0 due to flaps in take-off configuration
           Delta_CD0_L % Change in CD0 due to flaps in landing config
           Delta_CD0_geardown % Change in CD0 due to landing gear down/out

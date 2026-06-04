@@ -16,36 +16,54 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % specific enough to stop overthinking stuff.
           % Each "object" could be an individual part of the design.
           airfoiltype % either "cambered" or "uncambered." Leave empty if NOT AIRFOIL.
-          e_osw
-          alpha_L0_deg
-          Cf
-          CL
-          CL_alpha
-          cl_alpha = 1.0 % Assumed value (arbitrary)
-          CL_max
-          CL_minD
-          CD
-          CD0
-          CDi
-          CD_wave
-          D
+          e_osw_clean
+          e_osw_TO
+          e_osw_L
+          LD_max
+          AR_wet
+          K_LD
           K
           K1
           K2
+          Cf
+          CL_minD
+          CL_max_clean
+          CL_max_TO
+          CL_max_L
+          Delta_CL_max_TO
+          Delta_CL_max_L
+          Delta_cl_max_TO % Contribution from high-lift devices (take-off config)
+          Delta_cl_max_L % Contribution from high-lift devices (landing config)
+          Delta_CD0_TO
+          Delta_CD0_L
+          Delta_CD0_geardown
+          Delta_CDi
+          F % Fuselage interference factor
           R_components
           R_cutoff
-          k
           FF
-          Q
-          DragResults
-          CL_max_TO = 1.27567 % Should definitely calculate this
-          CL_max_Land = 1.42591 % Should definitely calculate this
+     end
+
+     properties (Constant) % These should be values that are tabulated based on geometry.
+          hld_TE = "plain"; % High-lift device, trailing edge (type)
+          hld_LE = "slat"; % High-lift device, leading edge (type)
+          delta_hld_TE_TO = 20; % Deflection of high-lift device, trailing edge, take-off config (deg)
+          delta_hld_TE_L = 60; % Deflection of high-lift device, trailing edge, landing config (deg)
+          C1 = 0.5; % Tabulated from Fig 12.12, lambda = 0.23 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
+          C2 = 0.65; % Tabulatef from Fig 12.12, lambda = 0.23 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
+          CL_max_base = 0.91; % Tabulated from Fig 12.13 (Raymer, 6th ed) & (C1 + 1)*(AR/beta)*cosd(Lambda_LE_deg) = 2.76.
+          sharpness_param = 0.7720; % Computed from Table 12.1 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed)
+          % Delta_CL_max % (Not using the one from Fig 12.14)
+          CL_max_cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40.
+          cl_max = 1.0; % Obtained from page 14 of https://ntrs.nasa.gov/api/citations/19870017427/downloads/19870017427.pdf
+          alpha_L0 = -1.01 % Zero-lift AOA (deg)
+          k = 2.08*10^(-5) % Skin roughness factor
      end
 
      methods
           % constructor
           function obj = F16AeroLevel3(geometry_obj, design)
-               obj.k = 2.08*10^(-5); % Set skin roughness to "smooth paint"
+               % obj.k = 2.08*10^(-5); % Set skin roughness to "smooth paint"
                AR = geometry_obj.mainwings.AR;
                LE_sweep_deg = geometry_obj.mainwings.LE_sweep;
                obj.alpha_L0_deg = design.geom.wings.Main.alphaL0;
@@ -108,11 +126,11 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     CL_alpha = AeroLevel3.CL_alpha_wing_sup(M);
                elseif M<(1/cos(Lambda_LE_rad))
                     % Subsonic:
-                    F = AeroLevel3.F(fuselage_width, b);
+                    aero_obj.F = AeroLevel3.F(fuselage_width, b);
                     beta = AeroLevel3.beta_mach(M);
                     % eta = AeroLevel3.eta_mach(cl_alpha, beta);
                     eta = 0.95; % Raymer: if it's unknown, we may assume 0.95.
-                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_rad, beta, eta);
+                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, aero_obj.F, Lambda_max_t_rad, beta, eta);
                else
                     error("Error handler, get_CL_alpha, AeroLevel3.")
                end
@@ -130,29 +148,29 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % specific components.
           % That could push the design-wide computation to a higher level,
           % leaving this area more room and more specificity. Good.
-          function DragResults = get_design_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
+          function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
 
                % Compute q
                q = AeroUtils.compute_q(state_input);
 
                % Compute design CD0 (done)
-               DragResults.CD0_design = aero_obj.get_design_CD0(state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
+               DragResults.CD0_design = aero_obj.get_CD0(state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
 
                % Compute CDi (done)
-               DragResults.CDi_design = aero_obj.get_design_CDi(state_input, geometry_obj.mainwings.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
+               DragResults.CDi_design = aero_obj.get_CDi(state_input, geometry_obj.mainwings.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
 
                % Is this for the entire design, or one component? Confirm?
                % This is for one component, the main wings
                % Get CL_alpha
                aero_obj.CL_alpha = aero_obj.CL_alpha_Raymer(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
-               
+
                % Is this for the entire design, or one component? Confirm?
                % Compute CL_minD (done)
                DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
 
                % Compute CD (done?) (double-check results later)
                aero_obj.K1 = AeroLevel3.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
-               DragResults.CD_design = get_design_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
+               DragResults.CD_design = get_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
 
                % Compute D for given state (done)
                % DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
@@ -160,9 +178,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           end
 
           % Get CD
-          % I could probably move "get_design_CD0" and "get_design_CDi"
+          % I could probably move "get_CD0" and "get_CDi"
           % into here...
-          function CD = get_design_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector, K1)
+          function CD = get_CD(aero_obj, CD0, CDi, CL, CL_minD, airfoiltype, statevector, K1)
                if airfoiltype == "uncambered"
                     % Uncambered:
                     CD = CD0 + CDi;
@@ -213,7 +231,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % I should differentiate usage between "get" and "compute."
           % "get" = "wrapper"
           % "compute" = "non-wrapper"
-          function CDi_design = get_design_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
+          function CDi_design = get_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
                M = statevector(1);
                q = AeroUtils.compute_q(statevector);
 
@@ -228,7 +246,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     CL = AeroUtils.compute_CL(L, q, S_ref);
                     CDi_design = AeroUtils.compute_CDi_subsonic(CL, e_osw, AR);
                else
-                    error("Error handler, get_design_CDi, AeroLevel3.")
+                    error("Error handler, get_CDi, AeroLevel3.")
                end
                aero_obj.CL = CL;
           end
@@ -284,7 +302,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           end
 
           % Get design CD0 (wrapper)
-          function CD0_design = get_design_CD0(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj)
+          function CD0_design = get_CD0(aero_obj, statevector, design, geometry_obj, S_ref, propulsion_obj)
                M = statevector(1);
                h_ft = statevector(2);
                % Check if super/subsonic conditions:

@@ -8,6 +8,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      % fidelity.
 
      properties
+          airfoiltype
           e_osw_clean
           e_osw_TO
           e_osw_L

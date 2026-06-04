@@ -55,13 +55,13 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           CD = get_CD(CD0, K, CL)
           CD0 = get_CD0(Cf, S_wet, S_ref)
           CDi = get_CDi(statevector, CL, e_osw, AR)
-          Delta_CD0 = get_Delta_CD0(configuration, rangeMode) % This should get you the Delta_CD0 values you need. (use Raymer 12.61
-          CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
+          Delta_CD0 = get_Delta_CD0(flaptype, cf_c, S_flapped, S_ref, delta_flap_deg) % This should get you the Delta_CD0 values you need. (use Raymer 12.61
+          CL_minD = get_CL_minD(CL_alpha, alpha_L0)
           Cf = get_Cf(aircraft_type, n_engines) % Using L1 until a suitable replacement is found.
-          CL_max = get_CL_max_values(aircraft_type, config, rangeMode) % This should get you the CL_max values you need (CL_max_TO, CL_max_Landing, etc)
-          Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding) % This should be able to get you the Delta_CL_max values you need.
+          CL_max = get_CL_max_values(aircraft_typeAR, Lambda_LE_deg, CL_max_base, Delta_CL_max, cl_max, CL_max_cl_max) % This should get you the CL_max values you need (CL_max_TO, CL_max_Landing, etc)
+          Delta_CL_max = get_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg) % This should be able to get you the Delta_CL_max values you need.
           Delta_cl_max = get_Delta_cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_cl_max_TO, Delta_cl_max_L)
-          Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q)
-          % cl_max = get_cl_max()
+          Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q_deg)
+          CL_alpha = get_CL_alpha(M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
      end
 end
