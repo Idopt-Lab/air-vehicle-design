@@ -14,7 +14,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
      properties
           e_osw_clean
           e_osw_TO
-          e_osw_Landing
+          e_osw_L
           LD_max
           AR_wet
           K_LD
@@ -25,9 +25,9 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           CL_minD
           CL_max_clean
           CL_max_TO
-          CL_max_Land
+          CL_max_L
           Delta_CD0_TO
-          Delta_CD0_Landing
+          Delta_CD0_L
           Delta_CD0_geardown
      end
 
@@ -57,7 +57,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get CL_minD
-          function output = get_CL_minD(aero_obj, airfoil_type, CL_min, CD0)
+          function output = get_CL_minD(aero_obj, airfoil_type, CL_min, CD0, CD_min)
                % First, check for which airfoil type
                % If uncambered, CD0 = CD_min, which is CL_minD = 0
                % If cambered, CL_minD = CL_min/CD_min, CD_min = CD where
@@ -65,7 +65,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                if (airfoil_type == "uncambered")
                     output = CD0;
                elseif (airfoil_type == "cambered")
-                    output = CL_min/CD0;
+                    output = CL_min/CD_min;
                else
                     error("Error handler.")
                end
@@ -122,7 +122,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
                end
           end
 
-          % Get K value (gross estimate, tabulated)
+          % Get K values
           function [K1, K2] = get_K(aero_obj, AR, e_osw, M, LE_sweep_deg, CLminD)
                % aero_obj.K1 = 1/(pi*AR*e_osw);
                K1 = aero_obj.compute_K1(M, AR, e_osw, LE_sweep_deg);
@@ -175,16 +175,6 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           function LD_max = get_LD_max(aero_obj, K_LD, AR_wetted)
                LD_max = AeroLevel1.compute_LDmax(K_LD, AR_wetted);
           end
-
-          % %% FOR MISSION ANALYSIS
-          % % Compute L/D
-          % function [LD_ratio] = compute_LD_ratio(q, CD0, W, W_TO, W_S, e, AR)
-          %      W_by_W_TO = W / W_TO;
-          %      W_by_S = W_by_W_TO * W_S;
-          %      LD_ratio = 1 / ((q * CD0 / W_by_S) + (W_by_S / (q * pi * e * AR)));
-          % end
-
-
 
      end
 end

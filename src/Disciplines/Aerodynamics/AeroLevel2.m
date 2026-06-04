@@ -237,15 +237,77 @@ classdef AeroLevel2
                output = CL_max_w_swept/cosd(Lambda_qc);
           end
 
+          % Get CL_minD
+          function output = CL_minD(CL_alpha, alpha_L0)
+               output = CL_alpha*(-alpha_L0/2);
+          end
 
-          % Get CD
-          function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+
+          % Get CD (uncambered)
+          % Source: Raymer, "Aircraft Design: A Conceptual Approach", 6th
+          % ed, eq 12.4
+          function CD = compute_CD_uncambered(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
                CD = CD0 + K.*CL.^2;
+          end
+
+          % Get CD (cambered)
+          % Source: Raymer, "Aircraft Design: A Conceptual Approach", 6th ed, eq 12.5
+          function CD = compute_CD_cambered(CD_min, K, CL, CL_minD)
+               CD = CD_min + K.*(CL - CL_minD).^2;
           end
 
           % Get CD0
           function CD0 = compute_CD0(Cf, S_wet_aircraft, S_ref)
                CD0 = Cf * S_wet_aircraft/S_ref;
+          end
+
+          % Estimate theoretical lift-curve slope for 2-D airfoil
+          % (subsonic)
+          % Raymer, 6th ed, fig 12.6
+          function output = cl_alpha_2D_sub(M)
+               output = 2*pi/(sqrt(1-M^2));
+          end
+
+          % Estimate theoretical lift-curve slope for a supersonic 2-D
+          % airfoil
+          % Raymer, 6th ed, fig 12.6
+          function output = cl_alpha_2D_sup(M)
+               output = 4/(sqrt(M^2 - 1));
+          end
+
+          % Estimate lift-curve slope (per radian) for a 3-D wing
+          % (subsonic)
+          % Raymer, 6th ed, eq 12.6
+          function output = CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta, eta)
+               % beta = sqrt(1 - M^2);
+               % eta = cl_alpha/(2*pi/beta);
+
+               output = (2*pi*AR)/((2 + sqrt(4 + ((AR^2 * beta^2)/(eta^2))*(1 + tand(Lambda_max_t_deg)^2/(beta^2)))))*(S_exposed/S_ref)*F;
+          end
+
+          % Estimate lift-curve slope (per radian) for a 3-D wing
+          % (supersonic)
+          % Raymer, 6th ed, eq 12.12
+          function output = CL_alpha_wing_sup(beta_mach)
+               output = 4/beta_mach;
+          end
+
+          % Compute beta for mach number
+          % Raymer, 6th ed, eq 12.7
+          function output = beta_mach(M)
+               output = sqrt(1-M^2);
+          end
+
+          % Compute eta for mach number and 2-D lift-curve slope
+          % Ramyer, 6th ed, eq 12.8
+          function output = eta_mach(cl_alpha, beta_mach)
+               output = cl_alpha/(2*pi/beta_mach);
+          end
+
+          % Compute fuselage lift factor
+          % Raymer, 6th ed, eq 12.9
+          function output = F(d, b)
+               output = 1.07*(1 + d/b);
           end
      end
 

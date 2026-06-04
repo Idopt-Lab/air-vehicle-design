@@ -22,7 +22,7 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           Delta_cl_max_TO % Contribution from high-lift devices (take-off config)
           Delta_cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
-          Delta_CD0_Landing
+          Delta_CD0_L
           Delta_CD0_geardown
           Delta_CDi
           % I should definitely add the properties of high-lift devices'
@@ -38,9 +38,10 @@ classdef (Abstract) AerodynamicsModelLevel2 < handle
           C1
           C2
           CL_max_base
-          sharpness_param
-          CL_max_cl_max
+          sharpness_param % Should be tabulated
+          CL_max_cl_max % Should be tabulated
           cl_max % Should be taken directly from the chosen airfoil
+          alpha_L0 % Zero-lift AOA (deg)
      end
 
 

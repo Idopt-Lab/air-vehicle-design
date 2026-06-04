@@ -5,7 +5,7 @@ classdef AerodynamicsModelLevel1 < handle
      properties (Abstract)
           e_osw_clean % e, clean (no flaps, no gear down/out)
           e_osw_TO % e, flaps in take-off config
-          e_osw_Landing % e, flaps in landing config
+          e_osw_L % e, flaps in landing config
           LD_max
           AR_wet
           K_LD
@@ -16,9 +16,9 @@ classdef AerodynamicsModelLevel1 < handle
           CL_minD
           CL_max_clean
           CL_max_TO
-          CL_max_Land
+          CL_max_L
           Delta_CD0_TO % Change in CD0 due to flaps in take-off configuration
-          Delta_CD0_Landing % Change in CD0 due to flaps in landing config
+          Delta_CD0_L % Change in CD0 due to flaps in landing config
           Delta_CD0_geardown % Change in CD0 due to landing gear down/out
      end
 
@@ -36,7 +36,5 @@ classdef AerodynamicsModelLevel1 < handle
           CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
           Cf = tab_Cf(aircraft_type, n_engines)
           CL_max = get_CL_max_values(aircraft_type, config, rangeMode)
-          Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding) % This should be able to get you the Delta_CL_max values you need.
-          Delta_Cl_max = get_Delta_Cl_max_values() % this should get you the values you need (Delta_Cl_max_TO, Delta_Cl_max_L)
      end
 end

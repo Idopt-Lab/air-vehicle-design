@@ -17,7 +17,7 @@ classdef ConstraintAnalysisClass
           % end
 
           % Solve for landing constraints
-          function Wto_S = landing_constraint(distance, beta, rho, CLmax, CD0, mu)
+          function Wto_S = landing_constraint(distance, beta, rho, CLmax, CD0, mu, V_Vstall)
                g = 32.174;
 
                Wto_S = (distance * rho * g * (mu * CLmax + 0.83 * CD0)) / (1.69 * beta);

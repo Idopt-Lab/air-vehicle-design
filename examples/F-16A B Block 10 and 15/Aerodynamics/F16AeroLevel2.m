@@ -27,9 +27,10 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           Delta_cl_max_TO % Contribution from high-lift devices (take-off config)
           Delta_cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CD0_TO
-          Delta_CD0_Landing
+          Delta_CD0_L
           Delta_CD0_geardown
           Delta_CDi
+          F % Fuselage interference factor
      end
 
      properties (Constant) % These should be values that are tabulated based on geometry.
@@ -44,6 +45,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Delta_CL_max % (Not using the one from Fig 12.14)
           CL_max_cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40.
           cl_max = 1.0; % Obtained from page 14 of https://ntrs.nasa.gov/api/citations/19870017427/downloads/19870017427.pdf
+          alpha_L0 = -1.01 % Zero-lift AOA (deg)
      end
 
      methods
@@ -56,6 +58,22 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
                % obj.CL_max = 1.5;
           end
+
+          % Get fuselage lift factor
+          function F = get_F(aero_obj, fuselage_diam, b)
+               F = AeroLevel2.F(fuselage_diam, b);
+          end
+
+          % Get cl_alpha (2-D)
+          function cl_alpha = get_cl_alpha(aero_obj, M)
+               if (0.0 < M) && (M < 1.0)
+                    cl_alpha = AeroLevel2.cl_alpha_2D_sub(M);
+               elseif (1.0 <= M)
+                    cl_alpha = AeroLevel2.cl_alpha_2D_sup(M);
+               else
+                    error("Error handler.")
+               end
+          end 
 
           % Get CDi
           function CDi = get_CDi(aero_obj, statevector, CL, e_osw, AR)
@@ -83,7 +101,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                end
 
                Delta_CDi = AeroLevel2.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
-          end 
+          end
 
           % Get Delta_CD0 from flaps
           function Delta_CD0 = get_Delta_CD0(aero_obj, flaptype, cf_c, S_flapped, S_ref, delta_flap_deg)
@@ -104,18 +122,24 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           end
 
           % Get CL_minD
-          function output = get_CL_minD(aero_obj, airfoil_type, CL_min, CD0)
-               % First, check for which airfoil type
-               % If uncambered, CD0 = CD_min, which is CL_minD = 0
-               % If cambered, CL_minD = CL_min/CD_min, CD_min = CD where
-               % CL_=0.
-               if (airfoil_type == "uncambered")
-                    output = CD0;
-               elseif (airfoil_type == "cambered")
-                    output = CL_min/CD0;
+          function output = get_CL_minD(aero_obj, CL_alpha, alpha_L0)
+               output = AeroLevel2.CL_minD(CL_alpha, alpha_L0);
+          end
+
+          % Get CL_alpha
+          % Output: Radians
+          function output = get_CL_alpha(aero_obj, M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
+               if (0.0 < M) && (M < 1.0)
+                    beta_mach = sqrt(1 - M^2);
+                    eta_mach = AeroLevel2.eta_mach(cl_alpha, beta_mach);
+                    output = AeroLevel2.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta_mach, eta_mach);
+               elseif (1.0 <= M)
+                    beta_mach = sqrt(M^2 - 1);
+                    output = AeroLevel2.CL_alpha_wing_sup(beta_mach);
                else
                     error("Error handler.")
                end
+
           end
 
           % Get Delta_cl_max
@@ -270,10 +294,17 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                DragResults.D = D;
           end
 
-          % Get design CD
-          function CD = get_CD(aero_obj, CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
+          % Get CD
+          function CD = get_CD(aero_obj, airfoiltype, CD0, K, CL, CD_min, CL_minD) % Problem: other classes have function with same name. Can I make this private somehow?
                % CD = CD0 + K*CL^2;
-               CD = AeroLevel2.compute_CD(CD0, K, CL);
+               if (airfoiltype == "uncambered")
+                    CD = AeroLevel2.compute_CD_uncambered(CD0, K, CL);
+               elseif (airfoiltype == "cambered")
+                    CD = AeroLevel2.compute_CD_cambered(CD_min, K, CL, CL_minD);
+               else
+                    error("Error handler.")
+               end
+
           end
 
           % Get CD0

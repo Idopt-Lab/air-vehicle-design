@@ -38,8 +38,8 @@ classdef F16ConstraintAnalysis < ConstraintModel
           end
 
           % compute landing constraint
-          function Wto_S = landing_constraint(constraint_obj, distance, beta, rho, CLmax, CD0, mu)
-               Wto_S = ConstraintAnalysisClass.landing_constraint(distance, beta, rho, CLmax, CD0, mu);
+          function Wto_S = landing_constraint(constraint_obj, distance, beta, rho, CLmax, CD0, mu, V_Vstall)
+               Wto_S = ConstraintAnalysisClass.landing_constraint(distance, beta, rho, CLmax, CD0, mu, V_Vstall);
           end
 
           % Compute wing loading or T/W ratio
