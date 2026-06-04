@@ -266,7 +266,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Get design drag
           function DragResults = get_design_drag(aero_obj, geometry_obj, state_input)
                W = state_input(4);
-               e_osw = aero_obj.e_osw;
+               e_osw = aero_obj.e_osw_clean;
                S_ref = geometry_obj.mainwings.S_ref;
                S_wet = geometry_obj.design.S_wet;
                AR = geometry_obj.mainwings.AR;

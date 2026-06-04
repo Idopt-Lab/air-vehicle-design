@@ -52,7 +52,7 @@ methods
                          alt = mission_obj.missiondata.(currentsegment).Altitudeft;
                          q = mission_obj.missiondata.(currentsegment).qlbfft2;
                          a = mission_obj.missiondata.(currentsegment).afts;
-                         CD0 = aero_obj.get_design_CD0(aero_obj.Cf, S_wet_aircraft, S_ref);
+                         CD0 = aero_obj.get_CD0(aero_obj.Cf, S_wet_aircraft, S_ref);
                          IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
                          if (IsDryOrWet == "Dry")
                               IsDryOrWet = "mil";
