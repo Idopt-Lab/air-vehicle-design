@@ -51,7 +51,7 @@ classdef F16SizingLevel3 < SizingModel
                % mission_obj.state_vector = mission_obj.generate_mission_states;
                for iteration = 1:max_iteration
                     % Recompute main wing planform area.
-                    S_ref_w = W_TO / W_S;
+                    % S_ref_w = W_TO / W_S;
                     geometry_obj.mainwings.S_ref = S_ref_w;
 
                     %% ----------------------------------------------------------------------

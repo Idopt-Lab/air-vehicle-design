@@ -2,7 +2,7 @@ classdef (Abstract) AerodynamicsModelLevel3 < handle
      %AerodynamicsModel Summary of this class goes here
      %   Detailed explanation goes here
 
-     properties
+     properties (Abstract)
           % Are these for the entire design, or for a specific component?
           % I could pick the "component" interpretation. That would be
           % specific enough to stop overthinking stuff.
@@ -70,5 +70,6 @@ classdef (Abstract) AerodynamicsModelLevel3 < handle
           Delta_cl_max = get_Delta_cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_cl_max_TO, Delta_cl_max_L)
           Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q)
           CL_alpha = get_CL_alpha(M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
+          F = get_F(d, b)
      end
 end

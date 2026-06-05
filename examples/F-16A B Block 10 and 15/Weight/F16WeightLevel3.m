@@ -23,6 +23,7 @@ classdef F16WeightLevel3 < WeightModelLevel3
           fuel_fraction
           weight_coefficients
           eps % Error tolerance
+          K_vs
      end
 
      methods

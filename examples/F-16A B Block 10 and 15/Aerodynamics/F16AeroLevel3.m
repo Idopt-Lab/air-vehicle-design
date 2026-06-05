@@ -26,6 +26,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           K1
           K2
           Cf
+          cl_alpha
           CL_minD
           CL_max_clean
           CL_max_TO
@@ -62,13 +63,120 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
      methods
           % constructor
-          function obj = F16AeroLevel3(geometry_obj, design)
+          function obj = F16AeroLevel3()
                % obj.k = 2.08*10^(-5); % Set skin roughness to "smooth paint"
-               AR = geometry_obj.mainwings.AR;
-               LE_sweep_deg = geometry_obj.mainwings.LE_sweep;
-               obj.alpha_L0_deg = design.geom.wings.Main.alphaL0;
-               obj.e_osw = get_e_osw(obj, AR, LE_sweep_deg);
+               % AR = geometry_obj.mainwings.AR;
+               % LE_sweep_deg = geometry_obj.mainwings.LE_sweep;
+               % obj.alpha_L0_deg = design.geom.wings.Main.alphaL0;
+               % obj.e_osw = get_e_osw(obj, AR, LE_sweep_deg);
           end
+
+          % Get cl_alpha (2-D)
+          function cl_alpha = get_cl_alpha(aero_obj, M)
+               if (0.0 < M) && (M < 1.0)
+                    cl_alpha = AeroLevel2.cl_alpha_2D_sub(M);
+               elseif (1.0 <= M)
+                    cl_alpha = AeroLevel2.cl_alpha_2D_sup(M);
+               else
+                    error("Error handler.")
+               end
+          end
+
+          % Get fuselage lift factor
+          function F = get_F(aero_obj, fuselage_diam, b)
+               F = AeroLevel2.F(fuselage_diam, b);
+          end
+
+          % Get Delta_CD0 from landing gear
+          function Delta_CD0_L = get_Delta_CD0_L(aero_obj)
+               Delta_CD0_L = AeroLevel1.tab_DeltaCD0("geardown", "Delta_CD0", "mean");
+          end
+
+          % Get L/D max
+          function LD_max = get_LD_max(aero_obj, AR, e_osw, CD0)
+               LD_max = AeroLevel2.LD_max(AR, e_osw, CD0);
+          end
+
+          % Get Delta_CD0 from flaps
+          function Delta_CD0 = get_Delta_CD0(aero_obj, flaptype, cf_c, S_flapped, S_ref, delta_flap_deg)
+               % Check which value of F_flap we should use.
+               if (flaptype == "plain")
+                    F_flap = 0.0144;
+               elseif (flaptype == "slotted")
+                    F_flap=0.0074;
+               else
+                    F_flap=(0.0144+0.0074)/2; % Averaged
+               end
+               Delta_CD0 = AeroLevel2.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
+          end
+
+          % Get CL_minD
+          function output = get_CL_minD(aero_obj, CL_alpha, alpha_L0)
+               output = AeroLevel2.CL_minD(CL_alpha, alpha_L0);
+          end
+
+          % Get CL_max values
+          % Wrapper
+          % Raymer: "CL_max will increase if the wing is low-AR, or if it
+          % has sufficient sweep & a sharp LE."
+          function CL_max = get_CL_max_values(aero_obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, cl_max, CL_max_cl_max)
+               % Check if high or low AR
+               AR_check = AeroUtils.AR_check(AR, aero_obj.C1, Lambda_LE_deg);
+               if (AR_check == "Low")
+                    CL_max = AeroLevel2.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
+               elseif (AR_check == "High")
+                    CL_max = AeroLevel2.CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max);
+               end
+          end
+
+          % Get Delta_CL_max values
+          function Delta_CL_max = get_Delta_CL_max_values(aero_obj, Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
+               % Lambda_HL_deg = Angle of the flap's hinge line (deg)
+               Delta_CL_max = AeroLevel2.Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg);
+          end
+
+          % Get Delta_cl_max
+          function Delta_cl_max = get_Delta_cl_max_values(aero_obj, liftdevice, config, cp_c)
+               % liftdevice = Type of lift device ("plain", "split",
+               % "slotted", "fowler", "double slotted", "triple slotted",
+               % "fixed slat", "LE slat", "kruger slat", "slat")
+               % config = "takeoff", "TO", or "landing", "L".
+               % cp_c = c'/c (Total chord of wing + flap, over the wing's
+               % chord length)
+
+               % Index the lift device
+               idx = AeroLevel2.Delta_cl_max_table.("High-Lift Device")==liftdevice;
+
+               % Extract the Delta_cl_max
+               Delta_cl_max = AeroLevel2.Delta_cl_max_table{idx, 2};
+
+               % Apply modifiers if necessary
+               if (ismember(liftdevice, ["fowler", "double slotted", "triple slotted", "slat"]))
+                    Delta_cl_max = Delta_cl_max*cp_c;
+               end
+
+               % Apply take-off/landing modifiers
+               % 60-80% of the tabulated value
+               if ismember(config, ["takeoff", "TO"])
+                    Delta_cl_max = Delta_cl_max*0.6; % Leaving the modifier here in case I want to change one, later.
+               elseif ismember(config, ["landing", "L"])
+                    Delta_cl_max = Delta_cl_max*0.8;
+               end
+          end
+
+          % Get Delta_CDi
+          function Delta_CDi = get_Delta_CDi(aero_obj, areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q_deg)
+               if (areFlapsFullOrHalfSpan == ["full"])
+                    k_f = 0.14;
+               elseif (areFlapsFullOrHalfSpan == ["half"])
+                    k_f = 0.28;
+               else
+                    error("Error handler.")
+               end
+
+               Delta_CDi = AeroLevel2.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
+          end
+
 
           % Compute Oswald span efficiency factor (wrapper)
           % Account for biplanes? (Raymer, 6th edi, p 444)
@@ -82,7 +190,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                else
                     error("Error handler, get e_osw level 3.")
                end
-               aero_obj.e_osw = e_osw;
           end
 
           % Get K value (gross estimate)
@@ -188,14 +295,16 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     % Cambered:
                     M = statevector(1);
                     if M >= 1.0
-                         CD = CD0 + K1.supersonic*(CL - CL_minD)^2;
+                         CD = CD0 + K1.*(CL - CL_minD).^2;
                     elseif M < 1.0
-                         CD = CD0 + K1.subsonic*(CL - CL_minD)^2;
+                         CD = CD0 + K1.*(CL - CL_minD).^2;
+                    else
+                         error("Error handler, compute_design_CD, F16AeroLevel3.")
                     end
                else
                     error("Error handler, compute_design_CD, F16AeroLevel3.")
                end
-               aero_obj.CD = CD;
+               % aero_obj.CD = CD;
           end
 
           % Get CL_minD (using brandt's equation)
@@ -208,23 +317,19 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % % Get CL_alpha (wrapper) (using Raymer's methods) (CL per rad)
           % (divide result by 57.3 to get something close to Brandt's
           % CL_alpha values) (I THINK it's the "wing" one).
-          function CL_alpha = get_CL_alpha(aero_obj, statevector, S_exposed, S_ref, Lambda_max_t, Lambda_LE_deg, AR, fuselage_width, b)
-               M = statevector(1);
-               Lambda_LE_rad = deg2rad(Lambda_LE_deg);
-               if M>=(1/cos(Lambda_LE_rad))
-                    % Supersonic (leading edge is purely in supersonic
-                    % flow)
-                    beta = AeroLevel3.beta_mach(M);
-                    CL_alpha = AeroLevel3.CL_alpha_wing_sup(beta);
-               elseif M<(1/cos(Lambda_LE_rad))
-                    % Subsonic:
-                    beta = sqrt(1-M^2); % Raymer, 6th ed, eq 12.7
-                    F = AeroLevel3.F(fuselage_width, b);
-                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t, beta, eta);
+          % Get CL_alpha
+          % Output: Radians
+          function output = get_CL_alpha(aero_obj, M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
+               if (0.0 < M) && (M < 1.0)
+                    beta_mach = sqrt(1 - M^2);
+                    eta_mach = AeroLevel2.eta_mach(cl_alpha, beta_mach);
+                    output = AeroLevel2.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta_mach, eta_mach);
+               elseif (1.0 <= M)
+                    beta_mach = sqrt(M^2 - 1);
+                    output = AeroLevel2.CL_alpha_wing_sup(beta_mach);
                else
-                    error("Error handler, get_CL_alpha, AeroLevel3.")
+                    error("Error handler.")
                end
-               aero_obj.CL_alpha = CL_alpha;
           end
 
           % Get design CDi for some given state (wrapper)
@@ -248,7 +353,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                else
                     error("Error handler, get_CDi, AeroLevel3.")
                end
-               aero_obj.CL = CL;
           end
 
           % Get Cf (should return turb and lam) (wrapper)

@@ -67,7 +67,7 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
                          alt = mission_obj.missiondata.(currentsegment).Altitudeft;
                          q = mission_obj.missiondata.(currentsegment).qlbfft2;
                          a = mission_obj.missiondata.(currentsegment).afts;
-                         CD0 = aero_obj.get_design_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
+                         CD0 = aero_obj.get_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
                          IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
                          if (IsDryOrWet == "Dry")
                               TSFC = propulsion_obj.get_TSFC([M, alt], IsDryOrWet, t_SL_dry, TSFC_sl_perhour_dry, E_dry, F1_dry, F2_dry, TR);

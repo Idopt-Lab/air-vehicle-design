@@ -57,7 +57,7 @@ classdef (Abstract) MissionAnalysisModel < handle
 
                     % Compute aerodynamic stuff
                     V = mission_table{"Mach number",i}*a;
-                    q = AeroUtils.compute_q([mission_table{"Mach number",i}, alt]);
+                    q = AeroUtils.q([mission_table{"Mach number",i}, alt]);
 
                     % add data to corresponding segment
                     atmospheredata(:,i) = [Temp, a, P, rho, nu, mu, V, q]';

@@ -19,6 +19,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           K1
           K2
           Cf
+          cl_alpha
           CL_minD
           CL_max_clean
           CL_max_TO
@@ -140,7 +141,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                else
                     error("Error handler.")
                end
-
           end
 
           % Get Delta_cl_max
