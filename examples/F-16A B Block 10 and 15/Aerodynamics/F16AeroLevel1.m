@@ -1,4 +1,4 @@
-classdef F16AeroLevel1 < AerodynamicsModelLevel1
+classdef F16AeroLevel1 < AerodynamicsModelLevel1 
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
@@ -49,8 +49,8 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get the skin friction coefficient
-          function output = tab_Cf(aero_obj, aircraft_type, n_engines)
-               output = aero_obj.get_Cf(aircraft_type, n_engines);
+          function output = get_Cf(aero_obj, aircraft_type, n_engines)
+               output = aero_obj.get_Cf_val(aircraft_type, n_engines);
                % This calls AerodynamicsModelLevel1's function "get_Cf".
           end
 

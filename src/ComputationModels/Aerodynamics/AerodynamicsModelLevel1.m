@@ -1,4 +1,4 @@
-classdef AerodynamicsModelLevel1 < handle
+classdef AerodynamicsModelLevel1
      %AERODYNAMICSMODELLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
 
@@ -30,10 +30,11 @@ classdef AerodynamicsModelLevel1 < handle
      methods (Abstract)
           e_osw = get_e_osw(AR, Lambda_LE) % This function is supposed to COMPUTE e_osw
           % You'll need a method to tabulate e_osw for takeoff and landing
+          % (e_osw_TO, e_osw_L)
           % conditions (Roskam's "Airplane Design Vol I/II" has tables on
           % this).
-          LD_max = get_LD_max(aircraft_type)
-          AR_wet = get_AR_wet(b, S_wet)
+          LD_max = get_LD_max(aircraft_type, b, S_wet) % You'll also need AR_wet for this.
+          % AR_wet = get_AR_wet(b, S_wet)
           K = get_K(e_osw, AR)
           K1 = compute_K1(M, AR, e_osw, LE_sweep)
           K2 = compute_K2(M, K1, CLminD)
@@ -42,7 +43,7 @@ classdef AerodynamicsModelLevel1 < handle
           CDi = get_CDi(statevector, CL, e_osw, AR)
           Delta_CD0 = get_Delta_CD0(configuration, rangeMode)
           CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
-          Cf = tab_Cf(aircraft_type, n_engines)
+          Cf = get_Cf(aircraft_type, n_engines)
           CL_max = get_CL_max_values(aircraft_type, config, rangeMode)
      end
 
@@ -65,17 +66,17 @@ classdef AerodynamicsModelLevel1 < handle
           end
 
           % Get K1 subsonic value (Source: Brandt)
-          function K1 = K1_sub(obj, AR, e_osw)
+          function K1 = K1_sub(~, AR, e_osw)
                K1 = 1/(pi*AR*e_osw);
           end
 
           % Get K1 supersonic value (Source: Brandt)
-          function K1 = K1_sup(obj, AR, M, LE_sweep_deg)
+          function K1 = K1_sup(~, AR, M, LE_sweep_deg)
                K1 = ((AR*(M^2 - 1))/(4*AR*sqrt(M^2 - 1)-2))*cosd(LE_sweep_deg);
           end
 
           % Get K2 subsonic value (Source: Brandt)
-          function K2 = K2_sub(obj, K1, CLminD)
+          function K2 = K2_sub(~, K1, CLminD)
                K2 = -2*K1*CLminD;
           end
 
@@ -85,12 +86,12 @@ classdef AerodynamicsModelLevel1 < handle
           end
 
           % Get e_osw for a design (straight wings)
-          function output = e_straight(obj, AR)
+          function output = e_straight(~, AR)
                output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
           end
 
           % Get e_osw for a design (swept wings)
-          function output = e_swept(obj, AR, Lambda_LE_deg)
+          function output = e_swept(~, AR, Lambda_LE_deg)
                output = (4.61*(1-0.045*AR^(0.68))*cosd(Lambda_LE_deg)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
           end
 
@@ -100,7 +101,7 @@ classdef AerodynamicsModelLevel1 < handle
           end
 
           % Get CL for some given state
-          function output = CL(obj, L, q, S_ref)
+          function output = CL(~, L, q, S_ref)
                output = L./(q.*S_ref);
           end
 
@@ -136,17 +137,17 @@ classdef AerodynamicsModelLevel1 < handle
 
           % Compute CDi
           % Compute CDi (subsonic case)
-          function CDi = CDi_subsonic(obj, CL, e_osw, AR)
+          function CDi = CDi_subsonic(~, CL, e_osw, AR)
                CDi = ( (CL^2) / (pi * e_osw * AR));
           end
 
           % Compute CDi (supersonic case)
-          function CDi = CDi_supersonic(obj, CL, alpha_deg)
+          function CDi = CDi_supersonic(~, CL, alpha_deg)
                CDi = CL*sind(alpha_deg);
           end
 
           % Estimate CD0
-          function output = CD0(obj, Cf, S_wet, S_ref)
+          function output = CD0(~, Cf, S_wet, S_ref)
                output = Cf*S_wet/S_ref;
           end
 
@@ -154,14 +155,14 @@ classdef AerodynamicsModelLevel1 < handle
           % This might be better in L1
           % Estimate Delta_CL_max_TO
           % Source: Aircraft Design Vol 2, Roskam, eq 7.6
-          function output = comp_Delta_CL_max_TO(obj, CL_max_TO, CL_max)
+          function output = comp_Delta_CL_max_TO(~, CL_max_TO, CL_max)
                output = 1.05*(CL_max_TO - CL_max);
           end
 
           % This might be better in L1
           % Estimate Delta_CL_max_L (landing)
           % Source: Aircraft Design Vol 2, Roskam, eq 7.7
-          function output = comp_Delta_CL_max_L(obj, CL_max_L, CL_max)
+          function output = comp_Delta_CL_max_L(~, CL_max_L, CL_max)
                output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
           end
 
@@ -176,13 +177,13 @@ classdef AerodynamicsModelLevel1 < handle
 
           % Estimate CL_max_w (clean)
           % Source: Airplane Design Vol 2, Roskam, eq 7.3
-          function output = CL_max_w(obj, k_lambda, cl_max_r, cl_max_t)
+          function output = CL_max_w(~, k_lambda, cl_max_r, cl_max_t)
                output = k_lambda*(cl_max_r + cl_max_t)/2;
           end
 
           % Determine if aircraf is "short-coupled" or "long-coupled"
           % Source: Aircraft Design Vol 2, Roskam, page 168
-          function output = isShortOrLongCoupled(obj, l_h, c_bar)
+          function output = isShortOrLongCoupled(~, l_h, c_bar)
                if (0.0 <= l_h/c_bar) && (l_h/c_bar < 3.0)
                     output = "short coupled";
                elseif (l_h/c_bar >= 5.0)
@@ -195,13 +196,13 @@ classdef AerodynamicsModelLevel1 < handle
           % Correct for sweep effects using the "cosine rule"
           % Source: Airplane Design Vol 2, Roskam, eq 7.2
           % outputs CL_max_w_unswept
-          function output = CL_max_w_unswept(obj, CL_max_w_swept, Lambda_qc)
+          function output = CL_max_w_unswept(~, CL_max_w_swept, Lambda_qc)
                output = CL_max_w_swept/cosd(Lambda_qc);
           end
 
           %% FOR MISSION ANALYSIS
           % Tabulate L/Dmax (cruise)
-          function output = get_LDmax_cruise(obj, LDmax, enginetype)
+          function output = get_LDmax_cruise(~, LDmax, enginetype)
                if (enginetype == "jet")
                     LDmax_cruise = 0.866*LDmax;
                elseif (enginetype == "prop")
@@ -225,18 +226,18 @@ classdef AerodynamicsModelLevel1 < handle
           end
 
           % Compute LD_max
-          function LD_max = compute_LDmax(obj, K_LD, AR_wetted)
+          function LD_max = compute_LDmax(~, K_LD, AR_wetted)
                LD_max = K_LD*sqrt(AR_wetted); % Raymer, 6th ed, eq 3.12
           end
 
           % Compute AR wetted
-          function AR_wetted = compute_AR_wetted(obj, b, S_wet)
+          function AR_wetted = compute_AR_wetted(~, b, S_wet)
                AR_wetted = b^2/S_wet; % Raymer, 6th ed, eq 3.11
           end
 
           % Tabulate K_LD
           % Raymer, 6th ed, page 40
-          function K_LD = tab_K_LD(obj, design_type)
+          function K_LD = tab_K_LD(~, design_type)
                if (design_type == "civil jet")
                     K_LD = 15.5;
                elseif (design_type == "military jet") || (design_type == "Jet fighter") || (design_type == "jet fighter")
@@ -317,32 +318,32 @@ classdef AerodynamicsModelLevel1 < handle
           % Get equivalent skin friction coefficient
           % Source: Raymer, Table 12.3, 6th edition
           % Revise this to use more universal type recognition.
-          function Cf = get_Cf(obj, aircraft_type, n_engines)
+          function output = get_Cf_val(~, aircraft_type, n_engines)
                if (aircraft_type == "bomber")
-                    Cf = 0.0030;
+                    output = 0.0030;
                elseif (aircraft_type == "civil transport")
-                    Cf = 0.0026;
+                    output = 0.0026;
                elseif (aircraft_type == "military cargo")
-                    Cf = 0.0035;
+                    output = 0.0035;
                elseif (aircraft_type == "air force fighter")
-                    Cf = 0.0035;
+                    output = 0.0035;
                elseif (aircraft_type == "navy fighter")
-                    Cf = 0.0040;
+                    output = 0.0040;
                elseif (aircraft_type == "supercruise aircraft")
-                    Cf = 0.0025;
+                    output = 0.0025;
                elseif (aircraft_type == "light aircraft")
                     if (0 < n_engines <= 1)
-                         Cf = 0.0055;
+                         output = 0.0055;
                     elseif (1 < n_engines <= 2)
-                         Cf = 0.0045;
+                         output = 0.0045;
                     else
                          warning("More engines than the table expected. Setting Cf = 0.0045.")
-                         Cf = 0.0045;
+                         output = 0.0045;
                     end
                elseif (aircraft_type == "prop seaplane")
-                    Cf = 0.0065;
+                    output = 0.0065;
                elseif (aircraft_type == "jet seaplane")
-                    Cf = 0.0040;
+                    output = 0.0040;
                else
                     error("Couldn't identify aircraft type.")
                end
@@ -352,7 +353,7 @@ classdef AerodynamicsModelLevel1 < handle
 
 
           % Using Roskam's work here
-          function output = tab_DeltaCD0(obj, flapconfig, quantity, rangeMode)
+          function output = tab_DeltaCD0(~, flapconfig, quantity, rangeMode)
                % Tabulate Delta_CD0 and optional Oswald efficiency factor by flap configuration.
                %
                % Usage:

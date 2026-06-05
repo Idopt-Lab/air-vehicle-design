@@ -59,6 +59,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % obj.e_osw_clean = obj.get_e_osw(AR, Lambda_LE); % This feels excessive
                % obj.Cf = obj.get_Cf(0.0035); % Again, EXTREMELY excessive
                % obj.CL_max = 1.5;
+               
           end
 
           % Get fuselage lift factor
@@ -259,7 +260,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
           % Get Cf
           function Cf = get_Cf(aero_obj, aircraft_type, n_engines)
-               Cf = AeroLevel2.get_Cf(aircraft_type, n_engines);
+               Cf = get_Cf@AerodynamicsModelLevel1(aircraft_type, n_engines);
                % N.b: using L1's function for now until I can find a
                % suitable L2 replacement.
           end
