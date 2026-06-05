@@ -15,7 +15,7 @@
 
 ## Purpose
 
-Implement `src/level_brandt/` as a direct, faithful MATLAB reimplementation of the Brandt F-16A Excel workbook (`examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`). This is **not** an approximation — it is a reference implementation that must reproduce each Excel cell value to within ±1%. It serves as the absolute ground truth against which all fidelity levels (I–III) are calibrated.
+Implement `src/level_brandt/` as a direct, faithful MATLAB reimplementation of the Brandt F-16A Excel workbook (`examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`). This is **not** an approximation — it is a reference implementation that must reproduce each Excel cell value to within ±1% unless a documented audit exception applies. It serves as the absolute ground truth against which all fidelity levels (I–III) are calibrated.
 
 Level-Brandt is architecturally standalone: it does not inherit from `Disciplines/` or `ComputationModels/`, and has no external dependencies beyond MATLAB's `atmosisa`.
 
@@ -45,10 +45,10 @@ A user creates `BrandtAerodynamics`, calls `analyze(design_vars)` to precompute 
 
 **Acceptance Scenarios:**
 
-1. **Given** `BrandtAerodynamics.analyze(design_vars)` has run, **When** properties are queried, **Then** CDmin = 0.01691 (Aero!G3) and k1 = 0.1160 (Aero!G10), each within ±5%.
-2. **Given** the subsonic mission polar (Miss tab basis), **When** `run(state_vector, control_vector)` is called, **Then** returns struct with fields CD0, K1, K2, CLmax_clean, CLmax_TO, CLmax_land, LD_max; values within ±5% of `Miss!` sheet.
-3. **Given** the subsonic polar, **When** L/D_max is computed, **Then** L/D_max = 8.93 ± 0.45 (5%) and CL_opt = 0.482 ± 5%.
-4. **Given** `BrandtAerodynamics.analyze()` has completed, **When** CLmax values are read from properties, **Then** CLmax_clean = 0.984 (Aero!H25), CLmax_takeoff = 1.276 (Aero!H27), CLmax_landing = 1.426 (Aero!H29), each within ±5%.
+1. **Given** `BrandtAerodynamics.analyze(design_vars)` has run, **When** properties are queried, **Then** CDmin = 0.01691 (Aero!G3) and k1 = 0.1160 (Aero!G10), each within ±1%.
+2. **Given** the subsonic mission polar (Miss tab basis), **When** `run(state_vector, control_vector)` is called, **Then** returns struct with fields CD0, K1, K2, CLmax_clean, CLmax_TO, CLmax_land, LD_max; values within ±1% of `Miss!` sheet.
+3. **Given** the subsonic polar, **When** L/D_max is computed, **Then** L/D_max = 8.93 and CL_opt = 0.482, each within ±1%.
+4. **Given** `BrandtAerodynamics.analyze()` has completed, **When** CLmax values are read from properties, **Then** CLmax_clean = 0.984 (Aero!H25), CLmax_takeoff = 1.276 (Aero!H27), CLmax_landing = 1.426 (Aero!H29), each within ±1%.
 5. **Given** a supersonic condition in state_vector, **When** `run(state_vector, control_vector)` is called, **Then** CDmin > CDmin_sub (wave drag present) and k2 ≤ 0 per Aero tab methodology.
 
 ---
@@ -59,10 +59,10 @@ A user creates `BrandtEngine`, calls `analyze(design_vars)` to precompute design
 
 **Acceptance Scenarios:**
 
-1. **Given** `BrandtEngine.analyze(design_vars)` has run, **When** `run(0, 0, false)` is called (SLS, dry), **Then** returns struct with fields {alpha, T, TSFC} where T = 15,000 lbf and TSFC = 0.70 hr⁻¹, each within ±5% of `Engn(s)` sheet.
-2. **Given** `BrandtEngine.analyze(design_vars)` has run, **When** `run(0, 0, true)` is called (SLS, afterburner), **Then** returns struct with T = 23,770 lbf and TSFC = 2.20 hr⁻¹, each within ±5%.
-3. **Given** altitude=40,000 ft, Mach=0.87, dry throttle, **When** `run(40000, 0.87, false)` is called, **Then** T and TSFC match the `Engn(s)` tab throttle-ratio branching formula within ±5%.
-4. **Given** altitude=40,000 ft, Mach=0.87, afterburner, **When** `run(40000, 0.87, true)` is called, **Then** T and TSFC match the `Engn(s)` tab AB branch formula within ±5%.
+1. **Given** `BrandtEngine.analyze(design_vars)` has run, **When** `run(0, 0, false)` is called (SLS, dry), **Then** returns struct with fields {alpha, T, TSFC} where T = 15,000 lbf and TSFC = 0.70 hr⁻¹, each within ±1% of `Engn(s)` sheet.
+2. **Given** `BrandtEngine.analyze(design_vars)` has run, **When** `run(0, 0, true)` is called (SLS, afterburner), **Then** returns struct with T = 23,770 lbf and TSFC = 2.20 hr⁻¹, each within ±1%.
+3. **Given** altitude=40,000 ft, Mach=0.87, dry throttle, **When** `run(40000, 0.87, false)` is called, **Then** T and TSFC match the `Engn(s)` tab throttle-ratio branching formula within ±1%.
+4. **Given** altitude=40,000 ft, Mach=0.87, afterburner, **When** `run(40000, 0.87, true)` is called, **Then** T and TSFC match the `Engn(s)` tab AB branch formula within ±1%.
 5. **Given** a range of altitudes (0–60,000 ft) and Mach numbers (0–2.0) with dry and AB settings, **When** `run()` is queried across the grid, **Then** the resulting engine map is monotonically decreasing with altitude (at fixed Mach) and thrust increases with Mach at low altitude (ram recovery), consistent with the Brandt model.
 
 ---
@@ -73,24 +73,79 @@ A user calls `BrandtGeometry.analyze(design_vars)` to precompute geometry, then 
 
 **Acceptance Scenarios:**
 
-1. **Given** standard F-16A geometry inputs, **When** `BrandtGeometry.analyze(design_vars)` is called, **Then** S_wet = 1,371 ft² ± 14 ft² (1%).
+1. **Given** standard F-16A geometry inputs, **When** `BrandtGeometry.analyze(design_vars)` is called, **Then** S_wet = 1,371 ft² ± 14 ft² (target 1%; documented exception for the `Geom!B19` / `Geom!K21` strake audit note).
 2. **Given** Amax computation, **When** whole-aircraft cross-sections are used (H26:H45), **Then** Amax matches `Geom!H47` to within ±1%.
 
 ---
 
 ### User Story 5 — Reproduce Brandt weight model (P3)
 
-A user calls `BrandtWeights.analyze(design_vars)` and receives OEW broken down by structural component, each within ±1% of the Brandt `Wt` sheet.
+A user calls `BrandtWeight(geom).analyze()` to compute geometry-dependent structural weights, then calls `run(W_TO_lb)` to produce OEW and fuel weight for a given takeoff gross weight estimate. All component weights must be within ±1% of the Brandt `Wt` sheet at W_TO = 31,377 lb.
 
 **Acceptance Scenarios:**
 
-1. **Given** Brandt plate-area weights (wing=6.75 lb/ft², fuse=5.0 lb/ft², pitch ctrl=6.0 lb/ft², vert surf=6.0 lb/ft²), **When** `BrandtWeights.analyze(design_vars)` is called, **Then** each component weight matches `Wt` sheet to within ±1%.
+1. **Given** Brandt plate-area weights (wing=6.75 lb/ft², fuse=5.0 lb/ft², pitch ctrl=6.0 lb/ft², vert surf=6.0 lb/ft², nac=4.5 lb/ft², strake=4.5 lb/ft²), **When** `BrandtWeight.analyze()` is called, **Then** each structural component matches `Wt!C9:H9` to within ±1%.
+2. **Given** `analyze()` has completed, **When** `run(31377)` is called, **Then** OEW = 19,980.70 lb ± 1% (`Wt!B12`) and W_fuel = 6,296.30 lb ± 1% (`Wt!B6`).
+3. **Given** `run(W_TO_lb)` is called multiple times with different W_TO values, **Then** geometry-dependent outputs (W_structure, W_engine) remain unchanged and W_TO-dependent outputs (W_gear, W_empty, W_fuel) update correctly — validating the sizing loop pattern.
+4. **Given** `run()` returns a struct, **Then** the struct fields also match the stored object properties (dual-return contract verified).
+
+---
+
+### User Story 6 — Constraint analysis and design point (P2)
+
+A user creates `BrandtConstraintAnalysis(aero, eng)`, calls `analyze()` to extract fixed parameters, then calls `run(WS_psf)` to evaluate all performance constraints and identify the optimal design point. The class replicates the Excel `Consts` tab using Mattingly's Master Equation.
+
+**Why this priority:** Constraint analysis defines the design point (W/S, T/W) that is the primary output of the conceptual sizing process.
+
+**Acceptance Scenarios:**
+
+1. **Given** `analyze()` has been called, **When** `max_mach(48)` is called, **Then** T/W = 1.2228 (`Consts!K23`) within ±1%.
+2. **Given** `analyze()` has been called, **When** `cruise(48)` is called, **Then** T/W = 0.6247 (`Consts!K24`) within ±1%.
+3. **Given** `analyze()` has been called, **When** `landing()` is called, **Then** W/S_max = 138.48 psf (`Consts!K33`) within ±1%.
+4. **Given** `run(linspace(10, 160, 151))` has been called, **When** `optimal_point()` is queried, **Then** W/S ∈ [70, 140] psf and T/W ∈ [0.50, 1.20], with W/S ≤ landing limit.
+5. **Given** `run()` returns a struct, **Then** all struct fields also match the corresponding `run_*` stored properties (dual-return contract).
+
+---
+
+### User Story 7 — Life-cycle cost (P3)
+
+A user creates `BrandtCost`, calls `analyze()` to compute the fixed DAPCA-IV material factor, then calls `run(W_TO_lb, wt_results, miss_results)` to obtain acquisition, O&M, and life-cycle cost outputs.
+
+**Acceptance Scenarios:**
+
+1. **Given** `BrandtWeight.run(31377)` and `BrandtMission.run(31377)` outputs, **When** `BrandtCost.run(31377, wt_results, miss_results)` is called, **Then** unit flyaway cost is about $68.4M within ±5%.
+2. **Given** the same inputs, **When** total program cost is computed, **Then** the result is about $13.68B within ±5%.
+3. **Given** the same inputs, **When** life O&M and LCC are computed, **Then** they are about $24.84M and $93.26M within ±5%.
+
+---
+
+### User Story 8 — Performance maps and envelopes (P3)
+
+A user creates `BrandtPerformance`, calls `analyze()` to build fixed reference grids, then calls `run(W_lb, options)` to compute specific excess power, maneuver turn-rate data, and a V-n envelope.
+
+**Acceptance Scenarios:**
+
+1. **Given** a 31,377 lb aircraft, **When** `run_perf(31377, 40000, 0)` is evaluated near Mach 0.87, **Then** `Ps` is positive.
+2. **Given** a 31,377 lb aircraft, **When** `run_maneuv(31377, 10000, 100)` is evaluated near Mach 0.87, **Then** sustained turn rate exceeds 10 deg/s.
+3. **Given** `run(31377)` has completed, **When** the V-n diagram is inspected, **Then** the corner speed is finite and does not exceed the `q_max` speed limit.
+
+---
+
+### User Story 9 — Balance, stability, control, and gear checks (P3)
+
+A user creates `BrandtBalanceStabControl`, calls `analyze()` to compute MAC, aerodynamic-center, and component-arm quantities, then calls `run(W_TO_lb)` to obtain CG, static margin, and gear-loading metrics.
+
+**Acceptance Scenarios:**
+
+1. **Given** the standard F-16A geometry, **When** `analyze()` is called, **Then** the wing MAC and xMAC match the worksheet values within ±1% and the neutral point is about 26.168 ft within ±1%.
+2. **Given** `run(31377)` is called, **When** takeoff and landing CG are computed, **Then** they are about 26.193 ft and 26.137 ft within ±1%.
+3. **Given** `run(31377)` is called, **When** gear metrics are computed, **Then** main/nose load split and tipback/rollover angles match worksheet values within ±1%.
 
 ---
 
 ### Edge Cases
 
-- What happens when `atmosisa` returns slightly different values than Brandt's atmosphere table? → Document the expected < 0.1% deviation as a known acceptable discrepancy.
+- What happens when `atmosisa` returns slightly different values than Brandt's atmosphere table? → Document the deviation explicitly; use at most a 2% test tolerance only where the workbook/atmosphere mismatch is the known cause.
 - What happens if the sizing loop does not converge within 50 iterations? → Error out with a MATLAB error ID `LevelBrandt:convergenceFailed`.
 - What if geometry inputs are outside physically valid ranges (negative area, AR < 0)? → Validate inputs and throw `LevelBrandt:invalidInput`.
 
@@ -102,7 +157,7 @@ A user calls `BrandtWeights.analyze(design_vars)` and receives OEW broken down b
 
 - **FR-001:** `LevelBrandt` and all `BrandtXxx` classes MUST be implemented as true OOP MATLAB classdefs using `handle` inheritance. Classes MUST use instance methods and properties for computed state (e.g., `compute()` populates `obj.geom`, `obj.weights`). Pure math helpers with no object state MAY be `Static`. No inheritance from `Disciplines/` or `ComputationModels/`.
 - **FR-002:** Every computed value MUST be traceable to a specific Excel cell in `Brandt-F16-A.xls`, documented in `examples/.../Ground-Truth/cell-map.md`.
-- **FR-003:** All outputs MUST be within ±1% (target) of their corresponding Brandt XLS cell values; deviations up to ±5% are acceptable where formula approximations or atmosphere model differences account for the gap.
+- **FR-003:** All outputs MUST be within ±1% (target) of their corresponding Brandt XLS cell values. A documented audit exception may widen the tolerance to 2% only when the workbook/formula discrepancy is known and cited.
 - **FR-004:** The drag polar MUST use the Brandt quadratic form: `CD = CD0 + k1·CL² + k2·CL` (not the standard parabolic `CD0 + K·CL²`).
 - **FR-005:** TSFC MUST apply the 1.08× installed correction factor (`Engn(s)` sheet).
 - **FR-006:** Mission analysis MUST implement all 7 Brandt segments: Takeoff → Accel → Climb → Cruise (190.8 nm) → Patrol → Dash (50 nm) → Patrol.
@@ -125,10 +180,10 @@ A user calls `BrandtWeights.analyze(design_vars)` and receives OEW broken down b
 - **`BrandtEngine`**: Installed thrust and TSFC at given altitude, Mach, and throttle setting (dry/AB); engine map generation. Corresponds to `Engn(s)` sheet.
 - **`BrandtWeight`**: Structural plate-area weight model → OEW. Corresponds to `Wt` sheet.
 - **`BrandtMission`**: 7-segment mission, quadratic drag polar, CDx corrections, fuel burn per segment. Corresponds to `Miss` sheet.
+- **`BrandtConstraintAnalysis`**: Mattingly Master Equation applied to all performance constraints (max Mach, cruise, max altitude, combat turns, Ps=500), plus takeoff and landing formulas. Returns T/W vs W/S for each constraint, the feasibility envelope, and the optimal design point. Corresponds to `Consts` tab.
 - **`BrandtSizing`**: TOGW convergence loop, W/S and T/W outputs.
-- **`BrandtPerformance`**: Specific excess power, maneuver envelope, V-n envelope, performance calculations. Corresponds to `Ps`, `Maneuv`, `Struct`, and `Perf` tabs.
-- **`BrandtLandingGear`**: Landing gear geometry and weight estimation. Corresponds to the `Gear` tab.
-- **`BrandtStabilityControl`**: Stability and control derivatives and margin estimation. Corresponds to the `S&C (2)` tab.
+- **`BrandtPerformance`**: Specific excess power, maneuver envelope, V-n envelope, and performance calculations. Corresponds to `Ps`, `Maneuv`, `Struct`, and `Perf` tabs.
+- **`BrandtBalanceStabControl`**: Combined balance, stability/control, and landing-gear checks. Corresponds to `Wt`, `Gear`, and `S&C (2)` tabs.
 - **`BrandtCost`**: Life-cycle cost estimation. Corresponds to `Cost` tab.
 
 ---
@@ -199,8 +254,9 @@ geom.run(altitude_ft, mach);               % results stored as obj.run_* propert
 
 ### Known Acceptable Deviations
 
-Some tests for `BrandtMission` use 2% tolerance (instead of 1%) for segments where the code intentionally differs from the Brandt Excel:
-- **Climb, Egress, Cruise2 fuel burns**: deviation traces to the known S_wet discrepancy (Excel double-counts strakes — documented in `readme_geom.md`). Code uses 1332.69 ft² (correct); Excel uses 1371.09 ft². This is intentional and acceptable per FR-003.
+Only the following audit-cited cases may exceed the 1% target, and none may exceed 2%:
+- `BrandtMission` climb, egress, and cruise2 fuel burns: driven by the documented `Geom!B19` / `Geom!K21` S_wet audit note in `readme_geom.md`.
+- `BrandtWeight` nacelle-area derived terms: MATLAB uses π while Excel uses 3.1516 in the workbook formula; see `readme_wt.md`.
 
 ---
 
