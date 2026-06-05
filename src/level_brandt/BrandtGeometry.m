@@ -44,6 +44,7 @@ classdef BrandtGeometry < handle
         S_wet_fuse_accurate_ft2  (1,1) double
         S_wet_total_accurate_ft2 (1,1) double
         Amax_ft2                 (1,1) double
+        fuselage_xcg_ft          (1,1) double
 
         % Computed component geometry
         wing        (1,1) struct
@@ -912,11 +913,14 @@ classdef BrandtGeometry < handle
                 dS(k) = (P_all(k) + P_all(k+1)) / 2 * (x_all(k+1) - x_all(k));
             end
 
+            x_mid = (x_all(1:end-1) + x_all(2:end)) / 2;
+
             obj.frame_x                 = x;
             obj.frame_perimeter         = P;
             obj.frame_area              = A;
             obj.fuselage_dSwet          = dS;
             obj.S_wet_fuse_accurate_ft2 = sum(dS);
+            obj.fuselage_xcg_ft         = sum(dS .* x_mid) / sum(dS);
         end
 
         % ------------------------------------------------------------------ %
@@ -941,7 +945,19 @@ classdef BrandtGeometry < handle
 
             L_exp = max(0, obj.aircraft_length_ft - L);
             obj.S_wet_nacelle_simple_ft2 = obj.n_engines * pi * obj.D_engine_ft * L_exp;
-            obj.S_wet_nacelle_gt_ft2     = 41.515;  % Geom B4 ground truth
+
+            % Nacelle effective area (Geom B4) — formula decoded from Excel COM.
+            % =IF(G31>C475/2+C32/2, n×D×L×π×E, n×D×L×π×E/2)
+            %   Condition: engine Y-offset > nacelle_r + fuse_half_w? F-16 centerline → false.
+            %   E475 = IF(n_eng=1, inlet_x_ft/(inlet_x_ft+L_eng), 1)
+            % Using standard π (Excel used 3.1516; difference < 0.4%).
+            inlet_x = obj.inp.engine.inlet_x_ft;
+            if obj.n_engines == 1
+                E_aft = inlet_x / (inlet_x + obj.L_engine_ft);
+            else
+                E_aft = 1.0;
+            end
+            obj.S_wet_nacelle_gt_ft2 = obj.n_engines * obj.D_engine_ft * obj.L_engine_ft * pi * E_aft / 2;
 
             % Lifting surfaces (Geom B14-B17) - same formula for both fidelities
             obj.S_wet_wing_ft2       = obj.wing.S_wet_ft2;
@@ -1245,6 +1261,7 @@ classdef BrandtGeometry < handle
             obj.S_wet_fuse_accurate_ft2  = NaN;
             obj.S_wet_total_accurate_ft2 = NaN;
             obj.Amax_ft2                 = NaN;
+            obj.fuselage_xcg_ft          = NaN;
 
             obj.wing = struct('c_root_ft',NaN,'c_tip_ft',NaN,'c_exp_root_ft',NaN, ...
                 'half_span_ft',NaN,'half_span_exp_ft',NaN,'S_exposed_ft2',NaN, ...

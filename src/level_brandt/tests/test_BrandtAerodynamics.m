@@ -17,6 +17,7 @@ classdef test_BrandtAerodynamics < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function buildAerodynamics(tc)
+            addpath(level_brandt_test_src_root());
             g = BrandtGeometry();
             g.analyze();
             tc.geom = g;

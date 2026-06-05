@@ -2,8 +2,9 @@
 
 > Single source of truth: `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`  
 > Every value, formula, and fidelity choice described here traces back to a specific cell in that workbook.
+> Key cells cited below: `Geom!B19`, `Geom!K21`, `Geom!D23`, `Geom!H26:H45`, `Geom!H47`, `Geom!B4`, `Main!D18`, and `Main!B28`.
 
-> ⚠️ NOTE: The Brandt Excel sheet has an error. In the computation of Whole Aircraft S_wet, cell B19, the strake wetted area is double-counted. The formula `B19 = D23 + B4 + B14 + B15 + B16 + B17 + K21` includes both `B15` (strake S_wet) and `K21` (also strake S_wet). The MATLAB implementation does **not** replicate this bug.
+> ⚠️ NOTE: The Brandt Excel sheet has an error. In the computation of Whole Aircraft S_wet, cell `Geom!B19`, the strake wetted area is double-counted. The workbook formula `Geom!B19 = Geom!D23 + Geom!B4 + Geom!B14 + Geom!B15 + Geom!B16 + Geom!B17 + Geom!K21` includes both `Geom!B15` (strake S_wet) and `Geom!K21` (also strake S_wet). This is a documented audit exception, not a silent deviation.
 
 ---
 
@@ -130,7 +131,7 @@ S_wet       = 40.89 × 1.9978     = 81.686 ft²  ≈  GT 81.689 ft² ✓
 
 `computeNacelle` computes D_engine and L_engine from Engn(s) formulas.
 
-For the **simple** nacelle S_wet (Geom B4 = 41.515 ft²), the cell formula could not be confirmed from the binary `.xls` file. The implementation uses an exposed-length cylinder model (`N·π·D·(aircraft_length − fuse_length)`) as a placeholder. The ground-truth value 41.515 ft² is stored separately and used in the accurate total.
+For the **simple** nacelle S_wet (`Geom!B4 = 41.515 ft²`), the cell formula could not be confirmed from the binary `.xls` file. The implementation uses an exposed-length cylinder model (`N·π·D·(aircraft_length − fuse_length)`) as a placeholder. The ground-truth value 41.515 ft² is stored separately and used in the accurate total.
 
 ### 4.5 Whole-Aircraft Cross-Sectional Area (H26:H45) and Amax
 
@@ -197,7 +198,7 @@ In the Geom tab cross-section detail block, frame 20 incorrectly uses cell `$F$2
 - MATLAB frame 20 whole-aircraft area = **17.129 ft²** (correct width)
 
 ### 6.2 B19 Strake Double-Count
-See note at the top of this document. Corrected total = 1331.134 ft².
+See note at the top of this document. Corrected total = 1331.134 ft². This is the only geometry comparison permitted to exceed the 1% target; validation allows up to 2% here because the workbook formula itself is known-bad.
 
 ---
 
@@ -213,6 +214,8 @@ See note at the top of this document. Corrected total = 1331.134 ft².
 ---
 
 ## 8. Validation Results (test_BrandtGeometry.m — 33/33 PASS)
+
+All geometry checks target ±1%. Only the `Geom!B19` whole-aircraft S_wet comparison uses the documented 2% audit exception.
 
 | Table | Quantity | Computed | GT | % Error | Status |
 |-------|---------|---------|-----|---------|--------|

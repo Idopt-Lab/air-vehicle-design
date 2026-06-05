@@ -13,6 +13,7 @@ mission profile, producing three primary summary targets:
 | Landing ground roll | Miss!O6    | 2884.95 ft  |
 
 Ground truth is `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`.
+Key Excel ranges used below are `Miss!B8:N9`, `Miss!B12:N12`, `Miss!O6:O9`, and `Miss!O12`.
 
 ---
 
@@ -340,8 +341,8 @@ less fuel for cruise/climb/egress segments:
 | Egress  | 304.6         | ~300.9    | −1.21%    |
 | Cruise2 | 789.4         | ~777.5    | −1.50%    |
 
-These three segments use 2% tolerance in the test suite. All other segments
-pass at 1%. Consistent with FR-003 (±5% acceptable for known Excel errors).
+These three segments use the documented 2% audit exception because they inherit the
+known `Geom!B19` S_wet double-count. All other segments pass at 1%.
 
 ### 2. TSFC Model (Old vs New)
 
@@ -371,7 +372,7 @@ Both Miss tab and `BrandtEngine` use the same New model. **No discrepancy.**
 | Egress fuel (lb)   | 304.6       | ~300.9      | −1.21% | 2%*       | PASS*  |
 | Cruise2 fuel (lb)  | 789.4       | ~777.5      | −1.50% | 2%*       | PASS*  |
 
-\* 2% tolerance applied; deviation traces to known Excel S_wet double-counting error.
+\* 2% tolerance applied; deviation traces to the documented `Geom!B19` / `Geom!K21` double-counting error.
 
 Test suite: `src/level_brandt/tests/test_BrandtMission.m` — 43 checks total
 (4 summary + 13 fuel + 13 time + 13 weight fractions).

@@ -176,7 +176,7 @@ classdef BrandtMission < handle
         end
 
         % ─────────────────────────────────────────────────────────────────
-        function run(obj, W_TO_lb)
+        function results = run(obj, W_TO_lb)
         % run  Run the full mission analysis, populating all outputs.
         %
         % W_TO_lb : takeoff gross weight [lb] — required parameter.
@@ -299,6 +299,7 @@ classdef BrandtMission < handle
 
             obj.validate_run_();
             obj.computed_ = true;
+            results = obj.packResults_();
         end
 
         % ─────────────────────────────────────────────────────────────────
@@ -839,6 +840,24 @@ classdef BrandtMission < handle
             t_alt = (abs(Ps) > 1e-6) * abs(dh / Ps / 60);
             t_vel = (abs(dVdt) > 1e-6) * abs(dV / dVdt / 60);
             t = t_alt + t_vel;
+        end
+
+        function r = packResults_(obj)
+            r.segment_names        = obj.inp.segment_names;
+            r.alt_ft               = obj.alt_ft;
+            r.mach_end             = obj.mach_end;
+            r.pct_AB               = obj.pct_AB;
+            r.CDx                  = obj.CDx;
+            r.drop_lb              = obj.drop_lb;
+            r.time_min             = obj.time_min;
+            r.dist_nm              = obj.dist_nm;
+            r.fuel_lb              = obj.fuel_lb;
+            r.W_Wto                = obj.W_Wto;
+            r.dW_Wto               = obj.dW_Wto;
+            r.total_fuel_lb        = obj.total_fuel_lb;
+            r.total_time_min       = obj.total_time_min;
+            r.landing_dist_ft      = obj.landing_dist_ft;
+            r.takeoff_dist_ft      = obj.takeoff_dist_ft;
         end
 
         % ── Run validation ─────────────────────────────────────────────

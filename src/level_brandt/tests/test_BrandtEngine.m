@@ -10,7 +10,7 @@ classdef test_BrandtEngine < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function buildEngine(tc)
-            addpath(fullfile(fileparts(fileparts(mfilename('fullpath'))), '..'));
+            addpath(level_brandt_test_src_root());
             tc.eng = BrandtEngine();
             tc.eng.analyze();
         end

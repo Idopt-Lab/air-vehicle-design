@@ -68,12 +68,51 @@ prop.thrust_lapse(state)  →  scalar α                % from Gorman
 
 ## Non-Negotiable Rules
 
-1. **Every constraint equation cited**: `% Raymer 6th ed, §5.2`
+1. **Every constraint equation cited**: `% Raymer 6th ed, §5.2` or Brandt XLS cell reference
 2. **β must be defined per constraint** — different constraints occur at different weight fractions (e.g., cruise at W_cruise/W_TO, takeoff at β=1.0)
-3. **α (thrust lapse) must come from Gorman** — never use a constant thrust fraction without consulting the propulsion model
+3. **α (thrust lapse) must come from Gorman (or BrandtEngine for Level-Brandt)** — never use a constant thrust fraction without consulting the propulsion model
 4. **Stall constraint is a W/S upper bound**, not a T/W constraint — plot it correctly
 5. **Optimal point is minimum T/W at feasible W/S** — not maximum L/D or any other metric
 6. **Units are always English**: lbf, ft², psf (lbf/ft²), dimensionless for T/W
+7. **For Level-Brandt, use CDmin_sub-based CD0 (≈0.017) from `aero.run(mach).CD0`** — NOT the Miss-tab Cfe_eff-based CD0 (0.027). The Consts tab sources CD0 from Aero!C7 = CDmin_sub basis.
+8. **No K2 term in the Master Equation** — Brandt's Consts tab uses simplified parabolic polar (CD0 + K1·CL²). K2 is omitted at this fidelity level.
+9. **Before finalizing any code, run all tests**: `runtests('src/level_brandt/tests')` — all must pass.
+10. **Never re-implement cross-discipline logic** — if a value from BrandtEngine or BrandtAerodynamics is needed, extend that class's `run()` struct output rather than re-computing it locally (FR-016).
+11. **Landing returns W/S, not T/W** — it is a vertical constraint line on the diagram.
+
+## Level-Brandt Implementation Details (BrandtConstraintAnalysis)
+
+### Files
+- `src/level_brandt/BrandtConstraintAnalysis.m` — main class
+- `src/level_brandt/tests/test_BrandtConstraintAnalysis.m` — 71 tests
+- `examples/.../Ground-Truth/readme_consts.md` — equations, discrepancies, flowchart
+- `examples/.../Ground-Truth/f16a_geometry.json` — added `"constraints"` section plus downstream `"cost"`, `"performance"`, and `"gear"` sections consumed by related Level-Brandt classes
+
+### Related Level-Brandt classes
+- `BrandtPerformance` consumes the same `BrandtAerodynamics` + `BrandtEngine` outputs used by the constraint model, but builds Ps grids, maneuver curves, and V-n data instead of T/W vs W/S curves.
+- `BrandtBalanceStabControl` uses the design-point geometry and weight breakdown to turn the constraint-selected aircraft into CG, static-margin, and gear-loading checks.
+- `BrandtCost` consumes `BrandtWeight` and `BrandtMission` outputs after sizing to estimate flyaway and life-cycle cost.
+
+### Class Dependencies
+```
+BrandtGeometry → BrandtAerodynamics ──┐
+                                       ├─→ BrandtConstraintAnalysis
+                BrandtEngine ──────────┘
+```
+
+### Critical Technical Notes
+- **CD0 source**: `aero.run(mach).CD0` returns CDmin_sub basis (≈0.017 subsonic) — this is the correct basis for constraint analysis matching Consts!AM column. Do NOT use `aero.CD0` (Miss-tab basis = 0.027).
+- **α source**: `eng.run(alt, mach, pct_AB/100).alpha_AB_ref` — matches Consts!AU column exactly.
+- **Atmosphere**: MATLAB `atmosisa` vs Brandt polynomial → ≤2% deviation in ρ, a → ≤2% on T/W. Test tolerances: 5% subsonic, 8% supersonic.
+- **β for performance constraints**: 0.89966696 (from Consts!B23, linked to Miss-tab weight fractions at combat phase start).
+- **β for takeoff/landing**: 1.0 (at TOGW).
+- **Takeoff mach approximation**: M=0.2 for liftoff (Consts!AT32 = 0.2).
+
+### Ground Truth (Consts tab)
+At W/S = 48 psf: max_mach T/W = 1.2228, cruise T/W = 0.6247, max_alt T/W = 0.4732,
+combat_turn_sub T/W = 0.5274, ps_500 T/W = 0.8888, takeoff T/W = 0.2438.
+Landing W/S_max = 138.4794 psf.
+Optimal point (Size&Opt): W/S = 104.59 psf, T/W = 0.7576.
 
 ## How I Work
 

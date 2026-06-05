@@ -16,6 +16,7 @@ classdef test_BrandtGeometry < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function buildGeometry(tc)
+            addpath(level_brandt_test_src_root());
             g = BrandtGeometry();
             g.analyze();
             tc.geom = g;

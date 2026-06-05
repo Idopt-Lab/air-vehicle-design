@@ -5,7 +5,8 @@
   "aircraft": {
     "name": "F-16A Block 10/15",
     "n_engines": 1,
-    "Mcrit": 0.873
+    "Mcrit": 0.873,
+    "Mmax": 2.0
   },
 
   "aero": {
@@ -140,13 +141,109 @@
     "_source": "Main!B28:I32; Engn(s) tab — nacelle D and L are CALCULATED, not given",
     "n_engines":       1,
     "T_mil_SLS_lb":    15000.0,
+    "T_dry_SLS_lb":    15000.0,
     "T_AB_SLS_lb":     23770.0,
     "TSFC_mil_per_hr": 0.70,
     "TSFC_AB_per_hr":  2.20,
     "inlet_x_ft":      14.0,
+    "inlet_entry_x_ft": 15.0,
+    "duct_length_ft":  14.0,
     "inlet_dz_ft":     1.5,
     "TSFC_install_factor": 1.08,
     "TR": 1.0
+  },
+
+  "weight": {
+    "_source": "Main!O15-O17, Main!Q27, Main!O27; Wt tab B4:B7, F7:H7",
+    "_note": "perm_payload and exp_payload are fixed inputs (not design variables). n_design_load and weight_scale are aircraft-level parameters. n_vert_tails drives vertical tail weight factor (=2 for twin VT aircraft).",
+    "perm_payload_lb":    700.0,
+    "exp_payload_lb":    4400.0,
+    "n_design_load":        9.0,
+    "weight_scale_pct":   100.0,
+    "n_vert_tails":           1
+  },
+
+  "constraints": {
+    "_source": "Brandt-F16-A.xls Consts tab, rows 22-33",
+    "_note_beta": "beta_perf = W/W_TO at constraint flight conditions, Consts!B23:B30. Value 0.89966696 is derived from the Miss tab weight fractions at the beginning of the combat phase.",
+    "_note_CD0": "CD0 for constraints uses BrandtAerodynamics.run(mach).CD0, which is the Aero-tab CDmin_sub basis (≈0.017 subsonic), NOT the Miss-tab CD0 (0.027). This matches Consts!AM column which sources Main!O4 = Aero!C7 = CDmin_sub.",
+    "_note_alpha": "Thrust lapse alpha uses BrandtEngine.run(alt, mach, AB_p).alpha_AB_ref (normalised to T_sl_AB), matching Consts!AU column.",
+    "beta_perf": 0.89966696,
+    "conditions": {
+      "max_mach":        {"alt_ft": 36000, "mach": 1.60, "n": 1.0, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!23", "_desc": "Max Mach sprint, supersonic dash"},
+      "cruise":          {"alt_ft": 36000, "mach": 0.87, "n": 1.0, "pct_AB":   0, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!24", "_desc": "Level subsonic cruise"},
+      "max_alt":         {"alt_ft": 50000, "mach": 0.87, "n": 1.0, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!25", "_desc": "Service ceiling (Ps=0)"},
+      "combat_turn_sub": {"alt_ft": 20000, "mach": 0.87, "n": 4.5, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!26", "_desc": "Sustained subsonic combat turn"},
+      "combat_turn_sup": {"alt_ft": 36000, "mach": 1.40, "n": 1.4, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!27", "_desc": "Supersonic combat turn"},
+      "ps_500":          {"alt_ft": 10000, "mach": 0.87, "n": 1.0, "pct_AB": 100, "Ps_fps": 500, "CDx": 0.0, "_row": "Consts!28", "_desc": "Specific excess power Ps=500 ft/s"}
+    },
+    "takeoff": {
+      "_source": "Consts!K32",
+      "_note": "beta=1.0 (takeoff at TOGW). mach_liftoff=0.2 is Brandt's approximation for V_liftoff/a_SL (Consts!AT32). CDx=0.035 includes landing gear and flap drag.",
+      "alt_ft": 0,
+      "mach_liftoff": 0.2,
+      "pct_AB": 100,
+      "CDx": 0.035,
+      "S_TO_ft": 4000
+    },
+    "landing": {
+      "_source": "Consts!K33",
+      "_note": "Returns max W/S limit, not T/W. beta=1.0. CDx=0.045 includes gear and flap drag. Power-off approach (no thrust). Formula: WS_max = S_land*rho*g*(mu_brake*CLmax_land + 0.83*CD0_land)/k_app^2.",
+      "CDx": 0.045,
+      "S_land_ft": 4000
+    }
+  },
+
+  "cost": {
+    "_source": "Cost tab — DAPCA IV model",
+    "Q": 200,
+    "FTA": 3,
+    "Tt4_R": 3400,
+    "RE_dol_hr": 86,
+    "RT_dol_hr": 88,
+    "RQ_dol_hr": 81,
+    "RM_dol_hr": 73,
+    "AF": 0.5,
+    "ICF": 0,
+    "EF": 0.16,
+    "AMF": 1.0,
+    "FH_yr": 500,
+    "F_dol_lb": 0.3,
+    "CR": 1.1,
+    "CH_yr": 300,
+    "MMH_FH": 15,
+    "life_yr": 20,
+    "material_Al_pct": 65,
+    "material_Al_fac": 1.0,
+    "material_CF_pct": 20,
+    "material_CF_fac": 0.9,
+    "material_FG_pct": 0,
+    "material_FG_fac": 0.9,
+    "material_Steel_pct": 5,
+    "material_Steel_fac": 1.0,
+    "material_Ti_pct": 10,
+    "material_Ti_fac": 1.5
+  },
+
+  "performance": {
+    "_source": "Perf, Ps, Maneuv, Struct tabs",
+    "altitude_perf_ft": 35000,
+    "altitude_maneuv_ft": 10000,
+    "pct_AB_maneuv": 100,
+    "n_max_pos": 9,
+    "n_max_neg": 3,
+    "q_max_psf": 2133
+  },
+
+  "gear": {
+    "_source": "Gear tab — landing gear geometry",
+    "x_nose_ft": 22.0,
+    "x_main_ft": 37.7,
+    "y_main_ft": 6.0,
+    "h_nose_ft": 5.3,
+    "h_main_ft": 5.3,
+    "d_nose_ft": 1.5,
+    "d_main_ft": 2.0
   },
 
   "mission": {

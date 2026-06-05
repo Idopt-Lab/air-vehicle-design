@@ -12,7 +12,7 @@ classdef test_BrandtMission < matlab.unittest.TestCase
         function buildMission(tc)
             % Build full dependency chain and run mission analysis.
             % W_TO_lb = 31377.0 lb (from f16a_geometry.json, Miss tab baseline)
-            addpath(fullfile(fileparts(fileparts(mfilename('fullpath'))), '..'));
+            addpath(level_brandt_test_src_root());
             geom = BrandtGeometry(); geom.analyze();
             aero = BrandtAerodynamics(geom); aero.analyze();
             eng  = BrandtEngine();           eng.analyze();
