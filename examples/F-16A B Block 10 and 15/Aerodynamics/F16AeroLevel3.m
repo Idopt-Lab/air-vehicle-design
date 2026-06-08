@@ -15,7 +15,6 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % I could pick the "component" interpretation. That would be
           % specific enough to stop overthinking stuff.
           % Each "object" could be an individual part of the design.
-          airfoiltype % either "cambered" or "uncambered." Leave empty if NOT AIRFOIL.
           e_osw_clean
           e_osw_TO
           e_osw_L
@@ -46,6 +45,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
      end
 
      properties (Constant) % These should be values that are tabulated based on geometry.
+          airfoiltype = "cambered"; % either "cambered" or "uncambered." Leave empty if NOT AIRFOIL.
           hld_TE = "plain"; % High-lift device, trailing edge (type)
           hld_LE = "slat"; % High-lift device, leading edge (type)
           delta_hld_TE_TO = 20; % Deflection of high-lift device, trailing edge, take-off config (deg)
@@ -202,9 +202,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % Compute K1
           function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
                if (0.0 < M) && (M < 1.0)
-                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+                    K1 = aero_obj.K1_sub(AR, e_osw);
                elseif (M >= 1.0)
-                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+                    K1 = aero_obj.K1_sup(AR, M, LE_sweep_deg);
                else
                     error("Error handler.")
                end
@@ -213,9 +213,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % Compute K2
           function K2 = compute_K2(aero_obj, M, K1, CLminD)
                if (0.0 < M) && (M < 1.0)
-                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+                    K2 = aero_obj.K2_sub(K1, CLminD);
                elseif (M >= 1.0)
-                    K2 = AeroUtils.compute_K2_sup();
+                    K2 = aero_obj.K2_sup();
                else
                     error("Error handler.")
                end
@@ -338,18 +338,18 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % "compute" = "non-wrapper"
           function CDi_design = get_CDi(aero_obj, statevector, S_ref, e_osw, AR, L)
                M = statevector(1);
-               q = AeroUtils.compute_q(statevector);
+               q = AeroUtils.q(statevector);
 
                % Check if sup/subsonic:
                if M >=1.0
                     % Supersonic
                     alpha_deg = statevector(3);
-                    CL = AeroUtils.compute_CL(L, q, S_ref);
-                    CDi_design = AeroUtils.compute_CDi_supersonic(CL, alpha_deg);
+                    CL = aero_obj.get_CL(L, q, S_ref);
+                    CDi_design = aero_obj.CDi_supersonic(CL, alpha_deg);
                elseif M<1.0
                     % Subsonic
-                    CL = AeroUtils.compute_CL(L, q, S_ref);
-                    CDi_design = AeroUtils.compute_CDi_subsonic(CL, e_osw, AR);
+                    CL = aero_obj.CL(L, q, S_ref);
+                    CDi_design = aero_obj.CDi_subsonic(CL, e_osw, AR);
                else
                     error("Error handler, get_CDi, AeroLevel3.")
                end
@@ -580,6 +580,11 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                component_CD0 = AeroLevel3.get_component_CD0_from_Dq(component_Dq, S_ref);
                % Recall that D/q * q = drag force
                % D/q divided by S_ref = CD0_component
+          end
+
+          % Get CL
+          function CL = get_CL(aero_obj, L, q, S_ref)
+               CL = aero_obj.CL(L, q, S_ref);
           end
 
      end

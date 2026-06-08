@@ -41,7 +41,7 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           % K2 = compute_K2(M, K1, CLminD)
           % CD = get_CD(CD0, K, CL)
           % CD0 = get_CD0(Cf, S_wet, S_ref)
-          CDi = get_CDi(statevector, CL, e_osw, AR)
+          % CDi = get_CDi(statevector, CL, e_osw, AR)
           Delta_CD0 = get_Delta_CD0(flaptype, cf_c, S_flapped, S_ref, delta_flap_deg) % This should get you the Delta_CD0 values you need. (use Raymer 12.61
           CL_minD = get_CL_minD(CL_alpha, alpha_L0)
           % Cf = get_Cf(aircraft_type, n_engines) % Using L1 until a suitable replacement is found.
