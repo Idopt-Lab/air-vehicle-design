@@ -19,6 +19,17 @@ classdef AeroUtils
                end
           end
 
+          % Get velocity, mu, and rho, given Mach number and altitude
+          function output = get_V_and_mu(M, h_ft)
+               [T, a, ~, rho] = atmosisa(h_ft*0.3048);
+               rho = rho*0.00194032033; % Convert from kg/m^3 to imperial
+               a = a*3.2808399; % Convert from m/s -> ft/s
+               V = a*M;
+               T = T*1.8; % Convert Kelvin to Rankine
+               mu = AeroLevel3.mu(T);   % dynamic viscosity
+               output = [V, mu, rho];
+          end
+
           % % Get CL for some given state
           % function output = compute_CL(L, q, S_ref)
           %      CL = L./(q.*S_ref);
@@ -36,7 +47,7 @@ classdef AeroUtils
           % function CDi = compute_CDi_subsonic(CL, e_osw, AR)
           %      CDi = ( (CL^2) / (pi * e_osw * AR));
           % end
-          % 
+          %
           % % Compute CDi (supersonic case)
           % function CDi = compute_CDi_supersonic(CL, alpha_deg)
           %      CDi = CL*sind(alpha_deg);

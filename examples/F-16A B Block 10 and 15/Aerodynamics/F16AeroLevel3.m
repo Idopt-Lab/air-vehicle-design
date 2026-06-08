@@ -74,9 +74,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % Get cl_alpha (2-D)
           function cl_alpha = get_cl_alpha(aero_obj, M)
                if (0.0 < M) && (M < 1.0)
-                    cl_alpha = AeroLevel2.cl_alpha_2D_sub(M);
+                    cl_alpha = aero_obj.cl_alpha_2D_sub(M);
                elseif (1.0 <= M)
-                    cl_alpha = AeroLevel2.cl_alpha_2D_sup(M);
+                    cl_alpha = aero_obj.cl_alpha_2D_sup(M);
                else
                     error("Error handler.")
                end
@@ -84,7 +84,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Get fuselage lift factor
           function F = get_F(aero_obj, fuselage_diam, b)
-               F = AeroLevel2.F(fuselage_diam, b);
+               F = aero_obj.F_comp(fuselage_diam, b);
           end
 
           % Get Delta_CD0 from landing gear
@@ -94,7 +94,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Get L/D max
           function LD_max = get_LD_max(aero_obj, AR, e_osw, CD0)
-               LD_max = AeroLevel2.LD_max(AR, e_osw, CD0);
+               LD_max = aero_obj.LD_max(AR, e_osw, CD0);
           end
 
           % Get Delta_CD0 from flaps
@@ -107,12 +107,12 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                else
                     F_flap=(0.0144+0.0074)/2; % Averaged
                end
-               Delta_CD0 = AeroLevel2.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
+               Delta_CD0 = aero_obj.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
           end
 
           % Get CL_minD
           function output = get_CL_minD(aero_obj, CL_alpha, alpha_L0)
-               output = AeroLevel2.CL_minD(CL_alpha, alpha_L0);
+               output = aero_obj.compute_CL_minD(CL_alpha, alpha_L0);
           end
 
           % Get CL_max values
@@ -123,16 +123,16 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % Check if high or low AR
                AR_check = AeroUtils.AR_check(AR, aero_obj.C1, Lambda_LE_deg);
                if (AR_check == "Low")
-                    CL_max = AeroLevel2.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
+                    CL_max = aero_obj.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
                elseif (AR_check == "High")
-                    CL_max = AeroLevel2.CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max);
+                    CL_max = aero_obj.CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max);
                end
           end
 
           % Get Delta_CL_max values
           function Delta_CL_max = get_Delta_CL_max_values(aero_obj, Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
                % Lambda_HL_deg = Angle of the flap's hinge line (deg)
-               Delta_CL_max = AeroLevel2.Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg);
+               Delta_CL_max = aero_obj.Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg);
           end
 
           % Get Delta_cl_max
@@ -145,10 +145,10 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % chord length)
 
                % Index the lift device
-               idx = AeroLevel2.Delta_cl_max_table.("High-Lift Device")==liftdevice;
+               idx = aero_obj.Delta_cl_max_table.("High-Lift Device")==liftdevice;
 
                % Extract the Delta_cl_max
-               Delta_cl_max = AeroLevel2.Delta_cl_max_table{idx, 2};
+               Delta_cl_max = aero_obj.Delta_cl_max_table{idx, 2};
 
                % Apply modifiers if necessary
                if (ismember(liftdevice, ["fowler", "double slotted", "triple slotted", "slat"]))
@@ -174,19 +174,18 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     error("Error handler.")
                end
 
-               Delta_CDi = AeroLevel2.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
+               Delta_CDi = aero_obj.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
           end
 
 
           % Compute Oswald span efficiency factor (wrapper)
           % Account for biplanes? (Raymer, 6th edi, p 444)
           function e_osw = get_e_osw(aero_obj, AR, Lambda_LE)
-               % Level 3: Actually compute this
                % Discern between straight and swept wings.
-               if Lambda_LE > 30 % Can I add a section for function handles?
-                    e_osw = AeroLevel3.e_swept(AR, Lambda_LE);
+               if Lambda_LE > 30
+                    e_osw = aero_obj.e_swept(AR, Lambda_LE);
                elseif (0 <= Lambda_LE) && (Lambda_LE < 30)
-                    e_osw = AeroLevel3.e_straight(AR);
+                    e_osw = aero_obj.e_straight(AR);
                else
                     error("Error handler, get e_osw level 3.")
                end
@@ -230,16 +229,16 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                if M>=(1/cos(Lambda_LE_rad))
                     % Supersonic (leading edge is purely in supersonic
                     % flow):
-                    CL_alpha = AeroLevel3.CL_alpha_wing_sup(M);
+                    CL_alpha = aero_obj.CL_alpha_wing_sup(M);
                elseif M<(1/cos(Lambda_LE_rad))
                     % Subsonic:
-                    aero_obj.F = AeroLevel3.F(fuselage_width, b);
-                    beta = AeroLevel3.beta_mach(M);
-                    % eta = AeroLevel3.eta_mach(cl_alpha, beta);
+                    aero_obj.F = aero_obj.F(fuselage_width, b);
+                    beta = aero_obj.beta_mach(M);
+                    % eta = aero_obj.eta_mach(cl_alpha, beta);
                     eta = 0.95; % Raymer: if it's unknown, we may assume 0.95.
-                    CL_alpha = AeroLevel3.CL_alpha_wing_sub(AR, S_exposed, S_ref, aero_obj.F, Lambda_max_t_rad, beta, eta);
+                    CL_alpha = aero_obj.CL_alpha_wing_sub(AR, S_exposed, S_ref, aero_obj.F, Lambda_max_t_rad, beta, eta);
                else
-                    error("Error handler, get_CL_alpha, AeroLevel3.")
+                    error("Error handler, get_CL_alpha, aero_obj.")
                end
           end
 
@@ -276,7 +275,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
 
                % Compute CD (done?) (double-check results later)
-               aero_obj.K1 = AeroLevel3.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
+               aero_obj.K1 = aero_obj.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
                DragResults.CD_design = get_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
 
                % Compute D for given state (done)
@@ -299,10 +298,10 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     elseif M < 1.0
                          CD = CD0 + K1.*(CL - CL_minD).^2;
                     else
-                         error("Error handler, compute_design_CD, F16AeroLevel3.")
+                         error("Error handler, compute_design_CD, F16aero_obj.")
                     end
                else
-                    error("Error handler, compute_design_CD, F16AeroLevel3.")
+                    error("Error handler, compute_design_CD, F16aero_obj.")
                end
                % aero_obj.CD = CD;
           end
@@ -322,11 +321,11 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           function output = get_CL_alpha(aero_obj, M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
                if (0.0 < M) && (M < 1.0)
                     beta_mach = sqrt(1 - M^2);
-                    eta_mach = AeroLevel2.eta_mach(cl_alpha, beta_mach);
-                    output = AeroLevel2.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta_mach, eta_mach);
+                    eta_mach = aero_obj.eta_mach(cl_alpha, beta_mach);
+                    output = aero_obj.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta_mach, eta_mach);
                elseif (1.0 <= M)
                     beta_mach = sqrt(M^2 - 1);
-                    output = AeroLevel2.CL_alpha_wing_sup(beta_mach);
+                    output = aero_obj.CL_alpha_wing_sup(beta_mach);
                else
                     error("Error handler.")
                end
@@ -351,7 +350,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     CL = aero_obj.CL(L, q, S_ref);
                     CDi_design = aero_obj.CDi_subsonic(CL, e_osw, AR);
                else
-                    error("Error handler, get_CDi, AeroLevel3.")
+                    error("Error handler, get_CDi, aero_obj.")
                end
           end
 
@@ -359,19 +358,19 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           function [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R, M)
                % Differentiate between TURBULENT and LAMINAR RE
                % Laminar:
-               Cf_lam_result = AeroLevel3.Cf_lam(R);
+               Cf_lam_result = aero_obj.Cf_lam(R);
 
                % Turbulent:
-               Cf_turb_result = AeroLevel3.Cf_turb(R, M);
+               Cf_turb_result = aero_obj.Cf_turb(R, M);
           end
 
           % Get R_cutoff (differentiate between sub and supersonic)
           % (wrapper)
           function R_cutoff = get_R_cutoff(aero_obj, ref_length, M)
                if M > 1.0
-                    R_cutoff = AeroLevel3.R_cutoff_sup(ref_length, M, aero_obj.k);
+                    R_cutoff = aero_obj.R_cutoff_sup(ref_length, M, aero_obj.k);
                elseif M <= 1.0
-                    R_cutoff = AeroLevel3.R_cutoff_sub(ref_length, aero_obj.k);
+                    R_cutoff = aero_obj.R_cutoff_sub(ref_length, aero_obj.k);
                end
           end
 
@@ -381,25 +380,25 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     x_c = component_specs.xc;
                     t_c = component_specs.tc;
                     Lambda_m = component_specs.Lambda_m;
-                    FF = AeroLevel3.FF_1(x_c, t_c, M, Lambda_m);
+                    FF = aero_obj.FF_1(x_c, t_c, M, Lambda_m);
                elseif (component_type == "fuselage") || (component_type == "smooth canopy")
                     l = component_specs.l;
                     d = component_specs.d;
                     A_max = component_specs.A_max;
-                    FF = AeroLevel3.FF_2(l, A_max);
+                    FF = aero_obj.FF_2(l, A_max);
                elseif (component_type == "nacelle") || (component_type == "smooth external store")
                     l = component_specs.l;
                     d = component_specs.d;
                     A_max = component_specs.A_max;
-                    FF = AeroLevel3.FF_3(l, A_max);
+                    FF = aero_obj.FF_3(l, A_max);
                elseif (component_type == "double wedge")
                     l = component_specs.l;
                     d = component_specs.d;
-                    FF = AeroLevel3.FF_doublewedge(d, l);
+                    FF = aero_obj.FF_doublewedge(d, l);
                elseif (component_type == "single wedge")
                     l = component_specs.l;
                     d = component_specs.d;
-                    FF = AeroLevel3.FF_singlewedge(d, l);
+                    FF = aero_obj.FF_singlewedge(d, l);
                else
                     error("Couldn't identify part. Use: wing, tail, strut, pylon, fuselage, smooth canopy, nacelle, smooth external store, double wedge, single wedge.")
                end
@@ -443,7 +442,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                CD0_LandP = aero_obj.compute_CD0_LandP(S_ref);
 
                % Wave drag for entire design:
-               CD0_wave = AeroLevel3.compute_CD0_wave(M, geometry_obj.mainwings.LE_sweep, pi*(geometry_obj.fuselage.W_max/2)^2, geometry_obj.fuselage.L, S_ref);
+               CD0_wave = aero_obj.compute_CD0_wave(M, geometry_obj.mainwings.LE_sweep, pi*(geometry_obj.fuselage.W_max/2)^2, geometry_obj.fuselage.L, S_ref);
 
                % Supersonic CD0: eq 12.41, Raymer 6th edition.
                output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total + CD0_wave;
@@ -492,13 +491,13 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                h_ft = statevector(2);
 
                % Extract V and mu from altitude
-               bingus = AeroLevel3.get_V_and_mu(M, h_ft);
+               bingus = AeroUtils.get_V_and_mu(M, h_ft);
                V = bingus(1);
                mu = bingus(2);
                rho = bingus(3);
 
                % Compute the component's reynolds number at the given state
-               R_component = AeroLevel3.R(ref_length, rho, V, mu);
+               R_component = aero_obj.R(ref_length, rho, V, mu);
 
                % Get cutoff Reynolds number
                R_cutoff = aero_obj.get_R_cutoff(ref_length, M);
@@ -507,17 +506,17 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                [Cf_lam_result, Cf_turb_result] = aero_obj.get_Cf(R_component, M);
 
                % Determine which CF_turb to use
-               Cf_turb_result = AeroLevel3.get_Cf_turb(Cf_turb_result, R_component, R_cutoff, M);
+               Cf_turb_result = aero_obj.get_Cf_turb(Cf_turb_result, R_component, R_cutoff, M);
 
                % Get the average Cf
-               Cf_avg = AeroLevel3.computeavgcf(R_component, R_cutoff, Cf_turb_result, Cf_lam_result);
+               Cf_avg = aero_obj.computeavgcf(R_component, R_cutoff, Cf_turb_result, Cf_lam_result);
                Cf_component = Cf_avg;
 
                % Get form factor
                FF_component = aero_obj.get_FF(component_type, component_specs, M);
 
                % Compute the component drag
-               component_drag_value = AeroLevel3.compute_component_drag(Cf_component, Q_component, S_wet_component, FF_component);
+               component_drag_value = aero_obj.compute_component_drag(Cf_component, Q_component, S_wet_component, FF_component);
 
                % THIS ISN'T ACTUALLY THE CD0 THIS IS THE NUMERATOR FOR THE
                % CD0 EQUATION FOR THE ENTIRE DESIGN
@@ -542,13 +541,13 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                h_ft = statevector(2);
 
                % Extract V and mu from altitude
-               bingus = AeroLevel3.get_V_and_mu(M, h_ft);
+               bingus = AeroUtils.get_V_and_mu(M, h_ft);
                V = bingus(1);
                mu = bingus(2);
                rho = bingus(3);
 
                % Compute the component's reynolds number at the given state
-               R_component = AeroLevel3.R(ref_length, rho, V, mu);
+               R_component = aero_obj.R(ref_length, rho, V, mu);
 
                % Get cutoff Reynolds number
                R_cutoff = aero_obj.get_R_cutoff(ref_length, M);
@@ -557,17 +556,17 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                [Cf_lam_result, Cf_turb_result] = get_Cf(aero_obj, R_component, M);
 
                % Determine which CF_turb to use
-               Cf_turb_result = AeroLevel3.get_Cf_turb(Cf_turb_result, R_component, R_cutoff, M);
+               Cf_turb_result = aero_obj.get_Cf_turb(Cf_turb_result, R_component, R_cutoff, M);
 
                % Get the average Cf
-               Cf_avg = AeroLevel3.computeavgcf(R_component, R_cutoff, Cf_turb_result, Cf_lam_result);
+               Cf_avg = aero_obj.computeavgcf(R_component, R_cutoff, Cf_turb_result, Cf_lam_result);
                Cf_component = Cf_avg;
 
                % Get form factor
                FF_component = 1.0;
 
                % Compute the component drag
-               component_drag_value = AeroLevel3.compute_component_drag(Cf_component, Q_component, S_wet_component, FF_component);
+               component_drag_value = aero_obj.compute_component_drag(Cf_component, Q_component, S_wet_component, FF_component);
 
                % Now compute the CD0
                % THIS ISN'T ACTUALLY THE CD0 THIS IS THE NUMERATOR FOR THE
@@ -577,7 +576,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           % Get CD0 for a given component (leakage and protuberance model)
           function component_CD0 = get_CD0_LandP(aero_obj, component_Dq, S_ref)
-               component_CD0 = AeroLevel3.get_component_CD0_from_Dq(component_Dq, S_ref);
+               component_CD0 = aero_obj.get_component_CD0_from_Dq(component_Dq, S_ref);
                % Recall that D/q * q = drag force
                % D/q divided by S_ref = CD0_component
           end
@@ -601,8 +600,8 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           %
           % % Get CD0_misc values
           function CD0_misc = compute_CD0_misc(aero_obj, design, propulsion_obj, S_ref)
-               CD0_misc.windmillingjet = AeroLevel3.Dq_windmillingjet(pi*(propulsion_obj.enginestats.D/2)^2)/S_ref;
-               CD0_misc.upsweep = AeroLevel3.Dq_upsweep(0.01, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2)/S_ref;
+               CD0_misc.windmillingjet = aero_obj.Dq_windmillingjet(pi*(propulsion_obj.enginestats.D/2)^2)/S_ref;
+               CD0_misc.upsweep = aero_obj.Dq_upsweep(0.01, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2)/S_ref;
                CD0_misc.total = CD0_misc.windmillingjet + CD0_misc.upsweep;
           end
 
