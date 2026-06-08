@@ -8,7 +8,6 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      % fidelity.
 
      properties
-          airfoiltype
           e_osw_clean
           e_osw_TO
           e_osw_L
@@ -36,6 +35,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
      end
 
      properties (Constant) % These should be values that are tabulated based on geometry.
+          airfoiltype = "cambered"
           hld_TE = "plain"; % High-lift device, trailing edge (type)
           hld_LE = "slat"; % High-lift device, leading edge (type)
           delta_hld_TE_TO = 20; % Deflection of high-lift device, trailing edge, take-off config (deg)
@@ -64,15 +64,15 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
           % Get fuselage lift factor
           function F = get_F(aero_obj, fuselage_diam, b)
-               F = AeroLevel2.F(fuselage_diam, b);
+               F = aero_obj.F_comp(fuselage_diam, b);
           end
 
           % Get cl_alpha (2-D)
           function cl_alpha = get_cl_alpha(aero_obj, M)
                if (0.0 < M) && (M < 1.0)
-                    cl_alpha = AeroLevel2.cl_alpha_2D_sub(M);
+                    cl_alpha = aero_obj.cl_alpha_2D_sub(M);
                elseif (1.0 <= M)
-                    cl_alpha = AeroLevel2.cl_alpha_2D_sup(M);
+                    cl_alpha = aero_obj.cl_alpha_2D_sup(M);
                else
                     error("Error handler.")
                end
@@ -103,7 +103,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                     error("Error handler.")
                end
 
-               Delta_CDi = AeroLevel2.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
+               Delta_CDi = aero_obj.Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg);
           end
 
           % Get Delta_CD0 from flaps
@@ -116,7 +116,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                else
                     F_flap=(0.0144+0.0074)/2; % Averaged
                end
-               Delta_CD0 = AeroLevel2.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
+               Delta_CD0 = aero_obj.Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg);
           end
 
           % Get Delta_CD0 from landing gear
@@ -126,7 +126,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
           % Get CL_minD
           function output = get_CL_minD(aero_obj, CL_alpha, alpha_L0)
-               output = AeroLevel2.CL_minD(CL_alpha, alpha_L0);
+               output = aero_obj.compute_CL_minD(CL_alpha, alpha_L0);
           end
 
           % Get CL_alpha
@@ -134,11 +134,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           function output = get_CL_alpha(aero_obj, M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
                if (0.0 < M) && (M < 1.0)
                     beta_mach = sqrt(1 - M^2);
-                    eta_mach = AeroLevel2.eta_mach(cl_alpha, beta_mach);
-                    output = AeroLevel2.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta_mach, eta_mach);
+                    eta_mach = aero_obj.eta_mach(cl_alpha, beta_mach);
+                    output = aero_obj.CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta_mach, eta_mach);
                elseif (1.0 <= M)
                     beta_mach = sqrt(M^2 - 1);
-                    output = AeroLevel2.CL_alpha_wing_sup(beta_mach);
+                    output = aero_obj.CL_alpha_wing_sup(beta_mach);
                else
                     error("Error handler.")
                end
@@ -154,10 +154,10 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % chord length)
 
                % Index the lift device
-               idx = AeroLevel2.Delta_cl_max_table.("High-Lift Device")==liftdevice;
+               idx = aero_obj.Delta_cl_max_table.("High-Lift Device")==liftdevice;
 
                % Extract the Delta_cl_max
-               Delta_cl_max = AeroLevel2.Delta_cl_max_table{idx, 2};
+               Delta_cl_max = aero_obj.Delta_cl_max_table{idx, 2};
 
                % Apply modifiers if necessary
                if (ismember(liftdevice, ["fowler", "double slotted", "triple slotted", "slat"]))
@@ -191,7 +191,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Get Delta_CL_max values
           function Delta_CL_max = get_Delta_CL_max_values(aero_obj, Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
                % Lambda_HL_deg = Angle of the flap's hinge line (deg)
-               Delta_CL_max = AeroLevel2.Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg);
+               Delta_CL_max = aero_obj.Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg);
           end
 
           % Get CL_max values
@@ -202,9 +202,9 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                % Check if high or low AR
                AR_check = AeroUtils.AR_check(AR, aero_obj.C1, Lambda_LE_deg);
                if (AR_check == "Low")
-                    CL_max = AeroLevel2.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
+                    CL_max = aero_obj.CL_max_clean_LowAR(CL_max_base, Delta_CL_max);
                elseif (AR_check == "High")
-                    CL_max = AeroLevel2.CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max);
+                    CL_max = aero_obj.CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max);
                end
           end
 
@@ -213,7 +213,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
           % Get L/D max
           function LD_max = get_LD_max(aero_obj, AR, e_osw, CD0)
-               LD_max = AeroLevel2.LD_max(AR, e_osw, CD0);
+               LD_max = aero_obj.LD_max(AR, e_osw, CD0);
           end
 
           % Compute Oswald span efficiency factor (wrapper)
@@ -239,9 +239,9 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Compute K1
           function K1 = compute_K1(aero_obj, M, AR, e_osw, LE_sweep_deg)
                if (0.0 < M) && (M < 1.0)
-                    K1 = AeroUtils.compute_K1_sub(AR, e_osw);
+                    K1 = aero_obj.K1_sub(AR, e_osw);
                elseif (M >= 1.0)
-                    K1 = AeroUtils.compute_K1_sup(AR, M, LE_sweep_deg);
+                    K1 = aero_obj.K1_sup(AR, M, LE_sweep_deg);
                else
                     error("Error handler.")
                end
@@ -250,9 +250,9 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Compute K2
           function K2 = compute_K2(aero_obj, M, K1, CLminD)
                if (0.0 < M) && (M < 1.0)
-                    K2 = AeroUtils.compute_K2_sub(K1, CLminD);
+                    K2 = aero_obj.K2_sub(K1, CLminD);
                elseif (M >= 1.0)
-                    K2 = AeroUtils.compute_K2_sup();
+                    K2 = aero_obj.K2_sup();
                else
                     error("Error handler.")
                end
@@ -260,7 +260,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
 
           % Get Cf
           function Cf = get_Cf(aero_obj, aircraft_type, n_engines)
-               Cf = get_Cf@AerodynamicsModelLevel1(aircraft_type, n_engines);
+               Cf = aero_obj.tab_Cf(aircraft_type, n_engines);
                % N.b: using L1's function for now until I can find a
                % suitable L2 replacement.
           end
@@ -300,9 +300,9 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           function CD = get_CD(aero_obj, airfoiltype, CD0, K, CL, CD_min, CL_minD) % Problem: other classes have function with same name. Can I make this private somehow?
                % CD = CD0 + K*CL^2;
                if (airfoiltype == "uncambered")
-                    CD = AeroLevel2.compute_CD_uncambered(CD0, K, CL);
+                    CD = aero_obj.compute_CD_uncambered(CD0, K, CL);
                elseif (airfoiltype == "cambered")
-                    CD = AeroLevel2.compute_CD_cambered(CD_min, K, CL, CL_minD);
+                    CD = aero_obj.compute_CD_cambered(CD_min, K, CL, CL_minD);
                else
                     error("Error handler.")
                end
@@ -312,7 +312,7 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
           % Get CD0
           function CD0 = get_CD0(aero_obj, Cf, S_wet_aircraft, S_ref)
                % CD0 = Cf * S_wet_aircraft/S_ref;
-               CD0 = AeroLevel2.compute_CD0(Cf, S_wet_aircraft, S_ref);
+               CD0 = aero_obj.compute_CD0(Cf, S_wet_aircraft, S_ref);
           end
 
           %% FOR MISSION ANALYSIS
@@ -322,6 +322,11 @@ classdef F16AeroLevel2 < AerodynamicsModelLevel2
                CL = 2*W/(q*S);
                K = 1/(pi*e*AR);
                LD_ratio = CL/(CD0 + K * CL^2);
+          end
+
+          % Get CL
+          function CL = get_CL(aero_obj, L, q, S_ref)
+               CL = aero_obj.get_CL(L, q, S_ref);
           end
 
      end

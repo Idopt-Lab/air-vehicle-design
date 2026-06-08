@@ -45,6 +45,8 @@ classdef AerodynamicsModelLevel1
           CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
           Cf = get_Cf(aircraft_type, n_engines)
           CL_max = get_CL_max_values(aircraft_type, config, rangeMode)
+          CL = get_CL(L, q, S_ref)
+          
      end
 
 
@@ -66,23 +68,23 @@ classdef AerodynamicsModelLevel1
           end
 
           % Get K1 subsonic value (Source: Brandt)
-          function K1 = K1_sub(~, AR, e_osw)
-               K1 = 1/(pi*AR*e_osw);
+          function output = K1_sub(~, AR, e_osw)
+               output = 1/(pi*AR*e_osw);
           end
 
           % Get K1 supersonic value (Source: Brandt)
-          function K1 = K1_sup(~, AR, M, LE_sweep_deg)
-               K1 = ((AR*(M^2 - 1))/(4*AR*sqrt(M^2 - 1)-2))*cosd(LE_sweep_deg);
+          function output = K1_sup(~, AR, M, LE_sweep_deg)
+               output = ((AR*(M^2 - 1))/(4*AR*sqrt(M^2 - 1)-2))*cosd(LE_sweep_deg);
           end
 
           % Get K2 subsonic value (Source: Brandt)
-          function K2 = K2_sub(~, K1, CLminD)
-               K2 = -2*K1*CLminD;
+          function output = K2_sub(~, K1, CLminD)
+               output = -2*K1*CLminD;
           end
 
           % Get K2 supersonic value (Source: Brandt)
-          function K2 = K2_sup(obj)
-               K2 = 0; % This is always zero
+          function output = K2_sup(obj)
+               output = 0; % This is always zero
           end
 
           % Get e_osw for a design (straight wings)
@@ -105,35 +107,35 @@ classdef AerodynamicsModelLevel1
                output = L./(q.*S_ref);
           end
 
-          % Get CL_minD (using brandt's equation)
-          function output = comp_CL_minD(CL_alpha, alpha_L0_deg)
-               alpha_L0_rad = deg2rad(alpha_L0_deg);
-               output = CL_alpha*(-1*alpha_L0_rad/2);
-          end
-
-          % Estimate theoretical lift-curve slope for 2-D airfoil
-          % (subsonic)
-          % Raymer, 6th ed, fig 12.6
-          function output = CL_alpha_2D_sub(M)
-               output = 2*pi/(sqrt(1-M^2));
-          end
-
-          % Estimate theoretical lift-curve slope for a supersonic 2-D
-          % airfoil
-          % Raymer, 6th ed, fig 12.6
-          function output = CL_alpha_2D_sup(M)
-               output = 4/(sqrt(M^2 - 1));
-          end
+          % % Get CL_minD (using brandt's equation)
+          % function output = comp_CL_minD(CL_alpha, alpha_L0_deg)
+          %      alpha_L0_rad = deg2rad(alpha_L0_deg);
+          %      output = CL_alpha*(-1*alpha_L0_rad/2);
+          % end
+          % 
+          % % Estimate theoretical lift-curve slope for 2-D airfoil
+          % % (subsonic)
+          % % Raymer, 6th ed, fig 12.6
+          % function output = CL_alpha_2D_sub(M)
+          %      output = 2*pi/(sqrt(1-M^2));
+          % end
+          % 
+          % % Estimate theoretical lift-curve slope for a supersonic 2-D
+          % % airfoil
+          % % Raymer, 6th ed, fig 12.6
+          % function output = CL_alpha_2D_sup(M)
+          %      output = 4/(sqrt(M^2 - 1));
+          % end
 
           % Get CD (uncambered)
           function output = CD_uncambered(CD0, K, CL)
                output = CD0 + K.*CL.^2;
           end
 
-          % Get CD (cambered)
-          function output = CD_cambered(CD_min, K, CL, CL_minD)
-               output = CD_min + K.*(CL - CL_minD).^2;
-          end
+          % % Get CD (cambered)
+          % function output = CD_cambered(CD_min, K, CL, CL_minD)
+          %      output = CD_min + K.*(CL - CL_minD).^2;
+          % end
 
           % Compute CDi
           % Compute CDi (subsonic case)
@@ -318,7 +320,7 @@ classdef AerodynamicsModelLevel1
           % Get equivalent skin friction coefficient
           % Source: Raymer, Table 12.3, 6th edition
           % Revise this to use more universal type recognition.
-          function output = get_Cf_val(~, aircraft_type, n_engines)
+          function output = tab_Cf(~, aircraft_type, n_engines)
                if (aircraft_type == "bomber")
                     output = 0.0030;
                elseif (aircraft_type == "civil transport")

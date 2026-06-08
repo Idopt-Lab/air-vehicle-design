@@ -8,12 +8,16 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           Delta_cl_max_TO % Contribution from high-lift devices (take-off config)
           Delta_cl_max_L % Contribution from high-lift devices (landing config)
           Delta_CDi
+          F % Fuselage interference factor
           % I should definitely add the properties of high-lift devices'
           % deflections for take-off and landing configurations, as well as
           % properties for their types.
      end
 
      properties (Abstract, Constant)
+          airfoiltype % "cambered" or "uncambered".
+          % N.B: Consider installing a NACA airfoil database for airfoil
+          % data lookup (instead of having to troll the internet).
           hld_TE % High-lift device, trailing edge (type) (e.g., "plain")
           hld_LE % High-lift device, leading edge (type) (e.g., "slat")
           delta_hld_TE_TO % Deflection of high-lift device, trailing edge, take-off config (deg)
@@ -64,7 +68,7 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           function obj = AerodynamicsModelLevel2()
 
           end
-        % Estimate Delta_CDi resulting from flaps
+          % Estimate Delta_CDi resulting from flaps
           % Source: Raymer, Aircraft Design: A Conceptual Approach, 6th ed,
           % eq 12.62
           function output = Delta_CDi_flap(k_f, Delta_CL_flap, Lambda_cbar_q_deg)
@@ -80,7 +84,7 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           % Estimate Delta_CD0 resulting from flaps deployed
           % Source: Raymer, Aircraft Design: A Conceptual Approach, 6th ed,
           % eq 12.61
-          function output = Delta_CD0_flap(F_flap, cf_c, S_flapped, S_ref, delta_flap_deg)
+          function output = Delta_CD0_flap(obj, F_flap, cf_c, S_flapped, S_ref, delta_flap_deg)
                % cf_c = Ratio of FLAP CHORD LENGTH (NOT TOTAL CHORD LENGTH (WING+FLAP)) over the WING CHORD
                % LENGTH.
                % delta_flap = flap deflection down (deg)
@@ -89,14 +93,14 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
 
           % Estimate CL_max (clean) (valid for M<1, moderate sweep)
           % Raymer, 6th ed, eq 12.15
-          function output = CL_max_clean_subsonic(cl_max, Lambda_qc_deg)
+          function output = CL_max_clean_subsonic(obj, cl_max, Lambda_qc_deg)
                output = 0.9*cl_max*cosd(Lambda_qc_deg);
           end
 
           % Estimate CL_max (clean) (HighAR, subsonic)
           % Valid: high AR, M<1
           % Raymer, 6th ed, eq 12.16
-          function output = CL_max_clean_HighAR(cl_max, CL_max_cl_max, Delta_CL_max)
+          function output = CL_max_clean_HighAR(obj, cl_max, CL_max_cl_max, Delta_CL_max)
                % cl_max = Airfoil lift coefficient at Mach 0.2
                output = cl_max*CL_max_cl_max + Delta_CL_max;
           end
@@ -104,14 +108,14 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           % Estimate CL_max (clean) (Low AR, subsonic)
           % Valid: Low AR, subsonic
           % Raymer, 6th ed, eq 12.19
-          function output = CL_max_clean_LowAR(CL_max_base, Delta_CL_max)
+          function output = CL_max_clean_LowAR(obj, CL_max_base, Delta_CL_max)
                output = CL_max_base + Delta_CL_max;
           end
 
           % Estimate Delta_CL_max induced by a high-lift device
           % Raymer, Aircraft Design: A Conceptual Approach, 6th ed, eq
           % 12.21
-          function output = Delta_CL_max(Delta_cl_max, S_flapped, S_ref, Lambda_HL)
+          function output = Delta_CL_max(obj, Delta_cl_max, S_flapped, S_ref, Lambda_HL)
                output = 0.9*Delta_cl_max*(S_flapped/S_ref)*cosd(Lambda_HL);
           end
 
@@ -253,7 +257,7 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           end
 
           % Get CL_minD
-          function output = CL_minD(CL_alpha, alpha_L0)
+          function output = compute_CL_minD(obj, CL_alpha, alpha_L0)
                output = CL_alpha*(-alpha_L0/2);
           end
 
@@ -267,33 +271,33 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
 
           % Get CD (cambered)
           % Source: Raymer, "Aircraft Design: A Conceptual Approach", 6th ed, eq 12.5
-          function CD = compute_CD_cambered(CD_min, K, CL, CL_minD)
+          function CD = compute_CD_cambered(obj, CD_min, K, CL, CL_minD)
                CD = CD_min + K.*(CL - CL_minD).^2;
           end
 
           % Get CD0
-          function CD0 = compute_CD0(Cf, S_wet_aircraft, S_ref)
+          function CD0 = compute_CD0(obj, Cf, S_wet_aircraft, S_ref)
                CD0 = Cf * S_wet_aircraft/S_ref;
           end
 
           % Estimate theoretical lift-curve slope for 2-D airfoil
           % (subsonic)
           % Raymer, 6th ed, fig 12.6
-          function output = cl_alpha_2D_sub(M)
+          function output = cl_alpha_2D_sub(obj, M)
                output = 2*pi/(sqrt(1-M^2));
           end
 
           % Estimate theoretical lift-curve slope for a supersonic 2-D
           % airfoil
           % Raymer, 6th ed, fig 12.6
-          function output = cl_alpha_2D_sup(M)
+          function output = cl_alpha_2D_sup(obj, M)
                output = 4/(sqrt(M^2 - 1));
           end
 
           % Estimate lift-curve slope (per radian) for a 3-D wing
           % (subsonic)
           % Raymer, 6th ed, eq 12.6
-          function output = CL_alpha_wing_sub(AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta, eta)
+          function output = CL_alpha_wing_sub(obj, AR, S_exposed, S_ref, F, Lambda_max_t_deg, beta, eta)
                % beta = sqrt(1 - M^2);
                % eta = cl_alpha/(2*pi/beta);
 
@@ -303,25 +307,25 @@ classdef AerodynamicsModelLevel2 < AerodynamicsModelLevel1
           % Estimate lift-curve slope (per radian) for a 3-D wing
           % (supersonic)
           % Raymer, 6th ed, eq 12.12
-          function output = CL_alpha_wing_sup(beta_mach)
+          function output = CL_alpha_wing_sup(obj, beta_mach)
                output = 4/beta_mach;
           end
 
           % Compute beta for mach number
           % Raymer, 6th ed, eq 12.7
-          function output = beta_mach(M)
+          function output = beta_mach(obj, M)
                output = sqrt(1-M^2);
           end
 
           % Compute eta for mach number and 2-D lift-curve slope
           % Ramyer, 6th ed, eq 12.8
-          function output = eta_mach(cl_alpha, beta_mach)
+          function output = eta_mach(obj, cl_alpha, beta_mach)
                output = cl_alpha/(2*pi/beta_mach);
           end
 
           % Compute fuselage lift factor
           % Raymer, 6th ed, eq 12.9
-          function output = F(d, b)
+          function output = F_comp(obj, d, b)
                output = 1.07*(1 + d/b);
           end
      end
