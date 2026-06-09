@@ -19,7 +19,7 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
           end
 
           % Compute mission fuel
-          function [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
+          function [total_fuel_used, fuel_fraction, CL_array, CD_array, CDi_array, CD0_array] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj, aero_obj)
                % This is where we actually compute the fuel for the mission
                % AR = design.geom.wings.Main.AspectRatio;
                AR = geometry_obj.mainwings.AR;
@@ -50,6 +50,13 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
 
                W_array(1) = W_TO;
 
+               % Initialize aerodynamic coefficient arrays
+               segment_count = length(segmentnames)-1;
+               CL_array = zeros(1, segment_count);
+               CD0_array = zeros(1, segment_count);
+               CDi_array = zeros(1, segment_count);
+               CD_array = zeros(1, segment_count);
+
                for i=1:length(segmentnames)
                     currentsegment = segmentnames{i};
                     % Clip extra letters from segment name, but don't store
@@ -67,7 +74,30 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
                          alt = mission_obj.missiondata.(currentsegment).Altitudeft;
                          q = mission_obj.missiondata.(currentsegment).qlbfft2;
                          a = mission_obj.missiondata.(currentsegment).afts;
-                         CD0 = aero_obj.get_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
+                         if (i>1)
+                              CL_array(i) = aero_obj.CL(W_array(i-1), q, geometry_obj.mainwings.S_ref);
+                         elseif (i==1)
+                              CL_array(i) = aero_obj.CL(W_array(i), q, geometry_obj.mainwings.S_ref);
+                         end
+
+                         CD0_components = aero_obj.get_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
+                         if (M>=1.0)
+                              CD0_wave = aero_obj.compute_CD0_wave(M, geometry_obj.mainwings.LE_sweep, geometry_obj.A_max, geometry_obj.design.total_length, geometry_obj.mainwings.S_ref);
+
+                              CD0_array(i) = CD0_wave + CD0_components + aero_obj.CD0_LandP.total + aero_obj.CD0_misc.total;
+                         elseif (0.8 <= M) && (M < 1.0) % Transonic
+                              CD0_wave = aero_obj.compute_CD0_wave(M, geometry_obj.mainwings.LE_sweep, geometry_obj.A_max, geometry_obj.design.total_length, geometry_obj.mainwings.S_ref);
+
+                              CD0_array(i) = (real(CD0_wave) + CD0_components + aero_obj.CD0_LandP.total + aero_obj.CD0_misc.total)/4;
+                              % Raymer indicates it's a good idea to interpolate or take
+                              % the average around here.
+                         else
+                              CD0_array(i) = CD0_components + aero_obj.CD0_LandP.total + aero_obj.CD0_misc.total;
+                         end
+                         cl_alpha = aero_obj.get_cl_alpha(M);
+                         CL_alpha = aero_obj.get_CL_alpha(M, cl_alpha, geometry_obj.mainwings.AR, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, aero_obj.F, geometry_obj.mainwings.QC_sweep);
+                         CL_minD = aero_obj.get_CL_minD(CL_alpha, aero_obj.alpha_L0);
+
                          IsDryOrWet = mission_obj.missiondata.(currentsegment).DryOrWet;
                          if (IsDryOrWet == "Dry")
                               TSFC = propulsion_obj.get_TSFC([M, alt], IsDryOrWet, t_SL_dry, TSFC_sl_perhour_dry, E_dry, F1_dry, F2_dry, TR);
@@ -81,19 +111,55 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
                     elseif (currentsegment == "taxi") || (currentsegment == "Taxi")
                          [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_taxi(W_array(i-1));
                     elseif (currentsegment == "takeoff") || (currentsegment == "Takeoff")
+                         e_osw = aero_obj.e_osw_TO;
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
                          [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_takeoff(W_array(i-1));
+                         CDi_array(i) = aero_obj.get_CDi([M, alt], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
+
                     elseif (currentsegment == "climb") || (currentsegment == "Climb")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0, mission_obj.missiondata.Cruise.e, AR, TSFC, alt, T0);
+                         e_osw = aero_obj.e_osw_clean;
+                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0_array(i), e_osw, AR, TSFC, alt, T0);
+
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
+                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_climb(W_TO, W_array(i-1), M, S_ref, CD0_array(i), e_osw, AR, TSFC, alt, T0);
+                         CDi_array(i) = aero_obj.get_CDi([M, alt], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
+
                     elseif (currentsegment == "cruise") || (currentsegment == "Cruise")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_cruise(W_array(i-1), TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0, mission_obj.missiondata.Cruise.e, AR, S_ref);
+                         e_osw = aero_obj.e_osw_clean;
+                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_cruise(W_array(i-1), TSFC, mission_obj.missiondata.Cruise.Rangeft, M, a, q, CD0_array(i), e_osw, AR, S_ref);
+
+                         CDi_array(i) = aero_obj.get_CDi([M, alt], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
                     elseif (currentsegment == "dash") || (currentsegment == "Dash")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_dash(W_array(i-1), S_ref, W_TO, q, CD0, mission_obj.missiondata.Dash.e, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
+                         e_osw = aero_obj.e_osw_clean;
+                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_dash(W_array(i-1), S_ref, W_TO, q, CD0_array(i), e_osw, AR, TSFC, mission_obj.missiondata.Dash.Rangeft, M * a);
+
+                         CDi_array(i) = aero_obj.get_CDi([M, alt, 0], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
                     elseif (currentsegment == "combat") || (currentsegment == "Combat")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0, mission_obj.missiondata.Combat.e, AR, W_TO, q, S_ref);
+                         e_osw = aero_obj.e_osw_clean; % YOU SHOULD ABSOLUTELY USE THE COMBAT SLAT CONFIGURATION FOR THIS
+                         CDi_array(i) = aero_obj.get_CDi([M, alt], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
+                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_combat(W_array(i-1), mission_obj.missiondata.Combat.Timemin, TSFC, mission_obj.missiondata.Combat.PayloadDroplbf, CD0_array(i), e_osw, AR, W_TO, q, S_ref);
                     elseif (currentsegment == "loiter") || (currentsegment == "Loiter")
-                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_loiter(W_TO, W_array(i-1), S_ref, q, CD0, mission_obj.missiondata.Loiter.e, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
+                         e_osw = aero_obj.e_osw_TO;
+                         [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_loiter(W_TO, W_array(i-1), S_ref, q, CD0_array(i), e_osw, AR, mission_obj.missiondata.Loiter.Timemin, TSFC);
+
+                         CDi_array(i) = aero_obj.get_CDi([M, alt], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
                     elseif (currentsegment == "landing") || (currentsegment == "Landing")
+                         e_osw = aero_obj.e_osw_L;
                          [W_array(i), fuelburnedarray(i)] = MissionAnalysisLevel3.segment_landing(W_array(i-1), W_TO);
+
+                         CDi_array(i) = aero_obj.get_CDi([M, alt], geometry_obj.mainwings.S_ref, e_osw, geometry_obj.mainwings.AR, W_array(i));
+                         aero_obj.K1 = aero_obj.compute_K1(M, geometry_obj.mainwings.AR, e_osw, geometry_obj.mainwings.LE_sweep);
+                         CD_array(i) = aero_obj.get_CD(CD0_array(i), CDi_array(i), CL_array(i), CL_minD, aero_obj.airfoiltype, [M, alt], aero_obj.K1);
                     elseif (currentsegment == "descent") || (currentsegment == "Descent")
                          % Not implemented yet
                     elseif (currentsegment == "meta")

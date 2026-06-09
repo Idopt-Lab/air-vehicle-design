@@ -65,8 +65,10 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           CL_max_base = 0.91; % Tabulated from Fig 12.13 (Raymer, 6th ed) & (C1 + 1)*(AR/beta)*cosd(Lambda_LE_deg) = 2.76.
           CL_max_cl_max = 1.1; % Tabulated from Fig 12.9 (Raymer, "Aircraft Design: A Conceptual Approach", 6th ed), Lambda_LE_deg = 40.
           % Delta_CL_max % (Not using the one from Fig 12.14)
-          delta_hld_TE_L = 60; % Deflection of high-lift device, trailing edge, landing config (deg)
+          delta_hld_TE_L = 20; % Deflection of high-lift device, trailing edge, landing config (deg)
           delta_hld_TE_TO = 20; % Deflection of high-lift device, trailing edge, take-off config (deg)
+          delta_hld_LE_TO = -2; % Deflection of high-lift device, leading edge, take-off configuration (deg)
+          delta_hld_LE_L = 15; % Deflection of high-lift device, leading edge, landing approach configuration (deg)
           E_WD = 1.8; % Equivalent wave drag parameter
           hld_LE = "slat"; % High-lift device, leading edge (type)
           hld_TE = "plain"; % High-lift device, trailing edge (type)
@@ -86,6 +88,27 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
 
           mainwheel_S_front = (25.5*8.0)/(12^2); % Frontal area of main wheels (in^2 -> ft^2)
           nosewheel_S_front = (18*5.5)/(12^2); % Frontal area of nosewheel (in^2 -> ft^2)
+     end
+
+     % Custom properties
+     properties
+          DragResults
+          CD
+          CDi
+          CD0
+          CD_wave
+          CL_val
+          D
+
+          Delta_CD0_TO_flap
+          Delta_CD0_TO_slat
+          Delta_CD0_L_flap
+          Delta_CD0_L_slat
+
+          Delta_CL_max_TO_flap
+          Delta_CL_max_TO_slat
+          Delta_CL_max_L_flap
+          Delta_CL_max_L_slat
      end
 
      methods
@@ -124,20 +147,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % Compute component "drag values" (the numerator in the CD0
                % equation)
                component_drag_value = aero_obj.get_component_drag_values_sub(design, statevector, geometry_obj);
-
-               % Now for the miscellaneous components:
-               % Get CD0_misc for each component
-               % CD0_misc = aero_obj.compute_CD0_misc(design, propulsion_obj, S_ref);
-               % CD0_misc = 0;
-
-               % Leakages and protuberances:
-               % Get CD0_LandP
-               % CD0_LandP = compute_CD0_LandP(aero_obj, S_ref);
-               % CD0_LandP = 0;
-
-               % Subsonic CD0: eq 12.24, Raymer 6th edition
-               % output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total;
-               output = component_drag_value.total/S_ref;
+               output = component_drag_value.total/S_ref; % Dividing by the S_ref gives the CD0
           end
 
           % Get design CD0 (supersonic) (wrapper)
@@ -150,25 +160,7 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                % Compute component "drag values" (the numerator in the CD0
                % equation)
                component_drag_value = aero_obj.get_component_drag_values_supersonic(design, statevector, geometry_obj);
-
-               % Now for the miscellaneous components:
-               % Get CD0_misc for each component
-               % CD0_misc = aero_obj.compute_CD0_misc(design, propulsion_obj, S_ref);
-               % CD0_misc = 0;
-
-               % Leakages and protuberances:
-               % Get CD0_LandP
-               % CD0_LandP = aero_obj.compute_CD0_LandP(S_ref);
-               % CD0_LandP = 0;
-
-               % Wave drag for entire design:
-               % CD0_wave = aero_obj.compute_CD0_wave(M, geometry_obj.mainwings.LE_sweep, pi*(geometry_obj.fuselage.W_max/2)^2, geometry_obj.design.total_length, S_ref);
-               % CD0_wave = 4.5*pi/300 * (22.72/48.3)^2 * 2.2*(0.74+0.37*cosd(geometry_obj.mainwings.LE_sweep))*(1 - 0.3*sqrt(M - 1.2));
-
-               % Supersonic CD0: eq 12.41, Raymer 6th edition.
-               % output = component_drag_value.total/S_ref + CD0_misc.total + CD0_LandP.total + CD0_wave;
-               % output = component_drag_value.total/S_ref + CD0_misc + CD0_LandP + CD0_wave;
-               output = component_drag_value.total/S_ref;
+               output = component_drag_value.total/S_ref; % Dividing by S_ref gives the CD0.
           end
 
           % Compute K1
@@ -179,7 +171,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                elseif (M >= 1.0)
                     K1 = aero_obj.K1_sup(AR, M, LE_sweep_deg);
                else
-                    error("Error handler.")
+                    warning("M = 0 or something. Setting K1 = K = 1/(pi*e_osw*AR).")
+                    K1 = 1/(pi*e_osw*AR);
+                    % error("Error handler.")
                end
           end
 
@@ -306,7 +300,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                elseif (1.0 <= M)
                     cl_alpha = aero_obj.cl_alpha_2D_sup(M);
                else
-                    error("Error handler.")
+                    % error("Error handler.")
+                    warning("M = 0; setting cl_alpha = 0.")
+                    cl_alpha = 0;
                end
           end
 
@@ -324,7 +320,9 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
                     beta_mach = sqrt(M^2 - 1);
                     output = aero_obj.CL_alpha_wing_sup(beta_mach);
                else
-                    error("Error handler.")
+                    % error("Error handler.")
+                    warning("M = 0. Settting CL_alpha = 0.")
+                    output = 0;
                end
           end
 
@@ -546,34 +544,34 @@ classdef F16AeroLevel3 < AerodynamicsModelLevel3
           % specific components.
           % That could push the design-wide computation to a higher level,
           % leaving this area more room and more specificity. Good.
-          % function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
-          %
-          %      % Compute q
-          %      q = AeroUtils.compute_q(state_input);
-          %
-          %      % Compute design CD0 (done)
-          %      DragResults.CD0_design = aero_obj.get_CD0(state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
-          %
-          %      % Compute CDi (done)
-          %      DragResults.CDi_design = aero_obj.get_CDi(state_input, geometry_obj.mainwings.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
-          %
-          %      % Is this for the entire design, or one component? Confirm?
-          %      % This is for one component, the main wings
-          %      % Get CL_alpha
-          %      aero_obj.CL_alpha = aero_obj.CL_alpha_Raymer(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
-          %
-          %      % Is this for the entire design, or one component? Confirm?
-          %      % Compute CL_minD (done)
-          %      DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
-          %
-          %      % Compute CD (done?) (double-check results later)
-          %      aero_obj.K1 = aero_obj.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
-          %      DragResults.CD_design = get_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
-          %
-          %      % Compute D for given state (done)
-          %      % DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
-          %      DragResults.D_design = AeroUtils.compute_D(q, DragResults.CD_design, geometry_obj.mainwings.S_ref);
-          % end
+          function DragResults = get_drag(aero_obj, geometry_obj, design, propulsion_obj, W, state_input, airfoiltype)
+
+               % Compute q
+               q = AeroUtils.compute_q(state_input);
+
+               % Compute design CD0 (done)
+               DragResults.CD0_design = aero_obj.get_CD0(state_input, design, geometry_obj, geometry_obj.mainwings.S_ref, propulsion_obj);
+
+               % Compute CDi (done)
+               DragResults.CDi_design = aero_obj.get_CDi(state_input, geometry_obj.mainwings.S_ref, aero_obj.e_osw, geometry_obj.mainwings.AR, W);
+
+               % Is this for the entire design, or one component? Confirm?
+               % This is for one component, the main wings
+               % Get CL_alpha
+               aero_obj.CL_alpha = aero_obj.CL_alpha_Raymer(state_input, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+
+               % Is this for the entire design, or one component? Confirm?
+               % Compute CL_minD (done)
+               DragResults.CL_minD = aero_obj.compute_CL_minD(aero_obj.CL_alpha, aero_obj.alpha_L0_deg);
+
+               % Compute CD (done?) (double-check results later)
+               aero_obj.K1 = aero_obj.K1(aero_obj.e_osw, geometry_obj.mainwings.AR, state_input(1), geometry_obj.mainwings.LE_sweep);
+               DragResults.CD_design = get_CD(aero_obj, DragResults.CD0_design, DragResults.CDi_design, aero_obj.CL, DragResults.CL_minD, airfoiltype, state_input, aero_obj.K1);
+
+               % Compute D for given state (done)
+               % DragResults.D_design = compute_D(aero_obj, state_input, DragResults.CD_design, geometry_obj.S_ref); % lbf
+               DragResults.D_design = AeroUtils.compute_D(q, DragResults.CD_design, geometry_obj.mainwings.S_ref);
+          end
 
           % Compute Oswald span efficiency factor (wrapper)
           % Account for biplanes? (Raymer, 6th edi, p 444)
