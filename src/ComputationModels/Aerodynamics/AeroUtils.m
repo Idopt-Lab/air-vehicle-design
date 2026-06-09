@@ -30,29 +30,6 @@ classdef AeroUtils
                output = [V, mu, rho];
           end
 
-          % % Get CL for some given state
-          % function output = compute_CL(L, q, S_ref)
-          %      CL = L./(q.*S_ref);
-          %      output = CL;
-          % end
-
-          % Get design drag
-          % function output = compute_D(q, CD, S_ref)
-          %      D = CD*q*S_ref;
-          %      output = D;
-          % end
-
-          % % Compute CDi
-          % % Compute CDi (subsonic case)
-          % function CDi = compute_CDi_subsonic(CL, e_osw, AR)
-          %      CDi = ( (CL^2) / (pi * e_osw * AR));
-          % end
-          %
-          % % Compute CDi (supersonic case)
-          % function CDi = compute_CDi_supersonic(CL, alpha_deg)
-          %      CDi = CL*sind(alpha_deg);
-          % end
-
           % Obtain CL_max for a desired stalling speed
           % Source: Snorri Gudmundsson, General Aviation Aircraft Design,
           % 2nd edition, Appendix B.

@@ -30,6 +30,10 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
           % Delta_CD0_geardown
           % Delta_CDi
           % F % Fuselage interference factor
+          CD0_misc
+          CD0_LandP
+          CD0_wave
+          Dq_searshaack_val % Dq value from the sears-haack equation
           R_components
           R_cutoff
           FF
@@ -37,7 +41,7 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
 
      properties (Abstract, Constant) % These should be values that are tabulated based on geometry.
           % airfoiltype % either "cambered" or "uncambered." Leave empty if NOT AIRFOIL.
-          % 
+          %
           % hld_TE % High-lift device, trailing edge (type)
           % hld_LE % High-lift device, leading edge (type)
           % delta_hld_TE_TO % Deflection of high-lift device, trailing edge, take-off config (deg)
@@ -51,42 +55,46 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
           % cl_max % Obtained from page 14 of https://ntrs.nasa.gov/api/citations/19870017427/downloads/19870017427.pdf
           % alpha_L0 % Zero-lift AOA (deg)
           % k % Skin roughness factor
+          E_WD % Equivalent wave drag parameter
+
      end
 
      methods (Abstract)
-          e_osw = get_e_osw(AR, Lambda_LE)
-          LD_max = get_LD_max(AR, e_osw, CD0)
-          % AR_wet = get_AR_wet(b, S_wet)
-          K = get_K(e_osw, AR)
-          K1 = compute_K1(M, AR, e_osw, LE_sweep)
-          K2 = compute_K2(M, K1, CLminD)
-          CD = get_CD(CD0, K, CL)
-          CD0 = get_CD0(Cf, S_wet, S_ref)
-          CDi = get_CDi(statevector, CL, e_osw, AR)
-          Delta_CD0 = get_Delta_CD0(configuration, rangeMode) % This should get you the Delta_CD0 values you need. (use Raymer 12.61
-          CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
-          Cf = get_Cf(aircraft_type, n_engines) % Using L1 until a suitable replacement is found.
-          CL_max = get_CL_max_values(aircraft_type, config, rangeMode) % This should get you the CL_max values you need (CL_max_TO, CL_max_Landing, etc)
-          Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding) % This should be able to get you the Delta_CL_max values you need.
-          Delta_cl_max = get_Delta_cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_cl_max_TO, Delta_cl_max_L)
-          Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q)
-          CL_alpha = get_CL_alpha(M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
-          F = get_F(d, b)
+          % e_osw = get_e_osw(AR, Lambda_LE)
+          % % LD_max = get_LD_max(AR, e_osw, CD0)
+          % % AR_wet = get_AR_wet(b, S_wet)
+          % K = get_K(e_osw, AR)
+          % K1 = compute_K1(M, AR, e_osw, LE_sweep)
+          % K2 = compute_K2(M, K1, CLminD)
+          % CD = get_CD(CD0, K, CL)
+          % CD0 = get_CD0(Cf, S_wet, S_ref)
+          % CDi = get_CDi(statevector, CL, e_osw, AR)
+          % Delta_CD0 = get_Delta_CD0(configuration, rangeMode) % This should get you the Delta_CD0 values you need. (use Raymer 12.61
+          % CL_minD = get_CL_minD(airfoil_type, CL_min, CD0)
+          [Cf_lam_result, Cf_turb_result] = get_Cf(R, M) % Using L3 method.
+          R_cutoff = get_R_cutoff(ref_length, M)
+
+          % CL_max = get_CL_max_values(aircraft_type, config, rangeMode) % This should get you the CL_max values you need (CL_max_TO, CL_max_Landing, etc)
+          % Delta_CL_max = get_Delta_CL_max_values(CL_max_dirty, CL_max_clean, isTakeoffOrLanding) % This should be able to get you the Delta_CL_max values you need.
+          % Delta_cl_max = get_Delta_cl_max_values(liftdevice, config, cp_c) % this should get you the values you need (Delta_cl_max_TO, Delta_cl_max_L)
+          % Delta_CDi = get_Delta_CDi(areFlapsFullOrHalfSpan, Delta_CL_flap, Lambda_cbar_q)
+          % CL_alpha = get_CL_alpha(M, cl_alpha, AR, S_exposed, S_ref, F, Lambda_max_t_deg)
+          % F = get_F(d, b)
      end
 
      methods
 
-                    % Compute CD for an uncambered wing
+          % Compute CD for an uncambered wing
           % Raymer, 6th ed, eq 12.4
-          function output = CD_uncambered(CD0, CDi)
-               output = CD0 + CDi;
-          end
-
-          % Compute CD for a cambered wing
-          % Raymer, 6th ed, eq 12.5
-          function output = CD_cambered(CD_min, K, CL, CL_minD)
-               output = CD_min + K*(CL-CL_minD)^2;
-          end
+          % function output = CD_uncambered(CD0, CDi)
+          %      output = CD0 + CDi;
+          % end
+          %
+          % % Compute CD for a cambered wing
+          % % Raymer, 6th ed, eq 12.5
+          % function output = CD_cambered(CD_min, K, CL, CL_minD)
+          %      output = CD_min + K*(CL-CL_minD)^2;
+          % end
 
           % Estimate theoretical lift-curve slope for 2-D airfoil
           % (subsonic)
@@ -121,9 +129,9 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
 
           % Estimate CL_max (clean)
           % Raymer, 6th ed, eq 12.15
-          function output = CL_max_clean(cl_max, Lambda_qc_deg)
-               output = 0.9*cl_max*cosd(Lambda_qc_deg);
-          end
+          % function output = CL_max_clean(cl_max, Lambda_qc_deg)
+          %      output = 0.9*cl_max*cosd(Lambda_qc_deg);
+          % end
 
           % Compute leading edge sharpness parameter (Delta-y)
           % Raymer, 6th ed, Table 12.1
@@ -159,38 +167,38 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
           % end
 
 
-          % Estimate CL_max_clean for high AR wings
-          % Raymer, 6th ed, eq 12.16
-          function output = CL_max_clean_highAR(cl_max, CL_max_cl_max, Delta_CL_max)
-               % cl_max = airfoil's max lift coefficient at M =0 .2
-               % CL_max_cl_max is tabulated from figure 12.9 in Raymer's
-               % book
-               output = cl_max*CL_max_cl_max + Delta_CL_max;
-          end
+          % % Estimate CL_max_clean for high AR wings
+          % % Raymer, 6th ed, eq 12.16
+          % function output = CL_max_clean_highAR(cl_max, CL_max_cl_max, Delta_CL_max)
+          %      % cl_max = airfoil's max lift coefficient at M =0 .2
+          %      % CL_max_cl_max is tabulated from figure 12.9 in Raymer's
+          %      % book
+          %      output = cl_max*CL_max_cl_max + Delta_CL_max;
+          % end
 
 
-          % AOA yielding CL_max for high AR wings
-          % Raymer, 6th ed, eq 12.17
-          function output = alpha_CL_max_highAR(CL_max, CL_alpha, alpha_L0, Delta_alpha_CL_max)
-               % Delta_alpha_CL_max - obtained from Fig 12.11
-               output = CL_max/CL_alpha + alpha_L0 + Delta_alpha_CL_max;
-          end
+          % % AOA yielding CL_max for high AR wings
+          % % Raymer, 6th ed, eq 12.17
+          % function output = alpha_CL_max_highAR(CL_max, CL_alpha, alpha_L0, Delta_alpha_CL_max)
+          %      % Delta_alpha_CL_max - obtained from Fig 12.11
+          %      output = CL_max/CL_alpha + alpha_L0 + Delta_alpha_CL_max;
+          % end
 
-          % Estimate CL_max_clean for low-AR wings
-          % Raymer, 6th ed, eq 12.19
-          function output = CL_max_clean_lowAR(CL_max_base, Delta_CL_max)
-               % CL_max_base - obtained from Fig 12.13
-               % Delta_CL_max - obtained from Fig 12.14
-               output = CL_max_base + Delta_CL_max;
-          end
+          % % Estimate CL_max_clean for low-AR wings
+          % % Raymer, 6th ed, eq 12.19
+          % function output = CL_max_clean_lowAR(CL_max_base, Delta_CL_max)
+          %      % CL_max_base - obtained from Fig 12.13
+          %      % Delta_CL_max - obtained from Fig 12.14
+          %      output = CL_max_base + Delta_CL_max;
+          % end
 
-          % Estimate AOA yielding CL_max for low-AR wings
-          % Raymer, 6th ed, eq 12.20
-          function output = alpha_CL_max_lowAR(alpha_CL_max_base, Delta_alpha_CL_max)
-               % alpha_CL_max_base - obtained from Fig 12.15
-               % Delta_alpha_CL_max - obtained from Fig 12.16
-               output = alpha_CL_max_base + Delta_alpha_CL_max;
-          end
+          % % Estimate AOA yielding CL_max for low-AR wings
+          % % Raymer, 6th ed, eq 12.20
+          % function output = alpha_CL_max_lowAR(alpha_CL_max_base, Delta_alpha_CL_max)
+          %      % alpha_CL_max_base - obtained from Fig 12.15
+          %      % Delta_alpha_CL_max - obtained from Fig 12.16
+          %      output = alpha_CL_max_base + Delta_alpha_CL_max;
+          % end
 
 
           % HIGH LIFT DEVICES
@@ -245,50 +253,10 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
                output = 4/beta;
           end
 
-
-          % Get CL_minD (using brandt's equation)
-          function output = CL_minD(~, CL_alpha, alpha_L0_deg)
-               alpha_L0_rad = deg2rad(alpha_L0_deg);
-               output = CL_alpha*(-1*alpha_L0_rad/2);
-          end
-
           % Get CL_alpha for wing + body
           % Brandt
           function output = CL_alpha_wb(~, CL_alpha_HT, CL_alpha_strakes, delta_epsilon_delta_alpha, S_HT, S_ref)
                output = CL_alpha_strakes + CL_alpha_HT*(1-delta_epsilon_delta_alpha)*(S_HT/S_ref);
-          end
-
-          % Get CL_alpha, accounting for strakes
-          % Brandt
-          function output = CL_alpha_strakes(CL_alpha_w, S_ref, S_strakes)
-               output = CL_alpha_w * (S_ref + S_strakes)/S_ref;
-          end
-
-          % Set skin roughness value
-          % Why do I have this?
-          function k = set_skin_roughness(k)
-               k = k;
-          end
-
-          % Compute K1
-          % Returns a struct:
-          %    K1.subsonic
-          %    K1.supersonic
-          function output = K1(e_osw, AR, M, Lambda_LE_degrees)
-               % Lambda_LE must be in DEGREES!!!
-
-               % Subsonic:
-               output.subsonic = 1/(pi*AR*e_osw); % eq 12.50
-
-               % Supersonic:
-               output.supersonic = (AR*(M^2 - 1)*cosd(Lambda_LE_degrees))/(4*AR*sqrt(M^2 - 1) - 2);
-               % eq 12.51
-          end
-
-          % Compute K2
-          function output = K2(K1, CL_minD)
-               output.subsonic = -2 * K1.subsonic * CL_minD; % Brandt, cell G17
-               output.supersonic = 0;
           end
 
           % Get component drag value (whatever that is, Raymer won't
@@ -313,8 +281,8 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
           % methods (Access = private)
 
           % Get CD0_wave values
-          function output = compute_CD0_wave(~, M, Lambda_LE_deg, A_max, l, S_ref)
-               Dq_wave_value = AeroLevel3.Dq_wave(2.2, M, Lambda_LE_deg, A_max, l);
+          function output = compute_CD0_wave(M, Lambda_LE_deg, A_max, l, S_ref)
+               Dq_wave_value = aero_obj.Dq_wave(obj.E_WD, M, Lambda_LE_deg, A_max, l);
                CD0_wave = Dq_wave_value/S_ref;
                output = CD0_wave;
           end
@@ -407,32 +375,13 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
           % Determing which Cf_turb to use
           % If R_cuttoff < R, recompute Cf_turb using R_cutoff. Otherwise,
           % use Cf_turb calculated with R.
-          function Cf_turb_result = get_Cf_turb(~, Cf_turb_value, R, R_cutoff, M)
-               if R_cutoff < R
-                    Cf_turb_result = AeroLevel3.Cf_turb(R_cutoff, M);
-               else
-                    Cf_turb_result = Cf_turb_value;
-               end
-          end
-
-          % Get velocity, mu, and rho, given Mach number and altitude
-          function output = get_V_and_mu(M, h_ft)
-               [T, a, ~, rho] = atmosisa(h_ft*0.3048);
-               rho = rho*0.00194032033; % Convert from kg/m^3 to imperial
-               a = a*3.2808399; % Convert from m/s -> ft/s
-               V = a*M;
-               T = T*1.8; % Convert Kelvin to Rankine
-               mu = AeroLevel3.mu(T);   % dynamic viscosity
-               output = [V, mu, rho];
-          end
-
-          % Compute dynamic viscosity (mu) (should probably be in utilities...)
-          function output = mu(~, T)
-               % Using Sutherland's Formula
-               T_0 = 518.7; % Rankine
-               mu_0 = 3.62*10^(-7); % (lb*s)/(ft^2)
-               output = mu_0 * (T/T_0)^(1.5) * ((T_0 + 198.72)/(T + 198.72));
-          end
+          % function Cf_turb_result = get_Cf_turb(~, Cf_turb_value, R, R_cutoff, M)
+          %      if R_cutoff < R
+          %           Cf_turb_result = AerodynamicsModelLevel3.Cf_turb(R_cutoff, M);
+          %      else
+          %           Cf_turb_result = Cf_turb_value;
+          %      end
+          % end
 
           %% COMPONENT DRAG BUILDUP METHOD
 
@@ -462,15 +411,17 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
 
           % Flat-plate skin friction coefficient.
           % Fuselage, smooth canopy
-          function output = FF_2(~, l, A_max)
-               output = (0.9 + 5 / (AeroLevel3.f(l,A_max)^(1.5)) + AeroLevel3.f(l,A_max)/400);
+          function output = FF_2(~, f_val)
+               % output = (0.9 + 5 / (AerodynamicsModelLevel3.f(l,A_max)^(1.5)) + AerodynamicsModelLevel3.f(l,A_max)/400);
+               output = (0.9 + 5 / (f_val^(1.5)) + f_val/400);
+
           end
           % Raymer, eq 12.31, 6th edition
 
           % Flat-plate skin friction coefficient
           % Nacelle and smooth external store
           function output = FF_3(~, l, A_max)
-               output = (1 + (0.35 / AeroLevel3.f(l,A_max)));
+               output = (1 + (0.35 / AerodynamicsModelLevel3.f(l,A_max)));
           end
           % Raymer, eq 12.32, 6th edition
 
@@ -527,15 +478,15 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
                output = (9*pi/2 * (A_max/l)^2); % eq 12.44, 6thh ed
           end
 
-          function output = Dq_wave(~, E_WD, M, Lambda_LE_deg, A_max, l)
-               output = (E_WD*(1-0.2*(M-1.2)^(0.57)*(1 - (pi*(Lambda_LE_deg^0.77))/100))*(AeroLevel3.Dq_searshaack(A_max, l))); % eq 12.45, 6th ed
+          function output = Dq_wave(~, E_WD, M, Lambda_LE_deg, Dq_searshaack)
+               output = (E_WD*(1-0.2*(M-1.2)^(0.57)*(1 - (pi*(Lambda_LE_deg^0.77))/100))*Dq_searshaack); % eq 12.45, 6th ed
                % Using 0.2 instead of 0.386 due to Raymer's recommendation.
           end
 
           % function output = e_straight(AR)
           %      output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
           % end
-          % 
+          %
           % function output = e_swept(AR, Lambda_LE_deg)
           %      output = (4.61*(1-0.045*AR^(0.68))*cosd(Lambda_LE_deg)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
           % end
@@ -550,11 +501,12 @@ classdef (Abstract) AerodynamicsModelLevel3 < AerodynamicsModelLevel2
                output = sqrt(1-M^2);
           end
 
-          % Compute eta for mach number and 2-D lift-curve slope
-          % Ramyer, 6th ed, eq 12.8
-          function output = eta_mach(~, cl_alpha, beta_mach)
-               output = cl_alpha/(2*pi/beta_mach);
-          end
+          % % Compute eta for mach number and 2-D lift-curve slope
+          % % Ramyer, 6th ed, eq 12.8
+          % function output = eta_mach(obj, cl_alpha, beta_mach)
+          %      % output = cl_alpha/(2*pi/beta_mach);
+          %      output = eta_mach@AerodynamicsModelLevel2(obj, cl_alpha, beta_mach);
+          % end
      end
 
      % Helper methods

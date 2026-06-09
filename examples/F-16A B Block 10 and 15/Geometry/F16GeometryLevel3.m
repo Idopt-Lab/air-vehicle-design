@@ -19,6 +19,12 @@ classdef F16GeometryLevel3 < GeometryModelLevel3
           strakes
           design
           S_flapped
+          A_max
+     end
+
+     properties (Constant)
+          delta_flap_TO = 20;
+          delta_flap_L = 60;
      end
 
      methods

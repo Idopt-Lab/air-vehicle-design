@@ -31,9 +31,10 @@ classdef AerodynamicsModelLevel1
           e_osw = get_e_osw(AR, Lambda_LE) % This function is supposed to COMPUTE e_osw
           % You'll need a method to tabulate e_osw for takeoff and landing
           % (e_osw_TO, e_osw_L)
-          % conditions (Roskam's "Airplane Design Vol I/II" has tables on
-          % this).
-          LD_max = get_LD_max(aircraft_type, b, S_wet) % You'll also need AR_wet for this.
+          % e_osw = tab_e_osw(flapconfig) % Tabulate e_osw with flaps in 
+          % certain flap configurations (Roskam's "Airplane Design Vol I/II"
+          % has tables on this).
+          % LD_max = get_LD_max(aircraft_type, b, S_wet) % You'll also need AR_wet for this.
           % AR_wet = get_AR_wet(b, S_wet)
           K = get_K(e_osw, AR)
           K1 = compute_K1(M, AR, e_osw, LE_sweep)
@@ -83,7 +84,7 @@ classdef AerodynamicsModelLevel1
           end
 
           % Get K2 supersonic value (Source: Brandt)
-          function output = K2_sup(obj)
+          function output = K2_sup(~)
                output = 0; % This is always zero
           end
 
@@ -98,7 +99,7 @@ classdef AerodynamicsModelLevel1
           end
 
           % Get design drag
-          function output = D(q, CD, S_ref)
+          function output = D(~, q, CD, S_ref)
                output = CD*q*S_ref;
           end
 

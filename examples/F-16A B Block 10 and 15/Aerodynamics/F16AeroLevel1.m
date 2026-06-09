@@ -1,4 +1,4 @@
-classdef F16AeroLevel1 < AerodynamicsModelLevel1 
+classdef F16AeroLevel1 < AerodynamicsModelLevel1
      %F16AEROLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 1 aerodynamics equations go here.
@@ -18,7 +18,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           LD_max
           AR_wet
           K_LD
-          K
+          K % This is K = 1/(pi*e_osw*AR), or K1 subsonic.
           K1
           K2
           Cf
@@ -55,10 +55,17 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           end
 
           % Get Delta_CD0 and e_osw change for flap configs
-          function [out1, out2] = get_Delta_CD0(aero_obj, configuration, rangeMode)
+          function out1 = get_Delta_CD0(aero_obj, configuration, rangeMode)
                out1 = aero_obj.tab_DeltaCD0(configuration, "Delta_CD0", rangeMode);
-               out2 = aero_obj.tab_DeltaCD0(configuration, "e_osw", rangeMode);
           end
+
+          % Get e_osw for specific flap configs.
+          function output = tab_e_osw(aero_obj, configuration)
+               output = aero_obj.tab_DeltaCD0(configuration, "e_osw", rangeMode);
+          end
+
+          % Get e_osw for TO config
+
 
           % Get CL_minD
           function output = get_CL_minD(aero_obj, CL_alpha, alpha_L0_deg)
@@ -74,7 +81,7 @@ classdef F16AeroLevel1 < AerodynamicsModelLevel1
           % function output = get_Delta_CL_max_TO(aero_obj, CL_max_TO, CL_max)
           %      output = aero_obj.comp_Delta_CL_max_TO(CL_max_TO, CL_max);
           % end
-          % 
+          %
           % % Get Delta_CL_max_L
           % function output = get_Delta_CL_max_L(aero_obj, CL_max_L, CL_max)
           %      output = aero_obj.comp_Delta_CL_max_L(CL_max_L, CL_max);
