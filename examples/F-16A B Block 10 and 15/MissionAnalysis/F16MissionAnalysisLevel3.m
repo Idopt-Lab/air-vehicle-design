@@ -81,6 +81,9 @@ classdef F16MissionAnalysisLevel3 < MissionAnalysisModel
                          end
 
                          CD0_components = aero_obj.get_CD0([M, alt], design, geometry_obj, S_ref, propulsion_obj);
+                         % CD0_components = CD0_components*10; % If you
+                         % multiply the CD0 by 10, you get a weight value
+                         % extremely close to the F16's.
                          if (M>=1.0)
                               CD0_wave = aero_obj.compute_CD0_wave(M, geometry_obj.mainwings.LE_sweep, geometry_obj.A_max, geometry_obj.design.total_length, geometry_obj.mainwings.S_ref);
 
