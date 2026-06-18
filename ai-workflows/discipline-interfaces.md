@@ -225,6 +225,86 @@ Additional geometry attributes can be defined by each fidelity implementation. F
 
 ---
 
+### Abstract Mission
+
+Mission analysis computes the total fuel burned over all mission segments given discipline objects and a TOGW estimate.
+
+**Abstract methods:**
+
+```
+compute_fuel(obj, aero, prop, W_TO, req)  →  scalar  (lbf)
+```
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `aero` | `AerodynamicsBase` subclass | Provides `drag_polar` and `CLmax` |
+| `prop` | `PropulsionBase` subclass | Provides `TSFC` and `thrust_lapse` |
+| `W_TO` | scalar (lbf) | Current takeoff gross weight guess |
+| `req` | struct | Mission definition — see below |
+
+**`req` struct required fields:**
+
+```
+req.W_payload    — payload weight (lbf)
+req.S_ref        — wing reference area (ft²)
+req.AR           — aspect ratio (used by L2/L3 for drag polar inversion)
+req.segments     — array of structs, each with:
+    .name        — 'startup','taxi','takeoff','climb','cruise','dash',
+                   'combat','loiter','descent','landing'
+    .altitude_ft — flight altitude (ft)
+    .mach        — Mach number
+    .range_ft    — segment range (ft)  for cruise/dash
+    .time_min    — segment time (min)  for loiter/combat
+    .W_drop      — weight jettisoned at segment end (lbf)
+```
+
+| Fidelity | Implementation |
+|----------|----------------|
+| L1 | Roskam fuel fractions for fixed segments; single-point Breguet with tabulated LD and TSFC for cruise/loiter. Does NOT call `aero.drag_polar` or `prop.TSFC`. |
+| L2 | Calls `aero.drag_polar(state)` and `prop.TSFC(state)` for each segment; single-point Breguet per segment. |
+| L3 | Same interface; cruise and climb sub-segmented (default 20 sub-segments) with L/D recomputed at each sub-segment weight. |
+| L4 | Delegates to L3 logic; higher-fidelity drag and TSFC come through the L4 discipline objects. |
+
+---
+
+### Abstract Tail Sizing
+
+Tail sizing is a separate discipline called only by `SizingLoopL2` and above. It is not called by `SizingLoopL1`.
+
+**Abstract methods:**
+
+```
+size(obj, S_ref, b, cbar, L_fus)  →  struct with fields: S_HT, S_VT
+```
+
+| Argument | Description | Units |
+|----------|-------------|-------|
+| `S_ref` | Wing reference area | ft² |
+| `b` | Wingspan | ft |
+| `cbar` | Mean aerodynamic chord | ft |
+| `L_fus` | Fuselage length | ft |
+
+Returns:
+
+| Field | Description | Units |
+|-------|-------------|-------|
+| `S_HT` | Horizontal tail reference area | ft² |
+| `S_VT` | Vertical tail reference area | ft² |
+
+The Level I implementation uses the Raymer tail volume coefficient method (Eq 6.28–6.29). The constructor takes `c_HT` and `c_VT` as inputs.
+
+---
+
+### Abstract Constraints
+
+```
+optimal_point(obj, aero, prop)  →  struct with fields: W_S, T_W
+```
+
+Returns the design point (wing loading and thrust-to-weight ratio) that satisfies all performance constraints with the minimum required T/W. The sizing loop uses this to determine S_ref (L1) or T_SL (L2).
+
+---
+
 ## How System-Level Code Uses These Interfaces
 
 The calling pattern is identical regardless of fidelity level or aircraft. Fidelity-specific behavior is documented in `Fidelity-Levels.md`.
@@ -249,16 +329,37 @@ tsfc  = prop.TSFC(state);
 
 ### Sizing loop (one iteration)
 
-```matlab
-fuel = mission.compute_fuel(aero, prop, geom, W_TO);   % calls drag_polar, TSFC internally
-oew  = weights.OEW(W_TO);                              % same call at any fidelity
+Two fidelity levels of sizing loop exist. Both call only the abstract interface methods.
 
-W_TO_new = oew + W_payload + W_fixed + fuel;
+**`SizingLoopL1` — 1 state variable (W_TO)**
+
+S_ref and T_SL are derived outputs:
+```matlab
+opt      = con.optimal_point(aero, prop);   % → struct(W_S, T_W)
+S_ref    = W_TO / opt.W_S;
+prop.T0  = opt.T_W * W_TO;
+fuel     = miss.compute_fuel(aero, prop, W_TO, req);
+oew      = weights.OEW(W_TO);
+W_TO_new = oew + W_payload + fuel;
 ```
+
+**`SizingLoopL2` — 2 state variables (W_TO, T_SL); S_ref is a fixed input**
+
+Tail surfaces are sized each iteration:
+```matlab
+opt      = con.optimal_point(aero, prop);   % → T_W (S_ref fixed; W_S not used)
+prop.T0  = opt.T_W * W_TO;
+result   = tail.size(S_ref, geom.b, geom.cbar, geom.L_fus);  % → S_HT, S_VT
+fuel     = miss.compute_fuel(aero, prop, W_TO, req);
+oew      = weights.OEW(W_TO);
+W_TO_new = oew + W_payload + fuel;
+```
+
+Convergence is checked on both W_TO and T_SL. Both loops use under-relaxation (default 0.5) for stability.
 
 This section defines the interface-level call flow only. Detailed equations and convergence implementation are kept in code.
 
-The five method names — `drag_polar`, `CLmax`, `thrust_lapse`, `TSFC`, `OEW` — are the only names the system-level code ever calls. A new fidelity level or a new aircraft provides a concrete class that implements these five methods. Nothing else changes.
+The seven method names — `drag_polar`, `CLmax`, `thrust_lapse`, `TSFC`, `OEW`, `compute_fuel`, `size` — are the only names the system-level code ever calls. A new fidelity level or a new aircraft provides concrete classes that implement these methods. Nothing else changes.
 
 ---
 

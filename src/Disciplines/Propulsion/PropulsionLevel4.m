@@ -1,54 +1,55 @@
-classdef PropulsionLevel4 < PropulsionModelLevel3
-     %UNTITLED Summary of this class goes here
-     %   Detailed explanation goes here
+classdef PropulsionLevel4 < PropulsionBase
+    % Level IV propulsion: Raymer Ch 10 component-level engine sizing.
+    %
+    % Inherits from PropulsionBase (not PropulsionModelLevel3).
+    % Provides detailed engine weight, length, and diameter estimates from
+    % Raymer's scaling equations.  TSFC and thrust_lapse use the Level III
+    % Mattingly models.
 
-     properties
-          enginestats
-          TSFC
-          T0
-     end
+    properties
+        engine_type
+        mil_or_max_power
+        BPR
+        enginestats     % struct: W, L, D, SFC_maxT, T_cruise, SFC_cruise
+    end
 
-     methods
-          % Estimate engine properties
-          function enginestats = get_propulsion_stats(obj, weight_obj, mission_obj, design)
-               enginestats = propulsion_est_level_IV(obj, design.propulsion.ThrustseaLevellbf.Dry, mission_obj.missiondata.Dash.MachNumber, design.propulsion.BypassRatio.BypassRatio);
-          end
-     end
+    methods
+        function obj = PropulsionLevel4(engine_type, mil_or_max_power, BPR)
+            if nargin < 2; mil_or_max_power = "mil"; end
+            if nargin < 3; BPR = 0; end
+            obj.engine_type      = PropulsionUtils.classify_engine_type(engine_type);
+            obj.mil_or_max_power = mil_or_max_power;
+            obj.BPR              = BPR;
+            obj.enginestats      = struct();
+        end
 
-     methods (Access = private)
+        function alpha = thrust_lapse(obj, state)
+            [~, ~, P_sl, ~] = atmosisa(0);
+            delta_0 = state.P_atm / (P_sl * 0.020885);
+            theta_0 = state.T_atm / 518.7;
+            F1 = 0.35; E = 1.0; F2 = 0.0; TR = 1.07;
+            if obj.mil_or_max_power == "mil"
+                T_lapsed = PropulsionLevel3.get_thrust_dry(obj.T0, delta_0, F1, state.mach, E, F2, theta_0, TR);
+            else
+                T_lapsed = PropulsionLevel3.get_thrust_wet(obj.T0, delta_0, F1, state.mach, E, theta_0, TR, F2);
+            end
+            alpha = T_lapsed / max(obj.T0, 1e-6);
+        end
 
+        function tsfc = TSFC(obj, state)
+            tsfc = PropulsionLevel2.get_TSFC_installed(obj.engine_type, ...
+                [state.mach, state.altitude], obj.mil_or_max_power);
+        end
 
-          % Estimate engine properties
-          function [enginestats] = propulsion_est_level_IV(obj, T, M, BPR)
-               % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
-               % 10.15
+        function stats = get_engine_stats(obj, M_dash)
+            % Compute Raymer Ch 10 engine stats at the given dash Mach and T0.
+            if obj.mil_or_max_power == "max"
+                stats = PropulsionLevel3.compute_jet_eng_stats_ab(obj.T0, M_dash, obj.BPR);
+            else
+                stats = PropulsionLevel3.compute_jet_eng_stats_noab(obj.T0, M_dash, obj.BPR);
+            end
+            obj.enginestats = stats;
+        end
+    end
 
-               % ARGUMENTS
-               % W = Weight (lbf)
-               % T = Takeoff thrust (lbf)
-               % BPR = Bypass ratio
-               % M = Mach number
-
-               % Afterburning engines (imperial units)
-               W = @(T, M, BPR) (0.063*T^(1.1)*M^(0.25)*exp(-0.81*BPR)); % Engine weight (lbf) (eq 10.10, 6th ed)
-               L = @(T, M) (0.255*T^(0.4)*M^(0.2)); % Engine length (ft) (eq 10.11, 6th ed)
-               D = @(T, BPR) (0.024*T^(0.5)*exp(0.04*BPR)); % Engine diameter (ft) (eq 10.12, 6th ed)
-               SFC_maxT = @(BPR) (2.1*exp(-0.12*BPR)); % SFC at max thrust (1/hr) (eq 10.13, 6th ed)
-               T_cruise = @(T, BPR) (2.4*T^(0.74)*exp(0.023*BPR)); % Cruise thrust (lbf) (eq 10.14, 6th ed)
-               SFC_cruise = @(BPR) (1.04*exp(-0.186*BPR)); % SFC at cruise conditions (1/hr) (eq 10.15, 6th ed)
-
-               enginestats.W = W(T, M, BPR);
-               enginestats.L = L(T, M);
-               enginestats.D = D(T, BPR);
-               enginestats.SFC_maxT = SFC_maxT(BPR)*(1/3600);
-               enginestats.T_cruise = T_cruise(T, BPR);
-               enginestats.SFC_cruise = SFC_cruise(BPR)*(1/3600);
-
-          end
-
-
-
-
-
-     end
 end

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MATLABProject version="1.0" schemaVersion="3">
+
+  <ProjectInformation>
+    <Name>Air Vehicle Design</Name>
+    <Summary>Multi-fidelity aircraft conceptual sizing framework (AOE 4065, Virginia Tech)</Summary>
+    <Description>
+      Fidelity-swappable MATLAB framework for aircraft conceptual design.
+      Discipline objects (Aerodynamics, Propulsion, Weights, Geometry, Mission,
+      TailSizing, Constraints) implement abstract base-class interfaces so that
+      the sizing loops are agnostic to fidelity level.
+
+      Levels:
+        L1 - type tables and statistical regressions
+        L2 - gross empirical (Mattingly, Raymer)
+        L3 - component buildup
+        L4 - Raymer Ch 15 detailed methods
+
+      See docs/00_framework_overview.md for architecture details.
+      See examples/F-16A B Block 10 and 15/ for the reference aircraft.
+    </Description>
+  </ProjectInformation>
+
+  <!-- startup.m runs automatically when this project is opened in MATLAB -->
+  <Configurations>
+    <StartupFiles>
+      <StartupFile path="startup.m"/>
+    </StartupFiles>
+    <ShutdownFiles/>
+  </Configurations>
+
+  <!-- Source paths that MATLAB adds to the search path on project open.
+       The repo root must be listed first so the +avd package is discoverable. -->
+  <PathsToAdd>
+    <PathToAdd path="."/>
+    <PathToAdd path="src"/>
+    <PathToAdd path="src/base"/>
+    <PathToAdd path="src/Disciplines/Aerodynamics"/>
+    <PathToAdd path="src/Disciplines/Propulsion"/>
+    <PathToAdd path="src/Disciplines/Weight"/>
+    <PathToAdd path="src/Disciplines/Geometry"/>
+    <PathToAdd path="src/Disciplines/MissionAnalysis"/>
+    <PathToAdd path="src/Disciplines/TailSizing"/>
+    <PathToAdd path="src/Sizing"/>
+    <PathToAdd path="src/Utilities"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/Aerodynamics"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/Propulsion"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/Weight"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/Geometry"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/Mission"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/TailSizing"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/disciplines/Constraints"/>
+    <PathToAdd path="examples/F-16A B Block 10 and 15/tests"/>
+  </PathsToAdd>
+
+  <!-- Shortcuts visible in the MATLAB Project toolstrip -->
+  <Shortcuts>
+    <Shortcut name="Run all V&amp;V tests">
+      <command>cd(fileparts(which('run_all_tests'))); run_all_tests</command>
+    </Shortcut>
+    <Shortcut name="Design Study 01 (L1)">
+      <command>run(fullfile(projectStartupFile, '..', 'examples', 'F-16A B Block 10 and 15', 'design_study_01.m'))</command>
+    </Shortcut>
+    <Shortcut name="Design Study 02 (L2)">
+      <command>run(fullfile(projectStartupFile, '..', 'examples', 'F-16A B Block 10 and 15', 'design_study_02.m'))</command>
+    </Shortcut>
+    <Shortcut name="Design Study 03 (L3 disciplines)">
+      <command>run(fullfile(projectStartupFile, '..', 'examples', 'F-16A B Block 10 and 15', 'design_study_03.m'))</command>
+    </Shortcut>
+  </Shortcuts>
+
+  <!-- Files tracked by the project -->
+  <Files>
+    <ProjectFile path="startup.m"/>
+    <ProjectFile path="+avd/startup.m"/>
+    <ProjectFile path="src/AircraftState.m"/>
+    <ProjectFile path="src/base/AerodynamicsBase.m"/>
+    <ProjectFile path="src/base/PropulsionBase.m"/>
+    <ProjectFile path="src/base/WeightsBase.m"/>
+    <ProjectFile path="src/base/GeometryBase.m"/>
+    <ProjectFile path="src/base/MissionBase.m"/>
+    <ProjectFile path="src/base/TailSizingBase.m"/>
+    <ProjectFile path="src/base/ConstraintBase.m"/>
+    <ProjectFile path="src/Disciplines/Aerodynamics/AeroLevel1.m"/>
+    <ProjectFile path="src/Disciplines/Aerodynamics/AeroLevel2.m"/>
+    <ProjectFile path="src/Disciplines/Aerodynamics/AeroLevel3.m"/>
+    <ProjectFile path="src/Disciplines/Aerodynamics/AeroLevel4.m"/>
+    <ProjectFile path="src/Disciplines/Propulsion/PropulsionLevel1.m"/>
+    <ProjectFile path="src/Disciplines/Propulsion/PropulsionLevel2.m"/>
+    <ProjectFile path="src/Disciplines/Propulsion/PropulsionLevel3.m"/>
+    <ProjectFile path="src/Disciplines/Propulsion/PropulsionLevel4.m"/>
+    <ProjectFile path="src/Disciplines/Weight/WeightLevel1.m"/>
+    <ProjectFile path="src/Disciplines/Weight/WeightLevel2.m"/>
+    <ProjectFile path="src/Disciplines/Weight/WeightLevel3.m"/>
+    <ProjectFile path="src/Disciplines/Weight/WeightLevel4.m"/>
+    <ProjectFile path="src/Disciplines/Geometry/GeometryLevel1.m"/>
+    <ProjectFile path="src/Disciplines/Geometry/GeometryLevel2.m"/>
+    <ProjectFile path="src/Disciplines/Geometry/GeometryLevel3.m"/>
+    <ProjectFile path="src/Disciplines/MissionAnalysis/MissionAnalysisLevel1.m"/>
+    <ProjectFile path="src/Disciplines/MissionAnalysis/MissionAnalysisLevel2.m"/>
+    <ProjectFile path="src/Disciplines/MissionAnalysis/MissionAnalysisLevel3.m"/>
+    <ProjectFile path="src/Disciplines/MissionAnalysis/MissionAnalysisLevel4.m"/>
+    <ProjectFile path="src/Disciplines/TailSizing/TailSizingLevel1.m"/>
+    <ProjectFile path="src/Sizing/SizingLoopL1.m"/>
+    <ProjectFile path="src/Sizing/SizingLoopL2.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Aerodynamics/F16AeroLevel1.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Aerodynamics/F16AeroLevel2.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Aerodynamics/F16AeroLevel3.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Propulsion/F16PropulsionLevel1.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Propulsion/F16PropulsionLevel2.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Propulsion/F16PropulsionLevel3.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Weight/F16WeightLevel1.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Weight/F16WeightLevel2.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Weight/F16WeightLevel3.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Geometry/F16GeometryLevel1.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Geometry/F16GeometryLevel2.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Geometry/F16GeometryLevel3.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Mission/F16MissionLevel1.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Mission/F16MissionLevel2.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Mission/F16MissionLevel3.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/TailSizing/F16TailSizingLevel1.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/disciplines/Constraints/F16ConstraintAnalysis.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/design_study_01.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/design_study_02.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/design_study_03.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/tests/test_F16Aerodynamics.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/tests/test_F16Propulsion.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/tests/test_F16WeightsAndGeometry.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/tests/test_F16Mission.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/tests/test_F16SizingStudies.m"/>
+    <ProjectFile path="examples/F-16A B Block 10 and 15/tests/run_all_tests.m"/>
+  </Files>
+
+</MATLABProject>

@@ -1,166 +1,116 @@
-classdef GeometryLevel2
-     %F16GEOMETRYSTUFF Summary of this class goes here
-     %   Detailed explanation goes here
+classdef GeometryLevel2 < GeometryBase
+    % Level II geometry: Roskam S_wet regression + exposed-surface wetted areas.
+    %
+    % Adds computed wing exposed and wetted areas from explicit span and chord
+    % geometry (Brandt/Raymer methods) rather than purely regression-based.
+    %
+    % Usage:
+    %   geom = GeometryLevel2(aircraft_type, W_TO, S_ref, b, AR, tc_wing);
+    %   geom.S_wet_wing
+    %   geom.L_fus
 
-     properties
-          % Organize by physical object; separate into tail (horizontal,
-          % vertical), fuselage, etc?
-          % I should definitely use structs for this. Organize into wings,
-          % tails, fuselage.
-     end
+    properties
+        aircraft_type
+        b           % wingspan (ft)
+        AR          % aspect ratio
+        lambda      % wing taper ratio
+        tc_wing     % thickness-to-chord ratio of wing
+        cbar        % mean aerodynamic chord (ft)
+        L_fus       % fuselage length (ft)
+        S_wet_wing  % wetted area of exposed wing (ft²)
+        S_wet_body  % wetted area of fuselage/body (ft²)
+        S_HT        % horizontal tail area (ft²) — set by sizing loop
+        S_VT        % vertical tail area (ft²)   — set by sizing loop
+    end
 
-     methods (Static)
+    methods
+        function obj = GeometryLevel2(aircraft_type, W_TO, S_ref_in, b, AR, tc_wing, lambda)
+            if nargin < 7; lambda = 0.3; end
+            obj.aircraft_type = aircraft_type;
+            obj.S_ref   = S_ref_in;
+            obj.b       = b;
+            obj.AR      = AR;
+            obj.lambda  = lambda;
+            obj.tc_wing = tc_wing;
 
-          % Add functions for estimating control surface sizing
+            % Regression-based total S_wet
+            [obj.S_wet, ~, ~] = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
 
-          % Estimate the wetted area of the aircraft
-          function [S_wet, c, d] = get_design_S_wet(aircraft_type, W_TO)
-               % Source: Airplane Design, vol 1, Roskam, table 3.5
-               if (aircraft_type == "Homebuilt")
-                    c = 1.2362;
-                    d = 0.4319;
-               elseif (aircraft_type == "single engine prop")
-                    c = 1.0892;
-                    d = 0.5147;
-               elseif (aircraft_type == "twin engine prop")
-                    c = 0.8635;
-                    d = 0.5632;
-               elseif (aircraft_type == "agricultural")
-                    c = 1.0447;
-                    d = 0.5326;
-               elseif (aircraft_type == "business jet")
-                    c = 0.2263;
-                    d = 0.6977;
-               elseif (aircraft_type == "Regional turboprop")
-                    c = -0.0866;
-                    d = 0.8099;
-               elseif (aircraft_type == "transport jet")
-                    c = 0.0199;
-                    d = 0.7351;
-               elseif (aircraft_type == "Military trainer") % Clean wet
-                    c = 0.8565;
-                    d = 0.5423;
-               elseif (aircraft_type == "fighter") % Clean wet
-                    c = -0.1289; % Coefficient for fighter aircraft, given for S_wet equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-                    d = 0.7506; % Coefficient for fighter aicraft, given for S_wet equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-               elseif (aircraft_type == "Military patrol") || (aircraft_type == "Military bomber") || (aircraft_type == "Military transport")
-                    c = 0.1628;
-                    d = 0.7316;
-               elseif (aircraft_type == "flying boat") || (aircraft_type == "amphibious") || (aircraft_type == "float")
-                    c = 0.6295;
-                    d = 0.6708;
-               elseif (aircraft_type == "Supersonic cruise")
-                    c = -1.1868;
-                    d = 0.9609;
-               else
-                    error("Couldn't identify aircraft type.")
-               end
-               S_wet = 10^(c) * W_TO^(d); % ft^2
-               % (Aircraft Design, vol 1, Roskam, eq 3.22)
-          end
+            % Fuselage length
+            [obj.L_fus, ~, ~] = GeometryLevel1.get_fus_len(aircraft_type, W_TO);
 
-          % Estimate exposed surface area (lifting surface)
-          % Source: Brandt, "F16A", "Geom" sheet, cell H7.
-          function output = get_S_exposed_wing(tip_length, exposed_rc, exposed_halfspan)
-               output = exposed_halfspan*(exposed_rc + tip_length);
-          end
+            % Wing root chord and MAC
+            c_root   = 2*S_ref_in / (b*(1 + lambda));
+            c_tip    = lambda * c_root;
+            obj.cbar = (2/3)*c_root*(1 + lambda + lambda^2)/(1 + lambda);
 
-          % Estimate exposed wetted areas (lifting surfaces) (Wrapper)
-          function S_wet_wing = get_S_wet_wing(S_exposed, tc)
-               if tc <= 0.05
-                    S_wet_wing = GeometryLevel2.compute_S_wet_wing_lowtc(S_exposed);
-               elseif tc > 0.05
-                    S_wet_wing = GeometryLevel2.compute_S_wet_wing_hightc(S_exposed, tc);
-               end
-          end
+            % Wing wetted area
+            S_exp          = GeometryLevel2.get_S_exposed_wing(c_tip, c_root, b/2);
+            obj.S_wet_wing = GeometryLevel2.get_S_wet_wing(S_exp, tc_wing);
+        end
+    end
 
-          % Estimate wetted area (body)
-          % "Body" = "fuselage + nose cone + whatever isn't the wings from
-          % a silouetted side-view"
-          % "Fuselage" = "the fuselage"
-          % I think this is better for level 1
-          function S_wet_body = compute_S_wet_body(A_top, A_side)
-               S_wet_body = 3.4*(A_top + A_side)/2; % Raymer, 6th ed, eq 7.13
-          end
+    methods (Static)
 
-          % Compute S_wet for wings with low tc
-          function output = compute_S_wet_wing_lowtc(S_exposed)
-               output = 2.003*S_exposed; % Raymer, 6th ed, eq 7.11
-          end
+        function [S_wet, c, d] = get_design_S_wet(aircraft_type, W_TO)
+            % Same regression as Level I; available as static for direct calls.
+            [S_wet, c, d] = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
+        end
 
-          % Compute S_wet for wings with high tc
-          function output = compute_S_wet_wing_hightc(S_exposed, tc)
-               output = S_exposed*(1.977 + 0.52*tc);
-          end
+        function output = get_S_exposed_wing(tip_length, exposed_rc, exposed_halfspan)
+            % Brandt, "Geom" sheet, cell H7
+            output = exposed_halfspan * (exposed_rc + tip_length);
+        end
 
+        function S_wet_wing = get_S_wet_wing(S_exposed, tc)
+            if tc <= 0.05
+                S_wet_wing = GeometryLevel2.compute_S_wet_wing_lowtc(S_exposed);
+            else
+                S_wet_wing = GeometryLevel2.compute_S_wet_wing_hightc(S_exposed, tc);
+            end
+        end
 
-          % Estimate tail properties based on historical trend of aircraft
-          % types
-          % This is probably better for stability and control
-          function [c_HT, c_VT] = est_tail_propers(aircraft_type)
-               if aircraft_type == "sailplane"
-                    c_HT = 0.50;
-                    c_VT = 0.02;
-               elseif (aircraft_type == "homebuilt")
-                    c_HT = 0.50;
-                    c_VT = 0.04;
-               elseif aircraft_type == "general aviation - single engine"
-                    c_HT = 0.70;
-                    c_VT = 0.04;
-               elseif aircraft_type == "general aviation - twin engine"
-                    c_HT = 0.80;
-                    c_VT = 0.07;
-               elseif aircraft_type == "agricultural"
-                    c_HT = 0.50;
-                    c_VT = 0.04;
-               elseif aircraft_type == "twin turboprop"
-                    c_HT = 0.90;
-                    c_VT = 0.08;
-               elseif aircraft_type == "flying boat"
-                    c_HT = 0.70;
-                    c_VT = 0.06;
-               elseif aircraft_type == "jet trainer"
-                    c_HT = 0.70;
-                    c_VT = 0.06;
-               elseif aircraft_type == "jet fighter"
-                    c_HT = 0.40;
-                    c_VT = 0.07; % 0.07 - 0.12, longer fuselage -> higher value
-               elseif (aircraft_type == "military cargo") || (aircraft_type == "military bomber")
-                    c_HT = 1.00;
-                    c_VT = 0.08;
-               elseif (aircraft_type == "jet transport")
-                    c_HT = 1.00;
-                    c_VT = 0.09;
-               else
-                    error("Unrecognized aircraft type.") % Include list of acceptable parameters
-               end
-          end
+        function S_wet_body = compute_S_wet_body(A_top, A_side)
+            S_wet_body = 3.4*(A_top + A_side)/2;  % Raymer, 6th ed, eq 7.13
+        end
 
-          % Estimate tail AR and lambda
-          function [HT, VT] = tab_tail_AR_lambda(aircraft_type, tail_type)
-               if aircraft_type == "fighter"
-                    HT.AR = 3;
-                    HT.lambda = 0.2;
-                    VT.AR = 0.6;
-                    VT.lambda = 0.2;
-               elseif aircraft_type == "sailplane"
-                    HT.AR = 6;
-                    HT.lambda = 0.3;
-                    VT.AR = 1.5;
-                    VT.lambda = 0.4;
-               elseif (aircraft_type ~= "fighter") || (aircraft_type ~= "sailplane")
-                    HT.AR = 3;
-                    HT.lambda = 0.3;
-                    VT.AR = 1.3;
-                    VT.lambda = 0.3;
-               elseif (tail_type == "T-tail")
-                    HT.AR = 0;
-                    HT.lambda = 0;
-                    VT.AR = 0.7;
-                    VT.lambda = 0.6;
-               else
-                    error("Couldn't identify aircraft or tail type.")
-               end
-          end
-     end
+        function output = compute_S_wet_wing_lowtc(S_exposed)
+            output = 2.003*S_exposed;  % Raymer, 6th ed, eq 7.11
+        end
+
+        function output = compute_S_wet_wing_hightc(S_exposed, tc)
+            output = S_exposed*(1.977 + 0.52*tc);
+        end
+
+        function [c_HT, c_VT] = est_tail_propers(aircraft_type)
+            % Raymer tail volume coefficient historical values
+            switch aircraft_type
+                case "sailplane";                       c_HT=0.50; c_VT=0.02;
+                case "homebuilt";                       c_HT=0.50; c_VT=0.04;
+                case "general aviation - single engine";c_HT=0.70; c_VT=0.04;
+                case "general aviation - twin engine";  c_HT=0.80; c_VT=0.07;
+                case "agricultural";                    c_HT=0.50; c_VT=0.04;
+                case "twin turboprop";                  c_HT=0.90; c_VT=0.08;
+                case "flying boat";                     c_HT=0.70; c_VT=0.06;
+                case "jet trainer";                     c_HT=0.70; c_VT=0.06;
+                case "jet fighter";                     c_HT=0.40; c_VT=0.07;
+                case {"military cargo","military bomber"}; c_HT=1.00; c_VT=0.08;
+                case "jet transport";                   c_HT=1.00; c_VT=0.09;
+                otherwise; error("Unrecognized aircraft type: %s", aircraft_type)
+            end
+        end
+
+        function [HT, VT] = tab_tail_AR_lambda(aircraft_type, ~)
+            switch aircraft_type
+                case "fighter"
+                    HT.AR=3; HT.lambda=0.2; VT.AR=0.6; VT.lambda=0.2;
+                case "sailplane"
+                    HT.AR=6; HT.lambda=0.3; VT.AR=1.5; VT.lambda=0.4;
+                otherwise
+                    HT.AR=3; HT.lambda=0.3; VT.AR=1.3; VT.lambda=0.3;
+            end
+        end
+
+    end
+
 end

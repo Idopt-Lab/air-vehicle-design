@@ -1,275 +1,144 @@
-classdef PropulsionLevel3
-     %UNTITLED Summary of this class goes here
-     %   Detailed explanation goes here
+classdef PropulsionLevel3 < PropulsionBase
+    % Level III propulsion: Mattingly thrust lapse + Raymer engine scaling.
+    %
+    % Adds a proper Mattingly thrust lapse model (dry and wet) using the
+    % pressure and temperature ratios from AircraftState.  TSFC comes from
+    % the Mattingly correlations at the actual flight Mach and altitude.
 
-     properties
-     end
+    properties
+        engine_type       % normalized engine type string
+        mil_or_max_power  % 'mil' (dry) or 'max' (wet, afterburner)
+        BPR               % bypass ratio
+        % Thrust lapse model constants (set from engine type in constructor)
+        F1; E; F2; TR     % Mattingly lapse coefficients
+        TSFC_sl           % sea-level TSFC (1/s), used in lapse model
+    end
 
-     methods (Static)
+    methods
+        function obj = PropulsionLevel3(engine_type, mil_or_max_power, BPR)
+            if nargin < 2; mil_or_max_power = "mil"; end
+            if nargin < 3; BPR = 0; end
+            obj.engine_type      = PropulsionUtils.classify_engine_type(engine_type);
+            obj.mil_or_max_power = mil_or_max_power;
+            obj.BPR              = BPR;
 
-          % % Estimate engine properties
-          % function output = get_engine_stats(T, M, BPR, isafterburning)
-          %      if (isafterburning == "Y")
-          %           output = PropulsionLevel3.compute_eng_stats_ab(T, M, BPR);
-          %      elseif (isafterburning == "N")
-          %           output = PropulsionLevel3.compute_eng_stats_noab(T, M, BPR);
-          %      else
-          %           error ("Couldn't determine if engine is/isn't afterburning. Accepted states: 'Y', 'N'.")
-          %      end
-          % end
+            % Default Mattingly constants for low-BPR mixed turbofan (F-16 like)
+            % Adjust via subclass constructor if needed.
+            obj.F1     = 0.35;
+            obj.E      = 1.0;
+            obj.F2     = 0.0;
+            obj.TR     = 1.07;
+            obj.TSFC_sl = PropulsionLevel2.get_TSFC_installed(engine_type, [0, 0], mil_or_max_power);
+        end
 
-          % Estimate engine properties (AFTERBURNING ENGINE, IMPERIAL
-          % UNITS)
-          function [enginestats] = compute_jet_eng_stats_ab(T, M, BPR)
-               % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
-               % 10.15
+        function alpha = thrust_lapse(obj, state)
+            [~, ~, P_sl, ~]    = atmosisa(0);
+            delta_0 = state.P_atm / (P_sl * 0.020885);     % pressure ratio
+            theta_0 = state.T_atm / 518.7;                  % temperature ratio
+            if obj.mil_or_max_power == "mil"
+                T_lapsed = PropulsionLevel3.get_thrust_dry(obj.T0, delta_0, obj.F1, state.mach, obj.E, obj.F2, theta_0, obj.TR);
+            else
+                T_lapsed = PropulsionLevel3.get_thrust_wet(obj.T0, delta_0, obj.F1, state.mach, obj.E, theta_0, obj.TR, obj.F2);
+            end
+            alpha = T_lapsed / max(obj.T0, 1e-6);
+        end
 
-               % ARGUMENTS
-               % W = Weight (lbf)
-               % T = Takeoff thrust (lbf)
-               % BPR = Bypass ratio
-               % M = Mach number
+        function tsfc = TSFC(obj, state)
+            tsfc = PropulsionLevel2.get_TSFC_installed(obj.engine_type, ...
+                [state.mach, state.altitude], obj.mil_or_max_power);
+        end
+    end
 
-               % Afterburning engines (imperial units)
-               W = @(T, M, BPR) (0.063*T^(1.1)*M^(0.25)*exp(-0.81*BPR)); % Engine weight (lbf) (eq 10.10, 6th ed) (IDK if this is "installed weight")
-               L = @(T, M) (0.255*T^(0.4)*M^(0.2)); % Engine length (ft) (eq 10.11, 6th ed)
-               D = @(T, BPR) (0.024*T^(0.5)*exp(0.04*BPR)); % Engine diameter (ft) (eq 10.12, 6th ed)
-               SFC_maxT = @(BPR) (2.1*exp(-0.12*BPR)); % SFC at max thrust (1/hr) (eq 10.13, 6th ed)
-               T_cruise = @(T, BPR) (2.4*T^(0.74)*exp(0.023*BPR)); % Cruise thrust (lbf) (eq 10.14, 6th ed)
-               SFC_cruise = @(BPR) (1.04*exp(-0.186*BPR)); % SFC at cruise conditions (1/hr) (eq 10.15, 6th ed)
+    methods (Static)
 
-               enginestats.W = W(T, M, BPR);
-               enginestats.L = L(T, M);
-               enginestats.D = D(T, BPR);
-               enginestats.SFC_maxT = SFC_maxT(BPR)*(1/3600);
-               enginestats.T_cruise = T_cruise(T, BPR);
-               enginestats.SFC_cruise = SFC_cruise(BPR)*(1/3600);
-          end
+        function [enginestats] = compute_jet_eng_stats_ab(T, M, BPR)
+            enginestats = PropulsionLevel2.compute_jet_eng_stats_ab(T, M, BPR);
+        end
 
-          % Estimate engine properties (NONAFTERBURNING ENGINE, IMPERIAL
-          % UNITS)
-          function [enginestats] = compute_jet_eng_stats_noab(T, M, BPR)
-               % Using equations from Raymer 6th edition, chapter 10, p 285, eq 10.4 ->
-               % 10.15
+        function [enginestats] = compute_jet_eng_stats_noab(T, M, BPR)
+            enginestats = PropulsionLevel2.compute_jet_eng_stats_noab(T, M, BPR);
+        end
 
-               % ARGUMENTS
-               % W = Weight (lbf)
-               % T = Takeoff thrust (lbf)
-               % BPR = Bypass ratio
-               % M = Mach number
+        function output = compute_theta_0(theta, gamma, M_0)
+            output = theta*(1 + ((gamma-1)/2)*M_0^2);
+        end
 
-               % Nonafterburning engines (imperial units)
-               W = @(T, BPR) (0.084*T^(1.1)*exp(-0.045*BPR)); % Engine weight (lbf) (eq 10.4, 6th ed)
-               L = @(T, M) (0.185*T^(0.4)*M^(0.2)); % Engine length (ft) (eq 10.5, 6th ed)
-               D = @(T, BPR) (0.033*T^(0.5)*exp(0.04*BPR)); % Engine diameter (ft) (eq 10.6, 6th ed)
-               SFC_maxT = @(BPR) (0.67*exp(-0.12*BPR)); % SFC at max thrust (1/hr) (eq 10.7, 6th ed)
-               T_cruise = @(T, BPR) (0.60*T^(0.9)*exp(0.02*BPR)); % Cruise thrust (lbf) (eq 10.8, 6th ed)
-               SFC_cruise = @(BPR) (0.88*exp(-0.05*BPR)); % SFC at cruise conditions (1/hr) (eq 10.9, 6th ed)
+        function output = compute_delta_0(delta, gamma, M_0)
+            output = delta*(1 + ((gamma-1)/2)*M_0^2);
+        end
 
-               enginestats.W = W(T, BPR);
-               enginestats.L = L(T, M);
-               enginestats.D = D(T, BPR);
-               enginestats.SFC_maxT = SFC_maxT(BPR)*(1/3600);
-               enginestats.T_cruise = T_cruise(T, BPR);
-               enginestats.SFC_cruise = SFC_cruise(BPR)*(1/3600);
-          end
+        function eng_scale = scale_engine(L_actual, D_actual, W_actual, T_actual, T_required)
+            SF = T_required / T_actual;
+            eng_scale.SF = SF;
+            eng_scale.L  = L_actual * SF^0.4;
+            eng_scale.D  = D_actual * SF^0.5;
+            eng_scale.W  = W_actual * SF^1.1;
+        end
 
-          % Get theta_0
-          function output = compute_theta_0(theta, gamma, M_0)
-               output = theta*(1 + ((gamma-1)/2) * M_0^2);
-          end
+        function output = get_theta(state_input)
+            h_ft = state_input(2);
+            [T]  = atmosisa(h_ft * 0.3048);
+            output = PropulsionUtils.theta(T);
+        end
 
-          % Get delta_0
-          function output = compute_delta_0(delta, gamma, M_0)
-               output = delta*(1 + ((gamma-1)/2) * M_0^2);
-          end
+        function output = get_delta(state_input)
+            h_ft   = state_input(2);
+            [~, ~, P] = atmosisa(h_ft * 0.3048);
+            output = PropulsionUtils.delta(P/1000);
+        end
 
-          % Scale engine
-          function eng_scale = scale_engine(L_actual, D_actual, W_actual, T_actual, T_required)
-               eng_scale.SF = T_actual/T_required;
-               eng_scale.L = L_actual*SF^(0.4); % Raymer, 6th ed, eq 10.1
-               eng_scale.D = D_actual*SF^(0.5); % Raymer, 6th ed, eq 10.2
-               eng_scale.W = W_actual*SF^(1.1); % Raymer, 6th ed, eq 10.3
-          end
+        function T_dry = get_thrust_dry(t_sl_dry, delta_0, F1, M0, E, F2, theta_0, TR)
+            if theta_0 <= TR
+                T_dry = t_sl_dry * delta_0 * (1 - F1*M0^E);
+            else
+                T_dry = t_sl_dry * delta_0 * (1 - F1*M0^E - F2*(theta_0-TR)/theta_0);
+            end
+        end
 
-          % % Compute TSFC (wrapper)
-          % function output = get_TSFC(propulsion_obj, state_input, isdryorwet, thrust_sl, TSFC_sl, E, F1, F2, TR)
-          %      M0 = state_input(1);
-          %      h_ft = state_input(2);
-          %      theta = propulsion_obj.get_theta(state_input);
-          %      delta = propulsion_obj.get_delta(state_input);
-          %      theta_0 = propulsion_obj.compute_theta_0(theta, PropulsionUtils.gamma, M0);
-          %      delta_0 = propulsion_obj.compute_delta_0(delta, PropulsionUtils.gamma, M0);
-          %      if (isdryorwet=="dry") || (isdryorwet=="Dry")
-          %           % Compute TSFC for dry config
-          %           thrust = propulsion_obj.get_thrust_dry(thrust_sl, delta_0, F1, M0, E, F2, theta_0, TR);
-          %           output = propulsion_obj.get_TSFC_dry(theta_0, TSFC_sl, M0, thrust, thrust_sl, TR);
-          %      elseif (isdryorwet == "wet") || (isdryorwet == "Wet")
-          %           % Compute TSFC for wet config
-          %           thrust = propulsion_obj.get_thrust_wet(thrust_sl, delta_0, F1, M0, E, theta_0, TR, F2);
-          %           output = get_TSFC_wet(propulsion_obj, TSFC_sl, M0, thrust, thrust_sl, theta_0, TR);
-          %      else
-          %           error("Error handler. Must be 'dry' or 'wet'.")
-          %      end
-          %      output = output/3600; % Convert TSFC from 1/hr -> 1/sec
-          % end
+        function TSFC_dry = get_TSFC_dry(theta_0, TSFC_sl_dry, M, thrust, thrust_sl, TR)
+            if theta_0 <= TR
+                TSFC_dry = TSFC_sl_dry*(1.0 + 0.35*(M-0.0))*(thrust/thrust_sl)^0.5;
+            else
+                TSFC_dry = TSFC_sl_dry*(1.0 + 0.35*M)*(thrust/thrust_sl)^0.5;
+            end
+        end
 
-          % Get theta (wrapper)
-          function output = get_theta(state_input)
-               h_ft = state_input(2);
-               [T] = atmosisa(h_ft*0.3048);
-               output = PropulsionUtils.theta(T);
-          end
+        function T_wet = get_thrust_wet(t_sl_wet, delta_0, F1, M0, E, theta_0, TR, F2)
+            if theta_0 <= TR
+                T_wet = t_sl_wet * delta_0 * (1 - F1*M0^E);
+            else
+                T_wet = t_sl_wet * delta_0 * (1 - F1*M0^E - F2*(theta_0-TR)/theta_0);
+            end
+        end
 
-          % Get delta (wrapper)
-          function output = get_delta(state_input)
-               h_ft = state_input(2);
-               [T, a, P] = atmosisa(h_ft*0.3048);
-               output = PropulsionUtils.delta(P/1000);
-          end
+        function TSFC_wet = get_TSFC_wet(TSFC_sl_wet, M, thrust, thrust_sl, theta_0, TR)
+            if theta_0 <= TR
+                TSFC_wet = TSFC_sl_wet*(1.0 + 0.35*(M-0.4))*(thrust/thrust_sl)^0.5;
+            else
+                TSFC_wet = TSFC_sl_wet*(1.0 + 0.35*abs(M-0.4))*(thrust/thrust_sl)^0.5;
+            end
+        end
 
-          %% For low_bpr_turbofan/jet, theta0<=TR
-          % Get thrust (dry)
-          function T_dry = get_thrust_dry(t_sl_dry, delta_0, F1, M0, E, F2, theta_0, TR)
-               if theta_0<=TR
-                    T_dry = t_sl_dry*delta_0*(1 - F1*M0^(E));
-               elseif theta_0>TR
-                    T_dry = t_sl_dry*delta_0*(1 - F1*M0^(E) - (F2 *(theta_0 - TR)/(theta_0)));
-               end
-          end
+        function J = compute_advance_ratio(V, n, D)
+            J = V / (n*D);
+        end
 
-          % Get TSFC (dry)
-          function TSFC_dry = get_TSFC_dry(theta_0, TSFC_sl_dry, M, thrust, thrust_sl, TR)
-               if theta_0 <= TR
-                    TSFC_dry = TSFC_sl_dry*(1.0 + 0.35*(M - 0.0))*(thrust/thrust_sl)^(0.5);
-               elseif theta_0 > TR
-                    TSFC_dry = TSFC_sl_dry*(1.0 + 0.35*M)*(thrust/thrust_sl)^(0.5);
-               else
-                    error("Error handler.")
-               end
-          end
+        function cp = compute_cp(P, rho, n, D)
+            cp = P / (rho*n^3*D^5);
+        end
 
-          % Get thrust (wet)
-          function T_wet = get_thrust_wet(t_sl_wet, delta_0, F1, M0, E, theta_0, TR, F2)
-               if theta_0<=TR
-                    T_wet = t_sl_wet*delta_0*(1 - F1*M0^(E));
-               elseif theta_0>TR
-                    T_wet = t_sl_wet*delta_0*(1 - F1*M0^(E) - (F2*(theta_0 - TR)/theta_0));
-               else
-                    error("Error handler.")
-               end
-          end
+        function ct = compute_ct(T, rho, n, D)
+            ct = T / (rho*n^2*D^4);
+        end
 
-          % Get TSFC (wet)
-          function TSFC_wet = get_TSFC_wet(TSFC_sl_wet, M, thrust, thrust_sl, theta_0, TR)
-               if theta_0 <= TR
-                    TSFC_wet = TSFC_sl_wet*(1.0 + 0.35*(M - 0.4))*(thrust/thrust_sl)^(0.5);
-               elseif theta_0 > TR
-                    TSFC_wet = TSFC_sl_wet*(1.0 + 0.35*abs(M - 0.4))*(thrust/thrust_sl)^(0.5);
-               else
-                    error("Error handler.")
-               end
-          end
+        function eta_p = compute_prop_efficiency(T, V, P)
+            eta_p = (T*V) / P;
+        end
 
-          
-          %% SECTION FOR PROPS
+        function thrust = compute_prop_thrust_moving(P, eta_p, V)
+            thrust = P * eta_p / V;
+        end
 
-          % Compute advance ratio (PROP)
-          function J = compute_advance_ratio(V, n, D)
-               % V = Velocity (ft/s)
-               % n = Rotation speed (rev/s)
-               % D = Prop diameter (ft)
+    end
 
-               J = V/(n*D);
-          end
-
-          % Compute power coefficient (PROP)
-          function cp = compute_cp(P, rho, n, D)
-               % P = Power (ft*lb/s)
-               % rho = density (slugs/ft^3)
-               % n = Rotation speed (rev/s)
-               % D = Prop diameter (ft)
-
-               cp = P/(rho*n^3 * D^5);
-          end
-
-          % Compute thrust coefficient (PROP)
-          function ct = compute_ct(T, rho, n, D)
-               % T = thrust (lb)
-               % rho = Air density (slugs/ft^3)
-               % n = Rotation speed (rev/s)
-               % D = Prop diameter (ft)
-
-               ct = T/(rho*n^2 * D^4);
-          end
-
-          % Compute speed-power coefficient (PROP)
-          function cs = compute_cs(V, rho, P, n)
-               % V = Velocity (ft/s)
-               % rho = Air density (slugs/ft^3)
-               % P = Power (ft*lb/s)
-               % n = Rotation speed (rev/s)
-
-               cs = V^5 * sqrt(rho/(P*n^2));
-          end
-
-          % Activity factor (PROP)
-          function AF_perblade = compute_AF_perblade(c_root, lambda, D)
-               % c_root = Root chord of propeller (ft)
-               % lambda = taper ratio of propeller (dimensionless)
-               % D = Propeller diameter (ft)
-
-               AF_perblade = (10^5 * c_root)/(16*D) *(0.25 - (1 - lambda)*0.2);
-          end
-
-          % Propeller efficiency (PROP)
-          function eta_p = compute_prop_efficiency(T, V, P)
-               % T = thrust (lbf)
-               % V = Velocity (ft/s)
-               % P = Power (ft*lbf/s)
-
-               eta_p = (T*V)/P;
-          end
-
-          % Thrust (forward flight) (PROP)
-          function thrust = compute_prop_thrust_moving(P, eta_p, V)
-               % P = Power (ft*lbf/s)
-               % eta_p = Propeller efficiency
-               % V = Velocity (ft/s)
-
-               thrust = (P*eta_p)/V;
-          end
-
-          % Thrust (static) (PROP)
-          function thrust = compute_prop_thrust_static(P, cp, ct, D)
-               % P = Power (ft*lbf/s)
-               % cp = Power coefficient
-               % ct = Thrust coefficient
-               % D = Prop diameter (ft)
-
-               thrust = (ct/cp)*(P/(n*D));
-          end
-
-
-
-
-
-          %% SECTION FOR TURBOPROPS
-
-
-          %% SECTION FOR ELECTRIC
-
-
-          %% SECTION FOR HYBRID ELECTRIC
-
-
-          %% SECTION FOR MISC (NUCLEAR, ETC)
-
-
-     end
-
-     methods (Access = private)
-
-
-     end
 end

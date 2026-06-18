@@ -1,78 +1,63 @@
-classdef AeroLevel2
-     %F16AEROLEVEL1 Summary of this class goes here
-     %   Detailed explanation goes here
-     % Level 1 aerodynamics equations go here.
-     % Remember, you can separate FUNCTION classes (classes with just
-     % functions) from DATA STORAGE CLASSES (classes that just store data).
-     % I think WeaponGenerator2 did that.
+classdef AeroLevel2 < AerodynamicsBase
+    % Level II aerodynamics: Oswald efficiency factor and Roskam S_wet regression.
+    %
+    % Improvement over Level I: K2 is computed from the actual Oswald span
+    % efficiency factor (1/(pi*e*AR)) rather than the K_LD factor approximation.
+    % CD0 still uses a tabulated equivalent Cf times the total S_wet/S_ref.
+    % K1 = 0 (symmetric polar; use Level III for cambered-polar correction).
+    %
+    % Usage:
+    %   Cf   = AeroLevel1.get_Cf('air force fighter', 1);
+    %   aero = AeroLevel2('fighter', Cf, 3.0, 0.8, S_wet, S_ref);
+    %   polar = aero.drag_polar(AircraftState(35000, 0.85));
 
-     properties
-     end
+    properties
+        aircraft_type   % normalized type string, used for CLmax table
+        Cf              % equivalent skin friction coefficient (-)
+        AR              % wing aspect ratio (-)
+        e_osw           % Oswald span efficiency factor (-)
+        S_wet           % total aircraft wetted area (ft²)
+        S_ref           % wing reference area (ft²)
+    end
 
-     methods (Static)
+    methods
+        function obj = AeroLevel2(aircraft_type, Cf, AR, e_osw, S_wet, S_ref)
+            obj.aircraft_type = aircraft_type;
+            obj.Cf    = Cf;
+            obj.AR    = AR;
+            obj.e_osw = e_osw;
+            obj.S_wet = S_wet;
+            obj.S_ref = S_ref;
+        end
 
-          % % Compute Oswald span efficiency factor
-          % function e_osw = get_e_osw(aero_obj, e_osw)
-          %      % Level 2: Actually compute this?
-          %      aero_obj.e_osw = e_osw;
-          % end
+        function polar = drag_polar(obj, state) %#ok<INUSD>
+            CD0 = AeroLevel2.compute_CD0(obj.Cf, obj.S_wet, obj.S_ref);
+            K2  = AeroLevel2.compute_K(obj.e_osw, obj.AR);
+            polar.CD0 = CD0;
+            polar.K1  = 0;
+            polar.K2  = K2;
+        end
 
-          % Compute K
-          function K = compute_K(e_osw, AR)
-               K = 1/(pi*AR*e_osw);
-          end
+        function CL = CLmax(obj, state) %#ok<INUSD>
+            CL = AeroLevel1.tab_CLmax_values(obj.aircraft_type, "clean");
+        end
+    end
 
-          % % Get Cf (should be tabulated by user or the program? Stick with
-          % % user, for now)
-          % function Cf = get_Cf(aero_obj, Cf)
-          %      aero_obj.Cf = Cf;
-          % end
+    %% Static computation methods
+    methods (Static)
 
-          % % Get CD0
-          % function DragResults = get_design_drag(aero_obj, geometry_obj, state_input)
-          %      W = state_input(4);
-          % 
-          %      % Get q
-          %      q = AeroUtils.compute_q(state_input);
-          % 
-          %      % Get CL
-          %      aero_obj.CL = AeroUtils.compute_CL(W, q, geometry_obj.mainwings.S_ref);
-          % 
-          %      % Get CD0
-          %      DragResults.CD0 = get_design_CD0(aero_obj, aero_obj.Cf, geometry_obj.design.S_wet, geometry_obj.mainwings.S_ref);
-          % 
-          %      % Compute K
-          %      aero_obj.compute_K(aero_obj.e_osw, geometry_obj.mainwings.AR);
-          % 
-          %      % Compute the CD
-          %      DragResults.CD = get_design_CD(aero_obj, DragResults.CD0, aero_obj.K, aero_obj.CL);
-          % 
-          %      % Compute the drag
-          %      DragResults.D = AeroUtils.compute_D(q, DragResults.CD, geometry_obj.mainwings.S_ref);
-          % 
-          % end
+        function K = compute_K(e_osw, AR)
+            K = 1 / (pi * AR * e_osw);
+        end
 
-          % Get CD
-          function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
-               CD = CD0 + K*CL^2;
-          end
+        function CD = compute_CD(CD0, K, CL)
+            CD = CD0 + K*CL^2;
+        end
 
-          % Get CD0
-          function CD0 = compute_CD0(Cf, S_wet_aircraft, S_ref)
-               CD0 = Cf * S_wet_aircraft/S_ref;
-          end
+        function CD0 = compute_CD0(Cf, S_wet_aircraft, S_ref)
+            CD0 = Cf * S_wet_aircraft / S_ref;
+        end
 
-          % %% FOR MISSION ANALYSIS
-          % % Compute L/D (using revised method) (I should probably store
-          % % mission segment results somewhere...)
-          % function [LD_ratio] = compute_revised_LD_ratio(W, q, S, CD0, e, AR)
-          %      CL = 2*W/(q*S);
-          %      K = 1/(pi*e*AR);
-          %      LD_ratio = CL/(CD0 + K * CL^2);
-          % end
+    end
 
-     end
-
-     methods (Access = private)
-     end
 end

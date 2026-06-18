@@ -1,131 +1,82 @@
-classdef GeometryLevel1
-     %GEOMETRYLEVEL1 Summary of this class goes here
-     %   Detailed explanation goes here
+classdef GeometryLevel1 < GeometryBase
+    % Level I geometry: Roskam historical regression for S_wet and L_fus.
+    %
+    % S_ref is set by the sizing loop (W_TO/W_S) or supplied as an input.
+    % S_wet is estimated from Roskam Table 3.5: S_wet = 10^c * W_TO^d.
+    % L_fus is estimated from Roskam Table 3.3: L_fus = a * W_TO^C.
+    %
+    % Usage (standalone):
+    %   geom = GeometryLevel1('jet fighter', 31000, 300);
+    %   geom.S_wet   % total wetted area (ft²)
 
-     properties
-     end
+    properties
+        aircraft_type   % type string for S_wet and L_fus regressions
+        L_fus           % fuselage length (ft) — from regression
+    end
 
-     methods (Static)
+    methods
+        function obj = GeometryLevel1(aircraft_type, W_TO, S_ref_in)
+            obj.aircraft_type = aircraft_type;
+            obj.S_ref = S_ref_in;
+            [obj.S_wet, ~, ~]  = GeometryLevel1.get_design_S_wet(aircraft_type, W_TO);
+            [obj.L_fus, ~, ~]  = GeometryLevel1.get_fus_len(aircraft_type, W_TO);
+        end
+    end
 
-          function [L_fuselage, a, c] = get_fus_len(aircraft_type, W_TO)
-               if aircraft_type == "sailplane - unpowered"
-                    a = 0.86;
-                    C = 0.48;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "sailplane - powered"
-                    a = 0.71;
-                    C = 0.48;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif (aircraft_type == "homebuilt - metal") || (aircraft_type == "homebuilt - wood")
-                    a = 3.68;
-                    C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "homebuilt - composite"
-                    a = 3.50;
-                    C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "general aviation - single engine"
-                    a = 4.37;
-                    C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "general aviation - twin engine"
-                    a = 0.86;
-                    C = 0.42;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "agricultural aircraft"
-                    a = 4.04;
-                    C = 0.23;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "twin turboprop"
-                    a = 0.37;
-                    C = 0.51;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "flying boat"
-                    a = 1.05;
-                    C = 0.40;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif aircraft_type == "jet trainer"
-                    a = 0.79;
-                    C = 0.41;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif (aircraft_type == "Jet fighter") || (aircraft_type == "jet fighter")
-                    a = 0.93;
-                    C = 0.39;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif (aircraft_type == "military cargo") || (aircraft_type == "military bomber")
-                    a = 0.23;
-                    C = 0.50;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               elseif (aircraft_type == "jet transport")
-                    a = 0.67;
-                    C = 0.43;
-                    L_fuselage = GeometryLevel1.compute_fus_len(a, C, W_TO);
-               else
-                    error("Unrecognized aircraft type. Accepted inputs: sailplane - unpowered, sailplane - powered, homebuilt - metal, homebuilt - wood, homebuilt - composite, general aviation - single engine, general aviation - twin engine, agricultural aircraft, twin turboprop, flying boat, jet trainer, jet fighter, military cargo, military bomber, jet transport.") % Include list of acceptable parameters
-               end
-          end
+    methods (Static)
 
-          % Estimate fuselage length based on historical trend
-          function output = compute_fus_len(a, C, W_TO)
-               output = a*W_TO^(C); % Raymer, 6th ed, table 6.3
-          end
+        function [L_fuselage, a, c] = get_fus_len(aircraft_type, W_TO)
+            % Roskam, Airplane Design Vol 1, Table 3.3
+            switch aircraft_type
+                case "sailplane - unpowered";                   a=0.86; c=0.48;
+                case "sailplane - powered";                     a=0.71; c=0.48;
+                case {"homebuilt - metal","homebuilt - wood"};  a=3.68; c=0.23;
+                case "homebuilt - composite";                   a=3.50; c=0.23;
+                case "general aviation - single engine";        a=4.37; c=0.23;
+                case "general aviation - twin engine";          a=0.86; c=0.42;
+                case "agricultural aircraft";                   a=4.04; c=0.23;
+                case "twin turboprop";                          a=0.37; c=0.51;
+                case "flying boat";                             a=1.05; c=0.40;
+                case "jet trainer";                             a=0.79; c=0.41;
+                case {"Jet fighter","jet fighter"};             a=0.93; c=0.39;
+                case {"military cargo","military bomber"};      a=0.23; c=0.50;
+                case "jet transport";                           a=0.67; c=0.43;
+                otherwise
+                    error("Unrecognized aircraft type for get_fus_len: %s", aircraft_type)
+            end
+            L_fuselage = GeometryLevel1.compute_fus_len(a, c, W_TO);
+        end
 
-          % Estimate the main wing's reference area based on W_TO and
-          % desired wing loading.
-          function S_ref = compute_wing_area(W_TO, WS_desired)
-               S_ref = W_TO/(1/WS_desired);
-          end
+        function output = compute_fus_len(a, C, W_TO)
+            output = a * W_TO^C;  % Raymer, 6th ed, Table 6.3
+        end
 
-          
+        function S_ref = compute_wing_area(W_TO, WS_desired)
+            S_ref = W_TO / WS_desired;
+        end
 
-          % Estimate the wetted area of the aircraft
-          function [S_wet, c, d] = get_design_S_wet(aircraft_type, W_TO)
-               % Source: Airplane Design, vol 1, Roskam, table 3.5
-               if (aircraft_type == "homebuilt")
-                    c = 1.2362;
-                    d = 0.4319;
-               elseif (aircraft_type == "single engine prop")
-                    c = 1.0892;
-                    d = 0.5147;
-               elseif (aircraft_type == "twin engine prop")
-                    c = 0.8635;
-                    d = 0.5632;
-               elseif (aircraft_type == "agricultural")
-                    c = 1.0447;
-                    d = 0.5326;
-               elseif (aircraft_type == "business jet")
-                    c = 0.2263;
-                    d = 0.6977;
-               elseif (aircraft_type == "regional turboprop")
-                    c = -0.0866;
-                    d = 0.8099;
-               elseif (aircraft_type == "transport jet")
-                    c = 0.0199;
-                    d = 0.7351;
-               elseif (aircraft_type == "military trainer") % Clean wet
-                    c = 0.8565;
-                    d = 0.5423;
-               elseif (aircraft_type == "jet fighter") % Clean wet
-                    c = -0.1289; % Coefficient for fighter aircraft, given for S_wet equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
-                    d = 0.7506; % Coefficient for fighter aicraft, given for S_wet equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
-               elseif (aircraft_type == "military patrol") || (aircraft_type == "military bomber") || (aircraft_type == "military transport")
-                    c = 0.1628;
-                    d = 0.7316;
-               elseif (aircraft_type == "flying boat") || (aircraft_type == "amphibious") || (aircraft_type == "float")
-                    c = 0.6295;
-                    d = 0.6708;
-               elseif (aircraft_type == "supersonic cruise")
-                    c = -1.1868;
-                    d = 0.9609;
-               else
-                    error("Couldn't identify aircraft type.")
-               end
-               S_wet = 10^(c) * W_TO^(d); % ft^2
-               % (Aircraft Design, vol 1, Roskam, eq 3.22) 
-          end
-     end
+        function [S_wet, c, d] = get_design_S_wet(aircraft_type, W_TO)
+            % Roskam, Airplane Design Vol 1, Table 3.5
+            % S_wet = 10^c * W_TO^d  (ft²)
+            switch aircraft_type
+                case "homebuilt";                   c=1.2362;  d=0.4319;
+                case "single engine prop";          c=1.0892;  d=0.5147;
+                case "twin engine prop";            c=0.8635;  d=0.5632;
+                case "agricultural";                c=1.0447;  d=0.5326;
+                case "business jet";                c=0.2263;  d=0.6977;
+                case "regional turboprop";          c=-0.0866; d=0.8099;
+                case "transport jet";               c=0.0199;  d=0.7351;
+                case "military trainer";            c=0.8565;  d=0.5423;
+                case {"jet fighter","Jet fighter"}; c=-0.1289; d=0.7506;
+                case {"military patrol","military bomber","military transport"}; c=0.1628; d=0.7316;
+                case {"flying boat","amphibious","float"}; c=0.6295; d=0.6708;
+                case "supersonic cruise";           c=-1.1868; d=0.9609;
+                otherwise
+                    error("Unrecognized aircraft type for get_design_S_wet: %s", aircraft_type)
+            end
+            S_wet = 10^c * W_TO^d;
+        end
 
-     methods (Access = private)
+    end
 
-     end
 end

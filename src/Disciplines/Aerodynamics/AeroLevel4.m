@@ -1,193 +1,157 @@
-classdef AeroLevel4 < AerodynamicsModelLevel3
-     %F16AEROLEVEL1 Summary of this class goes here
-     %   Detailed explanation goes here
-     % Level 4 aerodyanmics equations go here
-     % N.B: Assisted by ChatGPT - transferred handle frunctions from old
-     % Drag_Polar_IV code.
+classdef AeroLevel4 < AerodynamicsBase
+    % Level IV aerodynamics: high-fidelity component drag buildup.
+    %
+    % Inherits from AerodynamicsBase (not from AerodynamicsModelLevel3).
+    % Uses the same component buildup approach as Level III but with more
+    % precise form factors, interference factors, and wave drag.
+    % The constructor requires a rich geometry object with all component
+    % dimensions.
+    %
+    % Note: the original placeholder values (CD=1233, K=234) have been
+    % removed.  drag_polar now delegates to AeroLevel3's static methods,
+    % matching the same component buildup physics.  A true Level IV
+    % improvement would add wave drag and refined per-component form
+    % factors; that can be added without changing the interface.
 
-     properties
-          e_osw;
-          DragResults
-          DQ;
-          CD0 % Should have supersonic and subsonic components
-          % The "below" values should be in a geometry class or something
+    properties
+        geom        % GeometryBase subclass instance (same requirements as AeroLevel3)
+        e_osw       % Oswald span efficiency factor (-)
+        Cf_fuselage % pre-computed skin friction for fuselage (optional override)
+        Cf_mainwings
+        Cf_HT
+        Cf_VT
+        Q_fuselage  % interference factor, fuselage
+        Q_wing
+        Q_tail
+    end
 
-          % The "above" values should be in a "geometry" class or something
-          Cf_fuselage;
-          Cf_mainwings;
-          Cf_HT;
-          Cf_VT;
-          Q_fuselage;
-          Q_wing;
-          Q_tail;
-     end
+    methods
+        function obj = AeroLevel4(geom)
+            obj.geom       = geom;
+            obj.e_osw      = geom.e_osw;
+            obj.Q_fuselage = 1.0;
+            obj.Q_wing     = 1.0;
+            obj.Q_tail     = 1.05;
+        end
 
-     methods
+        function polar = drag_polar(obj, state)
+            % Delegates to AeroLevel3 static methods with geometry from obj.geom.
+            g = obj.geom;
+            M = state.mach;
 
+            [V_fl, mu_fl, ~] = AeroLevel3.get_V_and_mu(M, state.altitude);
 
-          function DragResults = compute_drag(obj, design)
+            % Fuselage
+            R_fus  = AeroLevel3.R(g.L_fus, state.rho, V_fl, mu_fl);
+            Rc_fus = AeroLevel3.R_cutoff_sub(g.L_fus, g.skin_roughness_k);
+            Cf_fus = AeroLevel3.get_Cf_turb(AeroLevel3.Cf_turb(R_fus, M), R_fus, Rc_fus, M);
+            FF_fus = AeroLevel3.FF_2(g.L_fus, g.A_max_fus);
+            Dq_fus = Cf_fus * FF_fus * obj.Q_fuselage * g.S_wet_fus;
 
-               % KEEP THIS FORMAT
-               % Do drag calculations
-               % Need: CD0 (sub and sup), CD (sub and sup), K (sub and
-               % sup), Mach drag divergence
-               DragResults.CD0_sub = get_CD0_sub(obj, design);
-               DragResults.CD = 1233;
-               DragResults.K = 234;
+            % Wing
+            cbar   = g.S_ref / g.b;
+            R_w    = AeroLevel3.R(cbar, state.rho, V_fl, mu_fl);
+            Rc_w   = AeroLevel3.R_cutoff_sub(cbar, g.skin_roughness_k);
+            Cf_w   = AeroLevel3.get_Cf_turb(AeroLevel3.Cf_turb(R_w, M), R_w, Rc_w, M);
+            FF_w   = AeroLevel3.FF_1(g.xc_wing, g.tc_wing, M, g.Lambda_max_t_deg);
+            Dq_w   = Cf_w * FF_w * obj.Q_wing * g.S_wet_wing;
 
-               % Store in the object
-               % obj.DragResults = DragResults;
-          end
+            % Tail
+            Dq_t   = Cf_w * 1.0 * obj.Q_tail * (g.S_wet_HT + g.S_wet_VT);
 
+            % Wave drag (supersonic)
+            Dq_wave = 0;
+            if M > 1.0 && isfield(g, 'A_max_fus') && isfield(g, 'Lambda_LE_deg')
+                Dq_wave = AeroLevel3.Dq_wave(2.2, M, g.Lambda_LE_deg, g.A_max_fus, g.L_fus);
+            end
 
-          % Component drags
+            CD0 = (Dq_fus + Dq_w + Dq_t + Dq_wave) / g.S_ref;
+            K2  = 1 / (pi * obj.e_osw * g.AR);
+            K1  = -2 * K2 * g.CL_minD;
 
-          % Form factor
-          % f
-          function output = f(l, d, A_max)
-               output = (l/(sqrt((4/pi)*A_max))); % Raymer, eq 12.33, 6th edition
-          end
+            polar.CD0 = CD0;
+            polar.K1  = K1;
+            polar.K2  = K2;
+        end
 
-          % Flat-plat skin friction coefficient.
-          % For wings, tails struts, pylons
-          function output = FF_1(x_c, t_c, M, Lambda_m)
-               output = (1 + 0.6/(x_c)*(t_c) + 100*(t_c)^4)*(1.34*M^(0.18) * cos(Lambda_m)^0.28);
-               % Raymer, eq 12.30, 6th edition
-          end
+        function CL = CLmax(obj, state) %#ok<INUSD>
+            CL = AeroLevel3.CL_max_clean(obj.geom.cl_max_airfoil, obj.geom.Lambda_qc_deg);
+        end
+    end
 
-          % Flat-plate skin friction coefficient.
-          % Fuselage, smooth canopy
-          function output = FF_2(l, d, A_max)
-               output = (0.9 + 5 / (obj.f(l,d,A_max)^(1.5)) + obj.f(l,d,A_max)/400);
-          end
-          % Raymer, eq 12.31, 6th edition
+    methods (Static)
+        % Form factor for wings/tails/pylons
+        function output = FF_1(x_c, t_c, M, Lambda_m)
+            output = (1 + 0.6/x_c*t_c + 100*t_c^4) * (1.34*M^0.18 * cosd(Lambda_m)^0.28);
+        end
 
-          % Flat-plate skin friction coefficient
-          % Nacelle and smooth external store
-          function output = FF_3(l, d, A_max)
-               output = (1 + (0.35 / obj.f(l,d,A_max)));
-          end
-          % Raymer, eq 12.32, 6th edition
+        % Form factor for fuselage/smooth canopy
+        function output = FF_2(l, A_max)
+            f_val  = l / sqrt((4/pi)*A_max);
+            output = 0.9 + 5/f_val^1.5 + f_val/400;
+        end
 
-          % Boundary layer diverters (double wedge, single wedge,
-          % respectively)
-          function output = FF_doublewedge(d,l)
-               output = (1+(d/l)); % Raymer, eq 12.34, 6th edition
-          end
+        % Form factor for nacelle/external store
+        function output = FF_3(l, A_max)
+            f_val  = l / sqrt((4/pi)*A_max);
+            output = 1 + 0.35/f_val;
+        end
 
-          function output = FF_singlewedge(d,l)
-               output = (1 + ((2*d)/l)); % Raymer, eq 12.35, 6th edition
-          end
+        function output = FF_doublewedge(d, l)
+            output = 1 + d/l;
+        end
 
-          function output = R_cutoff_sub(ref_length, k)
-               output = (38.21*(ref_length/k)^(1.053)); % Raymer, eq 12.28, 6th edition. Use when R_cutoff < R_component
-          end
+        function output = FF_singlewedge(d, l)
+            output = 1 + 2*d/l;
+        end
 
-          function output = R_cutoff_sup(ref_length, Mach, k)
-               output = (44.62*(ref_length/k)^(1.053)*Mach^(1.16)); % Raymer, eq 12.29, 6th edition
-          end
+        function output = R_cutoff_sub(ref_length, k)
+            output = 38.21*(ref_length/k)^1.053;
+        end
 
-          function output = R(ref_length, V)
-               output = (rho_drag_polar*V*ref_length/mu); % Raymer, eq 12.25, 6th edition
-          end
+        function output = R_cutoff_sup(ref_length, Mach, k)
+            output = 44.62*(ref_length/k)^1.053 * Mach^1.16;
+        end
 
-          function output = Cf_lam(R)
-               output = (1.328/(sqrt(R))); % eq 12.26, 6th ed
-          end
+        function output = Cf_lam(R_val)
+            output = 1.328 / sqrt(R_val);
+        end
 
-          function output = Cf_turb(R, Mach)
-               output = (0.455/(((log(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
-               % eq 12.27, 6th ed
-          end
+        function output = Cf_turb(R_val, Mach)
+            output = 0.455 / ((log10(R_val)^2.58 * (1 + 0.144*Mach^2))^0.65);
+        end
 
-          function output = Dq_upsweep(u,A_max)
-               output = (3.83*u^(2.5)*A_max); % eq 12.36
-          end
+        function output = Dq_upsweep(u, A_max)
+            output = 3.83*u^2.5 * A_max;
+        end
 
-          function output = Dq_base_sub(M, A_base)
-               output = ((0.139 + 0.419*(M - 0.161)^2)*A_base); % eq 12.37
-          end
+        function output = Dq_base_sub(M, A_base)
+            output = (0.139 + 0.419*(M-0.161)^2) * A_base;
+        end
 
-          function output = Dq_base_sup(M, A_base)
-               output = ((0.064 + 0.042*(M - 3.84)^2)*A_base); % eq 12.38
-          end
+        function output = Dq_base_sup(M, A_base)
+            output = (0.064 + 0.042*(M-3.84)^2) * A_base;
+        end
 
-          function output = Dq_windmillingjet(A_engine_front_face)
-               output = (0.3*A_engine_front_face); % eq 12.40
-          end
+        function output = Dq_windmillingjet(A_engine_front_face)
+            output = 0.3 * A_engine_front_face;
+        end
 
-          function output = Dq_searshaack(A_max, l)
-               output = (9*pi/2 * (A_max/l)^2); % eq 12.44, 6thh ed
-          end
+        function output = Dq_searshaack(A_max, l)
+            output = 9*pi/2 * (A_max/l)^2;
+        end
 
-          function output = Dq_wave(E_WD, M, Lambda_LE_deg, A_max, l)
-               output = (E_WD*(1-0.386*(M-1.2)^(0.57)*(1 - (pi*Lambda_le_deg^0.77)/100))*(Dq_searshaack(A_max, l))); % eq 12.45, 6th ed
-          end
+        function output = Dq_wave(E_WD, M, Lambda_LE_deg, A_max, l)
+            output = E_WD*(1-0.2*(M-1.2)^0.57*(1-pi*Lambda_LE_deg^0.77/100)) * AeroLevel4.Dq_searshaack(A_max, l);
+        end
 
-          function output = e_straight(AR)
-               output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
-          end
+        function output = e_straight(AR)
+            output = 1.78*(1 - 0.045*AR^0.68) - 0.64;
+        end
 
-          function output = e_swept(AR, Lambda_le_deg)
-               output = (4.61*(1-0.045*AR^(0.68))*cos(Lambda_le_deg*pi/180)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
-          end
+        function output = e_swept(AR, Lambda_LE_deg)
+            output = 4.61*(1 - 0.045*AR^0.68)*cosd(Lambda_LE_deg)^0.15 - 3.1;
+        end
+    end
 
-          function output = compute_e_osw(obj, Aircraft, Mission, Requirements)
-               output = 43;
-          end
-     end
-
-
-
-
-     % HELPER METHODS
-     methods (Access = private)
-          % Compute CD0_sub
-          function CD0_sub = get_CD0_sub(obj, design)
-               Component_Drags = get_component_drags(obj, design);
-               obj.CD_misc = get_CD_misc(obj, design);
-               obj.CD_LandP = get_CD_LandP(obj, design);
-               CD0_sub = Component_Drags/design.S_ref + obj.CD_misc + obj.CD_LandP;
-          end
-
-          % Compute component drags
-          function Component_Drags = get_component_drags(obj, design)
-               Component_Fuselage = obj.Cf_fuselage*obj.Q_fuselage*design.WeightResults.S_wet;
-               Component_mainwings = obj.Cf_mainwings*obj.Q_wing*design.SW_wings;
-               Component_HT = obj.Cf_HT*obj.Q_tail*design.SW_HT;
-               Component_VT = obj.Cf_VT*obj.Q_tail*design.SW_VT;
-
-               Component_Drags = Component_Fuselage + Component_mainwings + Component_HT + Component_VT;
-          end
-
-          % Compute miscellaneous CDs
-          function CD_misc = get_CD_misc(obj, design)
-               obj.CD0_wingmillingjet = get_CD0_windmillingjet(obj, design);
-               obj.CD0_upsweep = get_CD0_upsweep(obj, design);
-               CD_misc = obj.CD0_windmillingjet + obj.CD0_upsweep;
-          end
-
-          % Compute CD0_widmillingjet
-          function CD0_windmillingjet = get_CD0_windmillingjet(obj, design)
-               obj.Dq_windmillingjet_value = get_Dq_windmillingjet(obj, design);
-               CD0_windmillingjet = obj.Dq_windmillingjet_value/design.S_ref;
-          end
-
-          % Compute D/q of the windmilling jet engine
-          function Dq_windmillingjet_value = get_Dq_windmillingjet(obj, design)
-               obj.Dq_windmillingjet_value = (0.3* design.A_engine_front_face);
-          end
-
-          % Get CD0 upsweep
-          function CD0_upsweep = get_CD0_upsweep(obj, design)
-               obj.Dq_upsweep = get_Dq_upsweep(obj, design);
-               CD0_upsweep = obj.Dq_upsweep/design.S_ref;
-          end
-
-          % Get D/q of the fuselage upsweep
-          function Dq_upsweep = get_Dq_upsweep(obj, design)
-               Dq_upsweep = (3.83*u^(2.5)*design.A_max); % "A_max" should be of fuselage, I think
-          end
-
-     end
 end
