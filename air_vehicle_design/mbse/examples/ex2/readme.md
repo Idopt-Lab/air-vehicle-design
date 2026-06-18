@@ -29,7 +29,7 @@ ex2/
 
 ## How to Run
 
-1. Open MATLAB and open `AircraftDesign.prj` to set up the path.
+1. Open MATLAB and open `ex2_mbse.prj` to set up the path.
 2. Open `requirements/example.slreqx` in the Requirements Editor to browse the requirement set.
 3. Run all tests from the command line:
    ```matlab
