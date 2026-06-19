@@ -12,7 +12,7 @@ mission profile, producing three primary summary targets:
 | Total mission time  | Miss!O8    | 94.06 min   |
 | Landing ground roll | Miss!O6    | 2884.95 ft  |
 
-Ground truth is `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`.
+Ground truth is `GroundTruth/Brandt-F16-A.xls`.
 Key Excel ranges used below are `Miss!B8:N9`, `Miss!B12:N12`, `Miss!O6:O9`, and `Miss!O12`.
 
 ---
@@ -374,10 +374,10 @@ Both Miss tab and `BrandtEngine` use the same New model. **No discrepancy.**
 
 \* 2% tolerance applied; deviation traces to the documented `Geom!B19` / `Geom!K21` double-counting error.
 
-Test suite: `src/level_brandt/tests/test_BrandtMission.m` — 43 checks total
+Test suite: `tests/test_BrandtMission.m` — 43 checks total
 (4 summary + 13 fuel + 13 time + 13 weight fractions).
 
-Run: `results = runtests('src/level_brandt/tests/test_BrandtMission.m')`
+Run: `results = runtests('tests/test_BrandtMission.m')`
 
 ---
 

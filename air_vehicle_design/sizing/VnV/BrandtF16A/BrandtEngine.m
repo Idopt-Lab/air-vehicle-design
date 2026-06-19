@@ -40,8 +40,7 @@ classdef BrandtEngine < handle
 
     methods
         function obj = BrandtEngine()
-            json_path = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), ...
-                'examples', 'F-16A B Block 10 and 15', 'Ground-Truth', 'f16a_geometry.json');
+            json_path = fullfile(fileparts(mfilename('fullpath')), 'GroundTruth', 'f16a_geometry.json');
             obj.inp = jsondecode(fileread(json_path));
         end
 

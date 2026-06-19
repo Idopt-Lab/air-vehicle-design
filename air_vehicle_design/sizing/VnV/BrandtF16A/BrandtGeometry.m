@@ -77,9 +77,7 @@ classdef BrandtGeometry < handle
             %   geom = BrandtGeometry(inp_struct)
             if nargin == 0
                 here = fileparts(mfilename('fullpath'));
-                source = fullfile(here, '..', '..', ...
-                    'examples', 'F-16A B Block 10 and 15', ...
-                    'Ground-Truth', 'f16a_geometry.json');
+                source = fullfile(here, 'GroundTruth', 'f16a_geometry.json');
             end
             if ischar(source) || isstring(source)
                 raw = jsondecode(fileread(char(source)));

@@ -73,8 +73,7 @@ classdef BrandtAerodynamics < handle
         function obj = BrandtAerodynamics(brandtGeomObj)
         % Load JSON and store reference to an already-analyzed BrandtGeometry.
         % brandtGeomObj must have had analyze() called before passing in.
-            json_path = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), ...
-                'examples', 'F-16A B Block 10 and 15', 'Ground-Truth', 'f16a_geometry.json');
+            json_path = fullfile(fileparts(mfilename('fullpath')), 'GroundTruth', 'f16a_geometry.json');
             obj.inp = jsondecode(fileread(json_path));
             obj.inp.geom_ = brandtGeomObj;   % handle reference, not a copy
         end

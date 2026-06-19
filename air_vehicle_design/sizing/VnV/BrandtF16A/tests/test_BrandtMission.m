@@ -1,7 +1,7 @@
 classdef test_BrandtMission < matlab.unittest.TestCase
 % test_BrandtMission  MATLAB unit tests for BrandtMission.
 %   Replicates Miss tab validation targets.
-%   Run: results = runtests('src/level_brandt/tests/test_BrandtMission.m')
+%   Run: results = runtests('tests/test_BrandtMission.m')
 %   Or:  results = run(test_BrandtMission)
 
     properties (Access = private)

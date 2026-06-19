@@ -1,6 +1,6 @@
 # Brandt F-16A XLS Cell Map
 
-Maps every key Excel cell in `Brandt-F16-A.xls` to its MATLAB equivalent in `src/level_brandt/`.
+Maps every key Excel cell in `Brandt-F16-A.xls` to its MATLAB equivalent in `../`.
 Vasquez must reproduce each cell value to within ±1% unless a documented audit exception is called out in the readme.
 
 ## Sheet: Main
@@ -74,8 +74,8 @@ Vasquez must reproduce each cell value to within ±1% unless a documented audit 
 
 | Cell         | Description                                | Value        | MATLAB |
 |--------------|--------------------------------------------|--------------|--------|
-| Aero!J16:K26 | Cfe lookup (aircraft type → Cfe)          | see readme_aero.md | `BrandtAerodynamics.inp.aero.Cfe_tab` |
-| Aero!M4:Q10  | Actual F-16A aero values (5 Mach points)  | see readme_aero.md | reference only |
+| Aero!J16:K26 | Cfe lookup (aircraft type → Cfe)          | see ../readme_aero.md | `BrandtAerodynamics.inp.aero.Cfe_tab` |
+| Aero!M4:Q10  | Actual F-16A aero values (5 Mach points)  | see ../readme_aero.md | reference only |
 
 ### Mission tab (Miss)
 
@@ -87,9 +87,9 @@ Vasquez must reproduce each cell value to within ±1% unless a documented audit 
 | Miss!k2         | Polar asymmetry (COMPUTED)         | −0.00630 | `BrandtAerodynamics.k2` |
 | Miss!LD_max     | Max lift-to-drag ratio             | 8.93     | `BrandtAerodynamics.LD_max` |
 | Miss!CL_opt     | CL at LD_max                       | 0.482    | `BrandtAerodynamics.CL_opt` |
-| Miss!B3:N3      | Segment Mach schedule              | see readme_mission.md | `BrandtMission.segmentMach` |
-| Miss!B8:N9      | Segment time/fuel tables           | see readme_mission.md | `BrandtMission.time_min`, `BrandtMission.fuel_lb` |
-| Miss!O6:O9      | Landing distance / totals          | see readme_mission.md | `BrandtMission.landing_dist_ft`, `total_time_min`, `total_fuel_lb` |
+| Miss!B3:N3      | Segment Mach schedule              | see ../readme_mission.md | `BrandtMission.segmentMach` |
+| Miss!B8:N9      | Segment time/fuel tables           | see ../readme_mission.md | `BrandtMission.time_min`, `BrandtMission.fuel_lb` |
+| Miss!O6:O9      | Landing distance / totals          | see ../readme_mission.md | `BrandtMission.landing_dist_ft`, `total_time_min`, `total_fuel_lb` |
 
 > **Drag polar:** `CD = CD0 + k1·CL² + k2·CL` (Brandt quadratic form, FR-004)  
 > **LD_max formula:** `0.5 / sqrt(CD0 × k1)` (Brandt simplified, ignores k2)  
@@ -145,7 +145,7 @@ Vasquez must reproduce each cell value to within ±1% unless a documented audit 
 > **Weight factors (Wt row 7):** wing=6.75, fuse=5.0, pitch=6.0, vert=6.0, nac=4.5, strake=4.5 (all lb/ft²)
 > **Controls formula (Wt B25):** `0.012 × W_TO + (S_LE_flap / S_wing) × 6.75 × 200`
 > **Nacelle area (Geom!B4):** half-buried model; uses π (MATLAB) vs 3.1516 (Excel) → ~0.37% error
-> See `readme_wt.md` for full formula derivations and discrepancy analysis.
+> See `../readme_wt.md` for full formula derivations and discrepancy analysis.
 
 ## Sheet: Engn(s)
 
@@ -162,7 +162,7 @@ Vasquez must reproduce each cell value to within ±1% unless a documented audit 
 ### Thrust equations (Engn(s) rows 4–7)
 
 Thrust and TSFC are functions of altitude and Mach via standard atmosphere ratios θ, θ₀, δ, δ₀.
-See `readme_prop.md` for the full equation listing.
+See `../readme_prop.md` for the full equation listing.
 
 | Quantity         | Method signature                          | Returns        |
 |------------------|-------------------------------------------|----------------|
@@ -236,7 +236,7 @@ See `readme_prop.md` for the full equation listing.
 > `T/W = (β/α) × [q·CD0/(β·W/S) + K1·n²·β·W/S/q + Ps/V]`
 > No K2 term — Brandt uses simplified parabolic polar for constraint analysis.
 > CD0 uses Aero-tab CDmin_sub basis (≈0.017), NOT Miss-tab Cfe_eff basis (0.027).
-> See `readme_consts.md` for full derivation.
+> See `../readme_consts.md` for full derivation.
 
 ## Sheet: Miss
 
@@ -262,5 +262,5 @@ See `readme_prop.md` for the full equation listing.
 
 ---
 
-*This file must be updated whenever a new cell is referenced in `src/level_brandt/`.*  
+*This file must be updated whenever a new cell is referenced in `../`.*  
 *Maintained by: Dallas*

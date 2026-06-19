@@ -3,7 +3,7 @@
 ## Purpose
 
 A direct, faithful MATLAB reimplementation of the Brandt F-16A Excel workbook
-(`examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`).
+(`GroundTruth/Brandt-F16-A.xls`).
 
 This is **not** an approximation. Every computed value must reproduce the corresponding
 Excel cell to within ±1%. It is the absolute calibration reference for Levels I–III.
@@ -57,8 +57,6 @@ integration test in `tests/level_brandt/test_LevelBrandt_integration.m`.
 
 ## Related Files
 
-- **Spec:** `.specify/specs/level-brandt.md`
-- **Cell map:** `examples/F-16A B Block 10 and 15/Ground-Truth/cell-map.md`
-- **Tests:** `tests/level_brandt/`
-- **Validation reports:** `validation/level_brandt/`
-- **Ground truth XLS:** `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`
+- **Cell map:** `GroundTruth/cell-map.md`
+- **Tests:** `tests/`
+- **Ground truth XLS:** `GroundTruth/Brandt-F16-A.xls`

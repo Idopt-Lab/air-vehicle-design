@@ -1,6 +1,6 @@
 # BrandtWeight – Design Decisions, Calculations, and Validation
 
-> Single source of truth: `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`  
+> Single source of truth: `GroundTruth/Brandt-F16-A.xls`  
 > Every value, formula, and fidelity choice described here traces back to a specific cell in that workbook.
 
 ---
@@ -9,9 +9,9 @@
 
 | File | Role |
 |------|------|
-| `src/level_brandt/BrandtWeight.m` | MATLAB handle class replicating the **Wt** tab, rows A14:B38 |
-| `examples/.../f16a_geometry.json` | Weight inputs extracted from **Main** tab (weight section) |
-| `src/level_brandt/tests/test_BrandtWeight.m` | Validation test suite (28 GT checks) |
+| `BrandtWeight.m` | MATLAB handle class replicating the **Wt** tab, rows A14:B38 |
+| `GroundTruth/f16a_geometry.json` | Weight inputs extracted from **Main** tab (weight section) |
+| `tests/test_BrandtWeight.m` | Validation test suite (28 GT checks) |
 
 `BrandtWeight` is a handle class that depends on `BrandtGeometry` (passed as constructor argument, same pattern as `BrandtAerodynamics`).
 Key cross-referenced cells below include `Main!D18`, `Geom!B3`, `Geom!B4`, `Wt!B9`, `Wt!B12`, `Wt!B23`, and `Wt!G9`.
@@ -426,7 +426,7 @@ All deviations are within the 1% test tolerance. The π vs 3.1516 discrepancy in
 
 ## 11. Validation
 
-Run `runtests('test_BrandtWeight')` from the `src/level_brandt/tests/` folder.
+Run `runtests('test_BrandtWeight')` from the `tests/` folder.
 
 **Test suite summary (28 tests, W_TO = 31377 lb):**
 

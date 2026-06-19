@@ -1,7 +1,7 @@
 classdef test_BrandtEngine < matlab.unittest.TestCase
 % test_BrandtEngine  MATLAB unit tests for BrandtEngine.
 %
-% Run: results = runtests('src/level_brandt/tests/test_BrandtEngine.m')
+% Run: results = runtests('tests/test_BrandtEngine.m')
 % Or:  results = run(test_BrandtEngine)
 
     properties (Access = private)

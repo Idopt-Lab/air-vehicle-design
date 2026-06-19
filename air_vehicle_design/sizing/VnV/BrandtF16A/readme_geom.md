@@ -1,6 +1,6 @@
 # BrandtGeometry – Design Decisions, Calculations, and Validation
 
-> Single source of truth: `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`  
+> Single source of truth: `GroundTruth/Brandt-F16-A.xls`  
 > Every value, formula, and fidelity choice described here traces back to a specific cell in that workbook.
 > Key cells cited below: `Geom!B19`, `Geom!K21`, `Geom!D23`, `Geom!H26:H45`, `Geom!H47`, `Geom!B4`, `Main!D18`, and `Main!B28`.
 
@@ -12,9 +12,9 @@
 
 | File | Role |
 |------|------|
-| `src/level_brandt/BrandtGeometry.m` | MATLAB handle class replicating the **Geom** tab |
-| `examples/.../f16a_geometry.json` | All given input values extracted from **Main** tab |
-| `src/level_brandt/tests/test_BrandtGeometry.m` | Validation test suite (33 GT checks) |
+| `BrandtGeometry.m` | MATLAB handle class replicating the **Geom** tab |
+| `GroundTruth/f16a_geometry.json` | All given input values extracted from **Main** tab |
+| `tests/test_BrandtGeometry.m` | Validation test suite (33 GT checks) |
 
 `BrandtGeometry` is a handle class: `analyze()` and all display/plot helpers mutate or inspect `obj` in place after construction.
 

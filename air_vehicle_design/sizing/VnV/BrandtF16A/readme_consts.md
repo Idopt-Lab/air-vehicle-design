@@ -1,6 +1,6 @@
 # BrandtConstraintAnalysis – Design Decisions, Calculations, and Validation
 
-> Single source of truth: `examples/F-16A B Block 10 and 15/Ground-Truth/Brandt-F16-A.xls`  
+> Single source of truth: `GroundTruth/Brandt-F16-A.xls`  
 > Every value, formula, and fidelity choice described here traces back to a specific cell in that workbook.
 
 ---
@@ -9,9 +9,9 @@
 
 | File | Role |
 |------|------|
-| `src/level_brandt/BrandtConstraintAnalysis.m` | MATLAB handle class replicating the **Consts** tab |
-| `examples/.../f16a_geometry.json` (`"constraints"` section) | Constraint condition inputs |
-| `src/level_brandt/tests/test_BrandtConstraintAnalysis.m` | Validation test suite |
+| `BrandtConstraintAnalysis.m` | MATLAB handle class replicating the **Consts** tab |
+| `GroundTruth/f16a_geometry.json` (`"constraints"` section) | Constraint condition inputs |
+| `tests/test_BrandtConstraintAnalysis.m` | Validation test suite |
 
 `BrandtConstraintAnalysis` receives pre-built `BrandtAerodynamics` and `BrandtEngine` handles.
 Key Excel ranges cited below include `Consts!B23`, `Consts!AM:AU`, `Consts!E32:E33`, `Consts!K32:K33`, `Aero!H27:H29`, and `Main!B5`.

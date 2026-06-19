@@ -115,8 +115,7 @@ classdef BrandtConstraintAnalysis < handle
         % aeroObj — BrandtAerodynamics that has had analyze() called.
         % engObj  — BrandtEngine that has had analyze() called.
         % If both are omitted, objects are created and analyzed automatically.
-            json_path = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), ...
-                'examples', 'F-16A B Block 10 and 15', 'Ground-Truth', 'f16a_geometry.json');
+            json_path = fullfile(fileparts(mfilename('fullpath')), 'GroundTruth', 'f16a_geometry.json');
             obj.inp = jsondecode(fileread(json_path));
 
             if nargin < 1 || isempty(aeroObj)

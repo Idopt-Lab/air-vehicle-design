@@ -141,8 +141,7 @@ classdef BrandtMission < handle
             obj.geom_ = geomObj;
 
             % Load mission section from JSON
-            json_path = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), ...
-                'examples', 'F-16A B Block 10 and 15', 'Ground-Truth', 'f16a_geometry.json');
+            json_path = fullfile(fileparts(mfilename('fullpath')), 'GroundTruth', 'f16a_geometry.json');
             data = jsondecode(fileread(json_path));
             obj.inp = data.mission;
             % Stash install factor from engine section (Miss!C25 = 1.08)
