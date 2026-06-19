@@ -1,0 +1,536 @@
+classdef SandCLevel3 < SandCModelLevel3
+     %SANDCLEVEL3 Summary of this class goes here
+     %   Detailed explanation goes here
+
+     properties
+          CG
+          NP
+          C_of_L
+          StaticStability
+          weightlocations
+     end
+
+     methods
+          function obj = SandCLevel3(design)
+               %SANDCLEVEL3 Construct an instance of this class
+               %   Detailed explanation goes here
+               % obj.Property1 = inputArg1 + inputArg2;
+               % Import component weight and locations from design file
+               obj.weightlocations = SandCUtils.get_design_weights(obj, design);
+          end
+
+          % Stability check
+          % Positive static margin means the CG is ahead of the neutral point.
+          % For the usual aircraft sign convention, this should correspond to
+          % C_m_alpha < 0. The first output stays logical for backward
+          % compatibility with older calls that expected true/false only.
+          function [IsStaticStable, StabilityResults] = check_static_stability(stability_obj, SM, Cm_alpha, tolerance)
+               if nargin < 3
+                    Cm_alpha = [];
+               end
+               if nargin < 4 || isempty(tolerance)
+                    tolerance = 0;
+               end
+
+               if isempty(SM) || ~isnumeric(SM) || ~isfinite(SM)
+                    error("Static margin must be a finite numeric value.")
+               end
+
+               if isempty(Cm_alpha)
+                    Cm_alpha = NaN;
+               elseif ~isnumeric(Cm_alpha) || ~isfinite(Cm_alpha)
+                    error("C_m_alpha must be empty or a finite numeric value.")
+               end
+
+               if SM > tolerance
+                    stable_by_SM = true;
+                    neutral_by_SM = false;
+               elseif SM < -tolerance
+                    stable_by_SM = false;
+                    neutral_by_SM = false;
+               else
+                    stable_by_SM = false;
+                    neutral_by_SM = true;
+               end
+
+               if isnan(Cm_alpha)
+                    stable_by_Cm_alpha = [];
+                    neutral_by_Cm_alpha = [];
+               elseif Cm_alpha < -tolerance
+                    stable_by_Cm_alpha = true;
+                    neutral_by_Cm_alpha = false;
+               elseif Cm_alpha > tolerance
+                    stable_by_Cm_alpha = false;
+                    neutral_by_Cm_alpha = false;
+               else
+                    stable_by_Cm_alpha = false;
+                    neutral_by_Cm_alpha = true;
+               end
+
+               if isempty(stable_by_Cm_alpha)
+                    IsStaticStable = stable_by_SM;
+                    IsNeutral = neutral_by_SM;
+               else
+                    IsStaticStable = stable_by_SM && stable_by_Cm_alpha;
+                    IsNeutral = neutral_by_SM || neutral_by_Cm_alpha;
+               end
+
+               IsUnstable = (~IsStaticStable) && (~IsNeutral);
+
+               if IsStaticStable
+                    assessment = "Stable";
+                    reason = "Static margin is positive and C_m_alpha is negative.";
+               elseif IsNeutral
+                    assessment = "Neutrally stable";
+                    reason = "Static margin or C_m_alpha is within the specified tolerance of zero.";
+               else
+                    assessment = "Unstable";
+                    if SM < -tolerance
+                         reason = "Static margin is negative, so the CG is aft of the neutral point.";
+                    elseif ~isnan(Cm_alpha) && Cm_alpha > tolerance
+                         reason = "C_m_alpha is positive, so the pitching moment increases with angle of attack.";
+                    else
+                         reason = "Static-stability criteria were not satisfied.";
+                    end
+               end
+
+               StabilityResults = struct();
+               StabilityResults.IsStaticStable = IsStaticStable;
+               StabilityResults.IsNeutral = IsNeutral;
+               StabilityResults.IsUnstable = IsUnstable;
+               StabilityResults.Assessment = assessment;
+               StabilityResults.Reason = reason;
+               StabilityResults.SM = SM;
+               StabilityResults.Cm_alpha = Cm_alpha;
+               StabilityResults.Tolerance = tolerance;
+
+               stability_obj.StaticStability = StabilityResults;
+          end
+
+          % Get the static margin (wrapper)
+          function [SM, StabilityResults] = get_static_margin(stability_obj, geometry_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations, i_w, epsilon)
+               S_h = geometry_obj.HT.S_ref;
+               S_w = geometry_obj.mainwings.S_ref;
+
+
+               Xbar_acw = stability_obj.compute_Xbar_ac(geometry_obj.mainwings.c_root, geometry_obj.mainwings.lambda);
+               Xbar_ach = stability_obj.compute_Xbar_ac(geometry_obj.HT.c_root, geometry_obj.HT.lambda);
+
+               % FIGURE OUT WHAT "C" IS!!!!!! Wing mean chord (assuming
+               % "main")
+               K_fus = design.geom.wings.Main.Kfus;
+               C_malphafus = stability_obj.compute_cm_alpha_fuselage(K_fus, geometry_obj.fuselage.W_max, geometry_obj.fuselage.L, geometry_obj.mainwings.MeanGeometricChord, geometry_obj.mainwings.S_ref);
+
+               CL_alpha = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               % CL_alpha_b = aero_obj.get_CL_alpha(statevector, geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               CL_alpha_M0 = aero_obj.get_CL_alpha([0.0, statevector(2)], geometry_obj.mainwings.S_exposed, geometry_obj.mainwings.S_ref, geometry_obj.mainwings.QC_sweep, geometry_obj.mainwings.LE_sweep, geometry_obj.mainwings.AR, geometry_obj.fuselage.W_max, geometry_obj.mainwings.b);
+               CL_alphah = aero_obj.get_CL_alpha(statevector, geometry_obj.HT.S_exposed, geometry_obj.HT.S_ref, geometry_obj.HT.QC_sweep, geometry_obj.HT.LE_sweep, geometry_obj.HT.AR, geometry_obj.fuselage.W_max, geometry_obj.HT.b);
+               CL_alpha_strakes = aero_obj.compute_CL_alpha_strakes(CL_alpha, geometry_obj.mainwings.S_ref, 20);
+               delta_epsilon_delta_alpha_M0 = stability_obj.compute_zeromach_downwash(CL_alpha_M0, geometry_obj.mainwings.AR);
+               delta_epsilon_delta_alpha = stability_obj.get_delta_epsilon_delta_alpha(statevector(1), CL_alpha, CL_alpha_M0, geometry_obj.mainwings.AR, delta_epsilon_delta_alpha_M0);
+               CL_alpha_wb = aero_obj.compute_CL_alpha_wb(CL_alphah, CL_alpha_strakes, delta_epsilon_delta_alpha, geometry_obj.HT.S_ref, geometry_obj.mainwings.S_ref);
+               CL_alpha = CL_alpha_wb;
+
+               eta_h = stability_obj.get_eta_h(statevector, geometry_obj.HT.S_ref);
+
+               delta_alpha_h_delta_alpha = stability_obj.get_delta_alpha_h_delta_alpha(statevector(1), CL_alpha, CL_alpha_M0, geometry_obj.mainwings.AR, delta_epsilon_delta_alpha_M0);
+
+               F_palpha = stability_obj.get_Fp_alpha_jet(statevector, design.propulsion.InletArea.InletArea);
+
+               q = AeroUtils.compute_q(statevector);
+
+               % i_w = 0; % Assume 0 for now (angle of incidence? induced angle of attack?)
+               % epsilon = 0;
+               delta_alpha_p_delta_alpha = stability_obj.compute_delta_alpha_p_delta_alpha(i_w, epsilon);
+
+               % Xbar_p = stability_obj.compute_Xbar_p();
+               Xbar_p = 33.775; % Hardcoded temporarily.
+               % That's the thrust mass location for the F-16. Move this,
+               % later.
+
+               Xbar_np = stability_obj.compute_Xbar_np(CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p);
+
+               Xbar_cg = stability_obj.get_cg(component_weight_list, component_weight_x_locations);
+
+               SM = stability_obj.compute_SM(Xbar_np, Xbar_cg, geometry_obj.mainwings.MeanGeometricChord);
+               Cm_alpha = stability_obj.estimate_Cm_alpha(CL_alpha, Xbar_np, Xbar_cg);
+
+               [IsStaticStable, StabilityResults] = stability_obj.check_static_stability(SM, Cm_alpha);
+
+               stability_obj.NP = Xbar_np;
+               stability_obj.CG = Xbar_cg;
+               StabilityResults.NP = Xbar_np;
+               StabilityResults.CG = Xbar_cg;
+               StabilityResults.CL_alpha = CL_alpha;
+               StabilityResults.CL_alpha_tail = CL_alphah;
+               StabilityResults.eta_h = eta_h;
+               StabilityResults.delta_epsilon_delta_alpha = delta_epsilon_delta_alpha;
+               StabilityResults.delta_alpha_h_delta_alpha = delta_alpha_h_delta_alpha;
+               StabilityResults.q = q;
+               StabilityResults.IsStaticStable = IsStaticStable;
+
+               stability_obj.StaticStability = StabilityResults;
+          end
+
+          % Get complete longitudinal static-stability results.
+          % This is a convenience wrapper around get_static_margin.
+          function StabilityResults = get_static_stability(stability_obj, geometry_obj, weight_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations)
+               [~, StabilityResults] = stability_obj.get_static_margin(geometry_obj, weight_obj, aero_obj, design, statevector, component_weight_list, component_weight_x_locations);
+          end
+
+          % Compute zero-mach downwash angle
+          function output = compute_zeromach_downwash(stability_obj, CL_alpha_M0, AR)
+               delta_epsilon_delta_alpha_M0 = (2*CL_alpha_M0)/(pi*AR);
+               output = delta_epsilon_delta_alpha_M0;
+          end
+
+
+          % Get quarter-chord x-location
+          function output = get_qc_x_location(stability_obj, x_loc, c_root)
+               output = x_loc + 0.25*c_root;
+          end
+
+          % Compute delta_alpha_p_delta_alpha
+          function output = compute_delta_alpha_p_delta_alpha(stability_obj, i_w, epsilon)
+               output = i_w - epsilon; % Raymer, 6th ed, fig 16.3
+          end
+
+          % Get Fp_alpha_jet (wrapper)
+          function output = get_Fp_alpha_jet(stability_obj, statevector, inlet_area)
+               M = statevector(1);
+               [T,a,p,rho,nu,mu] = atmosisa(statevector(2)*0.3048);
+               rho = rho*0.00194032033; % Convert from kg/m^3 -> imperial units
+               a = a*3.2808;
+               V = M*a;
+               m_dot = stability_obj.compute_m_dot(V, rho, inlet_area);
+               Fp_alpha = stability_obj.compute_Fp_alpha_jet(m_dot, V);
+               output = Fp_alpha;
+          end
+
+
+          function output = compute_m_dot(stability_obj, V, rho, A_inlet)
+               output = rho*V*A_inlet;
+          end
+
+          % Get delta_alpha_u_delta_alpha (upwash)
+          function output = get_delta_alpha_u_delta_alpha(stability_obj, delta_epsilon_u_delta_alpha)
+               output = 1 + delta_epsilon_u_delta_alpha;
+          end
+
+          % Get delta_alpha_h_delta_alpha (downwash)
+          function output = get_delta_alpha_h_delta_alpha(stability_obj, M, CL_alpha, CL_alpha_M0, AR, delta_epsilon_delta_alpha_M0)
+               delta_epsilon_delta_alpha = stability_obj.get_delta_epsilon_delta_alpha(M, CL_alpha, CL_alpha_M0, AR, delta_epsilon_delta_alpha_M0);
+               output = 1 - delta_epsilon_delta_alpha;
+          end
+
+          % Get delta_epsilon_delta_alpha
+          function output = get_delta_epsilon_delta_alpha(stability_obj, M, CL_alpha, CL_alpha_M0, AR, delta_epsilon_delta_alpha_M0)
+               if (M>=1.0) % Is supersonic
+                    delta_epsilon_delta_alpha = stability_obj.compute_delta_epsilon_delta_alpha_supersonic(CL_alpha, AR);
+               elseif (M<1.0) % Is subsonic
+                    delta_epsilon_delta_alpha = stability_obj.compute_delta_epsilon_delta_alpha_subsonic(delta_epsilon_delta_alpha_M0, CL_alpha, CL_alpha_M0);
+               else
+                    error("Error handler. Sub/supersonic logic end.")
+               end
+               output = delta_epsilon_delta_alpha;
+          end
+
+          % Compute delta_epsilon_delta_alpha (subsonic)
+          function output = compute_delta_epsilon_delta_alpha_subsonic(stability_obj, delta_epsilon_delta_alpha_M0, CL_alpha, CL_alpha_M0)
+               output = (delta_epsilon_delta_alpha_M0)*(CL_alpha)/(CL_alpha_M0);
+          end
+
+          % Compute delta_epsilon_delta_alpha (supersonic)
+          function output = compute_delta_epsilon_delta_alpha_supersonic(stability_obj, CL_alpha, AR)
+               output = (1.62*CL_alpha)/(pi*AR);
+          end
+
+          % Get eta_h
+          function output = get_eta_h(stability_obj, statevector, S_ref_ht)
+               q = AeroUtils.compute_q(statevector);
+               q_h = AeroUtils.compute_q(statevector);
+               output = q_h/q;
+               output = 0.9; % HARDCODED FOR NOW
+          end
+
+          % Estimate longitudinal location of CG
+          function output = get_cg(stability_obj, component_weight_list, component_x_locations)
+               % Function accepts arguments of weight. Uses longitudinal
+               % location of weight components to estimate CG location
+               % CG loc = weight*x_loc/total_number
+               % Loop through entire thing
+               % Get numerator first
+               weight_length = length(component_weight_list);
+               totalweight = sum(component_weight_list);
+               moment_arms = 0;
+               for i=1:weight_length
+                    moment_arms = moment_arms + component_weight_list(i)*component_x_locations(i);
+               end
+
+               output = moment_arms/totalweight;
+          end
+
+          % Compute neutral point
+          function np = get_np()
+          end
+
+          % Compute pitching moment coefficient
+          function output = compute_cm(stability_obj, M, q, S_ref, c_bar)
+               output = M/(q*S_ref*c_bar);
+          end
+
+          % Compute yawing moment coefficient
+          function output = compute_cn(stability_obj, N, q, S_ref, b)
+               output = N/(q*S_ref*b);
+          end
+
+          % Compute rolling moment coefficient
+          function output = compute_cl(stability_obj, L, q, S_ref, b)
+               output = L/(q*S_ref*b);
+          end
+
+          %% LONGITUDINAL STATIC STABILITY AND CONTROL
+
+          % Compute the PITCH moment about the center of gravity
+          function output = compute_MCG(stability_obj, L, X_cg, X_acw, M_w, M_w_deltaf, delta_f, M_fus, L_h, X_ach, T_z_t, F_p, X_p)
+               output = L*(X_cg - X_acw) + M_w + M_w_deltaf*delta_f + M_fus - L_h*(X_ach - X_cg) - T_z_t + F_p*(X_cg - X_p);
+          end
+
+          % Compute the pitch moment coefficient about the CG
+          function output = compute_Cm_cg(stability_obj, CL, X_cg, X_acw, c, C_mw, C_mwdeltaf, delta_f, C_mfus, q_h, S_h, q, S_w, C_Lh, X_ach, T_zt, F_p, X_p)
+               output = CL*((X_cg - X_acw)/c) + C_mw + C_mwdeltaf*delta_f + C_mfus - ((q_h*S_h)/(q*S_w))*C_Lh*((X_ach - X_cg)/c) - (T_zt/(q*S_w*c)) + (F_p*(X_cg - X_p))/(q*S_w*c);
+          end
+
+          % Compute the derivative of the pitching moment w/r to AOA.
+          function output = compute_C_malpha(stability_obj, CL_alpha, Xbar_cg, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alphah_over_delta_alpha, F_palpha, q, Xbar_p, Xbar_ach)
+               output = CL_alpha*(Xbar_cg - Xbar_acw) + C_malphafus - eta_h*(S_h/S_w)*CL_alphah*(delta_alphah_over_delta_alpha)*(Xbar_ach - Xbar_cg) + F_palpha/(q*S_w) * delta_alphah_over_delta_alpha * (Xbar_cg - Xbar_p);
+          end
+
+          % Compute the neutral point
+          function output = compute_Xbar_np(stability_obj, CL_alpha, Xbar_acw, C_malphafus, eta_h, S_h, S_w, CL_alphah, delta_alpha_h_delta_alpha, Xbar_ach, F_palpha, q, delta_alpha_p_delta_alpha, Xbar_p)
+               output = ( ((CL_alpha/57.3)*Xbar_acw - C_malphafus + (eta_h*(S_h/S_w)*CL_alphah/57.3*delta_alpha_h_delta_alpha*Xbar_ach) + ((F_palpha/(q*S_w))*delta_alpha_p_delta_alpha*Xbar_p)))/(CL_alpha/57.3 + eta_h*(S_h/S_w)*CL_alphah/57.3*(delta_alpha_h_delta_alpha) + (F_palpha/(q*S_w))*delta_alpha_p_delta_alpha);
+          end
+          % Dividing CL_alphas by 57.3 somehow gives reasonable results for
+          % F-16. Probably something to do with radian/degrees conversions.
+
+          % Estimate the CM_alpha
+          function output = estimate_Cm_alpha(stability_obj, CL_alpha, Xbar_np, Xbar_cg)
+               output = -1*CL_alpha*(Xbar_np - Xbar_cg);
+          end
+
+          % Check longitudinal static stability directly from C_m_alpha.
+          % Stable: C_m_alpha < 0. Neutral: C_m_alpha == 0 within tolerance.
+          function [IsStaticStable, CmAlphaResults] = check_Cm_alpha_static_stability(stability_obj, Cm_alpha, tolerance)
+               if nargin < 3 || isempty(tolerance)
+                    tolerance = 0;
+               end
+
+               if isempty(Cm_alpha) || ~isnumeric(Cm_alpha) || ~isfinite(Cm_alpha)
+                    error("C_m_alpha must be a finite numeric value.")
+               end
+
+               IsStaticStable = Cm_alpha < -tolerance;
+               IsNeutral = abs(Cm_alpha) <= tolerance;
+               IsUnstable = Cm_alpha > tolerance;
+
+               if IsStaticStable
+                    assessment = "Stable";
+                    reason = "C_m_alpha is negative.";
+               elseif IsNeutral
+                    assessment = "Neutrally stable";
+                    reason = "C_m_alpha is within the specified tolerance of zero.";
+               else
+                    assessment = "Unstable";
+                    reason = "C_m_alpha is positive.";
+               end
+
+               CmAlphaResults = struct();
+               CmAlphaResults.IsStaticStable = IsStaticStable;
+               CmAlphaResults.IsNeutral = IsNeutral;
+               CmAlphaResults.IsUnstable = IsUnstable;
+               CmAlphaResults.Assessment = assessment;
+               CmAlphaResults.Reason = reason;
+               CmAlphaResults.Cm_alpha = Cm_alpha;
+               CmAlphaResults.Tolerance = tolerance;
+          end
+
+          % Compute the static margin
+          function output = compute_SM(stability_obj, Xbar_np, Xbar_cg, c_bar)
+               output = ((Xbar_np - Xbar_cg)/c_bar)/100;
+          end
+
+          %% AERODYNAMIC CENTERS
+          % Compute aerodynamic center
+
+          function output = compute_x_ac(stability_obj, x_c4, delta_x_ac, S_wing)
+               output = x_c4 + delta_x_ac*sqrt(S_wing);
+          end
+
+          % Compute mean aerodyanmic center
+          function output = compute_Xbar_ac(stability_obj, c_root, lambda)
+               output = (2/3)*c_root*((1 + lambda + lambda^2)/(1+lambda));
+          end
+
+          % Compute delta_x_ac
+          function output = get_delta_x_ac(stability_obj, M)
+               if M < 0.4
+                    delta_x_ac = 0;
+               elseif (0.4 <= M) && (M <= 1.1)
+                    delta_x_ac = stability_obj.compute_delta_x_ac_subsonic(M);
+               elseif (M > 1.1)
+                    delta_x_ac = stability_obj.compute_delta_x_ac_supersonic(M);
+               else
+                    error("Error handler.")
+               end
+               output = delta_x_ac;
+          end
+
+          %% Lift coefficients
+          % Wing:
+          function output = compute_CL_wing(stability_obj, CL_alpha, alpha, i_w, alpha_0L)
+               output = CL_alpha*(alpha + i_w - alpha_0L);
+          end
+          % Aft tail:
+          function output = compute_CL_tail(stability_obj, CL_alpha_h, alpha, i_h, epsilon, alpha_0L_h)
+               output = CL_alpha_h*(alpha + i_h - epsilon - alpha_0L_h);
+          end
+
+          %% Changes in zero-lift AOA
+          % Compute delta_alpha_0L (elevator)
+          function output = compute_delta_alpha_0L(stability_obj, delta_CL, CL_alpha)
+               output = - (delta_CL/CL_alpha);
+          end
+
+          % Change in zero-lift AOA (plain flap)
+          function output = compute_delta_alpha_0L_plainflap(stability_obj, CL_alpha, delta_CL_delta_delta_f, delta_f)
+               output = (- (1/CL_alpha) * delta_CL_delta_delta_f)*delta_f;
+          end
+
+          % Compute delta_CL_delta_delta_f
+          function output = compute_delta_CL_delta_f(stability_obj, K_f, delta_Cl_delta_delta_f, S_flapped, S_ref, Lambda_LE_h_deg)
+               output = 0.9*K_f*(delta_Cl_delta_delta_f)*(S_flapped/S_ref)*cosd(Lambda_LE_h_deg);
+          end
+
+
+          %% Wing pitching moment
+
+          % Compute the wing's pitching moment coefficient (M = 0.8)
+          function output = compute_cm_w(stability_obj, C_m0_airfoil, AR, Sweepangle_deg)
+               output = C_m0_airfoil*( (AR*cosd(Sweepangle_deg)^2)/(AR + 2*cosd(Sweepangle_deg)));
+          end
+
+          % Compute wing pitching moment coefficnet with flap deflection
+          function output = compute_cm_w_flapdeflection(stability_obj, delta_CL_delta_delta_f, Xbar_cp, Xbar_cg)
+               output = - delta_CL_delta_delta_f*(Xbar_cp - Xbar_cg);
+          end
+
+          %% Downwash, upwash, and updog
+          % Estimate the change in AOA due to downwash
+          function output = get_downwash_angle_derivative(stability_obj, delta_eps_delta_alpha_M0, CL_alpha, CL_alpha_M0, AR, M)
+               if (1.0 <= M)
+                    downwash_angle_derivative = stability_obj.compute_downwash_angle_deriv_supersonic(CL_alpha, AR);
+               elseif (M < 1.0)
+                    downwash_angle_derivative = stability_obj.compute_downwash_angle_deriv_subsonic(delta_eps_delta_alpha_M0, CL_alpha, CL_alpha_M0);
+               else
+                    error("Error handler.")
+               end
+               output = downwash_angle_derivative;
+          end
+
+          % Upwash:
+          function output = compute_upwash_angle_change(stability_obj, delta_epsilon_u_delta_alpha)
+               output = 1 + delta_epsilon_u_delta_alpha;
+          end
+
+          % Downwash:
+          function output = compute_downwash_angle_change(stability_obj, delta_epsilon_delta_alpha)
+               output = 1 - delta_epsilon_delta_alpha;
+          end
+
+          %% Tail angle of attack
+          function output = compute_alpha_h(stability_obj, alpha, i_w, delta_epsilon_delta_alpha, i_h, delta_alpha_0L)
+               output = (alpha + i_w)*(1 - delta_epsilon_delta_alpha) + (i_h - i_w) + delta_alpha_0L;
+          end
+
+          %% Fuselage and nacelle pitching moment (per deg)
+          function output = compute_cm_alpha_fuselage(stability_obj, K_fus, W_f, L_f, c, S_w)
+               output = (K_fus*W_f^2*L_f)/(c*S_w); % Raymer 6th ed, eq 16.25
+          end
+
+          %% Engine stuff
+          % Normal force due to the turning of the air at an inlet front
+          % face (jet engine)
+          function output = compute_Fp_jet(stability_obj, m_dot, V, alpha_p)
+               % alpha_p = turning angle
+               output = m_dot*V*tand(alpha_p);
+          end
+
+          function output = compute_Fp_alpha_jet(stability_obj, m_dot, V)
+               output = m_dot*V;
+          end
+
+          % Now for props
+          function output = compute_Fp_alpha_prop(stability_obj, q, rho, V, D, N_B, A_p, delta_CN_blade_delta_alpha, T)
+               thrust_function = stability_obj.compute_thrust_function(T, rho, V, D);
+               output = q*N_B*A_p*delta_CN_blade_delta_alpha*thrust_function;
+          end
+
+
+
+
+
+
+
+
+
+          %% MAC equations are sourced from Brandt
+          % Get MAC of a wing
+          function output = get_MAC(stability_obj, c_root, lambda)
+               output = (2/3)*c_root*((1+lambda+lambda^2)/(1+lambda));
+          end
+
+          % Compute MAC of a lifting surface (y)
+          function output = get_y_MAC(stability_obj, b, lambda)
+               output = (b/6)*(1 + 2*lambda)/(1+lambda);
+          end
+
+          % Compute MAC of a lifting surface (x)
+          function output = get_x_MAC(stability_obj, x_loc_wing, y_MAC, Lambda_LE_deg)
+               output = x_loc_wing + y_MAC*tand(Lambda_LE_deg);
+          end
+
+          % Compute the X-Location of the MAC of a wing
+          function output = get_ac_wing(stability_obj, x_MAC, MAC)
+               output = x_MAC + 0.25*MAC;
+          end
+     end
+
+     methods (Access = private)
+
+          % Compute thrust function (???) Raymer 6th ed fig 16.16
+          function output = compute_thrust_function(stability_obj, T, rho, V, D)
+               output = T/(rho*V^2*D^2);
+          end
+
+          % Compute downwash angle derivative, subsonic
+          function output = compute_downwash_angle_deriv_subsonic(stability_obj, delta_eps_delta_alpha_M0, CL_alpha, CL_alpha_M0)
+               output = delta_eps_delta_alpha_M0*(CL_alpha/CL_alpha_M0);
+          end
+
+          % Compute downwash angle derivative, supersonic
+          function output = compute_downwash_angle_deriv_supersonic(stability_obj, CL_alpha, AR)
+               output = (1.62*CL_alpha)/(pi*AR);
+          end
+
+
+          % Compute delta_x_ac (subsonic)
+          function output = compute_delta_x_ac_subsonic(stability_obj, M)
+               output = 0.26*(M - 0.4)^(2.5);
+          end
+
+          % Compute delta_x_ac (supersonic)
+          function output = compute_delta_x_ac_supersonic(stability, M)
+               output = 0.112 - 0.004*M;
+          end
+     end
+end

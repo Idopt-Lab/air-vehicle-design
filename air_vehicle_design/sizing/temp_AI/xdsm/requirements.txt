@@ -1,0 +1,2 @@
+# Python dependencies for XDSM diagram generation
+pyxdsm>=2.2.0
