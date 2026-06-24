@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MF0 version="1.1" packageUris="http://schema.mathworks.com/mf0/meta/19700101 http://schema.mathworks.com/mf0/systemcomposer_property/2.13 http://schema.mathworks.com/mf0/systemcomposer_services_proxy/1.2">
+  <systemcomposer.profile.Profile type="systemcomposer.profile.Profile" uuid="89969bb1-c5b8-4ec1-9f16-e6b2f36e7c57">
+    <friendlyName>Detect Profile</friendlyName>
+    <prototypes type="systemcomposer.profile.Prototype" uuid="e93fd93b-9206-4b4b-b41c-92f50d1fe27f">
+      <abstract>true</abstract>
+      <p_Name>Physical</p_Name>
+      <defaultStereotypeMap type="systemcomposer.profile.DefaultStereotypeMap" uuid="d6af5106-ba7c-4891-b563-dd6343e0dabf"/>
+      <propertySet type="systemcomposer.property.PropertySet" uuid="8d6f2895-2220-48cd-a026-11cb44c6ff60">
+        <properties type="systemcomposer.property.PropertyDefinition" uuid="87e99a73-79d4-463b-8607-d99ad70d7692">
+          <currentVersionId>1800b3e0-c256-4476-9993-e08b8aa93b23</currentVersionId>
+          <p_Name>Cost</p_Name>
+          <defaultValue type="systemcomposer.property.Value" uuid="2ac28908-fa9e-4ce6-9c76-07265578e54a">
+            <storedExpression>2000</storedExpression>
+            <units>dollars</units>
+            <valueTypeProxy type="systemcomposer.services.proxy.ProxySource" uuid="f7d3224d-572e-4c1c-8b31-91c720d5834f">
+              <Proxy type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="e6964fcc-84ca-4681-8f74-ec54bca6fc64"/>
+              <realElement type="systemcomposer.property.Value" uuid="2ac28908-fa9e-4ce6-9c76-07265578e54a"/>
+            </valueTypeProxy>
+          </defaultValue>
+          <ownedType type="systemcomposer.property.FloatType" uuid="a1a3752c-97ea-4e96-8e3e-b07cec9dfe3b">
+            <unitChecker type="systemcomposer.property.UnitQueryClientWrapper" uuid="d88aa5cf-7eb8-4dd1-9492-1c32bfd6d1b1"/>
+            <units>dollars</units>
+            <typeProxy type="systemcomposer.services.proxy.ProxySource" uuid="41bea32e-ee9a-4d88-9b2e-499236b4c2c1">
+              <Proxy type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="0936a45d-15e3-435f-90e6-80a9bd440837"/>
+              <realElement type="systemcomposer.property.FloatType" uuid="a1a3752c-97ea-4e96-8e3e-b07cec9dfe3b"/>
+            </typeProxy>
+            <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="119ec6ce-eac7-44de-bd22-b96562c7c6e5"/>
+          </ownedType>
+          <typeProxy type="systemcomposer.services.proxy.ProxySource" uuid="00969dd0-8d63-4b3f-9d09-aab7c67ea1f5">
+            <Proxy type="systemcomposer.services.proxy.BidirectionalProxy" uuid="4bd42ac9-ccf1-43ff-8d92-1412c1cd63a6"/>
+            <realElement type="systemcomposer.property.PropertyDefinition" uuid="87e99a73-79d4-463b-8607-d99ad70d7692"/>
+          </typeProxy>
+          <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="037f9a1e-ec7f-4e19-8605-57edcb7f0f39"/>
+        </properties>
+        <properties type="systemcomposer.property.PropertyDefinition" uuid="b9a1ffd5-09fa-44eb-bcd4-319932055bf1">
+          <currentVersionId>aba7c674-1354-4869-bb03-e635c327a9e7</currentVersionId>
+          <p_Index>1</p_Index>
+          <p_Name>Weight</p_Name>
+          <defaultValue type="systemcomposer.property.Value" uuid="06003c5d-1d86-4553-9450-3880bcb09f49">
+            <storedExpression>20</storedExpression>
+            <units>kg</units>
+            <valueTypeProxy type="systemcomposer.services.proxy.ProxySource" uuid="d2c2c89b-e7d1-492f-9e07-ed904e7fb436">
+              <Proxy type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="aaa58894-efc8-4e02-90ef-232e3f2f959e"/>
+              <realElement type="systemcomposer.property.Value" uuid="06003c5d-1d86-4553-9450-3880bcb09f49"/>
+            </valueTypeProxy>
+          </defaultValue>
+          <ownedType type="systemcomposer.property.FloatType" uuid="18948033-3ea0-4207-af38-0a35233bebbd">
+            <unitChecker type="systemcomposer.property.UnitQueryClientWrapper" uuid="d88aa5cf-7eb8-4dd1-9492-1c32bfd6d1b1"/>
+            <units>kg</units>
+            <typeProxy type="systemcomposer.services.proxy.ProxySource" uuid="a03e7dd1-9b2d-4752-9837-adf9e29b369b">
+              <Proxy type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="0936a45d-15e3-435f-90e6-80a9bd440837"/>
+              <realElement type="systemcomposer.property.FloatType" uuid="18948033-3ea0-4207-af38-0a35233bebbd"/>
+            </typeProxy>
+            <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="683de483-2d42-43ef-adb4-6d5c4d6d12c0"/>
+          </ownedType>
+          <typeProxy type="systemcomposer.services.proxy.ProxySource" uuid="ab2b8bd3-18ec-466a-bca2-01cf265f6c33">
+            <Proxy type="systemcomposer.services.proxy.BidirectionalProxy" uuid="d71c2ab9-1f4f-4ce9-a54c-0f1b2f2b6965"/>
+            <realElement type="systemcomposer.property.PropertyDefinition" uuid="b9a1ffd5-09fa-44eb-bcd4-319932055bf1"/>
+          </typeProxy>
+          <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="ab7eeafa-aa13-442a-ae85-3f49fab3b0f9"/>
+        </properties>
+        <properties type="systemcomposer.property.PropertyDefinition" uuid="dcf2f548-c533-41e1-b69b-75ad2f25dd01">
+          <currentVersionId>3a88deeb-30e5-4d7f-9a26-0f18e2f54158</currentVersionId>
+          <p_Index>2</p_Index>
+          <p_Name>Active</p_Name>
+          <defaultValue type="systemcomposer.property.Value" uuid="9fe320ea-fa6f-43ba-ac18-edc45d8b3eaf">
+            <valueTypeProxy type="systemcomposer.services.proxy.ProxySource" uuid="1e345f5d-5292-40d4-baf8-a982110de7eb">
+              <Proxy type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="4d532192-77cf-483e-8c67-7b7c43a0cad6"/>
+              <realElement type="systemcomposer.property.Value" uuid="9fe320ea-fa6f-43ba-ac18-edc45d8b3eaf"/>
+            </valueTypeProxy>
+          </defaultValue>
+          <ownedType type="systemcomposer.property.BooleanType" uuid="b0d3098f-83de-4031-b8a6-9b043efef32b">
+            <typeProxy type="systemcomposer.services.proxy.ProxySource" uuid="c6f44a43-092d-4414-b109-73684ef2703d">
+              <Proxy type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="02f83367-1702-4a5d-86ef-d70d9bc6a93b"/>
+              <realElement type="systemcomposer.property.BooleanType" uuid="b0d3098f-83de-4031-b8a6-9b043efef32b"/>
+            </typeProxy>
+            <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="1fd415c6-4d15-41af-afd3-dda17f58e4de"/>
+          </ownedType>
+          <typeProxy type="systemcomposer.services.proxy.ProxySource" uuid="fe7adec3-a2ec-400d-8aa4-f04d5c41d867">
+            <Proxy type="systemcomposer.services.proxy.BidirectionalProxy" uuid="588a8f1c-2a36-4ec3-a9d8-57f922f61f35"/>
+            <realElement type="systemcomposer.property.PropertyDefinition" uuid="dcf2f548-c533-41e1-b69b-75ad2f25dd01"/>
+          </typeProxy>
+          <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="a5538ad3-8901-445f-8669-926737f5eb23"/>
+        </properties>
+        <p_Name>Physical</p_Name>
+        <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="63973b7e-775b-4cf7-a22d-8a09afbbe7df"/>
+      </propertySet>
+      <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="89258068-3a32-46e6-a5dc-0bff6b2e0bde"/>
+    </prototypes>
+    <prototypes type="systemcomposer.profile.Prototype" uuid="fef6dd6d-da25-4dbf-9607-2e9df54a1ca3">
+      <appliesTo>Component</appliesTo>
+      <componentHeaderColor type="systemcomposer.profile.RGBValueStruct">
+        <BLUE>238</BLUE>
+        <GREEN>190</GREEN>
+        <RED>77</RED>
+      </componentHeaderColor>
+      <description>Physical Component</description>
+      <icon>PLANT</icon>
+      <p_Name>Physical_Component</p_Name>
+      <defaultStereotypeMap type="systemcomposer.profile.DefaultStereotypeMap" uuid="eb43a570-1d26-4767-be18-74e39c48cae6"/>
+      <metaAttributes type="mf.zero.meta.AttributeMap" uuid="5476511c-2a6f-4b8d-ab86-c429206a3ae9"/>
+      <parentProxy type="systemcomposer.services.proxy.ProxySource" uuid="8a30ab59-6900-4603-be4e-5ada9b51284c">
+        <Proxy type="systemcomposer.services.proxy.BidirectionalProxy" uuid="39be7e2b-30bd-4de1-8089-2bbc511f5d88"/>
+        <realElement type="systemcomposer.profile.Prototype" uuid="fef6dd6d-da25-4dbf-9607-2e9df54a1ca3"/>
+      </parentProxy>
+      <propertySet type="systemcomposer.property.PropertySet" uuid="d5713d73-7ed7-4021-9ecc-654d518e6c9d">
+        <p_Name>Physical_Component</p_Name>
+        <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="38d1887f-3d65-423b-85b6-1765e418dfce"/>
+      </propertySet>
+      <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="cbb3f83e-67ef-456b-b18f-7637b546fe80"/>
+    </prototypes>
+    <prototypes type="systemcomposer.profile.Prototype" uuid="7cec406f-1789-4133-bb7b-14a9fed54f4c">
+      <appliesTo>Connector</appliesTo>
+      <connectorLineColor type="systemcomposer.profile.RGBValueStruct">
+        <BLUE>19</BLUE>
+        <GREEN>212</GREEN>
+        <RED>100</RED>
+      </connectorLineColor>
+      <connectorLineStyle>DASH</connectorLineStyle>
+      <description>Physical Connector</description>
+      <p_Name>Physical_Connector</p_Name>
+      <defaultStereotypeMap type="systemcomposer.profile.DefaultStereotypeMap" uuid="d82c964c-60d7-41f5-aaf5-8c4e458c8702"/>
+      <metaAttributes type="mf.zero.meta.AttributeMap" uuid="34c0bed1-7fe1-4d61-90f0-24af96b63d12"/>
+      <parentProxy type="systemcomposer.services.proxy.ProxySource" uuid="ba6589e1-e5d7-42ec-88de-e846f02641e7">
+        <Proxy type="systemcomposer.services.proxy.BidirectionalProxy" uuid="39be7e2b-30bd-4de1-8089-2bbc511f5d88"/>
+        <realElement type="systemcomposer.profile.Prototype" uuid="7cec406f-1789-4133-bb7b-14a9fed54f4c"/>
+      </parentProxy>
+      <propertySet type="systemcomposer.property.PropertySet" uuid="4a085342-2b73-4603-97a4-7d1bf4d9d256">
+        <p_Name>Physical_Connector</p_Name>
+        <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="62006aeb-eba7-47d9-bf3a-b01c31db784a"/>
+      </propertySet>
+      <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="7c6f876a-f48d-4578-b014-ebea29930e45"/>
+    </prototypes>
+    <valueTypes type="systemcomposer.property.BooleanType" uuid="980a9ded-d4c8-4d0c-8903-772cbf8924b7">
+      <p_Name>boolean</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.FloatType" uuid="0dfdb7d7-3be0-4273-a2ab-2a98baa3ea26">
+      <max>1.7976931348623157e+308</max>
+      <min>-1.7976931348623157e+308</min>
+      <p_Name>double</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="f26df283-225e-4352-bcc0-7b3497e48995">
+      <max>32767</max>
+      <min>-32768</min>
+      <p_Name>int16</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="dcf4a53f-5e85-4921-9181-ba3f3b900bf7">
+      <max>2147483647</max>
+      <min>-2147483648</min>
+      <p_Name>int32</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="6b0a7eb3-f38c-49b6-b85c-da3fa193cf80">
+      <max>9223372036854775807</max>
+      <min>-9223372036854775808</min>
+      <p_Name>int64</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="074ade5b-377c-44db-ae48-9bd0956755c3">
+      <max>127</max>
+      <min>-128</min>
+      <p_Name>int8</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.FloatType" uuid="317aa595-357d-440a-ac4e-582212e062d8">
+      <max>3.4028234663852886e+38</max>
+      <min>-3.4028234663852886e+38</min>
+      <p_Name>single</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.StringType" uuid="bee5c0b2-7c1f-4417-b665-4ee838cdd2aa">
+      <p_Name>string</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.StringArrayType" uuid="304e4794-caeb-4a5d-8262-bf6b4d66c255">
+      <p_Name>stringArray</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="9aab780d-5809-481b-98cc-30cb43507282">
+      <max>65535</max>
+      <min>0</min>
+      <p_Name>uint16</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="6fb7bb9a-cb20-4bbb-b92e-d14fc4bbbc5e">
+      <max>4294967295</max>
+      <min>0</min>
+      <p_Name>uint32</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="1e897411-7d9b-44e8-a356-2b11eba4854e">
+      <max>9223372036854775807</max>
+      <min>0</min>
+      <p_Name>uint64</p_Name>
+    </valueTypes>
+    <valueTypes type="systemcomposer.property.IntegerType" uuid="cbeb6e84-f369-4e76-9ece-5875565089be">
+      <max>255</max>
+      <min>0</min>
+      <p_Name>uint8</p_Name>
+    </valueTypes>
+    <p_Name>DetectProfile</p_Name>
+    <elemProxy type="systemcomposer.services.proxy.ProxyTarget" uuid="dd0f68f7-3580-41b4-bd92-42cc675d67a6"/>
+  </systemcomposer.profile.Profile>
+  <systemcomposer.services.proxy.ModelIdentifier type="systemcomposer.services.proxy.ModelIdentifier" uuid="23e90916-8a76-4f15-b40e-08a44ba13252">
+    <URI>DetectProfile</URI>
+    <modelType>PROFILE_MODEL</modelType>
+  </systemcomposer.services.proxy.ModelIdentifier>
+  <systemcomposer.services.proxy.ModelResolver type="systemcomposer.services.proxy.ModelResolver" uuid="88f4e1ed-cfff-4a3e-8ada-97b67c630f2e">
+    <Proxies type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="0936a45d-15e3-435f-90e6-80a9bd440837">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="41bea32e-ee9a-4d88-9b2e-499236b4c2c1"/>
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="a03e7dd1-9b2d-4752-9837-adf9e29b369b"/>
+      <TargetId>0dfdb7d7-3be0-4273-a2ab-2a98baa3ea26</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.BidirectionalProxy" uuid="4bd42ac9-ccf1-43ff-8d92-1412c1cd63a6">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="00969dd0-8d63-4b3f-9d09-aab7c67ea1f5"/>
+      <TargetId>119ec6ce-eac7-44de-bd22-b96562c7c6e5</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="aaa58894-efc8-4e02-90ef-232e3f2f959e">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="d2c2c89b-e7d1-492f-9e07-ed904e7fb436"/>
+      <TargetId>18948033-3ea0-4207-af38-0a35233bebbd</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.BidirectionalProxy" uuid="588a8f1c-2a36-4ec3-a9d8-57f922f61f35">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="fe7adec3-a2ec-400d-8aa4-f04d5c41d867"/>
+      <TargetId>1fd415c6-4d15-41af-afd3-dda17f58e4de</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.BidirectionalProxy" uuid="d71c2ab9-1f4f-4ce9-a54c-0f1b2f2b6965">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="ab2b8bd3-18ec-466a-bca2-01cf265f6c33"/>
+      <TargetId>683de483-2d42-43ef-adb4-6d5c4d6d12c0</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="02f83367-1702-4a5d-86ef-d70d9bc6a93b">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="c6f44a43-092d-4414-b109-73684ef2703d"/>
+      <TargetId>980a9ded-d4c8-4d0c-8903-772cbf8924b7</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="e6964fcc-84ca-4681-8f74-ec54bca6fc64">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="f7d3224d-572e-4c1c-8b31-91c720d5834f"/>
+      <TargetId>a1a3752c-97ea-4e96-8e3e-b07cec9dfe3b</TargetId>
+    </Proxies>
+    <Proxies type="systemcomposer.services.proxy.UnidirectionalProxy" uuid="4d532192-77cf-483e-8c67-7b7c43a0cad6">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="1e345f5d-5292-40d4-baf8-a982110de7eb"/>
+      <TargetId>b0d3098f-83de-4031-b8a6-9b043efef32b</TargetId>
+    </Proxies>
+  </systemcomposer.services.proxy.ModelResolver>
+  <systemcomposer.property.UnitQueryClientWrapper type="systemcomposer.property.UnitQueryClientWrapper" uuid="d88aa5cf-7eb8-4dd1-9492-1c32bfd6d1b1"/>
+  <systemcomposer.services.proxy.WorkspaceWrapper type="systemcomposer.services.proxy.WorkspaceWrapper" uuid="978ac429-56c1-479a-aac7-c6564b69c2a9"/>
+  <systemcomposer.services.proxy.ModelResolver type="systemcomposer.services.proxy.ModelResolver" uuid="3fbb7b86-e89f-40d2-99b9-d79757640e8e">
+    <Proxies type="systemcomposer.services.proxy.BidirectionalProxy" uuid="39be7e2b-30bd-4de1-8089-2bbc511f5d88">
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="8a30ab59-6900-4603-be4e-5ada9b51284c"/>
+      <Source type="systemcomposer.services.proxy.ProxySource" uuid="ba6589e1-e5d7-42ec-88de-e846f02641e7"/>
+      <TargetId>89258068-3a32-46e6-a5dc-0bff6b2e0bde</TargetId>
+    </Proxies>
+    <modelType>PROFILE_MODEL</modelType>
+    <URI>DetectProfile</URI>
+  </systemcomposer.services.proxy.ModelResolver>
+  <systemcomposer.services.proxy.WorkspaceWrapper type="systemcomposer.services.proxy.WorkspaceWrapper" uuid="bd5ed906-4646-413c-8216-8fbc9909dbb0"/>
+  <systemcomposer.services.proxy.WorkspaceWrapper type="systemcomposer.services.proxy.WorkspaceWrapper" uuid="9df38f98-de41-4ff1-80ef-98526f18d79c"/>
+</MF0>
