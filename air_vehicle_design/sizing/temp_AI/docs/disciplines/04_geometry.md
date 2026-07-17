@@ -34,18 +34,11 @@ This is different from Aerodynamics and Propulsion, where the sizing loop calls 
 | Property | Value source | Formula |
 |---|---|---|
 | `S_ref` | Set by sizing loop | `W_TO / W_S_opt` |
-| `S_wet` | Roskam regression | `a * W_TO^b` (Table 3.5) |
-| `L_fus` | Roskam regression | `a * W_TO^b` (Table 3.2) |
+| `S_wet` | Roskam regression | `10^c * W_TO^d` (Vol 1; Equation 3.22 and Table 3.5) |
+| `L_fus` | Raymer (7th edition) regression | `a * W_TO^C1*M^C2` (Table 6.3) |
 | `b` (span) | From `S_ref` and AR | `√(AR * S_ref)` |
 
-The `S_wet` regression depends on aircraft type:
-
-| Type | a | b | Source |
-|---|---|---|---|
-| Fighter | 4.183 | 0.4921 | Roskam Vol. I Table 3.5 |
-| Transport | 5.655 | 0.4635 | Roskam Vol. I Table 3.5 |
-
-Note: the `a` and `b` coefficients above are illustrative. The actual values in the code come from the Roskam tables.
+The `S_wet` and `L_fus` regressions depend on aircraft type.
 
 ### What Is Not Captured
 

@@ -35,3 +35,4 @@ codegen/
 # buildtool cache folder
 .buildtool/
 
+/air_vehicle_design/mbse/examples/ex2/resources/project

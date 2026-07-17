@@ -2,7 +2,7 @@
 
 ## 1. Why This Architecture Exists
 
-Casey Brandt's original sizing code is a single Excel workbook. Every discipline is hard-coded into a fixed set of cells; changing fidelity means rewriting formulas in place. Students cannot swap in a better aerodynamics model without touching the constraint analysis, the mission analysis, and the sizing loop simultaneously. When two students want to use different propulsion fidelity levels for a trade study, they have to maintain separate copies of the entire workbook.
+Brandt's original sizing code is a single Excel workbook. Every discipline is hard-coded into a fixed set of cells; changing fidelity means rewriting formulas in place. Students cannot swap in a better aerodynamics model without touching the constraint analysis, the mission analysis, and the sizing loop simultaneously. When two students want to use different propulsion fidelity levels for a trade study, they have to maintain separate copies of the entire workbook.
 
 The MATLAB framework solves this by enforcing a clean separation between the *discipline interface* (what a module promises to compute) and the *discipline implementation* (how it computes it). The interface is defined once as an abstract base class. Every concrete implementation, regardless of fidelity, must honour that interface. The sizing loop, mission analysis, and constraint analysis are written against the interface only; they never know which fidelity level they are talking to.
 
@@ -47,7 +47,7 @@ The sizing loop and mission analysis receive discipline objects through their `r
 +------------------+     +------------------+
 |  AeroLevel1      |     |  AeroLevel2      |
 |  (Cf * Swet/Sref)|     |  (Cf * Swet/Sref)|
-|  K2 from K_LD    |     |  K2 = 1/(pi*e*AR)|
+|  K1 from K_LD    |     |  K1 = 1/(pi*e*AR)|
 +--------+---------+     +--------+---------+
          |                        |
          +----------+-------------+
@@ -69,7 +69,7 @@ The sizing loop and mission analysis receive discipline objects through their `r
 ```matlab
 % L1 design study
 aero = AeroLevel1('fighter', Cf, K_LD, S_wet, S_ref, b);
-miss = MissionAnalysisLevel1('fighter', 'jet');
+miss = MissionAnalysisLevel1('fighter', aero, ....);
 
 % L2 design study — only these two lines change
 aero = AeroLevel2('fighter', Cfe, AR, e_osw, S_wet, S_ref);
@@ -83,16 +83,16 @@ miss = MissionAnalysisLevel2(...);
 
 ## 4. How Fidelity Levels Build on Each Other
 
-Each level adds geometric parameters and uses more physics. Higher levels do not replace lower levels — they extend them.
+Each level adds geometric parameters and uses more physics. Higher levels do not replace lower levels — they extend them. 
 
 | Level | Aero | Propulsion | Weights | Geometry | Mission |
 |-------|------|-----------|---------|---------|---------|
-| L1 | Cf(type) x S_wet/S_ref; K2 from K_LD | Type TSFC table; density-ratio lapse | Raymer Table 6.1 regression | Roskam S_wet regression | Fuel fractions + tabulated LD |
-| L2 | Cf x S_wet/S_ref; K2 = 1/(pi*e*AR) | Mattingly installed TSFC | Raymer Eq 6.1 gross fraction | Adds b, AR, cbar, tc_wing | Single-point Breguet per segment |
-| L3 | Component Cf_turb(Re); K1 from CL_minD | Mattingly dry/wet lapse | Component buildup | Explicit all surfaces | 20-sub-segment cruise integration |
-| L4 | L3 + wave drag (M > 1) | L3 + Raymer Ch10 engine scaling | Raymer Ch15 detailed method | Same as L3 | L3 logic with L4 disciplines |
+| L1 | Cf(type) x S_wet/S_ref; K1 from K_LD | Type TSFC table; density-ratio lapse | Raymer Table 6.1 and Table 6.2 | Roskam S_wet regression | Fuel fractions + tabulated LD |
+| L2 | Cf x S_wet/S_ref; K1 = 1/(pi*e*AR) | Mattingly installed TSFC + Mattingly dry/wet lapse | Raymer Eq 6.1 gross fraction | Adds b, AR, cbar, tc_wing | Single-point Breguet per segment |
+| L3 | Component Cf_turb(Re); K1 from CL_minD; + wave drag (M > 1) | Same as L2 | Component buildup | Explicit all surfaces | 20-sub-segment cruise integration |
+| L4 | Same as L3  | Same as L3 | Raymer Ch15 detailed method | Same as L3 | L3 logic with L4 disciplines |
 
-Key progression insight: L1 and L2 set K1 = 0 (symmetric drag polar). K1 captures the shift of the drag polar minimum away from CL = 0, which occurs for cambered airfoils. Computing K1 requires knowing CL_minD, which in turn requires L3 geometry (component buildup). Accepting K1 = 0 at L1/L2 is a documented approximation, not a bug.
+There are separate markdown files for each discipline that has a lot more details. 
 
 ---
 
@@ -125,14 +125,17 @@ The factor 0.5 is empirical under-relaxation to prevent oscillation. Without it,
 **At each iteration:**
 1. `con.optimal_point(aero, prop)` returns T/W (W/S is not used to update S_ref).
 2. `T_SL_new = T/W * W_TO`; `prop.T0 = T_SL_new`.
-3. `tail.size(S_ref, geom.b, geom.cbar, geom.L_fus)` returns S_HT, S_VT; stored back into `geom`.
-4. `W_fuel = miss.compute_fuel(aero, prop, W_TO, req)`.
-5. `W_OEW = wts.OEW(W_TO)`.
-6. `W_TO_new = W_OEW + W_payload + W_fuel`.
+3. `W_fuel = miss.compute_fuel(aero, prop, W_TO, req)`.
+4. `W_OEW = wts.OEW(W_TO)`.
+5. `W_TO_new = W_OEW + W_payload + W_fuel`.
 
 **Convergence:** checked on both `|W_TO_new - W_TO|` and `|T_SL_new - T_SL|`.
 
 **Outputs:** W_TO, T_SL. (S_ref was fixed on entry.)
+
+In Step 4, where empty weight is being calculated:
+Only when doing a component build-up of the weight, we need to size the tail
+`tail.size(S_ref, geom.b, geom.cbar, geom.L_fus)` returns S_HT, S_VT; stored back into `geom` and then compute the tail weight as part of the buildup.
 
 **Call sequence diagram:**
 
@@ -180,14 +183,14 @@ The F-16A Block 10/15 is used as the validation baseline. All inputs live in `ex
 **L1 sizing walkthrough:**
 
 ```matlab
-geom = GeometryLevel1('jet fighter', 31377, 300);
+geom = GeometryLevel1('fighter', 31377, 300);
 aero = AeroLevel1('fighter', AeroLevel1.get_Cf('air force fighter',1), ...
                   AeroLevel1.tab_K_LD('jet fighter'), ...
                   geom.S_wet, geom.S_ref, b);
 prop = PropulsionLevel1('low_bypass_mixed_turbofan');
-wts  = WeightLevel1('jet fighter');
-miss = MissionAnalysisLevel1('fighter','jet');
-con  = F16ConstraintAnalysis();
+wts  = WeightLevel1('fighter');
+miss = MissionAnalysisLevel1('fighter', aero, prop, wts);
+con  = ConstraintAnalysis();
 sizer = SizingLoopL1();
 [W_TO, S_ref, T_SL] = sizer.run(req, aero, prop, wts, geom, miss, con);
 ```
@@ -286,11 +289,3 @@ Because all discipline objects are handle instances, a single object can be shar
 `GeometryLevel1` computes S_wet from a regression that depends on W_TO. But S_wet is used by `AeroLevel1` to compute CD0, which drives the constraint analysis, which drives the sizing loop. The loop will converge, but the converged S_wet implicitly anchors to the initial W_TO guess.
 
 For the F-16 L1 validation, the Brandt W_TO (31,377 lb) is used as the anchor. The error introduced by the circularity is small compared to the regression uncertainty.
-
-### K1 = 0 at L1 and L2
-
-The drag polar is `CD = CD0 + K1*CL + K2*CL^2`. At L1 and L2, K1 = 0 (symmetric polar). The true F-16 K1 is approximately -0.00630. For cruise at moderate CL this causes a modest underprediction of induced drag. For the constraint analysis, the effect is most visible in the sustained-turn constraint where CL is high.
-
-### tail.size Stores Results Through geom Handle
-
-`SizingLoopL2` calls `tail.size(...)` and stores the result back into `geom.S_HT` and `geom.S_VT`. This works because `geom` is a handle. If you query `geom.S_HT` before running the sizing loop, it will be NaN or zero because the tail has not been sized yet.

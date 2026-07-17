@@ -1,0 +1,16 @@
+function model_instance()
+    model = systemcomposer.openModel("Aircraft");        
+    modelInstance = ...
+    instantiate(model.Architecture, "DetectProfile", "NewInstance", ...
+    Function = @CostAndWeightRollupAnalysis, ...
+    Strict=true, ...
+    NormalizeUnits=false, ...
+    Direction="Postorder");
+    iterate(modelInstance,"Postorder",@CostAndWeightRollupAnalysis,Recurse=true);
+    % Get instance elements
+    root   = lookup(modelInstance,'Path','Aircraft');                 % root instance component
+    cost_aircraft  = root.getValue('DetectProfile.Physical.Cost');
+    weight_aircraft= root.getValue('DetectProfile.Physical.Weight');
+    disp(cost_aircraft)
+    disp(weight_aircraft)
+end
