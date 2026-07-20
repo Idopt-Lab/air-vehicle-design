@@ -1,0 +1,283 @@
+{
+  "_comment": "F-16A Block 10/15 geometry inputs for Brandt Level method. English units: ft, ft², deg, lb.",
+  "_source": "Brandt-F16-A.xls Main tab A16:F53; Engn(s) tab",
+
+  "aircraft": {
+    "name": "F-16A Block 10/15",
+    "n_engines": 1,
+    "Mcrit": 0.873,
+    "Mmax": 2.0
+  },
+
+  "aero": {
+    "_source": "Aero tab J16:K26 (Cfe table), M4:Q10 (F-16 values); Miss tab CD0/k1/k2",
+    "_note_Cfe": "Cfe_eff back-calculated from Miss!CD0_cruise=0.0270 and S_wet=1371.09 ft2, S_ref=300 ft2",
+    "_note_Cfe_tab": "Cfe_tab is J3 in Aero tab — selected from the Cfe lookup table for CDmin prediction; gives Aero!G3=0.01691",
+    "_note_computed": "e_oswald, k1, k2 are COMPUTED by BrandtAerodynamics — not given inputs",
+    "Cfe":          0.005908,
+    "Cfe_tab":      0.003700,
+    "CD0_takeoff":  0.0520,
+    "Ewd":          2.2
+  },
+
+  "wing": {
+    "_source": "Main!B18:B27",
+    "S_ref_ft2":      300.0,
+    "AR":             3.0,
+    "taper":          0.2275,
+    "sweep_LE_deg":   40.0,
+    "airfoil":        "NACA 1404",
+    "tc_ratio":       0.04,
+    "x_apex_ft":      17.786,
+    "z_ft":           0.0,
+    "dihedral_deg":   0.0
+  },
+
+  "pitch_ctrl": {
+    "_source": "Main!C18:C27 — moving stabilator",
+    "S_ft2":          108.0,
+    "AR":             3.0,
+    "taper":          0.2275,
+    "sweep_LE_deg":   40.0,
+    "airfoil":        "NACA 0004",
+    "tc_ratio":       0.04,
+    "x_le_ft":        36.0,
+    "z_ft":           0.0,
+    "dihedral_deg":   -10.0
+  },
+
+  "strake": {
+    "_source": "Main!D18:D27 — body strake/chine",
+    "S_ft2":          20.0,
+    "AR":             1.5,
+    "taper":          0.0,
+    "sweep_LE_deg":   74.0,
+    "airfoil":        "NACA 0004",
+    "tc_ratio":       0.04,
+    "x_le_ft":        12.0,
+    "y_ft":           2.0,
+    "z_ft":           0.0,
+    "dihedral_deg":   0.0
+  },
+
+  "aileron": {
+    "_source": "Main!E18:E27 — aileron/elevon; taper/sweep/x_le are calculated from wing",
+    "S_ft2":          24.0,
+    "AR":             10.0,
+    "airfoil":        "NACA 0008",
+    "tc_ratio":       0.08,
+    "y_ft":           3.5,
+    "z_ft":           0.0,
+    "dihedral_deg":   0.0
+  },
+
+  "le_flap": {
+    "_source": "Main!F18:F27 — leading-edge flap; S/AR/x_le calculated from wing geometry",
+    "_calc":          "S_ft2, AR, x_le_ft are CALCULATED (Main F18, F19, F23)",
+    "airfoil":        "NACA 0012",
+    "tc_ratio":       0.12,
+    "taper":          1.0,
+    "sweep_LE_deg":   40.0,
+    "y_ft":           3.5,
+    "z_ft":           0.0
+  },
+
+  "te_flap": {
+    "_source": "Main!G18:G27 — trailing edge flap; taper/sweep/x_le calculated from wing",
+    "_calc":          "taper, sweep_LE_deg, x_le_ft are CALCULATED (Main G20, G21, G23)",
+    "S_ft2":          24.0,
+    "AR":             10.0,
+    "airfoil":        "NACA 0008",
+    "tc_ratio":       0.08,
+    "y_ft":           3.5,
+    "z_ft":           0.0,
+    "dihedral_deg":   0.0
+  },
+
+  "vert_tail": {
+    "_source": "Main!H18:H27",
+    "S_ft2":          60.0,
+    "AR":             1.6,
+    "taper":          0.5,
+    "sweep_LE_deg":   40.0,
+    "airfoil":        "NACA 0004",
+    "tc_ratio":       0.04,
+    "x_le_ft":        36.0,
+    "y_ft":           0.0,
+    "z_le_ft":        12.0,
+    "tilt_deg":       0.0
+  },
+
+  "fuselage": {
+    "_source": "Main!B32, Main!D31:F31 (max dims), Main!A34:F53 (20 frames)",
+    "length_ft":      46.5,
+    "max_width_ft":   7.0,
+    "max_height_ft":  5.0,
+    "frames": [
+      {"frame": 1,  "x_ft": 2.425,  "z_chine_ft": 0.0, "z_ft": 0.2, "w_ft": 2.0, "h_ft": 1.5},
+      {"frame": 2,  "x_ft": 5.0,    "z_chine_ft": 0.0, "z_ft": 0.5, "w_ft": 3.2, "h_ft": 2.2},
+      {"frame": 3,  "x_ft": 9.0,    "z_chine_ft": 0.0, "z_ft": 0.8, "w_ft": 3.6, "h_ft": 3.0},
+      {"frame": 4,  "x_ft": 12.0,   "z_chine_ft": 0.0, "z_ft": 1.8, "w_ft": 4.2, "h_ft": 5.0},
+      {"frame": 5,  "x_ft": 13.5,   "z_chine_ft": 0.0, "z_ft": 2.0, "w_ft": 4.4, "h_ft": 6.0},
+      {"frame": 6,  "x_ft": 15.0,   "z_chine_ft": 0.0, "z_ft": 1.4, "w_ft": 4.0, "h_ft": 7.5},
+      {"frame": 7,  "x_ft": 16.975, "z_chine_ft": 0.0, "z_ft": 1.2, "w_ft": 4.5, "h_ft": 7.0},
+      {"frame": 8,  "x_ft": 20.0,   "z_chine_ft": 0.0, "z_ft": 0.6, "w_ft": 6.0, "h_ft": 6.0},
+      {"frame": 9,  "x_ft": 21.825, "z_chine_ft": 0.0, "z_ft": 0.3, "w_ft": 6.5, "h_ft": 5.5},
+      {"frame": 10, "x_ft": 24.25,  "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 6.5, "h_ft": 5.0},
+      {"frame": 11, "x_ft": 26.675, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 5.5, "h_ft": 5.0},
+      {"frame": 12, "x_ft": 29.1,   "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 5.5, "h_ft": 5.0},
+      {"frame": 13, "x_ft": 31.525, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 6.5, "h_ft": 5.0},
+      {"frame": 14, "x_ft": 33.95,  "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 5.0},
+      {"frame": 15, "x_ft": 36.375, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 5.0},
+      {"frame": 16, "x_ft": 38.8,   "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 5.0},
+      {"frame": 17, "x_ft": 41.225, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.5},
+      {"frame": 18, "x_ft": 43.65,  "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.0},
+      {"frame": 19, "x_ft": 46.075, "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 4.0},
+      {"frame": 20, "x_ft": 46.5,   "z_chine_ft": 0.0, "z_ft": 0.0, "w_ft": 7.0, "h_ft": 3.67}
+    ]
+  },
+
+  "engine": {
+    "_source": "Main!B28:I32; Engn(s) tab — nacelle D and L are CALCULATED, not given",
+    "n_engines":       1,
+    "T_mil_SLS_lb":    15000.0,
+    "T_dry_SLS_lb":    15000.0,
+    "T_AB_SLS_lb":     23770.0,
+    "TSFC_mil_per_hr": 0.70,
+    "TSFC_AB_per_hr":  2.20,
+    "inlet_x_ft":      14.0,
+    "inlet_entry_x_ft": 15.0,
+    "duct_length_ft":  14.0,
+    "inlet_dz_ft":     1.5,
+    "TSFC_install_factor": 1.08,
+    "TR": 1.0
+  },
+
+  "weight": {
+    "_source": "Main!O15-O17, Main!Q27, Main!O27; Wt tab B4:B7, F7:H7",
+    "_note": "perm_payload and exp_payload are fixed inputs (not design variables). n_design_load and weight_scale are aircraft-level parameters. n_vert_tails drives vertical tail weight factor (=2 for twin VT aircraft).",
+    "perm_payload_lb":    700.0,
+    "exp_payload_lb":    4400.0,
+    "n_design_load":        9.0,
+    "weight_scale_pct":   100.0,
+    "n_vert_tails":           1
+  },
+
+  "constraints": {
+    "_source": "Brandt-F16-A.xls Consts tab, rows 22-33",
+    "_note_beta": "beta_perf = W/W_TO at constraint flight conditions, Consts!B23:B30. Value 0.89966696 is derived from the Miss tab weight fractions at the beginning of the combat phase.",
+    "_note_CD0": "CD0 for constraints uses BrandtAerodynamics.run(mach).CD0, which is the Aero-tab CDmin_sub basis (≈0.017 subsonic), NOT the Miss-tab CD0 (0.027). This matches Consts!AM column which sources Main!O4 = Aero!C7 = CDmin_sub.",
+    "_note_alpha": "Thrust lapse alpha uses BrandtEngine.run(alt, mach, AB_p).alpha_AB_ref (normalised to T_sl_AB), matching Consts!AU column.",
+    "beta_perf": 0.89966696,
+    "conditions": {
+      "max_mach":        {"alt_ft": 36000, "mach": 1.60, "n": 1.0, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!23", "_desc": "Max Mach sprint, supersonic dash"},
+      "cruise":          {"alt_ft": 36000, "mach": 0.87, "n": 1.0, "pct_AB":   0, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!24", "_desc": "Level subsonic cruise"},
+      "max_alt":         {"alt_ft": 50000, "mach": 0.87, "n": 1.0, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!25", "_desc": "Service ceiling (Ps=0)"},
+      "combat_turn_sub": {"alt_ft": 20000, "mach": 0.87, "n": 4.5, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!26", "_desc": "Sustained subsonic combat turn"},
+      "combat_turn_sup": {"alt_ft": 36000, "mach": 1.40, "n": 1.4, "pct_AB": 100, "Ps_fps": 0,   "CDx": 0.0, "_row": "Consts!27", "_desc": "Supersonic combat turn"},
+      "ps_500":          {"alt_ft": 10000, "mach": 0.87, "n": 1.0, "pct_AB": 100, "Ps_fps": 500, "CDx": 0.0, "_row": "Consts!28", "_desc": "Specific excess power Ps=500 ft/s"}
+    },
+    "takeoff": {
+      "_source": "Consts!K32",
+      "_note": "beta=1.0 (takeoff at TOGW). mach_liftoff=0.2 is Brandt's approximation for V_liftoff/a_SL (Consts!AT32). CDx=0.035 includes landing gear and flap drag.",
+      "alt_ft": 0,
+      "mach_liftoff": 0.2,
+      "pct_AB": 100,
+      "CDx": 0.035,
+      "S_TO_ft": 4000
+    },
+    "landing": {
+      "_source": "Consts!K33",
+      "_note": "Returns max W/S limit, not T/W. beta=1.0. CDx=0.045 includes gear and flap drag. Power-off approach (no thrust). Formula: WS_max = S_land*rho*g*(mu_brake*CLmax_land + 0.83*CD0_land)/k_app^2.",
+      "CDx": 0.045,
+      "S_land_ft": 4000
+    }
+  },
+
+  "cost": {
+    "_source": "Cost tab — DAPCA IV model",
+    "Q": 200,
+    "FTA": 3,
+    "Tt4_R": 3400,
+    "RE_dol_hr": 86,
+    "RT_dol_hr": 88,
+    "RQ_dol_hr": 81,
+    "RM_dol_hr": 73,
+    "AF": 0.5,
+    "ICF": 0,
+    "EF": 0.16,
+    "AMF": 1.0,
+    "FH_yr": 500,
+    "F_dol_lb": 0.3,
+    "CR": 1.1,
+    "CH_yr": 300,
+    "MMH_FH": 15,
+    "life_yr": 20,
+    "material_Al_pct": 65,
+    "material_Al_fac": 1.0,
+    "material_CF_pct": 20,
+    "material_CF_fac": 0.9,
+    "material_FG_pct": 0,
+    "material_FG_fac": 0.9,
+    "material_Steel_pct": 5,
+    "material_Steel_fac": 1.0,
+    "material_Ti_pct": 10,
+    "material_Ti_fac": 1.5
+  },
+
+  "performance": {
+    "_source": "Perf, Ps, Maneuv, Struct tabs",
+    "altitude_perf_ft": 35000,
+    "altitude_maneuv_ft": 10000,
+    "pct_AB_maneuv": 100,
+    "n_max_pos": 9,
+    "n_max_neg": 3,
+    "q_max_psf": 2133
+  },
+
+  "gear": {
+    "_source": "Gear tab — landing gear geometry",
+    "x_nose_ft": 22.0,
+    "x_main_ft": 37.7,
+    "y_main_ft": 6.0,
+    "h_nose_ft": 5.3,
+    "h_main_ft": 5.3,
+    "d_nose_ft": 1.5,
+    "d_main_ft": 2.0
+  },
+
+  "mission": {
+    "_source": "Main!J32:Y45 (inputs/outputs), Miss!A2:P13 (calculations)",
+    "_notes": [
+      "14 mission segments: Takeoff through Landing.",
+      "altitude_ft/mach_end are CONDITIONS at END of each segment.",
+      "For Takeoff, mach_end is V_liftoff/a_SL = 0.282 (= 1.2 × V_stall/a_SL).",
+      "pct_AB: afterburner percentage 0–100.",
+      "CDx: extra drag increment added to CDo (landing gear, external stores, etc.).",
+      "dist_nm_given: prescribed range for cruise/dash/egress segments; null = computed.",
+      "time_min_given: prescribed duration for combat/loiter segments; 0 = computed.",
+      "drop_payload_lb: payload jettisoned during segment (e.g., combat weapons release).",
+      "W_TO_lb is the take-off gross weight used as the sizing baseline.",
+      "CLmax_TO and CLmax_land come from Main!L9 and Main!L10.",
+      "mu_rolling (ground friction) from Main!V12; mu_braking from Main!V13.",
+      "approach_factor (1.3) and liftoff_factor (1.2) are standard Brandt values (Main!U13, Main!U12).",
+      "Validation targets (Miss tab): O9=6000.43 lb total fuel, O8=94.06 min total time, O6=2884.95 ft landing."
+    ],
+    "W_TO_lb":          31377.0,
+    "CLmax_TO":         1.2757,
+    "CLmax_land":       1.4259,
+    "mu_rolling":       0.03,
+    "mu_braking":       0.5,
+    "liftoff_factor":   1.2,
+    "approach_factor":  1.3,
+    "warmup_fuel_per_engine_lb": 1000.0,
+    "segment_names":    ["Takeoff","Accel","Climb","Cruise","Patrol","Dash","Patrol2","Combat","Egress","Patrol3","Climb2","Cruise2","Loiter","Landing"],
+    "altitude_ft":      [0, 10000, 40000, 40000, 40000, 40000, 40000, 25000, 40000, 40000, 40000, 40000, 10000, 0],
+    "mach_end":         [0.282, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.87, 0.30, 0.0],
+    "pct_AB":           [100, 0, 0, 0, 0, 50, 0, 50, 0, 0, 0, 0, 0, 0],
+    "CDx":              [0.035, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "dist_nm_given":    [null, null, null, 190.8, 0, 50, 0, null, 50, 0, null, 250, null, null],
+    "time_min_given":   [null, null, null, null, 0, null, 0, 2.0, null, 0, null, null, 20.0, null],
+    "drop_payload_lb":  [0, 0, 0, 0, 0, 0, 0, 4400, 0, 0, 0, 0, 0, 0]
+  }
+}
