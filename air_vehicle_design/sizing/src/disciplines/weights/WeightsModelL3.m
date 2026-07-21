@@ -40,10 +40,11 @@ classdef (Abstract) WeightsModelL3 < WeightsBase
           %   Returns struct with fields main [lbf] and nose [lbf].
           W = weight_landing_gear(obj)
 
-          %WEIGHT_ENGINE_SECTION  Engine support + propulsion systems group [lbf].
-          %   Includes: engine mounts (15.7), firewall (15.8), engine section (15.9),
-          %   air induction (15.10), tailpipe (15.11), engine cooling (15.12),
-          %   oil cooling (15.13), engine controls (15.14), starter (15.15).
+          %WEIGHT_ENGINE_SECTION  Total propulsion group weight [lbf].
+          %   Includes: bare/dry engine weight (vendor/spec data), engine mounts
+          %   (15.7), firewall (15.8), engine section (15.9), air induction (15.10),
+          %   tailpipe (15.11), engine cooling (15.12), oil cooling (15.13),
+          %   engine controls (15.14), starter (15.15).
           %   Returns struct with one field per sub-component plus .total.
           W = weight_engine_section(obj, W_TO)
 

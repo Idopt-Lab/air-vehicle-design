@@ -34,6 +34,13 @@ classdef TestPropL1 < matlab.unittest.TestCase
         TOL_ATM   = 1e-4    % ISA/conversion rounding at SLS conditions
     end
 
+    % Brandt's six constraint-analysis (alt, Mach) conditions [Brandt
+    % "Consts" sheet] -- same points fidelity_comparison.m evaluates
+    % thrust_lapse/get_TSFC at for all three fidelity levels.
+    properties (TestParameter)
+        constraintName = {'cruise', 'combat_sub', 'dash', 'max_alt', 'combat_sup', 'ps'};
+    end
+
     % ---------------------------------------------------------------------- %
     methods (Test)
 
@@ -246,6 +253,31 @@ classdef TestPropL1 < matlab.unittest.TestCase
             tc.verifyLessThan(received,   0.70, 'α above physical upper bound.');
         end
 
+        % --- High-level: thrust lapse at all six Brandt constraint conditions -
+
+        function testThrustLapseAtConstraintConditions(tc, constraintName)
+            % Purpose: verify thrust_lapse follows the sigma^m formula
+            % (PropL1.sigma_lapse, independently tested above) at every one
+            % of Brandt's six constraint-analysis conditions -- L1's
+            % density-only model has no Mach term, so alpha depends solely
+            % on altitude. fidelity_comparison.m evaluates thrust_lapse at
+            % all six; only 'cruise' had a (range-only) test before this.
+            % Source: Martins AE481 course notes (metabook), Eq. 10.9.
+            b        = F16Baseline();
+            c        = b.constraints.(constraintName);
+            g        = F16PropL1();
+            state    = AircraftState(c.alt_ft, c.mach);
+            m        = PropL1.lookup_lapse_exponent(g.engine_type);
+            expected = PropL1.sigma_lapse(state.rho, m);
+            received = g.thrust_lapse(state);
+            fprintf('\n    %-11s alt=%6.0f M=%.2f: alpha received=%.4f  sigma^m formula=%.4f\n', ...
+                constraintName, c.alt_ft, c.mach, received, expected);
+            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT, ...
+                'thrust_lapse must equal the sigma_lapse(rho,m) formula at every constraint condition.');
+            tc.verifyGreaterThan(received, 0, 'alpha must be positive.');
+            tc.verifyLessThanOrEqual(received, 1.0, 'alpha must not exceed 1.0 (SLS maximum).');
+        end
+
         % --- High-level: TSFC ------------------------------------------------
 
         function testTSFCCruiseCondition(tc)
@@ -270,6 +302,23 @@ classdef TestPropL1 < matlab.unittest.TestCase
             received = g.lookup_TSFC(AircraftState(5000, 0.3));
             fprintf('\n    TSFC at M=0.3 (loiter): received = %.4f 1/hr,  expected = %.4f 1/hr\n', ...
                 received, expected);
+            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
+        end
+
+        function testTSFCAtCruiseAltitude(tc)
+            % Purpose: verify get_TSFC at the F-16's actual cruise constraint
+            % state (36,000 ft, M=0.87) -- fidelity_comparison.m calls
+            % get_TSFC there, not just at SL (see testTSFCCruiseCondition).
+            % Raymer Table 3.3's categorical lookup branches on Mach only, so
+            % the altitude change should not affect the result.
+            % Source: Raymer 6th ed. Table 3.3.
+            b        = F16Baseline();
+            expected = 0.80;   % 1/hr — cruise (M>=0.4), low_bypass_turbofan_AB [Raymer Table 3.3]
+            g        = F16PropL1();
+            state    = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
+            received = g.get_TSFC(state);
+            fprintf('\n    TSFC at 36kft M=%.2f (cruise): received = %.4f 1/hr,  expected = %.4f 1/hr\n', ...
+                b.constraints.cruise.mach, received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
         end
 

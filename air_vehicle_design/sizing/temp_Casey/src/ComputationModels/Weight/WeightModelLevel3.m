@@ -1,10 +1,8 @@
-classdef (Abstract) WeightModelLevel3 < handle
-     %WEIGHTESTMODEL Summary of this class goes here
-     %   Detailed explanation goes here
+classdef (Abstract) WeightModelLevel3 < WeightBase
+     %WEIGHTMODELLEVEL3 Level-3 (component-buildup) weight-estimation contract.
+     %   MTOW / OEW / W_fixed are inherited from WeightBase.
 
      properties (Abstract)
-          MTOW
-          OEW
           OEW_frac
           wings
           tail
@@ -14,7 +12,6 @@ classdef (Abstract) WeightModelLevel3 < handle
           landinggear
           W_TO_guess
           W_TO
-          W_fixed
      end
 
      methods (Abstract)

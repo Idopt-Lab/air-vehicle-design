@@ -20,9 +20,11 @@ classdef F16AeroL3 < AeroModelL3
 %
 %   Surface roughness: smooth paint k = 2.08e-5 ft  [Raymer 6th ed. Table 12.2]
 %   Laminar fraction: 5% on all surfaces (operational fighter in service)
+%   Misc drag: 1x cannon port + 1x arresting hook (USAF)  [Raymer 6th ed. Table 12.7]
 %
 %   Expected CD0 at M=0.5, sea level (for validation):
-%     Total should be within ±20% of Raymer Fig 12.32 value of 0.020.
+%     Total should be within ±40% of Raymer Fig 12.32 value of 0.020
+%     (see TestAeroL3.testCD0PhysicalRangeSL_M05).
 
     properties
         % --- Aircraft-specific inputs
@@ -45,7 +47,25 @@ classdef F16AeroL3 < AeroModelL3
         is_body_comp= [false, false,  false,  true,   true  ]  % true → FF_body
 
         % --- Miscellaneous drag
-        CD0_misc    = 0            % upsweep + base drag (add student estimate here)
+        % CD0_misc = (Dq_gun_port + Dq_hook_USAF)/S_ref, set in the
+        % constructor [Raymer 6th ed. Table 12.7] -- single cannon port +
+        % USAF arresting hook, the two Table 12.7 items applicable to a
+        % clean F-16.
+        %
+        % Audited against temp_Casey's F16AeroLevel3.compute_CD0_misc
+        % (upsweep + windmilling-jet) and neither of ITS terms was ported:
+        %   Upsweep (Raymer Eq. 12.36, Dq=3.83*u^2.5*A_max): temp_Casey uses
+        %     u=0.01 rad in this F-16-specific class but u=0 (i.e. no
+        %     contribution) in the generic Drag_Polar_III/IV toolboxes --
+        %     neither value is cited to an F-16 drawing/source, so it is not
+        %     reproducible here without fabricating a number.
+        %   Windmilling-jet drag (Raymer Eq. 12.40, Dq=0.3*A_engine_face):
+        %     represents an inoperative/windmilling engine, i.e. an
+        %     engine-out contingency drag increment -- not applicable to the
+        %     baseline (engine running) CD0 used for the mission polar.
+        % TODO: add upsweep once a cited F-16 aft-fuselage upsweep angle is
+        % available (T.O. 1F-16A-1 drawing or equivalent primary source).
+        CD0_misc    = 0.0010      % = (0.20+0.10)/300, overwritten in constructor
         CD0_LandP   = 0.0010       % leakage & protuberance allowance [Raymer §12.5]
 
         % --- Component-level buildup results (populated by get_CD0_buildup)
@@ -81,14 +101,22 @@ classdef F16AeroL3 < AeroModelL3
         k               = 2.08e-5   % ft  — smooth paint [Raymer 6th ed. Table 12.2]
     end
 
-    % These are for the landing gear drag components (disregard the Dq values if they're already in a table somewhere)
+    % Landing-gear drag items (not yet wired into get_CD0_buildup -- gear is
+    % retracted for the clean cruise/mission polar this class targets).
      % Source: Raymer, "Aircraft Design: A Conceptual Approach", 6th ed,
-     % Table 12.6
+     % Table 12.6.
      properties (Constant)
           Dq_wheels = 0.18; % Regular wheel and tire
           Dq_strut_highRE = 0.30; % Round strut
           Dq_strut_lowRE = 1.17; % Round strut
-          Dq_hook_USAF = 0.15; % ft^2
+     end
+
+    % Miscellaneous drag items included in CD0_misc (see constructor).
+     % Source: Raymer, "Aircraft Design: A Conceptual Approach", 6th ed,
+     % Table 12.7.
+     properties (Constant)
+          Dq_gun_port  = 0.20; % ft^2 -- single cannon port (F-16: 1x M61A1 20mm)
+          Dq_hook_USAF = 0.10; % ft^2 -- arresting hook, USAF
      end
 
     % Custom properties
@@ -124,7 +152,7 @@ classdef F16AeroL3 < AeroModelL3
             obj.Q_comp         = [ 1.0,  1.05,  1.05,  1.0,   1.0 ];
             obj.f_lam_comp     = [ 0.05, 0.05,  0.05,  0,     0   ];
             obj.is_body_comp   = [false, false, false, true,  true];
-            obj.CD0_misc       = 0;
+            obj.CD0_misc       = (obj.Dq_gun_port + obj.Dq_hook_USAF) / obj.S_ref;  % Raymer Table 12.7
             obj.CD0_LandP      = 0.0010;
         end
 

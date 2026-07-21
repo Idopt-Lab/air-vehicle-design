@@ -17,6 +17,13 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 %     Total:                                                        = 1274.0 ft^2
 %   Brandt truth: 1371 ft^2.  Difference: -7.1% (within ±15% tolerance;
 %   fuselage equivalent-diameter approximation accounts for most of the gap).
+%
+%   Component-level Brandt reference [Brandt Geom sheet, via F16Baseline.m
+%   b.brandt.S_wet_*]: Wing=392.02 (B14), HT=99.59 (B16), VT=81.69 (B17),
+%   Fuselage(more-accurate)=676.33 (D23). HT/VT compare loosely against
+%   this framework's formula output because S_exposed_HT/VT here are full
+%   T.O. reference planform areas, not Brandt's fuselage-excluded "exposed"
+%   areas (49.85/40.89) -- see per-test comments.
 
     properties (Constant)
         TOGW        = 31377     % lbf    — F-16A Brandt TOGW (passed to get_S_wet; unused by L2)
@@ -32,10 +39,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testWetPlanformFormulaZeroTc(tc)
         % tc=0: S_wet = S_exp * 1.977
         % Expected: 100 * 1.977 = 197.700 ft^2
-            g = GeomL2();
-            g.S_exposed_wing = 100;  g.tc_wing = 0;
             expected = 100 * 1.977;   % = 197.700 ft^2
-            received = g.get_S_wet_wing();
+            received = GeomL2.compute_wet_planform(100, 0);
             fprintf('\n    wet_planform(S=100, tc=0): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -44,10 +49,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testWetPlanformFormulaTypicalTc(tc)
         % tc=0.04: S_wet = S_exp * (1.977 + 0.52*0.04) = S_exp * 1.9978
         % Expected: 200 * 1.9978 = 399.560 ft^2
-            g = GeomL2();
-            g.S_exposed_wing = 200;  g.tc_wing = 0.04;
             expected = 200 * (1.977 + 0.52 * 0.04);   % = 399.560 ft^2
-            received = g.get_S_wet_wing();
+            received = GeomL2.compute_wet_planform(200, 0.04);
             fprintf('\n    wet_planform(S=200, tc=0.04): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -61,11 +64,9 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         %   (1-2/10)^(2/3) = (0.8)^(2/3) = 0.86177
         %   (1 + 1/100) = 1.01000
         %   Expected: 785.40 * 0.86177 * 1.01000 = 683.4 ft^2
-            g = GeomL2();
-            g.D_fus = 5.0;  g.L_fus = 50.0;
             lambda_f = 50.0 / 5.0;   % = 10
             expected = pi * 5.0 * 50.0 * (1 - 2/lambda_f)^(2/3) * (1 + 1/lambda_f^2);  % = 683.4 ft^2
-            received = g.get_S_wet_fuselage();
+            received = GeomL2.compute_s_wet_fus_cyl(5.0, 50.0);
             fprintf('\n    fuselage(D=5, L=50, lf=10): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
@@ -87,40 +88,71 @@ classdef TestGeomL2 < matlab.unittest.TestCase
                 'F16GeomL2 fuselage S_wet does not match Roskam Eq. 12.3.');
         end
 
-        % --- F-16A component values (formula-level) ----------------------
+        function testFuselageSwetVsBrandt(tc)
+        % Roskam Eq. 12.3 equivalent-diameter fuselage (644.7 ft^2) vs
+        % Brandt's "More Accurate Fuselage Swet"  [Geom!D23] = 676.33 ft^2.
+        % Difference is the equivalent-diameter approximation (~5%).
+            b        = F16Baseline();
+            g        = F16GeomL2();
+            expected = b.brandt.S_wet_fus_alt;
+            received = g.get_S_wet_fuselage();
+            fprintf('\n    fuselage S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
+                received, expected);
+            tc.verifyEqual(received, expected, 'RelTol', 0.1, ...
+                'Fuselage S_wet does not match Brandt Geom!D23 within 10%.');
+        end
+
+        % --- F-16A component values vs Brandt Geom-sheet truth ------------
+        %
+        %   [Brandt] Geom sheet component wetted areas (extract_brandt.m,
+        %   data.geom_wet), transcribed into F16Baseline.m as b.brandt.S_wet_*.
+        %   Wing matches tightly (both use ~the same exposed planform area).
+        %   HT/VT diverge because this framework's S_exposed_HT/VT inputs
+        %   (63.70/54.75, full T.O. reference planform area) are NOT the
+        %   same quantity as Brandt's true "exposed" (fuselage-blanketing
+        %   excluded) areas (49.85/40.89) -- a documented input-data gap,
+        %   not a formula bug -- so the tolerance below is loose by design.
 
         function testWingSwet(tc)
         % S_exposed=196.4 ft^2, tc=0.04
-        % Expected: 196.4 * (1.977 + 0.52*0.04) = 196.4 * 1.9978 = 392.4 ft^2
+        % Formula: 196.4 * (1.977 + 0.52*0.04) = 196.4 * 1.9978 = 392.4 ft^2
+        % Brandt:  392.020 ft^2  [Geom!B14] -- tight agreement (~0.1%)
+            b        = F16Baseline();
             g        = F16GeomL2();
-            expected = 196.4 * (1.977 + 0.52 * 0.04);   % = 392.4 ft^2
+            expected = b.brandt.S_wet_wing;
             received = g.get_S_wet_wing();
-            fprintf('\n    wing S_wet: received = %.4f ft^2,  expected = %.4f ft^2\n', ...
+            fprintf('\n    wing S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6, ...
-                'Wing S_wet does not match Brandt cell B13 formula for F-16A inputs.');
+            tc.verifyEqual(received, expected, 'RelTol', 0.03, ...
+                'Wing S_wet does not match Brandt Geom!B14 within 3%.');
         end
 
         function testHTSwet(tc)
         % S_exposed=63.70 ft^2, tc=0.048
-        % Expected: 63.70 * (1.977 + 0.52*0.048) = 63.70 * 2.0020 = 127.5 ft^2
+        % Formula: 63.70 * (1.977 + 0.52*0.048) = 63.70 * 2.0020 = 127.5 ft^2
+        % Brandt:  99.585 ft^2  [Geom!B16] -- loose tolerance; see header note.
+            b        = F16Baseline();
             g        = F16GeomL2();
-            expected = 63.70 * (1.977 + 0.52 * 0.048);   % = 127.5 ft^2
+            expected = b.brandt.S_wet_HT;
             received = g.get_S_wet_HT();
-            fprintf('\n    HT S_wet:   received = %.4f ft^2,  expected = %.4f ft^2\n', ...
+            fprintf('\n    HT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
+            tc.verifyEqual(received, expected, 'RelTol', 0.35, ...
+                'HT S_wet does not match Brandt Geom!B16 within 35%.');
         end
 
         function testVTSwet(tc)
         % S_exposed=54.75 ft^2, tc=0.042
-        % Expected: 54.75 * (1.977 + 0.52*0.042) = 54.75 * 1.9988 = 109.4 ft^2
+        % Formula: 54.75 * (1.977 + 0.52*0.042) = 54.75 * 1.9988 = 109.4 ft^2
+        % Brandt:  81.689 ft^2  [Geom!B17] -- loose tolerance; see header note.
+            b        = F16Baseline();
             g        = F16GeomL2();
-            expected = 54.75 * (1.977 + 0.52 * 0.042);   % = 109.4 ft^2
+            expected = b.brandt.S_wet_VT;
             received = g.get_S_wet_VT();
-            fprintf('\n    VT S_wet:   received = %.4f ft^2,  expected = %.4f ft^2\n', ...
+            fprintf('\n    VT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
+            tc.verifyEqual(received, expected, 'RelTol', 0.4, ...
+                'VT S_wet does not match Brandt Geom!B17 within 40%.');
         end
 
         % --- Total S_wet (physical-reasonableness check) -----------------
@@ -175,6 +207,20 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             received = g.get_S_ref();
             fprintf('\n    get_S_ref: received = %.2f ft^2,  expected = 300.00 ft^2\n', received);
             tc.verifyEqual(received, 300, 'AbsTol', 1e-9);
+        end
+
+        % --- L_fus (used directly by fidelity_comparison.m) --------------
+
+        function testLfusMatchesTO(tc)
+        % L2 exposes L_fus as a plain property (not a method, unlike L1's
+        % get_L_fus). Expected: 47.5 ft  [T.O. 1F-16A-1, Fig. 1-2].
+            b        = F16Baseline();
+            g        = F16GeomL2();
+            expected = b.geom.L_fus;   % 47.50 ft [TO Fig. 1-2]
+            received = g.L_fus;
+            fprintf('\n    L_fus: received = %.2f ft,  expected (TO) = %.2f ft\n', received, expected);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
+                'F16GeomL2.L_fus does not match T.O. 1F-16A-1 overall length.');
         end
 
         % --- Inheritance / interface compliance --------------------------

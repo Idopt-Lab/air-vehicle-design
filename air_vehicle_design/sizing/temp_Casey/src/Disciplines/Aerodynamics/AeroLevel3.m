@@ -2,39 +2,9 @@ classdef AeroLevel3
      %F16AEROLEVEL3 Summary of this class goes here
      %   Detailed explanation goes here
      % Level 3 aerodynamics equations go here.
-     % Should utilize textbook methods, like Raymer and Nicolai.
-     % Should compute:
-     %    - drag (CD, CD0 [sub & sup])
-     %    - lift
-     %    - Mach drag divergence
-     %    - Sears-Haack stuff? (Should probably leave that to Level IV)
-     % USE STUFF FROM AERO LEVEL 4 YOU'VE ALREADY DONE THIS
 
-     properties
-          % Are these for the entire design, or for a specific component?
-          % I could pick the "component" interpretation. That would be
-          % specific enough to stop overthinking stuff.
-          % Each "object" could be an individual part of the design.
-          % airfoiltype % either "cambered" or "uncambered." Leave empty if NOT AIRFOIL.
-          % e_osw
-          % alpha_L0_deg
-          % Cf
-          % CL
-          % CL_alpha
-          % CL_max
-          % CL_minD
-          % CD0
-          % CD
-          % D
-          % K
-          % K1
-          % K2
-          % R_components
-          % R_cutoff
-          % k
-          % FF
-          % Q
-          % DragResults
+     properties % Should be empty.
+
      end
 
      methods (Static)
@@ -198,7 +168,7 @@ classdef AeroLevel3
           % Compute fuselage lift factor
           % Raymer, 6th ed, eq 12.9
           function output = F(d, b)
-               output = 1.07*(1 + d/b);
+               output = 1.07*(1 + d/b)^2;
           end
 
           % Compute CL_alpha, supersonic
@@ -281,91 +251,6 @@ classdef AeroLevel3
                CD0_wave = Dq_wave_value/S_ref;
                output = CD0_wave;
           end
-
-          % Get CD0_LandP values
-          % function output = compute_CD0_LandP(S_ref) % These might be better as design-specific.
-          %      CD0_LandP.gun = AeroLEvel3.get_CD0_LandP(0.20, S_ref);
-          %      CD0_LandP.hook = AeroLevel3.get_CD0_LandP(0.10, S_ref);
-          %      CD0_LandP.total = CD0_LandP.gun + CD0_LandP.hook;
-          %      output = CD0_LandP;
-          % end
-
-          % Get CD0_misc values
-          % These might be better as design-specific.
-          % function CD0_misc = compute_CD0_misc(design, propulsion_obj, S_ref)
-          %      CD0_misc.windmillingjet = AeroLevel3.Dq_windmillingjet(pi*(propulsion_obj.enginestats.D/2)^2)/S_ref;
-          %      CD0_misc.upsweep = AeroLevel3.Dq_upsweep(0.01, pi*(design.geom.fuselage.Fuselage.MaxWidthft/2)^2)/S_ref;
-          %      CD0_misc.total = CD0_misc.windmillingjet + CD0_misc.upsweep;
-          % end
-
-          % % Get component drag values (supersonic)
-          % function output = get_component_drag_values_supersonic(aero_obj, design, statevector, geometry_obj)
-          %      % High-level outline:
-          %      % Get CD0 of all components (probably use a loop or
-          %      % something) (PICK UP HERE NEXT TIME)
-          %      % Get component drag values for: fuselage, main wings, and
-          %      % tail
-          %      fuselage_specs.l = geometry_obj.fuselage.L;
-          %      fuselage_specs.d = geometry_obj.fuselage.W_max;
-          %      fuselage_specs.A_max = pi*(fuselage_specs.d/2)^2;
-          %
-          %      wings_specs.xc = geometry_obj.mainwings.xc;
-          %      wings_specs.tc = geometry_obj.mainwings.tc;
-          %      wings_specs.Lambda_m = geometry_obj.mainwings.LE_sweep; % Use Lambda_m instead of LE
-          %
-          %      HT_specs.xc = geometry_obj.HT.xc;
-          %      HT_specs.tc = geometry_obj.HT.tc;
-          %      HT_specs.Lambda_m = geometry_obj.HT.LE_sweep; % Use Lambda_m instead of LE
-          %
-          %      VT_specs.xc = geometry_obj.VT.xc;
-          %      VT_specs.tc = geometry_obj.VT.tc;
-          %      VT_specs.Lambda_m = geometry_obj.VT.LE_sweep; % Use Lambda_m instead of LE
-          %
-          %      component_drag_value.fuselage = get_component_drag_val_supersonic(aero_obj, statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet);
-          %      component_drag_value.mainwings = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet);
-          %      component_drag_value.HT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.00, geometry_obj.HT.S_wet);
-          %      component_drag_value.VT = get_component_drag_val_supersonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.00, geometry_obj.VT.S_wet);
-          %
-          %      % Get total component drag value
-          %      component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
-          %
-          %      output = component_drag_value;
-          % end
-
-
-          % Get component drag values (subsonic)
-          % function output = get_component_drag_values_sub(aero_obj, design, statevector, geometry_obj)
-          %      % High-level outline:
-          %      % Get CD0 of all components (probably use a loop or
-          %      % something) (PICK UP HERE NEXT TIME)
-          %      % Get component drag values for: fuselage, main wings, and
-          %      % tail
-          %      fuselage_specs.l = geometry_obj.fuselage.L;
-          %      fuselage_specs.d = geometry_obj.fuselage.W_max;
-          %      fuselage_specs.A_max = pi*(fuselage_specs.d/2)^2;
-          %
-          %      wings_specs.xc = geometry_obj.mainwings.xc;
-          %      wings_specs.tc = geometry_obj.mainwings.tc;
-          %      wings_specs.Lambda_m = geometry_obj.mainwings.QC_sweep; % Use Lambda_m instead of LE
-          %
-          %      HT_specs.xc = geometry_obj.HT.xc;
-          %      HT_specs.tc = geometry_obj.HT.tc;
-          %      HT_specs.Lambda_m = geometry_obj.HT.QC_sweep; % Use Lambda_m instead of LE
-          %
-          %      VT_specs.xc = geometry_obj.VT.xc;
-          %      VT_specs.tc = geometry_obj.VT.tc;
-          %      VT_specs.Lambda_m = geometry_obj.VT.QC_sweep; % Use Lambda_m instead of LE
-          %
-          %      component_drag_value.fuselage = get_component_drag_val_subsonic(aero_obj, statevector, fuselage_specs.l, 1.00, geometry_obj.fuselage.S_wet, "fuselage", fuselage_specs);
-          %      component_drag_value.mainwings = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.Main.AverageChord, 1.00, geometry_obj.mainwings.S_wet, "wing", wings_specs); % Produces a complex value.
-          %      component_drag_value.HT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.HorizontalTail.AverageChord, 1.05, geometry_obj.HT.S_wet, "tail", HT_specs);
-          %      component_drag_value.VT = get_component_drag_val_subsonic(aero_obj, statevector, design.geom.wings.VerticalTail.AverageChord, 1.05, geometry_obj.VT.S_wet, "tail", VT_specs);
-          %
-          %      % Get total component drag value
-          %      component_drag_value.total = component_drag_value.fuselage + component_drag_value.mainwings + component_drag_value.HT + component_drag_value.VT;
-          %
-          %      output = component_drag_value;
-          % end
 
           % Determing which Cf_turb to use
           % If R_cuttoff < R, recompute Cf_turb using R_cutoff. Otherwise,
@@ -464,7 +349,7 @@ classdef AeroLevel3
           end
 
           function output = Cf_turb(R, Mach)
-               output = (0.455/(((log10(R)^(2.58))*(1 + 0.144*Mach^2))^(0.65)));
+               output = (0.455/((log10(R)^(2.58))*(1 + 0.144*Mach^2)^(0.65)));
                % eq 12.27, 6th ed
           end
 

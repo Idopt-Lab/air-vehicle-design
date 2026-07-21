@@ -11,35 +11,93 @@ classdef AeroLevel1 < handle
      % alternatively, I can have the user specify the aircraft type, then
      % pull values from a pre-configured table. That... might work.
 
+     %% ---------------------------------------------------------------
+% (7/9/2026) This is good for putting into AeroL1 (minding the corrections/TODOs)
      properties (Constant)
           CLmax_table = AeroLevel1.build_CLmax_table()
           Delta_CD0 = AeroLevel1.build_DeltaCD0_table()
      end
 
+
+     % These are common functions that should be available at every
+     % fidelity level.
      methods (Static)
+
+          % Get K1 subsonic value (Source: Brandt)
+          function output = K1_sub(AR, e_osw)
+               output = 1/(pi*AR*e_osw);
+          end
+
+          % Get K1 supersonic value (Source: Brandt)
+          function output = K1_sup(AR, M, LE_sweep_deg)
+               output = ((AR*(M^2 - 1))/(4*AR*sqrt(M^2 - 1)-2))*cosd(LE_sweep_deg);
+          end
+
+          % Get K2 subsonic value (Source: Brandt)
+          function output = K2_sub(K1, CLminD)
+               output = -2*K1*CLminD;
+          end
+
+          % Get K2 supersonic value (Source: Brandt)
+          function output = K2_sup()
+               output = 0; % This is always zero
+          end
+
+          % Get e_osw for a design (straight wings)
+          function output = e_straight(AR)
+               output = (1.78 * ( 1 - 0.045*AR^(0.68)) - 0.64); % For straight wings (sweep < 30 deg) (eq 12.48, 6th ed)
+          end
+
+          % Get e_osw for a design (swept wings)
+          function output = e_swept(AR, Lambda_LE_deg)
+               output = (4.61*(1-0.045*AR^(0.68))*cosd(Lambda_LE_deg)^(0.15) - 3.1); % For swept-wing (sweep > 30 deg) (eq 12.49, 6th ed)
+          end
+
+          % Get design drag
+          function output = D(q, CD, S_ref)
+               output = CD*q*S_ref;
+          end
+
+          % Get CL for some given state
+          function output = CL(L, q, S_ref)
+               output = L./(q.*S_ref);
+          end
+
+          % Get CD (uncambered)
+          function output = CD_uncambered(CD0, K, CL)
+               output = CD0 + K.*CL.^2;
+          end
+
+          % Compute CDi
+          % Compute CDi (subsonic case)
+          function CDi = CDi_subsonic(CL, e_osw, AR)
+               CDi = ( (CL^2) / (pi * e_osw * AR));
+          end
+
+          % Compute CDi (supersonic case)
+          function CDi = CDi_supersonic(CL, alpha_deg)
+               CDi = CL*sind(alpha_deg);
+          end
+
+          % Estimate CD0
+          function output = compute_CD0(Cf, S_wet, S_ref)
+               output = Cf*S_wet/S_ref;
+          end
+
 
           % This might be better in L1
           % Estimate Delta_CL_max_TO
           % Source: Aircraft Design Vol 2, Roskam, eq 7.6
-          function output = Delta_CL_max_TO(CL_max_TO, CL_max)
+          function output = comp_Delta_CL_max_TO(CL_max_TO, CL_max)
                output = 1.05*(CL_max_TO - CL_max);
           end
 
           % This might be better in L1
           % Estimate Delta_CL_max_L (landing)
           % Source: Aircraft Design Vol 2, Roskam, eq 7.7
-          function output = Delta_CL_max_L(CL_max_L, CL_max)
+          function output = comp_Delta_CL_max_L(CL_max_L, CL_max)
                output = 1.05*(CL_max_L - CL_max); % Yes, this is the same as the one for Delta_CL_max_TO
           end
-
-          % % This might be better in L2
-          % % Estimate the required incrementatl section maximum lift
-          % % coefficient with the flaps down
-          % % Source: Airplane Design Vol 2, Roskam, eq 7.8
-          % function output = Delta_cl_max(Delta_CL_max, S_ref, S_wf, K_Lambda)
-          %      output = Delta_CL_max*(S_ref/S_wf)/(K_Lambda);
-          % end
-
 
           % Estimate CL_max_w (clean)
           % Source: Airplane Design Vol 2, Roskam, eq 7.3
@@ -64,11 +122,6 @@ classdef AeroLevel1 < handle
           % outputs CL_max_w_unswept
           function output = CL_max_w_unswept(CL_max_w_swept, Lambda_qc)
                output = CL_max_w_swept/cosd(Lambda_qc);
-          end
-
-          % Get CD
-          function CD = compute_CD(CD0, K, CL) % Problem: other classes have function with same name. Can I make this private somehow?
-               CD = CD0 + K*CL^2;
           end
 
           %% FOR MISSION ANALYSIS
@@ -186,40 +239,35 @@ classdef AeroLevel1 < handle
                equiv_AR = a*M_max^c;
           end
 
-          % Estimate CD0
-          function CD0 = compute_CD0(Cf, S_wet, S_ref)
-               CD0 = Cf*S_wet/S_ref;
-          end
-
           % Get equivalent skin friction coefficient
           % Source: Raymer, Table 12.3, 6th edition
           % Revise this to use more universal type recognition.
-          function Cf = get_Cf(aircraft_type, n_engines)
+          function output = tab_Cf(aircraft_type, n_engines)
                if (aircraft_type == "bomber")
-                    Cf = 0.0030;
+                    output = 0.0030;
                elseif (aircraft_type == "civil transport")
-                    Cf = 0.0026;
+                    output = 0.0026;
                elseif (aircraft_type == "military cargo")
-                    Cf = 0.0035;
+                    output = 0.0035;
                elseif (aircraft_type == "air force fighter")
-                    Cf = 0.0035;
+                    output = 0.0035;
                elseif (aircraft_type == "navy fighter")
-                    Cf = 0.0040;
+                    output = 0.0040;
                elseif (aircraft_type == "supercruise aircraft")
-                    Cf = 0.0025;
+                    output = 0.0025;
                elseif (aircraft_type == "light aircraft")
                     if (0 < n_engines <= 1)
-                         Cf = 0.0055;
+                         output = 0.0055;
                     elseif (1 < n_engines <= 2)
-                         Cf = 0.0045;
+                         output = 0.0045;
                     else
                          warning("More engines than the table expected. Setting Cf = 0.0045.")
-                         Cf = 0.0045;
+                         output = 0.0045;
                     end
                elseif (aircraft_type == "prop seaplane")
-                    Cf = 0.0065;
+                    output = 0.0065;
                elseif (aircraft_type == "jet seaplane")
-                    Cf = 0.0040;
+                    output = 0.0040;
                else
                     error("Couldn't identify aircraft type.")
                end

@@ -68,6 +68,21 @@ function data = extract_brandt(xlsPath)
     data.engine.TSFC_mil = get("Main", "C30");
     data.engine.TSFC_max = get("Main", "D30");
 
+    % --- Component wetted areas ("Geom" sheet) ---
+    % Whole-aircraft total (Geom!B19) = fus(D23) + nacelle(B4) + wing(B14)
+    %   + strake(B15) + HT(B16) + VT(B17) + flaps(K21=40); verified to
+    %   reproduce B19=1371.0946 to 1e-6. Strake and flaps have no analog
+    %   in this framework's 5-component (wing/HT/VT/fus/duct) breakdown.
+    data.geom_wet.fus_simple   = get("Geom", "B3");    % 1/3 cone + 2/3 cylinder approx
+    data.geom_wet.nacelle      = get("Geom", "B4");    % "Exposed Engine Nacelles", full cylinder approx
+    data.geom_wet.wing         = get("Geom", "B14");   % "Exposed Wing Wetted Area"
+    data.geom_wet.strake       = get("Geom", "B15");   % "Strake Wetted Area" — not modeled here
+    data.geom_wet.ht           = get("Geom", "B16");   % "Exposed Pitch Trim Surface Wetted Area"
+    data.geom_wet.vt           = get("Geom", "B17");   % "Exposed Vertical Tail  Wetted Area"
+    data.geom_wet.total        = get("Geom", "B19");   % "Whole Aircraft Swet"
+    data.geom_wet.fus_accurate = get("Geom", "D23");   % "More Accurate Fuselage Swet"
+    data.geom_wet.flaps        = 40;                   % Geom!K21 "Swet, sq ft" — not modeled here
+
     printSummary(data);
 end
 
@@ -84,6 +99,10 @@ function printSummary(data)
         data.aero.CLmax_clean, data.aero.CLmax_takeoff, data.aero.CLmax_landing, data.aero.CLmax_a2a);
     fprintf("Engine: T_mil=%.0f  T_max=%.0f  TSFC_mil=%.2f  TSFC_max=%.2f\n", ...
         data.engine.T_mil, data.engine.T_max, data.engine.TSFC_mil, data.engine.TSFC_max);
+    fprintf("Geom Swet: wing=%.2f  HT=%.2f  VT=%.2f  fus_simple=%.2f  fus_accurate=%.2f  nacelle=%.2f  strake=%.2f  flaps=%.1f  total=%.2f\n", ...
+        data.geom_wet.wing, data.geom_wet.ht, data.geom_wet.vt, data.geom_wet.fus_simple, ...
+        data.geom_wet.fus_accurate, data.geom_wet.nacelle, data.geom_wet.strake, ...
+        data.geom_wet.flaps, data.geom_wet.total);
     disp("Model polar [Mach CDmin CDo k1 k2]:");  disp(data.polar_model);
     disp("Actual polar [Mach CDmin CDo k1 k2] (note M=0.02 row is a known artifact):");
     disp(data.polar_actual);

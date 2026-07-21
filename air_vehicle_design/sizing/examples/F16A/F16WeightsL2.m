@@ -8,7 +8,9 @@ classdef F16WeightsL2 < WeightsModelL2
 %     Structural group: Raymer Table 15.2 surface-density estimates.
 %       Wing 9 lbf/ft², HT 4 lbf/ft², VT 5.3 lbf/ft², Fus 4.8 lbf/ft²,
 %       LG 3.3% of W_TO.
-%     Engine + all-else: student-specified (see properties below).
+%     Engine + all-else: computed in the constructor from the WeightsL3
+%       Raymer §15.3.1 component equations (see properties below) — NOT
+%       calibrated against Brandt's OEW.
 %
 %   OEW = W_wings + W_HT + W_VT + W_fuselage + W_LG
 %         + W_installed_engine + W_all_else_empty
@@ -17,8 +19,10 @@ classdef F16WeightsL2 < WeightsModelL2
 %   the Roskam lower-bound estimate at any W_TO.
 %
 %   SOURCES:
-%     [Brandt]  S. Brandt, F-16A.xls workbook.
-%     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., AIAA, 2018, Table 15.2.
+%     [Brandt]  S. Brandt, F-16A.xls workbook. Used only as a validation
+%               target (see tests) — never as a calibration input here.
+%     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., AIAA, 2018,
+%               Table 15.2 and §15.3.1 (Eqs. 15.7-15.24).
 %     [TO]      T.O. 1F-16A-1, Flight Manual, USAF/EPAF F-16A/B Blocks 10/15.
 
     properties
@@ -42,20 +46,26 @@ classdef F16WeightsL2 < WeightsModelL2
         W_tail         = NaN  % tail weights struct; set by weight_tail [lbf]
         W_fuselage     = NaN  % fuselage structural weight [lbf]
 
-        % ----- Student-specified component weights (not computable from Table 15.2) -----
-        % F100-PW-200 dry weight ≈ 3030 lbf [estimate; Jane's / TO 1F-16A-1 §Engine].
-        % Installation factor 1.3 (engine mounts, nacelle, bay structure) → 3939 lbf [estimate].
-        W_installed_engine = 3939  % [lbf; estimate: 3030 × 1.3 installation factor; verify]
-
-        % Avionics, fuel system, FCS, hydraulics, electrical, furnishings.
-        % Calibrated from Brandt B12 OEW less structure and engine groups [estimate].
-        % Replace with WeightsL3 computation for a physics-based breakdown.
-        W_all_else_empty = 8162  % [lbf; estimate; see header note]
+        % ----- Component weights not computable from Table 15.2 (set in constructor) -----
+        % Both are evaluated from the WeightsL3 Raymer §15.3.1 component
+        % equations at the F-16A Block 10/15 spec inputs in F16WeightsL3 —
+        % NOT back-calculated from Brandt's OEW. (Brandt B12 is a validation
+        % target only; per PLAN.md it must never be a calibration input.)
+        W_installed_engine = NaN  % [lbf] bare engine + installation hardware; WeightsL3 Eqs. 15.7-15.15
+        W_all_else_empty = NaN   % [lbf] avionics/fuel/FCS/hydraulics/electrical/furnishings; WeightsL3 Eqs. 15.16-15.24
     end
 
     methods
 
         function obj = F16WeightsL2()
+            l3 = F16WeightsL3();
+            W_eng = WeightsL3.weight_engine_section(l3, NaN);
+            obj.W_installed_engine = W_eng.total;
+            % Nominal F-16A Block 10/15 baseline TOGW [T.O. 1F-16A-1 / Brandt B38]
+            % used only as the W_TO input to handling_gear (Eq. 15.24), which
+            % contributes < 0.05% of the systems-group total.
+            W_sys = WeightsL3.weight_systems(l3, 31377);
+            obj.W_all_else_empty = W_sys.total;
         end
 
         function oew = OEW(obj, W_TO)

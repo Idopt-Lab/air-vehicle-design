@@ -63,6 +63,9 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             % HT is smaller than the wing; expect 500–2,000 lbf.
             g = F16WeightsL3();
             W_tail = g.weight_tail(31377);
+            % TODO(7/20/2026): This should compare with the wing weight,
+            % not set a hard upper/lower boundary, as the function name
+            % implies. Should check if less than main wing weight.
             fprintf('\n    HT weight (Eq. 15.2): %.0f lbf\n', W_tail.HT);
             tc.verifyGreaterThan(W_tail.HT, 500, ...
                 'HT weight must exceed 500 lbf.');

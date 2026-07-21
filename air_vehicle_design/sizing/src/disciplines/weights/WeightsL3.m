@@ -88,9 +88,18 @@ classdef WeightsL3
         end
 
         function W = weight_engine_section(obj, ~)
-        %WEIGHT_ENGINE_SECTION  Engine support + propulsion systems [lbf].
-        %   Eqs. 15.7–15.15; returns struct with sub-component fields + .total.
+        %WEIGHT_ENGINE_SECTION  Total propulsion group weight [lbf].
+        %   Bare/dry engine weight (vendor data, obj.W_en x obj.N_en) PLUS
+        %   installation hardware Eqs. 15.7-15.15; returns struct with
+        %   sub-component fields + .total.
+        %   ⚠ Raymer §15.3.1 gives the installation-hardware items
+        %     (mounts, firewall, section, induction, tailpipe, cooling, oil,
+        %     starter) as ADDITIONS on top of the engine's own dry weight —
+        %     the dry weight itself is vendor/spec data, not a §15.3.1 equation.
+        %     Omitting it understates the propulsion group by the full engine
+        %     weight (previously produced an implausible ~600 lbf "engine").
         %   W_TO is accepted for API consistency but not needed by these equations.
+            W.engine   = obj.W_en * obj.N_en; % bare/dry engine weight [vendor/spec data, not a §15.3.1 eq]
             W.mounts   = WeightsL3.engine_mounts(obj.N_en, obj.T_max, obj.N_z);
             W.firewall = WeightsL3.firewall(obj.S_fw); % jet fighters set S_fw=0; eq. returns 0 for no piston firewall
             W.section  = WeightsL3.engine_section(obj.W_en, obj.N_en, obj.N_z);
@@ -101,7 +110,7 @@ classdef WeightsL3
             W.oil      = WeightsL3.oil_cooling(obj.N_en, obj.L_ec);
             W.controls = 0;  % Eq. 15.14 exponents not available; see [verify note] in oil_cooling
             W.starter  = WeightsL3.starter(obj.T_max, obj.N_en);
-            W.total    = W.mounts + W.firewall + W.section + W.induction + ...
+            W.total    = W.engine + W.mounts + W.firewall + W.section + W.induction + ...
                          W.tailpipe + W.cooling + W.oil + W.starter;
         end
 

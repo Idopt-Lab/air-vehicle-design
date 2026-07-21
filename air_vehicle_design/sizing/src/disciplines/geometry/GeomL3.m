@@ -1,11 +1,9 @@
-classdef GeomL3 < GeometryModelL3
-%GEOML3  Level-3 geometry concrete toolbox.
+classdef GeomL3
+%GEOML3  Level-3 geometry static toolbox: variable-tc planform + duct formulas.
 %
-%   Instantiable concrete class that implements the Level-3 component S_wet
-%   formulas.  Student classes (F16GeomL3, etc.) inherit from this class and
-%   provide aircraft-specific property values in their constructors.
-%
-%   Inheritance: GeometryBase → GeometryModelL3 → GeomL3 → F16GeomL3
+%   Call as GeomL3.method_name(args) — no instantiation required.
+%   Not in the inheritance chain.  Student classes (F16GeomL3, etc.) inherit
+%   from GeometryModelL3 and call these statics to implement each abstract method.
 %
 %   EQUATIONS:
 %     Lifting surfaces: S_wet = 2*S_exp*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda))
@@ -13,84 +11,17 @@ classdef GeomL3 < GeometryModelL3
 %     Fuselage: same as GeomL2 — Roskam Vol. II Eq. 12.3.
 %     Duct (frustum): S_wet = pi*(r1+r2)*sqrt((r2-r1)^2+L^2)
 %       [Raymer, Aircraft Design: A Conceptual Approach, 6th ed., Sec. 7.3]
-%
-%   Property naming convention:
-%     HT/VT properties use UPPERCASE suffixes (S_exposed_HT, lambda_HT, etc.)
-%     to match the abstract declarations in GeometryModelL3.
-%     t/c properties use lowercase (tc_r_ht, tc_t_ht, etc.) — not abstract.
 
-    properties
+    methods (Static)
 
-        S_ref          = NaN
-        S_wet          = NaN
-
-        % Fuselage (abstract in GeometryModelL3)
-        L_fuselage     = NaN
-        W_max_fuselage = NaN
-        H_max_fuselage = NaN
-        D_fus          = NaN
-        L_fus          = NaN
-
-        % Wing (abstract in GeometryModelL3)
-        S_exposed_wing = NaN
-        S_wet_wing     = NaN
-        QC_sweep_wing  = NaN
-        lambda_wing    = NaN
-        b_wing         = NaN
-        AR_wing        = NaN
-        LE_sweep_wing  = NaN
-        TE_sweep_wing  = NaN
-        c_tip_wing     = NaN
-        c_root_wing    = NaN
-        tc_r_wing      = NaN    % root t/c (not abstract; L3 uses separate root/tip)
-        tc_t_wing      = NaN    % tip  t/c
-
-        % Horizontal tail (abstract in GeometryModelL3 — uppercase HT)
-        S_exposed_HT   = NaN
-        S_wet_HT       = NaN
-        QC_sweep_HT    = NaN
-        lambda_HT      = NaN
-        b_HT           = NaN
-        AR_HT          = NaN
-        LE_sweep_HT    = NaN
-        TE_sweep_HT    = NaN
-        c_tip_HT       = NaN
-        c_root_HT      = NaN
-        tc_r_ht        = NaN    % root t/c (lowercase; not abstract)
-        tc_t_ht        = NaN    % tip  t/c
-
-        % Vertical tail (abstract in GeometryModelL3 — uppercase VT)
-        S_exposed_VT   = NaN
-        S_wet_VT       = NaN
-        QC_sweep_VT    = NaN
-        lambda_VT      = NaN
-        b_VT           = NaN
-        AR_VT          = NaN
-        LE_sweep_VT    = NaN
-        TE_sweep_VT    = NaN
-        c_tip_VT       = NaN
-        c_root_VT      = NaN
-        tc_r_vt        = NaN    % root t/c (lowercase; not abstract)
-        tc_t_vt        = NaN    % tip  t/c
-
-        % Duct
-        D_inlet        = NaN
-        D_exit         = NaN
-        L_duct         = NaN
-
-    end
-
-    % ====================================================================== %
-    methods
-
-        function val = get_S_ref(obj)
-            val = obj.S_ref;
-        end
+        % ================================================================== %
+        % HIGH-LEVEL: take the student object, return the result.
+        % ================================================================== %
 
         function val = get_S_wet(obj, ~)
-            val = obj.get_S_wet_wing()   + obj.get_S_wet_HT() + ...
-                  obj.get_S_wet_VT()     + obj.get_S_wet_fuselage() + ...
-                  obj.get_S_wet_duct();
+            val = GeomL3.get_S_wet_wing(obj)   + GeomL3.get_S_wet_HT(obj) + ...
+                  GeomL3.get_S_wet_VT(obj)     + GeomL3.get_S_wet_fuselage(obj) + ...
+                  GeomL3.get_S_wet_duct(obj);
         end
 
         function val = get_S_wet_wing(obj)
@@ -120,10 +51,9 @@ classdef GeomL3 < GeometryModelL3
             val = obj.S_exposed_wing;
         end
 
-    end
-
-    % ====================================================================== %
-    methods (Static)
+        % ================================================================== %
+        % LOW-LEVEL: pure math — take only scalars/arrays, no object access.
+        % ================================================================== %
 
         function val = compute_roskam_planform(S_exp, tc_r, tc_t, lambda)
         %COMPUTE_ROSKAM_PLANFORM  S_wet via Roskam Vol. II Eq. 12.1.

@@ -2,12 +2,6 @@ classdef PropulsionLevel1
      %F16PROPULSIONESTLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
 
-     properties
-          enginestats
-          TSFC
-          T0
-     end
-
      methods (Static)
 
           % Get TSFC (1/sec)
@@ -38,7 +32,6 @@ classdef PropulsionLevel1
                     error("Couldn't identify engine type.")
                end
 
-               TSFC = TSFC;
           end
 
      end

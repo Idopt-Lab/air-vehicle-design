@@ -461,6 +461,20 @@ classdef TestPropL2 < matlab.unittest.TestCase
                 'AbsTol', tc.TOL_TIGHT);
         end
 
+        function testGetTSFCAtSLS(tc)
+            % Purpose: verify the student-class get_TSFC (PropulsionBase API
+            % that fidelity_comparison.m calls directly) at SLS, M~0 --
+            % previously only the static TSFC_mil primitive was tested there
+            % (see testTSFCMilAtSLS above).
+            b        = F16Baseline();
+            g        = F16PropL2();
+            state    = AircraftState(0, 0.01);
+            expected = b.engine.C1_mil;   % 0.90 1/hr @ M~0, theta=1  [Mattingly Eq. 3.55a]
+            received = g.get_TSFC(state);
+            fprintf('\n    get_TSFC (SLS M~0): received=%.4f  expected=%.4f 1/hr\n', received, expected);
+            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ATM);
+        end
+
         function testGetTSFCMatchesComputeMil(tc)
             % get_TSFC (PropulsionBase API) == compute_TSFC_mil.
             g        = F16PropL2();

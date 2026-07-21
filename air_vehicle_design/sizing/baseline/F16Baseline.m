@@ -114,11 +114,11 @@ b.engine.F100PW100.T_t2     = 59;     % deg F
 %     Columns: [Mach  CDmin  CD0  K1  K2]  -- L1/L2 assertion target.
 % =========================================================================
 b.brandt.polar_model = [
-    0.1000,  0.0169,  0.0170,  0.1160,  -0.0066;
-    0.8727,  0.0169,  0.0170,  0.1160,  -0.0066;
-    1.0547,  0.0456,  0.0457,  0.1277,  -0.0047;
-    1.5000,  0.0413,  0.0399,  0.2516,   0.0000;
-    2.0000,  0.0413,  0.0373,  0.3670,   0.0000;
+    0.1000,  0.01691,  0.01700,  0.1160,  -0.0066;
+    0.8727,  0.01691,  0.01700,  0.1160,  -0.0066;
+    1.0547,  0.04558,  0.04568,  0.1277,  -0.0047;
+    1.5000,  0.04128,  0.03994,  0.2516,   0.0000;
+    2.0000,  0.04128,  0.03732,  0.3670,   0.0000;
 ];
 
 % =========================================================================
@@ -145,6 +145,27 @@ b.raymer.CD0      = [0.020, 0.035, 0.047];
 % =========================================================================
 b.brandt.S_wet       = 1371.09;  % ft^2  [Brandt L3]
 b.brandt.Mcrit       = 0.8727;   %       [Brandt L4]
+
+% --- Component wetted areas [Brandt F-16A.xls, "Geom" sheet] -------------
+%   Brandt builds the B19 "Whole Aircraft Swet" total from 7 terms, not 5:
+%     fus_accurate(D23) + nacelle(B4) + wing(B14) + strake(B15) + HT(B16)
+%     + VT(B17) + flaps(K21=40) = 676.329+41.515+392.020+39.956+99.585
+%     +81.689+40.0 = 1371.095 ft^2, matching B19 to 1e-6.
+%   Strake and flaps have no analog in this framework's 5-component
+%   (wing/HT/VT/fuselage/duct) breakdown -- their ~80 ft^2 combined
+%   contribution is a known, documented gap when comparing component sums.
+%   Also note: Brandt's "exposed" HT/VT areas (B8=49.85, B10=40.89, the
+%   portion outside the fuselage) differ from this framework's S_exposed_HT
+%   /S_exposed_VT inputs (63.70/54.75, full T.O. reference planform area)
+%   -- a separate, pre-existing input-data discrepancy, not fixed here.
+b.brandt.S_wet_wing     = 392.020;  % ft^2  [Brandt Geom!B14] "Exposed Wing Wetted Area"
+b.brandt.S_wet_HT       = 99.585;   % ft^2  [Brandt Geom!B16] "Exposed Pitch Trim Surface Wetted Area"
+b.brandt.S_wet_VT       = 81.689;   % ft^2  [Brandt Geom!B17] "Exposed Vertical Tail Wetted Area"
+b.brandt.S_wet_fus      = 730.422;  % ft^2  [Brandt Geom!B3]  1/3-cone + 2/3-cylinder approx
+b.brandt.S_wet_fus_alt  = 676.329;  % ft^2  [Brandt Geom!D23] "More Accurate Fuselage Swet" (used in B19 total)
+b.brandt.S_wet_duct     = 41.515;   % ft^2  [Brandt Geom!B4]  "Exposed Engine Nacelles", full-cylinder approx
+b.brandt.S_wet_strake   = 39.956;   % ft^2  [Brandt Geom!B15] not modeled in this framework
+b.brandt.S_wet_flaps    = 40.0;     % ft^2  [Brandt Geom!K21] not modeled in this framework
 b.brandt.CL_alpha      = 0.0615;         % 1/deg [Brandt L7] — total aircraft (includes strake)
 b.brandt.CL_alpha_wing = 0.054312 * 57.3; % /rad  [Brandt Aero!A15] — main wing only
 b.brandt.CLmax_clean = 0.9869;   %       [Brandt L8]
@@ -208,6 +229,17 @@ b.brandt_engine.C_TR_AB  = 2.2;   % theta coeff, AB  [Engn(s) R15]
 %  IMPORTANT: Brandt formula != Mattingly Eq. 2.54.  Direct alpha comparison
 %  without accounting for formula and normalization differences is misleading.
 %  Tests assert PropL2 matches Mattingly; Brandt values are reported as reference.
+%
+%  CD0/K1/K2 below are Brandt's own drag-polar coefficients evaluated at each
+%  constraint condition [Brandt Consts sheet, CDo/k1/k2 columns immediately
+%  following theta/theta0/delta/delta0 -- exact column letters not confirmed
+%  from the source screenshot, unlike the AI-AL/AS/AT/AU columns above].
+%  cruise/combat_sub/max_alt/ps all sit at M~=0.87 and share CD0/K1/K2 with
+%  b.brandt.polar_model row 2 (M=0.8727) to within rounding; dash (M=1.6) and
+%  combat_sup (M=1.4) do not match polar_model's M=1.5/2.0 rows -- Brandt
+%  appears to evaluate/interpolate the polar independently per condition
+%  rather than reading it off the 5-point Aero-sheet table, so these are
+%  recorded as-given rather than reconciled against polar_model.
 % =========================================================================
 
 % [A] Cruise  36,000 ft, M=0.87, n=1, no AB  [Consts row 24]
@@ -220,6 +252,9 @@ b.constraints.cruise.delta_0        = 0.366860;  % AL24
 b.constraints.cruise.alpha_dry      = 0.271110;  % AS24  T_dry/T_SL_dry   [Brandt Engn(s)]
 b.constraints.cruise.alpha_AB       = 0.332642;  % AT24  T_AB/T_SL_AB     [Brandt Engn(s)]
 b.constraints.cruise.alpha_mil_T_AB = 0.171083;  % AU24  alpha_dry*(T_SL_dry/T_SL_AB)  [Brandt Consts col AU]
+b.constraints.cruise.CD0            = 0.01700;   % Consts row 24 [Brandt Consts sheet]
+b.constraints.cruise.K1             = 0.11603;   % Consts row 24
+b.constraints.cruise.K2             = -0.0066;   % Consts row 24
 
 % [B] 1st combat turn (subsonic)  20,000 ft, M=0.87, n=4.5, AB  [Consts row 26]
 b.constraints.combat_sub.alt_ft         = 20000;
@@ -232,6 +267,9 @@ b.constraints.combat_sub.delta_0        = 0.751910;  % AL26
 b.constraints.combat_sub.alpha_dry      = 0.555662;  % AS26
 b.constraints.combat_sub.alpha_AB       = 0.681777;  % AT26
 b.constraints.combat_sub.alpha_mil_T_AB = 0.350649;  % AS26*(T_SL_dry/T_SL_AB)
+b.constraints.combat_sub.CD0            = 0.01700;   % Consts row 26 [Brandt Consts sheet]
+b.constraints.combat_sub.K1             = 0.11603;   % Consts row 26
+b.constraints.combat_sub.K2             = -0.0066;   % Consts row 26
 
 % [C] Max Mach / dash  36,000 ft, M=1.6, AB  [Consts row 23; Brandt "MxMach"]
 b.constraints.dash.alt_ft         = 36000;
@@ -243,6 +281,9 @@ b.constraints.dash.delta_0        = 0.952065;  % AL23
 b.constraints.dash.alpha_dry      = 0.298293;  % AS23
 b.constraints.dash.alpha_AB       = 0.576980;  % AT23
 b.constraints.dash.alpha_mil_T_AB = 0.188237;  % AS23*(T_SL_dry/T_SL_AB)
+b.constraints.dash.CD0            = 0.03933;   % Consts row 23 [Brandt Consts sheet] -- MxMach
+b.constraints.dash.K1             = 0.1251;    % Consts row 23
+b.constraints.dash.K2             = 0;         % Consts row 23
 
 % [D] Max altitude  50,000 ft, M=0.87  [Consts row 25]
 b.constraints.max_alt.alt_ft         = 50000;
@@ -254,6 +295,9 @@ b.constraints.max_alt.delta_0        = 0.187807;  % AL25
 b.constraints.max_alt.alpha_dry      = 0.138789;  % AS25
 b.constraints.max_alt.alpha_AB       = 0.170290;  % AT25
 b.constraints.max_alt.alpha_mil_T_AB = 0.087582;  % AS25*(T_SL_dry/T_SL_AB)
+b.constraints.max_alt.CD0            = 0.01700;   % Consts row 25 [Brandt Consts sheet]
+b.constraints.max_alt.K1             = 0.11603;   % Consts row 25
+b.constraints.max_alt.K2             = -0.0066;   % Consts row 25
 
 % [E] 2nd combat turn (supersonic)  [Brandt F-16A.xls, Consts sheet, row 27]
 %   36,000 ft, M=1.4, n=1.4, 100% AB.
@@ -267,6 +311,9 @@ b.constraints.combat_sup.delta_0        = 0.712808; % AL27  [Brandt Consts]
 b.constraints.combat_sup.alpha_dry      = 0.357862; % AS27  T_dry/T_SL_dry  [Brandt Consts]
 b.constraints.combat_sup.alpha_AB       = 0.556558; % AT27  T_AB/T_SL_AB    [Brandt Consts]
 b.constraints.combat_sup.alpha_mil_T_AB = 0.225828; % AS27*(T_SL_dry/T_SL_AB) = 0.357862*(15000/23770)
+b.constraints.combat_sup.CD0            = 0.04063;  % Consts row 27 [Brandt Consts sheet]
+b.constraints.combat_sup.K1             = 0.12563;  % Consts row 27
+b.constraints.combat_sup.K2             = -0.00105; % Consts row 27 -- Brandt's model is not exactly 0 here despite M>1 (K2=0 supersonic is this framework's own linearized-theory assumption, not universal)
 
 % [F] Ps (specific excess power) condition  [Brandt F-16A.xls, Consts sheet, row 28]
 %   10,000 ft, M=0.87, n=1, 100% AB, Ps_req=500 ft/s.
@@ -282,5 +329,37 @@ b.constraints.ps.delta_0        = 1.125634; % AL28  [Brandt Consts]
 b.constraints.ps.alpha_dry      = 0.702727; % AS28  T_dry/T_SL_dry  [Brandt Consts]
 b.constraints.ps.alpha_AB       = 0.853550; % AT28  T_AB/T_SL_AB    [Brandt Consts]
 b.constraints.ps.alpha_mil_T_AB = 0.443455; % AS28*(T_SL_dry/T_SL_AB) = 0.702727*(15000/23770)
+b.constraints.ps.CD0            = 0.01700;  % Consts row 28 [Brandt Consts sheet] -- rows 28-30 identical, row 28 used
+b.constraints.ps.K1             = 0.11603;  % Consts row 28
+b.constraints.ps.K2             = -0.0066;  % Consts row 28
+
+% [G] Takeoff ground roll  [Brandt F-16A.xls, Consts sheet, row 32]
+%   theta=theta_0=1, delta=delta_0=0.99976 -> M=0 (no ram-rise/impact-pressure
+%   terms); the small delta<1 offset is a sub-7-ft equivalent-altitude
+%   artifact of Brandt's own sheet, not a meaningful altitude. CD0 is much
+%   higher than clean (0.052 vs 0.017) from flaps/gear; K1/K2 match the
+%   clean subsonic polar in Brandt's model (unaffected by configuration here).
+b.constraints.takeoff.alt_ft  = 0;
+b.constraints.takeoff.mach    = 0;
+b.constraints.takeoff.theta   = 1;        % Consts row 32
+b.constraints.takeoff.theta_0 = 1;        % Consts row 32
+b.constraints.takeoff.delta   = 0.99976;  % Consts row 32
+b.constraints.takeoff.delta_0 = 0.99976;  % Consts row 32
+b.constraints.takeoff.CD0     = 0.052;    % Consts row 32 -- takeoff flap/gear config
+b.constraints.takeoff.K1      = 0.11603;  % Consts row 32
+b.constraints.takeoff.K2      = -0.0066;  % Consts row 32
+
+% [H] Landing approach  [Brandt F-16A.xls, Consts sheet, row 33]
+%   Same theta/theta_0/delta/delta_0 as takeoff (M=0); CD0 higher still
+%   (0.062) from full flaps/gear/speedbrake landing configuration.
+b.constraints.landing.alt_ft  = 0;
+b.constraints.landing.mach    = 0;
+b.constraints.landing.theta   = 1;        % Consts row 33
+b.constraints.landing.theta_0 = 1;        % Consts row 33
+b.constraints.landing.delta   = 0.99976;  % Consts row 33
+b.constraints.landing.delta_0 = 0.99976;  % Consts row 33
+b.constraints.landing.CD0     = 0.062;    % Consts row 33 -- landing flap/gear config
+b.constraints.landing.K1      = 0.11603;  % Consts row 33
+b.constraints.landing.K2      = -0.0066;  % Consts row 33
 
 end

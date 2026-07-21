@@ -1,18 +1,8 @@
-classdef (Abstract) MissionAnalysisModel < handle
-     %MISSIONANALYSISMODEL Summary of this class goes here
-     %   Detailed explanation goes here
-     % THIS IS FOR ESTIMATING MISSION FUEL
-     % MISSION FUEL, NOT MTOW
-     % BUT MISSION FUEL IS IMPORTANT FOR ESTIMATING MTOW
-
-     properties (Abstract)
-          missiondata
-          mission_fuel
-     end
-
-     methods (Abstract)
-          [total_fuel_used, fuel_fraction] = get_mission_fuel(mission_obj, constraint_obj, design, geometry_obj, propulsion_obj, weight_obj)
-     end
+classdef (Abstract) MissionAnalysisModel < MissionBase
+     %MISSIONANALYSISMODEL Shared mission-analysis intermediate.
+     %   The abstract contract (missiondata, mission_fuel, get_mission_fuel)
+     %   is inherited from MissionBase. This class retains the shared IO
+     %   helper (get_mission_data) common to every fidelity level.
 
      methods (Static) % Common code
           % Assign data to "missiondata" property

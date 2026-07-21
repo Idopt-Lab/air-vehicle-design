@@ -21,6 +21,16 @@ classdef TestGeomL3 < matlab.unittest.TestCase
 %     Total:                                                           = 1421.0 ft^2
 %   Brandt truth: 1371 ft^2.  Difference: +3.7% (within ±15% tolerance;
 %   duct dimensions are estimated, not from a primary source).
+%
+%   Component-level Brandt reference [Brandt Geom sheet, via F16Baseline.m
+%   b.brandt.S_wet_*]: Wing=392.02 (B14), HT=99.59 (B16), VT=81.69 (B17),
+%   Fuselage(more-accurate)=676.33 (D23), Nacelle=41.52 (B4). HT/VT and
+%   Duct/Nacelle compare loosely: HT/VT because this framework's
+%   S_exposed_HT/VT are full T.O. reference planform areas rather than
+%   Brandt's fuselage-excluded "exposed" areas (49.85/40.89); Duct/Nacelle
+%   because they are different physical quantities entirely (this
+%   framework's inlet-to-exit duct frustum vs Brandt's full-cylinder
+%   engine nacelle) -- see per-test comments.
 
     properties (Constant)
         TOGW        = 31377
@@ -37,11 +47,8 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % When tc_r == tc_t, the formula reduces to 2*S_exp*(1 + 0.25*tc_r).
         % Inputs: S=200, tc_r=tc_t=0.04, lambda=0.2275
         % Expected: 2*200*(1 + 0.25*0.04) = 2*200*1.0100 = 404.000 ft^2
-            g = GeomL3();
-            g.S_exposed_wing = 200;
-            g.tc_r_wing = 0.04;  g.tc_t_wing = 0.04;  g.lambda_wing = 0.2275;
             expected = 2 * 200 * (1 + 0.25 * 0.04);   % = 404.000 ft^2
-            received = g.get_S_wet_wing();
+            received = GeomL3.compute_roskam_planform(200, 0.04, 0.04, 0.2275);
             fprintf('\n    Roskam Eq12.1 (uniform tc=0.04): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
@@ -53,15 +60,9 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % Expected: 2*63.70*(1 + 0.25*0.06*(1+1.7143*0.390)/1.390)
         %         = 2*63.70*(1 + 0.015*1.6686/1.390)
         %         = 2*63.70*(1 + 0.01800) = 2*63.70*1.01800 = 129.693 ft^2
-            g = GeomL3();
-            g.S_exposed_HT = 63.70;
-            g.tc_r_ht = 0.06;  g.tc_t_ht = 0.035;  g.lambda_HT = 0.390;
-            g.D_fus = 5;  g.L_fus = 47.5;
-            g.S_exposed_VT=54.75; g.tc_r_vt=0.053; g.tc_t_vt=0.030; g.lambda_VT=0.437;
-            g.D_inlet=3.4; g.D_exit=2.9; g.L_duct=14;
             tc_r=0.06; tc_t=0.035; lambda=0.390; S_exp=63.70;
             expected = 2*S_exp*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));  % = 129.693 ft^2
-            received = g.get_S_wet_HT();
+            received = GeomL3.compute_roskam_planform(S_exp, tc_r, tc_t, lambda);
             fprintf('\n    Roskam Eq12.1 HT (varying tc): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
@@ -89,15 +90,8 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         function testDuctCylinderDegenerate(tc)
         % When D_inlet == D_exit = 3.2 ft, frustum reduces to pi*D*L.
         % Expected: pi * 3.2 * 14.0 = 140.743 ft^2
-            g = GeomL3();
-            g.S_ref=300; g.S_exposed_wing=196; g.tc_r_wing=0.04; g.tc_t_wing=0.04;
-            g.lambda_wing=0.2275; g.S_exposed_HT=63.7; g.tc_r_ht=0.06;
-            g.tc_t_ht=0.035; g.lambda_HT=0.39; g.S_exposed_VT=54.75;
-            g.tc_r_vt=0.053; g.tc_t_vt=0.030; g.lambda_VT=0.437;
-            g.D_fus=5; g.L_fus=47.5;
-            g.D_inlet = 3.2;   g.D_exit = 3.2;   g.L_duct = 14.0;
             expected = pi * 3.2 * 14.0;   % = 140.743 ft^2
-            received = g.get_S_wet_duct();
+            received = GeomL3.compute_s_wet_duct(3.2, 3.2, 14.0);
             fprintf('\n    duct cylinder (D=3.2, L=14): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
@@ -106,7 +100,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
 
         % --- F-16A component values (formula-level) ----------------------
 
-        function testWingSwet(tc)
+        function testWingSwetFormula(tc)
         % tc_r=tc_t=0.04, lambda=0.2275, S=196.4
         % Expected: 2*196.4*(1 + 0.25*0.04*(1+1*0.2275)/1.2275)
         %         = 2*196.4*1.0100 = 396.725 ft^2
@@ -119,7 +113,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
         end
 
-        function testHTSwet(tc)
+        function testHTSwetFormula(tc)
         % tc_r=0.060, tc_t=0.035, lambda=0.390, S=63.70
         % Expected: ≈ 129.693 ft^2
             g        = F16GeomL3();
@@ -131,7 +125,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
         end
 
-        function testVTSwet(tc)
+        function testVTSwetFormula(tc)
         % tc_r=0.053, tc_t=0.030, lambda=0.437, S=54.75
         % Expected: 2*54.75*(1 + 0.25*0.053*(1+1.7667*0.437)/1.437)
         %         = 2*54.75*(1 + 0.01634) = 2*54.75*1.01634 = 111.290 ft^2
@@ -142,6 +136,71 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             fprintf('\n    VT S_wet:   received = %.4f ft^2,  expected = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
+        end
+
+        % --- F-16A component values vs Brandt Geom-sheet truth ------------
+        %   See file-header note above: wing agrees tightly; HT/VT/Duct
+        %   are loose by design due to documented input-definition gaps.
+
+        function testWingSwetVsBrandt(tc)
+            b        = F16Baseline();
+            g        = F16GeomL3();
+            expected = b.brandt.S_wet_wing;   % 392.020 ft^2 [Geom!B14]
+            received = g.get_S_wet_wing();
+            fprintf('\n    wing S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
+                received, expected);
+            tc.verifyEqual(received, expected, 'RelTol', 0.03, ...
+                'Wing S_wet does not match Brandt Geom!B14 within 3%.');
+        end
+
+        function testHTSwetVsBrandt(tc)
+            b        = F16Baseline();
+            g        = F16GeomL3();
+            expected = b.brandt.S_wet_HT;   % 99.585 ft^2 [Geom!B16]
+            received = g.get_S_wet_HT();
+            fprintf('\n    HT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
+                received, expected);
+            tc.verifyEqual(received, expected, 'RelTol', 0.35, ...
+                'HT S_wet does not match Brandt Geom!B16 within 35%.');
+        end
+
+        function testVTSwetVsBrandt(tc)
+            b        = F16Baseline();
+            g        = F16GeomL3();
+            expected = b.brandt.S_wet_VT;   % 81.689 ft^2 [Geom!B17]
+            received = g.get_S_wet_VT();
+            fprintf('\n    VT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
+                received, expected);
+            tc.verifyEqual(received, expected, 'RelTol', 0.4, ...
+                'VT S_wet does not match Brandt Geom!B17 within 40%.');
+        end
+
+        function testFuselageSwetVsBrandt(tc)
+            b        = F16Baseline();
+            g        = F16GeomL3();
+            expected = b.brandt.S_wet_fus_alt;   % 676.329 ft^2 [Geom!D23]
+            received = g.get_S_wet_fuselage();
+            fprintf('\n    fuselage S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
+                received, expected);
+            tc.verifyEqual(received, expected, 'RelTol', 0.1, ...
+                'Fuselage S_wet does not match Brandt Geom!D23 within 10%.');
+        end
+
+        function testDuctSwetVsBrandtNacelle(tc)
+        % Not a tight physical match: this framework's duct is the exposed
+        % inlet-to-exit frustum lateral surface, while Brandt's nacelle
+        % (Geom!B4) is a full-cylinder engine-nacelle approximation -- a
+        % different quantity by definition. Loose tolerance is a
+        % same-order-of-magnitude sanity check only, per the file header.
+            b        = F16Baseline();
+            g        = F16GeomL3();
+            expected = b.brandt.S_wet_duct;   % 41.515 ft^2 [Geom!B4]
+            received = g.get_S_wet_duct();
+            fprintf('\n    duct S_wet: received = %.4f ft^2,  Brandt nacelle = %.4f ft^2 (different definitions)\n', ...
+                received, expected);
+            tc.verifyGreaterThan(received, 0, 'Duct S_wet must be positive.');
+            tc.verifyLessThan(received, 5 * expected, ...
+                'Duct S_wet is more than 5x Brandt nacelle estimate -- check for a gross unit/formula error.');
         end
 
         function testFuselageMatchesL2(tc)
@@ -219,6 +278,20 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             received = g.get_S_ref();
             fprintf('\n    get_S_ref: received = %.2f ft^2,  expected = 300.00 ft^2\n', received);
             tc.verifyEqual(received, 300, 'AbsTol', 1e-9);
+        end
+
+        % --- L_fus (used directly by fidelity_comparison.m) --------------
+
+        function testLfusMatchesTO(tc)
+        % L3 exposes L_fus as a plain property (not a method, unlike L1's
+        % get_L_fus). Expected: 47.5 ft  [T.O. 1F-16A-1, Fig. 1-2].
+            b        = F16Baseline();
+            g        = F16GeomL3();
+            expected = b.geom.L_fus;   % 47.50 ft [TO Fig. 1-2]
+            received = g.L_fus;
+            fprintf('\n    L_fus: received = %.2f ft,  expected (TO) = %.2f ft\n', received, expected);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
+                'F16GeomL3.L_fus does not match T.O. 1F-16A-1 overall length.');
         end
 
         % --- Inheritance / interface compliance --------------------------

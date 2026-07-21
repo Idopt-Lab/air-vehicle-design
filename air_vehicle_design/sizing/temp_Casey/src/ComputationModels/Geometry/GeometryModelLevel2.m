@@ -1,13 +1,32 @@
-classdef (Abstract) GeometryModelLevel2 < handle
+classdef (Abstract) GeometryModelLevel2 < GeometryBase
      %GEOMETRYMODELLEVEL2 Summary of this class goes here
      %   Detailed explanation goes here
 
+     % Properties for the entire design
      properties (Abstract)
-          mainwings
-          HT
-          VT
-          fuselage
-          design
+          S_ref
+          S_wet
+     end
+
+     % Properties for the fuselage
+     properties (Abstract)
+          L_fuselage % Fuselage length
+          W_max_fuselage % Maximum width of the fuselage
+          H_max_fuselage % Maximum height of the fuselage
+     end
+
+     % Properties for the main wings
+     properties (Abstract)
+          S_exposed_wing
+          S_wet_wing
+          QC_sweep_wing
+          lambda_wing
+          b_wing
+          AR_wing
+          LE_sweep_wing
+          TE_sweep_wing
+          c_tip_wing
+          c_root_wing
      end
 
      methods (Abstract)

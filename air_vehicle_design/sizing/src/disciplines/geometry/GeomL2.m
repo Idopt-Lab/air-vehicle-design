@@ -1,11 +1,9 @@
-classdef GeomL2 < GeometryModelL2
-%GEOML2  Level-2 geometry concrete toolbox.
+classdef GeomL2
+%GEOML2  Level-2 geometry static toolbox: component-level wetted-area formulas.
 %
-%   Instantiable concrete class that implements the Level-2 component S_wet
-%   formulas.  Student classes (F16GeomL2, etc.) inherit from this class and
-%   provide aircraft-specific property values in their constructors.
-%
-%   Inheritance: GeometryBase → GeometryModelL2 → GeomL2 → F16GeomL2
+%   Call as GeomL2.method_name(args) — no instantiation required.
+%   Not in the inheritance chain.  Student classes (F16GeomL2, etc.) inherit
+%   from GeometryModelL2 and call these statics to implement each abstract method.
 %
 %   EQUATIONS:
 %     Lifting surfaces: S_wet = S_exposed * (1.977 + 0.52 * tc)
@@ -15,51 +13,15 @@ classdef GeomL2 < GeometryModelL2
 %       where lambda_f = L/D  (fineness ratio)
 %       [Jan Roskam, Airplane Design Vol. II, DAR Corp., 1997, Eq. 12.3]
 
-    properties
+    methods (Static)
 
-        S_ref          = NaN    % ft^2 — wing reference area
-        S_wet          = NaN    % ft^2 — total wetted area (output of get_S_wet)
-
-        % Wing (abstract in GeometryModelL2 via GeometryBase)
-        S_exposed_wing = NaN
-        S_wet_wing     = NaN
-        QC_sweep_wing  = NaN
-        lambda_wing    = NaN
-        b_wing         = NaN
-        AR_wing        = NaN
-        LE_sweep_wing  = NaN
-        TE_sweep_wing  = NaN
-        c_tip_wing     = NaN
-        c_root_wing    = NaN
-        tc_wing        = NaN    % L2 uses a single average t/c per surface
-
-        % Fuselage (abstract in GeometryModelL2)
-        L_fuselage     = NaN
-        W_max_fuselage = NaN
-        H_max_fuselage = NaN
-        D_fus          = NaN    % equivalent diameter for Roskam Eq. 12.3
-        L_fus          = NaN
-
-        % Horizontal tail (not abstract at L2; needed by L2 planform formula)
-        S_exposed_ht   = NaN
-        tc_ht          = NaN
-
-        % Vertical tail (not abstract at L2; needed by L2 planform formula)
-        S_exposed_vt   = NaN
-        tc_vt          = NaN
-
-    end
-
-    % ====================================================================== %
-    methods
-
-        function val = get_S_ref(obj)
-            val = obj.S_ref;
-        end
+        % ================================================================== %
+        % HIGH-LEVEL: take the student object, return the result.
+        % ================================================================== %
 
         function val = get_S_wet(obj, ~)
-            val = obj.get_S_wet_wing()     + obj.get_S_wet_HT() + ...
-                  obj.get_S_wet_VT()       + obj.get_S_wet_fuselage();
+            val = GeomL2.get_S_wet_wing(obj)     + GeomL2.get_S_wet_HT(obj) + ...
+                  GeomL2.get_S_wet_VT(obj)        + GeomL2.get_S_wet_fuselage(obj);
         end
 
         function val = get_S_wet_wing(obj)
@@ -78,10 +40,9 @@ classdef GeomL2 < GeometryModelL2
             val = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);
         end
 
-    end
-
-    % ====================================================================== %
-    methods (Static)
+        % ================================================================== %
+        % LOW-LEVEL: pure math — take only scalars/arrays, no object access.
+        % ================================================================== %
 
         function val = compute_wet_planform(S_exp, tc)
         %COMPUTE_WET_PLANFORM  S_wet = S_exposed*(1.977 + 0.52*tc)

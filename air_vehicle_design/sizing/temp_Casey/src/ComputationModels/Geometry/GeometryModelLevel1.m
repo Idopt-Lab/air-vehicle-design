@@ -1,13 +1,11 @@
-classdef (Abstract) GeometryModelLevel1 < handle
+classdef (Abstract) GeometryModelLevel1 < GeometryBase
      %GEOMETRYMODELLEVEL1 Summary of this class goes here
      %   Detailed explanation goes here
 
      properties (Abstract)
-          mainwings
-          HT
-          VT
-          fuselage
-          design
+          L_fuselage
+          S_ref
+          S_wet
      end
 
      methods (Abstract)

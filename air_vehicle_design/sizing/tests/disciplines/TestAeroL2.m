@@ -25,6 +25,15 @@ classdef TestAeroL2 < matlab.unittest.TestCase
           TOL_ABS = 0.20;
      end
 
+     % Brandt "Aero" A6:E10 tabulates the model polar at 5 Mach points
+     % (b.brandt.polar_model rows): M = 0.1000, 0.8727(=Mcrit), 1.0547,
+     % 1.5000, 2.0000. Tests below that compare against Brandt values use
+     % these same rows/Mach numbers rather than arbitrary points.
+     properties (TestParameter)
+          brandtRow      = {1, 2, 3, 4, 5};
+          constraintName = {'cruise', 'combat_sub', 'dash', 'max_alt', 'combat_sup', 'ps'};
+     end
+
      % ------------------------------------------------------------------ %
      methods (Test)
 
@@ -103,6 +112,118 @@ classdef TestAeroL2 < matlab.unittest.TestCase
                fprintf('\n    CD0 L1=%.6f  CD0 L2=%.6f\n', g1.get_CD0(), g2.get_CD0());
                tc.verifyEqual(g2.get_CD0(), g1.get_CD0(), 'AbsTol', 1e-12, ...
                     'L2 CD0 must equal L1 (same Cf*Swet/Sref formula).');
+          end
+
+          % --- e_osw matches L1 (same formula) ------------------------------
+
+          function testEoswMatchesL1(tc)
+               % L2 get_e_osw delegates to AeroL1.oswald_eff(AR, Lambda_LE_deg),
+               % the identical Raymer Eq. 12.49 formula L1 uses -- see
+               % TestAeroL1.testEoswFormula for the underlying formula check.
+               g1 = F16AeroL1();
+               g2 = F16AeroL2();
+               fprintf('\n    e_osw L1=%.6f  e_osw L2=%.6f\n', g1.get_e_osw(), g2.get_e_osw());
+               tc.verifyEqual(g2.get_e_osw(), g1.get_e_osw(), 'AbsTol', 1e-12, ...
+                    'L2 e_osw must equal L1 (same Raymer Eq. 12.49 formula).');
+          end
+
+          % --- drag_polar vs Brandt ACTUAL (flight-measured) polar ---------
+
+          function testDragPolarVsBrandtActualAtDash(tc)
+               % Sanity check against Brandt's ACTUAL (flight-measured) polar
+               % table [Brandt Aero!M6:Q10] at 36 kft, M=1.6 -- a different
+               % reference table than polar_model used elsewhere in this file
+               % (see fidelity_comparison.m "[AERO — SUP]" section). Known to
+               % diverge from L2's linear supersonic K1 (Raymer Eq. 12.51)
+               % near/beyond M=1 -- see testK1AtBrandtMachPoints -- so this is
+               % a coarse positivity / order-of-magnitude check only.
+               b       = F16Baseline();
+               g       = F16AeroL2();
+               state   = AircraftState(36000, 1.60);
+               polar   = g.drag_polar(state);
+               CD0_ref = b.brandt.polar_actual(4,3);   % 0.0461 [Brandt Aero!O9]
+               K1_ref  = b.brandt.polar_actual(4,4);   % 0.3400 [Brandt Aero!P9]
+               fprintf('\n    dash (actual polar ref): CD0=%.4f (ref %.4f), K1=%.4f (ref %.4f)\n', ...
+                    polar.CD0, CD0_ref, polar.K1, K1_ref);
+               tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
+               tc.verifyGreaterThan(polar.K1, 0, 'K1 must be positive.');
+               tc.verifyLessThan(polar.CD0, 5*CD0_ref, ...
+                    'CD0 is more than 5x Brandt actual-polar reference -- check for a gross error.');
+               tc.verifyLessThan(polar.K1, 5*K1_ref, ...
+                    'K1 is more than 5x Brandt actual-polar reference -- check for a gross error.');
+          end
+
+          % --- Verification across Brandt's tabulated Mach breakpoints -----
+          %   K1/CD0 use the same formulas as L1 (see header note); tolerance
+          %   reasoning matches TestAeroL1's equivalent tests.
+
+          function testK1AtBrandtMachPoints(tc, brandtRow)
+               b        = F16Baseline();
+               M        = b.brandt.polar_model(brandtRow, 1);
+               K1_ref   = b.brandt.polar_model(brandtRow, 4);
+               g        = F16AeroL2();
+               received = g.get_K1(M);
+               fprintf('\n    K1 (M=%.4f): received = %.4f,  Brandt = %.4f  (%+.1f%%)\n', ...
+                    M, received, K1_ref, 100*(received-K1_ref)/K1_ref);
+               if ismember(brandtRow, [1, 2, 4])
+                    tc.verifyEqual(received, K1_ref, 'RelTol', 0.20, ...
+                         sprintf('K1 at M=%.4f deviates >20%% from Brandt.', M));
+               else
+                    % Rows 3 (M=1.0547, near-M=1 singularity of Eq. 12.51) and
+                    % 5 (M=2.0, linear theory under-predicts at high Mach) are
+                    % known breakdowns of the linear theory -- see TestAeroL1.
+                    tc.verifyGreaterThan(received, 0, ...
+                         'K1 must stay positive even where linear theory breaks down near/beyond M=1.');
+               end
+          end
+
+          function testCD0AtBrandtMachPoints(tc, brandtRow)
+               % L2 CD0 has no Mach dependence (same formula as L1) -- only
+               % tracks Brandt in the flat subsonic region (rows 1-2).
+               b        = F16Baseline();
+               M        = b.brandt.polar_model(brandtRow, 1);
+               CD0_ref  = b.brandt.polar_model(brandtRow, 3);
+               g        = F16AeroL2();
+               received = g.get_CD0();
+               fprintf('\n    CD0 (M=%.4f): received = %.4f,  Brandt = %.4f  (%+.1f%%)\n', ...
+                    M, received, CD0_ref, 100*(received-CD0_ref)/CD0_ref);
+               if ismember(brandtRow, [1, 2])
+                    tc.verifyEqual(received, CD0_ref, 'RelTol', 0.20, ...
+                         sprintf('CD0 at M=%.4f deviates >20%% from Brandt.', M));
+               else
+                    tc.verifyGreaterThan(received, 0.005);
+                    tc.verifyLessThan(received, 0.030);
+               end
+          end
+
+          % --- Verification at Brandt's constraint-analysis conditions -----
+
+          function testDragPolarAtConstraintConditions(tc, constraintName)
+               % See TestAeroL1's equivalent test for rationale. F16Baseline
+               % b.constraints.*.CD0/K1/K2 carry Brandt's own drag-polar
+               % coefficients at each condition (Consts sheet); the flat
+               % subsonic points get a real numeric comparison, same
+               % ±20% tolerance as testCD0/K1AtBrandtMachPoints.
+               b     = F16Baseline();
+               c     = b.constraints.(constraintName);
+               g     = F16AeroL2();
+               state = AircraftState(c.alt_ft, c.mach);
+               polar = g.drag_polar(state);
+               fprintf('\n    %-11s alt=%6.0f  M=%.2f: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
+                    constraintName, c.alt_ft, c.mach, polar.CD0, polar.K1, polar.K2, c.CD0, c.K1, c.K2);
+               tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
+               tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
+               tc.verifyTrue(isfinite(polar.CD0) && isfinite(polar.K1) && isfinite(polar.K2), ...
+                    'drag_polar outputs must be finite.');
+               if c.mach >= 1
+                    tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, 'K2 must be 0 supersonic.');
+               end
+               if ismember(constraintName, {'cruise', 'combat_sub', 'max_alt', 'ps'})
+                    tc.verifyEqual(polar.CD0, c.CD0, 'RelTol', 0.20, ...
+                         sprintf('CD0 at %s deviates >20%% from Brandt.', constraintName));
+                    tc.verifyEqual(polar.K1, c.K1, 'RelTol', 0.20, ...
+                         sprintf('K1 at %s deviates >20%% from Brandt.', constraintName));
+               end
           end
 
           % --- drag_polar struct -------------------------------------------

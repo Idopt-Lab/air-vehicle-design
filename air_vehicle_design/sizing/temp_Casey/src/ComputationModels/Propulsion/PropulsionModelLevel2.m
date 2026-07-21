@@ -1,9 +1,10 @@
-classdef (Abstract) PropulsionModelLevel2 < handle
+classdef (Abstract) PropulsionModelLevel2 < PropulsionBase
      %PROPULSIONMODELLEVEL2 Summary of this class goes here
      %   This is for preliminary estimation.
 
-     properties (Abstract) % Possibly unnecessary in general
-          TSFC
+     properties (Abstract)
+          engine_type
+          T0 % This is your guess thrust, for the sizing script.
      end
 
      methods (Abstract)

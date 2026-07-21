@@ -11,7 +11,7 @@ classdef WeightLevel2
      methods (Static)
 
           % Estimate OEW (Raymer, 6th ed, Table 6.1)
-          function OEW = get_OEW(aircraft_type, W_TO, W0, AR, T, S_ref, M_max, K_vs)
+          function OEW_frac = get_OEW(aircraft_type, W_TO, AR, T, S_ref, M_max, K_vs)
 
                if (aircraft_type == "jet trainer")
                     a = 0;
@@ -120,7 +120,7 @@ classdef WeightLevel2
                else
                     error("Couldn't identify aircraft type. Accepted values: jet trainer/fighter/transport, military cargo/bomber, sailplane unpowered/powered, homebuilt - metal/wood/composite, general aviation single/twin engine, agricultural aircraft, twin turboprop, flying boat.")
                end
-               OEW = W_TO*(a + b*W0^(c1) * AR^(c2) * (T/W0)^(c3) * (W0/S_ref)^(c4) * M_max^(c5))*K_vs;
+               OEW_frac = (a + b*W_TO^(c1) * AR^(c2) * (T/W_TO)^(c3) * (W_TO/S_ref)^(c4) * M_max^(c5))*K_vs;
           end
 
           % Component weight functions (high-level, large objects; main

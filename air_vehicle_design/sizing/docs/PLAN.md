@@ -277,6 +277,7 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 4. No feature added beyond what the step requires.
 5. Each subplan `.md` is written/expanded at the start of its implementation step.
 6. After each step: STOP and wait for professor to review code and run MATLAB independently.
+7. Do not search the internet unless explicitly asked to. Use locally available resources and references. You may use files in C:\Users\John Freeman\Desktop\Academics\VRMastersProgram\code\air-vehicle-design\air_vehicle_design\sizing\temp_AI\docs\disciplines\reference_extracts, C:\Users\John Freeman\Desktop\Academics\VRMastersProgram\Documents\References (this contains information on a few real-world jets and contains a text from Nicolai), and C:\Users\John Freeman\Desktop\Academics\VRMastersProgram\Documents\Readings, as well as other directories allowed.
 
 ---
 

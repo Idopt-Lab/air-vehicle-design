@@ -21,7 +21,8 @@ classdef AeroL3
 %     Cf_lam  = 1.328/sqrt(Re)              Raymer 6th ed. Eq. 12.26
 %     Cf_turb = 0.455/(log10(Re)^2.58*(1+0.144*M^2)^0.65)  Eq. 12.27
 %     FF_surf = (1+0.6/x_c_max*tc+100*tc^4)*(1.34*M^0.18*cos(Lm50)^0.28)  Eq. 12.30
-%     FF_body = 1+5/f^1.5+f/400,  f=L/D    Raymer 6th ed. Eq. 12.31 (user-modified)
+%     FF_body = 1+5/f^1.5+f/400 (f<=6), or 1+60/f^3+f/400 (f>6),
+%               f=L/D                    Raymer 6th ed. Eq. 12.31
 %     CD0 = SUM(Cf_eff*FF*Q*Swet_i)/Sref + CD0_misc + CD0_LandP
 
     methods (Static)
@@ -246,9 +247,16 @@ classdef AeroL3
 
         function FF = FF_body(L_body, D_body)
         %FF_BODY  Form factor for body/fuselage.  Raymer 6th ed. Eq. 12.31.
-        %   User-modified formula: 1 + 5/f^1.5 + f/400  (was 1 + 60/f^3 + f/400).
-            f  = L_body / D_body;
-            FF = 1 + 5/f^1.5 + f/400;
+        %   The equation as printed is 1 + 5/f^1.5 + f/400 (f = l/d); Raymer
+        %   notes the 1 + 60/f^3 + f/400 form is preferred for fineness
+        %   ratios f > 6. Branch on f so each body uses whichever form
+        %   applies to its own fineness ratio.
+            f = L_body / D_body;
+            if f > 6
+                FF = 1 + 60/f^3 + f/400;
+            else
+                FF = 1 + 5/f^1.5 + f/400;
+            end
         end
 
     end

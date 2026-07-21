@@ -11,6 +11,27 @@ classdef GeometryLevel2
 
      methods (Static)
 
+          % Estimate exposed surface area (lifting surface)
+          % Source: Brandt, "F16A", "Geom" sheet, cell H7.
+          function S_exposed = get_S_exposed(tip_length, exposed_rc, exposed_halfspan)
+               S_exposed = exposed_halfspan*(exposed_rc + tip_length);
+          end
+
+          % Compute wingspan from planform area
+          function b = compute_b(AR, S_ref)
+               b = sqrt(AR*S_ref);
+          end
+
+          % Compute c_root from wingspan, S_ref, and taper ratio
+          function c_root = compute_c_root(S_ref, b, lambda)
+               c_root = (2 * S_ref)/(b*(1 + lambda));
+          end
+
+          % Compute c_tip from taper ratio, and c_root
+          function c_tip = compute_c_tip(lambda, c_root)
+               c_tip = lambda*c_root;
+          end
+
           % Estimate wetted area for planforms
           % Valid for straight tapered planforms (wing, tail, canard, fin,
           % pylons)
@@ -48,7 +69,7 @@ classdef GeometryLevel2
           % Source: Airplane Design Vol 2, Roska, eq 12.5
           function output = S_wet_fan_cowl(l_n, D_n, l_1, l_eta, D_hl)
                output = l_n*D_n*(2 + 0.35*l_1/l_eta + 0.81*l_1*D_hl/l_eta * D_n);
-          end 
+          end
 
           % Estimate wetted area for gas generator
           % Source: Airplane Design Vol 2, Roskam, eq 12.6
@@ -61,7 +82,7 @@ classdef GeometryLevel2
           function output = S_wet_plug(l_p, D_p)
                output = 0.7*pi*l_p*D_p;
           end
-          
+
 
 
 
@@ -203,7 +224,7 @@ classdef GeometryLevel2
                elseif (aircraft_type == "Military trainer") % Clean wet
                     c = 0.8565;
                     d = 0.5423;
-               elseif (aircraft_type == "fighter") % Clean wet
+               elseif (aircraft_type == "fighter") || (aircraft_type == "jet fighter") % Clean wet
                     c = -0.1289; % Coefficient for fighter aircraft, given for S_wet equation, provided by Roskam's Aircraft Design Volume 1 (1985), Table 3.5.
                     d = 0.7506; % Coefficient for fighter aicraft, given for S_wet equation, provided by Roskam's Aircraf Design Volume 1 (1985), Table 3.5.
                elseif (aircraft_type == "Military patrol") || (aircraft_type == "Military bomber") || (aircraft_type == "Military transport")
