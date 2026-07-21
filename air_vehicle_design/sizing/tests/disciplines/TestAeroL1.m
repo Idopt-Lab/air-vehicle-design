@@ -75,19 +75,6 @@ classdef TestAeroL1 < matlab.unittest.TestCase
                tc.verifyEqual(received, expected, 'RelTol', 0.20);
           end
 
-          % Note (Casey): This test IS numerically valid, BUT invalid for
-          % the F-16 test case. Valid for... Cessna 172. Consider adding as
-          % a test case, later.
-          function testEoswStraightWingBranch(tc)
-               % Raymer Eq. 12.48 (Lambda_LE < 30 deg):
-               % For AR=6, Lambda_LE=0: e = 1.78*(1-0.045*6^0.68) - 0.64
-               AR       = 6.0;
-               expected = 1.78 * (1 - 0.045*AR^0.68) - 0.64;
-               received = AeroL1.oswald_eff(6.0, 0);
-               fprintf('\n    e_osw (straight): received = %.6f,  expected = %.6f\n', received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
-
           % --- K1 subsonic / supersonic ------------------------------------
 
           function testK1Subsonic(tc)

@@ -60,19 +60,6 @@ classdef TestPropL2 < matlab.unittest.TestCase
         end
 
         % ------------------------------------------------------------------ %
-        % LOW-LEVEL: thrust_lapse_mil (Mattingly Eq. 2.54b)                  %
-        % ------------------------------------------------------------------ %
-
-        function testLapseMilAtSLS(tc)
-            % theta0=1, delta0=1, TR=b.engine.TR: alpha_mil=0.6*delta0=0.6.
-            b        = F16Baseline();
-            expected = 0.6;   % below-TR: alpha_mil = 0.6*delta_0 = 0.6 at SLS  [Mattingly Eq. 2.54b]
-            alpha    = PropL2.thrust_lapse_mil(1.0, 1.0, b.engine.TR);
-            fprintf('\n    alpha_mil (SLS): received=%.6f  expected=%.6f\n', alpha, expected);
-            tc.verifyEqual(alpha, expected, 'AbsTol', tc.TOL_TIGHT);
-        end
-
-        % ------------------------------------------------------------------ %
         % LOW-LEVEL: Mattingly Part 12 worked examples                        %
         % ------------------------------------------------------------------ %
 

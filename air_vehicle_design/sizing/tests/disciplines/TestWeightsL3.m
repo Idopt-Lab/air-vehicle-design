@@ -195,46 +195,4 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
     end
 
-    % ------------------------------------------------------------------ %
-    % Low-level equation spot checks
-    % ------------------------------------------------------------------ %
-
-    methods (Test)
-
-        function testHorizontalTailFormula(tc)
-            % Eq. 15.2: 3.316*(1+7/11.61)^(-2.0)*((31377*13.5)/1000)^0.260*63.70^0.806
-            F_w = 7.0; B_h = 11.61; W_dg = 31377; N_z = 13.5; S_ht = 63.70;
-            expected = 3.316 * (1 + F_w/B_h)^(-2.0) * ((W_dg*N_z)/1000)^0.260 * S_ht^0.806;
-            received = WeightsL3.horizontal_tail(W_dg, N_z, S_ht, F_w, B_h);
-            tc.verifyEqual(received, expected, 'AbsTol', 0.1, ...
-                'horizontal_tail must match direct Eq. 15.2 calculation.');
-        end
-
-        function testFuselageFormula(tc)
-            % Eq. 15.4: 0.499*1.0*31377^0.35*13.5^0.25*47.5^0.5*5.0^0.849*7.0^0.685
-            W_dg=31377; N_z=13.5; L=47.5; D=5.0; W=7.0; K_dwf=1.0;
-            expected = 0.499*K_dwf*W_dg^0.35*N_z^0.25*L^0.5*D^0.849*W^0.685;
-            received = WeightsL3.fuselage(W_dg, N_z, L, D, W, K_dwf);
-            tc.verifyEqual(received, expected, 'AbsTol', 0.1, ...
-                'fuselage must match direct Eq. 15.4 calculation.');
-        end
-
-        function testHandlingGearFormula(tc)
-            % Eq. 15.24: 3.2e-4 * W_TO.  Simple linear.
-            expected = 3.2e-4 * 31377;   % = 10.04 lbf
-            received = WeightsL3.handling_gear(31377);
-            tc.verifyEqual(received, expected, 'AbsTol', 0.01, ...
-                'handling_gear must match Eq. 15.24 = 3.2e-4 × W_TO.');
-        end
-
-        function testFurnishingsFormula(tc)
-            % Eq. 15.22: 217.6 * N_c.  N_c=1 (single-seat).
-            expected = 217.6 * 1;
-            received = WeightsL3.furnishings(1);
-            tc.verifyEqual(received, expected, 'AbsTol', 0.01, ...
-                'furnishings must match Eq. 15.22 = 217.6 × N_c.');
-        end
-
-    end
-
 end

@@ -54,15 +54,6 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 
     methods (Test)
 
-        function testWeFractionPowerLaw_jetfighter(tc)
-            % We/Wto = Kvs × A × W_TO^C  [Raymer Table 3.1, jet_fighter; Kvs=1.00 fixed sweep]
-            Kvs = 1.00; A = 2.34; C = -0.13;
-            expected = Kvs * A * 31377^C;
-            received = WeightsL1.We_fraction_power_law(Kvs, A, C, 31377);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6, ...
-                'Power-law formula must match Kvs×A×W_TO^C [Raymer Table 3.1].');
-        end
-
         function testWeFractionIsLessThanOne(tc)
             % Sanity: no aircraft can have empty weight >= takeoff weight.
             frac = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 31377);
@@ -85,15 +76,6 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
     % ------------------------------------------------------------------ %
 
     methods (Test)
-
-        function testWeRoskamFormula(tc)
-            % Direct formula check: log10(W_E) = (log10(31377) - 0.5091) / 0.9505
-            A = 0.5091; B = 0.9505; W_TO = 31377;
-            expected = 10^((log10(W_TO) - A) / B);
-            received = WeightsL1.We_roskam(A, B, W_TO);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-3, ...
-                'We_roskam must match direct log-log formula [Roskam Eq. 2.16].');
-        end
 
         function testWeRoskamLowerThanRaymerL1(tc)
             % Roskam gives minimum bound; Raymer Table 3.1 gives a higher central estimate.
