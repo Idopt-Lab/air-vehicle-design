@@ -31,6 +31,19 @@ Two folders are tracked in git but must stay untouched:
 
 When committing a large batch of new files spanning multiple disciplines, split commits by discipline (baseline, geometry, propulsion, aerodynamics, weights each separately; `fidelity_comparison` and `run_all_tests` each their own commit too), and never commit `.asv`, `__MACOSX`, `temp_AI`, `temp_Casey`, or `docs`.
 
+### Discipline deep-dive process — use the project's custom subagents
+
+For substantial discipline work (the Geometry deep-dive was first; the same process applies to future Aerodynamics/Propulsion/Weights deep-dives), use the project-scoped custom subagents in `.claude/agents/` rather than doing everything inline: `scribe`, `io`, `geometry-equations-expert`, `matlab-oop-expert`, `test-writer`, `test-verifier`. You (the main session) act as Coordinator — hold the approval gates, spawn the others via the `Agent` tool.
+
+Process, with two hard human-approval gates before autonomous looping starts:
+1. **`scribe`** documents the equations/citations/comparison values (per-file companion `.md` docs, parameter-usage tables) and logs any internal discrepancy it finds within `VnV/BrandtF16A` (the ground-truth source) to `VnV/BrandtF16A/todo.md` — never resolves such a discrepancy unilaterally. **STOP for user approval**, including sign-off on anything in `todo.md`.
+2. **`io`** turns the approved documentation into the actual JSON input files and Brandt ground-truth comparison JSON. **STOP for user approval.**
+3. Loop to green (no further gate): `geometry-equations-expert` + `matlab-oop-expert` implement/modify the `.m` files together (one owns equation/citation correctness, the other owns MATLAB OOP/coding practice); `test-writer` writes both test tiers (see below); `test-verifier` runs everything and reports factually; `scribe` logs any new discrepancies. Repeat until `run_all_tests` is green.
+
+**Two test tiers, never blended**: unit/correctness tests (`tests/disciplines/Test*.m`, gate `run_all_tests`, must be green — deliberately-failing TODO tests for missing citations are the only expected exception, and must be clearly labeled as such) vs. a separate Brandt comparison report (e.g. `examples/F16A/*_brandt_comparison.m`, exports console/JSON/`.md`) that checks agreement with ground truth — informational, not pass/fail, and never used to backfill a unit test's "expected" value.
+
+See `.claude/agents/*.md` for each role's full brief, and `docs/darshan-verification/` for the review that motivated this process.
+
 ## Running tests
 
 From MATLAB, with the working directory anywhere in the repo:
@@ -91,6 +104,8 @@ Concretely, for F-16 aerodynamics at L1: `AerodynamicsBase` (abstract) ← `Aero
 
 This pattern repeats identically for propulsion (`PropL*`/`PropulsionModelL*`), weights (`WeightsL*`/`WeightsModelL*`), and geometry (`GeomL*`/`GeometryModelL*`).
 
+**2026-07-22 exception — Geometry has no L3.** Geometry is L1/L2 only; there is no `GeomL3`/`GeometryModelL3`/`F16GeomL3` tier (Aerodynamics, Propulsion, and Weights are unaffected and keep their full L1/L2/L3 structure). Rationale: Geometry's former L3 tier only added a variable-tc wetted-area formula option and a duct component, neither meaningfully different in fidelity from L2, so both were folded into L2 as additional method options instead of being kept as a separate tier. See `sizing/src/disciplines/geometry/GeomL2.md` for the full writeup.
+
 ### Layer split (generic vs. aircraft-specific)
 
 Independent of the tier split above, PLAN.md frames disciplines as two *layers*:
@@ -98,6 +113,15 @@ Independent of the tier split above, PLAN.md frames disciplines as two *layers*:
 - **Layer 2** (`examples/<aircraft>/`) — an aircraft's subclass wiring in its spec data (AR, sweep, engine type, etc.) as constructor defaults. The subclass never changes the equations, only supplies the numbers a real aircraft's spec sheet would give you.
 
 Critically: **do not hardcode Brandt's back-calculated calibration values** (e.g. `Cfe=0.005908`, `e_osw=0.9086`) into an F-16 subclass — those are sizing *outputs* Brandt derived by calibrating to his own model, not inputs from the F-16 spec sheet. Only genuine spec data (AR=3.0, sweep=40°, airfoil, engine model, etc.) belongs in a Tier-3 class. Brandt's outputs (W_TO=31,377 lb, OEW=19,980 lb, etc., listed in full in PLAN.md) exist only as validation targets to compare framework output against after a sizing run.
+
+### Optimization-ready property design — inputs vs. derived (Dependent)
+
+Everything downstream (constraint analysis, mission, the sizing loop) is an **optimization loop that mutates design variables on a discipline object in place** and expects updated outputs on the next read. So concrete Tier-3 classes (`F16GeomL2`, and every future `F16AeroL*`/`F16WeightsL*`/…) must split their properties into two kinds:
+
+- **Inputs** — a plain, mutable `properties` block: the genuine design-variable spec data an optimizer varies (reference areas, aspect ratios, taper, sweep, t/c, fuselage envelope, engine thrust, …). The constructor sets these once from the JSON.
+- **Derived** — a `properties (Dependent)` block: every quantity computed from the inputs (span, root/tip chords, MAC, sweep-station conversions, exposed/wetted areas, diameters, totals). Each has a `get.<name>` method that recomputes live from the inputs on every read, via the Base / `<Disc>L*N*` toolbox statics. There is **no stored/cached copy** — a derived value can never go stale, so the instant an optimizer changes an input (`obj.AR_wing = …`), every dependent read reflects it.
+
+Do **not** compute a derived quantity once in the constructor and freeze it into a plain property — that silently goes stale under mutation (exactly the bug this pattern removes). Derived properties are read-only (no set-method); assigning to one errors, which is correct — they're outputs. The formulas are cheap closed-form algebra, so recompute-on-read costs nothing measurable and buys correctness-by-construction with zero cache bookkeeping. `examples/F16A/F16GeomL2.m` is the reference implementation — see its header block for the full rationale. This also dovetails with the JSON split: only true inputs live in the input JSON; derived quantities are never stored there, they're computed by the Dependent getters.
 
 ### Tests
 
