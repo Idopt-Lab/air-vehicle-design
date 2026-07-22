@@ -8,7 +8,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %           + W_installed_engine + W_all_else_empty
 %
 %   REFERENCE VALUES:
-%     [Brandt] OEW = 19,980.7 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
+%     [Brandt] OEW = 19,148 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
 %     [Raymer Table 15.2] Fighter unit weights: wing 9, HT 4, VT 5.3, fus 4.8 lbf/ft²
 %     [AE481 metabook §7] LG fraction: 0.033 × W_TO for non-Navy fighters
 %
@@ -76,12 +76,12 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
             % Structural components from Raymer Table 15.2; engine and all-else are
             % estimates (see F16WeightsL2 properties).  Use ±20% tolerance.
             g = F16WeightsL2();
-            expected = 19980.7;  % lbf  [Brandt B12]
+            expected = 19148;  % lbf  [Brandt B12]
             oew = g.OEW(31377);
             fprintf('\n    L2 component OEW=%.0f lbf  Brandt=%.0f lbf  err=%.1f%%\n', ...
                 oew, expected, 100*(oew-expected)/expected);
             tc.verifyEqual(oew, expected, 'RelTol', 0.20, ...
-                'L2 OEW must be within ±20% of Brandt F-16A OEW (19,981 lbf) [Brandt B12].');
+                'L2 OEW must be within ±20% of Brandt F-16A OEW (19,148 lbf) [Brandt B12].');
         end
 
         function testJetFighterCategorySetCorrectly(tc)
@@ -99,33 +99,36 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
     methods (Test)
 
         function testWingWeightFormula(tc)
-            % Wing: 9 lbf/ft² × S_w.  F-16 S_w = 300 ft²  [TO 1F-16A-1]
-            % Expected: 9 × 300 = 2700 lbf  [Raymer Table 15.2]
+            % Wing: 9 lbf/ft² × S_w.  F-16 exposed S_w = 196.23 ft²
+            % [Brandt Geom sheet, "Exposed S", Wing row].
+            % Expected: 9 × 196.23 = 1766.07 lbf  [Raymer Table 15.2]
             g = F16WeightsL2();
             W = g.weight_wing(31377);
-            expected = 9.0 * 300;
+            expected = 9.0 * 196.23;
             fprintf('\n    L2 wing weight: %.0f lbf (expected %.0f lbf)\n', W, expected);
             tc.verifyEqual(W, expected, 'AbsTol', 1.0, ...
                 'Wing weight must equal 9 lbf/ft² × S_w [Raymer Table 15.2].');
         end
 
         function testHTWeightFormula(tc)
-            % HT: 4 lbf/ft² × S_ht.  F-16 S_ht = 63.70 ft²  [TO 1F-16A-1]
-            % Expected: 4 × 63.70 = 254.8 lbf  [Raymer Table 15.2]
+            % HT: 4 lbf/ft² × S_ht.  F-16 exposed S_ht = 49.85 ft²
+            % [Brandt Geom sheet, "Exposed S", Pitch Control Surface row].
+            % Expected: 4 × 49.85 = 199.4 lbf  [Raymer Table 15.2]
             g = F16WeightsL2();
             W = g.weight_tail(31377);
-            expected_HT = 4.0 * 63.70;
+            expected_HT = 4.0 * 49.85;
             fprintf('\n    L2 HT weight: %.1f lbf (expected %.1f lbf)\n', W.HT, expected_HT);
             tc.verifyEqual(W.HT, expected_HT, 'AbsTol', 1.0, ...
                 'HT weight must equal 4 lbf/ft² × S_ht [Raymer Table 15.2].');
         end
 
         function testVTWeightFormula(tc)
-            % VT: 5.3 lbf/ft² × S_vt.  F-16 S_vt = 54.75 ft²  [TO 1F-16A-1]
-            % Expected: 5.3 × 54.75 = 290.2 lbf  [Raymer Table 15.2]
+            % VT: 5.3 lbf/ft² × S_vt.  F-16 exposed S_vt = 40.89 ft²
+            % [Brandt Geom sheet, "Exposed S", Vertical Tail row].
+            % Expected: 5.3 × 40.89 = 216.717 lbf  [Raymer Table 15.2]
             g = F16WeightsL2();
             W = g.weight_tail(31377);
-            expected_VT = 5.3 * 54.75;
+            expected_VT = 5.3 * 40.89;
             fprintf('\n    L2 VT weight: %.1f lbf (expected %.1f lbf)\n', W.VT, expected_VT);
             tc.verifyEqual(W.VT, expected_VT, 'AbsTol', 1.0, ...
                 'VT weight must equal 5.3 lbf/ft² × S_vt [Raymer Table 15.2].');

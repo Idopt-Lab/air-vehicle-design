@@ -44,25 +44,38 @@ classdef F16WeightsL3 < WeightsModelL3
 
         % --- Wing (Eq. 15.1) ---
         N_z        = 13.5     % --    ultimate load factor = 1.5 × 9g limit  [TO 1F-16A-1 §5, Raymer Nz=1.5×n_lim]
-        S_w        = 300      % ft²   wing reference area  [TO 1F-16A-1, Fig. 1-2]
+        % Exposed planform area (fuselage-excluded), per Raymer Table 15.2's
+        % definition -- NOT the full trapezoidal reference area (S_ref=300).
+        S_w        = 196.23   % ft²   exposed wing planform area [Brandt Geom sheet, "Exposed S", Wing row; F16Baseline b.geom.S_exposed_wing]
         AR_w       = 3.0      % --    wing aspect ratio    [TO 1F-16A-1, Fig. 1-2]
         tc_root    = 0.04     % --    root thickness ratio [NACA 64A204]
         lambda_w   = 0.2275   % --    wing taper ratio     [TO 1F-16A-1, Fig. 1-2]
         Lambda_LE_w = 40      % deg   LE sweep             [TO 1F-16A-1, Fig. 1-2]
-        S_csw      = 69.0     % ft²   wing control-surface area [estimate; from WeightLevel3.m hardcode; verify TO 1F-16A-1]
+        S_csw      = 68.03    % ft²   wing control-surface area = flaperon (31.32) + LEF (36.71) [TO 1F-16A-1 Fig. 1-2]
         K_dw       = 1.0      % --    not a delta wing     [Raymer]
         K_vs       = 1.0      % --    not variable sweep   [Raymer]
 
         % --- Horizontal tail (Eq. 15.2) ---
-        S_ht       = 63.70    % ft²   HT area              [TO 1F-16A-1]
+        % Exposed planform area (fuselage-excluded), per Raymer Table 15.2's
+        % definition -- NOT the full T.O. reference area (63.70) used to
+        % derive B_h below.
+        S_ht       = 49.85    % ft²   exposed HT planform area [Brandt Geom sheet, "Exposed S", Pitch Control Surface row; F16Baseline b.geom.S_exposed_ht]
         AR_ht      = 2.114    % --    HT aspect ratio      [Brandt / TO 1F-16A-1]
         lambda_ht  = 0.390    % --    HT taper             [Brandt / TO 1F-16A-1]
-        F_w        = 7.0      % ft    fuselage width at HT [Brandt, b.geom.W_fus]
-        B_h        = 11.61    % ft    HT full span = sqrt(AR_ht × S_ht) [derived]
+        F_w        = 7.0      % ft    fuselage width at HT intersection [estimate: reuses max
+                               %       fuselage width (Brandt, b.geom.W_fus) as an upper-bound
+                               %       proxy -- TO 1F-16A-1 Fig. 1-2 has no station-specific width
+                               %       at the empennage, and this is narrower on the real aircraft]
+        B_h        = 18.5      % ft    HT full span = 18 ft 6 in [USAF 3-view diagram, "18 FT 6 IN"
+                               %       span callout; F16Baseline b.geom.b_ht] (supersedes the earlier
+                               %       sqrt(AR_ht*S_ht)=11.61 ft derivation, which is inconsistent
+                               %       with this reported value -- AR_ht/S_ht above not reconciled)
         K_rht      = 1.047    % --    rolling (all-moving) tail [Raymer §15.3]
 
         % --- Vertical tail (Eq. 15.3) ---
-        S_vt       = 54.75    % ft²   VT area              [TO 1F-16A-1]
+        % Exposed planform area (fuselage-excluded), per Raymer Table 15.2's
+        % definition -- NOT the full T.O. reference area (54.75).
+        S_vt       = 40.89    % ft²   exposed VT planform area [Brandt Geom sheet, "Exposed S", Vertical Tail row; F16Baseline b.geom.S_exposed_vt]
         AR_vt      = 1.294    % --    VT aspect ratio      [Brandt / TO 1F-16A-1]
         lambda_vt  = 0.437    % --    VT taper             [Brandt / TO 1F-16A-1]
         Lambda_LE_vt = 47.5   % deg   VT LE sweep          [TO 1F-16A-1]
@@ -70,7 +83,7 @@ classdef F16WeightsL3 < WeightsModelL3
         H_v        = 1        % ft    any nonzero; H_t/H_v = 0  [F-16 conventional tail]
         M_design   = 2.0      % --    max Mach             [Brandt polar_model]
         L_t        = 22.0     % ft    wing ¼MAC to HT ¼MAC [estimate; verify TO 1F-16A-1]
-        S_r        = 50.0     % ft²   VT rudder area       [estimate; from WeightLevel3.m code]
+        S_r        = 11.65    % ft²   VT rudder area       [TO 1F-16A-1 Fig. 1-2]
         K_dwf      = 1.0      % --    not a delta wing fuselage [Raymer]
 
         % --- Fuselage (Eq. 15.4) ---
@@ -141,7 +154,13 @@ classdef F16WeightsL3 < WeightsModelL3
     methods
 
         function obj = F16WeightsL3()
-            obj.B_h = sqrt(obj.AR_ht * obj.S_ht);  % 11.61 ft [derived]
+            % B_h is set directly from the reported USAF full span (see the
+            % property default above) -- no longer derived from AR_ht/S_ht.
+            % Note: The AR and S_ht are derived from the USAF manual. These
+            % values are the actual physcial construction values, not the
+            % theoretical ones that Brandt suggests. However, I would still
+            % move this to the baseline, and cite its information as coming from the
+            % USAF manual.
         end
 
         function oew = OEW(obj, W_TO)

@@ -23,7 +23,7 @@ classdef WeightsL1
 %   lower efficiency frontier.  At W_TO=31,377 lbf for a jet fighter:
 %     Raymer (1): OEW ≈ 19,108 lbf   (central estimate)
 %     Roskam (2): W_E ≈ 15,660 lbf   (minimum achievable)
-%     Brandt actual: 19,981 lbf       (Brandt F-16A.xls B12)
+%     Brandt actual: 19,148 lbf       (Brandt F-16A.xls B12)
 %
 %   SOURCES:
 %     AE481 Aircraft Design Metabook, Table 3.1 — Raymer empty-weight regression

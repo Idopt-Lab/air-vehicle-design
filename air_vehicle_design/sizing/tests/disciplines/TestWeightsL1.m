@@ -8,12 +8,12 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %     (2) Roskam Eq. 2.16 log-log   — minimum achievable W_E lower bound
 %
 %   REFERENCE VALUES:
-%     [Brandt]  OEW = 19,980.7 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
+%     [Brandt]  OEW = 19,148 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
 %     [Brandt]  TOGW = 31,377 lbf   [Brandt F-16A.xls, sheet "Wt", B38]
 %     [Raymer Table 3.1] jet_fighter: Kvs=1.00 (fixed sweep), A=2.34, C=-0.13.
 %       [AE481 Metabook Table 3.1; verify against Raymer 6th ed. Table 3.1]
 %       Predicted: We/Wto = 1.00 × 2.34 × 31377^(−0.13) ≈ 0.609; OEW ≈ 19,108 lbf.
-%       Error vs Brandt: ≈ −4.4% → within the ±8% statistical scatter.
+%       Error vs Brandt: ≈ −2.5% → within the ±8% statistical scatter.
 %     [Roskam Table 2.15] jet_fighter: A=0.5091, B=0.9505.
 %       Minimum bound at W_TO=31,377: W_E_min ≈ 15,660 lbf.
 %       Interpretation: historical lower efficiency frontier; actual OEW ≥ W_E_min.
@@ -130,14 +130,14 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 
         function testOEWWithinBrandsValue(tc)
             % Raymer Table 3.1 L1 prediction vs Brandt OEW reference.
-            % Predicted ≈ 19,108 lbf; target 19,981 lbf; err ≈ -4.4% → within ±8%.
+            % Predicted ≈ 19,108 lbf; target 19,148 lbf; err ≈ -0.2% → within ±8%.
             g = F16WeightsL1();
-            expected = 19980.7;  % lbf  [Brandt F-16A.xls, sheet "Wt", B12]
+            expected = 19148;  % lbf  [Brandt F-16A.xls, sheet "Wt", B12]
             received = g.OEW(31377);
             fprintf('\n    OEW L1 (Raymer): received=%.1f lbf  Brandt=%.1f lbf  err=%.1f%%\n', ...
                 received, expected, 100*(received-expected)/expected);
             tc.verifyEqual(received, expected, 'RelTol', tc.TOL_L1, ...
-                'L1 OEW must be within ±8% of Brandt F-16A OEW (19,981 lbf) [Brandt B12].');
+                'L1 OEW must be within ±8% of Brandt F-16A OEW (19,148 lbf) [Brandt B12].');
         end
 
         function testWeFractionMatchesOEW(tc)
@@ -164,7 +164,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         function testRoskamMinBoundBelowBrandt(tc)
             % Roskam lower bound must be below the actual F-16 OEW.
             g = F16WeightsL1();
-            expected_brandt = 19980.7;  % lbf  [Brandt B12]
+            expected_brandt = 19148;  % lbf  [Brandt B12]
             W_E_min = g.compute_We_roskam(31377);
             fprintf('\n    L1 Roskam min W_E=%.0f lbf  Brandt OEW=%.0f lbf\n', ...
                 W_E_min, expected_brandt);

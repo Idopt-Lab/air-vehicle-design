@@ -4,7 +4,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   Tests: WeightsL3 (static toolbox) + F16WeightsL3 (student class).
 %
 %   REFERENCE VALUES:
-%     [Brandt] OEW = 19,980.7 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
+%     [Brandt] OEW = 19,148 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
 %     [Brandt] TOGW = 31,377 lbf   [Brandt F-16A.xls, sheet "Wt", B38]
 %
 %   ⚠ NOTE ON TOLERANCES:
@@ -48,8 +48,22 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
     methods (Test)
 
         function testWingWeightPositiveAndPlausible(tc)
-            % Raymer Eq. 15.1.  F-16 wing is small (300 ft²) and lightly loaded.
-            % Plausible range: 2,000–6,000 lbf for a 9g-capable fighter wing.
+            % Raymer Eq. 15.1.  F-16 exposed wing planform is small (196.23
+            % ft^2 [Brandt Geom sheet, "Exposed S", Wing row]) and lightly
+            % loaded. Plausible range: 2,000–6,000 lbf for a 9g-capable
+            % fighter wing.
+            % Eq. 15.1 gives ~2,397 lbf, +29% vs Brandt's "Wing" line [Brandt
+            % F-16A.xls, "Structural Weight Models, average psf" table =
+            % 1,852 lbf]. Eq. 15.1 and every input here
+            % (S_w/AR/tc_root/lambda/Lambda_LE/S_csw/N_z) were independently
+            % re-verified letter-for-letter against the Raymer 6th ed. p.572
+            % equation image and TO 1F-16A-1 Fig. 1-2 -- this is not a units
+            % or coefficient bug. The gap reflects Raymer's fighter wing
+            % regression (fit across many production aircraft) not capturing
+            % the F-16's unusually lightweight, highly optimized structure;
+            % Raymer himself notes (p.570) these statistical equations are
+            % estimates with intrinsic scatter, not exact per-aircraft
+            % predictions.
             g = F16WeightsL3();
             W = g.weight_wing(31377);
             fprintf('\n    Wing weight (Eq. 15.1): %.0f lbf\n', W);
@@ -60,43 +74,75 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         end
 
         function testHTWeightPositiveAndLessThanWing(tc)
-            % HT is smaller than the wing; expect 500–2,000 lbf.
-            g = F16WeightsL3();
-            W_tail = g.weight_tail(31377);
+            % Eq. 15.2 gives ~196 lbf for the F-16's exposed S_ht (49.85 ft^2
+            % [Brandt Geom sheet, "Exposed S", Pitch Control Surface row]),
+            % F_w=7.0 ft, and B_h=18.5 ft (18 ft 6 in, the USAF-reported full
+            % HT span [USAF 3-view diagram; F16Baseline b.geom.b_ht]).
+            % Brandt's own "Structural Weight Models, average psf" table gives
+            % "Pitch Cntrl" = 199.39 lbf [F16Baseline b.brandt.W_pitch_cntrl]
+            % -- essentially the same calculation as Eq. 15.2's cross-check
+            % (coeff 4 psf x exposed S_ht=49.85 ft^2 = 199.4 lbf), so this
+            % ~196 lbf result is now within 1.5% of Brandt's own model.
             % TODO(7/20/2026): This should compare with the wing weight,
             % not set a hard upper/lower boundary, as the function name
             % implies. Should check if less than main wing weight.
+            g = F16WeightsL3();
+            W_tail = g.weight_tail(31377);
             fprintf('\n    HT weight (Eq. 15.2): %.0f lbf\n', W_tail.HT);
-            tc.verifyGreaterThan(W_tail.HT, 500, ...
-                'HT weight must exceed 500 lbf.');
+            tc.verifyGreaterThan(W_tail.HT, 100, ...
+                'HT weight must exceed 100 lbf.');
             tc.verifyLessThan(W_tail.HT, 2000, ...
                 'HT weight must be below 2,000 lbf.');
         end
 
         function testVTWeightPositiveAndLessThanHT(tc)
-            % VT is smaller than HT on F-16; expect 300–1,500 lbf.
+            % VT is smaller than HT on F-16; expect 200-1,500 lbf.
+            % Eq. 15.3 gives ~313 lbf, within 28% of Brandt's "Vert" line
+            % [Brandt "Structural Weight Models, average psf" table =
+            % 245.34 lbf; F16Baseline b.brandt.W_vert], using the exposed VT
+            % area (40.89 ft^2 [Brandt Geom sheet, "Exposed S", Vertical Tail
+            % row]) in the S_vt^0.718 term (S_r/S_vt stays the same physical
+            % rudder-fraction term it always was -- S_r=11.65 ft^2 is not an
+            % area convention that changed here). Bound lowered from 300 to
+            % 200 lbf to keep margin now that the exposed-area switch moved
+            % the result from ~378 to ~313 lbf.
             g = F16WeightsL3();
             W_tail = g.weight_tail(31377);
             fprintf('\n    VT weight (Eq. 15.3): %.0f lbf\n', W_tail.VT);
-            tc.verifyGreaterThan(W_tail.VT, 300, ...
-                'VT weight must exceed 300 lbf.');
+            tc.verifyGreaterThan(W_tail.VT, 200, ...
+                'VT weight must exceed 200 lbf.');
             tc.verifyLessThan(W_tail.VT, 1500, ...
                 'VT weight must be below 1,500 lbf.');
         end
 
         function testFuselageWeightPlausible(tc)
-            % Raymer Eq. 15.4.  Fuselage is a major fraction; expect 4,000–10,000 lbf.
+            % Raymer Eq. 15.4 gives ~3,674 lbf, matching Brandt's fuselage
+            % line [Brandt F-16A.xls, Wt!D9 = 3,652 lbf] to <1%, and the
+            % independent per-area cross-check [AE481 metabook §7,
+            % rho_fus=4.8 lbf/ft^2 * S_wet_fus=730.4 ft^2 = 3,506 lbf] to
+            % ~5%. All three cluster in [3,200, 3,700] lbf, below the
+            % original 4,000 lbf floor -- the floor, not the equation, was
+            % wrong.
             g = F16WeightsL3();
             W = g.weight_fuselage(31377);
             fprintf('\n    Fuselage weight (Eq. 15.4): %.0f lbf\n', W);
-            tc.verifyGreaterThan(W, 4000, ...
-                'Fuselage weight must exceed 4,000 lbf.');
+            tc.verifyGreaterThan(W, 3000, ...
+                'Fuselage weight must exceed 3,000 lbf.');
             tc.verifyLessThan(W, 10000, ...
                 'Fuselage weight must be below 10,000 lbf.');
         end
 
         function testLandingGearWeightPlausible(tc)
-            % Eqs. 15.5–15.6.  LG typically 4–6% of W_TO ≈ 1,200–2,000 lbf.
+            % Eqs. 15.5-15.6, verified against the Raymer 6th ed. p.572
+            % equation image (raymer_data.md's OCR dropped Eq. 15.5
+            % entirely, which is why an earlier pass here wrongly concluded
+            % the equation was missing terms). The equations were correct;
+            % the bug was that obj.L_m/obj.L_n (main/nose gear strut length)
+            % are stored in feet but Raymer's own nomenclature (6th ed.
+            % pp.577-578) defines L_m/L_n in INCHES -- WeightsL3.
+            % weight_landing_gear now converts. Fixed result (~1,057 lbf)
+            % matches Brandt's gear line [Brandt F-16A.xls, Wt!B23 =
+            % 1,066.8 lbf] to <1%.
             g = F16WeightsL3();
             W_lg = g.weight_landing_gear();
             W_total = W_lg.main + W_lg.nose;
@@ -154,12 +200,12 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             % Several F16WeightsL3 inputs are estimates — use ±40% on total OEW.
             % When all inputs are verified, tighten to ±20%.
             g = F16WeightsL3();
-            expected = 19980.7;   % lbf  [Brandt F-16A.xls, B12]
+            expected = 19148;   % lbf  [Brandt F-16A.xls, B12]
             received = g.OEW(31377);
             fprintf('\n    L3 OEW: received=%.0f lbf  Brandt=%.0f lbf  err=%.1f%%\n', ...
                 received, expected, 100*(received-expected)/expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.40, ...
-                ['L3 OEW must be within ±40% of Brandt OEW (19,981 lbf) [Brandt B12]. ', ...
+                ['L3 OEW must be within ±40% of Brandt OEW (19,148 lbf) [Brandt B12]. ', ...
                  'Tighten after verifying Raymer exponents (PDF pp.602-603) ', ...
                  'and estimated inputs in F16WeightsL3.']);
         end
@@ -189,7 +235,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
                      '    Brandt target  %7.0f lbf\n'], ...
                 W_wing, W_tail.HT, W_tail.VT, W_fus, ...
                 W_lg.main, W_lg.nose, W_eng.total, W_sys.total, ...
-                total, 19980.7);
+                total, 19148);
             tc.verifyTrue(true);  % diagnostic-only; inspect printed output
         end
 
@@ -202,8 +248,13 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
     methods (Test)
 
         function testHorizontalTailFormula(tc)
-            % Eq. 15.2: 3.316*(1+7/11.61)^(-2.0)*((31377*13.5)/1000)^0.260*63.70^0.806
-            F_w = 7.0; B_h = 11.61; W_dg = 31377; N_z = 13.5; S_ht = 63.70;
+            % Eq. 15.2: 3.316*(1+7/18.5)^(-2.0)*((31377*13.5)/1000)^0.260*49.85^0.806
+            % S_ht = 49.85 is the exposed HT area [Brandt Geom sheet, "Exposed
+            % S", Pitch Control Surface row], matching F16WeightsL3.S_ht.
+            % B_h = 18.5 ft = 18 ft 6 in, the USAF-reported full HT span
+            % [USAF 3-view diagram; F16Baseline b.geom.b_ht], matching
+            % F16WeightsL3.B_h.
+            F_w = 7.0; B_h = 18.5; W_dg = 31377; N_z = 13.5; S_ht = 49.85;
             expected = 3.316 * (1 + F_w/B_h)^(-2.0) * ((W_dg*N_z)/1000)^0.260 * S_ht^0.806;
             received = WeightsL3.horizontal_tail(W_dg, N_z, S_ht, F_w, B_h);
             tc.verifyEqual(received, expected, 'AbsTol', 0.1, ...

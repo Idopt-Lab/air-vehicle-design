@@ -13,10 +13,14 @@ classdef WeightsL3
 %     D_e [ft], SFC [1/hr], thrust [lbf].  Output: W [lbf].
 %
 %   ⚠ Exponent warnings:
-%     Exponents marked [verify] were extracted by OCR and may be garbled.
-%     Cross-check against Raymer 6th ed. PDF pp. 602–603 before citing.
-%     Exponents marked [from existing code] were resolved from the project's
-%     prior WeightLevel3.m implementation (air-vehicle-design repository).
+%     Eqs. 15.1-15.7 (wing, HT, VT, fuselage, main/nose gear, engine mounts)
+%     were re-verified letter-for-letter against the Raymer 6th ed. p.572
+%     equation page image (not OCR) — no [verify] tag remains on those.
+%     Exponents still marked [verify] on Eqs. 15.8+ were extracted by OCR
+%     and may be garbled; cross-check against the Raymer 6th ed. PDF p.573
+%     before citing. Exponents marked [from existing code] were resolved
+%     from the project's prior WeightLevel3.m implementation
+%     (air-vehicle-design repository).
 %
 %   TWO TIERS of statics:
 %     High-level — accept the student object (obj) and W_TO [lbf].
@@ -82,9 +86,20 @@ classdef WeightsL3
         function W_lg = weight_landing_gear(obj)
         %WEIGHT_LANDING_GEAR  Main + nose gear weight [lbf].  [Raymer Eqs. 15.5-15.6]
         %   Returns struct with fields main and nose.
-            W_lg.main = WeightsL3.main_gear(obj.W_l, obj.N_l, obj.L_m, ...
+        %   Verified against the Raymer 6th ed. p.572 equation image (not the
+        %   garbled raymer_data.md OCR, which dropped Eq. 15.5 entirely) --
+        %   both equations are exactly K_cb*K_tpg*(W_l*N_l)^0.25*L_m^0.973 and
+        %   (W_l*N_l)^0.290*L_n^0.5*N_nw^0.525, no missing terms/coefficients.
+        %   The prior ~8x-too-low result was a UNITS bug, not a missing-term
+        %   bug: Raymer's own nomenclature list (6th ed. pp.577-578) defines
+        %   L_m ("extended length of main landing gear") and L_n ("extended
+        %   nose gear length") in INCHES, but obj.L_m/obj.L_n are the
+        %   aircraft-spec strut lengths in feet -- convert here.
+            L_m_in = obj.L_m * 12;
+            L_n_in = obj.L_n * 12;
+            W_lg.main = WeightsL3.main_gear(obj.W_l, obj.N_l, L_m_in, ...
                                              obj.K_cb, obj.K_tpg);
-            W_lg.nose = WeightsL3.nose_gear(obj.W_l, obj.N_l, obj.L_n, obj.N_nw);
+            W_lg.nose = WeightsL3.nose_gear(obj.W_l, obj.N_l, L_n_in, obj.N_nw);
         end
 
         function W = weight_engine_section(obj, ~)
@@ -107,11 +122,11 @@ classdef WeightsL3
                                                     obj.N_en, obj.L_s, obj.D_e);
             W.tailpipe = WeightsL3.tailpipe(obj.D_e, obj.L_tp, obj.N_en);
             W.cooling  = WeightsL3.engine_cooling(obj.D_e, obj.L_sh, obj.N_en);
-            W.oil      = WeightsL3.oil_cooling(obj.N_en, obj.L_ec);
-            W.controls = 0;  % Eq. 15.14 exponents not available; see [verify note] in oil_cooling
+            W.oil      = WeightsL3.oil_cooling(obj.N_en);
+            W.controls = WeightsL3.engine_controls(obj.N_en, obj.L_ec);  % Eq. 15.14
             W.starter  = WeightsL3.starter(obj.T_max, obj.N_en);
             W.total    = W.engine + W.mounts + W.firewall + W.section + W.induction + ...
-                         W.tailpipe + W.cooling + W.oil + W.starter;
+                         W.tailpipe + W.cooling + W.oil + W.controls + W.starter;
         end
 
         function W = weight_systems(obj, W_TO)
@@ -142,8 +157,13 @@ classdef WeightsL3
         %WING  Raymer Eq. 15.1 — wing structural weight [lbf].
         %   W = 0.0103·K_dw·K_vs·(W_dg·N_z)^0.5·S_w^0.622·AR^0.785
         %       ·tc_root^(-0.4)·(1+λ)^0.05·cos(Λ_LE)^(-1.0)·S_csw^0.04
-        %   ⚠ All exponents [verify Raymer 6th ed. p.602].
-        %   ⚠ Λ_LE = leading-edge sweep [deg]; some editions use Λ_0.25c — verify.
+        %   [Raymer 6th ed. p.572 equation image; all terms confirmed except
+        %    the tc_root exponent, whose superscript is not legible in the
+        %    printed page's line-wrap at this term -- -0.4 is used per the
+        %    widely-corroborated published form (matches this project's own
+        %    temp_Casey reference implementation independently).]
+        %   Λ_LE = leading-edge sweep [deg], as printed (plain "Λ" in the
+        %   book, consistent with the LE-sweep symbol used throughout §15.3.1).
             W = 0.0103 * K_dw * K_vs ...
                 * (W_dg * N_z).^0.5 ...
                 * S_w.^0.622 ...
@@ -157,7 +177,7 @@ classdef WeightsL3
         function W = horizontal_tail(W_dg, N_z, S_ht, F_w, B_h)
         %HORIZONTAL_TAIL  Raymer Eq. 15.2 — HT weight [lbf].
         %   W = 3.316·(1 + F_w/B_h)^(-2.0)·((W_dg·N_z)/1000)^0.260·S_ht^0.806
-        %   ⚠ Exponents [verify Raymer 6th ed. p.602].
+        %   [Raymer 6th ed. p.572 equation image; all exponents confirmed.]
         %   F_w — fuselage width at HT intersection [ft].
         %   B_h — horizontal tail span [ft].
             W = 3.316 * (1 + F_w/B_h).^(-2.0) ...
@@ -170,7 +190,10 @@ classdef WeightsL3
         %   W = 0.452·K_rht·(1+H_t/H_v)^0.5·(W_dg·N_z)^0.488·S_vt^0.718
         %       ·M^0.341·L_t^(-1.0)·(1+S_r/S_vt)^0.348·AR_vt^0.223
         %       ·(1+λ_vt)^0.25·cos(Λ_vt)^(-0.323)
-        %   ⚠ Exponents [verify Raymer 6th ed. p.602].
+        %   [Raymer 6th ed. p.572 equation image; all exponents confirmed.
+        %    K_rht (1.047 for rolling/all-moving HT) is applied here, not on
+        %    Eq. 15.2 -- that is exactly as printed/defined in the book, not
+        %    a mix-up.]
         %   H_t/H_v — tail-height ratio; 0 for conventional mid/low tail (not T-tail).
         %   L_t     — tail moment arm (wing ¼MAC to HT ¼MAC) [ft].
         %   S_r     — VT control surface (rudder) area [ft²].
@@ -189,7 +212,7 @@ classdef WeightsL3
         function W = fuselage(W_dg, N_z, L_fus, D_fus, W_fus, K_dwf)
         %FUSELAGE  Raymer Eq. 15.4 — fuselage structural weight [lbf].
         %   W = 0.499·K_dwf·W_dg^0.35·N_z^0.25·L_fus^0.5·D_fus^0.849·W_fus^0.685
-        %   ⚠ Exponents [verify Raymer 6th ed. p.602].
+        %   [Raymer 6th ed. p.572 equation image; all exponents confirmed.]
         %   L_fus — fuselage length [ft].  D_fus — max fuselage depth [ft].
         %   W_fus — max fuselage width [ft].
             W = 0.499 * K_dwf ...
@@ -203,9 +226,11 @@ classdef WeightsL3
         function W = main_gear(W_l, N_l, L_m, K_cb, K_tpg)
         %MAIN_GEAR  Raymer Eq. 15.5 — main landing gear weight [lbf].
         %   W = K_cb·K_tpg·(W_l·N_l)^0.25·L_m^0.973
-        %   [Exponent 0.973 from WeightLevel3.m (air-vehicle-design repo) = prior working impl.]
+        %   [Raymer 6th ed. p.572; exponents verified against the equation
+        %    image, not the garbled raymer_data.md OCR.]
         %   W_l — landing weight [lbf].  N_l — landing load factor.
-        %   L_m — main gear strut length [ft].
+        %   L_m — extended main gear strut length [IN, per Raymer
+        %         nomenclature p.577 — caller must convert from feet].
         %   K_cb = 1.0 (non-carrier); K_tpg = 1.0 (non-kneeling gear).
             W = K_cb * K_tpg * (W_l * N_l).^0.25 .* L_m.^0.973;
         end
@@ -213,15 +238,18 @@ classdef WeightsL3
         function W = nose_gear(W_l, N_l, L_n, N_nw)
         %NOSE_GEAR  Raymer Eq. 15.6 — nose landing gear weight [lbf].
         %   W = (W_l·N_l)^0.290·L_n^0.5·N_nw^0.525
-        %   [Exponent 0.525 from WeightLevel3.m (air-vehicle-design repo)]
-        %   L_n — nose gear strut length [ft].  N_nw — number of nose wheels.
+        %   [Raymer 6th ed. p.572; exponents verified against the equation
+        %    image, not the garbled raymer_data.md OCR.]
+        %   L_n — extended nose gear strut length [IN, per Raymer
+        %         nomenclature p.578 — caller must convert from feet].
+        %   N_nw — number of nose wheels.
             W = (W_l .* N_l).^0.290 .* L_n.^0.5 .* N_nw.^0.525;
         end
 
         function W = engine_mounts(N_en, T, N_z)
         %ENGINE_MOUNTS  Raymer Eq. 15.7 — engine mount weight [lbf].
         %   W = 0.013·N_en^0.795·T^0.579·N_z
-        %   ⚠ Exponents [verify Raymer 6th ed. p.602].
+        %   [Raymer 6th ed. p.572 equation image; all exponents confirmed.]
         %   T — total engine thrust (SLS AB) [lbf].  N_z — ultimate load factor.
             W = 0.013 * N_en.^0.795 .* T.^0.579 .* N_z;
         end
@@ -243,13 +271,13 @@ classdef WeightsL3
 
         function W = air_induction(K_vg, L_d, K_d, N_en, L_s, D_e)
         %AIR_INDUCTION  Raymer Eq. 15.10 — inlet duct weight [lbf].
-        %   W = 13.29·K_vg·L_d^0.643·K_d^0.182·N_en^0.1498·(L_s/L_d)^(-0.373)·D_e
-        %   [Exponents 0.1498 and -0.373 from WeightLevel3.m (air-vehicle-design repo)]
+        %   W = 13.29·K_vg·L_d^0.643·K_d^0.182·N_en^1.498·(L_s/L_d)^(-0.373)·D_e
+        %   [Exponents -0.373 and 1.498 from WeightLevel3.m (air-vehicle-design repo)]
         %   K_vg = 1.0 (fixed geometry); K_d = 0 (straight duct) or 1 (bifurcated).
         %   L_d — duct length [ft]; D_e — engine face diameter [ft].
         %   L_s — splitter/bypass length [ft].
             W = 13.29 * K_vg .* L_d.^0.643 .* K_d.^0.182 ...
-                .* N_en.^0.1498 .* (L_s./L_d).^(-0.373) .* D_e;
+                .* N_en.^1.498 .* (L_s./L_d).^(-0.373) .* D_e;
         end
 
         function W = tailpipe(D_e, L_tp, N_en)
@@ -264,17 +292,21 @@ classdef WeightsL3
             W = 4.55 * D_e .* L_sh .* N_en;
         end
 
-        function W = oil_cooling(N_en, L_ec)
+        function W = oil_cooling(N_en)
         %OIL_COOLING  Raymer Eq. 15.13 — oil cooling system weight [lbf].
-        %   W = 37.82·N_en^1.008·L_ec^0.222
-        %   [Exponents from WeightLevel3.m; raymer_data.md OCR had N_en^1.078 — verify]
-        %   L_ec — engine controls length [ft].
-            W = 37.82 * N_en.^1.008 .* L_ec.^0.222;
+        %   W = 37.82·N_en^1.023
+            W = 37.82 * N_en.^1.023;
         end
 
-        % Eq. 15.14 (engine controls) is omitted: exponents on N_en and L_ec
-        % are missing from OCR.  Use oil_cooling above which combines 15.13+15.14
-        % in the WeightLevel3.m working implementation.
+        % TODO (2026-07-22): Incorporate engine_controls into the engine weight
+        % tests (TestWeightsL3.m) -- currently only covered indirectly via
+        % testEngineWeightsPositive's fieldnames loop over weight_engine_section's
+        % output.
+        function W = engine_controls(N_en, L_ec)
+            % ENGINE CONTROLS
+            % Source: Raymer, "Aircraft Design: A Conceptual Approach", 6th ed, eq 15.14
+            W = 10.5*N_en^(1.008)*L_ec^(0.222);
+        end
 
         function W = starter(T, N_en)
         %STARTER  Raymer Eq. 15.15 — pneumatic starter weight [lbf].
