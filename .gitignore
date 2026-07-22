@@ -36,3 +36,6 @@ codegen/
 .buildtool/
 
 /air_vehicle_design/mbse/examples/ex2/resources/project
+
+# Local-only working folder (Darshan's step reviews) — never tracked
+/air_vehicle_design/sizing/docs/darshan-verification/
