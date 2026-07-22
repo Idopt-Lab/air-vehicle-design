@@ -31,6 +31,13 @@ b.geom.tc_root         = 0.04;
 b.geom.tc_avg          = 0.04;
 b.geom.S_ht            = 63.70;     % ft^2  -- horizontal tail, Block 10
 b.geom.AR_ht           = 2.114;
+b.geom.b_ht            = 18.5;      % ft    -- HT full span = 18 ft 6 in
+                                     %         [USAF 3-view diagram, "18 FT 6 IN" span callout]
+                                     %         NOTE: inconsistent with sqrt(AR_ht*S_ht) = 11.61 ft
+                                     %         using the AR_ht/S_ht pair above -- not reconciled
+                                     %         here; flagged for follow-up, not used elsewhere yet
+                                     %         (F16GeomL2/L3's own b_HT=17.5 estimate and
+                                     %         F16WeightsL3's derived B_h=11.61 are unchanged).
 b.geom.taper_ht        = 0.390;
 b.geom.sweep_LE_ht_deg = 40;
 b.geom.dihedral_ht_deg = -10;       % deg   -- anhedral
@@ -41,19 +48,72 @@ b.geom.sweep_LE_vt_deg = 47.5;
 b.geom.L_fus           = 47.50;     % ft    -- overall length (excl. probe)
 b.geom.W_fus           = 7.0;       % ft    -- approx max width
 
+% Exposed lifting-surface planform areas [Brandt F-16A.xls, "Geom" sheet,
+% "Exposed Lifting Surf Geometry" table, "Exposed S" column]. Raymer's
+% S_w/S_ht/S_vt in the Table 15.2 and Eq. 15.1-15.3 weight buildups are the
+% exposed (fuselage-excluded) planform areas, not the full trapezoidal
+% reference area -- WeightsL2/WeightsL3 (via F16WeightsL2/F16WeightsL3) use
+% these values, not b.geom.S_ref/S_ht/S_vt above.
+b.geom.S_exposed_wing   = 196.23;   % ft^2  -- "Wing" row       [Brandt Geom sheet]
+b.geom.S_exposed_ht     = 49.85;    % ft^2  -- "Pitch Control Surface" row [Brandt Geom sheet]
+b.geom.S_exposed_strake = 20.00;    % ft^2  -- "Strake" row     [Brandt Geom sheet] (not modeled: no strake weight component in this framework)
+b.geom.S_exposed_vt     = 40.89;    % ft^2  -- "Vertical Tail" row [Brandt Geom sheet]
+
 % =========================================================================
 %  2. Weights  [Brandt F-16A.xls, sheet "Wt"]
 % =========================================================================
 b.brandt.TOGW      = 31377.0;  % lbf  -- "Total @ Takeoff"   [Brandt B38]
-b.brandt.OEW       = 19980.7;  % lbf  -- "Empty"             [Brandt B12]
+b.brandt.OEW       = 19148;    % lbf  -- "Empty"             [Brandt B12]
 b.brandt.W_fuel    = 6296.3;   % lbf  -- internal fuel        [Brandt B6]
 b.brandt.W_landing = 20680.7;  % lbf  -- "Total for Lndg"    [Brandt B41]
 b.brandt.W_perm_pay = 700;     % lbf  -- permanent payload    [Brandt B32]
 b.brandt.W_exp_pay  = 4400;    % lbf  -- expendable payload   [Brandt B33+B34]
 
+% Component-level Group Weight Statement [Brandt F-16A.xls, "Wt" sheet,
+% rows 16-31]. b.brandt.W_wing/W_fuselage/W_pitch_cntrl/W_vert/W_nacelles/
+% W_strakes below are now Brandt's "Structural Weight Models, average psf"
+% table results (a separate psf-coefficient x area model calculation,
+% analogous to this framework's own WeightsL2 method) -- NOT the raw Wt!B16-
+% B21 Group Weight Statement cells previously used here. As a result these
+% 6 values no longer sum with the remaining Wt!B22-B31 items below to
+% b.brandt.OEW (19,148 lbf); that cross-check applied only to the
+% superseded Wt!B16-B21 figures and is not expected to hold for this model
+% table.
+% "Brandt corrected" psf coefficients (upper row of Brandt's "Structural
+% Weight Models, average psf" table) -- Brandt's own per-component unit
+% weights, NOT the Raymer Table 15.2 fighter coefficients this framework's
+% WeightsL2 actually uses (wing=9.0, HT=4.0, VT=5.3, fus=4.8 lbf/ft^2, per
+% F16WeightsL2/WeightsL2.wing_unit_weight et al.). Fuselage and HT happen to
+% coincide (4.8=4.8, 4.0=4.0); wing and VT do not (7.0 vs 9.0, 6.0 vs 5.3).
+% Nacelles/Strakes have no Raymer Table 15.2 analog in this framework.
+b.brandt.rho_wing_model    = 7.0;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; Raymer Table 15.2 fighter wing = 9.0 lbf/ft^2 (differs)
+b.brandt.rho_fus_model     = 4.8;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; matches Raymer Table 15.2 fighter fuselage = 4.8 lbf/ft^2
+b.brandt.rho_pitch_cntrl_model = 4.0;  % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; matches Raymer Table 15.2 fighter HT = 4.0 lbf/ft^2
+b.brandt.rho_vert_model    = 6.0;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; Raymer Table 15.2 fighter VT = 5.3 lbf/ft^2 (differs)
+b.brandt.rho_nacelles_model = 4.5;  % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; no Raymer Table 15.2 analog
+b.brandt.rho_strakes_model = 4.5;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; no Raymer Table 15.2 analog
+b.brandt.W_wing        = 1852.09302;  % lbf  -- wing structure           [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 7.0 lbf/ft^2 coeff above, not Raymer Table 15.2's 9.0]
+b.brandt.W_fuselage    = 3506.0256;   % lbf  -- fuselage structure       [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.8 lbf/ft^2 coeff above]
+b.brandt.W_pitch_cntrl = 199.389002;  % lbf  -- horizontal tail/stabilator [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.0 lbf/ft^2 coeff above]
+b.brandt.W_vert        = 245.3380129; % lbf  -- vertical tail            [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 6.0 lbf/ft^2 coeff above, not Raymer Table 15.2's 5.3]
+b.brandt.W_nacelles    = 186.817478;  % lbf  -- engine nacelles          [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.5 lbf/ft^2 coeff above]
+b.brandt.W_strakes     = 90;          % lbf  -- LEX/strakes (not modeled in this framework) [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.5 lbf/ft^2 coeff above]
+b.brandt.W_engine      = 4730.23;   % lbf  -- bare/dry engine          [Brandt Wt!B22]
+b.brandt.W_gear        = 1066.818;  % lbf  -- landing gear             [Brandt Wt!B23]
+b.brandt.W_inlet_duct  = 728.5882;  % lbf  -- inlet duct               [Brandt Wt!B24]
+b.brandt.W_controls    = 472.4354;  % lbf  -- flight controls system   [Brandt Wt!B25]
+b.brandt.W_electrical  = 533.409;   % lbf  -- electrical system        [Brandt Wt!B26]
+b.brandt.W_hydraulics  = 367.1109;  % lbf  -- hydraulics system        [Brandt Wt!B27]
+b.brandt.W_ecs         = 360.8355;  % lbf  -- environmental control system [Brandt Wt!B28]
+b.brandt.W_other       = 2016.862;  % lbf  -- other/misc systems       [Brandt Wt!B29]
+b.brandt.W_avionics    = 2541.537;  % lbf  -- avionics                 [Brandt Wt!B30]
+b.brandt.W_armament    = 440;       % lbf  -- fixed armament (gun)     [Brandt Wt!B31]
+
 b.sizing.TOGW_target = 31377;  % lbf  [Brandt]
+% TODO (7/22/2026): Consider replacing with Brandt's "sizing" value (around
+% 29k lbf)
 b.sizing.TOGW_tol    = 2000;   % lbf  -- acceptable +-band
-b.sizing.OEW_frac    = b.brandt.OEW  / b.brandt.TOGW;   % approx 0.6367
+b.sizing.OEW_frac    = b.brandt.OEW  / b.brandt.TOGW;   % approx 0.6103
 b.sizing.Wf_frac     = b.brandt.W_fuel / b.brandt.TOGW; % approx 0.2006
 
 % =========================================================================
@@ -155,9 +215,14 @@ b.brandt.Mcrit       = 0.8727;   %       [Brandt L4]
 %   (wing/HT/VT/fuselage/duct) breakdown -- their ~80 ft^2 combined
 %   contribution is a known, documented gap when comparing component sums.
 %   Also note: Brandt's "exposed" HT/VT areas (B8=49.85, B10=40.89, the
-%   portion outside the fuselage) differ from this framework's S_exposed_HT
-%   /S_exposed_VT inputs (63.70/54.75, full T.O. reference planform area)
-%   -- a separate, pre-existing input-data discrepancy, not fixed here.
+%   portion outside the fuselage; same values as b.geom.S_exposed_ht/vt
+%   above) differ from the GEOMETRY discipline's own S_exposed_HT/S_exposed_VT
+%   inputs (F16GeomL2/F16GeomL3 properties, 63.70/54.75, full T.O. reference
+%   planform area) used for wetted-area (S_wet) computation -- a separate,
+%   pre-existing input-data discrepancy, not fixed here. (The WEIGHTS
+%   discipline's analogous S_ht/S_vt inputs, used in Raymer Table 15.2 /
+%   Eq. 15.1-15.3, DO use these correct exposed values -- see F16WeightsL2/
+%   F16WeightsL3 and b.geom.S_exposed_ht/vt above.)
 b.brandt.S_wet_wing     = 392.020;  % ft^2  [Brandt Geom!B14] "Exposed Wing Wetted Area"
 b.brandt.S_wet_HT       = 99.585;   % ft^2  [Brandt Geom!B16] "Exposed Pitch Trim Surface Wetted Area"
 b.brandt.S_wet_VT       = 81.689;   % ft^2  [Brandt Geom!B17] "Exposed Vertical Tail Wetted Area"
@@ -256,6 +321,20 @@ b.constraints.cruise.CD0            = 0.01700;   % Consts row 24 [Brandt Consts 
 b.constraints.cruise.K1             = 0.11603;   % Consts row 24
 b.constraints.cruise.K2             = -0.0066;   % Consts row 24
 
+% Full Cruise constraint-diagram row [Brandt F-16A.xls Consts sheet]: the
+% required T_SL/W_TO Brandt's own model produces at each of 21 W_TO/S sweep
+% points. Validation target for ThrustConstraint's Master-Equation assembly
+% (see tests/constraints/TestThrustConstraint.m testF16CruiseRequiredTWTable)
+% -- NOT an input to the equation itself. Same WS_psf sweep as
+% b.constraints.dash.WS_psf (Brandt's Consts sheet uses one shared W_TO/S
+% column for every condition row).
+b.constraints.cruise.WS_psf   = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.cruise.TW_Cruise = [1.29179, 0.98352, 0.80848, 0.69843, 0.62495, ...
+                                  0.57406, 0.53812, 0.51258, 0.49456, 0.48216, ...
+                                  0.47407, 0.46935, 0.46733, 0.46750, 0.46946, ...
+                                  0.47291, 0.47762, 0.48340, 0.49009, 0.49757, ...
+                                  0.50573];   % [Brandt Consts sheet, Cruise row]
+
 % [B] 1st combat turn (subsonic)  20,000 ft, M=0.87, n=4.5, AB  [Consts row 26]
 b.constraints.combat_sub.alt_ft         = 20000;
 b.constraints.combat_sub.mach           = 0.87;
@@ -271,6 +350,20 @@ b.constraints.combat_sub.CD0            = 0.01700;   % Consts row 26 [Brandt Con
 b.constraints.combat_sub.K1             = 0.11603;   % Consts row 26
 b.constraints.combat_sub.K2             = -0.0066;   % Consts row 26
 
+% Full Combat Turn 1 (subsonic) constraint-diagram row [Brandt F-16A.xls
+% Consts sheet, row 26]: the required T_SL/W_TO Brandt's own model produces
+% at each of 21 W_TO/S sweep points. Validation target for ThrustConstraint's
+% Master-Equation assembly (see tests/constraints/TestThrustConstraint.m
+% testF16CombatSubRequiredTWTable) -- NOT an input to the equation itself.
+% Same WS_psf sweep as b.constraints.dash.WS_psf (Brandt's Consts sheet uses
+% one shared W_TO/S column for every condition row).
+b.constraints.combat_sub.WS_psf      = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.combat_sub.TW_CombatSub = [0.750288, 0.621802, 0.561842, 0.535309, 0.527578, ...
+                                         0.531472, 0.543051, 0.559979, 0.580775, 0.604463, ...
+                                         0.630366, 0.658006, 0.687031, 0.717180, 0.748253, ...
+                                         0.780094, 0.812581, 0.845617, 0.879123, 0.913034, ...
+                                         0.947296];   % [Brandt Consts sheet, Cmbt Trn row 26]
+
 % [C] Max Mach / dash  36,000 ft, M=1.6, AB  [Consts row 23; Brandt "MxMach"]
 b.constraints.dash.alt_ft         = 36000;
 b.constraints.dash.mach           = 1.6;
@@ -285,6 +378,18 @@ b.constraints.dash.CD0            = 0.03933;   % Consts row 23 [Brandt Consts sh
 b.constraints.dash.K1             = 0.1251;    % Consts row 23
 b.constraints.dash.K2             = 0;         % Consts row 23
 
+% Full MxMach constraint-diagram row [Brandt F-16A.xls Consts sheet]: the
+% required T_SL/W_TO Brandt's own model produces at each of 21 W_TO/S sweep
+% points. Validation target for ThrustConstraint's Master-Equation assembly
+% (see tests/constraints/TestThrustConstraint.m testMasterEquationReproduces
+% BrandtWorksheet) -- NOT an input to the equation itself.
+b.constraints.dash.WS_psf    = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.dash.TW_MxMach = [2.899067, 2.149974, 1.709927, 1.420634, 1.216140, ...
+                                1.064066, 0.946659, 0.853367, 0.777526, 0.714722, ...
+                                0.661913, 0.619169, 0.578204, 0.544542, 0.515045, ...
+                                0.489014, 0.465897, 0.444524, 0.426730, 0.410032, ...
+                                0.394923];   % [Brandt Consts sheet, MxMach row]
+
 % [D] Max altitude  50,000 ft, M=0.87  [Consts row 25]
 b.constraints.max_alt.alt_ft         = 50000;
 b.constraints.max_alt.mach           = 0.87;
@@ -298,6 +403,20 @@ b.constraints.max_alt.alpha_mil_T_AB = 0.087582;  % AS25*(T_SL_dry/T_SL_AB)
 b.constraints.max_alt.CD0            = 0.01700;   % Consts row 25 [Brandt Consts sheet]
 b.constraints.max_alt.K1             = 0.11603;   % Consts row 25
 b.constraints.max_alt.K2             = -0.0066;   % Consts row 25
+
+% Full Max Alt constraint-diagram row [Brandt F-16A.xls Consts sheet]: the
+% required T_SL/W_TO Brandt's own model produces at each of 21 W_TO/S sweep
+% points. Validation target for ThrustConstraint's Master-Equation assembly
+% (see tests/constraints/TestThrustConstraint.m testF16MaxAltRequiredTWTable)
+% -- NOT an input to the equation itself. Same WS_psf sweep as
+% b.constraints.dash.WS_psf (Brandt's Consts sheet uses one shared W_TO/S
+% column for every condition row).
+b.constraints.max_alt.WS_psf    = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.max_alt.TW_MaxAlt = [0.727697, 0.591304, 0.523436, 0.488996, 0.473359, ...
+                                    0.469345, 0.473018, 0.482038, 0.494928, 0.510708, ...
+                                    0.528705, 0.548437, 0.569556, 0.591798, 0.614964, ...
+                                    0.638898, 0.663478, 0.688607, 0.714205, 0.740209, ...
+                                    0.766565];   % [Brandt Consts sheet, Max Alt row]
 
 % [E] 2nd combat turn (supersonic)  [Brandt F-16A.xls, Consts sheet, row 27]
 %   36,000 ft, M=1.4, n=1.4, 100% AB.
@@ -314,6 +433,21 @@ b.constraints.combat_sup.alpha_mil_T_AB = 0.225828; % AS27*(T_SL_dry/T_SL_AB) = 
 b.constraints.combat_sup.CD0            = 0.04063;  % Consts row 27 [Brandt Consts sheet]
 b.constraints.combat_sup.K1             = 0.12563;  % Consts row 27
 b.constraints.combat_sup.K2             = -0.00105; % Consts row 27 -- Brandt's model is not exactly 0 here despite M>1 (K2=0 supersonic is this framework's own linearized-theory assumption, not universal)
+
+% Full Combat Turn 2 (supersonic) constraint-diagram row [Brandt F-16A.xls
+% Consts sheet, row 27, "Cmbt Trn"]: the required T_SL/W_TO Brandt's own
+% model produces at each of 21 W_TO/S sweep points. Validation target for
+% ThrustConstraint's Master-Equation assembly (see
+% tests/constraints/TestThrustConstraint.m testF16CombatSupRequiredTWTable)
+% -- NOT an input to the equation itself. Same WS_psf sweep as
+% b.constraints.dash.WS_psf (Brandt's Consts sheet uses one shared W_TO/S
+% column for every condition row).
+b.constraints.combat_sup.WS_psf      = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.combat_sup.TW_CombatSup = [2.38427, 1.77264, 1.41439, 1.17976, 1.01465, ...
+                                         0.89252, 0.79881, 0.72487, 0.66525, 0.61631, ...
+                                         0.57557, 0.54124, 0.51204, 0.48700, 0.46537, ...
+                                         0.44658, 0.43018, 0.41582, 0.40318, 0.39205, ...
+                                         0.38221];   % [Brandt Consts sheet, Cmbt Trn row 27]
 
 % [F] Ps (specific excess power) condition  [Brandt F-16A.xls, Consts sheet, row 28]
 %   10,000 ft, M=0.87, n=1, 100% AB, Ps_req=500 ft/s.
@@ -333,6 +467,20 @@ b.constraints.ps.CD0            = 0.01700;  % Consts row 28 [Brandt Consts sheet
 b.constraints.ps.K1             = 0.11603;  % Consts row 28
 b.constraints.ps.K2             = -0.0066;  % Consts row 28
 
+% Full Ps (specific excess power) constraint-diagram row [Brandt F-16A.xls
+% Consts sheet, row 28]: the required T_SL/W_TO Brandt's own model produces
+% at each of 21 W_TO/S sweep points. Validation target for ThrustConstraint's
+% Master-Equation assembly (see tests/constraints/TestThrustConstraint.m
+% testF16PsRequiredTWTable) -- NOT an input to the equation itself. Same
+% WS_psf sweep as b.constraints.dash.WS_psf (Brandt's Consts sheet uses one
+% shared W_TO/S column for every condition row).
+b.constraints.ps.WS_psf = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.ps.TW_Ps  = [1.32434, 1.12632, 1.01023, 0.93411, 0.88048, ...
+                           0.84074, 0.81020, 0.78605, 0.76653, 0.75047, ...
+                           0.73705, 0.72571, 0.71603, 0.70769, 0.70046, ...
+                           0.69414, 0.68860, 0.68371, 0.67939, 0.67555, ...
+                           0.67213];   % [Brandt Consts sheet, Ps row 28]
+
 % [G] Takeoff ground roll  [Brandt F-16A.xls, Consts sheet, row 32]
 %   theta=theta_0=1, delta=delta_0=0.99976 -> M=0 (no ram-rise/impact-pressure
 %   terms); the small delta<1 offset is a sub-7-ft equivalent-altitude
@@ -349,6 +497,22 @@ b.constraints.takeoff.CD0     = 0.052;    % Consts row 32 -- takeoff flap/gear c
 b.constraints.takeoff.K1      = 0.11603;  % Consts row 32
 b.constraints.takeoff.K2      = -0.0066;  % Consts row 32
 
+% Full Takeoff constraint-diagram row [Brandt F-16A.xls Consts sheet, row
+% 32]: the required T_SL/W_TO Brandt's own (unsimplified) takeoff-ground-
+% roll model produces at each of 21 W_TO/S sweep points -- includes the
+% drag/rolling-friction term (temp_Casey takeoff_constraint.m term2) that
+% TakeoffConstraint.m's simplified form intentionally omits (see that
+% class's header), so this is a diagnostic/loose validation target for
+% tests/constraints/TestTakeoffConstraint.m, NOT an exact-match assertion.
+% Same WS_psf sweep as b.constraints.dash.WS_psf (Brandt's Consts sheet
+% uses one shared W_TO/S column for every condition row).
+b.constraints.takeoff.WS_psf     = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
+b.constraints.takeoff.TW_Takeoff = [0.13551, 0.16247, 0.18944, 0.21640, 0.24336, ...
+                                    0.27033, 0.29729, 0.32425, 0.35121, 0.37818, ...
+                                    0.40514, 0.43210, 0.45907, 0.48603, 0.51299, ...
+                                    0.53996, 0.56692, 0.59388, 0.62085, 0.64780, ...
+                                    0.67477];   % [Brandt Consts sheet, Takeoff row 32]
+
 % [H] Landing approach  [Brandt F-16A.xls, Consts sheet, row 33]
 %   Same theta/theta_0/delta/delta_0 as takeoff (M=0); CD0 higher still
 %   (0.062) from full flaps/gear/speedbrake landing configuration.
@@ -361,5 +525,15 @@ b.constraints.landing.delta_0 = 0.99976;  % Consts row 33
 b.constraints.landing.CD0     = 0.062;    % Consts row 33 -- landing flap/gear config
 b.constraints.landing.K1      = 0.11603;  % Consts row 33
 b.constraints.landing.K2      = -0.0066;  % Consts row 33
+
+% Landing wing-loading limit [Brandt F-16A.xls, Consts sheet, row 33]: the
+% single W_TO/S value Brandt's own landing ground-roll-with-braking
+% equation produces (mu=0.50, CLmax_land=1.4288, CD0=0.062, S_FR=4000 ft,
+% k_L=1.3, beta=1.0) -- reference/diagnostic target for
+% tests/constraints/TestLandingConstraint.m, not an exact-match
+% assertion (LandingConstraint.m uses aero.get_CLmax/drag_polar's clean-
+% config values, not Brandt's flapped CLmax_land/CD0 -- see that class's
+% header).
+b.constraints.landing.WS_land = 138.742;  % lbf/ft^2 [Brandt Consts row 33]
 
 end
