@@ -5,7 +5,7 @@ classdef Atmosphere < handle
      %   Detailed explanation goes here
 
      properties (SetAccess = immutable)
-          rho_sl = 27.45*10^(-4); % Density (Slugs/ft^3)
+          rho_sl = 23.769*10^(-4); % Density (Slugs/ft^3)
           t_sl = 518.67; % Temperature (Rankine)
           p_sl = 14.696*144; % Pressure (lb/ft^2)
           mu = 3.737*10^(-7); % Dynamic viscosity (lb*s/ft^2)
