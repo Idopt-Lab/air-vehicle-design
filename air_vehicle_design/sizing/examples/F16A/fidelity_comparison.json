@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-20",
+  "generated": "2026-07-22",
   "aircraft": "F-16A Block 10",
   "W_TO_lbf": 31377,
   "rows": [
@@ -16,25 +16,102 @@
     },
     {
       "parameter": "OEW [lbf]",
-      "Reference": "19981",
+      "Reference": "19148",
       "Source": "Brandt B12",
       "L1": "19110",
-      "L1_err": "-4.4%",
-      "L2": "16062",
-      "L2_err": "-19.6%",
-      "L3": "15724",
-      "L3_err": "-21.3%"
+      "L1_err": "-0.2%",
+      "L2": "16091",
+      "L2_err": "-16.0%",
+      "L3": "15818",
+      "L3_err": "-17.4%"
     },
     {
       "parameter": "We/W_TO [-]",
-      "Reference": "0.6368",
+      "Reference": "0.6103",
       "Source": "Brandt B12/B38",
       "L1": "0.6091",
-      "L1_err": "-4.4%",
-      "L2": "0.5119",
-      "L2_err": "-19.6%",
-      "L3": "0.5011",
-      "L3_err": "-21.3%"
+      "L1_err": "-0.2%",
+      "L2": "0.5128",
+      "L2_err": "-16.0%",
+      "L3": "0.5041",
+      "L3_err": "-17.4%"
+    },
+    {
+      "parameter": "Main wings [lbf]",
+      "Reference": "1852",
+      "Source": "Brandt Structural Wt Models (psf)",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "1766",
+      "L2_err": "-4.6%",
+      "L3": "2397",
+      "L3_err": "+29.4%"
+    },
+    {
+      "parameter": "Horizontal tail [lbf]",
+      "Reference": "199",
+      "Source": "Brandt Structural Wt Models (psf), Pitch Cntrl",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "199",
+      "L2_err": "+0.0%",
+      "L3": "196",
+      "L3_err": "-1.5%"
+    },
+    {
+      "parameter": "Vertical tail [lbf]",
+      "Reference": "245",
+      "Source": "Brandt Structural Wt Models (psf), Vert Surf",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "217",
+      "L2_err": "-11.7%",
+      "L3": "313",
+      "L3_err": "+27.6%"
+    },
+    {
+      "parameter": "Fuselage [lbf]",
+      "Reference": "3506",
+      "Source": "Brandt Structural Wt Models (psf)",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "3600",
+      "L2_err": "+2.7%",
+      "L3": "3674",
+      "L3_err": "+4.8%"
+    },
+    {
+      "parameter": "Landing gear [lbf]",
+      "Reference": "1067",
+      "Source": "Brandt Wt!B23",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "1035",
+      "L2_err": "-2.9%",
+      "L3": "1057",
+      "L3_err": "-0.9%"
+    },
+    {
+      "parameter": "Engine(s) installed [lbf]",
+      "Reference": "5646",
+      "Source": "Brandt Structural Wt Models Nacelle(s) + Wt!B22+B24 (Engine+Duct)",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "3939",
+      "L2_err": "-30.2%",
+      "L3": "3639",
+      "L3_err": "-35.5%"
+    },
+    {
+      "parameter": "All else empty [lbf]",
+      "Reference": "6822",
+      "Source": "Brandt Structural Wt Models Strakes + Wt!B25:B31 (Ctrl+Elec+Hyd+ECS+Other+Avionics+Armament)",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "5334",
+      "L2_err": "-21.8%",
+      "L3": "4541",
+      "L3_err": "-33.4%"
     },
     {
       "parameter": "[GEOMETRY]",
@@ -176,8 +253,8 @@
       "L1_err": "-60.0%",
       "L2": "0.0160",
       "L2_err": "-60.0%",
-      "L3": "0.0125",
-      "L3_err": "-68.8%"
+      "L3": "0.0286",
+      "L3_err": "-28.4%"
     },
     {
       "parameter": "CD0, M=2.0000 [-]",
@@ -187,8 +264,8 @@
       "L1_err": "-57.1%",
       "L2": "0.0160",
       "L2_err": "-57.1%",
-      "L3": "0.0112",
-      "L3_err": "-70.1%"
+      "L3": "0.0261",
+      "L3_err": "-30.0%"
     },
     {
       "parameter": "K1,  M=0.1000 [-]",
@@ -216,34 +293,34 @@
       "parameter": "K1,  M=1.0547 [-]",
       "Reference": "0.1277",
       "Source": "Brandt model",
-      "L1": "0.3808",
-      "L1_err": "+198.2%",
-      "L2": "0.3808",
-      "L2_err": "+198.2%",
-      "L3": "0.3808",
-      "L3_err": "+198.2%"
+      "L1": "0.1277",
+      "L1_err": "-0.0%",
+      "L2": "0.1277",
+      "L2_err": "-0.0%",
+      "L3": "0.1277",
+      "L3_err": "-0.0%"
     },
     {
       "parameter": "K1,  M=1.5000 [-]",
       "Reference": "0.2516",
       "Source": "Brandt model",
-      "L1": "0.2251",
-      "L1_err": "-10.5%",
-      "L2": "0.2251",
-      "L2_err": "-10.5%",
-      "L3": "0.2251",
-      "L3_err": "-10.5%"
+      "L1": "0.2516",
+      "L1_err": "+0.0%",
+      "L2": "0.2516",
+      "L2_err": "+0.0%",
+      "L3": "0.2516",
+      "L3_err": "+0.0%"
     },
     {
       "parameter": "K1,  M=2.0000 [-]",
       "Reference": "0.3670",
       "Source": "Brandt model",
-      "L1": "0.2119",
-      "L1_err": "-42.3%",
-      "L2": "0.2119",
-      "L2_err": "-42.3%",
-      "L3": "0.2119",
-      "L3_err": "-42.3%"
+      "L1": "0.3670",
+      "L1_err": "+0.0%",
+      "L2": "0.3670",
+      "L2_err": "+0.0%",
+      "L3": "0.3670",
+      "L3_err": "+0.0%"
     },
     {
       "parameter": "e_osw [-]",
@@ -253,8 +330,8 @@
       "L1_err": "-0.7%",
       "L2": "0.9086",
       "L2_err": "-0.7%",
-      "L3": "N/A",
-      "L3_err": " - "
+      "L3": "0.9086",
+      "L3_err": "-0.7%"
     },
     {
       "parameter": "CLmax clean [-]",
@@ -273,10 +350,10 @@
       "Source": "Brandt Aero!A15",
       "L1": "N/A",
       "L1_err": " - ",
-      "L2": "3.0132",
-      "L2_err": "-3.2%",
-      "L3": "N/A",
-      "L3_err": " - "
+      "L2": "2.9310",
+      "L2_err": "-5.8%",
+      "L3": "2.9310",
+      "L3_err": "-5.8%"
     },
     {
       "parameter": "CL_alpha, M=0.6 [/rad]",
@@ -284,9 +361,152 @@
       "Source": "Brandt Aero!A15",
       "L1": "N/A",
       "L1_err": " - ",
-      "L2": "3.2187",
-      "L2_err": "+3.4%",
-      "L3": "N/A",
+      "L2": "3.1387",
+      "L2_err": "+0.9%",
+      "L3": "3.1387",
+      "L3_err": "+0.9%"
+    },
+    {
+      "parameter": "[AERO — HIGH-LIFT DEVICES]",
+      "Reference": "---",
+      "Source": "---",
+      "L1": "---",
+      "L1_err": "---",
+      "L2": "---",
+      "L2_err": "---",
+      "L3": "---",
+      "L3_err": "---"
+    },
+    {
+      "parameter": "Delta_e_osw, TO [-]",
+      "Reference": "N/A",
+      "Source": "Roskam Table 3.6",
+      "L1": "-0.0500",
+      "L1_err": " - ",
+      "L2": "-0.0500",
+      "L2_err": " - ",
+      "L3": "-0.0500",
+      "L3_err": " - "
+    },
+    {
+      "parameter": "Delta_e_osw, L  [-]",
+      "Reference": "N/A",
+      "Source": "Roskam Table 3.6",
+      "L1": "-0.1000",
+      "L1_err": " - ",
+      "L2": "-0.1000",
+      "L2_err": " - ",
+      "L3": "-0.1000",
+      "L3_err": " - "
+    },
+    {
+      "parameter": "Delta_CD0, TO [-]",
+      "Reference": "N/A",
+      "Source": "(no Brandt ref)",
+      "L1": "0.0350",
+      "L1_err": " - ",
+      "L2": "0.0344",
+      "L2_err": " - ",
+      "L3": "0.0342",
+      "L3_err": " - "
+    },
+    {
+      "parameter": "Delta_CD0, L  [-]",
+      "Reference": "N/A",
+      "Source": "(no Brandt ref)",
+      "L1": "0.0850",
+      "L1_err": " - ",
+      "L2": "0.0488",
+      "L2_err": " - ",
+      "L3": "0.0486",
+      "L3_err": " - "
+    },
+    {
+      "parameter": "CD0, TO total [-]",
+      "Reference": "0.0520",
+      "Source": "Brandt Consts row 32",
+      "L1": "0.0510",
+      "L1_err": "-1.9%",
+      "L2": "0.0504",
+      "L2_err": "-3.1%",
+      "L3": "0.0494",
+      "L3_err": "-5.0%"
+    },
+    {
+      "parameter": "CD0, L  total [-]",
+      "Reference": "0.0620",
+      "Source": "Brandt Consts row 33",
+      "L1": "0.1010",
+      "L1_err": "+62.9%",
+      "L2": "0.0648",
+      "L2_err": "+4.5%",
+      "L3": "0.0638",
+      "L3_err": "+2.9%"
+    },
+    {
+      "parameter": "Delta_CLmax, TO [-]",
+      "Reference": "0.2916",
+      "Source": "Brandt L9-L8",
+      "L1": "0.2000",
+      "L1_err": "-31.4%",
+      "L2": "0.3105",
+      "L2_err": "+6.5%",
+      "L3": "0.3351",
+      "L3_err": "+14.9%"
+    },
+    {
+      "parameter": "Delta_CLmax, L  [-]",
+      "Reference": "0.4419",
+      "Source": "Brandt L10-L8",
+      "L1": "0.6000",
+      "L1_err": "+35.8%",
+      "L2": "0.4140",
+      "L2_err": "-6.3%",
+      "L3": "0.4469",
+      "L3_err": "+1.1%"
+    },
+    {
+      "parameter": "CLmax, TO total [-]",
+      "Reference": "1.2785",
+      "Source": "Brandt L9",
+      "L1": "1.1000",
+      "L1_err": "-14.0%",
+      "L2": "1.1730",
+      "L2_err": "-8.2%",
+      "L3": "1.2351",
+      "L3_err": "-3.4%"
+    },
+    {
+      "parameter": "CLmax, L  total [-]",
+      "Reference": "1.4288",
+      "Source": "Brandt L10",
+      "L1": "1.5000",
+      "L1_err": "+5.0%",
+      "L2": "1.2765",
+      "L2_err": "-10.7%",
+      "L3": "1.3469",
+      "L3_err": "-5.7%"
+    },
+    {
+      "parameter": "Delta_CDi, TO [-]",
+      "Reference": "N/A",
+      "Source": "(no Brandt ref)",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "0.0216",
+      "L2_err": " - ",
+      "L3": "0.0216",
+      "L3_err": " - "
+    },
+    {
+      "parameter": "Delta_CDi, L  [-]",
+      "Reference": "N/A",
+      "Source": "(no Brandt ref)",
+      "L1": "N/A",
+      "L1_err": " - ",
+      "L2": "0.0383",
+      "L2_err": " - ",
+      "L3": "0.0385",
       "L3_err": " - "
     },
     {
@@ -308,19 +528,19 @@
       "L1_err": "-65.3%",
       "L2": "0.0160",
       "L2_err": "-65.3%",
-      "L3": "0.0133",
-      "L3_err": "-71.2%"
+      "L3": "0.0291",
+      "L3_err": "-36.8%"
     },
     {
       "parameter": "K1,  M=1.60 [-]",
       "Reference": "0.3400",
       "Source": "Brandt actual",
-      "L1": "0.2210",
-      "L1_err": "-35.0%",
-      "L2": "0.2210",
-      "L2_err": "-35.0%",
-      "L3": "0.2210",
-      "L3_err": "-35.0%"
+      "L1": "0.2760",
+      "L1_err": "-18.8%",
+      "L2": "0.2760",
+      "L2_err": "-18.8%",
+      "L3": "0.2760",
+      "L3_err": "-18.8%"
     },
     {
       "parameter": "[AERO — CONSTRAINT COND.]",
@@ -361,10 +581,10 @@
       "Source": "Brandt Consts",
       "L1": "-0.0000",
       "L1_err": "-100.0%",
-      "L2": "-0.0000",
-      "L2_err": "-100.0%",
-      "L3": "-0.0000",
-      "L3_err": "-100.0%"
+      "L2": "-0.0073",
+      "L2_err": "+11.3%",
+      "L3": "-0.0071",
+      "L3_err": "+7.3%"
     },
     {
       "parameter": "CD0, combat_sub  alt= 20000 M=0.87 [-]",
@@ -394,10 +614,10 @@
       "Source": "Brandt Consts",
       "L1": "-0.0000",
       "L1_err": "-100.0%",
-      "L2": "-0.0000",
-      "L2_err": "-100.0%",
-      "L3": "-0.0000",
-      "L3_err": "-100.0%"
+      "L2": "-0.0073",
+      "L2_err": "+11.3%",
+      "L3": "-0.0071",
+      "L3_err": "+7.3%"
     },
     {
       "parameter": "CD0, dash        alt= 36000 M=1.60 [-]",
@@ -407,19 +627,19 @@
       "L1_err": "-59.3%",
       "L2": "0.0160",
       "L2_err": "-59.3%",
-      "L3": "0.0133",
-      "L3_err": "-66.2%"
+      "L3": "0.0291",
+      "L3_err": "-25.9%"
     },
     {
       "parameter": "K1,  dash        alt= 36000 M=1.60 [-]",
       "Reference": "0.1251",
       "Source": "Brandt Consts",
-      "L1": "0.2210",
-      "L1_err": "+76.7%",
-      "L2": "0.2210",
-      "L2_err": "+76.7%",
-      "L3": "0.2210",
-      "L3_err": "+76.7%"
+      "L1": "0.2760",
+      "L1_err": "+120.6%",
+      "L2": "0.2760",
+      "L2_err": "+120.6%",
+      "L3": "0.2760",
+      "L3_err": "+120.6%"
     },
     {
       "parameter": "K2,  dash        alt= 36000 M=1.60 [-]",
@@ -460,10 +680,10 @@
       "Source": "Brandt Consts",
       "L1": "-0.0000",
       "L1_err": "-100.0%",
-      "L2": "-0.0000",
-      "L2_err": "-100.0%",
-      "L3": "-0.0000",
-      "L3_err": "-100.0%"
+      "L2": "-0.0073",
+      "L2_err": "+11.3%",
+      "L3": "-0.0071",
+      "L3_err": "+7.3%"
     },
     {
       "parameter": "CD0, combat_sup  alt= 36000 M=1.40 [-]",
@@ -473,19 +693,19 @@
       "L1_err": "-60.6%",
       "L2": "0.0160",
       "L2_err": "-60.6%",
-      "L3": "0.0139",
-      "L3_err": "-65.9%"
+      "L3": "0.0303",
+      "L3_err": "-25.4%"
     },
     {
       "parameter": "K1,  combat_sup  alt= 36000 M=1.40 [-]",
       "Reference": "0.1256",
       "Source": "Brandt Consts",
-      "L1": "0.2308",
-      "L1_err": "+83.7%",
-      "L2": "0.2308",
-      "L2_err": "+83.7%",
-      "L3": "0.2308",
-      "L3_err": "+83.7%"
+      "L1": "0.2261",
+      "L1_err": "+80.0%",
+      "L2": "0.2261",
+      "L2_err": "+80.0%",
+      "L3": "0.2261",
+      "L3_err": "+80.0%"
     },
     {
       "parameter": "K2,  combat_sup  alt= 36000 M=1.40 [-]",
@@ -526,10 +746,10 @@
       "Source": "Brandt Consts",
       "L1": "-0.0000",
       "L1_err": "-100.0%",
-      "L2": "-0.0000",
-      "L2_err": "-100.0%",
-      "L3": "-0.0000",
-      "L3_err": "-100.0%"
+      "L2": "-0.0073",
+      "L2_err": "+11.3%",
+      "L3": "-0.0071",
+      "L3_err": "+7.3%"
     },
     {
       "parameter": "[PROPULSION]",

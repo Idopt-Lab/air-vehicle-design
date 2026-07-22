@@ -55,8 +55,11 @@ classdef F16GeomL3 < GeometryModelL3
         S_wet_HT       = 0
         QC_sweep_HT    = 37        % deg   [derived]
         lambda_HT      = 0.390     % —     [TO Fig. 1-2]
-        b_HT           = 17.5      % ft    full span  [estimated; TO cross-sections]
-        AR_HT          = 4.81      % —     [b^2/S = 306.25/63.70]
+        b_HT           = 18.5      % ft    full span = 18 ft 6 in  [USAF 3-view diagram, "18 FT 6 IN"
+                                    %       span callout; F16Baseline b.geom.b_ht]
+        AR_HT          = 4.81      % —     [b^2/S = 306.25/63.70, using the prior 17.5 ft span
+                                    %       estimate -- NOT reconciled with the updated b_HT above;
+                                    %       same for c_root_HT/c_tip_HT below]
         LE_sweep_HT    = 40        % deg   [estimated; TO Sec I]
         TE_sweep_HT    = 25        % deg   [derived]
         c_root_HT      = 5.24      % ft    [2*S/(b*(1+λ))]
