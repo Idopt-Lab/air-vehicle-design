@@ -38,7 +38,7 @@ classdef F16AeroL3 < AeroModelL3
         %             [  wing    HT      VT      fus     duct  ]
         l_ref_comp  = [12.0,   5.8,    6.5,   47.5,   14.0  ]  % ft  — MAC or length
         D_comp      = [ 0,     0,      0,      5.0,    3.15  ]  % ft  — 0 for surfaces
-        S_wet_comp  = [397,   130,   111,    644,    139   ]  % ft^2 [F16GeomL3 outputs]
+        S_wet_comp  = [397,   130,   111,    644,    139   ]  % ft^2 [hand-copied estimate, not live-read from F16GeomL2 -- see docs/geometry_parameter_usage.md]
         tc_comp     = [ 0.04,  0.047,  0.042,  0,      0     ]  % —
         x_c_max_comp= [ 0.40,  0.35,   0.35,   0,      0     ]  % —
         Lambda_m_comp=[35,    35,     42,     0,      0     ]  % deg

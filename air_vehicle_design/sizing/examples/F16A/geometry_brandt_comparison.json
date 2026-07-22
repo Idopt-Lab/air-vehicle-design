@@ -1,0 +1,296 @@
+{
+  "generated": "2026-07-22",
+  "aircraft": "F-16A Block 10",
+  "W_TO_lbf": 31377,
+  "source": "VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json",
+  "rows": [
+    {
+      "parameter": "[WING / HT / VT WETTED AREA — TWO FORMULA OPTIONS EACH]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Wing S_wet, Roskam Eq.12.1 [OFFICIAL] [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "396.3767",
+      "Brandt": "392.0204",
+      "PctDiff": "+1.11%",
+      "Source": "Brandt Geom!B14",
+      "Notes": "get_S_wet_wing()"
+    },
+    {
+      "parameter": "Wing S_wet, Brandt uniform-tc [alt]  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "392.0204",
+      "Brandt": "392.0204",
+      "PctDiff": "+0.00%",
+      "Source": "Brandt Geom!B14",
+      "Notes": "compute_wet_planform() -- same formula Brandt uses, near-exact match expected"
+    },
+    {
+      "parameter": "HT   S_wet, Roskam Eq.12.1 [OFFICIAL] [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "101.3879",
+      "Brandt": "99.5848",
+      "PctDiff": "+1.81%",
+      "Source": "Brandt Geom!B16",
+      "Notes": "get_S_wet_HT()"
+    },
+    {
+      "parameter": "HT   S_wet, Brandt uniform-tc [alt]  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "99.5848",
+      "Brandt": "99.5848",
+      "PctDiff": "+0.00%",
+      "Source": "Brandt Geom!B16",
+      "Notes": "compute_wet_planform() -- same formula Brandt uses, near-exact match expected"
+    },
+    {
+      "parameter": "VT   S_wet, Roskam Eq.12.1 [OFFICIAL] [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "83.1398",
+      "Brandt": "81.6894",
+      "PctDiff": "+1.78%",
+      "Source": "Brandt Geom!B17",
+      "Notes": "get_S_wet_VT()"
+    },
+    {
+      "parameter": "VT   S_wet, Brandt uniform-tc [alt]  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "81.6894",
+      "Brandt": "81.6894",
+      "PctDiff": "-0.00%",
+      "Source": "Brandt Geom!B17",
+      "Notes": "compute_wet_planform() -- same formula Brandt uses, near-exact match expected"
+    },
+    {
+      "parameter": "Strake S_wet -- NOT MODELED           [ft^2]",
+      "Fidelity": "N/A",
+      "Computed": "N/A",
+      "Brandt": "39.9560",
+      "PctDiff": " - ",
+      "Source": "Brandt Geom!B15",
+      "Notes": "No strake component exists in GeomL2's get_S_wet aggregation"
+    },
+    {
+      "parameter": "[FUSELAGE WETTED AREA — THREE FORMULA OPTIONS]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Fuselage S_wet, Roskam Eq.12.3 [OFFICIAL] [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "730.3023",
+      "Brandt": "676.3289",
+      "PctDiff": "+7.98%",
+      "Source": "Brandt Geom!D23",
+      "Notes": "get_S_wet_fuselage() -- equivalent-diameter cylinder model; compared vs Brandt's high-fi (closest formula family)"
+    },
+    {
+      "parameter": "Fuselage S_wet, Brandt low-fi [alt]   [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "730.4203",
+      "Brandt": "730.4220",
+      "PctDiff": "-0.00%",
+      "Source": "Brandt Geom!B3",
+      "Notes": "compute_s_wet_fus_brandt_lowfi() -- reproduces Brandt's own \"1/3-cone+2/3-cyl\" formula"
+    },
+    {
+      "parameter": "Fuselage S_wet, Brandt high-fi [alt]  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "677.9260",
+      "Brandt": "676.3289",
+      "PctDiff": "+0.24%",
+      "Source": "Brandt Geom!D23",
+      "Notes": "compute_s_wet_fus_brandt_highfi() -- reproduces Brandt's own frame-integration formula"
+    },
+    {
+      "parameter": "[DUCT / NACELLE]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Duct S_wet (inlet-to-exit frustum)     [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "155.5664",
+      "Brandt": "41.5150",
+      "PctDiff": "+274.72%",
+      "Source": "Brandt Geom!B4 (nacelle)",
+      "Notes": "DIFFERENT quantity: exposed inlet-to-exit frustum vs Brandt's full-cylinder nacelle -- large %Diff expected, not a bug"
+    },
+    {
+      "parameter": "Nacelle diameter D=sqrt(T_AB_SLS/1900) [ft]",
+      "Fidelity": "L2",
+      "Computed": "3.537022",
+      "Brandt": "3.537000",
+      "PctDiff": "+0.00%",
+      "Source": "Brandt Engn(s) tab",
+      "Notes": "Same formula as Brandt -- should match near-exactly (positive control)"
+    },
+    {
+      "parameter": "[EXPOSED LIFTING-SURFACE AREAS]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Wing exposed area  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "196.2261",
+      "Brandt": "196.2261",
+      "PctDiff": "-0.00%",
+      "Source": "Brandt Geom!7",
+      "Notes": "compute_S_exposed_horizontal() via F16GeomL2 constructor"
+    },
+    {
+      "parameter": "HT   exposed area  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "49.8473",
+      "Brandt": "49.8473",
+      "PctDiff": "-0.00%",
+      "Source": "Brandt Geom!8",
+      "Notes": "compute_S_exposed_horizontal() via F16GeomL2 constructor"
+    },
+    {
+      "parameter": "VT   exposed area  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "40.8897",
+      "Brandt": "40.8897",
+      "PctDiff": "-0.00%",
+      "Source": "Brandt Geom!10",
+      "Notes": "compute_S_exposed_vertical() via F16GeomL2 constructor"
+    },
+    {
+      "parameter": "Strake exposed area -- NOT MODELED [ft^2]",
+      "Fidelity": "N/A",
+      "Computed": "N/A",
+      "Brandt": "20.0000",
+      "PctDiff": " - ",
+      "Source": "Brandt Geom!9",
+      "Notes": "No strake component exists in this framework"
+    },
+    {
+      "parameter": "[SWEEP-ANGLE CONVERSION — HEADLINE BUG-FIX CHECK]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Wing QC (25%c) sweep [deg]",
+      "Fidelity": "L2",
+      "Computed": "32.1832",
+      "Brandt": "28.1530",
+      "PctDiff": "+14.32%",
+      "Source": "readme_geom.md Table 3",
+      "Notes": "HEADLINE: was hardcoded 37 deg (bug), now computed ~32.2 deg via convert_sweep. No single Brandt cell for \"wing QC sweep\" exists in the comparison JSON; 28.153 deg is the closest available figure but reflects Brandt's EXPOSED-PANEL-based sweep definition, not our full-planform convert_sweep definition -- the ~4 deg gap is an expected, informative definitional difference (per IO's handoff notes), NOT a bug to chase down in this pass."
+    },
+    {
+      "parameter": "[TOTALS]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "S_wet total, L1 statistical regression [ft^2]",
+      "Fidelity": "L1",
+      "Computed": "1763.02",
+      "Brandt": "1371.09",
+      "PctDiff": "+28.58%",
+      "Source": "Brandt Main!L3 (raw)",
+      "Notes": "Roskam Vol.I Table 3.5 regression -- coarse by design"
+    },
+    {
+      "parameter": "S_wet total, L2 OFFICIAL formula set    [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "1466.77",
+      "Brandt": "1331.13",
+      "PctDiff": "+10.19%",
+      "Source": "readme_geom.md Sec 6.2 (corrected)",
+      "Notes": "wing+HT+VT (Roskam Eq.12.1) + fuselage (Roskam Eq.12.3) + duct"
+    },
+    {
+      "parameter": "S_wet total, L2 OFFICIAL vs RAW BUGGY  [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "1466.77",
+      "Brandt": "1371.09",
+      "PctDiff": "+6.98%",
+      "Source": "Brandt Geom!B19 (raw, double-counts strake)",
+      "Notes": "Brandt's own raw total double-counts the strake term (documented Excel bug, readme_geom.md Sec 6.2) -- corrected_total row above is the intended comparison target"
+    },
+    {
+      "parameter": "S_wet total, Brandt-style formula set   [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "1406.79",
+      "Brandt": "1331.13",
+      "PctDiff": "+5.68%",
+      "Source": "readme_geom.md Sec 6.2 (corrected)",
+      "Notes": "wing+HT+VT (Brandt uniform-tc) + fuselage (Brandt high-fi) + duct -- closer to Brandt's own methodology"
+    },
+    {
+      "parameter": "[OTHER GEOMETRY OUTPUTS]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Fuselage length L_fus [ft]",
+      "Fidelity": "L2",
+      "Computed": "46.5000",
+      "Brandt": "N/A",
+      "PctDiff": " - ",
+      "Source": "geometry_L2.json (Brandt Main!B32)",
+      "Notes": "Passthrough of the same Brandt Main-tab input the constructor reads -- reported for completeness, not an independent check"
+    },
+    {
+      "parameter": "L_fus vs Brandt TOTAL aircraft length [ft]",
+      "Fidelity": "L2",
+      "Computed": "46.5000",
+      "Brandt": "48.3039",
+      "PctDiff": "-3.73%",
+      "Source": "Brandt Geom!B21",
+      "Notes": "DIFFERENT quantity: fuselage length only (46.5 ft) vs Brandt's total aircraft length incl. nose probe/pitot (48.30 ft) -- the ~3.7% gap is expected, not a bug"
+    },
+    {
+      "parameter": "L1 fuselage length regression L_fus [ft]",
+      "Fidelity": "L1",
+      "Computed": "52.7426",
+      "Brandt": "46.5000",
+      "PctDiff": "+13.42%",
+      "Source": "F16GeomL2.L_fus (Brandt)",
+      "Notes": "Raymer 6th ed. Table 6.3 statistical regression vs the Brandt-sourced L2 spec value"
+    },
+    {
+      "parameter": "Max cross-section area Amax -- NOT MODELED [ft^2]",
+      "Fidelity": "N/A",
+      "Computed": "N/A",
+      "Brandt": "25.1106",
+      "PctDiff": " - ",
+      "Source": "Brandt Geom!B20/H47",
+      "Notes": "No max-cross-section-area computation exists anywhere in GeomL1/GeomL2"
+    }
+  ]
+}

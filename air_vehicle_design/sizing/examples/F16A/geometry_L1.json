@@ -1,0 +1,10 @@
+{
+  "_comment": "F-16A Block 10/15 Level-1 geometry inputs. L1 is a pure statistical/regression fidelity level: only classification strings are needed here, no numeric F-16 dimensions (those first appear at L2).",
+  "_source": "src/disciplines/geometry/GeomL1.md (Scribe doc, Phase 1 sign-off); examples/F16A/F16GeomL1.md (Scribe doc, Phase 1 sign-off)",
+
+  "aircraft_category": "jet_fighter",
+  "_note_aircraft_category": "Existing F16GeomL1.m hardcoded literal — an aircraft-type classification string, not a numeric Brandt/Raymer/Roskam cell value. Selects the 'jet_fighter' row of Roskam Vol. I Eq. 3.22/Table 3.5 (S_wet regression, GeomL1.compute_s_wet_regression/lookup_swet) and the 'jet_fighter' row of Raymer 6th ed. Table 6.3 (L_fus regression, GeomL1.compute_l_fus_regression/lookup_lfus). Per GeomL1.md's Task-2 section, it is also intended to select the 'Jet fighter (dogfighter)' row of the new Raymer 7th ed. Table 4.1 AR_eq lookup once implemented — that lookup must error explicitly for any category other than the dogfighter row, per GeomL1.md's scope restriction.",
+
+  "M_max": 2.0,
+  "_note_M_max": "Design maximum Mach number (dimensionless). Source: VnV/BrandtF16A/GroundTruth/f16a_geometry.json field aircraft.Mmax (Brandt-F16-A.xls Main tab, top-level aircraft block). Drives the planned Raymer 7th ed. Table 4.1 'Jet fighter (dogfighter)' regression AR_eq = a*M_max^C (a=5.416, C=-0.6222), documented in src/disciplines/geometry/GeomL1.md Task 2 — not yet implemented in GeomL1.m as of this phase."
+}
