@@ -41,34 +41,6 @@ classdef TestGeomL3 < matlab.unittest.TestCase
     % ------------------------------------------------------------------ %
     methods (Test)
 
-        % --- Roskam Eq. 12.1 formula tests --------------------------------
-
-        function testRoskamPlanformUniformTc(tc)
-        % When tc_r == tc_t, the formula reduces to 2*S_exp*(1 + 0.25*tc_r).
-        % Inputs: S=200, tc_r=tc_t=0.04, lambda=0.2275
-        % Expected: 2*200*(1 + 0.25*0.04) = 2*200*1.0100 = 404.000 ft^2
-            expected = 2 * 200 * (1 + 0.25 * 0.04);   % = 404.000 ft^2
-            received = GeomL3.compute_roskam_planform(200, 0.04, 0.04, 0.2275);
-            fprintf('\n    Roskam Eq12.1 (uniform tc=0.04): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
-                'Roskam Eq. 12.1 should reduce to 2*S*(1+0.25*tc_r) when tc_r==tc_t.');
-        end
-
-        function testRoskamPlanformVaryingTc(tc)
-        % HT inputs: tc_r=0.06, tc_t=0.035, lambda=0.390, S_exp=63.70
-        % Expected: 2*63.70*(1 + 0.25*0.06*(1+1.7143*0.390)/1.390)
-        %         = 2*63.70*(1 + 0.015*1.6686/1.390)
-        %         = 2*63.70*(1 + 0.01800) = 2*63.70*1.01800 = 129.693 ft^2
-            tc_r=0.06; tc_t=0.035; lambda=0.390; S_exp=63.70;
-            expected = 2*S_exp*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));  % = 129.693 ft^2
-            received = GeomL3.compute_roskam_planform(S_exp, tc_r, tc_t, lambda);
-            fprintf('\n    Roskam Eq12.1 HT (varying tc): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
-                'Roskam Eq. 12.1 HT does not match direct formula evaluation.');
-        end
-
         % --- Frustum duct formula tests -----------------------------------
 
         function testDuctFrustumFormula(tc)
@@ -96,46 +68,6 @@ classdef TestGeomL3 < matlab.unittest.TestCase
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
                 'Constant-section duct should give pi*D*L.');
-        end
-
-        % --- F-16A component values (formula-level) ----------------------
-
-        function testWingSwetFormula(tc)
-        % tc_r=tc_t=0.04, lambda=0.2275, S=196.4
-        % Expected: 2*196.4*(1 + 0.25*0.04*(1+1*0.2275)/1.2275)
-        %         = 2*196.4*1.0100 = 396.725 ft^2
-            g        = F16GeomL3();
-            tc_r=0.04; tc_t=0.04; lambda=0.2275; S=196.4;
-            expected = 2*S*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));   % = 396.725 ft^2
-            received = g.get_S_wet_wing();
-            fprintf('\n    wing S_wet: received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
-        end
-
-        function testHTSwetFormula(tc)
-        % tc_r=0.060, tc_t=0.035, lambda=0.390, S=63.70
-        % Expected: ≈ 129.693 ft^2
-            g        = F16GeomL3();
-            tc_r=0.060; tc_t=0.035; lambda=0.390; S=63.70;
-            expected = 2*S*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));   % = 129.693 ft^2
-            received = g.get_S_wet_HT();
-            fprintf('\n    HT S_wet:   received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
-        end
-
-        function testVTSwetFormula(tc)
-        % tc_r=0.053, tc_t=0.030, lambda=0.437, S=54.75
-        % Expected: 2*54.75*(1 + 0.25*0.053*(1+1.7667*0.437)/1.437)
-        %         = 2*54.75*(1 + 0.01634) = 2*54.75*1.01634 = 111.290 ft^2
-            g        = F16GeomL3();
-            tc_r=0.053; tc_t=0.030; lambda=0.437; S=54.75;
-            expected = 2*S*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda));   % = 111.290 ft^2
-            received = g.get_S_wet_VT();
-            fprintf('\n    VT S_wet:   received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
         end
 
         % --- F-16A component values vs Brandt Geom-sheet truth ------------

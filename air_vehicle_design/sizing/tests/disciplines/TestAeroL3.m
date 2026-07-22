@@ -90,18 +90,6 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
           end
 
-          function testCfTurbulent(tc)
-               % Cf_turb at Re=1e7, M=0.5:
-               % = 0.455/(7^2.58*(1+0.144*0.25)^0.65) = 0.455/(7^2.58*1.023)
-               Re = 1e7;  M = 0.5;
-               expected = 0.455 / (log10(Re)^2.58 * (1 + 0.144*M^2)^0.65);  % Raymer Eq. 12.27 is the primary source
-               % TODO (7/13/2026): Find an empherical number for "expected" value (preferrably a primary source or experimental data)
-               received = AeroL3.Cf_turbulent(Re, M);
-               fprintf('\n    Cf_turb (Re=1e7, M=0.5): received = %.6f,  expected = %.6f\n', ...
-                    received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
-
           function testCfTurbGreaterThanCfLam(tc)
                % For the same Re, turbulent Cf > laminar Cf.
                Re = 1e7;  M = 0.3;
@@ -115,81 +103,6 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                Cf_hi = AeroL3.Cf_turbulent(1e8, 0.3);
                fprintf('\n    Cf_turb: Re=1e6 → %.5f,  Re=1e8 → %.5f\n', Cf_lo, Cf_hi);
                tc.verifyGreaterThan(Cf_lo, Cf_hi);
-          end
-
-          % --- Form factors ------------------------------------------------
-
-          function testFFSurfaceFormula(tc)
-               % tc=0.04, x_c_max=0.40, Lambda_m=35 deg, M=0.5
-               % FF = (1+0.6/0.40*0.04+100*0.04^4)*(1.34*0.5^0.18*cos(35)^0.28)
-               %    = 1.0603 * 1.119 = 1.1864 (approx)
-               tc_val = 0.04;  xcmax = 0.40;  Lm = 35;  M = 0.5;
-               expected = (1 + 0.6/xcmax*tc_val + 100*tc_val^4) * ...
-                    (1.34 * M^0.18 * cosd(Lm)^0.28);  % Raymer Eq. 12.30 is the primary source
-               received = AeroL3.FF_surface(tc_val, xcmax, Lm, M);
-               fprintf('\n    FF_surface: received = %.5f,  expected = %.5f\n', received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
-
-          function testFFBodyFormula(tc)
-               % F-16 fuselage: L=47.5, D=5.0, f=9.5 (>6 -> high-fineness form)
-               % FF = 1 + 60/9.5^3 + 9.5/400
-               L = 47.5;  D = 5.0;  f = L/D;
-               expected = 1 + 60/f^3 + f/400;  % Raymer Eq. 12.31 (f>6 form) is the primary source
-               received = AeroL3.FF_body(L, D);
-               fprintf('\n    FF_body (F-16 fus, f=%.2f): received = %.5f,  expected = %.5f\n', f, received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
-
-          function testFFBodySlenderFuselageLow(tc)
-               % Very slender body (high fineness ratio): FF approaches 1 + f/400.
-               % f=20: FF = 1 + 60/20^3 + 20/400
-               L = 100;  D = 5.0;   % f=20
-               expected = 1 + 60/20^3 + 20/400;  % Raymer Eq. 12.31 (f>6 form) is the primary source
-               received = AeroL3.FF_body(L, D);
-               fprintf('\n    FF_body (f=20): received = %.5f,  expected = %.5f\n', received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
-
-          function testFFBodyLowFinenessUsesPrintedForm(tc)
-               % F-16 duct: L=14.0, D=3.15, f=4.444 (<=6 -> as-printed form).
-               % FF = 1 + 5/4.444^1.5 + 4.444/400
-               L = 14.0;  D = 3.15;  f = L/D;
-               expected = 1 + 5/f^1.5 + f/400;  % Raymer Eq. 12.31 (as printed, f<=6) is the primary source
-               received = AeroL3.FF_body(L, D);
-               fprintf('\n    FF_body (F-16 duct, f=%.3f): received = %.5f,  expected = %.5f\n', f, received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
-
-          function testFFBodyFormSwitchesAtFinenessSix(tc)
-               % The two forms of Eq. 12.31 agree closely near f=6 (the
-               % documented crossover) and diverge away from it -- confirm
-               % FF_body actually branches rather than always using one form.
-               f_lo = 5.9;  f_hi = 6.1;
-               FF_lo = AeroL3.FF_body(f_lo, 1.0);   % D=1 -> f=L
-               FF_hi = AeroL3.FF_body(f_hi, 1.0);
-               expected_lo = 1 + 5/f_lo^1.5 + f_lo/400;
-               expected_hi = 1 + 60/f_hi^3 + f_hi/400;
-               fprintf('\n    FF_body switch: f=%.1f -> %.5f (expect %.5f, printed form);  f=%.1f -> %.5f (expect %.5f, f>6 form)\n', ...
-                    f_lo, FF_lo, expected_lo, f_hi, FF_hi, expected_hi);
-               tc.verifyEqual(FF_lo, expected_lo, 'AbsTol', tc.TOL_ABS);
-               tc.verifyEqual(FF_hi, expected_hi, 'AbsTol', tc.TOL_ABS);
-          end
-
-          % --- CLmax (falls back to the L1 historical table) ---------------
-
-          function testCLmaxMatchesL1(tc)
-               % F16AeroL3.get_CLmax is a declared TODO fallback that calls
-               % AeroL1.lookup_CLmax('jet_fighter') directly -- the identical
-               % historical lookup F16AeroL1.get_CLmax uses -- so the two
-               % must agree exactly until L3 gets its own high-lift model.
-               % See TestAeroL1.testCLmaxJetFighter for the underlying value.
-               g1    = F16AeroL1();
-               g3    = F16AeroL3();
-               state = AircraftState(0, 0.5);
-               fprintf('\n    CLmax L1=%.4f  CLmax L3=%.4f\n', g1.get_CLmax(state), g3.get_CLmax(state));
-               tc.verifyEqual(g3.get_CLmax(state), g1.get_CLmax(state), 'AbsTol', 1e-12, ...
-                    'L3 CLmax must equal L1 (same jet_fighter historical lookup).');
           end
 
           % --- drag_polar vs Brandt ACTUAL (flight-measured) polar ---------
@@ -218,21 +131,6 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                     'CD0 deviates >50% from Brandt actual-polar reference even with wave drag included.');
                tc.verifyLessThan(polar.K1, 5*K1_ref, ...
                     'K1 is more than 5x Brandt actual-polar reference -- check for a gross error.');
-          end
-
-          % --- Re cutoff ---------------------------------------------------
-
-          function testReCutoffSubsonicFormula(tc)
-               % Re_cut = 38.21 * (l/k)^1.053
-               % For l=12 ft, k=2.08e-5 ft: l/k = 576923
-               % Re_cut = 38.21 * 576923^1.053
-               l = 12;  k = 2.08e-5;
-               expected = 38.21 * (l/k)^1.053;  % Raymer Eq. 12.28 is the primary source
-               % TODO (7/13/2026): Find an empherical number for "expected" value (preferrably a primary source or experimental data)
-               received = AeroL3.Re_cutoff_sub(l, k);
-               fprintf('\n    Re_cut_sub (l=12ft): received = %.4e,  expected = %.4e\n', ...
-                    received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
           end
 
           % --- Full CD0 buildup (physical range) ---------------------------

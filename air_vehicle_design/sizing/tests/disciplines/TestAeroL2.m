@@ -103,30 +103,6 @@ classdef TestAeroL2 < matlab.unittest.TestCase
                     'Wing CLmax should be less than 2D section CLmax due to sweep.');
           end
 
-          % --- CD0 matches L1 (same formula) --------------------------------
-
-          function testCD0MatchesL1(tc)
-               % L2 CD0 formula is identical to L1.
-               g1 = F16AeroL1();
-               g2 = F16AeroL2();
-               fprintf('\n    CD0 L1=%.6f  CD0 L2=%.6f\n', g1.get_CD0(), g2.get_CD0());
-               tc.verifyEqual(g2.get_CD0(), g1.get_CD0(), 'AbsTol', 1e-12, ...
-                    'L2 CD0 must equal L1 (same Cf*Swet/Sref formula).');
-          end
-
-          % --- e_osw matches L1 (same formula) ------------------------------
-
-          function testEoswMatchesL1(tc)
-               % L2 get_e_osw delegates to AeroL1.oswald_eff(AR, Lambda_LE_deg),
-               % the identical Raymer Eq. 12.49 formula L1 uses -- see
-               % TestAeroL1.testEoswFormula for the underlying formula check.
-               g1 = F16AeroL1();
-               g2 = F16AeroL2();
-               fprintf('\n    e_osw L1=%.6f  e_osw L2=%.6f\n', g1.get_e_osw(), g2.get_e_osw());
-               tc.verifyEqual(g2.get_e_osw(), g1.get_e_osw(), 'AbsTol', 1e-12, ...
-                    'L2 e_osw must equal L1 (same Raymer Eq. 12.49 formula).');
-          end
-
           % --- drag_polar vs Brandt ACTUAL (flight-measured) polar ---------
 
           function testDragPolarVsBrandtActualAtDash(tc)

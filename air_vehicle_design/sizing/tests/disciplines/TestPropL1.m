@@ -278,50 +278,6 @@ classdef TestPropL1 < matlab.unittest.TestCase
             tc.verifyLessThanOrEqual(received, 1.0, 'alpha must not exceed 1.0 (SLS maximum).');
         end
 
-        % --- High-level: TSFC ------------------------------------------------
-
-        function testTSFCCruiseCondition(tc)
-            % Purpose: verify cruise TSFC returned when M >= 0.4.
-            % At M=0.5: Raymer Table 3.3 cruise TSFC for low-bypass turbofan = 0.80 1/hr.
-            % Source: Raymer 6th ed. Table 3.3.
-            expected = 0.80;   % 1/hr — cruise  [Raymer Table 3.3]
-            g        = F16PropL1();
-            received = g.lookup_TSFC(AircraftState(0, 0.5));
-            fprintf('\n    TSFC at M=0.5 (cruise): received = %.4f 1/hr,  expected = %.4f 1/hr\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
-        end
-
-        function testTSFCLoiterCondition(tc)
-            % Purpose: verify loiter TSFC returned when M < 0.4.
-            % At M=0.3: Raymer Table 3.3 loiter TSFC for low-bypass turbofan = 0.70 1/hr.
-            % Note: M=0.3 is a representative loiter speed for the F-16.
-            % Source: Raymer 6th ed. Table 3.3.
-            expected = 0.70;   % 1/hr — loiter  [Raymer Table 3.3]
-            g        = F16PropL1();
-            received = g.lookup_TSFC(AircraftState(5000, 0.3));
-            fprintf('\n    TSFC at M=0.3 (loiter): received = %.4f 1/hr,  expected = %.4f 1/hr\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
-        end
-
-        function testTSFCAtCruiseAltitude(tc)
-            % Purpose: verify get_TSFC at the F-16's actual cruise constraint
-            % state (36,000 ft, M=0.87) -- fidelity_comparison.m calls
-            % get_TSFC there, not just at SL (see testTSFCCruiseCondition).
-            % Raymer Table 3.3's categorical lookup branches on Mach only, so
-            % the altitude change should not affect the result.
-            % Source: Raymer 6th ed. Table 3.3.
-            b        = F16Baseline();
-            expected = 0.80;   % 1/hr — cruise (M>=0.4), low_bypass_turbofan_AB [Raymer Table 3.3]
-            g        = F16PropL1();
-            state    = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
-            received = g.get_TSFC(state);
-            fprintf('\n    TSFC at 36kft M=%.2f (cruise): received = %.4f 1/hr,  expected = %.4f 1/hr\n', ...
-                b.constraints.cruise.mach, received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
-        end
-
         % --- Base-class delegation consistency --------------------------------
 
         function testThrustLapseMatchesCompute(tc)

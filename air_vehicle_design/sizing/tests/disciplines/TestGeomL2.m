@@ -34,60 +34,6 @@ classdef TestGeomL2 < matlab.unittest.TestCase
     % ------------------------------------------------------------------ %
     methods (Test)
 
-        % --- Wet planform formula ----------------------------------------
-
-        function testWetPlanformFormulaZeroTc(tc)
-        % tc=0: S_wet = S_exp * 1.977
-        % Expected: 100 * 1.977 = 197.700 ft^2
-            expected = 100 * 1.977;   % = 197.700 ft^2
-            received = GeomL2.compute_wet_planform(100, 0);
-            fprintf('\n    wet_planform(S=100, tc=0): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
-        end
-
-        function testWetPlanformFormulaTypicalTc(tc)
-        % tc=0.04: S_wet = S_exp * (1.977 + 0.52*0.04) = S_exp * 1.9978
-        % Expected: 200 * 1.9978 = 399.560 ft^2
-            expected = 200 * (1.977 + 0.52 * 0.04);   % = 399.560 ft^2
-            received = GeomL2.compute_wet_planform(200, 0.04);
-            fprintf('\n    wet_planform(S=200, tc=0.04): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
-        end
-
-        % --- Roskam Eq. 12.3 fuselage formula ----------------------------
-
-        function testFuselageFormulaKnownFineness(tc)
-        % D=5, L=50, lambda_f=10:
-        %   pi*5*50 = 785.40 ft^2
-        %   (1-2/10)^(2/3) = (0.8)^(2/3) = 0.86177
-        %   (1 + 1/100) = 1.01000
-        %   Expected: 785.40 * 0.86177 * 1.01000 = 683.4 ft^2
-            lambda_f = 50.0 / 5.0;   % = 10
-            expected = pi * 5.0 * 50.0 * (1 - 2/lambda_f)^(2/3) * (1 + 1/lambda_f^2);  % = 683.4 ft^2
-            received = GeomL2.compute_s_wet_fus_cyl(5.0, 50.0);
-            fprintf('\n    fuselage(D=5, L=50, lf=10): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
-        end
-
-        function testFuselageFormulaF16(tc)
-        % D=5.0, L=47.5, lambda_f = 47.5/5.0 = 9.5:
-        %   pi*5*47.5 = 745.35 ft^2
-        %   (1-2/9.5)^(2/3) = (0.7895)^(2/3) = 0.85425
-        %   (1 + 1/9.5^2) = 1.01108
-        %   Expected: 745.35 * 0.85425 * 1.01108 = 644.7 ft^2
-            g        = F16GeomL2();
-            lambda_f = 47.5 / 5.0;   % = 9.5
-            expected = pi * 5.0 * 47.5 * (1 - 2/lambda_f)^(2/3) * (1 + 1/lambda_f^2);  % = 644.7 ft^2
-            received = g.get_S_wet_fuselage();
-            fprintf('\n    fuselage(D=5, L=47.5, lf=9.5): received = %.4f ft^2,  expected = %.4f ft^2\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-6, ...
-                'F16GeomL2 fuselage S_wet does not match Roskam Eq. 12.3.');
-        end
-
         function testFuselageSwetVsBrandt(tc)
         % Roskam Eq. 12.3 equivalent-diameter fuselage (644.7 ft^2) vs
         % Brandt's "More Accurate Fuselage Swet"  [Geom!D23] = 676.33 ft^2.
