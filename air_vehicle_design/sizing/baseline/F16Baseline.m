@@ -1,5 +1,11 @@
 function b = F16Baseline()
-%F16BASELINE  Authoritative ground-truth data for the F-16A Block 10 example.
+%F16BASELINE  [DEPRECATED - TO BE DELETED] Ground-truth data for the F-16A Block 10.
+%
+%   *** DEPRECATED: this file and the whole baseline/ folder (F16Baseline.m +
+%   extract_brandt.m) are superseded by air_vehicle_design/sizing/VnV/BrandtF16A/
+%   (Brandt*.m classes + GroundTruth/*.json) and are slated for removal once the
+%   remaining consumers are migrated to the VnV ground-truth. Do NOT add new
+%   dependencies on F16Baseline; point new code at VnV/BrandtF16A instead. ***
 %
 %   b = F16Baseline() returns a struct of cited inputs and expected truth
 %   outputs used to seed unit tests at all three fidelity levels.
