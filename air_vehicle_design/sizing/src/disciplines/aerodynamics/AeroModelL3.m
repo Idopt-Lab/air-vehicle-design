@@ -38,6 +38,9 @@ classdef (Abstract) AeroModelL3 < AerodynamicsBase
 
      methods (Abstract)
 
+          %GET_E_OSW  Oswald span efficiency factor (same equation as L1/L2).
+          val = get_e_osw(obj)
+
           %COMPUTE_RE  Re = rho*V*l/mu  (Raymer Eq. 12.25).
           val = compute_Re(obj, state, l_ref)
 

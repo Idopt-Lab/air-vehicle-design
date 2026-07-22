@@ -9,6 +9,10 @@ classdef TestAeroL3 < matlab.unittest.TestCase
      %     FF_surf = (1+0.6/xmax*tc+100*tc^4)*(1.34*M^0.18*cos(Lm)^0.28)   Eq. 12.30
      %     FF_body = 1+5/f^1.5+f/400 (f<=6) or 1+60/f^3+f/400 (f>6)
      %               f=L/D                                Raymer Eq. 12.31
+     %     CD_wave = E_WD*[1-0.386*(M-1.2)^0.57*(1-(pi*Lambda_LE^0.77)/100)]
+     %               *(9*pi/2)*(A_max/l)^2/S_ref  (M>=1.2)  Raymer Eq. 12.41
+     %               -- F-16-specific (F16AeroL3.compute_CD0_wave), not a
+     %               generic AeroL3 toolbox method; see below.
      %
      %   Pre-computed values used as expected results:
      %
@@ -194,10 +198,12 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                % Sanity check against Brandt's ACTUAL (flight-measured) polar
                % table [Brandt Aero!M6:Q10] at 36 kft, M=1.6 -- a different
                % reference table than polar_model used elsewhere in this file
-               % (see fidelity_comparison.m "[AERO — SUP]" section). Known to
-               % diverge near/beyond M=1 (L3 has no wave drag yet -- see
-               % testCD0AtBrandtMachPoints), so this is a coarse positivity /
-               % order-of-magnitude check only.
+               % (see fidelity_comparison.m "[AERO — SUP]" section). M=1.6
+               % now includes the F-16 wave-drag term (get_CD0_buildup adds
+               % it for M>=1.2 -- see testCD0AtBrandtMachPoints), which closes
+               % most but not all of the gap (fuselage-only wave drag; no
+               % wing/boat-tail/canopy wave-drag terms) -- still a loosely-
+               % toleranced check, just tighter than before wave drag existed.
                b       = F16Baseline();
                g       = F16AeroL3();
                state   = AircraftState(36000, 1.60);
@@ -208,8 +214,8 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                     polar.CD0, CD0_ref, polar.K1, K1_ref);
                tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
                tc.verifyGreaterThan(polar.K1, 0, 'K1 must be positive.');
-               tc.verifyLessThan(polar.CD0, 5*CD0_ref, ...
-                    'CD0 is more than 5x Brandt actual-polar reference -- check for a gross error.');
+               tc.verifyEqual(polar.CD0, CD0_ref, 'RelTol', 0.50, ...
+                    'CD0 deviates >50% from Brandt actual-polar reference even with wave drag included.');
                tc.verifyLessThan(polar.K1, 5*K1_ref, ...
                     'K1 is more than 5x Brandt actual-polar reference -- check for a gross error.');
           end
@@ -266,10 +272,16 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                % there -- so the gap widens from row 1 to row 2 (-6% to
                % -17%, with CD0_misc's Table 12.7 gun-port + hook terms
                % included). ±20% brackets both.
-               % Rows 3-5 (transonic/supersonic): CD0 is expected to read low
-               % because wave drag is not yet implemented (F16AeroL3.CD_wave
-               % is a declared-but-unpopulated property; see its TODO
-               % comment) -- sanity-checked for positivity only.
+               % Row 3 (M=1.0547): still transonic (<1.2), below the wave-
+               % drag term's Raymer Eq. 12.41 domain (get_CD0_buildup only
+               % adds it for M>=1.2 -- see F16AeroL3.compute_CD0_wave), so
+               % CD0 is still expected to read low here; positivity only.
+               % Rows 4-5 (M=1.5, 2.0): now include the F-16 fuselage
+               % wave-drag term, which closes most (not all -- no wing/
+               % boat-tail/canopy wave drag) of the previous gap: row 4
+               % improves from ~-69% to ~-28%, row 5 from ~-64% to ~-30%
+               % (received=0.0286/0.0261 vs Brandt=0.0399/0.0373). ±40%
+               % (tc.TOL_PCT) brackets both with margin.
                b        = F16Baseline();
                M        = b.brandt.polar_model(brandtRow, 1);
                CD0_ref  = b.brandt.polar_model(brandtRow, 3);
@@ -281,9 +293,85 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                if ismember(brandtRow, [1, 2])
                     tc.verifyEqual(received, CD0_ref, 'RelTol', 0.20, ...
                          sprintf('CD0 at M=%.4f deviates >20%% from Brandt.', M));
+               elseif ismember(brandtRow, [4, 5])
+                    tc.verifyEqual(received, CD0_ref, 'RelTol', tc.TOL_PCT, ...
+                         sprintf('CD0 at M=%.4f (with wave drag) deviates >%.0f%% from Brandt.', M, 100*tc.TOL_PCT));
                else
                     tc.verifyGreaterThan(received, 0, 'CD0 must be positive.');
                end
+          end
+
+          % --- Supersonic wave drag (F-16-specific, Raymer Eq. 12.41) ------
+
+          function testCD0WaveFormula(tc)
+               % Hand-computed at M=1.5, SL: A_max=pi*(5.0/2)^2=19.634954,
+               % l=47.5 (fuselage component 4), Lambda_LE=40 deg, E_WD=2.2.
+               %   (M-1.2)^0.57       = 0.503453
+               %   1-(pi*40^0.77/100) = 0.462057
+               %   bracket = 1-0.386*0.503453*0.462057 = 0.910207
+               %   searshaack = (9*pi/2)*(19.634954/47.5)^2 = 2.415655
+               %   CD_wave = 2.2*0.910207*2.415655/300 = 0.01612414
+               g        = F16AeroL3();
+               state    = AircraftState(0, 1.5);
+               expected = 0.01612414;  % Raymer 6th ed. Eq. 12.41 is the primary source
+               received = g.compute_CD0_wave(state);
+               fprintf('\n    CD_wave (M=1.5): received = %.8f,  expected = %.8f\n', received, expected);
+               tc.verifyEqual(received, expected, 'RelTol', 1e-4);
+          end
+
+          function testCD0WaveDecreasesTowardHigherSupersonicMach(tc)
+               % Raymer Eq. 12.41's (M-1.2)^0.57 factor grows with M, shrinking
+               % the bracket term -- so CD_wave should decrease from M=1.5 to
+               % M=2.0 (0.01612 -> 0.01493), matching the physical expectation
+               % that wave drag due to volume eases somewhat as Mach increases
+               % further past the transonic/low-supersonic peak.
+               g   = F16AeroL3();
+               cd_wave_15 = g.compute_CD0_wave(AircraftState(0, 1.5));
+               cd_wave_20 = g.compute_CD0_wave(AircraftState(0, 2.0));
+               fprintf('\n    CD_wave: M=1.5 -> %.5f,  M=2.0 -> %.5f\n', cd_wave_15, cd_wave_20);
+               tc.verifyGreaterThan(cd_wave_15, cd_wave_20);
+          end
+
+          function testCD0BuildupUnchangedBelowMach1_2(tc)
+               % Below the Eq. 12.41 domain (M<1.2), get_CD0_buildup must
+               % equal the generic AeroL3 buildup exactly -- no wave-drag
+               % term added yet (transonic fairing gap, M=1.05 here).
+               g       = F16AeroL3();
+               state   = AircraftState(0, 1.05);
+               withWave    = g.get_CD0_buildup(state);
+               genericOnly = AeroL3.get_CD0_buildup(g, state);
+               fprintf('\n    CD0 buildup at M=1.05: F16AeroL3=%.6f,  generic AeroL3=%.6f\n', withWave, genericOnly);
+               tc.verifyEqual(withWave, genericOnly, 'AbsTol', 1e-12, ...
+                    'get_CD0_buildup must not add wave drag below M=1.2.');
+          end
+
+          function testCD0BuildupIncludesWaveAboveMach1_2(tc)
+               % At/above M=1.2, F16AeroL3.get_CD0_buildup must equal the
+               % generic AeroL3 buildup plus this class's own CD_wave term --
+               % confirms the F-16-specific override actually adds the term
+               % (rather than, e.g., silently no-op'ing) and that it's additive.
+               g       = F16AeroL3();
+               state   = AircraftState(0, 1.5);
+               received     = g.get_CD0_buildup(state);
+               expected     = AeroL3.get_CD0_buildup(g, state) + g.compute_CD0_wave(state);
+               fprintf('\n    CD0 buildup at M=1.5: received = %.6f,  generic+wave = %.6f\n', received, expected);
+               tc.verifyEqual(received, expected, 'AbsTol', 1e-12);
+          end
+
+          function testDragPolarCD0MatchesGetCD0BuildupSupersonic(tc)
+               % drag_polar's CD0 must flow through the same F-16 override as
+               % calling get_CD0_buildup directly -- regression test for the
+               % drag_polar override that routes CD0 through obj.get_CD0_buildup
+               % (polymorphically) instead of the generic AeroL3.drag_polar,
+               % which bypasses instance overrides by calling
+               % AeroL3.get_CD0_buildup(obj,...) as a static function.
+               g     = F16AeroL3();
+               state = AircraftState(0, 1.5);
+               polar = g.drag_polar(state);
+               fprintf('\n    drag_polar CD0=%.6f vs get_CD0_buildup=%.6f (M=1.5)\n', ...
+                    polar.CD0, g.get_CD0_buildup(state));
+               tc.verifyEqual(polar.CD0, g.get_CD0_buildup(state), 'AbsTol', 1e-12, ...
+                    'drag_polar CD0 must include the F-16 wave-drag term, same as get_CD0_buildup.');
           end
 
           % --- Verification at Brandt's constraint-analysis conditions -----
@@ -366,6 +454,94 @@ classdef TestAeroL3 < matlab.unittest.TestCase
           function testIsHandleClass(tc)
                g = F16AeroL3();
                tc.verifyTrue(isa(g, 'handle'));
+          end
+
+          % --- High-lift-device / gear deltas (flap + slat + gear buildup) -
+          %   Delta_e_osw: Roskam Table 3.6 (tabulated, no closed form).
+          %   Delta_CLmax: Raymer Table 12.2 + Eq. 12.21, flap AND slat.
+          %   Delta_CD0: Raymer Eq. 12.61 (flap) + Eq. 12.61 form (slat,
+          %     F_flap/delta_flap/Cf swapped for the LE device's own
+          %     F_slat/delta_slat/chord) + component buildup (gear, via
+          %     compute_Delta_CD0_geardown).
+          %   Delta_CDi: Raymer Eq. 12.62 (flap) + Eq. 12.62 form (slat).
+
+          function testDeltaEoswNegative(tc)
+               g = F16AeroL3();
+               fprintf('\n    Delta_e_osw: TO=%.4f  L=%.4f\n', g.get_Delta_e_osw_TO(), g.get_Delta_e_osw_L());
+               tc.verifyLessThan(g.get_Delta_e_osw_TO(), 0);
+               tc.verifyLessThan(g.get_Delta_e_osw_L(), g.get_Delta_e_osw_TO());
+          end
+
+          function testDeltaCD0PositiveAndOrdered(tc)
+               % Approach-speed state for the gear Reynolds-number lookup.
+               g     = F16AeroL3();
+               state = AircraftState(0, 0.2);
+               dcd0_TO = g.get_Delta_CD0_TO(state);
+               dcd0_L  = g.get_Delta_CD0_L(state);
+               fprintf('\n    Delta_CD0: TO=%.4f  L=%.4f\n', dcd0_TO, dcd0_L);
+               tc.verifyGreaterThan(dcd0_TO, 0);
+               tc.verifyGreaterThan(dcd0_L, dcd0_TO);
+          end
+
+          function testDeltaCD0SlatPositive(tc)
+               % Eq. 12.61 form (F_slat/delta_slat/c_slat_over_c) should give
+               % a positive parasite-drag increment, same sign as the flap.
+               g   = F16AeroL3();
+               val = g.Delta_CD0_slat(g.delta_slat_TO_deg);
+               fprintf('\n    Delta_CD0_slat(TO) = %.5f\n', val);
+               tc.verifyGreaterThan(val, 0);
+          end
+
+          function testDeltaCDiIncludesSlat(tc)
+               % get_Delta_CDi_TO/L must exceed the flap-only Eq. 12.62 term
+               % now that the slat contributes via the Eq. 12.62 form too.
+               g            = F16AeroL3();
+               flapOnly     = g.Delta_CDi_flap(g.Delta_CLmax_flap('TO'));
+               total        = g.get_Delta_CDi_TO();
+               fprintf('\n    Delta_CDi_TO: flap-only=%.4f  flap+slat=%.4f\n', flapOnly, total);
+               tc.verifyGreaterThan(total, flapOnly);
+          end
+
+          function testDeltaCD0GeardownPositive(tc)
+               g     = F16AeroL3();
+               state = AircraftState(0, 0.2);
+               dcd0_gear = g.compute_Delta_CD0_geardown(state);
+               fprintf('\n    Delta_CD0_geardown = %.5f\n', dcd0_gear);
+               tc.verifyGreaterThan(dcd0_gear, 0);
+          end
+
+          function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
+               % L3 adds the LE slat on top of the TE flap; total Delta_CLmax
+               % must exceed the flap-only contribution.
+               g = F16AeroL3();
+               flapOnly = g.Delta_CLmax_flap('TO');
+               total    = g.get_Delta_CLmax_TO();
+               fprintf('\n    Delta_CLmax_TO: flap-only=%.4f  flap+slat=%.4f\n', flapOnly, total);
+               tc.verifyGreaterThan(total, flapOnly);
+          end
+
+          function testCLmaxTotalVsBrandtTakeoffLanding(tc)
+               % L3 has both flap and slat -- tightest tolerance of the three
+               % fidelity levels, consistent with this suite's L1->L3 pattern.
+               b = F16Baseline();
+               g = F16AeroL3();
+               fprintf('\n    CLmax_TO: received=%.4f  Brandt=%.4f\n', g.get_CLmax_TO(), b.brandt.CLmax_TO);
+               fprintf('    CLmax_L:  received=%.4f  Brandt=%.4f\n', g.get_CLmax_L(), b.brandt.CLmax_land);
+               tc.verifyEqual(g.get_CLmax_TO(), b.brandt.CLmax_TO,   'RelTol', 0.40);
+               tc.verifyEqual(g.get_CLmax_L(),  b.brandt.CLmax_land, 'RelTol', 0.40);
+          end
+
+          function testPopulateHLDDeltasFillsProperties(tc)
+               % The Delta_*_flap/slat/gear properties pre-date this feature
+               % (placeholders); confirm populate_HLD_deltas actually sets them.
+               g     = F16AeroL3();
+               state = AircraftState(0, 0.2);
+               g     = g.populate_HLD_deltas(state);
+               tc.verifyNotEmpty(g.Delta_CD0_TO_flap);
+               tc.verifyNotEmpty(g.Delta_CD0_TO_gear);
+               tc.verifyNotEmpty(g.Delta_CL_max_TO_slat);
+               tc.verifyGreaterThan(g.Delta_CD0_TO_slat, 0, ...
+                    'Slat CD0 increment should be positive (Eq. 12.61 form, delta_slat=17 deg).');
           end
 
      end

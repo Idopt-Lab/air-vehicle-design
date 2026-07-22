@@ -133,10 +133,12 @@ classdef TestAeroL2 < matlab.unittest.TestCase
                % Sanity check against Brandt's ACTUAL (flight-measured) polar
                % table [Brandt Aero!M6:Q10] at 36 kft, M=1.6 -- a different
                % reference table than polar_model used elsewhere in this file
-               % (see fidelity_comparison.m "[AERO — SUP]" section). Known to
-               % diverge from L2's linear supersonic K1 (Raymer Eq. 12.51)
-               % near/beyond M=1 -- see testK1AtBrandtMachPoints -- so this is
-               % a coarse positivity / order-of-magnitude check only.
+               % (see fidelity_comparison.m "[AERO — SUP]" section). This
+               % flight-measured K1 (0.34) reflects real supersonic effects
+               % L2's linear-theory K1 (Raymer Eq. 12.51, verified against the
+               % polar_model curve in testK1AtBrandtMachPoints) doesn't
+               % capture, so this is a coarse positivity / order-of-magnitude
+               % check only.
                b       = F16Baseline();
                g       = F16AeroL2();
                state   = AircraftState(36000, 1.60);
@@ -290,6 +292,57 @@ classdef TestAeroL2 < matlab.unittest.TestCase
           function testIsHandleClass(tc)
                g = F16AeroL2();
                tc.verifyTrue(isa(g, 'handle'));
+          end
+
+          % --- High-lift-device deltas (flap only, from geometry) ----------
+          %   Delta_e_osw: Roskam Table 3.6 (tabulated, no closed form).
+          %   Delta_CLmax: Raymer Table 12.2 + Eq. 12.21 (geometry-driven).
+          %   Delta_CD0/CDi: Raymer Eq. 12.61/12.62 (geometry-driven).
+
+          function testDeltaEoswNegative(tc)
+               g = F16AeroL2();
+               fprintf('\n    Delta_e_osw: TO=%.4f  L=%.4f\n', g.get_Delta_e_osw_TO(), g.get_Delta_e_osw_L());
+               tc.verifyLessThan(g.get_Delta_e_osw_TO(), 0);
+               tc.verifyLessThan(g.get_Delta_e_osw_L(), g.get_Delta_e_osw_TO());
+          end
+
+          function testDeltaCD0PositiveAndOrdered(tc)
+               g = F16AeroL2();
+               fprintf('\n    Delta_CD0: TO=%.4f  L=%.4f\n', g.get_Delta_CD0_TO(), g.get_Delta_CD0_L());
+               tc.verifyGreaterThan(g.get_Delta_CD0_TO(), 0);
+               tc.verifyGreaterThan(g.get_Delta_CD0_L(), g.get_Delta_CD0_TO(), ...
+                    'Landing flap deflection (65 deg) should add more CD0 than takeoff (30 deg).');
+          end
+
+          function testDeltaCLmaxPositiveAndOrdered(tc)
+               g = F16AeroL2();
+               fprintf('\n    Delta_CLmax: TO=%.4f  L=%.4f\n', g.get_Delta_CLmax_TO(), g.get_Delta_CLmax_L());
+               tc.verifyGreaterThan(g.get_Delta_CLmax_TO(), 0);
+               tc.verifyGreaterThan(g.get_Delta_CLmax_L(), g.get_Delta_CLmax_TO(), ...
+                    'Landing uses 80% of Table 12.2''s Delta_cl_max vs 60% for takeoff.');
+          end
+
+          function testDeltaCDiPositive(tc)
+               % Raymer Eq. 12.62: induced-drag increment is always >= 0
+               % (proportional to (Delta_CL_flap)^2).
+               g = F16AeroL2();
+               fprintf('\n    Delta_CDi: TO=%.5f  L=%.5f\n', g.get_Delta_CDi_TO(), g.get_Delta_CDi_L());
+               tc.verifyGreaterThanOrEqual(g.get_Delta_CDi_TO(), 0);
+               tc.verifyGreaterThanOrEqual(g.get_Delta_CDi_L(), 0);
+          end
+
+          function testCLmaxTotalVsBrandtTakeoffLanding(tc)
+               % L2's flap-only CLmax_TO/L omit the F-16's actual leading-edge
+               % flap contribution (added at L3), so expect CLmax_TO/L to
+               % under-shoot Brandt's targets -- generous tolerance.
+               b = F16Baseline();
+               g = F16AeroL2();
+               fprintf('\n    CLmax_TO: received=%.4f  Brandt=%.4f\n', g.get_CLmax_TO(), b.brandt.CLmax_TO);
+               fprintf('    CLmax_L:  received=%.4f  Brandt=%.4f\n', g.get_CLmax_L(), b.brandt.CLmax_land);
+               tc.verifyGreaterThan(g.get_CLmax_TO(), g.get_CLmax([]));
+               tc.verifyGreaterThan(g.get_CLmax_L(),  g.get_CLmax_TO());
+               tc.verifyLessThan(g.get_CLmax_L(), b.brandt.CLmax_land, ...
+                    'L2 (flap only, no slat) should not exceed Brandt''s full-HLD landing CLmax.');
           end
 
      end

@@ -17,7 +17,8 @@ classdef AeroL1
 %     e_osw (Λ_LE < 30°):  1.78*(1-0.045*AR^0.68) - 0.64       Eq. 12.48
 %     e_osw (Λ_LE ≥ 30°):  4.61*(1-0.045*AR^0.68)*cos(Λ)^0.15 - 3.1  Eq. 12.49
 %     K1 subsonic:   1/(pi*AR*e)                                 Eq. 12.50
-%     K1 supersonic: AR*beta*cos(Λ_LE)/(4*AR*beta - 2)          Eq. 12.51
+%     K1 supersonic: AR*(M^2-1)*cos(Λ_LE)/(4*AR*beta - 2)       Eq. 12.51
+%                    where beta = sqrt(M^2-1)
 %     K2 subsonic:   -2*K1_sub*CL_minD                          Brandt §4.3
 %     K2 supersonic: 0
 %     LD_max = K_LD * sqrt(AR_wet)                              Raymer Eq. 3.12
@@ -141,7 +142,7 @@ classdef AeroL1
                     'K1_supersonic called with M=%.3f; use K1_subsonic for M<1.', M);
             end
             beta = sqrt(M^2 - 1);
-            K1   = AR * beta * cosd(Lambda_LE_deg) / (4 * AR * beta - 2);
+            K1   = AR * (M^2 - 1) * cosd(Lambda_LE_deg) / (4 * AR * beta - 2);
         end
 
         function K2 = K2_value(K1_sub, CL_minD, M)
