@@ -61,6 +61,7 @@ No mission analysis subclassing needed — the generic classes are sufficient. T
 - Weight continuity: Wf of segment N = Wi of segment N+1 — enforced in `MissionSegmentBase`.
 - Reserve fuel fraction (RFF): 0.05 added to total mission fuel (Roskam convention).
 - `W_drop` from payload release (combat segment) reduces weight at end of that segment, NOT as fuel.
+- **TODO (high-lift configuration):** the CAP mission profile below has segments (takeoff, combat, landing) that each fly with a different slat/flap setting. Mason, "F-16 configuration" (archive.aoe.vt.edu/mason/Mason_f/F16S04.pdf, slide 10) gives sourced deflections for six named configs (takeoff ground roll, takeoff after liftoff, reflexed cruise, max maneuver, approach, landing). If a `HighLiftConfig`-style value class gets built for Step 6 (see subplan 06 TODO), each mission segment should carry/reference the matching config so `aero.drag_polar`/`aero.CLmax` reflect the right configuration per segment rather than always using clean values.
 
 ---
 

@@ -42,6 +42,27 @@ classdef F16AeroL1 < AeroModelL1
         CDi          = 0
         CD           = 0
         CL           = 0
+
+        % --- High-lift-device / gear deltas (L1: pure tabulation) ---
+        % Source: Roskam, Airplane Design Part I, Table 3.6 ("First
+        % Estimates for Delta_CD0 and 'e' -- With Flaps and Gear Down") for
+        % Delta_CD0/Delta_e_osw, and Table 3.1 ("Typical Values for Maximum
+        % Lift Coefficient") for Delta_CLmax, both already tabulated (but
+        % previously unused) as AeroL1.Delta_CD0 / AeroL1.CLmax_table.
+        Delta_e_osw_TO = 0
+        Delta_e_osw_L  = 0
+        Delta_CD0_TO   = 0   % flaps + landing gear
+        Delta_CD0_L    = 0   % flaps + landing gear
+        Delta_CLmax_TO = 0
+        Delta_CLmax_L  = 0
+    end
+
+    properties (Constant)
+        % Roskam Airplane Design Part I, Table 3.1 aircraft-category key.
+        % Distinct from aircraft_category ("jet_fighter"), which indexes
+        % AeroL1's separate Raymer Table 12.3/Cf and Roskam Table 3.3
+        % single-value lookups.
+        roskam_category = "fighter"
     end
 
     methods
@@ -101,6 +122,79 @@ classdef F16AeroL1 < AeroModelL1
 
         function val = lookup_CLmax(~, aircraft_type, ~, ~)
             val = AeroL1.lookup_CLmax(aircraft_type);
+        end
+
+        % ================================================================ %
+        % High-lift-device / gear deltas (tabulated -- Roskam Part I,
+        % Tables 3.1 and 3.6). Reads AeroL1's existing Constant tables
+        % directly; no accessor method is added to the AeroL1 toolbox.
+        % ================================================================ %
+
+        function val = get_Delta_e_osw_TO(obj)
+        %GET_DELTA_E_OSW_TO  Roskam Table 3.6: e(TO flaps) - e(clean).
+        %   Table 3.6's "e" column is an ABSOLUTE Oswald efficiency per
+        %   configuration (0.70-0.85), not already a delta.
+            val = obj.roskam_e_osw("takeoff_flaps") - obj.roskam_e_osw("clean");
+        end
+
+        function val = get_Delta_e_osw_L(obj)
+        %GET_DELTA_E_OSW_L  Roskam Table 3.6: e(landing flaps) - e(clean).
+            val = obj.roskam_e_osw("landing_flaps") - obj.roskam_e_osw("clean");
+        end
+
+        function val = get_Delta_CD0_TO(obj)
+        %GET_DELTA_CD0_TO  Roskam Table 3.6: Delta_CD0(TO flaps) + Delta_CD0(gear).
+            val = obj.roskam_Delta_CD0("takeoff_flaps") + obj.roskam_Delta_CD0("landing_gear");
+        end
+
+        function val = get_Delta_CD0_L(obj)
+        %GET_DELTA_CD0_L  Roskam Table 3.6: Delta_CD0(landing flaps) + Delta_CD0(gear).
+            val = obj.roskam_Delta_CD0("landing_flaps") + obj.roskam_Delta_CD0("landing_gear");
+        end
+
+        function val = get_Delta_CLmax_TO(obj)
+        %GET_DELTA_CLMAX_TO  Roskam Table 3.1: CLmax_TO(fighter) - CLmax_clean(fighter).
+            val = obj.roskam_CLmax("CL_max_TO") - obj.roskam_CLmax("CL_max_clean");
+        end
+
+        function val = get_Delta_CLmax_L(obj)
+        %GET_DELTA_CLMAX_L  Roskam Table 3.1: CLmax_L(fighter) - CLmax_clean(fighter).
+            val = obj.roskam_CLmax("CL_max_L") - obj.roskam_CLmax("CL_max_clean");
+        end
+
+        function val = get_CLmax_TO(obj)
+        %GET_CLMAX_TO  Clean CLmax + Delta_CLmax_TO.
+            val = obj.get_CLmax([]) + obj.get_Delta_CLmax_TO();
+        end
+
+        function val = get_CLmax_L(obj)
+        %GET_CLMAX_L  Clean CLmax + Delta_CLmax_L.
+            val = obj.get_CLmax([]) + obj.get_Delta_CLmax_L();
+        end
+
+    end
+
+    methods (Access = private)
+
+        function val = roskam_e_osw(~, flapconfig)
+        %ROSKAM_E_OSW  Mean of AeroL1.Delta_CD0's "e_osw" range for flapconfig.
+            T   = AeroL1.Delta_CD0;
+            row = T(T.FlapConfig == flapconfig, :);
+            val = mean(row.e_osw{1});
+        end
+
+        function val = roskam_Delta_CD0(~, flapconfig)
+        %ROSKAM_DELTA_CD0  Mean of AeroL1.Delta_CD0's "Delta_CD0" range for flapconfig.
+            T   = AeroL1.Delta_CD0;
+            row = T(T.FlapConfig == flapconfig, :);
+            val = mean(row.Delta_CD0{1});
+        end
+
+        function val = roskam_CLmax(~, column)
+        %ROSKAM_CLMAX  Mean of AeroL1.CLmax_table's column for the "fighter" row.
+            T   = AeroL1.CLmax_table;
+            row = T(T.AircraftType == "fighter", :);
+            val = mean(row.(column){1});
         end
 
     end

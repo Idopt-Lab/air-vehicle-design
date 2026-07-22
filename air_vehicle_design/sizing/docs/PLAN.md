@@ -95,7 +95,7 @@ air_vehicle_design/sizing/
 │   ├── constraints/
 │   │   ├── ConstraintAnalysis.m
 │   │   ├── PointPerformanceBase.m
-│   │   ├── WingSizingConstraint.m
+│   │   ├── LandingConstraint.m
 │   │   └── ThrustConstraint.m
 │   ├── mission/
 │   │   ├── MissionAnalysisL1.m

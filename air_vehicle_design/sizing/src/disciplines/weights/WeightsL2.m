@@ -12,13 +12,16 @@ classdef WeightsL2
 %     W_VT       = rho_vt  × S_vt       (rho_vt = 5.3 lbf/ft²)
 %     W_fuselage = rho_fus × S_wet_fus  (rho_fus = 4.8 lbf/ft²)
 %     W_LG       = f_lg    × W_TO       (f_lg = 0.033 for non-Navy fighters)
+%     W_installed_engine = 1.3 × N_en × W_en (bare/dry engine weight)
+%     W_all_else_empty   = 0.17 × W_TO
 %   OEW = W_wing + W_HT + W_VT + W_fus + W_LG
 %         + obj.W_installed_engine + obj.W_all_else_empty
 %
-%   The last two terms are set directly by the student class.  They capture
-%   installed engine weight and the systems/equipment group (avionics,
-%   fuel system, FCS, hydraulics, electrical, furnishings).  Computing these
-%   from first principles requires the L3 Raymer §15.3.1 equations.
+%   The last two terms are AE481 metabook §7 fraction-based estimates
+%   (installed engine = 1.3× bare engine weight; all-else-empty = 0.17×
+%   W_TO), set by the student class constructor via weight_installed_engine
+%   / weight_all_else_empty below — NOT the L3 Raymer §15.3.1 component
+%   buildup, which is a separate, independent (and more detailed) method.
 %
 %   The Roskam statistical method (minimum-bound regression) has moved to
 %   WeightsL1.compute_We_roskam / WeightsL1.We_roskam.  Call it there for
@@ -83,6 +86,20 @@ classdef WeightsL2
             W = f * W_TO;
         end
 
+        function W = weight_installed_engine(obj)
+        %WEIGHT_INSTALLED_ENGINE  Installed engine weight [lbf].  [AE481 metabook §7]
+        %   Fraction-based: W = 1.3 × N_en × W_en (bare/dry engine weight).
+        %   1.3 = installed/bare weight ratio [AE481 Aircraft Design Metabook
+        %   §7, "Fraction-Based Weight Estimates" table].
+            W = 1.3 * obj.N_en * obj.W_en;
+        end
+
+        function W = weight_all_else_empty(obj, W_TO)
+        %WEIGHT_ALL_ELSE_EMPTY  Systems/avionics/furnishings group [lbf].
+        %   [AE481 metabook §7]  Fraction-based: W = 0.17 × W_TO.
+            W = 0.17 * W_TO;
+        end
+
         % ================================================================== %
         % LOW-LEVEL: unit weight / fraction lookups  [Raymer Table 15.2]
         % ================================================================== %
@@ -91,7 +108,9 @@ classdef WeightsL2
         %WING_UNIT_WEIGHT  Wing structural surface density [lbf/ft²].
         %   Source: Raymer, Aircraft Design 6th ed., Table 15.2.
             switch lower(aircraft_category)
-                case 'jet_fighter',      rho = 9.0;   % [Raymer Table 15.2]
+                case 'jet_fighter',      rho = 9.0;   % [Raymer Table 15.2]; cf. F16Baseline
+                                                       % b.brandt.rho_wing_model=7.0, Brandt's own
+                                                       % "corrected" coefficient (differs)
                 case 'jet_transport',    rho = 10.0;  % [Raymer Table 15.2]
                 case 'general_aviation', rho = 2.5;   % [Raymer Table 15.2]
                 otherwise
@@ -104,7 +123,9 @@ classdef WeightsL2
         %HT_UNIT_WEIGHT  Horizontal tail structural surface density [lbf/ft²].
         %   Source: Raymer Table 15.2.
             switch lower(aircraft_category)
-                case 'jet_fighter',      rho = 4.0;   % [Raymer Table 15.2]
+                case 'jet_fighter',      rho = 4.0;   % [Raymer Table 15.2]; cf. F16Baseline
+                                                       % b.brandt.rho_pitch_cntrl_model=4.0, Brandt's
+                                                       % own "corrected" coefficient (matches)
                 case 'jet_transport',    rho = 5.5;   % [Raymer Table 15.2]
                 case 'general_aviation', rho = 2.0;   % [Raymer Table 15.2]
                 otherwise
@@ -117,7 +138,9 @@ classdef WeightsL2
         %VT_UNIT_WEIGHT  Vertical tail structural surface density [lbf/ft²].
         %   Source: Raymer Table 15.2.
             switch lower(aircraft_category)
-                case 'jet_fighter',      rho = 5.3;   % [Raymer Table 15.2]
+                case 'jet_fighter',      rho = 5.3;   % [Raymer Table 15.2]; cf. F16Baseline
+                                                       % b.brandt.rho_vert_model=6.0, Brandt's own
+                                                       % "corrected" coefficient (differs)
                 case 'jet_transport',    rho = 5.5;   % [Raymer Table 15.2]
                 case 'general_aviation', rho = 2.0;   % [Raymer Table 15.2]
                 otherwise
@@ -130,7 +153,9 @@ classdef WeightsL2
         %FUS_UNIT_WEIGHT  Fuselage structural surface density [lbf/ft²].
         %   Source: Raymer Table 15.2.
             switch lower(aircraft_category)
-                case 'jet_fighter',      rho = 4.8;   % [Raymer Table 15.2]
+                case 'jet_fighter',      rho = 4.8;   % [Raymer Table 15.2]; cf. F16Baseline
+                                                       % b.brandt.rho_fus_model=4.8, Brandt's own
+                                                       % "corrected" coefficient (matches)
                 case 'jet_transport',    rho = 5.0;   % [Raymer Table 15.2]
                 case 'general_aviation', rho = 1.4;   % [Raymer Table 15.2]
                 otherwise

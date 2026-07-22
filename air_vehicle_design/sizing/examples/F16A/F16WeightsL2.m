@@ -8,9 +8,10 @@ classdef F16WeightsL2 < WeightsModelL2
 %     Structural group: Raymer Table 15.2 surface-density estimates.
 %       Wing 9 lbf/ft², HT 4 lbf/ft², VT 5.3 lbf/ft², Fus 4.8 lbf/ft²,
 %       LG 3.3% of W_TO.
-%     Engine + all-else: computed in the constructor from the WeightsL3
-%       Raymer §15.3.1 component equations (see properties below) — NOT
-%       calibrated against Brandt's OEW.
+%     Engine + all-else: AE481 metabook §7 fraction-based estimates,
+%       computed in the constructor (see properties below) — NOT
+%       calibrated against Brandt's OEW, and NOT the L3 Raymer §15.3.1
+%       component buildup (a separate, independent, higher-fidelity method).
 %
 %   OEW = W_wings + W_HT + W_VT + W_fuselage + W_LG
 %         + W_installed_engine + W_all_else_empty
@@ -22,17 +23,26 @@ classdef F16WeightsL2 < WeightsModelL2
 %     [Brandt]  S. Brandt, F-16A.xls workbook. Used only as a validation
 %               target (see tests) — never as a calibration input here.
 %     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., AIAA, 2018,
-%               Table 15.2 and §15.3.1 (Eqs. 15.7-15.24).
+%               Table 15.2 (structural group).
+%     [AE481]   AE481 Aircraft Design Metabook §7, Fraction-Based Weight
+%               Estimates table (installed engine, all-else-empty).
 %     [TO]      T.O. 1F-16A-1, Flight Manual, USAF/EPAF F-16A/B Blocks 10/15.
 
     properties
         aircraft_category = 'jet_fighter'  % selects Raymer Table 15.2 row
 
         % ----- Geometry inputs for Raymer Table 15.2 component estimates -----
-        S_w       = 300      % ft²  wing trapezoidal reference area  [TO 1F-16A-1]
-        S_ht      = 63.70    % ft²  horizontal tail area             [TO 1F-16A-1]
-        S_vt      = 54.75    % ft²  vertical tail area               [TO 1F-16A-1]
+        % S_w/S_ht/S_vt are EXPOSED planform areas (fuselage-excluded), per
+        % Raymer Table 15.2's definition -- NOT the full trapezoidal
+        % reference areas (b.geom.S_ref/S_ht/S_vt = 300/63.70/54.75).
+        S_w       = 196.23   % ft²  exposed wing planform area       [Brandt Geom sheet, "Exposed S", Wing row; F16Baseline b.geom.S_exposed_wing]
+        S_ht      = 49.85    % ft²  exposed horizontal tail area     [Brandt Geom sheet, "Exposed S", Pitch Control Surface row; F16Baseline b.geom.S_exposed_ht]
+        S_vt      = 40.89    % ft²  exposed vertical tail area       [Brandt Geom sheet, "Exposed S", Vertical Tail row; F16Baseline b.geom.S_exposed_vt]
         S_wet_fus = 750      % ft²  fuselage wetted area             [estimate; verify TO 1F-16A-1]
+
+        % ----- Inputs for AE481 §7 installed-engine fraction estimate -----
+        N_en      = 1        % --   number of engines                [TO 1F-16A-1]
+        W_en      = 3030     % lbf  bare/dry engine weight            [estimate; verify TO 1F-16A-1 or Jane's All the World's Aircraft]
 
         % ----- WeightsBase abstract properties -----
         W_TO               = NaN      % candidate gross takeoff weight [lbf]; set by sizing loop
@@ -47,25 +57,23 @@ classdef F16WeightsL2 < WeightsModelL2
         W_fuselage     = NaN  % fuselage structural weight [lbf]
 
         % ----- Component weights not computable from Table 15.2 (set in constructor) -----
-        % Both are evaluated from the WeightsL3 Raymer §15.3.1 component
-        % equations at the F-16A Block 10/15 spec inputs in F16WeightsL3 —
-        % NOT back-calculated from Brandt's OEW. (Brandt B12 is a validation
-        % target only; per PLAN.md it must never be a calibration input.)
-        W_installed_engine = NaN  % [lbf] bare engine + installation hardware; WeightsL3 Eqs. 15.7-15.15
-        W_all_else_empty = NaN   % [lbf] avionics/fuel/FCS/hydraulics/electrical/furnishings; WeightsL3 Eqs. 15.16-15.24
+        % Both are AE481 metabook §7 fraction-based estimates (installed
+        % engine = 1.3 x bare engine weight; all-else-empty = 0.17 x W_TO) —
+        % NOT back-calculated from Brandt's OEW (Brandt B12 is a validation
+        % target only; per PLAN.md it must never be a calibration input),
+        % and NOT the L3 Raymer §15.3.1 component buildup, which is a
+        % separate, independent, higher-fidelity method.
+        W_installed_engine = NaN  % [lbf] AE481 §7: 1.3 x N_en x W_en
+        W_all_else_empty = NaN   % [lbf] AE481 §7: 0.17 x W_TO
     end
 
     methods
 
         function obj = F16WeightsL2()
-            l3 = F16WeightsL3();
-            W_eng = WeightsL3.weight_engine_section(l3, NaN);
-            obj.W_installed_engine = W_eng.total;
+            obj.W_installed_engine = WeightsL2.weight_installed_engine(obj);
             % Nominal F-16A Block 10/15 baseline TOGW [T.O. 1F-16A-1 / Brandt B38]
-            % used only as the W_TO input to handling_gear (Eq. 15.24), which
-            % contributes < 0.05% of the systems-group total.
-            W_sys = WeightsL3.weight_systems(l3, 31377);
-            obj.W_all_else_empty = W_sys.total;
+            % used as the W_TO input to the 0.17xW_TO all-else-empty fraction.
+            obj.W_all_else_empty = WeightsL2.weight_all_else_empty(obj, 31377);
         end
 
         function oew = OEW(obj, W_TO)

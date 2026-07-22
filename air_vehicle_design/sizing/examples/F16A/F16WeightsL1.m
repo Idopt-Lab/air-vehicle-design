@@ -13,7 +13,7 @@ classdef F16WeightsL1 < WeightsModelL1
 %   VALIDATION (at W_TO = 31,377 lbf):
 %     Raymer: We/Wto = 1.00 × 2.34 × 31377^(−0.13) ≈ 0.609 → OEW ≈ 19,108 lbf
 %     Roskam: W_E_min ≈ 15,660 lbf (lower bound)
-%     Brandt actual: 19,981 lbf  [Brandt F-16A.xls, B12]
+%     Brandt actual: 19,148 lbf  [Brandt F-16A.xls, B12]
 %
 %   SOURCES:
 %     [Brandt]  S. Brandt, F-16A.xls workbook.

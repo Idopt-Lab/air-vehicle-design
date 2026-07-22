@@ -22,7 +22,7 @@ Implement the generic constraint analysis framework. The F-16-specific constrain
 | File | Purpose |
 |------|---------|
 | `src/constraints/PointPerformanceBase.m` | Abstract base for all constraint types |
-| `src/constraints/WingSizingConstraint.m` | Upper bound on W/S (landing, stall) |
+| `src/constraints/LandingConstraint.m` | Upper bound on W/S (landing, stall) |
 | `src/constraints/ThrustConstraint.m` | Master equation (cruise, turn, dash, climb, takeoff) |
 | `src/constraints/ConstraintAnalysis.m` | Aggregator — receives a list of constraints, computes optimal point + diagram |
 
@@ -54,6 +54,8 @@ Inspired by NPTEL notebook (`NPTEL_Fighter_Aircraft_Sizing.ipynb`) class hierarc
 Source: `examples/F16A/requirements.json` (populated from Requirements.xlsx as primary; β and μ from Constraints.xlsx). Data is written once — no duplication between the two Excel sources.
 
 **CLmax is NOT a constraint input.** The constraint analysis calls `aero.CLmax(state)` at the relevant flight condition. The discipline computes it. Values from Constraints.xlsx (CLmax_TO=1.276, CLmax_land=1.426) are verification targets — see table below.
+
+**TODO (high-lift configuration):** `F16AeroL3` already has an ad-hoc `'TO'`/`'L'` string-config scheme (`delta_flap_TO_deg`/`delta_slat_TO_deg`, `Delta_CLmax_flap(config)`, `get_CLmax_TO`/`get_CLmax_L`) feeding CLmax deltas, but several of the deflection angles are marked "estimated"/"TODO: verify" rather than sourced. Mason, "F-16 configuration" (archive.aoe.vt.edu/mason/Mason_f/F16S04.pdf, slide 10) gives sourced slat/flap deflections for six named configs (takeoff ground roll, takeoff after liftoff, reflexed cruise, max maneuver, approach, landing) — reconcile the current TO/L angles against it, and consider generalizing the bare string configs into a small named-config value class (e.g. `HighLiftConfig` with `slat_deg`/`flap_deg` + static presets) so `get_CLmax(state, config)` can take it as a first-class argument instead of a string literal. Decide scope here rather than folding it into `AircraftState` (pure ISA atmosphere, used by disciplines with no notion of flap position).
 
 **Operational constraints** — all use β = 0.8997:
 
@@ -94,15 +96,20 @@ Source: `examples/F16A/requirements.json` (populated from Requirements.xlsx as p
 | CD0, K1, K2 | `aero.drag_polar(state)` | AerodynamicsBase |
 | q | `state.q` | AircraftState |
 
-### WingSizingConstraint — Landing
+### LandingConstraint — Landing
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
 | W/S ≤ | μ × ρ × g × CLmax × S_ground_roll / (k_L²) × β⁻¹ | Raymer 6th ed (landing ground roll, confirm exact eq at implementation) |
 
-### ThrustConstraint — Takeoff
+### TakeoffConstraint — Mattingly Master Equation, ground-roll case
+Implemented as its own `PointPerformanceBase` class (`src/constraints/TakeoffConstraint.m`),
+not folded into `ThrustConstraint`, since the ground-roll case zeroes the Master
+Equation's A/C/D terms and needs different inputs (CLmax_TO, S_ground_roll, k_TO)
+than the continuous-flight conditions.
+
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
-| T/W ≥ | (β² / α) × (k_TO² / (ρ × g × CLmax_TO)) × (W/S) / S_ground_roll | Raymer 6th ed (takeoff ground roll simplified) |
+| T/W ≥ | (β² / α) × (k_TO² / (ρ × g × CLmax_TO)) × (W/S) / S_ground_roll | Mattingly, *Aircraft Engine Design*, 2nd ed., AIAA, 2002 — Master Equation specialized via T_SL≫(D+R), dh/dt=0 (matches `NPTEL_Fighter_Aircraft_Sizing.ipynb`'s `Takeoff` class, cells 32–33). **Not Raymer** — Raymer 6th ed. ch. 5 ("Takeoff Distance," pp. 128–130) gives only the graphical Takeoff Parameter (TOP)/Fig. 5.4 method; a prior version of this doc cited Raymer in error. Brandt's own F-16A.xls Consts-sheet takeoff row uses the *unsimplified* form (T≫D not assumed), which keeps a `0.7·CD0/(β·CLmax) + μ` drag/friction term this simplified version omits — see `TestTakeoffConstraint.m`'s diagnostic (not exact-match) comparison against it. |
 
 ---
 
@@ -119,7 +126,7 @@ Source: `examples/F16A/requirements.json` (populated from Requirements.xlsx as p
 | Test | Expected | Tolerance |
 |------|----------|-----------|
 | ThrustConstraint returns finite T/W over W/S sweep | no NaN, no Inf | exact |
-| WingSizingConstraint returns positive W/S limit | > 0 | exact |
+| LandingConstraint returns positive W/S limit | > 0 | exact |
 | optimal_point: W/S ≤ landing limit | physical | exact |
 | Works with mock aero/prop objects | converges | — |
 

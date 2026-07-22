@@ -117,17 +117,10 @@ classdef TestAeroL1 < matlab.unittest.TestCase
           function testK1AtBrandtMachPoints(tc, brandtRow)
                % K1 vs Brandt polar_model at each of Brandt's 5 tabulated
                % Mach points. Raymer's linear theory (Eq. 12.50 subsonic /
-               % Eq. 12.51 supersonic) tracks Brandt within ~20% away from
-               % M=1: rows 1,2 (flat subsonic region) and row 4 (M=1.5).
-               % Rows 3 and 5 are known breakdowns of the LINEAR THEORY
-               % ITSELF, not implementation bugs:
-               %   row 3 (M=1.0547): beta=sqrt(M^2-1)->0 just above M=1, so
-               %     Eq. 12.51's denominator (4*AR*beta-2) collapses toward
-               %     zero and K1 blows up (+198% here).
-               %   row 5 (M=2.0): linearized supersonic theory under-predicts
-               %     K1 for this low-AR (3.0), high-sweep (40 deg) wing at
-               %     high Mach (-42% here); Raymer notes Eq. 12.51 is a rough
-               %     estimate, most reliable near M=1.2-1.6.
+               % Eq. 12.51 supersonic, K1 = AR*(M^2-1)*cos(Lambda_LE) /
+               % (4*AR*beta - 2) with beta = sqrt(M^2-1)) tracks Brandt
+               % within ~20% at all 5 rows, including near M=1 (row 3,
+               % M=1.0547) and at M=2.0 (row 5).
                b        = F16Baseline();
                M        = b.brandt.polar_model(brandtRow, 1);
                K1_ref   = b.brandt.polar_model(brandtRow, 4);
@@ -135,13 +128,8 @@ classdef TestAeroL1 < matlab.unittest.TestCase
                received = g.get_K1(M);
                fprintf('\n    K1 (M=%.4f): received = %.4f,  Brandt = %.4f  (%+.1f%%)\n', ...
                     M, received, K1_ref, 100*(received-K1_ref)/K1_ref);
-               if ismember(brandtRow, [1, 2, 4])
-                    tc.verifyEqual(received, K1_ref, 'RelTol', 0.20, ...
-                         sprintf('K1 at M=%.4f deviates >20%% from Brandt.', M));
-               else
-                    tc.verifyGreaterThan(received, 0, ...
-                         'K1 must stay positive even where linear theory breaks down near/beyond M=1.');
-               end
+               tc.verifyEqual(received, K1_ref, 'RelTol', 0.20, ...
+                    sprintf('K1 at M=%.4f deviates >20%% from Brandt.', M));
           end
 
           function testCD0AtBrandtMachPoints(tc, brandtRow)
@@ -196,9 +184,11 @@ classdef TestAeroL1 < matlab.unittest.TestCase
                % and linear-theory K1_sub are expected to track Brandt within
                % ±20%, same tolerance as testCD0/K1AtBrandtMachPoints.
                % dash (M=1.6) and combat_sup (M=1.4) are left sanity-only --
-               % Eq. 12.51's linear K1_sup diverges from Brandt near/beyond
-               % M=1 (documented in testK1AtBrandtMachPoints) and L1 has no
-               % transonic/supersonic CD0 rise.
+               % Brandt's Consts-sheet K1/CD0 at these points are empirical
+               % (not the polar_model linear-theory curve verified in
+               % testK1AtBrandtMachPoints) and L1 has no transonic/supersonic
+               % CD0 rise, so neither CD0 nor K1 is expected to track closely
+               % here.
                if ismember(constraintName, {'cruise', 'combat_sub', 'max_alt', 'ps'})
                     tc.verifyEqual(polar.CD0, c.CD0, 'RelTol', 0.20, ...
                          sprintf('CD0 at %s deviates >20%% from Brandt.', constraintName));
@@ -352,6 +342,74 @@ classdef TestAeroL1 < matlab.unittest.TestCase
           function testIsHandleClass(tc)
                g = F16AeroL1();
                tc.verifyTrue(isa(g, 'handle'));
+          end
+
+          % --- High-lift-device / gear deltas (Roskam Part I, Tables 3.1/3.6)
+
+          function testDeltaEoswNegative(tc)
+               % Flaps degrade span efficiency: Roskam Table 3.6's "e" column
+               % decreases clean -> TO -> landing, so the delta is negative.
+               g = F16AeroL1();
+               fprintf('\n    Delta_e_osw: TO=%.4f  L=%.4f\n', g.get_Delta_e_osw_TO(), g.get_Delta_e_osw_L());
+               tc.verifyLessThan(g.get_Delta_e_osw_TO(), 0);
+               tc.verifyLessThan(g.get_Delta_e_osw_L(),  0);
+               tc.verifyLessThan(g.get_Delta_e_osw_L(), g.get_Delta_e_osw_TO(), ...
+                    'Landing (more flap) should degrade e_osw more than takeoff.');
+          end
+
+          function testDeltaCD0PositiveAndOrdered(tc)
+               g = F16AeroL1();
+               fprintf('\n    Delta_CD0: TO=%.4f  L=%.4f\n', g.get_Delta_CD0_TO(), g.get_Delta_CD0_L());
+               tc.verifyGreaterThan(g.get_Delta_CD0_TO(), 0);
+               tc.verifyGreaterThan(g.get_Delta_CD0_L(),  0);
+               tc.verifyGreaterThan(g.get_Delta_CD0_L(), g.get_Delta_CD0_TO(), ...
+                    'Landing config (more flap) should add more CD0 than takeoff.');
+          end
+
+          function testDeltaCLmaxPositiveAndOrdered(tc)
+               g = F16AeroL1();
+               fprintf('\n    Delta_CLmax: TO=%.4f  L=%.4f\n', g.get_Delta_CLmax_TO(), g.get_Delta_CLmax_L());
+               tc.verifyGreaterThan(g.get_Delta_CLmax_TO(), 0);
+               tc.verifyGreaterThan(g.get_Delta_CLmax_L(),  0);
+               tc.verifyGreaterThan(g.get_Delta_CLmax_L(), g.get_Delta_CLmax_TO());
+          end
+
+          function testCD0TotalVsBrandtTakeoffLanding(tc)
+               % L1 CD0 is a category-mean estimate (Raymer Table 12.3 Cf x
+               % Roskam Table 3.6 deltas), not F-16-calibrated -- generous
+               % tolerance, consistent with this file's other L1-vs-Brandt tests.
+               % TO matches Brandt closely (clean+TO-flap+gear ~= 0.017+0.015+
+               % 0.020 = 0.052, vs Brandt 0.052 exactly). Landing does NOT:
+               % Roskam Table 3.6's landing-flap Delta_CD0 range (0.055-0.075)
+               % reflects generic large (e.g. Fowler-type) flaps, much bigger
+               % than the F-16's small flaperon -- L1's category estimate
+               % genuinely overshoots Brandt's landing CD0 (0.062). That is
+               % the expected L1-vs-real-aircraft gap, not a bug, so the
+               % landing case is a sanity bound rather than a tight RelTol
+               % (same pattern as e.g. testDragPolarVsBrandtActualAtDash).
+               b   = F16Baseline();
+               g   = F16AeroL1();
+               cd0_TO = g.get_CD0() + g.get_Delta_CD0_TO();
+               cd0_L  = g.get_CD0() + g.get_Delta_CD0_L();
+               fprintf('\n    CD0_TO: received=%.4f  Brandt=%.4f\n', cd0_TO, b.constraints.takeoff.CD0);
+               fprintf('    CD0_L:  received=%.4f  Brandt=%.4f\n', cd0_L, b.constraints.landing.CD0);
+               tc.verifyEqual(cd0_TO, b.constraints.takeoff.CD0, 'RelTol', 0.60);
+               tc.verifyGreaterThan(cd0_L, b.constraints.landing.CD0, ...
+                    'L1''s generic-category landing CD0 should exceed Brandt''s F-16-specific value.');
+               tc.verifyLessThan(cd0_L, 3*b.constraints.landing.CD0, ...
+                    'L1 landing CD0 is more than 3x Brandt -- check for a gross error.');
+          end
+
+          function testCLmaxTotalVsBrandtTakeoffLanding(tc)
+               b   = F16Baseline();
+               g   = F16AeroL1();
+               state = AircraftState(0, 0.2);
+               clmax_TO = g.get_CLmax(state) + g.get_Delta_CLmax_TO();
+               clmax_L  = g.get_CLmax(state) + g.get_Delta_CLmax_L();
+               fprintf('\n    CLmax_TO: received=%.4f  Brandt=%.4f\n', clmax_TO, b.brandt.CLmax_TO);
+               fprintf('    CLmax_L:  received=%.4f  Brandt=%.4f\n', clmax_L, b.brandt.CLmax_land);
+               tc.verifyEqual(clmax_TO, b.brandt.CLmax_TO,   'RelTol', 0.60);
+               tc.verifyEqual(clmax_L,  b.brandt.CLmax_land, 'RelTol', 0.60);
           end
 
      end

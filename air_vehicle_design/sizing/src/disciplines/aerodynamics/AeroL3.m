@@ -23,7 +23,7 @@ classdef AeroL3
 %     FF_surf = (1+0.6/x_c_max*tc+100*tc^4)*(1.34*M^0.18*cos(Lm50)^0.28)  Eq. 12.30
 %     FF_body = 1+5/f^1.5+f/400 (f<=6), or 1+60/f^3+f/400 (f>6),
 %               f=L/D                    Raymer 6th ed. Eq. 12.31
-%     CD0 = SUM(Cf_eff*FF*Q*Swet_i)/Sref + CD0_misc + CD0_LandP
+%     CD0 = SUM(Cf_eff*FF*Q*Swet_i)/Sref + CD0_misc + CD0_LandP   Eq 12.41
 
     methods (Static)
 
@@ -72,6 +72,11 @@ classdef AeroL3
             FF = AeroL3.FF_body(L_body, D_body);
         end
 
+        function e = get_e_osw(obj)
+        %GET_E_OSW  Oswald efficiency — same Raymer formula as L1/L2.
+            e = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
+        end
+
         function val = get_K1(obj, M)
         %GET_K1  Induced-drag factor at Mach M; reads obj.AR and obj.Lambda_LE_deg.
             e = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
@@ -83,8 +88,15 @@ classdef AeroL3
         end
 
         function val = get_K2(obj, K1_sub, M)
-        %GET_K2  Polar-offset term; reads obj.CL_minD.
-            val = AeroL1.K2_value(K1_sub, obj.CL_minD, M);
+        %GET_K2  Polar-offset term.
+        %   CL_minD = CL_alpha(M) * (-deg2rad(alpha_L0) / 2)  [Brandt et al. §4.3],
+        %   evaluated at the current Mach via obj.get_CL_alpha so any
+        %   per-aircraft override (e.g. Lambda_c4_deg vs Lambda_LE_deg) is
+        %   honored. alpha_L0 is a genuine NACA 64A204 airfoil spec value
+        %   (not a Brandt-calibrated output).
+            CL_alpha_M = obj.get_CL_alpha(M);
+            CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
+            val        = AeroL1.K2_value(K1_sub, CL_minD, M);
         end
 
         function val = compute_K(e_osw, AR)

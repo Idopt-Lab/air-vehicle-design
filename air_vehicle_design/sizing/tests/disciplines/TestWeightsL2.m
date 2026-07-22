@@ -8,7 +8,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %           + W_installed_engine + W_all_else_empty
 %
 %   REFERENCE VALUES:
-%     [Brandt] OEW = 19,980.7 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
+%     [Brandt] OEW = 19,148 lbf  [Brandt F-16A.xls, sheet "Wt", B12]
 %     [Raymer Table 15.2] Fighter unit weights: wing 9, HT 4, VT 5.3, fus 4.8 lbf/ft²
 %     [AE481 metabook §7] LG fraction: 0.033 × W_TO for non-Navy fighters
 %
@@ -76,12 +76,12 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
             % Structural components from Raymer Table 15.2; engine and all-else are
             % estimates (see F16WeightsL2 properties).  Use ±20% tolerance.
             g = F16WeightsL2();
-            expected = 19980.7;  % lbf  [Brandt B12]
+            expected = 19148;  % lbf  [Brandt B12]
             oew = g.OEW(31377);
             fprintf('\n    L2 component OEW=%.0f lbf  Brandt=%.0f lbf  err=%.1f%%\n', ...
                 oew, expected, 100*(oew-expected)/expected);
             tc.verifyEqual(oew, expected, 'RelTol', 0.20, ...
-                'L2 OEW must be within ±20% of Brandt F-16A OEW (19,981 lbf) [Brandt B12].');
+                'L2 OEW must be within ±20% of Brandt F-16A OEW (19,148 lbf) [Brandt B12].');
         end
 
         function testJetFighterCategorySetCorrectly(tc)
