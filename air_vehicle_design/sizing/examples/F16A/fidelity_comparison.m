@@ -82,17 +82,21 @@ ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ..
            b.brandt.W_avionics + b.brandt.W_armament;
 
 % ── Geometry ──────────────────────────────────────────────────────────── %
+% Geometry has only L1/L2 fidelity tiers (L3 eliminated and merged into L2,
+% 2026-07-22 -- see src/disciplines/geometry/GeomL2.md's dated note). L2 now
+% carries the full HT/VT breakdown + duct that used to live on a separate
+% F16GeomL3 class, so the L3 column below is NaN throughout (not a missing
+% class -- Geometry genuinely stops at L2).
 g1 = F16GeomL1();
 g2 = F16GeomL2();
-g3 = F16GeomL3();
 
-swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(W_TO),      g3.get_S_wet(W_TO)     ];
-lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                g3.L_fus               ];
-sw_wing = [NaN,                g2.get_S_wet_wing(),      g3.get_S_wet_wing()    ];
-sw_ht   = [NaN,                g2.get_S_wet_HT(),        g3.get_S_wet_HT()      ];
-sw_vt   = [NaN,                g2.get_S_wet_VT(),        g3.get_S_wet_VT()      ];
-sw_fus  = [NaN,                g2.get_S_wet_fuselage(),  g3.get_S_wet_fuselage()];
-sw_duct = [NaN,                NaN,                      g3.get_S_wet_duct()    ];
+swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),      NaN];
+lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                NaN];
+sw_wing = [NaN,                g2.get_S_wet_wing(),      NaN];
+sw_ht   = [NaN,                g2.get_S_wet_HT(),        NaN];
+sw_vt   = [NaN,                g2.get_S_wet_VT(),        NaN];
+sw_fus  = [NaN,                g2.get_S_wet_fuselage(),  NaN];
+sw_duct = [NaN,                g2.get_S_wet_duct(),      NaN];
 
 % ── Aerodynamics ──────────────────────────────────────────────────────── %
 a1 = F16AeroL1();
@@ -330,7 +334,7 @@ fprintf('               else Brandt counts in OEW (Strakes/Controls/Electrical/H
 fprintf('               Avionics/Armament). Because Strakes/Nacelles are now Structural-Weight-Models\n');
 fprintf('               values, these 7 reference values no longer sum exactly to Brandt''s OEW\n');
 fprintf('               (19,148 lbf) the way the original all-Wt-sheet figures did.\n');
-fprintf('  [GEOMETRY]   L1: Roskam Vol.I Table 3.5; L2: planform+tc; L3: adds inlet duct.\n');
+fprintf('  [GEOMETRY]   L1: Roskam Vol.I Table 3.5; L2: planform+tc (Roskam Eq.12.1) + duct. No L3 (eliminated 2026-07-22, merged into L2).\n');
 fprintf('  [GEOMETRY]   Component refs are Brandt Geom-sheet wetted areas; Wing agrees tightly.\n');
 fprintf('  [GEOMETRY]   HT/VT %%err is large because this framework''s S_exposed_HT/VT use full\n');
 fprintf('               T.O. reference planform area, not Brandt''s fuselage-excluded exposed area.\n');

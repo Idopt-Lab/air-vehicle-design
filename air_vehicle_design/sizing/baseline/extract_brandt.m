@@ -1,5 +1,9 @@
 function data = extract_brandt(xlsPath)
-%EXTRACT_BRANDT  Read the cells of the Brandt F-16A workbook used to seed F16Baseline.m.
+%EXTRACT_BRANDT  [DEPRECATED - TO BE DELETED] Read Brandt F-16A cells for F16Baseline.m.
+%
+%   *** DEPRECATED: this file and the whole baseline/ folder are superseded by
+%   air_vehicle_design/sizing/VnV/BrandtF16A/ (Brandt*.m + GroundTruth/) and are
+%   slated for removal. Do NOT build new tooling on this; use VnV/BrandtF16A. ***
 %   data = extract_brandt(xlsPath) opens the Brandt "Jet Designer/Jet3" workbook
 %   READ-ONLY with macros disabled, pulls the specific cells transcribed into
 %   baseline/F16Baseline.m, prints them, and returns them in a struct so the
