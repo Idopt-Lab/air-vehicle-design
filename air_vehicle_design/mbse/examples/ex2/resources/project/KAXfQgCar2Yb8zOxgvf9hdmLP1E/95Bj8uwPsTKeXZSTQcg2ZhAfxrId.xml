@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Info File="Aircraft.slx" GroupUUID="" Icon="" Name="Aircraft" Type="StartUp" Visible="0">
+    <Extension Name="StartUpPrev" Value="87d0375b-13eb-4063-a623-44848fe243f2"/>
+</Info>

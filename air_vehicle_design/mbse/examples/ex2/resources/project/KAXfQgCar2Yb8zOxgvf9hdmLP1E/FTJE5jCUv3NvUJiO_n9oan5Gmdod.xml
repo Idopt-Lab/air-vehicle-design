@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Info File="three_g.slx" GroupUUID="" Icon="" Name="three_g" Type="StartUp" Visible="0">
+    <Extension Name="StartUpPrev" Value="50509a75-5bf0-40ed-8657-0e8fcb21cd56"/>
+</Info>
