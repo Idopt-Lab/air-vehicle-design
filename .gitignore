@@ -34,3 +34,7 @@ codegen/
 
 # buildtool cache folder
 .buildtool/
+
+# MATLAB/Simulink project dependency-analysis cache (regenerated on open/analysis)
+*.dmr
+*.dmr.old*
