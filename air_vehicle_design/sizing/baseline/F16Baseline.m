@@ -426,7 +426,19 @@ b.constraints.dash.alpha_dry      = 0.298293;  % AS23
 b.constraints.dash.alpha_AB       = 0.576980;  % AT23
 b.constraints.dash.alpha_mil_T_AB = 0.188237;  % AS23*(T_SL_dry/T_SL_AB)
 b.constraints.dash.CD0            = 0.03933;   % Consts row 23 [Brandt Consts sheet] -- MxMach
-b.constraints.dash.K1             = 0.1251;    % Consts row 23
+b.constraints.dash.K1             = 0.276031;  % CORRECTED (2026-07-23, user direction): supersonic-form K1,
+                                                % k1_super_f(M=1.6) = AR*(M^2-1)*cos(Lambda_LE)/(4*AR*sqrt(M^2-1)-2)
+                                                % [Raymer 6th ed. Eq. 12.51; same functional form as Brandt's
+                                                % Aero-tab k1_super_f in BrandtAerodynamics.aero_at_mach()],
+                                                % superseding the Consts-row-23 tabulated cell value (0.1251).
+                                                % b.constraints.dash.TW_MxMach below has been RECOMPUTED to stay
+                                                % consistent with this K1 (see the note at that array). This
+                                                % directly contradicts tests/constraints/TestThrustConstraint.m's
+                                                % "NOTE ON temp_Casey" comment, which documents the opposite
+                                                % conclusion for this exact condition (that 0.1251, not a larger
+                                                % supersonic-form value, was the one found to reproduce Brandt's
+                                                % original TW_MxMach table) -- flagged, not reconciled, here;
+                                                % that comment has not been updated.
 b.constraints.dash.K2             = 0;         % Consts row 23
 
 % Full MxMach constraint-diagram row [Brandt F-16A.xls Consts sheet]: the
@@ -435,11 +447,23 @@ b.constraints.dash.K2             = 0;         % Consts row 23
 % (see tests/constraints/TestThrustConstraint.m testMasterEquationReproduces
 % BrandtWorksheet) -- NOT an input to the equation itself.
 b.constraints.dash.WS_psf    = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
-b.constraints.dash.TW_MxMach = [2.899067, 2.149974, 1.70993, 1.42063, 1.21614, ...
-                                1.06407, 0.94666, 0.85337, 0.77753, 0.71472, ...
-                                0.66191, 0.61693, 0.5782, 0.54454, 0.51505, ...
-                                0.48901, 0.4659, 0.444525, 0.42673, 0.41003, ...
-                                0.39492];   % [Brandt Consts sheet, MxMach row]
+% RECOMPUTED (2026-07-23, user direction): the row immediately below is no
+% longer Brandt's tabulated worksheet output. It is Brandt's original row
+% (least-squares-fit to a T/W = A/WS + B*WS curve, max |fit residual| =
+% 6.5e-4) with its B term (= K1_old*n^2*beta^2/(alpha*q)) rescaled by the
+% ratio K1_new/K1_old = 0.276031/0.1251, matching the K1 correction applied
+% to b.constraints.dash.K1 above. This directly reproduces the equation
+% masterConstraint_ evaluates (see BrandtConstraintAnalysis.m) with the new
+% K1 and everything else (CD0, alpha, beta, q) held at Brandt's original
+% values. Superseded values (Brandt's original worksheet row, K1=0.1251):
+%   [2.899067, 2.149974, 1.70993, 1.42063, 1.21614, 1.06407, 0.94666,
+%    0.85337, 0.77753, 0.71472, 0.66191, 0.61693, 0.5782, 0.54454, 0.51505,
+%    0.48901, 0.4659, 0.444525, 0.42673, 0.41003, 0.39492]
+b.constraints.dash.TW_MxMach = [2.904072, 2.156704, 1.718385, 1.430823, 1.228061, ...
+                                1.077721, 0.962048, 0.870490, 0.796384, 0.735314, ...
+                                0.684239, 0.640996, 0.604001, 0.572074, 0.544313, ...
+                                0.520017, 0.498635, 0.479728, 0.462938, 0.447976, ...
+                                0.434602];   % RECOMPUTED at K1=0.276031 -- see note above
 
 % [D] Max altitude  50,000 ft, M=0.87  [Consts row 25]
 b.constraints.max_alt.alt_ft         = 50000;
@@ -482,8 +506,27 @@ b.constraints.combat_sup.alpha_dry      = 0.357862; % AS27  T_dry/T_SL_dry  [Bra
 b.constraints.combat_sup.alpha_AB       = 0.556558; % AT27  T_AB/T_SL_AB    [Brandt Consts]
 b.constraints.combat_sup.alpha_mil_T_AB = 0.225828; % AS27*(T_SL_dry/T_SL_AB) = 0.357862*(15000/23770)
 b.constraints.combat_sup.CD0            = 0.04063;  % Consts row 27 [Brandt Consts sheet]
-b.constraints.combat_sup.K1             = 0.12563;  % Consts row 27
-b.constraints.combat_sup.K2             = -0.00105; % Consts row 27 -- Brandt's model is not exactly 0 here despite M>1 (K2=0 supersonic is this framework's own linearized-theory assumption, not universal)
+b.constraints.combat_sup.K1             = 0.226103; % CORRECTED (2026-07-23, user direction): supersonic-form K1,
+                                                     % k1_super_f(M=1.4) = AR*(M^2-1)*cos(Lambda_LE)/(4*AR*sqrt(M^2-1)-2)
+                                                     % [Raymer 6th ed. Eq. 12.51; same functional form as Brandt's
+                                                     % Aero-tab k1_super_f in BrandtAerodynamics.aero_at_mach()],
+                                                     % superseding the Consts-row-27 tabulated cell value (0.12563).
+                                                     % b.constraints.combat_sup.TW_CombatSup below has been
+                                                     % RECOMPUTED to stay consistent with this K1 (see the note at
+                                                     % that array). See the parallel note on b.constraints.dash.K1
+                                                     % above re: the now-contradicted TestThrustConstraint.m comment.
+b.constraints.combat_sup.K2             = 0;        % CORRECTED (2026-07-23, user direction): corrections.xls
+                                                     % Consts!AO27 now uses the same K2 supersonic equation
+                                                     % (K2=0, linearized theory) as every other supersonic
+                                                     % condition, superseding the old -0.00105 tabulated cell
+                                                     % value. Resolves the previously-flagged anomaly ("Brandt's
+                                                     % model is not exactly 0 here despite M>1"); K2=0 is no
+                                                     % longer just this framework's own assumption for this row.
+                                                     % No TW_CombatSup recompute needed: the original table was
+                                                     % already generated with no K2 contribution (a nonzero
+                                                     % K2*n*beta/alpha term would show up as a ~-0.0024 uniform
+                                                     % offset across the row, which the A/WS+B*WS fit above
+                                                     % shows is not present -- max residual 5.2e-6).
 
 % Full Combat Turn 2 (supersonic) constraint-diagram row [Brandt F-16A.xls
 % Consts sheet, row 27, "Cmbt Trn"]: the required T_SL/W_TO Brandt's own
@@ -494,11 +537,20 @@ b.constraints.combat_sup.K2             = -0.00105; % Consts row 27 -- Brandt's 
 % b.constraints.dash.WS_psf (Brandt's Consts sheet uses one shared W_TO/S
 % column for every condition row).
 b.constraints.combat_sup.WS_psf      = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
-b.constraints.combat_sup.TW_CombatSup = [2.38459, 1.77307, 1.41494, 1.18042, 1.01542, ...
-                                         0.8934, 0.79981, 0.72598, 0.66647, 0.61765, ...
-                                         0.57702, 0.54281, 0.51372, 0.48879, 0.46727, ...
-                                         0.4486, 0.43231, 0.41806, 0.40554, 0.39451, ...
-                                         0.38479];   % [Brandt Consts sheet, Cmbt Trn row 27]
+% RECOMPUTED (2026-07-23, user direction): the row immediately below is no
+% longer Brandt's tabulated worksheet output -- see the parallel note on
+% b.constraints.dash.TW_MxMach above (same method: least-squares fit of
+% Brandt's original row to T/W = A/WS + B*WS, max |fit residual| = 5.2e-6,
+% then B rescaled by K1_new/K1_old = 0.226103/0.12563). Superseded values
+% (Brandt's original worksheet row, K1=0.12563):
+%   [2.38459, 1.77307, 1.41494, 1.18042, 1.01542, 0.8934, 0.79981, 0.72598,
+%    0.66647, 0.61765, 0.57702, 0.54281, 0.51372, 0.48879, 0.46727, 0.4486,
+%    0.43231, 0.41806, 0.40554, 0.39451, 0.38479]
+b.constraints.combat_sup.TW_CombatSup = [2.393396, 1.784961, 1.429914, 1.198472, 1.036556, ...
+                                         0.917621, 0.827109, 0.756369, 0.699938, 0.654196, ...
+                                         0.616648, 0.585520, 0.559517, 0.537668, 0.519234, ...
+                                         0.503642, 0.490439, 0.479265, 0.469827, 0.461888, ...
+                                         0.455250];   % RECOMPUTED at K1=0.226103 -- see note above
 
 % [F] Ps (specific excess power) condition  [Brandt F-16A.xls, Consts sheet, row 28]
 %   10,000 ft, M=0.87, n=1, 100% AB, Ps_req=500 ft/s.
@@ -605,11 +657,21 @@ b.constraints.landing.WS_land = 138.742;  % lbf/ft^2 [Brandt Consts row 33]
 % differ between "original" and "corrected" -- every other b.* field
 % (weights, geometry, engine, ...) is untouched by variant.
 if variant == "corrected"
-    b.constraints.dash.TW_MxMach = [2.898946, 2.149811, 1.709722, 1.420386, 1.215849, ...
-                                     1.063734, 0.946284, 0.852949, 0.777067, 0.714220, ...
-                                     0.661368, 0.616347, 0.577575, 0.543871, 0.514332, ...
-                                     0.488258, 0.465099, 0.444414, 0.425847, 0.409107, ...
-                                     0.393955];   % [corrections.xls Consts!K23:AE23]
+    % RECOMPUTED (2026-07-23, user direction): same K1=0.276031 correction
+    % as the "original" b.constraints.dash.TW_MxMach above, applied here to
+    % the corrections.xls-basis row instead (least-squares fit of the row
+    % below to T/W = A/WS + B*WS, max |fit residual| = 5.0e-7, then B
+    % rescaled by K1_new/K1_old = 0.276031/0.1251). Superseded values
+    % (corrections.xls worksheet row, K1=0.1251):
+    %   [2.898946, 2.149811, 1.709722, 1.420386, 1.215849, 1.063734,
+    %    0.946284, 0.852949, 0.777067, 0.714220, 0.661368, 0.616347,
+    %    0.577575, 0.543871, 0.514332, 0.488258, 0.465099, 0.444414,
+    %    0.425847, 0.409107, 0.393955]
+    b.constraints.dash.TW_MxMach = [2.903785, 2.156344, 1.717948, 1.430306, 1.227463, ...
+                                     1.077042, 0.961286, 0.869645, 0.795456, 0.734303, ...
+                                     0.683145, 0.639817, 0.602739, 0.570728, 0.542883, ...
+                                     0.518503, 0.497038, 0.478046, 0.461173, 0.446127, ...
+                                     0.432668];   % RECOMPUTED at K1=0.276031 -- see note above
 
     b.constraints.cruise.TW_Cruise = [1.290512, 0.981789, 0.806303, 0.695810, 0.621877, ...
                                        0.570543, 0.534155, 0.508163, 0.489696, 0.476848, ...
@@ -629,11 +691,21 @@ if variant == "corrected"
                                               0.760262, 0.791638, 0.823564, 0.855958, 0.888759, ...
                                               0.921911];   % [corrections.xls Consts!K26:AE26]
 
-    b.constraints.combat_sup.TW_CombatSup = [2.384266, 1.772636, 1.414394, 1.179756, 1.014645, ...
-                                              0.892515, 0.798808, 0.724873, 0.665246, 0.616308, ...
-                                              0.575565, 0.541242, 0.512044, 0.486999, 0.465370, ...
-                                              0.446583, 0.430185, 0.415815, 0.403182, 0.392048, ...
-                                              0.382215];   % [corrections.xls Consts!K27:AE27]
+    % RECOMPUTED (2026-07-23, user direction): same K1=0.226103 correction
+    % as the "original" b.constraints.combat_sup.TW_CombatSup above, applied
+    % here to the corrections.xls-basis row instead (least-squares fit of
+    % the row below to T/W = A/WS + B*WS, max |fit residual| = 5.6e-7, then
+    % B rescaled by K1_new/K1_old = 0.226103/0.12563). Superseded values
+    % (corrections.xls worksheet row, K1=0.12563):
+    %   [2.384266, 1.772636, 1.414394, 1.179756, 1.014645, 0.892515,
+    %    0.798808, 0.724873, 0.665246, 0.616308, 0.575565, 0.541242,
+    %    0.512044, 0.486999, 0.465370, 0.446583, 0.430185, 0.415815,
+    %    0.403182, 0.392048, 0.382215]
+    b.constraints.combat_sup.TW_CombatSup = [2.392815, 1.784177, 1.428927, 1.197282, 1.035163, ...
+                                              0.916025, 0.825310, 0.754367, 0.697733, 0.651787, ...
+                                              0.614036, 0.582706, 0.556499, 0.534447, 0.515810, ...
+                                              0.500015, 0.486609, 0.475232, 0.465591, 0.457448, ...
+                                              0.450608];   % RECOMPUTED at K1=0.226103 -- see note above
 
     b.constraints.ps.TW_Ps = [1.324343, 1.126315, 1.010227, 0.934111, 0.880478, ...
                                0.840744, 0.810201, 0.786052, 0.766531, 0.750465, ...

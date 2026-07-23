@@ -28,15 +28,28 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 %   0.10) and TestAeroL3 (positivity-only at supersonic conditions), those are
 %   diagnostic/loose checks here, not exact-match assertions.
 %
-%   NOTE ON temp_Casey: a since-removed diagnostic test fed Brandt's own
-%   CD0/K1/K2/alpha for the Max Mach condition through the Master Equation
-%   directly (bypassing F16AeroL3/F16PropL2) and found that temp_Casey's
-%   src/Utilities/Constraints.m records MxMach K1 = 0.213727, but only
-%   F16Baseline's b.constraints.dash.K1 = 0.1251 reproduces Brandt's actual
-%   worksheet numbers (0.213727 overshoots Brandt's table by a growing
-%   percentage as W/S increases -- up to +1.7% by W/S=83 -- while 0.1251
-%   matches to a constant ~0.15% offset, i.e. pure atmosphere-model rounding).
-%   Do not port temp_Casey's K1 value for MxMach.
+%   NOTE ON temp_Casey (HISTORICAL -- see 2026-07-23 update below): a
+%   since-removed diagnostic test fed Brandt's own CD0/K1/K2/alpha for the
+%   Max Mach condition through the Master Equation directly (bypassing
+%   F16AeroL3/F16PropL2) and found that temp_Casey's src/Utilities/
+%   Constraints.m records MxMach K1 = 0.213727, but F16Baseline's
+%   b.constraints.dash.K1 -- 0.1251 at the time -- reproduced Brandt's
+%   original worksheet numbers (0.213727 overshot Brandt's table by a
+%   growing percentage as W/S increases, up to +1.7% by W/S=83, while
+%   0.1251 matched to a constant ~0.15% offset, i.e. pure atmosphere-model
+%   rounding). Do not port temp_Casey's K1 value for MxMach.
+%
+%   2026-07-23 UPDATE: F16Baseline's b.constraints.dash.K1 has since been
+%   changed, at user direction, from 0.1251 (the Consts-row-23 tabulated
+%   cell value the finding above validated against) to 0.276031 -- the
+%   supersonic-form K1 [Raymer 6th ed. Eq. 12.51 / Brandt's own Aero-tab
+%   k1_super_f, see F16Baseline.m's b.constraints.dash.K1 comment]. The
+%   b.constraints.dash.TW_MxMach table was recomputed to match this new K1
+%   (see that field's comment in F16Baseline.m), so it and K1 are internally
+%   consistent again, but the specific 0.1251-vs-0.213727 comparison above
+%   no longer describes what b.constraints.dash.K1 currently holds --
+%   retained as historical context for how 0.1251 was originally chosen,
+%   not as a statement about the present value.
 
     properties (Constant)
         ALPHA_ABS_TOL = 0.10   % Brandt-vs-Mattingly alpha formula mismatch, matches TestPropL2.testLapseABAtDash
