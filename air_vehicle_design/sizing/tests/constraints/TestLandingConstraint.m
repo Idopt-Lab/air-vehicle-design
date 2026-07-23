@@ -54,6 +54,14 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
+        function testIsaOnlyWbyS(tc)
+            % Landing belongs to the Only_WbyS category, same as
+            % StallConstraint -- see LandingConstraint.m/Only_WbyS.m headers.
+            state = AircraftState(0, 0.1);
+            obj   = LandingConstraint("Toy", state, F16AeroL1(), 4000, 0.5);
+            tc.verifyTrue(isa(obj, 'Only_WbyS'));
+        end
+
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, F16AeroL1(), 4000, 0.5);
@@ -241,6 +249,10 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % K1/K2 variant, matching Brandt's own Consts sheet, which reuses
             % the same K1=0.11603/K2=-0.0066 for both the takeoff (row 32)
             % and landing (row 33) rows [F16Baseline b.constraints.landing].
+            % Which F16Baseline() table this prints against ("original" or
+            % "corrected" -- see F16Baseline.m section 11b; Landing's WS_land
+            % is essentially unchanged between the two) is controlled by the
+            % single manual switch in BrandtVariant.m.
             %
             % Prints, organized by fidelity level: the CD0/K1/K2/CLmax used,
             % the computed W/S, Brandt's reference W/S (138.742), and the
@@ -252,7 +264,8 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % flap-vs-clean bases (see testEquationReproducesBrandtLandingPoint,
             % which confirms the EQUATION itself reproduces Brandt exactly
             % when fed Brandt's own flapped numbers).
-            b = F16Baseline();
+            variant = BrandtVariant();
+            b = F16Baseline(variant);
             [~, CLmax_land, CD0_land, K1, K2] = TestLandingConstraint.landingAeroValues(fidelityLevel);
 
             stub  = FixedAeroStub(CLmax_land, CD0_land, K1, K2);
@@ -263,7 +276,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             WS_expected = b.constraints.landing.WS_land;
             pct_error   = 100 * (WS_computed - WS_expected) / WS_expected;
 
-            fprintf('\n    ==================== Fidelity Level: %s ====================\n', fidelityLevel);
+            fprintf('\n    ==================== Fidelity Level: %s (%s) ====================\n', fidelityLevel, variant);
             fprintf('    Aerodynamics used (flapped landing config):\n');
             fprintf('      CD0    = %.5f\n', CD0_land);
             fprintf('      K1     = %.5f\n', K1);

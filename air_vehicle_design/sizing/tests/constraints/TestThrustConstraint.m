@@ -60,6 +60,15 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
+        function testIsaBothWbySTbyW(tc)
+            % ThrustConstraint belongs to the Both_WbyS_TbyW category, same
+            % as TakeoffConstraint -- see ThrustConstraint.m/
+            % Both_WbyS_TbyW.m headers.
+            state = AircraftState(0, 0.5);
+            obj   = ThrustConstraint("Toy", state, F16AeroL1(), F16PropL2(), 1.0);
+            tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
+        end
+
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.5);
             obj   = ThrustConstraint("Toy", state, F16AeroL1(), F16PropL2(), 1.0);
@@ -215,10 +224,15 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % model does. This is a known aerodynamics-discipline gap, not a
             % ThrustConstraint bug -- see the class header note on how the
             % Master Equation itself was separately confirmed against
-            % Brandt's table to ~0.15%.
+            % Brandt's table to ~0.15%. Which F16Baseline() table this prints
+            % against ("original" Brandt F-16A.xls, or Casey's "corrected"
+            % revised-OEW recalculation) is controlled by the single manual
+            % switch in BrandtVariant.m -- edit that file, not this one, to
+            % flip it.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
-            b     = F16Baseline();
+            variant = BrandtVariant();
+            b     = F16Baseline(variant);
             state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
             obj   = ThrustConstraint("Max Mach", state, aero, prop, 0.8997, 1.0, 0.0);
 
@@ -226,7 +240,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_MxMach = b.constraints.dash.TW_MxMach;
             TW            = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s]  %6s  %12s  %12s  %10s\n', fidelityLevel, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
             for i = 1:numel(WS_range)
                 fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_MxMach(i), ...
                     100*(TW(i) - brandt_MxMach(i))/brandt_MxMach(i));
@@ -296,9 +310,14 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % tabulated row [F16Baseline b.constraints.max_alt.TW_MaxAlt].
             % Diagnostic only, same caveats as testF16CruiseRequiredTWTable
             % (textbook CD0/K1 buildup vs. Brandt's flight-calibrated polar).
+            % Which F16Baseline() table this prints against ("original" or
+            % "corrected" -- see F16Baseline.m section 11b; Max Alt is one of
+            % the rows that shifts materially between the two) is controlled
+            % by the single manual switch in BrandtVariant.m.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
-            b     = F16Baseline();
+            variant = BrandtVariant();
+            b     = F16Baseline(variant);
             state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
             obj   = ThrustConstraint("Max Alt", state, aero, prop, 0.8997, 1.0, 0.0);
 
@@ -306,7 +325,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_maxalt = b.constraints.max_alt.TW_MaxAlt;
             TW            = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s]  %6s  %12s  %12s  %10s\n', fidelityLevel, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
             for i = 1:numel(WS_range)
                 fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_maxalt(i), ...
                     100*(TW(i) - brandt_maxalt(i))/brandt_maxalt(i));
@@ -380,9 +399,14 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Brandt's flight-calibrated polar) -- n=4.5 also means the K1
             % (induced-drag) term dominates far more here than at the n=1.0
             % conditions, so any K1 buildup gap will show up amplified.
+            % Which F16Baseline() table this prints against ("original" or
+            % "corrected" -- see F16Baseline.m section 11b; Combat Turn 1 is
+            % one of the rows that shifts materially between the two) is
+            % controlled by the single manual switch in BrandtVariant.m.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
-            b     = F16Baseline();
+            variant = BrandtVariant();
+            b     = F16Baseline(variant);
             state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
             obj   = ThrustConstraint("Combat Turn 1", state, aero, prop, 0.8997, b.constraints.combat_sub.n, 0.0);
 
@@ -390,7 +414,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_combatsub = b.constraints.combat_sub.TW_CombatSub;
             TW               = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s]  %6s  %12s  %12s  %10s\n', fidelityLevel, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
             for i = 1:numel(WS_range)
                 fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_combatsub(i), ...
                     100*(TW(i) - brandt_combatsub(i))/brandt_combatsub(i));
@@ -464,9 +488,14 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % TW_CombatSup]. Diagnostic only, same caveats as
             % testF16MaxMachRequiredTWTable (textbook CD0/K1 buildup vs.
             % Brandt's flight-calibrated polar; no supersonic wave-drag term).
+            % Which F16Baseline() table this prints against ("original" or
+            % "corrected" -- see F16Baseline.m section 11b; Combat Turn 2 is
+            % essentially unchanged between the two) is controlled by the
+            % single manual switch in BrandtVariant.m.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
-            b     = F16Baseline();
+            variant = BrandtVariant();
+            b     = F16Baseline(variant);
             state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
             obj   = ThrustConstraint("Combat Turn 2", state, aero, prop, 0.8997, b.constraints.combat_sup.n, 0.0);
 
@@ -474,7 +503,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_combatsup = b.constraints.combat_sup.TW_CombatSup;
             TW               = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s]  %6s  %12s  %12s  %10s\n', fidelityLevel, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
             for i = 1:numel(WS_range)
                 fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_combatsup(i), ...
                     100*(TW(i) - brandt_combatsup(i))/brandt_combatsup(i));
@@ -557,9 +586,14 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % values to read LOW vs. Brandt across the board here, on top of
             % (and likely dominating) the CD0/K1 gap already seen at Max Mach
             % -- see the alpha-basis note in this section's header comment.
+            % Which F16Baseline() table this prints against ("original" or
+            % "corrected" -- see F16Baseline.m section 11b; Cruise is one of
+            % the rows that shifts materially between the two) is controlled
+            % by the single manual switch in BrandtVariant.m.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
-            b     = F16Baseline();
+            variant = BrandtVariant();
+            b     = F16Baseline(variant);
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
             obj   = ThrustConstraint("Cruise", state, aero, prop, 0.8997, 1.0, 0.0);
 
@@ -567,7 +601,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_cruise = b.constraints.cruise.TW_Cruise;
             TW           = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s]  %6s  %12s  %12s  %10s\n', fidelityLevel, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
             for i = 1:numel(WS_range)
                 fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_cruise(i), ...
                     100*(TW(i) - brandt_cruise(i))/brandt_cruise(i));
@@ -637,10 +671,15 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % each fidelity level, alongside Brandt's full 21-point tabulated
             % row [F16Baseline b.constraints.ps.TW_Ps]. Diagnostic only, same
             % caveats as testF16MaxAltRequiredTWTable (textbook CD0/K1 buildup
-            % vs. Brandt's flight-calibrated polar).
+            % vs. Brandt's flight-calibrated polar). Which F16Baseline()
+            % table this prints against ("original" or "corrected" -- see
+            % F16Baseline.m section 11b; Ps is essentially unchanged between
+            % the two) is controlled by the single manual switch in
+            % BrandtVariant.m.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
-            b     = F16Baseline();
+            variant = BrandtVariant();
+            b     = F16Baseline(variant);
             state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
             obj   = ThrustConstraint("Excess Power", state, aero, prop, 0.8997, ...
                 b.constraints.ps.n, b.constraints.ps.Ps_fps);
@@ -649,7 +688,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_ps  = b.constraints.ps.TW_Ps;
             TW         = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s]  %6s  %12s  %12s  %10s\n', fidelityLevel, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
             for i = 1:numel(WS_range)
                 fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_ps(i), ...
                     100*(TW(i) - brandt_ps(i))/brandt_ps(i));

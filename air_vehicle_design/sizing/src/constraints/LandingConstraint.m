@@ -1,4 +1,4 @@
-classdef LandingConstraint < PointPerformanceBase
+classdef LandingConstraint < Only_WbyS
 %LANDINGCONSTRAINT  Landing ground-roll upper bound on wing loading.
 %
 %   Generic Layer-1 constraint: given a sea-level landing flight condition
@@ -12,20 +12,20 @@ classdef LandingConstraint < PointPerformanceBase
 %   and sizing/docs/subplans/06_constraint_analysis.md, "CLmax is NOT a
 %   constraint input").
 %
-%   Unlike ThrustConstraint/TakeoffConstraint, this condition constrains W/S
-%   directly and has no thrust dependence at all (idle/braking, not powered
-%   flight) -- there is no "required T/W" to derive. To still satisfy
-%   PointPerformanceBase's required_TW(WS) interface (so a future aggregator
-%   can treat every point-performance condition, including this one,
-%   uniformly -- see PointPerformanceBase.m and
-%   sizing/docs/subplans/06_constraint_analysis.md's Design Notes), this
-%   class encodes the landing limit as a hard vertical wall: required_TW
-%   returns 0 (no additional thrust demanded) for W/S at or below the
-%   landing limit, and Inf (infeasible -- no finite thrust satisfies it)
-%   above the limit. Under ConstraintAnalysis's max-envelope combination
-%   (TW_envelope(WS) = max_i TW_table(i,WS)), this correctly excludes W/S
-%   values beyond the landing bound from the feasible region while adding
-%   no spurious thrust requirement below it.
+%   Unlike ThrustConstraint/TakeoffConstraint (Both_WbyS_TbyW category),
+%   this condition constrains W/S directly and has no thrust dependence at
+%   all (idle/braking, not powered flight) -- there is no "required T/W" to
+%   derive. It belongs to the Only_WbyS category (see that class's header,
+%   and sizing/docs/subplans/06_constraint_analysis.md's Design Notes):
+%   Only_WbyS supplies the required_TW(WS) interface every
+%   PointPerformanceBase condition must expose, encoding this class's
+%   WS_max() as a hard vertical wall -- required_TW returns 0 (no additional
+%   thrust demanded) for W/S at or below the landing limit, and Inf
+%   (infeasible -- no finite thrust satisfies it) above it. Under
+%   ConstraintAnalysis's max-envelope combination (TW_envelope(WS) =
+%   max_i TW_table(i,WS)), this correctly excludes W/S values beyond the
+%   landing bound from the feasible region while adding no spurious thrust
+%   requirement below it.
 %
 %   EQUATION [landing ground-roll-with-braking sizing relation: touchdown
 %   speed V_TD = k_L*V_stall decelerates to a stop under braking friction
@@ -139,17 +139,6 @@ classdef LandingConstraint < PointPerformanceBase
 
             WS = (rho * g * obj.S_FR * (obj.mu * CLmax_land + LandingConstraint.DRAG_FACTOR * CD0_land)) ...
                 / (obj.k_L^2 * obj.beta);
-        end
-
-        function TW = required_TW(obj, WS)
-        %REQUIRED_TW  Vertical-wall encoding of the landing W/S limit: 0
-        %   (no thrust penalty) at or below the limit, Inf (infeasible)
-        %   above it. See class header for why this class -- which has no
-        %   real "required T/W" -- still implements this interface. WS may
-        %   be scalar or array; TW is returned the same size.
-            WS_limit = obj.WS_max();
-            TW = zeros(size(WS));
-            TW(WS > WS_limit) = Inf;
         end
 
     end

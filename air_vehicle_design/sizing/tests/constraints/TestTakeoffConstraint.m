@@ -45,6 +45,15 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
+        function testIsaBothWbySTbyW(tc)
+            % TakeoffConstraint belongs to the Both_WbyS_TbyW category, same
+            % as ThrustConstraint -- see TakeoffConstraint.m/
+            % Both_WbyS_TbyW.m headers.
+            state = AircraftState(0, 0.1);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000);
+            tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
+        end
+
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000);
