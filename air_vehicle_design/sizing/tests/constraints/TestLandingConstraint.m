@@ -50,19 +50,19 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
         function testIsaPointPerformanceBase(tc)
             state = AircraftState(0, 0.1);
-            obj   = LandingConstraint("Toy", state, F16AeroL1(), 4000, 0.5);
+            obj   = LandingConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), 4000, 0.5);
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
-            obj   = LandingConstraint("Toy", state, F16AeroL1(), 4000, 0.5);
+            obj   = LandingConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), 4000, 0.5);
             tc.verifyTrue(isa(obj, 'handle'));
         end
 
         function testNamePropertySet(tc)
             state = AircraftState(0, 0.1);
-            obj   = LandingConstraint("Landing", state, F16AeroL1(), 4000, 0.5);
+            obj   = LandingConstraint("Landing", state, F16AeroL1(f16a_spec_path(1)), 4000, 0.5);
             tc.verifyEqual(obj.name, "Landing");
         end
 
@@ -70,7 +70,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % beta and k_L default to 1.0 and 1.3 (field constraint, per
             % subplans/06_constraint_analysis.md) when omitted.
             state = AircraftState(0, 0.1);
-            obj   = LandingConstraint("Toy", state, F16AeroL1(), 4000, 0.5);
+            obj   = LandingConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), 4000, 0.5);
             tc.verifyEqual(obj.beta, 1.0);
             tc.verifyEqual(obj.k_L, 1.3);
         end
@@ -82,7 +82,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % data, just uses an F-16 discipline object as a concrete
             % AerodynamicsBase). Independently derived form of the same
             % equation, not a copy of LandingConstraint's own algebra.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             S_FR  = 3500;
             mu    = 0.45;
@@ -146,7 +146,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         function testWSMaxIncreasesWithGroundRoll(tc)
             % A longer allowable ground roll tolerates a higher wing loading
             % (more room to bleed off the same touchdown speed).
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
 
             obj_short = LandingConstraint("Short field", state, aero, 2000, 0.5);
@@ -159,7 +159,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         function testWSMaxIncreasesWithFriction(tc)
             % Better braking (higher mu) decelerates faster, tolerating a
             % higher wing loading for the same ground-roll distance.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
 
             obj_low  = LandingConstraint("Low mu", state, aero, 4000, 0.3);
@@ -173,7 +173,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % A larger touchdown-speed margin k_L means a higher touchdown
             % speed for the same stall speed, demanding a lower wing loading
             % to still stop within the same ground roll.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
 
             obj_tight = LandingConstraint("Tight margin", state, aero, 4000, 0.5, 1.0, 1.15);
@@ -186,7 +186,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         % --- Vertical-wall required_TW encoding -----------------------------
 
         function testRequiredTWZeroAtOrBelowLimit(tc)
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
             WS_limit = obj.WS_max();
@@ -196,7 +196,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         end
 
         function testRequiredTWInfAboveLimit(tc)
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
             WS_limit = obj.WS_max();
@@ -208,7 +208,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         function testRequiredTWVectorizedOverWS(tc)
             % Constraint diagrams sweep W/S -- required_TW must vectorize
             % cleanly, staying finite below the limit and Inf above it.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
             WS_limit = obj.WS_max();
@@ -285,11 +285,11 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         %BUILDAERO  F-16 aerodynamics discipline object for a fidelity level.
             switch fidelityLevel
                 case 'L1'
-                    aero = F16AeroL1();
+                    aero = F16AeroL1(f16a_spec_path(1));
                 case 'L2'
-                    aero = F16AeroL2();
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2));
                 case 'L3'
-                    aero = F16AeroL3();
+                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(3));
                 otherwise
                     error('TestLandingConstraint:buildAero:UnknownFidelity', ...
                         'Unknown fidelity level "%s".', fidelityLevel);
@@ -313,7 +313,13 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             CLmax_land = aero.get_CLmax_L();
 
             switch fidelityLevel
-                case {'L1', 'L2'}
+                case 'L1'
+                    % L1 is geometry-free and has NO get_CD0 (migrated to L2);
+                    % read the clean CD0 from the Mattingly drag polar instead
+                    % (same fix applied in examples/F16A/fidelity_comparison.m).
+                    CD0_clean   = polar.CD0;
+                    Delta_CD0_L = aero.get_Delta_CD0_L();
+                case 'L2'
                     CD0_clean   = aero.get_CD0();
                     Delta_CD0_L = aero.get_Delta_CD0_L();
                 case 'L3'
