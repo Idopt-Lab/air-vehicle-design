@@ -42,7 +42,7 @@ Process, with two hard human-approval gates before autonomous looping starts:
 
 **Two test tiers, never blended**: unit/correctness tests (`tests/disciplines/Test*.m`, gate `run_all_tests`, must be green — deliberately-failing TODO tests for missing citations are the only expected exception, and must be clearly labeled as such) vs. a separate Brandt comparison report (e.g. `examples/F16A/*_brandt_comparison.m`, exports console/JSON/`.md`) that checks agreement with ground truth — informational, not pass/fail, and never used to backfill a unit test's "expected" value.
 
-See `.claude/agents/*.md` for each role's full brief, and `docs/darshan-verification/` for the review that motivated this process.
+See `.claude/agents/*.md` for each role's full brief.
 
 ## Running tests
 
@@ -71,9 +71,9 @@ Target MATLAB version is R2022b+ — use `arguments` blocks and `mustBe*` valida
 
 ### Core
 - `src/core/AircraftState.m` — immutable **value** class (not `handle`) representing ISA atmosphere at a given altitude/Mach. Built via MATLAB's `atmosisa`, converted to English units (lbf, ft, slug, ft/s, deg R). Carries `theta`/`delta`/`theta_0`/`delta_0` per Mattingly Eq. 2.52. Passed into most discipline methods as the flight-condition argument.
-- `baseline/F16Baseline.m` — the actual ground-truth data source used by tests: a struct of cited Brandt/Raymer/Mattingly/T.O. values (geometry, weights, engine, sizing targets), extracted via `baseline/extract_brandt.m`. Tests compare computed results against `F16Baseline()` fields with `RelTol` tolerances (looser at L1, tighter at L3) rather than exact equality — exact agreement with Brandt is explicitly not the goal.
+- `baseline/F16Baseline.m` — a struct of cited Brandt/Raymer/Mattingly/T.O. values (geometry, weights, engine, sizing targets). **Deprecated**, kept only because the weights and constraint tests still compare against `F16Baseline()` fields; geometry and aerodynamics now validate against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`. Tests use `RelTol` tolerances (looser at L1, tighter at L3), not exact equality — exact agreement with Brandt is explicitly not the goal.
 
-  Note: PLAN.md's Step 0 describes a JSON-based data model (`examples/F16A/requirements.json` + `aircraft_spec.json`). That JSON layer does not exist in the tree yet — `F16Baseline.m` is the mechanism actually in use. Don't assume the JSON files exist without checking.
+  Discipline inputs come from the unified per-level JSON `examples/F16A/f16a_L{1,2,3}.json` — one file per fidelity level, each with `.geometry` and/or `.aerodynamics` blocks read by the matching `F16Geom*`/`F16Aero*` classes (resolved via `f16a_spec_path(level)`; constructors require the path — no silent default). PLAN.md's Step 0 `requirements.json`/`aircraft_spec.json` data model was never built. (Propulsion/weights concretes still use their own older per-discipline input style.)
 
 ### The three-tier discipline pattern
 
@@ -125,6 +125,6 @@ Do **not** compute a derived quantity once in the constructor and freeze it into
 
 ### Tests
 
-`tests/` mirrors `src/`'s layout (`tests/core/`, `tests/disciplines/`). Test classes subclass `matlab.unittest.TestCase`; each documents the hand-computed expected value inline in a comment block above the `properties (Constant)` block, then asserts `verifyEqual(received, expected, 'RelTol', tol, message)` against either the hand-computed formula result or an `F16Baseline()` field. Generic-class tests and F-16-specific tests are not yet split into separate `tests/disciplines/` vs `tests/examples/F16A/` folders as PLAN.md's target layout describes — currently they live together in `tests/disciplines/`.
+`tests/` mirrors `src/`'s layout (`tests/core/`, `tests/disciplines/`, `tests/constraints/`). Test classes subclass `matlab.unittest.TestCase`; each documents the hand-computed expected value inline in a comment block above the `properties (Constant)` block, then asserts `verifyEqual(received, expected, 'RelTol', tol, message)` against either the hand-computed formula result or an `F16Baseline()` field. Generic-class tests and F-16-specific tests are not yet split into separate `tests/disciplines/` vs `tests/examples/F16A/` folders as PLAN.md's target layout describes — currently they live together in `tests/disciplines/`.
 
 `.asv` files (MATLAB autosave) appear throughout `src/` — they're gitignored; ignore them when reading the tree.
