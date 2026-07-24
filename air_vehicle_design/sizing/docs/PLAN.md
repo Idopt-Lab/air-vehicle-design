@@ -179,7 +179,7 @@ Each step ends with: **Claude runs MATLAB, all tests pass, then STOP for profess
 | 3 | Aerodynamics | [03_aerodynamics.md](subplans/03_aerodynamics.md) | Not started |
 | 4 | Propulsion | [04_propulsion.md](subplans/04_propulsion.md) | Not started |
 | 5 | Weights | [05_weights.md](subplans/05_weights.md) | Not started |
-| 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Not started |
+| 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Done — implemented, tested, audited against Brandt |
 | 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Not started |
 | 8 | Sizing | [08_sizing.md](subplans/08_sizing.md) | Not started |
 

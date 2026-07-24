@@ -16,7 +16,7 @@ against the current (post-Cruise-fix) working tree.
 | Max Alt (ceiling) | **−47% to −50%** | −14% to −19% | −13% to −17% | L1 much worse than L2/L3 — new finding, §2. |
 | Combat Turn 1 (sub) | **−0.5% to −5.4%** | −14% to −20% | −14% to −27% | L1 *closest* by compensating errors — coincidence, §3. |
 | Ps (excess power) | −0.5% to +2.9% | −1.5% to −4.2% | −3.0% to −10.3% | All small. Best-behaved condition. |
-| Takeoff | −23% to +29% (crosses zero) | same shape | same shape | Known, cited: framework's T≫D simplification omits Brandt's drag/friction term. Not a bug. |
+| Takeoff | −23% to +29% (crosses zero) | same shape | same shape | **RESOLVED 2026-07-24** (see §5): missing drag/friction term now implemented; equation reproduces Brandt to <0.5% when fed Brandt's own inputs. These figures are the pre-fix historical gap. |
 | Landing | +8.8% (L1) / −9.7% (L2) / −4.2% (L3) | | | Equation itself matches Brandt to <0.1% when fed Brandt's inputs (`testEquationReproducesBrandtLandingPoint`) — gap is purely textbook-vs-flight-calibrated flapped CLmax/CD0. Not a bug. |
 | Stall | n/a | | | No Brandt reference row exists to compare against at all (not in Brandt's Consts sheet). Sanity-check only. |
 
@@ -106,14 +106,22 @@ about ±10% of Brandt (L1: −0.5% to +2.9%; L2: −1.5% to −4.2%; L3: −3.0%
 
 ## 5. Takeoff / Landing / Stall: not large, not hidden
 
-- **Takeoff**: `TakeoffConstraint.m`'s own header already documents that it
-  implements Mattingly's `T≫(D+R)` simplified ground-roll form, which omits
-  a drag/rolling-friction correction term Brandt's own (unsimplified)
+- **Takeoff**: at the time this doc was written, `TakeoffConstraint.m`'s own header
+  documented that it implemented Mattingly's `T≫(D+R)` simplified ground-roll form,
+  which omitted a drag/rolling-friction correction term Brandt's own (unsimplified)
   worksheet row includes — `TestTakeoffConstraint.m`'s
-  `testF16TakeoffRequiredTWTable` already labels this "known modeling gap,
-  not a TakeoffConstraint bug." Live gap is −23% to +29%, crossing zero
+  `testF16TakeoffRequiredTWTable` labeled this "known modeling gap,
+  not a TakeoffConstraint bug." Live gap was −23% to +29%, crossing zero
   (not a one-directional miss) — consistent with a missing additive term
   rather than a scaling/basis error.
+  **RESOLVED (2026-07-24):** the `0.7·CD0_TO/(β·CLmax_TO) + μ` correction term is now
+  implemented (`TakeoffConstraint.m`'s Master Equation C term, wired from
+  `Constraints.xlsx`'s `SurfaceFrictionCoefficient_mu_` column via `F16ConstraintSet.m`),
+  closing the gap this section described — verified to reproduce Brandt's
+  `TW_Takeoff` to <0.5% at W/S=90 when fed Brandt's own inputs
+  (`TestTakeoffConstraint.m`'s `testEquationReproducesBrandtTakeoffPoint`). See
+  `docs/subplans/06_constraint_analysis.md`'s 2026-07-24 update for the corrected
+  equation.
 - **Landing**: `TestLandingConstraint.m`'s `testEquationReproducesBrandtLandingPoint`
   already proves `LandingConstraint`'s own equation matches Brandt to <0.1%
   when fed Brandt's own flapped `CLmax`/`CD0`. The remaining per-fidelity gap

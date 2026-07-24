@@ -1,7 +1,8 @@
 %% run_F16_constraint_diagram
-%   Builds the F-16's 8 constraint objects (F16ConstraintSet, reading
-%   Constraints.xlsx), aggregates them (ConstraintAnalysis), and produces the
-%   constraint diagram + optimum design point.
+%   Builds the F-16's 9 constraint objects (F16ConstraintSet, reading
+%   Constraints.xlsx's 8 rows plus the Stall sanity-check condition),
+%   aggregates them (ConstraintAnalysis), and produces the constraint
+%   diagram + optimum design point.
 %
 %   Edit fidelityLevel and/or trim the constraints list below to analyze a
 %   different fidelity level or a subset of conditions.

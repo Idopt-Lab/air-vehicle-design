@@ -37,7 +37,11 @@ classdef ConstraintAnalysis
 %
 %   optimal_point() finds [WS_opt, TW_opt] by direct search over the supplied
 %   WS_range (no interpolation -- resolution is set by the caller's sweep).
-%   plot_diagram() draws each constraint curve plus the optimum point.
+%   envelope() exposes TW_envelope(WS) directly (e.g. for fidelity-overlay
+%   callers that want the envelope curve without every individual
+%   constraint). plot_diagram() draws the shaded feasible region (the area
+%   at/above the envelope, capped where a wall constraint makes it Inf), each
+%   constraint curve, and the optimum point.
 %
 %   Generic Layer-1 aggregator: does not know which aircraft or fidelity
 %   level produced the constraints -- see
@@ -75,24 +79,50 @@ classdef ConstraintAnalysis
             end
         end
 
+        function env = envelope(obj)
+        %ENVELOPE  Upper envelope TW_envelope(WS) = max_i required_TW_i(WS)
+        %   used by both optimal_point() and plot_diagram() (feasible-region
+        %   shading); exposed publicly so callers comparing fidelity levels
+        %   (e.g. run_F16_constraint_diagram_overlay.m) can plot it directly
+        %   without recomputing required_TW themselves.
+            env = max(obj.TW_table, [], 1);
+        end
+
         function [WS_opt, TW_opt] = optimal_point(obj)
         %OPTIMAL_POINT  [W/S, T/W] at the minimum of the constraint envelope.
         %   See class header for the envelope/argmin definition and citation.
-            envelope     = max(obj.TW_table, [], 1);
-            [TW_opt, idx] = min(envelope);
+            env           = obj.envelope();
+            [TW_opt, idx] = min(env);
             WS_opt        = obj.WS_range(idx);
         end
 
         function fig = plot_diagram(obj)
-        %PLOT_DIAGRAM  Draw the constraint diagram: one curve per thrust-type
-        %   constraint, a vertical dashed line per wall-type (WS-bounding)
-        %   constraint, plus the optimum design point -- with axis labels,
-        %   legend, grid.
+        %PLOT_DIAGRAM  Draw the constraint diagram: shaded feasible region,
+        %   one curve per thrust-type constraint, a vertical dashed line per
+        %   wall-type (WS-bounding) constraint, plus the optimum design point
+        %   -- with axis labels, legend, grid.
+        %
+        %   FEASIBLE REGION [Raymer ch. 5]: the set of (W/S, T/W) points
+        %   satisfying every constraint simultaneously is bounded below by
+        %   the envelope (see class header) and, where a wall constraint
+        %   makes the envelope Inf, bounded on the right by that wall -- so
+        %   shading the area between the envelope and a fixed ceiling
+        %   (capping the wall's Inf at that ceiling) both highlights the
+        %   feasible region and naturally stops the shading at the wall.
             [WS_opt, TW_opt] = obj.optimal_point();
+            env = obj.envelope();
+            y_max = 1.15 * max([TW_opt, env(isfinite(env))]);
+            env_capped = min(env, y_max);
 
             fig = figure('Name', 'Constraint Diagram');
             ax  = axes(fig);
             hold(ax, 'on');
+
+            fill(ax, [obj.WS_range, fliplr(obj.WS_range)], ...
+                [env_capped, y_max * ones(1, numel(env_capped))], ...
+                [0.60 0.85 0.60], 'FaceAlpha', 0.25, 'EdgeColor', 'none', ...
+                'DisplayName', 'Feasible region');
+
             colors = lines(numel(obj.constraints));
             for i = 1:numel(obj.constraints)
                 if ismethod(obj.constraints{i}, 'WS_max')
@@ -111,6 +141,7 @@ classdef ConstraintAnalysis
             title(ax, 'Constraint Diagram with Optimal Design Point');
             legend(ax, 'Location', 'northeastoutside');
             grid(ax, 'on');
+            ylim(ax, [0, y_max]);
             hold(ax, 'off');
         end
 

@@ -1,6 +1,12 @@
 # Subplan 06 — Constraint Analysis
 
-**Status:** Placeholder — not started
+**Status:** Done — implemented and tested (`src/constraints/`, `examples/F16A/F16ConstraintSet.m`,
+`tests/constraints/`), including the TW/WS margin methods and a post-implementation accuracy audit
+against Brandt (`examples/F16A/cruise_and_combatturn2_error_scrape.md`,
+`examples/F16A/remaining_constraints_scrape.md`) — every flagged gap traces to a cited, documented
+modeling simplification, not a bug. Both Plot Deliverables below are built:
+`examples/F16A/run_F16_constraint_diagram.m` (single fidelity) and
+`examples/F16A/run_F16_constraint_diagram_overlay.m` (L1/L2/L3 fidelity-sensitivity overlay).
 **Depends on:** Steps 1–5 (all disciplines needed to run constraints at all fidelities)
 **Blocks:** Steps 7, 8 (mission, sizing)
 
@@ -97,26 +103,49 @@ Source: `examples/F16A/requirements.json` (populated from Requirements.xlsx as p
 | q | `state.q` | AircraftState |
 
 ### LandingConstraint — Landing
+This row was originally written as a placeholder before implementation ("confirm exact eq at
+implementation") and went stale: it named Raymer and omitted the CD0 term. The equation actually
+implemented (and verified, see below) is Brandt's own landing-sizing relation:
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
-| W/S ≤ | μ × ρ × g × CLmax × S_ground_roll / (k_L²) × β⁻¹ | Raymer 6th ed (landing ground roll, confirm exact eq at implementation) |
+| W/S ≤ | ρ × g × S_ground_roll × (μ × CLmax_land + 0.83 × CD0_land) / (k_L² × β) | Roskam, *Airplane Design, Part I*, DARcorporation, ch. 3 — ground-roll-with-braking method; algebraically identical to Brandt's `Wto_S = (Distance×ρ×g×(μ×CLmax+0.83×CD0))/(1.69×β)` with `k_L²=1.69` (k_L=1.3) and `S_ground_roll` in place of `Distance`. **Not Raymer** — see `LandingConstraint.m`'s header for the full derivation and citation correction. Verified to reproduce Brandt's `WS_land=138.742` to <0.1% when fed Brandt's own flapped CLmax/CD0 (`TestLandingConstraint.m`'s `testEquationReproducesBrandtLandingPoint`). |
 
 ### TakeoffConstraint — Mattingly Master Equation, ground-roll case
 Implemented as its own `PointPerformanceBase` class (`src/constraints/TakeoffConstraint.m`),
 not folded into `ThrustConstraint`, since the ground-roll case zeroes the Master
-Equation's A/C/D terms and needs different inputs (CLmax_TO, S_ground_roll, k_TO)
+Equation's A/D terms and needs different inputs (CLmax_TO, S_ground_roll, k_TO, μ)
 than the continuous-flight conditions.
+
+**2026-07-24 update:** this class previously omitted Brandt's drag/rolling-friction
+correction term (`0.7·CD0/(β·CLmax) + μ`), matching only the B*(W/S) part of Brandt's
+takeoff row. That correction is now implemented (as the Master Equation's C term) so the
+class matches Brandt's own equation exactly — see below and `TakeoffConstraint.m`'s header.
 
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
-| T/W ≥ | (β² / α) × (k_TO² / (ρ × g × CLmax_TO)) × (W/S) / S_ground_roll | Mattingly, *Aircraft Engine Design*, 2nd ed., AIAA, 2002 — Master Equation specialized via T_SL≫(D+R), dh/dt=0 (matches `NPTEL_Fighter_Aircraft_Sizing.ipynb`'s `Takeoff` class, cells 32–33). **Not Raymer** — Raymer 6th ed. ch. 5 ("Takeoff Distance," pp. 128–130) gives only the graphical Takeoff Parameter (TOP)/Fig. 5.4 method; a prior version of this doc cited Raymer in error. Brandt's own F-16A.xls Consts-sheet takeoff row uses the *unsimplified* form (T≫D not assumed), which keeps a `0.7·CD0/(β·CLmax) + μ` drag/friction term this simplified version omits — see `TestTakeoffConstraint.m`'s diagnostic (not exact-match) comparison against it. |
+| T/W ≥ | (β² / α) × (k_TO² / (ρ × g × CLmax_TO)) × (W/S) / S_ground_roll + 0.7×CD0_TO/(β×CLmax_TO) + μ | Mattingly, *Aircraft Engine Design*, 2nd ed., AIAA, 2002 — Master Equation specialized via T_SL≫(D+R), dh/dt=0 for the B term (matches `NPTEL_Fighter_Aircraft_Sizing.ipynb`'s `Takeoff` class, cells 32–33), plus Brandt's own F-16A.xls Consts-sheet row 32 drag/rolling-friction correction for the C term (matches temp_Casey's `takeoff_constraint.m` term2). **Not Raymer** — Raymer 6th ed. ch. 5 ("Takeoff Distance," pp. 128–130) gives only the graphical Takeoff Parameter (TOP)/Fig. 5.4 method; a prior version of this doc cited Raymer in error. Verified to reproduce Brandt's `TW_Takeoff=0.40514` at W/S=90 to <0.5% when fed Brandt's own mu/CD0_TO/CLmax_TO/alpha_AB (`TestTakeoffConstraint.m`'s `testEquationReproducesBrandtTakeoffPoint`). |
 
 ---
 
 ## Plot Deliverables
 
-1. Constraint diagram for F-16 with all 8 constraints, design point marked, feasible region shaded.
+1. Constraint diagram for F-16 with all 8 Constraints.xlsx constraints plus Stall (9 total),
+   design point marked, feasible region shaded.
+   `examples/F16A/run_F16_constraint_diagram.m` (single fidelity level, edit `fidelityLevel` to
+   choose L1/L2/L3); shading is drawn by `ConstraintAnalysis.plot_diagram()` itself (the area at
+   or above the constraint envelope, capped at the wall constraints' W/S limits).
 2. Overlay: same diagram computed with F16L1, F16L2, F16L3 disciplines on one figure — shows fidelity sensitivity.
+   `examples/F16A/run_F16_constraint_diagram_overlay.m` — plots each fidelity level's envelope
+   curve and optimum point on one figure (not all 8 individual constraint curves per level, which
+   would be too busy to read; the envelope is exactly what `optimal_point()` reduces to for the
+   design-point decision).
+
+Both diagrams include Stall alongside the 8 Constraints.xlsx-derived conditions
+(`F16ConstraintSet.build`'s `includeStall` argument defaults to `true`) — Stall was never one of
+Constraints.xlsx's 8 rows (see F16ConstraintSet.m's header) and has no Brandt reference row to
+validate against (StallConstraint.m's header), but it is still a real sanity-check condition, so
+it's plotted like the rest. `F16ConstraintSet.build(fidelityLevel, false)` remains available to
+drop it (exercised by `TestF16ConstraintSet.m`'s `testBuildWithoutStallReturnsEightConstraints`).
 
 ---
 

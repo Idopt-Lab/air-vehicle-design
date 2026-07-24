@@ -45,13 +45,24 @@ classdef F16ConstraintSet
 
     methods (Static)
 
-        function constraints = build(fidelityLevel)
+        function constraints = build(fidelityLevel, includeStall)
         %BUILD  Construct the F-16's constraint objects for one fidelity
         %   level. Returns a 1xN cell array of PointPerformanceBase objects,
-        %   in Constraints.xlsx row order, ready to hand to ConstraintAnalysis
+        %   in Constraints.xlsx row order (plus a trailing Stall condition,
+        %   unless includeStall is false), ready to hand to ConstraintAnalysis
         %   (as-is, or trimmed/reordered by the caller first).
+        %   includeStall -- default true (used by TestF16ConstraintSet.m's
+        %   9-constraint checks and both F-16 constraint DIAGRAM deliverables,
+        %   run_F16_constraint_diagram.m/run_F16_constraint_diagram_overlay.m).
+        %   Stall was never one of subplans/06_constraint_analysis.md's
+        %   original 8 diagram constraints (Constraints.xlsx only has 8 rows;
+        %   Stall was added later as a 9th, sanity-check-only condition -- see
+        %   this class's header and StallConstraint.m's "no Brandt reference
+        %   row exists" note); pass includeStall=false to drop it, e.g. to
+        %   reproduce only the 8 Constraints.xlsx-derived conditions.
             arguments
                 fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])} = "L3"
+                includeStall  (1,1) logical = true
             end
 
             [aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);
@@ -61,7 +72,7 @@ classdef F16ConstraintSet
             T = ConstraintSetImporter.read(xlsxPath, "Constraints");
 
             names = string(T.Properties.RowNames);
-            constraints = cell(1, numel(names) + 1);
+            constraints = cell(1, numel(names));
             for i = 1:numel(names)
                 name = names(i);
                 row  = T(i, :);
@@ -69,7 +80,7 @@ classdef F16ConstraintSet
                     case "Takeoff"
                         state = AircraftState(0, 0.1);
                         constraints{i} = TakeoffConstraint(name, state, aero, prop, ...
-                            row.Distance_ft_, row.W_Wto);
+                            row.Distance_ft_, row.SurfaceFrictionCoefficient_mu_, row.W_Wto);
                     case "Landing"
                         state = AircraftState(0, 0.1);
                         constraints{i} = LandingConstraint(name, state, aero, ...
@@ -85,8 +96,10 @@ classdef F16ConstraintSet
                 end
             end
 
-            stallState = AircraftState(0, F16ConstraintSet.STALL_MACH);
-            constraints{end} = StallConstraint("Stall", stallState, aero);
+            if includeStall
+                stallState = AircraftState(0, F16ConstraintSet.STALL_MACH);
+                constraints{end+1} = StallConstraint("Stall", stallState, aero);
+            end
         end
 
     end
