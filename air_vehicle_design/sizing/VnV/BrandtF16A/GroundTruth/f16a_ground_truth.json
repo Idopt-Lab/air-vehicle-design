@@ -1,0 +1,199 @@
+{
+  "_comment": "F-16A Block 10/15 CONSOLIDATED cross-discipline ground-truth / comparison values. Each discipline section holds Brandt-workbook / Air-Force-manual / internet OUTPUTS that the framework's computed results are compared AGAINST -- these are NOT toolbox inputs (see examples/F16A/*_L*.json for inputs). NEVER backfill a unit-test 'expected' value from anything in this file (self-referential-test trap); the comparison report is informational only.",
+  "_source": "Brandt-F16-A.xls geometry values + VnV/BrandtF16A/readme_aero.md (Brandt aero, cell refs) + T.O. 1F-16A-1 (AF-manual aero) + cited internet sources (aerodynamics).",
+  "_note_columns": "Aerodynamics comparison columns are Brandt + AF-Manual (T.O. 1F-16A-1) + internet (no F16Baseline column). Read as the comparison target by examples/F16A/geometry_brandt_comparison.m and aerodynamics_brandt_comparison.m; never backfill a unit-test expected value from this file.",
+
+  "geometry": {
+  "_comment": "F-16A Block 10/15 Brandt-workbook ground-truth geometry values, for the Geometry deep-dive's later comparison-report script to check computed L1/L2 toolbox output against (Geometry's L3 tier was eliminated 2026-07-22 and merged into L2 — see src/disciplines/geometry/GeomL2.md's dated note). These are NOT toolbox inputs (see examples/F16A/geometry_L*.json for those) — they are Brandt Geom-tab outputs/validation figures to compare computed results to.",
+  "_source": "VnV/BrandtF16A/GroundTruth/Brandt-F16-A.xls (Geom sheet unless noted); VnV/BrandtF16A/readme_geom.md; VnV/BrandtF16A/GroundTruth/cell-map.md; VnV/BrandtF16A/todo.md. Cell values re-confirmed live via MATLAB readcell 2026-07-21 during this JSON-authoring phase (full-precision reads shown where they refine the readme's rounded figures).",
+
+  "fuselage_S_wet": {
+    "low_fi_ft2": 730.422,
+    "low_fi_source": "Geom!B3 — '1/3 Cone and 2/3 Cylinder approximation' (Geom!C3 label text, confirmed live). Formula: D_avg=(max_w+max_h)/2, S_wet=(5/6)*pi*D_avg*L_fuse. readme_geom.md Section 4.1.",
+    "high_fi_ft2": 676.3289,
+    "high_fi_source": "Geom!D23 — trapezoidal frame-integration of per-frame perimeters. readme_geom.md Section 4.1. RESOLVED per VnV/BrandtF16A/todo.md Finding 3 (2026-07-21 user decision): fuselage S_wet ground truth is Geom!B3 (low-fi) / Geom!D23 (high-fi) — NOT Geom!A3/A4, which are label cells (A3='Fuselage', A4='Exposed Engine Nacelles'), not a second fuselage-S_wet pair."
+  },
+
+  "lifting_surface_S_wet_ft2": {
+    "_source": "Geom!A11:C17 (full labeled table, header 'Exposed Lifting Surface Swet') / B14:B17 (value column) — confirmed live exact match, VnV/BrandtF16A/todo.md Finding 2.",
+    "wing":              {"value": 392.0204, "cell": "Geom!B14", "label": "Exposed Wing Wetted Area"},
+    "strake":            {"value": 39.956,   "cell": "Geom!B15", "label": "Strake Wetted Area"},
+    "pitch_control_HT":  {"value": 99.5848,  "cell": "Geom!B16", "label": "Exposed Pitch Trim Surface Wetted Area"},
+    "vertical_tail":     {"value": 81.6894,  "cell": "Geom!B17", "label": "Exposed Vertical Tail Wetted Area"}
+  },
+
+  "lifting_surface_exposed_areas": {
+    "_source": "Geom!A5:I10 — 'Exposed Lifting Surf Geometry' table (header rows 5-6: Xexposed, Root Chord, Tip Chord, Span, Root Chord (exposed), Half Span (exposed), Exposed S; data rows 7-10 = Wing/Pitch Control Surface/Strake/Vertical Tail). Range confirmed live exact match, VnV/BrandtF16A/todo.md Finding 1. Full row re-read live via MATLAB readcell 2026-07-21 (Scribe's companion docs, readme_geom.md Section 4.5's 'Surface parameters' table, only reproduced a partial subset of these columns for the cosine cross-section formula — this block carries the complete raw table).",
+    "_columns": ["Xexposed_ft", "root_chord_full_ft", "tip_chord_full_ft", "span_full_ft", "root_chord_exposed_ft", "half_span_exposed_ft", "exposed_S_ft2"],
+    "wing":             {"row": "Geom!7",  "Xexposed_ft": 20.7227, "root_chord_full_ft": 16.2933, "tip_chord_full_ft": 3.7067, "span_full_ft": 30.0,    "root_chord_exposed_ft": 13.3564, "half_span_exposed_ft": 11.5000, "exposed_S_ft2": 196.2261},
+    "pitch_control_HT": {"row": "Geom!8",  "Xexposed_ft": 38.9368, "root_chord_full_ft": 9.7760,  "tip_chord_full_ft": 2.2240, "span_full_ft": 18.0,    "root_chord_exposed_ft": 6.8391,  "half_span_exposed_ft": 5.5000,  "exposed_S_ft2": 49.8473},
+    "strake":           {"row": "Geom!9",  "Xexposed_ft": 12.0,    "root_chord_full_ft": 7.3030,  "tip_chord_full_ft": 0.0,   "span_full_ft": 5.4772,  "root_chord_exposed_ft": 7.3030,  "half_span_exposed_ft": 2.7386,  "exposed_S_ft2": 20.0},
+    "vertical_tail":    {"row": "Geom!10", "Xexposed_ft": 38.0977, "root_chord_full_ft": 8.1650,  "tip_chord_full_ft": 4.0825, "span_full_ft": 9.7980, "root_chord_exposed_ft": 7.1233,  "half_span_exposed_ft": 7.2980,  "exposed_S_ft2": 40.8897}
+  },
+
+  "whole_aircraft_S_wet_ft2": {
+    "raw_buggy_total": 1371.0946,
+    "raw_buggy_source": "Geom!B19 — KNOWN EXCEL BUG: strake wetted area is double-counted. Workbook formula Geom!B19 = D23+B4+B14+B15+B16+B17+K21 includes both B15 (strake S_wet) and K21 (strake-chine wetted-area term, also strake S_wet). readme_geom.md top-of-file note + Section 6.2. This is a documented audit exception, not a silent deviation.",
+    "corrected_total": 1331.134,
+    "corrected_source": "readme_geom.md Section 6.2 — corrected total with the double-counted strake term removed. This is the value the comparison report should target for whole-aircraft S_wet; up to 2% error (vs. the usual 1% target used elsewhere in readme_geom.md) is the documented audit exception, because the workbook formula itself is known-bad, not because of any modeling looseness.",
+    "strake_chine_term_ft2": 40.0,
+    "strake_chine_term_source": "Geom!K21 — the strake-chine wetted-area term responsible for the B19 double-count. GroundTruth/cell-map.md."
+  },
+
+  "nacelle": {
+    "_note": "No nacelle S_wet/geometry component exists in the current GeomL1/L2 toolbox's get_S_wet aggregation (wing+HT+VT+fuselage[+duct, folded into L2 per the 2026-07-22 L3-elimination decision] only) — recorded here as a Brandt ground-truth figure for possible future comparison use (e.g. once a nacelle component or the D=sqrt(T_AB_SLS/1900) duct-diameter formula referenced by geometry_L2.json's engine block is implemented), not a value any current toolbox method should be checked against yet.",
+    "S_wet_ft2": 41.515,
+    "S_wet_source": "Geom!B4 — 'Exposed Engine Nacelles' (Geom!C4 label: 'Full Cylinder approximation'). readme_geom.md Section 4.4 — cell formula itself could not be confirmed from the binary .xls; this GT value is used as-is.",
+    "diameter_ft": 3.537,
+    "diameter_source": "Engn(s) tab: D_engine = sqrt(T_AB_SLS_lb / 1900) = sqrt(23770/1900). readme_geom.md Section 3; GroundTruth/cell-map.md 'Engn(s)' section (Engn!D_nac).",
+    "length_ft": 15.917,
+    "length_source": "Engn(s) tab: L_engine = 4.5 * D_engine. readme_geom.md Section 3; GroundTruth/cell-map.md 'Engn(s)' section (Engn!L_nac)."
+  },
+
+  "aircraft_length_ft": {
+    "value": 48.3039,
+    "source": "Geom!B21 ('Total Aircraft Length:' label). Confirmed live 2026-07-21. readme_geom.md Section 8, Table 2 cites the rounded figure 48.304 ft."
+  },
+
+  "Amax_ft2": {
+    "value": 25.1106,
+    "source": "Geom!B20 ('Total Aircraft Amax:' label) and Geom!H47 (same value per GroundTruth/cell-map.md) — both cells confirmed live 2026-07-21 to read 25.1106 ft2, not a conflict (B20 appears to reference/duplicate H47's computation). Derivation per readme_geom.md Section 4.5: Amax = MAX(H26:H45) - N_eng*pi*D_eng^2/5.0 = 32.971 - pi*3.537^2/5.0 = 25.110 ft2."
+  },
+
+  "wing_sweep_25pct_chord_deg": {
+    "value": 28.153,
+    "source": "readme_geom.md Section 8, Table 3 validation entry ('Wing sweep 25%c'). Not tied to a single raw Excel cell — a validated BrandtGeometry.m-computed check value (readme_geom.md gives no _row/cell citation for this specific entry, unlike most other Table entries). Useful future comparison target for the new Base-tier sweep-conversion (convert_sweep) method once implemented — see src/base/GeometryBase.md Task 2 (citation for the sweep-conversion identity itself is documented there as unresolved/uncited, per user decision)."
+  }
+},
+
+  "aerodynamics": {
+    "_comment": "Brandt = his workbook's own model outputs/predictions and (for the polar-vs-Mach table) his tabulated actual F-16 reference polar; AF-Manual = T.O. 1F-16A-1 limits/airfoil (very few coefficients -- the drag polar / CLmax / CD0 are NOT in this manual, see _af_manual_note); internet = published estimates (many are estimates, flagged in each _note). Compare framework output to these; never treat a Brandt-model output as an independent second ground truth (see VnV/BrandtF16A/todo.md 2026-07-22 Finding D).",
+    "_source": "readme_aero.md 'Ground-Truth Cross-Check Values' + Aero/Miss-tab cell refs (Brandt); T.O. 1F-16A-1 (AF-manual, scribe PDF read); cited publications (internet).",
+
+    "CD0_cruise": {
+      "brandt": {"value": 0.0270, "_source": "Brandt-F16-A.xls Miss!CD0_cruise (readme_aero.md Ground-Truth table). Uses the back-calculated Cfe_eff=0.005908 that folds in form/interference/wave drag."},
+      "internet": {"value": 0.0167, "_source": "'Aerodynamic Performance Analysis of F-16C' (ResearchGate). F-16C conceptual polar CD=0.01667+0.1167*CL^2-0.009*CL.", "_note": "ESTIMATE. Brandt's own textbook polar ('Introduction to Aeronautics: A Design Perspective') instead gives CD0=0.018 (CD=0.018+0.117*CL^2)."}
+    },
+    "CD0_takeoff": {
+      "brandt": {"value": 0.0520, "_source": "Brandt-F16-A.xls Miss!CD0_TO (readme_aero.md). Clean CD0 + gear/flap increment."}
+    },
+    "k1": {
+      "brandt": {"value": 0.1160, "_source": "Brandt-F16-A.xls Miss!k1 (readme_aero.md). Quadratic / induced term (CD = CD0 + k1*CL^2 + k2*CL)."},
+      "internet": {"value": 0.1167, "_source": "'Aerodynamic Performance Analysis of F-16C' (ResearchGate), quadratic coefficient.", "_note": "ESTIMATE. Brandt-textbook polar gives K=0.117."}
+    },
+    "k2": {
+      "brandt": {"value": -0.00630, "_source": "Brandt-F16-A.xls Miss!k2 (computed, Aero!G17 = -2*k1*CL0). readme_aero.md. Linear / camber term."},
+      "internet": {"value": -0.009, "_source": "'Aerodynamic Performance Analysis of F-16C' (ResearchGate), linear CL term of CD=0.01667+0.1167*CL^2-0.009*CL.", "_note": "ESTIMATE."}
+    },
+    "LD_max": {
+      "brandt": {"value": 8.93, "_source": "Brandt-F16-A.xls Miss!LD_max (readme_aero.md). Brandt simplified 0.5/sqrt(CD0*k1), ignoring k2, on the mission CD0=0.0270 basis."},
+      "internet": {"value": 10.9, "_source": "Brandt, 'Introduction to Aeronautics: A Design Perspective' textbook polar (CD=0.018+0.117*CL^2) -> LDmax=10.9.", "_note": "ESTIMATE; published clean subsonic L/Dmax band ~10.4-10.9. Higher than Brandt-workbook 8.93 because it uses the lower textbook CD0=0.018 vs the mission CD0=0.0270."}
+    },
+    "CL_opt": {
+      "brandt": {"value": 0.482, "_source": "Brandt-F16-A.xls Miss!CL_opt = sqrt(CD0/k1) (readme_aero.md). CL at max L/D on the mission polar."},
+      "internet": {"value": 0.39, "_source": "Brandt textbook polar (CD=0.018+0.117*CL^2) -> CL at L/Dmax = 0.39.", "_note": "ESTIMATE; lower because it uses the textbook CD0=0.018."}
+    },
+    "e0": {
+      "brandt": {"value": 0.9144, "_source": "Brandt-F16-A.xls Aero!G12 = max(0.4, 4.6*(1-0.033*AR^0.53)*cos(Lambda_LE)^0.1 - 3.3). readme_aero.md. Brandt's own Oswald formula (differs from Raymer Eq 12.48/12.49)."},
+      "internet": {"value": 0.907, "_source": "Brandt textbook polar back-out e=1/(pi*AR*K)=1/(pi*3*0.117)=0.907.", "_note": "ESTIMATE; F-16C ResearchGate polar gives e~0.91."}
+    },
+    "e_wing": {
+      "brandt": {"value": 0.7227, "_source": "Brandt-F16-A.xls Aero!A19 = max(0.6, 2/(2-AR+sqrt(4+AR^2*(1+tan^2(Lambda_avg))))). readme_aero.md. Brandt's per-surface span-efficiency (distinct from e0)."}
+    },
+    "e_pitch": {
+      "brandt": {"value": 0.7227, "_source": "Brandt-F16-A.xls Aero!A28 (same formula/value as e_wing, for the stabilator). readme_aero.md."}
+    },
+    "CDmin_sub": {
+      "brandt": {"value": 0.01691, "_source": "Brandt-F16-A.xls Aero!G3 = Cfe_tab*S_wet/S_ref (Aero-tab basis, Cfe_tab=0.0037). readme_aero.md. This is Brandt's pure skin-friction prediction (used by aero_at_mach), distinct from the Miss-tab CD0=0.0270 mission basis."}
+    },
+    "Mcrit": {
+      "brandt": {"value": 0.8727, "_source": "Brandt-F16-A.xls Aero!A12 = 1 - 0.065*(cos(Lambda_LE)*tc_pct)^0.6. readme_aero.md. Computed by Brandt's own formula, not a T.O. number (todo.md Finding D)."},
+      "internet": {"value": 0.85, "_source": "'Aerodynamic Performance Analysis of F-16C' (ResearchGate).", "_note": "ESTIMATE."}
+    },
+    "M_wave": {
+      "brandt": {"value": 1.0547, "_source": "Brandt-F16-A.xls Aero!G8 = sec(Lambda_LE)^0.2 = (1/cos(40deg))^0.2. readme_aero.md."}
+    },
+    "M_LE_super": {
+      "brandt": {"value": 1.3054, "_source": "Brandt-F16-A.xls Aero!F9 = sec(Lambda_LE) = 1/cos(40deg). readme_aero.md. Above this Mach the wing LE is supersonic."}
+    },
+    "S_flapped_ft2": {
+      "brandt": {"value": 144.745, "_source": "Brandt-F16-A.xls Aero!L31 = max(0, S_ref - outboard_strip - inboard_strip) = 300.0 - 51.49 - 103.77. readme_aero.md CLmax Step 2."}
+    },
+    "CLmax_clean": {
+      "brandt": {"value": 0.984, "_source": "Brandt-F16-A.xls Aero!H25 = CLalpha_total[/deg]*alpha_stall = 0.06150*16. readme_aero.md CLmax Step 1."},
+      "internet": {"value": 1.6, "_source": "NASA TP-1538 / DAVE-ML F16_aero model / Stevens and Lewis, 'Aircraft Control and Simulation'.", "_note": "ESTIMATE; published whole-aircraft clean CLmax band ~1.6-1.9 (much higher than Brandt's 0.984, which is a conservative camber-digit-based estimate)."}
+    },
+    "CLmax_takeoff": {
+      "brandt": {"value": 1.276, "_source": "Brandt-F16-A.xls Aero!H27 = CLmax_clean + 0.66*(CLmax_landing - CLmax_clean). readme_aero.md CLmax Step 5."},
+      "internet": {"value": 1.35, "_source": "Estimate band ~1.2-1.5.", "_note": "ESTIMATE ONLY -- the F-16 has no conventional trailing-edge flaps (flaperons + LE flaps only); no authoritative published takeoff CLmax. Midpoint 1.35 recorded as a rough band center."}
+    },
+    "CLmax_landing": {
+      "brandt": {"value": 1.426, "_source": "Brandt-F16-A.xls Aero!H29 = min(CLmax_trim, CLmax_from_flaps) = min(1.537, 1.426). readme_aero.md CLmax Step 5."},
+      "internet": {"value": 1.35, "_source": "Estimate band ~1.2-1.5.", "_note": "ESTIMATE ONLY -- same caveat as CLmax_takeoff (no conventional TE flaps)."}
+    },
+    "CL_alpha_total_per_deg": {
+      "brandt": {"value": 0.0615, "_source": "Brandt-F16-A.xls Aero!A32 (whole-aircraft, incl. strake + tail contributions). readme_aero.md. Brandt Helmbold-formula output, not independent data (todo.md Finding D)."},
+      "internet": {"value": 0.055, "_source": "DATCOM-style estimate ~3.1/rad ~= 0.055/deg.", "_note": "ESTIMATE (whole-aircraft lift-curve slope)."}
+    },
+    "CL_alpha_wing_per_deg": {
+      "brandt": {"value": 0.05431, "_source": "Brandt-F16-A.xls Aero!A15 = 0.1/(1+5.73/(pi*e*AR)) (Helmbold-like, per deg). readme_aero.md. Brandt-model output (todo.md Finding D)."}
+    },
+    "cl_alpha_2D_64A204_per_deg": {
+      "internet": {"value": 0.105, "_source": "Published NACA 64A204 section lift-curve slope ~0.10-0.11/deg (thin-airfoil theory 2*pi/rad=0.1097/deg brackets it).", "_note": "ESTIMATE; 2-D section value (distinct from the whole-aircraft/finite-wing CL_alpha above). Midpoint 0.105 recorded."}
+    },
+    "CD0_supersonic_M1p05": {
+      "internet": {"value": 0.0425, "_source": "Published F-16 supersonic CD0 ~0.04-0.045 near M~1.05.", "_note": "ESTIMATE; band center. Compare vs Brandt's tabulated actual polar CDo=0.0444 at M=1.05 (brandt_actual_polar_vs_mach)."}
+    },
+    "LD_supersonic": {
+      "internet": {"value": 5.0, "_source": "Published F-16 supersonic L/Dmax ~4-6.", "_note": "ESTIMATE; band center."}
+    },
+
+    "brandt_actual_polar_vs_mach": {
+      "_source": "Brandt-F16-A.xls Aero!M4:Q10 -- the tabulated ACTUAL/reference F-16A polar (measured or authoritative reference data, NOT Brandt-predicted), five Mach points. readme_aero.md 'F-16A Specific Values'. CDmin ~= CDo at all points (very low wing camber). This IS reference data, unlike Brandt's predicted polar.",
+      "_columns": ["mach", "CDmin", "CDo", "k1", "k2"],
+      "rows": [
+        {"mach": 0.02,  "CDmin": 0.0197, "CDo": 0.0197, "k1": 0.122, "k2": -0.0070},
+        {"mach": 0.875, "CDmin": 0.0205, "CDo": 0.0205, "k1": 0.128, "k2": -0.0070},
+        {"mach": 1.05,  "CDmin": 0.0444, "CDo": 0.0444, "k1": 0.210, "k2": -0.0030},
+        {"mach": 1.60,  "CDmin": 0.0461, "CDo": 0.0461, "k1": 0.340, "k2": 0.0000},
+        {"mach": 2.00,  "CDmin": 0.0458, "CDo": 0.0458, "k1": 0.380, "k2": 0.0000}
+      ]
+    },
+
+    "internet_reference_polars": {
+      "_note": "Full published quadratic drag polars, recorded for reference. ESTIMATES; do not backfill unit-test expected values from these.",
+      "brandt_textbook": {
+        "_source": "Brandt et al., 'Introduction to Aeronautics: A Design Perspective' (textbook example polar).",
+        "form": "CD = 0.018 + 0.117*CL^2",
+        "CD0": 0.018,
+        "K": 0.117,
+        "e": 0.907,
+        "LD_max": 10.9,
+        "CL_at_LD_max": 0.39
+      },
+      "f16c_conceptual": {
+        "_source": "'Aerodynamic Performance Analysis of F-16C' (ResearchGate).",
+        "form": "CD = 0.01667 + 0.1167*CL^2 - 0.009*CL",
+        "CD0": 0.0167,
+        "K": 0.1167,
+        "e_approx": 0.91,
+        "Mcrit_approx": 0.85,
+        "wave_drag_peak_delta_CD": 0.026,
+        "wave_drag_peak_mach": 1.05
+      }
+    },
+
+    "af_manual": {
+      "_source": "T.O. 1F-16A-1, Flight Manual, USAF/EPAF F-16A/B Blocks 10 and 15 (scribe PDF read, Aero deep-dive Phase A). Section I / Figure 1-2 (airfoil), operating-limits pages.",
+      "_af_manual_note": "T.O. 1F-16A-1 contains almost no aerodynamic COEFFICIENTS -- the drag polar, CLmax, and CD0 are NOT in it; they live in the separate T.O. 1F-16A-1-1 performance-data supplement, which is NOT in the repo. Only limits and the airfoil designation are AF-manual ground truth.",
+      "airfoil": {"value": "NACA 64A204", "_source": "T.O. 1F-16A-1 Fig. 1-2 (wing, root and tip). Cross-confirmed usaf_f16_data.md line 30."},
+      "Mach_limit": {"value": 2.05, "_source": "T.O. 1F-16A-1 operating limits."},
+      "load_limit": {"value": "+9g below 15 deg AoA, -3g", "_source": "T.O. 1F-16A-1 operating limits (symmetric maneuvering)."},
+      "AoA_range_deg": {
+        "indicator": [-5, 32],
+        "controllable": [-5, 25],
+        "_source": "T.O. 1F-16A-1 -- AoA indicator range -5 to 32 deg; controllable range -5 to 25 deg."
+      }
+    }
+  }
+}

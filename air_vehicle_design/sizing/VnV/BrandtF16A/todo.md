@@ -124,5 +124,75 @@ formula if a later phase re-derives these fields to match Excel bit-for-bit.
 
 ---
 
+## 2026-07-22 — Aerodynamics deep-dive, Phase A (documentation)
+
+**Context:** Phase-A documentation pass for the Aerodynamics deep-dive (mirrors the Geometry
+deep-dive). Cross-checked the live aero code (`src/base/AerodynamicsBase.m`, the `AeroL{1,2,3}` /
+`AeroModelL{1,2,3}` toolboxes/enforcers, `examples/F16A/F16AeroL{1,2,3}.m`), the ground truth
+(`readme_aero.md`, `GroundTruth/cell-map.md`, `Brandt-F16-A.xls` Aero/Miss tabs), the reference
+extracts, and `baseline/F16Baseline.m`. Entries below are **flagged for user review, not resolved**.
+
+### Finding A — K1/K2 label convention: code+Mattingly+Brandt (Convention A) vs. stale docs (Convention B)
+Two competing labelings of the quadratic drag polar exist across the repo:
+- **Convention A (settled, live):** `CD = CD0 + K1·CL² + K2·CL`, K1 = quadratic/induced, K2 =
+  linear/camber. Used by `AerodynamicsBase.compute_CD` (`CD0 + K1*CL^2 + K2*CL`), the `AeroL*`
+  toolboxes (`K1 = 1/(πARe)`, `K2 = −2·K1·CL_minD`), `src/constraints/ThrustConstraint.m`,
+  **Mattingly AED 2nd ed. Eq. 2.9**, and **Brandt** (`readme_aero.md`: `CD = CD0 + k1·CL² + k2·CL`;
+  Aero!G17 `k2 = −2·k1·CL0`; Miss tab).
+- **Convention B (stale, swapped):** K1 = linear/camber, K2 = induced. Appears in
+  `temp_AI/docs/disciplines/01_aerodynamics.md` (`CD = CD0 + K1·CL + K2·CL²`) and (before this pass)
+  `docs/subplans/03_aerodynamics.md` (`K2 = 1/(πARe)`, `K1 = −2·K2·CL_minD`).
+`docs/subplans/03_aerodynamics.md` was corrected to Convention A in this pass;
+`temp_AI/docs/disciplines/01_aerodynamics.md` is **read-only and left as-is** — flagged stale here so
+no future reader treats it as authoritative. Not a VnV-internal disagreement (Brandt itself is
+Convention A, consistent with the code); logged because the stale docs contradict the ground truth.
+
+### Finding B — Mattingly Fig. 2.10 / Fig. 2.11 not in the repo → target-L1 uses a placeholder
+The approved target **L1** (aircraft-type-only Mattingly drag polar) needs `CD0(M)` from Mattingly
+Fig. 2.10 and `K1(M)` from Fig. 2.11, F-16 "Current" curve. **Neither figure is in the repo.** Only
+`temp_AI/docs/disciplines/reference_extracts/mattingly_data.md` (PART 9) is available: Eq. 2.9, the
+fighter-`K2=0` rule (§2.3.1), coarse ranges (subsonic CD0≈0.014–0.020 / K1≈0.15–0.20; supersonic
+CD0≈0.025–0.040 / K1≈0.20–0.50), and 5 AAF worked-example points [M, K1, CD0]: (0.9, 0.18, 0.016),
+(1.5, 0.27, 0.028), (1.6, 0.288, 0.028), (1.8, 0.324, 0.028). Target L1 must seed a **placeholder**
+curve from these, marked TODO, until the actual Fig. 2.10/2.11 F-16 curves are transcribed. Flagging
+the source gap for the user; not fabricating a curve.
+
+### Finding C — cargo/passenger L1 type-curves (K2≠0) not available (TODO)
+Target L1 sets `K2 = 0` for fighters (Mattingly §2.3.1, uncambered). Cargo/passenger types keep
+`K2 ≠ 0` (`K2 = −2·K″·CL_min`, Eq. 2.9), but no Fig. 2.10/2.11 equivalents for those types are in
+the repo either. Logged as a TODO scope boundary — the F-16 work does not need it, but a generic L1
+does.
+
+### Finding D — `F16Baseline.m` aero fields used as a "comparison column" are Brandt-model echoes, not independent T.O. data
+The Aero deep-dive plans to keep an F16Baseline-derived comparison column. Several of its aero
+fields are **Brandt's own model outputs**, not independent authoritative data, and should be
+labeled as such so they are not mistaken for a second ground-truth source:
+- `b.brandt.polar_model` (`[Brandt Aero A6:E10]`) — Brandt's *predicted* Mach-swept polar (his
+  Cfe·Swet/Sref + linear-theory K1), i.e. the same method the framework is being compared against,
+  not measured data. (Brandt's *actual/flight-measured* polar is the separate `b.brandt.polar_actual`,
+  Aero!M6:Q10 — that one IS reference data.)
+- `b.brandt.Mcrit = 0.8727` (`[Brandt L4]` / Aero!A12) — computed by Brandt's own
+  `1−0.065·(cos Λ_LE·tc%)^0.6` formula, not a T.O. number.
+- `b.brandt.CL_alpha = 0.0615` /deg (`[Brandt L7]` / Aero!A32) and `CL_alpha_wing = 0.054312·57.3`
+  (Aero!A15) — Brandt's Helmbold-formula outputs (`CLα = 0.1/(1+5.73/(πeAR))`), used verbatim as the
+  "expected" in `TestAeroL2.testCLalphaAtMachZero/06`. This is a **self-referential-test risk** (the
+  exact failure mode the scribe convention warns against): the L2 test's expected value is a Brandt
+  *model* output, not a hand-derivation or independent datum. Flagging for the user to decide whether
+  these belong in a comparison column or should be labeled "Brandt-model, not independent."
+
+### Finding E — `F16Baseline.m` Consts-sheet CD0/K1/K2 provenance caveat (column letters unconfirmed)
+`baseline/F16Baseline.m` (lines ~305–313) states the per-condition `b.constraints.*.CD0/K1/K2`
+values were read from "the CDo/k1/k2 columns immediately following theta/theta0/delta/delta0 —
+**exact column letters not confirmed from the source screenshot**, unlike the AI–AL/AS/AT/AU columns
+above." So these drag-polar coefficients (consumed by `TestAeroL1/L2/L3.testDragPolarAtConstraint
+Conditions` as Brandt references) rest on an **unverified cell mapping** in the live `Brandt-F16-A.xls`
+Consts sheet. `GroundTruth/cell-map.md` does document `Consts!AM23 = CD0+CDx = 0.016996` and
+`Consts!AN23 = K1 = 0.1160` for the max_mach row, but does not map the CD0/K1/K2 columns for the
+other condition rows (cruise/combat/max_alt/ps/combat_sup). Recommend confirming the Consts CD0/K1/K2
+column letters directly against the live workbook (COM/`actxserver`, as in prior findings) before
+relying on these as a comparison column. Flagged, not resolved.
+
+---
+
 *No entries resolved. Add new dated sections above this line for future discrepancies; do not
 edit or remove prior entries.*
