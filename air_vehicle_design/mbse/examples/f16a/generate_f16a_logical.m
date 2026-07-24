@@ -1,0 +1,390 @@
+function generate_f16a_logical()
+%GENERATE_F16A_LOGICAL Build the F-16A Logical-layer architecture (RFLP "L").
+%   Creates logical/F16A_Logical.slx (a System Composer model of solution-
+%   role components), its interface dictionary logical/F16A_Logical.sldd, a
+%   trade-candidate stereotype profile logical/F16A_LogicalTrades.xml, and
+%   the allocation set logical/F16A_FunctionToLogical.mldatx that ties
+%   each function (RFLP "F") to the logical role that realizes it. It also
+%   Implement-links the logical roles back to the requirements (RFLP "R")
+%   that only a solution role can satisfy.
+%
+%   Where the Functional layer says WHAT the aircraft must do, the Logical
+%   layer says HOW -- in solution roles -- and, crucially, records that a
+%   role can usually be realized more than one way. Three roles are modelled
+%   as VARIANT COMPONENTS, each holding two competing choices; a trade study
+%   (F16ALogicalTradeStudy.m) scores the options and selects one.
+%
+%   Structure (root architecture = F16ASolutionRoles):
+%     F16ASolutionRoles
+%       |- Airframe               (VARIANT: BlendedCrankedDelta | ConventionalTrapWing)
+%       |- PropulsionSystem       (VARIANT: SingleEngine_F100   | TwinEngine_LWF)
+%       |- FuelSystem
+%       |- FlightControlSystem    (VARIANT: AnalogFBW           | HydroMechanical)
+%       |- LandingGear            (constraint-driven; no function allocated)
+%       |- AvionicsSuite
+%       |- CommunicationSystem
+%       |- WeaponSystem
+%       |- MissionSystemsBay      (constraint-driven; no function allocated)
+%
+%   Allocation (function -> logical role), 13 leaf functions, 14 edges:
+%     GenerateLift -> Airframe; ProduceThrust -> PropulsionSystem;
+%     Maneuver -> FlightControlSystem; ManageFuel -> FuelSystem;
+%     MaintainStructuralIntegrity -> Airframe; Navigate -> AvionicsSuite;
+%     Communicate -> CommunicationSystem; Find/Fix/Track/Assess -> AvionicsSuite;
+%     Target -> AvionicsSuite + WeaponSystem (the one 1->2 fan-out);
+%     Engage -> WeaponSystem. The ten temporal mission phases are NOT
+%     allocated -- they are orchestration realized BY these capabilities.
+%
+%   Deferred requirements now homed at L (Implement links, role -> requirement):
+%     020 -> MissionSystemsBay; 023,024 -> LandingGear; 025 -> Airframe.
+%     022 (materials) and 026 (cost) stay deferred to the Physical layer.
+%
+%   Idempotent: re-run to regenerate from scratch. Requires the F model and
+%   the requirement sets to exist first (run generate_f16a_functional.m and
+%   generate_f16a_logical_derived_requirements.m before this).
+%
+%   -----------------------------------------------------------------------
+%   R2026a API NOTES -- these calls are new to this repo (the F layer used
+%   only plain components + slreq links). Confirm on first run; each is
+%   isolated in a helper below so a signature fix touches one place:
+%     * Variants:   addVariantComponent, addChoice, setActiveChoice
+%                   (helper addVariantRole).
+%     * Profile:    systemcomposer.profile.Profile.createProfile, addStereotype
+%                   (AppliesTo=), addStereotype-property addProperty(Type=,
+%                   DefaultValue=), applyProfile, applyStereotype, setProperty.
+%     * Allocation: systemcomposer.allocation.createAllocationSet, getScenario,
+%                   scenario.allocate(srcElem, dstElem), alloc.save.
+%   As in generate_f16a_functional.m, connect ports with the TWO-argument
+%   form connect(srcPort, dstPort); the three-argument form silently leaves
+%   ports unwired in R2026a.
+%   -----------------------------------------------------------------------
+
+modelName   = "F16A_Logical";
+funcName    = "F16A_Functional";
+profileName = "F16A_LogicalTrades";
+allocName   = "F16A_FunctionToLogical";
+
+thisDir  = fileparts(mfilename("fullpath"));
+logiDir  = fullfile(thisDir, "logical");
+archDir  = fullfile(thisDir, "architecture");
+reqDir   = fullfile(thisDir, "requirements");
+dictFile = fullfile(logiDir, modelName + ".sldd");
+modelFile= fullfile(logiDir, modelName + ".slx");
+slmxFile = fullfile(logiDir, modelName + "~mdl.slmx");
+profFile = fullfile(logiDir, profileName + ".xml");
+allocFile= fullfile(logiDir, allocName + ".mldatx");   % allocation sets save as .mldatx
+origFile = fullfile(reqDir, "f16a.slreqx");
+
+if ~isfolder(logiDir); mkdir(logiDir); end
+
+% Prerequisites (this generator links into the requirement sets and loads the
+% F model, and its final step runs the trade study against the decision reqs).
+derFile = fullfile(reqDir, "f16a_logical_derived.slreqx");
+if ~isfile(origFile)
+    error("Missing %s. Run generate_f16a_requirements first.", origFile);
+end
+if ~isfile(derFile)
+    error("Missing %s. Run generate_f16a_logical_derived_requirements first.", derFile);
+end
+if ~isfile(fullfile(archDir, funcName + ".slx"))
+    error("Missing %s.slx. Run generate_f16a_functional first.", funcName);
+end
+
+% Make the models, dictionary, profile and requirement sets resolvable by name.
+addpath(thisDir);   % so F16ALogicalTradeStudy is on the path
+addpath(logiDir);
+addpath(archDir);
+addpath(reqDir);
+
+% ---------------------------------------------------------------------
+% 0) Idempotent cleanup
+% ---------------------------------------------------------------------
+slreq.clear();
+% Unload prior in-memory artifacts FIRST -- loading an allocation set (or the
+% profile) can reopen both linked models and their dictionaries, so this must
+% happen before we close models/dictionaries, not after (otherwise the
+% dictionary is re-locked and createDictionary below fails "file already open").
+try  % close any in-memory allocation sets so createAllocationSet can reuse the name
+    systemcomposer.allocation.AllocationSet.closeAll();
+catch, end %#ok<CTCH>
+try  % drop any in-memory copies of previously-loaded profiles (closeAll
+     % discards unsaved changes, so a later createProfile can reuse the name)
+    systemcomposer.profile.Profile.closeAll();
+catch, end %#ok<CTCH>
+% Now close every model and dictionary so nothing holds the files open.
+try, systemcomposer.close(modelName, true); catch, end %#ok<CTCH>
+bdclose("all");
+Simulink.data.dictionary.closeAll("-discard");
+staleRoot = fullfile(thisDir, modelName);   % guard against artifacts saved to cwd
+cleanupFiles = [dictFile, modelFile, slmxFile, profFile, allocFile, ...
+    fullfile(logiDir, modelName + ".slxc"), ...
+    staleRoot + ".slx", staleRoot + ".slxc", staleRoot + "~mdl.slmx", ...
+    fullfile(thisDir, profileName + ".xml"), fullfile(pwd, profileName + ".xml"), ...
+    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx")];
+for f = cleanupFiles
+    if isfile(f); delete(f); end
+end
+if isfolder(fullfile(thisDir, "slprj")); rmdir(fullfile(thisDir, "slprj"), "s"); end
+
+% ---------------------------------------------------------------------
+% 1) Interface dictionary (a small, curated logical backbone)
+% ---------------------------------------------------------------------
+dict = systemcomposer.createDictionary(dictFile);
+ff = addInterface(dict, "FuelFlow");
+addElement(ff, "FuelRate_pph",  Type="double");
+addElement(ff, "TankState_frac",Type="double");
+tv = addInterface(dict, "ThrustVector");
+addElement(tv, "Thrust_lbf",    Type="double");
+cc = addInterface(dict, "ControlCommand");
+addElement(cc, "SurfaceDeflect_deg", Type="double");
+tt = addInterface(dict, "TargetTrack");
+addElement(tt, "Bearing_deg",   Type="double");
+addElement(tt, "Range_nm",      Type="double");
+dict.save();
+
+% ---------------------------------------------------------------------
+% 2) Model + dictionary link (link BEFORE typing ports)
+% ---------------------------------------------------------------------
+m = systemcomposer.createModel(modelName);
+linkDictionary(m, dictFile);
+ff = m.InterfaceDictionary.getInterface("FuelFlow");        % re-fetch handles
+tv = m.InterfaceDictionary.getInterface("ThrustVector");
+cc = m.InterfaceDictionary.getInterface("ControlCommand");
+tt = m.InterfaceDictionary.getInterface("TargetTrack");
+root = m.Architecture;
+
+% ---------------------------------------------------------------------
+% 3) Solution-role components (6 single-solution + 3 variant roles)
+% ---------------------------------------------------------------------
+fuel   = addComponent(root, "FuelSystem");
+gear   = addComponent(root, "LandingGear");             %#ok<NASGU> constraint-driven, no ports
+avionics = addComponent(root, "AvionicsSuite");
+comms  = addComponent(root, "CommunicationSystem");     %#ok<NASGU> constraint-driven, no ports
+weapon = addComponent(root, "WeaponSystem");
+bay    = addComponent(root, "MissionSystemsBay");       %#ok<NASGU> constraint-driven, no ports
+
+% Variant roles: each holds two competing choices; active = production F-16A.
+% Boundary ports are declared here (added to every choice and propagated to
+% the variant boundary -- see addVariantRole), so the wiring below can use
+% them exactly like a plain component's ports.
+airframe = addVariantRole(root, "Airframe", ...
+    ["BlendedCrankedDelta","ConventionalTrapWing"], {"ThrustIn","in",tv; "ControlIn","in",cc});
+prop     = addVariantRole(root, "PropulsionSystem", ...
+    ["SingleEngine_F100","TwinEngine_LWF"], {"FuelIn","in",ff; "ThrustOut","out",tv});
+fcs      = addVariantRole(root, "FlightControlSystem", ...
+    ["AnalogFBW","HydroMechanical"], {"ControlOut","out",cc});
+
+% ---------------------------------------------------------------------
+% 4) Light logical backbone (typed connections between 6 of the 9 roles).
+%    LandingGear, CommunicationSystem, MissionSystemsBay stay port-free --
+%    a deliberate echo of the F-layer capability tree, and a marker that
+%    they are constraint-driven, not flow-driven.
+%    NOTE: two-argument connect() only (see R2026a note above).
+% ---------------------------------------------------------------------
+% Single-role ports (variant-role ports were declared in step 3).
+addP(fuel.Architecture,     "FuelOut",  "out", ff);
+addP(avionics.Architecture, "TrackOut", "out", tt);
+addP(weapon.Architecture,   "TrackIn",  "in",  tt);
+
+connect(fuel.getPort("FuelOut"),      prop.getPort("FuelIn"));
+connect(prop.getPort("ThrustOut"),    airframe.getPort("ThrustIn"));
+connect(fcs.getPort("ControlOut"),    airframe.getPort("ControlIn"));
+connect(avionics.getPort("TrackOut"), weapon.getPort("TrackIn"));
+
+% ---------------------------------------------------------------------
+% 5) Auto-layout + save
+% ---------------------------------------------------------------------
+try, Simulink.BlockDiagram.arrangeSystem(modelName); catch, end %#ok<CTCH>
+save_system(modelName, char(modelFile));   % save into logical/
+% Cosmetic diagram refresh; skip quietly if the model has no root behavior
+% (this architecture has no root-level ports, unlike the F model).
+try, set_param(modelName, "SimulationCommand", "update"); catch, end %#ok<CTCH>
+
+% ---------------------------------------------------------------------
+% 6) Trade-candidate stereotype profile + property values on the choices.
+%    Generated programmatically (no fragile hand-written XML), consistent
+%    with the repo's idempotent-generator philosophy.
+% ---------------------------------------------------------------------
+profile = systemcomposer.profile.Profile.createProfile(profileName);
+st = profile.addStereotype("TradeCandidate", AppliesTo="Component");
+st.addProperty("Mass_lb",      Type="double",  DefaultValue="0");
+st.addProperty("UnitCost_USD", Type="double",  DefaultValue="0");
+st.addProperty("TRL",          Type="int32",   DefaultValue="5");
+st.addProperty("Benefit",      Type="double",  DefaultValue="0");
+st.addProperty("Selected",     Type="boolean", DefaultValue="false");
+profile.save();
+relocate(profileName + ".xml", profFile, thisDir);   % ensure it lands in logical/
+
+applyProfile(m, profileName);
+
+% {choicePath, Mass_lb, UnitCost_USD, TRL, Benefit}
+% Illustrative teaching values (not authoritative F-16 data). Tuned so the
+% production-F-16A choice wins each weighted trade -- but for a DIFFERENT
+% reason each time (see F16ALogicalTradeStudy.m).
+S = "F16A_Logical/";
+tradeRows = {
+    S+"PropulsionSystem/SingleEngine_F100",    3800, 4.5e6, 8, 8.0;
+    S+"PropulsionSystem/TwinEngine_LWF",       5200, 6.8e6, 7, 8.5;
+    S+"FlightControlSystem/AnalogFBW",         1200, 1.5e6, 6, 9.0;
+    S+"FlightControlSystem/HydroMechanical",   1800, 1.0e6, 9, 6.0;
+    S+"Airframe/BlendedCrankedDelta",          5400, 7.0e6, 7, 9.5;
+    S+"Airframe/ConventionalTrapWing",         5900, 6.2e6, 8, 6.5;
+};
+for i = 1:size(tradeRows,1)
+    c = lookup(m, Path=char(tradeRows{i,1}));
+    applyStereotype(c, profileName + ".TradeCandidate");
+    setProperty(c, profileName + ".TradeCandidate.Mass_lb",      string(tradeRows{i,2}));
+    setProperty(c, profileName + ".TradeCandidate.UnitCost_USD", string(tradeRows{i,3}));
+    setProperty(c, profileName + ".TradeCandidate.TRL",          string(tradeRows{i,4}));
+    setProperty(c, profileName + ".TradeCandidate.Benefit",      string(tradeRows{i,5}));
+    setProperty(c, profileName + ".TradeCandidate.Selected",     "false");
+end
+save_system(modelName, char(modelFile));
+
+% ---------------------------------------------------------------------
+% 7) Allocation set: function -> logical role (targets the ROLE, i.e. the
+%    variant container, independent of which choice is active).
+% ---------------------------------------------------------------------
+srcModel = systemcomposer.loadModel(funcName);
+
+FP = "F16A_Functional/";
+AV = FP + "ProvideAircraftFunctions/Aviate/";
+NC = FP + "ProvideAircraftFunctions/";
+CB = FP + "ExecuteMissionProfile/Combat/";
+
+% {functionPath, logicalRolePath}
+edges = {
+    AV+"GenerateLift",                 S+"Airframe";
+    AV+"ProduceThrust",                S+"PropulsionSystem";
+    AV+"Maneuver",                     S+"FlightControlSystem";
+    AV+"ManageFuel",                   S+"FuelSystem";
+    AV+"MaintainStructuralIntegrity",  S+"Airframe";
+    NC+"Navigate",                     S+"AvionicsSuite";
+    NC+"Communicate",                  S+"CommunicationSystem";
+    CB+"Find",                         S+"AvionicsSuite";
+    CB+"Fix",                          S+"AvionicsSuite";
+    CB+"Track",                        S+"AvionicsSuite";
+    CB+"Target",                       S+"AvionicsSuite";      % Target is the one
+    CB+"Target",                       S+"WeaponSystem";       % 1 -> 2 fan-out
+    CB+"Assess",                       S+"AvionicsSuite";
+    CB+"Engage",                       S+"WeaponSystem";
+};
+
+alloc = systemcomposer.allocation.createAllocationSet(allocName, funcName, modelName);
+scenario = alloc.getScenario("Scenario 1");
+for i = 1:size(edges,1)
+    srcElem = srcModel.lookup(Path=char(edges{i,1}));
+    dstElem = m.lookup(Path=char(edges{i,2}));
+    scenario.allocate(srcElem, dstElem);
+end
+alloc.save();
+relocate(allocName + ".mldatx", allocFile, thisDir);  % ensure it lands in logical/
+
+% ---------------------------------------------------------------------
+% 8) L-layer Implement links: deferred requirements a solution role owns.
+% ---------------------------------------------------------------------
+origSet = slreq.load(origFile);
+lLinks = {
+    S+"MissionSystemsBay", "REQ_F16A_020";   % permanent payload carriage
+    S+"LandingGear",       "REQ_F16A_023";   % tipback angle
+    S+"LandingGear",       "REQ_F16A_024";   % rollover angle
+    S+"Airframe",          "REQ_F16A_025";   % static margin (CG vs neutral point)
+};
+for i = 1:size(lLinks,1)
+    comp = lookup(m, Path=char(lLinks{i,1}));
+    req  = find(origSet, Id=char(lLinks{i,2}));
+    slreq.createLink(comp, req);
+end
+save(origSet);
+saveLogicalLinkSets();   % only the F16A_Logical link set (leave F's slmx untouched)
+save_system(modelName, char(modelFile));
+
+% ---------------------------------------------------------------------
+% 9) Run the trade study so the shipped model already reflects the
+%    selected options (active variant choice + Selected flag) and the
+%    decision requirements (REQ_F16A_L01..L03) are Implement-linked to the
+%    chosen option. This is also the explicit "now justify the choice"
+%    teaching step and can be re-run standalone.
+% ---------------------------------------------------------------------
+F16ALogicalTradeStudy();
+
+nComp = countComps(m.Architecture);
+fprintf("Built %s with %d components (3 variant roles), %d allocation edges, %d L Implement links.\n", ...
+    modelName, nComp, size(edges,1), size(lLinks,1));
+
+end
+
+% =====================================================================
+function vc = addVariantRole(parentArch, roleName, choiceNames, portSpecs)
+%ADDVARIANTROLE Add a variant component (a role with competing options).
+%   choiceNames : string array of choice names (first = active/production).
+%   portSpecs   : Nx3 cell {name, dir, iface}; added to EVERY choice and
+%                 propagated to the variant boundary so the role can be wired
+%                 like a plain component. Pass {} for a port-free variant.
+%
+%   R2026a specifics learned the hard way:
+%     * addVariantComponent seeds two default choices ("Component",
+%       "Component1"); we destroy any choice we did not ask for.
+%     * setActiveChoice matches the choice NAME created by addChoice (not a
+%       renamed component), so we addChoice rather than rename the defaults.
+%     * Variant boundary ports are NOT created by addPort on the variant's
+%       architecture; add ports to each choice, then updatePortsFromChoices
+%       (Mode="addPorts") lifts them onto the boundary.
+if nargin < 4; portSpecs = {}; end
+vc = addVariantComponent(parentArch, roleName);
+addChoice(vc, choiceNames);
+for c = getChoices(vc)
+    if ~ismember(string(c.Name), choiceNames); destroy(c); end
+end
+for c = getChoices(vc)
+    for i = 1:size(portSpecs,1)
+        addP(c.Architecture, portSpecs{i,1}, portSpecs{i,2}, portSpecs{i,3});
+    end
+end
+setActiveChoice(vc, choiceNames(1));
+if ~isempty(portSpecs)
+    updatePortsFromChoices(vc, Mode="addPorts");
+end
+end
+
+% =====================================================================
+function p = addP(archObj, name, dir, iface)
+%ADDP Add a typed architecture port (dictionary must be linked first).
+p = addPort(archObj, name, dir);
+p.setInterface(iface);
+end
+
+% =====================================================================
+function relocate(fileName, destFull, thisDir)
+%RELOCATE Move a just-saved artifact into logical/ if the API wrote it to
+%   the current folder or the script folder instead. No-op if already there.
+if isfile(destFull); return; end
+cands = [string(fullfile(pwd, fileName)), string(fullfile(thisDir, fileName))];
+for c = cands
+    if isfile(c)
+        movefile(c, destFull, "f");
+        return;
+    end
+end
+end
+
+% =====================================================================
+function n = countComps(arch)
+%COUNTCOMPS Recursively count components under an architecture.
+n = 0;
+for c = arch.Components
+    n = n + 1 + countComps(c.Architecture);
+end
+end
+
+% =====================================================================
+function saveLogicalLinkSets()
+%SAVELOGICALLINKSETS Save only link sets belonging to F16A_Logical, so the
+%   functional layer's link set (F16A_Functional~mdl.slmx) is not re-written.
+lnkSets = slreq.find(Type="LinkSet");
+for i = 1:numel(lnkSets)
+    if contains(string(lnkSets(i).Artifact), "F16A_Logical")
+        save(lnkSets(i));
+    end
+end
+end

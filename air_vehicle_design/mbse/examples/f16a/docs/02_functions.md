@@ -120,6 +120,9 @@ Project health is confirmed by `runChecks(currentProject)` (12/12 passing).
 ## Next
 
 The [traceability document](03_traceability.md) shows how each function links back to the
-requirement it implements. The **Logical layer** (next) will realize each function with a
-solution-role component (e.g. `GenerateLift` → a Wing, `ProduceThrust` → a Propulsion
-unit), connected to this layer by an allocation set.
+requirement it implements. The **Logical layer** ([`04_logical.md`](04_logical.md)) realizes each
+function with a solution-role component — `GenerateLift` → `Airframe`, `ProduceThrust` →
+`PropulsionSystem`, `Maneuver` → `FlightControlSystem`, and so on — connected to this layer by an
+**allocation set**. It also shows that a role can be realized more than one way: three roles carry
+competing **options** (single- vs twin-engine, fly-by-wire vs hydro-mechanical, delta vs
+conventional wing), and a **trade study** selects among them.

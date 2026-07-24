@@ -83,18 +83,23 @@ organizational containers; their children carry the traceability.
 Six requirements are non-functional — they constrain the physical solution, not what the
 aircraft *does* — so they are deliberately left for the **Logical / Physical** layers:
 
-| Requirement | Concern | Will trace to |
-|-------------|---------|---------------|
-| REQ_F16A_020 | Permanent payload capacity | L/P |
-| REQ_F16A_022 | Materials (composite fraction) | L/P |
-| REQ_F16A_023 | Balance — tipback angle | L/P |
-| REQ_F16A_024 | Balance — rollover angle | L/P |
-| REQ_F16A_025 | Stability & control — static margin | L/P |
-| REQ_F16A_026 | Unit flyaway cost | L/P |
+| Requirement | Concern | Traces to |
+|-------------|---------|-----------|
+| REQ_F16A_020 | Permanent payload capacity | **L** — `MissionSystemsBay` |
+| REQ_F16A_022 | Materials (composite fraction) | **P** |
+| REQ_F16A_023 | Balance — tipback angle | **L** — `LandingGear` |
+| REQ_F16A_024 | Balance — rollover angle | **L** — `LandingGear` |
+| REQ_F16A_025 | Stability & control — static margin | **L** — `Airframe` |
+| REQ_F16A_026 | Unit flyaway cost | **P** |
 
 This is not a gap to fix now — it is the correct RFLP behavior. A requirement about
 *materials* or *cost* has no meaningful home in a layer that only describes *behavior*; it
 belongs where physical components exist.
+
+The [Logical layer](04_logical.md) now picks up the four that a **solution role or its geometry**
+can satisfy (020, 023, 024, 025). Materials (022) and cost (026) go one level further, to the
+**Physical** layer, because only *materialized parts* can carry them — which is exactly why the
+Physical layer needs to exist.
 
 ## Checking traceability yourself
 

@@ -26,7 +26,7 @@ this part exist?" and "where is this requirement satisfied?".
 |-------|--------|----------|
 | **R** – Requirements | ✅ Done | `requirements/f16a.slreqx` (26 requirements) |
 | **F** – Functions | ✅ Done | `architecture/F16A_Functional.slx` (26 functions, 39 links) |
-| **L** – Logical | ⬜ Not started | — |
+| **L** – Logical | ✅ Done | `logical/F16A_Logical.slx` (9 roles, 3 with traded options; allocation set with 14 edges) |
 | **P** – Physical | ⬜ Not started | — |
 
 ## Documentation map
@@ -36,6 +36,7 @@ this part exist?" and "where is this requirement satisfied?".
 | [`01_requirements.md`](01_requirements.md) | The Requirements layer: how the requirements were derived from the Brandt F-16A sizing model, and how they are organized. |
 | [`02_functions.md`](02_functions.md) | The Functions layer: the functional architecture, the F2T2EA combat kill chain, the shared capability tree, and the interfaces. |
 | [`03_traceability.md`](03_traceability.md) | The requirement → function link matrix, the derived placeholder requirements, and known coverage gaps. |
+| [`04_logical.md`](04_logical.md) | The Logical layer: the solution roles, the function → logical allocation set, the requirements L now owns, and the design-alternative variant roles with their trade study and selection. |
 
 ## Folder layout
 
@@ -53,7 +54,16 @@ mbse/examples/f16a/
 │   ├─ F16A_Functional.sldd              interface dictionary (FlightState, EngagementData)
 │   └─ F16A_Functional~mdl.slmx          requirement links (auto-generated)
 ├─ generate_f16a_functional.m            builds the F model + traceability links
-└─ F16AFunctionalArchitectureTest.m      unit tests for the F layer
+├─ F16AFunctionalArchitectureTest.m      unit tests for the F layer
+├─ logical/
+│   ├─ F16A_Logical.slx                  L layer: System Composer model (9 solution roles)
+│   ├─ F16A_Logical.sldd                 logical interface dictionary (FuelFlow, ThrustVector, …)
+│   ├─ F16A_Logical~mdl.slmx             requirement links (auto-generated)
+│   ├─ F16A_LogicalTrades.xml            stereotype profile for trade candidates
+│   └─ F16A_FunctionToLogical.mldatx     function → logical allocation set
+├─ generate_f16a_logical.m               builds the L model + profile + allocation + L links
+├─ F16ALogicalTradeStudy.m               trades the variant-role options and selects one
+└─ F16ALogicalArchitectureTest.m         unit tests for the L layer
 ```
 
 ## How to open and run
@@ -68,16 +78,22 @@ Regenerate the artifacts (order matters — the functional generator creates lin
 requirement sets, so the requirements must exist first):
 
 ```matlab
-generate_f16a_requirements          % -> requirements/f16a.slreqx
-generate_f16a_derived_requirements  % -> requirements/f16a_functional_derived.slreqx
-generate_f16a_functional            % -> architecture/F16A_Functional.slx + links
+generate_f16a_requirements                  % -> requirements/f16a.slreqx
+generate_f16a_derived_requirements          % -> requirements/f16a_functional_derived.slreqx
+generate_f16a_functional                    % -> architecture/F16A_Functional.slx + links
+generate_f16a_logical_derived_requirements  % -> requirements/f16a_logical_derived.slreqx (L01–L03)
+generate_f16a_logical                       % -> logical/F16A_Logical.slx + profile + allocation + links
+                                            %    (calls F16ALogicalTradeStudy to select the traded options)
 ```
 
-Open the functional model and run the tests:
+Open the models and run the tests:
 
 ```matlab
 systemcomposer.openModel("F16A_Functional")
+systemcomposer.openModel("F16A_Logical")
+systemcomposer.allocation.editor            % inspect the function → logical allocation matrix
 runtests("F16AFunctionalArchitectureTest")
+runtests("F16ALogicalArchitectureTest")
 ```
 
 ## Prerequisites
