@@ -4,9 +4,10 @@ classdef F16AeroL3 < AeroModelL3
 %   Inherits from AeroModelL3 (abstract enforcer).  Most abstract methods are
 %   satisfied by a single delegation line to AeroL3 statics -- the exceptions
 %   are drag_polar/get_CD0_buildup, which add this class's own supersonic
-%   wave-drag term (compute_CD0_wave, Raymer 6th ed. Eq. 12.41) on top of the
-%   generic AeroL3 buildup, since wave drag is unique to supersonic designs
-%   and doesn't belong in the shared toolbox used by every fidelity-3 aircraft.
+%   wave-drag term (compute_CD0_wave, Raymer 6th ed. Eqs. 12.44-12.45) on top
+%   of the generic AeroL3 buildup, since wave drag is unique to supersonic
+%   designs and doesn't belong in the shared toolbox used by every
+%   fidelity-3 aircraft.
 %
 %   Concrete utility methods (compute_CD, compute_CL, compute_CD0, get_CDi) are
 %   inherited from AerodynamicsBase.
@@ -39,6 +40,21 @@ classdef F16AeroL3 < AeroModelL3
         CL_minD       = 0.0        % —
 
         % --- Component arrays (5 components: wing, HT, VT, fuselage, duct)
+        % TODO: canopy is NOT modeled as a 6th component. No citable numeric
+        % canopy geometry (length, diameter, S_wet) exists anywhere in this
+        % repo (temp_Casey, VnV/BrandtF16A, or
+        % temp_AI/docs/disciplines/reference_extracts/) -- see
+        % F16AeroL3_wave_drag_fix.md Sec. 3. It is also UNRESOLVED whether
+        % the fuselage S_wet_comp(4)=644 figure below already implicitly
+        % includes canopy wetted area: Brandt's own fuselage frame table
+        % (BrandtGeometry.m / GroundTruth/f16a_geometry.json) shows a local
+        % height bulge over x≈12-20 ft (the plausible cockpit/canopy
+        % station range) baked directly into the frame data it integrates
+        % S_wet from, suggestive (not conclusive) that canopy area is
+        % already folded into 644. A future canopy addition must resolve
+        % this double-counting question with a primary source (e.g. T.O.
+        % 1F-16A-1 canopy drawing) before adding a 6th term, not just
+        % append a naive additional S_wet value.
         %             [  wing    HT      VT      fus     duct  ]
         l_ref_comp  = [12.0,   5.8,    6.5,   47.5,   14.0  ]  % ft  — MAC or length
         D_comp      = [ 0,     0,      0,      5.0,    3.15  ]  % ft  — 0 for surfaces
@@ -49,6 +65,22 @@ classdef F16AeroL3 < AeroModelL3
         Q_comp      = [ 1.0,   1.05,   1.05,   1.0,    1.0   ]  % —   [Raymer Table 12.6]
         f_lam_comp  = [ 0.05,  0.05,   0.05,   0,      0     ]  % fraction laminar flow
         is_body_comp= [false, false,  false,  true,   true  ]  % true → FF_body
+
+        % --- Whole-aircraft wave-drag geometry (Raymer Eq. 12.44 Sears-Haack
+        % term needs a single WHOLE-VEHICLE Amax/length pair, not a
+        % per-component value -- distinct from l_ref_comp(4)/D_comp(4) above,
+        % which stay fuselage-component-only for the skin-friction Re/FF_body
+        % calc). Genuine independently-sourced spec/ground-truth constants,
+        % not derived from this class's other properties -- see
+        % F16AeroL3_wave_drag_fix.md Sec. 2.
+        Amax_ft2      = 25.110556  % ft^2  whole-aircraft max cross-section, net of
+                                    %       engine flow-through area [Brandt Geom!B20/H47,
+                                    %       25.1106 ft^2 live; BrandtGeometry.m computeAmax()
+                                    %       independently reproduces 25.110556, +0.002%]
+        L_aircraft_ft = 48.304     % ft    overall aircraft length (nose to aftmost of
+                                    %       fuselage/nozzle/VT-TE) [Brandt Geom!B21,
+                                    %       48.3039 ft live; BrandtGeometry.m
+                                    %       aircraft_length_ft reproduces 48.304, 0.000%]
 
         % --- Miscellaneous drag
         % CD0_misc = (Dq_gun_port + Dq_hook_USAF)/S_ref, set in the
@@ -69,6 +101,38 @@ classdef F16AeroL3 < AeroModelL3
         %     baseline (engine running) CD0 used for the mission polar.
         % TODO: add upsweep once a cited F-16 aft-fuselage upsweep angle is
         % available (T.O. 1F-16A-1 drawing or equivalent primary source).
+        %
+        % WHY SUBSONIC CD0 READS ~10-16% LOW VS. BRANDT (investigated
+        % 2026-07-23, remaining_constraints_scrape.md Sec 5 -- not a bug,
+        % logged here so it isn't re-investigated as a mystery later):
+        % component-by-component check at Cruise (36 kft, M=0.87) and Combat
+        % Turn 1 (20 kft, M=0.87) confirms every buildup formula matches its
+        % cited Raymer 6th ed. equation exactly (12.25-12.31) and the
+        % roughness-limited Re cutoff (Eq. 12.28) never binds at either
+        % point (actual Re always well below Re_cutoff for all 5
+        % components) -- no clamping or formula bug. Two real, expected
+        % effects instead: (1) this class's blended skin-friction*FF*Q
+        % averages ~0.0026-0.0028 across the 5 components, genuinely below
+        % the flat Cfe=0.0035 jet-fighter lookup (AeroL1.lookup_Cf,
+        % Raymer Table 12.3) F16AeroL1/L2 use -- an idealized clean
+        % component buildup with only 2 of Raymer Table 12.7's many
+        % possible miscellaneous-drag items (gun port + hook, see above)
+        % is expected to read below an empirically-calibrated whole-
+        % aircraft Cfe unless a fuller miscellaneous-drag catalog is added,
+        % which no cited F-16 source currently supports beyond what's
+        % listed above; (2) this buildup is Reynolds-number sensitive
+        % (correctly, per Eq. 12.27) and predicts a LOWER CD0 at the
+        % higher-Re, lower-altitude Combat Turn 1 point (0.01434 at 20 kft)
+        % than at Cruise (0.01536 at 36 kft) -- but Brandt's own
+        % F16Baseline.m uses the IDENTICAL CD0=0.01700 for both
+        % b.constraints.cruise and b.constraints.combat_sub despite the
+        % altitude difference, so part of the apparent "error" is this
+        % class correctly modeling a Reynolds effect Brandt's simpler
+        % tabulated value does not vary with altitude. Not fixing further:
+        % per PLAN.md, fabricating additional Table 12.7 items or
+        % Reynolds-independent recalibration without a primary source would
+        % be hardcoding a calibrated result, not implementing a cited
+        % equation.
         CD0_misc    = 0.0010      % = (0.20+0.10)/300, overwritten in constructor
         CD0_LandP   = 0.0010       % leakage & protuberance allowance [Raymer §12.5]
 
@@ -103,7 +167,7 @@ classdef F16AeroL3 < AeroModelL3
         cl_max          = 1.0       % NTRS-19870017427 p. 14 (NACA 64A204)
         alpha_L0        = -1.01     % deg — zero-lift AOA [NACA 64A204 data]
         k               = 2.08e-5   % ft  — smooth paint [Raymer 6th ed. Table 12.2]
-        % Empirical wave-drag efficiency factor, Raymer 6th ed. Eq. 12.41 --
+        % Empirical wave-drag efficiency factor, Raymer 6th ed. Eq. 12.45 --
         % E_WD=1 is a perfectly area-ruled (Sears-Haack) body, higher values
         % penalize a real fuselage's departure from that ideal. F-16 value
         % of 2.2 cross-checked against two independent sources: Brandt's own
@@ -233,6 +297,8 @@ classdef F16AeroL3 < AeroModelL3
             obj.Q_comp         = [ 1.0,  1.05,  1.05,  1.0,   1.0 ];
             obj.f_lam_comp     = [ 0.05, 0.05,  0.05,  0,     0   ];
             obj.is_body_comp   = [false, false, false, true,  true];
+            obj.Amax_ft2       = 25.110556;
+            obj.L_aircraft_ft  = 48.304;
             obj.CD0_misc       = (obj.Dq_gun_port + obj.Dq_hook_USAF) / obj.S_ref;  % Raymer Table 12.7
             obj.CD0_LandP      = 0.0010;
         end
@@ -291,8 +357,8 @@ classdef F16AeroL3 < AeroModelL3
         function val = get_CD0_buildup(obj, state)
         %GET_CD0_BUILDUP  Generic Raymer component buildup (AeroL3, shared
         %   by every fidelity-3 aircraft) plus the F-16's own supersonic
-        %   wave-drag-due-to-volume term (Raymer 6th ed. Eq. 12.41), added
-        %   only for M >= 1.2 -- Eq. 12.41's own domain, since its
+        %   wave-drag-due-to-volume term (Raymer 6th ed. Eqs. 12.44-12.45),
+        %   added only for M >= 1.2 -- Eq. 12.45's own domain, since its
         %   (M-1.2)^0.57 factor is undefined below that Mach. Wave drag is
         %   not generic (a subsonic-only airframe would never need it), so
         %   it lives here in the F-16 example rather than in the shared
@@ -307,26 +373,23 @@ classdef F16AeroL3 < AeroModelL3
         end
 
         function val = compute_CD0_wave(obj, state)
-        %COMPUTE_CD0_WAVE  Supersonic wave drag due to fuselage volume
-        %   distribution.  Raymer 6th ed. Eq. 12.41 (valid M >= 1.2):
-        %     CD_wave = E_WD * [1 - 0.386*(M-1.2)^0.57
-        %                         *(1 - (pi*Lambda_LE_deg^0.77)/100)]
-        %               * (9*pi/2) * (A_max/l)^2 / S_ref
-        %   The (9*pi/2)*(A_max/l)^2 factor is the Sears-Haack minimum-
-        %   wave-drag-body result; the bracketed term is Raymer's empirical
-        %   correction for sweep and E_WD (area-ruling quality).
-        %   A_max/l come from this class's own fuselage component (index 4:
-        %   L=47.5 ft, D=5.0 ft -> A_max=pi*(D/2)^2) -- genuine T.O.
-        %   1F-16A-1 geometry already used elsewhere in this class, not new
-        %   calibration data.  Lambda_LE_deg is the wing leading-edge sweep
-        %   (also an existing spec property).
-            M     = state.mach;
-            l_fus = obj.l_ref_comp(4);
-            D_fus = obj.D_comp(4);
-            A_max = pi * (D_fus/2)^2;
+        %COMPUTE_CD0_WAVE  Supersonic wave drag due to volume distribution.
+        %   Raymer 6th ed. Eq. 12.44 (Sears-Haack) + Eq. 12.45 (E_WD/sweep/
+        %   Mach correction), valid M >= 1.2:
+        %     (D/q)_SH   = (9*pi/2) * (Amax/l)^2                                    [12.44]
+        %     (D/q)_wave = E_WD*[1 - 0.386*(M-1.2)^0.57*(1-(pi*Lambda_LE_deg^0.77)/100)]
+        %                  * (D/q)_SH                                               [12.45]
+        %     CD0_wave   = (D/q)_wave / S_ref
+        %   Amax/l are WHOLE-AIRCRAFT quantities [Brandt Geom!B20/H47, B21 --
+        %   see F16AeroL3_wave_drag_fix.md], distinct from
+        %   l_ref_comp(4)/D_comp(4) (fuselage-component-only values used
+        %   elsewhere in this class for the skin-friction Re/FF_body calc --
+        %   do not conflate the two length scales).
+            M = state.mach;
+            Dq_SH = (9*pi/2) * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
             val = obj.E_WD ...
-                * (1 - 0.386 * (M - 1.2)^0.57 * (1 - (pi*obj.Lambda_LE_deg^0.77)/100)) ...
-                * (9*pi/2) * (A_max/l_fus)^2 / obj.S_ref;
+                * (1 - 0.386*(M-1.2)^0.57*(1 - (pi*obj.Lambda_LE_deg^0.77)/100)) ...
+                * Dq_SH / obj.S_ref;
         end
 
         function val = get_K1(obj, M)

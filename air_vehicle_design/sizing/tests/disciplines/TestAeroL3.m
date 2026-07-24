@@ -10,9 +10,13 @@ classdef TestAeroL3 < matlab.unittest.TestCase
      %     FF_body = 1+5/f^1.5+f/400 (f<=6) or 1+60/f^3+f/400 (f>6)
      %               f=L/D                                Raymer Eq. 12.31
      %     CD_wave = E_WD*[1-0.386*(M-1.2)^0.57*(1-(pi*Lambda_LE^0.77)/100)]
-     %               *(9*pi/2)*(A_max/l)^2/S_ref  (M>=1.2)  Raymer Eq. 12.41
+     %               *(9*pi/2)*(A_max/l)^2/S_ref  (M>=1.2)  Raymer Eqs. 12.44-12.45
      %               -- F-16-specific (F16AeroL3.compute_CD0_wave), not a
-     %               generic AeroL3 toolbox method; see below.
+     %               generic AeroL3 toolbox method; A_max/l are WHOLE-AIRCRAFT
+     %               values (Amax_ft2=25.110556 ft^2, L_aircraft_ft=48.304 ft,
+     %               net of engine flow-through area, [Brandt Geom!B20/H47/B21]),
+     %               not fuselage-component-only -- see below and
+     %               F16AeroL3_wave_drag_fix.md.
      %
      %   Pre-computed values used as expected results:
      %
@@ -112,11 +116,16 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                % table [Brandt Aero!M6:Q10] at 36 kft, M=1.6 -- a different
                % reference table than polar_model used elsewhere in this file
                % (see fidelity_comparison.m "[AERO — SUP]" section). M=1.6
-               % now includes the F-16 wave-drag term (get_CD0_buildup adds
-               % it for M>=1.2 -- see testCD0AtBrandtMachPoints), which closes
-               % most but not all of the gap (fuselage-only wave drag; no
-               % wing/boat-tail/canopy wave-drag terms) -- still a loosely-
-               % toleranced check, just tighter than before wave drag existed.
+               % now includes the corrected whole-aircraft wave-drag term
+               % (get_CD0_buildup adds it for M>=1.2 -- see
+               % testCD0AtBrandtMachPoints; Amax_ft2/L_aircraft_ft are now
+               % whole-aircraft values net of engine flow-through, per
+               % F16AeroL3_wave_drag_fix.md -- no separate wing/boat-tail
+               % wave-drag term is needed since Brandt's Amax cross-section
+               % table already sums wing+tail+nacelle area at the governing
+               % station; canopy wave drag remains unmodeled, no citable
+               % geometry available anywhere in this repo) -- still a
+               % loosely-toleranced (RelTol 0.50) check.
                b       = F16Baseline();
                g       = F16AeroL3();
                state   = AircraftState(36000, 1.60);
@@ -171,15 +180,24 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                % -17%, with CD0_misc's Table 12.7 gun-port + hook terms
                % included). ±20% brackets both.
                % Row 3 (M=1.0547): still transonic (<1.2), below the wave-
-               % drag term's Raymer Eq. 12.41 domain (get_CD0_buildup only
-               % adds it for M>=1.2 -- see F16AeroL3.compute_CD0_wave), so
-               % CD0 is still expected to read low here; positivity only.
-               % Rows 4-5 (M=1.5, 2.0): now include the F-16 fuselage
-               % wave-drag term, which closes most (not all -- no wing/
-               % boat-tail/canopy wave drag) of the previous gap: row 4
-               % improves from ~-69% to ~-28%, row 5 from ~-64% to ~-30%
-               % (received=0.0286/0.0261 vs Brandt=0.0399/0.0373). ±40%
-               % (tc.TOL_PCT) brackets both with margin.
+               % drag term's Raymer Eqs. 12.44-12.45 domain (get_CD0_buildup
+               % only adds it for M>=1.2 -- see F16AeroL3.compute_CD0_wave),
+               % so CD0 is still expected to read low here; positivity only.
+               % Rows 4-5 (M=1.5, 2.0): now include the corrected WHOLE-
+               % AIRCRAFT wave-drag term (Amax_ft2=25.110556, L_aircraft_ft=
+               % 48.304 [Brandt Geom!B20/H47/B21] -- see
+               % F16AeroL3_wave_drag_fix.md; this raised (Amax/l)^2 by ~58%
+               % over the old fuselage-only approximation), which closes
+               % nearly all of the previous gap: row 4 improves from ~-69%
+               % (pre-wave-drag) to ~-28% (fuselage-only wave drag, now
+               % corrected) to ~-5% (hand-computed: generic buildup ~0.01248
+               % + CD_wave 0.02550 = ~0.0380 vs Brandt=0.0399); row 5 from
+               % ~-64% to ~-30% to ~-7% (~0.01117 + CD_wave 0.02362 = ~0.0348
+               % vs Brandt=0.0373). ±40% (tc.TOL_PCT) brackets both with wide
+               % margin now -- not re-tightened here since these hand
+               % estimates back out the pre-fix "generic-only" contribution
+               % from this comment's own previously-recorded rounded values;
+               % test-verifier should confirm the live-computed gap.
                b        = F16Baseline();
                M        = b.brandt.polar_model(brandtRow, 1);
                CD0_ref  = b.brandt.polar_model(brandtRow, 3);
@@ -199,30 +217,45 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                end
           end
 
-          % --- Supersonic wave drag (F-16-specific, Raymer Eq. 12.41) ------
+          % --- Supersonic wave drag (F-16-specific, Raymer Eqs. 12.44-12.45) -
 
           function testCD0WaveFormula(tc)
-               % Hand-computed at M=1.5, SL: A_max=pi*(5.0/2)^2=19.634954,
-               % l=47.5 (fuselage component 4), Lambda_LE=40 deg, E_WD=2.2.
-               %   (M-1.2)^0.57       = 0.503453
-               %   1-(pi*40^0.77/100) = 0.462057
-               %   bracket = 1-0.386*0.503453*0.462057 = 0.910207
-               %   searshaack = (9*pi/2)*(19.634954/47.5)^2 = 2.415655
-               %   CD_wave = 2.2*0.910207*2.415655/300 = 0.01612414
+               % Hand-computed at M=1.5, SL, using the CORRECTED whole-
+               % aircraft Amax/l [Brandt Geom!B20/H47/B21, cross-validated
+               % against BrandtGeometry.m's independent computeAmax()/
+               % aircraft_length_ft, agreement within 0.002%/0.000% -- see
+               % F16AeroL3_wave_drag_fix.md]:
+               %   Amax_ft2 = 25.110556 ft^2 (whole-aircraft max cross-section,
+               %              net of engine flow-through area -- NOT
+               %              pi*(D_comp(4)/2)^2=19.634954, the old
+               %              fuselage-only cylinder approximation)
+               %   L_aircraft_ft = 48.304 ft (nose to aftmost of fuselage/
+               %              nozzle/VT-TE -- NOT l_ref_comp(4)=47.5 ft, the
+               %              old fuselage-component-only length)
+               %   Lambda_LE=40 deg, E_WD=2.2 (unchanged, correctly cited).
+               %   (M-1.2)^0.57       = 0.3^0.57 = 0.503453        (unchanged by fix)
+               %   1-(pi*40^0.77/100) = 0.462057                    (unchanged by fix)
+               %   bracket = 1-0.386*0.503453*0.462057 = 0.910207   (unchanged by fix)
+               %   Amax/l = 25.110556/48.304 = 0.5198442
+               %   searshaack = (9*pi/2)*(0.5198442)^2
+               %              = 14.1371669*0.2702380 = 3.8203997
+               %   CD_wave = 2.2*0.910207*3.8203997/300 = 0.02550060
                g        = F16AeroL3();
                state    = AircraftState(0, 1.5);
-               expected = 0.01612414;  % Raymer 6th ed. Eq. 12.41 is the primary source
+               expected = 0.02550060;  % Raymer 6th ed. Eqs. 12.44-12.45 (Sears-Haack + sweep/Mach correction)
                received = g.compute_CD0_wave(state);
                fprintf('\n    CD_wave (M=1.5): received = %.8f,  expected = %.8f\n', received, expected);
                tc.verifyEqual(received, expected, 'RelTol', 1e-4);
           end
 
           function testCD0WaveDecreasesTowardHigherSupersonicMach(tc)
-               % Raymer Eq. 12.41's (M-1.2)^0.57 factor grows with M, shrinking
+               % Raymer Eq. 12.45's (M-1.2)^0.57 factor grows with M, shrinking
                % the bracket term -- so CD_wave should decrease from M=1.5 to
-               % M=2.0 (0.01612 -> 0.01493), matching the physical expectation
-               % that wave drag due to volume eases somewhat as Mach increases
-               % further past the transonic/low-supersonic peak.
+               % M=2.0 (0.02550 -> 0.02362, whole-aircraft Amax/l per the
+               % wave-drag fix -- see F16AeroL3_wave_drag_fix.md, hand-computed
+               % the same way as testCD0WaveFormula), matching the physical
+               % expectation that wave drag due to volume eases somewhat as
+               % Mach increases further past the transonic/low-supersonic peak.
                g   = F16AeroL3();
                cd_wave_15 = g.compute_CD0_wave(AircraftState(0, 1.5));
                cd_wave_20 = g.compute_CD0_wave(AircraftState(0, 2.0));
@@ -231,9 +264,10 @@ classdef TestAeroL3 < matlab.unittest.TestCase
           end
 
           function testCD0BuildupUnchangedBelowMach1_2(tc)
-               % Below the Eq. 12.41 domain (M<1.2), get_CD0_buildup must
-               % equal the generic AeroL3 buildup exactly -- no wave-drag
-               % term added yet (transonic fairing gap, M=1.05 here).
+               % Below the wave-drag term's Raymer Eqs. 12.44-12.45 domain
+               % (M<1.2), get_CD0_buildup must equal the generic AeroL3
+               % buildup exactly -- no wave-drag term added yet (transonic
+               % fairing gap, M=1.05 here).
                g       = F16AeroL3();
                state   = AircraftState(0, 1.05);
                withWave    = g.get_CD0_buildup(state);
