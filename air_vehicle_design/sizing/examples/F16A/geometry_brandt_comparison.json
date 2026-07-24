@@ -1,8 +1,8 @@
 {
-  "generated": "2026-07-22",
+  "generated": "2026-07-24",
   "aircraft": "F-16A Block 10",
   "W_TO_lbf": 31377,
-  "source": "VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json",
+  "source": "VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.geometry]",
   "rows": [
     {
       "parameter": "[WING / HT / VT WETTED AREA — TWO FORMULA OPTIONS EACH]",

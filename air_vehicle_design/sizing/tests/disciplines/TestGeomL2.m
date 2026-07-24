@@ -50,7 +50,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         TOL_PCT     = 0.15      % —      — ±15% physical-reasonableness tolerance
 
         % Brandt ground-truth figures for the new Task-2 methods, from
-        % VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json.
+        % VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json.
         BRANDT_FUS_LOWFI    = 730.422    % ft^2  [Brandt Geom!B3]  fuselage_S_wet.low_fi_ft2
         BRANDT_FUS_HIGHFI   = 676.3289   % ft^2  [Brandt Geom!D23] fuselage_S_wet.high_fi_ft2
         BRANDT_EXP_WING     = 196.2261   % ft^2  [Brandt Geom!7]   lifting_surface_exposed_areas.wing.exposed_S_ft2
@@ -66,7 +66,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Brandt's "More Accurate Fuselage Swet"  [Geom!D23] = 676.33 ft^2.
         % Difference is the equivalent-diameter approximation (~8%).
             b        = F16Baseline();
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             expected = b.brandt.S_wet_fus_alt;
             received = g.get_S_wet_fuselage();
             fprintf('\n    fuselage S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -94,7 +94,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_r=tc_t=0.04, lambda=0.2275 -> ≈396.38 ft^2.
         % Brandt:  392.020 ft^2  [Geom!B14] -- tight agreement (~1.1%).
             b        = F16Baseline();
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             expected = b.brandt.S_wet_wing;
             received = g.get_S_wet_wing();
             fprintf('\n    wing S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -108,7 +108,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_r=0.060, tc_t=0.035, lambda=0.390 -> ≈101.39 ft^2.
         % Brandt:  99.585 ft^2  [Geom!B16] -- loose tolerance; see header note.
             b        = F16Baseline();
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             expected = b.brandt.S_wet_HT;
             received = g.get_S_wet_HT();
             fprintf('\n    HT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -122,7 +122,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_r=0.053, tc_t=0.030, lambda=0.437 -> ≈83.14 ft^2.
         % Brandt:  81.689 ft^2  [Geom!B17] -- loose tolerance; see header note.
             b        = F16Baseline();
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             expected = b.brandt.S_wet_VT;
             received = g.get_S_wet_VT();
             fprintf('\n    VT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -136,7 +136,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testTotalSwetWithinTolOfBrandt(tc)
         % Total (wing+HT+VT+fuselage+duct) ≈1466.8 ft^2.
         % Brandt truth: 1371 ft^2.  Tolerance: ±15% → [1165, 1577] ft^2.
-            g       = F16GeomL2();
+            g       = F16GeomL2(f16a_spec_path(2));
             received = g.get_S_wet();
             lo      = tc.BRANDT_SWET * (1 - tc.TOL_PCT);   % 1165.4 ft^2
             hi      = tc.BRANDT_SWET * (1 + tc.TOL_PCT);   % 1576.8 ft^2
@@ -159,7 +159,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % GeomL2.m's get_S_wet docstring/DECISION note). This test used to
         % sum only four components (wing+HT+VT+fuselage) and failed once
         % the duct term was added to get_S_wet's own aggregation.
-            g      = F16GeomL2();
+            g      = F16GeomL2(f16a_spec_path(2));
             manual = g.get_S_wet_wing() + g.get_S_wet_HT() + ...
                      g.get_S_wet_VT()  + g.get_S_wet_fuselage() + ...
                      g.get_S_wet_duct();
@@ -178,7 +178,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % testGetSwetIgnoresWTO, which asserted W_TO was accepted-but-
         % ignored. Calling with zero arguments must succeed and match the
         % property populated automatically at construction (obj.S_wet).
-            g   = F16GeomL2();
+            g   = F16GeomL2(f16a_spec_path(2));
             val = g.get_S_wet();
             fprintf('\n    get_S_wet():  %.6f ft^2\n', val);
             fprintf('    obj.S_wet:    %.6f ft^2  (should match -- Dependent, live-computed)\n', g.S_wet);
@@ -197,7 +197,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % are nonzero and consistent with a fresh method call right after
         % construction, and (b) they track a mutated input WITHOUT any
         % reconstruction -- the exact behavior a downstream optimizer needs.
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             % (a) nonzero + consistent with the method immediately
             tc.verifyNotEqual(g.S_wet, 0, 'obj.S_wet must not be 0.');
             tc.verifyNotEqual(g.S_wet_wing, 0, 'obj.S_wet_wing must not be 0.');
@@ -224,7 +224,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % error (there is no set-method), so nothing can silently overwrite a
         % computed value with a frozen literal (the anti-pattern this whole
         % refactor removes).
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             tc.verifyError(@() setfield(g, 'S_wet_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'QC_sweep_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'S_wet', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
@@ -233,8 +233,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % --- S_ref -------------------------------------------------------
 
         function testGetSref(tc)
-        % Expected: 300 ft^2  [Brandt Main!B18, geometry_L2.json wing.S_ft2]
-            g        = F16GeomL2();
+        % Expected: 300 ft^2  [Brandt Main!B18, f16a_L2.json wing.S_ft2]
+            g        = F16GeomL2(f16a_spec_path(2));
             received = g.get_S_ref();
             fprintf('\n    get_S_ref: received = %.2f ft^2,  expected = 300.00 ft^2\n', received);
             tc.verifyEqual(received, 300, 'AbsTol', 1e-9);
@@ -245,16 +245,16 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testLfusMatchesBrandt(tc)
         % L2 exposes L_fus as a plain property (not a method, unlike L1's
         % get_L_fus). RENAMED/FIXED 2026-07-22 (was testLfusMatchesTO): the
-        % OOP-practice pass re-sourced L_fus from examples/F16A/geometry_L2.json's
+        % OOP-practice pass re-sourced L_fus from examples/F16A/f16a_L2.json's
         % fuselage.length_ft (Brandt Main!B32 = 46.5 ft), replacing the old
         % T.O.-manual literal (47.5 ft) this test used to check against --
-        % see F16GeomL2.m's constructor and geometry_L2.json's "_comment"
+        % see F16GeomL2.m's constructor and f16a_L2.json's "_comment"
         % field explaining why the Brandt Main-tab value is used instead of
         % the T.O. manual value. Expected value below is the Brandt figure,
         % cited independently (not read back out of the same JSON via
         % F16GeomL2's own constructor code path).
             expected = 46.5;   % ft [Brandt Main!B32, f16a_geometry.json fuselage.length_ft]
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             received = g.L_fus;
             fprintf('\n    L_fus: received = %.2f ft,  expected (Brandt) = %.2f ft\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
@@ -264,24 +264,24 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % --- Inheritance / interface compliance --------------------------
 
         function testIsaGeometryBase(tc)
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             tc.verifyTrue(isa(g, 'GeometryBase'));
         end
 
         function testIsaGeometryModelL2(tc)
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             tc.verifyTrue(isa(g, 'GeometryModelL2'));
         end
 
         function testNotIsaGeometryModelL1(tc)
         % L2 does NOT inherit from the L1 enforcer.
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             tc.verifyFalse(isa(g, 'GeometryModelL1'), ...
                 'L2 geometry must NOT inherit from GeometryModelL1.');
         end
 
         function testIsHandleClass(tc)
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             tc.verifyTrue(isa(g, 'handle'));
         end
 
@@ -354,7 +354,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % regress back to the old hardcoded-wrong 37 deg literal.
             expected_correct = 32.1831783983;
             old_wrong_value  = 37;
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             received = g.QC_sweep_wing;
             fprintf(['\n    QC_sweep_wing: received = %.10f deg,  hand-computed (correct) ' ...
                 '= %.10f deg,  old hardcoded (wrong) = %d deg\n'], ...
@@ -416,14 +416,14 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % intentional comparison-tier-style check on an otherwise Tier-1
         % unit test, per the task brief's explicit carve-out, NOT the
         % implementation's own computed output fed back as its own oracle
-        % (the GT values below come from geometry_comparison_values.json /
+        % (the GT values below come from f16a_ground_truth.json /
         % f16a_geometry.json, independent ground-truth files).
         % ================================================================== %
 
         function testFusBrandtLowfiVsGT(tc)
         % "1/3-cone + 2/3-cylinder" approximation [Brandt Geom!B3]. Inputs
         % are the F-16's genuine spec fuselage envelope (max_width=7.0 ft,
-        % max_height=5.0 ft, L_fuse=46.5 ft -- geometry_L2.json's fuselage
+        % max_height=5.0 ft, L_fuse=46.5 ft -- f16a_L2.json's fuselage
         % block).
             received = GeomL2.compute_s_wet_fus_brandt_lowfi(7.0, 5.0, 46.5);
             fprintf('\n    fus brandt low-fi: received = %.4f ft^2,  Brandt GT = %.4f ft^2\n', ...
@@ -436,7 +436,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % High-level get_S_wet_fuselage_brandt_lowfi(obj) reads
         % obj.W_max_fuselage/H_max_fuselage/L_fuselage from a real
         % F16GeomL2 instance and must match the low-level call above.
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             received = GeomL2.get_S_wet_fuselage_brandt_lowfi(g);
             fprintf(['\n    F16GeomL2 fus brandt low-fi (high-level): received = %.4f ft^2, ' ...
                 ' Brandt GT = %.4f ft^2\n'], received, tc.BRANDT_FUS_LOWFI);
@@ -477,7 +477,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % compute_S_exposed_horizontal, wing case: boundary = fuselage
         % half-width, both panels mirrored [Brandt readme_geom.md Sec 4.3].
         % Inputs are Brandt's OWN root/tip chord and span figures from the
-        % ground-truth exposed-area table (geometry_comparison_values.json
+        % ground-truth exposed-area table (f16a_ground_truth.json
         % lifting_surface_exposed_areas.wing), not this framework's own
         % computed chords.
             c_root = 16.2933; c_tip = 3.7067; hs = 15.0; fw = 3.5;   % fw = fuselage half-width = 7.0/2
@@ -506,7 +506,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % via the same GeomL2 exposed-area statics tested above -- this
         % checks the full JSON-to-property pipeline reproduces Brandt's
         % exposed-area ground truth, not just the bare static functions.
-            g = F16GeomL2();
+            g = F16GeomL2(f16a_spec_path(2));
             fprintf('\n    F16GeomL2 S_exposed_wing = %.4f ft^2 (Brandt = %.4f)\n', g.S_exposed_wing, tc.BRANDT_EXP_WING);
             fprintf('    F16GeomL2 S_exposed_vt   = %.4f ft^2 (Brandt = %.4f)\n', g.S_exposed_vt, tc.BRANDT_EXP_VT);
             tc.verifyEqual(g.S_exposed_wing, tc.BRANDT_EXP_WING, 'RelTol', 1e-3, ...
@@ -519,7 +519,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % get_S_exposed_wing(obj) is a pure passthrough accessor -- must
         % return obj.S_exposed_wing unchanged (structural test, not a
         % formula check; moved from the former GeometryModelL3 contract).
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             received = g.get_S_exposed_wing();
             fprintf('\n    get_S_exposed_wing: received = %.6f,  obj.S_exposed_wing = %.6f\n', ...
                 received, g.S_exposed_wing);
@@ -560,13 +560,13 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testDuctSwetVsBrandtNacelle(tc)
         % F16GeomL2's own D_inlet=D_exit (Brandt nacelle-diameter formula,
         % D=sqrt(T_AB_SLS_lb/1900)) vs Brandt's own nacelle S_wet ground
-        % truth [Geom!B4, geometry_comparison_values.json nacelle.S_wet_ft2].
+        % truth [Geom!B4, f16a_ground_truth.json nacelle.S_wet_ft2].
         % Not a tight physical match by design: this framework's duct is the
         % exposed inlet-to-exit frustum lateral surface, while Brandt's
         % nacelle is a full-cylinder engine-nacelle approximation -- a
         % different quantity. Loose bound is a same-order-of-magnitude
         % sanity check only (mirrors the former TestGeomL3's identical note).
-            g        = F16GeomL2();
+            g        = F16GeomL2(f16a_spec_path(2));
             received = g.get_S_wet_duct();
             fprintf('\n    duct S_wet: received = %.4f ft^2,  Brandt nacelle = %.4f ft^2 (different definitions)\n', ...
                 received, tc.BRANDT_NACELLE_SWET);
@@ -576,32 +576,32 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % Constructor: default vs explicit JSON path
+        % Constructor: required explicit JSON path (no silent default)
         % ================================================================== %
 
-        function testDefaultConstructorLoadsJSON(tc)
-        % No-arg F16GeomL2() must load examples/F16A/geometry_L2.json's
-        % genuine spec values (checked against a few distinctive fields).
-            g = F16GeomL2();
-            fprintf('\n    default ctor: AR_wing=%.2f, LE_sweep_wing=%.1f, S_ref=%.1f\n', ...
-                g.AR_wing, g.LE_sweep_wing, g.S_ref);
-            tc.verifyEqual(g.AR_wing, 3.0, 'AbsTol', 1e-9);
-            tc.verifyEqual(g.LE_sweep_wing, 40.0, 'AbsTol', 1e-9);
-            tc.verifyEqual(g.S_ref, 300.0, 'AbsTol', 1e-9);
+        function testNoArgConstructorErrors(tc)
+        % F16GeomL2 has no default JSON path -- a no-arg call must error rather
+        % than silently loading a default file.
+            errored = false;
+            ctor = @F16GeomL2;   % no-arg call below must hit the required-path guard
+            try
+                ctor();   %#ok<NASGU>
+            catch
+                errored = true;
+            end
+            tc.verifyTrue(errored, ...
+                'F16GeomL2() with no path must error (no silent default).');
         end
 
         function testExplicitJsonPathConstructor(tc)
-        % Passing an explicit path to the same geometry_L2.json must give
-        % identical results to the no-arg default constructor.
-            this_dir    = fileparts(mfilename('fullpath'));
-            sizing_root = fileparts(fileparts(this_dir));
-            json_path   = fullfile(sizing_root, 'examples', 'F16A', 'geometry_L2.json');
-            g_default   = F16GeomL2();
-            g_explicit  = F16GeomL2(json_path);
-            fprintf('\n    explicit-path ctor: QC_sweep_wing = %.6f deg (default = %.6f deg)\n', ...
-                g_explicit.QC_sweep_wing, g_default.QC_sweep_wing);
-            tc.verifyEqual(g_explicit.QC_sweep_wing, g_default.QC_sweep_wing, 'AbsTol', 1e-9);
-            tc.verifyEqual(g_explicit.S_ref, g_default.S_ref, 'AbsTol', 1e-9);
+        % Constructing from the unified L2 JSON path (f16a_spec_path(2)) loads
+        % the genuine spec values (checked against a few distinctive fields).
+            g = F16GeomL2(f16a_spec_path(2));
+            fprintf('\n    L2 ctor: AR_wing=%.2f, LE_sweep_wing=%.1f, S_ref=%.1f, QC_sweep_wing=%.4f deg\n', ...
+                g.AR_wing, g.LE_sweep_wing, g.S_ref, g.QC_sweep_wing);
+            tc.verifyEqual(g.AR_wing, 3.0, 'AbsTol', 1e-9);
+            tc.verifyEqual(g.LE_sweep_wing, 40.0, 'AbsTol', 1e-9);
+            tc.verifyEqual(g.S_ref, 300.0, 'AbsTol', 1e-9);
         end
 
     end

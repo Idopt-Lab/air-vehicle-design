@@ -34,7 +34,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±30% of Brandt reference to cover known regression scatter.
             b        = F16Baseline();
             expected = b.brandt.S_wet;   % 1371.09 ft^2 [Brandt L3]
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1));
             received = g.get_S_wet_statistical(tc.TOGW);
             fprintf('\n    S_wet_statistical: received = %.2f ft^2,  expected (Brandt) = %.2f ft^2\n', ...
                 received, expected);
@@ -48,7 +48,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±20% of USAF TO reference value.
             b        = F16Baseline();
             expected = b.geom.L_fus;   % 47.50 ft [T.O. 1F-16A-1, Fig. 1-2]
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1));
             received = g.get_L_fus(tc.TOGW);
             fprintf('\n    get_L_fus:         received = %.2f ft,    expected (TO) = %.2f ft\n', ...
                 received, expected);
@@ -59,7 +59,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testGetSwetCallsStatistical(tc)
         % Structural: get_S_wet(W_TO) must delegate to get_S_wet_statistical(W_TO).
         % Both calls should return bit-identical results.
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1));
             via_base = g.get_S_wet(tc.TOGW);
             via_impl = g.get_S_wet_statistical(tc.TOGW);
             fprintf('\n    get_S_wet (base):  %.6f ft^2\n', via_base);
@@ -73,7 +73,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
 
         function testSwetMonotonicallyIncreasing(tc)
         % Positive regression exponent d=0.7506 → heavier ⟹ more wetted area.
-            g  = F16GeomL1();
+            g  = F16GeomL1(f16a_spec_path(1));
             S1 = g.get_S_wet_statistical(tc.W_TO_2);   % W_TO = 20000 lbf
             S2 = g.get_S_wet_statistical(tc.TOGW);     % W_TO = 31377 lbf
             fprintf('\n    S_wet at W_TO=20000: %.2f ft^2\n', S1);
@@ -85,14 +85,14 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % --- Unknown category error --------------------------------------
 
         function testUnknownCategoryThrows(tc)
-            g = F16GeomL1();
+            g = F16GeomL1(f16a_spec_path(1));
             g.aircraft_category = "flying_car";
             tc.verifyError(@() g.get_S_wet_statistical(tc.TOGW), ...
                 'GeomL1:unknownCategory');
         end
 
         function testUnknownCategoryLfusThrows(tc)
-            g = F16GeomL1();
+            g = F16GeomL1(f16a_spec_path(1));
             g.aircraft_category = "flying_car";
             tc.verifyError(@() g.get_L_fus(tc.TOGW), ...
                 'GeomL1:unknownCategory');
@@ -103,7 +103,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testSrefMutable(tc)
         % Sizing loop updates S_ref in-place on the handle object.
         % Expected: get_S_ref() returns 250 after assignment.
-            g = F16GeomL1();
+            g = F16GeomL1(f16a_spec_path(1));
             g.S_ref = 250;
             received = g.get_S_ref();
             fprintf('\n    S_ref after assignment: received = %.2f ft^2,  expected = 250.00 ft^2\n', ...
@@ -141,7 +141,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % F16GeomL1's default M_max=2.0, aircraft_category='jet_fighter' --
         % get_AR_eq(obj) must equal the same hand-computed value as above.
             expected = 3.5186639569;
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1));
             received = g.get_AR_eq();
             fprintf('\n    get_AR_eq: received = %.10f,  hand-computed = %.10f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6, ...
@@ -236,7 +236,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testGetControlSurfaceFractionObjectLevel(tc)
         % High-level get_control_surface_fraction(obj, surface) reads
         % obj.aircraft_category and delegates to the same lookup.
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1));
             received = GeomL1.get_control_surface_fraction(g, 'elevator');
             fprintf('\n    get_control_surface_fraction(elevator): received = %.4f\n', received);
             tc.verifyEqual(received, 0.30, 'AbsTol', 1e-9);

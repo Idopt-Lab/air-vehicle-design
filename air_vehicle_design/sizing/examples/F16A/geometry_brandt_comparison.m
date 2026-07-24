@@ -2,12 +2,12 @@ function T_all = geometry_brandt_comparison()
 %GEOMETRY_BRANDT_COMPARISON  F-16A Block 10 — Geometry vs Brandt ground truth.
 %
 %   NOT A TEST. No pass/fail assertions, not part of run_all_tests. A pure
-%   reporting script: loads examples/F16A/geometry_L1.json/geometry_L2.json,
+%   reporting script: loads the F-16A L1/L2 input JSONs (f16a_spec_path(1)/(2)),
 %   runs the actual F16GeomL1/F16GeomL2 methods and GeomL2 static toolbox
-%   calls, and compares against
-%   VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json — the
-%   Brandt-DIRECT ground truth (NOT F16Baseline.m's older T.O.-manual-based
-%   figures, which fidelity_comparison.m uses instead).
+%   calls, and compares against the `geometry` section of
+%   VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json — the Brandt-DIRECT
+%   ground truth (NOT F16Baseline.m's older T.O.-manual-based figures, which
+%   fidelity_comparison.m uses instead).
 %
 %   Where a physical quantity has multiple implementation options (e.g.
 %   wing/HT/VT S_wet via Roskam Eq. 12.1 vs Brandt's own uniform-tc formula;
@@ -19,17 +19,17 @@ function T_all = geometry_brandt_comparison()
 %     geometry_brandt_comparison.md    — rendered markdown table
 %
 %   REFERENCE SOURCES:
-%     [Brandt]  S. Brandt, F-16A.xls workbook, via
-%               VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json
+%     [Brandt]  S. Brandt, F-16A.xls workbook, via the geometry section of
+%               VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json
 %               and f16a_geometry.json
 %     [Roskam]  J. Roskam, Airplane Design Vol. II, DARcorp., 1997 (Eq. 12.1, 12.3)
 %     [Raymer]  D.P. Raymer, Aircraft Design 6th/7th ed., AIAA (Sec 7.3; Table 4.1/6.4/6.5)
 
 script_dir  = fileparts(mfilename('fullpath'));
 sizing_root = fileparts(fileparts(script_dir));
-gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'geometry_comparison_values.json');
+gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 frames_path = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_geometry.json');
-gt          = jsondecode(fileread(gt_path));
+gt          = jsondecode(fileread(gt_path)).geometry;   % geometry section of the unified ground-truth file
 J_frames    = jsondecode(fileread(frames_path));
 
 % W_TO sourced directly from the Brandt JSON (f16a_geometry.json, already
@@ -38,8 +38,8 @@ J_frames    = jsondecode(fileread(frames_path));
 % elsewhere (see header comment) and is slated for removal.
 W_TO = J_frames.mission.W_TO_lb;   % 31,377 lbf  [Brandt Main! mission W_TO_lb]
 
-g1 = F16GeomL1();
-g2 = F16GeomL2();
+g1 = F16GeomL1(f16a_spec_path(1));
+g2 = F16GeomL2(f16a_spec_path(2));
 
 % ════════════════════════════════════════════════════════════════════════ %
 %  COMPUTE — run the actual toolbox code
@@ -136,7 +136,7 @@ T = [T; grow('S_wet total, L2 OFFICIAL vs RAW BUGGY  [ft^2]', 'L2', total_offici
 T = [T; grow('S_wet total, Brandt-style formula set   [ft^2]', 'L2', total_brandt_style, gt.whole_aircraft_S_wet_ft2.corrected_total, 'readme_geom.md Sec 6.2 (corrected)', '%.2f', 'wing+HT+VT (Brandt uniform-tc) + fuselage (Brandt high-fi) + duct -- closer to Brandt''s own methodology')];
 
 T = [T; srow('[OTHER GEOMETRY OUTPUTS]')];
-T = [T; grow('Fuselage length L_fus [ft]', 'L2', L_fus_computed, NaN, 'geometry_L2.json (Brandt Main!B32)', '%.4f', 'Passthrough of the same Brandt Main-tab input the constructor reads -- reported for completeness, not an independent check')];
+T = [T; grow('Fuselage length L_fus [ft]', 'L2', L_fus_computed, NaN, 'f16a_L2.json .geometry (Brandt Main!B32)', '%.4f', 'Passthrough of the same Brandt Main-tab input the constructor reads -- reported for completeness, not an independent check')];
 T = [T; grow('L_fus vs Brandt TOTAL aircraft length [ft]', 'L2', L_fus_computed, gt.aircraft_length_ft.value, 'Brandt Geom!B21', '%.4f', 'DIFFERENT quantity: fuselage length only (46.5 ft) vs Brandt''s total aircraft length incl. nose probe/pitot (48.30 ft) -- the ~3.7% gap is expected, not a bug')];
 T = [T; grow('L1 fuselage length regression L_fus [ft]', 'L1', lfus_l1, L_fus_computed, 'F16GeomL2.L_fus (Brandt)', '%.4f', 'Raymer 6th ed. Table 6.3 statistical regression vs the Brandt-sourced L2 spec value')];
 T = [T; grow('Max cross-section area Amax -- NOT MODELED [ft^2]', 'N/A', NaN, gt.Amax_ft2.value, 'Brandt Geom!B20/H47', '%.4f', 'No max-cross-section-area computation exists anywhere in GeomL1/GeomL2')];
@@ -151,7 +151,7 @@ BAR     = repmat('=', 1, 110);
 fprintf('\n%s\n', BAR);
 fprintf('  F-16A BLOCK 10 -- GEOMETRY vs BRANDT GROUND TRUTH\n');
 fprintf('  W_TO = %.0f lbf [Brandt B38]  |  Generated %s\n', W_TO, now_str);
-fprintf('  Source: VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json (Brandt-direct, NOT F16Baseline.m)\n');
+fprintf('  Source: VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.geometry] (Brandt-direct, NOT F16Baseline.m)\n');
 fprintf('%s\n\n', BAR);
 
 disp(T);
@@ -179,7 +179,7 @@ out_md   = fullfile(script_dir, 'geometry_brandt_comparison.md');
 data.generated = now_str;
 data.aircraft  = 'F-16A Block 10';
 data.W_TO_lbf  = W_TO;
-data.source    = 'VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json';
+data.source    = 'VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.geometry]';
 data.rows      = table_to_rows(T);
 
 fid = fopen(out_json, 'w');
@@ -250,7 +250,7 @@ function write_markdown(T, out_path, W_TO, now_str)
     fid = fopen(out_path, 'w');
     fprintf(fid, '# F-16A Block 10 — Geometry vs Brandt Ground Truth\n\n');
     fprintf(fid, 'Generated %s. W_TO = %.0f lbf [Brandt B38].\n\n', now_str, W_TO);
-    fprintf(fid, ['Source: `VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json` ' ...
+    fprintf(fid, ['Source: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.geometry`] ' ...
         '(Brandt-direct ground truth -- NOT `F16Baseline.m`, which is the older T.O.-manual-based ' ...
         'ground truth used by `fidelity_comparison.m`).\n\n']);
     fprintf(fid, ['This is a **comparison report**, not a test -- no pass/fail assertions. ' ...

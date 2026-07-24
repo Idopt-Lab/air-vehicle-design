@@ -5,16 +5,17 @@ classdef F16GeomL1 < GeometryModelL1
 %   is satisfied by a single delegation line to GeomL1 statics — no formulas
 %   are duplicated here.
 %
-%   Constructor loads examples/F16A/geometry_L1.json by default (override by
-%   passing an explicit path).  L1 is a pure statistical/regression fidelity
-%   level: only classification strings/scalars are JSON inputs (aircraft
-%   category, design M_max) — no numeric F-16 planform dimensions exist at
-%   this tier (those first appear at L2).
+%   Constructor reads the .geometry block of a required unified L1 input JSON
+%   (see f16a_spec_path(1); the same file's .aerodynamics block feeds
+%   F16AeroL1).  L1 is a pure statistical/regression fidelity level: only
+%   classification strings/scalars are JSON inputs (aircraft category, design
+%   M_max) — no numeric F-16 planform dimensions exist at this tier (those
+%   first appear at L2).
 %
 %   SOURCES:
-%     S_ref: T.O. 1F-16A-1, Flight Manual, Fig. 1-2 (300 ft^2) — NOT part of
-%       geometry_L1.json (deliberately excluded, see the JSON's own
-%       "_comment"); kept as the pre-existing hardcoded literal.
+%     S_ref: T.O. 1F-16A-1, Flight Manual, Fig. 1-2 (300 ft^2) — NOT a JSON
+%       input (deliberately excluded from the L1 .geometry block); kept as the
+%       pre-existing hardcoded literal.
 %     aircraft_category: 'jet_fighter' — selects:
 %       c = -0.1289, d = 0.7506  (Roskam Vol. I Table 3.5)
 %       a = 0.93,    C = 0.39    (Raymer 6th ed. Table 6.3)
@@ -36,15 +37,16 @@ classdef F16GeomL1 < GeometryModelL1
     methods
 
         function obj = F16GeomL1(json_path)
-        %F16GEOML1  Construct from examples/F16A/geometry_L1.json (default)
-        %   or an explicit override path. S_ref is not part of that JSON
-        %   (see class header) and stays the pre-existing hardcoded literal.
-            if nargin == 0
-                json_path = fullfile(fileparts(mfilename('fullpath')), 'geometry_L1.json');
+        %F16GEOML1  Construct from a required unified L1 input JSON path
+        %   (f16a_spec_path(1)); reads its .geometry block. No silent default:
+        %   the path must be supplied. S_ref is not a JSON input (see class
+        %   header) and stays the pre-existing hardcoded literal.
+            arguments
+                json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
-            J = jsondecode(fileread(json_path));
-            obj.aircraft_category = string(J.aircraft_category);
-            obj.M_max             = J.M_max;
+            G = jsondecode(fileread(json_path)).geometry;
+            obj.aircraft_category = string(G.aircraft_category);
+            obj.M_max             = G.M_max;
             obj.S_ref             = 300;
         end
 

@@ -1,8 +1,8 @@
 # F-16A Block 10 — Geometry vs Brandt Ground Truth
 
-Generated 2026-07-22. W_TO = 31377 lbf [Brandt B38].
+Generated 2026-07-24. W_TO = 31377 lbf [Brandt B38].
 
-Source: `VnV/BrandtF16A/GroundTruth/geometry_comparison_values.json` (Brandt-direct ground truth -- NOT `F16Baseline.m`, which is the older T.O.-manual-based ground truth used by `fidelity_comparison.m`).
+Source: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.geometry`] (Brandt-direct ground truth -- NOT `F16Baseline.m`, which is the older T.O.-manual-based ground truth used by `fidelity_comparison.m`).
 
 This is a **comparison report**, not a test -- no pass/fail assertions. Where a quantity has multiple implementation options, each option gets its own row.
 

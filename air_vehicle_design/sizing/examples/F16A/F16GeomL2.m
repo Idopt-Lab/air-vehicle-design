@@ -46,8 +46,9 @@ classdef F16GeomL2 < GeometryModelL2
 %   correctness-by-construction with zero cache-coherency bookkeeping.
 %   ============================================================================
 %
-%   Constructor loads examples/F16A/geometry_L2.json by default (override by
-%   passing an explicit path). It sets ONLY the input properties; every
+%   Constructor reads the .geometry block of a required unified L2 input JSON
+%   (see f16a_spec_path(2); the same file's .aerodynamics block feeds
+%   F16AeroL2). It sets ONLY the input properties; every
 %   derived quantity (span, root/tip chord, MAC, sweep-station conversions,
 %   exposed areas, nacelle diameter, wetted areas) is produced live by its
 %   Dependent getter — none are hand-frozen literals, fixing the documented
@@ -78,7 +79,7 @@ classdef F16GeomL2 < GeometryModelL2
 %   SOURCES:
 %     [Brandt] Brandt F-16A.xls, Main tab (via
 %       VnV/BrandtF16A/GroundTruth/f16a_geometry.json), reproduced in
-%       examples/F16A/geometry_L2.json — genuine spec/ground-truth inputs.
+%       examples/F16A/f16a_L2.json (.geometry) — genuine spec/ground-truth inputs.
 %     [TO]     T.O. 1F-16A-1, Sec. I — HT/VT root/tip t/c splits (not a
 %       Brandt value; Brandt uses one uniform tc per surface).
 
@@ -145,7 +146,7 @@ classdef F16GeomL2 < GeometryModelL2
         cbar_wing      % ft    GeometryBase.compute_mac        [Raymer 7th ed. Eq. 7.8]
         QC_sweep_wing  % deg   Λ_c/4  GeometryBase.convert_sweep(x=0.25) — fixes the historical "37 deg" bug -> ~32.2 deg
         TE_sweep_wing  % deg   GeometryBase.convert_sweep(x=1.0)
-        tc_r_wing      % —     mirrors tc_wing (wing modeled uniform-tc; no root/tip split available from Brandt — matches geometry_L2.json wing._note_tc)
+        tc_r_wing      % —     mirrors tc_wing (wing modeled uniform-tc; no root/tip split available from Brandt)
         tc_t_wing      % —     mirrors tc_wing; see tc_r_wing
         S_exposed_wing % ft^2  GeomL2.compute_S_exposed_horizontal
         S_wet_wing     % ft^2  get_S_wet_wing() [Roskam Eq. 12.1]
@@ -170,7 +171,7 @@ classdef F16GeomL2 < GeometryModelL2
 
         % ── Fuselage ──────────────────────────────────────────────────────── %
         L_fuselage     % ft    mirrors L_fus (duplicate name required by the GeometryModelL2 abstract contract)
-        D_fus          % ft    (W_max_fuselage+H_max_fuselage)/2 — JUDGMENT CALL (Brandt low-fi D_avg convention as the equivalent diameter fed to the official Roskam Eq. 12.3 fuselage S_wet formula; geometry_L2.json has no D_fus field)
+        D_fus          % ft    (W_max_fuselage+H_max_fuselage)/2 — JUDGMENT CALL (Brandt low-fi D_avg convention as the equivalent diameter fed to the official Roskam Eq. 12.3 fuselage S_wet formula; the L2 .geometry block has no D_fus field)
 
         % ── Inlet + engine duct ───────────────────────────────────────────── %
         D_inlet        % ft    nacelle formula D=sqrt(T_AB_SLS_lb/1900) [Brandt Engn(s) tab, D_nac; readme_geom.md Sec. 3]
@@ -180,13 +181,14 @@ classdef F16GeomL2 < GeometryModelL2
     methods
 
         function obj = F16GeomL2(json_path)
-        %F16GEOML2  Construct from examples/F16A/geometry_L2.json (default)
-        %   or an explicit override path. Sets ONLY the input properties; all
+        %F16GEOML2  Construct from a required unified L2 input JSON path
+        %   (f16a_spec_path(2)); reads its .geometry block. No silent default:
+        %   the path must be supplied. Sets ONLY the input properties; all
         %   derived quantities are produced live by their Dependent getters.
-            if nargin == 0
-                json_path = fullfile(fileparts(mfilename('fullpath')), 'geometry_L2.json');
+            arguments
+                json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
-            J = jsondecode(fileread(json_path));
+            J = jsondecode(fileread(json_path)).geometry;
 
             % ---- wing ---------------------------------------------------- %
             obj.S_ref         = J.wing.S_ft2;        % [Brandt Main!B18]
@@ -357,7 +359,7 @@ classdef F16GeomL2 < GeometryModelL2
             v = obj.L_fus;   % mirrors L_fus (duplicate name required by the abstract contract)
         end
         function v = get.D_fus(obj)
-            % JUDGMENT CALL: geometry_L2.json has no D_fus field (width/height
+            % JUDGMENT CALL: the L2 .geometry block has no D_fus field (width/height
             % only), so the equivalent diameter reuses Brandt's own low-fi
             % D_avg convention (compute_s_wet_fus_brandt_lowfi) fed to the
             % official Roskam Eq. 12.3 formula (get_S_wet_fuselage).
