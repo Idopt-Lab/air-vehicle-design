@@ -191,6 +191,112 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
                 'A larger touchdown-speed margin k_L must lower WS_max.');
         end
 
+        % --- Available/margin ------------------------------------------------
+
+        function testWSMarginMatchesHandComputedFormula(tc)
+            % Arbitrary field length/friction/design point (not F-16-specific
+            % data). WS_max() itself is already independently verified above,
+            % so this only needs to confirm WS_margin combines it with the
+            % actual W_TO/S_ref correctly: margin = WS_required - WS_available,
+            % WS_required = WS_max(), WS_available = W_TO/S_ref. Requests
+            % WS_margin's 2nd/3rd (available/required) outputs directly so
+            % both underlying constraint values are independently verified,
+            % not just their combined margin.
+            aero  = F16AeroL1();
+            state = AircraftState(0, 0.1);
+            obj   = LandingConstraint("Toy", state, aero, 3500, 0.45, 0.98, 1.25);
+
+            W_TO  = 32000;
+            S_ref = 320;
+
+            expected_required  = obj.WS_max();
+            expected_available = W_TO / S_ref;
+            expected_margin    = expected_required - expected_available;
+
+            [received_margin, received_available, received_required] = obj.WS_margin(W_TO, S_ref);
+
+            fprintf(['\n    WS_margin: required=%.4f  available=%.4f  margin=%.4f  ' ...
+                '(hand-computed: required=%.4f  available=%.4f  margin=%.4f)\n'], ...
+                received_required, received_available, received_margin, ...
+                expected_required, expected_available, expected_margin);
+            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
+                'WS_margin''s required output must equal WS_max().');
+            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
+                'WS_margin''s available output must equal W_TO/S_ref.');
+            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
+                'WS_margin must equal required minus available.');
+        end
+
+        function testWSMarginDecreasesWithHigherActualWS(tc)
+            % A heavier design (or smaller wing) for the same W_TO -- higher
+            % actual W_TO/S_ref -- must shrink the margin: less "wiggle room"
+            % before hitting the landing wall. Prints/verifies the required
+            % and available values behind each margin: required must be
+            % identical between the two calls (same condition), only
+            % available should move.
+            aero  = F16AeroL1();
+            state = AircraftState(0, 0.1);
+            obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
+
+            W_TO = 30000;
+            [margin_light_loading, available_light, required_light] = obj.WS_margin(W_TO, 350);   % lower actual W/S
+            [margin_heavy_loading, available_heavy, required_heavy] = obj.WS_margin(W_TO, 250);   % higher actual W/S
+
+            fprintf('\n    Light loading (S_ref=350): required=%.4f  available=%.4f  margin=%.4f\n', ...
+                required_light, available_light, margin_light_loading);
+            fprintf('    Heavy loading (S_ref=250): required=%.4f  available=%.4f  margin=%.4f\n', ...
+                required_heavy, available_heavy, margin_heavy_loading);
+
+            tc.verifyEqual(required_light, required_heavy, 'AbsTol', 1e-12, ...
+                'required must be unchanged between the two calls -- only S_ref differs.');
+            tc.verifyGreaterThan(available_heavy, available_light, ...
+                'A smaller S_ref (same W_TO) must increase the available output.');
+            tc.verifyGreaterThan(margin_light_loading, margin_heavy_loading, ...
+                'A higher actual wing loading must shrink WS_margin.');
+        end
+
+        function testWSMarginSignAtLimit(tc)
+            % When the actual W_TO/S_ref exactly equals WS_max(), margin must
+            % be ~0 -- the definitional boundary between feasible (>=0) and
+            % infeasible (<0). Prints/verifies required and available
+            % explicitly equal one another here.
+            aero  = F16AeroL1();
+            state = AircraftState(0, 0.1);
+            obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
+
+            W_TO  = 30000;
+            S_ref = W_TO / obj.WS_max();   % actual W/S == the landing limit, exactly
+
+            [margin, available, required] = obj.WS_margin(W_TO, S_ref);
+            fprintf('\n    At boundary: required=%.4f  available=%.4f  margin=%.4f\n', ...
+                required, available, margin);
+            tc.verifyEqual(available, required, 'RelTol', 1e-8, ...
+                'available must equal required exactly at this constructed boundary.');
+            tc.verifyEqual(margin, 0, 'AbsTol', 1e-8, ...
+                'WS_margin must be ~0 when actual W_TO/S_ref exactly equals WS_max().');
+        end
+
+        function testF16LandingWSMarginAtBrandtDesignPoint(tc)
+            % Diagnostic only: evaluates WS_margin at Brandt's own actual
+            % design point (W_TO=b.brandt.TOGW, S_ref=b.geom.S_ref ->
+            % WS_actual=b.constraint.WS_opt=104.59) using this framework's
+            % own (clean-CLmax) WS_max() -- already documented (class header,
+            % "NOTE ON CLmax/CD0 BASIS") to read below Brandt's flapped
+            % WS_land=138.742, so a negative margin here is expected, not a
+            % bug -- printed for visibility, not asserted for closeness.
+            b     = F16Baseline();
+            aero  = F16AeroL1();
+            state = AircraftState(0, 0.1);
+            obj   = LandingConstraint("Landing", state, aero, 4000, 0.5);
+
+            [margin, available, required] = obj.WS_margin(b.brandt.TOGW, b.geom.S_ref);
+            fprintf('\n    Landing at Brandt''s design point (WS_opt=%.2f): required=%.2f  available=%.2f  margin=%.4f\n', ...
+                b.constraint.WS_opt, required, available, margin);
+            tc.verifyTrue(isfinite(required), 'WS_margin''s required output must be finite at Brandt''s design point.');
+            tc.verifyTrue(isfinite(available), 'WS_margin''s available output must be finite at Brandt''s design point.');
+            tc.verifyTrue(isfinite(margin), 'WS_margin must be finite at Brandt''s design point.');
+        end
+
         % --- Vertical-wall required_TW encoding -----------------------------
 
         function testRequiredTWZeroAtOrBelowLimit(tc)

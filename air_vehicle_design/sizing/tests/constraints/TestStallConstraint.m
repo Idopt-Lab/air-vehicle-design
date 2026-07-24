@@ -87,6 +87,43 @@ classdef TestStallConstraint < matlab.unittest.TestCase
                 'A higher stall-speed requirement must permit a higher WS_max.');
         end
 
+        % --- Available/margin ------------------------------------------------
+
+        function testWSMarginMatchesHandComputedFormula(tc)
+            % Arbitrary flight condition (not F-16-specific data). Confirms
+            % Only_WbyS.WS_margin (shared with LandingConstraint, see
+            % TestLandingConstraint.m for the fuller battery of margin tests)
+            % works correctly through StallConstraint's own WS_max():
+            % margin = WS_required - WS_available, WS_required = WS_max(),
+            % WS_available = W_TO/S_ref. Requests WS_margin's 2nd/3rd
+            % (available/required) outputs directly so both underlying
+            % constraint values are independently verified, not just their
+            % combined margin.
+            aero  = F16AeroL1();
+            state = AircraftState(0, 0.3);
+            obj   = StallConstraint("Toy", state, aero);
+
+            W_TO  = 30000;
+            S_ref = 300;
+
+            expected_required  = obj.WS_max();
+            expected_available = W_TO / S_ref;
+            expected_margin    = expected_required - expected_available;
+
+            [received_margin, received_available, received_required] = obj.WS_margin(W_TO, S_ref);
+
+            fprintf(['\n    WS_margin: required=%.4f  available=%.4f  margin=%.4f  ' ...
+                '(hand-computed: required=%.4f  available=%.4f  margin=%.4f)\n'], ...
+                received_required, received_available, received_margin, ...
+                expected_required, expected_available, expected_margin);
+            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
+                'WS_margin''s required output must equal WS_max().');
+            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
+                'WS_margin''s available output must equal W_TO/S_ref.');
+            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
+                'WS_margin must equal required minus available.');
+        end
+
         % --- Vertical-wall required_TW encoding -----------------------------
 
         function testRequiredTWZeroAtOrBelowLimit(tc)

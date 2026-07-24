@@ -142,6 +142,99 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
                 'required_TW must equal the raw (unsimplified) Master Equation.');
         end
 
+        % --- Available/margin ------------------------------------------------
+
+        function testTWMarginMatchesHandComputedFormula(tc)
+            % Arbitrary condition/design point (not F-16-specific data).
+            % required_TW itself is already independently verified above, so
+            % this only needs to confirm TW_margin combines it with the
+            % available (lapsed) T_SL/W_TO correctly: margin =
+            % alpha*(T_SL/W_TO - required_TW(WS_actual)), where alpha is the
+            % same AB-basis lapse this ThrustConstraint's own required_TW
+            % uses internally (default powerSetting="AB"). Requests
+            % TW_margin's 2nd/3rd (available/required) outputs directly,
+            % rather than just its combined margin, so both underlying
+            % constraint values are independently verified too.
+            aero  = F16AeroL1();
+            prop  = F16PropL2();
+            state = AircraftState(20000, 0.6);
+            obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 2.0, 50);
+
+            WS_actual = 90;
+            T_SL      = 25000;
+            W_TO      = 32000;
+
+            alpha              = prop.thrust_lapse(state);
+            expected_required  = alpha * obj.required_TW(WS_actual);
+            expected_available = alpha * (T_SL / W_TO);
+            expected_margin    = expected_available - expected_required;
+
+            [received_margin, received_available, received_required] = obj.TW_margin(WS_actual, T_SL, W_TO);
+
+            fprintf(['\n    TW_margin: required=%.6f  available=%.6f  margin=%.6f  ' ...
+                '(hand-computed: required=%.6f  available=%.6f  margin=%.6f)\n'], ...
+                received_required, received_available, received_margin, ...
+                expected_required, expected_available, expected_margin);
+            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
+                'TW_margin''s required output must equal alpha*required_TW(WS_actual).');
+            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
+                'TW_margin''s available output must equal alpha*T_SL/W_TO.');
+            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
+                'TW_margin must equal available minus required.');
+        end
+
+        function testTWMarginIncreasesWithAvailableThrust(tc)
+            % More installed sea-level-static thrust (same W_TO, same
+            % WS_actual) must increase the margin -- strictly more T/W
+            % available with everything else held fixed. Prints/verifies
+            % the required and available values behind each margin: required
+            % must be identical between the two calls (same condition, same
+            % WS_actual), only available should move.
+            aero  = F16AeroL1();
+            prop  = F16PropL2();
+            state = AircraftState(20000, 0.6);
+            obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 2.0, 50);
+
+            [margin_low, available_low, required_low]   = obj.TW_margin(90, 20000, 32000);
+            [margin_high, available_high, required_high] = obj.TW_margin(90, 30000, 32000);
+
+            fprintf('\n    Low T_SL=20000:  required=%.6f  available=%.6f  margin=%.6f\n', ...
+                required_low, available_low, margin_low);
+            fprintf('    High T_SL=30000: required=%.6f  available=%.6f  margin=%.6f\n', ...
+                required_high, available_high, margin_high);
+
+            tc.verifyEqual(required_low, required_high, 'AbsTol', 1e-12, ...
+                'required must be unchanged between the two calls -- only available T_SL differs.');
+            tc.verifyGreaterThan(available_high, available_low, ...
+                'More installed T_SL must increase the available output.');
+            tc.verifyGreaterThan(margin_high, margin_low, ...
+                'More available T_SL must increase TW_margin.');
+        end
+
+        function testTWMarginSignAtRequiredBoundary(tc)
+            % When available T/W is set to exactly the required_TW at
+            % WS_actual, margin must be ~0 -- the definitional boundary
+            % between feasible (>=0) and infeasible (<0). Prints/verifies
+            % required and available explicitly equal one another here.
+            aero  = F16AeroL1();
+            prop  = F16PropL2();
+            state = AircraftState(20000, 0.6);
+            obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 2.0, 50);
+
+            WS_actual   = 90;
+            W_TO        = 32000;
+            TW_required = obj.required_TW(WS_actual);
+            T_SL        = TW_required * W_TO;   % available == required, exactly
+
+            [margin, available, required] = obj.TW_margin(WS_actual, T_SL, W_TO);
+            fprintf('\n    At boundary: required=%.6f  available=%.6f  margin=%.6f\n', ...
+                required, available, margin);
+            tc.verifyEqual(available, required, 'RelTol', 1e-10, ...
+                'available must equal required exactly at this constructed boundary.');
+            tc.verifyEqual(margin, 0, 'AbsTol', 1e-10, ...
+                'TW_margin must be ~0 when available T/W exactly equals required_TW.');
+        end
+
         function testRequiredTWVectorizedOverWS(tc)
             % Constraint diagrams sweep W/S -- required_TW must vectorize
             % cleanly and stay finite over a physically reasonable range.
@@ -222,22 +315,22 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Max Mach condition
             % at each fidelity level, alongside Brandt's full 21-point
-            % tabulated row [F16Baseline b.constraints.dash.TW_MxMach]. All
-            % three levels read LOW vs. Brandt (none has a supersonic
-            % wave-drag term), but the gap is SMALLEST at L1 (~33-51%) and
-            % LARGEST at L3 (~48-64%), the opposite of what "higher fidelity
-            % is more accurate" would suggest: L1's CD0 is a flat Cfe*Swet/Sref
-            % estimate with no Mach dependence at all, while L2/L3's Reynolds-
-            % based buildup legitimately *lowers* CD0 as M rises (the
-            % (1+0.144*M^2)^0.65 compressibility term in Cf_turbulent -- see
-            % TestAeroL3.testCD0AtBrandtMachPoints), and neither adds back the
-            % wave-drag rise that dominates real supersonic CD0 -- so L1's
-            % Mach-blindness accidentally lands closer to Brandt's calibrated
-            % value here than L2/L3's more physical (but wave-drag-incomplete)
-            % model does. This is a known aerodynamics-discipline gap, not a
-            % ThrustConstraint bug -- see the class header note on how the
-            % Master Equation itself was separately confirmed against
-            % Brandt's table to ~0.15%. Which F16Baseline() table this prints
+            % tabulated row [F16Baseline b.constraints.dash.TW_MxMach].
+            % L1/L2 still read LOW vs. Brandt (~40-51%/~47-57% across the
+            % sweep) -- CD0 is a flat Cfe*Swet/Sref estimate with no Mach
+            % dependence at all, so neither ever picks up the supersonic
+            % wave-drag rise. L3 now reads CLOSE to Brandt (within about
+            % +2.5% to +3.0% across the sweep) since F16AeroL3.compute_CD0_wave
+            % was fixed to use the true whole-aircraft Amax/length (Raymer
+            % 6th ed. Eqs. 12.44-12.45, see F16AeroL3_wave_drag_fix.md) instead
+            % of a fuselage-only approximation -- "higher fidelity is more
+            % accurate" now holds here, reversing the earlier state where L3
+            % (fuselage-only wave drag) undershot even L1's flat estimate.
+            % Remaining ~+3% at L3 is a known, smaller residual gap (Brandt's
+            % own flight-calibrated polar vs. this framework's textbook
+            % buildup), not a ThrustConstraint bug -- see the class header
+            % note on how the Master Equation itself was separately confirmed
+            % against Brandt's table to ~0.15%. Which F16Baseline() table this prints
             % against ("original" Brandt F-16A.xls, or Casey's "corrected"
             % revised-OEW recalculation) is controlled by the single manual
             % switch in BrandtVariant.m -- edit that file, not this one, to
@@ -253,14 +346,29 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_MxMach = b.constraints.dash.TW_MxMach;
             TW            = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            % "required"/"available" columns (this class's TW_margin, 2nd/3rd
+            % outputs) at Brandt's own actual design point (T_SL=b.engine.T_max,
+            % W_TO=b.brandt.TOGW), evaluated at each W/S in the sweep -- alpha
+            % is fixed for this condition, so "available" is constant across
+            % rows while "required" (=alpha*required_TW(WS)) tracks TW*alpha.
+            T_SL = b.engine.T_max;
+            W_TO = b.brandt.TOGW;
+            required_vals  = zeros(size(WS_range));
+            available_vals = zeros(size(WS_range));
+
+            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
+                'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
-                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_MxMach(i), ...
-                    100*(TW(i) - brandt_MxMach(i))/brandt_MxMach(i));
+                [~, available_vals(i), required_vals(i)] = obj.TW_margin(WS_range(i), T_SL, W_TO);
+                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%  %12.6f  %12.6f\n', WS_range(i), TW(i), brandt_MxMach(i), ...
+                    100*(TW(i) - brandt_MxMach(i))/brandt_MxMach(i), required_vals(i), available_vals(i));
             end
 
             tc.verifyTrue(all(isfinite(TW)), sprintf('[%s] required_TW must be finite over the W/S sweep.', fidelityLevel));
             tc.verifyTrue(all(TW > 0), sprintf('[%s] required_TW must be positive (100%% AB, supersonic dash).', fidelityLevel));
+            tc.verifyTrue(all(isfinite(required_vals)), sprintf('[%s] TW_margin''s required output must be finite over the W/S sweep.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(available_vals)), sprintf('[%s] TW_margin''s available output must be finite over the W/S sweep.', fidelityLevel));
         end
 
         function testF16MaxMachRequiredTWPhysicalRange(tc)
@@ -338,14 +446,29 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_maxalt = b.constraints.max_alt.TW_MaxAlt;
             TW            = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            % "required"/"available" columns (this class's TW_margin, 2nd/3rd
+            % outputs) at Brandt's own actual design point (T_SL=b.engine.T_max,
+            % W_TO=b.brandt.TOGW), evaluated at each W/S in the sweep -- alpha
+            % is fixed for this condition, so "available" is constant across
+            % rows while "required" (=alpha*required_TW(WS)) tracks TW*alpha.
+            T_SL = b.engine.T_max;
+            W_TO = b.brandt.TOGW;
+            required_vals  = zeros(size(WS_range));
+            available_vals = zeros(size(WS_range));
+
+            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
+                'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
-                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_maxalt(i), ...
-                    100*(TW(i) - brandt_maxalt(i))/brandt_maxalt(i));
+                [~, available_vals(i), required_vals(i)] = obj.TW_margin(WS_range(i), T_SL, W_TO);
+                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%  %12.6f  %12.6f\n', WS_range(i), TW(i), brandt_maxalt(i), ...
+                    100*(TW(i) - brandt_maxalt(i))/brandt_maxalt(i), required_vals(i), available_vals(i));
             end
 
             tc.verifyTrue(all(isfinite(TW)), sprintf('[%s] required_TW must be finite over the W/S sweep.', fidelityLevel));
             tc.verifyTrue(all(TW > 0), sprintf('[%s] required_TW must be positive.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(required_vals)), sprintf('[%s] TW_margin''s required output must be finite over the W/S sweep.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(available_vals)), sprintf('[%s] TW_margin''s available output must be finite over the W/S sweep.', fidelityLevel));
         end
 
         function testF16MaxAltRequiredTWPhysicalRange(tc)
@@ -427,14 +550,29 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_combatsub = b.constraints.combat_sub.TW_CombatSub;
             TW               = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            % "required"/"available" columns (this class's TW_margin, 2nd/3rd
+            % outputs) at Brandt's own actual design point (T_SL=b.engine.T_max,
+            % W_TO=b.brandt.TOGW), evaluated at each W/S in the sweep -- alpha
+            % is fixed for this condition, so "available" is constant across
+            % rows while "required" (=alpha*required_TW(WS)) tracks TW*alpha.
+            T_SL = b.engine.T_max;
+            W_TO = b.brandt.TOGW;
+            required_vals  = zeros(size(WS_range));
+            available_vals = zeros(size(WS_range));
+
+            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
+                'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
-                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_combatsub(i), ...
-                    100*(TW(i) - brandt_combatsub(i))/brandt_combatsub(i));
+                [~, available_vals(i), required_vals(i)] = obj.TW_margin(WS_range(i), T_SL, W_TO);
+                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%  %12.6f  %12.6f\n', WS_range(i), TW(i), brandt_combatsub(i), ...
+                    100*(TW(i) - brandt_combatsub(i))/brandt_combatsub(i), required_vals(i), available_vals(i));
             end
 
             tc.verifyTrue(all(isfinite(TW)), sprintf('[%s] required_TW must be finite over the W/S sweep.', fidelityLevel));
             tc.verifyTrue(all(TW > 0), sprintf('[%s] required_TW must be positive.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(required_vals)), sprintf('[%s] TW_margin''s required output must be finite over the W/S sweep.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(available_vals)), sprintf('[%s] TW_margin''s available output must be finite over the W/S sweep.', fidelityLevel));
         end
 
         function testF16CombatSubRequiredTWPhysicalRange(tc)
@@ -499,8 +637,13 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % condition at each fidelity level, alongside Brandt's full
             % 21-point tabulated row [F16Baseline b.constraints.combat_sup.
             % TW_CombatSup]. Diagnostic only, same caveats as
-            % testF16MaxMachRequiredTWTable (textbook CD0/K1 buildup vs.
-            % Brandt's flight-calibrated polar; no supersonic wave-drag term).
+            % testF16MaxMachRequiredTWTable: L1/L2 still read far LOW vs.
+            % Brandt (~30-54%/~44-63%, no Mach-dependent CD0 at all), while
+            % L3 now reads much closer (~8.4-8.9% low across the sweep) since
+            % compute_CD0_wave was fixed to use the true whole-aircraft
+            % Amax/length instead of a fuselage-only approximation (see
+            % F16AeroL3_wave_drag_fix.md) -- textbook CD0/K1 buildup vs.
+            % Brandt's flight-calibrated polar accounts for the remainder.
             % Which F16Baseline() table this prints against ("original" or
             % "corrected" -- see F16Baseline.m section 11b; Combat Turn 2 is
             % essentially unchanged between the two) is controlled by the
@@ -516,14 +659,29 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_combatsup = b.constraints.combat_sup.TW_CombatSup;
             TW               = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            % "required"/"available" columns (this class's TW_margin, 2nd/3rd
+            % outputs) at Brandt's own actual design point (T_SL=b.engine.T_max,
+            % W_TO=b.brandt.TOGW), evaluated at each W/S in the sweep -- alpha
+            % is fixed for this condition, so "available" is constant across
+            % rows while "required" (=alpha*required_TW(WS)) tracks TW*alpha.
+            T_SL = b.engine.T_max;
+            W_TO = b.brandt.TOGW;
+            required_vals  = zeros(size(WS_range));
+            available_vals = zeros(size(WS_range));
+
+            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
+                'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
-                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_combatsup(i), ...
-                    100*(TW(i) - brandt_combatsup(i))/brandt_combatsup(i));
+                [~, available_vals(i), required_vals(i)] = obj.TW_margin(WS_range(i), T_SL, W_TO);
+                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%  %12.6f  %12.6f\n', WS_range(i), TW(i), brandt_combatsup(i), ...
+                    100*(TW(i) - brandt_combatsup(i))/brandt_combatsup(i), required_vals(i), available_vals(i));
             end
 
             tc.verifyTrue(all(isfinite(TW)), sprintf('[%s] required_TW must be finite over the W/S sweep.', fidelityLevel));
             tc.verifyTrue(all(TW > 0), sprintf('[%s] required_TW must be positive (100%% AB, supersonic turn).', fidelityLevel));
+            tc.verifyTrue(all(isfinite(required_vals)), sprintf('[%s] TW_margin''s required output must be finite over the W/S sweep.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(available_vals)), sprintf('[%s] TW_margin''s available output must be finite over the W/S sweep.', fidelityLevel));
         end
 
         function testF16CombatSupRequiredTWPhysicalRange(tc)
@@ -547,37 +705,39 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
         % 36,000 ft, M=0.87, n=1.0, 0% AB (dry/mil power), Ps=0, beta=0.8997
         % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.cruise]
         %
-        % NOTE ON ALPHA BASIS: unlike Max Mach (100% AB, so prop.thrust_lapse's
-        % AB-basis convention applies directly), Cruise is flown at 0% AB/dry
-        % power. PropulsionBase's thrust_lapse contract only exposes the
-        % AB-basis lapse (see PropulsionBase.m header), so ThrustConstraint
-        % here still evaluates alpha via prop.thrust_lapse (AB basis, ~alpha_AB
-        % =0.332642), NOT Brandt's own alpha_mil_T_AB=0.171083 (dry thrust
-        % re-normalized to T_SL_AB, which is what Brandt's TW_Cruise row
-        % actually uses). Using a ~2x larger alpha than Brandt's means our
-        % required_TW will read roughly HALF of Brandt's table for the same
-        % drag polar -- a known, documented alpha-basis mismatch (on top of
-        % the usual CD0/K1 buildup-vs-flight-calibration gap already seen at
-        % Max Mach), not a ThrustConstraint bug. Selecting mil vs AB lapse per
-        % condition would require a PropulsionBase interface change, out of
-        % scope for this step.
+        % ALPHA BASIS (updated): Cruise is flown at 0% AB/dry (mil) power, so
+        % it needs a mil-power thrust lapse rather than prop.thrust_lapse's
+        % AB-basis default. PropulsionBase now exposes
+        % thrust_lapse_mil_on_AB_scale (mil thrust re-normalized onto the AB
+        % T_SL scale, matching Brandt's own alpha_mil_T_AB convention -- see
+        % PropulsionBase.m and ThrustConstraint.m get_alpha), and the Cruise
+        % ThrustConstraint instances below are constructed with
+        % powerSetting="mil" so compute_A/B/C/D pull alpha from it. This
+        % closes most (not all) of the previous ~2x-alpha gap at L2/L3 --
+        % F16PropL2's mil lapse now lands ~0.032 absolute off Brandt's
+        % alpha_mil_T_AB, well inside ALPHA_ABS_TOL=0.10. F16PropL1 has no
+        % mil-power model and PropulsionBase's default thrust_lapse_mil_on_AB_scale
+        % silently falls back to the AB-basis thrust_lapse, so Cruise at L1
+        % specifically is UNAFFECTED by this fix and stays as inaccurate as
+        % before -- do not be surprised its numbers didn't move. Full
+        % diagnosis: cruise_and_combatturn2_error_scrape.md Sec 2.
 
         function testF16CruiseAlphaNearBrandt(tc)
-            % prop.thrust_lapse (AB basis, per PropulsionBase convention) at
-            % the Cruise condition should be in the neighborhood of Brandt's
-            % alpha_AB -- same AbsTol as the Max Mach alpha check. Brandt's
-            % alpha_mil_T_AB (the value his own Cruise row equation actually
-            % uses) is printed alongside for reference only -- see class note
-            % above on why the two are NOT expected to match our alpha here.
+            % F16PropL2's mil-power lapse, expressed on the AB T_SL scale via
+            % thrust_lapse_mil_on_AB_scale, should be in the neighborhood of
+            % Brandt's own alpha_mil_T_AB -- the value his Cruise row
+            % equation actually uses (T_mil/T_SL_AB). Same AbsTol as the
+            % Max Mach alpha check; the paired implementation agent's sanity
+            % check found this lands ~0.032 absolute off, well inside it.
             b     = F16Baseline();
             prop  = F16PropL2();
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
-            received = prop.thrust_lapse(state);
-            expected = b.constraints.cruise.alpha_AB;   % 0.332642 [Brandt Consts AT24]
-            fprintf('\n    alpha (Cruise, AB basis): received=%.4f  Brandt alpha_AB=%.4f  (Brandt alpha_mil_T_AB=%.4f, dry basis, reference only)\n', ...
-                received, expected, b.constraints.cruise.alpha_mil_T_AB);
+            received = prop.thrust_lapse_mil_on_AB_scale(state);
+            expected = b.constraints.cruise.alpha_mil_T_AB;   % 0.171083 [Brandt Consts AU24]
+            fprintf('\n    alpha (Cruise, mil-on-AB-scale basis): received=%.4f  Brandt alpha_mil_T_AB=%.4f\n', ...
+                received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
-                'Cruise alpha (AB basis) should be within 0.10 of Brandt AT24.');
+                'Cruise alpha (mil-on-AB-scale basis) should be within 0.10 of Brandt AU24.');
         end
 
         function testF16CruiseDragPolarSubsonic(tc)
@@ -595,43 +755,67 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Cruise condition at
             % each fidelity level, alongside Brandt's full 21-point tabulated
-            % row [F16Baseline b.constraints.cruise.TW_Cruise]. Expect our
-            % values to read LOW vs. Brandt across the board here, on top of
-            % (and likely dominating) the CD0/K1 gap already seen at Max Mach
-            % -- see the alpha-basis note in this section's header comment.
-            % Which F16Baseline() table this prints against ("original" or
-            % "corrected" -- see F16Baseline.m section 11b; Cruise is one of
-            % the rows that shifts materially between the two) is controlled
-            % by the single manual switch in BrandtVariant.m.
+            % row [F16Baseline b.constraints.cruise.TW_Cruise]. Constructed
+            % with powerSetting="mil" so alpha is drawn from
+            % thrust_lapse_mil_on_AB_scale (see this section's header
+            % comment). At L2/L3 (F16PropL2's real mil-power model) expect
+            % our values to read much closer to Brandt's table now -- most of
+            % the previous ~2x-alpha gap is closed, leaving only the usual
+            % CD0/K1 buildup-vs-flight-calibration gap already seen at
+            % Max Mach. At L1 (F16PropL1, no mil-power model, silently falls
+            % back to the AB-basis lapse) expect values to still read LOW vs.
+            % Brandt, same as before this fix. Which F16Baseline() table this
+            % prints against ("original" or "corrected" -- see F16Baseline.m
+            % section 11b; Cruise is one of the rows that shifts materially
+            % between the two) is controlled by the single manual switch in
+            % BrandtVariant.m.
             [aero, prop] = TestThrustConstraint.buildDisciplines(fidelityLevel);
 
             variant = BrandtVariant();
             b     = F16Baseline(variant);
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
-            obj   = ThrustConstraint("Cruise", state, aero, prop, 0.8997, 1.0, 0.0);
+            obj   = ThrustConstraint("Cruise", state, aero, prop, 0.8997, 1.0, 0.0, "mil");
 
             WS_range     = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
             brandt_cruise = b.constraints.cruise.TW_Cruise;
             TW           = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            % "required"/"available" columns (this class's TW_margin, 2nd/3rd
+            % outputs) at Brandt's own actual design point (T_SL=b.engine.T_max,
+            % W_TO=b.brandt.TOGW), evaluated at each W/S in the sweep -- alpha
+            % (mil-on-AB-scale basis, per this object's powerSetting="mil") is
+            % fixed for this condition, so "available" is constant across rows
+            % while "required" (=alpha*required_TW(WS)) tracks TW*alpha.
+            T_SL = b.engine.T_max;
+            W_TO = b.brandt.TOGW;
+            required_vals  = zeros(size(WS_range));
+            available_vals = zeros(size(WS_range));
+
+            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
+                'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
-                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_cruise(i), ...
-                    100*(TW(i) - brandt_cruise(i))/brandt_cruise(i));
+                [~, available_vals(i), required_vals(i)] = obj.TW_margin(WS_range(i), T_SL, W_TO);
+                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%  %12.6f  %12.6f\n', WS_range(i), TW(i), brandt_cruise(i), ...
+                    100*(TW(i) - brandt_cruise(i))/brandt_cruise(i), required_vals(i), available_vals(i));
             end
 
             tc.verifyTrue(all(isfinite(TW)), sprintf('[%s] required_TW must be finite over the W/S sweep.', fidelityLevel));
             tc.verifyTrue(all(TW > 0), sprintf('[%s] required_TW must be positive.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(required_vals)), sprintf('[%s] TW_margin''s required output must be finite over the W/S sweep.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(available_vals)), sprintf('[%s] TW_margin''s available output must be finite over the W/S sweep.', fidelityLevel));
         end
 
         function testF16CruiseRequiredTWPhysicalRange(tc)
-            % Sanity check only, at Brandt's own optimal W/S -- not a match to
-            % Brandt's TW_opt (see class note on the alpha-basis mismatch).
+            % Sanity check only, at Brandt's own optimal W/S -- not an exact
+            % match to Brandt's TW_opt, though constructed with
+            % powerSetting="mil" (see this section's header comment) so it's
+            % now much closer than before this fix.
             b     = F16Baseline();
             aero  = F16AeroL3();
             prop  = F16PropL2();
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
-            obj   = ThrustConstraint("Cruise", state, aero, prop, 0.8997, 1.0, 0.0);
+            obj   = ThrustConstraint("Cruise", state, aero, prop, 0.8997, 1.0, 0.0, "mil");
 
             TW = obj.required_TW(b.constraint.WS_opt);
             fprintf('\n    Cruise required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
@@ -701,14 +885,29 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             brandt_ps  = b.constraints.ps.TW_Ps;
             TW         = obj.required_TW(WS_range);
 
-            fprintf('\n    [%s, %s]  %6s  %12s  %12s  %10s\n', fidelityLevel, variant, 'W/S', 'Our T/W', 'Brandt T/W', 'diff %');
+            % "required"/"available" columns (this class's TW_margin, 2nd/3rd
+            % outputs) at Brandt's own actual design point (T_SL=b.engine.T_max,
+            % W_TO=b.brandt.TOGW), evaluated at each W/S in the sweep -- alpha
+            % is fixed for this condition, so "available" is constant across
+            % rows while "required" (=alpha*required_TW(WS)) tracks TW*alpha.
+            T_SL = b.engine.T_max;
+            W_TO = b.brandt.TOGW;
+            required_vals  = zeros(size(WS_range));
+            available_vals = zeros(size(WS_range));
+
+            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
+                'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
-                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%\n', WS_range(i), TW(i), brandt_ps(i), ...
-                    100*(TW(i) - brandt_ps(i))/brandt_ps(i));
+                [~, available_vals(i), required_vals(i)] = obj.TW_margin(WS_range(i), T_SL, W_TO);
+                fprintf('    %6d  %12.6f  %12.6f  %9.2f%%  %12.6f  %12.6f\n', WS_range(i), TW(i), brandt_ps(i), ...
+                    100*(TW(i) - brandt_ps(i))/brandt_ps(i), required_vals(i), available_vals(i));
             end
 
             tc.verifyTrue(all(isfinite(TW)), sprintf('[%s] required_TW must be finite over the W/S sweep.', fidelityLevel));
             tc.verifyTrue(all(TW > 0), sprintf('[%s] required_TW must be positive.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(required_vals)), sprintf('[%s] TW_margin''s required output must be finite over the W/S sweep.', fidelityLevel));
+            tc.verifyTrue(all(isfinite(available_vals)), sprintf('[%s] TW_margin''s available output must be finite over the W/S sweep.', fidelityLevel));
         end
 
         function testF16PsRequiredTWPhysicalRange(tc)
