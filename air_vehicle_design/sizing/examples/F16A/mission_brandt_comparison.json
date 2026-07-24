@@ -1,0 +1,451 @@
+{
+  "generated": "2026-07-24",
+  "aircraft": "F-16A Block 10/15",
+  "W_TO_lbf": 31377,
+  "source": "VnV/BrandtF16A/BrandtMission.m; VnV/BrandtF16A/tests/test_BrandtMission.m; VnV/BrandtF16A/readme_mission.md (Validation Summary / Cell References sections)",
+  "x_comment": "Pre-registered Brandt Miss-tab (14-segment) ground-truth targets for the future examples/F16A/mission_brandt_comparison.m report (not yet written -- that is the implementation loop's job, gated on F16MissionL1/L2/L3 existing). 'Computed'/'PctDiff' are TBD throughout because no F16MissionL1/L2/L3/.m file exists yet -- this is the io pass, before the implementation loop starts. IMPORTANT: this file registers the BRANDT MISS-TAB profile's ground truth ONLY. Comparing it against F16MissionL1's own default CAP profile (examples/F16A/mission_profile.json, 10 segments) is EXPECTED to show LARGE disagreement on total fuel (documented precedent: temp_AI/docs/disciplines/05_mission_analysis.md Sec.7, '10-25% lower fuel estimates... not an error -- a deliberate simplification') because CAP and Brandt's Miss tab are two different, deliberately different mission profiles -- see docs/subplans/07_mission_analysis.md's 'CAP mission profile vs. Brandt's 14-segment Miss-tab profile' section for the full rationale (Accel/Egress genuinely absent from CAP; Patrol/Patrol2/Patrol3/Climb2 are 0-duration Brandt bookkeeping waypoints, not real legs). This comparison is INFORMATIONAL ONLY and must never be used as a unit-test pass/fail target (project's two-test-tier rule, CLAUDE.md).",
+  "x_verification_note": "VERIFIED against the live Brandt-F16-A.xls Miss tab (2026-07-24, coordinator pass, via Python xlrd since no MATLAB execution tool was available -- functionally equivalent to the readcell/readtable check the earlier scribe/io passes couldn't run; xlrd is required for this specific file because it's the legacy binary .xls format, not .xlsx). Every 'Brandt' value below (all 4 summary targets, all 13 per-segment fuel/time/weight-fraction values) was diffed against the live Miss!B7:O13 cell values and matches to the precision shown -- no discrepancies found. This independently confirms BrandtMission.m/test_BrandtMission.m's existing validation claims against the live workbook, closing the gap both the scribe and io passes had flagged as incomplete (see VnV/BrandtF16A/todo.md's 2026-07-24 entries).",
+  "rows": [
+    {
+      "parameter": "[MISSION-LEVEL SUMMARY TARGETS]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Total mission fuel (segments 1-13) [lb]",
+      "Fidelity": "L1 / L2 / L3 (CAP profile)",
+      "Computed": "L1=8938.4 | L2=6052.8 | L3=6406.5 lb",
+      "Brandt": "6000.43",
+      "PctDiff": "L1=+49.0% | L2=+0.9% | L3=+6.8%",
+      "Source": "Miss!O9; BrandtMission.total_fuel_lb; test_BrandtMission.testTotalFuel",
+      "Notes": "1% tolerance in test_BrandtMission.m. This is the Brandt Miss-tab total -- NOT expected to match F16MissionL1's CAP-profile total (see file-level _comment)."
+    },
+    {
+      "parameter": "Total mission time (segments 1-13) [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (not computed by MissionL1/L2/L3 -- get_mission_fuel's breakdown has no time/duration total)",
+      "Brandt": "94.06",
+      "PctDiff": "N/A",
+      "Source": "Miss!O8; BrandtMission.total_time_min; test_BrandtMission.testTotalTime",
+      "Notes": "1% tolerance in test_BrandtMission.m."
+    },
+    {
+      "parameter": "Landing ground roll distance [ft]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (not computed by MissionL1/L2/L3 -- ground-roll distance is a Constraints-discipline quantity, not produced by Mission)",
+      "Brandt": "2884.95",
+      "PctDiff": "N/A",
+      "Source": "Miss!O6; BrandtMission.landing_dist_ft; test_BrandtMission.testLandingDist",
+      "Notes": "1% tolerance in test_BrandtMission.m. No fuel burned during Landing itself; distance-only segment."
+    },
+    {
+      "parameter": "Final W/W_TO (after Loiter, before Landing)",
+      "Fidelity": "L1 / L2 / L3 (CAP profile)",
+      "Computed": "L1=0.5940 | L2=0.6812 | L3=0.6705",
+      "Brandt": "0.6685",
+      "PctDiff": "L1=-11.15% | L2=+1.90% | L3=+0.30%",
+      "Source": "Miss!O12; BrandtMission.W_Wto(end-1); test_BrandtMission.testFinalWeightFraction",
+      "Notes": "1% tolerance in test_BrandtMission.m."
+    },
+    {
+      "parameter": "[PER-SEGMENT FUEL BURN -- Brandt Miss-tab 14-segment profile, Miss!B9:N9]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Fuel: Takeoff [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "1540.1",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!B9; test_BrandtMission.testFuelTakeoff",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Fuel: Accel   [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "377.2",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!C9; test_BrandtMission.testFuelAccel",
+      "Notes": "1% tol. CAP has no distinct Accel leg."
+    },
+    {
+      "parameter": "Fuel: Climb   [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "449.1",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!D9; test_BrandtMission.testFuelClimb",
+      "Notes": "2% tol in test_BrandtMission.m -- traces to the documented Geom!B19 S_wet double-count (readme_geom.md), not a Mission-discipline issue."
+    },
+    {
+      "parameter": "Fuel: Cruise  [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "1003.3",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!E9; test_BrandtMission.testFuelCruise",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Fuel: Patrol  [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!F9; test_BrandtMission.testFuelPatrol",
+      "Notes": "0-duration bookkeeping waypoint (absolute tol 5.0 lb in test). CAP omits this row entirely (not a distinct leg)."
+    },
+    {
+      "parameter": "Fuel: Dash    [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "484.1",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!G9; test_BrandtMission.testFuelDash",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Fuel: Patrol2 [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!H9; test_BrandtMission.testFuelPatrol2",
+      "Notes": "0-duration bookkeeping waypoint (absolute tol 5.0 lb). CAP omits this row."
+    },
+    {
+      "parameter": "Fuel: Combat  [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "564.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!I9; test_BrandtMission.testFuelCombat",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Fuel: Egress  [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "304.6",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!J9; test_BrandtMission.testFuelEgress",
+      "Notes": "2% tol -- Geom!B19 S_wet double-count (same root cause as Climb). CAP has no distinct Egress leg -- one of only two Brandt legs genuinely absent from CAP."
+    },
+    {
+      "parameter": "Fuel: Patrol3 [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!K9; test_BrandtMission.testFuelPatrol3",
+      "Notes": "0-duration bookkeeping waypoint (absolute tol 5.0 lb). CAP omits this row."
+    },
+    {
+      "parameter": "Fuel: Climb2  [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!L9; test_BrandtMission.testFuelClimb2",
+      "Notes": "0-duration bookkeeping waypoint, 'same conditions' as prior segment (absolute tol 5.0 lb). CAP omits this row."
+    },
+    {
+      "parameter": "Fuel: Cruise2 [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "789.4",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!M9; test_BrandtMission.testFuelCruise2",
+      "Notes": "2% tol -- Geom!B19 S_wet double-count."
+    },
+    {
+      "parameter": "Fuel: Loiter  [lb]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "488.6",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!N9; test_BrandtMission.testFuelLoiter",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "[PER-SEGMENT TIME -- Brandt Miss-tab 14-segment profile, Miss!B8:N8]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Time: Takeoff [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.223",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!B8; test_BrandtMission.testTimeTakeoff",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Time: Accel   [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "2.256",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!C8; test_BrandtMission.testTimeAccel",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Time: Climb   [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "4.508",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!D8; test_BrandtMission.testTimeClimb",
+      "Notes": "2% tol -- S_wet discrepancy"
+    },
+    {
+      "parameter": "Time: Cruise  [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "22.95",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!E8; test_BrandtMission.testTimeCruise",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Time: Patrol  [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!F8; test_BrandtMission.testTimePatrol",
+      "Notes": "given 0 min (absolute tol 0.01)"
+    },
+    {
+      "parameter": "Time: Dash    [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "6.017",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!G8; test_BrandtMission.testTimeDash",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "Time: Patrol2 [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!H8; test_BrandtMission.testTimePatrol2",
+      "Notes": "given 0 min (absolute tol 0.01)"
+    },
+    {
+      "parameter": "Time: Combat  [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "2.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!I8; test_BrandtMission.testTimeCombat",
+      "Notes": "given exactly (absolute tol 0.01). Matches CAP's Combat time_min_given=2.0 exactly."
+    },
+    {
+      "parameter": "Time: Egress  [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "6.017",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!J8; test_BrandtMission.testTimeEgress",
+      "Notes": "1% tol. CAP has no distinct Egress leg."
+    },
+    {
+      "parameter": "Time: Patrol3 [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!K8; test_BrandtMission.testTimePatrol3",
+      "Notes": "given 0 min (absolute tol 0.01)"
+    },
+    {
+      "parameter": "Time: Climb2  [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!L8; test_BrandtMission.testTimeClimb2",
+      "Notes": "given 0 min, 'same conditions' (absolute tol 0.01)"
+    },
+    {
+      "parameter": "Time: Cruise2 [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "30.08",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!M8; test_BrandtMission.testTimeCruise2",
+      "Notes": "2% tol -- S_wet discrepancy"
+    },
+    {
+      "parameter": "Time: Loiter  [min]",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "20.0",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!N8; test_BrandtMission.testTimeLoiter",
+      "Notes": "given exactly (absolute tol 0.01). Matches CAP's Loiter time_min_given=20.0 exactly."
+    },
+    {
+      "parameter": "[PER-SEGMENT WEIGHT FRACTION W/W_TO (at END of segment) -- Brandt Miss-tab, Miss!B12:N12]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "W/W_TO after Takeoff",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.9509",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!B12; test_BrandtMission.testWfracTakeoff",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "W/W_TO after Accel",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.9389",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!C12; test_BrandtMission.testWfracAccel",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "W/W_TO after Climb",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.9246",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!D12; test_BrandtMission.testWfracClimb",
+      "Notes": "2% tol"
+    },
+    {
+      "parameter": "W/W_TO after Cruise",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.8926",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!E12; test_BrandtMission.testWfracCruise",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "W/W_TO after Patrol",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.8926",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!F12; test_BrandtMission.testWfracPatrol",
+      "Notes": "1% tol (unchanged from Cruise -- 0-fuel waypoint)"
+    },
+    {
+      "parameter": "W/W_TO after Dash",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.8772",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!G12; test_BrandtMission.testWfracDash",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "W/W_TO after Patrol2",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.8772",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!H12; test_BrandtMission.testWfracPatrol2",
+      "Notes": "1% tol (unchanged from Dash -- 0-fuel waypoint)"
+    },
+    {
+      "parameter": "W/W_TO after Combat",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.7190",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!I12; test_BrandtMission.testWfracCombat",
+      "Notes": "1% tol. Includes both Combat fuel burn AND the 4,400 lb payload drop."
+    },
+    {
+      "parameter": "W/W_TO after Egress",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.7093",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!J12; test_BrandtMission.testWfracEgress",
+      "Notes": "2% tol"
+    },
+    {
+      "parameter": "W/W_TO after Patrol3",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.7093",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!K12; test_BrandtMission.testWfracPatrol3",
+      "Notes": "2% tol (unchanged from Egress -- 0-fuel waypoint)"
+    },
+    {
+      "parameter": "W/W_TO after Climb2",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.7093",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!L12; test_BrandtMission.testWfracClimb2",
+      "Notes": "2% tol (unchanged from Patrol3 -- 0-fuel waypoint)"
+    },
+    {
+      "parameter": "W/W_TO after Cruise2",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.6841",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!M12; test_BrandtMission.testWfracCruise2",
+      "Notes": "2% tol"
+    },
+    {
+      "parameter": "W/W_TO after Loiter (= Miss!O12, final)",
+      "Fidelity": "TBD",
+      "Computed": "N/A (different profile)",
+      "Brandt": "0.6685",
+      "PctDiff": "N/A (different profile)",
+      "Source": "Miss!N12 = Miss!O12; test_BrandtMission.testWfracLoiter / testFinalWeightFraction",
+      "Notes": "1% tol"
+    },
+    {
+      "parameter": "[CAP vs. BRANDT -- INFORMATIONAL DISCLAIMER, NOT A COMPARISON ROW]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "F16MissionL1/L2/L3 CAP-profile total fuel vs. Brandt Miss-tab total (6000.43 lb)",
+      "Fidelity": "N/A",
+      "Computed": "N/A",
+      "Brandt": "6000.43",
+      "PctDiff": "EXPECTED LARGE (10-25% per precedent)",
+      "Source": "temp_AI/docs/disciplines/05_mission_analysis.md Sec.7 ('F-16 Mission Profile Discrepancy')",
+      "Notes": "Do NOT treat disagreement here as a bug. CAP (examples/F16A/mission_profile.json) and Brandt's Miss tab are two different mission profiles by design (subplan 07's 'CAP mission profile vs. Brandt's 14-segment Miss-tab profile' section) -- CAP omits Accel and Egress as distinct legs, and its Dash/Combat conditions differ from Brandt's (Dash M=1.60 vs Brandt's M=0.87; Combat M=0.80 vs Brandt's M=0.87). This row exists purely to pre-warn a future reader of mission_brandt_comparison.m's output, per the parent task's explicit instruction."
+    }
+  ]
+}
