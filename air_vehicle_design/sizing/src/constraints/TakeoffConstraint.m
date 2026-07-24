@@ -111,7 +111,7 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
         function B = compute_B(obj)
         %COMPUTE_B  See class header for the equation and citation.
             CLmax_TO = obj.aero.get_CLmax(obj.state);
-            alpha    = obj.prop.thrust_lapse(obj.state);
+            alpha    = obj.get_alpha();
             rho      = obj.state.rho;
 
             coeff = (obj.beta^2 / alpha) * (obj.k_TO^2 / (rho * TakeoffConstraint.G_FTS2 * CLmax_TO));
@@ -124,6 +124,16 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 
         function D = compute_D(~)
             D = 0;
+        end
+
+        function alpha = get_alpha(obj)
+        %GET_ALPHA  Thrust lapse (AB/max power, PropulsionBase convention --
+        %   TakeoffConstraint has no mil/AB distinction to select between,
+        %   unlike ThrustConstraint.m's get_alpha). Exposed as its own
+        %   method, rather than computed inline only inside compute_B, so
+        %   Both_WbyS_TbyW.TW_margin uses this exact same alpha -- never an
+        %   independently-supplied value that could disagree with it.
+            alpha = obj.prop.thrust_lapse(obj.state);
         end
 
     end
