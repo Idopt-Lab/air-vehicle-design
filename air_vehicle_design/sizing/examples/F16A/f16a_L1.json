@@ -1,0 +1,66 @@
+{
+  "_comment": "F-16A Block 10/15 Level-1 inputs. L1 is statistical/type-based: only classification strings/scalars, no planform dimensions (those first appear at L2). Read by F16GeomL1 (.geometry) and F16AeroL1 (.aerodynamics).",
+
+  "geometry": {
+    "_src": "aircraft_category selects Roskam Vol. I Table 3.5 (S_wet) / Raymer 6th Table 6.3 (L_fus) / Raymer 7th Table 4.1 (AR_eq, dogfighter row) regressions. M_max = Brandt Main-tab aircraft.Mmax.",
+    "aircraft_category": "jet_fighter",
+    "M_max": 2.0
+  },
+
+  "aerodynamics": {
+    "_src": "aircraft_type selects the fighter Roskam CLmax row + the Mattingly fighter curves. design_type='uncambered' sets K2=0 (Mattingly AED 2nd ed. Sec. 2.3.1). curve selects the 'Current' technology arrays (Mattingly Figs. 2.10/2.11).",
+    "aircraft_type": "fighter",
+    "design_type": "uncambered",
+    "curve": "Current",
+
+    "cd0_curve": {
+      "_comment": "PLACEHOLDER Mattingly AED 2nd ed. Fig. 2.10 CD0(M), fighter. From 5 AAF worked points (mattingly_data.md PART 9); TODO replace with the digitized figure. Future = copy of Current (no Future curve in repo).",
+      "_placeholder": true,
+      "Current": [
+        {"mach": 0.0, "value": 0.016},
+        {"mach": 0.8, "value": 0.016},
+        {"mach": 0.9, "value": 0.016},
+        {"mach": 1.2, "value": 0.028},
+        {"mach": 1.5, "value": 0.028},
+        {"mach": 1.6, "value": 0.028},
+        {"mach": 1.8, "value": 0.028},
+        {"mach": 2.0, "value": 0.028}
+      ],
+      "Future": [
+        {"mach": 0.0, "value": 0.016},
+        {"mach": 0.8, "value": 0.016},
+        {"mach": 0.9, "value": 0.016},
+        {"mach": 1.2, "value": 0.028},
+        {"mach": 1.5, "value": 0.028},
+        {"mach": 1.6, "value": 0.028},
+        {"mach": 1.8, "value": 0.028},
+        {"mach": 2.0, "value": 0.028}
+      ]
+    },
+
+    "k1_curve": {
+      "_comment": "PLACEHOLDER Mattingly AED 2nd ed. Fig. 2.11 K1(M), fighter. From 5 AAF worked points (mattingly_data.md PART 9); TODO replace with the digitized figure. Future = copy of Current (no Future curve in repo).",
+      "_placeholder": true,
+      "Current": [
+        {"mach": 0.0, "value": 0.18},
+        {"mach": 0.8, "value": 0.18},
+        {"mach": 0.9, "value": 0.18},
+        {"mach": 1.2, "value": 0.20},
+        {"mach": 1.5, "value": 0.27},
+        {"mach": 1.6, "value": 0.288},
+        {"mach": 1.8, "value": 0.324},
+        {"mach": 2.0, "value": 0.360}
+      ],
+      "Future": [
+        {"mach": 0.0, "value": 0.18},
+        {"mach": 0.8, "value": 0.18},
+        {"mach": 0.9, "value": 0.18},
+        {"mach": 1.2, "value": 0.20},
+        {"mach": 1.5, "value": 0.27},
+        {"mach": 1.6, "value": 0.288},
+        {"mach": 1.8, "value": 0.324},
+        {"mach": 2.0, "value": 0.360}
+      ]
+    }
+  }
+}

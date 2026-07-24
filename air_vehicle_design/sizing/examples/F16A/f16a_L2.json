@@ -1,0 +1,29 @@
+{
+  "_comment": "F-16A Block 10/15 Level-2 inputs. Read by F16GeomL2 (.geometry) and F16AeroL2 (.aerodynamics). Geometry = Brandt-F16-A.xls Main-tab spec; aerodynamics = genuine aero spec (ALL geometry injected from the geom object, none stored here).",
+
+  "geometry": {
+    "_src": "Brandt-F16-A.xls Main tab (wing B18:B24, pitch_ctrl C18:C24, vert_tail H18:H24, fuselage B32/C32/D32, engine Engn(s)); HT/VT tc_root/tc_tip = T.O. 1F-16A-1 Sec. I biconvex splits.",
+    "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04},
+    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04, "tc_root": 0.060, "tc_tip": 0.035},
+    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_ratio": 0.04, "tc_root": 0.053, "tc_tip": 0.030},
+    "fuselage":        {"length_ft": 46.5, "max_width_ft": 7.0, "max_height_ft": 5.0},
+    "engine":          {"duct_length_ft": 14.0, "T_AB_SLS_lb": 23770.0}
+  },
+
+  "aerodynamics": {
+    "_src": "Cfe = Raymer 6th Table 12.3 (AF fighter, 0.0035) for Eq. 12.23 CD0. e_method='official' = Raymer Eq. 12.48/12.49. airfoil = NACA 64A204 (T.O. 1F-16A-1 Fig. 1-2).",
+    "Cfe_subsonic_clean": 0.0035,
+    "e_method": "official",
+    "airfoil": {
+      "name": "NACA 64A204",
+      "airfoiltype": "cambered",
+      "design_CL": 0.2,
+      "alpha_L0_deg": -1.01,
+      "cl_max_2D": 1.20,
+      "cl_alpha_per_deg": 0.105,
+      "_TODO_alpha_L0_deg": "alpha_L0=-1.01 unverified vs a primary NACA 64A204 source (thin-airfoil ~ -1.4 to -1.9); remove this key when pinned. Guarded by TestAeroL2.testTODO_AlphaL0Unverified.",
+      "_TODO_cl_max_2D": "cl_max_2D=1.20 (Abbott & von Doenhoff) conflicts with NTRS-19870017427's 1.0; remove when reconciled. Guarded by TestAeroL2.testTODO_ClMax2DUnverified.",
+      "_TODO_cl_alpha_per_deg": "cl_alpha=0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guarded by TestAeroL2.testTODO_ClAlpha2DUnverified."
+    }
+  }
+}

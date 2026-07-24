@@ -1,0 +1,21 @@
+{
+  "_comment": "F-16A Block 10/15 Level-3 aerodynamics inputs (aero-only; Raymer Eq. 12.24 component drag buildup + Eq. 12.41 wave drag). Geometry at L3 is the injected L2 object (Geometry has no L3 tier), so there is no geometry block. Read by F16AeroL3 (.aerodynamics). Component order: wing, horizontal_tail, vertical_tail, fuselage, duct.",
+
+  "aerodynamics": {
+    "_src": "Per-component Q / laminar-fraction / body-flag / x_c_max = Raymer 6th Table 12.6; surface roughness = Raymer Table 12.4/12.5 ('smooth paint'); CD0_LandP = Raymer Sec. 12.5; misc drag areas = Raymer Table 12.7; E_WD (Eq. 12.41) tuned to Brandt aero.Ewd=2.2. airfoil = NACA 64A204.",
+
+    "airfoil": {"name": "NACA 64A204", "alpha_L0_deg": -1.01, "cl_max_2D": 1.20},
+
+    "x_c_max":                {"wing": 0.40,   "horizontal_tail": 0.35,   "vertical_tail": 0.35,   "fuselage": 0.0,     "duct": 0.0},
+    "interference_factor_Q":  {"wing": 1.0,    "horizontal_tail": 1.05,   "vertical_tail": 1.05,   "fuselage": 1.0,     "duct": 1.0},
+    "laminar_fraction_f_lam": {"wing": 0.05,   "horizontal_tail": 0.05,   "vertical_tail": 0.05,   "fuselage": 0.0,     "duct": 0.0},
+    "is_body":                {"wing": false,  "horizontal_tail": false,  "vertical_tail": false,  "fuselage": true,    "duct": true},
+    "surface_roughness_k_ft": {"wing": 2.08e-5, "horizontal_tail": 2.08e-5, "vertical_tail": 2.08e-5, "fuselage": 2.08e-5, "duct": 2.08e-5,
+      "_TODO_table_number": "roughness k table is Raymer 12.4/12.5, not 12.2 (citation drift); remove this key when corrected. Guarded by TestAeroL3.testTODO_RoughnessTableCitation."},
+
+    "wave_drag_factor_E_WD": 2.2,
+    "_TODO_wave_drag_factor_E_WD": "E_WD=2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or explicitly accepted as a calibration knob. Guarded by TestAeroL3.testTODO_EWDCalibrationInput.",
+    "CD0_LandP": 0.0010,
+    "misc_drag_areas": {"Dq_gun_port_ft2": 0.20, "Dq_hook_USAF_ft2": 0.10}
+  }
+}
