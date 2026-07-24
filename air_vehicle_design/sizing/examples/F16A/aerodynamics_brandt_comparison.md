@@ -23,7 +23,7 @@ This is a **comparison report**, not a test — no pass/fail assertions, not in 
 | **[SUPERSONIC CLEAN DRAG POLAR -- M=1.6, 36 kft]** | | | | | | | | |
 | CD0 supersonic (L1) | L1 | 0.02800 | 0.04610 | -39.26% | N/A | 0.04250 | Brandt Aero!O9 (actual polar, M=1.6) | L1 Mattingly supersonic CD0 plateau (~0.028, placeholder). Internet band ~0.0425 is at M~1.05. |
 | CD0 supersonic (L2, skin friction only) | L2 | 0.00787 | 0.04610 | -82.92% | N/A | 0.04250 | Brandt Aero!O9 (actual polar, M=1.6) | EXPECTED LOW, NOT A BUG: L2 supersonic CD0 is Cf(Re,M)*Swet/Sref with NO wave drag (that is added only at L3). Grossly under Brandt 0.0461. |
-| CD0 supersonic (L3, buildup + wave drag) | L3 | 0.04624 | 0.04610 | +0.30% | N/A | 0.04250 | Brandt Aero!O9 (actual polar, M=1.6) | L3 adds the Raymer Eq.12.41 fuselage wave-drag term (M>=1.2); much closer to Brandt 0.0461. Residual gap = no wing/canopy/boat-tail wave drag -- not a bug. |
+| CD0 supersonic (L3, buildup + wave drag) | L3 | 0.03889 | 0.04610 | -15.63% | N/A | 0.04250 | Brandt Aero!O9 (actual polar, M=1.6) | L3 adds the Raymer Eq.12.41 fuselage wave-drag term (M>=1.2); much closer to Brandt 0.0461. Residual gap = no wing/canopy/boat-tail wave drag -- not a bug. |
 | K1 supersonic (L1) | L1 | 0.2880 | 0.3400 | -15.29% | N/A | N/A | Brandt Aero!P9 (actual polar, M=1.6) | L1 Mattingly Fig.2.11 supersonic K1 (~0.29, placeholder). |
 | K1 supersonic (L2/L3, Eq.12.51) | L2 | 0.2760 | 0.3400 | -18.81% | N/A | N/A | Brandt Aero!P9 (actual polar, M=1.6) | Raymer Eq.12.51 linearized supersonic K1 (shared L2/L3). Under Brandt 0.340 -- linear theory under-predicts real supersonic induced drag; expected. |
 | **[CD0 vs MACH SWEEP -- L2 & L3, 36 kft (subsonic 0.6/0.8/0.9, supersonic 1.2/1.5/2.0)]** | | | | | | | | |
@@ -34,11 +34,11 @@ This is a **comparison report**, not a test — no pass/fail assertions, not in 
 | CD0 @ M=0.9 (L2) | L2 | 0.01711 | 0.02050 | -16.53% | N/A | N/A | Brandt actual polar (M~0.875) | L2 skin-friction CD0 (flat/slightly falling with M); Brandt = nearest tabulated actual-polar CDo. |
 | CD0 @ M=0.9 (L3) | L3 | 0.01600 | 0.02050 | -21.95% | N/A | N/A | Brandt actual polar (M~0.875) | L3 buildup CD0 falls slightly with M (compressible Cf); Brandt = nearest tabulated actual-polar CDo. |
 | CD0 @ M=1.2 (L2) | L2 | 0.00889 | 0.04440 | -79.98% | N/A | N/A | Brandt actual polar (M~1.05) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
-| CD0 @ M=1.2 (L3) | L3 | 0.05130 | 0.04440 | +15.53% | N/A | N/A | Brandt actual polar (M~1.05) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
+| CD0 @ M=1.2 (L3) | L3 | 0.04308 | 0.04440 | -2.97% | N/A | N/A | Brandt actual polar (M~1.05) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
 | CD0 @ M=1.5 (L2) | L2 | 0.00812 | 0.04610 | -82.39% | N/A | N/A | Brandt actual polar (M~1.6) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
-| CD0 @ M=1.5 (L3) | L3 | 0.04712 | 0.04610 | +2.22% | N/A | N/A | Brandt actual polar (M~1.6) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
+| CD0 @ M=1.5 (L3) | L3 | 0.03964 | 0.04610 | -14.00% | N/A | N/A | Brandt actual polar (M~1.6) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
 | CD0 @ M=2.0 (L2) | L2 | 0.00697 | 0.04580 | -84.78% | N/A | N/A | Brandt actual polar (M~2) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
-| CD0 @ M=2.0 (L3) | L3 | 0.04321 | 0.04580 | -5.65% | N/A | N/A | Brandt actual polar (M~2) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
+| CD0 @ M=2.0 (L3) | L3 | 0.03629 | 0.04580 | -20.77% | N/A | N/A | Brandt actual polar (M~2) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
 | **[OSWALD SPAN EFFICIENCY -- two implementation options]** | | | | | | | | |
 | e, official Raymer Eq.12.48/12.49 (L2) | L2 | 0.9086 | 0.9144 | -0.63% | N/A | 0.9070 | Brandt Aero!G12 (e0) | OFFICIAL drag_polar value (Eq.12.49, Lambda_LE=40). ~0.6% under Brandt e0 (Brandt uses a different formula). |
 | e, official Raymer Eq.12.48/12.49 (L3) | L3 | 0.9086 | 0.9144 | -0.63% | N/A | 0.9070 | Brandt Aero!G12 (e0) | Same official formula as L2. |

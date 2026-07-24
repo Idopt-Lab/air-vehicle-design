@@ -278,6 +278,46 @@ classdef TestPropL1 < matlab.unittest.TestCase
             tc.verifyLessThanOrEqual(received, 1.0, 'alpha must not exceed 1.0 (SLS maximum).');
         end
 
+        function testThrustLapseVsBrandtAtConstraintConditions(tc, constraintName)
+            % Purpose: DIAGNOSTIC ONLY (not a closeness assertion, same
+            % pattern as TestThrustConstraint.m's testF16*RequiredTWTable and
+            % testF16CombatSupDragPolarK2ZeroSupersonic) -- prints
+            % F16PropL1.thrust_lapse against Brandt's alpha_AB at all six
+            % constraint conditions. Before this test, NOTHING in the suite
+            % compared L1's alpha to Brandt at any condition (see
+            % examples/F16A/cruise_and_combatturn2_error_scrape.md Sec 4 and
+            % examples/F16A/remaining_constraints_scrape.md Sec 2-3), which let
+            % a >2x error at Max Alt (50,000 ft) go completely unnoticed --
+            % PropL1's sigma^m density-only law has no Mach term and, per
+            % those docs' live findings, degrades badly at both extreme
+            % altitude (Max Alt: alpha 90% too high) and supersonic Mach vs.
+            % subsonic at the same altitude (identical alpha predicted for
+            % Max Mach M=1.6 and Combat Turn 2 M=1.4, both at 36,000 ft, which
+            % is not physically plausible for a real afterburning engine).
+            % L1 is compared against alpha_AB (not alpha_mil_T_AB) at every
+            % condition, including Cruise -- L1 has no mil/AB throttle
+            % concept at all (unlike F16PropL2, see PropulsionBase.m's
+            % thrust_lapse_mil_on_AB_scale default fallback), so alpha_AB is
+            % the only basis it can be compared against.
+            % No AbsTol assertion: at Max Alt/Cruise the gap exceeds 2x, so a
+            % tolerance loose enough to pass there would be meaningless
+            % everywhere else -- this deliberately mirrors how
+            % ThrustConstraint's required_TW diagnostic tables assert only
+            % finiteness/positivity, not closeness, for known-divergent
+            % fidelity-model comparisons.
+            b        = F16Baseline();
+            c        = b.constraints.(constraintName);
+            g        = F16PropL1();
+            state    = AircraftState(c.alt_ft, c.mach);
+            received = g.thrust_lapse(state);
+            expected = c.alpha_AB;
+            pct_diff = 100 * (received - expected) / expected;
+            fprintf('\n    %-11s alt=%6.0f M=%.2f: L1 alpha=%.6f  Brandt alpha_AB=%.6f  diff=%+.1f%%\n', ...
+                constraintName, c.alt_ft, c.mach, received, expected, pct_diff);
+            tc.verifyGreaterThan(received, 0, 'alpha must be positive.');
+            tc.verifyLessThanOrEqual(received, 1.0, 'alpha must not exceed 1.0 (SLS maximum).');
+        end
+
         % --- Base-class delegation consistency --------------------------------
 
         function testThrustLapseMatchesCompute(tc)

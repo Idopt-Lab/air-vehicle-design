@@ -1,4 +1,4 @@
-function b = F16Baseline()
+function b = F16Baseline(variant)
 %F16BASELINE  [DEPRECATED - TO BE DELETED] Ground-truth data for the F-16A Block 10.
 %
 %   *** DEPRECATED: this file and the whole baseline/ folder (F16Baseline.m +
@@ -7,8 +7,18 @@ function b = F16Baseline()
 %   remaining consumers are migrated to the VnV ground-truth. Do NOT add new
 %   dependencies on F16Baseline; point new code at VnV/BrandtF16A instead. ***
 %
-%   b = F16Baseline() returns a struct of cited inputs and expected truth
-%   outputs used to seed unit tests at all three fidelity levels.
+%   b = F16Baseline() / F16Baseline("original") returns a struct of cited
+%   inputs and expected truth outputs used to seed unit tests at all three
+%   fidelity levels.
+%
+%   b = F16Baseline("corrected") returns the same struct, but with the
+%   fields Casey's revised-OEW/component-weight recalculation actually
+%   changes replaced by that recalculation's own values -- see section 2's
+%   "corrected" override block (b.brandt.OEW/rho_*_model/W_wing/W_fuselage/
+%   W_pitch_cntrl/W_vert/W_nacelles/W_strakes, b.sizing.TOGW_target) and
+%   section 11b (b.constraints.*.TW_*, b.constraints.landing.WS_land) for
+%   sources and citations. Every other field (geometry, engine, Brandt's raw
+%   TOGW/fuel/landing weights, etc.) is identical between variants.
 %
 %   SOURCES:
 %     [Brandt]    S. Brandt, "Introduction to Aeronautics: A Design
@@ -19,6 +29,10 @@ function b = F16Baseline()
 %     [Mattingly] J.D. Mattingly, "Aircraft Engine Design", 2nd ed., AIAA, 2002.
 %     [TO]        T.O. 1F-16A-1, Flight Manual, USAF/EPAF F-16A/B Blocks 10/15.
 %   All values in English units: lbf, ft, slug/ft^3, ft/s, deg R.
+
+arguments
+    variant (1,1) string {mustBeMember(variant, ["original", "corrected"])} = "original"
+end
 
 b = struct();
 
@@ -54,6 +68,13 @@ b.geom.sweep_LE_vt_deg = 47.5;
 b.geom.L_fus           = 47.50;     % ft    -- overall length (excl. probe)
 b.geom.W_fus           = 7.0;       % ft    -- approx max width
 
+% Speedbrakes [TO, Fig. 1-2] -- 4-element clamshell. Reference-only value;
+% not modeled by any current geometry/aerodynamics discipline (analogous to
+% b.geom.S_exposed_strake below).
+b.geom.S_speedbrake        = 14.26;   % ft^2  -- total, all 4 elements
+b.geom.S_speedbrake_each   = 3.565;   % ft^2  -- per element
+b.geom.n_speedbrake_elements = 4;     % --    -- clamshell element count
+
 % Exposed lifting-surface planform areas [Brandt F-16A.xls, "Geom" sheet,
 % "Exposed Lifting Surf Geometry" table, "Exposed S" column]. Raymer's
 % S_w/S_ht/S_vt in the Table 15.2 and Eq. 15.1-15.3 weight buildups are the
@@ -68,8 +89,8 @@ b.geom.S_exposed_vt     = 40.89;    % ft^2  -- "Vertical Tail" row [Brandt Geom 
 % =========================================================================
 %  2. Weights  [Brandt F-16A.xls, sheet "Wt"]
 % =========================================================================
-b.brandt.TOGW      = 31377.0;  % lbf  -- "Total @ Takeoff"   [Brandt B38]
-b.brandt.OEW       = 19148;    % lbf  -- "Empty"             [Brandt B12]
+b.brandt.TOGW      = 31377.0;  % lbf  -- "Total @ Takeoff"   [Brandt B38] -- identical in both the original and corrections workbooks, so not part of the variant split below
+b.brandt.OEW       = 19980.70058;  % lbf  -- "Empty"         [Brandt F-16A.xls Wt!B12] -- see the "corrected" override below (Casey's revised-OEW/component-weight recalculation, [corrections.xls Wt!B12] = 19148.07828)
 b.brandt.W_fuel    = 6296.3;   % lbf  -- internal fuel        [Brandt B6]
 b.brandt.W_landing = 20680.7;  % lbf  -- "Total for Lndg"    [Brandt B41]
 b.brandt.W_perm_pay = 700;     % lbf  -- permanent payload    [Brandt B32]
@@ -77,33 +98,55 @@ b.brandt.W_exp_pay  = 4400;    % lbf  -- expendable payload   [Brandt B33+B34]
 
 % Component-level Group Weight Statement [Brandt F-16A.xls, "Wt" sheet,
 % rows 16-31]. b.brandt.W_wing/W_fuselage/W_pitch_cntrl/W_vert/W_nacelles/
-% W_strakes below are now Brandt's "Structural Weight Models, average psf"
-% table results (a separate psf-coefficient x area model calculation,
-% analogous to this framework's own WeightsL2 method) -- NOT the raw Wt!B16-
-% B21 Group Weight Statement cells previously used here. As a result these
-% 6 values no longer sum with the remaining Wt!B22-B31 items below to
-% b.brandt.OEW (19,148 lbf); that cross-check applied only to the
-% superseded Wt!B16-B21 figures and is not expected to hold for this model
-% table.
-% "Brandt corrected" psf coefficients (upper row of Brandt's "Structural
-% Weight Models, average psf" table) -- Brandt's own per-component unit
-% weights, NOT the Raymer Table 15.2 fighter coefficients this framework's
-% WeightsL2 actually uses (wing=9.0, HT=4.0, VT=5.3, fus=4.8 lbf/ft^2, per
-% F16WeightsL2/WeightsL2.wing_unit_weight et al.). Fuselage and HT happen to
-% coincide (4.8=4.8, 4.0=4.0); wing and VT do not (7.0 vs 9.0, 6.0 vs 5.3).
-% Nacelles/Strakes have no Raymer Table 15.2 analog in this framework.
-b.brandt.rho_wing_model    = 7.0;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; Raymer Table 15.2 fighter wing = 9.0 lbf/ft^2 (differs)
-b.brandt.rho_fus_model     = 4.8;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; matches Raymer Table 15.2 fighter fuselage = 4.8 lbf/ft^2
-b.brandt.rho_pitch_cntrl_model = 4.0;  % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; matches Raymer Table 15.2 fighter HT = 4.0 lbf/ft^2
-b.brandt.rho_vert_model    = 6.0;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; Raymer Table 15.2 fighter VT = 5.3 lbf/ft^2 (differs)
-b.brandt.rho_nacelles_model = 4.5;  % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; no Raymer Table 15.2 analog
-b.brandt.rho_strakes_model = 4.5;   % lbf/ft^2  -- "Brandt corrected" coeff [Brandt "Structural Weight Models, average psf" table]; no Raymer Table 15.2 analog
-b.brandt.W_wing        = 1852.09302;  % lbf  -- wing structure           [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 7.0 lbf/ft^2 coeff above, not Raymer Table 15.2's 9.0]
-b.brandt.W_fuselage    = 3506.0256;   % lbf  -- fuselage structure       [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.8 lbf/ft^2 coeff above]
-b.brandt.W_pitch_cntrl = 199.389002;  % lbf  -- horizontal tail/stabilator [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.0 lbf/ft^2 coeff above]
-b.brandt.W_vert        = 245.3380129; % lbf  -- vertical tail            [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 6.0 lbf/ft^2 coeff above, not Raymer Table 15.2's 5.3]
-b.brandt.W_nacelles    = 186.817478;  % lbf  -- engine nacelles          [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.5 lbf/ft^2 coeff above]
-b.brandt.W_strakes     = 90;          % lbf  -- LEX/strakes (not modeled in this framework) [Brandt "Structural Weight Models, average psf" table, using the "Brandt corrected" 4.5 lbf/ft^2 coeff above]
+% W_strakes below are Brandt's "Structural Weight Models, average psf" table
+% results (Wt!C9:H9, a psf-coefficient x area model, analogous to this
+% framework's own WeightsL2 method) -- verified identical to the raw
+% Wt!B16-B21 Group Weight Statement cells (Brandt's own workbook feeds
+% B16-B21 from this same table), and verified to sum with the remaining
+% Wt!B22-B31 items to b.brandt.OEW (Wt!B12) in BOTH the original and
+% corrected workbooks (19,980.7 and 19,148.1 lbf respectively) -- so the
+% "doesn't sum" caveat previously written here was itself an artifact of
+% the original/corrected mixup this variant split now fixes, not a real
+% Brandt-workbook inconsistency.
+% Per-component unit weights (Wt!C7:H7) -- Brandt's own psf coefficients,
+% NOT the Raymer Table 15.2 fighter coefficients this framework's WeightsL2
+% actually uses (wing=9.0, HT=4.0, VT=5.3, fus=4.8 lbf/ft^2, per
+% F16WeightsL2/WeightsL2.wing_unit_weight et al.).
+b.brandt.rho_wing_model    = 6.75;  % lbf/ft^2  [Brandt F-16A.xls Wt!C7]; Raymer Table 15.2 fighter wing = 9.0 lbf/ft^2 (differs)
+b.brandt.rho_fus_model     = 5;     % lbf/ft^2  [Brandt F-16A.xls Wt!D7]; Raymer Table 15.2 fighter fuselage = 4.8 lbf/ft^2 (close)
+b.brandt.rho_pitch_cntrl_model = 6; % lbf/ft^2  [Brandt F-16A.xls Wt!E7]; Raymer Table 15.2 fighter HT = 4.0 lbf/ft^2 (differs)
+b.brandt.rho_vert_model    = 6;     % lbf/ft^2  [Brandt F-16A.xls Wt!F7]; Raymer Table 15.2 fighter VT = 5.3 lbf/ft^2 (close)
+b.brandt.rho_nacelles_model = 4.5;  % lbf/ft^2  [Brandt F-16A.xls Wt!G7]; no Raymer Table 15.2 analog
+b.brandt.rho_strakes_model = 4.5;   % lbf/ft^2  [Brandt F-16A.xls Wt!H7]; no Raymer Table 15.2 analog
+b.brandt.W_wing        = 1785.946837; % lbf  -- wing structure            [Brandt F-16A.xls Wt!C9, using the rho_wing_model coeff above]
+b.brandt.W_fuselage    = 3652.11;     % lbf  -- fuselage structure        [Brandt F-16A.xls Wt!D9]
+b.brandt.W_pitch_cntrl = 648;         % lbf  -- horizontal tail/stabilator [Brandt F-16A.xls Wt!E9]
+b.brandt.W_vert        = 360;         % lbf  -- vertical tail             [Brandt F-16A.xls Wt!F9]
+b.brandt.W_nacelles    = 186.8174778; % lbf  -- engine nacelles           [Brandt F-16A.xls Wt!G9]
+b.brandt.W_strakes     = 90;          % lbf  -- LEX/strakes (not modeled in this framework) [Brandt F-16A.xls Wt!H9]
+% "Corrected" override -- Casey's revised-OEW/component-weight
+% recalculation [source workbook "Brandt F-16A - corrections.xls", same
+% Wt!B12/C7:H7/C9:H9 cells]. Only rho_pitch_cntrl_model/rho_wing_model/
+% rho_fus_model actually change (6->4, 6.75->7, 5->4.8); rho_vert_model/
+% rho_nacelles_model/rho_strakes_model are unchanged (still assigned below
+% for structural completeness). W_strakes is likewise unchanged (90 lbf
+% both ways) since Strakes aren't modeled by this framework's weights
+% discipline either way.
+if variant == "corrected"
+    b.brandt.OEW       = 19148.07828;  % lbf  [corrections.xls Wt!B12]
+    b.brandt.rho_wing_model    = 7;     % lbf/ft^2  [corrections.xls Wt!C7]
+    b.brandt.rho_fus_model     = 4.8;   % lbf/ft^2  [corrections.xls Wt!D7]
+    b.brandt.rho_pitch_cntrl_model = 4; % lbf/ft^2  [corrections.xls Wt!E7]
+    b.brandt.rho_vert_model    = 6;     % lbf/ft^2  [corrections.xls Wt!F7]
+    b.brandt.rho_nacelles_model = 4.5;  % lbf/ft^2  [corrections.xls Wt!G7]
+    b.brandt.rho_strakes_model = 4.5;   % lbf/ft^2  [corrections.xls Wt!H7]
+    b.brandt.W_wing        = 1852.093016; % lbf  [corrections.xls Wt!C9]
+    b.brandt.W_fuselage    = 3506.0256;   % lbf  [corrections.xls Wt!D9]
+    b.brandt.W_pitch_cntrl = 199.389002;  % lbf  [corrections.xls Wt!E9]
+    b.brandt.W_vert        = 245.3380129; % lbf  [corrections.xls Wt!F9]
+    b.brandt.W_nacelles    = 186.8174778; % lbf  [corrections.xls Wt!G9]
+    b.brandt.W_strakes     = 90;          % lbf  [corrections.xls Wt!H9]
+end
 b.brandt.W_engine      = 4730.23;   % lbf  -- bare/dry engine          [Brandt Wt!B22]
 b.brandt.W_gear        = 1066.818;  % lbf  -- landing gear             [Brandt Wt!B23]
 b.brandt.W_inlet_duct  = 728.5882;  % lbf  -- inlet duct               [Brandt Wt!B24]
@@ -115,12 +158,19 @@ b.brandt.W_other       = 2016.862;  % lbf  -- other/misc systems       [Brandt W
 b.brandt.W_avionics    = 2541.537;  % lbf  -- avionics                 [Brandt Wt!B30]
 b.brandt.W_armament    = 440;       % lbf  -- fixed armament (gun)     [Brandt Wt!B31]
 
-b.sizing.TOGW_target = 31377;  % lbf  [Brandt]
-% TODO (7/22/2026): Consider replacing with Brandt's "sizing" value (around
-% 29k lbf)
+% "Sized" takeoff weight [Brandt F-16A.xls Main!O25, labeled "Sized:";
+% same value at Size&Opt!B7 "Wto, lb"] -- Brandt's own wing-sizing-loop
+% converged W_TO, distinct from the raw "Total @ Takeoff" Wt!B38 cell
+% (b.brandt.TOGW above, unaffected by the OEW correction). Resolves the
+% prior TODO here, which had already flagged that Brandt's "sizing" value
+% (~29k lbf) was the more appropriate target than the 31,377 lbf B38 figure.
+b.sizing.TOGW_target = 29606.858;  % lbf  [Brandt F-16A.xls Main!O25]
+if variant == "corrected"
+    b.sizing.TOGW_target = 25654.768;  % lbf  [corrections.xls Main!O25]
+end
 b.sizing.TOGW_tol    = 2000;   % lbf  -- acceptable +-band
-b.sizing.OEW_frac    = b.brandt.OEW  / b.brandt.TOGW;   % approx 0.6103
-b.sizing.Wf_frac     = b.brandt.W_fuel / b.brandt.TOGW; % approx 0.2006
+b.sizing.OEW_frac    = b.brandt.OEW  / b.brandt.TOGW;   % 0.6367 original / 0.6103 corrected
+b.sizing.Wf_frac     = b.brandt.W_fuel / b.brandt.TOGW; % approx 0.2006 (W_fuel/TOGW unaffected by variant)
 
 % =========================================================================
 %  3. Engine  [Brandt, sheet "Main" rows 29-30; TO Section I]
@@ -292,7 +342,9 @@ b.brandt_engine.e_M_AB   = 0.5;   % Mach exponent    [Engn(s) F15]
 b.brandt_engine.C_TR_AB  = 2.2;   % theta coeff, AB  [Engn(s) R15]
 
 % =========================================================================
-%  11. Constraint-condition reference values  [Brandt F-16A.xls, "Consts" sheet]
+%  11. Constraint-condition reference values  [Brandt F-16A.xls, "Consts"
+%      sheet, except [I] Stall which comes from the "Ps" sheet -- see that
+%      entry's own citation]
 %
 %  Data from Consts columns AI-AL (theta, theta0, delta, delta0) and
 %  AS (alpha_dry) / AT (alpha_AB).  Normalization: see section 10.
@@ -364,11 +416,11 @@ b.constraints.combat_sub.K2             = -0.0066;   % Consts row 26
 % Same WS_psf sweep as b.constraints.dash.WS_psf (Brandt's Consts sheet uses
 % one shared W_TO/S column for every condition row).
 b.constraints.combat_sub.WS_psf      = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
-b.constraints.combat_sub.TW_CombatSub = [0.750288, 0.621802, 0.561842, 0.535309, 0.527578, ...
-                                         0.531472, 0.543051, 0.559979, 0.580775, 0.604463, ...
-                                         0.630366, 0.658006, 0.687031, 0.717180, 0.748253, ...
-                                         0.780094, 0.812581, 0.845617, 0.879123, 0.913034, ...
-                                         0.947296];   % [Brandt Consts sheet, Cmbt Trn row 26]
+b.constraints.combat_sub.TW_CombatSub = [0.75029, 0.6218, 0.56184, 0.53531, 0.52758, ...
+                                         0.53147, 0.54305, 0.55998, 0.58078, 0.60446, ...
+                                         0.63037, 0.65801, 0.68703, 0.71718, 0.74825, ...
+                                         0.78009, 0.81258, 0.84562, 0.87912, 0.91303, ...
+                                         0.9473];   % [Brandt Consts sheet, Cmbt Trn row 26]
 
 % [C] Max Mach / dash  36,000 ft, M=1.6, AB  [Consts row 23; Brandt "MxMach"]
 b.constraints.dash.alt_ft         = 36000;
@@ -381,7 +433,19 @@ b.constraints.dash.alpha_dry      = 0.298293;  % AS23
 b.constraints.dash.alpha_AB       = 0.576980;  % AT23
 b.constraints.dash.alpha_mil_T_AB = 0.188237;  % AS23*(T_SL_dry/T_SL_AB)
 b.constraints.dash.CD0            = 0.03933;   % Consts row 23 [Brandt Consts sheet] -- MxMach
-b.constraints.dash.K1             = 0.1251;    % Consts row 23
+b.constraints.dash.K1             = 0.276031;  % CORRECTED (2026-07-23, user direction): supersonic-form K1,
+                                                % k1_super_f(M=1.6) = AR*(M^2-1)*cos(Lambda_LE)/(4*AR*sqrt(M^2-1)-2)
+                                                % [Raymer 6th ed. Eq. 12.51; same functional form as Brandt's
+                                                % Aero-tab k1_super_f in BrandtAerodynamics.aero_at_mach()],
+                                                % superseding the Consts-row-23 tabulated cell value (0.1251).
+                                                % b.constraints.dash.TW_MxMach below has been RECOMPUTED to stay
+                                                % consistent with this K1 (see the note at that array). This
+                                                % directly contradicts tests/constraints/TestThrustConstraint.m's
+                                                % "NOTE ON temp_Casey" comment, which documents the opposite
+                                                % conclusion for this exact condition (that 0.1251, not a larger
+                                                % supersonic-form value, was the one found to reproduce Brandt's
+                                                % original TW_MxMach table) -- flagged, not reconciled, here;
+                                                % that comment has not been updated.
 b.constraints.dash.K2             = 0;         % Consts row 23
 
 % Full MxMach constraint-diagram row [Brandt F-16A.xls Consts sheet]: the
@@ -390,11 +454,23 @@ b.constraints.dash.K2             = 0;         % Consts row 23
 % (see tests/constraints/TestThrustConstraint.m testMasterEquationReproduces
 % BrandtWorksheet) -- NOT an input to the equation itself.
 b.constraints.dash.WS_psf    = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
-b.constraints.dash.TW_MxMach = [2.899067, 2.149974, 1.709927, 1.420634, 1.216140, ...
-                                1.064066, 0.946659, 0.853367, 0.777526, 0.714722, ...
-                                0.661913, 0.619169, 0.578204, 0.544542, 0.515045, ...
-                                0.489014, 0.465897, 0.444524, 0.426730, 0.410032, ...
-                                0.394923];   % [Brandt Consts sheet, MxMach row]
+% RECOMPUTED (2026-07-23, user direction): the row immediately below is no
+% longer Brandt's tabulated worksheet output. It is Brandt's original row
+% (least-squares-fit to a T/W = A/WS + B*WS curve, max |fit residual| =
+% 6.5e-4) with its B term (= K1_old*n^2*beta^2/(alpha*q)) rescaled by the
+% ratio K1_new/K1_old = 0.276031/0.1251, matching the K1 correction applied
+% to b.constraints.dash.K1 above. This directly reproduces the equation
+% masterConstraint_ evaluates (see BrandtConstraintAnalysis.m) with the new
+% K1 and everything else (CD0, alpha, beta, q) held at Brandt's original
+% values. Superseded values (Brandt's original worksheet row, K1=0.1251):
+%   [2.899067, 2.149974, 1.70993, 1.42063, 1.21614, 1.06407, 0.94666,
+%    0.85337, 0.77753, 0.71472, 0.66191, 0.61693, 0.5782, 0.54454, 0.51505,
+%    0.48901, 0.4659, 0.444525, 0.42673, 0.41003, 0.39492]
+b.constraints.dash.TW_MxMach = [2.904072, 2.156704, 1.718385, 1.430823, 1.228061, ...
+                                1.077721, 0.962048, 0.870490, 0.796384, 0.735314, ...
+                                0.684239, 0.640996, 0.604001, 0.572074, 0.544313, ...
+                                0.520017, 0.498635, 0.479728, 0.462938, 0.447976, ...
+                                0.434602];   % RECOMPUTED at K1=0.276031 -- see note above
 
 % [D] Max altitude  50,000 ft, M=0.87  [Consts row 25]
 b.constraints.max_alt.alt_ft         = 50000;
@@ -418,11 +494,11 @@ b.constraints.max_alt.K2             = -0.0066;   % Consts row 25
 % b.constraints.dash.WS_psf (Brandt's Consts sheet uses one shared W_TO/S
 % column for every condition row).
 b.constraints.max_alt.WS_psf    = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
-b.constraints.max_alt.TW_MaxAlt = [0.727697, 0.591304, 0.523436, 0.488996, 0.473359, ...
-                                    0.469345, 0.473018, 0.482038, 0.494928, 0.510708, ...
-                                    0.528705, 0.548437, 0.569556, 0.591798, 0.614964, ...
-                                    0.638898, 0.663478, 0.688607, 0.714205, 0.740209, ...
-                                    0.766565];   % [Brandt Consts sheet, Max Alt row]
+b.constraints.max_alt.TW_MaxAlt = [0.7277, 0.5913, 0.52344, 0.489, 0.47336, ...
+                                    0.46935, 0.47302, 0.48204, 0.49493, 0.51071, ...
+                                    0.5287, 0.54844, 0.56956, 0.5918, 0.61496, ...
+                                    0.6389, 0.66348, 0.68861, 0.71421, 0.74021, ...
+                                    0.76656];   % [Brandt Consts sheet, Max Alt row]
 
 % [E] 2nd combat turn (supersonic)  [Brandt F-16A.xls, Consts sheet, row 27]
 %   36,000 ft, M=1.4, n=1.4, 100% AB.
@@ -437,8 +513,27 @@ b.constraints.combat_sup.alpha_dry      = 0.357862; % AS27  T_dry/T_SL_dry  [Bra
 b.constraints.combat_sup.alpha_AB       = 0.556558; % AT27  T_AB/T_SL_AB    [Brandt Consts]
 b.constraints.combat_sup.alpha_mil_T_AB = 0.225828; % AS27*(T_SL_dry/T_SL_AB) = 0.357862*(15000/23770)
 b.constraints.combat_sup.CD0            = 0.04063;  % Consts row 27 [Brandt Consts sheet]
-b.constraints.combat_sup.K1             = 0.12563;  % Consts row 27
-b.constraints.combat_sup.K2             = -0.00105; % Consts row 27 -- Brandt's model is not exactly 0 here despite M>1 (K2=0 supersonic is this framework's own linearized-theory assumption, not universal)
+b.constraints.combat_sup.K1             = 0.226103; % CORRECTED (2026-07-23, user direction): supersonic-form K1,
+                                                     % k1_super_f(M=1.4) = AR*(M^2-1)*cos(Lambda_LE)/(4*AR*sqrt(M^2-1)-2)
+                                                     % [Raymer 6th ed. Eq. 12.51; same functional form as Brandt's
+                                                     % Aero-tab k1_super_f in BrandtAerodynamics.aero_at_mach()],
+                                                     % superseding the Consts-row-27 tabulated cell value (0.12563).
+                                                     % b.constraints.combat_sup.TW_CombatSup below has been
+                                                     % RECOMPUTED to stay consistent with this K1 (see the note at
+                                                     % that array). See the parallel note on b.constraints.dash.K1
+                                                     % above re: the now-contradicted TestThrustConstraint.m comment.
+b.constraints.combat_sup.K2             = 0;        % CORRECTED (2026-07-23, user direction): corrections.xls
+                                                     % Consts!AO27 now uses the same K2 supersonic equation
+                                                     % (K2=0, linearized theory) as every other supersonic
+                                                     % condition, superseding the old -0.00105 tabulated cell
+                                                     % value. Resolves the previously-flagged anomaly ("Brandt's
+                                                     % model is not exactly 0 here despite M>1"); K2=0 is no
+                                                     % longer just this framework's own assumption for this row.
+                                                     % No TW_CombatSup recompute needed: the original table was
+                                                     % already generated with no K2 contribution (a nonzero
+                                                     % K2*n*beta/alpha term would show up as a ~-0.0024 uniform
+                                                     % offset across the row, which the A/WS+B*WS fit above
+                                                     % shows is not present -- max residual 5.2e-6).
 
 % Full Combat Turn 2 (supersonic) constraint-diagram row [Brandt F-16A.xls
 % Consts sheet, row 27, "Cmbt Trn"]: the required T_SL/W_TO Brandt's own
@@ -449,11 +544,20 @@ b.constraints.combat_sup.K2             = -0.00105; % Consts row 27 -- Brandt's 
 % b.constraints.dash.WS_psf (Brandt's Consts sheet uses one shared W_TO/S
 % column for every condition row).
 b.constraints.combat_sup.WS_psf      = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S sweep, 21 points
-b.constraints.combat_sup.TW_CombatSup = [2.38427, 1.77264, 1.41439, 1.17976, 1.01465, ...
-                                         0.89252, 0.79881, 0.72487, 0.66525, 0.61631, ...
-                                         0.57557, 0.54124, 0.51204, 0.48700, 0.46537, ...
-                                         0.44658, 0.43018, 0.41582, 0.40318, 0.39205, ...
-                                         0.38221];   % [Brandt Consts sheet, Cmbt Trn row 27]
+% RECOMPUTED (2026-07-23, user direction): the row immediately below is no
+% longer Brandt's tabulated worksheet output -- see the parallel note on
+% b.constraints.dash.TW_MxMach above (same method: least-squares fit of
+% Brandt's original row to T/W = A/WS + B*WS, max |fit residual| = 5.2e-6,
+% then B rescaled by K1_new/K1_old = 0.226103/0.12563). Superseded values
+% (Brandt's original worksheet row, K1=0.12563):
+%   [2.38459, 1.77307, 1.41494, 1.18042, 1.01542, 0.8934, 0.79981, 0.72598,
+%    0.66647, 0.61765, 0.57702, 0.54281, 0.51372, 0.48879, 0.46727, 0.4486,
+%    0.43231, 0.41806, 0.40554, 0.39451, 0.38479]
+b.constraints.combat_sup.TW_CombatSup = [2.393396, 1.784961, 1.429914, 1.198472, 1.036556, ...
+                                         0.917621, 0.827109, 0.756369, 0.699938, 0.654196, ...
+                                         0.616648, 0.585520, 0.559517, 0.537668, 0.519234, ...
+                                         0.503642, 0.490439, 0.479265, 0.469827, 0.461888, ...
+                                         0.455250];   % RECOMPUTED at K1=0.226103 -- see note above
 
 % [F] Ps (specific excess power) condition  [Brandt F-16A.xls, Consts sheet, row 28]
 %   10,000 ft, M=0.87, n=1, 100% AB, Ps_req=500 ft/s.
@@ -516,7 +620,7 @@ b.constraints.takeoff.WS_psf     = 20:7:160;   % lbf/ft^2 -- Brandt's own W_TO/S
 b.constraints.takeoff.TW_Takeoff = [0.13551, 0.16247, 0.18944, 0.21640, 0.24336, ...
                                     0.27033, 0.29729, 0.32425, 0.35121, 0.37818, ...
                                     0.40514, 0.43210, 0.45907, 0.48603, 0.51299, ...
-                                    0.53996, 0.56692, 0.59388, 0.62085, 0.64780, ...
+                                    0.53996, 0.56692, 0.59388, 0.62085, 0.64781, ...
                                     0.67477];   % [Brandt Consts sheet, Takeoff row 32]
 
 % [H] Landing approach  [Brandt F-16A.xls, Consts sheet, row 33]
@@ -541,5 +645,94 @@ b.constraints.landing.K2      = -0.0066;  % Consts row 33
 % config values, not Brandt's flapped CLmax_land/CD0 -- see that class's
 % header).
 b.constraints.landing.WS_land = 138.742;  % lbf/ft^2 [Brandt Consts row 33]
+
+% =========================================================================
+%  11b. "Corrected" Brandt constraint values -- revised OEW/component-weight
+%  basis  [Casey's workbook "Brandt F-16A - corrections.xls", "Consts"
+%  sheet, J22:AE30 (T_SL/W_TO tables) + K33 (Landing W_TO/S)]
+% =========================================================================
+% The [A]-[H] constraint blocks above ("original") are Brandt's un-revised
+% F-16A.xls. This corrections workbook recomputes the same 8 Consts-sheet
+% rows (+ the Landing single-value row just below them) after Casey revised
+% the F-16's OEW/component weights, which feeds back into Brandt's own
+% drag-polar/thrust inputs for some -- not all -- of these conditions:
+% MxMach and Combat Turn 1 (subsonic) shift materially at the high end of
+% the W/S sweep, Cruise/Max Alt shift by a smaller, smoothly W/S-growing
+% amount, while Combat Turn 2 (supersonic), Ps, and Landing come back
+% essentially unchanged (their governing equations don't route through the
+% revised weight/polar the same way the others do). Only these 7 fields
+% differ between "original" and "corrected" -- every other b.* field
+% (weights, geometry, engine, ...) is untouched by variant.
+if variant == "corrected"
+    % RECOMPUTED (2026-07-23, user direction): same K1=0.276031 correction
+    % as the "original" b.constraints.dash.TW_MxMach above, applied here to
+    % the corrections.xls-basis row instead (least-squares fit of the row
+    % below to T/W = A/WS + B*WS, max |fit residual| = 5.0e-7, then B
+    % rescaled by K1_new/K1_old = 0.276031/0.1251). Superseded values
+    % (corrections.xls worksheet row, K1=0.1251):
+    %   [2.898946, 2.149811, 1.709722, 1.420386, 1.215849, 1.063734,
+    %    0.946284, 0.852949, 0.777067, 0.714220, 0.661368, 0.616347,
+    %    0.577575, 0.543871, 0.514332, 0.488258, 0.465099, 0.444414,
+    %    0.425847, 0.409107, 0.393955]
+    b.constraints.dash.TW_MxMach = [2.903785, 2.156344, 1.717948, 1.430306, 1.227463, ...
+                                     1.077042, 0.961286, 0.869645, 0.795456, 0.734303, ...
+                                     0.683145, 0.639817, 0.602739, 0.570728, 0.542883, ...
+                                     0.518503, 0.497038, 0.478046, 0.461173, 0.446127, ...
+                                     0.432668];   % RECOMPUTED at K1=0.276031 -- see note above
+
+    b.constraints.cruise.TW_Cruise = [1.290512, 0.981789, 0.806303, 0.695810, 0.621877, ...
+                                       0.570543, 0.534155, 0.508163, 0.489696, 0.476848, ...
+                                       0.468310, 0.463147, 0.460679, 0.460395, 0.461907, ...
+                                       0.464914, 0.469176, 0.474506, 0.480748, 0.487778, ...
+                                       0.495493];   % [corrections.xls Consts!K24:AE24]
+
+    b.constraints.max_alt.TW_MaxAlt = [0.725185, 0.587913, 0.519166, 0.483847, 0.467331, ...
+                                        0.462438, 0.465232, 0.473372, 0.485383, 0.500284, ...
+                                        0.517402, 0.536255, 0.556495, 0.577858, 0.600144, ...
+                                        0.623199, 0.646900, 0.671150, 0.695869, 0.720994, ...
+                                        0.746471];   % [corrections.xls Consts!K25:AE25]
+
+    b.constraints.combat_sub.TW_CombatSub = [0.747115, 0.617518, 0.556447, 0.528803, 0.519963, ...
+                                              0.522745, 0.533215, 0.549031, 0.568717, 0.591294, ...
+                                              0.616087, 0.642616, 0.670531, 0.699569, 0.729531, ...
+                                              0.760262, 0.791638, 0.823564, 0.855958, 0.888759, ...
+                                              0.921911];   % [corrections.xls Consts!K26:AE26]
+
+    % RECOMPUTED (2026-07-23, user direction): same K1=0.226103 correction
+    % as the "original" b.constraints.combat_sup.TW_CombatSup above, applied
+    % here to the corrections.xls-basis row instead (least-squares fit of
+    % the row below to T/W = A/WS + B*WS, max |fit residual| = 5.6e-7, then
+    % B rescaled by K1_new/K1_old = 0.226103/0.12563). Superseded values
+    % (corrections.xls worksheet row, K1=0.12563):
+    %   [2.384266, 1.772636, 1.414394, 1.179756, 1.014645, 0.892515,
+    %    0.798808, 0.724873, 0.665246, 0.616308, 0.575565, 0.541242,
+    %    0.512044, 0.486999, 0.465370, 0.446583, 0.430185, 0.415815,
+    %    0.403182, 0.392048, 0.382215]
+    b.constraints.combat_sup.TW_CombatSup = [2.392815, 1.784177, 1.428927, 1.197282, 1.035163, ...
+                                              0.916025, 0.825310, 0.754367, 0.697733, 0.651787, ...
+                                              0.614036, 0.582706, 0.556499, 0.534447, 0.515810, ...
+                                              0.500015, 0.486609, 0.475232, 0.465591, 0.457448, ...
+                                              0.450608];   % RECOMPUTED at K1=0.226103 -- see note above
+
+    b.constraints.ps.TW_Ps = [1.324343, 1.126315, 1.010227, 0.934111, 0.880478, ...
+                               0.840744, 0.810201, 0.786052, 0.766531, 0.750465, ...
+                               0.737050, 0.725711, 0.716029, 0.707691, 0.700457, ...
+                               0.694142, 0.688599, 0.683713, 0.679388, 0.675548, ...
+                               0.672128];   % [corrections.xls Consts!K28:AE28 (rows 28-30 identical, row 28 used)]
+
+    b.constraints.landing.WS_land = 138.741741;   % lbf/ft^2 [corrections.xls Consts!K33] -- matches "original" 138.742 to displayed precision
+end
+
+% [I] Stall speed, sea level  [Brandt F-16A.xls, "Ps" sheet, cell B10]
+%   The "Ps" sheet ("Jet3 Performance Reporting - Specific Excess Power") is
+%   a different sheet from the "Consts" sheet [A]-[H] above are sourced
+%   from -- it tabulates a "Stall Line" (Mach vs. altitude, columns B:C
+%   starting row 10) alongside its Ps/qMax reporting tables, at the sheet's
+%   own reference weight/CLmax (B4=23,828.85 lbf, F4=CLmax=1.1316, row 4).
+%   B10 is the Stall Line's first (sea-level) point -- a typed constant in
+%   the workbook (=0.217465934361336), not a live formula referencing
+%   B4/F4, so it is transcribed here as given, not re-derived.
+b.constraints.stall.alt_ft = 0;
+b.constraints.stall.mach   = 0.217466;  % B10 [Brandt "Ps" sheet]
 
 end

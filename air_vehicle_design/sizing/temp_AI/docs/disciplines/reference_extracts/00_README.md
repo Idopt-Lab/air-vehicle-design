@@ -31,7 +31,7 @@ Each scraped item carries an inline citation of the form:
 | 1  | `01_introduction.md`                    | 1 Introduction                              | 17–48   | **done** |
 | 2  | `02_practical_aerodynamics.md`          | 2 Review of Practical Aerodynamics          | 48–86   | **done** |
 | 3  | `03_aircraft_performance_methods.md`    | 3 Aircraft Performance Methods              | 86–116  | **done** |
-| 4  | `04_operating_envelope.md`              | 4 Aircraft Operating Envelope               | 116–138 | pending |
+| 4  | `04_operating_envelope.md`              | 4 Aircraft Operating Envelope               | 116–138 | **done** |
 | 5  | `05_takeoff_weight_estimate.md`         | 5 Preliminary Estimate of Takeoff Weight    | 138–165 | pending |
 | 6  | `06_takeoff_wing_loading.md`            | 6 Estimating the Takeoff Wing Loading       | 165–184 | pending |
 | 7  | `07_planform_and_airfoil.md`            | 7 Selecting the Planform and Airfoil        | 184–208 | pending |

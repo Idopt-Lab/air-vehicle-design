@@ -1,6 +1,7 @@
 classdef F16ConstraintSet
-%F16CONSTRAINTSET  Builds the F-16's 8 point-performance/field constraint
-%   objects from examples/F16A/Constraints.xlsx.
+%F16CONSTRAINTSET  Builds the F-16's 9 point-performance/field/stall
+%   constraint objects: 8 from examples/F16A/Constraints.xlsx, plus a Stall
+%   condition not yet present in that workbook (see STALL_MACH below).
 %
 %   Layer-2 (aircraft-specific) wiring: reads the F-16's constraint
 %   conditions (altitude, Mach, weight fraction, load factor, specific
@@ -10,12 +11,14 @@ classdef F16ConstraintSet
 %   ThrustConstraint (Mattingly Master Equation) for every row except
 %   Takeoff/Landing, TakeoffConstraint/LandingConstraint (ground-roll
 %   equations) for those two -- wired to the F-16 aero/prop discipline
-%   objects for the requested fidelity level.
+%   objects for the requested fidelity level. A 9th constraint, Stall
+%   (StallConstraint), is appended directly rather than read from the sheet
+%   (see STALL_MACH's comment for why).
 %
 %   See sizing/docs/subplans/06_constraint_analysis.md, "F-16 Constraint
 %   Conditions" tables, for the condition data; the constraint equations
 %   themselves are cited in ThrustConstraint.m/TakeoffConstraint.m/
-%   LandingConstraint.m, not repeated here.
+%   LandingConstraint.m/StallConstraint.m, not repeated here.
 %
 %   NOT WIRED FROM THE SHEET (intentional, documented gaps -- out of scope
 %   here):
@@ -29,6 +32,16 @@ classdef F16ConstraintSet
 %               Field Constraints table) -- Takeoff's Vstall=1.3, Landing's
 %               is blank -- so this class keeps those classes' own defaults
 %               rather than reading a value that may not be finalized.
+
+    properties (Constant, Access = private)
+        %STALL_MACH  Mach number of the F-16 stall-speed requirement, sea
+        %   level [Brandt F-16A.xls, "Ps" sheet, cell B10 -- see F16Baseline.m's
+        %   b.constraints.stall.mach, same value]. examples/F16A/Constraints.xlsx
+        %   has no Stall row yet (unlike the other 8 conditions), so this is
+        %   hardcoded here rather than read via ConstraintSetImporter; flag
+        %   for spreadsheet backfill.
+        STALL_MACH = 0.217466
+    end
 
     methods (Static)
 
@@ -48,7 +61,7 @@ classdef F16ConstraintSet
             T = ConstraintSetImporter.read(xlsxPath, "Constraints");
 
             names = string(T.Properties.RowNames);
-            constraints = cell(1, numel(names));
+            constraints = cell(1, numel(names) + 1);
             for i = 1:numel(names)
                 name = names(i);
                 row  = T(i, :);
@@ -71,6 +84,9 @@ classdef F16ConstraintSet
                             row.W_Wto, row.n, Ps);
                 end
             end
+
+            stallState = AircraftState(0, F16ConstraintSet.STALL_MACH);
+            constraints{end} = StallConstraint("Stall", stallState, aero);
         end
 
     end

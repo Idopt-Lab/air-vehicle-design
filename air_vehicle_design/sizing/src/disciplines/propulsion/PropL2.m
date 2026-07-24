@@ -69,6 +69,20 @@ classdef PropL2
             alpha = PropL2.thrust_lapse_AB(state.delta_0, state.theta_0, obj.TR);
         end
 
+        function alpha = get_thrust_lapse_mil_on_AB_scale(obj, state)
+        %GET_THRUST_LAPSE_MIL_ON_AB_SCALE  Mil lapse renormalized onto the AB
+        %   T_SL scale: alpha_mil_on_AB = alpha_mil * (T_SL_mil/T_SL_wet).
+        %   [Mattingly Eq. 2.54b supplies alpha_mil; renormalization matches
+        %   Brandt F-16A.xls Consts col AU convention (alpha_mil_T_AB =
+        %   alpha_dry*(T_SL_dry/T_SL_AB)) -- see PropulsionBase.m
+        %   thrust_lapse_mil_on_AB_scale.]
+        %   Used so a dry/mil-power point-performance condition (e.g. Cruise)
+        %   can be plotted on the same T_SL_AB/W_TO constraint-diagram axis as
+        %   AB-flown conditions.
+            alpha_mil = PropL2.thrust_lapse_mil(state.delta_0, state.theta_0, obj.TR);
+            alpha = alpha_mil * (obj.T_SL_mil / obj.T_SL_wet);
+        end
+
         function c_t = get_TSFC(obj, state)
         %GET_TSFC  Mil-power TSFC (default for Breguet range/endurance).
         %   [Mattingly Eq. 3.12 + 3.55a]

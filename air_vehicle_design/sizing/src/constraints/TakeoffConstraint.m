@@ -1,12 +1,15 @@
-classdef TakeoffConstraint < PointPerformanceBase
+classdef TakeoffConstraint < Both_WbyS_TbyW
 %TAKEOFFCONSTRAINT  Mattingly Master Equation, ground-roll (takeoff) case.
 %
 %   Generic Layer-1 constraint: given a sea-level takeoff flight condition
 %   (AircraftState), a required ground-roll distance S_G, and the
 %   current-iteration aerodynamics/propulsion discipline objects, returns
 %   the thrust-to-weight ratio required to take off within S_G as a
-%   function of wing loading W/S. CLmax_TO is pulled fresh from
-%   aero.get_CLmax(state) each call -- not a constraint input, per
+%   function of wing loading W/S. Belongs to the Both_WbyS_TbyW category
+%   (see that class's header) -- it supplies the A/B/C/D terms below (A=C=D=0,
+%   only B survives, see equation below); Both_WbyS_TbyW assembles them into
+%   required_TW(WS). CLmax_TO is pulled fresh from aero.get_CLmax(state)
+%   each call -- not a constraint input, per
 %   sizing/docs/subplans/06_constraint_analysis.md ("CLmax is NOT a
 %   constraint input. The constraint analysis calls aero.CLmax(state) at
 %   the relevant flight condition."). Using the generic get_CLmax(state)
@@ -94,17 +97,43 @@ classdef TakeoffConstraint < PointPerformanceBase
             obj.k_TO  = k_TO;
         end
 
-        function TW = required_TW(obj, WS)
-        %REQUIRED_TW  T/W required at wing loading(s) WS [lbf/ft^2].
-        %   Mattingly Master Equation, ground-roll case, see class header
-        %   for the equation and citation. WS may be scalar or array; TW is
-        %   returned the same size.
+    end
+
+    methods (Access = protected)
+        %COMPUTE_A/B/C/D  Master Equation terms specialized to the ground-roll
+        %   case (T_SL>>D+R, dh/dt=0 zero A, C, D -- see class header): only B
+        %   survives, carrying the equation below.
+
+        function A = compute_A(~)
+            A = 0;
+        end
+
+        function B = compute_B(obj)
+        %COMPUTE_B  See class header for the equation and citation.
             CLmax_TO = obj.aero.get_CLmax(obj.state);
-            alpha    = obj.prop.thrust_lapse(obj.state);
+            alpha    = obj.get_alpha();
             rho      = obj.state.rho;
 
             coeff = (obj.beta^2 / alpha) * (obj.k_TO^2 / (rho * TakeoffConstraint.G_FTS2 * CLmax_TO));
-            TW    = coeff .* WS / obj.S_G;
+            B = coeff / obj.S_G;
+        end
+
+        function C = compute_C(~)
+            C = 0;
+        end
+
+        function D = compute_D(~)
+            D = 0;
+        end
+
+        function alpha = get_alpha(obj)
+        %GET_ALPHA  Thrust lapse (AB/max power, PropulsionBase convention --
+        %   TakeoffConstraint has no mil/AB distinction to select between,
+        %   unlike ThrustConstraint.m's get_alpha). Exposed as its own
+        %   method, rather than computed inline only inside compute_B, so
+        %   Both_WbyS_TbyW.TW_margin uses this exact same alpha -- never an
+        %   independently-supplied value that could disagree with it.
+            alpha = obj.prop.thrust_lapse(obj.state);
         end
 
     end

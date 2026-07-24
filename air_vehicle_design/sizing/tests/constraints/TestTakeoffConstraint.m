@@ -45,6 +45,15 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
+        function testIsaBothWbySTbyW(tc)
+            % TakeoffConstraint belongs to the Both_WbyS_TbyW category, same
+            % as ThrustConstraint -- see TakeoffConstraint.m/
+            % Both_WbyS_TbyW.m headers.
+            state = AircraftState(0, 0.1);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
+            tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
+        end
+
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
@@ -95,6 +104,48 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             fprintf('\n    required_TW(WS=%d): received=%.6f  hand-computed=%.6f\n', WS, received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 1e-10, ...
                 'required_TW must equal the hand-computed takeoff equation.');
+        end
+
+        % --- Available/margin ------------------------------------------------
+
+        function testTWMarginMatchesHandComputedFormula(tc)
+            % Arbitrary field length/design point (not F-16-specific data).
+            % Confirms Both_WbyS_TbyW.TW_margin (shared with ThrustConstraint,
+            % see TestThrustConstraint.m) works correctly through
+            % TakeoffConstraint's own required_TW/get_alpha (pure linear in
+            % W/S, A=C=D=0 -- a different code path than ThrustConstraint's
+            % bucket-shaped curve): margin = alpha*(T_SL/W_TO -
+            % required_TW(WS_actual)), where alpha is TakeoffConstraint's own
+            % get_alpha() (plain AB-basis lapse, no mil/AB distinction).
+            % Requests TW_margin's 2nd/3rd (available/required) outputs
+            % directly so both underlying constraint values are
+            % independently verified, not just their combined margin.
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2();
+            state = AircraftState(0, 0.1);
+            obj   = TakeoffConstraint("Toy", state, aero, prop, 3500, 0.98, 1.15);
+
+            WS_actual = 90;
+            T_SL      = 25000;
+            W_TO      = 32000;
+
+            alpha              = prop.thrust_lapse(state);
+            expected_required  = alpha * obj.required_TW(WS_actual);
+            expected_available = alpha * (T_SL / W_TO);
+            expected_margin    = expected_available - expected_required;
+
+            [received_margin, received_available, received_required] = obj.TW_margin(WS_actual, T_SL, W_TO);
+
+            fprintf(['\n    TW_margin: required=%.6f  available=%.6f  margin=%.6f  ' ...
+                '(hand-computed: required=%.6f  available=%.6f  margin=%.6f)\n'], ...
+                received_required, received_available, received_margin, ...
+                expected_required, expected_available, expected_margin);
+            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
+                'TW_margin''s required output must equal alpha*required_TW(WS_actual).');
+            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
+                'TW_margin''s available output must equal alpha*T_SL/W_TO.');
+            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
+                'TW_margin must equal available minus required.');
         end
 
         function testRequiredTWVectorizedOverWS(tc)

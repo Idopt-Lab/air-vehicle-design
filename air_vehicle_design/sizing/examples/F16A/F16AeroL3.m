@@ -50,7 +50,9 @@ classdef F16AeroL3 < AeroModelL3
         is_body_comp      % logical — true selects the body form factor (Eq. 12.31)
 
         k                 % ft  — equivalent surface roughness (smooth paint) [Raymer Table 12.4/12.5]
-        E_WD              % — wave-drag efficiency factor (TUNED calibration input) [Raymer Eq. 12.41]
+        E_WD              % — wave-drag efficiency factor (TUNED calibration input) [Raymer Eq. 12.45]
+        Amax_ft2          % ft^2 whole-aircraft max cross-section, net of engine flow-through [Brandt Geom!B20/H47] — wave drag; the geometry object exposes no area-ruled Amax
+        L_aircraft_ft     % ft   overall aircraft length [Brandt Geom!B21] — wave drag (distinct from the fuselage L_fus)
         CD0_LandP         % — leakage & protuberance allowance [Raymer Sec. 12.5]
 
         % Miscellaneous drag areas (D/q, ft^2) composing CD0_misc [Raymer Table 12.7].
@@ -140,7 +142,9 @@ classdef F16AeroL3 < AeroModelL3
             obj.is_body_comp = logical([J.is_body.wing, J.is_body.horizontal_tail, ...
                                 J.is_body.vertical_tail, J.is_body.fuselage, J.is_body.duct]);
             obj.k            = J.surface_roughness_k_ft.wing;   % uniform roughness
-            obj.E_WD         = J.wave_drag_factor_E_WD;
+            obj.E_WD          = J.wave_drag_factor_E_WD;
+            obj.Amax_ft2      = J.wave_drag.Amax_ft2;        % [Brandt Geom!B20/H47]
+            obj.L_aircraft_ft = J.wave_drag.L_aircraft_ft;   % [Brandt Geom!B21]
             obj.CD0_LandP    = J.CD0_LandP;
             obj.Dq_gun_port  = J.misc_drag_areas.Dq_gun_port_ft2;
             obj.Dq_hook_USAF = J.misc_drag_areas.Dq_hook_USAF_ft2;
@@ -220,27 +224,23 @@ classdef F16AeroL3 < AeroModelL3
         end
 
         function val = compute_CD0_wave(obj, state)
-        %COMPUTE_CD0_WAVE  Supersonic wave drag due to fuselage volume.
-        %   Raymer 6th ed. Eq. 12.41 (Sears-Haack, valid M >= 1.2):
-        %     CD_wave = E_WD*[1 - 0.386*(M-1.2)^0.57*(1 - pi*Lambda_LE^0.77/100)]
-        %               * (9*pi/2)*(A_max/l)^2 / S_ref
-        %   A_max is the fuselage max cross-sectional area and l its length,
-        %   read live from the injected geometry object.
-        %
-        %   TODO (geometry-interface gap): the geometry object does NOT expose a
-        %   max cross-sectional area (flagged "Amax NOT MODELED" in
-        %   geometry_brandt_comparison; Brandt Geom!B20=25.11 ft^2). A_max is
-        %   therefore APPROXIMATED here as an ellipse of the injected fuselage
-        %   max width x height, A_max = (pi/4)*W_max*H_max -- a cited closed-form
-        %   from available geometry, NOT a hardcoded number. (pi/4*7*5 = 27.5
-        %   ft^2 vs Brandt's area-ruled 25.11.) Replace with a real geometry
-        %   Amax getter when one exists.
+        %COMPUTE_CD0_WAVE  Supersonic wave drag due to volume distribution.
+        %   Raymer 6th ed. Eq. 12.44 (Sears-Haack) + Eq. 12.45 (E_WD / sweep /
+        %   Mach correction), valid M >= 1.2:
+        %     (D/q)_SH   = (9*pi/2)*(Amax/l)^2                                  [12.44]
+        %     (D/q)_wave = E_WD*[1 - 0.386*(M-1.2)^0.57*(1 - pi*Lambda_LE^0.77/100)]*(D/q)_SH  [12.45]
+        %     CD0_wave   = (D/q)_wave / S_ref
+        %   Amax/l are WHOLE-AIRCRAFT inputs (obj.Amax_ft2, net of engine
+        %   flow-through, and obj.L_aircraft_ft) [Brandt Geom!B20/H47, B21]. The
+        %   geometry object exposes no area-ruled Amax, so these are carried as
+        %   L3 aero inputs -- distinct from the fuselage-component L_fus/D_fus
+        %   used elsewhere for the skin-friction Re/FF_body calc (do not conflate
+        %   the two length scales). Replace with a geometry Amax getter if added.
             M     = state.mach;
-            l_fus = obj.geom.L_fus;
-            A_max = (pi/4) * obj.geom.W_max_fuselage * obj.geom.H_max_fuselage;
-            val = obj.E_WD ...
+            Dq_SH = (9*pi/2) * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
+            val   = obj.E_WD ...
                 * (1 - 0.386 * (M - 1.2)^0.57 * (1 - (pi*obj.Lambda_LE_deg^0.77)/100)) ...
-                * (9*pi/2) * (A_max/l_fus)^2 / obj.S_ref;
+                * Dq_SH / obj.S_ref;
         end
 
         % ---- Auxiliary accessors + buildup primitives (delegations) ------- %

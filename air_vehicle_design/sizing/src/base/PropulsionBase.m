@@ -36,4 +36,22 @@ classdef (Abstract) PropulsionBase < handle
 
     end
 
+    methods
+
+        function alpha = thrust_lapse_mil_on_AB_scale(obj, state)
+        %THRUST_LAPSE_MIL_ON_AB_SCALE  Mil-power thrust lapse expressed on the
+        %   AB/max T_SL scale: alpha = T_mil(alt,M) / T_SL_AB (NOT T_SL_mil).
+        %   Matches Brandt F-16A.xls Consts col AU convention (alpha_mil_T_AB =
+        %   alpha_dry*(T_SL_dry/T_SL_AB)) -- needed so a dry-power point-
+        %   performance condition (e.g. Cruise) can be expressed on the same
+        %   T_SL_AB/W_TO constraint-diagram axis as AB-flown conditions.
+        %   Default: falls back to the AB-basis thrust_lapse -- correct for any
+        %   concrete class with no separate mil-power model (e.g. F16PropL1's
+        %   density-only lapse, which cannot distinguish power settings at all).
+        %   Override in a concrete/Tier-2 class with a real mil-power model.
+            alpha = obj.thrust_lapse(state);
+        end
+
+    end
+
 end

@@ -230,7 +230,10 @@ e_osw_ref = 1 / (pi * b.geom.AR * b.brandt.polar_model(1,4));   % Brandt K1 → 
 % Rows 1-2 (M<=Mcrit) are the "trustworthy" comparison points; rows 3-5
 % (transonic/supersonic) are known to diverge -- see those tests' comments
 % (linear supersonic K1 theory breaks down near M=1 and at high Mach; L1/L2
-% have no drag-rise model; L3 has no wave drag yet).
+% have no drag-rise model; L3 has a whole-aircraft wave-drag term
+% [F16AeroL3.compute_CD0_wave, Raymer Eqs. 12.44-12.45, corrected 2026-07-23
+% to use whole-aircraft Amax/l per F16AeroL3_wave_drag_fix.md] that closes
+% most of rows 4-5's gap but does not fully eliminate rows 3-5's divergence).
 T_asub = table();
 for iM = 1:nBrandt
     label = sprintf('CD0, M=%.4f [-]', brandtM(iM));
@@ -348,7 +351,9 @@ fprintf('  [AERO sub]   CD0=Cf*Swet/Sref; Brandt model is flat for M<=%.4f (no t
 fprintf('  [AERO sub]   L3 CD0 now includes CD0_misc = (Dq_gun_port+Dq_hook_USAF)/Sref [Raymer Table 12.7].\n');
 fprintf('  [AERO sub]   Mach rows 1-2 (M<=Mcrit) are the trustworthy Brandt comparison; rows 3-5\n');
 fprintf('               (transonic/supersonic) diverge by design -- L1/L2 have no drag-rise model,\n');
-fprintf('               L3 has no wave drag yet, and Raymer''s linear supersonic K1 (Eq.12.51) breaks\n');
+fprintf('               L3''s wave-drag term (Eqs.12.44-12.45) uses whole-aircraft Amax/l (corrected\n');
+fprintf('               2026-07-23, see F16AeroL3_wave_drag_fix.md) and closes most but not all of the\n');
+fprintf('               gap; Raymer''s linear supersonic K1 (Eq.12.51) also breaks\n');
 fprintf('               down near M=1 and at high Mach for this low-AR, high-sweep wing.\n');
 fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L2/L3 use Raymer Eq.12.48/49 (injected AR,\n');
 fprintf('               Lambda_LE). L1=N/A (geometry-free Mattingly type-curve, no Oswald e). CL_alpha\n');

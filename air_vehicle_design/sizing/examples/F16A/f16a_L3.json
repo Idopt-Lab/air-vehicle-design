@@ -15,6 +15,11 @@
 
     "wave_drag_factor_E_WD": 2.2,
     "_TODO_wave_drag_factor_E_WD": "E_WD=2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or explicitly accepted as a calibration knob. Guarded by TestAeroL3.testTODO_EWDCalibrationInput.",
+    "wave_drag": {
+      "_src": "Whole-aircraft Sears-Haack inputs for compute_CD0_wave (Raymer Eq. 12.44): Amax net of engine flow-through [Brandt Geom!B20/H47], total aircraft length [Brandt Geom!B21]. Carried as L3 aero inputs because the geometry object exposes no area-ruled Amax.",
+      "Amax_ft2": 25.110556,
+      "L_aircraft_ft": 48.304
+    },
     "CD0_LandP": 0.0010,
     "misc_drag_areas": {"Dq_gun_port_ft2": 0.20, "Dq_hook_USAF_ft2": 0.10}
   }

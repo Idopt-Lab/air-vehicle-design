@@ -2,7 +2,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
 %TESTAEROL3  Tier-1 unit/correctness tests for the AeroL3 toolbox + F16AeroL3.
 %
 %   L3 is the Raymer Eq. 12.24 component drag build-up plus the F16's own
-%   supersonic wave-drag term (Eq. 12.41, M>=1.2):
+%   supersonic wave-drag term (Eqs. 12.44/12.45, M>=1.2):
 %     CD0 = [sum_c (Cf_c*FF_c*Q_c*S_wet_c)]/S_ref + CD0_misc + CD0_LandP
 %       Cf_lam  = 1.328/sqrt(Re)                        Eq. 12.26
 %       Cf_turb = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Eq. 12.27
@@ -10,8 +10,9 @@ classdef TestAeroL3 < matlab.unittest.TestCase
 %       FF_surf = (1+0.6/x*tc+100*tc^4)*(1.34*M^0.18*cos(Lm)^0.28)  Eq. 12.30
 %       FF_body = 1+5/f^1.5+f/400 (f<=6) or 1+60/f^3+f/400 (f>6)     Eq. 12.31
 %     CD_wave = E_WD*[1-0.386*(M-1.2)^0.57*(1-(pi*L_LE^0.77)/100)]
-%               *(9*pi/2)*(A_max/l)^2/S_ref   (M>=1.2)   Eq. 12.41
-%       (F16-specific F16AeroL3.compute_CD0_wave, NOT a generic toolbox method)
+%               *(9*pi/2)*(A_max/l)^2/S_ref   (M>=1.2)   Eqs. 12.44/12.45
+%       (F16-specific F16AeroL3.compute_CD0_wave; A_max/l are WHOLE-AIRCRAFT
+%        inputs, not the fuselage component)
 %     K1/K2/CLmax as at L2. Transonic band (0.95<M<1.05) NOT modeled -> NaN.
 %
 %   The shared skin-friction primitives (dyn_viscosity, Cf_turbulent) live in
@@ -155,24 +156,24 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % Supersonic wave drag (F16-specific, Raymer Eq. 12.41) -- HEADLINE
+        % Supersonic wave drag (F16-specific, Raymer Eqs. 12.44/12.45) -- HEADLINE
         % ================================================================== %
 
         function testCD0WaveFormula(tc)
-            % Hand-computed at M=1.5, SL, from the injected geometry envelope
-            % (max_width=7.0 ft, max_height=5.0 ft, L_fus=46.5 ft) and the aero
-            % inputs (Lambda_LE=40 deg, E_WD=2.2, S_ref=300 ft^2):
-            %   A_max = (pi/4)*7.0*5.0 = 27.488936   (ellipse approximation)
+            % Hand-computed at M=1.5, SL, from the whole-aircraft wave-drag
+            % inputs (Amax_ft2=25.110556 net of engine flow-through,
+            % L_aircraft_ft=48.304 [Brandt Geom!B20/H47/B21]) and the aero inputs
+            % (Lambda_LE=40 deg, E_WD=2.2, S_ref=300 ft^2). Raymer Eqs. 12.44/12.45:
             %   (M-1.2)^0.57       = 0.3^0.57        = 0.5034532
             %   pi*40^0.77/100     = pi*17.1232498/100 = 0.5379428
             %   1 - 0.386*0.5034532*(1-0.5379428)
-            %       = 1 - 0.386*0.5034532*0.4620572 = 1 - 0.0897929 = 0.9102071
-            %   searshaack = (9*pi/2)*(27.488936/46.5)^2 = 14.137167*0.3494700
-            %              = 4.9405163
-            %   CD_wave = 2.2*0.9102071*4.9405163/300 = 9.893164/300 = 0.0329772
+            %       = 1 - 0.386*0.5034532*0.4620572 = 0.9102071
+            %   (D/q)_SH = (9*pi/2)*(25.110556/48.304)^2 = 14.137167*0.2702380
+            %            = 3.8203997
+            %   CD_wave = 2.2*0.9102071*3.8203997/300 = 0.0255006
             g        = TestAeroL3.makeAero();
             received = g.compute_CD0_wave(AircraftState(0, 1.5));
-            tc.verifyEqual(received, 0.0329772136, 'RelTol', 1e-4);
+            tc.verifyEqual(received, 0.0255006046, 'RelTol', 1e-4);
         end
 
         function testCD0WaveDecreasesTowardHigherMach(tc)
