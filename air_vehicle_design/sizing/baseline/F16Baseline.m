@@ -68,6 +68,13 @@ b.geom.sweep_LE_vt_deg = 47.5;
 b.geom.L_fus           = 47.50;     % ft    -- overall length (excl. probe)
 b.geom.W_fus           = 7.0;       % ft    -- approx max width
 
+% Speedbrakes [TO, Fig. 1-2] -- 4-element clamshell. Reference-only value;
+% not modeled by any current geometry/aerodynamics discipline (analogous to
+% b.geom.S_exposed_strake below).
+b.geom.S_speedbrake        = 14.26;   % ft^2  -- total, all 4 elements
+b.geom.S_speedbrake_each   = 3.565;   % ft^2  -- per element
+b.geom.n_speedbrake_elements = 4;     % --    -- clamshell element count
+
 % Exposed lifting-surface planform areas [Brandt F-16A.xls, "Geom" sheet,
 % "Exposed Lifting Surf Geometry" table, "Exposed S" column]. Raymer's
 % S_w/S_ht/S_vt in the Table 15.2 and Eq. 15.1-15.3 weight buildups are the
