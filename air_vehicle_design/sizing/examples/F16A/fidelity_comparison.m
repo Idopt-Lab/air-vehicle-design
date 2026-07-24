@@ -87,8 +87,8 @@ ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ..
 % carries the full HT/VT breakdown + duct that used to live on a separate
 % F16GeomL3 class, so the L3 column below is NaN throughout (not a missing
 % class -- Geometry genuinely stops at L2).
-g1 = F16GeomL1();
-g2 = F16GeomL2();
+g1 = F16GeomL1(f16a_spec_path(1));
+g2 = F16GeomL2(f16a_spec_path(2));
 
 swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),      NaN];
 lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                NaN];
@@ -99,16 +99,18 @@ sw_fus  = [NaN,                g2.get_S_wet_fuselage(),  NaN];
 sw_duct = [NaN,                g2.get_S_wet_duct(),      NaN];
 
 % ── Aerodynamics ──────────────────────────────────────────────────────── %
-a1 = F16AeroL1();
-a2 = F16AeroL2();
-a3 = F16AeroL3();
+a1 = F16AeroL1(f16a_spec_path(1));
+a2 = F16AeroL2(g2, f16a_spec_path(2));
+a3 = F16AeroL3(g2, f16a_spec_path(3));
 
 pu1 = a1.drag_polar(st_36_160); pu2 = a2.drag_polar(st_36_160); pu3 = a3.drag_polar(st_36_160);
 
 cd0_sup    = [pu1.CD0, pu2.CD0, pu3.CD0];
 k1_sup     = [pu1.K1,  pu2.K1,  pu3.K1 ];
 clmax      = [a1.get_CLmax(st_SL_050), a2.get_CLmax(st_SL_050), a3.get_CLmax(st_SL_050)];
-e_osw      = [a1.get_e_osw(), a2.get_e_osw(), a3.get_e_osw()];
+% L1 is geometry-free (Mattingly type-curve) and has no Oswald-efficiency
+% concept -> N/A; L2/L3 use Raymer Eq. 12.48/12.49 (official e).
+e_osw      = [NaN, a2.get_e_osw(), a3.get_e_osw()];
 cl_alpha_M0  = [NaN, a2.get_CL_alpha(0.0), a3.get_CL_alpha(0.0)];
 cl_alpha_M06 = [NaN, a2.get_CL_alpha(0.6), a3.get_CL_alpha(0.6)];
 
@@ -117,7 +119,9 @@ cl_alpha_M06 = [NaN, a2.get_CL_alpha(0.6), a3.get_CL_alpha(0.6)];
 % for L3's gear-strut Reynolds-number lookup (compute_Delta_CD0_geardown).
 st_hld = AircraftState(0, 0.2);
 
-cd0_clean_hld = [a1.get_CD0(), a2.get_CD0(), a3.drag_polar(st_hld).CD0];
+% L1 clean CD0 is the Mattingly type-curve value at the HLD reference state
+% (geometry-free); L2 is the Cfe*Swet/Sref clean estimate; L3 the buildup.
+cd0_clean_hld = [a1.drag_polar(st_hld).CD0, a2.get_CD0(), a3.drag_polar(st_hld).CD0];
 d_cd0_TO      = [a1.get_Delta_CD0_TO(), a2.get_Delta_CD0_TO(), a3.get_Delta_CD0_TO(st_hld)];
 d_cd0_L       = [a1.get_Delta_CD0_L(),  a2.get_Delta_CD0_L(),  a3.get_Delta_CD0_L(st_hld)];
 cd0_TO_total  = cd0_clean_hld + d_cd0_TO;
@@ -346,10 +350,12 @@ fprintf('  [AERO sub]   Mach rows 1-2 (M<=Mcrit) are the trustworthy Brandt comp
 fprintf('               (transonic/supersonic) diverge by design -- L1/L2 have no drag-rise model,\n');
 fprintf('               L3 has no wave drag yet, and Raymer''s linear supersonic K1 (Eq.12.51) breaks\n');
 fprintf('               down near M=1 and at high Mach for this low-AR, high-sweep wing.\n');
-fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L1/L2/L3 all use the same Raymer Eq.12.48/49\n');
-fprintf('               formula (obj.AR, obj.Lambda_LE_deg). CL_alpha L2/L3 (Raymer Eq.12.6, both use\n');
-fprintf('               Lambda_c4_deg=37deg); L1=N/A (no finite-wing lift-slope method at that fidelity).\n');
-fprintf('  [AERO sub]   CLmax: L1/L3 Roskam historical table; L2 Raymer sweep-corrected formula.\n');
+fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L2/L3 use Raymer Eq.12.48/49 (injected AR,\n');
+fprintf('               Lambda_LE). L1=N/A (geometry-free Mattingly type-curve, no Oswald e). CL_alpha\n');
+fprintf('               L2/L3 (Raymer Eq.12.6, injected quarter-chord sweep ~32.2deg, NOT the old 37);\n');
+fprintf('               L1=N/A (no finite-wing lift-slope method at that fidelity).\n');
+fprintf('  [AERO sub]   CLmax: L1 Roskam historical table (0.90); L2/L3 Raymer Eq.12.15 sweep-corrected\n');
+fprintf('               (0.9*cl_max_2D*cos(Lambda_c4)); vortex lift from the LEX/strake is NOT modeled.\n');
 fprintf('  [AERO sup]   K2=0 for M>=1 (linearized supersonic theory) — enforced at all fidelity levels.\n');
 fprintf('  [AERO hld]   L1: pure tabulation, Roskam Airplane Design Pt.I, Table 3.1 (CLmax by category,\n');
 fprintf('               "fighter" row) and Table 3.6 (Delta_CD0/e by flap config, flaps+gear).\n');
