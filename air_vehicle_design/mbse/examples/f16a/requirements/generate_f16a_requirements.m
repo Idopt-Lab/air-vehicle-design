@@ -1,6 +1,6 @@
 function generate_f16a_requirements()
 %GENERATE_F16A_REQUIREMENTS Build the F-16A top-level requirements set.
-%   Creates mbse/examples/f16a.slreqx with DRAFT top-level aircraft
+%   Creates mbse/examples/f16a/requirements/f16a.slreqx with DRAFT top-level aircraft
 %   requirements derived from sizing/VnV/BrandtF16A, cross-referenced
 %   against Brandt-F16-A.xls (Main tab, mission block J32:Y39 and
 %   constraints block R1:X13). Only Excel INPUT cells (literal values,
@@ -8,10 +8,20 @@ function generate_f16a_requirements()
 %   noted as such in the Description for traceability but are not
 %   themselves requirement values.
 %
-%   Re-run to regenerate. Delete f16a.slreqx first for a clean rebuild
-%   (existing IDs are otherwise preserved on regeneration).
+%   Idempotent: re-run to regenerate from scratch. Any existing f16a.slreqx
+%   (and its in-memory copy) is cleared first, so no manual delete is needed.
 
-rs = slreq.new("f16a");
+% Save into this script's own requirements/ folder, independent of pwd
+% (the name stays "f16a" so the file is f16a.slreqx, which the Functional
+% layer loads by that path in generate_f16a_functional.m).
+thisDir = fileparts(mfilename("fullpath"));
+reqFile = fullfile(thisDir, "f16a.slreqx");
+
+% Idempotent clean rebuild: drop any in-memory copy and the existing file
+% so slreq.new does not error on an already-existing set.
+slreq.clear();
+if isfile(reqFile); delete(reqFile); end
+rs = slreq.new(fullfile(thisDir, "f16a"));
 rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab. DRAFT - for RFLP Requirements phase review.";
 
 % ---- Root container ----

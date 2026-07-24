@@ -17,9 +17,18 @@ function generate_f16a_derived_requirements()
 %   Quantitative acceptance criteria are intentionally left as TBD
 %   placeholders for the program/class to define.
 %
-%   Re-run to regenerate.
+%   Idempotent: re-run to regenerate from scratch. Any existing
+%   f16a_functional_derived.slreqx (and its in-memory copy) is cleared first.
 
-rs = slreq.new("f16a_functional_derived");
+% Save into this script's own requirements/ folder, independent of pwd.
+thisDir = fileparts(mfilename("fullpath"));
+reqFile = fullfile(thisDir, "f16a_functional_derived.slreqx");
+
+% Idempotent clean rebuild: drop any in-memory copy and the existing file
+% so slreq.new does not error on an already-existing set.
+slreq.clear();
+if isfile(reqFile); delete(reqFile); end
+rs = slreq.new(fullfile(thisDir, "f16a_functional_derived"));
 rs.Description = "Derived functional/capability requirements for the F-16A, identified during Functional-layer (RFLP F) analysis. PLACEHOLDER values - quantitative acceptance criteria to be defined. Kept separate from the sizing-derived set (f16a.slreqx) to preserve original provenance.";
 
 % ---- Root container ----

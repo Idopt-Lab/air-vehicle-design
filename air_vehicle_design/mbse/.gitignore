@@ -1,0 +1,8 @@
+# Backup / snapshot copies of MATLAB & Simulink artifacts.
+# These are ad-hoc developer backups and must not be tracked; the live
+# .slx/.slreqx/.m files are the source of truth.
+*.original
+*.bak
+*.orig
+*.slx.original
+*.slreqx.original
