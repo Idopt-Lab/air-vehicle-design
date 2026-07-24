@@ -65,6 +65,13 @@ classdef F16PropL2 < PropulsionModelL2
             alpha = PropL2.get_thrust_lapse_mil(obj, state);
         end
 
+        function alpha = thrust_lapse_mil_on_AB_scale(obj, state)
+        %THRUST_LAPSE_MIL_ON_AB_SCALE  Mil lapse on AB T_SL scale.
+        %   [Mattingly Eq. 2.54b; renormalized per Brandt F-16A.xls Consts
+        %   col AU convention -- see PropulsionBase.m.]
+            alpha = PropL2.get_thrust_lapse_mil_on_AB_scale(obj, state);
+        end
+
         function alpha = compute_thrust_lapse_AB(obj, state)
             alpha = PropL2.get_thrust_lapse_AB(obj, state);
         end
