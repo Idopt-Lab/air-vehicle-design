@@ -37,7 +37,7 @@ Per-component loop (order wing/HT/VT/fuselage/duct): `re_eff = min(compute_Re, r
 ## Notes
 
 - **Supersonic wave drag is not here.** It is aircraft-specific: `F16AeroL3` overrides
-  `get_CD0_buildup` to add its `compute_CD0_wave` term (Raymer Eq. 12.41) for `M ≥ 1.2`.
+  `get_CD0_buildup` to add its `compute_CD0_wave` term (Raymer Eqs. 12.44/12.45) for `M ≥ 1.2`.
 - **Transonic (1.0 < M < 1.2) is not modeled** — `drag_polar` returns NaN in the `AeroL2`
   transonic band, and no fairing is applied between the subsonic build-up and the M≥1.2 wave-drag
   onset.

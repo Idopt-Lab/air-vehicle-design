@@ -17,8 +17,9 @@ duct**.
 
 **Inputs** (from JSON `.aerodynamics`): `geom`; airfoil `alpha_L0`, `cl_max_2D`; per-component
 `x_c_max_comp`, `Q_comp`, `f_lam_comp`, `is_body_comp`; surface roughness `k`; wave-drag factor
-`E_WD`; `CD0_LandP`; misc drag areas `Dq_gun_port`, `Dq_hook_USAF`. Additional `Constant`
-flaperon / LE-slat / landing-gear control-surface estimates are declared inline.
+`E_WD` and the whole-aircraft wave-drag geometry `Amax_ft2` / `L_aircraft_ft`; `CD0_LandP`; misc
+drag areas `Dq_gun_port`, `Dq_hook_USAF`. Additional `Constant` flaperon / LE-slat / landing-gear
+control-surface estimates are declared inline.
 
 **Derived** (`properties (Dependent)`, read live from `obj.geom` — no stored copy):
 
@@ -37,7 +38,7 @@ flaperon / LE-slat / landing-gear control-surface estimates are declared inline.
 - **Contract:** `drag_polar` (`AeroL3.drag_polar`), `get_CLmax` (Raymer Eq. 12.15, via
   `AeroL2.CLmax_clean`).
 - **Build-up + wave drag:** `get_CD0_buildup` overrides the generic Eq. 12.24 sum to add
-  `compute_CD0_wave` for `M ≥ 1.2` (Raymer Eq. 12.41, Sears-Haack).
+  `compute_CD0_wave` for `M ≥ 1.2` (Raymer Eqs. 12.44/12.45, Sears-Haack).
 - **Deltas:** TE-flap (`Delta_CD0_flap`, `Delta_CDi_flap`, `Delta_CLmax_flap`), LE-slat
   (`Delta_CD0_slat`, `Delta_CDi_slat`, `Delta_CLmax_slat`; Eq. 12.61/62 *form*, no separate LE
   citation in Raymer), landing gear (`compute_Delta_CD0_geardown`, Raymer Table 12.6), assembled by
@@ -45,6 +46,8 @@ flaperon / LE-slat / landing-gear control-surface estimates are declared inline.
 
 ## Current limitation
 
-The geometry object exposes no max cross-sectional area, so `compute_CD0_wave` approximates it as an
-ellipse of the injected fuselage envelope, `A_max = (π/4)·W_max·H_max` — a cited closed form from
-available geometry, to be replaced when a real `A_max` getter exists.
+The Sears-Haack wave drag needs a whole-aircraft max cross-sectional area, which the geometry object
+does not expose (Brandt's value is area-ruled, net of engine flow-through). So `Amax_ft2`
+(25.110556 ft²) and `L_aircraft_ft` (48.304 ft) are carried as L3 aero inputs [Brandt Geom!B20/H47,
+B21] rather than read live from `obj.geom` — a documented departure from the otherwise-pure
+dependency injection, to be replaced if a geometry `Amax` getter is added.
