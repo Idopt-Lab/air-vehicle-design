@@ -28,6 +28,17 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             end
         end
 
+        function testBuildWithoutStallReturnsEightConstraints(tc, fidelityLevel)
+            % includeStall=false should drop only the Stall row, leaving
+            % the 8 Constraints.xlsx-derived conditions untouched. The
+            % constraint-diagram scripts (run_F16_constraint_diagram*.m)
+            % use the includeStall=true default and plot all 9.
+            constraints = F16ConstraintSet.build(fidelityLevel, false);
+            tc.verifyEqual(numel(constraints), 8);
+            names = cellfun(@(c) c.name, constraints);
+            tc.verifyFalse(any(names == "Stall"));
+        end
+
         function testTakeoffLandingAndStallRowsUseCorrectClasses(tc)
             constraints = F16ConstraintSet.build("L3");
             names = cellfun(@(c) c.name, constraints);

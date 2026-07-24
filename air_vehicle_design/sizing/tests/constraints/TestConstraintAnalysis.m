@@ -121,10 +121,47 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 
             tc.verifyClass(fig, 'matlab.ui.Figure');
             ax = fig.CurrentAxes;
-            % 1 thrust curve + 1 landing vertical line + 1 optimum marker
-            tc.verifyEqual(numel(ax.Children), 3);
+            % 1 feasible-region fill + 1 thrust curve + 1 landing vertical line + 1 optimum marker
+            tc.verifyEqual(numel(ax.Children), 4);
             tc.verifyTrue(any(arrayfun(@(h) isa(h, 'matlab.graphics.chart.decoration.ConstantLine'), ax.Children)), ...
                 'Landing should render as a vertical ConstantLine (xline), not a regular curve.');
+            tc.verifyTrue(any(arrayfun(@(h) isa(h, 'matlab.graphics.primitive.Patch'), ax.Children)), ...
+                'Feasible region should render as a shaded Patch (fill).');
+        end
+
+        function testPlotDiagramFeasibleRegionStopsAtLandingWall(tc)
+            % The feasible-region fill's top edge is the envelope, capped at
+            % a fixed ceiling wherever a wall constraint drives it to Inf --
+            % so the fill should have zero height (top == bottom) at W/S
+            % values beyond the landing wall's limit, and positive height
+            % below it.
+            aero  = F16AeroL1();
+            prop  = F16PropL2();
+            state = AircraftState(20000, 0.8);
+            WS_range = 20:2:200;
+
+            thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
+            landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
+
+            ca  = ConstraintAnalysis({thrust, landing}, WS_range);
+            fig = ca.plot_diagram();
+            tc.addTeardown(@() close(fig));
+
+            ax    = fig.CurrentAxes;
+            patch = ax.Children(arrayfun(@(h) isa(h, 'matlab.graphics.primitive.Patch'), ax.Children));
+            n     = numel(WS_range);
+            ydata = patch.YData;
+            % XData/YData are [WS_range, fliplr(WS_range)]: bottom edge (the
+            % capped envelope) is the first n points, top edge (the ceiling)
+            % is the last n points, reversed to match.
+            bottom = ydata(1:n);
+            top    = fliplr(ydata(n+1:end));
+
+            beyondWall = WS_range > landing.WS_max();
+            tc.verifyTrue(all(bottom(beyondWall) == top(beyondWall)), ...
+                'Fill should have zero height beyond the landing wall (infeasible).');
+            tc.verifyTrue(any(bottom(~beyondWall) < top(~beyondWall)), ...
+                'Fill should have positive height below the landing wall (feasible).');
         end
 
         % --- Input validation -----------------------------------------------

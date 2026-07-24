@@ -26,6 +26,17 @@ classdef TestConstraintSetImporter < matlab.unittest.TestCase
             tc.verifyEqual(row.Distance_ft_, 4000, 'AbsTol', 1e-9);
         end
 
+        function testTakeoffFrictionAndDistance(tc)
+            % Per subplans/06_constraint_analysis.md's "Field constraints"
+            % table: mu=0.03 for Takeoff (vs. 0.50 for Landing) -- now wired
+            % into TakeoffConstraint's drag/rolling-friction correction term
+            % (see TakeoffConstraint.m's header).
+            T = ConstraintSetImporter.read(TestConstraintSetImporter.xlsxPath(), "Constraints");
+            row = T("Takeoff", :);
+            tc.verifyEqual(row.SurfaceFrictionCoefficient_mu_, 0.03, 'AbsTol', 1e-9);
+            tc.verifyEqual(row.Distance_ft_, 4000, 'AbsTol', 1e-9);
+        end
+
         function testExcessPowerHasPS(tc)
             T = ConstraintSetImporter.read(TestConstraintSetImporter.xlsxPath(), "Constraints");
             row = T("Excess Power", :);

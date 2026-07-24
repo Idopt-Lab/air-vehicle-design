@@ -5,28 +5,33 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 %
 %   Equation [Mattingly, Heiser, Pratt, "Aircraft Engine Design," 2nd ed.,
 %   AIAA, 2002, Master Equation specialized to ground roll (T_SL>>D+R,
-%   dh/dt=0); matches NPTEL_Fighter_Aircraft_Sizing.ipynb's Takeoff class
+%   dh/dt=0), plus Brandt's own ground-roll drag/rolling-friction correction
+%   (F-16A.xls Consts-sheet row 32, matching temp_Casey's takeoff_constraint.m
+%   term2); B term matches NPTEL_Fighter_Aircraft_Sizing.ipynb's Takeoff class
 %   (cells 32-33) -- NOT Raymer ch. 5, which gives only the graphical TOP
 %   method, per TakeoffConstraint.m's header], as TakeoffConstraint.m
 %   implements it:
 %
 %     T_SL/W_TO = (beta^2/alpha) * (k_TO^2 / (rho*g*CLmax_TO)) * (W_TO/S) / S_G
+%                 + 0.7*CD0_TO/(beta*CLmax_TO) + mu
 %
 %   testRequiredTWMatchesHandComputedEquation checks required_TW against an
 %   independently written form of the same equation (not a copy of
 %   TakeoffConstraint's own algebra) using the same aero/prop discipline
-%   outputs (get_CLmax, thrust_lapse -- each already unit-tested elsewhere).
+%   outputs (get_CLmax, drag_polar, thrust_lapse -- each already unit-tested
+%   elsewhere). testEquationReproducesBrandtTakeoffPoint drives the actual
+%   production code path with Brandt's own inputs (mu, CD0, CLmax_TO,
+%   alpha_AB) and checks it reproduces his tabulated value directly.
 %
 %   The F-16 Takeoff field condition [subplans/06_constraint_analysis.md
-%   "Field constraints" table]: sea level, k_TO=1.2, S_G=4,000 ft, beta=1.0.
-%   F16Baseline's b.constraints.takeoff.TW_Takeoff is Brandt's full 21-point
-%   Consts-sheet row 32 -- but that row comes from his *unsimplified* takeoff
-%   equation (drag/rolling-friction term included, per temp_Casey's
-%   takeoff_constraint.m term2) which TakeoffConstraint.m intentionally does
-%   not implement (see class header). So testF16TakeoffRequiredTWTable
-%   prints our values alongside Brandt's for reference only -- diagnostic,
-%   not an exact-match assertion, same spirit as ThrustConstraint's
-%   testF16MaxMachRequiredTWTable.
+%   "Field constraints" table]: sea level, k_TO=1.2, S_G=4,000 ft, mu=0.03,
+%   beta=1.0. F16Baseline's b.constraints.takeoff.TW_Takeoff is Brandt's full
+%   21-point Consts-sheet row 32; testF16TakeoffRequiredTWTable prints our
+%   per-fidelity-level values alongside it as a diagnostic (not an
+%   exact-match assertion, same spirit as ThrustConstraint's
+%   testF16MaxMachRequiredTWTable) -- this framework's own aero/prop
+%   fidelity-level gaps (documented in F16AeroLN/F16PropLN) still drive some
+%   spread even though the equation itself now matches Brandt's.
 
     properties (TestParameter)
         % Aero/prop discipline pairing per fidelity level. No F16PropL3
@@ -41,7 +46,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
         function testIsaPointPerformanceBase(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
@@ -50,19 +55,19 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % as ThrustConstraint -- see TakeoffConstraint.m/
             % Both_WbyS_TbyW.m headers.
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
         end
 
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'handle'));
         end
 
         function testNamePropertySet(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Takeoff", state, F16AeroL1(), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Takeoff", state, F16AeroL1(), F16PropL2(), 4000, 0.03);
             tc.verifyEqual(obj.name, "Takeoff");
         end
 
@@ -70,7 +75,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % beta and k_TO default to 1.0 and 1.2 (field constraints, per
             % subplans/06_constraint_analysis.md) when omitted.
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(), F16PropL2(), 4000, 0.03);
             tc.verifyEqual(obj.beta, 1.0);
             tc.verifyEqual(obj.k_TO, 1.2);
         end
@@ -87,23 +92,69 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             prop  = F16PropL2();
             state = AircraftState(0, 0.1);
             S_G   = 3500;
+            mu    = 0.03;
             beta  = 0.98;
             k_TO  = 1.15;
             WS    = 90;
 
             CLmax_TO = aero.get_CLmax(state);
+            CD0_TO   = aero.drag_polar(state).CD0;
             alpha    = prop.thrust_lapse(state);
             rho      = state.rho;
             g        = 32.174;
 
-            expected = (beta^2 / alpha) * (k_TO^2 / (rho * g * CLmax_TO)) * WS / S_G;
+            expected = (beta^2 / alpha) * (k_TO^2 / (rho * g * CLmax_TO)) * WS / S_G ...
+                + 0.7 * CD0_TO / (beta * CLmax_TO) + mu;
 
-            obj      = TakeoffConstraint("Toy", state, aero, prop, S_G, beta, k_TO);
+            obj      = TakeoffConstraint("Toy", state, aero, prop, S_G, mu, beta, k_TO);
             received = obj.required_TW(WS);
 
             fprintf('\n    required_TW(WS=%d): received=%.6f  hand-computed=%.6f\n', WS, received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 1e-10, ...
                 'required_TW must equal the hand-computed takeoff equation.');
+        end
+
+        function testEquationReproducesBrandtTakeoffPoint(tc)
+            % Plugs Brandt's own takeoff inputs directly into the same
+            % equation TakeoffConstraint.m implements (B term + the
+            % 0.7*CD0_TO/(beta*CLmax_TO) + mu correction) and checks it lands
+            % within 0.5% of F16Baseline's b.constraints.takeoff.TW_Takeoff
+            % at W/S=90 (index 11 of the 20:7:160 sweep) [Brandt F-16A.xls
+            % Consts sheet, row 32]. This validates the equation itself
+            % against Brandt's worksheet -- separate from
+            % testRequiredTWMatchesHandComputedEquation's generic algebra
+            % check and from testF16TakeoffRequiredTWTable's aero-driven
+            % (textbook flapped CLmax_TO/CD0_TO per fidelity level, not
+            % expected to match exactly) comparison.
+            b = F16Baseline();
+
+            mu       = 0.03;
+            CLmax_TO = b.brandt.CLmax_TO;               % 1.2785 [Brandt L9]
+            CD0_TO   = b.constraints.takeoff.CD0;       % 0.052 [Brandt Consts row 32]
+            alpha_AB = b.engine.val.brandt_alpha_AB_SLS_M12;   % 0.955053 [Brandt Consts row 32, col AT]
+            S_G      = 4000;
+            k_TO     = 1.2;
+            beta     = 1.0;
+            WS       = 90;   % b.constraints.takeoff.WS_psf(11)
+
+            % Drive the actual production code path (TakeoffConstraint.required_TW,
+            % which internally calls aero.get_CLmax(state)/aero.drag_polar(state)
+            % and prop.thrust_lapse(state)) via fixed-value aero/prop stubs
+            % carrying Brandt's own numbers, rather than re-deriving the
+            % equation by hand in the test -- this way the test would catch a
+            % bug in TakeoffConstraint.m's own algebra.
+            aeroStub = FixedAeroStub(CLmax_TO, CD0_TO);
+            propStub = FixedPropStub(alpha_AB);
+            state    = AircraftState(0, 0.1);
+            obj      = TakeoffConstraint("Takeoff", state, aeroStub, propStub, S_G, mu, beta, k_TO);
+
+            received = obj.required_TW(WS);
+            expected = b.constraints.takeoff.TW_Takeoff(11);
+
+            fprintf('\n    Takeoff required_TW at WS=%d (Brandt inputs): received=%.6f  Brandt=%.6f\n', ...
+                WS, received, expected);
+            tc.verifyEqual(received, expected, 'RelTol', 5e-3, ...
+                'The takeoff equation, fed Brandt''s own inputs, should reproduce Brandt''s TW_Takeoff to within 0.5%.');
         end
 
         % --- Available/margin ------------------------------------------------
@@ -112,9 +163,9 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % Arbitrary field length/design point (not F-16-specific data).
             % Confirms Both_WbyS_TbyW.TW_margin (shared with ThrustConstraint,
             % see TestThrustConstraint.m) works correctly through
-            % TakeoffConstraint's own required_TW/get_alpha (pure linear in
-            % W/S, A=C=D=0 -- a different code path than ThrustConstraint's
-            % bucket-shaped curve): margin = alpha*(T_SL/W_TO -
+            % TakeoffConstraint's own required_TW/get_alpha (affine in W/S,
+            % A=D=0, B and C nonzero -- a different code path than
+            % ThrustConstraint's bucket-shaped curve): margin = alpha*(T_SL/W_TO -
             % required_TW(WS_actual)), where alpha is TakeoffConstraint's own
             % get_alpha() (plain AB-basis lapse, no mil/AB distinction).
             % Requests TW_margin's 2nd/3rd (available/required) outputs
@@ -123,7 +174,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             aero  = F16AeroL1();
             prop  = F16PropL2();
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, aero, prop, 3500, 0.98, 1.15);
+            obj   = TakeoffConstraint("Toy", state, aero, prop, 3500, 0.03, 0.98, 1.15);
 
             WS_actual = 90;
             T_SL      = 25000;
@@ -154,7 +205,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             aero  = F16AeroL1();
             prop  = F16PropL2();
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, aero, prop, 4000);
+            obj   = TakeoffConstraint("Toy", state, aero, prop, 4000, 0.03);
 
             WS_range = 20:10:180;
             TW       = obj.required_TW(WS_range);
@@ -163,21 +214,28 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             tc.verifyTrue(all(isfinite(TW)), 'required_TW must be finite over the W/S sweep.');
         end
 
-        function testRequiredTWLinearInWS(tc)
+        function testRequiredTWAffineInWS(tc)
             % Unlike the Mattingly Master Equation (bucket-shaped), the
-            % simplified takeoff relation is strictly linear in W/S:
-            % required_TW = coeff * WS / S_G, so doubling WS must double TW.
+            % takeoff relation is AFFINE in W/S: required_TW = B*(W/S) + C,
+            % where B is the ground-roll term (coeff/S_G) and C is the
+            % drag/rolling-friction correction (constant in W/S, see class
+            % header) -- NOT strictly proportional (doubling WS does NOT
+            % double TW once C is nonzero). Equal steps in W/S must still
+            % produce equal steps in required_TW, i.e. the second difference
+            % across three equally spaced points is zero.
             aero  = F16AeroL1();
             prop  = F16PropL2();
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, aero, prop, 4000);
+            obj   = TakeoffConstraint("Toy", state, aero, prop, 4000, 0.03);
 
-            WS    = 60;
-            TW_1x = obj.required_TW(WS);
-            TW_2x = obj.required_TW(2 * WS);
+            WS = 60;
+            d  = 20;
+            TW_0 = obj.required_TW(WS);
+            TW_1 = obj.required_TW(WS + d);
+            TW_2 = obj.required_TW(WS + 2*d);
 
-            tc.verifyEqual(TW_2x, 2 * TW_1x, 'RelTol', 1e-10, ...
-                'required_TW must scale linearly with W/S.');
+            tc.verifyEqual(TW_1 - TW_0, TW_2 - TW_1, 'RelTol', 1e-10, ...
+                'required_TW must be affine in W/S (equal W/S steps -> equal T/W steps).');
         end
 
         function testRequiredTWIncreasesWithGroundRoll(tc)
@@ -188,8 +246,8 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             state = AircraftState(0, 0.1);
             WS    = 90;
 
-            obj_short = TakeoffConstraint("Short field", state, aero, prop, 2000);
-            obj_long  = TakeoffConstraint("Long field", state, aero, prop, 6000);
+            obj_short = TakeoffConstraint("Short field", state, aero, prop, 2000, 0.03);
+            obj_long  = TakeoffConstraint("Long field", state, aero, prop, 6000, 0.03);
 
             tc.verifyGreaterThan(obj_short.required_TW(WS), obj_long.required_TW(WS), ...
                 'A shorter ground-roll requirement must demand a higher required T/W.');
@@ -207,7 +265,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             aero  = F16AeroL3();
             prop  = F16PropL2();
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Takeoff", state, aero, prop, 4000, 1.0, 1.2);
+            obj   = TakeoffConstraint("Takeoff", state, aero, prop, 4000, 0.03, 1.0, 1.2);
 
             WS = 80;
             TW = obj.required_TW(WS);
@@ -222,15 +280,17 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % aero+prop discipline objects produce for the Takeoff condition
             % at each fidelity level, alongside Brandt's full 21-point
             % tabulated row [F16Baseline b.constraints.takeoff.TW_Takeoff].
-            % Expect our values to read LOW vs. Brandt across the board:
-            % Brandt's row includes the drag/rolling-friction term this
-            % class's simplified equation omits (see class header) -- known
-            % modeling gap, not a TakeoffConstraint bug.
+            % Now that the equation itself includes Brandt's drag/rolling-
+            % friction correction (see class header), the remaining diff is
+            % from this framework's own textbook flapped-CLmax_TO/CD0_TO
+            % estimate vs. Brandt's flight-calibrated values (same class of
+            % per-fidelity gap as Landing, see LandingConstraint.m's header)
+            % -- diagnostic only, not an exact-match assertion.
             [aero, prop] = TestTakeoffConstraint.buildDisciplines(fidelityLevel);
 
             b     = F16Baseline();
             state = AircraftState(0, 0.1);   % sea level, near-zero Mach (avoids M=0 edge cases)
-            obj   = TakeoffConstraint("Takeoff", state, aero, prop, 4000, 1.0, 1.2);
+            obj   = TakeoffConstraint("Takeoff", state, aero, prop, 4000, 0.03, 1.0, 1.2);
 
             WS_range      = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
             brandt_takeoff = b.constraints.takeoff.TW_Takeoff;
