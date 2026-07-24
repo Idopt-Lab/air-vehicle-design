@@ -1,7 +1,7 @@
 # Subplan 05 — Weights
 
-**Status:** Placeholder — not started
-**Depends on:** Steps 0–2 (baseline, AircraftState, Geometry)
+**Status:** Implemented (L1, L2, L3)
+**Depends on:** Steps 1–2 (AircraftState, Geometry)
 **Blocks:** Steps 7, 8 (mission analysis, sizing)
 
 ---
@@ -14,74 +14,80 @@ Implement `WeightsBase` and three generic fidelity levels using Raymer and Roska
 
 ## Files to Create
 
+Three-tier pattern per level `N`: `WeightsBase` (abstract) ← `WeightsModelLN` (abstract enforcer) ← `F16WeightsLN` (concrete), plus a standalone static toolbox `WeightsLN` holding the equations.
+
 ### Layer 1 — Generic (`src/`)
 
 | File | Purpose |
 |------|---------|
-| `src/base/WeightsBase.m` | Abstract base: `OEW(W_TO)→scalar(lbf)` |
-| `src/disciplines/weights/WeightsLevel1.m` | Raymer Table 6.1 power-law regression; requires aircraft_type |
-| `src/disciplines/weights/WeightsLevel2.m` | Raymer eq 6.1 multi-parameter regression; requires type + design params |
-| `src/disciplines/weights/WeightsLevel3.m` | Component buildup (wing, fuselage, tail, LG, engine, systems) |
+| `src/base/WeightsBase.m` | Abstract base: `OEW(W_TO)→scalar(lbf)` contract |
+| `src/disciplines/weights/WeightsModelL1.m` | Abstract L1 enforcer |
+| `src/disciplines/weights/WeightsModelL2.m` | Abstract L2 enforcer |
+| `src/disciplines/weights/WeightsModelL3.m` | Abstract L3 enforcer |
+| `src/disciplines/weights/WeightsL1.m` | Static toolbox — Raymer Table 6.1 power-law regression |
+| `src/disciplines/weights/WeightsL2.m` | Static toolbox — Raymer eq 6.1 multi-parameter regression |
+| `src/disciplines/weights/WeightsL3.m` | Static toolbox — component buildup (wing, fuselage, tail, LG, engine, systems) |
 
-### Layer 2 — F-16 specific (`examples/F16A/`)
+### Layer 2 — F-16 specific (`examples/F16A/`, flat directory)
 
 | File | What it provides |
 |------|-----------------|
-| `examples/F16A/disciplines/weights/F16WeightsLevel1.m` | Wires in `aircraft_type='jet fighter'` → Raymer Table 6.1 A=2.34, C=−0.13 |
-| `examples/F16A/disciplines/weights/F16WeightsLevel2.m` | Wires in AR=3.0, M_max=2.05, N_z=9.0 from F-16 MIL-SPEC; T/W and W/S from constraint analysis (passed at construction) |
-| `examples/F16A/disciplines/weights/F16WeightsLevel3.m` | Wires in N_z=9.0 and F16GeometryLevel3 object; equations unchanged |
+| `examples/F16A/F16WeightsL1.m` | Wires in `aircraft_type='jet fighter'` → Raymer Table 6.1 A=2.34, C=−0.13; delegates to `WeightsL1` statics |
+| `examples/F16A/F16WeightsL2.m` | Wires in AR=3.0, M_max, N_z=9.0 from F-16 MIL-SPEC (+ T/W, W/S); delegates to `WeightsL2` statics |
+| `examples/F16A/F16WeightsL3.m` | Wires in N_z=9.0 and the F-16 exposed-area / component geometry inputs as its own properties; delegates to `WeightsL3` statics |
 
 ### Tests
 
 | File | Tests |
 |------|-------|
-| `tests/disciplines/TestWeightsLevels.m` | Generic: physical constraints, monotonicity |
-| `tests/examples/F16A/TestF16WeightsLevels.m` | F-16: OEW in physically plausible range for a ~31,000 lb fighter |
+| `tests/disciplines/TestWeightsL1.m` | L1: physical constraints, monotonicity, F-16 OEW range |
+| `tests/disciplines/TestWeightsL2.m` | L2: regression correctness, F-16 OEW range |
+| `tests/disciplines/TestWeightsL3.m` | L3: component buildup positivity + sum, F-16 OEW range |
 
 ---
 
 ## Design Notes
 
-- Inheritance: `F16WeightsLevelN < WeightsLevelN < WeightsBase < handle`.
+- Inheritance: `F16WeightsLN < WeightsModelLN < WeightsBase < handle` (each `WeightsModelLN` enforcer inherits `WeightsBase` directly).
 - Physical constraints enforced with MATLAB errors: OEW must be positive and strictly less than W_TO.
-- `WeightsLevel2` generic constructor: `WeightsLevel2(aircraft_type, TW, WS, AR, M_max, Kvs)` — all required so it works for any aircraft. F-16 subclass wires in the F-16-specific values; T/W and W/S are passed from constraint analysis at construction time.
-- `WeightsLevel3` requires a geometry object at construction.
+- The concrete `F16WeightsLN` classes set their F-16 spec values in a no-arg constructor (older per-discipline input style — they do **not** read `f16a_L*.json`) and satisfy every abstract method with a one-line delegation to the `WeightsLN` static toolbox. The generic equations live in the toolboxes.
+- `F16WeightsL3` carries the required exposed-area / component-geometry inputs (S_w, S_ht, S_vt, fuselage envelope, …) as its own properties — it does **not** take a separate geometry object (geometry has no L3).
 - Do NOT hardcode Brandt's OEW=19,980 lb as a calibration target input. The Raymer regressions will give an estimate; it may differ from Brandt by 5–15%.
 
-**What generic vs. F-16 subclass provides:**
+**What generic toolbox vs. F-16 subclass provides:**
 
-| | WeightsLevel1 (generic) | F16WeightsLevel1 (F-16 spec) |
+| | WeightsL1 (generic toolbox) | F16WeightsL1 (F-16 spec) |
 |-|-------------------------|------------------------------|
-| aircraft_type | arg to constructor | hardcodes `'jet fighter'` |
+| aircraft_type | table key | hardcodes `'jet fighter'` |
 | regression coefficients | Raymer Table 6.1 lookup | same lookup, same coefficients |
 
-| | WeightsLevel2 (generic) | F16WeightsLevel2 (F-16 spec) |
+| | WeightsL2 (generic toolbox) | F16WeightsL2 (F-16 spec) |
 |-|-------------------------|------------------------------|
-| AR, M_max, N_z | args to constructor | hardcodes 3.0, 2.05, 9.0 |
-| T/W, W/S | args to constructor | passed from F16ConstraintSet output |
+| AR, M_max, N_z | formula inputs | hardcodes F-16 spec values |
+| T/W, W/S | formula inputs | from constraint analysis output |
 
-| | WeightsLevel3 (generic) | F16WeightsLevel3 (F-16 spec) |
+| | WeightsL3 (generic toolbox) | F16WeightsL3 (F-16 spec) |
 |-|-------------------------|------------------------------|
-| N_z | arg to constructor | hardcodes 9.0 (MIL-SPEC) |
-| geometry | geometry object arg | uses F16GeometryLevel3 |
+| N_z | formula input | hardcodes 9.0 (MIL-SPEC) |
+| geometry inputs | formula inputs | F-16 exposed areas / envelope as own properties |
 
 ---
 
 ## Equations & References
 
-### WeightsLevel1 (generic)
+### WeightsL1 (generic toolbox)
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
 | OEW/W_TO | A × W_TO^C; jet fighter: A=2.34, C=−0.13 | Raymer 6th ed, Table 6.1 |
 | OEW | (OEW/W_TO) × W_TO | definition |
 
-### WeightsLevel2 (generic)
+### WeightsL2 (generic toolbox)
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
 | OEW | W_TO × (a + b × W_TO^c1 × AR^c2 × (T/W)^c3 × (W/S)^c4 × M_max^c5) × K_vs | Raymer 6th ed, eq 6.1 |
 | Coefficients (jet fighter) | a=−0.02, b=2.16, c1=−0.10, c2=0.20, c3=0.04, c4=−0.10, c5=0.08 | Raymer 6th ed, Table 6.1 |
 
-### WeightsLevel3 (generic component buildup)
+### WeightsL3 (generic toolbox — component buildup)
 | Component | Equation | Reference |
 |-----------|----------|-----------|
 | Wing | Raymer/Nicolai plate-area — exact eq TBD at implementation | Raymer 6th ed, eq 15.1 |
@@ -95,30 +101,35 @@ Implement `WeightsBase` and three generic fidelity levels using Raymer and Roska
 
 ## Tests
 
-### Generic (`tests/disciplines/TestWeightsLevels.m`)
+### L1 (`tests/disciplines/TestWeightsL1.m`)
 | Test | Expected | Tolerance |
 |------|----------|-----------|
 | OEW > 0 | positive | exact |
 | OEW < W_TO | enforced with error | exact |
 | OEW increases monotonically with W_TO | monotonic | exact |
+| F16 OEW at W_TO=31,377 lb | 17,000–23,000 lb (±15% of Brandt) | regression bounds |
+| F16 OEW/W_TO ratio | 0.54–0.72 (plausible fighter range) | Raymer table range |
+
+### L2 (`tests/disciplines/TestWeightsL2.m`)
+| Test | Expected | Tolerance |
+|------|----------|-----------|
+| F16 OEW at W_TO=31,377 lb | 18,000–22,000 lb (±10% of Brandt) | better bounds |
+
+### L3 (`tests/disciplines/TestWeightsL3.m`)
+| Test | Expected | Tolerance |
+|------|----------|-----------|
 | Each L3 component positive | all > 0 | exact |
 | L3 component sum = OEW | ±1e-6 lbf | analytical |
 
-### F-16 specific (`tests/examples/F16A/TestF16WeightsLevels.m`)
-| Test | Level | Expected | Tolerance |
-|------|-------|----------|-----------|
-| OEW at W_TO=31,377 lb | F16L1 | 17,000–23,000 lb (±15% of Brandt) | regression bounds |
-| OEW at W_TO=31,377 lb | F16L2 | 18,000–22,000 lb (±10% of Brandt) | better bounds |
-| OEW/W_TO ratio | F16L1 | 0.54–0.72 (plausible fighter range) | Raymer table range |
-
-Note: We compare against Brandt's OEW=19,980 lb as a sanity check on the right order of magnitude, not as an exact target. The textbook regressions are expected to differ from Brandt's calibrated values.
+Note: We compare against Brandt's OEW=19,980 lb (from `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`; `baseline/F16Baseline.m` is deprecated) as a sanity check on the right order of magnitude, not as an exact target. The textbook regressions are expected to differ from Brandt's calibrated values.
 
 ---
 
 ## Verification
 
 ```matlab
-runtests('tests/disciplines/TestWeightsLevels.m')
-runtests('tests/examples/F16A/TestF16WeightsLevels.m')
+runtests('tests/disciplines/TestWeightsL1.m')
+runtests('tests/disciplines/TestWeightsL2.m')
+runtests('tests/disciplines/TestWeightsL3.m')
 ```
 All tests must pass before Step 6 begins.
