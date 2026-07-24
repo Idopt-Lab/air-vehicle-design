@@ -1,36 +1,44 @@
 classdef (Abstract) AerodynamicsBase < handle
 %AERODYNAMICSBASE  Tier-1 base enforcer for all aerodynamics discipline classes.
 %
-%   Declares the two methods orchestrators call (drag_polar, get_CLmax) as
-%   abstract, and provides concrete utility methods that every fidelity level
-%   inherits unchanged.
+%   Enforces ONLY the two-method contract every orchestrator (ConstraintAnalysis,
+%   MissionAnalysis, SizingLoop) actually calls:
+%
+%     drag_polar(state) -> struct(CD0, K1, K2)   Convention A (see below)
+%     get_CLmax(state)  -> scalar
+%
+%   and provides two universal, fidelity-independent utility methods
+%   (compute_CD, compute_CL) that every level inherits unchanged.
 %
 %   Inheritance chain per fidelity level:
-%     AerodynamicsBase → AeroModelLN (abstract) → F16AeroLN (student class)
+%     AerodynamicsBase -> AeroModelLN (abstract) -> F16AeroLN (student class)
 %
-%   AeroL1/L2/L3 are standalone static toolboxes — they are NOT in this
-%   inheritance chain.  Student classes call them via AeroL1.method().
-
-% Properties - these are here for now, until I'm able to find fidelity-specific substitutes for each equation.
-% Also so each fidelity level has some consistent property enforcement across each fidelity level.
-properties (Abstract)
-     e_osw_clean
-     CD0
-     CDi
-     CL
-     CD
-     CL_minD
-     CL_max_clean
-     Cf % Skin friction coefficient
-     K1
-     K2
-end
-
+%   AeroL1/L2/L3 are standalone static toolboxes -- they are NOT in this
+%   inheritance chain.  Student classes call them via AeroLN.method().
+%
+%   ---------------------------------------------------------------------------
+%   K-CONVENTION (SETTLED -- Convention A):
+%     CD = CD0 + K1*CL^2 + K2*CL
+%   K1 is the quadratic/induced factor, K2 the linear/camber-offset term. This
+%   matches Mattingly AED 2nd ed. Eq. 2.9, Brandt Aero!G17, ThrustConstraint,
+%   and every AeroLN toolbox. (The K1/K2-swapped "Convention B" in the stale
+%   temp_AI/docs is NOT followed here.)
+%
+%   DESIGN NOTE (Aero deep-dive Phase C, 2026-07-23): the former abstract
+%   computed-quantity property block (e_osw_clean, CD0, CDi, CL, CD, CL_minD,
+%   CL_max_clean, Cf, K1, K2) was REMOVED. Those are derived outputs, not
+%   stored inputs; forcing every concrete class to carry them as frozen "=0"
+%   plain properties was stale-by-construction (a frozen K1=0 never reflected a
+%   mutated AR). Derived quantities now live either in the struct returned by
+%   drag_polar or in the concrete class's own properties (Dependent) getters
+%   that recompute live from the injected geometry object. Author-specific K
+%   decompositions (Mattingly K'/K'', Brandt single-e0, Raymer single-K) stay
+%   inside the level toolboxes; the base sees only the assembled {CD0,K1,K2}.
 
     methods (Abstract)
 
         %DRAG_POLAR  Drag polar coefficients at the given flight state.
-        %   Returns struct with fields CD0, K1, K2.
+        %   Returns struct with fields CD0, K1, K2 (Convention A).
         polar = drag_polar(obj, state)
 
         %GET_CLMAX  Maximum usable lift coefficient at the given flight state.
@@ -41,34 +49,24 @@ end
     methods
 
         function CD = compute_CD(~, CD0, K1, K2, CL)
-        %COMPUTE_CD  CD = CD0 + K1*CL^2 + K2*CL  (cambered polar).
-        %   Identical across all fidelity levels.
+        %COMPUTE_CD  CD = CD0 + K1*CL^2 + K2*CL   (Convention A).
+        %   Mattingly, "Aircraft Engine Design," 2nd ed., AIAA, 2002, Eq. 2.9
+        %   (Brandt Aero!G17 form). Identical across all fidelity levels.
             CD = CD0 + K1*CL^2 + K2*CL;
         end
 
         function CL = compute_CL(~, L, q, S_ref)
         %COMPUTE_CL  Lift coefficient from aero forces.
-        %   CL = L / (q * S_ref)
-        %   Identical across all fidelity levels.
-        %   Steady, level flight assumption.
-        %   TODO (7/10/2026): Incorporate the version expressing CL as a func of lift slope curve and angle of attack.
+        %   CL = L / (q * S_ref)   -- definitional (Nicolai Eq. 2.1).
+        %   Steady, level-flight assumption. Identical across all fidelity
+        %   levels. S_ref and q guarded positive (division denominators).
+            arguments
+                ~
+                L     (1,1) double
+                q     (1,1) double {mustBePositive}
+                S_ref (1,1) double {mustBePositive}
+            end
             CL = L / (q * S_ref);
-        end
-
-        function CD0 = compute_CD0(~, Cf, S_wet, S_ref)
-        %COMPUTE_CD0  Simplified CD0 estimate: CD0 = Cf * S_wet / S_ref.
-        %   Raymer 6th ed. §12.3.  Useful for L1/L2 quick estimates and for
-        %   L3 comparison against the component buildup result.
-            CD0 = Cf * S_wet / S_ref;
-        end
-
-        function CDi = get_CDi(obj, state, CL)
-        %GET_CDI  Induced drag coefficient at the given state and lift coefficient.
-        %   Uses the drag polar assembled by drag_polar(state) so the result is
-        %   consistent with the active fidelity level.
-        %   CDi = K1*CL^2 + K2*CL
-            polar = obj.drag_polar(state);
-            CDi   = polar.K1 * CL^2 + polar.K2 * CL;
         end
 
     end

@@ -1,325 +1,382 @@
 classdef TestAeroL2 < matlab.unittest.TestCase
-     %TESTAERO L2  Unit tests for AeroL2 toolbox and F16AeroL2 student class.
-     %
-     %   Formula references:
-     %     CL_alpha = 2*pi*AR / (2 + sqrt(4 + (AR*beta)^2*(1+tan^2(Lc4)/beta^2)))
-     %       Raymer 6th ed. Eq. 12.6   [beta = sqrt(1-M^2)]
-     %     CLmax = 0.9 * cl_max_2D * cos(Lambda_c4_deg)  Raymer 6th ed. §12.2
-     %     CD0, e, K1, K2: same equations as L1 (tested separately in TestAeroL1)
-     %
-     %   Pre-computed F-16A expected values at M=0:
-     %     beta=1, Lambda_c4=37 deg
-     %     CL_alpha = 2*pi*3 / (2 + sqrt(4 + 9*(1+tan(37°)^2)))
-     %              = 18.850 / (2 + sqrt(4 + 9*1.5679)) = 18.850 / (2 + sqrt(18.111))
-     %              = 18.850 / (2 + 4.2559) = 18.850 / 6.2559 = 3.013 /rad
-     %
-     %   At M=0.6:
-     %     beta=0.800
-     %     CL_alpha = 18.850 / (2 + sqrt(4 + (3*0.8)^2*(1+tan(37°)^2/0.64)))
-     %              = 18.850 / (2 + sqrt(4 + 5.76*(1+0.8874)))
-     %              = 18.850 / (2 + sqrt(14.859)) = 18.850 / (2 + 3.855) = 3.219 /rad
-     %
-     %   CLmax = 0.9 * 1.20 * cos(37°) = 0.9 * 1.20 * 0.79864 = 0.8624
+%TESTAEROL2  Tier-1 unit/correctness tests for the AeroL2 toolbox + F16AeroL2.
+%
+%   L2 is the GEOMETRY-DEPENDENT clean drag polar + finite-wing lift, with all
+%   geometry read live from an injected geometry object (dependency injection):
+%     CD0 (subsonic)  = Cfe*(S_wet/S_ref)              Raymer 6th ed. Eq. 12.23
+%     e (Lambda_LE>=30) = 4.61*(1-0.045*AR^0.68)*cos(L)^0.15 - 3.1   Eq. 12.49
+%     e (Lambda_LE<30)  = 1.78*(1-0.045*AR^0.68) - 0.64              Eq. 12.48
+%     K1 subsonic     = 1/(pi*AR*e)                    Eq. 12.50
+%     K1 supersonic   = AR*(M^2-1)*cos(L_LE)/(4*AR*beta-2)          Eq. 12.51
+%     K2 subsonic     = -2*K1*CL_minD (< 0, cambered)  Brandt Sec. 4.3
+%     CL_alpha        = finite-wing Datcom slope       Eq. 12.6
+%     CLmax (clean)   = 0.9*cl_max_2D*cos(Lambda_c/4)  Eq. 12.15
+%   Transonic band (0.95 < M < 1.05) is NOT modeled -> drag_polar returns NaN.
+%
+%   Every "expected" is HAND-COMPUTED from the cited formula (arithmetic shown
+%   inline), using GENUINE spec inputs where an F16 value is needed: AR=3,
+%   Lambda_LE=40 deg (f16a_L2.json .geometry wing block), Cfe=0.0035 (Raymer Table
+%   12.3), cl_max_2D=1.20 (airfoil), and the geometry-DERIVED quarter-chord
+%   sweep Lambda_c/4=32.1831783983 deg (independently hand-computed in
+%   TestGeomL2.testConvertSweepWingQC..., a GEOMETRY result, not an aero one).
+%   No Brandt-comparison assertions here -- those live in the separate
+%   examples/F16A/aerodynamics_brandt_comparison.m report.
+%
+%   NOTE ON DELETED TESTS (do not re-add): the previous TestAeroL2 asserted
+%   CL_alpha at M=0 AND M=0.6 against the SAME Brandt per-degree constant
+%   (0.054312*57.3, a value tabulated at Mcrit) -- self-contradicting and
+%   self-referential (Brandt-model echo, todo.md Finding D). Its
+%   testCLmaxClean/testDragPolarAtConstraintConditions were loose Brandt
+%   comparisons. All removed; comparison happens only in the report.
+%
+%   testTODO_* are DELIBERATELY-FAILING placeholders for unverified airfoil
+%   citations still marked _TODO in f16a_L2.json's .aerodynamics (the only expected
+%   run_all_tests failures from this file).
 
-     properties (Constant)
-          TOL_ABS = 0.20;
-     end
+    methods (Static, Access = private)
+        function a = makeAero()
+        %MAKEAERO  A fresh F16AeroL2 with an injected F16GeomL2, both built from
+        %   the unified L2 JSON (constructors require explicit paths -- no
+        %   silent defaults).
+            a = F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2));
+        end
+        function J = readAeroL2JSON()
+        %READAEROL2JSON  The .aerodynamics block of the unified L2 JSON.
+            J = jsondecode(fileread(f16a_spec_path(2))).aerodynamics;
+        end
+    end
 
-     % Brandt "Aero" A6:E10 tabulates the model polar at 5 Mach points
-     % (b.brandt.polar_model rows): M = 0.1000, 0.8727(=Mcrit), 1.0547,
-     % 1.5000, 2.0000. Tests below that compare against Brandt values use
-     % these same rows/Mach numbers rather than arbitrary points.
-     properties (TestParameter)
-          brandtRow      = {1, 2, 3, 4, 5};
-          constraintName = {'cruise', 'combat_sub', 'dash', 'max_alt', 'combat_sup', 'ps'};
-     end
+    methods (Test)
 
-     % ------------------------------------------------------------------ %
-     methods (Test)
+        % ================================================================== %
+        % Oswald efficiency (Raymer Eq. 12.48 / 12.49, branch on Lambda_LE)
+        % ================================================================== %
 
-          % --- CL_alpha formula --------------------------------------------
+        function testOswaldEffEq1249Swept(tc)
+            % Lambda_LE=40 (>=30) -> Eq. 12.49, AR=3 (genuine F16 spec):
+            %   e = 4.61*(1-0.045*3^0.68)*cos(40)^0.15 - 3.1
+            %   3^0.68 = 2.1107775 ; 0.045*2.1107775 = 0.0949850 ; 1-... = 0.9050150
+            %   cos(40)^0.15 = 0.766044^0.15 = 0.9608113
+            %   e = 4.61*0.9050150*0.9608113 - 3.1 = 4.0086192 - 3.1 = 0.9086192
+            tc.verifyEqual(AeroL2.oswald_eff(3, 40), 0.9086192166, 'RelTol', 1e-4);
+        end
 
-          function testCLalphaAtMachZero(tc)
-               % M=0: beta=1, CL_alpha = 18.850/6.256 = 3.013 /rad
-               % Brandt gives 0.0615 /deg = 3.52 /rad, but that is at Mcrit=0.8727
-               % (he uses per-degree units; 57.3 converts to /rad). No M=0 counterpart.
-               g    = F16AeroL2();
-               AR   = 3.0;  Lc4 = 37;
-               beta = 1.0;
-               % Raymer Eq. 12.6 is the primary source
-               expected = 0.054312*57.3; % Taken from Brandt, Aero, A15 (main wing)
-               received = g.get_CL_alpha(0.0);
-               fprintf('\n    CL_alpha (M=0):   received = %.4f /rad,  expected = %.4f /rad\n', ...
-                    received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
+        function testOswaldEffEq1248Unswept(tc)
+            % Independently chosen unswept case Lambda_LE=10 (<30), AR=8 ->
+            % Eq. 12.48:  e = 1.78*(1-0.045*8^0.68) - 0.64
+            %   8^0.68 = 4.1124553 ; 0.045*4.1124553 = 0.1850605 ; 1-... = 0.8149395
+            %   e = 1.78*0.8149395 - 0.64 = 1.4505923 - 0.64 = 0.8105923
+            % (verifies the Eq.12.48 branch is selected for Lambda_LE < 30.)
+            tc.verifyEqual(AeroL2.oswald_eff(8, 10), 0.8105923299, 'RelTol', 1e-4);
+        end
 
-          function testCLalphaAtMach06(tc)
-               % M=0.6: beta=0.8, expected ≈ 3.219 /rad
-               % No Brandt counterpart at M=0.6; Raymer Eq. 12.6 is the primary source.
-               g    = F16AeroL2();
-               AR   = 3.0;  Lc4 = 37;  M = 0.6;
-               beta = sqrt(1 - M^2);
-               % expected ≈ 3.219
-               expected = 0.054312*57.3; % Taken from Brandt, Aero, A15 (main wing)
-               received = g.get_CL_alpha(M);
-               fprintf('\n    CL_alpha (M=0.6): received = %.4f /rad,  expected = %.4f /rad\n', ...
-                    received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
+        function testGetEoswReadsInjectedGeometry(tc)
+            % F16AeroL2.get_e_osw must return the Eq.12.49 value for the
+            % injected AR=3, Lambda_LE=40 -> 0.9086192 (same hand value above).
+            % Confirms the JSON->geom->aero pipeline uses the official method.
+            a = TestAeroL2.makeAero();
+            tc.verifyEqual(a.get_e_osw(), 0.9086192166, 'RelTol', 1e-4);
+        end
 
-          function testCLalphaIncreasesWithMach(tc)
-               % Compressibility (Prandtl-Glauert) raises finite-wing CL_alpha from
-               % M=0 to M → 1.
-               g   = F16AeroL2();
-               a0  = g.get_CL_alpha(0.0);
-               a06 = g.get_CL_alpha(0.6);
-               fprintf('\n    CL_alpha: M=0 → %.4f /rad,  M=0.6 → %.4f /rad\n', a0, a06);
-               tc.verifyGreaterThan(a06, a0, ...
-                    'CL_alpha should increase with Mach (compressibility effect).');
-          end
+        function testUnknownEMethodThrows(tc)
+            % A bogus e_method must error (only "official" is defined).
+            a = TestAeroL2.makeAero();
+            a.e_method = "bogus";
+            tc.verifyError(@() a.get_e_osw(), 'AeroL2:unknownEMethod');
+        end
 
-          % --- CLmax -------------------------------------------------------
+        % ================================================================== %
+        % Induced factor K1 (Raymer Eq. 12.50 subsonic / Eq. 12.51 supersonic)
+        % ================================================================== %
 
-          function testCLmaxClean(tc)
-               % CLmax = 0.9 * cl_max_2D * cos(Lambda_c4).  Raymer §12.2.
-               % Formula gives 0.9*1.20*cos(37°) = 0.8624.
-               % Brandt CLmax_clean = 0.9869 [Brandt L8]; formula is ~12.6% low → within ±20%.
-               b        = F16Baseline();
-               expected = b.brandt.CLmax_clean;   % 0.9869
-               g        = F16AeroL2();
-               state    = AircraftState(0, 0.3);
-               received = g.get_CLmax(state);
-               fprintf('\n    CLmax: received = %.5f,  expected (Brandt) = %.5f\n', received, expected);
-               tc.verifyEqual(received, expected, 'RelTol', 0.20, ...
-                    'CLmax deviates >20% from Brandt workbook value.');
-          end
+        function testK1SubsonicFormula(tc)
+            % K1 = 1/(pi*AR*e). Independent inputs e=0.85, AR=8:
+            %   1/(pi*8*0.85) = 1/21.36283 = 0.04681028
+            tc.verifyEqual(AeroL2.K1_subsonic(0.85, 8), 0.0468102774, 'RelTol', 1e-4);
+        end
 
-          function testCLmaxLessThanSection(tc)
-               % Finite-wing sweep correction: CLmax_wing < cl_max_2D.
-               g     = F16AeroL2();
-               state = AircraftState(0, 0.3);
-               tc.verifyLessThan(g.get_CLmax(state), g.cl_max_2D, ...
-                    'Wing CLmax should be less than 2D section CLmax due to sweep.');
-          end
+        function testK1SupersonicFormula(tc)
+            % Eq. 12.51: K1 = AR*(M^2-1)*cos(L_LE)/(4*AR*beta-2), beta=sqrt(M^2-1).
+            % M=1.5, AR=3, L_LE=40:
+            %   beta = sqrt(1.25) = 1.1180340
+            %   num  = 3*1.25*cos(40) = 3.75*0.766044 = 2.8726657
+            %   den  = 4*3*1.1180340 - 2 = 13.416408 - 2 = 11.416408
+            %   K1   = 2.8726657/11.416408 = 0.2516261
+            tc.verifyEqual(AeroL2.K1_supersonic(1.5, 3, 40), 0.2516261416, 'RelTol', 1e-4);
+        end
 
-          % --- drag_polar vs Brandt ACTUAL (flight-measured) polar ---------
+        function testK1SupersonicRejectsSubsonicMach(tc)
+            % Guard: calling the supersonic branch at M<=1 must error.
+            tc.verifyError(@() AeroL2.K1_supersonic(0.8, 3, 40), 'AeroL2:subsonicMach');
+        end
 
-          function testDragPolarVsBrandtActualAtDash(tc)
-               % Sanity check against Brandt's ACTUAL (flight-measured) polar
-               % table [Brandt Aero!M6:Q10] at 36 kft, M=1.6 -- a different
-               % reference table than polar_model used elsewhere in this file
-               % (see fidelity_comparison.m "[AERO — SUP]" section). This
-               % flight-measured K1 (0.34) reflects real supersonic effects
-               % L2's linear-theory K1 (Raymer Eq. 12.51, verified against the
-               % polar_model curve in testK1AtBrandtMachPoints) doesn't
-               % capture, so this is a coarse positivity / order-of-magnitude
-               % check only.
-               b       = F16Baseline();
-               g       = F16AeroL2();
-               state   = AircraftState(36000, 1.60);
-               polar   = g.drag_polar(state);
-               CD0_ref = b.brandt.polar_actual(4,3);   % 0.0461 [Brandt Aero!O9]
-               K1_ref  = b.brandt.polar_actual(4,4);   % 0.3400 [Brandt Aero!P9]
-               fprintf('\n    dash (actual polar ref): CD0=%.4f (ref %.4f), K1=%.4f (ref %.4f)\n', ...
-                    polar.CD0, CD0_ref, polar.K1, K1_ref);
-               tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
-               tc.verifyGreaterThan(polar.K1, 0, 'K1 must be positive.');
-               tc.verifyLessThan(polar.CD0, 5*CD0_ref, ...
-                    'CD0 is more than 5x Brandt actual-polar reference -- check for a gross error.');
-               tc.verifyLessThan(polar.K1, 5*K1_ref, ...
-                    'K1 is more than 5x Brandt actual-polar reference -- check for a gross error.');
-          end
+        function testGetK1TransonicThrows(tc)
+            % get_K1 is undefined in the transonic band (avoids the Eq.12.51
+            % pole) -- must error (drag_polar returns the NaN signal instead).
+            a = TestAeroL2.makeAero();
+            tc.verifyError(@() a.get_K1(1.0), 'AeroL2:transonicNotModeled');
+        end
 
-          % --- Verification across Brandt's tabulated Mach breakpoints -----
-          %   K1/CD0 use the same formulas as L1 (see header note); tolerance
-          %   reasoning matches TestAeroL1's equivalent tests.
+        % ================================================================== %
+        % Camber offset K2 (Convention A: CD = CD0 + K1*CL^2 + K2*CL)
+        % ================================================================== %
 
-          function testK1AtBrandtMachPoints(tc, brandtRow)
-               b        = F16Baseline();
-               M        = b.brandt.polar_model(brandtRow, 1);
-               K1_ref   = b.brandt.polar_model(brandtRow, 4);
-               g        = F16AeroL2();
-               received = g.get_K1(M);
-               fprintf('\n    K1 (M=%.4f): received = %.4f,  Brandt = %.4f  (%+.1f%%)\n', ...
-                    M, received, K1_ref, 100*(received-K1_ref)/K1_ref);
-               if ismember(brandtRow, [1, 2, 4])
-                    tc.verifyEqual(received, K1_ref, 'RelTol', 0.20, ...
-                         sprintf('K1 at M=%.4f deviates >20%% from Brandt.', M));
-               else
-                    % Rows 3 (M=1.0547, near-M=1 singularity of Eq. 12.51) and
-                    % 5 (M=2.0, linear theory under-predicts at high Mach) are
-                    % known breakdowns of the linear theory -- see TestAeroL1.
-                    tc.verifyGreaterThan(received, 0, ...
-                         'K1 must stay positive even where linear theory breaks down near/beyond M=1.');
-               end
-          end
+        function testCLminDFormula(tc)
+            % CL_minD = CL_alpha*(-deg2rad(alpha_L0)/2). Independent inputs
+            % CL_alpha=3.0/rad, alpha_L0=-1.5 deg:
+            %   -deg2rad(-1.5)/2 = deg2rad(1.5)/2 = 0.02617994/2 = 0.01308997
+            %   CL_minD = 3.0*0.01308997 = 0.03926991
+            tc.verifyEqual(AeroL2.compute_CL_minD(3.0, -1.5), 0.0392699082, 'RelTol', 1e-4);
+        end
 
-          function testCD0AtBrandtMachPoints(tc, brandtRow)
-               % L2 CD0 has no Mach dependence (same formula as L1) -- only
-               % tracks Brandt in the flat subsonic region (rows 1-2).
-               b        = F16Baseline();
-               M        = b.brandt.polar_model(brandtRow, 1);
-               CD0_ref  = b.brandt.polar_model(brandtRow, 3);
-               g        = F16AeroL2();
-               received = g.get_CD0();
-               fprintf('\n    CD0 (M=%.4f): received = %.4f,  Brandt = %.4f  (%+.1f%%)\n', ...
-                    M, received, CD0_ref, 100*(received-CD0_ref)/CD0_ref);
-               if ismember(brandtRow, [1, 2])
-                    tc.verifyEqual(received, CD0_ref, 'RelTol', 0.20, ...
-                         sprintf('CD0 at M=%.4f deviates >20%% from Brandt.', M));
-               else
-                    tc.verifyGreaterThan(received, 0.005);
-                    tc.verifyLessThan(received, 0.030);
-               end
-          end
+        function testK2ValueSubsonic(tc)
+            % K2 = -2*K1_sub*CL_minD (M<1). Independent K1_sub=0.117,
+            % CL_minD=0.05, M=0.6:  -2*0.117*0.05 = -0.0117
+            tc.verifyEqual(AeroL2.K2_value(0.117, 0.05, 0.6), -0.0117, 'RelTol', 1e-4);
+        end
 
-          % --- Verification at Brandt's constraint-analysis conditions -----
+        function testK2ValueSupersonicIsZero(tc)
+            % K2 = 0 for all M>=1 (linearized supersonic theory), regardless
+            % of CL_minD.
+            tc.verifyEqual(AeroL2.K2_value(0.117, 0.20, 1.2), 0, 'AbsTol', 1e-12);
+        end
 
-          function testDragPolarAtConstraintConditions(tc, constraintName)
-               % See TestAeroL1's equivalent test for rationale. F16Baseline
-               % b.constraints.*.CD0/K1/K2 carry Brandt's own drag-polar
-               % coefficients at each condition (Consts sheet); the flat
-               % subsonic points get a real numeric comparison, same
-               % ±20% tolerance as testCD0/K1AtBrandtMachPoints.
-               b     = F16Baseline();
-               c     = b.constraints.(constraintName);
-               g     = F16AeroL2();
-               state = AircraftState(c.alt_ft, c.mach);
-               polar = g.drag_polar(state);
-               fprintf('\n    %-11s alt=%6.0f  M=%.2f: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                    constraintName, c.alt_ft, c.mach, polar.CD0, polar.K1, polar.K2, c.CD0, c.K1, c.K2);
-               tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
-               tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
-               tc.verifyTrue(isfinite(polar.CD0) && isfinite(polar.K1) && isfinite(polar.K2), ...
-                    'drag_polar outputs must be finite.');
-               if c.mach >= 1
-                    tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, 'K2 must be 0 supersonic.');
-               end
-               if ismember(constraintName, {'cruise', 'combat_sub', 'max_alt', 'ps'})
-                    tc.verifyEqual(polar.CD0, c.CD0, 'RelTol', 0.20, ...
-                         sprintf('CD0 at %s deviates >20%% from Brandt.', constraintName));
-                    tc.verifyEqual(polar.K1, c.K1, 'RelTol', 0.20, ...
-                         sprintf('K1 at %s deviates >20%% from Brandt.', constraintName));
-               end
-          end
+        function testGetK2NegativeForCamberedF16(tc)
+            % The F16's cambered 64A204 (alpha_L0 = -1.01 deg) gives CL_minD>0,
+            % so subsonic K2 = -2*K1*CL_minD is strictly NEGATIVE (sign check;
+            % the magnitude depends on the M-dependent CL_alpha).
+            a  = TestAeroL2.makeAero();
+            k1 = a.get_K1(0.6);
+            tc.verifyLessThan(a.get_K2(k1, 0.6), 0, ...
+                'Cambered F16 airfoil must give a negative subsonic K2.');
+        end
 
-          % --- drag_polar struct -------------------------------------------
+        % ================================================================== %
+        % Finite-wing lift-curve slope (Raymer Eq. 12.6)
+        % ================================================================== %
 
-          function testDragPolarReturnsStruct(tc)
-               g     = F16AeroL2();
-               state = AircraftState(0, 0.5);
-               polar = g.drag_polar(state);
-               tc.verifyTrue(isstruct(polar));
-               tc.verifyTrue(isfield(polar, 'CD0'));
-               tc.verifyTrue(isfield(polar, 'K1'));
-               tc.verifyTrue(isfield(polar, 'K2'));
-          end
+        function testCLalphaFormula(tc)
+            % Eq. 12.6 with the default eta=0.95 (no 2-D slope), no fuselage
+            % factor. Independent inputs AR=8, Lambda_c/4=25 deg, M=0.5:
+            %   beta = sqrt(1-0.25) = 0.8660254
+            %   AR*beta/eta = 8*0.8660254/0.95 = 7.2928455
+            %   tan(25)^2/beta^2 = 0.4663077^2/0.75 = 0.2174429/0.75 = 0.2899238
+            %   radicand = 4 + 7.2928455^2*(1+0.2899238) = 4 + 68.6053643 = 72.6053643
+            %   sqrt = 8.5208781
+            %   CL_a = 2*pi*8/(2 + 8.5208781) = 50.265482/10.5208781 = 4.7776889
+            tc.verifyEqual(AeroL2.CL_alpha(8, 25, 0.5), 4.7776888765, 'RelTol', 1e-4);
+        end
 
-          function testDragPolarK2ZeroSupersonic(tc)
-               % K2 must be zero at M=1.2.
-               g     = F16AeroL2();
-               state = AircraftState(30000, 1.2);
-               polar = g.drag_polar(state);
-               fprintf('\n    K2 at M=1.2: received = %.6f,  expected = 0\n', polar.K2);
-               tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, ...
-                    'K2 must be 0 at supersonic speeds.');
-          end
+        function testCLalphaClampsSupersonicMach(tc)
+            % Eq. 12.6 is subsonic; M is clamped to 0.99 internally, so
+            % CL_alpha(...,1.5) must equal CL_alpha(...,0.99) (no crash, no
+            % imaginary beta).
+            v_super = AeroL2.CL_alpha(3, 32, 1.5);
+            v_clamp = AeroL2.CL_alpha(3, 32, 0.99);
+            tc.verifyEqual(v_super, v_clamp, 'RelTol', 1e-4);
+            tc.verifyTrue(isreal(v_super) && isfinite(v_super));
+        end
 
-          % --- Physical range ----------------------------------------------
+        % ================================================================== %
+        % Clean CLmax (Raymer Eq. 12.15)
+        % ================================================================== %
 
-          function testCLalphaPhysicalRange(tc)
-               % Typical fighter CL_alpha: 2.0–5.0 /rad.
-               g        = F16AeroL2();
-               received = g.get_CL_alpha(0.5);
-               fprintf('\n    CL_alpha (M=0.5) = %.4f /rad  [bounds: 2.0, 5.0]\n', received);
-               tc.verifyGreaterThan(received, 2.0);
-               tc.verifyLessThan(received,   5.0);
-          end
+        function testCLmaxCleanFormula(tc)
+            % CLmax = 0.9*cl_max_2D*cos(Lambda_c/4). Independent inputs
+            % cl_max_2D=1.5, Lambda_c/4=30 deg:
+            %   0.9*1.5*cos(30) = 1.35*0.8660254 = 1.1691343
+            tc.verifyEqual(AeroL2.CLmax_clean(1.5, 30), 1.1691342951, 'RelTol', 1e-4);
+        end
 
-          function testCLmaxPhysicalRange(tc)
-               % Clean fighter CLmax: 0.5–1.5.
-               g     = F16AeroL2();
-               state = AircraftState(0, 0.3);
-               received = g.get_CLmax(state);
-               fprintf('\n    CLmax = %.4f  [bounds: 0.50, 1.50]\n', received);
-               tc.verifyGreaterThan(received, 0.50);
-               tc.verifyLessThan(received,   1.50);
-          end
+        function testGetCLmaxUsesGeometryQuarterChordSweep(tc)
+            % F16AeroL2.get_CLmax uses the genuine cl_max_2D=1.20 and the
+            % geometry-DERIVED quarter-chord sweep 32.1831783983 deg (NOT the
+            % old hardcoded 37 deg). Hand-computed:
+            %   0.9*1.20*cos(32.1831783983) = 1.08*0.846349 = 0.9140575
+            % (cos(32.1831784) = 0.8463496.) Guards the sweep-source bug fix.
+            a = TestAeroL2.makeAero();
+            tc.verifyEqual(a.get_CLmax([]), 0.9140575443, 'RelTol', 1e-4);
+        end
 
-          % --- Inheritance / interface compliance --------------------------
+        % ================================================================== %
+        % Subsonic CD0 (Raymer Eq. 12.23) -- primitive + DI wiring
+        % ================================================================== %
 
-          function testIsaAerodynamicsBase(tc)
-               g = F16AeroL2();
-               tc.verifyTrue(isa(g, 'AerodynamicsBase'));
-          end
+        function testCD0FromCfFormula(tc)
+            % CD0 = Cf*S_wet/S_ref. Independent inputs Cf=0.0035, S_wet=1470,
+            % S_ref=300:  0.0035*1470/300 = 5.145/300 = 0.017150
+            tc.verifyEqual(AeroL2.CD0_from_Cf(0.0035, 1470, 300), 0.017150, 'RelTol', 1e-4);
+        end
 
-          function testIsaAeroModelL2(tc)
-               g = F16AeroL2();
-               tc.verifyTrue(isa(g, 'AeroModelL2'));
-          end
+        function testCD0FromCfGuardsZeroSref(tc)
+            % S_ref is a division denominator -> mustBePositive guard.
+            tc.verifyError(@() AeroL2.CD0_from_Cf(0.0035, 1470, 0), ...
+                'MATLAB:validators:mustBePositive');
+        end
 
-          function testNotIsaAeroModelL1(tc)
-               g = F16AeroL2();
-               tc.verifyFalse(isa(g, 'AeroModelL1'), ...
-                    'L2 must NOT inherit from the L1 enforcer.');
-          end
+        function testGetCD0UsesInjectedSwetSref(tc)
+            % DI wiring: get_CD0 must equal Cfe*(injected S_wet)/(injected
+            % S_ref) with NO hardcoded S_wet (the historical S_wet=1371 bug).
+            % Verifies the operands are wired from the live geometry object,
+            % not frozen literals. The NUMERIC value of S_wet is verified
+            % independently in TestGeomL2, not re-derived here.
+            a = TestAeroL2.makeAero();
+            tc.verifyEqual(a.get_CD0(), a.Cfe * a.S_wet / a.S_ref, 'RelTol', 1e-12);
+            % ...and it must NOT be the old hardcoded S_wet=1371 result:
+            tc.verifyNotEqual(round(a.S_wet, 0), 1371, ...
+                'S_wet must be the live geometry value, not the Brandt back-calc 1371.');
+        end
 
-          function testIsHandleClass(tc)
-               g = F16AeroL2();
-               tc.verifyTrue(isa(g, 'handle'));
-          end
+        function testSupersonicCD0IsPositiveFinite(tc)
+            % L2 supersonic CD0 = Cf(Re,M)*S_wet/S_ref (skin friction only, NO
+            % wave drag -- that is L3). Just check it is a positive finite
+            % number at M=1.5; the (low) magnitude vs Brandt is a report item.
+            a     = TestAeroL2.makeAero();
+            polar = a.drag_polar(AircraftState(0, 1.5));
+            tc.verifyTrue(isfinite(polar.CD0) && polar.CD0 > 0);
+        end
 
-          % --- High-lift-device deltas (flap only, from geometry) ----------
-          %   Delta_e_osw: Roskam Table 3.6 (tabulated, no closed form).
-          %   Delta_CLmax: Raymer Table 12.2 + Eq. 12.21 (geometry-driven).
-          %   Delta_CD0/CDi: Raymer Eq. 12.61/12.62 (geometry-driven).
+        % ================================================================== %
+        % Transonic guard (mandatory): drag_polar returns NaN, no crash
+        % ================================================================== %
 
-          function testDeltaEoswNegative(tc)
-               g = F16AeroL2();
-               fprintf('\n    Delta_e_osw: TO=%.4f  L=%.4f\n', g.get_Delta_e_osw_TO(), g.get_Delta_e_osw_L());
-               tc.verifyLessThan(g.get_Delta_e_osw_TO(), 0);
-               tc.verifyLessThan(g.get_Delta_e_osw_L(), g.get_Delta_e_osw_TO());
-          end
+        function testDragPolarTransonicReturnsNaN(tc)
+            % In the un-modeled transonic band (M=1.0) drag_polar returns NaN
+            % for CD0/K1/K2 (Eq.12.51 pole near M=1) rather than crashing.
+            a = TestAeroL2.makeAero();
+            w = warning('off', 'AeroL2:transonicNotModeled');
+            cleanup = onCleanup(@() warning(w)); %#ok<NASGU>
+            polar = a.drag_polar(AircraftState(0, 1.0));
+            tc.verifyTrue(isnan(polar.CD0));
+            tc.verifyTrue(isnan(polar.K1));
+            tc.verifyTrue(isnan(polar.K2));
+        end
 
-          function testDeltaCD0PositiveAndOrdered(tc)
-               g = F16AeroL2();
-               fprintf('\n    Delta_CD0: TO=%.4f  L=%.4f\n', g.get_Delta_CD0_TO(), g.get_Delta_CD0_L());
-               tc.verifyGreaterThan(g.get_Delta_CD0_TO(), 0);
-               tc.verifyGreaterThan(g.get_Delta_CD0_L(), g.get_Delta_CD0_TO(), ...
-                    'Landing flap deflection (65 deg) should add more CD0 than takeoff (30 deg).');
-          end
+        function testDragPolarTransonicWarns(tc)
+            % The transonic branch must WARN (not silently NaN).
+            a = TestAeroL2.makeAero();
+            tc.verifyWarning(@() a.drag_polar(AircraftState(0, 1.0)), ...
+                'AeroL2:transonicNotModeled');
+        end
 
-          function testDeltaCLmaxPositiveAndOrdered(tc)
-               g = F16AeroL2();
-               fprintf('\n    Delta_CLmax: TO=%.4f  L=%.4f\n', g.get_Delta_CLmax_TO(), g.get_Delta_CLmax_L());
-               tc.verifyGreaterThan(g.get_Delta_CLmax_TO(), 0);
-               tc.verifyGreaterThan(g.get_Delta_CLmax_L(), g.get_Delta_CLmax_TO(), ...
-                    'Landing uses 80% of Table 12.2''s Delta_cl_max vs 60% for takeoff.');
-          end
+        function testDragPolarSubsonicFiniteK2Negative(tc)
+            % Subsonic (M=0.6): all coefficients finite/real, and the cambered
+            % K2 is negative (sign contract).
+            a     = TestAeroL2.makeAero();
+            polar = a.drag_polar(AircraftState(0, 0.6));
+            tc.verifyTrue(all(isfinite([polar.CD0, polar.K1, polar.K2])));
+            tc.verifyLessThan(polar.K2, 0);
+        end
 
-          function testDeltaCDiPositive(tc)
-               % Raymer Eq. 12.62: induced-drag increment is always >= 0
-               % (proportional to (Delta_CL_flap)^2).
-               g = F16AeroL2();
-               fprintf('\n    Delta_CDi: TO=%.5f  L=%.5f\n', g.get_Delta_CDi_TO(), g.get_Delta_CDi_L());
-               tc.verifyGreaterThanOrEqual(g.get_Delta_CDi_TO(), 0);
-               tc.verifyGreaterThanOrEqual(g.get_Delta_CDi_L(), 0);
-          end
+        function testDragPolarSupersonicK2Zero(tc)
+            % Supersonic (M=1.5): K2 = 0 (linearized theory).
+            a     = TestAeroL2.makeAero();
+            polar = a.drag_polar(AircraftState(0, 1.5));
+            tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12);
+        end
 
-          function testCLmaxTotalVsBrandtTakeoffLanding(tc)
-               % L2's flap-only CLmax_TO/L omit the F-16's actual leading-edge
-               % flap contribution (added at L3), so expect CLmax_TO/L to
-               % under-shoot Brandt's targets -- generous tolerance.
-               b = F16Baseline();
-               g = F16AeroL2();
-               fprintf('\n    CLmax_TO: received=%.4f  Brandt=%.4f\n', g.get_CLmax_TO(), b.brandt.CLmax_TO);
-               fprintf('    CLmax_L:  received=%.4f  Brandt=%.4f\n', g.get_CLmax_L(), b.brandt.CLmax_land);
-               tc.verifyGreaterThan(g.get_CLmax_TO(), g.get_CLmax([]));
-               tc.verifyGreaterThan(g.get_CLmax_L(),  g.get_CLmax_TO());
-               tc.verifyLessThan(g.get_CLmax_L(), b.brandt.CLmax_land, ...
-                    'L2 (flap only, no slat) should not exceed Brandt''s full-HLD landing CLmax.');
-          end
+        % ================================================================== %
+        % Optimization-ready DI guards (mirror TestGeomL2)
+        % ================================================================== %
 
-     end
+        function testDerivedTracksMutatedGeometryLiveOnRead(tc)
+            % LIVE-RECOMPUTE: read a derived aero value, mutate the injected
+            % geometry input IN PLACE, and confirm the derived value tracks the
+            % change with NO reconstruction (the behavior a downstream
+            % optimizer depends on).
+            a   = TestAeroL2.makeAero();
+            AR0 = a.AR;               % Dependent, reads geom.AR_wing
+            k0  = a.get_K1(0.6);      % depends on AR and e(AR)
+            a.geom.AR_wing = a.geom.AR_wing + 1;   % optimizer-style mutation
+            tc.verifyEqual(a.AR, AR0 + 1, 'AbsTol', 1e-12, ...
+                'a.AR must track the mutated injected geom.AR_wing live.');
+            tc.verifyNotEqual(a.get_K1(0.6), k0, ...
+                'K1 must change after the injected AR is mutated (no stale cache).');
+        end
+
+        function testDerivedPropertiesAreReadOnly(tc)
+            % Derived (Dependent) aero properties are outputs: assigning to one
+            % must error 'MATLAB:class:noSetMethod' (nothing can overwrite a
+            % live-computed value with a frozen literal).
+            a = TestAeroL2.makeAero();
+            tc.verifyError(@() setfield(a, 'AR', 5),            'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(a, 'S_wet', 1371),      'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(a, 'Lambda_c4_deg', 37),'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
+
+        % ================================================================== %
+        % High-lift-device deltas -- ordering/sign only (formulas are
+        % geometry-driven; exact magnitudes are report items, not unit checks)
+        % ================================================================== %
+
+        function testDeltaCLmaxFlapOrdered(tc)
+            % Landing uses 80% of Table 12.2's Delta_cl_max vs 60% at takeoff
+            % (Raymer Eq. 12.21) -> both positive, landing > takeoff.
+            a = TestAeroL2.makeAero();
+            tc.verifyGreaterThan(a.get_Delta_CLmax_TO(), 0);
+            tc.verifyGreaterThan(a.get_Delta_CLmax_L(), a.get_Delta_CLmax_TO());
+        end
+
+        function testDeltaCD0FlapOrdered(tc)
+            % Larger landing flap deflection -> larger parasite increment
+            % (Raymer Eq. 12.61, linear in delta-10).
+            a = TestAeroL2.makeAero();
+            tc.verifyGreaterThan(a.get_Delta_CD0_TO(), 0);
+            tc.verifyGreaterThan(a.get_Delta_CD0_L(), a.get_Delta_CD0_TO());
+        end
+
+        % ================================================================== %
+        % Inheritance / interface compliance
+        % ================================================================== %
+
+        function testIsaAerodynamicsBase(tc)
+            tc.verifyTrue(isa(TestAeroL2.makeAero(), 'AerodynamicsBase'));
+        end
+
+        function testIsaAeroModelL2(tc)
+            tc.verifyTrue(isa(TestAeroL2.makeAero(), 'AeroModelL2'));
+        end
+
+        function testNotIsaAeroModelL1(tc)
+            tc.verifyFalse(isa(TestAeroL2.makeAero(), 'AeroModelL1'));
+        end
+
+        function testIsHandleClass(tc)
+            tc.verifyTrue(isa(TestAeroL2.makeAero(), 'handle'));
+        end
+
+        % ================================================================== %
+        % DELIBERATELY-FAILING TODO (unverified citations) -- see header.
+        % ================================================================== %
+
+        function testTODO_AlphaL0Unverified(tc)
+            % alpha_L0 = -1.01 deg is NOT verified against a primary NACA
+            % 64A204 source (thin-airfoil for design_CL=0.2 suggests ~ -1.4 to
+            % -1.9 deg). f16a_L2.json's .aerodynamics still carries "_TODO_alpha_L0_deg".
+            % FAILS until pinned to a primary source (clear the _TODO key).
+            J = TestAeroL2.readAeroL2JSON();
+            tc.verifyFalse(isfield(J.airfoil, 'x_TODO_alpha_L0_deg'), ...
+                'TODO: NACA 64A204 alpha_L0 (-1.01 deg) is unverified in-repo.');
+        end
+
+        function testTODO_ClMax2DUnverified(tc)
+            % cl_max_2D = 1.20 (Abbott and von Doenhoff) conflicts with NTRS-
+            % 19870017427's 1.0 for the same thin (4%) 64A204 section.
+            % f16a_L2.json's .aerodynamics still carries "_TODO_cl_max_2D". FAILS until
+            % reconciled to one primary-sourced value.
+            J = TestAeroL2.readAeroL2JSON();
+            tc.verifyFalse(isfield(J.airfoil, 'x_TODO_cl_max_2D'), ...
+                'TODO: cl_max_2D 1.20 vs NTRS 1.0 for NACA 64A204 unreconciled.');
+        end
+
+        function testTODO_ClAlpha2DUnverified(tc)
+            % cl_alpha_2D = 0.105/deg is an internet midpoint estimate (0.10-
+            % 0.11 band), not a primary/repo-pinned 64A204 lift slope.
+            % f16a_L2.json's .aerodynamics still carries "_TODO_cl_alpha_per_deg".
+            J = TestAeroL2.readAeroL2JSON();
+            tc.verifyFalse(isfield(J.airfoil, 'x_TODO_cl_alpha_per_deg'), ...
+                'TODO: NACA 64A204 2-D lift slope (0.105/deg) is an unpinned estimate.');
+        end
+
+    end
 end
