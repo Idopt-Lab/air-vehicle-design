@@ -58,8 +58,10 @@ the reference. `F16AeroL2/L3` also receive an injected geometry object (dependen
 owns no geometry.
 
 **Inputs** come from the unified per-level JSON `examples/F16A/f16a_L{1,2,3}.json` (one file per
-level, `.geometry`/`.aerodynamics` blocks; `f16a_spec_path(level)`; constructors require the path —
-no silent default).
+level, `.geometry`/`.aerodynamics`/`.propulsion` blocks; `f16a_spec_path(level)`; constructors
+require the path — no silent default). Geometry, aerodynamics, and propulsion all read this unified
+JSON (the `.propulsion` block lives in `f16a_L{1,2}.json` — propulsion is L1/L2 only); only weights
+still uses its own older per-discipline input style.
 
 **Tier count per discipline (2026):** Geometry and Propulsion are L1/L2 only (no L3); Aerodynamics
 and Weights are L1/L2/L3.
@@ -102,18 +104,18 @@ air_vehicle_design/sizing/
 │   └── constraints/     TestConstraintAnalysis.m, TestF16ConstraintSet.m, TestConstraintSetImporter.m,
 │                        Test{Thrust,Takeoff,Landing,Stall}Constraint.m
 ├── examples/F16A/       (flat — no disciplines/ subfolders)
-│   ├── f16a_L1.json, f16a_L2.json, f16a_L3.json     ← unified per-level inputs (.geometry/.aerodynamics)
+│   ├── f16a_L1.json, f16a_L2.json, f16a_L3.json     ← unified per-level inputs (.geometry/.aerodynamics/.propulsion; .propulsion in L1/L2 only)
 │   ├── f16a_spec_path.m
 │   ├── F16GeomL1.m, F16GeomL2.m
 │   ├── F16AeroL1.m, F16AeroL2.m, F16AeroL3.m
 │   ├── F16PropL1.m, F16PropL2.m
 │   ├── F16WeightsL1.m, F16WeightsL2.m, F16WeightsL3.m
 │   ├── F16ConstraintSet.m, Constraints.xlsx, run_F16_constraint_diagram.m
-│   ├── {geometry,aerodynamics}_brandt_comparison.m (+ .json/.md), fidelity_comparison.m (+ .json/.xlsx)
+│   ├── {geometry,aerodynamics,propulsion}_brandt_comparison.m (+ .json/.md), fidelity_comparison.m (+ .json/.xlsx)
 │   └── per-file companion .md docs
-├── VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth
+├── VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth (.geometry/.aerodynamics/.propulsion)
 ├── baseline/            F16Baseline.m, extract_brandt.m   (deprecated)
-└── docs/                PLAN.md, {aerodynamics,geometry}_parameter_usage.md,
+└── docs/                PLAN.md, {aerodynamics,geometry,propulsion}_parameter_usage.md,
                          subplans/01_aircraft_state … 08_sizing.md
 ```
 
@@ -121,7 +123,7 @@ air_vehicle_design/sizing/
 
 ## F-16A Validation Targets (Brandt spreadsheet)
 
-These are the **sizing outputs** we compare our framework against after running — not inputs to any discipline equation. They live in `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` (with `.geometry`/`.aerodynamics` sections), clearly separated from the toolbox inputs. Brandt's intermediate calibration values (Cfe, e_osw, CD0, lapse rates) must not be stored or used as discipline inputs.
+These are the **sizing outputs** we compare our framework against after running — not inputs to any discipline equation. They live in `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` (with `.geometry`/`.aerodynamics`/`.propulsion` sections), clearly separated from the toolbox inputs. Brandt's intermediate calibration values (Cfe, e_osw, CD0, lapse rates) must not be stored or used as discipline inputs.
 
 | Quantity | Value | Source |
 |---|---|---|
