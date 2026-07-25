@@ -5,8 +5,8 @@ classdef (Abstract) PropulsionModelL1 < PropulsionBase
 %   fidelity enforcer independently satisfies the Tier-1 contract).
 %
 %   Level-1 propulsion uses two simplified models:
-%     thrust_lapse — density-ratio power law: α = σ^0.6   [Raymer 6th §5.4]
-%     TSFC         — categorical lookup by engine type      [Raymer 6th Table 3.3]
+%     thrust_lapse — density-ratio power law: α = σ^m   [Martins AE481 metabook Eq. 10.9]
+%     TSFC         — categorical lookup by engine type    [Raymer 6th Table 3.3]
 %
 %   Inheritance: PropulsionBase → PropulsionModelL1 → F16PropL1
 
@@ -17,11 +17,9 @@ classdef (Abstract) PropulsionModelL1 < PropulsionBase
 
     methods (Abstract)
 
-        %COMPUTE_THRUST_LAPSE  Density-ratio lapse: α = σ^0.6.
-        %   σ = ρ/ρ_SL.  No Mach correction.  [Raymer 6th ed. §5.4]
-        alpha = compute_thrust_lapse(obj, state)
-        % TODO 7/15/2026): This should be "get_thrust_lapse" since it's
-        % using state and obj as args.
+        %GET_THRUST_LAPSE  Density-ratio lapse: α = σ^m, σ = ρ/ρ_SL.
+        %   No Mach correction.  [Martins AE481 metabook Eq. 10.9]
+        alpha = get_thrust_lapse(obj, state)
 
         %LOOKUP_TSFC  Categorical TSFC from engine-type table.
         %   Returns TSFC in 1/hr appropriate for the flight state.

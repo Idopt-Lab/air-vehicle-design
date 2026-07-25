@@ -8,30 +8,37 @@ classdef (Abstract) PropulsionModelL2 < PropulsionBase
 %     thrust_lapse — Mattingly AED 2nd ed. Eq. 2.54 (low-BPR mixed turbofan)
 %     TSFC         — Mattingly AED 2nd ed. Eq. 3.12 + 3.55 coefficients
 %
-%   Student classes supply the engine-specific constants (C1_mil, C2_mil,
-%   C1_AB, C2_AB, TR) as Constant properties.
+%   The Mattingly TSFC coefficients (C1/C2 mil+AB) are NOT declared here as
+%   abstract Constants: they are engine-class constants selected by
+%   engine_type inside the PropL2 toolbox (PropL2.lookup_TSFC_coeffs),
+%   mirroring PropL1's engine_type-keyed lapse/TSFC tables (user decision
+%   2026-07-24).  Student classes supply engine_type; the throttle ratio TR
+%   is a per-aircraft derived quantity supplied by the concrete class.
 %
 %   Inheritance: PropulsionBase → PropulsionModelL2 → F16PropL2
 
     properties (Abstract)
+        engine_type % string; selects the PropL2 TSFC coefficient set
+                    %   (e.g. "low_bypass_turbofan_AB" for the F100-PW-200)
         TR          % double; — throttle ratio (typical AAF: 1.05–1.08)
-    end
-
-    
-    properties (Abstract, Constant)
-        C1      % TSFC model: mil/AB power, Eq. 3.55a coefficient 1
-        C2      % TSFC model: mil/AB power, Eq. 3.55a coefficient 2
-        % F-16 example shoudl include C1_mil, C2_mil, C1_AB, C2_AB.
-        
     end
 
     methods (Abstract)
          % Note: citations not required for abstract enforcers because it's
          % not a concrete implementation, just a requirement.
 
-         % TODO (7/15/2026): "mil" and "AB" are too specific. These must be
-         % broadly applicable across many design categories. Remove the
-         % "mil" and "AB" suffix.
+         % DECISION (2026-07-24, matlab-oop-expert): keep the "mil"/"AB"
+         % power-setting suffixes. The earlier TODO (7/15/2026) proposed a
+         % generic power-setting-agnostic rename, but "mil" (military/dry) and
+         % "AB" (afterburner) are the correct, meaningful vocabulary for an
+         % AB-equipped fighter and match the Mattingly Eq. 2.54a/b and Eq.
+         % 3.55a/b two-branch (dry vs. wet) model these methods implement. A
+         % sweeping rename would change the public API (compute_thrust_lapse_*,
+         % compute_TSFC_*) that constraints/tests already target and would
+         % ripple across src/constraints + examples mid-loop for no fidelity
+         % gain. If a genuinely power-setting-generic contract is ever wanted
+         % (e.g. an arbitrary throttle parameter), that is a separate dedicated
+         % refactor with its own test pass -- not this convergence loop.
         %COMPUTE_THRUST_LAPSE_MIL  Mil-power lapse α_mil.
         alpha_mil = compute_thrust_lapse_mil(obj, state)
 

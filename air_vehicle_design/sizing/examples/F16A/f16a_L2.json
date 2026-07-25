@@ -25,5 +25,24 @@
       "_TODO_cl_max_2D": "cl_max_2D=1.20 (Abbott & von Doenhoff) conflicts with NTRS-19870017427's 1.0; remove when reconciled. Guarded by TestAeroL2.testTODO_ClMax2DUnverified.",
       "_TODO_cl_alpha_per_deg": "cl_alpha=0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guarded by TestAeroL2.testTODO_ClAlpha2DUnverified."
     }
+  },
+
+  "propulsion": {
+    "_src": "Brandt-F16-A.xls Engn(s) tab (T_AB_SLS, T_mil_SLS), Main!C29 (dry/mil), Main!D29 (AB), Miss!C25 = Main!C25 (install factor); T.O. 1F-16A-1 Sec. I; Mattingly AED 2nd ed. (TSFC Eq. 3.55a/b, T_t4 Table C.4). Per examples/F16A/F16PropL2.md + docs/propulsion_parameter_usage.md Part A/B, these are the engine-spec inputs F16PropL2 reads; all lapse/TSFC/TR OUTPUTS are DERIVED and are not stored here.",
+    "engine_type": "low_bypass_turbofan_AB",
+    "engine_model": "F100-PW-200",
+    "T_SL":     23770.0,
+    "T_SL_wet": 23770.0,
+    "T_SL_mil": 15000.0,
+    "_thrust_source": "SLS thrusts, lbf. T_SL / T_SL_wet = AB (max) = Brandt Engn!T_AB_SLS = Main!D29 = 23770; T_SL_mil = military (dry) = Brandt Engn!T_mil_SLS = Main!C29 = 15000; T.O. 1F-16A-1 Sec. I.",
+    "_C_note": "The Mattingly TSFC coefficients (C1_mil/C2_mil/C1_AB/C2_AB = 0.90/0.30/1.60/0.27, Eq. 3.55a/b) are NOT stored here. Per user decision 2026-07-24 they are engine-class Constants selected by engine_type inside the PropL2 toolbox (mirroring PropL1's engine_type-keyed lapse/TSFC tables) -- this JSON supplies only engine_type, which selects the coefficient set. Verified-agreement provenance in todo.md 2026-07-24 entry 5.",
+    "T_t4_max_F": 2566.0,
+    "_T_t4_max_source": "Burner-exit total temperature, deg F. Mattingly AED 2nd ed. Table C.4 (F100-PW-100).",
+    "_T_t4_max_note": "Feeds the throttle-ratio input (TR = T_t4_max / T_t4_SLS, Mattingly Eq. D.6). T_t4_SLS is unknown, so the DERIVED TR defaults to 1.0 (independently corroborated by Brandt Engn(s)!S1). TR is derived and is NOT stored in this input block.",
+    "TSFC_install_factor": 1.08,
+    "_TSFC_install_factor_source": "Brandt Miss!C25 = Main!C25 (readme_mission.md Engine Model; also stored in GroundTruth/f16a_geometry.json engine.TSFC_install_factor).",
+    "_TSFC_install_factor_note": "The framework wires installed = uninstalled x 1.08 onto the Mattingly (uninstalled) TSFC. The stored Brandt SLS TSFCs 0.70 (mil) / 2.20 (AB) are ALREADY installed (they include the 1.08 factor) -- do not double-apply (todo.md 2026-07-24 entry 4).",
+    "_engine_type_note": "Engine-class identifier (F100-PW-200 class). Selects the Mattingly TSFC coefficient set (C1/C2 mil+AB, Eq. 3.55a/b) from the PropL2 toolbox's engine_type-keyed table (user decision 2026-07-24, decision b). The thrust lapse (Mattingly Eq. 2.54a/b) uses the analytical model directly.",
+    "_engine_model_note": "Descriptor: F-16A Block 10/15 powerplant (F100-PW-200 class), per examples/F16A/F16PropL1.md. Recorded for provenance; not read numerically. Note T_t4_max_F traces to Mattingly Table C.4's F100-PW-100 entry, the closest tabulated variant."
   }
 }

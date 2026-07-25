@@ -7,8 +7,13 @@ classdef F16PropL1 < PropulsionModelL1
 %   Level-1 model:
 %     thrust_lapse — density-ratio law: α = σ^m, m=0.6 (engine-type table)
 %                    [Martins AE481 course notes (metabook), Eq. 10.9]
-%     TSFC         — categorical: 0.80 1/hr subsonic, 2.20 1/hr supersonic
-%                    [Raymer 6th Table 3.3, low-bypass turbofan with AB]
+%     TSFC         — categorical: cruise 0.80 1/hr (M >= 0.4) /
+%                    loiter 0.70 1/hr (M < 0.4).  No AB, no Mach term, no
+%                    supersonic value.  [Raymer 6th Table 3.3, low-bypass turbofan]
+%
+%   Constructor reads the .propulsion block of a required unified L1 input JSON
+%   (see f16a_spec_path(1); the same file's .geometry/.aerodynamics blocks feed
+%   F16GeomL1/F16AeroL1).  No silent default — the path must be supplied.
 %
 %   Validation target:
 %     T_SL = 23,770 lbf  [Brandt D29; T.O. 1F-16A-1]
@@ -19,18 +24,25 @@ classdef F16PropL1 < PropulsionModelL1
 %     [TO]     T.O. 1F-16A-1, Sec. I
 
     properties
-        engine_type = "low_bypass_turbofan_AB"   % PropL1 TSFC table key
+        engine_type = "low_bypass_turbofan_AB"   % PropL1 TSFC/lapse table key [F100-PW-200 low-bypass AB turbofan; TO 1F-16A-1 Sec. I]
         T_SL     = 23770                         % lbf — AB (max) SLS thrust  [PropulsionBase contract; Brandt D29; TO]
         T_SL_wet = 23770                         % lbf — alias for T_SL (AB)  [Brandt D29; TO]
-        TSFC     = 0                             % 1/hr — populated by get_TSFC(obj, state)
+        TSFC     = 0                             % 1/hr — PLACEHOLDER: PropulsionBase abstract-contract artifact; the real per-state TSFC is returned by get_TSFC(obj, state), never this stored scalar.
     end
 
     methods
 
-        function obj = F16PropL1()
-            obj.engine_type = "low_bypass_turbofan_AB";
-            obj.T_SL     = 23770;
-            obj.T_SL_wet = 23770;
+        function obj = F16PropL1(json_path)
+        %F16PROPL1  Construct from a required unified L1 input JSON path
+        %   (f16a_spec_path(1)); reads its .propulsion block. No silent
+        %   default: the path must be supplied.
+            arguments
+                json_path {mustBeTextScalar, mustBeNonzeroLengthText}
+            end
+            J = jsondecode(fileread(json_path)).propulsion;
+            obj.engine_type = string(J.engine_type);
+            obj.T_SL        = J.T_SL;
+            obj.T_SL_wet    = J.T_SL_wet;
         end
 
         function alpha = thrust_lapse(obj, state)
@@ -41,7 +53,7 @@ classdef F16PropL1 < PropulsionModelL1
             c_t = PropL1.get_TSFC(obj, state);
         end
 
-        function alpha = compute_thrust_lapse(obj, state)
+        function alpha = get_thrust_lapse(obj, state)
             alpha = PropL1.get_thrust_lapse(obj, state);
         end
 

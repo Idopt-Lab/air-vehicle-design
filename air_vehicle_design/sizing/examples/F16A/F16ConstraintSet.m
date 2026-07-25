@@ -101,13 +101,13 @@ classdef F16ConstraintSet
             switch fidelityLevel
                 case "L1"
                     aero = F16AeroL1(f16a_spec_path(1));
-                    prop = F16PropL1();
+                    prop = F16PropL1(f16a_spec_path(1));
                 case "L2"
                     aero = F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2));
-                    prop = F16PropL2();
+                    prop = F16PropL2(f16a_spec_path(2));
                 case "L3"
                     aero = F16AeroL3(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(3));
-                    prop = F16PropL2();
+                    prop = F16PropL2(f16a_spec_path(2));
             end
         end
 

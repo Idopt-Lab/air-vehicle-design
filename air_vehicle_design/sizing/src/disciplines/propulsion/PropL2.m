@@ -20,7 +20,10 @@ classdef PropL2
 %     TSFC — Mattingly Eq. 3.12 (general) + Eq. 3.55 (low-BPR coefficients):
 %       TSFC = (C1 + C2·M)·√θ,  θ = T_atm/T_SL
 %       Mil: C1=C1_mil, C2=C2_mil  |  AB: C1=C1_AB, C2=C2_AB
-%       Units: lbf_fuel/(hr·lbf_thrust)
+%       The C1/C2 values are engine-class constants selected by engine_type
+%       via lookup_TSFC_coeffs (mirrors PropL1's engine-type-keyed tables).
+%       Installed TSFC = uninstalled × TSFC_install_factor (get_TSFC_installed).
+%       Units: lbf_fuel/(hr·lbf_thrust) [1/hr] throughout (no /3600).
 %
 %   EQUATIONS — PARAMETRIC ENGINE SIZING (Raymer Eqs 10.4–10.15):
 %     Raymer, "Aircraft Design: A Conceptual Approach," 6th ed., AIAA, 2018, §10.3.2
@@ -33,7 +36,7 @@ classdef PropL2
 %     Nonafterburning (BPR 0–6):
 %       engine_weight_nonAB  Eq. 10.4 — W [lb]
 %       engine_length_nonAB  Eq. 10.5 — L [ft]
-%       engine_diam_nonAB    Eq. 10.6 — D [ft]   [coefficient verify from book p. 284]
+%       engine_diam_nonAB    Eq. 10.6 — D [ft]   [Raymer 7th ed. Eq. 10.6; imperial, D in ft]
 %       SFC_max_nonAB        Eq. 10.7 — SFC at max throttle [1/hr]
 %       thrust_cruise_nonAB  Eq. 10.8 — cruise thrust [lb]
 %       SFC_cruise_nonAB     Eq. 10.9 — cruise SFC [1/hr]
@@ -41,7 +44,7 @@ classdef PropL2
 %     Afterburning (BPR 0–<1, M_max < 2.5):
 %       engine_weight_AB     Eq. 10.10 — W [lb]
 %       engine_length_AB     Eq. 10.11 — L [ft]
-%       engine_diam_AB       Eq. 10.12 — D [ft]  [coefficient verify from book p. 284]
+%       engine_diam_AB       Eq. 10.12 — D [ft]  [Raymer 7th ed. Eq. 10.12; imperial, D in ft]
 %       SFC_max_AB           Eq. 10.13 — SFC at max (AB) throttle [1/hr]
 %       thrust_cruise_AB     Eq. 10.14 — cruise thrust (non-AB) [lb]
 %       SFC_cruise_AB        Eq. 10.15 — cruise SFC (non-AB) [1/hr]
@@ -84,19 +87,48 @@ classdef PropL2
         end
 
         function c_t = get_TSFC(obj, state)
-        %GET_TSFC  Mil-power TSFC (default for Breguet range/endurance).
+        %GET_TSFC  Uninstalled mil-power TSFC (default for Breguet range/endurance).
+        %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
         %   [Mattingly Eq. 3.12 + 3.55a]
-            c_t = PropL2.TSFC_mil(obj.C1_mil, obj.C2_mil, state.mach, state.theta);
+            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
+            c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
         end
 
         function c_t = get_TSFC_mil(obj, state)
-        %GET_TSFC_MIL  Mil-power TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55a]
-            c_t = PropL2.TSFC_mil(obj.C1_mil, obj.C2_mil, state.mach, state.theta);
+        %GET_TSFC_MIL  Uninstalled mil-power TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55a]
+        %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
+            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
+            c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
         end
 
         function c_t = get_TSFC_AB(obj, state)
-        %GET_TSFC_AB  Afterburner TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55b]
-            c_t = PropL2.TSFC_AB(obj.C1_AB, obj.C2_AB, state.mach, state.theta);
+        %GET_TSFC_AB  Uninstalled afterburner TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55b]
+        %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
+            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
+            c_t = PropL2.TSFC_AB(c.C1_AB, c.C2_AB, state.mach, state.theta);
+        end
+
+        % ------------------------------------------------------------------ %
+        % Installed TSFC = uninstalled TSFC × installation factor.
+        %   [installation factor Brandt Miss!C25; installed = uninstalled × 1.08]
+        %   NOTE: The stored Brandt SLS TSFCs (0.70 mil / 2.20 AB) are ALREADY
+        %   installed (they include the 1.08 factor) -- do NOT double-apply the
+        %   factor when comparing against those Brandt values.  See
+        %   VnV/BrandtF16A/todo.md 2026-07-24 entry 4.
+        % ------------------------------------------------------------------ %
+
+        function c_t = get_TSFC_installed(obj, state)
+        %GET_TSFC_INSTALLED  Installed mil-power TSFC in 1/hr.
+        %   = uninstalled mil TSFC × obj.TSFC_install_factor.
+        %   [Mattingly Eq. 3.12 + 3.55a; install factor Brandt Miss!C25]
+            c_t = PropL2.get_TSFC_mil(obj, state) * obj.TSFC_install_factor;
+        end
+
+        function c_t = get_TSFC_AB_installed(obj, state)
+        %GET_TSFC_AB_INSTALLED  Installed afterburner TSFC in 1/hr.
+        %   = uninstalled AB TSFC × obj.TSFC_install_factor.
+        %   [Mattingly Eq. 3.12 + 3.55b; install factor Brandt Miss!C25]
+            c_t = PropL2.get_TSFC_AB(obj, state) * obj.TSFC_install_factor;
         end
 
         % ================================================================== %
@@ -141,6 +173,24 @@ classdef PropL2
             c_t = (C1_AB + C2_AB * M) * sqrt(theta);
         end
 
+        function coeffs = lookup_TSFC_coeffs(engine_type)
+        %LOOKUP_TSFC_COEFFS  Mattingly TSFC coefficients by engine type.
+        %   Returns struct with fields C1_mil, C2_mil, C1_AB, C2_AB for use in
+        %   TSFC = (C1 + C2·M)·√θ.  Engine-class constants, selected by
+        %   engine_type (mirrors PropL1.lookup_TSFC_table's keyed pattern).
+        %   [Mattingly 2nd ed. Eq. 3.55a (mil) / Eq. 3.55b (AB), low-BPR
+        %   mixed turbofan]
+            switch engine_type
+                case {'low_bypass_turbofan_AB', 'low_bypass_turbofan'}
+                    coeffs = struct('C1_mil', 0.90, 'C2_mil', 0.30, ...
+                                    'C1_AB',  1.60, 'C2_AB',  0.27);
+                otherwise
+                    error('PropL2:unknownEngineType', ...
+                        'Unknown engine_type "%s". Add it to PropL2.lookup_TSFC_coeffs.', ...
+                        engine_type);
+            end
+        end
+
         function TR = compute_TR(T_t4_max_R, T_t4_SLS_R)
         %COMPUTE_TR  Throttle ratio from turbine inlet temperatures.  [Mattingly App. D, Eq. D.6]
         %   TR = T_t4_max / T_t4_SLS  (both in Rankine).
@@ -177,9 +227,10 @@ classdef PropL2
         end
 
         function D = engine_diam_nonAB(T, BPR)
-        %ENGINE_DIAM_NONAB  Statistical engine max diameter, nonafterburning.  [Raymer Eq. 10.6]
+        %ENGINE_DIAM_NONAB  Statistical engine max diameter, nonafterburning.  [Raymer 7th ed. Eq. 10.6]
         %   D [ft] = 0.033 · T^0.5 · exp(0.04·BPR)
-        %   [OCR coefficient verify: book p. 284; metric check suggests ~0.034]
+        %   Coefficient 0.033 is correct for imperial units; D in ft
+        %   (user-confirmed 2026-07-24).
             D = 0.033 * T.^0.5 .* exp(0.04 * BPR);
         end
 
@@ -219,9 +270,10 @@ classdef PropL2
         end
 
         function D = engine_diam_AB(T, BPR)
-        %ENGINE_DIAM_AB  Statistical engine max diameter, afterburning.  [Raymer Eq. 10.12]
+        %ENGINE_DIAM_AB  Statistical engine max diameter, afterburning.  [Raymer 7th ed. Eq. 10.12]
         %   D [ft] = 0.024 · T^0.5 · exp(0.04·BPR)
-        %   [OCR coefficient verify: book p. 284; metric check suggests ~0.0256]
+        %   Coefficient 0.024 is correct for imperial units; D in ft
+        %   (user-confirmed 2026-07-24).
             D = 0.024 * T.^0.5 .* exp(0.04 * BPR);
         end
 

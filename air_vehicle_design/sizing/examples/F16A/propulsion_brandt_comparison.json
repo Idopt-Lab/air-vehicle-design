@@ -1,0 +1,297 @@
+{
+  "generated": "2026-07-24",
+  "aircraft": "F-16A Block 10",
+  "source": "VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.propulsion]",
+  "rows": [
+    {
+      "parameter": "[THRUST LAPSE alpha_AB -- L2 Mattingly Eq.2.54a vs Brandt alpha_AB (Consts AT)]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "alpha_AB @ dash_max_mach (36000ft M1.60, 100%AB)",
+      "Fidelity": "L2",
+      "Computed": "0.5494",
+      "Brandt": "0.5770",
+      "PctDiff": "-4.77%",
+      "OtherSource": "AU(eff on T_AB)=0.5770; AS(dry)=0.2983",
+      "Source": "Brandt Consts AT23",
+      "Notes": "Above-TR (theta_0>TR=1.0): both models carry a theta correction; Mattingly (3.5 coeff) and Brandt (2.2 coeff + 0.1*sqrt(M)) agree within a few percent -- the closest conditions."
+    },
+    {
+      "parameter": "alpha_AB @ cruise (36000ft M0.87, 0%AB)",
+      "Fidelity": "L2",
+      "Computed": "0.3674",
+      "Brandt": "0.3326",
+      "PctDiff": "+10.45%",
+      "OtherSource": "AU(eff on T_AB)=0.1711; AS(dry)=0.2711",
+      "Source": "Brandt Consts AT24",
+      "Notes": "Below-TR (theta_0<=TR=1.0): Mattingly alpha_AB=delta_0 with NO Mach term; Brandt subtracts 0.1*sqrt(M). Framework reads HIGH vs Brandt AT -- expected, not a bug."
+    },
+    {
+      "parameter": "alpha_AB @ max_alt (50000ft M0.87, 100%AB)",
+      "Fidelity": "L2",
+      "Computed": "0.1875",
+      "Brandt": "0.1703",
+      "PctDiff": "+10.08%",
+      "OtherSource": "AU(eff on T_AB)=0.1703; AS(dry)=0.1388",
+      "Source": "Brandt Consts AT25",
+      "Notes": "Below-TR (theta_0<=TR=1.0): Mattingly alpha_AB=delta_0 with NO Mach term; Brandt subtracts 0.1*sqrt(M). Framework reads HIGH vs Brandt AT -- expected, not a bug."
+    },
+    {
+      "parameter": "alpha_AB @ combat_turn_sub (20000ft M0.87, 100%AB)",
+      "Fidelity": "L2",
+      "Computed": "0.7526",
+      "Brandt": "0.6818",
+      "PctDiff": "+10.39%",
+      "OtherSource": "AU(eff on T_AB)=0.6818; AS(dry)=0.5557",
+      "Source": "Brandt Consts AT26",
+      "Notes": "Below-TR (theta_0<=TR=1.0): Mattingly alpha_AB=delta_0 with NO Mach term; Brandt subtracts 0.1*sqrt(M). Framework reads HIGH vs Brandt AT -- expected, not a bug."
+    },
+    {
+      "parameter": "alpha_AB @ combat_turn_sup (36000ft M1.40, 100%AB)",
+      "Fidelity": "L2",
+      "Computed": "0.6007",
+      "Brandt": "0.5566",
+      "PctDiff": "+7.92%",
+      "OtherSource": "AU(eff on T_AB)=0.5566; AS(dry)=0.3579",
+      "Source": "Brandt Consts AT27",
+      "Notes": "Above-TR (theta_0>TR=1.0): both models carry a theta correction; Mattingly (3.5 coeff) and Brandt (2.2 coeff + 0.1*sqrt(M)) agree within a few percent -- the closest conditions."
+    },
+    {
+      "parameter": "alpha_AB @ ps_500 (10000ft M0.87, 100%AB)",
+      "Fidelity": "L2",
+      "Computed": "0.8608",
+      "Brandt": "0.8536",
+      "PctDiff": "+0.85%",
+      "OtherSource": "AU(eff on T_AB)=0.8536; AS(dry)=0.7027",
+      "Source": "Brandt Consts AT28",
+      "Notes": "Above-TR (theta_0>TR=1.0): both models carry a theta correction; Mattingly (3.5 coeff) and Brandt (2.2 coeff + 0.1*sqrt(M)) agree within a few percent -- the closest conditions."
+    },
+    {
+      "parameter": "[THRUST LAPSE alpha -- L1 density-only sigma^m vs Brandt alpha_AB (Consts AT)]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "alpha_L1 @ dash_max_mach (36000ft M1.60)",
+      "Fidelity": "L1",
+      "Computed": "0.4837",
+      "Brandt": "0.5770",
+      "PctDiff": "-16.16%",
+      "OtherSource": "AT=0.5770",
+      "Source": "Brandt Consts AT23",
+      "Notes": "L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation."
+    },
+    {
+      "parameter": "alpha_L1 @ cruise (36000ft M0.87)",
+      "Fidelity": "L1",
+      "Computed": "0.4837",
+      "Brandt": "0.3326",
+      "PctDiff": "+45.42%",
+      "OtherSource": "AT=0.3326",
+      "Source": "Brandt Consts AT24",
+      "Notes": "L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation."
+    },
+    {
+      "parameter": "alpha_L1 @ max_alt (50000ft M0.87)",
+      "Fidelity": "L1",
+      "Computed": "0.3232",
+      "Brandt": "0.1703",
+      "PctDiff": "+89.80%",
+      "OtherSource": "AT=0.1703",
+      "Source": "Brandt Consts AT25",
+      "Notes": "L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation."
+    },
+    {
+      "parameter": "alpha_L1 @ combat_turn_sub (20000ft M0.87)",
+      "Fidelity": "L1",
+      "Computed": "0.6854",
+      "Brandt": "0.6818",
+      "PctDiff": "+0.53%",
+      "OtherSource": "AT=0.6818",
+      "Source": "Brandt Consts AT26",
+      "Notes": "L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation."
+    },
+    {
+      "parameter": "alpha_L1 @ combat_turn_sup (36000ft M1.40)",
+      "Fidelity": "L1",
+      "Computed": "0.4837",
+      "Brandt": "0.5566",
+      "PctDiff": "-13.08%",
+      "OtherSource": "AT=0.5566",
+      "Source": "Brandt Consts AT27",
+      "Notes": "L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation."
+    },
+    {
+      "parameter": "alpha_L1 @ ps_500 (10000ft M0.87)",
+      "Fidelity": "L1",
+      "Computed": "0.8337",
+      "Brandt": "0.8536",
+      "PctDiff": "-2.33%",
+      "OtherSource": "AT=0.8536",
+      "Source": "Brandt Consts AT28",
+      "Notes": "L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation."
+    },
+    {
+      "parameter": "[THRUST LAPSE dry/mil basis -- L2 mil-on-AB-scale vs Brandt alpha_eff_on_TAB (Consts AU)]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "alpha_mil-on-AB @ cruise (36000ft M0.87)",
+      "Fidelity": "L2",
+      "Computed": "0.1391",
+      "Brandt": "0.1711",
+      "PctDiff": "-18.69%",
+      "OtherSource": "AS(dry)=0.2711",
+      "Source": "Brandt Consts AU24",
+      "Notes": "Cruise is flown 0% AB (dry). Framework alpha_mil = 0.6*delta_0 renormalized to the AB axis (x T_SL_mil/T_SL_wet). Brandt AU = AS*(T_dry/T_AB). Mattingly has no below-TR Mach term; expected high."
+    },
+    {
+      "parameter": "[TSFC -- L2 Mattingly Eq.3.55 (uninstalled & installed x1.08) vs Brandt installed]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "TSFC mil SLS(M~0), UNINSTALLED (L2)",
+      "Fidelity": "L2",
+      "Computed": "0.9003",
+      "Brandt": "0.7000",
+      "PctDiff": "+28.61%",
+      "OtherSource": "Mattingly Eq.3.55a C1_mil=0.90",
+      "Source": "Brandt Engn!TSFC_mil (installed)",
+      "Notes": "Brandt 0.70 is INSTALLED (incl. 1.08); compare the installed row below, not this uninstalled one."
+    },
+    {
+      "parameter": "TSFC mil SLS(M~0), INSTALLED x1.08 (L2)",
+      "Fidelity": "L2",
+      "Computed": "0.9723",
+      "Brandt": "0.7000",
+      "PctDiff": "+38.90%",
+      "OtherSource": "uninst 0.90 x 1.08",
+      "Source": "Brandt Engn!TSFC_mil (installed)",
+      "Notes": "Mattingly over-predicts SLS static mil TSFC vs Brandt 0.70 (known systematic bias); trend vs alt/Mach is correct."
+    },
+    {
+      "parameter": "TSFC AB SLS(M=0.4), UNINSTALLED (L2)",
+      "Fidelity": "L2",
+      "Computed": "1.7080",
+      "Brandt": "2.2000",
+      "PctDiff": "-22.36%",
+      "OtherSource": "Mattingly Eq.3.55b (1.60+0.27M)",
+      "Source": "Brandt Engn!TSFC_AB (installed, M=0.4)",
+      "Notes": "Brandt 2.20 is INSTALLED at the M=0.4 reference; compare the installed row below."
+    },
+    {
+      "parameter": "TSFC AB SLS(M=0.4), INSTALLED x1.08 (L2)",
+      "Fidelity": "L2",
+      "Computed": "1.8446",
+      "Brandt": "2.2000",
+      "PctDiff": "-16.15%",
+      "OtherSource": "uninst 1.7080 x 1.08",
+      "Source": "Brandt Engn!TSFC_AB (installed, M=0.4)",
+      "Notes": "Mattingly under-predicts the AB reference vs Brandt 2.20; different AB model calibration -- not a bug."
+    },
+    {
+      "parameter": "TSFC cruise (L1 Raymer Table 3.3)",
+      "Fidelity": "L1",
+      "Computed": "0.8000",
+      "Brandt": "0.7000",
+      "PctDiff": "+14.29%",
+      "OtherSource": "Raymer Table 3.3 cruise=0.80",
+      "Source": "Brandt Engn!TSFC_mil (installed SLS)",
+      "Notes": "DIFFERENT basis: L1 categorical cruise SFC (0.80, M>=0.4) vs Brandt SLS-static installed mil (0.70) -- not directly comparable."
+    },
+    {
+      "parameter": "[ENGINE CONSTANTS -- positive controls]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "T_SL_wet (AB SLS thrust) [lbf]",
+      "Fidelity": "L2",
+      "Computed": "23770.0",
+      "Brandt": "23770.0",
+      "PctDiff": "+0.00%",
+      "OtherSource": "T.O. 1F-16A-1 Sec.I",
+      "Source": "Brandt Main!D29",
+      "Notes": "Spec input echoed both sides -- should match exactly."
+    },
+    {
+      "parameter": "T_SL_mil (dry SLS thrust) [lbf]",
+      "Fidelity": "L2",
+      "Computed": "15000.0",
+      "Brandt": "15000.0",
+      "PctDiff": "+0.00%",
+      "OtherSource": "T.O. 1F-16A-1 Sec.I",
+      "Source": "Brandt Main!C29",
+      "Notes": "Spec input echoed both sides -- should match exactly."
+    },
+    {
+      "parameter": "TR (throttle ratio)",
+      "Fidelity": "L2",
+      "Computed": "1.0000",
+      "Brandt": "1.0000",
+      "PctDiff": "+0.00%",
+      "OtherSource": "Mattingly Eq.D.6 (T_t4_SLS unknown->1.0)",
+      "Source": "Brandt Engn(s)!S1",
+      "Notes": "Should match exactly (both 1.0)."
+    },
+    {
+      "parameter": "[NACELLE SIZING -- Brandt Engn(s) formula reproduced as positive control]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Nacelle diameter D=sqrt(T_AB/1900) [ft]",
+      "Fidelity": "L2",
+      "Computed": "3.5370",
+      "Brandt": "3.5370",
+      "PctDiff": "+0.00%",
+      "OtherSource": "Raymer Eq.10.12 ~3.8 (unwired)",
+      "Source": "Brandt Engn(s) D_nac",
+      "Notes": "Same formula/inputs as Brandt -- near-exact match expected."
+    },
+    {
+      "parameter": "Nacelle length L=4.5*D [ft]",
+      "Fidelity": "L2",
+      "Computed": "15.9166",
+      "Brandt": "15.9170",
+      "PctDiff": "-0.00%",
+      "OtherSource": "T.O. 1F-16A-1 total length 15.93",
+      "Source": "Brandt Engn(s) L_nac",
+      "Notes": "Same formula/inputs as Brandt; T.O. total engine length 15.93 ft is an independent anchor."
+    }
+  ]
+}

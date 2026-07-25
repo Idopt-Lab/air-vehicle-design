@@ -62,5 +62,14 @@
         {"mach": 2.0, "value": 0.360}
       ]
     }
+  },
+
+  "propulsion": {
+    "_src": "Brandt-F16-A.xls Engn(s) tab (T_AB_SLS) = Main!D29; T.O. 1F-16A-1 Sec. I. Per examples/F16A/F16PropL1.md, F16PropL1 reads only engine_type + AB (max) SLS thrust; the L1 lapse exponent (Martins metabook Eq. 10.9) and TSFC table (Raymer 6th ed. Table 3.3) are selected by engine_type, not stored here.",
+    "engine_type": "low_bypass_turbofan_AB",
+    "T_SL":     23770.0,
+    "T_SL_wet": 23770.0,
+    "_T_SL_source": "AB (max) SLS thrust, lbf. Brandt Engn!T_AB_SLS = Main!D29 = 23770; T.O. 1F-16A-1 Sec. I. T_SL_wet is the AB alias of T_SL.",
+    "_engine_type_note": "Engine-class identifier (F100-PW-200 class). Selects the PropL1 density-lapse exponent (turbofan m=0.6, Martins metabook Eq. 10.9) and the TSFC table rows (Raymer 6th ed. Table 3.3, low-bypass turbofan). Not a numeric design variable."
   }
 }

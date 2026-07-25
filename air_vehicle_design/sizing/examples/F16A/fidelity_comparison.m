@@ -180,8 +180,8 @@ for iC = 1:nCon
 end
 
 % ── Propulsion (L3 not yet implemented → NaN) ─────────────────────────── %
-p1 = F16PropL1();
-p2 = F16PropL2();
+p1 = F16PropL1(f16a_spec_path(1));
+p2 = F16PropL2(f16a_spec_path(2));
 
 % alpha_AB and alpha_mil at each constraint condition
 % L1: density-ratio lapse only (no mil/AB split) → alpha_mil = NaN for L1

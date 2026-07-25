@@ -29,7 +29,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             % internally) -- this exercises the aggregation wiring, not the
             % Master Equation itself (already covered by TestThrustConstraint).
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
             WS_range = 20:5:160;
 
@@ -50,7 +50,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 
         function testNamesAndTWTableCachedFromConstraints(tc)
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             WS_range = 20:10:180;
 
@@ -68,7 +68,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             % A single bucket-shaped Master Equation curve -- optimal_point
             % should land at its minimum, cross-checked directly.
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             WS_range = 10:2:200;
 
@@ -91,7 +91,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             % the same max-envelope -- no special-casing needed for
             % correctness (see LandingConstraint.m's header).
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.8);
             WS_range = 20:2:200;
 
@@ -108,7 +108,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 
         function testPlotDiagramRendersWallConstraintAsVerticalLine(tc)
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.8);
             WS_range = 20:2:200;
 
@@ -131,7 +131,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 
         function testNonPointPerformanceBaseElementErrors(tc)
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             c = ThrustConstraint("Toy", state, aero, prop, 0.9);
 
@@ -143,7 +143,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 
         function testReportDoesNotError(tc)
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             c  = ThrustConstraint("Toy", state, aero, prop, 0.9);
             ca = ConstraintAnalysis({c}, 20:10:200);

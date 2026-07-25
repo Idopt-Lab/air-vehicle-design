@@ -195,5 +195,42 @@
         "_source": "T.O. 1F-16A-1 -- AoA indicator range -5 to 32 deg; controllable range -5 to 25 deg."
       }
     }
+  },
+
+  "propulsion": {
+    "_comment": "F-16A Block 10/15 Brandt-workbook propulsion OUTPUTS for the propulsion deep-dive's later comparison-report script to check computed L1/L2 toolbox output against. These are NOT toolbox inputs (see examples/F16A/f16a_L{1,2}.json .propulsion for those). Propulsion is L1/L2 only -- no L3, per CLAUDE.md. Never backfill a unit-test expected value from anything here.",
+    "_source": "VnV/BrandtF16A/GroundTruth/Brandt-F16-A.xls (Engn(s)/Main/Miss/Consts/Wt sheets); VnV/BrandtF16A/readme_prop.md; VnV/BrandtF16A/BrandtEngine.m; VnV/BrandtF16A/GroundTruth/cell-map.md; VnV/BrandtF16A/todo.md 2026-07-24 Propulsion section; docs/propulsion_parameter_usage.md Part B.",
+
+    "T_SL_wet_lb": {"value": 23770.0, "_source": "Brandt Engn!T_AB_SLS = Main!D29. AB (max) SLS thrust; T.O. 1F-16A-1 Sec. I."},
+    "T_SL_mil_lb": {"value": 15000.0, "_source": "Brandt Engn!T_mil_SLS = Main!C29. Military (dry) SLS thrust; T.O. 1F-16A-1 Sec. I."},
+
+    "TSFC_mil_installed_per_hr": {"value": 0.70, "_source": "Brandt Engn!TSFC_mil. Mil-power SLS TSFC.", "_note": "INSTALLED value -- already includes the 1.08 install factor; do NOT double-apply (todo.md 2026-07-24 entry 4). Mattingly Eq. 3.55a gives 0.90 uninstalled at M=0."},
+    "TSFC_AB_installed_per_hr": {"value": 2.20, "_source": "Brandt Engn!TSFC_AB. AB-power reference TSFC (M=0.4 basis).", "_note": "INSTALLED value -- already includes the 1.08 install factor; do NOT double-apply (todo.md 2026-07-24 entry 4). Mattingly Eq. 3.55b gives 1.60 uninstalled at M=0."},
+
+    "TR": {"value": 1.0, "_source": "Brandt Engn(s)!S1. Throttle ratio (Mattingly Eq. D.6 with T_t4_SLS unknown -> 1.0)."},
+    "n_engines": {"value": 1, "_source": "Brandt Main!B28."},
+    "TSFC_install_factor": {"value": 1.08, "_source": "Brandt Miss!C25 = Main!C25."},
+
+    "nacelle": {
+      "_note": "SAME numbers as the geometry.nacelle block in this file -- one shared truth, not two independent ones. Brandt sizes the nacelle on the Engn(s) tab from D = sqrt(T_AB_SLS/1900), L = 4.5*D; cross-reference geometry.nacelle above.",
+      "diameter_ft": {"value": 3.537, "_source": "Brandt Engn(s) D_nac = sqrt(23770/1900). cell-map.md 'Engn(s)' section (Engn!D_nac)."},
+      "length_ft":   {"value": 15.917, "_source": "Brandt Engn(s) L_nac = 4.5*D_nac. cell-map.md 'Engn(s)' section (Engn!L_nac)."}
+    },
+
+    "W_engine_lb": {"value": 4730.23, "_source": "Brandt Wt!B22 = 0.199*T_AB_SLS = 0.199*23770.", "_note": "WEIGHTS-discipline ground truth, recorded here for reference only -- not a propulsion-toolbox output."},
+
+    "thrust_lapse_at_constraint_conditions": {
+      "_source": "live Excel COM read of Brandt-F16-A.xls Consts sheet, cells AS/AT/AU rows 23-28, 2026-07-24 (todo.md entry A); AS=alpha_dry Engn(s) row 4 coeffs, AT=alpha_AB Engn(s) row 15 coeffs, AU=alpha_AB_ref effective lapse on T_SL_AB axis.",
+      "_note": "The framework's Mattingly alpha_AB (F16PropL2.thrust_lapse) compares against alpha_AB (AT) at each condition; a dry/mil point (cruise, 0% AB) compares against alpha_eff_on_TAB (AU). AS is normalized to T_SL_dry (15000); AT/AU to T_SL_AB (23770). For 100%-AB rows AU = AT; for the 0%-AB cruise row AU = AS*(T_dry/T_AB).",
+      "_columns": ["condition", "consts_row", "alt_ft", "mach", "pct_AB", "n", "alpha_dry", "alpha_AB", "alpha_eff_on_TAB"],
+      "rows": [
+        {"condition": "dash_max_mach",   "consts_row": 23, "alt_ft": 36000, "mach": 1.60, "pct_AB": 100, "n": 1.0, "alpha_dry": 0.29829, "alpha_AB": 0.57698, "alpha_eff_on_TAB": 0.57698},
+        {"condition": "cruise",          "consts_row": 24, "alt_ft": 36000, "mach": 0.87, "pct_AB": 0,   "n": 1.0, "alpha_dry": 0.27111, "alpha_AB": 0.33264, "alpha_eff_on_TAB": 0.17108},
+        {"condition": "max_alt",         "consts_row": 25, "alt_ft": 50000, "mach": 0.87, "pct_AB": 100, "n": 1.0, "alpha_dry": 0.13879, "alpha_AB": 0.17029, "alpha_eff_on_TAB": 0.17029},
+        {"condition": "combat_turn_sub", "consts_row": 26, "alt_ft": 20000, "mach": 0.87, "pct_AB": 100, "n": 4.5, "alpha_dry": 0.55566, "alpha_AB": 0.68178, "alpha_eff_on_TAB": 0.68178},
+        {"condition": "combat_turn_sup", "consts_row": 27, "alt_ft": 36000, "mach": 1.40, "pct_AB": 100, "n": 1.4, "alpha_dry": 0.35786, "alpha_AB": 0.55656, "alpha_eff_on_TAB": 0.55656},
+        {"condition": "ps_500",          "consts_row": 28, "alt_ft": 10000, "mach": 0.87, "pct_AB": 100, "n": 1.0, "alpha_dry": 0.70273, "alpha_AB": 0.85355, "alpha_eff_on_TAB": 0.85355}
+      ]
+    }
   }
 }

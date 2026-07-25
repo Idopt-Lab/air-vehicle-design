@@ -41,7 +41,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
         function testIsaPointPerformanceBase(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
@@ -50,19 +50,19 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % as ThrustConstraint -- see TakeoffConstraint.m/
             % Both_WbyS_TbyW.m headers.
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
             tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
         end
 
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
             tc.verifyTrue(isa(obj, 'handle'));
         end
 
         function testNamePropertySet(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Takeoff", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Takeoff", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
             tc.verifyEqual(obj.name, "Takeoff");
         end
 
@@ -70,7 +70,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % beta and k_TO default to 1.0 and 1.2 (field constraints, per
             % subplans/06_constraint_analysis.md) when omitted.
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
             tc.verifyEqual(obj.beta, 1.0);
             tc.verifyEqual(obj.k_TO, 1.2);
         end
@@ -84,7 +84,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % form of the same equation, not a copy of TakeoffConstraint's
             % own algebra.
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             S_G   = 3500;
             beta  = 0.98;
@@ -121,7 +121,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % directly so both underlying constraint values are
             % independently verified, not just their combined margin.
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, aero, prop, 3500, 0.98, 1.15);
 
@@ -152,7 +152,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % Constraint diagrams sweep W/S -- required_TW must vectorize
             % cleanly and stay finite over a physically reasonable range.
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, aero, prop, 4000);
 
@@ -168,7 +168,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % simplified takeoff relation is strictly linear in W/S:
             % required_TW = coeff * WS / S_G, so doubling WS must double TW.
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, aero, prop, 4000);
 
@@ -184,7 +184,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % A shorter required ground roll demands a higher T/W at fixed
             % W/S (harder field-length requirement -> more thrust needed).
             aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             WS    = 90;
 
@@ -205,7 +205,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % objects produce a plausible, finite, positive required T/W at
             % a representative W/S.
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(3));
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Takeoff", state, aero, prop, 4000, 1.0, 1.2);
 
@@ -256,13 +256,13 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             switch fidelityLevel
                 case 'L1'
                     aero = F16AeroL1(f16a_spec_path(1));
-                    prop = F16PropL1();
+                    prop = F16PropL1(f16a_spec_path(1));
                 case 'L2'
                     aero = F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2));
-                    prop = F16PropL2();
+                    prop = F16PropL2(f16a_spec_path(2));
                 case 'L3'
                     aero = F16AeroL3(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(3));
-                    prop = F16PropL2();
+                    prop = F16PropL2(f16a_spec_path(2));
                 otherwise
                     error('TestTakeoffConstraint:buildDisciplines:UnknownFidelity', ...
                         'Unknown fidelity level "%s".', fidelityLevel);
