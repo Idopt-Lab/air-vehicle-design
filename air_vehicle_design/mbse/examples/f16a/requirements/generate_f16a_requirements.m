@@ -208,15 +208,21 @@ r = add(sc, Id="REQ_F16A_025", Summary="Static margin (TODO)", ...
 r.Rationale = "Bounds longitudinal stability/controllability margin used to size the horizontal tail/stabilator and permissible CG travel.";
 r.Keywords = ["draft","auto-generated","todo"];
 
-% ---- Cost container ----
-cost = add(root, Id="REQ_F16A_COST", Summary="Cost requirements");
+% ---- Cost container (a Measure of Merit, not a "shall" threshold) ----
+% Cost is an OBJECTIVE TO MINIMIZE, not a pass/fail limit. A hard "unit
+% flyaway cost <= $X" requirement is the wrong construct in conceptual
+% design: affordability is traded against weight, materials, and production
+% quantity, and lower is always better. So REQ_F16A_026 is stated as a
+% Measure of Merit (MoM). The Physical layer carries it on a MeasureOfMerit
+% stereotype and will populate its value from a cost-model function.
+cost = add(root, Id="REQ_F16A_COST", Summary="Cost measure of merit");
 cost.Type = "Container";
 cost.Keywords = ["draft","auto-generated"];
 
-r = add(cost, Id="REQ_F16A_026", Summary="Unit flyaway cost target", ...
-    Description="The program shall achieve a unit flyaway cost not exceeding approximately $68.4M (program-year dollars), per the BrandtCost DAPCA IV validation target.");
-r.Rationale = "Provides an affordability target that constrains material/weight and production-quantity assumptions.";
-r.Keywords = ["draft","auto-generated"];
+r = add(cost, Id="REQ_F16A_026", Summary="Unit flyaway cost (minimize)", ...
+    Description="Unit flyaway cost shall be MINIMIZED. This is a Measure of Merit (design objective), not a pass/fail threshold: a lower unit flyaway cost is always preferred, and cost is traded against weight, materials, and production quantity. For reference only, the Brandt F-16A DAPCA IV model computes a unit flyaway cost of about $68.4M (program-year dollars) for the reference aircraft -- that is a reference-aircraft analysis output for context, not an acceptance limit.");
+r.Rationale = "Cost is an objective to minimize, driving material/weight and production-quantity decisions. Modeling it as a MoM (rather than a 'shall not exceed' limit) reflects how affordability is actually traded in conceptual design; it is homed at the Physical layer as a MeasureOfMerit whose value comes from a cost-model function.";
+r.Keywords = ["draft","auto-generated","moe","objective","minimize"];
 
 save(rs);
 fprintf("Saved f16a.slreqx with %d requirements/containers.\n", numel(find(rs, Type="Requirement")));

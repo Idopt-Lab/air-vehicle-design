@@ -101,11 +101,13 @@ Six requirements were held back from F as non-functional (see
 | REQ_F16A_024 | Balance — rollover angle | `LandingGear` |
 | REQ_F16A_025 | Stability & control — static margin | `Airframe` |
 
-The remaining two stay deferred to the **Physical** layer, because only *materialized parts* can
+The remaining two are handled at the **Physical** layer, because only *materialized parts* can
 carry them: `REQ_F16A_022` (composite material fraction) and `REQ_F16A_026` (unit flyaway cost). No
-logical role *is* a material choice, and cost aggregates over concrete parts. Note 023/024/025 are
-still `todo` placeholders — the Implement link records *where* they will be satisfied even before
-the numbers are filled in. Allocation of responsibility precedes quantification.
+logical role *is* a material choice, and cost is a whole-aircraft figure. At P, cost (026) becomes a
+**Measure of Merit** to minimize, and materials (022) stays a deferred design constraint — see
+[`05_physical.md`](05_physical.md). Note 023/024/025 are still `todo` placeholders — the Implement
+link records *where* they will be satisfied even before the numbers are filled in. Allocation of
+responsibility precedes quantification.
 
 ## Light logical backbone
 
@@ -205,13 +207,15 @@ allocation link changes. Keeping those two decisions decoupled is the whole poin
 `F16ALogicalArchitectureTest.m` (15 tests) checks: the 9 roles exist; the 4 interfaces are defined;
 the six wired roles are fully connected and the three constraint roles are port-free; the allocation
 set exists with 14 edges from 13 leaves (Target fans out to 2); **no phase is allocated**; 020/023/
-024/025 are implemented from L while 022/026 are not; the three variant roles each have two choices
+024/025 are implemented from L while 022 stays deferred (026 is reclassified as a cost MoM, homed at
+P); the three variant roles each have two choices
 and exactly one active; every choice carries the `TradeCandidate` stereotype; the trade study ranks
 and returns a unique winner per role; the `Selected` flag and active choice match the top score; and
 each decision requirement `L01`–`L03` is linked from its winner.
 
 ## Next
 
-The **Physical layer (P)** will realize each logical role — and the *active* choice of each variant
-role — with concrete parts, refine the airframe into wing/fuselage/empennage, and finally give
-`REQ_F16A_022` (materials) and `REQ_F16A_026` (cost) a home, closing out the RFLP model.
+The **Physical layer (P)** ([`05_physical.md`](05_physical.md)) realizes each logical role with
+concrete parts — refining the airframe into wing/fuselage/empennage — rolls those parts' masses up
+to the aircraft's Operating Empty Weight, and records OEW and unit cost as **Measures of Merit** to
+minimize (homing the cost requirement `REQ_F16A_026`), closing out the RFLP model.

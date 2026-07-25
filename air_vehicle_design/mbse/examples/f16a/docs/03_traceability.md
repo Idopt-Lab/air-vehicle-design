@@ -86,20 +86,21 @@ aircraft *does* — so they are deliberately left for the **Logical / Physical**
 | Requirement | Concern | Traces to |
 |-------------|---------|-----------|
 | REQ_F16A_020 | Permanent payload capacity | **L** — `MissionSystemsBay` |
-| REQ_F16A_022 | Materials (composite fraction) | **P** |
+| REQ_F16A_022 | Materials (composite fraction) | **P** — deferred (future materials roll-up) |
 | REQ_F16A_023 | Balance — tipback angle | **L** — `LandingGear` |
 | REQ_F16A_024 | Balance — rollover angle | **L** — `LandingGear` |
 | REQ_F16A_025 | Stability & control — static margin | **L** — `Airframe` |
-| REQ_F16A_026 | Unit flyaway cost | **P** |
+| REQ_F16A_026 | Unit flyaway cost (MoM) | **P** — cost Measure of Merit on `Aircraft` |
 
 This is not a gap to fix now — it is the correct RFLP behavior. A requirement about
 *materials* or *cost* has no meaningful home in a layer that only describes *behavior*; it
 belongs where physical components exist.
 
-The [Logical layer](04_logical.md) now picks up the four that a **solution role or its geometry**
-can satisfy (020, 023, 024, 025). Materials (022) and cost (026) go one level further, to the
-**Physical** layer, because only *materialized parts* can carry them — which is exactly why the
-Physical layer needs to exist.
+The [Logical layer](04_logical.md) picks up the four that a **solution role or its geometry**
+can satisfy (020, 023, 024, 025). The [Physical layer](05_physical.md) then takes the last two,
+because only *materialized parts* can carry them: cost (026) becomes a **Measure of Merit** to
+minimize, homed on the `Aircraft` component; materials (022) — a genuine ≤ 20% design *constraint*
+— stays a deferred requirement, a natural next extension via a composite-fraction roll-up.
 
 ## Checking traceability yourself
 

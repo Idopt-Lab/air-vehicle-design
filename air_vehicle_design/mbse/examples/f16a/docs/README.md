@@ -27,7 +27,7 @@ this part exist?" and "where is this requirement satisfied?".
 | **R** – Requirements | ✅ Done | `requirements/f16a.slreqx` (26 requirements) |
 | **F** – Functions | ✅ Done | `architecture/F16A_Functional.slx` (26 functions, 39 links) |
 | **L** – Logical | ✅ Done | `logical/F16A_Logical.slx` (9 roles, 3 with traded options; allocation set with 14 edges) |
-| **P** – Physical | ⬜ Not started | — |
+| **P** – Physical | ✅ Done | `physical/F16A_Physical.slx` (20 components, 16 mass leaves; realization allocation; OEW roll-up; OEW & cost Measures of Merit) |
 
 ## Documentation map
 
@@ -37,6 +37,7 @@ this part exist?" and "where is this requirement satisfied?".
 | [`02_functions.md`](02_functions.md) | The Functions layer: the functional architecture, the F2T2EA combat kill chain, the shared capability tree, and the interfaces. |
 | [`03_traceability.md`](03_traceability.md) | The requirement → function link matrix, the derived placeholder requirements, and known coverage gaps. |
 | [`04_logical.md`](04_logical.md) | The Logical layer: the solution roles, the function → logical allocation set, the requirements L now owns, and the design-alternative variant roles with their trade study and selection. |
+| [`05_physical.md`](05_physical.md) | The Physical layer: the physical decomposition, the mass roll-up to Operating Empty Weight, the OEW and unit-cost Measures of Merit, and the logical → physical realization allocation. |
 
 ## Folder layout
 
@@ -63,7 +64,17 @@ mbse/examples/f16a/
 │   └─ F16A_FunctionToLogical.mldatx     function → logical allocation set
 ├─ generate_f16a_logical.m               builds the L model + profile + allocation + L links
 ├─ F16ALogicalTradeStudy.m               trades the variant-role options and selects one
-└─ F16ALogicalArchitectureTest.m         unit tests for the L layer
+├─ F16ALogicalArchitectureTest.m         unit tests for the L layer
+├─ physical/
+│   ├─ F16A_Physical.slx                 P layer: System Composer model (Aircraft + 11 assemblies)
+│   ├─ F16A_Physical.sldd                physical interface dictionary (ThrustMech, ElecPower, …)
+│   ├─ F16A_Physical~mdl.slmx            requirement links (auto-generated)
+│   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit)
+│   └─ F16A_LogicalToPhysical.mldatx     logical → physical realization allocation set
+├─ generate_f16a_physical.m              builds the P model + profile + realization + roll-up
+├─ F16APhysicalMassRollup.m              native roll-up of part masses to OEW
+├─ F16APhysicalCostModel.m               cost-model hook for the unit-cost MoM (stub)
+└─ F16APhysicalArchitectureTest.m        unit tests for the P layer
 ```
 
 ## How to open and run
@@ -84,6 +95,8 @@ generate_f16a_functional                    % -> architecture/F16A_Functional.sl
 generate_f16a_logical_derived_requirements  % -> requirements/f16a_logical_derived.slreqx (L01–L03)
 generate_f16a_logical                       % -> logical/F16A_Logical.slx + profile + allocation + links
                                             %    (calls F16ALogicalTradeStudy to select the traded options)
+generate_f16a_physical                      % -> physical/F16A_Physical.slx + profile + realization
+                                            %    (calls F16APhysicalMassRollup to compute the OEW MoM)
 ```
 
 Open the models and run the tests:
@@ -91,9 +104,12 @@ Open the models and run the tests:
 ```matlab
 systemcomposer.openModel("F16A_Functional")
 systemcomposer.openModel("F16A_Logical")
-systemcomposer.allocation.editor            % inspect the function → logical allocation matrix
+systemcomposer.openModel("F16A_Physical")
+systemcomposer.allocation.editor            % inspect the allocation matrices (F→L and L→P)
+F16APhysicalMassRollup                       % print the mass roll-up and OEW
 runtests("F16AFunctionalArchitectureTest")
 runtests("F16ALogicalArchitectureTest")
+runtests("F16APhysicalArchitectureTest")
 ```
 
 ## Prerequisites

@@ -136,16 +136,18 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testDeferredRequirementsPickedUpAtL(testCase)
-            % 020/023/024/025 now implemented from L; 022/026 still deferred to P.
+            % 020/023/024/025 now implemented from L. 022 (materials) stays a
+            % deferred requirement for P. 026 (cost) is reclassified as a
+            % Measure of Merit and homed at P, so it is NOT checked here (its
+            % inLinks depend on whether the P layer is built, and L must stay
+            % independent of P).
             for id = ["REQ_F16A_020","REQ_F16A_023","REQ_F16A_024","REQ_F16A_025"]
                 r = find(testCase.OrigSet, Id=char(id));
                 testCase.verifyNotEmpty(r, "Requirement not found: " + id);
                 testCase.verifyNotEmpty(r.inLinks(), "Expected an L Implement link for " + id);
             end
-            for id = ["REQ_F16A_022","REQ_F16A_026"]
-                r = find(testCase.OrigSet, Id=char(id));
-                testCase.verifyEmpty(r.inLinks(), id + " should stay deferred to P (no link).");
-            end
+            r = find(testCase.OrigSet, Id="REQ_F16A_022");
+            testCase.verifyEmpty(r.inLinks(), "REQ_F16A_022 should stay deferred to P (no link).");
         end
 
         function testVariantRolesExist(testCase)

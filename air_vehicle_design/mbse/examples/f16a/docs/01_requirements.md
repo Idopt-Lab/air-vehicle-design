@@ -86,11 +86,16 @@ conditions the aircraft must sustain (`Ps = 0`) or the field lengths it must mee
 | 023 | Balance | Tipback angle — **TODO**, no program minimum yet |
 | 024 | Balance | Rollover angle — **TODO**, no program minimum yet |
 | 025 | Stability & Control | Static margin — **TODO**, no program bounds yet |
-| 026 | Cost | Unit flyaway cost ≤ ~$68.4M |
+| 026 | Cost | Unit flyaway cost — **Measure of Merit (minimize)**, homed at the Physical layer |
 
 **26 requirements total** across 8 concern containers. Requirements 023–025 are honest
 `TODO` placeholders: the Brandt model computes these as *outputs*, but no design *minimum*
 has been specified, so they carry no requirement value yet.
+
+`REQ_F16A_026` (cost) is stated as a **Measure of Merit**, not a "shall not exceed" threshold: a
+hard cost ceiling is the wrong construct in conceptual design — cost is an objective you
+*minimize* and trade against weight and materials. The ~$68.4M DAPCA IV figure is kept only as
+the reference-aircraft value for context. The [Physical layer](05_physical.md) carries it as a MoM.
 
 ## Next
 
