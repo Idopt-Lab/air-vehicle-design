@@ -27,7 +27,7 @@ this part exist?" and "where is this requirement satisfied?".
 | **R** – Requirements | ✅ Done | `requirements/f16a.slreqx` (26 requirements) |
 | **F** – Functions | ✅ Done | `architecture/F16A_Functional.slx` (26 functions, 39 links) |
 | **L** – Logical | ✅ Done | `logical/F16A_Logical.slx` (9 roles, 3 with traded options; allocation set with 14 edges) |
-| **P** – Physical | ✅ Done | `physical/F16A_Physical.slx` (20 components, 16 mass leaves; realization allocation; OEW roll-up; OEW & cost Measures of Merit) |
+| **P** – Physical | ✅ Done | `physical/F16A_Physical.slx` (23 components; realization allocation; mass/materials/fuel roll-ups; OEW & cost MoMs; REQ_022 & REQ_P01 *verified by* tests) |
 
 ## Documentation map
 
@@ -49,7 +49,12 @@ mbse/examples/f16a/
 │   ├─ f16a.slreqx                       R layer: sizing-derived requirements (pristine)
 │   ├─ generate_f16a_requirements.m      generator for the above
 │   ├─ f16a_functional_derived.slreqx    derived placeholder requirements (D01–D09)
-│   └─ generate_f16a_derived_requirements.m
+│   ├─ generate_f16a_derived_requirements.m
+│   ├─ f16a_logical_derived.slreqx        logical decision requirements (L01–L03)
+│   ├─ generate_f16a_logical_derived_requirements.m
+│   ├─ f16a_physical_derived.slreqx       physical-layer requirements (P01: fuel volume)
+│   ├─ generate_f16a_physical_derived_requirements.m
+│   └─ *~slreqx.slmx                      verify link sets (requirement → test)
 ├─ architecture/
 │   ├─ F16A_Functional.slx               F layer: System Composer model
 │   ├─ F16A_Functional.sldd              interface dictionary (FlightState, EngagementData)
@@ -69,12 +74,16 @@ mbse/examples/f16a/
 │   ├─ F16A_Physical.slx                 P layer: System Composer model (Aircraft + 11 assemblies)
 │   ├─ F16A_Physical.sldd                physical interface dictionary (ThrustMech, ElecPower, …)
 │   ├─ F16A_Physical~mdl.slmx            requirement links (auto-generated)
-│   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit)
+│   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit, Material, FuelTank)
 │   └─ F16A_LogicalToPhysical.mldatx     logical → physical realization allocation set
-├─ generate_f16a_physical.m              builds the P model + profile + realization + roll-up
+├─ generate_f16a_physical.m              builds the P model + profiles + realization + roll-ups + links
 ├─ F16APhysicalMassRollup.m              native roll-up of part masses to OEW
+├─ F16APhysicalMaterialsRollup.m         roll-up of the airframe composite fraction (REQ_022)
+├─ F16APhysicalFuelRollup.m              roll-up of available internal fuel capacity (REQ_P01)
 ├─ F16APhysicalCostModel.m               cost-model hook for the unit-cost MoM (stub)
-└─ F16APhysicalArchitectureTest.m        unit tests for the P layer
+├─ F16APhysicalMissionFuel.m             mission-fuel hook for the fuel-volume check (stub → NaN)
+├─ F16APhysicalArchitectureTest.m        unit tests: the P model is built correctly
+└─ F16APhysicalVerificationTest.m        "verified by" tests: the design meets REQ_022 / REQ_P01
 ```
 
 ## How to open and run
@@ -95,8 +104,10 @@ generate_f16a_functional                    % -> architecture/F16A_Functional.sl
 generate_f16a_logical_derived_requirements  % -> requirements/f16a_logical_derived.slreqx (L01–L03)
 generate_f16a_logical                       % -> logical/F16A_Logical.slx + profile + allocation + links
                                             %    (calls F16ALogicalTradeStudy to select the traded options)
-generate_f16a_physical                      % -> physical/F16A_Physical.slx + profile + realization
-                                            %    (calls F16APhysicalMassRollup to compute the OEW MoM)
+generate_f16a_physical_derived_requirements % -> requirements/f16a_physical_derived.slreqx (P01 fuel)
+generate_f16a_physical                      % -> physical/F16A_Physical.slx + profiles + realization
+                                            %    (runs the mass/materials/fuel roll-ups; adds the
+                                            %     cost/materials/fuel requirement + verify links)
 ```
 
 Open the models and run the tests:
@@ -110,6 +121,8 @@ F16APhysicalMassRollup                       % print the mass roll-up and OEW
 runtests("F16AFunctionalArchitectureTest")
 runtests("F16ALogicalArchitectureTest")
 runtests("F16APhysicalArchitectureTest")
+runtests("F16APhysicalVerificationTest")     % NOTE: the fuel-volume test fails on purpose
+                                             % (mission-fuel stub) until /sizing/ is connected
 ```
 
 ## Prerequisites

@@ -20,22 +20,28 @@ function generate_f16a_physical()
 %        the mass roll-up; cost comes from a cost-model FUNCTION
 %        (F16APhysicalCostModel, a stub for now) -- NOT a roll-up.
 %
-%   Structure (20 components; the Aircraft component is the system-of-interest
-%   that holds the roll-up total and the MoMs), 16 mass-bearing leaves
-%   (FuelSystem is a 17th, zero-OEW leaf -- see below):
+%   Structure (23 components; the Aircraft component is the system-of-interest
+%   that holds the OEW/cost MoMs), 16 mass-bearing leaves:
 %     F16A_Physical
 %       |- Aircraft
 %          |- Airframe     |- Wing Fuselage HorizontalTail VerticalTail Nacelles Strakes
 %          |- Propulsion   |- Engine(F100-PW-200) InletDuct
-%          |- LandingGear  |- FuelSystem  |- FlightControls  |- Avionics
-%          |- Electrical   |- Hydraulics  |- ECS             |- ArmamentSupport
-%          |- SecondaryStructure
+%          |- FuelSystem   |- FwdFuselageTank AftFuselageTank WingTank
+%          |- LandingGear  |- FlightControls  |- Avionics
+%          |- Electrical   |- Hydraulics  |- ECS  |- ArmamentSupport  |- SecondaryStructure
 %   Leaf masses are Brandt F-16A ground-truth weights (lbf, design point
-%   W_TO = 31,377 lb) and sum to OEW ~= 19,980.7 lb. FuelSystem carries 0:
-%   its dry tankage is integral to the wet wing/fuselage and internal fuel is
-%   a consumable, not empty weight -- a deliberate "not every part adds to
-%   OEW" lesson. Airframe-less-engine = OEW - Engine ~= 15,250.5 lb is the
-%   standard airframe-unit-weight convention (NOT a structural-group sum).
+%   W_TO = 31,377 lb) and sum to OEW ~= 19,980.7 lb. The fuel tanks carry 0
+%   dry mass (tankage is integral to the wet wing/fuselage; internal fuel is a
+%   consumable, not empty weight) -- a deliberate "not every part adds to OEW"
+%   lesson. Airframe-less-engine = OEW - Engine ~= 15,250.5 lb is the standard
+%   airframe-unit-weight convention (NOT a structural-group sum).
+%
+%   Three roll-ups (see F16APhysical*Rollup):
+%     * Mass    -> OEW (native instantiate/iterate; a MoM to minimize).
+%     * Material-> airframe mass-weighted composite fraction (~0.19), the
+%                  "verified by" side of REQ_F16A_022 (composite <= 20%).
+%     * Fuel    -> available internal fuel capacity (~6300 lb), the "available"
+%                  side of REQ_F16A_P01 (fuel-volume sufficiency).
 %
 %   Realization (logical role -> physical part), 9 roles, 15 edges:
 %     Airframe -> Wing/Fuselage/HorizontalTail/VerticalTail/Nacelles/Strakes;
@@ -47,9 +53,13 @@ function generate_f16a_physical()
 %   logical role -- supporting infrastructure, the symmetric echo of L's
 %   constraint-driven (function-less) roles.
 %
-%   Requirements: REQ_F16A_026 (unit flyaway cost) is a Measure of Merit
-%   (minimize), homed here and Implement-linked from the Aircraft component.
-%   REQ_F16A_022 (materials) remains a deferred requirement.
+%   Requirements: REQ_F16A_026 (cost) is a Measure of Merit (minimize), homed
+%   here and Implement-linked from the Aircraft. REQ_F16A_022 (materials) is
+%   Implement-linked from the Airframe and VERIFIED by a test (composite
+%   fraction roll-up <= 20%). REQ_F16A_P01 (fuel volume) is Implement-linked
+%   from the FuelSystem and VERIFIED by a test (available >= required fuel);
+%   its mission-fuel side is a stub, so that verification is pending (fails).
+%   These are the project's first requirement-to-test "verified by" links.
 %
 %   Idempotent: re-run to regenerate from scratch. Requires the L model and
 %   the requirement set to exist first (run generate_f16a_logical.m and the
@@ -84,13 +94,18 @@ slmxFile = fullfile(physDir, modelName + "~mdl.slmx");
 profFile = fullfile(physDir, profileName + ".xml");
 allocFile= fullfile(physDir, allocName + ".mldatx");
 origFile = fullfile(reqDir, "f16a.slreqx");
+physDerFile = fullfile(reqDir, "f16a_physical_derived.slreqx");
 
 if ~isfolder(physDir); mkdir(physDir); end
 
 % Prerequisites: this generator loads the L model (allocation source) and
-% links into the base requirement set (cost MoM).
+% links into the base requirement set (cost MoM, materials) and the
+% physical-derived set (fuel volume).
 if ~isfile(origFile)
     error("Missing %s. Run generate_f16a_requirements first.", origFile);
+end
+if ~isfile(physDerFile)
+    error("Missing %s. Run generate_f16a_physical_derived_requirements first.", physDerFile);
 end
 if ~isfile(fullfile(logiDir, logiName + ".slx"))
     error("Missing %s.slx. Run generate_f16a_logical first.", logiName);
@@ -155,12 +170,18 @@ asmNames = ["Airframe","Propulsion","LandingGear","FuelSystem", ...
     "FlightControls","Avionics","Electrical","Hydraulics","ECS", ...
     "ArmamentSupport","SecondaryStructure"];
 asm = addComponent(ac, asmNames);
-airframe = asm(1); propulsion = asm(2);
+airframe = asm(1); propulsion = asm(2); fuelsys = asm(4);
 fctrl = asm(5); avionics = asm(6); elec = asm(7); hyd = asm(8);
 
 addComponent(airframe.Architecture, ...
     ["Wing","Fuselage","HorizontalTail","VerticalTail","Nacelles","Strakes"]);
 addComponent(propulsion.Architecture, ["Engine","InletDuct"]);
+% FuelSystem refines into three internal tanks (~2100 lb usable fuel each,
+% ~6300 lb total, matching the Brandt internal-fuel weight). Their DRY mass
+% is 0 (tankage is integral to the wet wing/fuselage); they carry a fuel
+% CAPACITY that the fuel-volume roll-up sums for REQ_F16A_P01.
+addComponent(fuelsys.Architecture, ...
+    ["FwdFuselageTank","AftFuselageTank","WingTank"]);
 
 % ---------------------------------------------------------------------
 % 4) Light physical backbone (a few typed connections so interfaces exist).
@@ -202,6 +223,12 @@ mom.addProperty("OEW_lb",       Type="double", DefaultValue="0");   % <- mass ro
 mom.addProperty("UnitCost_USD", Type="double", DefaultValue="0");   % <- cost-model function
 % String defaults are evaluated as MATLAB expressions, so quote the literal.
 mom.addProperty("Goal",         Type="string", DefaultValue="'Minimize'");
+% Material: composite fraction per part -> airframe composite roll-up (REQ_022).
+mat = profile.addStereotype("Material", AppliesTo="Component");
+mat.addProperty("CompositeFraction", Type="double", DefaultValue="0");   % 0..1 of part mass
+% FuelTank: fuel capacity per tank -> available-fuel roll-up (REQ_P01).
+tank = profile.addStereotype("FuelTank", AppliesTo="Component");
+tank.addProperty("FuelCapacity_lb", Type="double", DefaultValue="0");
 profile.save();
 relocate(profileName + ".xml", profFile, thisDir);
 
@@ -235,6 +262,38 @@ massRows = {
 for i = 1:size(massRows,1)
     c = lookup(m, Path=char(massRows{i,1}));
     setProperty(c, profileName + ".PhysicalItem.Mass_lb", string(massRows{i,2}));
+end
+
+% Airframe material split: CompositeFraction per structural part (fraction of
+% the part's mass that is composite). Educated guess grounded in real F-16
+% composite usage -- graphite/epoxy tail skins, carbon-fiber wing leading
+% edge, fiberglass strakes; aluminum fuselage/nacelles -- tuned so the
+% mass-weighted airframe composite fraction (~0.19) sits within the 20% cap
+% of the Brandt reference material mix (REQ_F16A_022).
+compRows = {
+    S+"Airframe/Wing",           0.15;
+    S+"Airframe/Fuselage",       0.10;
+    S+"Airframe/HorizontalTail", 0.55;
+    S+"Airframe/VerticalTail",   0.70;
+    S+"Airframe/Nacelles",       0.05;
+    S+"Airframe/Strakes",        0.50;
+};
+for i = 1:size(compRows,1)
+    c = lookup(m, Path=char(compRows{i,1}));
+    applyStereotype(c, profileName + ".Material");
+    setProperty(c, profileName + ".Material.CompositeFraction", string(compRows{i,2}));
+end
+
+% Internal fuel tanks: ~2100 lb usable each (~6300 lb total, ~ Brandt fuel).
+fuelRows = {
+    S+"FuelSystem/FwdFuselageTank", 2100;
+    S+"FuelSystem/AftFuselageTank", 2100;
+    S+"FuelSystem/WingTank",        2100;
+};
+for i = 1:size(fuelRows,1)
+    c = lookup(m, Path=char(fuelRows{i,1}));
+    applyStereotype(c, profileName + ".FuelTank");
+    setProperty(c, profileName + ".FuelTank.FuelCapacity_lb", string(fuelRows{i,2}));
 end
 
 % Declare the two Measures of Merit on the Aircraft (Goal defaults to
@@ -276,8 +335,10 @@ alloc.save();
 relocate(allocName + ".mldatx", allocFile, thisDir);
 
 % ---------------------------------------------------------------------
-% 8) Cost Measure of Merit (from a cost-model function, not a roll-up) and
-%    the Implement link that homes REQ_F16A_026 at the Physical layer.
+% 8) Cost Measure of Merit (from a cost-model function) + requirement links:
+%    cost MoM (Implement), materials (Implement + the project's first VERIFY
+%    link), and fuel volume (Implement + Verify). The verify links point at
+%    F16APhysicalVerificationTest, whose tests check the requirements are met.
 % ---------------------------------------------------------------------
 unitCost = F16APhysicalCostModel(m);   % stub returns NaN ("not yet computed")
 % num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
@@ -285,23 +346,44 @@ setProperty(aircraft, profileName + ".MeasureOfMerit.UnitCost_USD", string(num2s
 save_system(modelName, char(modelFile));
 
 origSet = slreq.load(origFile);
-req = find(origSet, Id="REQ_F16A_026");
-if ~isempty(req) && isempty(req.inLinks())
-    slreq.createLink(aircraft, req);   % cost MoM (Aircraft) -> REQ_F16A_026
+physSet = slreq.load(physDerFile);
+vtFile  = which("F16APhysicalVerificationTest");
+if isempty(vtFile)
+    error("F16APhysicalVerificationTest not found on the path (needed for verify links).");
 end
+
+airframeC = lookup(m, Path=char(S + "Airframe"));
+fuelSysC  = lookup(m, Path=char(S + "FuelSystem"));
+
+% Cost MoM -> REQ_026 (Implement, from the Aircraft).
+linkImplement(aircraft, find(origSet, Id="REQ_F16A_026"));
+% Materials -> REQ_022: implemented by the Airframe, VERIFIED by the test.
+linkImplement(airframeC, find(origSet, Id="REQ_F16A_022"));
+linkVerify(find(origSet, Id="REQ_F16A_022"), vtFile);
+% Fuel volume -> REQ_P01: implemented by the FuelSystem, VERIFIED by the test.
+linkImplement(fuelSysC, find(physSet, Id="REQ_F16A_P01"));
+linkVerify(find(physSet, Id="REQ_F16A_P01"), vtFile);
+
 save(origSet);
-savePhysicalLinkSets();   % only the F16A_Physical link set (leave F/L untouched)
+save(physSet);
+savePhysicalLinkSets();   % F16A_Physical model link set + the verify link sets
 save_system(modelName, char(modelFile));
 
 % ---------------------------------------------------------------------
-% 9) Run the mass roll-up so the shipped model already carries subtotals and
-%    the OEW Measure of Merit. Can be re-run standalone.
+% 9) Run the roll-ups so the shipped model already carries subtotals and the
+%    OEW Measure of Merit, and print the materials/fuel figures. Each can be
+%    re-run standalone.
 % ---------------------------------------------------------------------
 results = F16APhysicalMassRollup();
+mats    = F16APhysicalMaterialsRollup();
+fuel    = F16APhysicalFuelRollup();
 
 nComp = countComps(m.Architecture);
-fprintf("Built %s with %d components (%d realization L->P edges), OEW=%.2f lb, airframe=%.2f, propulsion=%.2f.\n", ...
-    modelName, nComp, size(edges,1), results.OEW, results.Airframe, results.Propulsion);
+fmt = "Built %s with %d components (%d realization L->P edges). " + ...
+    "OEW=%.2f lb; airframe composite=%.1f%% (REQ_022 cap 20%%); " + ...
+    "available fuel=%.0f lb.\n";
+fprintf(fmt, modelName, nComp, size(edges,1), results.OEW, ...
+    100*mats.CompositeFraction, fuel.AvailableFuel_lb);
 
 end
 
@@ -342,12 +424,37 @@ end
 end
 
 % =====================================================================
+function linkImplement(srcComp, req)
+%LINKIMPLEMENT Implement-link a component to a requirement (idempotent).
+if ~isempty(req) && isempty(req.inLinks())
+    slreq.createLink(srcComp, req);
+end
+end
+
+% =====================================================================
+function linkVerify(req, testFile)
+%LINKVERIFY Create a Verify link from a requirement to a test file, so the
+%   requirement is "verified by" that test. Idempotent (skips if one exists).
+%   Direction is requirement -> test file (the working slreq form); the link
+%   is stored in the requirement set's link set.
+if isempty(req); return; end
+ol = req.outLinks();
+for k = 1:numel(ol)
+    if string(ol(k).Type) == "Verify"; return; end
+end
+vl = slreq.createLink(req, char(testFile));
+vl.Type = "Verify";
+end
+
+% =====================================================================
 function savePhysicalLinkSets()
-%SAVEPHYSICALLINKSETS Save only link sets belonging to F16A_Physical, so the
-%   functional and logical layers' link sets are not re-written.
+%SAVEPHYSICALLINKSETS Save the F16A_Physical model link set (Implement links)
+%   and the requirement-set link sets that hold the new Verify links, without
+%   re-writing the functional or logical layers' link sets.
 lnkSets = slreq.find(Type="LinkSet");
 for i = 1:numel(lnkSets)
-    if contains(string(lnkSets(i).Artifact), "F16A_Physical")
+    a = string(lnkSets(i).Artifact);
+    if contains(a, "F16A_Physical") || endsWith(a, ".slreqx")
         save(lnkSets(i));
     end
 end

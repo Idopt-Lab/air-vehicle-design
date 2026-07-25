@@ -97,6 +97,10 @@ hard cost ceiling is the wrong construct in conceptual design — cost is an obj
 *minimize* and trade against weight and materials. The ~$68.4M DAPCA IV figure is kept only as
 the reference-aircraft value for context. The [Physical layer](05_physical.md) carries it as a MoM.
 
+`REQ_F16A_022` (materials) *is* a genuine ≤ 20% constraint; the [Physical layer](05_physical.md)
+**verifies** it with a test that rolls up the airframe composite fraction — the first
+requirement-to-test "verified by" relationship in the model.
+
 ## Next
 
 The Functions layer ([`02_functions.md`](02_functions.md)) defines what the aircraft must

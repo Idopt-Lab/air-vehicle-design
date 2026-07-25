@@ -25,6 +25,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "ArmamentSupport","SecondaryStructure"];
         AirframeParts   = ["Wing","Fuselage","HorizontalTail","VerticalTail","Nacelles","Strakes"];
         PropulsionParts = ["Engine","InletDuct"];
+        FuelTanks       = ["FwdFuselageTank","AftFuselageTank","WingTank"];
         LogicalRoles = ["Airframe","PropulsionSystem","FuelSystem", ...
             "FlightControlSystem","LandingGear","AvionicsSuite", ...
             "CommunicationSystem","WeaponSystem","MissionSystemsBay"];
@@ -64,10 +65,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     methods (Test)
 
         function testPhysicalComponentsExist(testCase)
-            % 20 components; root holds one Aircraft; Aircraft holds 11
-            % assemblies; Airframe has 6 parts; Propulsion has 2.
-            testCase.verifyEqual(testCase.countComps(testCase.Model.Architecture), 20, ...
-                "Expected 20 components (Aircraft + 11 assemblies + 8 parts).");
+            % 23 components; root holds one Aircraft; Aircraft holds 11
+            % assemblies; Airframe 6 parts, Propulsion 2, FuelSystem 3 tanks.
+            testCase.verifyEqual(testCase.countComps(testCase.Model.Architecture), 23, ...
+                "Expected 23 components (Aircraft + 11 assemblies + 8 parts + 3 tanks).");
             testCase.verifyEqual(numel(testCase.Model.Architecture.Components), 1, ...
                 "Root should hold exactly one component (Aircraft).");
             ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
@@ -77,6 +78,8 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.verifyEqual(numel(af.Architecture.Components), 6, "Airframe should have 6 parts.");
             pr = testCase.Model.lookup(Path=char(testCase.AC + "Propulsion"));
             testCase.verifyEqual(numel(pr.Architecture.Components), 2, "Propulsion should have 2 parts.");
+            fs = testCase.Model.lookup(Path=char(testCase.AC + "FuelSystem"));
+            testCase.verifyEqual(numel(fs.Architecture.Components), 3, "FuelSystem should have 3 tanks.");
         end
 
         function testHierarchyCorrect(testCase)
@@ -92,7 +95,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             for p = testCase.PropulsionParts
                 testCase.verifyTrue(testCase.resolves(testCase.AC + "Propulsion/" + p), "Missing Propulsion part: " + p);
             end
-            leafAsm = setdiff(testCase.Assemblies, ["Airframe","Propulsion"]);
+            for t = testCase.FuelTanks
+                testCase.verifyTrue(testCase.resolves(testCase.AC + "FuelSystem/" + t), "Missing fuel tank: " + t);
+            end
+            leafAsm = setdiff(testCase.Assemblies, ["Airframe","Propulsion","FuelSystem"]);
             for a = leafAsm
                 c = testCase.Model.lookup(Path=char(testCase.AC + a));
                 testCase.verifyEmpty(c.Architecture.Components, a + " should be a leaf.");
@@ -105,6 +111,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             paths = [paths, testCase.AC + testCase.Assemblies];
             paths = [paths, testCase.AC + "Airframe/" + testCase.AirframeParts];
             paths = [paths, testCase.AC + "Propulsion/" + testCase.PropulsionParts];
+            paths = [paths, testCase.AC + "FuelSystem/" + testCase.FuelTanks];
             for pth = paths
                 c = testCase.Model.lookup(Path=char(pth));
                 sters = string(c.getStereotypes());
@@ -127,6 +134,39 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             fs = testCase.Model.lookup(Path=char(testCase.AC + "FuelSystem"));
             vfs = str2double(string(getProperty(fs, testCase.Profile + ".PhysicalItem.Mass_lb")));
             testCase.verifyEqual(vfs, 0, "AbsTol", 1e-9, "FuelSystem should carry zero OEW mass.");
+        end
+
+        function testAirframeCompositeFractionsSet(testCase)
+            % Every airframe part carries a Material stereotype with a
+            % CompositeFraction in [0,1]; at least the tails are composite-heavy.
+            for p = testCase.AirframeParts
+                c = testCase.Model.lookup(Path=char(testCase.AC + "Airframe/" + p));
+                testCase.verifyTrue(any(contains(string(c.getStereotypes()), "Material")), ...
+                    "Material stereotype not applied to " + p);
+                cf = str2double(string(getProperty(c, testCase.Profile + ".Material.CompositeFraction")));
+                testCase.verifyGreaterThanOrEqual(cf, 0, p + " CompositeFraction < 0.");
+                testCase.verifyLessThanOrEqual(cf, 1, p + " CompositeFraction > 1.");
+            end
+            vt = testCase.Model.lookup(Path=char(testCase.AC + "Airframe/VerticalTail"));
+            cfvt = str2double(string(getProperty(vt, testCase.Profile + ".Material.CompositeFraction")));
+            testCase.verifyGreaterThan(cfvt, 0.3, "VerticalTail should be composite-heavy (graphite skins).");
+        end
+
+        function testFuelTankCapacities(testCase)
+            % Each fuel tank carries a FuelTank stereotype with a positive
+            % capacity and zero dry (OEW) mass; total ~ 6300 lb.
+            total = 0;
+            for t = testCase.FuelTanks
+                c = testCase.Model.lookup(Path=char(testCase.AC + "FuelSystem/" + t));
+                testCase.verifyTrue(any(contains(string(c.getStereotypes()), "FuelTank")), ...
+                    "FuelTank stereotype not applied to " + t);
+                cap = str2double(string(getProperty(c, testCase.Profile + ".FuelTank.FuelCapacity_lb")));
+                testCase.verifyGreaterThan(cap, 0, t + " should have positive fuel capacity.");
+                mass = str2double(string(getProperty(c, testCase.Profile + ".PhysicalItem.Mass_lb")));
+                testCase.verifyEqual(mass, 0, "AbsTol", 1e-9, t + " dry mass should be 0 (fuel is a consumable).");
+                total = total + cap;
+            end
+            testCase.verifyGreaterThanOrEqual(total, 6000, "Total internal fuel capacity looks too low.");
         end
 
         function testMassRollupSelfConsistent(testCase)
