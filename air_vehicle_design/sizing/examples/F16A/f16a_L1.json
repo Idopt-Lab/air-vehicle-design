@@ -6,7 +6,7 @@
   "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Roskam I Tbl 3.5 (S_wet) / Raymer Tbl 6.3 (L_fus) / Raymer 7th Tbl 4.1 (AR_eq) / Raymer Tbl 3.1 + Roskam I Tbl 2.15 (empty weight) / Roskam I Tbl 3.1 (CLmax) / Raymer Tbl 12.3 (Cfe) rows. Those tables name their categories differently (Roskam's CLmax table says 'fighter'), so each lookup translates this canonical value to its own table's row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key: the row name is what the textbook prints.",
 
   "geometry": {
-    "_note": "★ NO INPUTS AT L1. M_max = 2.0 was DELETED here (Phase 4, 2026-07-25): it was the THIRD copy of the design max Mach, which now lives once in examples/F16A/f16a_requirements.json as design_mach [Brandt Main! aircraft.Mmax; GroundTruth/f16a_geometry.json:9]. It is still CONSUMED -- F16GeomL1 feeds it to GeomL1.get_AR_eq (Raymer 7th Tbl 4.1, GeomL1.m:121-129) -- so this is a consolidation, not a removal. ★ IMPLEMENTER: F16GeomL1.m:79 reads J.geometry.M_max today and will error until repointed at the requirements file. todo 2026-07-25 Phase 4 §P4-14."
+    "_note": "★ NO INPUTS AT L1. M_max = 2.0 was DELETED here (Phase 4, 2026-07-25): it was the THIRD copy of the design max Mach, which now lives once in examples/F16A/f16a_requirements.json as design_mach [Brandt Main! aircraft.Mmax; GroundTruth/f16a_geometry.json:9]. It is still CONSUMED -- F16GeomL1 feeds it to GeomL1.get_AR_eq (Raymer 7th Tbl 4.1, GeomL1.m:121-129) -- so this is a consolidation, not a removal. The repoint has LANDED: F16GeomL1(json_path, req_path) reads design_mach from the requirements file. todo 2026-07-25 Phase 4 §P4-14."
   },
 
   "aerodynamics": {
