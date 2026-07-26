@@ -2373,6 +2373,37 @@ that `max()` omits NaN, so the test stays meaningful if the guard ever moves. Th
 from a new `tests/constraints/NaNCurveStub.m`, necessarily a stub: a real `ThrustConstraint` throws
 `Both_WbyS_TbyW:nonFiniteTerm` first and the aggregator's guard is never reached.
 
+### §D-5 — The 11 `examples/F16A/F16*L*.md` companion docs were standardized and renumbered
+
+Same pass, second sweep. The eleven concrete-class companion docs ranged from **34 to 1123 lines**
+with four different structures; they now share the five-section shape the `*_parameter_usage.md`
+files use — **1 constructor, 2 inputs, 3 derived, 4 methods + as-built values, 5 to-dos**. 3432 lines
+→ 1150, with every property table regenerated from the class metaclass `PropertyList` rather than
+from the previous revision.
+
+Errors that regeneration caught, each a doc asserting something the code had stopped doing:
+`F16AeroL1.md` documented `get_CLmax` as Table 3.3's 0.90 and the input as `aircraft_type`;
+`F16AeroL2.md` listed the now-`Dependent` `Cfe` as an input; `F16AeroL3.md` listed `Amax_ft2` /
+`L_aircraft_ft` as inputs and carried a "Current limitation" section stating they were frozen aero
+inputs at 25.110556 / 48.304; `F16GeomL2.md` listed `tc_ht`, `tc_vt` and `T_AB_SLS_lb` as inputs and
+omitted `Amax` and `L_aircraft` entirely.
+
+Two stale in-code comments were fixed at the same time: `F16AeroL3.m`'s `Amax_ft2` property line
+still called it the envelope ellipse (it is tier-specific, area-ruled at L3), and its
+`compute_CD0_wave` header still carried the superseded "+23.15 % / `E_WD` would need 1.7864" note.
+This closes §H items 13 and 18 of the old `F16GeomL3.md`.
+
+**`F16AeroL3_wave_drag_fix.md` was deleted.** It was a 449-line *specification* whose own header read
+"documentation only … No `.m` file has been edited … gated on user approval" for a change that
+shipped in `8ec0e9e`. Its six references now point at `F16AeroL3.md`.
+
+**Reference mapping for this log.** Older entries here cite the *lettered* sections of those docs.
+They map: `F16GeomL3.md` §A.1/§A.1b → §2, §A.2/§A.3/§A.5 → §3, §A.4 → §4, §B → §2, §C → §3, §D → §4,
+§D.6 → §6, §E → §2, §F → §2, §G → the comparison-report scripts, §H → §6;
+`F16Weights{L1,L2,L3}.md` §B.1 → §2, §B.2/§B.3 → §3, §D.* → §4 (or §3 for L3 §D.6), §E.* → §4,
+§F → §4, §G → `weights_brandt_comparison.m`. Prior entries are left unedited per this file's own
+rule; every reference **outside** this file was repointed.
+
 ### §D-4 — Standing lesson
 
 **A signature or contract change must sweep the companion `.md` in the same commit.** This is the
