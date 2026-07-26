@@ -16,7 +16,7 @@ classdef (Abstract) WeightsBase < handle
      %   closure identity above is NOT enforced anywhere yet. That is correct for
      %   now -- the sizing loop does not exist -- but it means those three
      %   properties are currently inert. See docs/weights_parameter_usage.md
-     %   Part A ("AS-IS gap").
+     %   §5.
      %
      %   Inheritance chain per fidelity level:
      %     WeightsBase -> WeightsModelLN (abstract) -> F16WeightsLN (student class)
