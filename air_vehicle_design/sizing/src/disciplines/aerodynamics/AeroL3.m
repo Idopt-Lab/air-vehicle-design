@@ -1,35 +1,27 @@
 classdef AeroL3
 %AEROL3  Level-3 aerodynamics static toolbox: component CD0 buildup.
 %
-%   Call as AeroL3.method_name(args) -- no instantiation required.
-%   Not in the inheritance chain.  Student classes (F16AeroL3, etc.) inherit
-%   from AeroModelL3 and call these statics.
+%   Call as AeroL3.method(...); never instantiated, not in the inheritance
+%   chain. F16AeroL3 inherits AeroModelL3 and delegates to these statics.
 %
-%   Replaces the type-based Cf with a per-component Reynolds/skin-friction/
-%   form-factor buildup.  The induced (K1/K2/e), the shared skin-friction
-%   primitives (dyn_viscosity, compute_Re, Cf_turbulent), and the transonic
-%   regime test live in the AeroL2 toolbox (single source of truth); this
-%   toolbox calls them.  AeroL3 owns the buildup-specific primitives: laminar
-%   Cf, cutoff Reynolds, form factors, and the component summation.
+%   Replaces L2's type-based Cfe with a per-component Reynolds / skin-friction
+%   / form-factor buildup. The induced terms, the shared skin-friction
+%   primitives and the regime test stay in AeroL2 as the single source of
+%   truth; this toolbox calls them and owns only the buildup-specific pieces:
+%   laminar Cf, cutoff Reynolds, form factors, and the component summation.
 %
-%   All component geometry (per-component S_wet, reference length, diameter,
-%   t/c, max-thickness-line sweep) is read from the injected geometry object
-%   via the student object's Dependent getters -- this toolbox never sees a
-%   hardcoded geometry number; it reads whatever obj exposes (duck typing).
+%   All component geometry is read from the injected geometry object through
+%   the concrete class's Dependent getters.
 %
-%   EQUATIONS:
-%     CD0 = SUM(Cf_eff*FF*Q*Swet_i)/Sref + CD0_misc + CD0_LandP   Raymer Eq. 12.24
-%     Re         = rho*V*l/mu                       Eq. 12.25 (AeroL2.compute_Re)
-%     Cf_lam     = 1.328/sqrt(Re)                   Eq. 12.26
-%     Cf_turb    = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Eq. 12.27 (AeroL2.Cf_turbulent)
-%     Re_cut_sub = 38.21*(l/k)^1.053                Eq. 12.28
-%     Re_cut_sup = 44.62*(l/k)^1.053*M^1.16         Eq. 12.29
-%     FF_surf    = (1+0.6/x_c_max*tc+100*tc^4)*(1.34*M^0.18*cos(Lm)^0.28)  Eq. 12.30
-%     FF_body    = 1+5/f^1.5+f/400 (f<=6) or 1+60/f^3+f/400 (f>6), f=L/D    Eq. 12.31
+%   Sources: [Raymer 6th ed. Eq. 12.24] buildup; [Eq. 12.26] laminar Cf;
+%   [Eq. 12.28/12.29] cutoff Reynolds; [Eq. 12.30] surface form factor;
+%   [Eq. 12.31] body form factor.
 %
-%   Supersonic wave drag (Raymer Eq. 12.41, M >= 1.2) is added by the concrete
-%   class's get_CD0_buildup override (it is aircraft-specific, not generic).
-%   The transonic band (see AeroL2.flight_regime) is NOT modeled.
+%   Supersonic wave drag [Raymer 6th ed. Eq. 12.41, M >= 1.2] is added by the
+%   concrete class's get_CD0_buildup override, being aircraft-specific. The
+%   transonic band is not modelled.
+%
+%   Companion doc: src/disciplines/aerodynamics/AeroL3.md
 
     methods (Static)
 
@@ -66,20 +58,6 @@ classdef AeroL3
         end
 
         function val = get_CD0_buildup(obj, state)
-        %GET_CD0_BUILDUP  Generic Raymer Eq. 12.24 component sum:
-        %   SUM(Cf_eff*FF*Q*S_wet)/S_ref + CD0_misc + CD0_LandP.
-        %   Reads the per-component arrays from obj (built live from the
-        %   injected geometry object). Supersonic wave drag is NOT added here
-        %   (it is aircraft-specific -- the concrete class overrides this
-        %   method to add it for M >= 1.2).
-        %
-        %   REQUIRES M > 0. The component buildup is Reynolds-based, and at M=0
-        %   (V=0) every component's Re is 0: Cf_laminar(0)=Inf while the Eq.
-        %   12.30 form factor's 1.34*M^0.18 term is 0, so the product silently
-        %   evaluated to NaN and returned NaN CD0 for the whole aircraft. NaN
-        %   then makes every > / < comparison in a constraint solve false, so the
-        %   point was reported SATISFIED rather than failing (fixed 2026-07-25).
-        %   AircraftState permits mach=0, so this must be caught here.
             M = state.mach;
             if ~(M > 0)
                 error('AeroL3:machOutOfDomain', ...
@@ -177,26 +155,12 @@ classdef AeroL3
         end
 
         function val = get_K2(obj, K1_sub, M)
-        %GET_K2  Polar-offset term (Convention A).
-        %   CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2)  [Brandt Sec. 4.3],
-        %   evaluated at Mach M via obj.get_CL_alpha (honoring any concrete
-        %   override that passes quarter-chord sweep). M>=1: K2=0.
             CL_alpha_M = obj.get_CL_alpha(M);
             CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
             val        = AeroL2.K2_value(K1_sub, CL_minD, M);
         end
 
         function val = get_CL_alpha(obj, M)
-        %GET_CL_ALPHA  Finite-wing lift-curve slope (Raymer Eq. 12.6) using the
-        %   injected quarter-chord sweep obj.Lambda_c4_deg (NOT leading-edge --
-        %   fixes the former Lambda_LE approximation).
-        %
-        %   Delegates to AeroL2.get_CL_alpha so the 2-D airfoil lift slope
-        %   obj.cl_alpha_2D reaches the eta term (Raymer Eq. 12.8). Until
-        %   2026-07-25 this called AeroL2.CL_alpha directly with three
-        %   arguments, so eta silently fell back to the 0.95 default while L2 --
-        %   the LOWER-fidelity level -- used the real NACA 64A204 slope. Same
-        %   airfoil, same injected geometry, different answer at the two levels.
             val = AeroL2.get_CL_alpha(obj, M);
         end
 
@@ -215,11 +179,6 @@ classdef AeroL3
         end
 
         function Cf = Cf_laminar(Re)
-        %CF_LAMINAR  Laminar flat-plate Cf = 1.328/sqrt(Re).  Raymer 6th ed. Eq. 12.26.
-        %   Re guarded POSITIVE: Re=0 returns Inf, which then multiplied a zero
-        %   M=0 form factor into a silent NaN CD0 for the whole aircraft
-        %   (fixed 2026-07-25 -- see get_CD0_buildup's Mach guard). Negative Re
-        %   would return a complex Cf.
             arguments
                 Re (1,1) double {mustBePositive}
             end
@@ -240,10 +199,6 @@ classdef AeroL3
         end
 
         function FF = FF_body(L_body, D_body)
-        %FF_BODY  Body/fuselage form factor.  Raymer 6th ed. Eq. 12.31.
-        %   Printed as 1 + 5/f^1.5 + f/400 (f = l/d); the 1 + 60/f^3 + f/400
-        %   form is preferred for fineness ratios f > 6, so branch on f.
-        %   D_body guarded positive (fineness-ratio denominator).
             arguments
                 L_body (1,1) double {mustBePositive}
                 D_body (1,1) double {mustBePositive}

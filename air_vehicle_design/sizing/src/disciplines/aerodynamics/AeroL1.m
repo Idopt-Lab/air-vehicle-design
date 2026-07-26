@@ -1,35 +1,22 @@
 classdef AeroL1
-%AEROL1  Level-1 aerodynamics static toolbox -- aircraft-type only, NO geometry.
+%AEROL1  Level-1 aerodynamics static toolbox: aircraft type only, no geometry.
 %
-%   Call as AeroL1.method_name(args) -- no instantiation required.
-%   Not in the inheritance chain.  Student classes (F16AeroL1, etc.) inherit
-%   from AeroModelL1 and call these statics to implement drag_polar/get_CLmax.
+%   Call as AeroL1.method(...); never instantiated, not in the inheritance
+%   chain. F16AeroL1 inherits AeroModelL1 and delegates to these statics.
 %
-%   TWO TIERS of statics:
-%     High-level  -- take the student object (obj) and return a computed result.
-%     Low-level   -- pure math; take only scalars/arrays.
+%   Two tiers: high-level statics take the concrete object; low-level statics
+%   take only scalars and arrays.
 %
-%   APPROVED TARGET (Aero deep-dive Phase C, 2026-07-23): L1 is a geometry-FREE
-%   Mattingly type-curve drag polar. The geometry-dependent skin-friction /
-%   Oswald-induced machinery that used to live here (oswald_eff, K1_subsonic,
-%   K1_supersonic, K2_value, CD0_from_Cf, lookup_Cf, compute_AR_wet,
-%   compute_LD_max) has MIGRATED to the AeroL2 toolbox (the geometry-dependent
-%   tier). Only the aircraft-type-based content remains: the Mattingly curves
-%   and the Roskam CLmax / high-lift-device Delta tables.
+%   Drag polar: [Mattingly 2nd ed. Eq. 2.9], with CD0(M) and K1(M) interpolated
+%   from the fighter "Current" type-curves [Mattingly 2nd ed. Fig. 2.10, 2.11]
+%   and K2 = 0 for an uncambered fighter [Mattingly 2nd ed. Sec. 2.3.1].
+%   CLmax and the high-lift increments: [Roskam Vol. I Table 3.1, Table 3.6].
 %
-%   EQUATIONS:
-%     CD = CD0(M) + K1(M)*CL^2 + K2*CL
-%       Mattingly, "Aircraft Engine Design," 2nd ed., AIAA, 2002, Eq. 2.9.
-%     CD0(M) : Mattingly Fig. 2.10 (fighter "Current" curve), interp. by Mach.
-%     K1(M)  : Mattingly Fig. 2.11 (fighter "Current" curve), interp. by Mach.
-%     K2     : 0 for a high-performance (uncambered) fighter  (Mattingly Sec. 2.3.1).
-%     CLmax  : type-based lookup                              (Roskam Vol. I Table 3.1/3.3).
+%   TODO: Mattingly Fig. 2.10/2.11 are not in this repo. The curve blocks in
+%   f16a_L1.json are seeded from 5 AAF worked-example points and marked
+%   _placeholder. Guarded by TestAeroL1.testTODO_MattinglyCurvesArePlaceholder.
 %
-%   *** PLACEHOLDER curve data (TODO): Mattingly Fig. 2.10/2.11 are NOT in the
-%   repo. The f16a_L1.json .aerodynamics cd0_curve/k1_curve blocks seed the
-%   CD0(M)/K1(M) "Current" curves from the 5 AAF worked-example points in
-%   reference_extracts/mattingly_data.md PART 9; they are marked _placeholder
-%   until the real figures are transcribed. See VnV/BrandtF16A/todo.md. ***
+%   Companion doc: src/disciplines/aerodynamics/AeroL1.md
 
 % Type-based tables (no geometry): Roskam CLmax by category and the
 % high-lift-device Delta_CD0 / e-osw table. Consumed by F16AeroL1's
@@ -56,28 +43,6 @@ classdef AeroL1
         end
 
         function CLmax = get_CLmax(obj)
-        %GET_CLMAX  Type-based clean CLmax, Roskam Vol. I Table 3.1 (range mean
-        %   of the aircraft type's clean column).
-        %
-        %   TABLE 3.1 THROUGHOUT (user decision 2026-07-25). L1's clean CLmax and
-        %   its takeoff/landing increments must come from ONE table, because the
-        %   increments are differences within it:
-        %     get_Delta_CLmax_TO = mean(CL_max_TO) - mean(CL_max_clean)
-        %     get_Delta_CLmax_L  = mean(CL_max_L)  - mean(CL_max_clean)
-        %   Until 2026-07-25 this returned Table 3.3's 0.90 while the increments
-        %   were Table 3.1 differences off a 1.50 clean base, so the fighter
-        %   totals (0.90+0.20=1.10 TO, 0.90+0.60=1.50 landing) matched neither
-        %   table -- Table 3.1's own fighter means are 1.70 and 2.10. Two unit
-        %   tests locked each half independently, so nothing caught the sum.
-        %
-        %   Consequence, deliberate and documented: fighter clean CLmax is now
-        %   1.50 against L2/L3's geometry-based 0.913 (Raymer Eq. 12.15), the
-        %   largest step in the fidelity ladder. That is the honest size of a
-        %   type-only statistical estimate for a thin 40-deg swept wing -- not a
-        %   bug. See AeroL1.md and fidelity_comparison.m's notes.
-        %
-        %   AeroL1.lookup_CLmax (Table 3.3) is retained as a standalone utility
-        %   but is deliberately NOT wired here -- see its header.
             CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_category, "CL_max_clean");
         end
 
@@ -98,16 +63,6 @@ classdef AeroL1
         end
 
         function v = interp_curve(mach_pts, val_pts, M)
-        %INTERP_CURVE  Linear interpolation of a value-vs-Mach curve, clamped at
-        %   the curve endpoints for Mach outside the tabulated range. Unlike the
-        %   Raymer Eq. 12.51 supersonic K1 path (AeroL2), a tabulated figure has
-        %   NO transonic singularity, so the Mattingly curve is evaluated across
-        %   the whole Mach range (including the transonic band) directly.
-        %   The endpoint clamp assumes mach_pts is STRICTLY ASCENDING -- it
-        %   clamps to mach_pts(1)/mach_pts(end) as the min/max of the range. An
-        %   unsorted or duplicated breakpoint vector would clamp to the wrong
-        %   bounds and/or make interp1 return NaN, silently, so both are checked
-        %   here rather than trusted (added 2026-07-25).
             arguments
                 mach_pts (1,:) double {mustBeReal}
                 val_pts  (1,:) double {mustBeReal}
@@ -135,12 +90,6 @@ classdef AeroL1
         end
 
         function K2 = mattingly_K2(design_type)
-        %MATTINGLY_K2  Linear polar-offset term for the Mattingly type-curve.
-        %   A high-performance (uncambered) fighter sets K2 = 0 -- the polar is
-        %   symmetric, CD = K1*CL^2 + CD0 (Mattingly AED 2nd ed. Sec. 2.3.1).
-        %   TODO: cargo/passenger (cambered) types keep K2 != 0
-        %   (K2 = -2*K''*CL_min); those curves are not yet fitted at L1 -- error
-        %   loudly rather than silently returning 0. See VnV/BrandtF16A/todo.md.
             switch string(design_type)
                 case "uncambered"
                     K2 = 0;
@@ -154,26 +103,6 @@ classdef AeroL1
         end
 
         function rowName = to_CLmax_table_row(aircraft_category)
-        %TO_CLMAX_TABLE_ROW  Canonical aircraft_category -> AeroL1.CLmax_table row name.
-        %
-        %   WHY A TRANSLATION LAYER RATHER THAN ONE GLOBAL SPELLING (Phase 3,
-        %   2026-07-25). The framework's regression/lookup tables are transcribed
-        %   from FOUR different textbook tables, and those tables name their
-        %   categories differently:
-        %     Roskam Vol. I Table 3.5 (S_wet)        -> "jet_fighter"
-        %     Raymer 6th Table 6.3    (L_fus)        -> "jet_fighter"
-        %     Raymer 7th Table 4.1    (AR_eq)        -> "jet_fighter"
-        %     Raymer 6th Table 3.1    (empty weight) -> "jet_fighter"
-        %     Roskam Vol. I Table 3.1 (CLmax, HERE)  -> "fighter"
-        %   (they also disagree elsewhere: transport_jet vs jet_transport,
-        %   military_cargo vs military_cargo_bomber).
-        %
-        %   The input JSON carries ONE canonical aircraft_category. Renaming this
-        %   table's row to match it was considered and rejected: the row name is
-        %   the category name Roskam actually prints, and renaming it would break
-        %   the source traceability this project treats as non-negotiable. So the
-        %   canonical value is translated at the table boundary instead -- one
-        %   input key, every table still faithful to its own source.
             arguments
                 aircraft_category (1,1) string
             end
@@ -186,18 +115,6 @@ classdef AeroL1
         end
 
         function CLmax = roskam_CLmax_value(aircraft_category, column)
-        %ROSKAM_CLMAX_VALUE  Range mean of one AeroL1.CLmax_table column for an
-        %   aircraft category.  Source: Roskam, "Airplane Design Vol. I," Table 3.1.
-        %   column -- "CL_max_clean" | "CL_max_TO" | "CL_max_L".
-        %
-        %   Takes the CANONICAL category (e.g. "jet_fighter") and translates it to
-        %   this table's own row name via to_CLmax_table_row -- see that method for
-        %   why the two differ.
-        %
-        %   Low-level static (scalars/strings only): the single place the Table
-        %   3.1 range means are computed, shared by AeroL1.get_CLmax and the
-        %   concrete classes' HLD-increment methods so the clean base and the
-        %   increments can never again come from different tables.
             arguments
                 aircraft_category (1,1) string
                 column            (1,1) string {mustBeMember(column, ["CL_max_clean","CL_max_TO","CL_max_L"])}
@@ -215,14 +132,6 @@ classdef AeroL1
         end
 
         function CLmax = lookup_CLmax(aircraft_type)
-        %LOOKUP_CLMAX  Clean CLmax by aircraft type (historical, no HLD).
-        %   Source: Roskam, "Airplane Design Vol. I," Table 3.3.
-        %
-        %   NOT the L1 CLmax path. Deliberately unwired from AeroL1.get_CLmax on
-        %   2026-07-25: Table 3.3's clean values (0.90 for a fighter) cannot be
-        %   combined with the Table 3.1 takeoff/landing increments, whose own
-        %   clean base is 1.50. Retained as a standalone reference lookup and for
-        %   comparison reporting -- see get_CLmax's header for the full rationale.
             switch string(aircraft_type)
                 case {"fighter", "jet_fighter"}, CLmax = 0.90;
                 case "military_cargo",           CLmax = 1.20;

@@ -1,41 +1,26 @@
 classdef AeroL2
-%AEROL2  Level-2 aerodynamics static toolbox -- geometry-DEPENDENT clean polar.
+%AEROL2  Level-2 aerodynamics static toolbox: geometry-dependent clean polar.
 %
-%   Call as AeroL2.method_name(args) -- no instantiation required.
-%   Not in the inheritance chain.  Student classes (F16AeroL2, etc.) inherit
-%   from AeroModelL2 and call these statics.  All geometry (S_ref, S_wet, AR,
-%   sweep, taper, t/c, characteristic length) is read from the injected
-%   geometry object via the student object's Dependent getters -- this toolbox
-%   never sees a hardcoded geometry number.
+%   Call as AeroL2.method(...); never instantiated, not in the inheritance
+%   chain. F16AeroL2 inherits AeroModelL2 and delegates to these statics.
 %
-%   This toolbox is the home of the geometry-dependent skin-friction / induced
-%   machinery that used to live in AeroL1 (migrated here 2026-07-23), PLUS the
-%   finite-wing lift-slope / clean-CLmax content that was already at L2. The
-%   pure-math skin-friction primitives (dyn_viscosity, compute_Re,
-%   Cf_turbulent) live here as the single source of truth; the L3 component
-%   buildup calls them.
+%   All geometry is read from the injected geometry object through the concrete
+%   class's Dependent getters; this toolbox never sees a hardcoded geometry
+%   number. The skin-friction primitives (dyn_viscosity, compute_Re,
+%   Cf_turbulent) live here as the single source of truth and are also called
+%   by the L3 component buildup.
 %
-%   EQUATIONS:
-%     CD0 (subsonic clean) = Cfe*(S_wet/S_ref)          Raymer 6th ed. Eq. 12.23 / Table 12.3
-%     CD0 (supersonic)     = Cf(Re,M)*(S_wet/S_ref)     Raymer 6th ed. Eq. 12.27 (Cf), Eq. 12.23 (form)
-%     e (Lambda_LE<30 deg) = 1.78*(1-0.045*AR^0.68)-0.64            Eq. 12.48
-%     e (Lambda_LE>=30 deg)= 4.61*(1-0.045*AR^0.68)*cos(L)^0.15-3.1 Eq. 12.49
-%     K1 subsonic          = 1/(pi*AR*e)                Eq. 12.50
-%     K1 supersonic        = AR*(M^2-1)*cos(L_LE)/(4*AR*beta-2)     Eq. 12.51, beta=sqrt(M^2-1)
-%     K2 subsonic          = -2*K1_sub*CL_minD          Brandt Sec. 4.3 / Aero!G17
-%     K2 supersonic        = 0                          (linearized theory)
-%     CL_alpha             = finite-wing Datcom slope   Eq. 12.6 (beta Eq. 12.7, eta Eq. 12.8)
-%     CLmax (clean)        = 0.9*cl_max_2D*cos(L_c/4)   Eq. 12.15
-%     Cf turbulent         = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Eq. 12.27
-%     Re                   = rho*V*l/mu                 Eq. 12.25
-%     mu                   = Sutherland's law (English) Sec. 12.3.1
+%   Sources: [Raymer 6th ed. Eq. 12.23] parasite drag; [Table 12.3] Cfe;
+%   [Eq. 12.48/12.49] Oswald e; [Eq. 12.50/12.51] K1; [Eq. 12.6] lift slope;
+%   [Eq. 12.15] clean CLmax; [Eq. 12.25/12.27] Reynolds number and Cf;
+%   [Sec. 12.3.1] viscosity. K2 subsonic follows [Brandt Sec. 4.3, Aero!G17].
 %
-%   TRANSONIC BAND (MACH_SUBSONIC_MAX < M < MACH_SUPERSONIC_MIN) is NOT
-%   modeled: the Raymer Eq. 12.51 supersonic K1 has a pole at 4*AR*beta=2
-%   (M~1.014 for AR=3), so the transonic band returns a clear NaN "not modeled"
-%   signal rather than a singular value. Subsonic uses M < 0.95; supersonic
-%   uses M >= 1.05 (clear of the pole; Brandt's tabulated M=1.0547 lands in the
-%   supersonic branch).
+%   TRANSONIC BAND (MACH_SUBSONIC_MAX < M < MACH_SUPERSONIC_MIN) is not
+%   modelled: Eq. 12.51 has a pole at 4*AR*beta = 2 (M ~ 1.014 at AR = 3), so
+%   that band returns NaN as an explicit "not modelled" signal rather than a
+%   singular value.
+%
+%   Companion doc: src/disciplines/aerodynamics/AeroL2.md
 
     properties (Constant)
         % Transonic-band boundaries (see class header). Subsonic below
@@ -116,13 +101,6 @@ classdef AeroL2
         end
 
         function val = get_CD0_supersonic(obj, state)
-        %GET_CD0_SUPERSONIC  Supersonic CD0 = Cf(Re,M)*(S_wet/S_ref).
-        %   Cf via the compressible turbulent flat-plate formula (Raymer Eq.
-        %   12.27); the aircraft-level Reynolds number uses a characteristic
-        %   length obj.L_char (injected fuselage length). Raymer does not pin
-        %   the reference length for this whole-aircraft equivalent-Cf; the
-        %   fuselage length (the longest streamwise wetted dimension) is a
-        %   documented modeling choice -- see obj.L_char and F16AeroL2.md.
             Re  = AeroL2.compute_Re(state, obj.L_char);
             Cf  = AeroL2.Cf_turbulent(Re, state.mach);
             val = AeroL2.CD0_from_Cf(Cf, obj.S_wet, obj.S_ref);
@@ -154,18 +132,6 @@ classdef AeroL2
         end
 
         function val = get_CL_alpha(obj, M)
-        %GET_CL_ALPHA  Finite-wing lift-curve slope (Raymer Eq. 12.6); reads
-        %   geometry (AR, quarter-chord sweep) from the injected object and
-        %   passes the 2-D airfoil lift slope obj.cl_alpha_2D [1/rad] through to
-        %   the eta term (Eq. 12.8).
-        %
-        %   cl_alpha_2D is REQUIRED of every caller. It used to be optional
-        %   (absent -> eta = 0.95 via an isprop() guard), which silently masked
-        %   F16AeroL3 never supplying it -- so the higher-fidelity level ran on
-        %   the less-informed default (fixed 2026-07-25). AeroL2.CL_alpha still
-        %   accepts an empty slope and falls back to 0.95, for a caller that
-        %   genuinely has no airfoil data; that fallback must now be an explicit
-        %   choice at the call site, not an accident of a missing property.
             if ~isprop(obj, 'cl_alpha_2D') || isempty(obj.cl_alpha_2D)
                 error('AeroL2:missingClAlpha2D', ...
                     ['%s must define a non-empty cl_alpha_2D [1/rad] to use ', ...
@@ -186,13 +152,6 @@ classdef AeroL2
         end
 
         function val = lookup_Delta_cl_max_values(liftdevice, config, cp_c)
-        %LOOKUP_DELTA_CL_MAX_VALUES  Section cl_max increment for a HLD type.
-        %   liftdevice -- "plain","split","slotted","fowler","double slotted",
-        %                 "triple slotted","fixed slot","leading-edge flap",
-        %                 "kruger flap","slat"
-        %   config     -- "takeoff"/"TO" or "landing"/"L"
-        %   cp_c       -- c'/c for chord-changing devices
-        %   Raymer 6th ed. Sec. 12.5 (Table 12.2 / Fig. 12.18).
             switch liftdevice
                 case {'plain','split'},          base = 0.9;
                 case 'slotted',                  base = 1.3;
@@ -252,14 +211,6 @@ classdef AeroL2
         end
 
         function e = oswald_eff_brandt(AR, Lambda_LE_deg)
-        %OSWALD_EFF_BRANDT  ALTERNATE (comparison-only) Oswald efficiency.
-        %   Brandt F-16A workbook, Aero!G12:
-        %     e0 = max(0.4, 4.6*(1-0.033*AR^0.53)*cos(Lambda_LE)^0.1 - 3.3)
-        %   Distinct constants/exponents from Raymer Eq. 12.49; for the F-16
-        %   (AR=3, Lambda_LE=40) gives e0~0.914. This is a SEPARATELY-cited
-        %   alternate for the Brandt comparison report ONLY -- it must never be
-        %   the value drag_polar/get_e_osw returns (AeroL2.md: keep both,
-        %   distinctly cited).
             arguments
                 AR            (1,1) double {mustBePositive}
                 Lambda_LE_deg (1,1) double {mustBeReal}
@@ -277,10 +228,6 @@ classdef AeroL2
         end
 
         function K1 = K1_supersonic(M, AR, Lambda_LE_deg)
-        %K1_SUPERSONIC  Linearized supersonic K1  [Raymer 6th ed. Eq. 12.51].
-        %   K1 = AR*(M^2-1)*cos(Lambda_LE)/(4*AR*beta - 2),  beta = sqrt(M^2-1).
-        %   Has a pole at 4*AR*beta = 2 (M~1.014 for AR=3); only evaluated at
-        %   M >= MACH_SUPERSONIC_MIN=1.05 (clear of the pole) via flight_regime.
             arguments
                 M             (1,1) double {mustBeReal}
                 AR            (1,1) double {mustBePositive}
@@ -306,24 +253,6 @@ classdef AeroL2
         end
 
         function Cfe = lookup_Cfe(aircraft_category)
-        %LOOKUP_CFE  Equivalent skin-friction coefficient by aircraft category.
-        %
-        %   SOURCE: Raymer, "Aircraft Design: A Conceptual Approach," 6th ed.,
-        %   Table 12.3 "Equivalent skin-friction coefficients" (PDF p.447, book
-        %   p.417). Transcribed from the repo's own reference extract
-        %   temp_AI/docs/disciplines/reference_extracts/raymer_data.md:82, and
-        %   independently corroborated by metabook_data.md:118 -- both extracts
-        %   agree on all ten rows. Feeds Eq. 12.23, CD0 = Cfe*(S_wet/S_ref).
-        %
-        %   Moved out of the input JSON in Phase 3 (2026-07-25). Cfe is not a
-        %   design variable an optimizer varies and not an F-16 spec-sheet
-        %   number -- it is a textbook table value selected by aircraft class,
-        %   exactly like PropL2.lookup_TSFC_coeffs' engine-class coefficients and
-        %   WeightsL1.lookup_coeffs' regression constants. Storing it as an input
-        %   invited "tuning" a published constant: temp_AI's own notes record
-        %   Cfe being set to 0.005908 to make CD0 match Brandt's mission polar,
-        %   which is precisely the back-calculated-calibration-value-as-input
-        %   pattern PLAN.md forbids.
             arguments
                 aircraft_category (1,1) string
             end
@@ -366,17 +295,6 @@ classdef AeroL2
         end
 
         function CL_a = CL_alpha(AR, Lambda_c4_deg, M, S_exposed, S_ref, F, Cl_alpha_2D)
-        %CL_ALPHA  Finite-wing CL_alpha (per rad) via Raymer 6th ed. Eq. 12.6.
-        %   AR            -- aspect ratio
-        %   Lambda_c4_deg -- quarter-chord sweep (deg); used as approx. for the
-        %                    max-thickness-line sweep in Eq. 12.6 (documented
-        %                    approximation).
-        %   M             -- Mach (subsonic; clamped to 0.99 internally)
-        %   S_exposed,S_ref,F -- optional; (S_exposed/S_ref)*F fuselage-lift
-        %                    factor (Eq. 12.9), defaults to 1 when omitted
-        %                    (Raymer caps the true product near 0.98).
-        %   Cl_alpha_2D   -- optional 2-D airfoil lift slope [1/rad];
-        %                    eta = Cl_alpha_2D/(2*pi/beta) [Eq. 12.8], else 0.95.
             if nargin < 6 || isempty(S_exposed) || isempty(S_ref) || isempty(F)
                 exposed_factor = 1;
             else
@@ -396,16 +314,6 @@ classdef AeroL2
         end
 
         function CLmax = CLmax_clean(cl_max_2D, Lambda_c4_deg)
-        %CLMAX_CLEAN  Wing clean CLmax = 0.9*cl_max_2D*cos(Lambda_c/4).
-        %   Raymer 6th ed. Eq. 12.15.
-        %
-        %   TODO (F-16 limitation): Eq. 12.15 is a plain swept-wing relation
-        %   that IGNORES the F-16's leading-edge-extension (strake/LEX) vortex
-        %   lift. With cl_max_2D=1.20 and Lambda_c/4~32.2 deg it gives
-        %   CLmax~0.91 (near Brandt's clean 0.984) -- but the real
-        %   whole-aircraft CLmax is ~1.6 once vortex lift is added. A
-        %   vortex-lift correction (e.g. Polhamus leading-edge suction) is not
-        %   modeled here.  See F16AeroL2.md / VnV/BrandtF16A/todo.md.
             CLmax = 0.9 * cl_max_2D * cosd(Lambda_c4_deg);
         end
 
