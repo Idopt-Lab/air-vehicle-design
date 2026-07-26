@@ -55,7 +55,9 @@ classdef F16PropL2 < PropulsionModelL2
         T_SL_mil = 15000   % lbf — mil SLS thrust        [Brandt C29; TO]
         T_t4_max_F = 2566  % °F  — burner-exit total temperature [Mattingly Table C.4]; feeds get.TR
         TSFC_install_factor = 1.08  % — installed = uninstalled × factor [Brandt Miss!C25]
-        TSFC     = 0     % 1/hr — PLACEHOLDER: PropulsionBase abstract-contract artifact; real per-state TSFC comes from get_TSFC(obj, state), never this stored scalar.
+        % (No stored TSFC property -- removed 2026-07-25 along with the
+        % PropulsionBase abstract declaration it existed to satisfy. TSFC is
+        % state-dependent: call get_TSFC(obj, state).)
     end
 
     % ======================================================================= %

@@ -27,7 +27,10 @@ classdef F16PropL1 < PropulsionModelL1
         engine_type = "low_bypass_turbofan_AB"   % PropL1 TSFC/lapse table key [F100-PW-200 low-bypass AB turbofan; TO 1F-16A-1 Sec. I]
         T_SL     = 23770                         % lbf — AB (max) SLS thrust  [PropulsionBase contract; Brandt D29; TO]
         T_SL_wet = 23770                         % lbf — alias for T_SL (AB)  [Brandt D29; TO]
-        TSFC     = 0                             % 1/hr — PLACEHOLDER: PropulsionBase abstract-contract artifact; the real per-state TSFC is returned by get_TSFC(obj, state), never this stored scalar.
+        % (No stored TSFC property. It used to exist as a `TSFC = 0` placeholder
+        % satisfying a PropulsionBase abstract property; that declaration was
+        % removed 2026-07-25 because TSFC is state-dependent. Call
+        % get_TSFC(obj, state).)
     end
 
     methods

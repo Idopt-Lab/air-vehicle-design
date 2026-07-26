@@ -20,8 +20,14 @@ classdef (Abstract) PropulsionBase < handle
 
     properties (Abstract)
         T_SL    % double; lbf — sea-level static (max) thrust (static thrust)
-        TSFC
     end
+    %   TSFC was declared abstract HERE until 2026-07-25 and removed: TSFC is a
+    %   function of the flight state, not a stored scalar, so there was nothing
+    %   meaningful for a concrete class to put in it. F16PropL1 satisfied it with
+    %   a self-labelled "PLACEHOLDER: abstract-contract artifact" TSFC = 0 while
+    %   the real value came from get_TSFC(obj, state) — so any consumer that
+    %   trusted the documented property contract read 0 instead of a TSFC. The
+    %   abstract METHOD get_TSFC below is the contract.
 
     methods (Abstract)
 
