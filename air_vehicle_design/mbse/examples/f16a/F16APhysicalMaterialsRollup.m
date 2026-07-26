@@ -28,7 +28,7 @@ profileName = "F16A_PhysicalProps";
 massProp    = profileName + ".PhysicalItem.Mass_lb";
 cfProp      = profileName + ".Material.CompositeFraction";
 
-thisDir = fileparts(mfilename("fullpath"));
+thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 addpath(fullfile(thisDir, "physical"));
 m = systemcomposer.loadModel(modelName);
 

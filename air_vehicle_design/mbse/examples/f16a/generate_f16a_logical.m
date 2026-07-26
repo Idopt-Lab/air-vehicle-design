@@ -64,7 +64,7 @@ funcName    = "F16A_Functional";
 profileName = "F16A_LogicalTrades";
 allocName   = "F16A_FunctionToLogical";
 
-thisDir  = fileparts(mfilename("fullpath"));
+thisDir  = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 logiDir  = fullfile(thisDir, "logical");
 archDir  = fullfile(thisDir, "architecture");
 reqDir   = fullfile(thisDir, "requirements");

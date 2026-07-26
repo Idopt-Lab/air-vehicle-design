@@ -30,7 +30,7 @@ function results = F16ALogicalTradeStudy()
 modelName   = "F16A_Logical";
 profileName = "F16A_LogicalTrades";
 
-thisDir  = fileparts(mfilename("fullpath"));
+thisDir  = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 logiDir  = fullfile(thisDir, "logical");
 reqDir   = fullfile(thisDir, "requirements");
 modelFile= fullfile(logiDir, modelName + ".slx");

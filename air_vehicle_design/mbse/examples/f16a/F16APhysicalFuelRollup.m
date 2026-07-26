@@ -16,7 +16,7 @@ modelName   = "F16A_Physical";
 profileName = "F16A_PhysicalProps";
 capProp     = profileName + ".FuelTank.FuelCapacity_lb";
 
-thisDir = fileparts(mfilename("fullpath"));
+thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 addpath(fullfile(thisDir, "physical"));
 m = systemcomposer.loadModel(modelName);
 

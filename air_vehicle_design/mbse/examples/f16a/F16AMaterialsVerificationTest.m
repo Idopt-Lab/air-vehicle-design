@@ -14,7 +14,7 @@ classdef F16AMaterialsVerificationTest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function setup(testCase)
-            addpath(fileparts(mfilename("fullpath")));   % resolve the roll-up fn
+            addpath(f16aRoot(), fullfile(f16aRoot(),"physical"));   % roll-up fn: root now, physical/ after reorg
             testCase.addTeardown(@() bdclose("all"));
         end
     end

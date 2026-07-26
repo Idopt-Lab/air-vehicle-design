@@ -17,7 +17,7 @@ classdef F16AFuelVerificationTest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function setup(testCase)
-            addpath(fileparts(mfilename("fullpath")));   % resolve the roll-up fns
+            addpath(f16aRoot(), fullfile(f16aRoot(),"physical"));   % roll-up fns: root now, physical/ after reorg
             testCase.addTeardown(@() bdclose("all"));
         end
     end

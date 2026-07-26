@@ -15,7 +15,7 @@ function F16AOpenForReview()
 %   REQ_F16A_022 -> F16AMaterialsVerificationTest and REQ_F16A_P01 ->
 %   F16AFuelVerificationTest in the Requirements Editor.
 
-thisDir = fileparts(mfilename("fullpath"));
+thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 addpath(thisDir, ...
     fullfile(thisDir,"requirements"), fullfile(thisDir,"architecture"), ...
     fullfile(thisDir,"logical"), fullfile(thisDir,"physical"));

@@ -85,7 +85,7 @@ logiName    = "F16A_Logical";
 profileName = "F16A_PhysicalProps";
 allocName   = "F16A_LogicalToPhysical";
 
-thisDir  = fileparts(mfilename("fullpath"));
+thisDir  = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 physDir  = fullfile(thisDir, "physical");
 logiDir  = fullfile(thisDir, "logical");
 reqDir   = fullfile(thisDir, "requirements");
@@ -441,8 +441,16 @@ end
 
 % =====================================================================
 function linkImplement(srcComp, req)
-%LINKIMPLEMENT Implement-link a component to a requirement (idempotent).
-if ~isempty(req) && isempty(req.inLinks())
+%LINKIMPLEMENT Implement-link a component to a requirement.
+%   Unconditional create: section 0's cleanup deletes the F16A_Physical model
+%   link set before this runs, so re-running rebuilds the Implement links from
+%   scratch with no duplicates -- the same pattern generate_f16a_functional.m
+%   and generate_f16a_logical.m use. An earlier version guarded on
+%   isempty(req.inLinks()), but a manual "Verify" link (test -> requirement) is
+%   an INBOUND link to the requirement too, so once one existed the guard
+%   wrongly skipped the Implement link -- regenerating then dropped
+%   "Implemented by" for REQ_F16A_022 and REQ_F16A_P01.
+if ~isempty(req)
     slreq.createLink(srcComp, req);
 end
 end

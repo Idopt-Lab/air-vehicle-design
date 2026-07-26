@@ -34,7 +34,7 @@ function generate_f16a_functional()
 %   generate_f16a_derived_requirements.m first).
 
 modelName = "F16A_Functional";
-thisDir   = fileparts(mfilename("fullpath"));
+thisDir   = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 archDir   = fullfile(thisDir, "architecture");
 reqDir    = fullfile(thisDir, "requirements");
 dictFile  = fullfile(archDir, modelName + ".sldd");
