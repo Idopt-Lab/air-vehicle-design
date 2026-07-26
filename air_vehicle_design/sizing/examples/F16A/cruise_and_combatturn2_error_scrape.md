@@ -72,7 +72,7 @@ residual already documented for Combat Turn 2's AB branch in §3).
 
 **Status: documentation only, no `.m` files edited.** Live-verified via
 `matlab -batch` against the current (uncommitted) working tree, which already
-includes the `F16AeroL3` wave-drag fix (`F16AeroL3_wave_drag_fix.md`). Scope:
+includes the `F16AeroL3` wave-drag fix (`F16AeroL3.md`). Scope:
 `ThrustConstraint`'s two worst-performing F-16 conditions in
 `tests/constraints/TestThrustConstraint.m` —
 
@@ -221,7 +221,7 @@ model at a supersonic design point.
 
 **L3 already fixes most of this.** `F16AeroL3.compute_CD0_wave`
 (`examples/F16A/F16AeroL3.m:343-...`, Raymer Eqs. 12.44-12.45, landed this
-session per `F16AeroL3_wave_drag_fix.md`) brings CD0 to 0.03988 — only **1.8%
+session per `F16AeroL3.md`) brings CD0 to 0.03988 — only **1.8%
 low** vs. Brandt's 0.04063 — and the required_TW gap collapses accordingly,
 from −30–63% down to a flat **−8.4% to −8.9%**.
 
@@ -272,7 +272,7 @@ Independent of §2's alpha-basis issue: `F16AeroL3`'s Raymer component
 skin-friction buildup (`AeroL3.get_CD0_buildup`, unaffected by the wave-drag
 fix since M=0.87 < 1.2) computes CD0=0.01536 at Cruise — **9.6% below**
 Brandt's 0.01700, and further below than L1/L2's flat-Cfe 0.01599 (−6.0%).
-The wave-drag fix in `F16AeroL3_wave_drag_fix.md` only touches the `M≥1.2`
+The wave-drag fix in `F16AeroL3.md` only touches the `M≥1.2`
 branch and does not touch this. This is a small contributor next to §2's
 dominant alpha-basis gap, but is a distinct, real discrepancy worth a look in
 its own right if/when Aerodynamics gets its own deep-dive pass (component

@@ -55,7 +55,7 @@ path — no silent default; `F16AeroL2/L3` also require the injected geometry ob
   `Amax`/`L_aircraft` LIVE from the injected geometry object (Phase 2 sub-step 2h, 2026-07-25 —
   `GeomL3` computes an area-ruled `Amax`; the earlier "geometry exposes no area-ruled Amax" note is
   obsolete). `GeomL2` deliberately keeps the low-fidelity fuselage-envelope form — see
-  `examples/F16A/F16GeomL3.md` §D.
+  `examples/F16A/F16GeomL3.md` §4.
 - **Transonic (0.95 < M < 1.05) not modeled** — `drag_polar` returns NaN there (avoids the Eq. 12.51
   supersonic-K1 pole near M=1).
 

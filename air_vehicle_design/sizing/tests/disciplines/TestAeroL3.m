@@ -47,7 +47,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         %   this file is hand-computed either from a bare AeroL2/AeroL3 static
         %   (geometry-independent) or from the L2 wing/fuselage envelope, and
         %   the file's job is the AeroL3 FORMULAS, not the L3 planform. Switching
-        %   the injected tier is a comparison-report concern (F16GeomL3.md §G.2),
+        %   the injected tier is a comparison-report concern (the aerodynamics comparison report),
         %   not a unit-test one.
         %   PHASE-2 CONSTRUCTOR CHANGE: F16GeomL2 takes a REQUIRED injected
         %   propulsion object -- the nacelle diameter is sqrt(T_AB_SLS/1900),
@@ -199,7 +199,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             %   bracket = 1 - 0.386*0.5034532*(1-0.5379428) = 0.9102071  [Eq. 12.45]
             %   CD_wave = 2.2*0.9102071*4.7049220/300 = 0.0314047
             % (The old 0.0255006 value is +23.15% below this -- the shift is
-            % REPORTED, not absorbed by retuning E_WD; see F16GeomL3.md §D.)
+            % REPORTED, not absorbed by retuning E_WD; see F16GeomL3.md §4.)
             g        = TestAeroL3.makeAero();
             received = g.compute_CD0_wave(AircraftState(0, 1.5));
             tc.verifyEqual(received, 0.0314046569, 'RelTol', 1e-4);

@@ -116,7 +116,7 @@ classdef F16AeroL3 < AeroModelL3
         %   MODELED". The framework consumed as an input the very number it
         %   reported as unmodelled, and the Sears-Haack term could not respond to
         %   a fuselage change. That JSON block is deleted; these are Dependent.
-        Amax_ft2          % ft^2 <- geom.Amax = (pi/4)*W_max*H_max (envelope ellipse; NOT Brandt's flow-through-net figure, see get.Amax_ft2)
+        Amax_ft2          % ft^2 <- geom.Amax. TIER-SPECIFIC: area-ruled buildup at L3 (24.7037, what Eq. 12.44 wants), fuselage-envelope ellipse at L2 (27.4889). See get.Amax_ft2.
         L_aircraft_ft     % ft   <- geom.L_aircraft (overall length input, distinct from the fuselage L_fus)
 
         CD0_misc          % — (Dq_gun_port + Dq_hook_USAF)/S_ref  [Raymer Table 12.7], live (S_ref from geom)
@@ -238,12 +238,8 @@ classdef F16AeroL3 < AeroModelL3
             %      here silently substitutes a fuselage-only quantity for a
             %      whole-aircraft one and inflates CD0_wave ~23%.
             %
-            % Corrected 2026-07-25 (sub-step 2h): this getter briefly documented
-            % the ellipse as the L3 value, which was the fidelity inversion 2h
-            % exists to fix. With the area-ruled Amax, CD0_wave sits -0.54% from
-            % the Brandt-referenced term with E_WD = 2.2 UNCHANGED -- no retune.
-            % (The earlier "+23.15% shift, E_WD would need 1.7864" note described
-            % the superseded ellipse and no longer applies.)
+            % With the area-ruled Amax, CD0_wave sits -0.54% from the
+            % Brandt-referenced term with E_WD = 2.2 UNCHANGED -- no retune.
             %
             % Brandt Geom!B20 = 25.110556 is the same KIND of quantity as the L3
             % value -- an area-ruled MAX (32.971053) net of a 7.8605 ft^2 engine
@@ -251,7 +247,7 @@ classdef F16AeroL3 < AeroModelL3
             % fidelity difference (L3's fuselage is 47.5 ft vs Brandt's 46.5),
             % not the definitional mismatch the ellipse had. TestGeomL3's
             % round-trip control reproduces Geom!B20 to -0.0001% when L_fus is
-            % set back to 46.5. See F16GeomL3.md Sec D and
+            % set back to 46.5. See F16GeomL3.md §4 and
             % VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 Sec 4b (the affine
             % rescaling is UNCITED) and Sec 5 (the bare pi*D^2/5 literal).
             v = obj.geom.Amax;

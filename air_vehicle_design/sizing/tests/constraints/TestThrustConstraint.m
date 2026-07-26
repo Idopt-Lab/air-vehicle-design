@@ -322,7 +322,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % wave-drag rise. L3 now reads CLOSE to Brandt (within about
             % +2.5% to +3.0% across the sweep) since F16AeroL3.compute_CD0_wave
             % was fixed to use the true whole-aircraft Amax/length (Raymer
-            % 6th ed. Eqs. 12.44-12.45, see F16AeroL3_wave_drag_fix.md) instead
+            % 6th ed. Eqs. 12.44-12.45, see F16AeroL3.md) instead
             % of a fuselage-only approximation -- "higher fidelity is more
             % accurate" now holds here, reversing the earlier state where L3
             % (fuselage-only wave drag) undershot even L1's flat estimate.
@@ -642,7 +642,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % L3 now reads much closer (~8.4-8.9% low across the sweep) since
             % compute_CD0_wave was fixed to use the true whole-aircraft
             % Amax/length instead of a fuselage-only approximation (see
-            % F16AeroL3_wave_drag_fix.md) -- textbook CD0/K1 buildup vs.
+            % F16AeroL3.md) -- textbook CD0/K1 buildup vs.
             % Brandt's flight-calibrated polar accounts for the remainder.
             % Which F16Baseline() table this prints against ("original" or
             % "corrected" -- see F16Baseline.m section 11b; Combat Turn 2 is
