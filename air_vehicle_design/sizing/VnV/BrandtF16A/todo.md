@@ -1044,6 +1044,14 @@ L2 one exists". Every member L3 aero needs has one **except two**:
    `[Brandt Engn(s) D_nac; readme_geom.md §3]` citation once. **Flagged; not decided.**
 
 ### §13 — `src/base/GeometryBase.md` was not updated for Phase 1b's `convert_sweep_panel`
+
+**RESOLVED (2026-07-26, documentation-lag sweep — see the 2026-07-26 section, §D-1).** Both halves
+are done: the "Concrete static utilities" table now carries `convert_sweep_panel` (2/AR) alongside
+`convert_sweep` (4/AR), and the missing heading the code pointed at now exists — the new section is
+titled **"Sweep-angle conversion — mirrored vs. single-panel"**, so `GeometryBase.m`'s citation notes
+resolve. It records the derivation of both coefficients and the 0.33°→22.90° VT defect that motivated
+the split. Original evidence below.
+
 Phase 1b added `GeometryBase.convert_sweep_panel` (the single-panel `2/AR` form) and repointed the
 three VT call sites. The companion doc's "Concrete static utilities" table (`GeometryBase.md:32-42`)
 still lists **only** `convert_sweep`, so the doc now understates the API and does not record the
@@ -2131,6 +2139,18 @@ non-finite reads).
 
 ### §P4-18 — ★ NEW: the `requireWTO` OVER-GUARD, now fixed — a guard must encode a real dependency
 
+**LOOSE END RESOLVED (2026-07-26 — see §D-1).** The stale-docstring loose end recorded at the bottom
+of this entry is closed: `TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO` was **deleted**,
+not rewritten. A `testTODO_` marker whose condition is already satisfied guards nothing, and leaving
+a green one whose docstring says "EXPECTED RED" invites a future reader to make the docstring true by
+re-adding the over-guard. The principle survives where it belongs — in `requireWTO`'s own docstring
+at both levels, and in `TestWeightsL3.testWTODependentPropertiesErrorWhenWTOUnset`'s comment (which
+cross-referenced the deleted test by name until this sweep). Four docs described the test as still
+present (`docs/subplans/05_weights.md`, `docs/weights_parameter_usage.md`,
+`examples/F16A/F16WeightsL2.md`, and that test comment); all four now record the deletion. The
+suite's `testTODO_` count is **ten, all red** — there is no longer a green one. Original evidence
+below.
+
 An earlier Phase-4 version routed **five** of `F16WeightsL2`'s six component/group getters through
 `requireWTO` "for uniformity", and its `requireWTO` docstring justified this as applying **"UNIFORMLY to
 all six"**. Two things were wrong at once:
@@ -2196,6 +2216,12 @@ share an implementation quirk: **each keys off its source file's own TO-DO sente
 
 ### §P4-20 — ★ NEW: the shipped `f16a_requirements.json` `_comment` is already stale about `F16GeomL1`
 
+**RESOLVED (2026-07-26 — see §D-2).** Re-read live: the `_comment` now states *"★ F16GeomL1 READS
+design_mach FROM HERE as of Phase 4 … §P4-14, resolved"*. Two further copies of the same stale claim
+— `f16a_L1.json .geometry._note` ("will error until repointed") and
+`docs/weights_parameter_usage.md` — were corrected by the 2026-07-26 sweep. **§P4-14's broader
+requirements-consolidation item stays OPEN.** Original evidence below.
+
 The new requirements file's `_comment` states:
 
 > *"★ F16GeomL1 IS PENDING: f16a_L1.json .geometry.M_max was deleted as the third copy of this quantity,
@@ -2213,6 +2239,10 @@ would mislead the next person wiring a requirements consumer.
 mission has not been done — so §P4-14 must **not** be closed on the strength of this one fix.
 
 ### §P4-21 — NEW (residual): §P4-12's corrected ground-truth note has one stale sentence left
+
+**RESOLVED (2026-07-26 — see §D-2).** Re-read live: the "framework CLASSES still default to 220/0"
+sentence is gone. The `_note` now records that all three `F16WeightsL{1,2,3}` read the payload split
+from the JSON and that the old 220/0 defaults are gone. Original evidence below.
 
 `f16a_ground_truth.json .weights.inputs_on_Wt_tab._note` was correctly rewritten to say the payload
 split now **agrees** (700/4400 on both sides; closure `31377 − 19980.70 − 6296.30 = 5100 = 700 + 4400`
@@ -2249,6 +2279,108 @@ distinguish "the L2 geometry" from "the L3 geometry" here; only a call-site read
 re-introduced. Recorded as a standing lesson: **after a tier renumbering, grep every construction site
 of the affected class**, because a same-contract wrong tier is invisible to both the guards and the
 tests.
+
+---
+
+## 2026-07-26 — Documentation-lag sweep (closing out the 15-finding remediation)
+
+**Context:** the four-phase remediation is implemented, tested and committed (`8ede0a8` → `f7bf65b`).
+`run_all_tests` re-verified at HEAD: **501 tests / 491 pass / 10 red, all 10 labelled `testTODO_`,
+zero unlabelled reds.** A three-way audit of the plan against the tree found the *code* complete
+everywhere and the trailing *documentation* of two items never written, plus one guard that landed in
+only one of its two required places. This section records that sweep. No numeric output moved.
+
+### §D-1 — What was stale, and why it matters more than it looks
+
+Every item below was a file **asserting something about the code that had stopped being true in the
+same phase that made it false**. That is the exact failure mode this log exists to catch, and it is
+worse than an absent doc: an absent doc sends you to the source, a confidently wrong one does not.
+
+| File | Claimed | Actually |
+|---|---|---|
+| `src/disciplines/aerodynamics/AeroL1.md` | `get_CLmax` = `lookup_CLmax(aircraft_type)`, "Table 3.1 / 3.3" | Table 3.1 only, via `roskam_CLmax_value` — since `8152059` |
+| `examples/F16A/fidelity_comparison.m` | note printed `CLmax: L1 … (0.90)` | its own `.json` already reported `1.5000` |
+| `tests/disciplines/TestAeroL1.m` header | `CLmax = 0.90 … Table 3.3` | 1.50 / Table 3.1 (the tests below it were already correct) |
+| `examples/F16A/F16GeomL1.md` | `F16GeomL1(json_path)`; `S_wet = 0`, `L_fuselage = 0` "populated on demand" | `(json_path, req_path)`; both `Dependent` on an input `W_TO`, erroring when unset |
+| `examples/F16A/F16GeomL2.md` | `F16GeomL2(json_path)` | `(json_path, prop)`; `T_AB_SLS_lb` Dependent on `prop.T_SL` |
+| `examples/F16A/F16AeroL2.md` | "`geom` is any `GeometryBase`" | `mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])` |
+| `docs/subplans/04_propulsion.md` | `F16PropL1/L2` read `T_SL_wet` from JSON | `T_SL_wet` is `Dependent`; the key was deleted from every JSON |
+| `src/base/GeometryBase.md` | only `convert_sweep` (4/AR) | `convert_sweep_panel` (2/AR) has existed since Phase 1b — **closes §13** |
+| `examples/F16A/F16AeroL3.md` | `Lambda_m_comp` "via `convert_sweep`" | VT uses `convert_sweep_panel` |
+| `tests/disciplines/TestWeightsL3.m:822` | cross-referenced `TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO` | that test was **deleted**; the question it named is settled, not open (§P4-18) |
+
+**Six more found by the verification grep, not by the audit** — same two classes, in files the audit
+had not opened. Recording them because the *ratio* is the point: a targeted read found ten, a
+four-line grep found six more, and the grep cost nothing.
+
+| File | Claimed | Actually |
+|---|---|---|
+| `docs/subplans/04_propulsion.md` (3 rows: the two class rows and the constructor-contract row) | `F16PropL1/L2` read `T_SL_wet` from JSON | `Dependent`; key deleted. Only the prose bullet had been fixed, not the tables |
+| `examples/F16A/F16PropL1.md` | reads `T_SL_wet`; lists it under **Inputs** | `Dependent`; the file also claimed L1 has "no derived quantities" |
+| `examples/F16A/F16PropL2.md` | reads `T_SL_wet`; lists it under **Inputs**; no `bypass_ratio` row | `T_SL_wet` `Dependent`, `bypass_ratio` = 0.71 is an input |
+| `docs/subplans/05_weights.md` | the deleted test is "a **third** `testTODO_` case, now GREEN" | deleted |
+| `docs/weights_parameter_usage.md` | "the **eleventh** `testTODO_` case … the only one that passes" | deleted; the count is ten, all red |
+| `examples/F16A/F16WeightsL2.md` | "**PRESENT**, and now GREEN … flagged for review" | deleted |
+
+`docs/propulsion_parameter_usage.md`'s `T_SL_wet` row was checked and left alone: it is a
+framework-vs-Brandt comparison table, `F16Prop{L1,L2}.T_SL_wet` still exists and still reads 23,770,
+so the row is accurate.
+
+All corrected. The `AeroL1.md` and `fidelity_comparison.m` entries also gained the **L1↔L2 CLmax
+discontinuity** note (1.50 statistical vs 0.913 geometry-based) that `AeroL1.m:77` promises — that
+pointer had been dangling since the fix landed.
+
+### §D-2 — §P4-20 and §P4-21 → RESOLVED (both were already fixed when re-checked)
+
+Both were logged "flagged, not edited" in the Phase-4 as-built re-status, because that was a
+documentation-only pass. Both had in fact been corrected in the commits that closed the phase, and
+live re-reads on 2026-07-26 confirm it:
+
+- **§P4-20** — `f16a_requirements.json` `_comment` now reads *"★ F16GeomL1 READS design_mach FROM
+  HERE as of Phase 4 … §P4-14, resolved"*. The residual copy of the same stale claim in
+  `docs/weights_parameter_usage.md` and in `f16a_L1.json .geometry._note` ("★ IMPLEMENTER: …will
+  error until repointed") is corrected by this sweep.
+- **§P4-21** — `f16a_ground_truth.json .weights.inputs_on_Wt_tab._note` no longer contains the
+  "classes still default to 220/0" sentence; it states the payload split agrees and closure is exact.
+
+**§P4-14's broader item stays OPEN** — the full requirements consolidation across constraints and
+mission has not been done. Do not close it on the strength of these.
+
+### §D-3 — `ConstraintAnalysis` had no non-finite guard, and the right check is NaN-only
+
+The 15-finding remediation specified the loud-failure guard for **both** `Both_WbyS_TbyW.required_TW`
+and `ConstraintAnalysis`; only the former landed. Now added — but **not** as the `~isfinite` the
+original wording implied, and the difference is the substance of this entry:
+
+- **`Inf` is meaningful here and must keep working.** Wall-type constraints encode "infeasible above
+  my W/S limit" as `Inf` (`LandingConstraint.m`; `ConstraintAnalysis.m` class header). An `~isfinite`
+  check would have broken every wall constraint — a guard that breaks correct code.
+- **`NaN` is the actual hazard, for a reason specific to MATLAB.** `max`/`min` **omit NaN by
+  default**, so a NaN row silently drops out of `max(obj.TW_table, [], 1)`. The aggregate then reads
+  as though that condition were never supplied, and `optimal_point()` returns a design point
+  satisfying one fewer constraint — no warning, plausible-looking answer. Same "unevaluable reads as
+  satisfied" family as the original finding, by a different mechanism.
+- **Why a second layer at all**, given `Both_WbyS_TbyW` already checks: that check only protects
+  constraints built on the Master Equation. A category computing `required_TW` some other way (a wall
+  bound; any future tabulated or interpolated condition) never passes through it. The aggregator is
+  the one place **every** constraint type funnels through.
+
+As built: `ConstraintAnalysis.assertNoNaN` (private static), called per constraint at construction,
+naming the offending constraint and the first W/S at which it went NaN. Tests in
+`tests/constraints/TestConstraintAnalysis.m` cover the error, the error alongside valid constraints,
+that `Inf` is still accepted, and — asserted directly against MATLAB rather than against our code —
+that `max()` omits NaN, so the test stays meaningful if the guard ever moves. The NaN curve comes
+from a new `tests/constraints/NaNCurveStub.m`, necessarily a stub: a real `ThrustConstraint` throws
+`Both_WbyS_TbyW:nonFiniteTerm` first and the aggregator's guard is never reached.
+
+### §D-4 — Standing lesson
+
+**A signature or contract change must sweep the companion `.md` in the same commit.** This is the
+sibling of §P4-22's "after a tier renumbering, grep every construction site". Both failures share a
+shape: the change was correct, the tests stayed green, and the only casualty was a *description*
+elsewhere in the tree that nothing executes and nothing checks. Neither the compiler nor the suite
+can catch it. The cheap mitigation is a grep at commit time — `F16GeomL1(`, `F16GeomL2(`,
+`T_SL_wet`, whatever the changed name is — across `*.md` as well as `*.m`.
 
 ---
 
