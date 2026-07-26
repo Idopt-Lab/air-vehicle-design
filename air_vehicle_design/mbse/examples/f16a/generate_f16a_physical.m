@@ -131,7 +131,12 @@ cleanupFiles = [dictFile, modelFile, slmxFile, profFile, allocFile, ...
     fullfile(physDir, modelName + ".slxc"), ...
     staleRoot + ".slx", staleRoot + ".slxc", staleRoot + "~mdl.slmx", ...
     fullfile(thisDir, profileName + ".xml"), fullfile(pwd, profileName + ".xml"), ...
-    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx")];
+    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx"), ...
+    ... % the requirement-set link sets hold THIS layer's Verify links; delete
+    ... % them so verify links regenerate to the current test files (otherwise a
+    ... % stale Verify link survives and the create-if-absent guard skips it).
+    fullfile(reqDir, "f16a~slreqx.slmx"), ...
+    fullfile(reqDir, "f16a_physical_derived~slreqx.slmx")];
 for f = cleanupFiles
     if isfile(f); delete(f); end
 end
@@ -347,9 +352,12 @@ save_system(modelName, char(modelFile));
 
 origSet = slreq.load(origFile);
 physSet = slreq.load(physDerFile);
-vtFile  = which("F16APhysicalVerificationTest");
-if isempty(vtFile)
-    error("F16APhysicalVerificationTest not found on the path (needed for verify links).");
+% Each requirement's Verify link points to its OWN verification test file
+% (kept separate from the model-machinery tests and from each other).
+matVtFile  = which("F16AMaterialsVerificationTest");
+fuelVtFile = which("F16AFuelVerificationTest");
+if isempty(matVtFile) || isempty(fuelVtFile)
+    error("Verification test files not found on the path (needed for the verify links).");
 end
 
 airframeC = lookup(m, Path=char(S + "Airframe"));
@@ -357,12 +365,12 @@ fuelSysC  = lookup(m, Path=char(S + "FuelSystem"));
 
 % Cost MoM -> REQ_026 (Implement, from the Aircraft).
 linkImplement(aircraft, find(origSet, Id="REQ_F16A_026"));
-% Materials -> REQ_022: implemented by the Airframe, VERIFIED by the test.
+% Materials -> REQ_022: implemented by the Airframe, VERIFIED by F16AMaterialsVerificationTest.
 linkImplement(airframeC, find(origSet, Id="REQ_F16A_022"));
-linkVerify(find(origSet, Id="REQ_F16A_022"), vtFile);
-% Fuel volume -> REQ_P01: implemented by the FuelSystem, VERIFIED by the test.
+linkVerify(find(origSet, Id="REQ_F16A_022"), matVtFile);
+% Fuel volume -> REQ_P01: implemented by the FuelSystem, VERIFIED by F16AFuelVerificationTest.
 linkImplement(fuelSysC, find(physSet, Id="REQ_F16A_P01"));
-linkVerify(find(physSet, Id="REQ_F16A_P01"), vtFile);
+linkVerify(find(physSet, Id="REQ_F16A_P01"), fuelVtFile);
 
 save(origSet);
 save(physSet);

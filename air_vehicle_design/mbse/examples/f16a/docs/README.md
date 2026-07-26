@@ -82,8 +82,9 @@ mbse/examples/f16a/
 ├─ F16APhysicalFuelRollup.m              roll-up of available internal fuel capacity (REQ_P01)
 ├─ F16APhysicalCostModel.m               cost-model hook for the unit-cost MoM (stub)
 ├─ F16APhysicalMissionFuel.m             mission-fuel hook for the fuel-volume check (stub → NaN)
-├─ F16APhysicalArchitectureTest.m        unit tests: the P model is built correctly
-├─ F16APhysicalVerificationTest.m        "verified by" tests: the design meets REQ_022 / REQ_P01
+├─ F16APhysicalArchitectureTest.m        machinery tests: the P model is built correctly
+├─ F16AMaterialsVerificationTest.m       "verified by" test for REQ_F16A_022 (composite ≤ 20%)
+├─ F16AFuelVerificationTest.m            "verified by" test for REQ_F16A_P01 (fuel volume) — fails until /sizing/
 └─ F16AOpenForReview.m                   load all models + requirement sets, open the editor
 ```
 
@@ -121,10 +122,17 @@ systemcomposer.allocation.editor            % inspect the allocation matrices (F
 F16APhysicalMassRollup                       % print the mass roll-up and OEW
 runtests("F16AFunctionalArchitectureTest")
 runtests("F16ALogicalArchitectureTest")
-runtests("F16APhysicalArchitectureTest")
-runtests("F16APhysicalVerificationTest")     % NOTE: the fuel-volume test fails on purpose
-                                             % (mission-fuel stub) until /sizing/ is connected
+runtests("F16APhysicalArchitectureTest")     % machinery: the model is built correctly
+runtests("F16AMaterialsVerificationTest")    % REQ_F16A_022 met (composite ≤ 20%) — passes
+runtests("F16AFuelVerificationTest")         % REQ_F16A_P01 — FAILS on purpose (mission-fuel
+                                             % stub) until /sizing/ is connected
 ```
+
+The two `*VerificationTest` files are the requirement-verification tests referenced by the Verify
+links — kept **separate** from `F16APhysicalArchitectureTest` (which only checks the model
+machinery: components, stereotypes, roll-up self-consistency, and that the links were wired). Each
+requirement's Verify link points to its **own** file, so `REQ_F16A_022`'s verifier is all-green and
+`REQ_F16A_P01`'s intentional failure stays isolated.
 
 ## Reviewing requirement traceability
 
@@ -145,7 +153,8 @@ the requirement set's own link set, so they show even without the models loaded.
 
 (Automated pass/fail *verification status* for the MATLAB-based tests is not populated by the
 Verify link alone — that needs Test Manager result import, a future step. The Verify link itself is
-the traceability: `REQ_F16A_022` / `REQ_F16A_P01` → `F16APhysicalVerificationTest`.)
+the traceability: `REQ_F16A_022` → `F16AMaterialsVerificationTest` and `REQ_F16A_P01` →
+`F16AFuelVerificationTest`.)
 
 ## Prerequisites
 

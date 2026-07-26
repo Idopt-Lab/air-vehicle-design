@@ -187,17 +187,22 @@ pristine (the same pattern as the functional- and logical-derived sets).
 
 ## Verification
 
-`F16APhysicalArchitectureTest.m` (13 tests) checks the model is **built correctly**: the 23
+Two kinds of test, kept in separate files:
+
+**Machinery** — `F16APhysicalArchitectureTest.m` checks the model is **built correctly**: the 23
 components and the Aircraft/Airframe/Propulsion/FuelSystem hierarchy; the `PhysicalItem` stereotype
 on every part; the 16 leaf masses against the Brandt ground truth; the composite fractions and fuel
 capacities; the mass roll-up for **self-consistency** (each subtotal = sum of parts — never against
-a target); the OEW and cost MoMs (`Goal = Minimize`); the realization covers all 9 roles; and the
-four infrastructure parts realize no role.
+a target); the OEW and cost MoMs (`Goal = Minimize`); the realization covers all 9 roles; the four
+infrastructure parts realize no role; and that REQ_022/026/P01 were wired with their Implement and
+Verify links.
 
-`F16APhysicalVerificationTest.m` (4 tests) checks the design **meets its requirements**: the
-materials constraint is met (≈19% ≤ 20% ✔) and both `REQ_F16A_022` and `REQ_F16A_P01` carry Verify
-links. Its fourth test — that available fuel ≥ mission fuel — **fails on purpose** until the
-mission-fuel analysis is connected (see above).
+**Requirement verification** (the tests the Verify links point to) — one file per requirement, so
+each requirement's "is it met?" is self-contained:
+- `F16AMaterialsVerificationTest.m` → `REQ_F16A_022`: airframe composite ≈ 19% ≤ 20% ✔ (**passes**).
+- `F16AFuelVerificationTest.m` → `REQ_F16A_P01`: available fuel ≥ mission fuel — **fails on purpose**
+  until the mission-fuel analysis is connected (see above). Isolating it in its own file keeps the
+  materials verifier all-green and the intentional failure unambiguous.
 
 ## Next
 

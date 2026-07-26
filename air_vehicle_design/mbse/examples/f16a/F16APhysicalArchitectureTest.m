@@ -13,7 +13,8 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     properties
         Model      % F16A_Physical
         LogiModel  % F16A_Logical (realization source)
-        OrigSet    % f16a.slreqx (REQ_F16A_026 cost MoM homes here)
+        OrigSet    % f16a.slreqx (REQ_F16A_022 materials, REQ_F16A_026 cost MoM)
+        PhysSet    % f16a_physical_derived.slreqx (REQ_F16A_P01 fuel volume)
         Alloc      % F16A_LogicalToPhysical allocation set
         Profile = "F16A_PhysicalProps";
         AC      = "F16A_Physical/Aircraft/";
@@ -55,6 +56,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.Model     = systemcomposer.loadModel("F16A_Physical");
             testCase.LogiModel = systemcomposer.loadModel("F16A_Logical");
             testCase.OrigSet   = slreq.load(fullfile(thisDir, "requirements", "f16a.slreqx"));
+            testCase.PhysSet   = slreq.load(fullfile(thisDir, "requirements", "f16a_physical_derived.slreqx"));
             testCase.Alloc     = systemcomposer.allocation.load("F16A_LogicalToPhysical");
             testCase.addTeardown(@() testCase.Alloc.close());
             testCase.addTeardown(@() bdclose("all"));
@@ -246,12 +248,45 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "REQ_F16A_026 should be marked a Measure of Merit (keyword 'minimize').");
         end
 
+        function testMaterialsRequirementLinked(testCase)
+            % Machinery check (NOT the verification itself): the generator wired
+            % REQ_F16A_022 with an Implement link (from Airframe) and a Verify
+            % link (to F16AMaterialsVerificationTest). The actual "is it met?"
+            % check lives in that verification test.
+            req = find(testCase.OrigSet, Id="REQ_F16A_022");
+            testCase.verifyNotEmpty(req, "REQ_F16A_022 not found.");
+            testCase.verifyNotEmpty(req.inLinks(), "REQ_F16A_022 should be Implement-linked at P.");
+            testCase.verifyTrue(testCase.hasVerifyLink(req), ...
+                "REQ_F16A_022 should carry a Verify link to its verification test.");
+        end
+
+        function testFuelRequirementLinked(testCase)
+            % Machinery check: REQ_F16A_P01 has an Implement link (from
+            % FuelSystem) and a Verify link (to F16AFuelVerificationTest).
+            req = find(testCase.PhysSet, Id="REQ_F16A_P01");
+            testCase.verifyNotEmpty(req, "REQ_F16A_P01 not found.");
+            testCase.verifyNotEmpty(req.inLinks(), "REQ_F16A_P01 should be Implement-linked at P.");
+            testCase.verifyTrue(testCase.hasVerifyLink(req), ...
+                "REQ_F16A_P01 should carry a Verify link to its verification test.");
+        end
+
     end
 
     methods (Access = private)
         function tf = resolves(testCase, pth)
             tf = true;
             try, testCase.Model.lookup(Path=char(pth)); catch, tf = false; end
+        end
+
+        function tf = hasVerifyLink(~, req)
+            tf = false;
+            if isempty(req); return; end
+            for links = {req.outLinks(), req.inLinks()}
+                ls = links{1};
+                for k = 1:numel(ls)
+                    if string(ls(k).Type) == "Verify"; tf = true; return; end
+                end
+            end
         end
 
         function n = countComps(~, arch)
