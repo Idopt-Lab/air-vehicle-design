@@ -1,28 +1,14 @@
 classdef PropL1
-%PROPL1  Level-1 propulsion static toolbox.
+%PROPL1  Level-1 propulsion static toolbox: density-ratio lapse, table TSFC.
 %
-%   Call as PropL1.method_name(args) — no instantiation required.
-%   Not in the inheritance chain.  Student classes (F16PropL1, etc.) inherit
-%   from PropulsionModelL1 and call these statics to implement each abstract method.
+%   Call as PropL1.method(...); never instantiated, not in the inheritance
+%   chain. F16PropL1 inherits PropulsionModelL1 and delegates to these statics.
 %
-%   TWO TIERS of statics:
-%     High-level — take the student object (obj) and return a computed result.
-%                  Student implementations are a single delegation line.
-%     Low-level  — pure math; take only scalars/arrays.
+%   Thrust lapse: [Martins AE481 metabook Eq. 10.9], exponent by engine type
+%   per Eq. 10.7. TSFC: [Raymer 6th ed. Table 3.3], a two-value table with no
+%   Mach or afterburner dependence.
 %
-%   EQUATIONS:
-%     thrust_lapse: α = σ^m,  σ = ρ/ρ_SL
-%       Exponent m is looked up by engine type (see lookup_lapse_exponent):
-%         turbojet / turbojet_AB:              m = 1.0  [Martins Eq. 10.7]
-%         low_bypass_turbofan / _AB:           m = 0.6  [Martins Eq. 10.9]
-%         high_bypass_turbofan:                m = 0.6  [Martins Eq. 10.9]
-%         turboprop:                           m = 1.0  [shaft power ∝ ρ]
-%       No Mach correction at Level 1 — see L2/L3 for Mattingly Eq. 2.54.
-%       Source: J.R.R.A. Martins, AE481 course notes (metabook), Eqs. 10.7 / 10.9
-%     TSFC: categorical lookup by engine type — cruise and loiter conditions only.
-%       Raymer 6th ed. Table 3.3; values in lbf_fuel/(hr·lbf_thrust).
-%       M < 0.4 → loiter TSFC; M >= 0.4 → cruise TSFC  (L1 approximation).
-%       AB operation is not modelled at Level 1 — see L2/L3 for Mattingly Eq. 3.55.
+%   Companion doc: src/disciplines/propulsion/PropL1.md
 
     properties (Constant, Access = private)
         RHO_SL = 0.002377;   % slug/ft³ — ISA sea-level density [Mattingly App. B]
