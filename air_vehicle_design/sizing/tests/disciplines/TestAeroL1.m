@@ -7,7 +7,12 @@ classdef TestAeroL1 < matlab.unittest.TestCase
 %     CD0(M), K1(M)  interpolated from the fighter "Current" curve tables
 %                    (f16a_L1.json .aerodynamics cd0_curve / k1_curve)
 %     K2 = 0         uncambered fighter          Mattingly Sec. 2.3.1
-%     CLmax = 0.90   fighter lookup              Roskam Vol. I Table 3.3
+%     CLmax = 1.50   fighter clean, ONE table    Roskam Vol. I Table 3.1
+%                    (TO 1.70 / landing 2.10; the increments are Table 3.1
+%                    differences, so the clean base is Table 3.1 too --
+%                    2026-07-25. Table 3.3's 0.90 is still reachable through
+%                    the standalone AeroL1.lookup_CLmax, tested below, but is
+%                    no longer what get_CLmax returns. See AeroL1.md.)
 %
 %   These are TRUE unit tests: every "expected" value is HAND-COMPUTED from the
 %   cited formula/table with the arithmetic shown inline, never copied from a

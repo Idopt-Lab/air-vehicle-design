@@ -7,8 +7,22 @@ adds the F-16 flaperon (TE-flap) high-lift/gear delta methods.
 ## Construction (dependency injection)
 
 `F16AeroL2(geom, json_path)` — **both arguments are required** (no silent defaults; a no-arg call
-errors). Typically `F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2))`. `geom` is any
-`GeometryBase`; `json_path` supplies the `.aerodynamics` block of `f16a_L2.json`.
+errors). Typically:
+
+```matlab
+prop = F16PropL2(f16a_spec_path(2));
+a2   = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2));
+```
+
+`json_path` supplies the `.aerodynamics` block of `f16a_L2.json`. `geom` is guarded by
+`mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])` — **not** the bare `GeometryBase` it used to
+accept. `GeometryBase` declares only `S_ref`/`S_wet`/`get_S_ref`/`get_S_wet`, so a wrong-tier object
+(e.g. an `F16GeomL1`) used to construct fine and then die mid-run inside a Dependent getter, or
+worse resolve with changed meaning. The narrowed guard fails at **construction** instead.
+
+Caveat worth knowing: this guard cannot catch an L2-vs-L3 mix-up, because both tiers satisfy the
+contract by design — passing `g2` where `g3` was meant yields plausible numbers, not an error. Only
+reading the call site catches that (see `VnV/BrandtF16A/todo.md` §P4-22).
 
 ## Properties — inputs vs. derived
 

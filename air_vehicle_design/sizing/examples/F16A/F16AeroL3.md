@@ -40,7 +40,7 @@ control-surface estimates are declared inline.
 | `l_ref_comp` | per-component MAC / length (`geom.cbar_wing`, HT/VT MAC via `GeometryBase.compute_mac`, `L_fus`, `L_duct`) |
 | `D_comp` | body diameters (`0` for surfaces; `geom.D_fus`, `geom.D_inlet`) |
 | `tc_comp` | per-component thickness ratio (mean root/tip for HT/VT; `0` for bodies) |
-| `Lambda_m_comp` | max-thickness-line sweep via `GeometryBase.convert_sweep` at `x_c_max` |
+| `Lambda_m_comp` | max-thickness-line sweep at `x_c_max` — `GeometryBase.convert_sweep` (4/AR) for the mirrored wing and HT, `convert_sweep_panel` (2/AR) for the single-panel VT |
 | `CD0_misc` | `(Dq_gun_port + Dq_hook_USAF)/S_ref` (Raymer Table 12.7) |
 
 ## Methods
