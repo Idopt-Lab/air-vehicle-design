@@ -1,46 +1,83 @@
 # GeomL2
 
-Level-2 geometry static toolbox (`classdef GeomL2`, all `methods (Static)`). Called as
-`GeomL2.method(...)`; not instantiated and not in the inheritance chain. Concrete classes
-(e.g. `F16GeomL2`) inherit from `GeometryModelL2` and delegate to these statics. L2 computes
-component-level wetted areas from real planform geometry (exposed areas, thickness ratios,
-fuselage envelope, duct dimensions). Geometry has no L3 tier.
+Level-2 geometry static toolbox (`classdef GeomL2`, `methods (Static)` only). Called as
+`GeomL2.method(...)`; never instantiated and not in the inheritance chain. Concrete classes such as
+`F16GeomL2` inherit `GeometryModelL2` and delegate here.
 
-## High-level methods (take the concrete object)
+L2 computes component wetted areas from real planform geometry — exposed areas, thickness ratios,
+fuselage envelope, duct dimensions. Geometry has **three** tiers; L3 is the physical/T.O. tier and
+has its own toolbox, `GeomL3`.
 
-| Method | Returns |
-|--------|---------|
-| `get_S_wet(obj)` | Total: wing + HT + VT + fuselage + duct |
-| `get_S_wet_wing(obj)` / `get_S_wet_HT(obj)` / `get_S_wet_VT(obj)` | Surface wetted area via `compute_roskam_planform` |
-| `get_S_wet_fuselage(obj)` | Fuselage wetted area via `compute_s_wet_fus_cyl` |
-| `get_S_wet_duct(obj)` | Inlet/duct wetted area via `compute_s_wet_duct` |
-| `get_S_exposed_wing(obj)` | Passthrough accessor for `obj.S_exposed_wing` |
-| `get_S_wet_fuselage_brandt_lowfi(obj)` | Brandt low-fi fuselage alternate |
+---
 
-`get_S_wet` includes the duct term unconditionally; a concrete class with no real duct sets
-`D_inlet=D_exit=L_duct=0`, degenerating the frustum to 0 ft^2.
+## 1. Role
 
-## Low-level methods and their equations
+| Layer | Members |
+|---|---|
+| High-level — take the concrete object | `get_S_wet`, `get_S_wet_wing/_HT/_VT`, `get_S_wet_fuselage`, `get_S_wet_duct`, `get_S_exposed_wing`, `get_S_wet_fuselage_brandt_lowfi` |
+| Low-level — scalars and arrays only | `compute_*` |
 
-| Method | Formula | Source |
-|--------|---------|--------|
-| `compute_roskam_planform(S_exp, tc_r, tc_t, lambda)` | `2*S_exp*(1 + 0.25*tc_r*(1+(tc_r/tc_t)*lambda)/(1+lambda))` | Roskam Vol. II, Eq. 12.1 (variable root/tip t/c) |
-| `compute_wet_planform(S_exp, tc)` | `S_exp*(1.977 + 0.52*tc)` (uniform t/c) | Brandt F-16A workbook, Geom!B13 |
-| `compute_s_wet_fus_cyl(D_fus, L_fus)` | `pi*D*L*(1-2/lambda_f)^(2/3)*(1+1/lambda_f^2)`, `lambda_f=L/D` | Roskam Vol. II, Eq. 12.3 |
-| `compute_s_wet_fus_brandt_lowfi(w, h, L)` | `D_avg=(w+h)/2; (5/6)*pi*D_avg*L` | Brandt Geom!B3 ("1/3-cone + 2/3-cylinder") |
-| `compute_s_wet_fus_brandt_highfi(frame_x, frame_zchine, frame_z, frame_w, frame_h)` | trapezoidal integration of per-frame perimeter | Brandt Geom!D23 |
-| `compute_frame_perimeter(w, h, z_chine, z_center)` | cosine cross-section path length (6 samples/half, mirrored) | Brandt Geom frame model |
-| `compute_s_wet_duct(D_inlet, D_exit, L_duct)` | `pi*(r1+r2)*sqrt((r2-r1)^2+L^2)` (frustum lateral area) | Raymer 6th ed., Sec. 7.3 |
-| `compute_S_exposed_horizontal(c_root, c_tip, hs, fw)` | exposed area clipped by fuselage half-width, both panels | Brandt; readme_geom.md Sec. 4.3 |
-| `compute_S_exposed_vertical(S, AR, c_root, c_tip, fh)` | exposed area clipped by fuselage half-height, single panel | Brandt; readme_geom.md Sec. 4.3 |
+## 2. Methods
 
-## Formula choices and guards
-- Wing/HT/VT default to `compute_roskam_planform` (Eq. 12.1); `compute_wet_planform` (Brandt
-  uniform-tc) is the special case `tc_r=tc_t` and stays available as a named alternate.
-- Fuselage defaults to `compute_s_wet_fus_cyl` (Roskam Eq. 12.3); the two Brandt formulas
-  (low-fi, high-fi frame integration) are named alternates.
-- `compute_s_wet_fus_cyl` errors (`GeomL2:invalidFinenessRatio`) when `L/D <= 2`, where Eq. 12.3
-  is invalid and would otherwise return a complex number.
-- `compute_roskam_planform` requires `tc_t` strictly positive (guards the `tc_r/tc_t` division)
-  and `lambda` nonnegative.
+| Method | Returns | Source |
+|---|---|---|
+| `get_S_wet(obj)` | total: wing + HT + VT + fuselage + duct | — |
+| `get_S_wet_wing/_HT/_VT(obj)` | surface wetted area [ft²] | Roskam Vol. II Eq. 12.1 |
+| `get_S_wet_fuselage(obj)` | fuselage wetted area [ft²] | Roskam Vol. II Eq. 12.3 |
+| `get_S_wet_duct(obj)` | duct wetted area [ft²] | Raymer 6th ed. Sec. 7.3 |
+| `get_S_exposed_wing(obj)` | passthrough of `obj.S_exposed_wing` | — |
+| `compute_S_exposed_horizontal/_vertical` | exposed planform area [ft²] | Brandt F-16A.xls; `readme_geom.md` §4.3 |
+
+`get_S_wet` takes no `W_TO` argument (contrast L1) and includes the duct unconditionally; a concrete
+class with no duct sets `D_inlet = D_exit = L_duct = 0`, degenerating the frustum to zero.
+
+## 3. Equations
+
+**Lifting surfaces, variable root/tip t/c** — the official path
+[Roskam Vol. II Eq. 12.1]:
+
+$$S_{wet} = 2\,S_{exp}\left[1 + 0.25\,(t/c)_r\,
+  \frac{1 + \dfrac{(t/c)_r}{(t/c)_t}\lambda}{1 + \lambda}\right]$$
+
+**Lifting surfaces, uniform t/c** — Brandt's own form, kept as a named alternate. It is the special
+case $(t/c)_r = (t/c)_t$ of the above [Brandt F-16A.xls, Geom!B13]:
+
+$$S_{wet} = S_{exp}\,(1.977 + 0.52\,t/c)$$
+
+**Fuselage, cylindrical midsection** — the official path [Roskam Vol. II Eq. 12.3], with fineness
+ratio $\lambda_f = L/D$:
+
+$$S_{wet} = \pi D L \left(1 - \frac{2}{\lambda_f}\right)^{2/3}
+  \left(1 + \frac{1}{\lambda_f^{2}}\right)$$
+
+**Fuselage, Brandt low-fidelity** — "⅓-cone + ⅔-cylinder" [Brandt F-16A.xls, Geom!B3]:
+
+$$D_{avg} = \frac{w_{max} + h_{max}}{2} \qquad
+  S_{wet} = \frac{5}{6}\,\pi D_{avg} L$$
+
+**Fuselage, Brandt high-fidelity** — trapezoidal integration of per-frame perimeter
+[Brandt F-16A.xls, Geom!D23]:
+
+$$S_{wet} = \sum_i \frac{P_i + P_{i+1}}{2}\,\Delta x_i$$
+
+with each perimeter from the cosine cross-section model, sampled at 6 points per quarter and doubled
+for symmetry.
+
+**Duct** — lateral area of a right circular frustum [Raymer 6th ed. Sec. 7.3]:
+
+$$S_{wet} = \pi (r_1 + r_2)\sqrt{(r_2 - r_1)^2 + L^2}$$
+
+## 4. Formula choices and guards
+
+- Wing/HT/VT default to Eq. 12.1; the Brandt uniform-t/c form stays available as a named alternate
+  for the comparison report.
+- The fuselage defaults to Eq. 12.3; both Brandt forms are named alternates.
+- `compute_s_wet_fus_cyl` errors (`GeomL2:invalidFinenessRatio`) when $L/D \le 2$, where Eq. 12.3 is
+  invalid and would otherwise return a complex number.
+- `compute_roskam_planform` requires $(t/c)_t$ strictly positive (guards the ratio) and $\lambda$
+  nonnegative (guards $1 + \lambda$).
 - `compute_s_wet_fus_brandt_highfi` errors on mismatched per-frame vector lengths.
+
+## 5. To-dos
+
+None.

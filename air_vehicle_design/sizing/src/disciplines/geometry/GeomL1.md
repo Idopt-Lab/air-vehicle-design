@@ -1,45 +1,95 @@
 # GeomL1
 
-Level-1 geometry static toolbox (`classdef GeomL1`, all `methods (Static)`). Called as
-`GeomL1.method(...)`; not instantiated and not in the inheritance chain. Concrete classes
-(e.g. `F16GeomL1`) inherit from `GeometryModelL1` and delegate to these statics. L1 is a pure
-statistical/regression tier: geometry is estimated from takeoff gross weight and design Mach.
+Level-1 geometry static toolbox (`classdef GeomL1`, `methods (Static)` only). Called as
+`GeomL1.method(...)`; never instantiated and not in the inheritance chain. Concrete classes such as
+`F16GeomL1` inherit `GeometryModelL1` and delegate here.
 
-## High-level methods (take the concrete object)
+**L1 is a pure statistical tier**: geometry is estimated from takeoff gross weight and design Mach.
+There is no planform.
 
-| Method | Returns | Reads |
-|--------|---------|-------|
-| `get_S_wet_statistical(obj, W_TO)` | Total wetted area | `obj.aircraft_category` |
-| `get_L_fus(obj, W_TO)`             | Fuselage length | `obj.aircraft_category` |
-| `get_AR_eq(obj)`                   | Equivalent aspect ratio | `obj.aircraft_category`, `obj.M_max` |
-| `get_control_surface_fraction(obj, surface)` | Control-surface chord fraction C/c | `obj.aircraft_category` |
+---
 
-## Low-level methods (scalars/strings only) and their equations
+## 1. Role
 
-| Method | Formula | Source |
-|--------|---------|--------|
-| `compute_s_wet_regression(cat, W_TO)` | `S_wet = 10^c * W_TO^d` | Roskam, *Airplane Design* Vol. I, Table 3.5 |
-| `compute_l_fus_regression(cat, W_TO)` | `L_fus = a * W_TO^C` | Raymer 6th ed., Table 6.3 |
-| `compute_AR_eq(cat, M_max)` | `AR_eq = a * M_max^C` | Raymer 7th ed., Table 4.1, "Jet fighter (dogfighter)" row |
-| `compute_tail_volume_coeffs(cat, has_rss, has_all_moving_tail)` | base `c_HT`=0.40, `c_VT`=0.07 with corrections (below) | Raymer 7th ed., Table 6.4, "Jet fighter" row |
-| `compute_tail_arm(L_fus)` | `L_HT = L_VT = 0.475*L_fus` | Raymer aft-single-engine text rule (midpoint of stated 0.45-0.50 range) |
-| `compute_S_HT(c_HT, cbar, S_ref, L_HT)` | `S_HT = c_HT*cbar*S_ref/L_HT` | Raymer 7th ed., Table 6.4 |
-| `compute_S_VT(c_VT, b, S_ref, L_VT)` | `S_VT = c_VT*b*S_ref/L_VT` | Raymer 7th ed., Table 6.4 |
-| `compute_control_surface_fraction(cat, surface)` | table lookup | Raymer 7th ed., Table 6.5, "Jet fighter" row |
+| Layer | Members |
+|---|---|
+| High-level — take the concrete object | `get_S_wet_statistical`, `get_L_fus`, `get_AR_eq`, `get_control_surface_fraction` |
+| Low-level — scalars and strings only | `compute_*` |
+| Constants | `lookup_*`, one per `compute_*` |
 
-Each `compute_*` delegates to a matching `lookup_*` for its constants.
+## 2. Methods
 
-### Tail-volume text corrections (`compute_tail_volume_coeffs`)
-- `has_rss` (active FCS / relaxed static stability): `c_HT, c_VT *= (1 - 0.10)`.
-- `has_all_moving_tail` (HT only): `c_HT *= (1 - 0.125)` (midpoint of Raymer's 0.10-0.15 range).
-- F-16 (both true): `c_HT = 0.315`, `c_VT = 0.063`.
+| Method | Returns | Source |
+|---|---|---|
+| `get_S_wet_statistical(obj, W_TO)` | total wetted area [ft²] | Roskam Vol. I Table 3.5 |
+| `get_L_fus(obj, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
+| `get_AR_eq(obj)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
+| `get_control_surface_fraction(obj, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
+| `compute_tail_volume_coeffs(cat, has_rss, has_all_moving_tail)` | $c_{HT}$, $c_{VT}$ | Raymer 7th ed. Table 6.4 + text |
+| `compute_tail_arm(L_{fus})` | tail moment arm [ft] | Raymer 7th ed. text rule |
+| `compute_S_HT`, `compute_S_VT` | tail areas [ft²] | Raymer 7th ed. Table 6.4 |
 
-### Category coverage
-- `lookup_swet`: jet_fighter, jet_bomber, transport_jet, business_jet, military_cargo.
-- `lookup_lfus`: jet_fighter, jet_trainer, transport_jet, military_cargo.
-- `lookup_AR_eq`, `lookup_tail_volume_coeffs`, `lookup_control_surface_fraction`: jet_fighter only.
+## 3. Equations
 
-Every lookup errors explicitly (`GeomL1:unknownCategory`) for an unlisted category rather than
-guessing. Control-surface fractions cover elevator (0.30, the all-moving-tail row value) and
-rudder (0.33); `'aileron'` errors (`GeomL1:unknownControlSurface`) because Raymer Table 6.5's
-"Jet fighter" row does not provide an aileron value, and the code will not fabricate one.
+**Wetted area** — Roskam Vol. I Table 3.5:
+
+$$S_{wet} = 10^{c}\,W_{TO}^{\,d}$$
+
+**Fuselage length** — Raymer 6th ed. Table 6.3:
+
+$$L_{fus} = a\,W_{TO}^{\,C}$$
+
+**Equivalent aspect ratio** — Raymer 7th ed. Table 4.1, jet-fighter (dogfighter) row:
+
+$$AR_{eq} = a\,M_{max}^{\,C}$$
+
+**Tail areas from volume coefficients** — Raymer 7th ed. Table 6.4:
+
+$$S_{HT} = \frac{c_{HT}\,\bar{c}\,S_{ref}}{L_{HT}} \qquad
+  S_{VT} = \frac{c_{VT}\,b\,S_{ref}}{L_{VT}}$$
+
+**Tail moment arm** — Raymer 7th ed., aft-mounted single-engine text rule (0.475 is the midpoint of
+the stated 0.45–0.50 range):
+
+$$L_{HT} = L_{VT} = 0.475\,L_{fus}$$
+
+**Tail-volume text corrections** applied on top of the Table 6.4 base values:
+
+$$c_{HT},\,c_{VT} \mathrel{\times}= (1 - 0.10) \quad \text{if relaxed static stability}$$
+$$c_{HT} \mathrel{\times}= (1 - 0.125) \quad \text{if all-moving stabilator}$$
+
+The 0.125 is the midpoint of Raymer's stated 10–15 % range. For the F-16 both apply, giving
+$c_{HT} = 0.315$ and $c_{VT} = 0.063$.
+
+## 4. Coefficients
+
+`lookup_swet` — Roskam Vol. I Table 3.5:
+
+| Category | $c$ | $d$ |
+|---|---|---|
+| `jet_fighter` | −0.1289 | 0.7506 |
+| `jet_bomber` | 0.1213 | 0.7306 |
+| `transport_jet` | 0.0199 | 0.7351 |
+| `business_jet` | 0.2263 | 0.6977 |
+| `military_cargo` | −0.0866 | 0.8099 |
+
+`lookup_lfus` — Raymer 6th ed. Table 6.3 (ft from lbf):
+
+| Category | $a$ | $C$ |
+|---|---|---|
+| `jet_fighter` | 0.93 | 0.39 |
+| `jet_trainer` | 0.79 | 0.41 |
+| `transport_jet` | 0.67 | 0.43 |
+| `military_cargo` | 0.23 | 0.50 |
+
+Jet-fighter only: `lookup_AR_eq` $a = 5.416$, $C = -0.6222$; `lookup_tail_volume_coeffs`
+$c_{HT} = 0.40$, $c_{VT} = 0.07$; `lookup_control_surface_fraction` elevator 0.30 (the
+all-moving-tail row value, not a hinged-elevator fraction), rudder 0.33.
+
+Every lookup errors (`GeomL1:unknownCategory`) for an unlisted category rather than guessing.
+
+## 5. To-dos
+
+| Item | Guard |
+|---|---|
+| Raymer Table 6.5's jet-fighter row carries **no aileron chord fraction**, so `'aileron'` errors rather than returning a fabricated value | `TestGeomL1.testTODO_AileronFractionNotAvailable` |

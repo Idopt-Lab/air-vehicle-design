@@ -1,117 +1,20 @@
 classdef (Abstract) GeometryModelL3 < GeometryBase
-%GEOMETRYMODELL3  Tier-2a abstract enforcer for Level-3 geometry.
+%GEOMETRYMODELL3  Tier-2 abstract enforcer for Level-3 geometry.
 %
-%   Inherits GeometryBase directly — NOT GeometryModelL2 (each fidelity level
-%   independently satisfies the Tier-1 contract, per the project three-tier
-%   pattern). Mirrors GeometryModelL2's structure and, since Phase 2, its
-%   PROPERTY MEANINGS: L3 is the detailed PHYSICAL / T.O.-geometry tier.
+%   Inherits GeometryBase directly, not GeometryModelL2: each fidelity level
+%   satisfies the Tier-1 contract independently.
 %
-%   2026-07-24: GeomL3 (re)introduced (user decision, reversing the
-%   2026-07-22 "Geometry has no L3").
-%   2026-07-25 (Phase 2, locked user decision): promoted from a weights-only
-%   tier to the FULL L3 geometry tier consumed by L3 geometry + aero + weights.
-%   Authoritative spec: examples/F16A/F16GeomL3.md (§2/§3 the input/derived
-%   classification, §B the rename, §C the complete L3-aero contract, §D Amax,
-%   §E L_aircraft). This tier is HIGHER fidelity than GeomL2's Brandt-reference
-%   geometry: where a physical/T.O. value differs from Brandt, GeomL3 uses the
-%   physical one (VT LE sweep 47.5°, L_fus 47.5 ft, HT span B_h 18.5 ft as the
-%   PRIMARY span, exposed HT/VT AR 2.114/1.294 and tapers 0.390/0.437). Those
-%   divergences from GeomL2 are INTENTIONAL fidelity differences, not errors
-%   (locked decision, VnV/BrandtF16A/todo.md 2026-07-24 GeomL3 + 2026-07-25
-%   Phase 2 §§3/7).
+%   L3 is the physical / T.O. tier, consumed by L3 geometry, aerodynamics and
+%   weights. Divergences from L2 are intentional fidelity differences.
 %
-%   ============================================================================
-%   NAME COLLISION REMOVED — Phase 2 rename (F16GeomL3.md §2).
+%   NAMING. AR_ht / lambda_ht / S_ht / S_vt mean FULL planform at both tiers;
+%   the exposed values carry an explicit _exposed_ infix. Members marked
+%   [DERIVED] below must be Dependent getters on the concrete class, never
+%   stored values.
 %
-%   BEFORE 2026-07-25 this contract used AR_ht / lambda_ht / AR_vt / lambda_vt
-%   for the EXPOSED planform (2.114 / 0.390 / 1.294 / 0.437) while
-%   GeometryModelL2 used the SAME FOUR NAMES for the FULL planform (3.0 /
-%   0.2275 / 1.6 / 0.5), and carried no S_ht / S_vt at all. Both tiers are
-%   GeometryBase subclasses and F16AeroL2/F16AeroL3 accept `geom (1,1)
-%   GeometryBase`, so injecting the wrong tier compiled, ran, and silently
-%   resolved one property name to a different physical quantity — e.g.
-%   F16AeroL3.get.l_ref_comp calls GeometryBase.compute_mac(g.c_root_ht,
-%   g.lambda_ht), and Raymer 7th ed. Eq. 7.8 requires the FULL-planform taper
-%   that goes with the chord it is handed; the exposed 0.390 would have produced
-%   a wrong HT MAC, hence a wrong component Reynolds number, hence a wrong
-%   Raymer Eq. 12.30 form factor, with no error and no warning.
-%
-%   AFTER the rename, on BOTH tiers:
-%     * AR_ht / lambda_ht / S_ht / S_vt / AR_vt / lambda_vt  = FULL planform.
-%     * S_exposed_ht / S_exposed_vt                          = exposed planform.
-%     * AR_exposed_ht / lambda_exposed_ht / AR_exposed_vt /
-%       lambda_exposed_vt = the physical exposed-planform values the Raymer
-%       Eq. 15.2/15.3 weights build-up wants — unambiguous by name, L3 only.
-%     * H_max_fuselage = the max fuselage DEPTH (weights' "D_fus", Raymer
-%       Eq. 15.4). The Dependent D_fus is the EQUIVALENT diameter (W+H)/2 = 6.0
-%       used ONLY for the Roskam Eq. 12.3 fuselage S_wet term — a weights DI
-%       must read H_max_fuselage, NOT D_fus (residual trap, todo 2026-07-24
-%       GeomL3 §5; the same is true of S_exposed_ht/_vt vs S_ht/S_vt).
-%   ============================================================================
-%
-%   INPUT vs DERIVED — the optimization-ready pattern (per CLAUDE.md; see
-%   F16GeomL2.m for the reference implementation). A concrete class satisfies
-%   each abstract property with EITHER a stored (mutable) property for a
-%   genuine design-variable input, OR a `Dependent` property whose getter
-%   recomputes live from the inputs for a derived quantity — never a frozen
-%   constant for something derivable. Every property below is tagged [INPUT] or
-%   [DERIVED] with the kind F16GeomL3 must use; F16GeomL3.md §2/§3 carry
-%   the authoritative 33-input / 34-derived classification and every citation.
-%
-%   Nothing derivable may stay frozen (§A.3). Five quantities that WERE stored
-%   inputs before Phase 2 are now [DERIVED] and must not be re-frozen:
-%     AR_ht (= B_h^2/S_ht — Decision 1, see below), S_exposed_ht,
-%     S_exposed_vt, tc_ht, tc_vt.
-%   A sixth, engine SLS thrust, left geometry entirely: it is injected from a
-%   propulsion object and is concrete-only (see below).
-%
-%   DECISION 1 (user, 2026-07-25 — option B, "physical span primary"): the
-%   whole L3 HT planform is fixed by the S_ht + B_h INPUT PAIR, and AR_ht is
-%   [DERIVED] = B_h^2/S_ht = 3.1690. Rationale: area and span are what a 3-view
-%   measures; aspect ratio is definitional. A stored AR_ht alongside both S_ht
-%   and B_h would be self-contradictory (sqrt(3.0*108) = 18.0 ft, not 18.5) AND
-%   would go stale the instant an optimizer moved the span. Brandt Main!C19 =
-%   3.0 is now a comparison reference, not an input. Consequences, all BY
-%   DESIGN: c_root_ht 9.5118, c_tip_ht 2.1639, S_exposed_ht 51.1486 (+2.611 %
-%   vs Brandt Geom!8), HT MAC 6.6085, QC/TE_sweep_ht 32.6400 / 2.5617°.
-%
-%   VERTICAL-TAIL SWEEP FORM: QC_sweep_vt / TE_sweep_vt take
-%   GeometryBase.convert_sweep_panel (SINGLE-PANEL, 2/AR), never convert_sweep.
-%   A vertical tail is one panel — root->tip spans the full b_vt — so the
-%   mirrored 4/AR coefficient double-counts the taper term. Wing and HT are
-%   mirrored surfaces and keep convert_sweep.
-%
-%   AREA-RULED Amax (sub-step 2h, locked user decision 2026-07-25). L3's Amax
-%   is NO LONGER the fuselage-envelope ellipse (pi/4)*W*H — that is the
-%   LOW-fidelity definition per readme_geom.md §7's own fidelity table, and it
-%   had been sitting in the finest tier, inflating the Raymer Eq. 12.44
-%   Sears-Haack term by +23.15%. It is now the whole-aircraft area-ruled
-%   maximum, MAX over stations of fuselage + wing + HT + VT + nacelle cross-
-%   sections less an n_engines*pi*D^2/5 engine flow-through deduction
-%   [Brandt Geom!H26:H45 -> H47]. GeometryModelL2 KEEPS the ellipse: it is the
-%   right answer for the low-fidelity tier. Six new [INPUT]s pay for it — five
-%   x-stations/counts plus the NORMALIZED fuselage frame table — and every
-%   intermediate it needs (exposed root chords, exposed spans, Xexp stations,
-%   engine length, nacelle aft limit) is [DERIVED], never stored: todo.md
-%   2026-07-25 Phase 2 §16.1 verified each one is derivable from inputs L3
-%   already carries. Equations and citations live in the GeomL3 toolbox.
-%
-%   PROPULSION INJECTION (Phase 2/3a): engine SLS thrust is NOT geometry spec
-%   data and is no longer a geometry input. The concrete class takes a required
-%   injected propulsion object and exposes T_AB_SLS_lb as Dependent on
-%   prop.T_SL, so the nacelle diameter — and hence duct wetted area, and hence
-%   CD0 — tracks the engine instead of staying pinned to a stale 23,770 lbf
-%   copy. T_AB_SLS_lb and the injected object are deliberately NOT in this
-%   abstract contract: they are engine, not airframe, data (the same judgment
-%   F16GeomL2 already documents for T_AB_SLS_lb), and a different concrete
-%   class may size its duct differently. D_inlet / D_exit / L_duct ARE in the
-%   contract, because L3 aero reads them.
-%
-%   Inheritance: GeometryBase → GeometryModelL3 → F16GeomL3
-%   (GeomL3 is the static toolbox alongside, NOT in the chain.)
-%
-%   Declares no equations and no formula constants — those live in the GeomL3
-%   static toolbox and the reused GeomL2 / GeometryBase statics.
+%   Authoritative spec: examples/F16A/F16GeomL3.md
+%   Toolbox companion:  src/disciplines/geometry/GeomL3.md
+
 
     % Abstract properties cannot have validation attributes in MATLAB.
     % Size/type validation is enforced in the concrete class (F16GeomL3).
