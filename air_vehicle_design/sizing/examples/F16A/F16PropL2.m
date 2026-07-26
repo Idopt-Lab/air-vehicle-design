@@ -54,6 +54,15 @@ classdef F16PropL2 < PropulsionModelL2
         T_SL_mil = 15000   % lbf — mil SLS thrust        [Brandt C29; TO]
         T_t4_max_F = 2566  % °F  — burner-exit total temperature [Mattingly Table C.4]; feeds get.TR
         TSFC_install_factor = 1.08  % — installed = uninstalled × factor [Brandt Miss!C25]
+
+        %BYPASS_RATIO  — engine bypass ratio (F100-PW-200 class). Consumed by
+        %   Raymer Eq. 10.10's exp(-0.81*BPR) term in the weights engine-weight
+        %   estimate, which reads it off this object by dependency injection.
+        %   Added 2026-07-25: the JSON key was written in Phase 3 without a
+        %   property to read it, so it sat unread until Phase 4 needed it.
+        %   Value is NOT traceable to anything in this repo -- see the JSON's
+        %   _TODO_bypass_ratio marker.
+        bypass_ratio = 0.71
         % (No stored TSFC property -- removed 2026-07-25 along with the
         % PropulsionBase abstract declaration it existed to satisfy. TSFC is
         % state-dependent: call get_TSFC(obj, state).)
@@ -94,6 +103,7 @@ classdef F16PropL2 < PropulsionModelL2
             % T_SL_wet is NOT read: it is Dependent on T_SL (see its comment).
             obj.T_t4_max_F          = J.T_t4_max_F;
             obj.TSFC_install_factor = J.TSFC_install_factor;
+            obj.bypass_ratio        = J.bypass_ratio;
         end
 
         % ---- DERIVED-property getters (recompute live on every read) ------ %

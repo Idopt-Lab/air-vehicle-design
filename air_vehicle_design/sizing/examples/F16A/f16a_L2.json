@@ -49,7 +49,7 @@
 
   "weights": {
     "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants.",
-    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
+    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. design_mach (Raymer Eq. 10.10 M^0.25) is NOT here either -- it is a REQUIREMENT, read from examples/F16A/f16a_requirements.json. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio, then x1.3 installed -- the x1.3 applies at L2 ONLY, F16WeightsL2.md §D.5) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
     "N_en": 1,
     "W_payload_fixed": 700,
     "W_payload_expendable": 4400

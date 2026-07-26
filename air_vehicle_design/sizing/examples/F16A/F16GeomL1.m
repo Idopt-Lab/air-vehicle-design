@@ -61,13 +61,23 @@ classdef F16GeomL1 < GeometryModelL1
 
     methods
 
-        function obj = F16GeomL1(json_path)
+        function obj = F16GeomL1(json_path, req_path)
         %F16GEOML1  Construct from a required unified L1 input JSON path
-        %   (f16a_spec_path(1)); reads its .geometry block. No silent default:
-        %   the path must be supplied. S_ref is not a JSON input (see class
-        %   header) and stays the pre-existing hardcoded literal.
+        %   (f16a_spec_path(1)) plus the requirements JSON path
+        %   (f16a_requirements_path()). No silent defaults: both must be
+        %   supplied. S_ref is not a JSON input (see class header) and stays the
+        %   pre-existing hardcoded literal.
+        %
+        %   WHY A SECOND PATH (Phase 4, 2026-07-25). M_max is a design
+        %   REQUIREMENT, not airframe spec data, and it existed in three places
+        %   at once. It now lives once in the requirements file as design_mach
+        %   [Brandt Main! aircraft.Mmax]. It is still consumed here -- it feeds
+        %   GeomL1.get_AR_eq (Raymer 7th ed. Table 4.1) -- so this is a
+        %   consolidation, not a removal. See f16a_requirements_path's header for
+        %   the requirements-vs-spec distinction.
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
+                req_path  {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             J = jsondecode(fileread(json_path));
             % ONE canonical top-level category key (Phase 3, 2026-07-25): it
@@ -76,7 +86,8 @@ classdef F16GeomL1 < GeometryModelL1
             % spellings (.geometry / .aerodynamics / .weights) with nothing
             % keeping them in sync.
             obj.aircraft_category = string(J.aircraft_category);
-            obj.M_max             = J.geometry.M_max;
+            R = jsondecode(fileread(req_path));
+            obj.M_max             = R.design_mach;
             obj.S_ref             = 300;
         end
 

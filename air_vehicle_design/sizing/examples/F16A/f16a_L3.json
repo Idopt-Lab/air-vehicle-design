@@ -126,9 +126,9 @@
   },
 
   "weights": {
-    "_src": "N_z ultimate = 1.5 x 9g [TO §5; Raymer §15.3.1]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]",
-    "_note": "Raymer §15.3.1 exponents/coefficients are aircraft_category-selected toolbox Constants and a standing verify-against-book item (todo 2026-07-24 §3a). Brandt's Wt-tab psf model stores n_ult = 9 [Main!Q27] -- a different model, do not conflate with N_z.",
-    "_not_inputs": "Removed in Phase 3 (2026-07-25) as Brandt OUTPUTS, computed quantities, or geometry duplicates. Geometry arrives by DI from F16GeomL3 (Phase 4 wires it), engine data by DI from the propulsion object. W_energy [Wt!B6] and W_l [Wt!B41] are sizing-loop/mission OUTPUTS, both back-calculated by Brandt. W_en is computed from Raymer Eq. 10.10 using prop.T_SL and bypass_ratio. T_max duplicated .propulsion.T_SL. V_t was derived from W_energy / 6.7 lb-per-gal. SFC_mission [Main!C30] duplicates what PropL2.get_TSFC computes. AR_ht/lambda_ht/B_h/F_w/S_csw/AR_vt/lambda_vt/Lambda_LE_vt/H_t/H_v/S_r/L_t/S_cs all duplicated .geometry keys.",
+    "_src": "N_z ultimate = 1.5 x 9g [TO §5; Raymer §15.3.1]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. REQUIREMENTS (design_mach, cruise.altitude_ft, cruise.mach) are NOT here: examples/F16A/f16a_requirements.json.",
+    "_note": "Raymer §15.3.1 exponents/coefficients are hardcoded literals in the WeightsL3 toolbox and a standing verify-against-book item (todo 2026-07-24 §3a). They are NOT aircraft_category-selected: WeightsL3 implements only the Fighter/Attack build-up, so there is one path and no lookup -- an earlier version of this note claimed otherwise and was wrong (todo 2026-07-25 §P4-9). Brandt's Wt-tab psf model stores n_ult = 9 [Main!Q27] -- a different model, do not conflate with N_z.",
+    "_not_inputs": "Removed in Phase 3 (2026-07-25); every one settled in Phase 4 -- rationale in F16WeightsL3.md §B.3. Geometry (S_w, AR_w, tc_root, lambda_w, Lambda_LE_w, S_csw, S_ht, F_w, B_h, S_vt, AR_vt, lambda_vt, Lambda_LE_vt, H_t, H_v, L_t, S_r, L_fus, D_fus, W_fus, S_cs) arrives by DI from F16GeomL3; AR_ht/lambda_ht were DEAD (read by no equation) and stay deleted (todo §P4-6). T_max duplicated .propulsion.T_SL, by DI from the injected prop object. W_en is DERIVED from Raymer Eq. 10.10 (prop.T_SL, design_mach, prop.bypass_ratio), UNINSTALLED at L3 -- no x1.3, because §15.3.1 adds mounts/firewall/section/induction/tailpipe/cooling/oil/controls/starter separately (decision 1). W_energy [Wt!B6 = B3-B4-B5-B12] is a back-calculated Brandt output: a NaN state input set by mission analysis. W_l is DERIVED = 0.95*W_TO so the landing-gear group tracks the sizing loop (decision 4); Brandt Wt!B41 = 20680.70 [=SUM(B16:B32)] is now a comparison reference only, and the 0.95 factor has NO repo citation (todo §P4-16). V_t is RESTORED as an input above (decision 3). SFC_mission is DERIVED by DI = prop.get_TSFC(AircraftState(cruise.altitude_ft, cruise.mach)) at the requirements cruise point 36000 ft / M 0.87 = 1.007116 1/hr (decision 2). ★ CORRECTION OF THE RECORD: the Phase-3 reason given for deleting SFC_mission -- that it 'duplicates what PropL2.get_TSFC computes' -- was FALSE. get_TSFC never returns Brandt's Main!C30 = 0.70 (0.903000 at SLS/M0.01, 1.007116 at 36 kft/M0.87). The true reason it is not an input is that it is now a DI evaluated at the cruise condition, and the resulting +43.87 % divergence from 0.70 is accepted BY DECISION -- two deliberate causes, a real cruise point vs Brandt's single stored SLS constant, and uninstalled vs Brandt's already-installed 0.70. todo §P4-15.",
     "N_z": 13.5,
     "W_payload_fixed": 700,
     "W_payload_expendable": 4400,
@@ -145,8 +145,7 @@
     },
 
     "vertical_tail": {
-      "_src": "Raymer Eq. 15.3. M_design [Brandt polar_model]; K_dwf not a delta-wing fuselage [Raymer]",
-      "M_design": 2.0,
+      "_src": "Raymer Eq. 15.3. K_dwf not a delta-wing fuselage [Raymer]. M_design = 2.0 DELETED -- the design Mach is a REQUIREMENT, read as design_mach from examples/F16A/f16a_requirements.json (todo §P4-14); it also feeds Eq. 15.17 and Raymer Eq. 10.10, so it was never a vertical-tail input.",
       "K_dwf": 1.0
     },
 
@@ -175,7 +174,9 @@
     },
 
     "systems": {
-      "_src": "Raymer Eqs. 15.16-15.24. N_gen [TO]; N_c = 1 single-seat; K_vsh no variable-sweep hydraulics, K_mc for <=2 generators [Raymer]; V_i, V_p, N_t, N_s, N_ci, N_u, R_kva, L_a, W_uav [estimates, unpinned; F-16 Block 10]",
+      "_src": "Raymer Eqs. 15.16-15.24. V_t total fuel volume, gal, RESTORED as an input (settled decision 3) [Brandt-style arithmetic: Wt!B6 = 6296.30 lbf / 6.7 lb-per-gal ~= 940 -- see _TODO_V_t]; N_gen [TO]; N_c = 1 single-seat; K_vsh no variable-sweep hydraulics, K_mc for <=2 generators [Raymer]; V_i, V_p, N_t, N_s, N_ci, N_u, R_kva, L_a, W_uav [estimates, unpinned; F-16 Block 10]. SFC_mission is NOT here: it is DERIVED by DI at the requirements cruise condition -- see _not_inputs.",
+      "V_t": 940,
+      "_TODO_V_t": "★ PROVENANCE OPEN. V_t = 940 gal is deliberately an INPUT rather than V_t = W_energy / rho_fuel, because the 6.7 lb/gal density behind the 940 is cited NOWHERE in this repo (grepped air_vehicle_design/sizing/ 2026-07-25: 6.7 lb/gal appears only in an F16WeightsL3.m comment, and no JP-4/JP-5/JP-8 density is cited in metabook_data.md, raymer_data.md, readme_wt.md or F16Baseline.m) -- deriving it would substitute an uncited constant for a Brandt-traceable figure. The arithmetic also gives 939.746, not 940, so the literal is itself rounded. Eq. 15.16 is weakly sensitive (fuel system 386.742 at 939.746 vs 386.794 at 940). Remove this key when the user supplies a cited fuel density. todo 2026-07-25 Phase 4 §P4-5b.",
       "V_i": 500,
       "V_p": 0,
       "N_t": 3,
