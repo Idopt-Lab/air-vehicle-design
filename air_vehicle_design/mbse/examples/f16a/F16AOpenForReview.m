@@ -18,7 +18,8 @@ function F16AOpenForReview()
 thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 addpath(thisDir, ...
     fullfile(thisDir,"requirements"), fullfile(thisDir,"architecture"), ...
-    fullfile(thisDir,"logical"), fullfile(thisDir,"physical"));
+    fullfile(thisDir,"logical"), fullfile(thisDir,"physical"), ...
+    fullfile(thisDir,"verification"));
 
 % Loading a model loads its requirement link set (the Implement links).
 systemcomposer.loadModel("F16A_Functional");
