@@ -55,11 +55,19 @@ brandt_CDo = @(M) ap(nearestIdx(ap_mach, M)).CDo;   % nearest tabulated CDo
 brandt_k1a = @(M) ap(nearestIdx(ap_mach, M)).k1;    % nearest tabulated k1
 
 % L1 is geometry-free (Mattingly type-curve) -> takes no geometry object.
-% L2/L3 share the detailed geometry (geometry has no separate L3 tier).
-a1 = F16AeroL1(f16a_spec_path(1));
-geom = F16GeomL2(f16a_spec_path(2));
-a2 = F16AeroL2(geom, f16a_spec_path(2));
-a3 = F16AeroL3(geom, f16a_spec_path(3));
+% L2 and L3 now inject their OWN geometry tier (Phase 2, 2026-07-25): L3 was
+% previously handed an F16GeomL2, which made f16a_L3.json's entire .geometry
+% block dead input. Geometry also takes the propulsion object, because the
+% nacelle diameter -- and so duct wetted area and CD0 -- is sized from thrust.
+% L3 geometry is INTENTIONALLY divergent from L2 (physical/T.O. values: VT LE
+% sweep 47.5 vs 40, L_fus 47.5 vs 46.5, HT span 18.5 primary), so L2-vs-L3
+% differences below are expected, not errors -- see examples/F16A/F16GeomL3.md.
+a1   = F16AeroL1(f16a_spec_path(1));
+prop = F16PropL2(f16a_spec_path(2));
+g2   = F16GeomL2(f16a_spec_path(2), prop);
+g3   = F16GeomL3(f16a_spec_path(3), prop);
+a2 = F16AeroL2(g2, f16a_spec_path(2));
+a3 = F16AeroL3(g3, f16a_spec_path(3));
 
 st_sub = AircraftState(ALT, M_SUB);
 st_sup = AircraftState(ALT, M_SUP);

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-24",
+  "generated": "2026-07-25",
   "aircraft": "F-16A Block 10",
   "W_TO_lbf": 31377,
   "source": "VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.geometry]",
@@ -10,6 +10,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -19,6 +21,8 @@
       "Computed": "396.3767",
       "Brandt": "392.0204",
       "PctDiff": "+1.11%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B14",
       "Notes": "get_S_wet_wing()"
     },
@@ -28,6 +32,8 @@
       "Computed": "392.0204",
       "Brandt": "392.0204",
       "PctDiff": "+0.00%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B14",
       "Notes": "compute_wet_planform() -- same formula Brandt uses, near-exact match expected"
     },
@@ -37,15 +43,19 @@
       "Computed": "101.3879",
       "Brandt": "99.5848",
       "PctDiff": "+1.81%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B16",
       "Notes": "get_S_wet_HT()"
     },
     {
       "parameter": "HT   S_wet, Brandt uniform-tc [alt]  [ft^2]",
       "Fidelity": "L2",
-      "Computed": "99.5848",
+      "Computed": "99.7792",
       "Brandt": "99.5848",
-      "PctDiff": "+0.00%",
+      "PctDiff": "+0.20%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B16",
       "Notes": "compute_wet_planform() -- same formula Brandt uses, near-exact match expected"
     },
@@ -55,15 +65,19 @@
       "Computed": "83.1398",
       "Brandt": "81.6894",
       "PctDiff": "+1.78%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B17",
       "Notes": "get_S_wet_VT()"
     },
     {
       "parameter": "VT   S_wet, Brandt uniform-tc [alt]  [ft^2]",
       "Fidelity": "L2",
-      "Computed": "81.6894",
+      "Computed": "81.7213",
       "Brandt": "81.6894",
-      "PctDiff": "-0.00%",
+      "PctDiff": "+0.04%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B17",
       "Notes": "compute_wet_planform() -- same formula Brandt uses, near-exact match expected"
     },
@@ -73,8 +87,10 @@
       "Computed": "N/A",
       "Brandt": "39.9560",
       "PctDiff": " - ",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B15",
-      "Notes": "No strake component exists in GeomL2's get_S_wet aggregation"
+      "Notes": "No strake component exists in any geometry tier. DEFERRED, not overlooked: sub-step 2h proved the strake contributes exactly 0.000% to Amax (active only 12.0 < x < 21.551 ft, well forward of the governing station), so it was descoped from 2h and logged for its own step."
     },
     {
       "parameter": "[FUSELAGE WETTED AREA — THREE FORMULA OPTIONS]",
@@ -82,6 +98,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -91,6 +109,8 @@
       "Computed": "730.3023",
       "Brandt": "676.3289",
       "PctDiff": "+7.98%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!D23",
       "Notes": "get_S_wet_fuselage() -- equivalent-diameter cylinder model; compared vs Brandt's high-fi (closest formula family)"
     },
@@ -100,6 +120,8 @@
       "Computed": "730.4203",
       "Brandt": "730.4220",
       "PctDiff": "-0.00%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B3",
       "Notes": "compute_s_wet_fus_brandt_lowfi() -- reproduces Brandt's own \"1/3-cone+2/3-cyl\" formula"
     },
@@ -109,6 +131,8 @@
       "Computed": "677.9260",
       "Brandt": "676.3289",
       "PctDiff": "+0.24%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!D23",
       "Notes": "compute_s_wet_fus_brandt_highfi() -- reproduces Brandt's own frame-integration formula"
     },
@@ -118,6 +142,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -127,8 +153,10 @@
       "Computed": "155.5664",
       "Brandt": "41.5150",
       "PctDiff": "+274.72%",
+      "TO": "N/A",
+      "Divergence": "DEFINITIONAL",
       "Source": "Brandt Geom!B4 (nacelle)",
-      "Notes": "DIFFERENT quantity: exposed inlet-to-exit frustum vs Brandt's full-cylinder nacelle -- large %Diff expected, not a bug"
+      "Notes": "DIFFERENT quantity: exposed inlet-to-exit frustum vs Brandt's full-cylinder nacelle -- the %Diff is not a meaningful error measure here."
     },
     {
       "parameter": "Nacelle diameter D=sqrt(T_AB_SLS/1900) [ft]",
@@ -136,6 +164,8 @@
       "Computed": "3.537022",
       "Brandt": "3.537000",
       "PctDiff": "+0.00%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Engn(s) tab",
       "Notes": "Same formula as Brandt -- should match near-exactly (positive control)"
     },
@@ -145,6 +175,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -154,6 +186,8 @@
       "Computed": "196.2261",
       "Brandt": "196.2261",
       "PctDiff": "-0.00%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!7",
       "Notes": "compute_S_exposed_horizontal() via F16GeomL2 constructor"
     },
@@ -163,6 +197,8 @@
       "Computed": "49.8473",
       "Brandt": "49.8473",
       "PctDiff": "-0.00%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!8",
       "Notes": "compute_S_exposed_horizontal() via F16GeomL2 constructor"
     },
@@ -172,6 +208,8 @@
       "Computed": "40.8897",
       "Brandt": "40.8897",
       "PctDiff": "-0.00%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!10",
       "Notes": "compute_S_exposed_vertical() via F16GeomL2 constructor"
     },
@@ -181,8 +219,10 @@
       "Computed": "N/A",
       "Brandt": "20.0000",
       "PctDiff": " - ",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!9",
-      "Notes": "No strake component exists in this framework"
+      "Notes": "No strake component exists in this framework -- DEFERRED with a logged todo entry, see the strake S_wet row above."
     },
     {
       "parameter": "[SWEEP-ANGLE CONVERSION — HEADLINE BUG-FIX CHECK]",
@@ -190,6 +230,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -199,6 +241,8 @@
       "Computed": "32.1832",
       "Brandt": "28.1530",
       "PctDiff": "+14.32%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "readme_geom.md Table 3",
       "Notes": "HEADLINE: was hardcoded 37 deg (bug), now computed ~32.2 deg via convert_sweep. No single Brandt cell for \"wing QC sweep\" exists in the comparison JSON; 28.153 deg is the closest available figure but reflects Brandt's EXPOSED-PANEL-based sweep definition, not our full-planform convert_sweep definition -- the ~4 deg gap is an expected, informative definitional difference (per IO's handoff notes), NOT a bug to chase down in this pass."
     },
@@ -208,6 +252,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -217,6 +263,8 @@
       "Computed": "1763.02",
       "Brandt": "1371.09",
       "PctDiff": "+28.58%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Main!L3 (raw)",
       "Notes": "Roskam Vol.I Table 3.5 regression -- coarse by design"
     },
@@ -226,6 +274,8 @@
       "Computed": "1466.77",
       "Brandt": "1331.13",
       "PctDiff": "+10.19%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "readme_geom.md Sec 6.2 (corrected)",
       "Notes": "wing+HT+VT (Roskam Eq.12.1) + fuselage (Roskam Eq.12.3) + duct"
     },
@@ -235,15 +285,19 @@
       "Computed": "1466.77",
       "Brandt": "1371.09",
       "PctDiff": "+6.98%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "Brandt Geom!B19 (raw, double-counts strake)",
       "Notes": "Brandt's own raw total double-counts the strake term (documented Excel bug, readme_geom.md Sec 6.2) -- corrected_total row above is the intended comparison target"
     },
     {
       "parameter": "S_wet total, Brandt-style formula set   [ft^2]",
       "Fidelity": "L2",
-      "Computed": "1406.79",
+      "Computed": "1407.01",
       "Brandt": "1331.13",
-      "PctDiff": "+5.68%",
+      "PctDiff": "+5.70%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "readme_geom.md Sec 6.2 (corrected)",
       "Notes": "wing+HT+VT (Brandt uniform-tc) + fuselage (Brandt high-fi) + duct -- closer to Brandt's own methodology"
     },
@@ -253,6 +307,8 @@
       "Computed": "---",
       "Brandt": "---",
       "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
       "Source": "---",
       "Notes": "---"
     },
@@ -262,7 +318,9 @@
       "Computed": "46.5000",
       "Brandt": "N/A",
       "PctDiff": " - ",
-      "Source": "geometry_L2.json (Brandt Main!B32)",
+      "TO": "N/A",
+      "Divergence": "",
+      "Source": "f16a_L2.json .geometry (Brandt Main!B32)",
       "Notes": "Passthrough of the same Brandt Main-tab input the constructor reads -- reported for completeness, not an independent check"
     },
     {
@@ -271,8 +329,10 @@
       "Computed": "46.5000",
       "Brandt": "48.3039",
       "PctDiff": "-3.73%",
+      "TO": "N/A",
+      "Divergence": "DEFINITIONAL",
       "Source": "Brandt Geom!B21",
-      "Notes": "DIFFERENT quantity: fuselage length only (46.5 ft) vs Brandt's total aircraft length incl. nose probe/pitot (48.30 ft) -- the ~3.7% gap is expected, not a bug"
+      "Notes": "DIFFERENT quantity: fuselage length only (46.5 ft) vs Brandt's total aircraft length (48.30 ft) -- see the dedicated L_aircraft row."
     },
     {
       "parameter": "L1 fuselage length regression L_fus [ft]",
@@ -280,17 +340,164 @@
       "Computed": "52.7426",
       "Brandt": "46.5000",
       "PctDiff": "+13.42%",
+      "TO": "N/A",
+      "Divergence": "",
       "Source": "F16GeomL2.L_fus (Brandt)",
       "Notes": "Raymer 6th ed. Table 6.3 statistical regression vs the Brandt-sourced L2 spec value"
     },
     {
-      "parameter": "Max cross-section area Amax -- NOT MODELED [ft^2]",
-      "Fidelity": "N/A",
-      "Computed": "N/A",
+      "parameter": "Max cross-section Amax, L2 envelope ellipse [ft^2]",
+      "Fidelity": "L2",
+      "Computed": "27.4889",
       "Brandt": "25.1106",
-      "PctDiff": " - ",
+      "PctDiff": "+9.47%",
+      "TO": "N/A",
+      "Divergence": "DEFINITIONAL",
       "Source": "Brandt Geom!B20/H47",
-      "Notes": "No max-cross-section-area computation exists anywhere in GeomL1/GeomL2"
+      "Notes": "(pi/4)*W_max*H_max -- readme_geom.md Sec 7's LOW-fidelity Amax form, correct for the low-fidelity tier. DEFINITIONAL, not BY DESIGN: this is a fuselage-only envelope area, a different KIND of quantity from Brandt's whole-aircraft area-ruled max, so the two are not really comparable. Contrast the L3 row below, which computes the same kind of quantity Brandt does and differs only by the physical fuselage length."
+    },
+    {
+      "parameter": "Max cross-section Amax, L3 AREA-RULED [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "24.7037",
+      "Brandt": "25.1106",
+      "PctDiff": "-1.62%",
+      "TO": "N/A",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Geom!B20/H47",
+      "Notes": "Whole-aircraft buildup: MAX over 20 stations of (rescaled fuselage frames + wing/HT/VT cosine sections + nacelle) less n_eng*pi*D^2/5 -- the quantity Raymer Eq. 12.44 wants. ROUND-TRIP CONTROL (TestGeomL3): with L_fus set back to Brandt's own 46.5 this reproduces Geom!B20 to -0.0001%. The residual gap here is L3's 47.5 ft fuselage."
+    },
+    {
+      "parameter": "Overall aircraft length L_aircraft [ft]",
+      "Fidelity": "L3",
+      "Computed": "47.6500",
+      "Brandt": "48.3039",
+      "PctDiff": "-1.35%",
+      "TO": "47.6500",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Geom!B21",
+      "Notes": "Published F-16A airframe length (47 ft 7.75 in). Brandt's 48.3039 is a MAX() over x-stations -- an EXTENT, not a spec length -- so the two are not the same quantity. Value user-approved; citation NOT pinned to any document in this repo (todo.md 2026-07-25 Phase 2 Sec 6, guarded by TestGeomL3.testTODO_OverallLengthCitationNotPinned)."
+    },
+    {
+      "parameter": "[L3 PHYSICAL / T.O. TIER — DIVERGENCES FROM BRANDT ARE INTENTIONAL]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "TO": "---",
+      "Divergence": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
+    {
+      "parameter": "Wing S_wet, Roskam Eq.12.1 [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "396.3767",
+      "Brandt": "392.0204",
+      "PctDiff": "+1.11%",
+      "TO": "N/A",
+      "Divergence": "",
+      "Source": "Brandt Geom!B14",
+      "Notes": "Wing planform is identical at L2 and L3 (no physical divergence), so this matches the L2 row exactly."
+    },
+    {
+      "parameter": "HT   S_wet, Roskam Eq.12.1 [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "104.0349",
+      "Brandt": "99.5848",
+      "PctDiff": "+4.47%",
+      "TO": "N/A",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Geom!B16",
+      "Notes": "Decomposes as +1.8% formula family (Roskam Eq.12.1 with T.O. root/tip t/c vs Brandt's uniform t/c) and +2.6% exposed area (the 18.5 ft T.O. span taken as primary). Not one large error."
+    },
+    {
+      "parameter": "VT   S_wet, Roskam Eq.12.1 [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "83.1398",
+      "Brandt": "81.6894",
+      "PctDiff": "+1.78%",
+      "TO": "N/A",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Geom!B17",
+      "Notes": "VT exposed area is sweep-independent, so this differs from L2 only by formula family."
+    },
+    {
+      "parameter": "Fuselage S_wet, Roskam Eq.12.3 [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "749.1337",
+      "Brandt": "676.3289",
+      "PctDiff": "+10.76%",
+      "TO": "47.5000",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Geom!D23",
+      "Notes": "L3 fuselage is 47.5 ft [T.O. 1F-16A-1] vs Brandt's 46.5 -- a longer fuselage has more wetted area."
+    },
+    {
+      "parameter": "Duct S_wet [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "155.5664",
+      "Brandt": "41.5150",
+      "PctDiff": "+274.72%",
+      "TO": "N/A",
+      "Divergence": "",
+      "Source": "Brandt Geom!B4 (nacelle)",
+      "Notes": "Same frustum model and same injected thrust as L2 -- identical to the L2 duct row."
+    },
+    {
+      "parameter": "S_wet total, L3 (incl. duct) [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "1488.25",
+      "Brandt": "1331.13",
+      "PctDiff": "+11.80%",
+      "TO": "N/A",
+      "Divergence": "BY DESIGN",
+      "Source": "readme_geom.md Sec 6.2 (corrected)",
+      "Notes": "Phase 2 changed GeomL3.get_S_wet to INCLUDE the duct (it was airframe-only)."
+    },
+    {
+      "parameter": "HT exposed area [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "51.1486",
+      "Brandt": "49.8473",
+      "PctDiff": "+2.61%",
+      "TO": "N/A",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Geom!8",
+      "Notes": "Derived from S_ht=108 + the T.O. span 18.5 (option B), so AR_ht is derived rather than Brandt's 3.0."
+    },
+    {
+      "parameter": "VT exposed area [ft^2]",
+      "Fidelity": "L3",
+      "Computed": "40.8897",
+      "Brandt": "40.8897",
+      "PctDiff": "-0.00%",
+      "TO": "N/A",
+      "Divergence": "",
+      "Source": "Brandt Geom!10",
+      "Notes": "Sweep does not enter the exposed-area clip, so L3 matches L2 and Brandt exactly despite the 47.5 deg LE sweep."
+    },
+    {
+      "parameter": "HT aspect ratio AR_ht (DERIVED) [-]",
+      "Fidelity": "L3",
+      "Computed": "3.1690",
+      "Brandt": "3.0000",
+      "PctDiff": "+5.63%",
+      "TO": "N/A",
+      "Divergence": "BY DESIGN",
+      "Source": "Brandt Main!C19",
+      "Notes": "DERIVED = B_h^2/S_ht = 18.5^2/108. Area and span are what a 3-view measures; aspect ratio is definitional. Brandt's 3.0 implies an 18.0 ft span, contradicting the physical 18.5."
+    },
+    {
+      "parameter": "VT quarter-chord sweep [deg]",
+      "Fidelity": "L3",
+      "Computed": "44.6293",
+      "Brandt": "N/A",
+      "PctDiff": " - ",
+      "TO": "47.5000",
+      "Divergence": "BY DESIGN",
+      "Source": "no Brandt cell",
+      "Notes": "Single-panel (2/AR) conversion at the physical 47.5 deg LE sweep. The mirrored (4/AR) wing form is wrong for a one-panel surface -- it gave the F-16 a physically impossible 0.33 deg VT trailing-edge sweep before Phase 1."
     }
   ]
 }

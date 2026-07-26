@@ -5,6 +5,13 @@ function T_all = propulsion_brandt_comparison()
 %   part of run_all_tests. A pure reporting script: it builds the six Brandt
 %   constraint-analysis flight conditions with AircraftState, runs the actual
 %   F16PropL1/F16PropL2 code, and compares the results against the
+%
+%   NO L3 PROPULSION TIER EXISTS (and none is planned, user decision
+%   2026-07-25). Geometry, aerodynamics and weights are L1/L2/L3; propulsion is
+%   L1/L2 only. The framework's L3 rung pairs F16AeroL3 with F16PropL2, so any
+%   "L3" propulsion figure elsewhere in the project is computed by F16PropL2 and
+%   equals the L2 rows in this report.
+%
 %   `propulsion` section of
 %   VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json (Brandt-workbook OUTPUTS,
 %   each cited in the JSON to a Consts/Engn(s) cell). Percentage differences
@@ -78,6 +85,19 @@ p2 = F16PropL2(f16a_spec_path(2));
 %  BUILD TABLE
 % ════════════════════════════════════════════════════════════════════════ %
 T = table();
+
+% ── There is NO L3 propulsion tier ──────────────────────────────────────── %
+% Stated up front because every OTHER discipline now has three tiers, so a
+% reader is entitled to wonder where the L3 propulsion rows went.
+%
+% No PropL3 / PropulsionModelL3 / F16PropL3 exists, and none is planned (user
+% decision 2026-07-25). The L3 rung of the framework pairs F16AeroL3 with
+% F16PropL2 -- see F16ConstraintSet.buildDisciplines. So every propulsion
+% number quoted anywhere for "L3" is COMPUTED BY F16PropL2 and is identical to
+% the L2 rows below; duplicating them under an "L3" label would imply a
+% higher-fidelity model that does not exist. Geometry and aerodynamics DO
+% diverge between L2 and L3; propulsion does not.
+T = [T; srow('[NOTE: NO L3 PROPULSION TIER -- the L3 rung uses F16PropL2, so every L2 row below IS the L3 result]')];
 
 % ── Thrust lapse alpha_AB: L2 Mattingly vs Brandt AT ─────────────────────── %
 T = [T; srow('[THRUST LAPSE alpha_AB -- L2 Mattingly Eq.2.54a vs Brandt alpha_AB (Consts AT)]')];

@@ -1,6 +1,6 @@
 # F-16A Block 10 — Propulsion vs Brandt Ground Truth
 
-Generated 2026-07-24.
+Generated 2026-07-25.
 
 Source: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.propulsion`] (Brandt-workbook outputs, cited per cell).
 
@@ -8,6 +8,7 @@ This is a **comparison report**, not a test — no pass/fail assertions, not in 
 
 | Parameter | Fidelity | Computed | Brandt | %Diff | Other source | Source | Notes |
 |---|---|---|---|---|---|---|---|
+| **[NOTE: NO L3 PROPULSION TIER -- the L3 rung uses F16PropL2, so every L2 row below IS the L3 result]** | | | | | | | |
 | **[THRUST LAPSE alpha_AB -- L2 Mattingly Eq.2.54a vs Brandt alpha_AB (Consts AT)]** | | | | | | | |
 | alpha_AB @ dash_max_mach (36000ft M1.60, 100%AB) | L2 | 0.5494 | 0.5770 | -4.77% | AU(eff on T_AB)=0.5770; AS(dry)=0.2983 | Brandt Consts AT23 | Above-TR (theta_0>TR=1.0): both models carry a theta correction; Mattingly (3.5 coeff) and Brandt (2.2 coeff + 0.1*sqrt(M)) agree within a few percent -- the closest conditions. |
 | alpha_AB @ cruise (36000ft M0.87, 0%AB) | L2 | 0.3674 | 0.3326 | +10.45% | AU(eff on T_AB)=0.1711; AS(dry)=0.2711 | Brandt Consts AT24 | Below-TR (theta_0<=TR=1.0): Mattingly alpha_AB=delta_0 with NO Mach term; Brandt subtracts 0.1*sqrt(M). Framework reads HIGH vs Brandt AT -- expected, not a bug. |

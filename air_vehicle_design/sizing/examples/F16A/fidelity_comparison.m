@@ -82,21 +82,34 @@ ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ..
            b.brandt.W_avionics + b.brandt.W_armament;
 
 % ── Geometry ──────────────────────────────────────────────────────────── %
-% Geometry has only L1/L2 fidelity tiers (L3 eliminated and merged into L2,
-% 2026-07-22 -- see src/disciplines/geometry/GeomL2.md's dated note). L2 now
-% carries the full HT/VT breakdown + duct that used to live on a separate
-% F16GeomL3 class, so the L3 column below is NaN throughout (not a missing
-% class -- Geometry genuinely stops at L2).
+% Geometry has all three fidelity tiers again as of 2026-07-24/25: the
+% 2026-07-22 "L3 eliminated and merged into L2" decision was REVERSED, and
+% Phase 2 promoted GeomL3 to the full L3 geometry tier consumed by L3
+% geometry + aero + weights. The L3 column below is now real, not NaN.
+%
+% L3 geometry is INTENTIONALLY divergent from L2 -- it is the physical/T.O.
+% tier, so where a physical value differs from Brandt's it uses the physical
+% one: VT LE sweep 47.5 vs 40, L_fus 47.5 vs 46.5, HT span 18.5 ft taken as
+% PRIMARY (making AR_ht a derived 3.1690 rather than Brandt's 3.0). It also
+% uses Roskam Vol. II Eq. 12.1 for lifting-surface S_wet where L2's official
+% choice is the same formula but L3 additionally carries the T.O. root/tip t/c
+% splits. L2-vs-L3 differences here are therefore EXPECTED, not errors --
+% see examples/F16A/F16GeomL3.md §A.4/§A.5 for the full accounting.
+%
+% Geometry also takes the propulsion object: the nacelle diameter -- and so
+% duct wetted area and total S_wet -- is sized from engine thrust.
+prop = F16PropL2(f16a_spec_path(2));
 g1 = F16GeomL1(f16a_spec_path(1));
-g2 = F16GeomL2(f16a_spec_path(2));
+g2 = F16GeomL2(f16a_spec_path(2), prop);
+g3 = F16GeomL3(f16a_spec_path(3), prop);
 
-swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),      NaN];
-lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                NaN];
-sw_wing = [NaN,                g2.get_S_wet_wing(),      NaN];
-sw_ht   = [NaN,                g2.get_S_wet_HT(),        NaN];
-sw_vt   = [NaN,                g2.get_S_wet_VT(),        NaN];
-sw_fus  = [NaN,                g2.get_S_wet_fuselage(),  NaN];
-sw_duct = [NaN,                g2.get_S_wet_duct(),      NaN];
+swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),          g3.get_S_wet()];
+lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                g3.L_fus];
+sw_wing = [NaN,                g2.get_S_wet_wing(),     g3.get_S_wet_wing()];
+sw_ht   = [NaN,                g2.get_S_wet_HT(),       g3.get_S_wet_HT()];
+sw_vt   = [NaN,                g2.get_S_wet_VT(),       g3.get_S_wet_VT()];
+sw_fus  = [NaN,                g2.get_S_wet_fuselage(), g3.get_S_wet_fuselage()];
+sw_duct = [NaN,                g2.get_S_wet_duct(),     g3.get_S_wet_duct()];
 
 % ── Aerodynamics ──────────────────────────────────────────────────────── %
 a1 = F16AeroL1(f16a_spec_path(1));

@@ -1,8 +1,18 @@
 {
-  "generated": "2026-07-24",
+  "generated": "2026-07-25",
   "aircraft": "F-16A Block 10",
   "source": "VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.propulsion]",
   "rows": [
+    {
+      "parameter": "[NOTE: NO L3 PROPULSION TIER -- the L3 rung uses F16PropL2, so every L2 row below IS the L3 result]",
+      "Fidelity": "---",
+      "Computed": "---",
+      "Brandt": "---",
+      "PctDiff": "---",
+      "OtherSource": "---",
+      "Source": "---",
+      "Notes": "---"
+    },
     {
       "parameter": "[THRUST LAPSE alpha_AB -- L2 Mattingly Eq.2.54a vs Brandt alpha_AB (Consts AT)]",
       "Fidelity": "---",
