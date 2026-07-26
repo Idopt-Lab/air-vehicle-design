@@ -139,6 +139,61 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
                 'ConstraintAnalysis:InvalidConstraint');
         end
 
+        % --- NaN vs Inf in a required_TW curve --------------------------------
+        %
+        % Inf and NaN are NOT interchangeable here. Inf is the documented way a
+        % wall-type constraint says "infeasible above my W/S limit"
+        % (LandingConstraint.m) and must keep working. NaN means the condition
+        % could not be evaluated, and must be rejected -- see the next test for
+        % why silence is the worst outcome.
+
+        function testNaNConstraintCurveErrorsAtConstruction(tc)
+            % Uses NaNCurveStub rather than a real ThrustConstraint on purpose:
+            % Both_WbyS_TbyW.required_TW would throw first and the aggregator's
+            % own guard would never be reached. Constraint categories outside
+            % the Master Equation have no such upstream check, which is exactly
+            % why ConstraintAnalysis needs this one.
+            tc.verifyError(@() ConstraintAnalysis({NaNCurveStub("Bad", 3)}, 20:10:100), ...
+                'ConstraintAnalysis:nanConstraintCurve');
+        end
+
+        function testNaNIsRejectedEvenAlongsideValidConstraints(tc)
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
+            state = AircraftState(10000, 0.8);
+            good  = ThrustConstraint("Good", state, aero, prop, 0.9);
+
+            tc.verifyError(@() ConstraintAnalysis({good, NaNCurveStub("Bad", 2)}, 20:10:100), ...
+                'ConstraintAnalysis:nanConstraintCurve');
+        end
+
+        function testNaNWouldOtherwiseVanishFromTheEnvelope(tc)
+            % Documents the failure mode the guard exists to prevent: MATLAB's
+            % max() OMITS NaN by default, so an unevaluable constraint would
+            % silently drop out of max(TW_table,[],1) and the design point would
+            % be computed as though it had never been supplied -- no warning,
+            % plausible-looking answer. This asserts the MATLAB behaviour
+            % directly, so the test stays meaningful if the guard is ever moved.
+            table_with_nan = [1 2 3; NaN NaN NaN];
+            tc.verifyEqual(max(table_with_nan, [], 1), [1 2 3], ...
+                'max() omits NaN -- an unguarded NaN row vanishes from the envelope.');
+        end
+
+        function testInfConstraintCurveIsStillAccepted(tc)
+            % The guard must be NaN-only. A LandingConstraint returns Inf above
+            % its W/S limit by design, so a ~isfinite() check here would break
+            % every wall-type constraint.
+            aero    = F16AeroL1(f16a_spec_path(1));
+            landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
+            WS_range = 20:2:200;
+
+            ca = ConstraintAnalysis({landing}, WS_range);
+            tc.verifyTrue(any(isinf(ca.TW_table(1,:))), ...
+                'Precondition: this landing wall must produce Inf somewhere in the sweep.');
+            tc.verifyFalse(any(isnan(ca.TW_table(1,:))), ...
+                'A wall constraint must encode infeasibility as Inf, never NaN.');
+        end
+
         % --- Report -----------------------------------------------------------
 
         function testReportDoesNotError(tc)
