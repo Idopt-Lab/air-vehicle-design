@@ -154,6 +154,7 @@ sanity minimum, the fraction identity, and per-equation hand-computed values.
 
 | Item | Status |
 |---|---|
+| **Darshan -> Krish: High-Priority To-Do: L2 and L3 weights** | These need to be cross-checked. They are giving significantly lower than Brandt. |
 | All 62 Raymer §15.3.1 exponents unverified against the printed book | guarded red by `TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified`; todo §3a |
 | Raymer Table 6.1 coefficients are not in the repo (code uses Table 3.1) | guarded red by `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo`; todo §P4-8 |
 | The `0.95` in `W_l = 0.95·W_TO` has no citation | todo §P4-16 — needs a cited landing-weight fraction |
