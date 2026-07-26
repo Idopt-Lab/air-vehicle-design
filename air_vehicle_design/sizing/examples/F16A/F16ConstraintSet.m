@@ -20,12 +20,19 @@ classdef F16ConstraintSet
 %   themselves are cited in ThrustConstraint.m/TakeoffConstraint.m/
 %   LandingConstraint.m/StallConstraint.m, not repeated here.
 %
+%   POWER SETTING IS WIRED FROM THE SHEET (fixed 2026-07-25): the workbook's
+%   "AB%" column (read as row.AB_) selects each thrust row's alpha basis --
+%   0% -> powerSetting="mil" (PropulsionBase.thrust_lapse_mil_on_AB_scale),
+%   100% -> powerSetting="AB" (PropulsionBase.thrust_lapse). Before this fix
+%   every row took ThrustConstraint's "AB" default, so the F-16's one dry-power
+%   condition (Cruise, AB%=0) was built on the afterburner lapse and its
+%   required T/W came out ~2.6x low -- the ~-58% error that
+%   cruise_and_combatturn2_error_scrape.md records as FIXED. The fix had landed
+%   in ThrustConstraint/TestThrustConstraint but never in this production build
+%   path. See mapPowerSetting below.
+%
 %   NOT WIRED FROM THE SHEET (intentional, documented gaps -- out of scope
 %   here):
-%     AB_    -- percent afterburner. PropulsionBase.thrust_lapse always
-%               returns the AB-basis lapse regardless of condition; there is
-%               no mil/dry-basis alternative to select (see
-%               TestThrustConstraint.m's "NOTE ON ALPHA BASIS" header).
 %     Vstall -- would-be k_TO/k_L touchdown/liftoff speed margins. The sheet
 %               currently disagrees with TakeoffConstraint/LandingConstraint's
 %               documented defaults (k_TO=1.2, k_L=1.3, per subplan 06's
@@ -81,7 +88,8 @@ classdef F16ConstraintSet
                             Ps = 0;
                         end
                         constraints{i} = ThrustConstraint(name, state, aero, prop, ...
-                            row.W_Wto, row.n, Ps);
+                            row.W_Wto, row.n, Ps, ...
+                            F16ConstraintSet.mapPowerSetting(name, row.AB_));
                 end
             end
 
@@ -93,21 +101,65 @@ classdef F16ConstraintSet
 
     methods (Static, Access = private)
 
+        function powerSetting = mapPowerSetting(name, AB_percent)
+        %MAPPOWERSETTING  Workbook "AB%" -> ThrustConstraint powerSetting.
+        %   0% afterburner is a dry/military-power condition, whose thrust lapse
+        %   must come from PropulsionBase.thrust_lapse_mil_on_AB_scale
+        %   (T_mil/T_SL_AB) rather than the AB-basis thrust_lapse -- see
+        %   ThrustConstraint.get_alpha and
+        %   cruise_and_combatturn2_error_scrape.md Sec. 2.
+        %
+        %   Errors rather than defaulting on a missing or partial value: an
+        %   unstated power setting silently defaulting to "AB" is exactly the
+        %   bug this method exists to prevent, and ThrustConstraint models only
+        %   the two discrete bases (there is no partial-AB thrust model).
+            arguments
+                name       (1,1) string
+                AB_percent (1,1) double
+            end
+            if isnan(AB_percent)
+                error('F16ConstraintSet:missingPowerSetting', ...
+                    ['Constraint row "%s" has no AB%% value. A ThrustConstraint ', ...
+                     'needs an explicit power setting (0 = mil, 100 = AB); ', ...
+                     'fill the AB%% column in Constraints.xlsx.'], name);
+            end
+            switch AB_percent
+                case 0,   powerSetting = "mil";
+                case 100, powerSetting = "AB";
+                otherwise
+                    error('F16ConstraintSet:partialAfterburnerNotModeled', ...
+                        ['Constraint row "%s" specifies AB%% = %g. Only 0 (mil) ', ...
+                         'and 100 (full AB) are modeled -- PropulsionBase exposes ', ...
+                         'no partial-afterburner thrust lapse.'], name, AB_percent);
+            end
+        end
+
         function [aero, prop] = buildDisciplines(fidelityLevel)
-        %BUILDDISCIPLINES  F-16 aero/prop discipline pair for a fidelity
-        %   level. No F16PropL3 exists yet, so L3 pairs F16AeroL3 with
-        %   F16PropL2 -- same pairing TestThrustConstraint/TestTakeoffConstraint
-        %   /TestLandingConstraint use.
+        %BUILDDISCIPLINES  F-16 aero/prop discipline pair for a fidelity level.
+        %
+        %   PROPULSION AT THE L3 RUNG: there is deliberately NO L3 propulsion
+        %   tier -- no PropL3/PropulsionModelL3/F16PropL3 exists, and none is
+        %   planned (user decision 2026-07-25). L3 pairs F16AeroL3 with
+        %   F16PropL2, and anything reporting L3 propulsion numbers must label
+        %   them "computed by F16PropL2". Same pairing the constraint tests use.
+        %
+        %   GEOMETRY IS NOW INJECTED INTO BOTH AERO AND PROPULSION-AWARE
+        %   GEOMETRY (Phase 2, 2026-07-25): F16GeomL{2,3} take the propulsion
+        %   object, because the nacelle diameter -- and therefore duct wetted
+        %   area and CD0 -- is sized from engine thrust. L3 now builds
+        %   F16GeomL3, the full L3 geometry tier; it previously injected
+        %   F16GeomL2, which made f16a_L3.json's whole .geometry block dead
+        %   input (an edit there changed nothing).
             switch fidelityLevel
                 case "L1"
                     aero = F16AeroL1(f16a_spec_path(1));
                     prop = F16PropL1(f16a_spec_path(1));
                 case "L2"
-                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2));
                     prop = F16PropL2(f16a_spec_path(2));
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2));
                 case "L3"
-                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(3));
                     prop = F16PropL2(f16a_spec_path(2));
+                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
             end
         end
 

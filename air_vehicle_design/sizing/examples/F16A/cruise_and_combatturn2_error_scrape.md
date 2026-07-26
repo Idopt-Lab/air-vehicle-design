@@ -1,6 +1,37 @@
 # Cruise & Supersonic Combat Turn (Combat Turn 2) — error scrape
 
-## RESOLUTION (2026-07-23) — Cruise alpha-basis fix implemented
+## AMENDMENT (2026-07-25) — the 2026-07-23 fix never reached the production path
+
+The §"RESOLUTION (2026-07-23)" below is **half true**. `ThrustConstraint` gained
+the `powerSetting` argument and `TestThrustConstraint` began passing `"mil"`, so
+the before/after table below is real *for that test*. But
+`examples/F16A/F16ConstraintSet.m` — the path `run_F16_constraint_diagram` and
+every comparison report actually use — kept building all six thrust rows with
+`ThrustConstraint`'s `"AB"` default. Production Cruise therefore stayed on the
+afterburner lapse and stayed ~2.6× low until 2026-07-25, when
+`F16ConstraintSet.mapPowerSetting` wired the setting from the workbook's `AB%`
+column (0 → mil, 100 → AB). Found by the max-effort code review.
+
+Two corrections to the numbers below, both verified live 2026-07-25:
+
+- **The post-fix Cruise agreement is now +16.6…+21.3% (L2) and +12.0…+14.7%
+  (L3)**, not the +8.9…+12.4% / +5.8…+10.7% tabulated below. The difference is
+  NOT from the power-setting fix — it was confirmed by measuring the same
+  quantity against `HEAD`'s pre-2026-07-25 `AeroL2.m`/`F16GeomL2.m`, which give
+  the identical +16.6…+21.3%. It comes from geometry/aero work committed
+  *between* 2026-07-23 and now: the duct is now inside `GeomL2.get_S_wet`
+  (S_wet 1371 → 1466.77 ft², so Cruise `CD0` 0.01599 → **0.01711**, +7.0%), and
+  `CL_alpha` changed, moving `K2` −0.00734 → **−0.00520**. §1a/§1b's tables are
+  therefore stale snapshots of the 2026-07-23 tree, kept as a historical record.
+- **The optimum design point does not move.** At all three fidelity levels the
+  `ConstraintAnalysis` optimum is byte-identical before and after this fix
+  (L1 76.00 psf / 0.7932; L2 62.00 / 0.8081; L3 62.00 / 1.0005) because **Stall
+  is the binding constraint at the optimum, not Cruise**. The fix still matters:
+  the Cruise curve itself was wrong by a factor ~2.2, which drives `TW_margin`
+  at cruise, any design where Cruise does bind, and the per-condition required
+  T/W every report prints.
+
+## RESOLUTION (2026-07-23) — Cruise alpha-basis fix implemented (partial, see amendment above)
 
 Per §2 below, implemented and verified via `run_all_tests`
 (1168/1169 tests pass; the sole failure,

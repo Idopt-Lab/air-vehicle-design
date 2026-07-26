@@ -42,7 +42,48 @@ classdef (Abstract) Both_WbyS_TbyW < PointPerformanceBase
         %REQUIRED_TW  T/W required at wing loading(s) WS [lbf/ft^2], per the
         %   Master Equation assembled from this condition's A/B/C/D terms.
         %   WS may be scalar or array; TW is returned the same size.
-            TW = obj.compute_A() ./ WS + obj.compute_B() .* WS + obj.compute_C() + obj.compute_D();
+        %
+        %   FAILS LOUDLY ON A NON-FINITE TERM (added 2026-07-25). The A/B/C/D
+        %   terms are built from the aero object's drag polar and the propulsion
+        %   object's thrust lapse, either of which can legitimately hand back a
+        %   non-finite value -- AeroL2 returns NaN CD0/K1 across the unmodeled
+        %   transonic band by design, and a mis-injected discipline object can
+        %   produce NaN or Inf too. A NaN required_TW is the WORST possible
+        %   outcome downstream: every > / < comparison against it is false, so a
+        %   condition that cannot be evaluated silently reads as SATISFIED and
+        %   ConstraintAnalysis picks a design point off a curve that does not
+        %   exist. Erroring here converts that into a visible failure at the one
+        %   place every Master-Equation constraint funnels through.
+            A = obj.compute_A();
+            B = obj.compute_B();
+            C = obj.compute_C();
+            D = obj.compute_D();
+            terms = [A, B, C, D];
+            if ~all(isfinite(terms))
+                names = ["A", "B", "C", "D"];
+                bad   = names(~isfinite(terms));
+                % Flight condition is the most useful diagnostic here, but
+                % `state` is declared by the concrete constraint classes rather
+                % than by this abstract category, so read it defensively.
+                if isprop(obj, 'state')
+                    where = sprintf('This condition is at alt=%g ft, M=%.4f.', ...
+                        obj.state.altitude_ft, obj.state.mach);
+                else
+                    where = '';
+                end
+                error('Both_WbyS_TbyW:nonFiniteTerm', ...
+                    ['Constraint "%s": Master-Equation term(s) %s are non-finite ', ...
+                     '[A B C D] = %s. The usual cause is a drag polar or thrust ', ...
+                     'lapse that is not modeled at this flight condition -- e.g. ', ...
+                     'AeroL2/AeroL3 return NaN CD0/K1 across the unmodeled ', ...
+                     'transonic band (%.2f < M < %.2f) by design, and the L3 ', ...
+                     'component buildup requires M > 0. %s Move the condition out ', ...
+                     'of the unmodeled region, or use a fidelity level that ', ...
+                     'covers it.'], ...
+                    obj.name, strjoin(bad, "/"), mat2str(terms, 6), ...
+                    AeroL2.MACH_SUBSONIC_MAX, AeroL2.MACH_SUPERSONIC_MIN, where);
+            end
+            TW = A ./ WS + B .* WS + C + D;
         end
 
         function [margin, TW_available, TW_required] = TW_margin(obj, WS_actual, T_SL, W_TO)

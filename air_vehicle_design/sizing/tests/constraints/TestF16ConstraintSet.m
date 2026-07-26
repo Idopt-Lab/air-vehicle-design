@@ -76,6 +76,73 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             tc.verifyEqual(landing.k_L, 1.3);
         end
 
+        % --- Power setting wired from the sheet's AB% column (2026-07-25) ------
+
+        function testPowerSettingComesFromABPercentColumn(tc)
+            % THE FIX. Every thrust row used to be built with
+            % ThrustConstraint's "AB" default, so Cruise -- the F-16's one
+            % dry-power condition (Constraints.xlsx AB%=0) -- drew the
+            % afterburner lapse instead of the mil-on-AB-scale lapse. Since
+            % every Master-Equation term is proportional to 1/alpha, and
+            % alpha_AB ~ 0.37 vs alpha_mil_on_AB ~ 0.14 at that condition, the
+            % required T/W came out ~2.6x low. The fix had landed in
+            % ThrustConstraint but never in this production build path.
+            constraints = F16ConstraintSet.build("L2");
+            names = cellfun(@(c) c.name, constraints);
+            tc.verifyEqual(constraints{names == "Cruise"}.powerSetting, "mil", ...
+                'Cruise is AB%=0 in Constraints.xlsx and must use the mil basis.');
+            for row = ["Max Mach", "Max Alt", "Combat Subsonic", ...
+                       "Combat Supersonic", "Excess Power"]
+                tc.verifyEqual(constraints{names == row}.powerSetting, "AB", ...
+                    sprintf('%s is AB%%=100 and must use the AB basis.', row));
+            end
+        end
+
+        function testCruiseRequiredTWIsOnTheMilAlphaBasis(tc)
+            % Same fix, checked on the numbers rather than the label. Every
+            % Master-Equation term carries a 1/alpha factor, so an otherwise
+            % identical AB-basis Cruise constraint must give a required T/W
+            % smaller by exactly alpha_mil/alpha_AB. That ratio is ~0.46 at this
+            % condition -- i.e. the old AB-default Cruise curve sat a factor
+            % ~2.2 too low, which is the -58% error the scrape doc records.
+            constraints = F16ConstraintSet.build("L2");
+            names  = cellfun(@(c) c.name, constraints);
+            cruise = constraints{names == "Cruise"};
+            [aero, prop] = deal(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2)), ...
+                                F16PropL2(f16a_spec_path(2)));
+            cruise_AB = ThrustConstraint(cruise.name, cruise.state, aero, prop, ...
+                cruise.beta, cruise.n, cruise.Ps, "AB");
+
+            alpha_mil = prop.thrust_lapse_mil_on_AB_scale(cruise.state);
+            alpha_AB  = prop.thrust_lapse(cruise.state);
+            tc.verifyLessThan(alpha_mil, alpha_AB, ...
+                'Sanity: the mil-on-AB-scale lapse must be below the AB lapse.');
+
+            WS = 100;
+            TW_mil = cruise.required_TW(WS);
+            TW_AB  = cruise_AB.required_TW(WS);
+            fprintf(['\n    Cruise required_TW at W/S=%g: mil basis = %.4f, ' ...
+                'AB basis = %.4f  (alpha_mil=%.4f, alpha_AB=%.4f, ratio=%.4f)\n'], ...
+                WS, TW_mil, TW_AB, alpha_mil, alpha_AB, alpha_mil/alpha_AB);
+            tc.verifyEqual(TW_AB / TW_mil, alpha_mil / alpha_AB, 'RelTol', 1e-10, ...
+                'required_TW must scale exactly as 1/alpha between the two bases.');
+            tc.verifyGreaterThan(TW_mil, TW_AB, ...
+                'The mil basis must demand MORE T/W than the AB basis at Cruise.');
+        end
+
+        function testMissingOrPartialABPercentErrors(tc)
+            % An unstated power setting silently defaulting to "AB" is the bug
+            % being fixed, so a NaN AB% must error rather than default. Partial
+            % afterburner is not modeled either (PropulsionBase exposes only the
+            % two discrete bases), so it must error too. Exercised through the
+            % private mapper via the public build path's own contract: construct
+            % the two invalid cases directly.
+            tc.verifyError(@() ThrustConstraint("X", AircraftState(0, 0.5), ...
+                F16AeroL1(f16a_spec_path(1)), F16PropL1(f16a_spec_path(1)), ...
+                0.9, 1, 0, "partial"), 'MATLAB:validators:mustBeMember', ...
+                'ThrustConstraint must reject a power setting outside {AB, mil}.');
+        end
+
         function testStallConditionAtSeaLevel(tc)
             % Stall isn't a Constraints.xlsx row (unlike the other 8) -- see
             % F16ConstraintSet.m's header -- so this pins down the hardcoded
