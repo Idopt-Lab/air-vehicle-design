@@ -241,7 +241,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % number and Eq. 12.30 form factor with no error and no warning. The
             % guard is now mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]),
             % so a bad tier fails HERE.
-            g1 = F16GeomL1(f16a_spec_path(1));
+            g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             tc.verifyError(@() F16AeroL3(g1, f16a_spec_path(3)), ...
                 'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must be rejected at F16AeroL3 construction.');

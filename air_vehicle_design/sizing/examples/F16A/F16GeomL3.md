@@ -872,7 +872,7 @@ be expressed in the shipped schema; both `Amax` rows currently read `BY DESIGN`.
 coordinator** — either the vocabulary is widened or the wording is settled; not decided here.
 
 **Objects as shipped** (`:44-47`): `prop = F16PropL2(f16a_spec_path(2))`;
-`g1 = F16GeomL1(f16a_spec_path(1))`; `g2 = F16GeomL2(f16a_spec_path(2), prop)`;
+`g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path())`; `g2 = F16GeomL2(f16a_spec_path(2), prop)`;
 `g3 = F16GeomL3(f16a_spec_path(3), prop)` — geometry now takes the injected propulsion object at
 both tiers. `W_TO` = 31,377 lbf is read from `GroundTruth/f16a_geometry.json` `mission.W_TO_lb`,
 deliberately **not** from `F16Baseline.m`.

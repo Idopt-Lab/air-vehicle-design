@@ -351,7 +351,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             % CLEANLY and only misbehaved later, at first use. The guard is now
             % mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]), so a wrong
             % tier must fail HERE, at construction.
-            g1 = F16GeomL1(f16a_spec_path(1));
+            g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             tc.verifyError(@() F16AeroL2(g1, f16a_spec_path(2)), ...
                 'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must be rejected at F16AeroL2 construction.');
