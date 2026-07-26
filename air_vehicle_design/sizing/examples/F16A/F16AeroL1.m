@@ -18,7 +18,17 @@ classdef F16AeroL1 < AeroModelL1
 %
 %   Expected outputs (F-16A "Current" fighter curve, placeholder data):
 %     drag_polar(M=0.6): CD0~0.016, K1~0.18, K2=0
-%     get_CLmax        : 0.90  [Roskam Vol. I Table 3.1/3.3, fighter]
+%     get_CLmax        : 1.50  [Roskam Vol. I Table 3.1, fighter clean mean]
+%     get_CLmax_TO     : 1.70  [Table 3.1 fighter TO mean]
+%     get_CLmax_L      : 2.10  [Table 3.1 fighter landing mean]
+%
+%   TABLE 3.1 THROUGHOUT (2026-07-25). Clean CLmax and the takeoff/landing
+%   increments all come from Roskam Table 3.1, so the totals equal that table's
+%   own fighter means. Previously the clean base was Table 3.3's 0.90 while the
+%   increments were Table 3.1 differences off a 1.50 base, giving totals
+%   (1.10/1.50) that belonged to neither table. Note the resulting L1->L2
+%   discontinuity is large and INTENTIONAL: 1.50 here vs. 0.913 at L2/L3
+%   (Raymer Eq. 12.15, geometry-based) -- see AeroL1.get_CLmax's header.
 
     % ======================================================================= %
     % INPUTS -- aircraft-type / technology-curve spec data (from JSON;
@@ -138,9 +148,11 @@ classdef F16AeroL1 < AeroModelL1
 
         function val = roskam_CLmax(obj, column)
         %ROSKAM_CLMAX  Mean of AeroL1.CLmax_table's column for this aircraft type.
-            T   = AeroL1.CLmax_table;
-            row = T(T.AircraftType == obj.aircraft_type, :);
-            val = mean(row.(column){1});
+        %   Delegates to the AeroL1.roskam_CLmax_value low-level static, which
+        %   AeroL1.get_CLmax also uses for the clean column -- so the clean base
+        %   and these increments are guaranteed to come from the same table
+        %   (Roskam Table 3.1). See AeroL1.get_CLmax's header.
+            val = AeroL1.roskam_CLmax_value(obj.aircraft_type, column);
         end
 
     end

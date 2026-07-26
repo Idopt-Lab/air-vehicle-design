@@ -112,19 +112,61 @@ classdef TestAeroL1 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % CLmax (Roskam Vol. I Table 3.3 fighter lookup) + unknown-type error
+        % CLmax (Roskam Vol. I Table 3.1 fighter row) + unknown-type errors
+        %
+        % TABLE 3.1 THROUGHOUT (2026-07-25). get_CLmax used to return Table
+        % 3.3's 0.90 while get_Delta_CLmax_TO/L were Table 3.1 differences off a
+        % 1.50 clean base, so the totals matched neither table. The clean value
+        % and the increments now come from one table -- and
+        % testCLmaxTotalsMatchTable31Means below locks that invariant, which is
+        % what the two old single-sided tests could not catch between them.
         % ================================================================== %
 
-        function testCLmaxFighterLookup(tc)
-            % Roskam Vol. I Table 3.3 clean CLmax for a jet fighter = 0.90.
+        function testCLmaxFighterCleanFromTable31(tc)
+            % Roskam Vol. I Table 3.1, fighter row, clean column [1.2 1.8]:
+            % mean = 1.50.  Hand-computed: (1.2 + 1.8)/2 = 1.50.
             a = F16AeroL1(f16a_spec_path(1));
-            tc.verifyEqual(a.get_CLmax([]), 0.90, 'AbsTol', 1e-12);
+            tc.verifyEqual(a.get_CLmax([]), 1.50, 'AbsTol', 1e-12, ...
+                'L1 clean CLmax must be the Roskam Table 3.1 fighter-row mean.');
+        end
+
+        function testCLmaxTotalsMatchTable31Means(tc)
+            % THE INVARIANT: because the increments are differences WITHIN Table
+            % 3.1, clean + Delta must reproduce that table's own TO/landing
+            % means exactly. Hand-computed from the fighter row:
+            %   clean [1.2 1.8] -> 1.50 ;  TO [1.4 2.0] -> 1.70 ;  L [1.6 2.6] -> 2.10
+            %   CLmax_TO = 1.50 + (1.70-1.50) = 1.70
+            %   CLmax_L  = 1.50 + (2.10-1.50) = 2.10
+            % Before the fix these were 1.10 and 1.50 -- a 0.60 offset carried
+            % straight from a mismatched Table 3.3 clean base.
+            a = F16AeroL1(f16a_spec_path(1));
+            tc.verifyEqual(a.get_CLmax_TO(), 1.70, 'AbsTol', 1e-12, ...
+                'CLmax_TO must equal the Roskam Table 3.1 fighter takeoff mean.');
+            tc.verifyEqual(a.get_CLmax_L(), 2.10, 'AbsTol', 1e-12, ...
+                'CLmax_L must equal the Roskam Table 3.1 fighter landing mean.');
+        end
+
+        function testLookupCLmaxTable33StillAvailable(tc)
+            % AeroL1.lookup_CLmax (Roskam Table 3.3) is retained as a standalone
+            % utility -- 0.90 for a fighter -- but is deliberately NOT the
+            % get_CLmax path any more. Both spellings resolve.
+            tc.verifyEqual(AeroL1.lookup_CLmax("fighter"), 0.90, 'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL1.lookup_CLmax("jet_fighter"), 0.90, 'AbsTol', 1e-12);
         end
 
         function testLookupCLmaxUnknownTypeThrows(tc)
             % Unknown aircraft_type must throw (guard against silent defaults).
             tc.verifyError(@() AeroL1.lookup_CLmax("dirigible"), ...
                 'AeroL1:unknownCategory');
+        end
+
+        function testRoskamCLmaxValueUnknownTypeThrows(tc)
+            % Table 3.1 has a "fighter" row but no "jet_fighter" row. The old
+            % private lookup brace-indexed an empty table row, throwing an
+            % opaque MATLAB indexing error; roskam_CLmax_value now raises an
+            % identified error naming the known types.
+            tc.verifyError(@() AeroL1.roskam_CLmax_value("jet_fighter", "CL_max_TO"), ...
+                'AeroL1:unknownAircraftType');
         end
 
         % ================================================================== %

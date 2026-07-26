@@ -56,8 +56,29 @@ classdef AeroL1
         end
 
         function CLmax = get_CLmax(obj)
-        %GET_CLMAX  Type-based clean CLmax lookup (Roskam Vol. I Table 3.1/3.3).
-            CLmax = AeroL1.lookup_CLmax(obj.aircraft_type);
+        %GET_CLMAX  Type-based clean CLmax, Roskam Vol. I Table 3.1 (range mean
+        %   of the aircraft type's clean column).
+        %
+        %   TABLE 3.1 THROUGHOUT (user decision 2026-07-25). L1's clean CLmax and
+        %   its takeoff/landing increments must come from ONE table, because the
+        %   increments are differences within it:
+        %     get_Delta_CLmax_TO = mean(CL_max_TO) - mean(CL_max_clean)
+        %     get_Delta_CLmax_L  = mean(CL_max_L)  - mean(CL_max_clean)
+        %   Until 2026-07-25 this returned Table 3.3's 0.90 while the increments
+        %   were Table 3.1 differences off a 1.50 clean base, so the fighter
+        %   totals (0.90+0.20=1.10 TO, 0.90+0.60=1.50 landing) matched neither
+        %   table -- Table 3.1's own fighter means are 1.70 and 2.10. Two unit
+        %   tests locked each half independently, so nothing caught the sum.
+        %
+        %   Consequence, deliberate and documented: fighter clean CLmax is now
+        %   1.50 against L2/L3's geometry-based 0.913 (Raymer Eq. 12.15), the
+        %   largest step in the fidelity ladder. That is the honest size of a
+        %   type-only statistical estimate for a thin 40-deg swept wing -- not a
+        %   bug. See AeroL1.md and fidelity_comparison.m's notes.
+        %
+        %   AeroL1.lookup_CLmax (Table 3.3) is retained as a standalone utility
+        %   but is deliberately NOT wired here -- see its header.
+            CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_type, "CL_max_clean");
         end
 
         % ================================================================== %
@@ -82,10 +103,32 @@ classdef AeroL1
         %   Raymer Eq. 12.51 supersonic K1 path (AeroL2), a tabulated figure has
         %   NO transonic singularity, so the Mattingly curve is evaluated across
         %   the whole Mach range (including the transonic band) directly.
+        %   The endpoint clamp assumes mach_pts is STRICTLY ASCENDING -- it
+        %   clamps to mach_pts(1)/mach_pts(end) as the min/max of the range. An
+        %   unsorted or duplicated breakpoint vector would clamp to the wrong
+        %   bounds and/or make interp1 return NaN, silently, so both are checked
+        %   here rather than trusted (added 2026-07-25).
             arguments
                 mach_pts (1,:) double {mustBeReal}
                 val_pts  (1,:) double {mustBeReal}
                 M        (1,1) double {mustBeReal}
+            end
+            if numel(mach_pts) ~= numel(val_pts)
+                error('AeroL1:curveLengthMismatch', ...
+                    'mach_pts has %d elements but val_pts has %d.', ...
+                    numel(mach_pts), numel(val_pts));
+            end
+            if numel(mach_pts) < 2
+                error('AeroL1:curveTooShort', ...
+                    'A value-vs-Mach curve needs at least 2 breakpoints (got %d).', ...
+                    numel(mach_pts));
+            end
+            if any(diff(mach_pts) <= 0)
+                error('AeroL1:curveNotAscending', ...
+                    ['Curve Mach breakpoints must be strictly ascending (got %s). ', ...
+                     'interp_curve clamps to the first/last element as the range ', ...
+                     'bounds, so an unsorted or duplicated vector clamps wrongly ', ...
+                     'or returns NaN.'], mat2str(mach_pts));
             end
             Mc = min(max(M, mach_pts(1)), mach_pts(end));
             v  = interp1(mach_pts, val_pts, Mc, 'linear');
@@ -110,9 +153,38 @@ classdef AeroL1
             end
         end
 
+        function CLmax = roskam_CLmax_value(aircraft_type, column)
+        %ROSKAM_CLMAX_VALUE  Range mean of one AeroL1.CLmax_table column for an
+        %   aircraft type.  Source: Roskam, "Airplane Design Vol. I," Table 3.1.
+        %   column -- "CL_max_clean" | "CL_max_TO" | "CL_max_L".
+        %
+        %   Low-level static (scalars/strings only): the single place the Table
+        %   3.1 range means are computed, shared by AeroL1.get_CLmax and the
+        %   concrete classes' HLD-increment methods so the clean base and the
+        %   increments can never again come from different tables.
+            arguments
+                aircraft_type (1,1) string
+                column        (1,1) string {mustBeMember(column, ["CL_max_clean","CL_max_TO","CL_max_L"])}
+            end
+            T   = AeroL1.CLmax_table;
+            row = T(T.AircraftType == aircraft_type, :);
+            if isempty(row)
+                error('AeroL1:unknownAircraftType', ...
+                    ['Unknown aircraft_type "%s" for Roskam Table 3.1. Known types: ', ...
+                     '%s.'], aircraft_type, strjoin(cellstr(T.AircraftType), ', '));
+            end
+            CLmax = mean(row.(column){1});
+        end
+
         function CLmax = lookup_CLmax(aircraft_type)
         %LOOKUP_CLMAX  Clean CLmax by aircraft type (historical, no HLD).
         %   Source: Roskam, "Airplane Design Vol. I," Table 3.3.
+        %
+        %   NOT the L1 CLmax path. Deliberately unwired from AeroL1.get_CLmax on
+        %   2026-07-25: Table 3.3's clean values (0.90 for a fighter) cannot be
+        %   combined with the Table 3.1 takeoff/landing increments, whose own
+        %   clean base is 1.50. Retained as a standalone reference lookup and for
+        %   comparison reporting -- see get_CLmax's header for the full rationale.
             switch string(aircraft_type)
                 case {"fighter", "jet_fighter"}, CLmax = 0.90;
                 case "military_cargo",           CLmax = 1.20;

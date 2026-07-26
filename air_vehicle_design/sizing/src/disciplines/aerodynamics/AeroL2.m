@@ -155,15 +155,27 @@ classdef AeroL2
 
         function val = get_CL_alpha(obj, M)
         %GET_CL_ALPHA  Finite-wing lift-curve slope (Raymer Eq. 12.6); reads
-        %   geometry (AR, quarter-chord sweep) from the injected object. Passes
-        %   the 2-D airfoil lift slope obj.cl_alpha_2D through to the eta term
-        %   (Eq. 12.8) when supplied; otherwise eta defaults to 0.95.
-            if isprop(obj, 'cl_alpha_2D') && ~isempty(obj.cl_alpha_2D)
-                cla2d = obj.cl_alpha_2D;
-            else
-                cla2d = [];
+        %   geometry (AR, quarter-chord sweep) from the injected object and
+        %   passes the 2-D airfoil lift slope obj.cl_alpha_2D [1/rad] through to
+        %   the eta term (Eq. 12.8).
+        %
+        %   cl_alpha_2D is REQUIRED of every caller. It used to be optional
+        %   (absent -> eta = 0.95 via an isprop() guard), which silently masked
+        %   F16AeroL3 never supplying it -- so the higher-fidelity level ran on
+        %   the less-informed default (fixed 2026-07-25). AeroL2.CL_alpha still
+        %   accepts an empty slope and falls back to 0.95, for a caller that
+        %   genuinely has no airfoil data; that fallback must now be an explicit
+        %   choice at the call site, not an accident of a missing property.
+            if ~isprop(obj, 'cl_alpha_2D') || isempty(obj.cl_alpha_2D)
+                error('AeroL2:missingClAlpha2D', ...
+                    ['%s must define a non-empty cl_alpha_2D [1/rad] to use ', ...
+                     'get_CL_alpha (Raymer Eq. 12.8 eta term). Read it from the ', ...
+                     'input JSON''s .aerodynamics.airfoil.cl_alpha_per_deg ', ...
+                     '(x 180/pi), or call AeroL2.CL_alpha directly with an empty ', ...
+                     'slope to opt into the eta = 0.95 default deliberately.'], ...
+                    class(obj));
             end
-            val = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M, [], [], [], cla2d);
+            val = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M, [], [], [], obj.cl_alpha_2D);
         end
 
         function val = compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)

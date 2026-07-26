@@ -37,8 +37,12 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         function a = makeAero()
         %MAKEAERO  A fresh F16AeroL2 with an injected F16GeomL2, both built from
         %   the unified L2 JSON (constructors require explicit paths -- no
-        %   silent defaults).
-            a = F16AeroL2(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(2));
+        %   silent defaults). The geometry constructor gained a REQUIRED
+        %   injected propulsion object in Phase 2 (2026-07-25): the nacelle
+        %   diameter is sized from engine thrust (sqrt(T_AB_SLS/1900)), which is
+        %   engine data, not airframe data, so F16GeomL2 takes (json_path, prop).
+            a = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                          f16a_spec_path(2));
         end
         function J = readAeroL2JSON()
         %READAEROL2JSON  The .aerodynamics block of the unified L2 JSON.
@@ -302,6 +306,27 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             tc.verifyError(@() setfield(a, 'AR', 5),            'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(a, 'S_wet', 1371),      'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(a, 'Lambda_c4_deg', 37),'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
+
+        function testGeometryInjectionRejectsWrongTierAtConstruction(tc)
+            % PHASE-2 NARROWED GUARD (2026-07-25). The constructor's geometry
+            % argument used to be validated as `geom (1,1) GeometryBase`, which
+            % declares only S_ref/S_wet/get_S_ref/get_S_wet -- far less than the
+            % ~7 members this class reads off obj.geom. An F16GeomL1 (whose
+            % S_wet is a TOGW regression, not a planform, and which has no
+            % QC_sweep_wing/lambda_wing/L_fus at all) therefore CONSTRUCTED
+            % CLEANLY and only misbehaved later, at first use. The guard is now
+            % mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]), so a wrong
+            % tier must fail HERE, at construction.
+            g1 = F16GeomL1(f16a_spec_path(1));
+            tc.verifyError(@() F16AeroL2(g1, f16a_spec_path(2)), ...
+                'MATLAB:validators:mustBeA', ...
+                'An L1 geometry object must be rejected at F16AeroL2 construction.');
+            % Positive control: both accepted tiers still construct.
+            tc.verifyClass(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                f16a_spec_path(2)), 'F16AeroL2');
+            tc.verifyClass(F16AeroL2(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
+                f16a_spec_path(2)), 'F16AeroL2');
         end
 
         % ================================================================== %

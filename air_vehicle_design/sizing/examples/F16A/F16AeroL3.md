@@ -8,10 +8,20 @@ duct**.
 
 ## Construction (dependency injection)
 
-`F16AeroL3(geom, json_path)` — **both arguments are required** (no silent defaults). Typically
-`F16AeroL3(F16GeomL2(f16a_spec_path(2)), f16a_spec_path(3))`: geometry at L3 is an injected L2 object
-(Geometry has no L3 tier), while the aero constants come from the `.aerodynamics` block of
-`f16a_L3.json`.
+`F16AeroL3(geom, json_path)` — **both arguments are required** (no silent defaults). The canonical
+pairing is now
+`F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3))`, with
+`prop = F16PropL2(f16a_spec_path(2))`: geometry has a full L3 tier again (reinstated 2026-07-24,
+promoted 2026-07-25 — the earlier "Geometry has no L3 tier" note is obsolete), and geometry itself
+takes an injected propulsion object because the nacelle diameter is sized from engine thrust. Aero
+constants still come from the `.aerodynamics` block of `f16a_L3.json`.
+
+The `geom` argument is guarded by `mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])`, not by the
+old `GeometryBase` — that base declares only four members while this class reads ~20, so a wrong tier
+used to construct cleanly and then fail mid-run, or worse resolve members whose *meaning* differed.
+Both tiers satisfy the contract, but they are **not interchangeable here**: `Amax` is tier-specific by
+design (L3 area-ruled, L2 fuselage-envelope), so injecting an `F16GeomL2` silently substitutes a
+fuselage-only cross-section into the Raymer Eq. 12.44 wave-drag term and inflates `CD0_wave` ~23%.
 
 ## Properties — inputs vs. derived
 

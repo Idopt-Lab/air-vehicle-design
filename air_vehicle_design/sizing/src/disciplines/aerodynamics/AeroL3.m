@@ -72,7 +72,24 @@ classdef AeroL3
         %   injected geometry object). Supersonic wave drag is NOT added here
         %   (it is aircraft-specific -- the concrete class overrides this
         %   method to add it for M >= 1.2).
-            M       = state.mach;
+        %
+        %   REQUIRES M > 0. The component buildup is Reynolds-based, and at M=0
+        %   (V=0) every component's Re is 0: Cf_laminar(0)=Inf while the Eq.
+        %   12.30 form factor's 1.34*M^0.18 term is 0, so the product silently
+        %   evaluated to NaN and returned NaN CD0 for the whole aircraft. NaN
+        %   then makes every > / < comparison in a constraint solve false, so the
+        %   point was reported SATISFIED rather than failing (fixed 2026-07-25).
+        %   AircraftState permits mach=0, so this must be caught here.
+            M = state.mach;
+            if ~(M > 0)
+                error('AeroL3:machOutOfDomain', ...
+                    ['The Raymer Eq. 12.24 component buildup requires M > 0 ', ...
+                     '(got M = %g): it is Reynolds-based, and at V = 0 every ', ...
+                     'component Re is 0, which makes Cf_laminar infinite and the ', ...
+                     'Eq. 12.30 form factor zero. Use a small nonzero Mach for a ', ...
+                     'brake-release/static condition, or an L1/L2 drag model, ', ...
+                     'which do not depend on Reynolds number.'], M);
+            end
             n_comp  = numel(obj.l_ref_comp);
             cd0_sum = 0;
             for i = 1:n_comp
@@ -173,7 +190,14 @@ classdef AeroL3
         %GET_CL_ALPHA  Finite-wing lift-curve slope (Raymer Eq. 12.6) using the
         %   injected quarter-chord sweep obj.Lambda_c4_deg (NOT leading-edge --
         %   fixes the former Lambda_LE approximation).
-            val = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M);
+        %
+        %   Delegates to AeroL2.get_CL_alpha so the 2-D airfoil lift slope
+        %   obj.cl_alpha_2D reaches the eta term (Raymer Eq. 12.8). Until
+        %   2026-07-25 this called AeroL2.CL_alpha directly with three
+        %   arguments, so eta silently fell back to the 0.95 default while L2 --
+        %   the LOWER-fidelity level -- used the real NACA 64A204 slope. Same
+        %   airfoil, same injected geometry, different answer at the two levels.
+            val = AeroL2.get_CL_alpha(obj, M);
         end
 
         % ================================================================== %
@@ -192,6 +216,13 @@ classdef AeroL3
 
         function Cf = Cf_laminar(Re)
         %CF_LAMINAR  Laminar flat-plate Cf = 1.328/sqrt(Re).  Raymer 6th ed. Eq. 12.26.
+        %   Re guarded POSITIVE: Re=0 returns Inf, which then multiplied a zero
+        %   M=0 form factor into a silent NaN CD0 for the whole aircraft
+        %   (fixed 2026-07-25 -- see get_CD0_buildup's Mach guard). Negative Re
+        %   would return a complex Cf.
+            arguments
+                Re (1,1) double {mustBePositive}
+            end
             Cf = 1.328 / sqrt(Re);
         end
 

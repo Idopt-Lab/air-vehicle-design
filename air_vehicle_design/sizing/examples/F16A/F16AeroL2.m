@@ -91,7 +91,14 @@ classdef F16AeroL2 < AeroModelL2
         %   and the path must be supplied. Sets ONLY the aero inputs; all
         %   geometry is produced live by the Dependent getters from obj.geom.
             arguments
-                geom      (1,1) GeometryBase
+                % GeometryBase is too weak a guard: it declares only
+                % S_ref/S_wet/get_S_ref/get_S_wet, so an F16GeomL1 (whose
+                % S_wet is a TOGW regression, not a planform) or any other
+                % subclass constructed fine and then produced wrong or zero
+                % drag at first use rather than failing here. Narrowed
+                % 2026-07-25 to the tiers that actually satisfy the aero
+                % contract; both L2 and L3 geometry do.
+                geom      (1,1) {mustBeA(geom, ["GeometryModelL2", "GeometryModelL3"])}
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             obj.geom = geom;
