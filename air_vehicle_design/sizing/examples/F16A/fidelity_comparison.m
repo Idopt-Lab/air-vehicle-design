@@ -412,8 +412,15 @@ fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L2/L3 use Raymer Eq.12.4
 fprintf('               Lambda_LE). L1=N/A (geometry-free Mattingly type-curve, no Oswald e). CL_alpha\n');
 fprintf('               L2/L3 (Raymer Eq.12.6, injected quarter-chord sweep ~32.2deg, NOT the old 37);\n');
 fprintf('               L1=N/A (no finite-wing lift-slope method at that fidelity).\n');
-fprintf('  [AERO sub]   CLmax: L1 Roskam historical table (0.90); L2/L3 Raymer Eq.12.15 sweep-corrected\n');
-fprintf('               (0.9*cl_max_2D*cos(Lambda_c4)); vortex lift from the LEX/strake is NOT modeled.\n');
+fprintf('  [AERO sub]   CLmax: L1 Roskam Pt.I Table 3.1 fighter-column mean (1.50, clean); L2/L3 Raymer\n');
+fprintf('               Eq.12.15 sweep-corrected (0.9*cl_max_2D*cos(Lambda_c4)) = 0.914; vortex lift\n');
+fprintf('               from the LEX/strake is NOT modeled at any level.\n');
+fprintf('               The L1->L2 STEP (1.50 -> 0.914) IS DELIBERATE, not a bug: 1.50 is a type-only\n');
+fprintf('               statistical mean over a fighter column dominated by straight/moderately-swept\n');
+fprintf('               wings; 0.914 is geometry-based and correctly penalizes a thin 40deg-swept wing.\n');
+fprintf('               Different questions at different fidelities; neither is calibrated to the other.\n');
+fprintf('               One table throughout at L1 (2026-07-25): the TO/landing increments are Table 3.1\n');
+fprintf('               differences, so the clean base must be Table 3.1 too. AeroL1.md has the detail.\n');
 fprintf('  [AERO sup]   K2=0 for M>=1 (linearized supersonic theory) — enforced at all fidelity levels.\n');
 fprintf('  [AERO hld]   L1: pure tabulation, Roskam Airplane Design Pt.I, Table 3.1 (CLmax by category,\n');
 fprintf('               "fighter" row) and Table 3.6 (Delta_CD0/e by flap config, flaps+gear).\n');
