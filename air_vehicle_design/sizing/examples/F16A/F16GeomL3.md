@@ -502,6 +502,34 @@ Component-by-component, with the static that owns each equation:
 | `A_nacelle` | `compute_nacelle_cs_area` | `n_eng·π·D²/4` = **9.825744 ft²** *(live)* on `x_inlet ≤ x ≤ x_nacelle_aft` = `[15.0, 44.9166]` | `[Brandt Geom!AE31; C480→C482→C484]`. The live chain, **not** the replica's `[14.0, 43.9166]` (todo §18) |
 | deduction | `compute_Amax_area_ruled` | `− n_eng·π·D²/5` = **−7.860596 ft²** *(live)* | `[Brandt Geom!H47]`. ★ **bare literal `5`, unjustified anywhere in the workbook** — §D.6 |
 
+#### D.1a The stored frame table — normalization receipts
+
+`f16a_L3.json` `.geometry.fuselage.frames_normalized` stores **20 × 3 = 60** numbers, normalized by
+**Brandt's own** envelope (`L_fus` = 46.5 `[Main!B32]`, `W_max` = 7.0 `[Main!C32]`, `H_max` = 5.0
+`[Main!D32]`) — note the length denominator is *Brandt's* 46.5, **not** L3's own 47.5, so
+denormalizing at L3 is a deliberate 2.15 % affine stretch, not a restoration (§D.2/§D.6).
+
+Three verification receipts, recorded here rather than in the input JSON (all live, 2026-07-25):
+
+1. **Columns dropped — `z_chine_ft`, `z_ft`.** They cancel *exactly* out of the cross-sectional area
+   (`readme_geom.md` §4.2: `dz = z_up − z_dn = h·cos(π/2·t)`, containing neither `z` term). Verified
+   numerically: perturbing `z_chine` by **+3.7 ft** and `z_center` by **−1.9 ft** at all 20 frames
+   changed the 20 frame **areas** by max **7.1 × 10⁻¹⁵ ft²** (pure round-off) while changing the
+   **perimeters** by up to **16.97 ft**. The `z` columns matter only to the perimeter, which feeds
+   Brandt's high-fidelity fuselage `S_wet` (`Geom!D23`) — a different quantity L3 does not compute
+   this way. (`z_chine_ft` is identically 0.0 at all 20 frames in the ground truth anyway.)
+2. **Denormalization positive control.** Denormalizing the stored table with `L_fus` = 46.5,
+   `W_max` = 7.0, `H_max` = 5.0 reproduces the read-only `GroundTruth/f16a_geometry.json` frame
+   values to max `|Δ|` = **3.6 × 10⁻¹⁵ ft** (`x`), **4.4 × 10⁻¹⁶ ft** (`w`), **0** (`h`) — i.e.
+   exactly, to floating-point round-off. Hence the `Amax` round-trip in §D.2.
+3. **Storage precision convention.** Values are stored at the shortest decimal string that
+   round-trips to the identical IEEE-754 double, because `Amax` is a `MAX` over closely-spaced
+   stations where rounding could change *which* station governs.
+
+The same algebra (`A = w·h·I_cos`) makes the frame area exactly **bilinear in `w` and `h`**, which is
+why `max_width_ft` and `max_depth_ft` move `Amax` by identical percentages (todo §16.5: both
++9.164 % for a +10 % input).
+
 ### D.2 Round-trip control — proves the method rather than fitting it
 
 | Case | `L_fus` | `Amax` *(live)* | vs `Geom!B20` = 25.110556 |
@@ -628,7 +656,11 @@ underlying **cosine section model** and Brandt's `(1 − cos 2πξ)` surface are
 half to L3. Both halves stay OPEN.
 *Modelling consequence, real and not a data error:* `max(h/H_max)` = **1.50** at frame 6 — the canopy
 bulge — so "max fuselage depth" is not the maximum frame height of the table it scales, and a 10 %
-deeper fuselage gets a 10 % taller canopy.
+deeper fuselage gets a 10 % taller canopy. Explicitly: the actual max frame height is **`h` = 7.5 ft
+at frame 6, `x` = 15.0 ft** `[GroundTruth/f16a_geometry.json fuselage.frames; Brandt Main!A34:F53]`,
+against a `max_depth_ft` **input** of 5.0 `[Main!D32]` — hence 7.5/5.0 = 1.50, which is **not a
+typo** in `frames_normalized`. Accept the model or replace it; do not "correct" the 1.50.
+(`w_over_Wmax` and `x_over_L` both peak at exactly 1.0, so only the depth axis has this property.)
 
 **(ii) The bare `/5` flow-through divisor — `GeomL3.compute_Amax_area_ruled` → todo §5.** A live
 2026-07-25 search of the entire Brandt nacelle block `Geom!A470:E490` found **no inlet capture area,
