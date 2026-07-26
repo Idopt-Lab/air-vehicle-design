@@ -1,39 +1,74 @@
 function T_all = aerodynamics_brandt_comparison()
-%AERODYNAMICS_BRANDT_COMPARISON  F-16A Block 10 -- Aerodynamics vs multi-source ground truth.
+%AERODYNAMICS_BRANDT_COMPARISON  F-16A aero at every fidelity vs ground truth.
 %
-%   NOT A TEST. No pass/fail assertions, NOT part of run_all_tests. A pure
-%   reporting script: it loads the aero JSON inputs, runs the actual
-%   F16AeroL1/L2/L3 code across a Mach sweep, and compares the results against
-%   the `aerodynamics` section of
-%   VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json (Brandt-workbook +
-%   T.O.-1F-16A-1 "AF Manual" + published-internet values, each cited in the
-%   JSON). Percentage differences are informational; a large %Diff is often
-%   EXPECTED (flagged "not a bug" in Notes), not a defect.
+%   Two jobs. (1) A one-stop comparison: run every aero tier over a Mach sweep
+%   and put its output next to Brandt's workbook, the T.O. 1F-16A-1 and
+%   published estimates. (2) A worked example of how to drive this framework —
+%   read it top to bottom and you have seen the whole input and
+%   dependency-injection story for aerodynamics.
 %
-%   INPUTS (the actual toolbox inputs the code reads):
-%     examples/F16A/f16a_L1.json  (.aerodynamics: type + folded Mattingly curves)
-%     examples/F16A/f16a_L2.json  (.aerodynamics: Cfe/airfoil/e-method; .geometry: injected F16GeomL2)
-%     examples/F16A/f16a_L3.json  (.aerodynamics: component-buildup constants)
+%   ─── HOW TO RUN ─────────────────────────────────────────────────────────
+%     >> cd air_vehicle_design/sizing
+%     >> addpath(genpath('src')); addpath(genpath('examples'))
+%     >> aerodynamics_brandt_comparison
+%   Or non-interactively:
+%     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); aerodynamics_brandt_comparison"
 %
-%   GROUND TRUTH (compared AGAINST, never re-derived here -- read from JSON):
-%     VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json  [.aerodynamics]
-%       Brandt   = Brandt-F16-A.xls workbook outputs / his tabulated actual polar
-%       AF Manual = T.O. 1F-16A-1 (airfoil + limits only; NO polar/CLmax/CD0)
-%       Internet = published estimates (F-16C conceptual polar, textbook, NASA)
+%   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
+%     f16a_spec_path(N) -> examples/F16A/f16a_L{N}.json, the SPEC file. Aero
+%                          reads its .aerodynamics block:
+%                            L1  aircraft type + the folded Mattingly curves
+%                            L2  airfoil section data + the Oswald-e selector
+%                            L3  per-component buildup constants
+%                          The SAME file's .geometry block builds the geometry
+%                          object injected below — one file per fidelity level,
+%                          read by two disciplines.
+%   Ground truth is separate and lives under VnV/BrandtF16A/, read here as `gt`.
+%   It is never an input — only a comparison target.
 %
-%   REFERENCE SOURCES:
-%     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., AIAA (Ch. 12).
-%     [Mattingly] Mattingly et al., Aircraft Engine Design 2nd ed., AIAA, 2002.
-%     [Brandt]  S. Brandt, F-16A.xls workbook + Introduction to Aeronautics.
-%     [Roskam]  J. Roskam, Airplane Design Vol. I (CLmax / HLD delta tables).
+%   ─── HOW TO WIRE THE DEPENDENCIES ───────────────────────────────────────
+%   Aero consumes geometry, and geometry consumes propulsion, so build outward:
 %
-%   The 0.95 <= M <= 1.05 transonic band is deliberately SKIPPED (L2/L3
-%   drag_polar returns NaN there -- Raymer Eq. 12.51 pole near M=1). The sweep
-%   uses subsonic M = 0.6/0.8/0.9 and supersonic M = 1.2/1.5/2.0.
+%       a1   = F16AeroL1(f16a_spec_path(1));          % L1 is geometry-FREE
+%       prop = F16PropL2(f16a_spec_path(2));
+%       g2   = F16GeomL2(f16a_spec_path(2), prop);
+%       g3   = F16GeomL3(f16a_spec_path(3), prop);
+%       a2   = F16AeroL2(g2, f16a_spec_path(2));
+%       a3   = F16AeroL3(g3, f16a_spec_path(3));      % NOTE: g3, not g2
 %
-%   Outputs (written next to this script):
-%     aerodynamics_brandt_comparison.json  -- full table + metadata
-%     aerodynamics_brandt_comparison.md    -- rendered markdown table (headline)
+%   Match the tiers. `F16AeroL3(g2, ...)` constructs happily — both geometry
+%   tiers satisfy the aero contract — and then silently computes the entire L3
+%   column on L2 geometry. That exact mistake shipped once and is invisible to
+%   both the type guard and the tests, because the result is plausible rather
+%   than wrong-looking. `Amax` in particular is tier-specific: area-ruled at L3
+%   (what Raymer Eq. 12.44 wants), a fuselage-envelope ellipse at L2, so a
+%   mismatched injection inflates supersonic CD0_wave by ~23 %.
+%
+%   L1 takes no geometry object at all: the Mattingly type-curve polar consumes
+%   no geometry, so there is nothing to inject.
+%
+%   ─── OUTPUTS (written beside this script) ───────────────────────────────
+%     aerodynamics_brandt_comparison.json  full table + metadata
+%     aerodynamics_brandt_comparison.md    rendered markdown
+%   Both via src/reporting/ComparisonReport.m, shared by all four discipline
+%   reports so their columns cannot drift apart.
+%
+%   ─── SOURCES ────────────────────────────────────────────────────────────
+%     [Brandt]    F-16A.xls workbook outputs + his tabulated actual polar
+%     [AF manual] T.O. 1F-16A-1 — airfoil and operating limits ONLY; it carries
+%                 no drag polar, CLmax or CD0 coefficients (those are in the
+%                 absent T.O. 1F-16A-1-1)
+%     [Internet]  published estimates (F-16C conceptual polar, textbook, NASA)
+%     [Raymer]    Aircraft Design 6th ed., AIAA (Ch. 12)
+%     [Mattingly] Aircraft Engine Design 2nd ed., AIAA, 2002
+%     [Roskam]    Airplane Design Vol. I (CLmax / HLD delta tables)
+%
+%   The 0.95 <= M <= 1.05 transonic band is deliberately SKIPPED — L2/L3
+%   drag_polar returns NaN there (Raymer Eq. 12.51 has a pole near M = 1). The
+%   sweep uses subsonic M = 0.6/0.8/0.9 and supersonic M = 1.2/1.5/2.0.
+%
+%   NOT A TEST: informational only, never pass/fail, and no value here may
+%   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
 sizing_root = fileparts(fileparts(script_dir));
@@ -171,138 +206,97 @@ T = [T; arow('CLmax landing (L2 flap)', 'L2', a2.get_CLmax_L(), gt.CLmax_landing
 T = [T; arow('CLmax landing (L3 flap+slat)', 'L3', a3.get_CLmax_L(), gt.CLmax_landing.brandt.value, 'N/A', gt.CLmax_landing.internet.value, '%.4f', 'Brandt Aero!H29', ...
         'Clean + TE-flap + LE-slat deltas; closest to Brandt 1.426.')];
 
-% ════════════════════════════════════════════════════════════════════════ %
-%  DISPLAY
-% ════════════════════════════════════════════════════════════════════════ %
-now_str = char(datetime('now', 'Format', 'yyyy-MM-dd'));
-BAR     = repmat('=', 1, 120);
-
-fprintf('\n%s\n', BAR);
-fprintf('  F-16A BLOCK 10 -- AERODYNAMICS vs GROUND TRUTH (Brandt / AF-Manual / Internet)\n');
-fprintf('  Flight condition: %d ft, subsonic M=%.1f / supersonic M=%.1f  |  Generated %s\n', ALT, M_SUB, M_SUP, now_str);
-fprintf('  Source: VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.aerodynamics]\n');
-fprintf('  NOT A TEST -- informational only. Large %%Diff is often expected (see Notes).\n');
-fprintf('%s\n\n', BAR);
-
-disp(T);
-
-fprintf('  KEY NOTES\n');
-fprintf('  - L2 supersonic CD0 is skin-friction only (no wave drag) -> far below Brandt; wave drag enters at L3 (Eq.12.41). Not a bug.\n');
-fprintf('  - CLmax (clean) under-predicts the ~1.6 whole-aircraft value at every level: LEX/strake vortex lift is not modeled. Not a bug.\n');
-fprintf('  - The official Oswald e (Raymer Eq.12.48/12.49) differs from Brandt e0 (Aero!G12) by formula; the Brandt-alternate rows are a positive control.\n');
-fprintf('  - Brandt CD0 columns use his skin-friction CDmin (Aero!G3, subsonic) or his tabulated ACTUAL polar (supersonic), not his mission CD0=0.0270.\n');
-fprintf('\n%s\n\n', BAR);
+% ── CL_alpha: the finite-wing lift slope. L1 has no such method (geometry-free,
+%    so no finite-wing correction exists at that tier) -- reported N/A rather
+%    than omitted, so the ladder shows where the capability starts.
+%    Compared against Brandt's WING slope (Aero!A15), not his whole-aircraft
+%    one (Aero!A32 = 0.0615/deg), because get_CL_alpha is a finite-WING method
+%    with no strake or tail contribution. Both are stored per DEGREE.
+gt_CLalpha = gt.CL_alpha_wing_per_deg.brandt.value * 180/pi;   % 3.1117 /rad
+T = [T; srow('[LIFT-CURVE SLOPE CL_alpha -- Raymer Eq.12.6, M=0]')];
+T = [T; arow('CL_alpha, M=0 [1/rad]', 'L1', NaN, gt_CLalpha, 'N/A', NaN, '%.4f', 'Brandt Aero!A15', ...
+        'L1 is geometry-free (Mattingly type-curve), so no finite-wing lift slope exists at this tier -- not an omission.')];
+T = [T; arow('CL_alpha, M=0 [1/rad]', 'L2', a2.get_CL_alpha(0), gt_CLalpha, 'N/A', NaN, '%.4f', 'Brandt Aero!A15', ...
+        'Raymer Eq.12.6 with the injected quarter-chord sweep (~32.2 deg) and the real NACA 64A204 2-D slope.')];
+T = [T; arow('CL_alpha, M=0 [1/rad]', 'L3', a3.get_CL_alpha(0), gt_CLalpha, 'N/A', NaN, '%.4f', 'Brandt Aero!A15', ...
+        'L3 delegates to AeroL2.get_CL_alpha, so it MUST equal the L2 row exactly for identical injected geometry -- a positive control on the delegation.')];
 
 % ════════════════════════════════════════════════════════════════════════ %
-%  EXPORT
+%  DISPLAY + EXPORT — all four discipline reports share one renderer
+%  (src/reporting/ComparisonReport.m), so their columns cannot drift apart.
 % ════════════════════════════════════════════════════════════════════════ %
+
+meta = struct( ...
+    'title',         'F-16A Block 10/15 — Aerodynamics vs Ground Truth', ...
+    'aircraft',      'F-16A Block 10/15', ...
+    'generated',     char(datetime('now', 'Format', 'yyyy-MM-dd')), ...
+    'condition',     sprintf('Flight condition: %d ft, subsonic M = %.1f / supersonic M = %.1f.', ALT, M_SUB, M_SUP), ...
+    'referenceDesc', ['Brandt F-16A.xls workbook outputs and his tabulated actual polar, via ' ...
+                      '`VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.aerodynamics`].'], ...
+    'secondDesc',    ['whichever independent source exists for that row, tagged inline — `[AF]` = ' ...
+                      'T.O. 1F-16A-1 (which carries the airfoil and operating limits **only**; it has ' ...
+                      'no drag polar, CLmax or CD0 coefficients — those live in the absent ' ...
+                      'T.O. 1F-16A-1-1), `[pub]` = a published estimate (F-16C conceptual polar, ' ...
+                      'textbook, NASA). Most aero rows have neither, and show `N/A`.'] );
+
+meta.preamble = { ...
+    ['**The transonic band 0.95 ≤ M ≤ 1.05 is deliberately skipped.** L2/L3 `drag_polar` returns NaN ' ...
+     'there — Raymer Eq. 12.51 has a pole near M = 1 — so the sweep uses subsonic M = 0.6/0.8/0.9 and ' ...
+     'supersonic M = 1.2/1.5/2.0. That NaN is a modelled gap, not a failure: `Both_WbyS_TbyW` and ' ...
+     '`ConstraintAnalysis` both refuse to evaluate a constraint there rather than returning a number.'], ...
+    ['**Two expected large gaps that are not defects.** L2 supersonic CD0 carries no wave-drag term at ' ...
+     'all (that arrives only at L3), so it sits far below Brandt. And Brandt''s skin-friction CDmin ' ...
+     '(`Aero!G3`) is a different basis from his *mission* CD0 of 0.0270, which folds in form, ' ...
+     'interference and wave drag — compare like with like before concluding anything.'] };
+
+meta.footer = { ...
+    ['**CLmax is the largest step in the fidelity ladder, and it is intentional.** L1 returns the ' ...
+     'Roskam Table 3.1 fighter-column mean (1.50); L2/L3 return Raymer Eq. 12.15''s geometry-based ' ...
+     '0.914. A type-only statistical mean over a column dominated by straight wings is simply a ' ...
+     'different estimator from one that penalises a thin 40°-swept wing. Neither is calibrated to ' ...
+     'the other.'], ...
+    ['**Vortex lift from the LEX/strake is not modelled at any tier**, so every CLmax row ' ...
+     'underpredicts the ~1.6 real whole-aircraft value.'] };
+
+ComparisonReport.show(T, meta);
+
 out_json = fullfile(script_dir, 'aerodynamics_brandt_comparison.json');
 out_md   = fullfile(script_dir, 'aerodynamics_brandt_comparison.md');
-
-data.generated   = now_str;
-data.aircraft    = 'F-16A Block 10';
-data.altitude_ft = ALT;
-data.M_subsonic  = M_SUB;
-data.M_supersonic = M_SUP;
-data.source      = 'VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.aerodynamics]';
-data.rows        = table_to_rows(T);
-
-fid = fopen(out_json, 'w');
-fprintf(fid, '%s', jsonencode(data, 'PrettyPrint', true));
-fclose(fid);
+ComparisonReport.writeJson(T, out_json, meta);
+ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);
-
-write_markdown(T, out_md, ALT, M_SUB, M_SUP, now_str);
 fprintf('  Markdown -> %s\n\n', out_md);
 
 T_all = T;
+
 end
 
-% ─── local helpers ───────────────────────────────────────────────────── %
+% ─── local helpers: thin wrappers over the shared renderer ───────────────── %
 
-function idx = nearestIdx(vec, x)
-%NEARESTIDX  Index of the element of vec closest to x.
-    [~, idx] = min(abs(vec - x));
-end
-
-function T = arow(name, fidelity, computed, brandt, afman, internet, numfmt, src, notes)
-%AROW  One comparison row: Fidelity | Computed | Brandt | %Diff | AF Manual | Internet | Source | Notes.
+function T = arow(name, fidelity, computed, brandt, afman, internet, numfmt, cite, notes)
+%AROW  One comparison row. See ComparisonReport.row for the column semantics.
+%   This report has TWO candidate second sources -- the AF manual and a
+%   published estimate -- but the shared scheme carries ONE `2nd Source`
+%   column, so whichever exists is passed through tagged inline ([AF] / [pub]).
+%   Rows with both are not expected and would need a Notes mention.
     if nargin < 9; notes = ''; end
-    comp_s = fmtNum(computed, numfmt);
-    brt_s  = fmtNum(brandt,   numfmt);
-    int_s  = fmtNum(internet, numfmt);
-    if ischar(afman) || isstring(afman)
-        af_s = char(afman);
-    else
-        af_s = fmtNum(afman, numfmt);
+    second = 'N/A';
+    if (ischar(afman) || isstring(afman)) && ~strcmpi(char(afman), 'N/A')
+        second = sprintf('%s [AF]', char(afman));
+    elseif isnumeric(afman) && ~isnan(afman)
+        second = sprintf([numfmt ' [AF]'], afman);
+    elseif isnumeric(internet) && ~isnan(internet)
+        second = sprintf([numfmt ' [pub]'], internet);
     end
-    if ~isnan(computed) && ~isnan(brandt) && brandt ~= 0
-        err_s = sprintf('%+.2f%%', 100*(computed - brandt)/brandt);
-    else
-        err_s = ' - ';
-    end
-    T = table({fidelity}, {comp_s}, {brt_s}, {err_s}, {af_s}, {int_s}, {src}, {notes}, ...
-        'VariableNames', {'Fidelity', 'Computed', 'Brandt', 'PctDiff', 'AFManual', 'Internet', 'Source', 'Notes'}, ...
-        'RowNames', {name});
-end
-
-function s = fmtNum(v, numfmt)
-%FMTNUM  Format a numeric value, or 'N/A' when NaN. String numfmt (%s) passes text.
-    if strcmp(numfmt, '%s')
-        s = 'N/A';
-    elseif isnan(v)
-        s = 'N/A';
-    else
-        s = sprintf(numfmt, v);
-    end
+    T = ComparisonReport.row(name, fidelity, computed, brandt, cite, numfmt, notes, second, '');
 end
 
 function T = srow(label)
 %SROW  Section separator row.
-    T = table({'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, ...
-        'VariableNames', {'Fidelity', 'Computed', 'Brandt', 'PctDiff', 'AFManual', 'Internet', 'Source', 'Notes'}, ...
-        'RowNames', {label});
+    T = ComparisonReport.section(label);
 end
 
-function rows = table_to_rows(T)
-%TABLE_TO_ROWS  Convert the comparison table to a struct array for jsonencode.
-    n = height(T);
-    for r = n:-1:1
-        rows(r).parameter = T.Properties.RowNames{r};
-        rows(r).Fidelity  = T.Fidelity{r};
-        rows(r).Computed  = T.Computed{r};
-        rows(r).Brandt    = T.Brandt{r};
-        rows(r).PctDiff   = T.PctDiff{r};
-        rows(r).AFManual  = T.AFManual{r};
-        rows(r).Internet  = T.Internet{r};
-        rows(r).Source    = T.Source{r};
-        rows(r).Notes     = T.Notes{r};
-    end
-end
-
-function write_markdown(T, out_path, ALT, M_SUB, M_SUP, now_str)
-%WRITE_MARKDOWN  Render the comparison table as a markdown file.
-    fid = fopen(out_path, 'w');
-    fprintf(fid, '# F-16A Block 10 — Aerodynamics vs Ground Truth (Brandt / AF-Manual / Internet)\n\n');
-    fprintf(fid, 'Generated %s. Flight condition: %d ft, subsonic M=%.1f / supersonic M=%.1f.\n\n', now_str, ALT, M_SUB, M_SUP);
-    fprintf(fid, ['Source: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.aerodynamics`]. ' ...
-        'Brandt = workbook outputs / his tabulated actual polar; AF Manual = T.O. 1F-16A-1 (airfoil + limits only); ' ...
-        'Internet = published estimates.\n\n']);
-    fprintf(fid, ['This is a **comparison report**, not a test — no pass/fail assertions, not in `run_all_tests`. ' ...
-        'A large %%Diff is frequently **expected** (see Notes), not a defect. The 0.95 ≤ M ≤ 1.05 transonic band is ' ...
-        'skipped (L2/L3 return NaN there).\n\n']);
-    fprintf(fid, '| Parameter | Fidelity | Computed | Brandt | %%Diff | AF Manual | Internet (F-16) | Source | Notes |\n');
-    fprintf(fid, '|---|---|---|---|---|---|---|---|---|\n');
-    n = height(T);
-    for r = 1:n
-        name = T.Properties.RowNames{r};
-        if strcmp(T.Computed{r}, '---')
-            fprintf(fid, '| **%s** | | | | | | | | |\n', strrep(name, '|', '\|'));
-        else
-            fprintf(fid, '| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n', ...
-                strrep(name, '|', '\|'), T.Fidelity{r}, T.Computed{r}, T.Brandt{r}, T.PctDiff{r}, ...
-                T.AFManual{r}, T.Internet{r}, strrep(T.Source{r}, '|', '\|'), strrep(T.Notes{r}, '|', '\|'));
-        end
-    end
-    fclose(fid);
+function idx = nearestIdx(vec, x)
+%NEARESTIDX  Index of the element of vec closest to x.
+    [~, idx] = min(abs(vec - x));
 end

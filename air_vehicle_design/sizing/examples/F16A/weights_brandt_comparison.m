@@ -1,47 +1,86 @@
 function T_all = weights_brandt_comparison()
-%WEIGHTS_BRANDT_COMPARISON  F-16A Block 10/15 -- Weights vs Brandt ground truth.
+%WEIGHTS_BRANDT_COMPARISON  F-16A weights at every fidelity vs ground truth.
 %
-%   NOT A TEST. No pass/fail assertions, not part of run_all_tests. A pure
-%   reporting script: loads the F-16A L1/L2/L3 input JSONs plus
-%   examples/F16A/f16a_requirements.json, runs the actual F16WeightsL1/L2/L3
-%   methods and the WeightsL2/WeightsL3 static toolboxes, and compares against
-%   the `weights` section of VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json
-%   -- the Brandt-DIRECT ground truth (NOT F16Baseline.m's older figures, which
-%   fidelity_comparison.m uses instead).
+%   Two jobs. (1) A one-stop comparison: run every weights tier and put its
+%   output next to Brandt's workbook. (2) A worked example of how to drive this
+%   framework — read it top to bottom and you have seen the whole input and
+%   dependency-injection story for weights, which is the most-injected
+%   discipline in the project.
 %
-%   *** INFORMATIONAL ONLY. NEVER PASS/FAIL. AND NOTHING PRODUCED HERE MAY EVER
-%   *** BE USED TO BACKFILL A UNIT TEST'S EXPECTED VALUE (CLAUDE.md's two-tier
-%   *** rule). The three TestWeights* files' former "OEW = 19,148 lbf [Brandt
-%   *** Wt!B12]" assertions are exactly what that rule prevents: Wt!B12 is
-%   *** 19,980.70 and 19,148.08 is corrections.xls, a different workbook
-%   *** ~4.3 % away (review finding #14). Those assertions were deleted from the
-%   *** unit tier in Phase 4 and became the headline rows of this report.
+%   ─── HOW TO RUN ─────────────────────────────────────────────────────────
+%     >> cd air_vehicle_design/sizing
+%     >> addpath(genpath('src')); addpath(genpath('examples'))
+%     >> weights_brandt_comparison
+%   Or non-interactively:
+%     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); weights_brandt_comparison"
 %
-%   Where a quantity has multiple valid implementations (Raymer Eq. 10.10
-%   uninstalled vs x1.3 vs Brandt's 0.199*T; the L2 psf buildup vs the L3
-%   Sec. 15.3.1 buildup), EACH option gets its own row -- never just the
-%   official one, and the REJECTED variants are reported too so the decisions
-%   stay auditable.
+%   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
+%     f16a_spec_path(N)        -> examples/F16A/f16a_L{N}.json, the SPEC file.
+%                                 The .weights block carries the payload split
+%                                 and, at L3, the Sec. 15.3.1 coefficients and
+%                                 counts. Geometry is NOT in there any more —
+%                                 it arrives by injection (below).
+%     f16a_requirements_path() -> examples/F16A/f16a_requirements.json, the
+%                                 REQUIREMENTS file: design_mach (Raymer
+%                                 Eq. 10.10) and the cruise condition (L3's
+%                                 SFC_mission). Not per-fidelity.
+%   Ground truth is separate and lives under VnV/BrandtF16A/, read here as `gt`.
+%   It is never an input — only a comparison target. The 19,148-vs-19,980.70
+%   mix-up below is what happens when that line blurs.
 %
-%   Outputs (written to the same directory as this script):
-%     weights_brandt_comparison.json  -- full table + metadata
-%     weights_brandt_comparison.md    -- rendered markdown table
+%   ─── HOW TO WIRE THE DEPENDENCIES ───────────────────────────────────────
+%   Weights sits at the END of the chain and injects TWO objects, so build
+%   propulsion, then geometry, then weights:
 %
-%   Specification: examples/F16A/examples/F16A/weights_brandt_comparison.m.
-%   Run via `matlab -batch`, not the MCP evaluate tool: the wide-table disp
-%   hang is on record.
+%       prop = F16PropL2(f16a_spec_path(2));
+%       g2   = F16GeomL2(f16a_spec_path(2), prop);
+%       g3   = F16GeomL3(f16a_spec_path(3), prop);
+%       w1   = F16WeightsL1(f16a_spec_path(1));                                  % injects NOTHING
+%       w2   = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g2, prop);
+%       w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
 %
-%   REFERENCE SOURCES:
-%     [Brandt]  S. Brandt, F-16A.xls workbook, sheet "Wt", via
-%               VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.weights].
-%               Every Wt cell in that block was re-read live over Excel COM on
-%               2026-07-25 (todo Sec. P4-0).
-%     [Alt]     corrections.xls (Casey's revised-weight workbook), per
-%               F16Baseline.m:136 -- a SECOND, DIFFERENT source, never Wt!B12.
-%     [Raymer]  D.P. Raymer, Aircraft Design 7th ed., AIAA -- Table 3.1,
-%               Table 15.2, Sec. 15.3.1 (Eqs. 15.1-15.24), Eq. 10.10.
-%     [Roskam]  J. Roskam, Airplane Design Part I, Eq. 2.16 + Table 2.15.
-%     [AE481]   AE481 metabook Sec. 7 "Fraction-Based Weight Estimates".
+%   Match the geometry tier to the weights tier — L2 takes g2, L3 takes g3 —
+%   and note the guards enforce it: F16WeightsL2 requires a GeometryModelL2 and
+%   F16WeightsL3 a GeometryModelL3, so a mismatch fails at construction rather
+%   than producing a plausible wrong number.
+%
+%   What crosses each injection:
+%     from geometry   exposed areas, tail planform, fuselage envelope,
+%                     control-surface areas, duct/engine lengths (21 Dependent
+%                     getters at L3). Watch the three NAME TRAPS: weights wants
+%                     geom.H_max_fuselage (5.0) not geom.D_fus (6.0), and
+%                     geom.S_exposed_ht/_vt not geom.S_ht/S_vt.
+%     from propulsion prop.T_SL -> T_max and Eq. 10.10; prop.bypass_ratio; and
+%                     at L3 prop.get_TSFC(cruise) -> SFC_mission.
+%
+%   THEN SET W_TO. The W_TO-dependent group properties are Dependent getters
+%   that ERROR when W_TO is unset rather than returning a stale or NaN value:
+%
+%       w2.W_TO = W_TO;  w3.W_TO = W_TO;
+%
+%   OEW(W_TO) takes its own argument and does not need this — and must never
+%   read obj.W_TO instead, which is how a frozen 0.17*31377 once got baked in.
+%
+%   ─── OUTPUTS (written beside this script) ───────────────────────────────
+%     weights_brandt_comparison.json  full table + metadata
+%     weights_brandt_comparison.md    rendered markdown
+%   Both via src/reporting/ComparisonReport.m, shared by all four discipline
+%   reports so their columns cannot drift apart.
+%
+%   ─── SOURCES ────────────────────────────────────────────────────────────
+%     [Brandt] F-16A.xls, Wt tab — every cell in the .weights ground-truth
+%              block was re-read live over Excel COM 2026-07-25
+%     [Alt]    corrections.xls (Casey's revised-weight workbook) where it has a
+%              figure — a SECOND, DIFFERENT source, not the original Wt cell
+%     [Raymer] Aircraft Design 7th ed. (Table 3.1; Table 15.2; Sec. 15.3.1;
+%              Eq. 10.10)
+%     [Roskam] Airplane Design Part I (Eq. 2.16 + Table 2.15)
+%     [AE481]  Martins metabook Sec. 7 (psf table + the fraction table)
+%
+%   NOT A TEST: informational only, never pass/fail, and **nothing here may
+%   ever be used to backfill a unit test's expected value** — that rule exists
+%   because the OEW check that used to live in the unit tier asserted 19,148
+%   while citing Wt!B12, which reads 19,980.70 (review finding #14).
 
 script_dir  = fileparts(mfilename('fullpath'));
 sizing_root = fileparts(fileparts(script_dir));
@@ -157,6 +196,12 @@ T = [T; grow('OEW, Roskam Eq. 2.16 MINIMUM bound [lbf]', 'L1', oew_l1_roskam, sm
     ['DIFFERENT KIND OF QUANTITY: a LOWER BOUND (the historical efficiency frontier), not a ' ...
      'central estimate. Any real OEW must sit ABOVE it, so a negative %Diff is the CORRECT ' ...
      'result and its magnitude is not an error measure. Never summed into OEW.'], ALT_OEW, 'DEFINITIONAL')];
+
+T = [T; grow('Empty-weight fraction We/W_TO [-]', 'L1', w1.compute_We_fraction(W_TO), sm.OEW.value/W_TO, SRC_OEW, '%.4f', ...
+    ['The quantity L1 actually estimates -- the Raymer Tbl 3.1 power law returns a FRACTION, and the ' ...
+     'OEW row above is that fraction times W_TO. Reported separately because the fraction is what ' ...
+     'the sizing loop will iterate on, and because comparing fractions removes the W_TO basis from ' ...
+     'the comparison entirely. Reference is Brandt Wt!B12 / Wt!B3.'], ALT_OEW/W_TO)];
 
 T = [T; grow('OEW, Tbl 15.2 psf buildup + Raymer W_en [lbf]', 'L2', oew_l2, sm.OEW.value, SRC_OEW, '%.2f', ...
     ['OFFICIAL L2. wing 9 / HT 4 / VT 5.3 psf on EXPOSED planform + fuselage 4.8 psf on WETTED ' ...
@@ -363,6 +408,23 @@ T = [T; grow('W_en [Brandt 0.199*T x 1.3 -- REJECTED] [lbf]', '--', W_en_brandt_
      'resulting L2 OEW agrees best with Wt!B12 of any option, which is the reason to reject it.'], ...
      NaN, 'DEFINITIONAL')];
 
+% L2's second-largest term, and it had no row until 2026-07-26 -- it was
+% computed above as l2_ale and dropped on the floor, so ~34% of L2's OEW was
+% invisible in this report while every L3 system got its own row.
+T = [T; grow('All-else-empty [0.17*W_TO] [lbf]', 'L2', l2_ale, NaN, 'no single Brandt cell', '%.2f', ...
+    ['L2''s catch-all for everything that is not wing / tail / fuselage / gear / engine: systems, ' ...
+     'furnishings, avionics, armament support. Brandt books those as ~8 separate line items ' ...
+     '(Wt!B25:B31 plus strakes), so there is no single cell to compare against -- the like-for-like ' ...
+     'target is the L3 systems group, which builds the same content from Eqs. 15.16-15.24 and comes ' ...
+     'to 4578.13. That L2-vs-L3 spread IS the fidelity difference: one calibrated fraction against ' ...
+     'nine component equations. At 5334.09 lbf this is the second-largest term in L2''s OEW after ' ...
+     'the fuselage, so its absence from earlier revisions of this report hid a third of the model.'], ...
+     NaN, 'DEFINITIONAL')];
+T = [T; grow('Systems group total (Eqs. 15.16-15.24) [lbf]', 'L3', l3_sys.total, NaN, 'no single Brandt cell', '%.2f', ...
+    ['The L3 counterpart of the L2 all-else-empty row above -- same content, nine equations instead ' ...
+     'of one fraction. Individual members are compared against Brandt cell by cell in section 3.'], ...
+     NaN, 'DEFINITIONAL')];
+
 T = [T; grow('Engine group total (dry + Eqs. 15.7-15.15) [lbf]', 'L3', l3_eng.total, es.engine.value, 'Brandt Wt!B11/B22', '%.2f', ...
     ['NOT like-for-like: this is the whole installed propulsion GROUP built item by item, while ' ...
      'Brandt''s B11 is one 0.199*T line and he books the inlet duct separately at B24. The nearer ' ...
@@ -445,79 +507,65 @@ T = [T; grow('OEW with K_d = 0 (legal STRAIGHT-DUCT input) [lbf]', 'L3', oew_Kd0
      ind_base, ind_Kd0, oew_l3, oew_Kd0, oew_Kd0 - oew_l3), NaN, 'DEFINITIONAL')];
 
 % ════════════════════════════════════════════════════════════════════════ %
-%  DISPLAY
+%  DISPLAY + EXPORT — all four discipline reports share one renderer
+%  (src/reporting/ComparisonReport.m), so their columns cannot drift apart.
 % ════════════════════════════════════════════════════════════════════════ %
 
-now_str = char(datetime('now', 'Format', 'yyyy-MM-dd'));
-BAR     = repmat('=', 1, 110);
+meta = struct( ...
+    'title',         'F-16A Block 10/15 — Weights vs Ground Truth', ...
+    'aircraft',      'F-16A Block 10/15', ...
+    'generated',     char(datetime('now', 'Format', 'yyyy-MM-dd')), ...
+    'condition',     sprintf('W_TO = %.0f lbf [Brandt Wt!B3 = Main!O15].', W_TO), ...
+    'referenceDesc', ['Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` ' ...
+                      '[`.weights`] — every `Wt` cell in that block was re-read live over Excel COM. ' ...
+                      'Not `F16Baseline.m`, which is the older ground truth `fidelity_comparison.m` uses.'], ...
+    'secondDesc',    ['`corrections.xls` (Casey''s revised-weight workbook, per `F16Baseline.m:136`) ' ...
+                      'where it carries a figure. That is a **second, different source** — *not* the ' ...
+                      'original Brandt `Wt!*` cell. For OEW the two are **19,980.70** (`Brandt Wt!B12`, ' ...
+                      'the Reference) and **19,148.08** (`corrections.xls Wt!B12`), 4.17 % apart.'] );
 
-fprintf('\n%s\n', BAR);
-fprintf('  F-16A BLOCK 10/15 -- WEIGHTS vs BRANDT GROUND TRUTH\n');
-fprintf('  W_TO = %.0f lbf [Brandt Wt!B3 = Main!O15]  |  Generated %s\n', W_TO, now_str);
-fprintf('  Source: VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.weights] (Brandt-direct,\n');
-fprintf('          every Wt cell live-read over Excel COM 2026-07-25; NOT F16Baseline.m)\n');
-fprintf('  INFORMATIONAL ONLY -- never pass/fail, and never a source for a unit test''s expected value.\n');
-fprintf('%s\n\n', BAR);
+meta.preamble = { ...
+    ['**The three levels are different MODELS, not refinements of one model.** L1 is a statistical ' ...
+     '`W_E/W_TO` power law, L2 is surface-density × area plus fractions, L3 is the Raymer Sec. 15.3.1 ' ...
+     'component build-up. Per-component agreement between the levels is not expected and is not a ' ...
+     'goal; what the ladder should show is decreasing reliance on calibration.'], ...
+    ['**About 2,733.68 lbf of the OEW gap is structural, not error.** Brandt books nacelles, strakes, ' ...
+     '"other structure" and armament support as line items this framework has no component for — ' ...
+     '13.68 % of `Wt!B12`. Section 5 tallies them. Subtract before concluding anything about the ' ...
+     'remaining difference.'], ...
+    ['**`TestWeights{L1,L2,L3}` used to assert 19,148 while citing `Wt!B12`** — the wrong workbook ' ...
+     'under the right cell name (review finding #14). That assertion left the unit tier entirely in ' ...
+     'Phase 4 and became the headline rows below. It is the reason for the rule at the top of this ' ...
+     'file: an agreement check against ground truth is not a unit test.'] };
 
-disp(T);
-
-fprintf('  NOTES\n');
-fprintf('  (a) Brandt''s structural line items use a psf x area model with HIS OWN coefficients\n');
-fprintf('      (Wt!C7:H7 = wing 6.75 / fuselage 5.0 / pitch 6.0 / VT 6.0 / nacelle 4.5 / strake 4.5\n');
-fprintf('      lbf/ft^2). The framework''s L2 is also psf x area but with RAYMER TABLE 15.2''s\n');
-fprintf('      coefficients (9 / 4.8 / 4 / 5.3), and L3 is the Raymer Sec. 15.3.1 statistical\n');
-fprintf('      buildup, which groups mass differently again. Per-component agreement is NOT expected.\n');
-fprintf('  (b) Brandt''s TAIL line items use the FULL planform areas (Wt!E9 = 6.0 x 108,\n');
-fprintf('      Wt!F9 = 6.0 x 60); the framework uses the EXPOSED areas per Raymer Table 15.2''s own\n');
-fprintf('      definition (49.8473 / 40.8897 at L2, 51.1486 / 40.8897 at L3). Those rows are\n');
-fprintf('      DEFINITIONAL, not BY DESIGN -- the two sides are different kinds of area.\n');
-fprintf('  (c) THE EXPECTED OEW IS Wt!B12 = %.2f lbf. The Alt column''s %.2f is\n', ...
-    sm.OEW.value, ALT_OEW);
-fprintf('      corrections.xls Wt!B12 (Casey''s revised-weight workbook), NOT the original Wt!B12 --\n');
-fprintf('      two distinct provenances %.2f %% apart. The unit tests used to assert the %.0f\n', ...
-    100*(ALT_OEW - sm.OEW.value)/sm.OEW.value, ALT_OEW);
-fprintf('      figure while CITING Wt!B12 (review finding #14); that assertion has been deleted from\n');
-fprintf('      the unit tier and lives here instead.\n');
-fprintf('  (d) %.2f lbf of Brandt''s weight statement (%.2f %% of Wt!B12) has NO framework analog at\n', ...
-    gap_total, 100*gap_total/sm.OEW.value);
-fprintf('      any fidelity level: nacelles %.2f + strakes %.2f + lumped "other structure" %.2f\n', ...
-    sc.nacelles.value, sc.strakes.value, es.other_structure.value);
-fprintf('      + armament support %.2f. That is a MISSING-COMPONENT gap, not an equation error, and\n', ...
-    es.armament_support.value);
-fprintf('      it accounts for the bulk of every negative OEW %%Diff in section 1.\n');
-fprintf('  (e) Section 6''s K_d = 0 row is the ONLY place the unguarded silent-zero of the 227.54 lbf\n');
-fprintf('      air-induction component is visible. Decision 6 left it unguarded on purpose and no\n');
-fprintf('      unit test asserts it, so this report is its sole record. todo Sec. P4-11 stays OPEN.\n');
-fprintf('\n%s\n\n', BAR);
-
-% ════════════════════════════════════════════════════════════════════════ %
-%  EXPORT
-% ════════════════════════════════════════════════════════════════════════ %
+ComparisonReport.show(T, meta);
 
 out_json = fullfile(script_dir, 'weights_brandt_comparison.json');
 out_md   = fullfile(script_dir, 'weights_brandt_comparison.md');
-
-data.generated = now_str;
-data.aircraft  = 'F-16A Block 10/15';
-data.W_TO_lbf  = W_TO;
-data.source    = 'VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.weights]';
-data.alt_source = sprintf(['corrections.xls Wt!B12 (Casey''s revised-weight workbook) = %.2f -- ' ...
-    'NOT the original Brandt Wt!B12 = %.2f'], ALT_OEW, sm.OEW.value);
-data.rows      = table_to_rows(T);
-
-fid = fopen(out_json, 'w');
-fprintf(fid, '%s', jsonencode(data, 'PrettyPrint', true));
-fclose(fid);
+ComparisonReport.writeJson(T, out_json, meta);
+ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);
-
-write_markdown(T, out_md, W_TO, now_str, sm.OEW.value, ALT_OEW, gap_total);
 fprintf('  Markdown -> %s\n\n', out_md);
 
 T_all = T;
 
 end
 
-% ─── local helpers ───────────────────────────────────────────────────── %
+% ─── local helpers: thin wrappers over the shared renderer ───────────────── %
+
+function T = grow(name, fidelity, computed, reference, cite, numfmt, notes, second, divergence)
+%GROW  One comparison row. See ComparisonReport.row for the column semantics.
+%   `second` here is the corrections.xls figure where one exists.
+    if nargin < 7; notes      = ''; end
+    if nargin < 8; second     = NaN; end
+    if nargin < 9; divergence = ''; end
+    T = ComparisonReport.row(name, fidelity, computed, reference, cite, numfmt, notes, second, divergence);
+end
+
+function T = srow(label)
+%SROW  Section separator row.
+    T = ComparisonReport.section(label);
+end
 
 function w = makeL3(req, prop)
 %MAKEL3  A FRESH F16WeightsL3 (and a fresh geometry) for a sensitivity variant.
@@ -527,145 +575,3 @@ function w = makeL3(req, prop)
                      F16GeomL3(f16a_spec_path(3), prop), prop);
 end
 
-function T = grow(name, fidelity, computed, expected, src, numfmt, notes, alt_value, divergence)
-%GROW  One comparison row.
-%   Columns: Fidelity / Computed / Brandt / PctDiff / Alt / Divergence / Source / Notes.
-%
-%   fidelity   — which weights tier produced `computed` ('L1'/'L2'/'L3'), 'L2/L3' for a
-%                quantity both tiers share, '--' for a REJECTED variant no tier ships, or
-%                'N/A' for a Brandt quantity nothing models (Computed is NaN in that case).
-%   alt_value  — OPTIONAL SECOND SOURCE: the corrections.xls figure where one exists.
-%                NaN or omitted -> 'N/A'. This is the geometry report's `TO` column,
-%                renamed because the second source here is a WORKBOOK, not the T.O.
-%                ★ It carries corrections.xls Wt!* (Casey's revised-weight workbook), which
-%                is NOT the original Brandt Wt!* -- conflating the two is review finding
-%                #14, the reason the OEW check left the unit tier.
-%   divergence — OPTIONAL annotation, three states:
-%                'BY DESIGN'    — the SAME KIND of quantity as Brandt's, but the framework is
-%                                 expected to differ: a different formula family, or a locked
-%                                 decision to use a different coefficient (e.g. LG 0.033 vs
-%                                 Brandt's 0.034). The %Diff IS meaningful and should be
-%                                 small-ish -- sanity-check its magnitude.
-%                'DEFINITIONAL' — a DIFFERENT KIND of quantity altogether (e.g. the
-%                                 uninstalled Eq. 10.10 W_en against Brandt's already-installed
-%                                 0.199*T; the Roskam MINIMUM bound against a central estimate;
-%                                 EXPOSED vs FULL tail areas; a design landing-weight rule
-%                                 against a back-calculated weight-statement subtotal). The
-%                                 %Diff is NOT a meaningful error measure at all -- do not
-%                                 chase it.
-%                blank          — a genuine agreement check; a large %Diff here IS worth
-%                                 chasing.
-%
-%   This report is INFORMATIONAL ONLY -- never pass/fail, and never a source for a unit
-%   test's expected value (CLAUDE.md's two-tier rule).
-    if nargin < 7; notes      = '';  end
-    if nargin < 8; alt_value  = NaN; end
-    if nargin < 9; divergence = '';  end
-    if isnan(computed)
-        comp_s = 'N/A';
-    else
-        comp_s = sprintf(numfmt, computed);
-    end
-    if isnan(expected)
-        exp_s = 'N/A';
-        err_s = ' - ';
-    else
-        exp_s = sprintf(numfmt, expected);
-        if isnan(computed)
-            err_s = ' - ';
-        elseif expected ~= 0
-            err_s = sprintf('%+.2f%%', 100*(computed - expected)/expected);
-        else
-            err_s = 'N/A';
-        end
-    end
-    if isnan(alt_value)
-        alt_s = 'N/A';
-    else
-        alt_s = sprintf(numfmt, alt_value);
-    end
-    T = table({fidelity}, {comp_s}, {exp_s}, {err_s}, {alt_s}, {divergence}, {src}, {notes}, ...
-        'VariableNames', {'Fidelity', 'Computed', 'Brandt', 'PctDiff', 'Alt', 'Divergence', 'Source', 'Notes'}, ...
-        'RowNames', {name});
-end
-
-function T = srow(label)
-%SROW  Section separator row.
-    T = table({'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, ...
-        'VariableNames', {'Fidelity', 'Computed', 'Brandt', 'PctDiff', 'Alt', 'Divergence', 'Source', 'Notes'}, ...
-        'RowNames', {label});
-end
-
-function rows = table_to_rows(T)
-%TABLE_TO_ROWS  Convert the comparison table to a struct array for jsonencode.
-    n = height(T);
-    for r = n:-1:1   % reverse iteration pre-allocates the struct array
-        rows(r).parameter  = T.Properties.RowNames{r};
-        rows(r).Fidelity   = T.Fidelity{r};
-        rows(r).Computed   = T.Computed{r};
-        rows(r).Brandt     = T.Brandt{r};
-        rows(r).PctDiff    = T.PctDiff{r};
-        rows(r).Alt        = T.Alt{r};
-        rows(r).Divergence = T.Divergence{r};
-        rows(r).Source     = T.Source{r};
-        rows(r).Notes      = T.Notes{r};
-    end
-end
-
-function write_markdown(T, out_path, W_TO, now_str, oew_brandt, oew_alt, gap_total)
-%WRITE_MARKDOWN  Render the comparison table as a markdown file.
-    fid = fopen(out_path, 'w');
-    fprintf(fid, '# F-16A Block 10/15 — Weights vs Brandt Ground Truth\n\n');
-    fprintf(fid, 'Generated %s. W_TO = %.0f lbf [Brandt Wt!B3 = Main!O15].\n\n', now_str, W_TO);
-    fprintf(fid, ['Source: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.weights`] ' ...
-        '(Brandt-direct ground truth; every `Wt` cell in that block was re-read live over ' ...
-        'Excel COM on 2026-07-25 — NOT `F16Baseline.m`, which is the older ground truth ' ...
-        '`fidelity_comparison.m` uses).\n\n']);
-    fprintf(fid, ['This is a **comparison report**, not a test — no pass/fail assertions, not part ' ...
-        'of `run_all_tests`, and **nothing here may ever be used to backfill a unit test''s ' ...
-        'expected value**. Where a quantity has multiple valid implementations, each option gets ' ...
-        'its own row, and the *rejected* variants are reported too so the decisions stay ' ...
-        'auditable.\n\n']);
-    fprintf(fid, ['**Reading the `Divergence` column.** `BY DESIGN` marks a row where the framework ' ...
-        'computes the *same kind* of quantity as Brandt but is *expected* to differ — a different ' ...
-        'formula family, or a locked decision to use a different coefficient. **A large %%Diff on ' ...
-        'a `BY DESIGN` row is the correct answer, not a defect.** `DEFINITIONAL` marks a row where ' ...
-        'the two sides are *different kinds of quantity altogether* (uninstalled vs installed ' ...
-        'engine weight, a minimum bound vs a central estimate, EXPOSED vs FULL tail area, a design ' ...
-        'landing-weight rule vs a back-calculated subtotal) — there the %%Diff is not an error ' ...
-        'measure at all, so do not chase it. Blank means it is a genuine agreement check, and a ' ...
-        'large %%Diff there **is** worth chasing.\n\n']);
-    fprintf(fid, ['**Reading the `Alt` column.** It carries the `corrections.xls Wt!*` figure ' ...
-        '(Casey''s revised-weight workbook, per `F16Baseline.m:136`) where one exists. That is a ' ...
-        '**second, different source** — *not* the original Brandt `Wt!*`. For OEW the two are ' ...
-        '**%.2f** (`Brandt Wt!B12`, the Expected) and **%.2f** (`corrections.xls Wt!B12`), ' ...
-        '%.2f %% apart. `TestWeights{L1,L2,L3}` used to assert the %.0f figure while *citing* ' ...
-        '`Wt!B12` — review finding #14. That assertion was deleted from the unit tier in Phase 4 ' ...
-        'and became the headline rows below.\n\n'], ...
-        oew_brandt, oew_alt, 100*(oew_alt - oew_brandt)/oew_brandt, oew_alt);
-    fprintf(fid, ['**Three standing caveats.** (1) Brandt''s structural line items are a psf × area ' ...
-        'model with *his own* coefficients (`Wt!C7:H7` = wing 6.75 / fuselage 5.0 / pitch 6.0 / ' ...
-        'VT 6.0 / nacelle 4.5 / strake 4.5 lbf/ft²); the framework''s L2 is psf × area with ' ...
-        '**Raymer Table 15.2**''s coefficients (9 / 4.8 / 4 / 5.3), and L3 is the Raymer §15.3.1 ' ...
-        'statistical build-up, which groups mass differently again. (2) Brandt''s tail line items ' ...
-        'use the **FULL** planform areas (108 / 60 ft²); the framework uses the **EXPOSED** areas ' ...
-        'per Raymer Table 15.2''s own definition. (3) **%.2f lbf** of Brandt''s weight statement ' ...
-        '(%.2f %% of `Wt!B12`) has no framework analog at any fidelity level — nacelles, strakes, ' ...
-        'a lumped "other structure" and armament support — which accounts for the bulk of every ' ...
-        'negative OEW %%Diff below.\n\n'], gap_total, 100*gap_total/oew_brandt);
-    fprintf(fid, '| Parameter | Fidelity | Computed | Brandt | %%Diff | Alt (corrections.xls) | Divergence | Source | Notes |\n');
-    fprintf(fid, '|---|---|---|---|---|---|---|---|---|\n');
-    n = height(T);
-    for r = 1:n
-        name = T.Properties.RowNames{r};
-        if strcmp(T.Computed{r}, '---')
-            fprintf(fid, '| **%s** | | | | | | | | |\n', strrep(name, '|', '\|'));
-        else
-            fprintf(fid, '| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n', ...
-                strrep(name, '|', '\|'), T.Fidelity{r}, T.Computed{r}, T.Brandt{r}, T.PctDiff{r}, ...
-                T.Alt{r}, T.Divergence{r}, ...
-                strrep(T.Source{r}, '|', '\|'), strrep(T.Notes{r}, '|', '\|'));
-        end
-    end
-    fclose(fid);
-end

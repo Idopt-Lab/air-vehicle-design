@@ -1,66 +1,81 @@
 function T_all = propulsion_brandt_comparison()
-%PROPULSION_BRANDT_COMPARISON  F-16A Block 10 -- Propulsion vs Brandt ground truth.
+%PROPULSION_BRANDT_COMPARISON  F-16A propulsion at every fidelity vs ground truth.
 %
-%   NOT A TEST -- informational comparison only. No pass/fail assertions, NOT
-%   part of run_all_tests. A pure reporting script: it builds the six Brandt
-%   constraint-analysis flight conditions with AircraftState, runs the actual
-%   F16PropL1/F16PropL2 code, and compares the results against the
+%   Two jobs. (1) A one-stop comparison: run every propulsion tier at the six
+%   Brandt constraint conditions and put its output next to his workbook.
+%   (2) A worked example of how to drive this framework — read it top to bottom
+%   and you have seen the whole input story for propulsion.
 %
-%   NO L3 PROPULSION TIER EXISTS (and none is planned, user decision
-%   2026-07-25). Geometry, aerodynamics and weights are L1/L2/L3; propulsion is
-%   L1/L2 only. The framework's L3 rung pairs F16AeroL3 with F16PropL2, so any
-%   "L3" propulsion figure elsewhere in the project is computed by F16PropL2 and
-%   equals the L2 rows in this report.
+%   ─── HOW TO RUN ─────────────────────────────────────────────────────────
+%     >> cd air_vehicle_design/sizing
+%     >> addpath(genpath('src')); addpath(genpath('examples'))
+%     >> propulsion_brandt_comparison
+%   Or non-interactively:
+%     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); propulsion_brandt_comparison"
 %
-%   `propulsion` section of
-%   VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json (Brandt-workbook OUTPUTS,
-%   each cited in the JSON to a Consts/Engn(s) cell). Percentage differences
-%   are informational; a large %Diff is frequently EXPECTED (the framework's
-%   Mattingly engine model and Brandt's Engn(s) model are DIFFERENT models,
-%   flagged "not a bug" in Notes), never a unit-test failure.
+%   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
+%     f16a_spec_path(N) -> examples/F16A/f16a_L{N}.json, the SPEC file. The
+%                          .propulsion block carries:
+%                            L1  engine_type, T_SL
+%                            L2  + T_SL_mil, T_t4_max_F, TSFC_install_factor,
+%                                bypass_ratio
+%                          T_SL_wet is NOT an input at either level — it is
+%                          Dependent on T_SL, because two settable copies of
+%                          one thrust is how they drift apart.
+%   Ground truth is separate and lives under VnV/BrandtF16A/, read here as `gt`.
+%   It is never an input — only a comparison target.
 %
-%   WHY THIS IS A REPORT, NOT A UNIT TEST: every row here compares two
-%   different engine MODELS (Mattingly Eq. 2.54/3.55 vs Brandt's Engn(s)
-%   lapse/TSFC formulas). Those cross-model deltas were previously (wrongly)
-%   asserted in TestPropL2 with a blanket 30% tolerance; they were moved here
-%   in Step 1c. Unit tests (TestPropL1/TestPropL2) now check only independent
-%   hand-computed / published-datum expecteds and never read this JSON.
+%   ─── HOW TO WIRE THE DEPENDENCIES ───────────────────────────────────────
+%   Propulsion is the ROOT of the dependency graph — it injects nothing:
 %
-%   INPUTS (actual toolbox inputs the code reads):
-%     examples/F16A/f16a_L1.json  (.propulsion: engine_type, T_SL, T_SL_wet)
-%     examples/F16A/f16a_L2.json  (.propulsion: + T_SL_mil, T_t4_max_F, install factor)
+%       p1 = F16PropL1(f16a_spec_path(1));
+%       p2 = F16PropL2(f16a_spec_path(2));
 %
-%   GROUND TRUTH (compared AGAINST, never re-derived here -- read from JSON):
-%     VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.propulsion]
-%       thrust_lapse_at_constraint_conditions.rows: alpha_dry(AS)/alpha_AB(AT)/
-%         alpha_eff_on_TAB(AU) at the six Consts rows 23-28 (live-xls verified,
-%         todo.md 2026-07-24 entry A).
-%       TSFC_mil_installed_per_hr = 0.70, TSFC_AB_installed_per_hr = 2.20
-%         (INSTALLED -- already include the 1.08 factor; do NOT double-apply,
-%         todo.md entry 4). TR = 1.0. Nacelle D=3.537 ft / L=15.917 ft.
+%   Everything else depends on IT. Geometry takes a propulsion object to size
+%   the nacelle from thrust; weights takes one for the Raymer Eq. 10.10 engine
+%   weight and, at L3, for the cruise SFC. So build propulsion first and pass
+%   the same object onward — see geometry_brandt_comparison.m for that chain.
 %
-%   SEMANTICS (Brandt Consts sheet, live-xls verified):
-%     AS = alpha_dry  (delta_0 basis, normalized to T_SL_dry = 15,000 lbf)
-%     AT = alpha_AB   (delta_0 basis, normalized to T_SL_AB  = 23,770 lbf)
-%     AU = alpha_eff_on_TAB (effective lapse on the T_SL_AB axis); for a
-%          100%-AB row AU = AT, for the 0%-AB cruise row AU = AS*(T_dry/T_AB).
-%     Framework Mattingly alpha_AB (F16PropL2.compute_thrust_lapse_AB) compares
-%     against AT; a dry/mil point (cruise) compares against AU.
+%   Flight conditions are built with AircraftState(altitude_ft, mach), which
+%   carries the total-ratio terms (delta_0, theta_0) the Mattingly lapse needs.
 %
-%   OTHER-SOURCE column: Mattingly (uninstalled) TSFC coefficients, Raymer
-%   Table 3.3 categorical L1 TSFC, and T.O. 1F-16A-1 nacelle length, where
-%   available.
+%   ─── NO L3 PROPULSION TIER EXISTS, and none is planned ──────────────────
+%   Geometry, aerodynamics and weights are L1/L2/L3; propulsion is L1/L2. The
+%   framework's L3 rung pairs F16AeroL3 with F16PropL2, so any "L3" propulsion
+%   figure anywhere in this project is computed by F16PropL2 and equals the L2
+%   rows below. That is a deliberate decision, not a missing tier.
 %
-%   Outputs (written next to this script):
-%     propulsion_brandt_comparison.json  -- full table + metadata
-%     propulsion_brandt_comparison.md    -- rendered markdown table
+%   ─── OUTPUTS (written beside this script) ───────────────────────────────
+%     propulsion_brandt_comparison.json  full table + metadata
+%     propulsion_brandt_comparison.md    rendered markdown
+%   Both via src/reporting/ComparisonReport.m, shared by all four discipline
+%   reports so their columns cannot drift apart.
 %
-%   REFERENCE SOURCES:
-%     [Brandt]    S. Brandt, F-16A.xls workbook (Consts/Engn(s)/Main/Miss tabs).
-%     [Mattingly] Mattingly et al., Aircraft Engine Design 2nd ed., AIAA, 2002
-%                 (Eq. 2.54 lapse, Eq. 3.55 TSFC, Eq. D.6 TR, Table C.4).
-%     [Raymer]    D.P. Raymer, Aircraft Design (Table 3.3; Eqs. 10.11/10.13/10.15).
-%     [TO]        T.O. 1F-16A-1, Sec. I.
+%   ─── WHY THIS IS A REPORT, NOT A UNIT TEST ──────────────────────────────
+%   Every row compares two different engine MODELS — Mattingly Eq. 2.54/3.55
+%   against Brandt's own Engn(s) lapse/TSFC formulas. Those cross-model deltas
+%   were once asserted in TestPropL2 under a blanket 30 % tolerance, which is
+%   not a unit test of anything. They live here instead; the unit tier checks
+%   only hand-computed or published expecteds and never reads this JSON.
+%
+%   ─── SEMANTICS OF BRANDT'S THREE LAPSE COLUMNS (live-xls verified) ──────
+%     AS = alpha_dry          delta_0 basis, normalized to T_SL_dry = 15,000
+%     AT = alpha_AB           delta_0 basis, normalized to T_SL_AB  = 23,770
+%     AU = alpha_eff_on_TAB   effective lapse on the T_SL_AB axis; for a
+%                             100 %-AB row AU = AT, for the 0 %-AB cruise row
+%                             AU = AS*(T_dry/T_AB)
+%   The framework's Mattingly alpha_AB compares against AT; a dry/mil point
+%   (cruise) compares against AU.
+%
+%   ─── SOURCES ────────────────────────────────────────────────────────────
+%     [Brandt]    F-16A.xls (Consts / Engn(s) / Main / Miss tabs)
+%     [Mattingly] Aircraft Engine Design 2nd ed., AIAA, 2002 (Eq. 2.54 lapse,
+%                 Eq. 3.55 TSFC, Eq. D.6 TR, Table C.4)
+%     [Raymer]    Aircraft Design (Table 3.3; Eq. 10.11/10.13/10.15)
+%     [T.O.]      T.O. 1F-16A-1, Sec. I
+%
+%   NOT A TEST: informational only, never pass/fail, and no value here may
+%   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
 sizing_root = fileparts(fileparts(script_dir));
@@ -172,67 +187,84 @@ end
 % ── Engine constants (positive controls -- same spec datum both sides) ───── %
 T = [T; srow('[ENGINE CONSTANTS -- positive controls]')];
 T = [T; prow('T_SL_wet (AB SLS thrust) [lbf]', 'L2', p2.T_SL_wet, gt.T_SL_wet_lb.value, ...
-    'T.O. 1F-16A-1 Sec.I', 'Brandt Main!D29', '%.1f', 'Spec input echoed both sides -- should match exactly.')];
+    'T.O. 1F-16A-1 Sec.I', 'Brandt Main!D29', '%.1f', 'Spec input echoed both sides -- should match exactly.', '')];
 T = [T; prow('T_SL_mil (dry SLS thrust) [lbf]', 'L2', p2.T_SL_mil, gt.T_SL_mil_lb.value, ...
-    'T.O. 1F-16A-1 Sec.I', 'Brandt Main!C29', '%.1f', 'Spec input echoed both sides -- should match exactly.')];
+    'T.O. 1F-16A-1 Sec.I', 'Brandt Main!C29', '%.1f', 'Spec input echoed both sides -- should match exactly.', '')];
 T = [T; prow('TR (throttle ratio)', 'L2', p2.TR, brandt_TR, ...
-    'Mattingly Eq.D.6 (T_t4_SLS unknown->1.0)', 'Brandt Engn(s)!S1', '%.4f', 'Should match exactly (both 1.0).')];
+    'Mattingly Eq.D.6 (T_t4_SLS unknown->1.0)', 'Brandt Engn(s)!S1', '%.4f', 'Should match exactly (both 1.0).', '')];
 
 % ── Nacelle sizing (Brandt Engn(s) formula, positive control) ───────────── %
 D_nac = sqrt(p2.T_SL_wet / 1900);   % Brandt Engn(s) D = sqrt(T_AB_SLS/1900)
 L_nac = 4.5 * D_nac;                % Brandt Engn(s) L = 4.5*D
 T = [T; srow('[NACELLE SIZING -- Brandt Engn(s) formula reproduced as positive control]')];
 T = [T; prow('Nacelle diameter D=sqrt(T_AB/1900) [ft]', 'L2', D_nac, gt.nacelle.diameter_ft.value, ...
-    'Raymer Eq.10.12 ~3.8 (unwired)', 'Brandt Engn(s) D_nac', '%.4f', 'Same formula/inputs as Brandt -- near-exact match expected.')];
+    'Raymer Eq.10.12 ~3.8 (unwired)', 'Brandt Engn(s) D_nac', '%.4f', 'Same formula/inputs as Brandt -- near-exact match expected.', '')];
 T = [T; prow('Nacelle length L=4.5*D [ft]', 'L2', L_nac, gt.nacelle.length_ft.value, ...
-    'T.O. 1F-16A-1 total length 15.93', 'Brandt Engn(s) L_nac', '%.4f', 'Same formula/inputs as Brandt; T.O. total engine length 15.93 ft is an independent anchor.')];
-
+    'T.O. 1F-16A-1 total length 15.93', 'Brandt Engn(s) L_nac', '%.4f', 'Same formula/inputs as Brandt; T.O. total engine length 15.93 ft is an independent anchor.', '')];
 % ════════════════════════════════════════════════════════════════════════ %
-%  DISPLAY
+%  DISPLAY + EXPORT — all four discipline reports share one renderer
+%  (src/reporting/ComparisonReport.m), so their columns cannot drift apart.
 % ════════════════════════════════════════════════════════════════════════ %
-now_str = char(datetime('now', 'Format', 'yyyy-MM-dd'));
-BAR     = repmat('=', 1, 120);
 
-fprintf('\n%s\n', BAR);
-fprintf('  F-16A BLOCK 10 -- PROPULSION vs BRANDT GROUND TRUTH\n');
-fprintf('  Generated %s  |  Source: VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.propulsion]\n', now_str);
-fprintf('  NOT A TEST -- informational only. Mattingly (framework) vs Brandt Engn(s) are DIFFERENT models; large %%Diff is often expected.\n');
-fprintf('%s\n\n', BAR);
+meta = struct( ...
+    'title',         'F-16A Block 10/15 — Propulsion vs Ground Truth', ...
+    'aircraft',      'F-16A Block 10/15', ...
+    'generated',     char(datetime('now', 'Format', 'yyyy-MM-dd')), ...
+    'condition',     'Six Brandt constraint-analysis flight conditions (Consts rows 23-28).', ...
+    'referenceDesc', ['Brandt F-16A.xls workbook outputs, via ' ...
+                      '`VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.propulsion`], each row ' ...
+                      'cited to a `Consts` / `Engn(s)` cell.'], ...
+    'secondDesc',    ['the corresponding independent figure where one exists — Mattingly''s ' ...
+                      '**uninstalled** TSFC coefficients, Raymer Table 3.3''s categorical L1 TSFC, ' ...
+                      'or the T.O. 1F-16A-1 nacelle length. Blank where the only source is Brandt.'] );
 
-disp(T);
+meta.preamble = { ...
+    ['**There is no L3 propulsion tier, by decision.** Geometry, aerodynamics and weights are ' ...
+     'L1/L2/L3; propulsion is L1/L2. The L3 rung pairs `F16AeroL3` with `F16PropL2`, so **every L2 ' ...
+     'row below IS the L3 result** — an "L3 propulsion" number anywhere in this project is computed ' ...
+     'by `F16PropL2`.'], ...
+    ['**These are two different engine models, not one model checked twice.** The framework uses ' ...
+     'Mattingly Eq. 2.54 (lapse) and Eq. 3.55 (TSFC); Brandt uses his own `Engn(s)` formulas. A large ' ...
+     '%Diff is frequently the expected answer — read the Notes column before treating one as an error.'], ...
+    ['**Installed vs uninstalled is the trap in this discipline.** Brandt''s stored SLS TSFCs ' ...
+     '(0.70 mil / 2.20 AB) are **already installed** — they include the 1.08 factor. Compare them ' ...
+     'against the framework''s *installed* rows; applying 1.08 on top of them double-counts.'] };
 
-fprintf('  KEY NOTES\n');
-fprintf('  - alpha_AB: framework Mattingly Eq.2.54 vs Brandt Consts AT. Best agreement above-TR (supersonic dash / Ps);\n');
-fprintf('    worst below-TR at cruise/max_alt (Mattingly has no below-TR Mach correction, Brandt does). Not a bug.\n');
-fprintf('  - L1 sigma^m has no Mach term at all -- compared against AT for reference; diverges at extreme alt / supersonic.\n');
-fprintf('  - TSFC: Brandt 0.70 (mil) / 2.20 (AB) are INSTALLED (already x1.08). Compare the framework INSTALLED rows;\n');
-fprintf('    do NOT double-apply 1.08 (todo.md 2026-07-24 entry 4). Mattingly over-predicts mil SLS, under-predicts AB ref.\n');
-fprintf('  - Engine constants / nacelle rows are positive controls (same spec/formula both sides) -> should match near-exactly.\n');
-fprintf('\n%s\n\n', BAR);
+ComparisonReport.show(T, meta);
 
-% ════════════════════════════════════════════════════════════════════════ %
-%  EXPORT
-% ════════════════════════════════════════════════════════════════════════ %
 out_json = fullfile(script_dir, 'propulsion_brandt_comparison.json');
 out_md   = fullfile(script_dir, 'propulsion_brandt_comparison.md');
-
-data.generated = now_str;
-data.aircraft  = 'F-16A Block 10';
-data.source    = 'VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json [.propulsion]';
-data.rows      = table_to_rows(T);
-
-fid = fopen(out_json, 'w');
-fprintf(fid, '%s', jsonencode(data, 'PrettyPrint', true));
-fclose(fid);
+ComparisonReport.writeJson(T, out_json, meta);
+ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);
-
-write_markdown(T, out_md, now_str);
 fprintf('  Markdown -> %s\n\n', out_md);
 
 T_all = T;
+
 end
 
-% ─── local helpers ───────────────────────────────────────────────────── %
+% ─── local helpers: thin wrappers over the shared renderer ───────────────── %
+
+function T = prow(name, fidelity, computed, reference, second, cite, numfmt, notes, divergence)
+%PROW  One comparison row. See ComparisonReport.row for the column semantics.
+%   `divergence` was added when the four reports were unified -- this report had
+%   no such column, so its cross-model rows had no way to say "expected".
+%
+%   DEFAULT IS 'BY DESIGN', which inverts the other three reports on purpose:
+%   almost every row here compares the framework's MATTINGLY model against
+%   Brandt's own ENGN(S) model, so "expected to differ" is the norm rather than
+%   the exception. The genuine agreement checks -- spec passthroughs and rows
+%   using Brandt's own formula on Brandt's own inputs -- pass '' explicitly.
+    if nargin < 8; notes      = ''; end
+    if nargin < 9; divergence = 'BY DESIGN'; end
+    T = ComparisonReport.row(name, fidelity, computed, reference, cite, numfmt, notes, second, divergence);
+end
+
+function T = srow(label)
+%SROW  Section separator row.
+    T = ComparisonReport.section(label);
+end
+
 
 function note = matt_vs_brandt_note(theta_0)
 %MATT_VS_BRANDT_NOTE  Per-condition note on the Mattingly-vs-Brandt alpha_AB gap.
@@ -247,77 +279,3 @@ function note = matt_vs_brandt_note(theta_0)
     end
 end
 
-function T = prow(name, fidelity, computed, brandt, other, src, numfmt, notes)
-%PROW  One comparison row: Fidelity | Computed | Brandt | %Diff | OtherSource | Source | Notes.
-%   other is a preformatted text field (secondary Brandt column, Mattingly/
-%   Raymer/T.O. reference, etc.).
-    if nargin < 8; notes = ''; end
-    comp_s = fmtNum(computed, numfmt);
-    brt_s  = fmtNum(brandt,   numfmt);
-    if ~isnan(computed) && ~isnan(brandt) && brandt ~= 0
-        err_s = sprintf('%+.2f%%', 100*(computed - brandt)/brandt);
-    else
-        err_s = ' - ';
-    end
-    T = table({fidelity}, {comp_s}, {brt_s}, {err_s}, {char(other)}, {src}, {notes}, ...
-        'VariableNames', {'Fidelity', 'Computed', 'Brandt', 'PctDiff', 'OtherSource', 'Source', 'Notes'}, ...
-        'RowNames', {name});
-end
-
-function s = fmtNum(v, numfmt)
-%FMTNUM  Format a numeric value, or 'N/A' when NaN.
-    if isnan(v)
-        s = 'N/A';
-    else
-        s = sprintf(numfmt, v);
-    end
-end
-
-function T = srow(label)
-%SROW  Section separator row.
-    T = table({'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, {'---'}, ...
-        'VariableNames', {'Fidelity', 'Computed', 'Brandt', 'PctDiff', 'OtherSource', 'Source', 'Notes'}, ...
-        'RowNames', {label});
-end
-
-function rows = table_to_rows(T)
-%TABLE_TO_ROWS  Convert the comparison table to a struct array for jsonencode.
-    n = height(T);
-    for r = n:-1:1
-        rows(r).parameter   = T.Properties.RowNames{r};
-        rows(r).Fidelity    = T.Fidelity{r};
-        rows(r).Computed    = T.Computed{r};
-        rows(r).Brandt      = T.Brandt{r};
-        rows(r).PctDiff     = T.PctDiff{r};
-        rows(r).OtherSource = T.OtherSource{r};
-        rows(r).Source      = T.Source{r};
-        rows(r).Notes       = T.Notes{r};
-    end
-end
-
-function write_markdown(T, out_path, now_str)
-%WRITE_MARKDOWN  Render the comparison table as a markdown file.
-    fid = fopen(out_path, 'w');
-    fprintf(fid, '# F-16A Block 10 — Propulsion vs Brandt Ground Truth\n\n');
-    fprintf(fid, 'Generated %s.\n\n', now_str);
-    fprintf(fid, ['Source: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.propulsion`] ' ...
-        '(Brandt-workbook outputs, cited per cell).\n\n']);
-    fprintf(fid, ['This is a **comparison report**, not a test — no pass/fail assertions, not in `run_all_tests`. ' ...
-        'The framework''s Mattingly engine model (Eq. 2.54 lapse / Eq. 3.55 TSFC) and Brandt''s Engn(s) model are ' ...
-        '**different models**, so a large %%Diff is frequently **expected** (see Notes), not a defect. ' ...
-        'Brandt SLS TSFCs 0.70/2.20 are **installed** (already ×1.08) — compare the framework installed rows.\n\n']);
-    fprintf(fid, '| Parameter | Fidelity | Computed | Brandt | %%Diff | Other source | Source | Notes |\n');
-    fprintf(fid, '|---|---|---|---|---|---|---|---|\n');
-    n = height(T);
-    for r = 1:n
-        name = T.Properties.RowNames{r};
-        if strcmp(T.Computed{r}, '---')
-            fprintf(fid, '| **%s** | | | | | | | |\n', strrep(name, '|', '\|'));
-        else
-            fprintf(fid, '| %s | %s | %s | %s | %s | %s | %s | %s |\n', ...
-                strrep(name, '|', '\|'), T.Fidelity{r}, T.Computed{r}, T.Brandt{r}, T.PctDiff{r}, ...
-                strrep(T.OtherSource{r}, '|', '\|'), strrep(T.Source{r}, '|', '\|'), strrep(T.Notes{r}, '|', '\|'));
-        end
-    end
-    fclose(fid);
-end
