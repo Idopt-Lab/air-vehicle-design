@@ -58,15 +58,33 @@ the reference. `F16AeroL2/L3` also receive an injected geometry object (dependen
 owns no geometry.
 
 **Inputs** come from the unified per-level JSON `examples/F16A/f16a_L{1,2,3}.json` (one file per
-level, `.geometry`/`.aerodynamics`/`.propulsion` blocks; `f16a_spec_path(level)`; constructors
-require the path — no silent default). Geometry, aerodynamics, and propulsion all read this unified
-JSON (the `.propulsion` block lives in `f16a_L{1,2}.json` — propulsion is L1/L2 only); only weights
-still uses its own older per-discipline input style.
+level, `.geometry`/`.aerodynamics`/`.propulsion`/`.weights` blocks; `f16a_spec_path(level)`;
+constructors require the path — no silent default). Geometry, aerodynamics, propulsion **and weights**
+all read this unified JSON (the `.propulsion` block lives in `f16a_L{1,2}.json` — propulsion is L1/L2
+only). The older per-discipline weights input style is gone as of 2026-07-25 (Phase-4 weights
+redesign).
+
+**Requirements** are a *second*, fidelity-independent input file: `examples/F16A/f16a_requirements.json`,
+resolved by `examples/F16A/f16a_requirements_path.m` (no `level` argument — that absence is the
+documentation that requirements do not vary with fidelity). It holds what the aircraft must **do**
+(`cruise.altitude_ft`, `cruise.mach`, `design_mach`); spec data — what the aircraft **is** — stays in
+`f16a_L{1,2,3}.json`. Consumers today: `F16WeightsL2`, `F16WeightsL3`, `F16GeomL1`. It is expected to
+grow into the full requirement set with constraint and mission analysis. See "Step 0" below — this is
+the partial revival of the Step-0 `requirements.json`.
 
 **Tier count per discipline (as of 2026-07-25):** Geometry, Aerodynamics and Weights are L1/L2/L3.
 **Propulsion is L1/L2 only** — there is no `PropL3`/`PropulsionModelL3`/`F16PropL3` and none is
-planned; the L3 rung pairs `F16AeroL3` with `F16PropL2`, and L3 propulsion figures in any report must
-be labelled "computed by `F16PropL2`".
+planned; the L3 rung pairs `F16AeroL3` **and `F16WeightsL3`** with `F16PropL2`, and L3 propulsion
+figures in any report must be labelled "computed by `F16PropL2`".
+
+**Weights dependency injection (2026-07-25).** `F16WeightsL2(json_path, req_path, geom, prop)` with
+`geom` = `F16GeomL2`; `F16WeightsL3(json_path, req_path, geom, prop)` with `geom` = **`F16GeomL3`**.
+Both `prop` = `F16PropL2`. All four arguments required at both levels; the `geom` type guard sits at
+the L2/L3 **enforcer** (`GeometryModelL2` / `GeometryModelL3`), not at `GeometryBase`, so a wrong tier
+fails at construction instead of resolving property names to different physical quantities mid-run.
+`F16WeightsL1(json_path)` injects nothing — its two regressions take only `W_TO` and
+`aircraft_category`. No `AircraftState` is injected anywhere in weights: `F16WeightsL3` reads the
+cruise condition from the requirements file and builds the state itself.
 
 Geometry's L3 tier was eliminated on 2026-07-22, reinstated on 2026-07-24, and **promoted on
 2026-07-25 to the full L3 geometry tier** consumed by L3 geometry, aerodynamics and weights. It is the
@@ -115,18 +133,21 @@ air_vehicle_design/sizing/
 │   └── constraints/     TestConstraintAnalysis.m, TestF16ConstraintSet.m, TestConstraintSetImporter.m,
 │                        Test{Thrust,Takeoff,Landing,Stall}Constraint.m
 ├── examples/F16A/       (flat — no disciplines/ subfolders)
-│   ├── f16a_L1.json, f16a_L2.json, f16a_L3.json     ← unified per-level inputs (.geometry/.aerodynamics/.propulsion; .propulsion in L1/L2 only)
+│   ├── f16a_L1.json, f16a_L2.json, f16a_L3.json     ← unified per-level SPEC inputs (.geometry/.aerodynamics/.propulsion/.weights; .propulsion in L1/L2 only)
 │   ├── f16a_spec_path.m
+│   ├── f16a_requirements.json, f16a_requirements_path.m   ← fidelity-INDEPENDENT REQUIREMENTS (cruise condition, design_mach); read by F16WeightsL2/L3 + F16GeomL1
 │   ├── F16GeomL1.m, F16GeomL2.m, F16GeomL3.m
 │   ├── F16AeroL1.m, F16AeroL2.m, F16AeroL3.m
 │   ├── F16PropL1.m, F16PropL2.m
 │   ├── F16WeightsL1.m, F16WeightsL2.m, F16WeightsL3.m
 │   ├── F16ConstraintSet.m, Constraints.xlsx, run_F16_constraint_diagram.m
-│   ├── {geometry,aerodynamics,propulsion}_brandt_comparison.m (+ .json/.md), fidelity_comparison.m (+ .json/.xlsx)
+│   ├── {geometry,aerodynamics,propulsion,weights}_brandt_comparison.m (+ .json/.md), fidelity_comparison.m (+ .json/.xlsx)
 │   └── per-file companion .md docs
-├── VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth (.geometry/.aerodynamics/.propulsion)
+├── VnV/BrandtF16A/
+│   ├── GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth (.geometry/.aerodynamics/.propulsion/.weights)
+│   └── todo.md                             ← dated discrepancy / open-decision log (user-review items)
 ├── baseline/            F16Baseline.m, extract_brandt.m   (deprecated)
-└── docs/                PLAN.md, {aerodynamics,geometry,propulsion}_parameter_usage.md,
+└── docs/                PLAN.md, {aerodynamics,geometry,propulsion,weights}_parameter_usage.md,
                          subplans/01_aircraft_state … 08_sizing.md
 ```
 
@@ -161,12 +182,12 @@ Status reflects the code tree (this table historically went stale — trust `git
 
 | Step | Title | Subplan | Status |
 |------|-------|---------|--------|
-| 0 | Inputs + Test Infrastructure | *(superseded — see below)* | Superseded |
+| 0 | Inputs + Test Infrastructure | *(superseded; `requirements.json` half PARTLY revived 2026-07-25 — see below)* | Superseded |
 | 1 | AircraftState | [01_aircraft_state.md](subplans/01_aircraft_state.md) | Done |
 | 2 | Geometry (L1/L2) | [02_geometry.md](subplans/02_geometry.md) | Done |
 | 3 | Aerodynamics (L1/L2/L3) | [03_aerodynamics.md](subplans/03_aerodynamics.md) | Done |
 | 4 | Propulsion (L1/L2) | [04_propulsion.md](subplans/04_propulsion.md) | Done |
-| 5 | Weights (L1/L2/L3) | [05_weights.md](subplans/05_weights.md) | Done |
+| 5 | Weights (L1/L2/L3) | [05_weights.md](subplans/05_weights.md) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
 | 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Done |
 | 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Not started |
 | 8 | Sizing | [08_sizing.md](subplans/08_sizing.md) | Not started |
@@ -175,10 +196,31 @@ Status reflects the code tree (this table historically went stale — trust `git
 
 ### Step 0 — Inputs & Test Infrastructure (superseded)
 
-The originally-planned two-file JSON data model (`requirements.json` + `aircraft_spec.json`) was
-never built. As implemented:
-- **Discipline inputs**: the unified per-level `examples/F16A/f16a_L{1,2,3}.json` (`.geometry`/
-  `.aerodynamics` blocks; resolved via `f16a_spec_path`).
+**CORRECTED 2026-07-25 — the two-file model is now PARTLY REAL.** This section previously read "the
+originally-planned two-file JSON data model (`requirements.json` + `aircraft_spec.json`) was never
+built." The **requirements half now exists**: `examples/F16A/f16a_requirements.json` +
+`examples/F16A/f16a_requirements_path.m`, introduced by the Phase-4 weights redesign (2026-07-25),
+because the design max Mach existed in three places and the cruise condition existed in none that a
+weights class could reach. It is **minimal** — `cruise.altitude_ft`, `cruise.mach`, `design_mach`, i.e.
+only what weights needed — and it is fidelity-independent by design (no `_L{1,2,3}` suffix, no `level`
+argument on the resolver). The `aircraft_spec.json` half was **not** revived: spec data stays in the
+unified per-level `f16a_L{1,2,3}.json`.
+
+The boundary the two files enforce: **requirements = what the aircraft must DO; spec = what the
+aircraft IS.** Reference areas, AR, taper, sweep, t/c, fuselage envelope, thrust and engine model are
+spec and must never migrate into the requirements file — it is fidelity-independent and will become the
+most cross-cut input in the repo once constraint and mission analysis extend it.
+
+Known residual duplication: `design_mach` is now the single source for `F16WeightsL2`, `F16WeightsL3`
+and `F16GeomL1`, but a full consolidation of every requirement-like value is still pending
+(`VnV/BrandtF16A/todo.md` 2026-07-25 Phase 4 §P4-14), and the value 2.0 must be cited to **Brandt**
+`Main! aircraft.Mmax`, **not** to the T.O. 1F-16A-1 Mach limit, which is a different number, 2.05
+(§P4-13).
+
+As implemented:
+- **Discipline spec inputs**: the unified per-level `examples/F16A/f16a_L{1,2,3}.json` (`.geometry`/
+  `.aerodynamics`/`.propulsion`/`.weights` blocks; resolved via `f16a_spec_path(level)`).
+- **Requirements**: `examples/F16A/f16a_requirements.json` (via `f16a_requirements_path()`).
 - **Constraint conditions**: `examples/F16A/Constraints.xlsx`, read via `ConstraintSetImporter`.
 - **Validation ground truth**: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`.
 - **Test runner**: `tests/run_all_tests.m`.
@@ -215,7 +257,22 @@ See [subplans/04_propulsion.md](subplans/04_propulsion.md). **STOP after tests p
 
 ### Step 5 — Weights
 
-See [subplans/05_weights.md](subplans/05_weights.md). **STOP after tests pass.**
+See [subplans/05_weights.md](subplans/05_weights.md) — rewritten to as-built 2026-07-25.
+**STOP after tests pass.**
+
+As built (Phase-4 redesign, 2026-07-25): L1 = `[Raymer 7th ed. Table 3.1]` power law +
+`[Roskam Part I Eq. 2.16]` minimum bound; L2 = `[Raymer 7th ed. Table 15.2]` psf × area +
+`[AE481 metabook Sec. 7]` fractions; L3 = `[Raymer 7th ed. §15.3.1, Eqs. 15.1–15.24]` component
+build-up on a `[Raymer 7th ed. Eq. 10.10]` dry engine weight. `OEW(31377)` = 19110.3126 (L1) /
+15664.6483 (L2) / 15705.3313 (L3) lbf against `Brandt Wt!B12` = 19980.700578.
+Property split: L1 5 inputs / 0 derived; L2 7 inputs + 2 injected objects / 12 `Dependent`;
+L3 43 inputs + 2 injected objects / 31 `Dependent`.
+Two standing labelled-red TO-DOs remain by design (Raymer Table 6.1 coefficients absent from the repo;
+every §15.3.1 exponent unverified against the printed book), plus open user decisions on the `K_d = 0`
+silent zero, the uncited `0.95` landing-weight factor and the uncited 6.7 lb/gal fuel density — all
+enumerated in `subplans/05_weights.md` §8 and `VnV/BrandtF16A/todo.md`.
+Comparison report: `examples/F16A/weights_brandt_comparison.{m,json,md}` — informational, 45 data rows
+in 7 sections, **not** in `run_all_tests`.
 
 ---
 

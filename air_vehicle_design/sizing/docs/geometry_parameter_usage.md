@@ -90,13 +90,24 @@ comment text and are stale.
 
 ---
 
-## Weights — geometry hardcoded independently (not DI yet)
+## Weights — geometry arrives by DI (Phase 4, landed 2026-07-25)
 
-`F16WeightsL2/L3` carry their own cited geometry constants; nothing reads a geometry object. The
-`[P4]` column gives the geometry member the **Phase 4** DI must read — and the three name traps that
-make a naive `geom.<same name>` wiring silently wrong.
+**This section previously read "geometry hardcoded independently (not DI yet)". That is no longer
+true.** `F16WeightsL2` injects `F16GeomL2` and `F16WeightsL3` injects `F16GeomL3`; the ~22 frozen
+geometry constants they used to carry are gone (review finding #11). Constructors are
+`F16WeightsL{2,3}(json_path, req_path, geom, prop)`, every argument required.
 
-| Weights quantity | Weights property | Used by | Citation | `[P4]` geometry member (on `F16GeomL3`) |
+The last column is now the **as-built** wiring, not a Phase-4 target. The three name traps it calls
+out are real and were the main hazard in doing this: each wrong-but-valid wiring produces a plausible
+number rather than an error. Two entries below are corrected against as-built:
+
+- `AR_exposed_ht` / `lambda_exposed_ht` are **NOT wired** — `todo` §P4-6 proved the weights-side
+  `AR_ht` / `lambda_ht` were dead, and both properties were deleted rather than re-pointed.
+  `isprop(w3,'AR_ht')` is 0.
+- `S_wet_fus` at L2 comes from `geom.get_S_wet_fuselage()` = **730.3023** (the L2 fuselage,
+  `L_fus` = 46.5); the 749.1337 in the row below is the **L3** figure at `L_fus` = 47.5.
+
+| Weights quantity | Weights property | Used by | Citation | Geometry member, AS BUILT (`F16GeomL3` unless noted) |
 |---|---|---|---|---|
 | exposed wing area, AR, LE sweep, taper, `tc_root`, `S_csw` | `S_w`, `AR_w`, `Lambda_LE_w`, `lambda_w`, `tc_root`, `S_csw` | `WeightsL3.wing` | Raymer Eq. 15.1 | `S_exposed_wing` (196.2261), `AR_wing`, `LE_sweep_wing`, `lambda_wing`, `tc_r_wing`, `S_csw` |
 | fuselage `S_wet`, length, **depth**, width | `S_wet_fus` (L2), `L_fus`, `D_fus`, `W_fus` | `WeightsL2.weight_fuselage` / `WeightsL3.fuselage` | Raymer Table 15.2 / Eq. 15.4 | `get_S_wet_fuselage()` (749.1337), `L_fus` (**47.5**), **`H_max_fuselage` = 5.0 — NOT `geom.D_fus` = 6.0**, `W_max_fuselage` |

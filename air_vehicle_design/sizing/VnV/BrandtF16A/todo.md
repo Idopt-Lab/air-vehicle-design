@@ -1640,6 +1640,618 @@ still shows as `M` in `git status`; the hygiene decision (restore or commit) is 
 
 ---
 
+## 2026-07-25 — Phase 4 (weights redesign), scribe documentation gate
+
+**Context:** documentation gate for Phase 4 (`~/.claude/plans/serene-conjuring-kitten.md` Phase 4 =
+`~/.claude/plans/jiggly-tickling-bonbon.md` steps 2b-wts-redo → 2c → 2d), which resumes the weights
+redesign paused in July. Docs-only pass — **no `.m` or `.json` file was changed.** Deliverables:
+`examples/F16A/F16Weights{L1,L2,L3}.md` rewritten to the Phase-4 target, `docs/weights_parameter_usage.md`
+rewritten, and the `weights_brandt_comparison` report spec written into `F16WeightsL2.md` §G.
+
+Sources cross-checked this pass: the live weights code (`src/base/WeightsBase.m`,
+`src/disciplines/weights/Weights{L1,L2,L3,ModelL1,ModelL2,ModelL3}.m`,
+`examples/F16A/F16Weights{L1,L2,L3}.m`), the three tests (read for citations only, never for expected
+values), `examples/F16A/f16a_L{1,2,3}.json`, `examples/F16A/F16GeomL3.m`/`.md`,
+`examples/F16A/F16PropL2.m`, `src/disciplines/propulsion/PropL2.m`,
+`GroundTruth/f16a_ground_truth.json` `.weights`, `readme_wt.md`, `GroundTruth/cell-map.md`, and the
+repo extracts `temp_AI/docs/disciplines/reference_extracts/{metabook_data.md, raymer_data.md,
+roskam_vol1_data.md}`.
+
+**Live workbook read performed this pass** (Excel COM `actxserver`, read-only, closed without saving,
+`GroundTruth/Brandt-F16-A.xls`) — 34 `Wt`-tab cells plus `'Engn(s)'`/`'Engn(s) Old'` engine-factor
+cells. §P4-0 records the verification; every ground-truth `Wt` value the comparison report will use is
+now cell-verified, not doc-transcribed.
+
+### §P4-0 — Wt-tab ground truth: LIVE-VERIFIED, no discrepancy (record, no action)
+
+Every `.weights` value in `GroundTruth/f16a_ground_truth.json` matches the live workbook. Values and
+formulas verbatim:
+
+| Cell | Live value | Live formula | GT records |
+|---|---|---|---|
+| `Wt!B3` | 31377.000000 | `=Main!O15` | 31377.00 ✅ |
+| `Wt!B4` | 700.000000 | `=Main!O16` | 700.0 ✅ |
+| `Wt!B5` | 4400.000000 | `=Main!O17` | 4400.0 ✅ |
+| `Wt!B6` | 6296.299422 | `=B3-B4-B5-B12` | 6296.30 ✅ |
+| `Wt!B9` | 6722.874315 | `=SUM(C9:H9)` | 6722.87 ✅ |
+| `Wt!C7:H7` | 6.75 / 5.0 / 6.0 / 6.0 (`=E7`) / 4.5 / 4.5 | literals | ✅ |
+| `Wt!C9` | 1785.946837 | `=Main!B18*C7/7*0.04*(Main!Q27^0.2)*(Main!B19^1.8)*((1+Main!B20)^0.5)/((Main!B22/100-INT(Main!B22/100))^0.7)/COS(Main!B21/57.29578)*Main!O27/100*MAX(1,(Main!L10-Main!L8)/Main!L7/8)` | 1785.95 ✅ |
+| `Wt!D9` | 3652.110000 | `=D7*Geom!B3*Main!O27/100*MAX(1,Main!B32/(Main!C32*Main!D32)^0.5/19)` | 3652.11 ✅ |
+| `Wt!E9` | 648.000000 | `=E7*Main!C18*Main!O27/100` | 648.00 ✅ |
+| `Wt!F9` | 360.000000 | `=F7*Main!H18*Main!O27/100*MAX(1+IF(Main!H24>0,1,0),1)` | 360.00 ✅ |
+| `Wt!G9` | 186.817478 | `=Geom!B4*Wt!G7*Main!O27/100` | 186.82 ✅ |
+| `Wt!H9` | 90.000000 | `=H7*Main!D18*Main!O27/100` | 90.00 ✅ |
+| `Wt!B10` | 15250.470578 | `=B9+SUM(B23:B31)` | 15250.47 ✅ |
+| `Wt!B11`/`B22` | 4730.230000 | `=IF(Main!C29=Main!D29,'Engn(s) Old'!D11*Main!B28*Main!C29,'Engn(s) Old'!D22*Main!B28*Main!D29)` / `=B11` | 4730.23 ✅ |
+| **`Wt!B12`** | **19980.700578** | `=SUM(B10:B11)` | **19980.70 ✅** |
+| `Wt!B23` | 1066.818000 | `=B8`, where `B8` = `=B3*F23` and `F23` = **0.034** | 1066.82 ✅ |
+| `Wt!B24` | 728.588163 | `=B20*F24`, `F24` = 3.9, `B20` = `=G9` | 728.60 (rounds 728.59 → 728.60; 0.0016 % — noted, not an issue) |
+| `Wt!B25` | 472.435405 | `=F25*Main!O$15+Main!F18/Main!B18*Wt!C7*200`, `F25` = 0.012 | 472.44 ✅ |
+| `Wt!B26` | 533.409000 | `=F26*Main!O$15`, `F26` = 0.017 | 533.41 ✅ |
+| `Wt!B27` | 367.110900 | `=F27*Main!O$15`, `F27` = 0.0117 | 367.11 ✅ |
+| `Wt!B28` | 360.835500 | `=F28*Main!O$15`, `F28` = 0.0115 | 360.84 ✅ |
+| `Wt!B29` | 2016.862295 | `=B9*F29`, `F29` = 0.3 | 2016.86 ✅ |
+| `Wt!B30` | 2541.537000 | `=F30*Main!O$15`, `F30` = 0.081 | 2541.54 ✅ |
+| `Wt!B31` | 440.000000 | `=Main!O17*Wt!F31`, `F31` = 0.1 | 440.00 ✅ |
+| `Wt!B38` | 31377.000000 | `=SUM(B16:B37)` | 31377.00 ✅ |
+| `Wt!B41` | **20680.700578** | `=SUM(B16:B32)` | see §P4-5a |
+
+Engine-factor chain: `'Engn(s) Old'!D22` = 0.199000 = `='Engn(s)'!D22`, and **`'Engn(s)'!D22` = 0.199
+is the bare literal**; label `'Engn(s) Old'!C22` = `"Engine with AB:  Weng = "`. `'Engn(s) Old'!D11` =
+0.199 = `='Engn(s)'!D10`. `readme_wt.md:230` attributes 0.199 to "Brandt 1997, Table 6.2" but gives
+**no cell** — the cell is now on record here. (Same `Engn(s)` vs `Engn(s) Old` split already flagged
+for the `L_engine` 4.5 factor in §18.)
+
+**No VnV-internal disagreement found on the Wt tab.** §P4-1 … §P4-12 below are the items that *do*
+need a decision.
+
+### §P4-1 — ★ The `×1.3` installed-engine factor: the locked `W_en` decision is ambiguous in two places
+
+**(a) The Brandt alternate must NOT be multiplied by 1.3 — doc-vs-plan ambiguity.**
+`readme_wt.md:230` states verbatim: *"This is the **installed engine weight** formula for afterburning
+turbofan/turbojet engines (Brandt 1997, Table 6.2). Factor 0.199 lb per lb-thrust is for AB engines."*
+So `Wt!B11` = 4730.23 is **already installed**. The locked bullet
+(`jiggly-tickling-bonbon.md` Decisions → L2) reads: *"`W_en` via BOTH Brandt (`0.199·T_SL_AB`) +
+Raymer (Eq 10.10 … × **1.3** installed)"* — grammatically the `×1.3` attaches to the Raymer branch,
+but the sentence can be misread as applying to both.
+
+Live L2 `OEW(31377)` consequence: Raymer×1.3 → **15664.65**; Brandt as-is → **16787.35**; Brandt×1.3
+→ **18206.42**. The double-installed variant reads *closest* to `Wt!B12` = 19980.70 (−8.88 % vs
+−15.98 % vs −21.60 %), so an implementer optimising for agreement would pick the wrong one.
+
+**Documented in `F16WeightsL2.md` §D.5 as Raymer-only ×1.3.** **Confirm.**
+
+**(b) At L3 the `×1.3` DOUBLE-COUNTS §15.3.1's own installation items — plan-vs-code conflict.**
+The locked resolution says *"L3 engine weight → compute via Raymer (like L2 official): `W_en` = Eq
+10.10 uninstalled × 1.3 installed"*. But `WeightsL3.weight_engine_section` (`WeightsL3.m:105-130`)
+sums the dry engine **plus** mounts (15.7), firewall (15.8), section (15.9), induction (15.10),
+tailpipe (15.11), cooling (15.12), oil (15.13), controls (15.14) and starter (15.15) — and its own
+docstring (`:112-115`) says so: *"Raymer §15.3.1 gives the installation-hardware items … as ADDITIONS
+on top of the engine's own dry weight."* Raymer's nomenclature for Eq. 15.9's `W_en` is likewise the
+engine weight *each* (dry). Applying ×1.3 **and** adding Eqs. 15.7–15.15 counts the installation twice.
+
+Live L3 `OEW(31377)` at the §B target: `W_en` uninstalled 2775.0210 → **15564.95**; installed
+3607.5273 → **16405.68** (+840.73). Again the double-counted variant is closer to Brandt.
+
+**Documented in `F16WeightsL3.md` §D.2 as uninstalled at L3, installed at L2.** **This contradicts the
+literal text of the locked decision and must be confirmed or overridden by the user.** Not resolved.
+
+### §P4-2 — `prop.bypass_ratio` does not exist, so Raymer Eq. 10.10 cannot be evaluated as specified
+
+`f16a_L2.json .propulsion.bypass_ratio = 0.71` was added in Phase 3 explicitly *"for the Raymer Eq.
+10.10 engine-weight term that Phase 4 wires"*. But `F16PropL2` neither declares nor reads it —
+verified live 2026-07-25: `isprop(prop,'bypass_ratio')` = **0**. `F16PropL2.m:51-60`'s input block is
+`engine_type, T_SL, T_SL_mil, T_t4_max_F, TSFC_install_factor`, and its constructor (`:90-97`) reads
+exactly those five keys. `PropulsionBase` declares no BPR either.
+
+So Phase 4 must add `bypass_ratio` as an `F16PropL2` **input** property and read it in the
+constructor. That is a propulsion-file edit inside a weights phase — flagging it so it is not
+discovered mid-implementation. The key's own `_TODO_bypass_ratio` marker already records that 0.71 is
+not traceable to any repo document.
+
+Also note `f16a_L3.json` has **no `.propulsion` block at all**, which is correct (no L3 propulsion
+tier; `F16PropL2(f16a_spec_path(2))` serves the L3 rung) — so BPR reaches L3 weights via the L2 JSON
+through the injected object. **Not resolved.**
+
+### §P4-3 — Raymer Eq. 10.10 needs a design Mach, and L2 has none anywhere
+
+Eq. 10.10 is `W = 0.0637·T^1.1·M^0.25·e^(−0.81·BPR)`. `T` ← `prop.T_SL` ✅, `BPR` ← §P4-2 ❌, and
+**`M` has no source at L2**:
+
+- `f16a_L2.json .geometry` has **no** `M_max` key (only `f16a_L1.json .geometry.M_max = 2.0` does).
+- `f16a_L2.json .aerodynamics` has no Mach input.
+- `F16PropL2` exposes no Mach.
+- `f16a_L3.json` has it, buried at `.weights.vertical_tail.M_design = 2.0`.
+
+Three placement options, all defensible: (a) add `.weights.M_design: 2.0` at L2, mirroring L3;
+(b) promote it to a **top-level** JSON key alongside `aircraft_category`, since design max Mach is an
+aircraft *requirement* consumed by geometry (Raymer Table 4.1 `AR_eq` at L1), weights (Eqs. 15.3,
+15.17, 10.10) and potentially aero — this is the only option that removes a duplicate instead of
+adding a third copy; (c) put it in `.propulsion` and reach it through `prop`.
+
+**User decision. Not resolved.**
+
+### §P4-4 — Two L3 `[estimate]` inputs have a CITED geometry analog with a different value
+
+Both are cases where an unpinned weights estimate coexists with a cited `F16GeomL3` quantity of
+arguably the same meaning. The locked DI decision ("geometry OUT of `.weights` → injected geometry
+object") does not say whether these two count as geometry.
+
+| Weights input | Value | Citation | `F16GeomL3` analog | Analog value *(live)* | Analog citation | Live effect if wired |
+|---|---|---|---|---|---|---|
+| `L_d` (Eq. 15.10 duct length) | 7.5 ft | `[estimate; F-16 ventral inlet to engine face]` | `L_duct` | **14.0 ft** | `[Brandt Main!F32, label Main!E32 = "Compr Face"; readme_geom.md §3]` | air induction **227.54 → 429.01 lbf, +88.5 %**; `OEW` +201.47 |
+| `D_e` (Eqs. 15.10/15.11/15.12 engine exit dia.) | 3.33 ft | `[estimate, ≈40 in; verify T.O.]` | `D_exit` (= `D_inlet` = `sqrt(T_AB/1900)`) | **3.537022 ft** | `[Brandt Geom!C475; Engn(s)!L22 = 1900]` | induction +14.15, tailpipe +3.26, cooling +7.54; `OEW` +24.94 |
+
+Note the semantic caveats: `geom.L_duct` is inlet **lip → compressor face**, whereas Raymer's `L_d` is
+the inlet **duct** length — plausibly the same, not provably so. And `geom.D_exit` is the *nacelle*
+diameter from the `sqrt(T/1900)` correlation, while Raymer's `D_e` is the engine **front-face /
+nozzle-exit** diameter (`WeightsL3.m:284` says "nozzle exit diameter", `:277` says "engine face
+diameter" — the code itself is inconsistent about which). Wiring them trades two unpinned estimates
+for two cited-but-possibly-different quantities.
+
+**User decision. Not resolved.**
+
+### §P4-5 — Phase 3 deleted three L3 inputs whose consumers still read them, with NO replacement specified
+
+Phase 3 removed `W_l`, `V_t`, `SFC_mission` from `f16a_L3.json` as "Brandt outputs / derived /
+duplicates". `WeightsL3` still reads all three (`obj.W_l` at `:100,:102`; `obj.V_t` at `:135`;
+`obj.SFC_mission` at `:137`). Each needs a decision before the class can drop the hardcoded literal.
+
+**§P4-5a — `W_l` (landing weight, Eqs. 15.5/15.6).** AS-IS 20681 `[Brandt Wt!B41]`. Live
+`Wt!B41` = **20680.700578**, formula `=SUM(B16:B32)` — so (i) the literal is Brandt's own figure
+**rounded up by 0.2994 lbf** (+0.00145 %), and (ii) it is a Brandt *output*, the same class of value
+CLAUDE.md forbids as an input. Raymer §15.3.1 does not define `W_l` as a function of `W_TO`, so there
+is no in-framework derivation; the usual conceptual-design assumptions (`W_l = W_TO`, or
+`W_l = OEW + payload + reserve fuel`) are both uncited here. Live sensitivity: LG total **1057.27** at
+20681 vs **1176.27** at `W_l = W_TO = 31377` (+11.25 %), vs **1096.30** at
+`OEW + 700 + 0.5·fuel = 23828.85`. **Documented as: keep 20681 as an explicit input with its
+`[Brandt Wt!B41]` citation until the user picks a definition.** Not resolved.
+
+**§P4-5b — `V_t` (total fuel volume, Eq. 15.16). ★ The proposed derivation rests on an UNCITED fuel
+density.** AS-IS 940 gal, commented `F16WeightsL3.m:125` *"derived: 6296 lbf ÷ **6.7 lb/gal** ≈ 940
+gal; Brandt B6"*. Grepped `air_vehicle_design/sizing/` 2026-07-25: **6.7 lb/gal appears nowhere else**,
+and **no JP-4 / JP-5 / JP-8 fuel density is cited anywhere in the repo** — not in `metabook_data.md`,
+not in `raymer_data.md`, not in `readme_wt.md`, not in `F16Baseline.m`. So `V_t = W_energy / 6.7`
+would replace one cited input (Brandt-derived 940) with an **uncited constant**. The arithmetic also
+gives **939.746**, not 940 (−0.027 %), so the AS-IS literal is itself rounded. Eq. 15.16 is weakly
+sensitive (386.79 → 386.74 lbf), so this is a citation problem, not a numeric one. **The user must
+supply a cited fuel density** (or accept `V_t` staying an input). Not resolved.
+
+**§P4-5c — `SFC_mission` (Eq. 15.16). The Phase-3 rationale is factually wrong.**
+`f16a_L3.json .weights._not_inputs` states: *"SFC_mission [Main!C30] duplicates what
+`PropL2.get_TSFC` computes."* It does not duplicate it — the values disagree by 29–147 %, and no
+reference condition is specified. Computed live from the injected `F16PropL2`:
+
+| Path | Condition | 1/hr | vs Brandt 0.70 |
+|---|---|---|---|
+| `compute_TSFC_mil` | SLS, M = 0.01 | 0.9030 | +29.0 % |
+| `compute_TSFC_installed` (mil) | SLS, M = 0.01 | 0.9752 | +39.3 % |
+| `compute_TSFC_installed` (mil) | 36 kft, M = 0.9 | 1.0961 | +56.6 % |
+| `compute_TSFC_AB_installed` | 36 kft, M = 0.9 | 1.7266 | +146.7 % |
+| `PropL2.SFC_cruise_AB(0.71)` [Raymer Eq. 10.15] | 36 kft, M = 0.9 | 0.9113 | +30.2 % |
+
+Brandt's own 0.70 is a **stored, already-installed** SLS mil TSFC (`Main!C30`; see 2026-07-24
+propulsion entry 4 — do not double-apply the 1.08). Eq. 15.16's `((T·SFC)/1000)^0.249` moves the
+fuel-system weight 386.74 → 420.03 lbf (+8.6 %) across the 0.70 → 0.9752 span, i.e. +33 lbf on `OEW`.
+**The user must name the reference condition.** Not resolved.
+
+### §P4-6 — Two `F16WeightsL3` inputs are DEAD: `AR_ht` = 2.114 and `lambda_ht` = 0.390
+
+Neither is read by any equation. Verified by grep of `obj.AR_ht` / `obj.lambda_ht` across
+`src/disciplines/weights/` 2026-07-25: **zero matches**. Raymer Eq. 15.2 as coded
+(`WeightsL3.m:70-71`) takes only `(W_dg, N_z, S_ht, F_w, B_h)`.
+
+They are the reason `F16WeightsL3.m:69-72`'s `B_h` comment ends *"supersedes the earlier
+`sqrt(AR_ht*S_ht)` = 11.61 ft derivation, which is inconsistent with this reported value — AR_ht/S_ht
+above not reconciled"* — an unreconciled inconsistency between two properties **neither of which is
+used**. Phase 4 should **delete both**, not wire them to `geom.AR_exposed_ht` /
+`geom.lambda_exposed_ht`. (Distinct from 2026-07-24 GeomL3 §1, which is about whether the *geometry*
+tier's exposed AR/taper reconcile — that item stands on its own for the geometry side.)
+**Flagged for confirmation.**
+
+### §P4-7 — `WeightsL2.LG_fraction`: one uncited row, one missing row
+
+`WeightsL2.m:167-178` cites all three rows to "AE481 metabook §7". Checked against the extract's
+fraction table, `temp_AI/docs/disciplines/reference_extracts/metabook_data.md:328-334`:
+
+| Code row | Code value | Extract row | Extract value | Status |
+|---|---|---|---|---|
+| `jet_fighter` | 0.033 | Landing gear (fighter), `:330` | 0.033 | ✅ |
+| `jet_transport` | 0.043 | Landing gear (transport), `:332` | 0.043 | ✅ |
+| `general_aviation` | **0.057** | *(no GA row exists)* | — | ❌ **UNCITED** |
+| *(absent)* | — | Landing gear (Navy fighter), `:331` | 0.045 | ❌ **MISSING from code** |
+
+The GA 0.057 has no source in this repo, despite carrying an AE481 §7 citation; and the Navy-fighter
+0.045 that the extract *does* give is absent (`WeightsL2.m:14`'s header comment even mentions "0.045
+for Navy fighters", so the value was known and simply not added to the lookup). Neither affects the
+F-16. **Citation-integrity item. Not resolved.**
+
+### §P4-8 — Raymer Table 6.1 (L1) — STANDING TO-DO, coefficients not in the repo
+
+Restating for Phase 4 (originally 2026-07-24 §3c item 4). `WeightsL1.m:29,89` cites Raymer **Table
+3.1**; `docs/subplans/05_weights.md:81,88` cites Raymer **Table 6.1** for the same power law. Locked:
+keep Table 3.1 + the existing Roskam bound; **Table 6.1's coefficients are not present anywhere in
+this repo** and the user is to supply them. Needs a labelled deliberately-failing
+`TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo`.
+
+**New, positive finding this pass — a prior doc claim was wrong.** `docs/weights_parameter_usage.md`
+(previous version, L1 table) and `F16WeightsL1.md` (previous version, Deviations) both stated the
+Roskam Table 2.15 constants were "no repo extract — unpinned" / "Not locatable in repo". **They are in
+the repo**: `temp_AI/docs/disciplines/reference_extracts/roskam_vol1_data.md:53-63` carries all five
+code rows exactly (`jet_fighter` 0.5091/0.9505; `fighter_piston` 0.5647/0.8761; `single_engine_prop`
+−0.1440/1.1162; `military_patrol_bomber` −0.2009/1.1037; `supersonic_cruise` 0.0833/1.0335), and
+`:47` carries Eq. 2.16 in the same form the code implements. The extract carries its own warning
+(`:63`): the 12-category table is image-only, these rows were OCR-recovered, *"Verify against the book
+before locking into code."* Likewise `metabook_data.md:20-26` carries all four Raymer Table 3.1 rows
+exactly, and `:319-334` carries every Table 15.2 psf value and every §7 fraction the code uses. So the
+L1/L2 constants are **traceable to a secondary repo extract but not book-verified** — the same status
+as the §15.3.1 exponents, one tier better than "unpinned". Both docs are corrected. **Record; no
+action beyond the Table 6.1 item above.**
+
+### §P4-9 — `f16a_L3.json .weights._note` describes a category-lookup design that does not exist
+
+The note asserts: *"Raymer §15.3.1 exponents/coefficients are aircraft_category-selected toolbox
+Constants and a standing verify-against-book item."* The second half is true; **the first half is
+false.** Every §15.3.1 coefficient (0.0103, 3.316, 0.452, 0.499, 0.013, 0.01, 13.29, 3.5, 4.55,
+37.82, 10.5, 0.025, 7.45, 36.28, 8.0/36.37/26.4, 37.23, 172.2, 2.117, 217.6, 201.6, 3.2e-4) is a bare
+literal inside a `WeightsL3` static — no `switch`, no lookup, no category key. And `F16WeightsL3` has
+**no `aircraft_category` property at all**, so nothing at L3 could select a row even if one existed
+(grep of `obj.aircraft_category` in `src/disciplines/weights/`: matches only in `WeightsL1`/`WeightsL2`).
+
+Two ways out: implement the one-row category lookup (consistent with `WeightsL1.lookup_coeffs` /
+`WeightsL2.wing_unit_weight` / `PropL2.lookup_TSFC_coeffs`), or correct the note. **Doc-vs-code
+mismatch inside the input file. Not resolved.**
+
+### §P4-10 — `WeightsModelL3.W_subsystems`' documented contract is wrong
+
+`WeightsModelL3.m:23` declares `W_subsystems  % Includes landing gear`. But `WeightsL3.OEW`
+(`WeightsL3.m:47-48`) sums `W_lg.main + W_lg.nose` **separately** from `W_sys.total`, and
+`WeightsL3.weight_systems` (`:132-150`) contains no landing-gear term at all. A consumer trusting the
+comment would double-count or under-count the gear by 1057.27 lbf *(live)*.
+
+Part of review finding #12 (the five NaN abstract totals), but a *distinct* defect: even once
+`W_subsystems` becomes a live `Dependent`, its documented meaning would still be wrong. Either fix the
+comment or add a sixth `W_landing_gear` Dependent to `WeightsModelL3`. **Flagged.**
+
+### §P4-11 — ★ Weights-side domain guards (deferred from Phase 1e) — one path is reachable BY DESIGN
+
+`~/.claude/plans/serene-conjuring-kitten.md` §1e: *"Weights-side guards (`H_v=0`, `L_s=0`, `K_d=0`)
+deferred to Phase 4 with that rewrite."* All four paths, with the exact failure mode:
+
+| Input | Value | Eq. | Term | Result | Reachability |
+|---|---|---|---|---|---|
+| `H_v` | 0 | 15.3 | `(1 + H_t/H_v)^0.5` | `H_t=0` → `0/0` = `NaN`; `H_t>0` → `Inf` | plausible mis-entry — the property is documented as "any nonzero denominator", i.e. its value is arbitrary and 0 looks harmless |
+| `L_s` | 0 | 15.10 | `(L_s/L_d)^(−0.373)` | `Inf` | plausible mis-entry (no splitter) |
+| **`K_d`** | **0** | **15.10** | **`K_d^0.182`** | **`0` — the ENTIRE 227.54 lbf air-induction term silently vanishes** | ★ **REACHABLE BY DESIGN.** `WeightsL3.m:276` documents `K_d = 0` as the legitimate **straight-duct** value ("`K_d = 0` (straight duct) or 1 (bifurcated)"). A legal input silently zeroes a whole component |
+| `V_t` | 0 | 15.16 | `V_t^0.47` · `(1+V_i/V_t)^(−0.095)` · `(1+V_p/V_t)` | `0 × Inf` → `NaN` | becomes live once `V_t` derives from `W_energy`, which starts `NaN` |
+
+The `K_d` case is not just a missing guard — **it means the code's `K_d` cannot be Raymer's `K_d` as a
+multiplicative base**, since a straight duct does not weigh zero. Either the exponent/placement is
+wrong, or `K_d`'s legal values are 1/1.x rather than 0/1. This sits inside the §3a "verify against the
+book" obligation (`K_d` exponent 0.182 is checklist row 7, `[VERIFY]`). Guards alone would mask it.
+**Needs a decision, not just an error message. Not resolved.**
+
+### §P4-12 — `f16a_ground_truth.json` `.weights.inputs_on_Wt_tab._note` is STALE
+
+It reads: *"NB the framework's payload split differs from Brandt's: Brandt perm=700 / exp=4400 lb, vs
+the framework `.weights` `W_payload_fixed=220` / `W_payload_expendable=0`."* Phase 3 already set all
+three `f16a_L{1,2,3}.json` `.weights` blocks to **700 / 4400**, so there is no longer any difference —
+the note now describes a divergence that does not exist and would mislead anyone verifying the
+closure. (The framework *classes* still default to 220/0 because they do not read the JSON yet, which
+Phase 4 fixes.) Same class of staleness as §10. **Hygiene item in a read-only-by-convention ground-truth
+file — flagging, not editing.**
+
+---
+
+## 2026-07-25 — Phase 4 decisions (user) + scribe re-status
+
+**Context:** the user settled six decisions on the items §P4-1 … §P4-12 raised above; the coordinator
+independently re-verified three of the scribe's claims (`isprop(F16PropL2,'bypass_ratio')` = 0;
+`get_TSFC` at plausible states vs Brandt's 0.70; Roskam Table 2.15 present at
+`roskam_vol1_data.md:53-63`) and accepted all three. This section records the dispositions and adds
+five new items (§P4-13 … §P4-17) that the decisions themselves surfaced. Still docs-only — no `.m`,
+`.json` or report script was changed.
+
+### Re-status table for §P4-1 … §P4-12
+
+| Item | Status now | Disposition |
+|---|---|---|
+| §P4-1a Brandt `0.199·T` and `×1.3` | **RESOLVED** | Brandt alternate gets **NO** `×1.3` — `readme_wt.md:230` says it is already installed. `W_en_brandt` = 4730.2300 as-is |
+| §P4-1b L3 `×1.3` double-counts | **RESOLVED — scribe's recommendation ACCEPTED** | L3 uses the **UNINSTALLED** 2775.0210; `×1.3` is **L2-only**. This **overrides the literal text** of the 2026-07-24 locked resolution ("L3 engine weight → compute via Raymer (like L2 official): Eq 10.10 uninstalled × 1.3 installed"). Recorded consequence: L3 `OEW(31377)` = **15705.33** (−21.40 % vs `Wt!B12`) vs the rejected `×1.3` **16546.06** (−17.19 %). **The rejected variant agrees BETTER with Brandt, and that was the reason to distrust it** |
+| §P4-2 `prop.bypass_ratio` missing | **RESOLVED (outside this phase)** | The coordinator is adding the `F16PropL2` input property. Its `_TODO_bypass_ratio` marker (0.71 untraceable in-repo) **stays open** |
+| §P4-3 no Mach at L2 | **RESOLVED** | New `examples/F16A/f16a_requirements.json` → `design_mach` = 2.0, read by L2 and L3. See §P4-13 for the citation correction |
+| §P4-4 `L_d` / `D_e` geometry analogs | **STILL OPEN** | Not addressed by the six decisions. Live sensitivities on the settled L3 base 15705.33: `L_d` 7.5→14.0 → 15906.80 (+201.47); `D_e` 3.33→3.537022 → 15730.27 (+24.94). Documented in `docs/weights_parameter_usage.md` §B.5 and `F16WeightsL3.md` §B.5 |
+| §P4-5a `W_l` | **RESOLVED** | `W_l` = **0.95 · W_TO**, a `Dependent` tracking the sizing loop. See §P4-16 for the uncited 0.95 and §P4-17 for the frozen-mutation bug it fixes |
+| §P4-5b `V_t` / uncited fuel density | **PARTLY RESOLVED, provenance STILL OPEN** | `V_t` **restored as a JSON input** = 940 gal, deliberately *not* derived, precisely so the uncited 6.7 lb/gal density does not enter an equation. The density remains cited **nowhere** in `air_vehicle_design/sizing/` (re-grepped 2026-07-25: only the `F16WeightsL3.m:125` comment; no JP-4/JP-5/JP-8 density anywhere). **User to supply a cited density if `V_t` is ever to be derived** |
+| §P4-5c `SFC_mission` | **RESOLVED, with an accepted divergence** | **DERIVED by DI** = `prop.get_TSFC(AircraftState(cruise.altitude_ft, cruise.mach))` = `get_TSFC(36000, 0.87)` = **1.007116** 1/hr *(live)*, **+43.87 %** above Brandt `Main!C30` = 0.70. **Accepted by decision.** Fuel system 386.794 → **423.465** lbf (+36.67). See §P4-15 for the false rationale being corrected |
+| §P4-6 dead `AR_ht` / `lambda_ht` | **RESOLVED** | Confirmed dead; **DELETE both**. Do not wire them to `geom.AR_exposed_ht` / `geom.lambda_exposed_ht` |
+| §P4-7 `LG_fraction` citation + rows | **PARTLY RESOLVED** | The **0.033 value is unchanged** (already coded) and its citation is corrected to `[AE481 metabook §7, "Fraction-Based Weight Estimates" table]`, `metabook_data.md:330` — **NOT** Raymer Table 15.2, which is the psf table at `:319-324` and carries no fraction rows. The same correction applies to the 1.3 installed-engine and 0.17 all-else factors. **Still open:** the uncited `general_aviation` 0.057 row and the missing `navy_fighter` 0.045 row |
+| §P4-8 Raymer Table 6.1 / Roskam Table 2.15 | **PARTLY RESOLVED** | The **Roskam Table 2.15 item is WITHDRAWN** — the extract exists at `roskam_vol1_data.md:53-63` with all five coded rows matching exactly (coordinator-verified). **Only Raymer Table 6.1 remains a standing TO-DO** (coefficients not in the repo; user to supply; needs `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo`) |
+| §P4-9 L3 `_note` claims a category lookup that does not exist | **STILL OPEN** | Not addressed. Either implement the one-row lookup or correct the note |
+| §P4-10 `W_subsystems` "includes landing gear" is false | **STILL OPEN** | Not addressed. Fix the comment or add a sixth `W_landing_gear` Dependent to `WeightsModelL3` |
+| §P4-11 `K_d` = 0 silent zero + other guards | **★ EXPLICITLY LEFT OPEN by decision 6** | **No guard added, no softening.** `K_d = 0` is a documented, legal straight-duct value; `0^0.182 = 0` *(verified live)*, so the entire **227.5439 lbf** air-induction term evaluates to exactly **0.0000** with no error and no `NaN`. L3 `OEW` would read **15477.79** instead of 15705.33. Same silent-zero class as the Phase-1 `F16GeomL1` defect (`CD0 = Cfe·0/S_ref` → infinite L/D). `H_v = 0`, `L_s = 0`, `V_t = 0` likewise unguarded. **The corollary stands: if `K_d = 0` is legal, the code's `K_d` cannot be Raymer's multiplicative base — a straight duct does not weigh nothing — so the exponent/placement is suspect (§3a checklist row 7). A guard alone would mask that.** No guard *tests* are being added either, since adding tests for unguarded behaviour would create a false green |
+| §P4-12 stale ground-truth payload note | **STILL OPEN** | Hygiene item in a read-only-by-convention file; flagged, not edited |
+
+### §P4-13 — ★ NEW: the proposed `design_mach` citation is a MIS-ATTRIBUTION — do not use it
+
+The decision message cites `design_mach: 2.0` as *"[T.O. 1F-16A-1 Mach 2.05 limit; the value L3
+already carries under `.weights.vertical_tail.M_design`]"*. **The repo distinguishes these two
+numbers, and they are not equal.**
+
+| Quantity | Value | Repo location | Source as recorded |
+|---|---|---|---|
+| Brandt's design max Mach | **2.0** | `GroundTruth/f16a_geometry.json:9` — `"Mmax": 2.0`; also `f16a_L1.json .geometry.M_max`, `f16a_L3.json .weights.vertical_tail.M_design`, `F16WeightsL3.m:84` (`[Brandt polar_model]`) | Brandt `Main!` aircraft input |
+| T.O. operating **Mach limit** | **2.05** | `GroundTruth/f16a_ground_truth.json:228` — `"Mach_limit": {"value": 2.05, "_source": "T.O. 1F-16A-1 operating limits."}` | T.O. 1F-16A-1 |
+
+2.0 ≠ 2.05 (**−2.44 %**). Citing the value 2.0 to "the T.O. Mach 2.05 limit" attributes a Brandt input
+to a primary document that states something different — the same class of wrong-source attribution as
+the 19,148-cited-as-`Wt!B12` error (finding #14, §3b). **Correct citation:**
+`[Brandt Main! aircraft.Mmax = 2.0; GroundTruth/f16a_geometry.json:9]`, with the T.O. 2.05 noted as a
+corroborating-but-different figure and a `_TODO_design_mach` marker key on the requirements file.
+
+Sensitivity, computed live: Raymer Eq. 10.10's `M^0.25` gives `W_en` = **2775.0210** at M = 2.0 vs
+**2792.2046** at M = 2.05 (+0.62 %); full L3 `OEW` 15705.33 → 15725.41 (+20.08). Numerically minor —
+which is exactly why the citation must not be allowed to drift unnoticed. **Not resolved: user to
+confirm which number the requirements file should carry, and cite it correctly either way.**
+
+### §P4-14 — NEW: `f16a_requirements.json` creates a third copy of the design Mach
+
+With `design_mach` in the requirements file, `f16a_L3.json .weights.vertical_tail.M_design` is a
+duplicate and is being deleted (settled decision 5). But **`f16a_L1.json .geometry.M_max = 2.0` is the
+same quantity again**, read by `F16GeomL1` for the Raymer 7th ed. Table 4.1 `AR_eq` regression
+(`GeomL1.m:121-129`). Repointing geometry at the requirements file is outside Phase 4's scope, so the
+duplicate persists. **Flagged for whoever builds the full requirements file with constraint/mission
+analysis** — the same "one canonical value per quantity" argument that produced the single top-level
+`aircraft_category` in Phase 3 applies here. Not resolved.
+
+### §P4-15 — NEW (correction of the record): the Phase-3 `SFC_mission` deletion rationale was FALSE
+
+`f16a_L3.json .weights._not_inputs` states: *"SFC_mission [Main!C30] duplicates what
+`PropL2.get_TSFC` computes."* The Phase-3 commit message says the same. **Both are false**, and the
+coordinator has accepted this on the record.
+
+`get_TSFC` does not reproduce Brandt's 0.70 at any condition. Computed live 2026-07-25 from
+`F16PropL2(f16a_spec_path(2))`:
+
+| Path | Condition | 1/hr | vs 0.70 |
+|---|---|---|---|
+| `compute_TSFC_mil` = `get_TSFC` | SLS, M = 0.01 | 0.903000 | +29.0 % |
+| `compute_TSFC_installed` (mil) | SLS, M = 0.01 | 0.975240 | +39.3 % |
+| **`get_TSFC` (mil, uninstalled)** | **36 kft, M = 0.87** | **1.007116** | **+43.87 %** ← the selected value |
+| `compute_TSFC_installed` (mil) | 36 kft, M = 0.87 | 1.087685 | +55.4 % |
+| `compute_TSFC_AB` | 36 kft, M = 0.87 | 1.591694 | +127.4 % |
+| `compute_TSFC_AB_installed` | 36 kft, M = 0.87 | 1.719029 | +145.6 % |
+| `PropL2.SFC_cruise_AB(0.71)` [Raymer Eq. 10.15] | 36 kft, M = 0.9 (Raymer's own cruise reference) | 0.911340 | +30.2 % |
+
+Two independent causes of the divergence, both deliberate: (a) **condition** — a real cruise point vs
+Brandt's single stored SLS constant; (b) **installation basis** — `get_TSFC` returns the *uninstalled*
+mil TSFC, while Brandt's 0.70 is *already installed* (2026-07-24 propulsion entry 4: "Brandt's stored
+SLS TSFCs are ALREADY installed — do not double-apply").
+
+One consistency point **in the framework's favour**, worth recording: Brandt's own cruise condition
+(`Consts!` row 24, via `.propulsion.thrust_lapse_at_constraint_conditions`) is `pct_AB = 0`, i.e.
+**dry/mil**, and `get_TSFC` resolves to the mil path at that state — so the *power setting* matches
+Brandt's cruise definition exactly. Only the condition and the installation basis differ.
+
+**io must correct the `.weights._not_inputs` note.** The +43.87 % is accepted by decision, not a
+defect — but the stated reason for the original deletion must not remain on record as fact.
+**Correction logged; the note fix is an io action.**
+
+### §P4-16 — ★ NEW OPEN ITEM: the `0.95` in `W_l = 0.95 · W_TO` has NO citation
+
+Settled decision 4 makes `W_l` a `Dependent` = `0.95 · W_TO`, where `W_dg` = TOGW = `W_TO`. The 0.95
+factor was supplied by the user and, per the decision message itself, **"has no citation in the repo —
+log that as an open item and do not invent one."** Recorded accordingly:
+
+- Grepped `air_vehicle_design/sizing/` 2026-07-25 — no `0.95` landing-weight fraction appears in
+  `metabook_data.md`, `raymer_data.md`, `roskam_vol1_data.md`, `readme_wt.md`, `F16Baseline.m`, or
+  `temp_Casey/`. Raymer §15.3.1's nomenclature defines `W_l` as the landing design gross weight but
+  gives no `W_l`/`W_dg` ratio.
+- Brandt's own figure is `Wt!B41` = **20680.700578** *(live, formula `=SUM(B16:B32)`)* — itself a
+  back-calculated output of his weight statement, i.e. `20680.70 / 31377` = **0.6591**, not 0.95.
+- So the framework's `W_l` = 29808.15 sits **+44.14 %** above Brandt's, and the two are
+  `DEFINITIONAL`-ly different quantities: a design landing-weight *rule of thumb* vs a computed
+  weight-statement subtotal.
+- Live sensitivity: LG total **1160.934** at 0.95·`W_TO` vs **1057.273** at `W_l` = 20681
+  (**+9.81 %**), vs 1176.272 at `W_l` = `W_TO`.
+
+**Needs a cited source (Raymer/Roskam/Nicolai landing-weight fraction, or a T.O. figure).
+Not resolved.**
+
+### §P4-17 — ★ NEW FINDING: L3's landing gear was ALSO frozen under mutation (a 16th defect)
+
+Not among the 15 verified review findings; surfaced while quantifying decision 4. AS-IS
+`F16WeightsL3.m:97` stores `W_l = 20681` as a plain constant, and `WeightsL3.weight_landing_gear(obj)`
+takes **no `W_TO` argument at all** (`WeightsL3.m:86`) — so **the entire landing-gear group is
+completely insensitive to `W_TO`.** Verified live:
+
+| `W_TO` | AS-IS LG total | With `W_l` = 0.95·`W_TO` |
+|---|---|---|
+| 31,377 | 1057.273 | 1160.934 |
+| 45,000 | **1057.273** | 1273.168 |
+| 60,000 | **1057.273** | 1370.469 |
+
+This is review finding #5's exact defect class (`W_all_else_empty` frozen at `0.17·31377` on
+`F16WeightsL2`) reproduced in a different tier, with the same signature: **a Brandt OUTPUT frozen as
+an input** (`Wt!B41`, a `=SUM()` over his own weight rows). Like #5, no test caught it because every
+`TestWeightsL3` case calls `OEW(31377)`. Settled decision 4 fixes it; the guard test is named in
+`F16WeightsL3.md` §F (`testLandingGearScalesWithWTO`). **Recorded for the review log — the review's
+count of frozen-derived defects was one short.**
+
+---
+
+## 2026-07-25 — Phase 4 AS-BUILT re-status (step 2d, scribe)
+
+**Context:** Phase 4 is implemented, tested and green — `run_all_tests` **491/501, all 10 reds labelled
+`testTODO_`, zero unlabelled reds** (coordinator-verified). This section re-statuses §P4-0 … §P4-17
+against **what actually shipped**, and adds four new items (§P4-18 … §P4-21) that the implementation
+itself surfaced. Docs-only pass: the five deliverables were `docs/subplans/05_weights.md`,
+`docs/PLAN.md`, `examples/F16A/F16Weights{L1,L2,L3}.md`, `docs/weights_parameter_usage.md` and this
+entry. **No `.m`, `.json` or report script was changed in this pass.**
+
+Verified live 2026-07-25 via `mcp__matlab__evaluate_matlab_code` for this re-status (not carried over
+from the target spec): the three property counts (L1 5/0, L2 9/12, L3 45/31), `isprop(prop,
+'bypass_ratio')` = 1, L2 `OEW(31377)`/`OEW(45000)` and the exact 2765.4690 delta, L3
+`OEW` at 31,377 / 45,000 / 60,000 = 15705.3313 / 16869.6310 / 17930.7085, the L3 landing-gear totals
+1160.9336 / 1273.1680 / 1370.4685, the unset-`W_TO` throw/no-throw split at L2, and the per-file test
+counts (25/38/44) with their reds.
+
+### Re-status table for §P4-0 … §P4-17 — as built
+
+| Item | Status now | What shipped |
+|---|---|---|
+| §P4-0 Wt-tab ground truth + the 19,148-vs-19,980.70 mis-citation (review finding #14) | **RESOLVED** | The OEW-vs-Brandt agreement check **left the unit tier entirely** at all three levels; the 19,148 assertions and the "[Brandt F-16A.xls, sheet Wt, B12]" header blocks are gone. `weights_brandt_comparison` carries `Brandt` = 19,980.70 `[Wt!B12]` with 19,148.08 `[corrections.xls Wt!B12]` in a **separately labelled `Alt` column** |
+| §P4-1a Brandt `0.199·T` gets no `×1.3` | **RESOLVED** | `W_en_brandt` = 4730.2300 as-is at both levels, report-only, never summed (`testBrandtEngineAlternateIsNeverSummedIntoOEW`) |
+| §P4-1b L3 `×1.3` double-counts | **RESOLVED** | L3 consumes the **UNINSTALLED** 2775.0210; `×1.3` is L2-only. `testEngineDryWeightIsUninstalledEq1010` guards it. Both rejected variants are reported rows, so the decision stays auditable |
+| §P4-2 `prop.bypass_ratio` missing | **RESOLVED** | `isprop(prop,'bypass_ratio')` = **1**, value 0.71, verified live. The key's own `_TODO_bypass_ratio` marker (0.71 untraceable in-repo) **stays open** |
+| §P4-3 no Mach at L2 | **RESOLVED** | `examples/F16A/f16a_requirements.json` + `f16a_requirements_path.m` shipped; `design_mach` = 2.0 read by `F16WeightsL2`, `F16WeightsL3` **and `F16GeomL1`** |
+| §P4-4 `L_d` / `D_e` geometry analogs | **STILL OPEN** | Neither wired, deliberately. Both keep `[estimate, unpinned]` plus an in-code `⚠` naming the analog and its cost, and both are sensitivity rows in report section 6 (`L_d` +201.47, `D_e` +24.94 on `OEW`) |
+| §P4-5a `W_l` | **RESOLVED** | `W_l` = `0.95 · W_TO`, `Dependent`. Also fixed §P4-17 |
+| §P4-5b `V_t` / uncited 6.7 lb/gal | **PARTLY RESOLVED, provenance STILL OPEN** | `V_t` restored as a JSON input = 940 gal, deliberately *not* derived, so the uncited density never enters an equation. The density remains cited **nowhere** in `air_vehicle_design/sizing/`. **User to supply a cited density if `V_t` is ever to be derived** |
+| §P4-5c `SFC_mission` | **RESOLVED, divergence accepted** | `Dependent` = `prop.get_TSFC(AircraftState(36000, 0.87))` = **1.007116** 1/hr, **+43.87 %** vs `Brandt Main!C30` = 0.70. `testSFCMissionIsDIAtCruiseCondition` asserts the *identity against the injected object*, deliberately **not** the literal 1.007116 |
+| §P4-6 dead `AR_ht` / `lambda_ht` | **RESOLVED** | Both **deleted**, neither rewired; `F16WeightsL3.m` carries a `NOTE:` at the HT getter block saying why. `testDeadHTAspectRatioAndTaperAreDeleted` |
+| §P4-7 `LG_fraction` citation + rows | **PARTLY RESOLVED, STILL OPEN** | 0.033's citation corrected to `[AE481 metabook §7, "Fraction-Based Weight Estimates"]` (`metabook_data.md:330`), **not** Raymer Table 15.2; same correction applied to the 1.3 and 0.17 factors. **Still open:** the uncited `general_aviation` **0.057** row (now carrying an in-code `TODO (…§P4-7, OPEN)`) and the **missing `navy_fighter` 0.045** row — the latter now pinned by `testLGFractionHasNoNavyFighterRow`, i.e. recorded as a *known* absence, not fixed |
+| §P4-8 Raymer Table 6.1 / Roskam Table 2.15 | **PARTLY RESOLVED; Table 6.1 STILL OPEN** | Roskam Table 2.15 item **withdrawn** (extract exists at `roskam_vol1_data.md:53-63`). **Raymer Table 6.1 remains a standing TO-DO**, guarded by `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` — verified RED. The rewritten `docs/subplans/05_weights.md` deliberately **keeps** its Table 6.1 citation (§9 item 1), since that file is the sole in-repo source of the claim and deleting it would erase the item the test guards |
+| §P4-9 L3 `_note` claims a category lookup that does not exist | **RESOLVED (note corrected)** | `f16a_L3.json .weights._note` now states that the §15.3.1 coefficients are hardcoded literals and are **not** category-selected, and records that the earlier claim was wrong. `F16WeightsL3` does now carry an `aircraft_category` input, unread by `WeightsL3` **by construction** (one build-up, one path) and kept for interface parity + report labelling |
+| §P4-10 `W_subsystems` "includes landing gear" is false | **RESOLVED (comment corrected)** | `WeightsModelL3`'s comment now says the group does **not** include the gear, records the old wording as wrong, and points at `weight_landing_gear(obj, W_TO)`. Guard: `testSystemsGroupContainsNoLandingGearTerm` |
+| §P4-11 `K_d` = 0 silent zero + `H_v`/`L_s`/`V_t` guards | **★ STILL OPEN — unguarded by decision 6, and not softened** | **No guard was added and no guard test was added** (adding tests for unguarded behaviour would be a false green). `K_d = 0` remains a documented, legal straight-duct value; `0^0.182 = 0`, so the entire **227.5439 lbf** air-induction term evaluates to exactly **0.0000** with no error, no warning and not even a `NaN`; L3 `OEW` reads **15477.7874** instead of 15705.3313 *(verified live)*. Report section 6 carries the row so the silent zero is visible somewhere. **The corollary stands:** if `K_d = 0` is legal, the code's `K_d` cannot be Raymer's multiplicative base — a straight duct does not weigh nothing — so the exponent/placement is itself suspect (§3a checklist row 7), and a guard alone would mask it |
+| §P4-12 stale ground-truth payload note | **RESOLVED (note corrected)**, one residual — see §P4-21 | `f16a_ground_truth.json .weights.inputs_on_Wt_tab._note` now states the payload split **agrees** (700/4400 both sides, closure exact) and records the old 220/0 divergence claim as stale |
+| §P4-13 `design_mach` citation mis-attribution | **STILL OPEN** | The value **is** cited to Brandt (`Main! aircraft.Mmax = 2.0`) with the T.O. limit 2.05 named as corroborating-but-different, and a `_TODO_design_mach` key carries the full argument. **The user must still confirm which figure is the design requirement**; sensitivity `W_en` 2775.0210 → 2792.2046 (+0.62 %), `OEW` 15705.33 → 15725.41 |
+| §P4-14 third copy of the design Mach | **STILL OPEN**, but better than planned | `f16a_L1.json .geometry.M_max` was **deleted too**: `F16GeomL1(json_path, req_path)` reads `design_mach` from the requirements file for `[Raymer 7th ed. Table 4.1]` `AR_eq`, so the design Mach has **one** source as built. The broader consolidation (every requirement-like value, once constraints + mission land) is **not** done, and see §P4-20 |
+| §P4-15 the Phase-3 `SFC_mission` rationale was FALSE | **CORRECTED ON THE RECORD** | The correction is carried in `F16WeightsL3.m`'s `get.SFC_mission` comment and in both docs. **Verify the `f16a_L3.json .weights._not_inputs` wording at review** |
+| §P4-16 the `0.95` in `W_l = 0.95·W_TO` has NO citation | **★ STILL OPEN** | Implemented as decided, with the missing citation stated plainly in `WeightsL3.landing_weight`, in `F16WeightsL3.get.W_l` and in both docs. Brandt's implied ratio is `20680.70/31377` = **0.6591**, and the two are definitionally different quantities. **Needs a cited source (Raymer/Roskam/Nicolai landing-weight fraction, or a T.O. figure).** Not invented |
+| §P4-17 L3 landing gear frozen under mutation | **RESOLVED** | `W_l` is `Dependent` = 0.95·`W_TO` **and** `weight_landing_gear(obj, W_TO)` gained its argument. LG total now **1160.9336 / 1273.1680 / 1370.4685** at 31,377 / 45,000 / 60,000 *(verified live)* where it was bit-identical 1057.273 at all three. Four guards: `testLandingGearScalesWithWTO`, `testLandingGearIsNotTheFrozenValue`, `testLandingGearArgumentWinsOverStaleObjectWTO`, `testLandingWeightIsDerivedFromWTO` |
+
+Also resolved en route, from the 2026-07-24 §3c list: item 1 (finding #5, `W_all_else_empty` frozen —
+the fix is measurable, `OEW(45000) − OEW(31377)` = `(0.17+0.033)·13623` = **2765.4690** exactly), item 3
+(the p.572-vs-p.602 page-scheme mix — `WeightsL3.m` now cites the **section only**), item 4 (edition
+unified to **Raymer 7th ed.** across weights, zero value changes), item 5 (`WEIGHTSMODELG3` typo gone),
+item 6 (the NaN "computed total" placeholders — 4 at L2, 5 at L3 — are all `Dependent`, with zero
+non-finite reads).
+
+### §P4-18 — ★ NEW: the `requireWTO` OVER-GUARD, now fixed — a guard must encode a real dependency
+
+An earlier Phase-4 version routed **five** of `F16WeightsL2`'s six component/group getters through
+`requireWTO` "for uniformity", and its `requireWTO` docstring justified this as applying **"UNIFORMLY to
+all six"**. Two things were wrong at once:
+
+1. **It was not uniform.** `W_installed_engine` was **never** guarded, so the stated rationale did not
+   describe the code it was attached to.
+2. **Three of the five have no `W_TO` dependence at all.** `WeightsL2.weight_wing`, `weight_tail` and
+   `weight_fuselage` declare their second argument as **`~`** — they are pure area × density
+   (`[Raymer 7th ed. Table 15.2]` psf). Guarding them asserted a dependency the formulas do not have,
+   and taught a reader that `9.0 · S_exposed_wing` somehow needs a gross weight.
+
+The **same over-guard existed at L3**, on `W_installed_engine` (`WeightsL3.weight_engine_section` also
+declares its `W_TO` argument as `~` — the engine group is built from thrust and component geometry).
+
+**As built, guarded only where the dependency is real:** L2 → `W_landing_gear` (`0.033·W_TO`) and
+`W_all_else_empty` (`0.17·W_TO`); L3 → the five that genuinely carry `W_dg`/`W_l` (`W_wings`, `W_tail`,
+`W_fuselage`, `W_subsystems`, `W_l`). Verified live at L2: `W_landing_gear` and `W_all_else_empty` throw
+`F16WeightsL2:WTONotSet` with `W_TO` unset, while `W_wings`/`W_tail`/`W_fuselage`/`W_installed_engine`
+return 1766.0346 / 199.3890 / 3505.4511 / 3607.5273.
+
+**Principle to keep: a guard must encode a real dependency, not a house style.** If a formula later
+gains a `W_TO` term, add the guard then. Both `requireWTO` docstrings now say so.
+
+**One loose end, flagged not fixed (a `.m` edit, outside this documentation step):**
+`TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO` was written to be **red** while the
+over-guard existed. The over-guard was removed in the same phase, so the test now **passes** — it is the
+only one of the suite's eleven `testTODO_`-named cases that is green, which is why the coordinator's
+count is "10 reds, all labelled". Its docstring still opens *"THIS TEST IS EXPECTED TO BE RED until a
+small `F16WeightsL2.m` change lands"* and still gives a `HOW TO RESOLVE` recipe for work already done.
+**Stale test docstring — needs either a rewrite into a positive assertion (`…ReadWithoutWTO`) or
+deletion by decision.** Recorded here so a future reader does not "fix" a passing test by re-adding the
+over-guard.
+
+### §P4-19 — ★ NEW: a FALSE verification claim removed from `WeightsL3.m`'s header
+
+The pre-Phase-4 `WeightsL3.m` header asserted that the §15.3.1 exponents had been *"re-verified
+letter-for-letter against the Raymer 6th ed. p.572 equation page image (not OCR)"*. That claim was:
+
+- **not checkable** — no such page image exists anywhere in this repo; and
+- **self-contradictory** — the same file's high-level `weight_wing` / `weight_fuselage` comments carried
+  `⚠ Exponents [verify]` warnings on the very equations the low-level `wing` / `fuselage` comments said
+  were "all exponents confirmed".
+
+The claim is **removed** from the header and from the wing / HT / VT / fuselage / gear / mounts method
+comments, and replaced by an honest tally: **2 CONFLICT / 9 FROM-CODE / 24 VERIFY / 27 IMAGE-ONLY /
+5 extract-clean** (62 rows total, matching §3a), with the IMAGE-ONLY entry stating in plain terms that
+the earlier claim was not checkable. Every method comment now reads
+`⚠ EXPONENTS NOT BOOK-VERIFIED (class header, … rows …)`.
+
+**Zero exponent values changed** — including the two CONFLICT rows, which keep their code values
+(Eq. 15.13 `N_en^1.023`, Eq. 15.3 `cos(Λ_vt)^−0.323`) per the locked 2026-07-24 "approach 2" decision.
+**§3a stays OPEN**, guarded RED by `TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified`.
+
+**Two new standing citation TO-DOs, both shipped as labelled reds.** Recorded together because they
+share an implementation quirk: **each keys off its source file's own TO-DO sentence**
+(`WeightsL1.m` / `WeightsL3.m` header text), because there is **no JSON marker key** to read for either
+— unlike the geometry/aero `testTODO_` tests, which key off a `_TODO_*` key in the input JSON.
+
+| Test | Guards | Verified |
+|---|---|---|
+| `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` | §P4-8 — Raymer Table 6.1's coefficients are not in this repo; the user must supply them. Table 3.1 is what the code uses | RED 2026-07-25 |
+| `TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified` | §3a — all 62 exponent rows unverified against the printed book | RED 2026-07-25 |
+
+### §P4-20 — ★ NEW: the shipped `f16a_requirements.json` `_comment` is already stale about `F16GeomL1`
+
+The new requirements file's `_comment` states:
+
+> *"★ F16GeomL1 IS PENDING: f16a_L1.json .geometry.M_max was deleted as the third copy of this quantity,
+> so F16GeomL1.m:79 (obj.M_max = J.geometry.M_max) must be repointed here (todo 2026-07-25 Phase 4
+> §P4-14)"*
+
+**That work has landed.** As built, `F16GeomL1.m:64` is `function obj = F16GeomL1(json_path, req_path)`,
+`:89` reads `R = jsondecode(fileread(req_path))` and `:90` sets `obj.M_max = R.design_mach`. So the file
+documents its own consumer as pending when the consumer exists — the same class of staleness as §10 and
+§P4-12, in a brand-new file. Not a numeric issue; a provenance/documentation one, and the sentence
+would mislead the next person wiring a requirements consumer.
+
+**Flagged, not edited** (a `.json` change, outside this documentation step). Note also that §P4-14's
+*broader* item is genuinely still open — the full requirements consolidation across constraints and
+mission has not been done — so §P4-14 must **not** be closed on the strength of this one fix.
+
+### §P4-21 — NEW (residual): §P4-12's corrected ground-truth note has one stale sentence left
+
+`f16a_ground_truth.json .weights.inputs_on_Wt_tab._note` was correctly rewritten to say the payload
+split now **agrees** (700/4400 on both sides; closure `31377 − 19980.70 − 6296.30 = 5100 = 700 + 4400`
+exact). But its final sentence still reads:
+
+> *"The framework CLASSES still default to 220/0 only because they do not read the JSON yet, which
+> Phase 4 fixes."*
+
+Both halves are now false: all three `F16WeightsL{1,2,3}` classes default to **700 / 4400** *and* read
+the JSON. Small, but it is a sentence in the ground-truth file asserting something about the framework
+that stopped being true in the same phase. **Flagged, not edited** — `GroundTruth/` is read-only by
+convention and this is a `.json` change regardless.
+
+### §P4-22 — NEW (Phase-2 miss, found while wiring `fidelity_comparison`): the L3 aero column was computed on L2 geometry
+
+Not a weights item, recorded here because this is where it was found and because the failure *mode* is
+the one these logs exist for. `examples/F16A/fidelity_comparison.m` (line 135 pre-fix; the corrected
+call is now `:157`, `a3 = F16AeroL3(g3, f16a_spec_path(3))`, with the explanatory comment at `:148-154`)
+still read `F16AeroL3(g2, …)` — so **that report's entire L3 aerodynamics column was silently computed
+on the L2 geometry object**. Phase 2 repointed `F16ConstraintSet` and `aerodynamics_brandt_comparison`
+at `g3` but missed this third call site.
+
+Consequence recorded in-file: the L3 aero numbers in that report **move**, because L3 geometry is the
+physical/T.O. tier (VT LE sweep 47.5 vs 40, `L_fus` 47.5 vs 46.5) and its `Amax` is the area-ruled
+buildup rather than L2's fuselage-envelope ellipse.
+
+**Why nothing caught it:** a wrong-but-valid tier yields *plausible numbers* rather than an error. And
+critically, **the narrowed `mustBeA` guard could not have caught it either** — `F16AeroL3`'s constructor
+guard admits any `GeometryBase`/`GeometryModelL2`-satisfying object, and **both tiers satisfy the
+contract**, so construction succeeds and every property name resolves. The type system cannot
+distinguish "the L2 geometry" from "the L3 geometry" here; only a call-site read can.
+
+**Fixed:** the line now passes `g3`, with an in-file comment at `:148` recording the miss so it is not
+re-introduced. Recorded as a standing lesson: **after a tier renumbering, grep every construction site
+of the affected class**, because a same-contract wrong tier is invisible to both the guards and the
+tests.
+
+---
+
 *Add new dated sections above this line for future discrepancies; do not edit or remove prior
 entries. Where an entry is resolved, PREPEND the decision and keep the original evidence intact —
 several entries (§1, §2, §7, §8, §17, and the 2026-07-24 propulsion/weights entries) now carry
