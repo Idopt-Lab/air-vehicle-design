@@ -168,7 +168,7 @@
       "Alt": "199.39",
       "Divergence": "DEFINITIONAL",
       "Source": "Brandt Wt!E9",
-      "Notes": "Same FULL-vs-EXPOSED definitional split as the L2 row. Raymer Eq. 15.2 on the EXPOSED 51.1486 ft^2, which is +2.605 % above L2's 49.8473 because F16GeomL3 takes the physical 18.5 ft HT span as primary (F16GeomL3.md Sec. A.4) -- itself BY DESIGN, not error."
+      "Notes": "Same FULL-vs-EXPOSED definitional split as the L2 row. Raymer Eq. 15.2 on the EXPOSED 51.1486 ft^2, which is +2.605 % above L2's 49.8473 because F16GeomL3 takes the physical 18.5 ft HT span as primary (F16GeomL3.md §4) -- itself BY DESIGN, not error."
     },
     {
       "parameter": "Vertical tail [Tbl 15.2 psf] [lbf]",

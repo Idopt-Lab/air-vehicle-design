@@ -184,7 +184,7 @@ classdef WeightsL3
         %   (1057.273 lbf at 31,377 / 45,000 / 60,000 alike — verified live), and
         %   with a W_TO-derived W_l but no W_TO argument, OEW(W_TO) would still
         %   have evaluated the gear at obj.W_TO instead of its own argument.
-        %   todo 2026-07-25 Phase 4 §P4-17 / F16WeightsL3.md §E.3.
+        %   todo 2026-07-25 Phase 4 §P4-17 / F16WeightsL3.md §4.
         %
         %   ! UNITS: Raymer's nomenclature defines L_m ("extended length of main
         %   landing gear") and L_n ("extended nose gear length") in INCHES, while
@@ -227,7 +227,7 @@ classdef WeightsL3
         %     16546.06, i.e. -17.19 % — CLOSER to Brandt. That closer agreement is
         %     the evidence AGAINST ×1.3, not a reason to keep it: a number that
         %     agrees because a factor is counted twice is not agreement.
-        %     F16WeightsL3.md §D.2; todo §P4-1b.
+        %     F16WeightsL3.md §4; todo §P4-1b.
             W.engine   = obj.W_en * obj.N_en; % dry/UNINSTALLED engine weight [Raymer 7th ed. Eq. 10.10 via the concrete class; NOT a §15.3.1 equation]
             W.mounts   = WeightsL3.engine_mounts(obj.N_en, obj.T_max, obj.N_z);
             W.firewall = WeightsL3.firewall(obj.S_fw); % jets set S_fw = 0; Eq. 15.8 then returns 0 (no piston firewall)
@@ -253,7 +253,7 @@ classdef WeightsL3
         %   obj.SFC_mission is a propulsion DI evaluated at the requirements-file
         %   cruise condition (36,000 ft / M 0.87) = 1.007116 1/hr, NOT Brandt's
         %   single stored SLS constant Main!C30 = 0.70. The +43.87 % divergence is
-        %   accepted by decision (F16WeightsL3.md §D.6).
+        %   accepted by decision (F16WeightsL3.md §3).
         %   obj.design_mach is the requirements-file design Mach (Eq. 15.17's M).
             W.fuel_sys     = WeightsL3.fuel_system(obj.V_t, obj.V_i, obj.V_p, ...
                                                      obj.N_t, obj.N_en, ...

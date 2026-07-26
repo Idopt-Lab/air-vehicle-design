@@ -43,7 +43,7 @@ classdef F16WeightsL1 < WeightsModelL1
 %       state.
 %   Adding Dependent mirrors keyed off obj.W_TO would be a feature beyond what
 %   this step requires and is deliberately out of scope — noted so a later
-%   reader does not mistake the absence for an oversight (F16WeightsL1.md §B.2).
+%   reader does not mistake the absence for an oversight (F16WeightsL1.md §3).
 %   ============================================================================
 %
 %   CONSTRUCTOR (CHANGED 2026-07-25, Phase 4): F16WeightsL1(json_path).
@@ -65,7 +65,7 @@ classdef F16WeightsL1 < WeightsModelL1
     % INPUTS (5) — plain mutable properties. The constructor sets the three
     % spec/mission values once from the JSON; the two state variables are
     % mutated in place by the sizing / mission loops.
-    % Authoritative table with all citations: F16WeightsL1.md §B.1.
+    % Authoritative table with all citations: F16WeightsL1.md §2.
     % ======================================================================= %
     properties
         aircraft_category = 'jet_fighter'  % selects the Raymer Tbl 3.1 row (WeightsL1.lookup_coeffs) and the Roskam Tbl 2.15 row (lookup_roskam_coeffs) [f16a_L1.json top-level aircraft_category — ONE canonical class flag per aircraft]

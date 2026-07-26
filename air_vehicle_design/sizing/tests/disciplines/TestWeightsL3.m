@@ -20,7 +20,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   ======================================================================== %
 %   ! THE OEW-vs-BRANDT AGREEMENT CHECK IS NOT IN THIS FILE ANY MORE.
 %
-%   Removed in Phase 4 (LOCKED; F16WeightsL3.md Sec. F, docs/
+%   Removed in Phase 4 (LOCKED; F16WeightsL3.md §4, docs/
 %   weights_parameter_usage.md §4, review finding #14):
 %       testOEWWithinBroadBounds  (expected = 19148, +-40 %, cited "Brandt B12")
 %       testOEWPrintBreakdown     (verifyTrue(true) diagnostic, hardcoded 19148)
@@ -788,7 +788,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
         function testAllThirtyOneDependentPropertiesExist(tc)
         %TESTALLTHIRTYONEDEPENDENTPROPERTIESEXIST  The declared split.
-        %   F16WeightsL3.md Sec. B: 43 inputs (42 numeric + 1 string) + 2
+        %   F16WeightsL3.md §2: 43 inputs (42 numeric + 1 string) + 2
         %   injected objects; 31 Dependent. A count change means the split moved
         %   and the sweeps below no longer cover what they claim to.
             tc.verifyEqual(numel(TestWeightsL3.dependentNames()), 31, ...
@@ -910,7 +910,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
         function testComponentSanityBounds(tc)
         %TESTCOMPONENTSANITYBOUNDS  Wide engineering bounds, no external target.
-        %   Retained from the pre-Phase-4 suite (F16WeightsL3.md Sec. F: "keep
+        %   Retained from the pre-Phase-4 suite (F16WeightsL3.md §4: "keep
         %   the bound form, re-base the numbers"). Every Brandt comparison
         %   figure that used to appear in these docstrings (1852 / 199.39 /
         %   245.34 / 3652 / 1066.8) has moved to the comparison report; the

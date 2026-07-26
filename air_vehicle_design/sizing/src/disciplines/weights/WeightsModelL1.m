@@ -20,7 +20,7 @@ classdef (Abstract) WeightsModelL1 < WeightsBase
 %   "computed total" placeholders that review finding #12 flagged at L2/L3.
 %   Adding Dependent mirrors keyed off obj.W_TO would be a feature beyond what
 %   this tier needs (docs/weights_parameter_usage.md §1;
-%   F16WeightsL1.md §B.2).
+%   F16WeightsL1.md §3).
 %
 %   Inheritance: WeightsBase → WeightsModelL1 → F16WeightsL1
 %   (WeightsL1 is the static toolbox alongside, NOT in the chain.)

@@ -100,7 +100,7 @@ classdef F16WeightsL2 < WeightsModelL2
     % INPUTS (6 numeric + 1 string) + 2 injected objects — plain mutable
     % properties, set once by the constructor. Every DERIVED property below
     % recomputes live from these (and from the injected objects) on every read.
-    % Authoritative table with all citations: F16WeightsL2.md §B.1.
+    % Authoritative table with all citations: F16WeightsL2.md §2.
     % ======================================================================= %
     properties
         aircraft_category = 'jet_fighter'  % selects the Raymer Tbl 15.2 psf row and the metabook Sec. 7 LG fraction [f16a_L2.json top-level aircraft_category — ONE canonical class flag per aircraft]
@@ -127,7 +127,7 @@ classdef F16WeightsL2 < WeightsModelL2
     % DERIVED (12) — recomputed live from the inputs / injected objects on every
     % read. No cache, never stale. Read-only: assigning to any of these errors
     % (there are no set-methods), which is correct — they are outputs.
-    % Authoritative table with all citations: F16WeightsL2.md §B.2.
+    % Authoritative table with all citations: F16WeightsL2.md §3.
     % ======================================================================= %
     properties (Dependent)
         % -- Geometry, by DI from the injected geom (4) -------------------- %

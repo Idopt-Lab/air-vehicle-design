@@ -22,7 +22,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %   ======================================================================== %
 %   ! THE OEW-vs-BRANDT AGREEMENT CHECK IS NOT IN THIS FILE ANY MORE.
 %
-%   Removed in Phase 4 (LOCKED; F16WeightsL2.md Sec. F, docs/
+%   Removed in Phase 4 (LOCKED; F16WeightsL2.md §4, docs/
 %   weights_parameter_usage.md §4, review finding #14):
 %       testOEWWithinBrandtValue   (expected = 19148, +-20 %, cited "Brandt B12")
 %   Brandt Wt!B12 is 19980.700578 (live-read 2026-07-25); 19,148.08 is
@@ -434,7 +434,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 
         function testAllTwelveDependentPropertiesExist(tc)
         %TESTALLTWELVEDEPENDENTPROPERTIESEXIST  The declared INPUT/DERIVED split.
-        %   F16WeightsL2.md Sec. B: 7 inputs (6 numeric + 1 string) + 2 injected
+        %   F16WeightsL2.md §2: 7 inputs (6 numeric + 1 string) + 2 injected
         %   objects; 12 Dependent. A count change means the split moved and the
         %   sweeps below no longer cover what they claim to.
             names = TestWeightsL2.dependentNames();

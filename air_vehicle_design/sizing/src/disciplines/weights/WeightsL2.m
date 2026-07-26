@@ -35,7 +35,7 @@ classdef WeightsL2
 %     obj.W_TO. That is review finding #5: F16WeightsL2 used to freeze
 %     W_all_else_empty at 0.17*31377 in its constructor, so OEW(45000)
 %     understated by 2315.91 lbf and 31,377 (a Brandt OUTPUT, Wt!B3) had become a
-%     calibration input. docs/weights_parameter_usage.md §4 / F16WeightsL2.md D.1.
+%     calibration input. docs/weights_parameter_usage.md §4 / F16WeightsL2.md §4.
 %
 %   The Roskam statistical minimum bound lives at
 %   WeightsL1.compute_We_roskam / WeightsL1.We_roskam — call it there for a
@@ -146,7 +146,7 @@ classdef WeightsL2
         %     (15.12), oil (15.13), controls (15.14) and starter (15.15) item by
         %     item, so applying x1.3 there would double-count the installation —
         %     WeightsL3.weight_engine_section uses the UNINSTALLED weight.
-        %     F16WeightsL2.md D.5 / F16WeightsL3.md D.2; todo §P4-1b.
+        %     F16WeightsL2.md §4 / F16WeightsL3.md §4; todo §P4-1b.
         %   ! Independent of W_TO, so it cannot go stale under the sizing loop —
         %     but it is still a Dependent property on the concrete class, so that
         %     mutating prop.T_SL flows through Eq. 10.10 into this term.

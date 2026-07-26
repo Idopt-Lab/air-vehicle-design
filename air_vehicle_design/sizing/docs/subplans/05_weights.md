@@ -308,7 +308,7 @@ Alt | Divergence | Source | Notes`.
 | `design_mach` = 2.0 must be cited to **Brandt** (`Main! aircraft.Mmax`), **not** to the T.O. Mach limit, which is a different number, **2.05** | **OPEN (citation)** | todo §P4-13 |
 | `f16a_L1.json .geometry.M_max` was the third copy of the design Mach; geometry now reads the requirements file, but a full requirements consolidation is still pending | **OPEN** | todo §P4-14 |
 | `WeightsL2.LG_fraction('general_aviation') = 0.057` is uncited; the extract's `navy_fighter` 0.045 row is absent from the code | **OPEN** (neither affects the F-16) | todo §P4-7 |
-| 18 of L3's 42 numeric inputs are unpinned `[estimate]`s (`L_m`, `L_n`, `N_l`, `D_e`, `L_tp`, `L_sh`, `L_ec`, `L_d`, `L_s`, `V_i`, `V_p`, `N_t`, `N_s`, `N_ci`, `N_u`, `R_kva`, `L_a`, `W_uav`), plus the DI'd-but-unpinned `F_w`, `L_t`, `S_cs` on the geometry object | **OPEN** (spec-data gaps, not equation-citation issues) | `F16WeightsL3.md` §D.9 |
+| 18 of L3's 42 numeric inputs are unpinned `[estimate]`s (`L_m`, `L_n`, `N_l`, `D_e`, `L_tp`, `L_sh`, `L_ec`, `L_d`, `L_s`, `V_i`, `V_p`, `N_t`, `N_s`, `N_ci`, `N_u`, `R_kva`, `L_a`, `W_uav`), plus the DI'd-but-unpinned `F_w`, `L_t`, `S_cs` on the geometry object | **OPEN** (spec-data gaps, not equation-citation issues) | `F16WeightsL3.md` §5 |
 
 Items **resolved** in the Phase-4 implementation, so a reader does not chase them: review findings #5,
 #11, #12 and §P4-17 (all four frozen-derived defects, §4); §P4-0 / finding #14 (the 19,148-cited-as-

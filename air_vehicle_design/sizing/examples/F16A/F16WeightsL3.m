@@ -21,7 +21,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %                          -17.98 % vs corrections.xls 19148.08)
 %     OEW(45000) = 16869.63 | OEW(60000) = 17930.71 — the near-zero change at
 %     45,000 vs the pre-Phase-4 code is a COINCIDENCE of four offsetting deltas,
-%     not evidence that nothing changed (F16WeightsL3.md §E.2).
+%     not evidence that nothing changed (F16WeightsL3.md §4).
 %
 %   ★ STANDING TO-DO, NOT CLEARED: EVERY §15.3.1 EXPONENT.
 %   Locked decision (user 2026-07-24, "approach 2"): keep every current code
@@ -111,7 +111,7 @@ classdef F16WeightsL3 < WeightsModelL3
     % and f16a_requirements.json (the two state variables are mutated by the
     % sizing / mission loops). Every DERIVED property below recomputes live from
     % these and from the injected objects on every read.
-    % Authoritative table with all citations: F16WeightsL3.md §B.1.
+    % Authoritative table with all citations: F16WeightsL3.md §2.
     % ===================================================================== %
     properties
 
@@ -194,7 +194,7 @@ classdef F16WeightsL3 < WeightsModelL3
     % DERIVED (31) — recomputed live from the inputs / injected objects on every
     % read. No cache, never stale. Read-only: assigning to any of these errors
     % (there are no set-methods), which is correct — they are outputs.
-    % Authoritative table with all citations: F16WeightsL3.md §B.2.
+    % Authoritative table with all citations: F16WeightsL3.md §3.
     % ===================================================================== %
     properties (Dependent)
         % -- Geometry, by DI from geom (21) — closes finding #11's literals -- %
@@ -407,7 +407,7 @@ classdef F16WeightsL3 < WeightsModelL3
             % raises no error and returns a plausible wrong number.
             % 51.1486 is +2.605 % above the L2 value 49.8473 — an INTENTIONAL
             % consequence of GeomL3's Decision 1 (physical 18.5 ft HT span
-            % primary, F16GeomL3.md §A.4), annotated BY DESIGN in the report and
+            % primary, F16GeomL3.md §4), annotated BY DESIGN in the report and
             % never as an error.
             v = obj.geom.S_exposed_ht;
         end

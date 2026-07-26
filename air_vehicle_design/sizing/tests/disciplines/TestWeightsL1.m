@@ -16,7 +16,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %   ======================================================================== %
 %   ! THE OEW-vs-BRANDT AGREEMENT CHECK IS NOT IN THIS FILE ANY MORE.
 %
-%   Removed in Phase 4 (LOCKED; F16WeightsL1.md Sec. F, docs/
+%   Removed in Phase 4 (LOCKED; F16WeightsL1.md §4, docs/
 %   weights_parameter_usage.md §4, todo 2026-07-25 Phase 4 review
 %   finding #14):
 %       testOEWWithinBrandsValue    (expected = 19148, +-8 %)
