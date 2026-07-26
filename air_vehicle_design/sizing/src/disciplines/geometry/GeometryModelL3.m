@@ -10,7 +10,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
 %   2026-07-22 "Geometry has no L3").
 %   2026-07-25 (Phase 2, locked user decision): promoted from a weights-only
 %   tier to the FULL L3 geometry tier consumed by L3 geometry + aero + weights.
-%   Authoritative spec: examples/F16A/F16GeomL3.md (§A the input/derived
+%   Authoritative spec: examples/F16A/F16GeomL3.md (§2/§3 the input/derived
 %   classification, §B the rename, §C the complete L3-aero contract, §D Amax,
 %   §E L_aircraft). This tier is HIGHER fidelity than GeomL2's Brandt-reference
 %   geometry: where a physical/T.O. value differs from Brandt, GeomL3 uses the
@@ -21,7 +21,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
 %   Phase 2 §§3/7).
 %
 %   ============================================================================
-%   NAME COLLISION REMOVED — Phase 2 rename (F16GeomL3.md §B).
+%   NAME COLLISION REMOVED — Phase 2 rename (F16GeomL3.md §2).
 %
 %   BEFORE 2026-07-25 this contract used AR_ht / lambda_ht / AR_vt / lambda_vt
 %   for the EXPOSED planform (2.114 / 0.390 / 1.294 / 0.437) while
@@ -55,7 +55,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
 %   genuine design-variable input, OR a `Dependent` property whose getter
 %   recomputes live from the inputs for a derived quantity — never a frozen
 %   constant for something derivable. Every property below is tagged [INPUT] or
-%   [DERIVED] with the kind F16GeomL3 must use; F16GeomL3.md §A.1/§A.2 carry
+%   [DERIVED] with the kind F16GeomL3 must use; F16GeomL3.md §2/§3 carry
 %   the authoritative 33-input / 34-derived classification and every citation.
 %
 %   Nothing derivable may stay frozen (§A.3). Five quantities that WERE stored

@@ -77,7 +77,7 @@ classdef F16GeomL2 < GeometryModelL2
 %       object the Raymer Eq. 12.44 wave-drag inputs it previously carried as
 %       frozen Brandt outputs. See the property comments for Amax's missing
 %       citation and L_aircraft's provenance caveat.
-%     * BRANDT CELL CITATIONS CORRECTED (12 sites in this file; F16GeomL3.md §F
+%     * BRANDT CELL CITATIONS CORRECTED (12 sites in this file; F16GeomL3.md §2
 %       is authoritative). Main row 20 = 'Taper Ratio', row 21 = 'Sweep, deg',
 %       row 22 = 'NACA 4-digit' (last two digits = % chord t/c). This file
 %       previously cited row 21 for taper, row 20 for sweep and row 24 for t/c;
@@ -475,7 +475,7 @@ classdef F16GeomL2 < GeometryModelL2
             % The sqrt(T/1900) expression was inline here until 2026-07-25;
             % Phase 2 needed it at L3 too, so it was extracted into the cited
             % static GeometryBase.compute_nacelle_diameter rather than copying the
-            % uncited literal 1900 across two tiers (F16GeomL3.md §C reuse gap;
+            % uncited literal 1900 across two tiers (F16GeomL3.md §3 reuse gap;
             % todo.md 2026-07-25 Phase 2 §12).
             v = GeometryBase.compute_nacelle_diameter(obj.T_AB_SLS_lb);
         end

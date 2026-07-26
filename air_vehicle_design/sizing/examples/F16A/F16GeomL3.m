@@ -49,12 +49,12 @@ classdef F16GeomL3 < GeometryModelL3
 %         outputs.
 %
 %   Nothing derivable is stored.  FIVE quantities that were stored inputs before
-%   Phase 2 are now Dependent and must never be re-frozen (F16GeomL3.md §A.3):
+%   Phase 2 are now Dependent and must never be re-frozen (F16GeomL3.md §3):
 %   AR_ht, S_exposed_ht, S_exposed_vt, tc_ht, tc_vt.  A sixth left geometry
 %   entirely -- see PROPULSION INJECTION below.
 %   ============================================================================
 %
-%   PHASE-2 RENAME (F16GeomL3.md §B) -- AR_ht / lambda_ht / S_ht / S_vt now mean
+%   PHASE-2 RENAME (F16GeomL3.md §2) -- AR_ht / lambda_ht / S_ht / S_vt now mean
 %   FULL planform on BOTH tiers, exactly as on GeometryModelL2; the exposed
 %   values live under AR_exposed_ht / lambda_exposed_ht / AR_exposed_vt /
 %   lambda_exposed_vt.  This removes a live silent-wrong-answer hazard: the aero
@@ -155,7 +155,7 @@ classdef F16GeomL3 < GeometryModelL3
 %   SOURCES:
 %     [Brandt] Brandt F-16A.xls, Main/Geom/Engn(s) tabs, reproduced in
 %       examples/F16A/f16a_L3.json (.geometry, per-value _src fields).
-%       CITATION CORRECTION 2026-07-25 (F16GeomL3.md §F is authoritative, zero
+%       CITATION CORRECTION 2026-07-25 (F16GeomL3.md §2 is authoritative, zero
 %       computed values change): Main row 20 = 'Taper Ratio', row 21 =
 %       'Sweep, deg', row 22 = 'NACA 4-digit' (last two digits = % chord t/c).
 %       The repo previously cited row 21 for taper, row 20 for sweep and row 24
@@ -170,7 +170,7 @@ classdef F16GeomL3 < GeometryModelL3
     % the constructor from f16a_L3.json .geometry, may be varied by an
     % optimizer) plus the injected propulsion object.  Every DERIVED
     % (Dependent) property below recomputes live from these.
-    % Authoritative table with all citations: F16GeomL3.md §A.1.
+    % Authoritative table with all citations: F16GeomL3.md §2.
     % ===================================================================== %
     properties
         % -- Wing (full-planform inputs; chords/MAC/sweeps/areas are DERIVED) %
@@ -252,7 +252,7 @@ classdef F16GeomL3 < GeometryModelL3
     % DERIVED -- 45 quantities computed live from the inputs above on every
     % read (no cache, never stale).  Read-only: assigning to any of these
     % errors (no set-method), which is correct -- they are outputs.
-    % Authoritative table with all citations: F16GeomL3.md §A.2.
+    % Authoritative table with all citations: F16GeomL3.md §3.
     % ===================================================================== %
     properties (Dependent)
         % -- Wing ------------------------------------------------------------ %
@@ -350,7 +350,7 @@ classdef F16GeomL3 < GeometryModelL3
 
             % ---- horizontal tail (FULL planform + physical exposed set) - %
             %      No AR key by design: S_ft2 + span_ft fix the planform and
-            %      AR_ht is Dependent (Decision 1, F16GeomL3.md §A.4).
+            %      AR_ht is Dependent (Decision 1, F16GeomL3.md §4).
             obj.S_ht              = G.horizontal_tail.S_ft2;         % [Brandt Main!C18]
             obj.B_h               = G.horizontal_tail.span_ft;       % [USAF 3-view] PRIMARY span
             obj.lambda_ht         = G.horizontal_tail.taper;         % [Brandt Main!C20]

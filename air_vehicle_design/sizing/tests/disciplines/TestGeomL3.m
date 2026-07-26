@@ -24,7 +24,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
 %      area and CD0, is sized from engine SLS thrust (sqrt(T_AB_SLS/1900)),
 %      which is engine data, not airframe data.
 %          -> testConstructorRequiresInjectedPropulsion
-%   2. RENAME (F16GeomL3.md Sec. B): AR_ht / lambda_ht / S_ht / S_vt now mean
+%   2. RENAME (F16GeomL3.md §2): AR_ht / lambda_ht / S_ht / S_vt now mean
 %      FULL planform on BOTH tiers; the physical exposed values live under
 %      AR_exposed_ht / lambda_exposed_ht / AR_exposed_vt / lambda_exposed_vt.
 %      This removed a live silent-wrong-answer hazard: F16AeroL3's reference
@@ -366,7 +366,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testFullVsExposedPlanformNamesAfterRename(tc)
-        % PHASE-2 RENAME GUARD (F16GeomL3.md Sec. B). Before the rename this
+        % PHASE-2 RENAME GUARD (F16GeomL3.md §2). Before the rename this
         % tier used AR_ht / lambda_ht / AR_vt / lambda_vt for the EXPOSED
         % planform while GeometryModelL2 used the SAME FOUR NAMES for the FULL
         % planform, and carried no S_ht / S_vt at all. Both tiers are
@@ -780,7 +780,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % error 'MATLAB:class:noSetMethod', so nothing can overwrite a computed
         % value with a frozen literal (the anti-pattern Phase 2 removes).
         % The FIVE quantities that were stored inputs before Phase 2 are checked
-        % explicitly (F16GeomL3.md Sec. A.3), plus T_AB_SLS_lb (which left
+        % explicitly (F16GeomL3.md §3), plus T_AB_SLS_lb (which left
         % geometry entirely) and the new Amax. setfield is used because a
         % property assignment cannot appear inside an anonymous function.
             g = TestGeomL3.makeGeom();

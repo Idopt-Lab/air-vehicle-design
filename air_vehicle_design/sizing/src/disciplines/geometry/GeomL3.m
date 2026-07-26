@@ -21,7 +21,7 @@ classdef GeomL3
 %   reused statics, and each wrapper names the reused static and its source.
 %
 %   TWO formulas needed earlier in Phase 2 do NOT live here, deliberately
-%   (F16GeomL3.md §C reuse gaps; todo.md 2026-07-25 §12):
+%   (F16GeomL3.md §3 reuse gaps; todo.md 2026-07-25 §12):
 %     GeometryBase.compute_Amax_elliptical(W_max, H_max)  — the LOW-fidelity
 %       fuselage-envelope ellipse.  Still the L2 answer; NO LONGER the L3
 %       answer (see the sub-step 2h note below).  No pinnable equation
@@ -102,7 +102,7 @@ classdef GeomL3
 %   because there was no duct geometry to add.)
 %
 %   OFFICIAL vs ALTERNATE lifting-surface S_wet (Decision 2, user 2026-07-25;
-%   F16GeomL3.md §A.5).  OFFICIAL at L3 = Roskam Vol. II Eq. 12.1
+%   F16GeomL3.md §3).  OFFICIAL at L3 = Roskam Vol. II Eq. 12.1
 %   (GeomL2.compute_roskam_planform), fed the T.O. root/tip t/c splits — the
 %   same choice L2 makes.  Brandt's own uniform-t/c Geom!B13 form stays
 %   reachable as GeomL2.compute_wet_planform for the COMPARISON REPORT ONLY,

@@ -200,7 +200,7 @@ end
         %   deduction. That is a DIFFERENT QUANTITY from this envelope figure
         %   (F-16A: 27.4889, +9.47 % vs 25.110556, -16.6 % vs the raw max), so
         %   the report row is annotated `definitional`, not an agreement check
-        %   (F16GeomL3.md §D; the /5-vs-/4 question is todo.md §5, OPEN).
+        %   (F16GeomL3.md §4; the /5-vs-/4 question is todo.md §5, OPEN).
             arguments
                 W_max (1,1) double {mustBePositive}
                 H_max (1,1) double {mustBePositive}
@@ -222,7 +222,7 @@ end
         %   expression previously existed ONLY inline in F16GeomL2.get.D_inlet,
         %   and Phase 2 needed it at L3 too — copying the literal 1900 would
         %   have duplicated an uncited magic number across two tiers
-        %   (F16GeomL3.md §C reuse gap 2; todo.md 2026-07-25 §12). Both
+        %   (F16GeomL3.md §3 reuse gap 2; todo.md 2026-07-25 §12). Both
         %   F16GeomL2 and F16GeomL3 call this one method.
         %
         %   The 1900 lbf/ft^2 divisor is Brandt's own empirical thrust-density

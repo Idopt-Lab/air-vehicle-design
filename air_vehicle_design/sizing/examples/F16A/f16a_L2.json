@@ -7,7 +7,7 @@
 
   "geometry": {
     "_src": "Surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %; wing B22 = 1404 -> 4%, corroborated TO Fig. 1-2 NACA 64A204). tc_root, tc_tip [TO Sec. I biconvex]. fuselage length_ft, max_width_ft, max_height_ft [Main!B32/C32/D32]. engine duct_length_ft [Main!F32, label E32 'Compr Face'].",
-    "_note": "Row map also in F16GeomL2.md / F16GeomL3.md §F. Derived quantities are Dependent getters; engine SLS thrust arrives by DI from .propulsion.T_SL.",
+    "_note": "Row map also in F16GeomL2.md / F16GeomL3.md §2. Derived quantities are Dependent getters; engine SLS thrust arrives by DI from .propulsion.T_SL.",
     "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04},
     "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_root": 0.060, "tc_tip": 0.035},
     "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_root": 0.053, "tc_tip": 0.030},
@@ -15,7 +15,7 @@
     "engine":          {"duct_length_ft": 14.0},
     "overall_length_ft": 47.65,
     "_overall_length_ft_src": "L_aircraft, ft; feeds only the Raymer Eq. 12.44 (Amax/l)^2 term. Published F-16A length 47 ft 7.75 in = 47.6458 ft. Distinct from fuselage.length_ft.",
-    "_TODO_overall_length_ft": "overall_length_ft = 47.65 is traceable to no document in this repo; remove this key when pinned to a primary source. todo 2026-07-25 Phase 2 §6; Geom!B21 does not pin it (F16GeomL3.md §E)."
+    "_TODO_overall_length_ft": "overall_length_ft = 47.65 is traceable to no document in this repo; remove this key when pinned to a primary source. todo 2026-07-25 Phase 2 §6; Geom!B21 does not pin it (F16GeomL3.md §2)."
   },
 
   "aerodynamics": {
@@ -49,7 +49,7 @@
 
   "weights": {
     "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants.",
-    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. design_mach (Raymer Eq. 10.10 M^0.25) is NOT here either -- it is a REQUIREMENT, read from examples/F16A/f16a_requirements.json. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio, then x1.3 installed -- the x1.3 applies at L2 ONLY, F16WeightsL2.md §D.5) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
+    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. design_mach (Raymer Eq. 10.10 M^0.25) is NOT here either -- it is a REQUIREMENT, read from examples/F16A/f16a_requirements.json. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio, then x1.3 installed -- the x1.3 applies at L2 ONLY, F16WeightsL2.md §4) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
     "N_en": 1,
     "W_payload_fixed": 700,
     "W_payload_expendable": 4400

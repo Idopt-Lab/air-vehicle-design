@@ -131,7 +131,7 @@ ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ..
 % uses Roskam Vol. II Eq. 12.1 for lifting-surface S_wet where L2's official
 % choice is the same formula but L3 additionally carries the T.O. root/tip t/c
 % splits. L2-vs-L3 differences here are therefore EXPECTED, not errors --
-% see examples/F16A/F16GeomL3.md §A.4/§A.5 for the full accounting.
+% see examples/F16A/F16GeomL3.md §4/§3 for the full accounting.
 %
 % Geometry also takes the propulsion object: the nacelle diameter -- and so
 % duct wetted area and total S_wet -- is sized from engine thrust.
@@ -285,7 +285,7 @@ e_osw_ref = 1 / (pi * b.geom.AR * b.brandt.polar_model(1,4));   % Brandt K1 → 
 % (linear supersonic K1 theory breaks down near M=1 and at high Mach; L1/L2
 % have no drag-rise model; L3 has a whole-aircraft wave-drag term
 % [F16AeroL3.compute_CD0_wave, Raymer Eqs. 12.44-12.45, corrected 2026-07-23
-% to use whole-aircraft Amax/l per F16AeroL3_wave_drag_fix.md] that closes
+% to use whole-aircraft Amax/l per F16AeroL3.md] that closes
 % most of rows 4-5's gap but does not fully eliminate rows 3-5's divergence).
 T_asub = table();
 for iM = 1:nBrandt
@@ -405,7 +405,7 @@ fprintf('  [AERO sub]   L3 CD0 now includes CD0_misc = (Dq_gun_port+Dq_hook_USAF
 fprintf('  [AERO sub]   Mach rows 1-2 (M<=Mcrit) are the trustworthy Brandt comparison; rows 3-5\n');
 fprintf('               (transonic/supersonic) diverge by design -- L1/L2 have no drag-rise model,\n');
 fprintf('               L3''s wave-drag term (Eqs.12.44-12.45) uses whole-aircraft Amax/l (corrected\n');
-fprintf('               2026-07-23, see F16AeroL3_wave_drag_fix.md) and closes most but not all of the\n');
+fprintf('               2026-07-23, see F16AeroL3.md) and closes most but not all of the\n');
 fprintf('               gap; Raymer''s linear supersonic K1 (Eq.12.51) also breaks\n');
 fprintf('               down near M=1 and at high Mach for this low-AR, high-sweep wing.\n');
 fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L2/L3 use Raymer Eq.12.48/49 (injected AR,\n');
