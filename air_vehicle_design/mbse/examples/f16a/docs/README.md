@@ -83,7 +83,8 @@ mbse/examples/f16a/
 ├─ F16APhysicalCostModel.m               cost-model hook for the unit-cost MoM (stub)
 ├─ F16APhysicalMissionFuel.m             mission-fuel hook for the fuel-volume check (stub → NaN)
 ├─ F16APhysicalArchitectureTest.m        unit tests: the P model is built correctly
-└─ F16APhysicalVerificationTest.m        "verified by" tests: the design meets REQ_022 / REQ_P01
+├─ F16APhysicalVerificationTest.m        "verified by" tests: the design meets REQ_022 / REQ_P01
+└─ F16AOpenForReview.m                   load all models + requirement sets, open the editor
 ```
 
 ## How to open and run
@@ -124,6 +125,27 @@ runtests("F16APhysicalArchitectureTest")
 runtests("F16APhysicalVerificationTest")     % NOTE: the fuel-volume test fails on purpose
                                              % (mission-fuel stub) until /sizing/ is connected
 ```
+
+## Reviewing requirement traceability
+
+To see **Implemented by / Verified by** links in the Requirements Editor, load the whole model
+first — then open the editor:
+
+```matlab
+F16AOpenForReview      % loads the 3 models + 4 requirement sets, opens the Requirements Editor
+```
+
+This matters because of how Requirements Toolbox stores links. An **Implement** link
+(`component → requirement`) lives in the *implementing model's* link set, **not** the requirement
+set. So if you open only `f16a.slreqx`, the Functional/Logical/Physical model link sets are not
+loaded, and requirements look un-implemented — e.g. `REQ_F16A_020/023/024/025` (Logical) and
+`REQ_F16A_022/026` + `REQ_F16A_P01` (Physical) show no implement link. Loading the models (what
+`F16AOpenForReview` does) brings those link sets in and the links appear. **Verify** links live in
+the requirement set's own link set, so they show even without the models loaded.
+
+(Automated pass/fail *verification status* for the MATLAB-based tests is not populated by the
+Verify link alone — that needs Test Manager result import, a future step. The Verify link itself is
+the traceability: `REQ_F16A_022` / `REQ_F16A_P01` → `F16APhysicalVerificationTest`.)
 
 ## Prerequisites
 
