@@ -42,7 +42,7 @@ W_TO = J_frames.mission.W_TO_lb;   % 31,377 lbf  [Brandt Main! mission W_TO_lb]
 % diameter -- and so duct wetted area and total S_wet -- is sized from engine
 % thrust, which is engine data and no longer a geometry input.
 prop = F16PropL2(f16a_spec_path(2));
-g1 = F16GeomL1(f16a_spec_path(1));
+g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
 g2 = F16GeomL2(f16a_spec_path(2), prop);
 g3 = F16GeomL3(f16a_spec_path(3), prop);
 

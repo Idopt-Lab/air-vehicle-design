@@ -28,10 +28,47 @@ st_36_140 = AircraftState(36000, 1.40);  % 36 kft M=1.4  (2nd combat turn)
 st_36_160 = AircraftState(36000, 1.60);  % 36 kft M=1.6  (dash / supersonic aero / polar_actual)
 st_50_087 = AircraftState(50000, 0.87);  % 50 kft M=0.87 (max altitude)
 
+% ── Discipline objects ────────────────────────────────────────────────── %
+% Built up front because every section below injects them. Geometry takes the
+% propulsion object (the nacelle diameter, and so duct wetted area and CD0, is
+% sized from engine thrust); weights takes geometry, propulsion and the
+% requirements file. There is no L3 propulsion tier, so F16PropL2 serves both
+% the L2 and L3 rungs -- any L3 propulsion figure here is computed by F16PropL2.
+prop = F16PropL2(f16a_spec_path(2));
+g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+g2 = F16GeomL2(f16a_spec_path(2), prop);
+g3 = F16GeomL3(f16a_spec_path(3), prop);
+
 % ── Weights ───────────────────────────────────────────────────────────── %
-w1 = F16WeightsL1();
-w2 = F16WeightsL2();
-w3 = F16WeightsL3();
+% Phase 4 (2026-07-25) reshaped the weights classes. L2/L3 now take the
+% requirements file plus injected geometry and propulsion objects:
+%   F16WeightsL{2,3}(json_path, req_path, geom, prop)
+% L2 injects F16GeomL2, L3 injects F16GeomL3 (the physical/T.O. tier), and
+% both take F16PropL2 -- there is no L3 propulsion tier. The requirements file
+% supplies the cruise condition (for the SFC dependency injection) and the
+% design Mach (for the Raymer Eq. 10.10 engine weight).
+%
+% The objects come from the Discipline-objects block above. L1 is unchanged: it
+% is a pure type-based statistical estimate with no geometry or engine data.
+%
+% Two Phase-4 fixes are visible in the numbers below. OEW is now a function of
+% its ARGUMENT rather than of a frozen 0.17*31377 baked into the constructor
+% (review finding #5), and the L3 landing-gear group now responds to W_TO at
+% all -- it was bit-identical at 31,377 / 45,000 / 60,000 lbf because the
+% landing weight was Brandt's frozen Wt!B41 output and weight_landing_gear
+% took no W_TO argument (todo 2026-07-25 Phase 4 §P4-17).
+w1 = F16WeightsL1(f16a_spec_path(1));
+w2 = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g2, prop);
+w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
+
+% Set the current TOGW iterate on the objects. The W_TO-dependent group
+% properties (W_all_else_empty, W_landing_gear, ...) are Dependent getters and
+% now ERROR rather than silently returning a stale or NaN value when W_TO has
+% not been set -- which is the point of the Phase-4 change, and is exactly what
+% a sizing loop does each iteration. The OEW(W_TO) methods take W_TO as an
+% argument and do not need this, but the property reads below do.
+w2.W_TO = W_TO;
+w3.W_TO = W_TO;
 
 oew          = [w1.OEW(W_TO), w2.OEW(W_TO), w3.OEW(W_TO)];
 wefrac       = oew / W_TO;
@@ -44,7 +81,7 @@ we_roskam_L1 = w1.compute_We_roskam(W_TO);
 % same pattern as e.g. the [PROPULSION] "TSFC_mil, 36kft" row above.
 t2_tail = w2.weight_tail(W_TO);
 t3_tail = w3.weight_tail(W_TO);
-lg3     = w3.weight_landing_gear();
+lg3     = w3.weight_landing_gear(W_TO);   % now takes W_TO -- see the section note
 eng3    = w3.weight_engine_section(W_TO);
 sys3    = w3.weight_systems(W_TO);
 
@@ -98,10 +135,6 @@ ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ..
 %
 % Geometry also takes the propulsion object: the nacelle diameter -- and so
 % duct wetted area and total S_wet -- is sized from engine thrust.
-prop = F16PropL2(f16a_spec_path(2));
-g1 = F16GeomL1(f16a_spec_path(1));
-g2 = F16GeomL2(f16a_spec_path(2), prop);
-g3 = F16GeomL3(f16a_spec_path(3), prop);
 
 swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),          g3.get_S_wet()];
 lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                g3.L_fus];
@@ -112,9 +145,16 @@ sw_fus  = [NaN,                g2.get_S_wet_fuselage(), g3.get_S_wet_fuselage()]
 sw_duct = [NaN,                g2.get_S_wet_duct(),     g3.get_S_wet_duct()];
 
 % ── Aerodynamics ──────────────────────────────────────────────────────── %
+% L3 aero injects g3, the L3 geometry tier -- NOT g2. This line still passed g2
+% after Phase 2 repointed the other L3 consumers (F16ConstraintSet,
+% aerodynamics_brandt_comparison), so the L3 aero column here was silently
+% computed on L2 geometry; corrected in Phase 4. The L3 aero numbers below
+% therefore move: L3 geometry is the physical/T.O. tier (VT LE sweep 47.5 vs 40,
+% L_fus 47.5 vs 46.5) and its Amax is the area-ruled buildup rather than L2's
+% fuselage-envelope ellipse.
 a1 = F16AeroL1(f16a_spec_path(1));
 a2 = F16AeroL2(g2, f16a_spec_path(2));
-a3 = F16AeroL3(g2, f16a_spec_path(3));
+a3 = F16AeroL3(g3, f16a_spec_path(3));
 
 pu1 = a1.drag_polar(st_36_160); pu2 = a2.drag_polar(st_36_160); pu3 = a3.drag_polar(st_36_160);
 
