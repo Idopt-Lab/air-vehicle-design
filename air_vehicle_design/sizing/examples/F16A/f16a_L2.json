@@ -2,12 +2,15 @@
   "_comment": "F-16A Block 10/15 Level-2 inputs. Read by F16GeomL2 (.geometry) and F16AeroL2 (.aerodynamics). Geometry = Brandt-F16-A.xls Main-tab spec; aerodynamics = genuine aero spec (ALL geometry injected from the geom object, none stored here).",
 
   "geometry": {
-    "_src": "Brandt-F16-A.xls Main tab (wing B18:B24, pitch_ctrl C18:C24, vert_tail H18:H24, fuselage B32/C32/D32, engine Engn(s)); HT/VT tc_root/tc_tip = T.O. 1F-16A-1 Sec. I biconvex splits.",
+    "_src": "Brandt-F16-A.xls Main tab (wing B18:B22, pitch_ctrl C18:C22, vert_tail H18:H22, fuselage B32/C32/D32). CITATION CORRECTION 2026-07-25 (repo-wide; examples/F16A/F16GeomL3.md §F is authoritative): Main row 20 = 'Taper Ratio', row 21 = 'Sweep, deg', row 22 = 'NACA 4-digit' -- so taper is {B,C,H}20 (was cited 21), LE sweep is {B,C,H}21 (was cited 20), and t/c comes from the row-22 NACA 4-digit designation (B22=1404, C22=H22='0004'; last two digits = thickness in % chord -> 0.04) rather than row 24, which is 'Y Location' with B24/C24 EMPTY. The former 'B18:B24' ranges were therefore too wide and row 24 is not an input source. ZERO computed values change -- only the audit trail moves. HT/VT tc_root/tc_tip = T.O. 1F-16A-1 Sec. I biconvex splits, and are now the SINGLE t/c basis: the uniform HT/VT tc_ratio inputs were REMOVED (locked decision 6), and where a uniform value is needed (the Brandt Geom!B13 uniform-t/c S_wet alternate) it is the derived root/tip mean, 0.0475 HT / 0.0415 VT. The wing KEEPS tc_ratio=0.04 [Main!B22, NACA 4-digit 1404; corroborated T.O. 1F-16A-1 Fig. 1-2 NACA 64A204]: it is genuinely uniform-t/c with no root/tip split available, and tc_r_wing/tc_t_wing mirror it as Dependent. Engine SLS thrust is NO LONGER a geometry input: T_AB_SLS_lb was REMOVED and is now DERIVED from the injected propulsion object's T_SL (dependency injection) = .propulsion.T_SL = 23770 lbf [Brandt Engn(s)!T_AB_SLS = Main!D29], so nacelle diameter D_inlet=sqrt(T/1900) and the 155.57 ft2 of duct wetted area track a thrust change instead of staying pinned to a stale copy; duct_length_ft stays a genuine airframe input. MINIMUM input set: derived quantities (spans, chords, MACs, sweep conversions, exposed/wetted areas, D_fus, Amax, D_inlet/D_exit) are Dependent getters and are deliberately absent.",
     "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04},
-    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04, "tc_root": 0.060, "tc_tip": 0.035},
-    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_ratio": 0.04, "tc_root": 0.053, "tc_tip": 0.030},
+    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_root": 0.060, "tc_tip": 0.035},
+    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_root": 0.053, "tc_tip": 0.030},
     "fuselage":        {"length_ft": 46.5, "max_width_ft": 7.0, "max_height_ft": 5.0},
-    "engine":          {"duct_length_ft": 14.0, "T_AB_SLS_lb": 23770.0}
+    "engine":          {"duct_length_ft": 14.0},
+    "overall_length_ft": 47.65,
+    "_overall_length_ft_src": "L_aircraft, whole-aircraft length, ft -- feeds ONLY the Raymer 6th ed. Eq. 12.44 Sears-Haack wave-drag term as (Amax/l)^2. Published F-16A airframe length, 47 ft 7.75 in = 47.6458 ft (47.65 is a +0.009% rounding). PROVENANCE CAVEAT, stated plainly: this figure is NOT traceable to any document in this repo -- neither '47.65', '47 ft 7.75 in', nor any overall-length figure appears anywhere in air_vehicle_design/sizing/ (grepped 2026-07-25). The VALUE stands as the user's decision (2026-07-25); pinning it to a primary source is a standing OPEN item, VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 §6. Not derivable in-model: the geometry object has no nose-boom / tailcone x-stations. DISTINCT from fuselage.length_ft = 46.5 at L2. Brandt Geom!B21 = 48.303947 is a MAX() over his component x-station columns -- an EXTENT of his own layout, not a published spec dimension -- so the two are NOT the same quantity: 48.303947 is a comparison reference only (report row annotated 'definitional'), never an input.",
+    "_TODO_overall_length_ft": "VALUE APPROVED, CITATION NOT PINNED. overall_length_ft=47.65 is the published F-16A airframe length (47 ft 7.75 in = 47.6458 ft) supplied from general knowledge -- it is NOT traceable to any document in this repo (grepped 2026-07-25: no overall-length figure appears anywhere in air_vehicle_design/sizing/). The value stands as the user's decision (2026-07-25); only its provenance is open. Remove this key when the figure is pinned to T.O. 1F-16A-1 or another named primary source. Brandt Geom!B21 = 48.303947 does NOT pin it: that cell is a MAX() over his component x-station columns (an extent of his own layout), not a published spec dimension, so it is a different quantity. Standing item: VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 §6."
   },
 
   "aerodynamics": {
@@ -44,5 +47,23 @@
     "_TSFC_install_factor_note": "The framework wires installed = uninstalled x 1.08 onto the Mattingly (uninstalled) TSFC. The stored Brandt SLS TSFCs 0.70 (mil) / 2.20 (AB) are ALREADY installed (they include the 1.08 factor) -- do not double-apply (todo.md 2026-07-24 entry 4).",
     "_engine_type_note": "Engine-class identifier (F100-PW-200 class). Selects the Mattingly TSFC coefficient set (C1/C2 mil+AB, Eq. 3.55a/b) from the PropL2 toolbox's engine_type-keyed table (user decision 2026-07-24, decision b). The thrust lapse (Mattingly Eq. 2.54a/b) uses the analytical model directly.",
     "_engine_model_note": "Descriptor: F-16A Block 10/15 powerplant (F100-PW-200 class), per examples/F16A/F16PropL1.md. Recorded for provenance; not read numerically. Note T_t4_max_F traces to Mattingly Table C.4's F100-PW-100 entry, the closest tabulated variant."
+  },
+
+  "weights": {
+    "_comment": "F-16A Block 10/15 Level-2 weight-estimation inputs (Raymer 6th ed. Table 15.2 surface-density structural groups + AE481 metabook §7 engine/all-else fractions). Read by F16WeightsL2. Only genuine engine spec + config stored here; the Table-15.2 psf densities and AE481 fractions are category-selected Constants inside the WeightsL2 toolbox (NOT JSON inputs; see _formula_constants_note). Exposed areas + fuselage wetted area are injected LIVE from an F16GeomL2 object (see _geometry_via_DI).",
+    "_geometry_via_DI": "Injected LIVE from an F16GeomL2 object in Step 2c, NOT stored here: S_w (= geom S_exposed_wing = 196.23), S_ht (= geom S_exposed_ht = 49.85), S_vt (= geom S_exposed_vt = 40.89) -- exposed areas match geom exactly; and S_wet_fus (= geom get_S_wet_fuselage). NB value divergence for 2c to reconcile: weights S_wet_fus=750 (unpinned estimate) vs geom fuselage wetted 730.30 ft2.",
+    "_formula_constants_note": "The Raymer Table 15.2 psf densities (wing 9.0 / HT 4.0 / VT 5.3 / fuselage 4.8 lbf/ft2) and the AE481 §7 fractions (landing gear 0.033, all-else-empty 0.17, installed-engine 1.3) are NOT JSON inputs -- they are Constants selected by aircraft_category inside the WeightsL2 toolbox (mirroring the propulsion lookup_TSFC_coeffs precedent). NB LG 0.033 (framework) vs 0.034 (Brandt/subplan) -- todo.md 2026-07-24 §3c item 2.",
+    "aircraft_category": "jet_fighter",
+    "_aircraft_category_source": "Selects the Raymer Table 15.2 fighter psf row + AE481 §7 fighter fractions. Matches F16WeightsL2 default.",
+    "N_en": 1,
+    "_N_en_source": "Number of engines. [TO 1F-16A-1].",
+    "W_en": 3030,
+    "_W_en_source": "Bare/dry engine weight, lbf. [estimate; verify TO 1F-16A-1 or Jane's All the World's Aircraft -- NOT pinned]. Feeds the AE481 §7 installed-engine = 1.3*N_en*W_en fraction.",
+    "W_energy": 6296.3,
+    "_W_energy_source": "Internal fuel weight, lbf. [Brandt Wt!B6].",
+    "W_payload_fixed": 220,
+    "_W_payload_fixed_source": "Fixed equipment + crew, lbf. [estimate: 1 pilot + survival gear -- NOT pinned to a repo source].",
+    "W_payload_expendable": 0,
+    "_W_payload_expendable_source": "Expendable payload, lbf; set by mission profile. [WeightsBase contract]."
   }
 }

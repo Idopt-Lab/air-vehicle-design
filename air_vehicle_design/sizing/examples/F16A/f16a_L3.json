@@ -1,10 +1,109 @@
 {
-  "_comment": "F-16A Block 10/15 Level-3 aerodynamics inputs (aero-only; Raymer Eq. 12.24 component drag buildup + Eq. 12.41 wave drag). Geometry at L3 is the injected L2 object (Geometry has no L3 tier), so there is no geometry block. Read by F16AeroL3 (.aerodynamics). Component order: wing, horizontal_tail, vertical_tail, fuselage, duct.",
+  "_comment": "F-16A Block 10/15 Level-3 inputs. Read by F16GeomL3 (.geometry), F16AeroL3 (.aerodynamics), and F16WeightsL3 (.weights). Geometry is now the PHYSICAL / T.O.-geometry L3 tier (GeomL3, reintroduced 2026-07-24) -- HIGHER fidelity than GeomL2's Brandt-reference geometry, with intentional physical divergences (see .geometry._note). Aero component order: wing, horizontal_tail, vertical_tail, fuselage, duct.",
+
+  "geometry": {
+    "_src": "GeomL3 = the PHYSICAL / T.O.-geometry tier AND the full L3 geometry tier consumed by L3 geometry + aero + weights (locked user decision 2026-07-25, Phase 2; reverses the 2026-07-22 'Geometry has no L3'). Where a physical/T.O. value differs from Brandt, GeomL3 uses the physical one. Every value traced to examples/F16A/F16GeomL3.md §A.1 (the 33-input INPUT-vs-DERIVED table) + docs/geometry_parameter_usage.md; open items in VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 and 2026-07-24 GeomL3. Brandt Main-tab cell citations below carry the 2026-07-25 repo-wide CITATION CORRECTION (F16GeomL3.md §F is authoritative): Main row 20 = 'Taper Ratio', row 21 = 'Sweep, deg', row 22 = 'NACA 4-digit' (last two digits = % chord t/c); the rows previously cited (21 for taper, 20 for sweep, 24 for t/c) were swapped, and row 24 is 'Y Location' with B24/C24 EMPTY. ZERO computed values change from that correction -- only the audit trail moves. Engine SLS thrust is NO LONGER a geometry input: T_AB_SLS_lb is DERIVED from the injected propulsion object's T_SL (dependency injection, F16GeomL3.md §A.2 #31) -- at the L3 rung that object is F16PropL2 reading f16a_L2.json .propulsion.T_SL = 23770 lbf [Brandt Engn(s)!T_AB_SLS = Main!D29], since there is no L3 propulsion tier (locked decision 2026-07-25).",
+    "_note": "MINIMUM input set for this fidelity level: 38 numeric scalar inputs + a 20-frame x 3-column NORMALIZED fuselage cross-section table (60 numbers, .fuselage.frames_normalized) + 1 injected propulsion object. Sub-step 2h (locked user decision 2026-07-25) added the 5 new scalars -- wing.x_apex_ft, horizontal_tail.x_le_ft, vertical_tail.x_le_ft, engine.x_inlet_ft, engine.n_engines -- and the frame table; all 65 new numbers exist for ONE reason, the WHOLE-AIRCRAFT AREA-RULED Amax that replaces the interim fuselage-only envelope ellipse at this tier (todo 2026-07-25 Phase 2 §16). Every other geometric quantity is a Dependent getter recomputed live (F16GeomL3.md §A.2 lists all 34; sub-step 2h adds more -- the per-surface exposed root chords, Xexp stations, L_engine and the nacelle aft limit, see below), per CLAUDE.md 'Optimization-ready property design' -- nothing derivable is stored, so nothing can go stale when an optimizer mutates an input. DERIVED, therefore deliberately ABSENT here: spans, root/tip chords, MACs, QC/TE sweep conversions; AR_ht (= span_ft^2/S_ft2 = 18.5^2/108 = 3.1690 -- Decision 1: S_ft2 + span_ft fix the HT planform, so a stored AR would be self-contradictory AND stale under mutation; Brandt Main!C19 = 3.0 is now a comparison reference only, NOT an input); the uniform tc_ht/tc_vt (= root/tip mean 0.0475 / 0.0415); S_exposed_wing / S_exposed_ht / S_exposed_vt (196.2261 / 51.1486 / 40.8897 -- the stored HT 49.85 and VT 40.89 inputs were REMOVED, both now Dependent); D_fus = (max_width+max_depth)/2 = 6.0 (equivalent diameter for the Roskam Eq. 12.3 fuselage S_wet term ONLY -- the weights-consumed max fuselage DEPTH is max_depth_ft = 5.0 = H_max_fuselage, todo 2026-07-24 GeomL3 §5 naming clash); Amax (now the AREA-RULED whole-aircraft maximum -- Raymer 6th ed. Eq. 12.44's actual requirement -- i.e. a MAX over stations of fuselage + wing + HT + VT cross-sections less the N_eng*pi*D_eng^2/5 engine flow-through deduction, computed live from frames_normalized rescaled by the envelope inputs; the interim fuselage-only ellipse (pi/4)*max_width*max_depth = 27.4889 is GONE from this tier and stays at L2 only, and BOTH remaining citation gaps stay OPEN: the elliptical identity and the affine-rescaling assumption, todo 2026-07-25 Phase 2 §4); T_AB_SLS_lb / D_inlet / D_exit; every S_wet. ALSO verified derivable and therefore NOT stored (todo §16.1): per-surface exposed root chords c_exp_root (already a local variable inside GeomL2.compute_S_exposed_horizontal/_vertical), exposed half-spans G_hs_exp, tip chords, LE sweeps, t/c, the component Xexp stations (= x_apex + (max_width/2)*tan(sweep_LE) horizontal, x_le + (max_depth/2)*tan(sweep_LE) vertical), D_engine (= existing Dependent D_inlet = 3.5370), L_engine (= 4.5*D_engine = 15.9166, factor 4.5 from Brandt Geom!D475 = C475 * 'Engn(s) Old'!Q22 = 'Engn(s)'!R22), and the nacelle aft limit (= x_inlet_ft + duct_length_ft + 4.5*D_engine = 44.9166, Brandt Geom!C484 = C482 + D475). The STRAKE is deliberately absent: it is DEFERRED to its own later step (locked user decision 2026-07-25) and is provably worth 0.000% of Amax for this configuration -- its active range is 12.0 < x < 21.551 ft while the governing station is x = 29.1 ft, so strake-out / strake-with-Brandt's-bug / strake-corrected all give identically 25.110534 (todo §16.2). Brandt's documented strake bug (readme_geom.md §5.1) is therefore DECLINED at zero numeric cost (todo §16.3). INTENTIONAL fidelity divergences from GeomL2's Brandt values (BY DESIGN, not errors): vertical_tail.sweep_LE_deg = 47.5 vs L2's 40 [Brandt Main!H21] (todo 2026-07-24 GeomL3 §2); fuselage.length_ft = 47.5 vs L2's 46.5 [Brandt Main!B32] (§3); horizontal_tail.span_ft = 18.5 as the PRIMARY span (USAF 3-view) vs L2's derived b_ht = 18.0, which yields derived AR_ht 3.1690 (+5.63% vs Main!C19) and S_exposed_ht 51.1486 (+2.611% vs Brandt Geom!8) -- Decision 1, todo 2026-07-25 §7. MIXED PROVENANCE, standing OPEN item (todo 2026-07-25 §3): the full-planform tail areas/AR/taper below are Brandt's, carried alongside T.O./USAF sweeps and span; T.O. full-planform tail values have been requested. Lifting-surface S_wet at L3 uses Roskam Vol. II Eq. 12.1 fed the root/tip t/c splits (Decision 2, todo 2026-07-25 §8); Brandt's uniform-t/c Geom!B13 form is a comparison-report alternate row only, never the computed value.",
+
+    "wing": {
+      "_src": "PHYSICAL wing planform = Brandt values (no wing divergence). S_ft2=300 reference wing area [Brandt Main!B18]; AR=3.0 [Brandt Main!B19 / TO 1F-16A-1 Fig. 1-2]; taper=0.2275 [Brandt Main!B20 -- citation corrected from B21, F16GeomL3.md §F.1 / TO Fig. 1-2]; sweep_LE_deg=40 [Brandt Main!B21 -- citation corrected from B20 / TO Fig. 1-2]; tc_ratio=0.04 (NACA 64A204) [Brandt Main!B22 'NACA 4-digit' = 1404, last two digits = 4% chord -- citation corrected from B24, which is the empty 'Y Location' cell; corroborated by TO 1F-16A-1 Fig. 1-2]. The wing KEEPS tc_ratio: it is genuinely uniform-t/c with no root/tip split available (locked decision 6), and tc_r_wing/tc_t_wing mirror it as Dependent. S_csw_ft2=68.03 wing control-surface area = flaperon (31.32) + LEF (36.71) [TO 1F-16A-1 Fig. 1-2] -- not derivable, no control-surface geometry exists in GeomL2/GeometryBase (NB does not match Brandt Main-tab LE-flap S=21.314; independent T.O. figure, todo 2026-07-21 Finding 5). Exposed wing area 196.2261 is DERIVED (Dependent S_exposed_wing) -- NOT stored. ADDED sub-step 2h (2026-07-25): x_apex_ft=17.786 wing apex (LE root) x-station measured aft from the nose, ft [Brandt Main!B23 'X Location'; same value carried by the read-only VnV/BrandtF16A/GroundTruth/f16a_geometry.json wing.x_apex_ft; todo 2026-07-25 Phase 2 §16.1 row 1]. Required by the area-ruled Amax: it fixes the wing's Xexp = x_apex_ft + (fuselage.max_width_ft/2)*tan(sweep_LE_deg) = 20.7226 [Brandt Geom!B7 = 20.72268], the start of the wing's cosine cross-section column. NOT derivable in-framework: on Brandt's side it is itself pre-computed in Main as x_MAC_qc - y_MAC*tan(sweep_LE) (readme_geom.md §2, 'calculated value stored as input'), but this framework carries no MAC x/y stations, so 17.786 is a given x-station here exactly as it is in the ground-truth JSON. PRECISION NOTE, recorded not silently resolved: a live Main-tab read logged in todo 2026-07-25 §12 reports the wing X Location as 17.7858, i.e. 2e-4 ft (0.0011%) below the 17.786 stored here and in the read-only GT; 17.786 is the value the §16 scoping computed against and is used unchanged -- do not 'correct' it without a decision.",
+      "S_ft2":        300.0,
+      "AR":           3.0,
+      "taper":        0.2275,
+      "sweep_LE_deg": 40.0,
+      "tc_ratio":     0.04,
+      "S_csw_ft2":    68.03,
+      "x_apex_ft":    17.786
+    },
+
+    "horizontal_tail": {
+      "_src": "FULL-planform HT reference geometry + the physical exposed-planform and weights inputs. NB there is deliberately NO 'AR' key here (Decision 1, user 2026-07-25): S_ft2 and span_ft together fix the HT planform, and AR_ht is DERIVED = span_ft^2/S_ft2 = 3.1690. Adding an AR key would re-introduce the over-determination that decision removes (Brandt's AR=3.0 with S=108 implies span 18.0, contradicting the physical 18.5) -- Brandt Main!C19 = 3.0 is a comparison reference only. S_ft2=108 FULL reference area [Brandt Main!C18] -- same meaning as L2 (F16GeomL3.md §B rename table). taper=0.2275 FULL-planform taper [Brandt Main!C20 -- citation corrected from C21]. sweep_LE_deg=40 [Brandt Main!C21 -- citation corrected from C20]; absent before this phase, required by L3 aero's Raymer Eq. 12.30 form factor (F16GeomL3.md §C #23). tc_root=0.060 / tc_tip=0.035 [T.O. 1F-16A-1 Sec. I, biconvex root ~6% / tip ~3.5%] -- the root/tip split is now the SINGLE t/c basis; the former uniform tc_ratio=0.04 input [previously miscited Brandt Main!C24, correct cell C22] was REMOVED and the uniform value, where needed, is the derived mean 0.0475 (locked decision 6). AR_exposed=2.114 / taper_exposed=0.390 = HT EXPOSED-planform aspect ratio / taper, PHYSICAL construction values [T.O./USAF] -- carried as INPUTs for Raymer Eq. 15.2 weights; NOT reconcilable with Brandt exposed geometry (clean-derived 2.4274 / 0.3252, +14.8% / -16.6% away; todo 2026-07-24 GeomL3 §1). span_ft=18.5 (B_h) HT full span, 18 ft 6 in [USAF 3-view] -- the PRIMARY span per Decision 1: area and span are what a 3-view measures, aspect ratio is definitional. F_w_ft=7.0 fuselage width at HT intersection, Raymer Eq. 15.2 [Brandt Main!C32, max-width upper-bound proxy -- estimate, the real empennage width is narrower]. S_exposed_ft2 was REMOVED: 51.1486 is now DERIVED (Dependent) from S_ft2 + span_ft + taper + fuselage max_width_ft via GeomL2.compute_S_exposed_horizontal. ADDED sub-step 2h (2026-07-25): x_le_ft=36.0 HT root leading-edge x-station aft of the nose, ft [Brandt Main!C23 'X Location', live-read 2026-07-25 per todo 2026-07-25 Phase 2 §16.1 row 2 / §3; same value as the read-only f16a_geometry.json pitch_ctrl.x_le_ft]. Required by the area-ruled Amax: it fixes the HT's Xexp = x_le_ft + (fuselage.max_width_ft/2)*tan(sweep_LE_deg) = 38.9368 [Brandt Geom!B8 = 38.93685]. FOR THE RECORD (todo §16.5): every HT variable including this one is currently WORTH 0.000% of Amax, because the HT cross-section only exists aft of x ~ 38.94 ft while the governing station is x ~ 29.1 ft. That is a genuine geometric fact for this configuration, NOT a reason to omit the input -- under optimizer mutation the governing station can migrate.",
+      "S_ft2":         108.0,
+      "taper":         0.2275,
+      "sweep_LE_deg":  40.0,
+      "tc_root":       0.060,
+      "tc_tip":        0.035,
+      "AR_exposed":    2.114,
+      "taper_exposed": 0.390,
+      "span_ft":       18.5,
+      "F_w_ft":        7.0,
+      "x_le_ft":       36.0
+    },
+
+    "vertical_tail": {
+      "_src": "FULL-planform VT reference geometry + the physical exposed-planform and weights inputs. S_ft2=60 FULL reference area [Brandt Main!H18]; AR=1.6 FULL-planform aspect ratio, single panel [Brandt Main!H19]; taper=0.5 FULL-planform taper [Brandt Main!H20 -- citation corrected from H21]. Unlike the HT, the VT keeps an AR key: no independent physical VT span input exists, so S_ft2 + AR fix the planform with no over-determination (b_vt = sqrt(S*AR) = 9.7980 ft, full single-panel span, NOT halved -- readme_geom.md §4.3). sweep_LE_deg=47.5 VT LE sweep, PHYSICAL [T.O. 1F-16A-1] -- INTENTIONAL divergence from GeomL2's 40 [Brandt Main!H21 -- citation corrected from H20] (todo 2026-07-24 GeomL3 §2); both tiers convert it with the single-panel 2/AR form (GeometryBase.convert_sweep_panel, Phase 1b). tc_root=0.053 / tc_tip=0.030 [T.O. 1F-16A-1 Sec. I, biconvex root ~5.3% / tip ~3.0%] -- the split is now the SINGLE t/c basis; the former uniform tc_ratio=0.04 input [previously miscited Brandt Main!H24, correct cell H22] was REMOVED and the uniform value, where needed, is the derived mean 0.0415 (locked decision 6). AR_exposed=1.294 / taper_exposed=0.437 = VT EXPOSED-planform aspect ratio / taper, PHYSICAL [T.O./USAF] -- carried as INPUTs for Raymer Eq. 15.3 weights (exposed AR reconciles at +0.7% vs the clean-derived 1.3025, taper does not: 0.5731, +31.1%; todo 2026-07-24 GeomL3 §1). rudder_area_ft2=11.65 (S_r) [T.O. 1F-16A-1 Fig. 1-2] -- no rudder chord-fraction anywhere in the repo. H_t_ft=0 / H_v_ft=1 = HT height above fuselage CL / a nonzero denominator so H_t/H_v=0, F-16 conventional (non-T) tail [Raymer 6th ed. §15.3]. S_exposed_ft2 was REMOVED: 40.8897 is now DERIVED (Dependent) via GeomL2.compute_S_exposed_vertical(S_ft2, AR, c_root_vt, c_tip_vt, max_depth_ft/2) -- that static takes NO sweep argument, so the L3 value is bit-identical to L2 and to Brandt Geom!10 and CANNOT diverge (todo 2026-07-25 §7(a); do not invent a sweep-dependent exposed-area formula). ADDED sub-step 2h (2026-07-25): x_le_ft=36.0 VT root leading-edge x-station aft of the nose, ft [Brandt Main!H23 'X Location'; todo 2026-07-25 Phase 2 §16.1 row 3; same value as the read-only f16a_geometry.json vert_tail.x_le_ft]. Required by the area-ruled Amax: it fixes the VT's Xexp = x_le_ft + (fuselage.max_depth_ft/2)*tan(sweep_LE_deg) -- note the VERTICAL surface clips on half-DEPTH, not half-width (readme_geom.md §4.3) -- giving 38.7283 at L3's physical 47.5 deg sweep vs Brandt Geom!B10 = 38.09775 at his 40 deg; that gap is the SAME intentional sweep divergence documented above, not a new error. Like the HT, this input is currently worth 0.000% of Amax (governing station x ~ 29.1 ft is far forward of the VT), todo §16.5.",
+      "S_ft2":           60.0,
+      "AR":              1.6,
+      "taper":           0.5,
+      "sweep_LE_deg":    47.5,
+      "tc_root":         0.053,
+      "tc_tip":          0.030,
+      "AR_exposed":      1.294,
+      "taper_exposed":   0.437,
+      "rudder_area_ft2": 11.65,
+      "H_t_ft":          0,
+      "H_v_ft":          1,
+      "x_le_ft":         36.0
+    },
+
+    "fuselage": {
+      "_src": "PHYSICAL/T.O. fuselage envelope. length_ft=47.5 [TO 1F-16A-1] -- INTENTIONAL divergence from GeomL2's 46.5 [Brandt Main!B32] (todo 2026-07-24 GeomL3 §3); feeds the fuselage-component Reynolds number and Roskam Eq. 12.3, and is DISTINCT from overall_length_ft below. max_width_ft=7.0 [Brandt Main!C32 / TO]. max_depth_ft=5.0 max fuselage depth [Brandt Main!D32; TO 1F-16A-1 cross-section] -- this, NOT the derived equivalent diameter D_fus=6.0=(W+H)/2, is the Raymer Eq. 15.4 structural depth the weights DI must read (naming clash logged, todo 2026-07-24 GeomL3 §5). All THREE envelope values are live consumers, and sub-step 2h (2026-07-25) made them more so: they feed D_fus, the exposed-area clips (W/2 for wing/HT, depth/2 for VT), the fuselage-component Reynolds number, AND -- new -- the affine rescaling of frames_normalized below, which is what puts the area-ruled Amax back under the control of fuselage width, depth and length. They no longer feed a fuselage-only Amax ellipse; that definition now lives at L2 only.",
+      "length_ft":    47.5,
+      "max_width_ft": 7.0,
+      "max_depth_ft": 5.0,
+
+      "_frames_normalized_src": "Brandt's 20-station fuselage cross-section table, stored NORMALIZED by the envelope so that L3's own fuselage.length_ft / max_width_ft / max_depth_ft rescale it (locked user decision 2026-07-25, sub-step 2h -- 'variant D' of todo 2026-07-25 Phase 2 §16.1). SOURCE of the raw numbers: the read-only VnV/BrandtF16A/GroundTruth/f16a_geometry.json fuselage.frames array [Brandt Main!A34:F53 per that file's own _source; readme_geom.md §2 cites the block as Main!A33:F53, '20 frames: frame, x, z_chine, z, w, h']; NOTHING here is computed by this framework -- these are Brandt's tabulated frame dimensions, divided through by three constants. NORMALIZATION DENOMINATORS (stated explicitly because one of them is NOT this file's own value): x_over_L = x_ft / 46.5, where 46.5 is BRANDT's L_fus [Main!B32], the length the table was actually measured against -- NOT L3's own fuselage.length_ft = 47.5 (the physical/T.O. length, an intentional L3 divergence documented above). Denormalizing with 47.5 is therefore a deliberate 2.15% affine stretch of the whole distribution, not a restoration. w_over_Wmax = w_ft / 7.0 [Brandt Main!C32] and h_over_Hmax = h_ft / 5.0 [Brandt Main!D32] -- those two denominators DO equal L3's own max_width_ft / max_depth_ft. COLUMNS KEPT: frame (Brandt's 1..20 index label, for traceability, not a design value), x_over_L, w_over_Wmax, h_over_Hmax. COLUMNS DROPPED, and why: z_chine_ft and z_ft are consumed by BrandtGeometry.frameCrossSection but cancel EXACTLY out of the cross-sectional AREA it returns -- the cosine section has z_up = z_chine + (z_top-z_chine)*cos(pi/2*t) and z_dn = z_chine + (z_bot-z_chine)*cos(pi/2*t), so the integrand dz = z_up - z_dn = (z_top-z_bot)*cos(pi/2*t) = h*cos(pi/2*t) contains neither z term (readme_geom.md §4.2). Verified numerically 2026-07-25: perturbing z_chine by +3.7 ft and z_center by -1.9 ft at all 20 frames changed the 20 frame AREAS by max 7.1e-15 ft2 (pure round-off) while changing the PERIMETERS by up to 16.97 ft. The z columns matter only to the perimeter, which feeds Brandt's high-fidelity fuselage S_wet (Geom!D23) -- a DIFFERENT quantity that L3 does not compute this way (L3 uses Roskam Vol. II Eq. 12.3 with D_fus). Storing them would violate the minimum-input rule. (Incidentally z_chine_ft is identically 0.0 at all 20 frames in the ground truth anyway.) The same algebra shows the frame area is exactly bilinear in w and h, which is why max_width_ft and max_depth_ft move Amax by identical percentages (todo §16.5: both +9.164% for a +10% input). ★ UNCITED ASSUMPTION, stated plainly and NOT papered over: the AFFINE-SCALING assumption -- that a fixed normalized cross-section shape distribution can be rescaled by the fuselage envelope -- has NO textbook source. No Raymer / Roskam / Mattingly / metabook equation number exists for it anywhere in this repo, and none was invented. It is the same class of citation gap as the elliptical Amax identity; see todo 2026-07-25 Phase 2 §4, which stays OPEN (§4 also records the one lead found: the repo's own Roskam Vol. II extract names Roskam Part VI as the authority for cross-sectional area-ruling, and Roskam Part VI is not in this repo). ★ MODELLING CONSEQUENCE, stated because it is real and not a data error: max(h_ft) = 7.5 ft at frame 6 (x = 15.0 ft) against max_depth_ft = 5.0, so h_over_Hmax PEAKS AT 1.50, not 1.0. That frame is the CANOPY BULGE, and it means the 'max fuselage depth' input is NOT the actual maximum frame height of the table it now scales. Under affine scaling the canopy therefore scales with fuselage depth -- an F-16 with a 10% deeper fuselage gets a 10% taller canopy. Accept it or replace the model; do not read the 1.50 as a typo. (w_over_Wmax and x_over_L both peak at exactly 1.0, so only the depth axis has this property.) WHY A STORED 60-NUMBER DISTRIBUTION IS UNAVOIDABLE (todo §16.1 variant table / §16.5): the fuselage supplies 52.7% of the governing station's total area (17.3628 of 32.9711 ft2 at x = 29.1 ft), so an area-ruled Amax cannot be built without a real A_fuse(x). The ONLY zero-new-input alternative -- a constant-section fuselage built from the 3 envelope scalars alone -- makes Amax WORSE than the interim ellipse it replaces: +20.11% (constant cosine section, 30.1598) to +40.85% (constant ellipse, 35.3671) vs Brandt's 25.110556, and pushes the L3 constraint optimum FURTHER out of bounds (T/W 1.304 / 1.652 vs the interim 1.147 and the 1.1 test ceiling). There is no cheap version of this. POSITIVE CONTROL: denormalizing this table with L_fus = 46.5, W_max = 7.0, H_max = 5.0 reproduces the read-only ground-truth frame values to max |delta| = 3.6e-15 ft (x), 4.4e-16 ft (w), 0 (h) -- i.e. exactly, to floating-point round-off; and with L_fus set back to 46.5 the resulting Amax is 25.110534, bit-identical to using Brandt's frozen table verbatim and -0.000% vs the live Geom!B20/H47 = 25.110556 (todo §16.1 'Variant D positive control'). At L3's own 47.5 ft length the expected Amax is 24.703652, -1.62% vs Brandt, giving CD0_wave -0.54% vs the Brandt-referenced wave term with E_WD = 2.2 UNCHANGED -- no retune of E_WD is required or permitted (todo §16.6). Values are stored at the shortest decimal string that round-trips to the identical IEEE-754 double, because Amax is a MAX over closely-spaced stations where rounding could change which station governs.",
+      "frames_normalized": [
+        {"frame": 1,  "x_over_L": 0.0521505376344086,  "w_over_Wmax": 0.2857142857142857, "h_over_Hmax": 0.3},
+        {"frame": 2,  "x_over_L": 0.10752688172043011, "w_over_Wmax": 0.4571428571428572, "h_over_Hmax": 0.44000000000000006},
+        {"frame": 3,  "x_over_L": 0.1935483870967742,  "w_over_Wmax": 0.5142857142857143, "h_over_Hmax": 0.6},
+        {"frame": 4,  "x_over_L": 0.25806451612903225, "w_over_Wmax": 0.6,                "h_over_Hmax": 1},
+        {"frame": 5,  "x_over_L": 0.2903225806451613,  "w_over_Wmax": 0.6285714285714287, "h_over_Hmax": 1.2},
+        {"frame": 6,  "x_over_L": 0.3225806451612903,  "w_over_Wmax": 0.5714285714285714, "h_over_Hmax": 1.5},
+        {"frame": 7,  "x_over_L": 0.36505376344086027, "w_over_Wmax": 0.6428571428571429, "h_over_Hmax": 1.4},
+        {"frame": 8,  "x_over_L": 0.43010752688172044, "w_over_Wmax": 0.8571428571428571, "h_over_Hmax": 1.2},
+        {"frame": 9,  "x_over_L": 0.4693548387096774,  "w_over_Wmax": 0.9285714285714286, "h_over_Hmax": 1.1},
+        {"frame": 10, "x_over_L": 0.521505376344086,   "w_over_Wmax": 0.9285714285714286, "h_over_Hmax": 1},
+        {"frame": 11, "x_over_L": 0.5736559139784947,  "w_over_Wmax": 0.7857142857142857, "h_over_Hmax": 1},
+        {"frame": 12, "x_over_L": 0.6258064516129033,  "w_over_Wmax": 0.7857142857142857, "h_over_Hmax": 1},
+        {"frame": 13, "x_over_L": 0.6779569892473118,  "w_over_Wmax": 0.9285714285714286, "h_over_Hmax": 1},
+        {"frame": 14, "x_over_L": 0.7301075268817205,  "w_over_Wmax": 1,                  "h_over_Hmax": 1},
+        {"frame": 15, "x_over_L": 0.782258064516129,   "w_over_Wmax": 1,                  "h_over_Hmax": 1},
+        {"frame": 16, "x_over_L": 0.8344086021505376,  "w_over_Wmax": 1,                  "h_over_Hmax": 1},
+        {"frame": 17, "x_over_L": 0.8865591397849463,  "w_over_Wmax": 1,                  "h_over_Hmax": 0.9},
+        {"frame": 18, "x_over_L": 0.9387096774193548,  "w_over_Wmax": 1,                  "h_over_Hmax": 0.8},
+        {"frame": 19, "x_over_L": 0.9908602150537635,  "w_over_Wmax": 1,                  "h_over_Hmax": 0.8},
+        {"frame": 20, "x_over_L": 1,                   "w_over_Wmax": 1,                  "h_over_Hmax": 0.734}
+      ]
+    },
+
+    "engine": {
+      "_src": "duct_length_ft=14.0 (L_duct) inlet-duct length -- a genuine AIRFRAME input [Brandt Main!F32, label Main!E32 = 'Compr Face', i.e. inlet lip to compressor face; = the read-only f16a_geometry.json engine.duct_length_ft; readme_geom.md §3], read by L3 aero as l_ref_comp(5) and by get_S_wet_duct() (Raymer §7.3 frustum, 155.5664 ft2), and -- new in sub-step 2h -- by the area-ruled Amax as the middle link of the nacelle x-chain. T_AB_SLS_lb is deliberately NOT here: engine SLS thrust is not geometry spec data, it arrives by dependency injection from the propulsion object (.propulsion.T_SL = 23770 lbf [Brandt Engn(s)!T_AB_SLS = Main!D29]; F16PropL2 serves the L3 rung -- no L3 propulsion tier) and T_AB_SLS_lb / D_inlet / D_exit are Dependent on it, so the nacelle diameter and 155.57 ft2 of duct wetted area track a thrust change instead of staying pinned to a stale copy. ADDED sub-step 2h (2026-07-25), both required by the area-ruled Amax: (1) x_inlet_ft = 15.0, the inlet-lip x-station aft of the nose, ft [Brandt Main!F31, label Main!E31 = 'Inlet(s):', live-verified over Excel COM 2026-07-25 -- todo 2026-07-25 Phase 2 §18 and §16.1 row 4]. ★ TRAP, recorded so nobody 'corrects' this back: the read-only GroundTruth/f16a_geometry.json key engine.inlet_x_ft = 14.0 is MISLABELLED -- 14.0 is Main!F32, the DUCT LENGTH (already stored above as duct_length_ft), not an x-station at all; the genuine inlet station is the key that file currently calls inlet_entry_x_ft = 15.0. BrandtGeometry.nacelleFrameArea (:1232-1236) consumes the mislabelled 14.0, so its nacelle range [14.0, 43.9166] is 1.0 ft low at BOTH ends versus the live workbook chain Geom!C480 = Main!F31 = 15.0 -> C482 = C480 + Main!F32 = 29.0 -> C484 = C482 + D475 = 44.9166. Numeric impact for the F-16A is exactly zero (both ranges produce the identical mask over Brandt's 20 frame stations), which is precisely why the mislabel went unnoticed; the framework nonetheless implements the LIVE chain, the only defensible one. Do NOT edit the read-only ground-truth file. (2) n_engines = 1 [Brandt Main!B28 = N_eng, live-confirmed in the Geom!H47 and Geom!AE31 formulas; = the read-only f16a_geometry.json aircraft.n_engines / engine.n_engines; todo §16.1 row 5]. It lives under .geometry because the Amax engine flow-through deduction needs it and NOTHING in the framework exposes an engine count today -- F16PropL2 exposes engine_type, T_SL, T_SL_wet, T_SL_mil, T_t4_max_F, TSFC_install_factor and TR, and no count. If a propulsion-side n_engines is added later this key should move to .propulsion and arrive by DI, exactly as T_AB_SLS_lb already does. ★ THE /5 DEDUCTION, kept and flagged: the area-ruled Amax subtracts n_engines * pi * D_engine^2 / 5 for the inlet flow-through [Brandt Geom!H47 = MAX(H26:H45) - Main!B28*3.141579*C475^2/5], per the locked user decision 2026-07-25. Reasons recorded: /5 reproduces Brandt's convention (25.110534 vs his 25.110556) and is the ONLY choice under which Amax responds to engine thrust at all (+0.783% for +10% T_SL; under /4 the flow-through nacelle nets exactly zero and Amax becomes completely thrust-insensitive, todo §5 UPDATE / §16.4). But the /5 is an UNJUSTIFIED BARE LITERAL in the workbook: a live 2026-07-25 search of the entire nacelle block Geom!A470:E490 found no inlet capture area, no throat diameter, and nothing else in the workbook dividing by 5, while readme_geom.md §4.5 uses pi*D^2/4 for the same nacelle's own cross-section. todo 2026-07-25 Phase 2 §5 therefore stays OPEN; /4 would give Amax 23.145385 (-7.82%) and CD0_wave -15.04%.",
+      "duct_length_ft": 14.0,
+      "x_inlet_ft":     15.0,
+      "n_engines":      1
+    },
+
+    "overall_length_ft": 47.65,
+    "_overall_length_ft_src": "L_aircraft, whole-aircraft length, ft -- feeds ONLY the Raymer 6th ed. Eq. 12.44 Sears-Haack wave-drag term as (Amax/l)^2. Published F-16A airframe length, 47 ft 7.75 in = 47.6458 ft (47.65 is a +0.009% rounding). PROVENANCE CAVEAT, stated plainly: this figure is NOT traceable to any document in this repo -- neither '47.65', '47 ft 7.75 in', nor any overall-length figure appears anywhere in air_vehicle_design/sizing/ (grepped 2026-07-25). The VALUE stands as the user's decision (2026-07-25); pinning it to a primary source is a standing OPEN item, VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 §6. Not derivable in-model: the geometry object has no nose-boom / tailcone x-stations. DISTINCT from fuselage.length_ft = 47.5. Brandt Geom!B21 = 48.303947 is a MAX() over his component x-station columns -- an EXTENT of his own layout, not a published spec dimension -- so the two are NOT the same quantity: 48.303947 is a comparison reference only (report row annotated 'definitional', -1.35%), never an input.",
+    "_TODO_overall_length_ft": "VALUE APPROVED, CITATION NOT PINNED. overall_length_ft=47.65 is the published F-16A airframe length (47 ft 7.75 in = 47.6458 ft) supplied from general knowledge -- it is NOT traceable to any document in this repo (grepped 2026-07-25: no overall-length figure appears anywhere in air_vehicle_design/sizing/). The value stands as the user's decision (2026-07-25); only its provenance is open. Remove this key when the figure is pinned to T.O. 1F-16A-1 or another named primary source. Brandt Geom!B21 = 48.303947 does NOT pin it: that cell is a MAX() over his component x-station columns (an extent of his own layout), not a published spec dimension, so it is a different quantity. Standing item: VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 §6.",
+
+    "tail_arm_ft": 22.0,
+    "_tail_arm_ft_src": "L_t, wing 1/4-MAC to HT 1/4-MAC, ft [estimate; verify TO 1F-16A-1] -- genuinely non-derivable today: the geometry model exposes no component apex-x locations. It would become derivable only if those were added as inputs (Brandt Main row 23 X-locations, read live 2026-07-25: wing 17.7858, pitch ctrl 36, vert surf 36). Standing unpinned-estimate item, todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12.",
+    "total_control_surface_area_ft2": 190,
+    "_total_control_surface_area_ft2_src": "S_cs total control-surface area, ft2 = flaperon + HT + rudder + LEF [estimate] -- unpinned; no control-surface geometry exists anywhere in GeomL2/GeometryBase. Feeds Raymer Eq. 15.17 flight controls. Standing unpinned-estimate item, todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12."
+  },
 
   "aerodynamics": {
     "_src": "Per-component Q / laminar-fraction / body-flag / x_c_max = Raymer 6th Table 12.6; surface roughness = Raymer Table 12.4/12.5 ('smooth paint'); CD0_LandP = Raymer Sec. 12.5; misc drag areas = Raymer Table 12.7; E_WD (Eq. 12.41) tuned to Brandt aero.Ewd=2.2. airfoil = NACA 64A204.",
 
-    "airfoil": {"name": "NACA 64A204", "alpha_L0_deg": -1.01, "cl_max_2D": 1.20},
+    "airfoil": {
+      "name": "NACA 64A204",
+      "alpha_L0_deg": -1.01,
+      "cl_max_2D": 1.20,
+      "cl_alpha_per_deg": 0.105,
+      "_TODO_cl_alpha_per_deg": "cl_alpha=0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Same unpinned value as f16a_L2.json (guarded there by TestAeroL2.testTODO_ClAlpha2DUnverified). ADDED 2026-07-25: previously absent, so AeroL3.get_CL_alpha fell through to Raymer Eq. 12.8's eta=0.95 default while L2 used this real slope -- the higher-fidelity level was the less-informed one."
+    },
 
     "x_c_max":                {"wing": 0.40,   "horizontal_tail": 0.35,   "vertical_tail": 0.35,   "fuselage": 0.0,     "duct": 0.0},
     "interference_factor_Q":  {"wing": 1.0,    "horizontal_tail": 1.05,   "vertical_tail": 1.05,   "fuselage": 1.0,     "duct": 1.0},
@@ -15,12 +114,101 @@
 
     "wave_drag_factor_E_WD": 2.2,
     "_TODO_wave_drag_factor_E_WD": "E_WD=2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or explicitly accepted as a calibration knob. Guarded by TestAeroL3.testTODO_EWDCalibrationInput.",
-    "wave_drag": {
-      "_src": "Whole-aircraft Sears-Haack inputs for compute_CD0_wave (Raymer Eq. 12.44): Amax net of engine flow-through [Brandt Geom!B20/H47], total aircraft length [Brandt Geom!B21]. Carried as L3 aero inputs because the geometry object exposes no area-ruled Amax.",
-      "Amax_ft2": 25.110556,
-      "L_aircraft_ft": 48.304
-    },
+    "_amax_via_DI": "The former wave_drag block (Amax_ft2=25.110556 [Brandt Geom!B20/H47], L_aircraft_ft=48.304 [Brandt Geom!B21]) was DELETED in Phase 2c (2026-07-25). Both were Brandt geometry OUTPUTS frozen as aero inputs -- the same defect class as the geometry block's former engine-thrust copy -- and Amax was reported as 'NOT MODELED' by geometry_brandt_comparison.m while being consumed here as an input. (1) Amax and L_aircraft now arrive by DEPENDENCY INJECTION from the geometry object: Amax is a geometry Dependent (F16GeomL3.md §A.2 #29/#30) and L_aircraft is the geometry INPUT .geometry.overall_length_ft = 47.65 (§A.1 #31), so supersonic wave drag tracks fuselage changes instead of staying pinned to the baseline airframe. (2) DIFFERENT QUANTITY, expected large positive %Diff: the framework's Amax = (pi/4)*max_width_ft*max_depth_ft = (pi/4)*7.0*5.0 = 27.4889 ft2 is the equivalent elliptical fuselage ENVELOPE, whereas Brandt Geom!B20 = 25.11055621 is a whole-aircraft area-ruled maximum NET of a 7.8605 ft2 engine flow-through deduction (raw MAX = 32.971053). +9.47% vs 25.110556 and -16.6% vs the raw figure; the comparison row is annotated 'definitional' and a large %Diff there is the CORRECT answer, not an error (F16GeomL3.md §D / §G.1 row 40; the pi*D^2/5-vs-/4 question is OPEN, todo.md 2026-07-25 Phase 2 §5, and the Amax identity itself has no pinnable equation number, §4). (3) NUMERIC CONSEQUENCE, reported not hidden: E_WD=2.2 above was tuned against Brandt's own Amax/l, and the Raymer Eq. 12.44 Sears-Haack term (Amax/l)^2 moves from (25.110556/48.303947)^2 = 0.270238 to (27.4889/47.65)^2 = 0.332805 -- +23.15% on CD0_wave, so L3 supersonic CD0 (formerly +0.30% vs Brandt) will now read materially high. The E_WD that would exactly preserve the old wave term is 1.7864. That number is recorded for the Phase-2f gate and is DELIBERATELY NOT APPLIED -- do not silently retune E_WD to absorb this shift.",
     "CD0_LandP": 0.0010,
     "misc_drag_areas": {"Dq_gun_port_ft2": 0.20, "Dq_hook_USAF_ft2": 0.10}
+  },
+
+  "weights": {
+    "_comment": "F-16A Block 10/15 Level-3 weight-estimation inputs (Raymer 6th ed. §15.3.1 Fighter/Attack statistical component build-up, Eqs. 15.1-15.24). Read by F16WeightsL3. Only genuine physical spec + config inputs are stored here; every Raymer/AE481 equation exponent and leading coefficient is a category-selected Constant inside the WeightsL3 toolbox (NOT a JSON input; see _formula_constants_note). Geometry that F16GeomL2 already exposes is injected LIVE via DI, NOT stored here (see _geometry_via_DI). Grouped: wing / horizontal_tail / vertical_tail / landing_gear / engine_section / systems. Units per field are given in each group's _src.",
+    "_geometry_via_DI": "Injected LIVE from an F16GeomL2 object in Step 2c, NOT stored here: wing S_w/AR_w/lambda_w/Lambda_LE_w/tc_root (= geom S_exposed_wing/AR_wing/lambda_wing/LE_sweep_wing/tc_r_wing); HT S_ht (= geom S_exposed_ht = 49.85); VT S_vt (= geom S_exposed_vt = 40.89); fuselage envelope L_fus/W_fus/D_fus + fuselage wetted area (= geom L_fus/W_max_fuselage/D_fus/get_S_wet_fuselage). Exposed wing area 196.23 also matches geom exactly. NB value divergences for 2c to reconcile: weights L_fus=47.5 vs geom 46.5; weights D_fus=5.0 vs geom 6.0 (geom D_fus=(W+H)/2=(7.0+5.0)/2). W_fus=7.0 matches geom W_max_fuselage.",
+    "_formula_constants_note": "The Raymer §15.3.1 equation exponents and leading coefficients are NOT JSON inputs -- they are formula constants selected by aircraft_category inside the WeightsL3 toolbox (mirroring the propulsion lookup_TSFC_coeffs precedent). Those exponents remain a STANDING verify-against-book TODO: see VnV/BrandtF16A/todo.md 2026-07-24 §3a (approach 2: keep code values as-is, unverified status preserved).",
+    "aircraft_category": "jet_fighter",
+    "_aircraft_category_source": "F-16A is a jet fighter; selects the Raymer §15.3.1 Fighter/Attack build-up path. Consistent with F16WeightsL1/L2 aircraft_category='jet_fighter'.",
+    "N_z": 13.5,
+    "_N_z_source": "Ultimate load factor = 1.5 x 9g limit. [TO 1F-16A-1 §5; Raymer N_z = 1.5 x n_limit].",
+    "_N_z_note": "Code/Raymer use N_z=13.5 (ULTIMATE = 1.5x9). Raymer §15.3.1 defines N_z as the ultimate (1.5xlimit) load factor, so 13.5 is dimensionally correct for these equations. Brandt's own Wt-tab psf model instead stores n_ult=9 (Main!Q27) -- a DIFFERENT model; do not conflate. The Step-2a plan text mentioning '9' referred to the limit factor. Per F16WeightsL3.md.",
+    "W_energy": 6296.3,
+    "_W_energy_source": "Internal fuel weight, lbf. [Brandt Wt!B6].",
+    "W_payload_fixed": 220,
+    "_W_payload_fixed_source": "Fixed equipment + crew, lbf. [estimate: 1 pilot + survival gear -- NOT pinned to a repo source].",
+    "W_payload_expendable": 0,
+    "_W_payload_expendable_source": "Expendable payload, lbf; set by mission profile. [WeightsBase contract].",
+
+    "wing": {
+      "_src": "Eq. 15.1 wing inputs NOT injected from geometry (S_w/AR_w/lambda_w/Lambda_LE_w/tc_root are DI'd from geom -- see _geometry_via_DI). S_csw=68.03 ft2 wing control-surface area = flaperon (31.32) + LEF (36.71) [TO 1F-16A-1 Fig. 1-2]; K_dw=1.0 (not a delta wing) [Raymer]; K_vs=1.0 (not variable sweep) [Raymer].",
+      "S_csw": 68.03,
+      "K_dw": 1.0,
+      "K_vs": 1.0
+    },
+
+    "horizontal_tail": {
+      "_src": "Eq. 15.2 HT inputs NOT injected from geometry (S_ht is DI'd from geom). AR_ht=2.114 / lambda_ht=0.390 are the HT EXPOSED-planform aspect ratio / taper [Brandt / TO 1F-16A-1] -- geom exposes only FULL-planform AR/taper, so these exposed values stay here (2c reconciliation candidate); F_w=7.0 ft fuselage width at HT intersection [estimate: reuses max fuselage width as an upper-bound proxy]; B_h=18.5 ft HT full span (18 ft 6 in) [USAF 3-view diagram]; K_rht=1.047 rolling (all-moving) tail [Raymer §15.3].",
+      "AR_ht": 2.114,
+      "lambda_ht": 0.390,
+      "F_w": 7.0,
+      "B_h": 18.5,
+      "K_rht": 1.047
+    },
+
+    "vertical_tail": {
+      "_src": "Eq. 15.3 VT inputs NOT injected from geometry (S_vt is DI'd from geom). AR_vt=1.294 / lambda_vt=0.437 / Lambda_LE_vt=47.5 deg are the VT EXPOSED-planform aspect ratio / taper / LE-sweep [Brandt / TO 1F-16A-1] -- geom exposes only FULL-planform values, so these exposed values stay here (2c reconciliation candidate); H_t=0 / H_v=1 (F-16 conventional tail, H_t/H_v=0); M_design=2.0 max Mach [Brandt polar_model]; L_t=22.0 ft wing 1/4-MAC to HT 1/4-MAC [estimate; verify TO 1F-16A-1]; S_r=11.65 ft2 rudder area [TO 1F-16A-1 Fig. 1-2]; K_dwf=1.0 (not a delta-wing fuselage) [Raymer].",
+      "AR_vt": 1.294,
+      "lambda_vt": 0.437,
+      "Lambda_LE_vt": 47.5,
+      "H_t": 0,
+      "H_v": 1,
+      "M_design": 2.0,
+      "L_t": 22.0,
+      "S_r": 11.65,
+      "K_dwf": 1.0
+    },
+
+    "landing_gear": {
+      "_src": "Eqs. 15.5-15.6. W_l=20681 lbf landing weight [Brandt Wt!B41]; N_l=2.67 landing load factor [standard military; verify TO 1F-16A-1 §5]; L_m=5.5 ft main-gear strut length / L_n=3.5 ft nose-gear strut length [estimates; verify TO 1F-16A-1] (converted to inches inside weight_landing_gear); K_cb=1.0 (not carrier-based) / K_tpg=1.0 (not kneeling gear) [Raymer]; N_nw=1 nose wheels [TO 1F-16A-1].",
+      "W_l": 20681,
+      "N_l": 2.67,
+      "L_m": 5.5,
+      "L_n": 3.5,
+      "K_cb": 1.0,
+      "K_tpg": 1.0,
+      "N_nw": 1
+    },
+
+    "engine_section": {
+      "_src": "Dry engine (vendor data W_en*N_en) + Eqs. 15.7-15.15. N_en=1 number of engines [TO 1F-16A-1]; T_max=23770 lbf SLS AB thrust [Brandt D29]; W_en=3030 lbf engine dry weight [estimate; verify TO 1F-16A-1 or Jane's]; S_fw=0 ft2 firewall area (no piston firewall on a jet) [Raymer note]; D_e=3.33 ft engine exit-nozzle diameter ~40 in [estimate; verify TO 1F-16A-1]; L_tp=4.5 ft tailpipe / L_sh=8.0 ft shroud / L_ec=5.0 ft engine-controls run / L_d=7.5 ft inlet-duct / L_s=3.0 ft splitter lengths [estimates]; K_vg=1.0 fixed-geometry inlet / K_d=1.0 inlet-geometry factor [Raymer].",
+      "N_en": 1,
+      "T_max": 23770,
+      "W_en": 3030,
+      "S_fw": 0,
+      "D_e": 3.33,
+      "L_tp": 4.5,
+      "L_sh": 8.0,
+      "L_ec": 5.0,
+      "L_d": 7.5,
+      "L_s": 3.0,
+      "K_vg": 1.0,
+      "K_d": 1.0
+    },
+
+    "systems": {
+      "_src": "Eqs. 15.16-15.24. V_t=940 gal total internal fuel volume [offline estimate: 6296 lbf / 6.7 lb/gal ~ 940 gal; Brandt Wt!B6]; V_i=500 gal integral (wing) tank / V_p=0 gal pressurized tank volumes [estimates]; N_t=3 tanks (2 wing + 1 fuselage) [estimate; verify TO 1F-16A-1]; SFC_mission=0.70 1/hr mil-power SFC for structural sizing [Brandt C30]; S_cs=190 ft2 total control-surface area [estimate: flaperon+HT+rudder+LEF]; N_s=4 control surfaces [estimate]; N_c=1 cockpit (single-seat); N_ci=3 comm/ID items [estimate; F-16 Block 10]; N_u=5 hydraulic utility functions [estimate]; R_kva=80 kVA generator power [estimate; F-16 Block 10 ~60-80 kVA]; L_a=10.0 ft electrical lead length [estimate]; N_gen=1 generator [TO 1F-16A-1]; W_uav=1500 lbf uninstalled avionics [estimate; F-16 Block 10 simple suite]; K_vsh=1.0 (no variable-sweep hydraulics) / K_mc=1.0 (<=2 generators) [Raymer].",
+      "V_t": 940,
+      "V_i": 500,
+      "V_p": 0,
+      "N_t": 3,
+      "SFC_mission": 0.70,
+      "S_cs": 190,
+      "N_s": 4,
+      "N_c": 1,
+      "N_ci": 3,
+      "N_u": 5,
+      "R_kva": 80,
+      "L_a": 10.0,
+      "N_gen": 1,
+      "W_uav": 1500,
+      "K_vsh": 1.0,
+      "K_mc": 1.0
+    }
   }
 }

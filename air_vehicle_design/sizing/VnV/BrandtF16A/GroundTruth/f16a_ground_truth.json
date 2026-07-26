@@ -4,8 +4,8 @@
   "_note_columns": "Aerodynamics comparison columns are Brandt + AF-Manual (T.O. 1F-16A-1) + internet (no F16Baseline column). Read as the comparison target by examples/F16A/geometry_brandt_comparison.m and aerodynamics_brandt_comparison.m; never backfill a unit-test expected value from this file.",
 
   "geometry": {
-  "_comment": "F-16A Block 10/15 Brandt-workbook ground-truth geometry values, for the Geometry deep-dive's later comparison-report script to check computed L1/L2 toolbox output against (Geometry's L3 tier was eliminated 2026-07-22 and merged into L2 — see src/disciplines/geometry/GeomL2.md's dated note). These are NOT toolbox inputs (see examples/F16A/geometry_L*.json for those) — they are Brandt Geom-tab outputs/validation figures to compare computed results to.",
-  "_source": "VnV/BrandtF16A/GroundTruth/Brandt-F16-A.xls (Geom sheet unless noted); VnV/BrandtF16A/readme_geom.md; VnV/BrandtF16A/GroundTruth/cell-map.md; VnV/BrandtF16A/todo.md. Cell values re-confirmed live via MATLAB readcell 2026-07-21 during this JSON-authoring phase (full-precision reads shown where they refine the readme's rounded figures).",
+  "_comment": "F-16A Block 10/15 Brandt-workbook ground-truth geometry values, for examples/F16A/geometry_brandt_comparison.m to check computed L1 / L2 / L3 toolbox output against. Geometry is an L1/L2/L3 discipline: the 2026-07-22 'L3 eliminated and merged into L2' decision (src/disciplines/geometry/GeomL2.md's dated note) was REVERSED on 2026-07-24, and Phase 2 (2026-07-25) promotes GeomL3 to the full L3 geometry tier consumed by L3 geometry + aero + weights — so the comparison report gains an L3 column, a T.O. 1F-16A-1 second-source column, and a divergence-annotation column (spec: examples/F16A/F16GeomL3.md §G.1). These are NOT toolbox inputs: inputs live in the unified per-level files examples/F16A/f16a_L{1,2,3}.json (.geometry blocks read by F16GeomL1/L2/L3); the former examples/F16A/geometry_L*.json files no longer exist. Everything here is a Brandt Geom-tab OUTPUT / validation figure (plus, where noted, a Brandt Main-tab GIVEN input or a T.O./USAF second source) to compare computed results against. NEVER backfill a unit-test 'expected' value from anything in this file — several rows are deliberate BY-DESIGN divergences where a large %Diff is the correct answer.",
+  "_source": "VnV/BrandtF16A/GroundTruth/Brandt-F16-A.xls (Geom sheet unless noted); VnV/BrandtF16A/readme_geom.md; VnV/BrandtF16A/GroundTruth/cell-map.md; VnV/BrandtF16A/todo.md; T.O. 1F-16A-1 and the USAF 3-view for the to_1f16a1 second-source block. Cell values re-confirmed live via MATLAB readcell 2026-07-21 during this JSON-authoring phase (full-precision reads shown where they refine the readme's rounded figures); the Main-tab cells and Geom!A20/B20/A21/B21/H47 were re-read live over Excel COM 2026-07-25 during the Phase-2 scribe pass. Workbook integrity: the working-tree Brandt-F16-A.xls was diffed against git HEAD across all seven cited tabs (Main, Geom, Aero, Wt, Engn(s), Consts, Miss) with readmatrix on 2026-07-25 — every numeric cell identical, so every cell citation here is safe (todo.md 2026-07-25 Phase 2 §14).",
 
   "fuselage_S_wet": {
     "low_fi_ft2": 730.422,
@@ -41,7 +41,7 @@
   },
 
   "nacelle": {
-    "_note": "No nacelle S_wet/geometry component exists in the current GeomL1/L2 toolbox's get_S_wet aggregation (wing+HT+VT+fuselage[+duct, folded into L2 per the 2026-07-22 L3-elimination decision] only) — recorded here as a Brandt ground-truth figure for possible future comparison use (e.g. once a nacelle component or the D=sqrt(T_AB_SLS/1900) duct-diameter formula referenced by geometry_L2.json's engine block is implemented), not a value any current toolbox method should be checked against yet.",
+    "_note": "No nacelle component exists in the framework's get_S_wet aggregation at any level (wing + HT + VT + fuselage + duct only; the duct term sits in GeomL2 and, as of Phase 2, GeomL3). S_wet_ft2=41.515 is therefore recorded as a Brandt figure for a DIFFERENT quantity than the framework's duct term — the comparison-report duct row (computed 155.5664 ft2, an inlet-to-exit frustum) is annotated 'definitional', not an agreement check. diameter_ft=3.537 IS a genuine agreement check: the framework uses Brandt's own D=sqrt(T_AB_SLS/1900) formula, and as of Phase 2/3a the thrust reaches geometry by dependency injection from the propulsion object (prop.T_SL) rather than a hardcoded copy, so this row doubles as the positive control that the DI reproduces the previously-frozen value. Engine-side twin of this block: .propulsion.nacelle (same numbers, one shared truth).",
     "S_wet_ft2": 41.515,
     "S_wet_source": "Geom!B4 — 'Exposed Engine Nacelles' (Geom!C4 label: 'Full Cylinder approximation'). readme_geom.md Section 4.4 — cell formula itself could not be confirmed from the binary .xls; this GT value is used as-is.",
     "diameter_ft": 3.537,
@@ -51,13 +51,51 @@
   },
 
   "aircraft_length_ft": {
-    "value": 48.3039,
-    "source": "Geom!B21 ('Total Aircraft Length:' label). Confirmed live 2026-07-21. readme_geom.md Section 8, Table 2 cites the rounded figure 48.304 ft."
+    "value": 48.30394666,
+    "source": "Geom!B21 ('Total Aircraft Length:' label, Geom!A21). Confirmed live 2026-07-21 (rounded 48.3039) and re-read live over Excel COM 2026-07-25 at full precision. readme_geom.md Section 8, Table 2 cites the rounded figure 48.304 ft.",
+    "_formula": "Geom!B21 = MAX(L38:L44,L46:L121,L123:L141,L152,...,L169) — a maximum over Brandt's component x-station columns, i.e. the aft-most modelled station of HIS OWN component layout.",
+    "_note": "NOT the same quantity as the framework's overall_length_ft input (47.65 ft, published F-16A airframe length 47 ft 7.75 in). Brandt's figure is an EXTENT of his layout; the framework's is a SPEC dimension. The -1.35% gap is definitional, not an error in either number, so the comparison-report row must be annotated 'definitional' (F16GeomL3.md §G.1 row 41 / §E). It also matches neither the commonly-quoted 49 ft 5 in (~49.42 ft, with pitot boom) figure. Cross-reference the T.O./published second source in to_1f16a1.overall_length_ft below, whose provenance is a standing OPEN item (todo.md 2026-07-25 Phase 2 §6)."
   },
 
   "Amax_ft2": {
-    "value": 25.1106,
-    "source": "Geom!B20 ('Total Aircraft Amax:' label) and Geom!H47 (same value per GroundTruth/cell-map.md) — both cells confirmed live 2026-07-21 to read 25.1106 ft2, not a conflict (B20 appears to reference/duplicate H47's computation). Derivation per readme_geom.md Section 4.5: Amax = MAX(H26:H45) - N_eng*pi*D_eng^2/5.0 = 32.971 - pi*3.537^2/5.0 = 25.110 ft2."
+    "value": 25.11055621,
+    "source": "Geom!B20 ('Total Aircraft Amax:' label, Geom!A20) = Geom!H47 (same value per GroundTruth/cell-map.md) — both cells confirmed live 2026-07-21 to read 25.1106 ft2, not a conflict (B20's formula is literally '=H47'); re-read live over Excel COM 2026-07-25 at full precision.",
+    "_formula": "Geom!H47 = MAX(H26:H45) - Main!B28*3.141579*C475^2/5 — i.e. a whole-aircraft AREA-RULED maximum cross-section, NET of engine flow-through: raw max 32.971053 ft2 minus N_eng*pi*D_nac^2/5 = 7.8605 ft2. (NB Brandt hardcodes pi as 3.141579.)",
+    "raw_max_ft2": 32.971053,
+    "raw_max_source": "Geom!H47's MAX(H26:H45) term before the engine deduction: 25.110556 + pi*3.537^2/5 = 32.971053 ft2. Recorded live-consistent 2026-07-25 (F16GeomL3.md §D; todo.md 2026-07-25 Phase 2 §5).",
+    "engine_flowthrough_deduction_ft2": 7.8605,
+    "engine_flowthrough_deduction_source": "N_eng*pi*D_nac^2/5 = 1*pi*3.537^2/5, per the Geom!H47 formula.",
+    "_note_open_item": "WHICH of these is the right comparison target is an OPEN item (todo.md 2026-07-25 Phase 2 §5): Brandt deducts pi*D^2/5 while readme_geom.md §4.5 states the same nacelle's OWN cross-section as pi*D^2/4 = 9.826 ft2, with no stated justification for removing only 80% of the duct area. Until that is resolved 'value' (25.11055621, Brandt's own published figure) stays the primary target and raw_max_ft2 is recorded alongside it — no choice has been made here.",
+    "_note": "DIFFERENT quantity from the framework's Amax. Phase 2 makes Amax a geometry Dependent = (pi/4)*W_max_fuselage*H_max_fuselage = 27.4889 ft2, the maximum cross-section of the equivalent elliptical-section fuselage the rest of the model already assumes (D_fus=(W+H)/2 feeding Roskam Eq. 12.3) — an envelope figure with no nacelle/strake/area-ruling content. +9.47% vs 25.110556, -16.6% vs the raw 32.971053. Comparison row annotated 'definitional' (F16GeomL3.md §G.1 row 40 / §D). The framework formula has NO pinnable equation number in any reference in this repo and is documented as a standard elliptical-cross-section identity (todo.md 2026-07-25 Phase 2 §4, OPEN) — do not invent one. This row previously read 'NOT MODELED' in the comparison report while F16AeroL3 consumed 25.110556 as a frozen input; Phase 2c removes that contradiction."
+  },
+
+  "inputs_on_Main_tab": {
+    "_note": "Brandt Main-tab GIVEN inputs (his own spec sheet), recorded as COMPARISON REFERENCES for the report's BY-DESIGN divergence rows and for citation audit — not Brandt outputs, and not framework targets in the agreement sense. Mirrors the .weights.inputs_on_Wt_tab block's role. All cells read live over Excel COM 2026-07-25 (values and row labels verbatim). CITATION MAP, corrected repo-wide 2026-07-25 (examples/F16A/F16GeomL3.md §F is authoritative): row 18 = 'S, sq ft', row 19 = 'Aspect Ratio', row 20 = 'Taper Ratio', row 21 = 'Sweep, deg', row 22 = 'NACA 4-digit', row 24 = 'Y Location' (B24/C24 EMPTY, H24=0), row 27 = 'TE Sweep'. The repo previously cited row 21 for taper, row 20 for sweep and row 24 for t/c; zero computed values change from the correction.",
+    "_columns": "B = wing, C = pitch control (HT), H = vertical surface (VT)",
+    "wing":             {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "NACA_4digit": "1404", "tc_from_NACA": 0.04, "TE_sweep_deg": -0.00024343, "cells": "Main!B18/B19/B20/B21/B22/B27", "_note": "Main!B27 TE sweep is a live formula '=Geom!N45'; the framework's GeometryBase.convert_sweep(40,3,0.2275,1.0) reproduces it as -0.0002 deg — an independent positive control for the mirrored 4/AR sweep identity."},
+    "pitch_control_HT": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "NACA_4digit": "0004", "tc_from_NACA": 0.04, "TE_sweep_deg": -0.00024343, "cells": "Main!C18/C19/C20/C21/C22/C27", "_note": "Main!C19 AR=3.0 is a COMPARISON REFERENCE ONLY, not a framework input: per Decision 1 (user, 2026-07-25) L3 fixes the HT planform from S_ht=108 plus the physical span 18.5 ft, making AR_ht DERIVED = 3.1690 (+5.63% vs this cell) — see to_1f16a1.HT_span_ft. Brandt's AR 3.0 with S 108 implies span sqrt(AR*S)=18.0 ft, which is the span_full_ft in lifting_surface_exposed_areas.pitch_control_HT. Main!C27 TE sweep is a live formula '=Geom!N122'."},
+    "vertical_tail":    {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "NACA_4digit": "0004", "tc_from_NACA": 0.04, "TE_sweep_deg": 0.0, "cells": "Main!H18/H19/H20/H21/H22/H27", "_note": "Main!H21 sweep=40 is the Brandt side of an INTENTIONAL divergence: L3 geometry uses the physical T.O. 47.5 deg (todo.md 2026-07-24 GeomL3 §2). Main!H27 TE sweep is a BARE LITERAL 0, unlike the wing/HT live formulas, and contradicts Brandt's OWN VT planform (S=60, AR=1.6, lambda=0.5, LE=40 imply TE sweep 22.9008 deg — exactly what the framework's single-panel convert_sweep_panel returns). Recorded so nobody 'corrects' the framework's 22.90 deg back to 0 (todo.md 2026-07-25 Phase 2 §9, informational)."},
+    "fuselage":         {"length_ft": 46.5, "max_width_ft": 7.0, "max_depth_ft": 5.0, "cells": "Main!B32/C32/D32", "_note": "Main!B32 length 46.5 is the Brandt side of an INTENTIONAL divergence: L3 geometry uses the physical T.O. 47.5 ft (todo.md 2026-07-24 GeomL3 §3); L2 uses 46.5. C32/D32 are unchanged at both levels."},
+    "n_engines":        {"value": 1, "cell": "Main!B28", "_note": "Used by the Geom!H47 Amax engine-flow-through deduction above."}
+  },
+
+  "to_1f16a1": {
+    "_note": "SECOND-SOURCE column for the comparison report (T.O. 1F-16A-1 / USAF 3-view), mirroring the .aerodynamics.af_manual block's role. These are the physical/T.O. figures GeomL3 uses where they differ from Brandt — so they are the SAME numbers the f16a_L3.json .geometry inputs carry (one shared truth recorded as a second source, NOT an independent third value). They exist here so the report can show, per row, that a BY-DESIGN divergence from Brandt is backed by a named physical source. NEVER backfill a unit-test expected value from these.",
+    "HT_span_ft": {"value": 18.5, "_source": "USAF 3-view; 18 ft 6 in. The PRIMARY HT span at L3 per Decision 1 (user, 2026-07-25) — area and span are what a 3-view measures, aspect ratio is definitional. +2.78% vs Brandt's derived sqrt(AR*S)=18.0."},
+    "VT_sweep_LE_deg": {"value": 47.5, "_source": "T.O. 1F-16A-1. +18.75% vs Brandt Main!H21 = 40 — the locked physical divergence, todo.md 2026-07-24 GeomL3 §2."},
+    "fuselage_length_ft": {"value": 47.5, "_source": "T.O. 1F-16A-1. +2.15% vs Brandt Main!B32 = 46.5 — the locked physical divergence, todo.md 2026-07-24 GeomL3 §3."},
+    "tc_biconvex": {
+      "_source": "T.O. 1F-16A-1 Sec. I — biconvex tail sections, root/tip thickness split. These replace the uniform 0.04 that Brandt's Main row-22 NACA '0004' designation implies for both tails; means 0.0475 (HT) / 0.0415 (VT).",
+      "HT_root": 0.060, "HT_tip": 0.035, "VT_root": 0.053, "VT_tip": 0.030
+    },
+    "wing_airfoil": {"value": "NACA 64A204", "_source": "T.O. 1F-16A-1 Fig. 1-2 (wing root and tip) — corroborates Brandt Main!B22 '1404' -> t/c 0.04. Same figure as .aerodynamics.af_manual.airfoil."},
+    "wing_control_surface_area_ft2": {"value": 68.03, "_source": "T.O. 1F-16A-1 Fig. 1-2: flaperon 31.32 + LEF 36.71. NB does NOT match Brandt Main!F18 LE-flap S = 21.314 (todo.md 2026-07-21 Finding 5) — an independent T.O. figure, not a Brandt cell."},
+    "rudder_area_ft2": {"value": 11.65, "_source": "T.O. 1F-16A-1 Fig. 1-2. No Brandt equivalent."},
+    "overall_length_ft": {
+      "value": 47.6458,
+      "_source": "Published F-16A airframe length, 47 ft 7.75 in = 47.6458 ft. PROVENANCE OPEN: this figure is NOT traceable to any document in this repo (grepped 2026-07-25 — no overall-length figure appears anywhere in air_vehicle_design/sizing/). The VALUE was accepted by the user 2026-07-25 and enters f16a_L{2,3}.json .geometry as overall_length_ft = 47.65 (a +0.009% rounding); pinning the source document is a standing OPEN item, todo.md 2026-07-25 Phase 2 §6.",
+      "_note": "Compared against Brandt's aircraft_length_ft = 48.30394666, which is a MAX() over his x-station columns (an extent) rather than a spec dimension — see that block's _note. The report row is 'definitional', not an agreement check."
+    }
   },
 
   "wing_sweep_25pct_chord_deg": {
@@ -231,6 +269,51 @@
         {"condition": "combat_turn_sup", "consts_row": 27, "alt_ft": 36000, "mach": 1.40, "pct_AB": 100, "n": 1.4, "alpha_dry": 0.35786, "alpha_AB": 0.55656, "alpha_eff_on_TAB": 0.55656},
         {"condition": "ps_500",          "consts_row": 28, "alt_ft": 10000, "mach": 0.87, "pct_AB": 100, "n": 1.0, "alpha_dry": 0.70273, "alpha_AB": 0.85355, "alpha_eff_on_TAB": 0.85355}
       ]
+    }
+  },
+
+  "weights": {
+    "_comment": "F-16A Block 10/15 Brandt-workbook per-component weight OUTPUTS (Wt tab), for the weights deep-dive's later comparison-report script to check computed L1/L2/L3 toolbox output against. All values in lb. These are NOT toolbox inputs (see examples/F16A/f16a_L{1,2,3}.json .weights for those). Never backfill a unit-test expected value from anything here (the tests' 19,148 OEW self-referential trap is exactly why -- see _oew_note).",
+    "_source": "VnV/BrandtF16A/readme_wt.md §5-§8 + GroundTruth/cell-map.md (Wt sheet) + VnV/BrandtF16A/BrandtWeight.m; corrections.xls figures per docs/weights_parameter_usage.md Part B (from baseline/F16Baseline.m corrected variant). W_TO basis = 31,377 lb (Wt!B3).",
+    "_method_note": "Brandt's structural line-items use a psf x area model (Wt!C7:H7 coefficients: wing 6.75 / fuselage 5.0 / pitch 6.0 / VT 6.0 / nacelle 4.5 / strake 4.5 lbf/ft2) -- closest to the framework's L2 (Raymer Table 15.2 psf, DIFFERENT coefficients 9.0/4.8/4.0/5.3). The framework's L3 uses the Raymer §15.3.1 statistical build-up, which groups mass differently (no separate nacelle or strake line; LG split main/nose; systems as ~9 sub-items). Exact per-component agreement is NOT expected (documented ±20-40% scatter). Nacelles (Wt!G9), strakes (Wt!H9), armament support (Wt!B31), and lumped 'other structure' (Wt!B29) have NO direct framework analog.",
+    "_oew_note": "TWO OEW figures. PRIMARY = official original Brandt Wt!B12 = 19,980.70 lb (comparison-report Expected column; agreed by readme_wt.md §8, cell-map.md:142, BrandtWeight.m, F16Baseline.m:93). ALTERNATE corrections_xls = 19,148.08 lb = corrections.xls Wt!B12 (Casey's revised-weight workbook, F16Baseline.m:136). The L1/L2/L3 unit tests assert 19,148 but MIS-cite it as 'Brandt Wt!B12'; per VnV/BrandtF16A/todo.md 2026-07-24 §3b that 19,148 traces to corrections.xls, NOT the original Wt!B12. Re-citation is a Step-2c code edit; the corrections.xls file itself is not chased.",
+
+    "structural_components": {
+      "wing":                {"value": 1785.95, "_source": "Brandt Wt!C9 = S_ref*(k_wing/7)*0.04*n_ult^0.2*AR^1.8*sqrt(1+lambda)/(tc^0.7*cos(Lambda_LE)); k_wing=6.75 lbf/ft2 (Wt!C7). readme_wt.md §5.2 / cell-map.md Wt!C9.", "corrections_xls": 1852.09, "_corrections_xls_source": "corrections.xls Wt!C9, per docs/weights_parameter_usage.md Part B."},
+      "fuselage":            {"value": 3652.11, "_source": "Brandt Wt!D9 = k_fuse*S_wet_fuse*max(1, fineness/19); k_fuse=5.0 lbf/ft2 (Wt!D7), S_wet_fuse=730.422 (Geom!B3). readme_wt.md §5.3 / cell-map.md Wt!D9.", "corrections_xls": 3506.03, "_corrections_xls_source": "corrections.xls Wt!D9, per docs/weights_parameter_usage.md Part B."},
+      "pitch_control_HT":    {"value": 648.00, "_source": "Brandt Wt!E9 = k_pitch*S_pitch = 6.0*108; k_pitch=6.0 lbf/ft2 (Wt!E7), S_pitch=108 ft2 (Main!C18). readme_wt.md §5.4 / cell-map.md Wt!E9. Framework analog: HT/stabilator (L3 Eq. 15.2 / L2 Table 15.2).", "corrections_xls": 199.39, "_corrections_xls_source": "corrections.xls Wt!E9, per docs/weights_parameter_usage.md Part B."},
+      "vertical_tail":       {"value": 360.00, "_source": "Brandt Wt!F9 = k_vert*S_vert = 6.0*60; k_vert=6.0 lbf/ft2 (Wt!F7), S_vert=60 ft2 (Main!H18), single VT. readme_wt.md §5.5 / cell-map.md Wt!F9.", "corrections_xls": 245.34, "_corrections_xls_source": "corrections.xls Wt!F9, per docs/weights_parameter_usage.md Part B."},
+      "nacelles":            {"value": 186.82, "_source": "Brandt Wt!G9 = k_nac*S_nac_eff = 4.5*S_nac (Geom!B4, half-buried). readme_wt.md §5.6 / cell-map.md Wt!G9. NO framework analog.", "corrections_xls": 186.82, "_corrections_xls_note": "unchanged in corrections.xls (Wt!G9), per docs/weights_parameter_usage.md Part B."},
+      "strakes":             {"value": 90.00, "_source": "Brandt Wt!H9 = k_strake*S_strakes = 4.5*20; k_strake=4.5 lbf/ft2 (Wt!H7), S_strakes=20 ft2 (Main!D18). readme_wt.md §5.7 / cell-map.md Wt!H9. NO framework analog.", "corrections_xls": 90.00, "_corrections_xls_note": "unchanged in corrections.xls (Wt!H9), per docs/weights_parameter_usage.md Part B."},
+      "structural_subtotal": {"value": 6722.87, "_source": "Brandt Wt!B9 = wing+fuselage+pitch+VT+nacelles+strakes. readme_wt.md §5.8 / cell-map.md Wt!B9."}
+    },
+
+    "engine_and_systems": {
+      "engine":          {"value": 4730.23, "_source": "Brandt Wt!B11/B22 = 0.199*T_AB_SLS = 0.199*23770 (installed AB turbofan, Brandt Table 6.2). readme_wt.md §5.9 / cell-map.md Wt!B11/B22. Framework analog: L3 engine-group dry engine = vendor data (W_en*N_en), NOT a §15.3.1 equation."},
+      "landing_gear":    {"value": 1066.82, "_source": "Brandt Wt!B23 = 0.034*W_TO. readme_wt.md §5.11 / cell-map.md Wt!B23. Single line; framework L3 splits main (Eq. 15.5) + nose (Eq. 15.6), L2 uses 0.033*W_TO. NB Brandt 0.034 vs framework 0.033 -- todo.md 2026-07-24 §3c item 2."},
+      "inlet_duct":      {"value": 728.60, "_source": "Brandt Wt!B24 = 3.9*W_nacelles. readme_wt.md §5.10 / cell-map.md Wt!B24. Framework analog: L3 air-induction (Eq. 15.10)."},
+      "flight_controls": {"value": 472.44, "_source": "Brandt Wt!B25 = 0.012*W_TO + (S_LE_flap/S_wing)*k_wing*200 = 376.52 + 95.92. readme_wt.md §5.12 / cell-map.md Wt!B25. Framework analog: L3 flight-controls (Eq. 15.17)."},
+      "electrical":      {"value": 533.41, "_source": "Brandt Wt!B26 = 0.017*W_TO. readme_wt.md §5.13 / cell-map.md Wt!B26. Framework analog: L3 electrical (Eq. 15.20)."},
+      "hydraulics":      {"value": 367.11, "_source": "Brandt Wt!B27 = 0.0117*W_TO. readme_wt.md §5.13 / cell-map.md Wt!B27. Framework analog: L3 hydraulics (Eq. 15.19)."},
+      "ecs_ac_antiice":  {"value": 360.84, "_source": "Brandt Wt!B28 = 0.0115*W_TO. readme_wt.md §5.13 / cell-map.md Wt!B28. Framework analog: L3 AC/anti-ice (Eq. 15.23)."},
+      "other_structure": {"value": 2016.86, "_source": "Brandt Wt!B29 = 0.30*W_structure. readme_wt.md §5.14 / cell-map.md Wt!B29. NO single framework analog (distributed across framework components)."},
+      "avionics":        {"value": 2541.54, "_source": "Brandt Wt!B30 = 0.081*W_TO. readme_wt.md §5.15 / cell-map.md Wt!B30. Framework analog: L3 avionics (Eq. 15.21)."},
+      "armament_support":{"value": 440.00, "_source": "Brandt Wt!B31 = 0.10*exp_payload = 0.10*4400. readme_wt.md §5.16 / cell-map.md Wt!B31. NO framework analog (not modeled)."}
+    },
+
+    "summary": {
+      "airframe": {"value": 15250.47, "_source": "Brandt Wt!B10 = structural subtotal (B9) + SUM(Wt!B23:B31); engine EXCLUDED. readme_wt.md §6 / cell-map.md Wt!B10."},
+      "OEW":      {"value": 19980.70, "_source": "Brandt Wt!B12 = airframe (B10) + engine (B11). Official original Brandt-F16-A.xls OEW; comparison-report Expected. readme_wt.md §8 / cell-map.md:142 / BrandtWeight.m / F16Baseline.m:93.", "corrections_xls": 19148.08, "_corrections_xls_source": "corrections.xls Wt!B12 (Casey's revised-weight workbook), per F16Baseline.m:136 corrected variant + docs/weights_parameter_usage.md Part B. LABELED ALTERNATE -- the L1/L2/L3 unit tests' 19,148 traces HERE, NOT to the original Wt!B12 (todo.md 2026-07-24 §3b). See _oew_note."},
+      "fuel":     {"value": 6296.30, "_source": "Brandt Wt!B6 = W_TO - perm_payload - exp_payload - OEW. readme_wt.md §6 / cell-map.md Wt!B6. Same figure as the .weights input W_energy=6296.3."},
+      "TOGW":     {"value": 31377.00, "_source": "Brandt Wt!B3/B38 = takeoff gross-weight basis. readme_wt.md §8 / cell-map.md Wt!B3."}
+    },
+
+    "inputs_on_Wt_tab": {
+      "_note": "Brandt Wt-tab GIVEN inputs (recorded for provenance, not framework comparison targets). NB the framework's payload split differs from Brandt's: Brandt perm=700 / exp=4400 lb, vs the framework .weights W_payload_fixed=220 / W_payload_expendable=0.",
+      "perm_payload":     {"value": 700.0, "_source": "Brandt Wt!B4 = Main!O16. readme_wt.md §3 / cell-map.md Wt!B4."},
+      "exp_payload":      {"value": 4400.0, "_source": "Brandt Wt!B5 = Main!O17. readme_wt.md §3 / cell-map.md Wt!B5."},
+      "n_ult":            {"value": 9, "_source": "Brandt Main!Q27 (design limit load x 1.5). readme_wt.md §3 / cell-map.md Main!Q27. NB framework L3 uses N_z=13.5 (=1.5x9, ultimate) in Raymer §15.3.1; Brandt's psf model uses n_ult=9 -- DIFFERENT models (see f16a_L3.json .weights _N_z_note)."},
+      "weight_scale_pct": {"value": 100, "_source": "Brandt Main!O27 (global weight scale; 100 = no scaling). readme_wt.md §3."}
     }
   }
 }

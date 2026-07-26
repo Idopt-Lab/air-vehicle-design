@@ -71,5 +71,18 @@
     "T_SL_wet": 23770.0,
     "_T_SL_source": "AB (max) SLS thrust, lbf. Brandt Engn!T_AB_SLS = Main!D29 = 23770; T.O. 1F-16A-1 Sec. I. T_SL_wet is the AB alias of T_SL.",
     "_engine_type_note": "Engine-class identifier (F100-PW-200 class). Selects the PropL1 density-lapse exponent (turbofan m=0.6, Martins metabook Eq. 10.9) and the TSFC table rows (Raymer 6th ed. Table 3.3, low-bypass turbofan). Not a numeric design variable."
+  },
+
+  "weights": {
+    "_comment": "F-16A Block 10/15 Level-1 weight-estimation inputs (statistical empty-weight regressions: Raymer 6th ed. Table 3.1 power law + Roskam Part I Table 2.15 minimum-empty bound). Read by F16WeightsL1. L1 has NO geometry inputs. All regression coefficients are category-selected Constants inside the WeightsL1 toolbox (NOT JSON inputs; see _formula_constants_note). Edition/table drift (6th-vs-7th, Table 3.1-vs-6.1) is logged in VnV/BrandtF16A/todo.md 2026-07-24 §3c.",
+    "_formula_constants_note": "The Raymer Table 3.1 power-law coefficients (jet_fighter A=2.34, C=-0.13, Kvs=1.00) and the Roskam Part I Table 2.15 coefficients (A=0.5091, B=0.9505) are NOT JSON inputs -- they are Constants selected by aircraft_category inside the WeightsL1 toolbox (mirroring the propulsion lookup_TSFC_coeffs precedent).",
+    "aircraft_category": "jet_fighter",
+    "_aircraft_category_source": "Selects the Raymer Table 3.1 / Roskam Table 2.15 jet_fighter regression rows. Matches F16WeightsL1 default.",
+    "W_energy": 6296.3,
+    "_W_energy_source": "Internal fuel weight, lbf. [Brandt Wt!B6].",
+    "W_payload_fixed": 220,
+    "_W_payload_fixed_source": "Fixed equipment + crew, lbf. [estimate: 1 pilot + survival gear -- NOT pinned to a repo source; flagged in F16WeightsL1.md Deviations].",
+    "W_payload_expendable": 0,
+    "_W_payload_expendable_source": "Expendable payload, lbf; set by mission profile. [WeightsBase contract]."
   }
 }
