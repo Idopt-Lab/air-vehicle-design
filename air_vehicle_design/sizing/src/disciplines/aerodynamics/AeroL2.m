@@ -305,6 +305,48 @@ classdef AeroL2
             end
         end
 
+        function Cfe = lookup_Cfe(aircraft_category)
+        %LOOKUP_CFE  Equivalent skin-friction coefficient by aircraft category.
+        %
+        %   SOURCE: Raymer, "Aircraft Design: A Conceptual Approach," 6th ed.,
+        %   Table 12.3 "Equivalent skin-friction coefficients" (PDF p.447, book
+        %   p.417). Transcribed from the repo's own reference extract
+        %   temp_AI/docs/disciplines/reference_extracts/raymer_data.md:82, and
+        %   independently corroborated by metabook_data.md:118 -- both extracts
+        %   agree on all ten rows. Feeds Eq. 12.23, CD0 = Cfe*(S_wet/S_ref).
+        %
+        %   Moved out of the input JSON in Phase 3 (2026-07-25). Cfe is not a
+        %   design variable an optimizer varies and not an F-16 spec-sheet
+        %   number -- it is a textbook table value selected by aircraft class,
+        %   exactly like PropL2.lookup_TSFC_coeffs' engine-class coefficients and
+        %   WeightsL1.lookup_coeffs' regression constants. Storing it as an input
+        %   invited "tuning" a published constant: temp_AI's own notes record
+        %   Cfe being set to 0.005908 to make CD0 match Brandt's mission polar,
+        %   which is precisely the back-calculated-calibration-value-as-input
+        %   pattern PLAN.md forbids.
+            arguments
+                aircraft_category (1,1) string
+            end
+            switch aircraft_category
+                case {"jet_fighter", "fighter"}, Cfe = 0.0035;  % Air Force fighter
+                case "navy_fighter",             Cfe = 0.0040;
+                case "bomber",                   Cfe = 0.0030;
+                case "civil_transport",          Cfe = 0.0026;
+                case "military_cargo",           Cfe = 0.0035;  % high-upsweep fuselage
+                case "supersonic_cruise",        Cfe = 0.0025;  % clean supersonic cruise
+                case "light_aircraft_single",    Cfe = 0.0055;
+                case "light_aircraft_twin",      Cfe = 0.0045;
+                case "prop_seaplane",            Cfe = 0.0065;
+                case "jet_seaplane",             Cfe = 0.0040;
+                otherwise
+                    error('AeroL2:unknownAircraftCategory', ...
+                        ['Unknown aircraft_category "%s" for the Raymer Table 12.3 ', ...
+                         'Cfe lookup. Add the row with its cited table value rather ', ...
+                         'than passing a number in through the input JSON.'], ...
+                        aircraft_category);
+            end
+        end
+
         function CD0 = CD0_from_Cf(Cf, S_wet, S_ref)
         %CD0_FROM_CF  Equivalent-skin-friction CD0 = Cf*(S_wet/S_ref).
         %   Raymer 6th ed. Eq. 12.23 / Table 12.3.  S_ref guarded positive.

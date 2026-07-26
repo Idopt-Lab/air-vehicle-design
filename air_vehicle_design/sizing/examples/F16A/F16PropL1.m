@@ -26,11 +26,23 @@ classdef F16PropL1 < PropulsionModelL1
     properties
         engine_type = "low_bypass_turbofan_AB"   % PropL1 TSFC/lapse table key [F100-PW-200 low-bypass AB turbofan; TO 1F-16A-1 Sec. I]
         T_SL     = 23770                         % lbf — AB (max) SLS thrust  [PropulsionBase contract; Brandt D29; TO]
-        T_SL_wet = 23770                         % lbf — alias for T_SL (AB)  [Brandt D29; TO]
         % (No stored TSFC property. It used to exist as a `TSFC = 0` placeholder
         % satisfying a PropulsionBase abstract property; that declaration was
         % removed 2026-07-25 because TSFC is state-dependent. Call
         % get_TSFC(obj, state).)
+    end
+
+    % ======================================================================= %
+    % DERIVED — recomputed live on every read; read-only (no set-method).
+    % ======================================================================= %
+    properties (Dependent)
+        %T_SL_WET  lbf — AB (max) SLS thrust; an ALIAS for T_SL, kept because
+        %   call sites read the wet/AB name explicitly. Was a stored input
+        %   duplicating T_SL in both the class and the JSON (Phase 3,
+        %   2026-07-25) -- two independently-settable copies of one quantity, so
+        %   an optimizer changing T_SL left T_SL_wet stale. Now they cannot
+        %   diverge.
+        T_SL_wet
     end
 
     methods
@@ -45,7 +57,11 @@ classdef F16PropL1 < PropulsionModelL1
             J = jsondecode(fileread(json_path)).propulsion;
             obj.engine_type = string(J.engine_type);
             obj.T_SL        = J.T_SL;
-            obj.T_SL_wet    = J.T_SL_wet;
+            % T_SL_wet is NOT read: it is Dependent on T_SL (see its comment).
+        end
+
+        function v = get.T_SL_wet(obj)
+            v = obj.T_SL;   % wet/AB SLS thrust IS T_SL by the PropulsionBase convention
         end
 
         function alpha = thrust_lapse(obj, state)

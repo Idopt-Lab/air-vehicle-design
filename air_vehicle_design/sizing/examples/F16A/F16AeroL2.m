@@ -42,7 +42,11 @@ classdef F16AeroL2 < AeroModelL2
     properties
         geom              % injected geometry object (all geometry read live from it)
 
-        Cfe               % equivalent skin-friction coefficient [Raymer Table 12.3, 0.0035 AF fighter]
+        %AIRCRAFT_CATEGORY  Canonical class flag ("jet_fighter"); selects the
+        %   Raymer Table 12.3 Cfe row. Read from the single top-level
+        %   aircraft_category key -- see the Dependent Cfe below.
+        aircraft_category
+
         e_method          % Oswald-e selector; "official" -> Raymer Eq. 12.48/12.49
 
         % Airfoil section data (NACA 64A204) -- from JSON airfoil block.
@@ -72,6 +76,15 @@ classdef F16AeroL2 < AeroModelL2
     % geometry bugs by construction.
     % ======================================================================= %
     properties (Dependent)
+        %CFE  Equivalent skin-friction coefficient, Raymer Table 12.3, selected
+        %   by aircraft_category (0.0035 for an Air Force fighter). Was a stored
+        %   JSON input until Phase 3 (2026-07-25): a published table constant is
+        %   not an input, and holding it as one invited tuning it -- temp_AI's
+        %   notes record 0.005908 being used to force CD0 onto Brandt's mission
+        %   polar, exactly the back-calculated-value-as-input pattern PLAN.md
+        %   forbids. The JSON now supplies only the category that selects it.
+        Cfe
+
         S_ref             % ft^2  wing reference area          <- geom.S_ref
         S_wet             % ft^2  total wetted area            <- geom.S_wet
         AR                % —     wing aspect ratio            <- geom.AR_wing
@@ -103,8 +116,14 @@ classdef F16AeroL2 < AeroModelL2
             end
             obj.geom = geom;
 
-            A = jsondecode(fileread(json_path)).aerodynamics;
-            obj.Cfe      = A.Cfe_subsonic_clean;    % [Raymer Table 12.3]
+            J = jsondecode(fileread(json_path));
+            A = J.aerodynamics;
+            % ONE canonical category key, top-level: it selects rows in several
+            % different discipline tables, so it is not aerodynamics' property to
+            % own. Until Phase 3 it was stored three times under two spellings
+            % (.geometry.aircraft_category, .aerodynamics.aircraft_type,
+            % .weights.aircraft_category) with nothing keeping them in sync.
+            obj.aircraft_category = string(J.aircraft_category);
             obj.e_method = string(A.e_method);
             af = A.airfoil;
             obj.airfoil_name = string(af.name);
@@ -117,6 +136,11 @@ classdef F16AeroL2 < AeroModelL2
         end
 
         % ---- Dependent geometry getters (live from obj.geom) -------------- %
+        function v = get.Cfe(obj)
+            % Raymer Table 12.3 row selected by the canonical category.
+            v = AeroL2.lookup_Cfe(obj.aircraft_category);
+        end
+
         function v = get.S_ref(obj);         v = obj.geom.S_ref;         end
         function v = get.S_wet(obj);         v = obj.geom.S_wet;         end
         function v = get.AR(obj);            v = obj.geom.AR_wing;       end

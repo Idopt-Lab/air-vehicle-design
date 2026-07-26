@@ -69,9 +69,14 @@ classdef F16GeomL1 < GeometryModelL1
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
-            G = jsondecode(fileread(json_path)).geometry;
-            obj.aircraft_category = string(G.aircraft_category);
-            obj.M_max             = G.M_max;
+            J = jsondecode(fileread(json_path));
+            % ONE canonical top-level category key (Phase 3, 2026-07-25): it
+            % selects rows in several different discipline tables, so it belongs
+            % to no single block. It was previously stored three times under two
+            % spellings (.geometry / .aerodynamics / .weights) with nothing
+            % keeping them in sync.
+            obj.aircraft_category = string(J.aircraft_category);
+            obj.M_max             = J.geometry.M_max;
             obj.S_ref             = 300;
         end
 

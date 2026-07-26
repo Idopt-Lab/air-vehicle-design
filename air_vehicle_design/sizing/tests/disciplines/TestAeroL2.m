@@ -53,6 +53,39 @@ classdef TestAeroL2 < matlab.unittest.TestCase
     methods (Test)
 
         % ================================================================== %
+        % Cfe is a cited table lookup, not an input (Phase 3, 2026-07-25).
+        % ================================================================== %
+
+        function testCfeComesFromTheRaymerTableNotTheJSON(tc)
+            % Cfe was a stored .aerodynamics input. A published table constant is
+            % not a design variable, and holding it as an input invited tuning it:
+            % temp_AI's notes record 0.005908 being used to force CD0 onto
+            % Brandt's mission polar -- the back-calculated-value-as-input pattern
+            % PLAN.md forbids. It is now Dependent on aircraft_category.
+            %
+            % Expected values transcribed from the repo's own reference extract
+            % temp_AI/docs/disciplines/reference_extracts/raymer_data.md:82
+            % (Raymer 6th ed. Table 12.3, PDF p.447), corroborated by
+            % metabook_data.md:118 -- both extracts agree on all ten rows.
+            a = TestAeroL2.makeAero();
+            tc.verifyEqual(a.Cfe, 0.0035, 'AbsTol', 1e-12, ...
+                'F-16A is an Air Force fighter: Raymer Table 12.3 gives Cfe = 0.0035.');
+            tc.verifyError(@() setfield(a, 'Cfe', 0.005908), ...
+                'MATLAB:class:noSetMethod', ...
+                'Cfe must be read-only -- it is a table value, not something to tune.'); %#ok<SFLD>
+            % Spot-check rows other than the F-16's, so a future edit to the
+            % table is caught rather than silently accepted.
+            tc.verifyEqual(AeroL2.lookup_Cfe("navy_fighter"),          0.0040, 'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL2.lookup_Cfe("bomber"),                0.0030, 'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL2.lookup_Cfe("civil_transport"),       0.0026, 'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL2.lookup_Cfe("supersonic_cruise"),     0.0025, 'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL2.lookup_Cfe("light_aircraft_single"), 0.0055, 'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL2.lookup_Cfe("prop_seaplane"),         0.0065, 'AbsTol', 1e-12);
+            tc.verifyError(@() AeroL2.lookup_Cfe("dirigible"), ...
+                'AeroL2:unknownAircraftCategory');
+        end
+
+        % ================================================================== %
         % Oswald efficiency (Raymer Eq. 12.48 / 12.49, branch on Lambda_LE)
         % ================================================================== %
 

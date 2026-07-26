@@ -160,12 +160,34 @@ classdef TestAeroL1 < matlab.unittest.TestCase
                 'AeroL1:unknownCategory');
         end
 
-        function testRoskamCLmaxValueUnknownTypeThrows(tc)
-            % Table 3.1 has a "fighter" row but no "jet_fighter" row. The old
-            % private lookup brace-indexed an empty table row, throwing an
-            % opaque MATLAB indexing error; roskam_CLmax_value now raises an
-            % identified error naming the known types.
-            tc.verifyError(@() AeroL1.roskam_CLmax_value("jet_fighter", "CL_max_TO"), ...
+        function testCanonicalCategoryResolvesToTheTablesOwnRowName(tc)
+            % PHASE 3 (2026-07-25). Roskam's CLmax table prints its fighter row
+            % as "fighter", while every other table in the framework (Roskam
+            % 3.5, Raymer 6.3 / 4.1 / 3.1) names the same class "jet_fighter".
+            % The JSON now carries ONE canonical aircraft_category, so this
+            % lookup must accept it -- previously "jet_fighter" brace-indexed an
+            % empty row and threw.
+            %
+            % Renaming the table row to "jet_fighter" was rejected: the row name
+            % is the category name the textbook prints, and renaming it would
+            % break source traceability. The canonical value is translated at the
+            % table boundary instead, so one input key serves every table while
+            % each table stays faithful to its source.
+            tc.verifyEqual(AeroL1.to_CLmax_table_row("jet_fighter"), "fighter", ...
+                'The canonical category must map to Roskam Table 3.1''s own row name.');
+            % Both spellings must reach the same row and the same value.
+            tc.verifyEqual(AeroL1.roskam_CLmax_value("jet_fighter", "CL_max_TO"), ...
+                            AeroL1.roskam_CLmax_value("fighter", "CL_max_TO"), ...
+                'AbsTol', 1e-12);
+            tc.verifyEqual(AeroL1.roskam_CLmax_value("jet_fighter", "CL_max_TO"), 1.70, ...
+                'AbsTol', 1e-12, 'Table 3.1 fighter takeoff mean.');
+        end
+
+        function testRoskamCLmaxValueUnknownCategoryThrows(tc)
+            % A genuinely unknown category must still raise an identified error
+            % naming the known rows -- the translation layer passes unrecognised
+            % values straight through rather than guessing a row.
+            tc.verifyError(@() AeroL1.roskam_CLmax_value("dirigible", "CL_max_TO"), ...
                 'AeroL1:unknownAircraftType');
         end
 

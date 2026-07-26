@@ -2,6 +2,9 @@
   "_comment": "F-16A Block 10/15 Level-2 inputs. Read by F16GeomL2, F16AeroL2, F16PropL2, F16WeightsL2. Full docs: F16GeomL2.md, F16AeroL2.md, F16PropL2.md, F16WeightsL2.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
   "_cite": "Main!/Engn(s)!/Miss!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly AED 2nd ed.; todo = VnV/BrandtF16A/todo.md.",
 
+  "aircraft_category": "jet_fighter",
+  "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
+
   "geometry": {
     "_src": "Surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %; wing B22 = 1404 -> 4%, corroborated TO Fig. 1-2 NACA 64A204). tc_root, tc_tip [TO Sec. I biconvex]. fuselage length_ft, max_width_ft, max_height_ft [Main!B32/C32/D32]. engine duct_length_ft [Main!F32, label E32 'Compr Face'].",
     "_note": "Row map also in F16GeomL2.md / F16GeomL3.md §F. Derived quantities are Dependent getters; engine SLS thrust arrives by DI from .propulsion.T_SL.",
@@ -16,8 +19,7 @@
   },
 
   "aerodynamics": {
-    "_src": "Cfe_subsonic_clean [Raymer Tbl 12.3 AF fighter, for Eq. 12.23]; e_method 'official' [Raymer Eq. 12.48/12.49]; airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]",
-    "Cfe_subsonic_clean": 0.0035,
+    "_src": "e_method 'official' [Raymer Eq. 12.48/12.49]; airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
     "e_method": "official",
     "airfoil": {
       "name": "NACA 64A204",
@@ -33,25 +35,23 @@
   },
 
   "propulsion": {
-    "_src": "engine_type [F100-PW-200 class; selects the PropL2 Mattingly Eq. 3.55a/b TSFC coefficients]; engine_model [descriptor]; T_SL = T_SL_wet, AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]; T_SL_mil, dry SLS lbf [Engn(s)!T_mil_SLS = Main!C29]; T_t4_max_F [Mattingly Tbl C.4, F100-PW-100]; TSFC_install_factor [Miss!C25 = Main!C25]",
-    "_note": "Installed = uninstalled x 1.08. Brandt's stored SLS TSFCs (0.70 mil / 2.20 AB) are ALREADY installed -- do not double-apply [todo 2026-07-24 §4]. TR [Mattingly Eq. D.6] is derived.",
+    "_src": "engine_type [F100-PW-200 class; selects the PropL2 Mattingly Eq. 3.55a/b TSFC coefficients]; engine_model [descriptor]; T_SL AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]; T_SL_mil, dry SLS lbf [Engn(s)!T_mil_SLS = Main!C29]; T_t4_max_F [Mattingly Tbl C.4, F100-PW-100]; TSFC_install_factor [Miss!C25 = Main!C25]; bypass_ratio [F100-PW-200 class, unpinned -- see _TODO key]",
+    "_note": "Installed = uninstalled x 1.08. Brandt's stored SLS TSFCs (0.70 mil / 2.20 AB) are ALREADY installed -- do not double-apply [todo 2026-07-24 §4]. TR [Mattingly Eq. D.6] and T_SL_wet (= T_SL) are derived.",
     "engine_type": "low_bypass_turbofan_AB",
     "engine_model": "F100-PW-200",
     "T_SL":     23770.0,
-    "T_SL_wet": 23770.0,
     "T_SL_mil": 15000.0,
     "T_t4_max_F": 2566.0,
-    "TSFC_install_factor": 1.08
+    "TSFC_install_factor": 1.08,
+    "bypass_ratio": 0.71,
+    "_TODO_bypass_ratio": "BPR = 0.71 for the F100-PW-200 is not traceable to any document in this repo -- added for the Raymer Eq. 10.10 engine-weight term that Phase 4 wires. Remove this key when pinned to a primary source (TO 1F-16A-1, Jane's, or a P&W datasheet). todo 2026-07-25 Phase 3."
   },
 
   "weights": {
-    "_src": "aircraft_category [selects Raymer Tbl 15.2 fighter psf + AE481 metabook §7 fractions; both toolbox Constants]; N_en [TO]; W_en [estimate, unpinned]; W_energy [Wt!B6]; W_payload_fixed [estimate, unpinned]; W_payload_expendable [WeightsBase contract]",
-    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2.",
-    "aircraft_category": "jet_fighter",
+    "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants.",
+    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
     "N_en": 1,
-    "W_en": 3030,
-    "W_energy": 6296.3,
-    "W_payload_fixed": 220,
-    "W_payload_expendable": 0
+    "W_payload_fixed": 700,
+    "W_payload_expendable": 4400
   }
 }

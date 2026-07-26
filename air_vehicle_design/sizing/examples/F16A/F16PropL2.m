@@ -51,7 +51,6 @@ classdef F16PropL2 < PropulsionModelL2
     properties
         engine_type = "low_bypass_turbofan_AB"  % selects PropL2 TSFC coefficient set [F100-PW-200 low-bypass AB turbofan; TO 1F-16A-1 Sec. I]
         T_SL     = 23770   % lbf — AB (max) SLS thrust  [PropulsionBase contract; Brandt D29; TO]
-        T_SL_wet = 23770   % lbf — alias for T_SL (AB)  [Brandt D29; TO]
         T_SL_mil = 15000   % lbf — mil SLS thrust        [Brandt C29; TO]
         T_t4_max_F = 2566  % °F  — burner-exit total temperature [Mattingly Table C.4]; feeds get.TR
         TSFC_install_factor = 1.08  % — installed = uninstalled × factor [Brandt Miss!C25]
@@ -67,6 +66,15 @@ classdef F16PropL2 < PropulsionModelL2
     % ======================================================================= %
     properties (Dependent)
         TR   % — throttle ratio; get.TR = PropL2.compute_TR(T_t4_max °F→°R) [Mattingly Eq. D.6]
+
+        %T_SL_WET  lbf — AB (max) SLS thrust. An ALIAS for T_SL, kept because
+        %   several call sites read the wet/AB name explicitly (e.g.
+        %   PropL2.thrust_lapse_mil_on_AB_scale's T_SL_mil/T_SL_wet ratio).
+        %   Was a stored input duplicating T_SL in both the class and the JSON
+        %   (Phase 3, 2026-07-25): two independently-settable copies of one
+        %   quantity, so an optimizer changing T_SL left T_SL_wet stale and the
+        %   mil-on-AB lapse silently wrong. Now Dependent, so they cannot diverge.
+        T_SL_wet
     end
 
     methods
@@ -82,13 +90,17 @@ classdef F16PropL2 < PropulsionModelL2
             J = jsondecode(fileread(json_path)).propulsion;
             obj.engine_type         = string(J.engine_type);
             obj.T_SL                = J.T_SL;
-            obj.T_SL_wet            = J.T_SL_wet;
             obj.T_SL_mil            = J.T_SL_mil;
+            % T_SL_wet is NOT read: it is Dependent on T_SL (see its comment).
             obj.T_t4_max_F          = J.T_t4_max_F;
             obj.TSFC_install_factor = J.TSFC_install_factor;
         end
 
-        % ---- DERIVED-property getter (recomputes live on every read) ------ %
+        % ---- DERIVED-property getters (recompute live on every read) ------ %
+        function v = get.T_SL_wet(obj)
+            v = obj.T_SL;   % wet/AB SLS thrust IS T_SL by the PropulsionBase convention
+        end
+
         function v = get.TR(obj)
             % Throttle ratio [Mattingly Eq. D.6]. °F → °R via +459.67.
             % T_t4_SLS is unknown → compute_TR defaults it to T_t4_max → TR = 1.0.

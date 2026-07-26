@@ -78,7 +78,7 @@ classdef AeroL1
         %
         %   AeroL1.lookup_CLmax (Table 3.3) is retained as a standalone utility
         %   but is deliberately NOT wired here -- see its header.
-            CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_type, "CL_max_clean");
+            CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_category, "CL_max_clean");
         end
 
         % ================================================================== %
@@ -153,25 +153,63 @@ classdef AeroL1
             end
         end
 
-        function CLmax = roskam_CLmax_value(aircraft_type, column)
+        function rowName = to_CLmax_table_row(aircraft_category)
+        %TO_CLMAX_TABLE_ROW  Canonical aircraft_category -> AeroL1.CLmax_table row name.
+        %
+        %   WHY A TRANSLATION LAYER RATHER THAN ONE GLOBAL SPELLING (Phase 3,
+        %   2026-07-25). The framework's regression/lookup tables are transcribed
+        %   from FOUR different textbook tables, and those tables name their
+        %   categories differently:
+        %     Roskam Vol. I Table 3.5 (S_wet)        -> "jet_fighter"
+        %     Raymer 6th Table 6.3    (L_fus)        -> "jet_fighter"
+        %     Raymer 7th Table 4.1    (AR_eq)        -> "jet_fighter"
+        %     Raymer 6th Table 3.1    (empty weight) -> "jet_fighter"
+        %     Roskam Vol. I Table 3.1 (CLmax, HERE)  -> "fighter"
+        %   (they also disagree elsewhere: transport_jet vs jet_transport,
+        %   military_cargo vs military_cargo_bomber).
+        %
+        %   The input JSON carries ONE canonical aircraft_category. Renaming this
+        %   table's row to match it was considered and rejected: the row name is
+        %   the category name Roskam actually prints, and renaming it would break
+        %   the source traceability this project treats as non-negotiable. So the
+        %   canonical value is translated at the table boundary instead -- one
+        %   input key, every table still faithful to its own source.
+            arguments
+                aircraft_category (1,1) string
+            end
+            switch aircraft_category
+                case {"jet_fighter", "fighter"}
+                    rowName = "fighter";          % Roskam Vol. I Table 3.1's own name
+                otherwise
+                    rowName = aircraft_category;  % pass through; the caller validates
+            end
+        end
+
+        function CLmax = roskam_CLmax_value(aircraft_category, column)
         %ROSKAM_CLMAX_VALUE  Range mean of one AeroL1.CLmax_table column for an
-        %   aircraft type.  Source: Roskam, "Airplane Design Vol. I," Table 3.1.
+        %   aircraft category.  Source: Roskam, "Airplane Design Vol. I," Table 3.1.
         %   column -- "CL_max_clean" | "CL_max_TO" | "CL_max_L".
+        %
+        %   Takes the CANONICAL category (e.g. "jet_fighter") and translates it to
+        %   this table's own row name via to_CLmax_table_row -- see that method for
+        %   why the two differ.
         %
         %   Low-level static (scalars/strings only): the single place the Table
         %   3.1 range means are computed, shared by AeroL1.get_CLmax and the
         %   concrete classes' HLD-increment methods so the clean base and the
         %   increments can never again come from different tables.
             arguments
-                aircraft_type (1,1) string
-                column        (1,1) string {mustBeMember(column, ["CL_max_clean","CL_max_TO","CL_max_L"])}
+                aircraft_category (1,1) string
+                column            (1,1) string {mustBeMember(column, ["CL_max_clean","CL_max_TO","CL_max_L"])}
             end
             T   = AeroL1.CLmax_table;
-            row = T(T.AircraftType == aircraft_type, :);
+            row = T(T.AircraftType == AeroL1.to_CLmax_table_row(aircraft_category), :);
             if isempty(row)
                 error('AeroL1:unknownAircraftType', ...
-                    ['Unknown aircraft_type "%s" for Roskam Table 3.1. Known types: ', ...
-                     '%s.'], aircraft_type, strjoin(cellstr(T.AircraftType), ', '));
+                    ['Unknown aircraft_category "%s" for Roskam Table 3.1 (no row "%s"). ', ...
+                     'Known rows: %s.'], aircraft_category, ...
+                     AeroL1.to_CLmax_table_row(aircraft_category), ...
+                     strjoin(cellstr(T.AircraftType), ', '));
             end
             CLmax = mean(row.(column){1});
         end

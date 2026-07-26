@@ -36,7 +36,7 @@ classdef F16AeroL1 < AeroModelL1
     % here (contrast F16AeroL2/L3).
     % ======================================================================= %
     properties
-        aircraft_type     % string; selects the fighter drag-polar + Roskam CLmax rows
+        aircraft_category % string; canonical class flag, read from the single top-level key. Selects the Roskam CLmax row (translated to that table's own "fighter" name by AeroL1.to_CLmax_table_row) and the Mattingly fighter curves.
         design_type       % string; "uncambered" -> K2=0 (Mattingly Sec. 2.3.1)
         curve             % string; Mattingly technology curve ("Current"/"Future")
 
@@ -61,8 +61,13 @@ classdef F16AeroL1 < AeroModelL1
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
-            A = jsondecode(fileread(json_path)).aerodynamics;
-            obj.aircraft_type = string(A.aircraft_type);
+            J = jsondecode(fileread(json_path));
+            A = J.aerodynamics;
+            % ONE canonical top-level category key (Phase 3, 2026-07-25): it was
+            % previously stored three times under two spellings, and the four
+            % readers did not accept the same vocabulary.
+            obj.aircraft_category = string(J.aircraft_category);
+
             obj.design_type   = string(A.design_type);
             obj.curve         = string(A.curve);
 
@@ -152,7 +157,7 @@ classdef F16AeroL1 < AeroModelL1
         %   AeroL1.get_CLmax also uses for the clean column -- so the clean base
         %   and these increments are guaranteed to come from the same table
         %   (Roskam Table 3.1). See AeroL1.get_CLmax's header.
-            val = AeroL1.roskam_CLmax_value(obj.aircraft_type, column);
+            val = AeroL1.roskam_CLmax_value(obj.aircraft_category, column);
         end
 
     end

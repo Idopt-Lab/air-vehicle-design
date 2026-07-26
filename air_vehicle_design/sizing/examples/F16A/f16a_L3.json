@@ -2,6 +2,9 @@
   "_comment": "F-16A Block 10/15 Level-3 inputs (physical / T.O. geometry tier). Read by F16GeomL3, F16AeroL3, F16WeightsL3; aero component order wing, horizontal_tail, vertical_tail, fuselage, duct. Full docs: F16GeomL3.md (authoritative for .geometry), F16AeroL3.md, F16WeightsL3.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
   "_cite": "Main!/Geom!/Engn(s)!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; todo = VnV/BrandtF16A/todo.md.",
 
+  "aircraft_category": "jet_fighter",
+  "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
+
   "geometry": {
     "_src": "FULL-planform surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %), 23 = 'X Location' (x_apex_ft / x_le_ft). Per-block _src below cites only the keys that depart from that map.",
     "_note": "Intentional divergences from L2 (vertical_tail.sweep_LE_deg, fuselage.length_ft, horizontal_tail.span_ft): F16GeomL3.md §B/§G/§F. Derived quantities are Dependent getters; engine SLS thrust arrives by DI. ★ horizontal_tail has NO 'AR' key by design -- S_ft2 + span_ft fix the planform, AR_ht is Dependent; do not add one (todo 2026-07-25 §7). ★ MIXED PROVENANCE, OPEN: full-planform tail areas/AR/taper are Brandt's, carried alongside TO/USAF sweeps and span (todo 2026-07-25 §3).",
@@ -123,46 +126,32 @@
   },
 
   "weights": {
-    "_src": "aircraft_category [selects the Raymer §15.3.1 Fighter/Attack build-up]; N_z ultimate = 1.5 x 9g [TO §5; Raymer §15.3.1]; W_energy [Wt!B6]; W_payload_fixed [estimate, unpinned]; W_payload_expendable [WeightsBase contract]",
-    "_note": "Raymer §15.3.1 exponents/coefficients are toolbox Constants and a standing verify-against-book item (todo 2026-07-24 §3a). Geometry F16GeomL2 exposes is injected by DI. Brandt's Wt-tab psf model stores n_ult = 9 [Main!Q27] -- a different model, do not conflate with N_z.",
-    "aircraft_category": "jet_fighter",
+    "_src": "N_z ultimate = 1.5 x 9g [TO §5; Raymer §15.3.1]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]",
+    "_note": "Raymer §15.3.1 exponents/coefficients are aircraft_category-selected toolbox Constants and a standing verify-against-book item (todo 2026-07-24 §3a). Brandt's Wt-tab psf model stores n_ult = 9 [Main!Q27] -- a different model, do not conflate with N_z.",
+    "_not_inputs": "Removed in Phase 3 (2026-07-25) as Brandt OUTPUTS, computed quantities, or geometry duplicates. Geometry arrives by DI from F16GeomL3 (Phase 4 wires it), engine data by DI from the propulsion object. W_energy [Wt!B6] and W_l [Wt!B41] are sizing-loop/mission OUTPUTS, both back-calculated by Brandt. W_en is computed from Raymer Eq. 10.10 using prop.T_SL and bypass_ratio. T_max duplicated .propulsion.T_SL. V_t was derived from W_energy / 6.7 lb-per-gal. SFC_mission [Main!C30] duplicates what PropL2.get_TSFC computes. AR_ht/lambda_ht/B_h/F_w/S_csw/AR_vt/lambda_vt/Lambda_LE_vt/H_t/H_v/S_r/L_t/S_cs all duplicated .geometry keys.",
     "N_z": 13.5,
-    "W_energy": 6296.3,
-    "W_payload_fixed": 220,
-    "W_payload_expendable": 0,
+    "W_payload_fixed": 700,
+    "W_payload_expendable": 4400,
 
     "wing": {
-      "_src": "Raymer Eq. 15.1. S_csw: see .geometry.wing.S_csw_ft2; K_dw not a delta wing, K_vs not variable sweep [Raymer]",
-      "S_csw": 68.03,
+      "_src": "Raymer Eq. 15.1. K_dw not a delta wing, K_vs not variable sweep [Raymer]",
       "K_dw": 1.0,
       "K_vs": 1.0
     },
 
     "horizontal_tail": {
-      "_src": "Raymer Eq. 15.2. AR_ht, lambda_ht, B_h, F_w: same values + citations as .geometry.horizontal_tail AR_exposed/taper_exposed/span_ft/F_w_ft; K_rht all-moving tail [Raymer §15.3]",
-      "AR_ht": 2.114,
-      "lambda_ht": 0.390,
-      "F_w": 7.0,
-      "B_h": 18.5,
+      "_src": "Raymer Eq. 15.2. K_rht all-moving tail [Raymer §15.3]",
       "K_rht": 1.047
     },
 
     "vertical_tail": {
-      "_src": "Raymer Eq. 15.3. AR_vt, lambda_vt, Lambda_LE_vt, H_t, H_v, S_r, L_t: same values + citations as .geometry.vertical_tail and .geometry.tail_arm_ft; M_design [Brandt polar_model]; K_dwf not a delta-wing fuselage [Raymer]",
-      "AR_vt": 1.294,
-      "lambda_vt": 0.437,
-      "Lambda_LE_vt": 47.5,
-      "H_t": 0,
-      "H_v": 1,
+      "_src": "Raymer Eq. 15.3. M_design [Brandt polar_model]; K_dwf not a delta-wing fuselage [Raymer]",
       "M_design": 2.0,
-      "L_t": 22.0,
-      "S_r": 11.65,
       "K_dwf": 1.0
     },
 
     "landing_gear": {
-      "_src": "Raymer Eqs. 15.5-15.6. W_l [Wt!B41]; N_nw [TO]; K_cb not carrier-based, K_tpg not kneeling gear [Raymer]; N_l [standard military; verify TO §5]; L_m, L_n [estimates, unpinned]",
-      "W_l": 20681,
+      "_src": "Raymer Eqs. 15.5-15.6. N_nw [TO]; K_cb not carrier-based, K_tpg not kneeling gear [Raymer]; N_l [standard military; verify TO §5]; L_m, L_n [estimates, unpinned]",
       "N_l": 2.67,
       "L_m": 5.5,
       "L_n": 3.5,
@@ -172,10 +161,8 @@
     },
 
     "engine_section": {
-      "_src": "Raymer Eqs. 15.7-15.15 + vendor dry-engine data. T_max SLS AB [Main!D29]; N_en [TO]; S_fw = 0 no piston firewall on a jet, K_vg fixed-geometry inlet, K_d [Raymer]; W_en, D_e, L_tp, L_sh, L_ec, L_d, L_s [estimates, unpinned]",
+      "_src": "Raymer Eqs. 15.7-15.15. N_en [TO]; S_fw = 0 no piston firewall on a jet, K_vg fixed-geometry inlet, K_d [Raymer]; D_e, L_tp, L_sh, L_ec, L_d, L_s [estimates, unpinned]",
       "N_en": 1,
-      "T_max": 23770,
-      "W_en": 3030,
       "S_fw": 0,
       "D_e": 3.33,
       "L_tp": 4.5,
@@ -188,13 +175,10 @@
     },
 
     "systems": {
-      "_src": "Raymer Eqs. 15.16-15.24. SFC_mission mil power [Main!C30]; N_gen [TO]; N_c = 1 single-seat; K_vsh no variable-sweep hydraulics, K_mc for <=2 generators [Raymer]; S_cs: see .geometry.total_control_surface_area_ft2; V_t [estimate: Wt!B6 / 6.7 lb/gal]; V_i, V_p, N_t, N_s, N_ci, N_u, R_kva, L_a, W_uav [estimates, unpinned; F-16 Block 10]",
-      "V_t": 940,
+      "_src": "Raymer Eqs. 15.16-15.24. N_gen [TO]; N_c = 1 single-seat; K_vsh no variable-sweep hydraulics, K_mc for <=2 generators [Raymer]; V_i, V_p, N_t, N_s, N_ci, N_u, R_kva, L_a, W_uav [estimates, unpinned; F-16 Block 10]",
       "V_i": 500,
       "V_p": 0,
       "N_t": 3,
-      "SFC_mission": 0.70,
-      "S_cs": 190,
       "N_s": 4,
       "N_c": 1,
       "N_ci": 3,
