@@ -35,11 +35,31 @@ scalars and returns a scalar.
 | `compute_tip_chord(c_root, lambda)`    | `lambda*c_root` | Raymer 7th ed., Eq. 7.7 |
 | `compute_mac(c_root, lambda)`          | `(2/3)*c_root*(1+lambda+lambda^2)/(1+lambda)` | Raymer 7th ed., Eq. 7.8 |
 | `compute_span(AR, S_ref)`              | `sqrt(AR*S_ref)` | Definitional (AR = b^2/S_ref) |
-| `convert_sweep(Lambda_LE_deg, AR, lambda, x)` | `tan(Lambda_x) = tan(Lambda_LE) - (4/AR)*x*(1-lambda)/(1+lambda)`; `x=0.25` gives quarter-chord, `x=1.0` trailing-edge | Standard swept-wing planform identity |
+| `convert_sweep(Lambda_LE_deg, AR, lambda, x)` | **MIRRORED** surfaces (wing, conventional HT): `tan(Lambda_x) = tan(Lambda_LE) - (4/AR)*x*(1-lambda)/(1+lambda)`; `x=0.25` gives quarter-chord, `x=1.0` trailing-edge | Standard swept-wing planform identity |
+| `convert_sweep_panel(Lambda_LE_deg, AR, lambda, x)` | **SINGLE-PANEL** surfaces (vertical tail): same identity with `2/AR` — exactly half the mirrored coefficient | Same identity, specialized to one panel |
 
-`convert_sweep` is cited as a standard swept-wing identity rather than a specific textbook
-equation number: no Raymer/Roskam edition and equation could be pinned to it against the
-references available in this repo.
+### Sweep-angle conversion — mirrored vs. single-panel
+
+`GeometryBase.m`'s `convert_sweep` / `convert_sweep_panel` citation notes point readers here.
+
+The coefficient follows from what root→tip spans:
+
+- **Mirrored** (`convert_sweep`): root→tip spans the **semi**span `b/2`, and `AR = b²/S` is defined
+  on the full mirrored planform. `tan(Λ_x) = tan(Λ_LE) − x·(c_root − c_tip)/(b/2)`, which with
+  `c_root = 2S/(b(1+λ))` gives the **4/AR** form.
+- **Single panel** (`convert_sweep_panel`): a vertical tail is one panel — root→tip spans the
+  **full** `b`, and `AR = b²/S` is defined on that single panel. The same derivation over `b`
+  instead of `b/2` gives **2/AR**.
+
+Passing a single-panel AR to `convert_sweep` double-counts the taper term. That was a live defect
+until 2026-07-25: the F-16's VT trailing-edge sweep read a physically impossible **0.33°** where
+the correct value is **22.90°** (quarter-chord 32.24° → **36.31°**). Verified against the repo's own
+VT chords (`readme_geom.md` §4.3: `S_vt = 60`, `AR_vt = 1.6`, `λ_vt = 0.5` → `b_vt = 9.798`,
+`c_root = 8.165`, `c_tip = 4.082`).
+
+Both are cited as a standard planform-geometry identity rather than a specific textbook equation
+number: no Raymer/Roskam edition and equation could be pinned to either against the references
+available in this repo.
 
 Argument validators guard the denominators: `lambda` is `mustBeNonnegative` (protects
 `1+lambda`), areas/spans/chords are `mustBePositive`, and `x` is constrained to `[0,1]`.

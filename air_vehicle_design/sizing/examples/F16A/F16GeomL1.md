@@ -6,20 +6,42 @@ duplicated here. L1 is a statistical/regression tier, so the only JSON inputs ar
 scalars — no numeric planform dimensions exist at this tier.
 
 ## Constructor
-`F16GeomL1(json_path)` requires a spec-file path (`f16a_spec_path(1)`) and reads the `.geometry`
-block of `examples/F16A/f16a_L1.json`; the same file's `.aerodynamics` block feeds `F16AeroL1`.
-There is no silent default — a no-argument call errors (`MATLAB:minrhs`). The constructor sets
-`aircraft_category` and `M_max` from JSON; `S_ref` is set to the hardcoded 300 ft^2 literal.
+`F16GeomL1(json_path, req_path)` — **both paths required**, no silent default (a short call errors,
+`MATLAB:minrhs`). Typically `F16GeomL1(f16a_spec_path(1), f16a_requirements_path())`.
+
+- `json_path` → the spec file `examples/F16A/f16a_L1.json`. Supplies the one canonical top-level
+  `aircraft_category`. (The same file's `.aerodynamics` block feeds `F16AeroL1`.)
+- `req_path` → `examples/F16A/f16a_requirements.json`. Supplies `design_mach`, which becomes
+  `M_max`. Added Phase 4 (2026-07-25): the design max Mach is a *requirement*, not airframe spec
+  data, and it previously existed in three places. `f16a_L1.json .geometry.M_max` was deleted and
+  this is now its single source — a consolidation, not a removal, since `M_max` still drives
+  `get_AR_eq`.
+
+`S_ref` is not a JSON input; it stays the hardcoded 300 ft² literal (see the table below).
 
 ## Properties
 
+**Inputs** — plain, mutable; set once by the constructor:
+
 | Property | Value | Notes |
 |----------|-------|-------|
-| `aircraft_category` | `"jet_fighter"` | drives GeomL1 table lookups |
+| `aircraft_category` | `"jet_fighter"` | drives GeomL1 table lookups; from the spec file's top-level key |
 | `S_ref` | `300` ft^2 | T.O. 1F-16A-1, Fig. 1-2; not a JSON input |
-| `S_wet` | `0` | populated on demand by `get_S_wet(obj, W_TO)` |
-| `L_fuselage` | `0` | populated on demand by `get_L_fus(obj, W_TO)` |
-| `M_max` | `2.0` | design max Mach; drives `get_AR_eq` |
+| `M_max` | `2.0` | design max Mach; drives `get_AR_eq`. From `f16a_requirements.json .design_mach` |
+| `W_TO` | `NaN` | lbf. A genuine L1 **input**: both regressions below are functions of TOGW, which geometry cannot know at this fidelity. The sizing loop mutates it between iterations |
+
+**Derived** (`Dependent`) — recomputed live on every read, no stored copy:
+
+| Property | Computes | Source |
+|----------|----------|--------|
+| `S_wet` | total wetted area from `W_TO` | Roskam Vol. I, Table 3.5 regression |
+| `L_fuselage` | fuselage length from `W_TO` | Raymer 6th ed., Table 6.3 regression |
+
+Both **error** (not return a placeholder) while `W_TO` is unset. They were plain properties frozen
+at `0` and commented "populated by `get_S_wet(obj, W_TO)`" — but `get_S_wet` only ever *returned* a
+value, it never assigned, so both sat at `0` for the object's whole life. Injecting an `F16GeomL1`
+into `F16AeroL2`/`F16AeroL3` then produced `CD0 = Cfe·0/S_ref = 0` — silent zero parasite drag and
+infinite L/D, with no warning. Converted to `Dependent` 2026-07-25.
 
 ## Methods
 

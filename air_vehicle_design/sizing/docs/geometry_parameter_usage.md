@@ -6,22 +6,7 @@ weights and propulsion `.m` files. Companions: `docs/aerodynamics_parameter_usag
 `docs/weights_parameter_usage.md`, `examples/F16A/F16GeomL3.md`,
 `src/disciplines/geometry/GeomL2.md`.
 
-**Tier status.** Geometry is **L1 / L2 / L3**. The 2026-07-22 "Geometry has no L3" decision was
-reversed on 2026-07-24, and `GeomL3` (`src/disciplines/geometry/GeomL3.m`, `GeometryModelL3.m`,
-`examples/F16A/F16GeomL3.m`, `tests/disciplines/TestGeomL3.m`) is the **full L3 geometry tier**,
-built, tested and **wired**. Both items this file previously listed as "not yet true" are now done:
-
-1. **`F16GeomL3` is no longer orphaned.** `geometry_brandt_comparison.m:47` and
-   `aerodynamics_brandt_comparison.m:68` build `g3 = F16GeomL3(f16a_spec_path(3), prop)`, so
-   `f16a_L3.json .geometry` is live input, not dead input.
-2. **L3's contract is aero-shaped as well as weights-shaped.** `AR_ht`/`lambda_ht`/`S_ht`/`S_vt`
-   mean **FULL** planform on both tiers; the exposed values are
-   `AR_exposed_ht`/`lambda_exposed_ht`/`AR_exposed_vt`/`lambda_exposed_vt`. The aero injection guard
-   was narrowed to match: `F16AeroL2.m:101` / `F16AeroL3.m:144` now take
-   `geom (1,1) {mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])}` instead of `GeometryBase`.
-   Full spec + citations: `examples/F16A/F16GeomL3.md` §B/§C.
-
-**No L3 propulsion tier exists, by locked decision (2026-07-25).** `F16PropL2` *is* the L3
+**No L3 propulsion tier exists.** `F16PropL2` *is* the L3
 propulsion rung and must be labelled as such wherever L3 is reported.
 
 **Property counts, as built** (`examples/F16A/F16GeomL3.md` §A): `F16GeomL3` carries **38 numeric

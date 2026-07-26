@@ -6,11 +6,20 @@ equations are duplicated here. This is the reference implementation of the INPUT
 optimization-ready property pattern that every future Tier-3 class follows.
 
 ## Constructor
-`F16GeomL2(json_path)` requires a spec-file path (`f16a_spec_path(2)`) and reads the `.geometry`
-block of `examples/F16A/f16a_L2.json`; the same file's `.aerodynamics` block feeds `F16AeroL2`.
-There is no silent default — a no-argument call errors (`MATLAB:minrhs`). The constructor sets
-**only** the input properties (wing, HT, VT, fuselage, engine/duct); every derived quantity is
-produced live by its Dependent getter.
+`F16GeomL2(json_path, prop)` — **both arguments required**, no silent default (a short call errors,
+`MATLAB:minrhs`). Typically `F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)))`.
+
+- `json_path` → `examples/F16A/f16a_L2.json`, whose `.geometry` block supplies the inputs. (The same
+  file's `.aerodynamics` block feeds `F16AeroL2`.)
+- `prop` → an injected propulsion object (`prop (1,1) PropulsionBase`). **Geometry takes a
+  propulsion object** because the nacelle diameter — and hence duct wetted area and CD0 — is sized
+  from engine SLS thrust, which is engine data, not airframe data. `T_AB_SLS_lb` is therefore
+  `Dependent` on `prop.T_SL` and is no longer a geometry input; `.geometry.engine.T_AB_SLS_lb` was
+  deleted from the JSON. Before this, `D_inlet` stayed pinned to a frozen thrust copy, so a
+  thrust-growing sizing loop under-predicted duct drag.
+
+The constructor sets **only** the input properties (wing, HT, VT, fuselage, engine/duct); every
+derived quantity is produced live by its Dependent getter.
 
 ## INPUT vs DERIVED pattern
 - **Inputs** — a plain, mutable `properties` block holding the genuine design-variable spec data
