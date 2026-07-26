@@ -8,7 +8,7 @@ function generate_f16a_physical_derived_requirements()
 %     REQ_F16A_P01  Fuel volume sufficiency -- enough internal tankage to
 %                   carry the mission fuel. Verified by comparing a roll-up
 %                   of available fuel capacity against a mission-analysis
-%                   estimate of required fuel (F16APhysicalVerificationTest).
+%                   estimate of required fuel (F16AFuelVerificationTest).
 %
 %   This is the first requirement in the project with a "verified by" test
 %   relationship: a unit test computes both sides and checks the requirement

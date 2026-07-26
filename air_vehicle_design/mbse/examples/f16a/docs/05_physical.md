@@ -5,7 +5,7 @@
 > · Generator: `generate_f16a_physical.m`
 > · Roll-ups: `F16APhysicalMassRollup.m`, `F16APhysicalMaterialsRollup.m`, `F16APhysicalFuelRollup.m`
 > · Cost hook: `F16APhysicalCostModel.m` · Mission-fuel hook: `F16APhysicalMissionFuel.m`
-> · Verification tests: `F16APhysicalVerificationTest.m`
+> · Verification tests: `F16AMaterialsVerificationTest.m` (REQ_F16A_022), `F16AFuelVerificationTest.m` (REQ_F16A_P01)
 
 The Logical layer said **how** — in solution roles. The Physical layer gives **concrete parts**:
 a real decomposition of the aircraft into a wing, a fuselage, an engine, and so on. It teaches
@@ -110,8 +110,10 @@ computed by different analyses**, and the architecture names where each one live
 Not every quantity is a MoM. Some are genuine **constraints** with a real limit, and for those the
 Physical layer introduces the project's first **"verified by"** relationship: a **test** computes a
 roll-up and checks the requirement is met, and a **Verify link** ties the requirement to that test
-(created requirement→test with `link.Type = "Verify"`, so the requirement shows *Verified by* the
-test). `F16APhysicalVerificationTest.m` holds these tests.
+(the requirement shows *Verified by* the test). The Verify links are added **manually** in the
+Requirements Editor — the generator makes Implement links only (see the README, "Verification links
+are added manually"). Each requirement has its **own** verification-test file:
+`F16AMaterialsVerificationTest.m` (REQ_F16A_022) and `F16AFuelVerificationTest.m` (REQ_F16A_P01).
 
 ### Materials — composite fraction ≤ 20% (REQ_F16A_022)
 

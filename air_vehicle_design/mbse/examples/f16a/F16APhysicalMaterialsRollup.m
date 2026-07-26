@@ -14,7 +14,7 @@ function results = F16APhysicalMaterialsRollup()
 %   This backs REQ_F16A_022 (airframe composite fraction <= 20%). Unlike OEW
 %   and cost -- which are Measures of Merit to minimize -- the material
 %   fraction is a genuine design CONSTRAINT with an upper bound, so it is
-%   checked with a "verified by" test (F16APhysicalVerificationTest).
+%   checked with a "verified by" test (F16AMaterialsVerificationTest).
 %
 %   Per-part CompositeFraction values are an educated-guess split (set in
 %   generate_f16a_physical.m) grounded in real F-16 composite usage: the
