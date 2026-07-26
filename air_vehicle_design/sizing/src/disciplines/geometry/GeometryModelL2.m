@@ -46,6 +46,21 @@ classdef (Abstract) GeometryModelL2 < GeometryBase
         L_fuselage % Fuselage length (ft)
         W_max_fuselage % Maximum width of the fuselage (ft)
         H_max_fuselage % Maximum height of the fuselage
+
+        %AMAX, L_AIRCRAFT  Whole-aircraft wave-drag geometry (added 2026-07-25,
+        %   Phase 2). Declared here as well as on GeometryModelL3 so an aero
+        %   consumer typed against either tier has one declared contract --
+        %   F16AeroL3 reads both live for the Raymer Eq. 12.44 Sears-Haack term.
+        %   Before Phase 2 they were frozen Brandt OUTPUTS stored as aero
+        %   INPUTS, so supersonic wave drag could not respond to a fuselage
+        %   change at all.
+        %     Amax       [DERIVED] max cross-section, ft^2, via
+        %                GeometryBase.compute_Amax_elliptical -- distinct from
+        %                Brandt Geom!B20's area-ruled flow-through-net figure.
+        %     L_aircraft [INPUT]   overall length, ft -- distinct from
+        %                L_fuselage; provenance OPEN, todo.md 2026-07-25 §6.
+        Amax
+        L_aircraft
     end
 
          % Properties for the main wings

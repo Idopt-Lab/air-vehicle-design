@@ -247,6 +247,48 @@ classdef TestGeomL1 < matlab.unittest.TestCase
                 'GeomL1:unknownCategory');
         end
 
+        % ================================================================== %
+        % S_wet / L_fuselage are DERIVED, not frozen zeros (added 2026-07-25).
+        %
+        % Both were plain properties initialised to 0 and commented "populated
+        % by get_S_wet(obj, W_TO)" -- which only ever RETURNED a value, never
+        % assigned. So both stayed 0 for the object's life, and because
+        % F16AeroL2/L3 accept any GeometryBase, injecting an F16GeomL1 gave
+        % CD0 = Cfe*0/S_ref = 0: silent zero parasite drag, infinite L/D.
+        % ================================================================== %
+
+        function testSWetTracksWTOAndMatchesRegression(tc)
+            % The Dependent getter must equal the Roskam Table 3.5 regression
+            % called directly, and must MOVE when W_TO moves (the staleness the
+            % conversion removes).
+            g = F16GeomL1(f16a_spec_path(1));
+            g.W_TO = 31377;
+            tc.verifyEqual(g.S_wet, g.get_S_wet(31377), 'RelTol', 1e-12, ...
+                'S_wet must equal the statistical regression at the current W_TO.');
+            tc.verifyGreaterThan(g.S_wet, 0, 'S_wet must be positive, never the old frozen 0.');
+            s1 = g.S_wet;  l1 = g.L_fuselage;
+            g.W_TO = 45000;
+            tc.verifyGreaterThan(g.S_wet, s1, ...
+                'S_wet must increase with W_TO -- a frozen value would not move.');
+            tc.verifyGreaterThan(g.L_fuselage, l1, ...
+                'L_fuselage must increase with W_TO -- a frozen value would not move.');
+        end
+
+        function testDerivedAreasErrorWhenWTOUnset(tc)
+            % Reading either derived quantity before W_TO is set is a caller
+            % error, not a 0. Erroring here is the entire point of the change.
+            g = F16GeomL1(f16a_spec_path(1));
+            tc.verifyError(@() g.S_wet,      'F16GeomL1:WTONotSet');
+            tc.verifyError(@() g.L_fuselage, 'F16GeomL1:WTONotSet');
+        end
+
+        function testDerivedAreasAreReadOnly(tc)
+            % Dependent with no set-method: assigning to an output must error.
+            g = F16GeomL1(f16a_spec_path(1));
+            tc.verifyError(@() setfield(g, 'S_wet', 1234), ...
+                'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
+
         % --- Deliberately-failing TODO test: Raymer Table 6.5 aileron gap ---
 
         function testTODO_AileronFractionNotAvailable(tc)

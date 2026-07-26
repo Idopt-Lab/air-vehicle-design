@@ -43,6 +43,24 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 %   (Brandt's uniform-tc formula) -- the wing/HT/VT tests below still pass
 %   against Brandt's loose tolerances either way (both formulas agree to
 %   within a percent or two for this aircraft's thin, near-uniform sections).
+%
+%   PHASE 2 (2026-07-25, locked user decisions; spec examples/F16A/F16GeomL3.md
+%   -- that doc governs BOTH tiers). What changed here:
+%     * CONSTRUCTOR: F16GeomL2(json_path, prop). A propulsion object is now a
+%       REQUIRED injected argument, because the nacelle diameter -- and hence
+%       duct wetted area and CD0 -- is sized from engine SLS thrust
+%       (D_nac = sqrt(T_AB_SLS/1900)), which is engine data, not airframe data.
+%       Every construction site below takes the appended
+%       F16PropL2(f16a_spec_path(2)).
+%     * T_AB_SLS_lb is Dependent on prop.T_SL, no longer a frozen 23770 copy.
+%       testNacelleDiameterAndDuctTrackInjectedThrust is the positive control
+%       for that path, which verification proved was previously DEAD (setting
+%       p.T_SL = 30000 left D_inlet, duct S_wet and CD0 bit-identical).
+%     * tc_ht / tc_vt are DERIVED root/tip means (0.0475 / 0.0415), not stored
+%       0.04 inputs; the L2 JSON no longer carries an HT/VT tc_ratio key at all.
+%     * L_aircraft (47.65 ft) is a new INPUT and Amax a new DERIVED property, so
+%       an injected aero object reads the Raymer Eq. 12.44 wave-drag geometry
+%       live instead of carrying Brandt's frozen outputs.
 
     properties (Constant)
         TOGW        = 31377     % lbf    — F-16A Brandt TOGW (passed to get_S_wet; unused by L2)
@@ -66,7 +84,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Brandt's "More Accurate Fuselage Swet"  [Geom!D23] = 676.33 ft^2.
         % Difference is the equivalent-diameter approximation (~8%).
             b        = F16Baseline();
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = b.brandt.S_wet_fus_alt;
             received = g.get_S_wet_fuselage();
             fprintf('\n    fuselage S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -94,7 +112,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_r=tc_t=0.04, lambda=0.2275 -> ≈396.38 ft^2.
         % Brandt:  392.020 ft^2  [Geom!B14] -- tight agreement (~1.1%).
             b        = F16Baseline();
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = b.brandt.S_wet_wing;
             received = g.get_S_wet_wing();
             fprintf('\n    wing S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -108,7 +126,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_r=0.060, tc_t=0.035, lambda=0.390 -> ≈101.39 ft^2.
         % Brandt:  99.585 ft^2  [Geom!B16] -- loose tolerance; see header note.
             b        = F16Baseline();
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = b.brandt.S_wet_HT;
             received = g.get_S_wet_HT();
             fprintf('\n    HT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -122,7 +140,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_r=0.053, tc_t=0.030, lambda=0.437 -> ≈83.14 ft^2.
         % Brandt:  81.689 ft^2  [Geom!B17] -- loose tolerance; see header note.
             b        = F16Baseline();
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = b.brandt.S_wet_VT;
             received = g.get_S_wet_VT();
             fprintf('\n    VT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
@@ -136,7 +154,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testTotalSwetWithinTolOfBrandt(tc)
         % Total (wing+HT+VT+fuselage+duct) ≈1466.8 ft^2.
         % Brandt truth: 1371 ft^2.  Tolerance: ±15% → [1165, 1577] ft^2.
-            g       = F16GeomL2(f16a_spec_path(2));
+            g       = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = g.get_S_wet();
             lo      = tc.BRANDT_SWET * (1 - tc.TOL_PCT);   % 1165.4 ft^2
             hi      = tc.BRANDT_SWET * (1 + tc.TOL_PCT);   % 1576.8 ft^2
@@ -159,7 +177,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % GeomL2.m's get_S_wet docstring/DECISION note). This test used to
         % sum only four components (wing+HT+VT+fuselage) and failed once
         % the duct term was added to get_S_wet's own aggregation.
-            g      = F16GeomL2(f16a_spec_path(2));
+            g      = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             manual = g.get_S_wet_wing() + g.get_S_wet_HT() + ...
                      g.get_S_wet_VT()  + g.get_S_wet_fuselage() + ...
                      g.get_S_wet_duct();
@@ -178,7 +196,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % testGetSwetIgnoresWTO, which asserted W_TO was accepted-but-
         % ignored. Calling with zero arguments must succeed and match the
         % property populated automatically at construction (obj.S_wet).
-            g   = F16GeomL2(f16a_spec_path(2));
+            g   = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             val = g.get_S_wet();
             fprintf('\n    get_S_wet():  %.6f ft^2\n', val);
             fprintf('    obj.S_wet:    %.6f ft^2  (should match -- Dependent, live-computed)\n', g.S_wet);
@@ -197,7 +215,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % are nonzero and consistent with a fresh method call right after
         % construction, and (b) they track a mutated input WITHOUT any
         % reconstruction -- the exact behavior a downstream optimizer needs.
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             % (a) nonzero + consistent with the method immediately
             tc.verifyNotEqual(g.S_wet, 0, 'obj.S_wet must not be 0.');
             tc.verifyNotEqual(g.S_wet_wing, 0, 'obj.S_wet_wing must not be 0.');
@@ -224,7 +242,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % error (there is no set-method), so nothing can silently overwrite a
         % computed value with a frozen literal (the anti-pattern this whole
         % refactor removes).
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             tc.verifyError(@() setfield(g, 'S_wet_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'QC_sweep_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'S_wet', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
@@ -234,7 +252,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 
         function testGetSref(tc)
         % Expected: 300 ft^2  [Brandt Main!B18, f16a_L2.json wing.S_ft2]
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = g.get_S_ref();
             fprintf('\n    get_S_ref: received = %.2f ft^2,  expected = 300.00 ft^2\n', received);
             tc.verifyEqual(received, 300, 'AbsTol', 1e-9);
@@ -254,7 +272,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % cited independently (not read back out of the same JSON via
         % F16GeomL2's own constructor code path).
             expected = 46.5;   % ft [Brandt Main!B32, f16a_geometry.json fuselage.length_ft]
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = g.L_fus;
             fprintf('\n    L_fus: received = %.2f ft,  expected (Brandt) = %.2f ft\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
@@ -264,24 +282,24 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % --- Inheritance / interface compliance --------------------------
 
         function testIsaGeometryBase(tc)
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             tc.verifyTrue(isa(g, 'GeometryBase'));
         end
 
         function testIsaGeometryModelL2(tc)
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             tc.verifyTrue(isa(g, 'GeometryModelL2'));
         end
 
         function testNotIsaGeometryModelL1(tc)
         % L2 does NOT inherit from the L1 enforcer.
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             tc.verifyFalse(isa(g, 'GeometryModelL1'), ...
                 'L2 geometry must NOT inherit from GeometryModelL1.');
         end
 
         function testIsHandleClass(tc)
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             tc.verifyTrue(isa(g, 'handle'));
         end
 
@@ -354,7 +372,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % regress back to the old hardcoded-wrong 37 deg literal.
             expected_correct = 32.1831783983;
             old_wrong_value  = 37;
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = g.QC_sweep_wing;
             fprintf(['\n    QC_sweep_wing: received = %.10f deg,  hand-computed (correct) ' ...
                 '= %.10f deg,  old hardcoded (wrong) = %d deg\n'], ...
@@ -363,6 +381,71 @@ classdef TestGeomL2 < matlab.unittest.TestCase
                 'F16GeomL2.QC_sweep_wing does not match the hand-computed convert_sweep result (~32.2 deg).');
             tc.verifyGreaterThan(abs(received - old_wrong_value), 1, ...
                 'F16GeomL2.QC_sweep_wing has regressed back toward the old hardcoded-wrong 37 deg literal.');
+        end
+
+        % ================================================================== %
+        % SINGLE-PANEL sweep conversion (convert_sweep_panel, added 2026-07-25).
+        %
+        % The mirrored convert_sweep's 4/AR coefficient assumes root->tip spans
+        % a SEMIspan b/2. A vertical tail is one panel spanning the full b, so
+        % its coefficient is 2/AR. The VT getters used the mirrored form, which
+        % double-counted the taper term and produced a physically impossible
+        % 0.33 deg VT trailing-edge sweep. NOTHING in the suite covered VT sweep
+        % at all, which is exactly why that survived -- hence these tests.
+        % ================================================================== %
+
+        function testConvertSweepPanelIsHalfTheMirroredTaperTerm(tc)
+        % Definitional relationship between the two forms: the single-panel
+        % taper term is exactly half the mirrored one, so
+        %   tan(panel) - tan(LE)  ==  0.5 * (tan(mirrored) - tan(LE))
+        % Checked on a generic case (AR=1.6, lambda=0.5, LE=40 deg, x=1.0),
+        % independent of any F-16 number.
+            LE = 40; AR = 1.6; lambda = 0.5; x = 1.0;
+            t_LE    = tand(LE);
+            t_panel = tand(GeometryBase.convert_sweep_panel(LE, AR, lambda, x));
+            t_mirr  = tand(GeometryBase.convert_sweep(LE, AR, lambda, x));
+            tc.verifyEqual(t_panel - t_LE, 0.5*(t_mirr - t_LE), 'AbsTol', 1e-12, ...
+                'convert_sweep_panel''s taper term must be exactly half convert_sweep''s.');
+        end
+
+        function testVTSweepsFromPanelChordGeometry(tc)
+        % HEADLINE REGRESSION CHECK for the 2026-07-25 fix. Derived independently
+        % from the VT's own chords rather than from either sweep formula:
+        %   b_vt     = sqrt(AR_vt*S_vt) = sqrt(1.6*60)        = 9.7979589711 ft
+        %   c_root   = 2*S_vt/(b_vt*(1+lambda)) = 120/14.6969 = 8.1649658093 ft
+        %   c_tip    = lambda*c_root = 0.5*8.16497            = 4.0824829046 ft
+        %   (c_root - c_tip)/b_vt                             = 0.4166666667
+        % A single panel's x-chord line falls back over the FULL span b_vt:
+        %   tan(Lambda_x) = tand(40) - x*(c_root - c_tip)/b_vt
+        %   x=1.00 -> atand(0.8390996312 - 0.4166666667) = 22.9007986415 deg
+        %   x=0.25 -> atand(0.8390996312 - 0.1041666667) = 36.3133926497 deg
+        % The old mirrored form gave 0.33 deg (TE) and 32.24 deg (QC).
+            expected_TE = 22.9007986415;
+            expected_QC = 36.3133926497;
+            old_wrong_TE = 0.33;
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            fprintf(['\n    VT sweeps: TE received = %.10f deg (chord-geometry %.10f, ' ...
+                'old mirrored-form %.2f);  QC received = %.10f deg (chord-geometry %.10f)\n'], ...
+                g.TE_sweep_vt, expected_TE, old_wrong_TE, g.QC_sweep_vt, expected_QC);
+            tc.verifyEqual(g.TE_sweep_vt, expected_TE, 'AbsTol', 1e-6, ...
+                'F16GeomL2.TE_sweep_vt must match the VT panel''s own chord geometry.');
+            tc.verifyEqual(g.QC_sweep_vt, expected_QC, 'AbsTol', 1e-6, ...
+                'F16GeomL2.QC_sweep_vt must match the VT panel''s own chord geometry.');
+            tc.verifyGreaterThan(g.TE_sweep_vt, 15, ...
+                ['F16GeomL2.TE_sweep_vt has regressed toward the mirrored-form ' ...
+                 '0.33 deg -- a near-zero VT trailing-edge sweep is physically impossible.']);
+        end
+
+        function testWingAndHTSweepsStillUseMirroredForm(tc)
+        % Guard the other direction: the wing and horizontal tail ARE mirrored
+        % surfaces and must keep the 4/AR form. Both have AR=3.0,
+        % lambda=0.2275, LE=40 deg, so both quarter-chord sweeps stay at the
+        % hand-computed 32.1831783983 deg (see the headline wing test above).
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyEqual(g.QC_sweep_wing, 32.1831783983, 'AbsTol', 1e-6, ...
+                'Wing is mirrored -- it must keep GeometryBase.convert_sweep''s 4/AR form.');
+            tc.verifyEqual(g.QC_sweep_ht, 32.1831783983, 'AbsTol', 1e-6, ...
+                'HT is mirrored -- it must keep GeometryBase.convert_sweep''s 4/AR form.');
         end
 
         % ================================================================== %
@@ -436,7 +519,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % High-level get_S_wet_fuselage_brandt_lowfi(obj) reads
         % obj.W_max_fuselage/H_max_fuselage/L_fuselage from a real
         % F16GeomL2 instance and must match the low-level call above.
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = GeomL2.get_S_wet_fuselage_brandt_lowfi(g);
             fprintf(['\n    F16GeomL2 fus brandt low-fi (high-level): received = %.4f ft^2, ' ...
                 ' Brandt GT = %.4f ft^2\n'], received, tc.BRANDT_FUS_LOWFI);
@@ -506,7 +589,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % via the same GeomL2 exposed-area statics tested above -- this
         % checks the full JSON-to-property pipeline reproduces Brandt's
         % exposed-area ground truth, not just the bare static functions.
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             fprintf('\n    F16GeomL2 S_exposed_wing = %.4f ft^2 (Brandt = %.4f)\n', g.S_exposed_wing, tc.BRANDT_EXP_WING);
             fprintf('    F16GeomL2 S_exposed_vt   = %.4f ft^2 (Brandt = %.4f)\n', g.S_exposed_vt, tc.BRANDT_EXP_VT);
             tc.verifyEqual(g.S_exposed_wing, tc.BRANDT_EXP_WING, 'RelTol', 1e-3, ...
@@ -519,7 +602,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % get_S_exposed_wing(obj) is a pure passthrough accessor -- must
         % return obj.S_exposed_wing unchanged (structural test, not a
         % formula check; moved from the former GeometryModelL3 contract).
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = g.get_S_exposed_wing();
             fprintf('\n    get_S_exposed_wing: received = %.6f,  obj.S_exposed_wing = %.6f\n', ...
                 received, g.S_exposed_wing);
@@ -566,13 +649,145 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % nacelle is a full-cylinder engine-nacelle approximation -- a
         % different quantity. Loose bound is a same-order-of-magnitude
         % sanity check only (mirrors the former TestGeomL3's identical note).
-            g        = F16GeomL2(f16a_spec_path(2));
+            g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             received = g.get_S_wet_duct();
             fprintf('\n    duct S_wet: received = %.4f ft^2,  Brandt nacelle = %.4f ft^2 (different definitions)\n', ...
                 received, tc.BRANDT_NACELLE_SWET);
             tc.verifyGreaterThan(received, 0, 'Duct S_wet must be positive.');
             tc.verifyLessThan(received, 5 * tc.BRANDT_NACELLE_SWET, ...
                 'Duct S_wet is more than 5x Brandt nacelle estimate -- check for a gross unit/formula error.');
+        end
+
+        % ================================================================== %
+        % PHASE 2 (2026-07-25): propulsion injection, derived t/c means,
+        % Amax / L_aircraft. See the class header for what each change fixed.
+        % ================================================================== %
+
+        function testConstructorRequiresInjectedPropulsion(tc)
+        % The propulsion object is a REQUIRED second argument -- there is
+        % deliberately no optional/defaulted injection, because a silent default
+        % is the exact defect class Phase 2 removes (it would re-freeze the
+        % engine thrust inside geometry). A path-only call must therefore error.
+            tc.verifyError(@() F16GeomL2(f16a_spec_path(2)), 'MATLAB:minrhs', ...
+                'F16GeomL2 must require an injected propulsion object (no silent default).');
+            % Positive control: the two-argument form constructs.
+            tc.verifyClass(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                'F16GeomL2');
+        end
+
+        function testTcHtVtAreDerivedRootTipMeans(tc)
+        % tc_ht / tc_vt were STORED 0.04 inputs [Brandt Main!C22/H22, the NACA
+        % 4-digit '0004' designation]. Phase 2 made the T.O. 1F-16A-1 Sec. I
+        % biconvex root/tip splits the SINGLE t/c basis (locked decision 6), so
+        % both are now Dependent root/tip means and the L2 JSON carries no
+        % HT/VT tc_ratio key at all. Hand-computed from the T.O. splits:
+        %   tc_ht = (0.060 + 0.035)/2 = 0.0475
+        %   tc_vt = (0.053 + 0.030)/2 = 0.0415
+        % The old stored 0.04 is pinned as a NOT-equal regression guard: a
+        % re-frozen uniform input would read 0.04 for both.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyEqual(g.tc_ht, 0.0475, 'AbsTol', 1e-12, ...
+                'tc_ht must be the (0.060+0.035)/2 T.O. root/tip mean.');
+            tc.verifyEqual(g.tc_vt, 0.0415, 'AbsTol', 1e-12, ...
+                'tc_vt must be the (0.053+0.030)/2 T.O. root/tip mean.');
+            tc.verifyGreaterThan(abs(g.tc_ht - 0.04), 1e-3, ...
+                'tc_ht has regressed to the old stored uniform 0.04 input.');
+            tc.verifyGreaterThan(abs(g.tc_vt - 0.04), 1e-4, ...
+                'tc_vt has regressed to the old stored uniform 0.04 input.');
+            % Derived -> read-only.
+            tc.verifyError(@() setfield(g, 'tc_ht', 0.04), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'tc_vt', 0.04), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
+
+        function testAmaxAndOverallLengthAtL2(tc)
+        % Both are NEW at L2 in Phase 2, so an injected aero object can read the
+        % Raymer 6th ed. Eq. 12.44 Sears-Haack inputs live instead of carrying
+        % Brandt's frozen geometry OUTPUTS (Geom!B20 = 25.110556,
+        % Geom!B21 = 48.303947) as aero inputs.
+        %   Amax = (pi/4)*W_max*H_max = (pi/4)*7.0*5.0 = 35*pi/4
+        %        = 27.4889357189 ft^2
+        %   [standard elliptical-cross-section identity; NO equation number is
+        %    known -- documented as such per the convert_sweep precedent,
+        %    todo.md 2026-07-25 Phase 2 §4]
+        %   L_aircraft = 47.65 ft, a genuine INPUT (not derivable: the geometry
+        %   model has no nose-boom/tailcone x-stations). Distinct from
+        %   L_fus = 46.5 ft -- the two length scales must not be conflated.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyEqual(g.Amax, 35*pi/4, 'AbsTol', 1e-12, ...
+                'Amax must be the (pi/4)*W_max*H_max envelope ellipse.');
+            tc.verifyEqual(g.L_aircraft, 47.65, 'AbsTol', 1e-12);
+            tc.verifyNotEqual(g.L_aircraft, g.L_fus, ...
+                'L_aircraft (47.65) and L_fus (46.5) are different length scales.');
+            tc.verifyError(@() setfield(g, 'Amax', 25.110556), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
+
+        function testAmaxTracksFuselageEnvelopeLive(tc)
+        % Positive control for a previously DEAD path: Amax was not modeled at
+        % all in geometry and the aero side carried Brandt's frozen 25.110556,
+        % so no fuselage change could ever reach the wave-drag term. Amax is now
+        % Dependent, and linear in each envelope dimension.
+        %   W_max 7.0 -> 8.0 (H_max = 5.0): Amax = (pi/4)*8*5 = 10*pi
+        %                                        = 31.4159265359 ft^2
+        %   ratio = 8/7 = 1.1428571 exactly (linear in W_max).
+            g     = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            Amax0 = g.Amax;
+            g.W_max_fuselage = 8.0;              % optimizer-style mutation
+            tc.verifyEqual(g.Amax, 10*pi, 'AbsTol', 1e-12, ...
+                'Amax must recompute live from the mutated fuselage width.');
+            tc.verifyEqual(g.Amax/Amax0, 8/7, 'RelTol', 1e-12, ...
+                'Amax is linear in W_max, so the ratio must be exactly 8/7.');
+        end
+
+        function testNacelleDiameterAndDuctTrackInjectedThrust(tc)
+        % HEADLINE PHASE-2 DEPENDENCY-INJECTION POSITIVE CONTROL.
+        % T_AB_SLS_lb = 23770 used to be a STORED geometry input, i.e. engine
+        % data frozen into the airframe. Verification proved the path was DEAD:
+        % setting p.T_SL = 30000 left geom.D_inlet, the 155.57 ft^2 of duct
+        % wetted area, and the aero CD0 all bit-identical, so a thrust-growing
+        % sizing loop under-predicted drag. T_AB_SLS_lb is now Dependent on the
+        % injected prop.T_SL.
+        %
+        % Hand-computed from the cited formulas:
+        %   D_nac = sqrt(T_AB_SLS/1900)      [Brandt Engn(s) D_nac;
+        %                                     readme_geom.md Sec. 3]
+        %     T = 23770 -> sqrt(12.5105263158) = 3.5370222385 ft
+        %     T = 30000 -> sqrt(15.7894736842) = 3.9735970712 ft
+        %   duct S_wet = pi*(r1+r2)*sqrt((r2-r1)^2+L^2), r1 = r2 = D/2
+        %              -> degenerates to pi*D*L    [Raymer 6th ed. Sec. 7.3]
+        %     L_duct = 14 ft:  pi*3.5370222385*14 = 155.5663631217 ft^2
+        %                      pi*3.9735970712*14 = 174.7679271407 ft^2
+        %   Delta(duct S_wet) = 19.2015640190 ft^2
+        %   CD0 = Cfe*S_wet/S_ref            [Raymer 6th ed. Eq. 12.23], linear
+        %     in S_wet, so with Cfe = 0.0035 [Raymer Table 12.3] and
+        %     S_ref = 300 ft^2:
+        %     Delta(CD0) = 0.0035*19.2015640190/300 = 2.2401824689e-4
+            p = F16PropL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), p);
+            a = F16AeroL2(g, f16a_spec_path(2));
+
+            tc.verifyEqual(g.T_AB_SLS_lb, p.T_SL, 'AbsTol', 1e-12, ...
+                'T_AB_SLS_lb must be the injected prop.T_SL, not a stored copy.');
+            tc.verifyEqual(g.D_inlet, 3.5370222385, 'RelTol', 1e-9, ...
+                'D_inlet must be sqrt(23770/1900).');
+            tc.verifyEqual(g.get_S_wet_duct(), 155.5663631217, 'RelTol', 1e-9, ...
+                'Duct S_wet must be pi*D*L at D = sqrt(23770/1900).');
+            cd0_0 = a.drag_polar(AircraftState(0, 0.5)).CD0;
+
+            p.T_SL = 30000;   % in-place engine mutation, no reconstruction
+
+            tc.verifyEqual(g.T_AB_SLS_lb, 30000, 'AbsTol', 1e-12);
+            tc.verifyEqual(g.D_inlet, 3.9735970712, 'RelTol', 1e-9, ...
+                'D_inlet must track the mutated thrust: sqrt(30000/1900).');
+            tc.verifyEqual(g.D_exit, g.D_inlet, 'AbsTol', 1e-12, ...
+                'The nacelle is a constant-diameter cylinder: D_exit == D_inlet.');
+            tc.verifyEqual(g.get_S_wet_duct(), 174.7679271407, 'RelTol', 1e-9, ...
+                'Duct S_wet must track the mutated nacelle diameter.');
+            cd0_1 = a.drag_polar(AircraftState(0, 0.5)).CD0;
+            % RelTol 1e-6: the expected delta is hand-arithmetic carried to 11
+            % significant figures, so only round-off at that level is tolerated.
+            tc.verifyEqual(cd0_1 - cd0_0, 2.2401824689e-4, 'RelTol', 1e-6, ...
+                ['CD0 must move by Cfe*Delta(S_wet_duct)/S_ref when engine thrust ' ...
+                 'changes -- this whole chain was dead before Phase 2.']);
         end
 
         % ================================================================== %
@@ -596,7 +811,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         function testExplicitJsonPathConstructor(tc)
         % Constructing from the unified L2 JSON path (f16a_spec_path(2)) loads
         % the genuine spec values (checked against a few distinctive fields).
-            g = F16GeomL2(f16a_spec_path(2));
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             fprintf('\n    L2 ctor: AR_wing=%.2f, LE_sweep_wing=%.1f, S_ref=%.1f, QC_sweep_wing=%.4f deg\n', ...
                 g.AR_wing, g.LE_sweep_wing, g.S_ref, g.QC_sweep_wing);
             tc.verifyEqual(g.AR_wing, 3.0, 'AbsTol', 1e-9);

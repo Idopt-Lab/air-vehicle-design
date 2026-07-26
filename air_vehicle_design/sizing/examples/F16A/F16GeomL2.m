@@ -46,20 +46,52 @@ classdef F16GeomL2 < GeometryModelL2
 %   correctness-by-construction with zero cache-coherency bookkeeping.
 %   ============================================================================
 %
-%   Constructor reads the .geometry block of a required unified L2 input JSON
-%   (see f16a_spec_path(2); the same file's .aerodynamics block feeds
-%   F16AeroL2). It sets ONLY the input properties; every
-%   derived quantity (span, root/tip chord, MAC, sweep-station conversions,
-%   exposed areas, nacelle diameter, wetted areas) is produced live by its
-%   Dependent getter — none are hand-frozen literals, fixing the documented
-%   "QC_sweep_wing=37 deg" bug (correct value ≈32.2 deg; see F16GeomL2.md).
+%   CONSTRUCTOR SIGNATURE (CHANGED 2026-07-25, Phase 2): F16GeomL2(json_path, prop).
+%   It reads the .geometry block of a required unified L2 input JSON (see
+%   f16a_spec_path(2); the same file's .aerodynamics block feeds F16AeroL2) and
+%   takes a REQUIRED injected propulsion object. Argument order chosen as
+%   path-first: json_path keeps position 1 exactly as before, so every call site
+%   takes an APPENDED argument rather than a reorder, and the class reads as
+%   "build from this spec, using that engine". Neither argument has a default —
+%   a silent default is the exact defect class Phase 2 removes.
+%   It sets ONLY the input properties; every derived quantity (span, root/tip
+%   chord, MAC, sweep-station conversions, exposed areas, t/c means, Amax,
+%   nacelle diameter, wetted areas) is produced live by its Dependent getter —
+%   none are hand-frozen literals, fixing the documented "QC_sweep_wing=37 deg"
+%   bug (correct value ≈32.2 deg; see F16GeomL2.md).
+%
+%   PHASE-2 CHANGES (2026-07-25, locked user decisions; spec in
+%   examples/F16A/F16GeomL3.md — that doc governs BOTH tiers):
+%     * PROPULSION IS INJECTED. `T_AB_SLS_lb = 23770` was a stored input, i.e.
+%       propulsion data frozen into geometry: verified live that setting
+%       p2.T_SL = 30000 left geom.D_inlet and the aero CD0 unchanged, so
+%       155.57 ft² of duct wetted area stayed pinned to the old engine and a
+%       thrust-growing sizing loop under-predicted drag. It is now Dependent on
+%       prop.T_SL, and D_inlet/D_exit/duct S_wet track the engine.
+%     * tc_ht / tc_vt are DERIVED root/tip means (0.0475 / 0.0415), not stored
+%       0.04 inputs — the T.O. root/tip split is now the single t/c basis and
+%       the L2 JSON no longer carries a uniform HT/VT tc_ratio. The wing is
+%       untouched: it is genuinely uniform-tc with no split available.
+%     * L_aircraft (overall_length_ft = 47.65) is a new INPUT and Amax a new
+%       DERIVED property, so BOTH geometry tiers can feed an injected aero
+%       object the Raymer Eq. 12.44 wave-drag inputs it previously carried as
+%       frozen Brandt outputs. See the property comments for Amax's missing
+%       citation and L_aircraft's provenance caveat.
+%     * BRANDT CELL CITATIONS CORRECTED (12 sites in this file; F16GeomL3.md §F
+%       is authoritative). Main row 20 = 'Taper Ratio', row 21 = 'Sweep, deg',
+%       row 22 = 'NACA 4-digit' (last two digits = % chord t/c). This file
+%       previously cited row 21 for taper, row 20 for sweep and row 24 for t/c;
+%       row 24 is 'Y Location' with B24/C24 EMPTY. ZERO computed values change —
+%       only the audit trail moves.
 %
 %   Inheritance: GeometryBase → GeometryModelL2 → F16GeomL2
 %
 %   S_wet breakdown (official formulas: Roskam Eq. 12.1 wing/HT/VT + Roskam
 %   Eq. 12.3 fuselage + Raymer Sec. 7.3 duct — see GeomL2.m for citations
-%   and get_S_wet's duct-inclusion note). Verified 2026-07-22 via
-%   mcp__matlab__evaluate_matlab_code against a fresh F16GeomL2() instance:
+%   and get_S_wet's duct-inclusion note). Verified 2026-07-22 and re-verified
+%   UNCHANGED 2026-07-25 after the Phase-2 edits, via
+%   mcp__matlab__evaluate_matlab_code against a fresh
+%   F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))):
 %     Wing:      396.38 ft^2   (Brandt Geom!B14 = 392.02, +1.1%)
 %     HT:        101.39 ft^2   (Brandt Geom!B16 =  99.59, +1.8%)
 %     VT:         83.14 ft^2   (Brandt Geom!B17 =  81.69, +1.8%)
@@ -75,6 +107,13 @@ classdef F16GeomL2 < GeometryModelL2
 %   match Brandt's own exposed-planform ground truth almost exactly (Brandt
 %   Geom!H7/H8/H9-equivalent), confirming the exposed-area formulas
 %   themselves (GeomL2.compute_S_exposed_horizontal/_vertical) are correct.
+%   Phase 2 did NOT move any of these numbers (verified live 2026-07-25):
+%   tc_ht/tc_vt becoming Dependent means (0.0475/0.0415) cannot shift the
+%   official S_wet, which uses the root/tip pair via Roskam Eq. 12.1 — it only
+%   affects the Brandt uniform-t/c COMPARISON alternate, which the report
+%   already computed on the root/tip-mean basis (wing 392.02, HT 99.78,
+%   VT 81.72). New at L2 in Phase 2: Amax = 27.4889 ft^2 and
+%   L_aircraft = 47.65 ft.
 %
 %   SOURCES:
 %     [Brandt] Brandt F-16A.xls, Main tab (via
@@ -97,27 +136,25 @@ classdef F16GeomL2 < GeometryModelL2
         S_ref          = 300       % ft^2  [Brandt Main!B18, wing S_ref]
 
         % ── Wing (NACA 64A204 / 1404) ────────────────────────────────────── %
-        tc_wing        = 0.04      % —     [Brandt Main!B24] wing single-value t/c; wing is modeled uniform-tc, so tc_r_wing/tc_t_wing (Dependent) mirror this
-        lambda_wing    = 0.2275    % —     [Brandt Main!B21]
+        tc_wing        = 0.04      % —     [Brandt Main!B22 'NACA 4-digit' = 1404 -> last two digits = 4% chord; citation corrected 2026-07-25 from B24, which is the empty 'Y Location' cell] wing single-value t/c; wing is modeled uniform-tc, so tc_r_wing/tc_t_wing (Dependent) mirror this
+        lambda_wing    = 0.2275    % —     [Brandt Main!B20 'Taper Ratio'; citation corrected 2026-07-25 from B21]
         AR_wing        = 3.0       % —     [Brandt Main!B19]
-        LE_sweep_wing  = 40        % deg   [Brandt Main!B20]
+        LE_sweep_wing  = 40        % deg   [Brandt Main!B21 'Sweep, deg'; citation corrected 2026-07-25 from B20]
 
         % ── Horizontal tail (all-moving stabilator; biconvex) ───────────── %
         S_ht           = 108.0     % ft^2  full reference planform area [Brandt Main!C18]
-        tc_ht          = 0.04      % —     [Brandt Main!C24] single-value uniform-tc (Brandt); distinct from the T.O. root/tip split below
-        lambda_ht      = 0.2275    % —     [Brandt Main!C21]
+        lambda_ht      = 0.2275    % —     [Brandt Main!C20 'Taper Ratio'; citation corrected 2026-07-25 from C21]
         AR_ht          = 3.0       % —     [Brandt Main!C19]
-        LE_sweep_ht    = 40        % deg   [Brandt Main!C20]
-        tc_r_ht        = 0.060     % —     [TO Sec I; biconvex root ~6%] — NOT a Brandt value, see class header
+        LE_sweep_ht    = 40        % deg   [Brandt Main!C21 'Sweep, deg'; citation corrected 2026-07-25 from C20]
+        tc_r_ht        = 0.060     % —     [TO Sec I; biconvex root ~6%] — NOT a Brandt value, see class header. Now the SINGLE t/c basis: Brandt's uniform HT t/c [Main!C22 'NACA 4-digit' = '0004' -> 0.04; citation corrected from C24] is no longer an input, and the Dependent tc_ht is this pair's mean.
         tc_t_ht        = 0.035     % —     [TO Sec I; biconvex tip ~3.5%]
 
         % ── Vertical tail (biconvex) ─────────────────────────────────────── %
         S_vt           = 60.0      % ft^2  full reference planform area [Brandt Main!H18]
-        tc_vt          = 0.04      % —     [Brandt Main!H24] single-value uniform-tc (Brandt)
-        lambda_vt      = 0.5       % —     [Brandt Main!H21]
+        lambda_vt      = 0.5       % —     [Brandt Main!H20 'Taper Ratio'; citation corrected 2026-07-25 from H21]
         AR_vt          = 1.6       % —     [Brandt Main!H19]
-        LE_sweep_vt    = 40        % deg   [Brandt Main!H20]
-        tc_r_vt        = 0.053     % —     [TO Sec I; biconvex root ~5.3%] — NOT a Brandt value, see class header
+        LE_sweep_vt    = 40        % deg   [Brandt Main!H21 'Sweep, deg'; citation corrected 2026-07-25 from H20]
+        tc_r_vt        = 0.053     % —     [TO Sec I; biconvex root ~5.3%] — NOT a Brandt value, see class header. Now the SINGLE t/c basis: Brandt's uniform VT t/c [Main!H22 'NACA 4-digit' = '0004' -> 0.04; citation corrected from H24] is no longer an input, and the Dependent tc_vt is this pair's mean.
         tc_t_vt        = 0.030     % —     [TO Sec I; biconvex tip ~3.0%]
 
         % ── Fuselage (equivalent cylindrical midsection) ─────────────────── %
@@ -125,9 +162,14 @@ classdef F16GeomL2 < GeometryModelL2
         W_max_fuselage = 7.0       % ft    [Brandt Main!C32]
         H_max_fuselage = 5.0       % ft    [Brandt Main!D32]
 
+        % ── Whole aircraft ───────────────────────────────────────────────── %
+        L_aircraft     = 47.65     % ft    OVERALL aircraft length; feeds ONLY the Raymer 6th ed. Eq. 12.44 Sears-Haack wave-drag term as (Amax/l)^2. DISTINCT from L_fus = 46.5 — do not conflate the two length scales. Not derivable in-model (the geometry object has no nose-boom/tailcone x-stations). PROVENANCE CAVEAT, carried from the JSON's _TODO_overall_length_ft: the VALUE is user-approved (2026-07-25) as the published F-16A airframe length 47 ft 7.75 in = 47.6458 ft (47.65 is a +0.009% rounding), but the CITATION IS NOT PINNED — no overall-length figure appears anywhere in air_vehicle_design/sizing/ (grepped 2026-07-25). Brandt Geom!B21 = 48.303947 does NOT pin it: that cell is a MAX() over his component x-station columns, i.e. an EXTENT of his own layout, a different quantity (report row annotated 'definitional', −1.35%). STANDING OPEN item: VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 §6.
+
         % ── Inlet + engine duct (F100-PW-200) ────────────────────────────── %
-        L_duct         = 14.0      % ft    [Brandt engine.duct_length_ft]
-        T_AB_SLS_lb    = 23770     % lbf   engine AB thrust — borrowed input used ONLY to size the nacelle diameter (D=sqrt(T_AB_SLS_lb/1900), Brandt Engn(s) D_nac). Concrete-only: not in the GeometryModelL2 abstract contract (it is engine, not airframe, data; a different concrete class may size its duct differently).
+        L_duct         = 14.0      % ft    [Brandt engine.duct_length_ft] — a genuine AIRFRAME input, unlike the engine thrust below
+
+        % ── Injected collaborator (NOT numeric spec data) ─────────────────── %
+        prop                       % (1,1) PropulsionBase — injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb, which sizes the nacelle diameter (Phase 2/3a, 2026-07-25). Concrete-only: not in the GeometryModelL2 abstract contract (it is engine, not airframe, data; a different concrete class may size its duct differently).
     end
 
     % ======================================================================= %
@@ -157,6 +199,7 @@ classdef F16GeomL2 < GeometryModelL2
         c_tip_ht       % ft    GeometryBase.compute_tip_chord (full-planform chord, ~2.22 ft)
         QC_sweep_ht    % deg   GeometryBase.convert_sweep(x=0.25)
         TE_sweep_ht    % deg   GeometryBase.convert_sweep(x=1.0)
+        tc_ht          % —     uniform HT t/c = (tc_r_ht+tc_t_ht)/2 = 0.0475 (root/tip mean; the split is the single t/c basis)
         S_exposed_ht   % ft^2  GeomL2.compute_S_exposed_horizontal
         S_wet_ht       % ft^2  get_S_wet_HT() [Roskam Eq. 12.1]
 
@@ -164,65 +207,80 @@ classdef F16GeomL2 < GeometryModelL2
         b_vt           % ft    sqrt(S_vt*AR_vt) — full single-panel span, not halved [readme_geom.md Sec. 4.3]
         c_root_vt      % ft    GeometryBase.compute_root_chord (full-planform chord, NOT exposed-derived)
         c_tip_vt       % ft    GeometryBase.compute_tip_chord (full-planform chord)
-        QC_sweep_vt    % deg   GeometryBase.convert_sweep(x=0.25)
-        TE_sweep_vt    % deg   GeometryBase.convert_sweep(x=1.0)
+        QC_sweep_vt    % deg   GeometryBase.convert_sweep_panel(x=0.25) — SINGLE-PANEL (2/AR), not the mirrored wing/HT form
+        TE_sweep_vt    % deg   GeometryBase.convert_sweep_panel(x=1.0)  — SINGLE-PANEL (2/AR)
+        tc_vt          % —     uniform VT t/c = (tc_r_vt+tc_t_vt)/2 = 0.0415 (root/tip mean; the split is the single t/c basis)
         S_exposed_vt   % ft^2  GeomL2.compute_S_exposed_vertical
         S_wet_vt       % ft^2  get_S_wet_VT() [Roskam Eq. 12.1]
 
-        % ── Fuselage ──────────────────────────────────────────────────────── %
+        % ── Fuselage / whole aircraft ─────────────────────────────────────── %
         L_fuselage     % ft    mirrors L_fus (duplicate name required by the GeometryModelL2 abstract contract)
         D_fus          % ft    (W_max_fuselage+H_max_fuselage)/2 — JUDGMENT CALL (Brandt low-fi D_avg convention as the equivalent diameter fed to the official Roskam Eq. 12.3 fuselage S_wet formula; the L2 .geometry block has no D_fus field)
+        Amax           % ft^2  GeometryBase.compute_Amax_elliptical(W_max, H_max) = (pi/4)*W*H — standard elliptical identity, NO equation number (todo 2026-07-25 Phase 2 §4); Raymer Eq. 12.44 input
 
         % ── Inlet + engine duct ───────────────────────────────────────────── %
-        D_inlet        % ft    nacelle formula D=sqrt(T_AB_SLS_lb/1900) [Brandt Engn(s) tab, D_nac; readme_geom.md Sec. 3]
+        T_AB_SLS_lb    % lbf   = prop.T_SL (INJECTED, no longer a stored copy) [Brandt Engn(s)!T_AB_SLS = Main!D29 = 23770]
+        D_inlet        % ft    GeometryBase.compute_nacelle_diameter(T_AB_SLS_lb) = sqrt(T/1900) [Brandt Engn(s) tab, D_nac; readme_geom.md Sec. 3]
         D_exit         % ft    = D_inlet (Brandt models the nacelle as a constant-diameter cylinder)
     end
 
     methods
 
-        function obj = F16GeomL2(json_path)
+        function obj = F16GeomL2(json_path, prop)
         %F16GEOML2  Construct from a required unified L2 input JSON path
-        %   (f16a_spec_path(2)); reads its .geometry block. No silent default:
-        %   the path must be supplied. Sets ONLY the input properties; all
-        %   derived quantities are produced live by their Dependent getters.
+        %   (f16a_spec_path(2)) plus a required injected propulsion object;
+        %   reads the JSON's .geometry block. NO silent default on either
+        %   argument: the path must be supplied, and so must the propulsion
+        %   object (a defaulted injection would silently re-freeze the engine
+        %   thrust — the defect class Phase 2 removes). Sets ONLY the input
+        %   properties; all derived quantities are produced live by their
+        %   Dependent getters.
+        %
+        %   prop must be a PropulsionBase subclass; only prop.T_SL is read (the
+        %   SLS afterburning thrust), and only to size the nacelle diameter.
             arguments
-                json_path {mustBeTextScalar, mustBeNonzeroLengthText}
+                json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
+                prop      (1,1) PropulsionBase
             end
             J = jsondecode(fileread(json_path)).geometry;
+
+            obj.prop = prop;   % injected: supplies the Dependent T_AB_SLS_lb
 
             % ---- wing ---------------------------------------------------- %
             obj.S_ref         = J.wing.S_ft2;        % [Brandt Main!B18]
             obj.AR_wing       = J.wing.AR;           % [Brandt Main!B19]
-            obj.lambda_wing   = J.wing.taper;        % [Brandt Main!B21]
-            obj.LE_sweep_wing = J.wing.sweep_LE_deg; % [Brandt Main!B20]
-            obj.tc_wing       = J.wing.tc_ratio;     % [Brandt Main!B24]
+            obj.lambda_wing   = J.wing.taper;        % [Brandt Main!B20]
+            obj.LE_sweep_wing = J.wing.sweep_LE_deg; % [Brandt Main!B21]
+            obj.tc_wing       = J.wing.tc_ratio;     % [Brandt Main!B22, NACA 4-digit 1404]
 
             % ---- horizontal tail (all-moving stabilator / "pitch_ctrl") -- %
+            %      No tc_ratio read: the T.O. root/tip split is the single t/c
+            %      basis and tc_ht is the Dependent mean.
             obj.S_ht        = J.horizontal_tail.S_ft2;         % [Brandt Main!C18]
-            obj.AR_ht       = J.horizontal_tail.AR;
-            obj.lambda_ht   = J.horizontal_tail.taper;
-            obj.LE_sweep_ht = J.horizontal_tail.sweep_LE_deg;
-            obj.tc_ht       = J.horizontal_tail.tc_ratio;
+            obj.AR_ht       = J.horizontal_tail.AR;            % [Brandt Main!C19]
+            obj.lambda_ht   = J.horizontal_tail.taper;         % [Brandt Main!C20]
+            obj.LE_sweep_ht = J.horizontal_tail.sweep_LE_deg;  % [Brandt Main!C21]
             obj.tc_r_ht     = J.horizontal_tail.tc_root;   % [TO Sec I; biconvex root]
             obj.tc_t_ht     = J.horizontal_tail.tc_tip;    % [TO Sec I; biconvex tip]
 
             % ---- vertical tail ------------------------------------------- %
             obj.S_vt        = J.vertical_tail.S_ft2;           % [Brandt Main!H18]
-            obj.AR_vt       = J.vertical_tail.AR;
-            obj.lambda_vt   = J.vertical_tail.taper;
-            obj.LE_sweep_vt = J.vertical_tail.sweep_LE_deg;
-            obj.tc_vt       = J.vertical_tail.tc_ratio;
+            obj.AR_vt       = J.vertical_tail.AR;              % [Brandt Main!H19]
+            obj.lambda_vt   = J.vertical_tail.taper;           % [Brandt Main!H20]
+            obj.LE_sweep_vt = J.vertical_tail.sweep_LE_deg;    % [Brandt Main!H21]
             obj.tc_r_vt     = J.vertical_tail.tc_root;
             obj.tc_t_vt     = J.vertical_tail.tc_tip;
 
-            % ---- fuselage ------------------------------------------------ %
+            % ---- fuselage / whole aircraft ------------------------------- %
             obj.L_fus          = J.fuselage.length_ft;     % [Brandt Main!B32]
             obj.W_max_fuselage = J.fuselage.max_width_ft;  % [Brandt Main!C32]
             obj.H_max_fuselage = J.fuselage.max_height_ft; % [Brandt Main!D32]
+            obj.L_aircraft     = J.overall_length_ft;      % 47.65 — citation NOT pinned, todo §6
 
             % ---- engine / duct ------------------------------------------- %
-            obj.L_duct      = J.engine.duct_length_ft;
-            obj.T_AB_SLS_lb = J.engine.T_AB_SLS_lb;   % feeds the nacelle-diameter Dependent getter D_inlet
+            %      Engine thrust deliberately NOT read here: T_AB_SLS_lb is
+            %      Dependent on the injected prop.T_SL.
+            obj.L_duct = J.engine.duct_length_ft;
         end
 
         % ================================================================== %
@@ -322,6 +380,15 @@ classdef F16GeomL2 < GeometryModelL2
         function v = get.TE_sweep_ht(obj)
             v = GeometryBase.convert_sweep(obj.LE_sweep_ht, obj.AR_ht, obj.lambda_ht, 1.0);
         end
+        function v = get.tc_ht(obj)
+            % Root/tip mean, DERIVED (2026-07-25) — needed only where a single
+            % uniform t/c is required (the Brandt Geom!B13 uniform-t/c S_wet
+            % comparison alternate, and the Raymer Eq. 12.30 form factor). The
+            % T.O. root/tip split is the single t/c basis, so the former stored
+            % 0.04 input [Brandt Main!C22, citation corrected from C24] is gone
+            % and the L2 JSON no longer carries a HT tc_ratio key.
+            v = (obj.tc_r_ht + obj.tc_t_ht) / 2;
+        end
         function v = get.S_exposed_ht(obj)
             fw = obj.W_max_fuselage / 2;
             v  = GeomL2.compute_S_exposed_horizontal(obj.c_root_ht, obj.c_tip_ht, obj.b_ht/2, fw);
@@ -341,10 +408,22 @@ classdef F16GeomL2 < GeometryModelL2
             v = GeometryBase.compute_tip_chord(obj.c_root_vt, obj.lambda_vt);
         end
         function v = get.QC_sweep_vt(obj)
-            v = GeometryBase.convert_sweep(obj.LE_sweep_vt, obj.AR_vt, obj.lambda_vt, 0.25);
+            % SINGLE-PANEL form (2/AR): AR_vt is defined on the one VT panel,
+            % whose root->tip spans the full b_vt -- not a mirrored semispan.
+            % Using the mirrored convert_sweep here double-counted the taper
+            % term (fixed 2026-07-25; was 32.24 deg, correct 36.31 deg).
+            v = GeometryBase.convert_sweep_panel(obj.LE_sweep_vt, obj.AR_vt, obj.lambda_vt, 0.25);
         end
         function v = get.TE_sweep_vt(obj)
-            v = GeometryBase.convert_sweep(obj.LE_sweep_vt, obj.AR_vt, obj.lambda_vt, 1.0);
+            % SINGLE-PANEL form -- see get.QC_sweep_vt. Was a physically
+            % impossible 0.33 deg under the mirrored form; correct 22.90 deg.
+            v = GeometryBase.convert_sweep_panel(obj.LE_sweep_vt, obj.AR_vt, obj.lambda_vt, 1.0);
+        end
+        function v = get.tc_vt(obj)
+            % Root/tip mean, DERIVED (2026-07-25) — see get.tc_ht. The former
+            % stored 0.04 input [Brandt Main!H22, citation corrected from H24]
+            % is gone and the L2 JSON no longer carries a VT tc_ratio key.
+            v = (obj.tc_r_vt + obj.tc_t_vt) / 2;
         end
         function v = get.S_exposed_vt(obj)
             fh = obj.H_max_fuselage / 2;   % fuselage half-height [readme_geom.md Sec. 4.3]
@@ -354,7 +433,7 @@ classdef F16GeomL2 < GeometryModelL2
             v = obj.get_S_wet_VT();
         end
 
-        % ---- Fuselage ----------------------------------------------------- %
+        % ---- Fuselage / whole aircraft ------------------------------------ %
         function v = get.L_fuselage(obj)
             v = obj.L_fus;   % mirrors L_fus (duplicate name required by the abstract contract)
         end
@@ -365,11 +444,40 @@ classdef F16GeomL2 < GeometryModelL2
             % official Roskam Eq. 12.3 formula (get_S_wet_fuselage).
             v = (obj.W_max_fuselage + obj.H_max_fuselage) / 2;
         end
+        function v = get.Amax(obj)
+            % Maximum cross-section of the equivalent elliptical-section
+            % fuselage the model already assumes (the same envelope whose
+            % D_fus = (W+H)/2 feeds Roskam Eq. 12.3); consumed by the Raymer
+            % 6th ed. Eq. 12.44 Sears-Haack wave-drag term as
+            % (Amax/L_aircraft)^2. ADDED 2026-07-25 so an injected aero object
+            % reads it live instead of carrying Brandt's frozen Geom!B20 output.
+            % The formula has NO pinnable equation number — it is cited as a
+            % standard elliptical-cross-section identity following the
+            % GeometryBase.convert_sweep precedent (GeometryBase.md, RESOLVED
+            % 2026-07-21); STANDING OPEN item, todo.md 2026-07-25 Phase 2 §4.
+            % See GeometryBase.compute_Amax_elliptical for the full citation note and
+            % why Brandt's Geom!B20 = 25.110556 is a different quantity (a
+            % whole-aircraft area-ruled max net of engine flow-through).
+            v = GeometryBase.compute_Amax_elliptical(obj.W_max_fuselage, obj.H_max_fuselage);
+        end
 
         % ---- Inlet + engine duct ------------------------------------------ %
+        function v = get.T_AB_SLS_lb(obj)
+            % INJECTED, not stored (2026-07-25, Phase 2/3a): the SLS
+            % afterburning thrust comes from the propulsion object, so the
+            % nacelle diameter -> duct wetted area -> CD0 chain tracks the
+            % engine instead of a frozen 23,770 lbf copy.
+            % [Brandt Engn(s)!T_AB_SLS = Main!D29]
+            v = obj.prop.T_SL;
+        end
         function v = get.D_inlet(obj)
             % Brandt nacelle sizing [Engn(s) tab D_nac; readme_geom.md Sec. 3].
-            v = sqrt(obj.T_AB_SLS_lb / 1900);
+            % The sqrt(T/1900) expression was inline here until 2026-07-25;
+            % Phase 2 needed it at L3 too, so it was extracted into the cited
+            % static GeometryBase.compute_nacelle_diameter rather than copying the
+            % uncited literal 1900 across two tiers (F16GeomL3.md §C reuse gap;
+            % todo.md 2026-07-25 Phase 2 §12).
+            v = GeometryBase.compute_nacelle_diameter(obj.T_AB_SLS_lb);
         end
         function v = get.D_exit(obj)
             v = obj.D_inlet;   % constant-diameter cylinder nacelle -> frustum degenerates to pi*D*L
