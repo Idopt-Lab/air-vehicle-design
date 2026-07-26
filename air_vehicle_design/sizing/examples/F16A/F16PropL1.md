@@ -7,20 +7,24 @@ duplicated here. Trace each method to its `PropL1` static for the cited equation
 ## Constructor
 `F16PropL1(json_path)` — **required JSON path** (mirrors `F16GeomL1/L2`; no silent default — a no-arg
 call errors `MATLAB:minrhs`). Reads the `.propulsion` block of the unified L1 input JSON
-(`f16a_spec_path(1)` → `f16a_L1.json`): `engine_type`, `T_SL`, `T_SL_wet`. The same file's
+(`f16a_spec_path(1)` → `f16a_L1.json`): `engine_type`, `T_SL`. The same file's
 `.geometry`/`.aerodynamics` blocks feed `F16GeomL1`/`F16AeroL1`.
 
 ## Property classification (input vs derived)
-Inputs-vs-`Dependent` split applied (`examples/F16A/F16GeomL2.m` is the reference). L1 has **no
-derived (`Dependent`) quantities** — all data are inputs set once from the JSON `.propulsion` block by
-the constructor (an optimizer may mutate them in place).
+Inputs-vs-`Dependent` split applied (`examples/F16A/F16GeomL2.m` is the reference). The inputs are
+set once from the JSON `.propulsion` block by the constructor (an optimizer may mutate them in
+place); `T_SL_wet` is the one derived quantity.
 
 **Inputs** (genuine mutable spec data, read from the JSON `.propulsion` block):
 | Property | Value | Units | Meaning / citation |
 |---|---|---|---|
 | `engine_type` | `"low_bypass_turbofan_AB"` | — | Selects the `PropL1` lapse-exponent and TSFC-table rows (F100-PW-200 class). |
 | `T_SL` | 23770 | lbf | AB (max) SLS thrust; `PropulsionBase` contract property. [Brandt Engn!T_AB_SLS; Main D29; T.O. 1F-16A-1 §I] |
-| `T_SL_wet` | 23770 | lbf | Alias for `T_SL` (AB). [Brandt Engn!T_AB_SLS; Main D29] |
+
+**Derived** (`Dependent`, recomputed live on read):
+| Property | Value | Units | Meaning / citation |
+|---|---|---|---|
+| `T_SL_wet` | 23770 | lbf | ≡ `T_SL` (AB). **No longer a JSON input** (Phase 3, 2026-07-25): it was a self-documented alias, i.e. the same number keyed twice with nothing keeping the copies in sync. [Brandt Engn!T_AB_SLS; Main D29] |
 
 **Contract placeholder (not a real input or derived):**
 | Property | Value | Note |

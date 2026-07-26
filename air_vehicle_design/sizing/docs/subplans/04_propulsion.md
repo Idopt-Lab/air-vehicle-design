@@ -30,8 +30,8 @@ Three-tier pattern per level `N`: `PropulsionBase` (abstract) ← `PropulsionMod
 
 | File | What it provides |
 |------|-----------------|
-| `examples/F16A/F16PropL1.m` | Reads `.propulsion` from `f16a_L1.json` (`engine_type`, `T_SL`, `T_SL_wet`); `engine_type` selects the Raymer TSFC table + Martins lapse exponent; delegates to `PropL1` statics |
-| `examples/F16A/F16PropL2.m` | Reads `.propulsion` from `f16a_L2.json` (`engine_type`, `T_SL`, `T_SL_wet`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`); `engine_type` selects the Mattingly `C1/C2` coefficient set; delegates to `PropL2` statics |
+| `examples/F16A/F16PropL1.m` | Reads `.propulsion` from `f16a_L1.json` (`engine_type`, `T_SL`); `engine_type` selects the Raymer TSFC table + Martins lapse exponent; delegates to `PropL1` statics. `T_SL_wet` is `Dependent` on `T_SL`, not read |
+| `examples/F16A/F16PropL2.m` | Reads `.propulsion` from `f16a_L2.json` (`engine_type`, `T_SL`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`, `bypass_ratio`); `engine_type` selects the Mattingly `C1/C2` coefficient set; delegates to `PropL2` statics. `T_SL_wet` is `Dependent` on `T_SL`, not read |
 
 ### Tests
 
@@ -53,7 +53,9 @@ Three-tier pattern per level `N`: `PropulsionBase` (abstract) ← `PropulsionMod
 ## Design Notes
 
 - Inheritance: `F16PropLN < PropulsionModelLN < PropulsionBase < handle` (each `PropulsionModelLN` enforcer inherits `PropulsionBase` directly, not the lower level).
-- **Required-JSON-path constructors** (mirrors `F16GeomL1/L2`). `F16PropL1(json_path)` reads `.propulsion` → `engine_type`, `T_SL`, `T_SL_wet`. `F16PropL2(json_path)` reads `.propulsion` → `engine_type`, `T_SL`, `T_SL_wet`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`. A no-arg call now errors (`MATLAB:minrhs`). Every abstract method is a one-line delegation to the `PropLN` static toolbox; no equations are overridden.
+- **Required-JSON-path constructors.** `F16PropL1(json_path)` reads `.propulsion` → `engine_type`, `T_SL`. `F16PropL2(json_path)` reads `.propulsion` → `engine_type`, `T_SL`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`, `bypass_ratio`. A no-arg call now errors (`MATLAB:minrhs`). Every abstract method is a one-line delegation to the `PropLN` static toolbox; no equations are overridden. (Geometry's own constructors are no longer a parallel: `F16GeomL1` takes a second *requirements* path and `F16GeomL2/L3` take an injected propulsion object.)
+- **`T_SL_wet` is NOT a JSON input** (Phase 3, 2026-07-25). It was a self-documented alias of `T_SL`, i.e. the same number keyed twice with nothing keeping the copies in sync. The key was deleted from every `f16a_L*.json` and `T_SL_wet` is now `Dependent` on `T_SL` at both levels.
+- **`bypass_ratio` = 0.71** (F100-PW-200) was added at L2 for Raymer Eq. 10.10, which the weights tier calls through propulsion DI to compute engine weight. It carries a `_TODO_bypass_ratio` marker: 0.71 is untraceable to an in-repo source.
 - **Inputs-vs-`Dependent` split** applied (`examples/F16A/F16GeomL2.m` is the reference). Inputs are a plain mutable `properties` block set once from the JSON (an optimizer may mutate `T_SL` etc. in place — do not defensively guard). Sea-level thrust (`T_SL = 23,770 lbf`) is a genuine design-variable input.
 - `F16PropL2.TR` is a `properties (Dependent)` `get.TR` (= `PropL2.compute_TR(T_t4_max_F+459.67)` [Mattingly Eq. D.6]) — recomputed live on read, never frozen in the constructor. It is degenerate ≡ 1.0 (only `T_t4_max` is an input; `T_t4_SLS` is unknown, so `compute_TR` defaults it to `T_t4_max`). This matches Brandt (Engn(s)!S1) and is an accepted known limitation, not a bug — genuine optimization visibility would require a separate `T_t4_SLS` input (user 2026-07-24; not to be added now).
 - **C1/C2 are NOT class Constants and are NOT in the JSON.** They are engine-class constants selected by `engine_type` inside the toolbox: `PropL2.lookup_TSFC_coeffs(engine_type)` → 0.90/0.30/1.60/0.27 for `low_bypass_turbofan_AB` [Mattingly Eq. 3.55a/b]. `PropulsionModelL2` declares abstract `engine_type` + `TR` (the former abstract `Constant C1/C2` block was removed). L1's `engine_type` likewise selects the Raymer Table 3.3 TSFC rows and the Martins lapse exponent.
@@ -128,7 +130,7 @@ Mattingly-vs-Brandt closeness comparison is the separate informational report
 ### Tier-1 unit tests — representative coverage
 | Area | L1 (`TestPropL1`, 26) | L2 (`TestPropL2`, 37) |
 |------|-----------------------|-----------------------|
-| Constructor contract | no-arg errors `MATLAB:minrhs`; `T_SL_wet` = 23,770 from JSON (spec datum, xref F100-PW-100 23,700 ±1%) | no-arg errors; `T_SL_wet`=23,770, `T_SL_mil`=15,000 from JSON |
+| Constructor contract | no-arg errors `MATLAB:minrhs`; `T_SL` = 23,770 from JSON (spec datum, xref F100-PW-100 23,700 ±1%), `T_SL_wet` `Dependent` on it | no-arg errors; `T_SL`=23,770 (`T_SL_wet` `Dependent`), `T_SL_mil`=15,000 from JSON |
 | Lapse (hand/anchor) | `σ^0.6` at ½ρ_SL = 0.659754; α=1 at SLS (Mach-independent); α=0.4828 at 36 kft (σ from ISA) | Eq. 2.54a/b branches hand-computed; Mattingly Part-12 anchors α_mil = 0.4792 / 0.5390 |
 | TSFC | Table 3.3 cruise 0.80 / loiter 0.70 transcription; M≥0.4→cruise, M<0.4→loiter | Eq. 3.55 reduces to C1 at SLS; (C1+C2·M)·√θ hand-computed; AB > mil |
 | Engine-type lookup | `lookup_lapse_exponent` / `lookup_TSFC_table`; unknown type throws | `lookup_TSFC_coeffs` = 0.90/0.30/1.60/0.27; unknown type throws |

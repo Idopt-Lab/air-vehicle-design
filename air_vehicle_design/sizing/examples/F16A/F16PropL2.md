@@ -8,30 +8,31 @@ cited equation.
 ## Constructor
 `F16PropL2(json_path)` — **required JSON path** (mirrors `F16GeomL1/L2`; no silent default — a no-arg
 call errors `MATLAB:minrhs`). Reads the `.propulsion` block of the unified L2 input JSON
-(`f16a_spec_path(2)` → `f16a_L2.json`): `engine_type`, `T_SL`, `T_SL_wet`, `T_SL_mil`, `T_t4_max_F`,
-`TSFC_install_factor`. Sets ONLY the input properties; `TR` is produced live by its `Dependent`
-getter (not frozen in the constructor). The same file's `.geometry`/`.aerodynamics` blocks feed
-`F16GeomL2`/`F16AeroL2`.
+(`f16a_spec_path(2)` → `f16a_L2.json`): `engine_type`, `T_SL`, `T_SL_mil`, `T_t4_max_F`,
+`TSFC_install_factor`, `bypass_ratio`. Sets ONLY the input properties; `TR` and `T_SL_wet` are
+produced live by their `Dependent` getters (not frozen in the constructor). The same file's
+`.geometry`/`.aerodynamics` blocks feed `F16GeomL2`/`F16AeroL2`.
 
 ## Property classification (input vs derived)
 Inputs-vs-`Dependent` split applied (`examples/F16A/F16GeomL2.m` is the reference). Inputs are a plain
-mutable `properties` block set once from the JSON `.propulsion` block; the one derived quantity (`TR`)
-is a `properties (Dependent)` getter that recomputes live on read (no stored/cached copy).
+mutable `properties` block set once from the JSON `.propulsion` block; the derived quantities (`TR`,
+`T_SL_wet`) are `properties (Dependent)` getters that recompute live on read (no stored/cached copy).
 
 **Inputs** (genuine mutable engine spec, read from the JSON `.propulsion` block):
 | Property | Value | Units | Meaning / citation |
 |---|---|---|---|
 | `engine_type` | `"low_bypass_turbofan_AB"` | — | Selects the Mattingly TSFC coefficient set via `PropL2.lookup_TSFC_coeffs` (F100-PW-200 class). |
 | `T_SL` | 23770 | lbf | AB (max) SLS thrust; `PropulsionBase` contract. [Brandt Engn!T_AB_SLS; Main D29; T.O. 1F-16A-1 §I] |
-| `T_SL_wet` | 23770 | lbf | Alias for `T_SL` (AB). [Brandt Engn!T_AB_SLS; Main D29] |
 | `T_SL_mil` | 15000 | lbf | Military (dry) SLS thrust. [Brandt Engn!T_mil_SLS; Main C29; T.O. §I] |
 | `T_t4_max_F` | 2566 | °F | Burner-exit total temperature; feeds `get.TR`. [Mattingly Table C.4, F100-PW-100] |
 | `TSFC_install_factor` | 1.08 | — | Installed = uninstalled × factor. [Brandt Miss!C25 = Main!C25] |
+| `bypass_ratio` | 0.71 | — | F100-PW-200. Feeds Raymer Eq. 10.10 engine weight, which the weights tier calls through propulsion DI. Carries a `_TODO_bypass_ratio` marker: 0.71 is untraceable to an in-repo source. |
 
 **Derived** (`properties (Dependent)` — recomputed live on every read, never stale):
 | Property | Value | get-method / citation |
 |---|---|---|
 | `TR` | 1.0 | `get.TR = PropL2.compute_TR(T_t4_max_F + 459.67)` [Mattingly Eq. D.6]. Recomputes live from the `T_t4_max_F` input on read; read-only (assigning errors `MATLAB:class:noSetMethod`). |
+| `T_SL_wet` | 23770 | `get.T_SL_wet = obj.T_SL` — AB (max) SLS thrust. **No longer a JSON input** (Phase 3, 2026-07-25): it was a self-documented alias of `T_SL`, i.e. the same number keyed twice with nothing keeping the copies in sync. [Brandt Engn!T_AB_SLS; Main D29] |
 
 **Accepted degenerate limitation (TR ≡ 1.0):** `TR = T_t4_max / T_t4_SLS`, but only `T_t4_max` is an
 input — `T_t4_SLS` is unknown, so `compute_TR` defaults it to `T_t4_max`, making `TR` identically 1.0
