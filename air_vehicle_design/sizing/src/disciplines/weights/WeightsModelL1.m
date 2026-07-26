@@ -19,7 +19,7 @@ classdef (Abstract) WeightsModelL1 < WeightsBase
 %   inputs-vs-Dependent rule to govern. Consequently L1 carries none of the NaN
 %   "computed total" placeholders that review finding #12 flagged at L2/L3.
 %   Adding Dependent mirrors keyed off obj.W_TO would be a feature beyond what
-%   this tier needs (docs/weights_parameter_usage.md Part A.1;
+%   this tier needs (docs/weights_parameter_usage.md §1;
 %   F16WeightsL1.md §B.2).
 %
 %   Inheritance: WeightsBase → WeightsModelL1 → F16WeightsL1

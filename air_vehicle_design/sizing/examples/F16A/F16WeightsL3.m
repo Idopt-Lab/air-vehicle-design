@@ -80,7 +80,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %                   and anything reporting an "L3 propulsion" number must say so.
 %     No silent default anywhere.
 %
-%   ★ THE THREE GEOMETRY-DI NAME TRAPS (docs/weights_parameter_usage.md §B.3).
+%   ★ THE THREE GEOMETRY-DI NAME TRAPS (docs/weights_parameter_usage.md §2).
 %   Each would produce a plausible wrong number with NO error if wired by name:
 %     1. S_ht / S_vt  <- geom.S_exposed_ht / geom.S_exposed_vt (51.1486 / 40.8897),
 %        NOT geom.S_ht / geom.S_vt (108 / 60 = FULL planform).
@@ -485,7 +485,7 @@ classdef F16WeightsL3 < WeightsModelL3
             % wetted-area cylinder. Same property name, different physical
             % quantity. Eq. 15.4 carries D_fus^0.849, so substituting 6.0 for 5.0
             % inflates the fuselage weight by +17.9 % ((6/5)^0.849) with no error.
-            % docs/weights_parameter_usage.md §B.3; todo 2026-07-24 GeomL3 §5.
+            % docs/weights_parameter_usage.md §2; todo 2026-07-24 GeomL3 §5.
             v = obj.geom.H_max_fuselage;
         end
         function v = get.W_fus(obj)

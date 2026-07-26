@@ -145,7 +145,7 @@ classdef WeightsL3
         %   obj.lambda_vt are geom.AR_exposed_vt / geom.lambda_exposed_vt, NOT
         %   geom.AR_vt = 1.6 / geom.lambda_vt = 0.5. Wiring the FULL-planform
         %   names produces a plausible wrong number with no error
-        %   (docs/weights_parameter_usage.md §B.3, the DI name traps).
+        %   (docs/weights_parameter_usage.md §2, the DI name traps).
         %   obj.design_mach is the requirements-file design Mach (Eq. 15.3's M).
             W_tail.HT = WeightsL3.horizontal_tail(W_TO, obj.N_z, obj.S_ht, ...
                                                    obj.F_w, obj.B_h);
@@ -165,7 +165,7 @@ classdef WeightsL3
         %   DIAMETER (W_max+H_max)/2 used only for the fuselage wetted area. Same
         %   name, different physical quantity; because Eq. 15.4 carries D_fus^0.849
         %   a 6.0-for-5.0 substitution inflates this component by +17.9 %
-        %   ((6/5)^0.849). docs/weights_parameter_usage.md §B.3.
+        %   ((6/5)^0.849). docs/weights_parameter_usage.md §2.
             W = WeightsL3.fuselage(W_TO, obj.N_z, obj.L_fus, obj.D_fus, ...
                                    obj.W_fus, obj.K_dwf);
         end

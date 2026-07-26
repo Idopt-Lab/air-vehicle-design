@@ -21,7 +21,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   ! THE OEW-vs-BRANDT AGREEMENT CHECK IS NOT IN THIS FILE ANY MORE.
 %
 %   Removed in Phase 4 (LOCKED; F16WeightsL3.md Sec. F, docs/
-%   weights_parameter_usage.md Sec. E.4, review finding #14):
+%   weights_parameter_usage.md §4, review finding #14):
 %       testOEWWithinBroadBounds  (expected = 19148, +-40 %, cited "Brandt B12")
 %       testOEWPrintBreakdown     (verifyTrue(true) diagnostic, hardcoded 19148)
 %   Brandt Wt!B12 is 19980.700578 (live-read 2026-07-25); 19,148.08 is

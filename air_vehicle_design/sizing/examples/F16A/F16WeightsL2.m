@@ -67,7 +67,7 @@ classdef F16WeightsL2 < WeightsModelL2
 %     and NO code ever assigned them (WeightsL2.OEW computed locally and
 %     discarded), so a consumer reading the documented contract got NaN. All four
 %     are now Dependent. A property documented as computed can no longer read NaN.
-%   todo 2026-07-24 §3c items 1 and 6; docs/weights_parameter_usage.md F.2.
+%   todo 2026-07-24 §3c items 1 and 6; docs/weights_parameter_usage.md §4.
 %   ============================================================================
 %
 %   CONSTRUCTOR (CHANGED 2026-07-25, Phase 4):
@@ -235,7 +235,7 @@ classdef F16WeightsL2 < WeightsModelL2
             % After the Phase-2 geometry rename, S_ht/S_vt/AR_ht/lambda_ht mean
             % FULL planform on BOTH geometry tiers; Raymer Table 15.2 wants the
             % EXPOSED planform. Wiring geom.S_ht here is silent — no error, a
-            % plausible wrong number (docs/weights_parameter_usage.md §B.3).
+            % plausible wrong number (docs/weights_parameter_usage.md §2).
             v = obj.geom.S_exposed_ht;
         end
         function v = get.S_vt(obj)

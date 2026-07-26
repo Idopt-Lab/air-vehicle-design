@@ -3,7 +3,7 @@
 **STATUS: AS-BUILT (reconciled 2026-07-25, step 2d).** This doc previously described the Phase-4
 *target*; everything below now describes what shipped. Rows still tagged `AS-IS` describe the
 **pre-Phase-4** code and are kept only where they explain a defect that was fixed — read them as `WAS`.
-All six settled decisions of 2026-07-25 are implemented (`docs/weights_parameter_usage.md` Part A.2);
+All six settled decisions of 2026-07-25 are implemented (`docs/weights_parameter_usage.md` §3);
 L2 is touched by two — `×1.3` is **L2-only** (decision 1) and `design_mach` arrives from the
 requirements file (decision 5).
 
@@ -71,7 +71,7 @@ The 7th input is `design_mach`, read from `f16a_requirements.json`.
 | 4 | `W_payload_expendable` | **4400** (AS-IS 0) | lbf | `.weights` | `[Brandt Wt!B5 = 4400.000000 (live), formula =Main!O17]` | Mission spec |
 | 5 | `W_TO` | `NaN` | lbf | **state** | `WeightsBase` contract | The optimizer's variable, mutated in place by the sizing loop |
 | 6 | `W_energy` | `NaN` (AS-IS **6296.3**) | lbf | **state** | `WeightsBase` contract | Set by mission analysis. **AS-IS 6296.3 is a Brandt OUTPUT** — `Wt!B6` = `=B3-B4-B5-B12` *(live formula)*. Deleted from the JSON in Phase 3 |
-| 7 | `design_mach` | **2.0** | — | **`f16a_requirements.json`** | `[Brandt Main! aircraft.Mmax = 2.0; GroundTruth/f16a_geometry.json:9]` — ★ **NOT** the T.O. Mach limit 2.05 (`f16a_ground_truth.json:228`); see `docs/weights_parameter_usage.md` §A.3.2 | Design max Mach: an aircraft **requirement**, not weights spec data, hence the separate file. Feeds Raymer Eq. 10.10's `M^0.25` for `W_en` |
+| 7 | `design_mach` | **2.0** | — | **`f16a_requirements.json`** | `[Brandt Main! aircraft.Mmax = 2.0; GroundTruth/f16a_geometry.json:9]` — ★ **NOT** the T.O. Mach limit 2.05 (`f16a_ground_truth.json:228`); see `docs/weights_parameter_usage.md` §5 | Design max Mach: an aircraft **requirement**, not weights spec data, hence the separate file. Feeds Raymer Eq. 10.10's `M^0.25` for `W_en` |
 | — | `geom` | `F16GeomL2` | — | **injected** | — | Not numeric. Supplies the four geometry quantities in §B.2 rows 1–4 |
 | — | `prop` | `F16PropL2` | — | **injected** | — | Not numeric. Supplies `prop.T_SL` and `prop.bypass_ratio` for `W_en` |
 
@@ -127,7 +127,7 @@ Raymer Eq. 10.10 is `W = 0.0637·T^1.1·M^0.25·e^(−0.81·BPR)`. An earlier re
 **The requirements file is new** — `examples/F16A/f16a_requirements.json` + `f16a_requirements_path.m`,
 not per-fidelity-level, partly reviving PLAN.md's Step-0 `requirements.json` that `docs/PLAN.md` used to
 record as never built (that line is now corrected). Full shape and reads are in
-`docs/weights_parameter_usage.md` §A.3. **One correction repeated here because it will otherwise be
+`docs/weights_parameter_usage.md` §2. **One correction repeated here because it will otherwise be
 copied into code:** `design_mach = 2.0` must be cited to **Brandt** (`GroundTruth/f16a_geometry.json:9`,
 `"Mmax": 2.0`), **not** to the T.O. Mach limit, which is **2.05** (`f16a_ground_truth.json:228`).
 2.0 ≠ 2.05, −2.44 %; live `W_en` sensitivity 2775.0210 → 2792.2046, +0.62 %. **todo §P4-13 stays open.**

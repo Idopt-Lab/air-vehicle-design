@@ -80,7 +80,7 @@ classdef F16WeightsL1 < WeightsModelL1
         %   contract and will be consumed by the future sizing loop. Setting them
         %   to 700/4400 changes no computed L1 number; it makes the closure
         %   identity 31377 - 19980.70 - 6296.30 = 5100 = 700 + 4400 correct for
-        %   when the loop lands. docs/weights_parameter_usage.md Part A.
+        %   when the loop lands. docs/weights_parameter_usage.md §1.
     end
 
     methods

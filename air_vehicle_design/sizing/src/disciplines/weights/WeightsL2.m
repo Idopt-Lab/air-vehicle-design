@@ -35,7 +35,7 @@ classdef WeightsL2
 %     obj.W_TO. That is review finding #5: F16WeightsL2 used to freeze
 %     W_all_else_empty at 0.17*31377 in its constructor, so OEW(45000)
 %     understated by 2315.91 lbf and 31,377 (a Brandt OUTPUT, Wt!B3) had become a
-%     calibration input. docs/weights_parameter_usage.md F.2 / F16WeightsL2.md D.1.
+%     calibration input. docs/weights_parameter_usage.md §4 / F16WeightsL2.md D.1.
 %
 %   The Roskam statistical minimum bound lives at
 %   WeightsL1.compute_We_roskam / WeightsL1.We_roskam — call it there for a
@@ -97,7 +97,7 @@ classdef WeightsL2
         %   obj.S_ht / obj.S_vt are the EXPOSED planform areas, supplied by the
         %   concrete class as geom.S_exposed_ht / geom.S_exposed_vt — NOT the
         %   FULL planform geom.S_ht = 108 / geom.S_vt = 60 (the geometry DI name
-        %   trap; docs/weights_parameter_usage.md B.3).
+        %   trap; docs/weights_parameter_usage.md §2).
         %   W_TO is accepted for API consistency but not used.
             rho_ht = WeightsL2.HT_unit_weight(obj.aircraft_category);
             rho_vt = WeightsL2.VT_unit_weight(obj.aircraft_category);

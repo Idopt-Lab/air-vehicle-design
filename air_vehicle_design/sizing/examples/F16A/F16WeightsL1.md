@@ -158,7 +158,7 @@ withdrawn; see the correction box in §C.1.
    computed number at L1; it makes the closure identity
    `31377 − 19980.70 − 6296.30 = 5100 = 700 + 4400` correct for when the loop lands.
 6. **The `0.033` / `1.3` / `0.17` metabook fractions are NOT Raymer Table 15.2** — an L2 concern, but
-   the same secondary-source point as item 2. Corrected in `docs/weights_parameter_usage.md` §D.2 and
+   the same secondary-source point as item 2. Corrected in `docs/weights_parameter_usage.md` §3 and
    `F16WeightsL2.md` §C.1. §P4-7.
 
 ---

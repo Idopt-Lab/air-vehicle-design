@@ -30,7 +30,7 @@ classdef (Abstract) WeightsModelL2 < WeightsBase
 %     * FINDING #5 — W_all_else_empty was computed ONCE in the constructor at a
 %       hardcoded W_TO = 31377 (Brandt Wt!B3, an OUTPUT) and frozen, so it went
 %       stale under mutation: OEW(45000) understated by 2315.91 lbf.
-%   docs/weights_parameter_usage.md F.2; F16WeightsL2.md §D.1/§D.2;
+%   docs/weights_parameter_usage.md §4; F16WeightsL2.md §D.1/§D.2;
 %   todo 2026-07-24 §3c items 1 and 6.
 %
 %   Inheritance: WeightsBase → WeightsModelL2 → F16WeightsL2

@@ -42,7 +42,7 @@ classdef WeightsL1
 %       F16Baseline.m:136] -> Raymer (1) is -0.20 %
 %     ! 19,148 is corrections.xls, NOT Brandt Wt!B12. The two are distinct
 %     provenances ~4.3 % apart and must never be conflated (review finding #14;
-%     VnV/BrandtF16A/todo.md 2026-07-25 Phase 4 §P4-0, docs/weights_parameter_usage.md E.4).
+%     VnV/BrandtF16A/todo.md 2026-07-25 Phase 4 §P4-0, docs/weights_parameter_usage.md §4).
 %
 %   STANDING TO-DO — Raymer Table 6.1 (locked, user 2026-07-24).
 %     docs/subplans/05_weights.md:81,88 cites Raymer **Table 6.1** for the same

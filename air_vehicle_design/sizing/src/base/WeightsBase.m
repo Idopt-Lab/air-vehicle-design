@@ -9,7 +9,7 @@ classdef (Abstract) WeightsBase < handle
      %   Closure sanity against the ground truth, at Brandt's converged point:
      %     31377 - 19980.70 - 6296.30 = 5100.00 = 700 + 4400
      %     [Brandt Wt!B3 / Wt!B12 / Wt!B6 / Wt!B4 / Wt!B5, live-read 2026-07-25;
-     %      docs/weights_parameter_usage.md Part A]
+     %      docs/weights_parameter_usage.md §1]
      %
      %   ! DOCUMENTED GAP (flagged, not fixed this phase): no WeightsL{1,2,3}
      %   static reads W_energy, W_payload_fixed or W_payload_expendable, so the
@@ -53,7 +53,7 @@ classdef (Abstract) WeightsBase < handle
           %   correct-by-construction. Concrete classes must therefore never
           %   cache an OEW value, and every W_TO-dependent term inside OEW must
           %   be evaluated at the PASSED W_TO -- not at obj.W_TO (that confusion
-          %   was review finding #5, docs/weights_parameter_usage.md F.2).
+          %   was review finding #5, docs/weights_parameter_usage.md §4).
           oew = OEW(obj, W_TO)
 
      end

@@ -23,7 +23,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %   ! THE OEW-vs-BRANDT AGREEMENT CHECK IS NOT IN THIS FILE ANY MORE.
 %
 %   Removed in Phase 4 (LOCKED; F16WeightsL2.md Sec. F, docs/
-%   weights_parameter_usage.md Sec. E.4, review finding #14):
+%   weights_parameter_usage.md §4, review finding #14):
 %       testOEWWithinBrandtValue   (expected = 19148, +-20 %, cited "Brandt B12")
 %   Brandt Wt!B12 is 19980.700578 (live-read 2026-07-25); 19,148.08 is
 %   corrections.xls Wt!B12 (Casey's revised-weight workbook, F16Baseline.m:136).
@@ -375,7 +375,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   Table 15.2 wants the EXPOSED planform. Wiring the FULL names raises
         %   NO error and returns a plausible wrong number, so the wrong value
         %   is asserted against explicitly.
-        %   docs/weights_parameter_usage.md Sec. B.3.
+        %   docs/weights_parameter_usage.md §2.
             [w, geom] = TestWeightsL2.makeW2();
             tc.verifyEqual(w.S_w,  geom.S_exposed_wing, 'AbsTol', 1e-9, ...
                 'S_w must be geom.S_exposed_wing.');
