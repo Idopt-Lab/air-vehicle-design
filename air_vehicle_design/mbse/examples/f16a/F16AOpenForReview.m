@@ -9,8 +9,11 @@ function F16AOpenForReview()
 %   Logical / Physical model link sets are not loaded, and the requirements
 %   look un-implemented -- e.g. REQ_F16A_020/023/024/025 (Logical) and
 %   REQ_F16A_022/026 + REQ_F16A_P01 (Physical) show no implement link. Once
-%   the models are loaded (below), those links appear. "Verified by" links
-%   live in the requirement set's own link set, so they show either way.
+%   the models are loaded (below), those links appear.
+%
+%   NOTE: "Verified by" links are added MANUALLY (see docs/README.md) -- link
+%   REQ_F16A_022 -> F16AMaterialsVerificationTest and REQ_F16A_P01 ->
+%   F16AFuelVerificationTest in the Requirements Editor.
 
 thisDir = fileparts(mfilename("fullpath"));
 addpath(thisDir, ...
@@ -29,11 +32,10 @@ for f = reqFiles
     slreq.load(fullfile(thisDir,"requirements",f));
 end
 
-fprintf(['Loaded 3 models + %d requirement sets.\n' ...
-    'The Requirements Editor now shows every Implement and Verify link.\n' ...
-    'Try: REQ_F16A_022 (Implemented by Airframe; Verified by ' ...
-    'F16AMaterialsVerificationTest) and REQ_F16A_P01 (Verified by ' ...
-    'F16AFuelVerificationTest).\n'], numel(reqFiles));
+fprintf(['Loaded 3 models + %d requirement sets. The Requirements Editor now ' ...
+    'shows the Implement links.\n' ...
+    'Add Verify links MANUALLY: REQ_F16A_022 -> F16AMaterialsVerificationTest, ' ...
+    'REQ_F16A_P01 -> F16AFuelVerificationTest.\n'], numel(reqFiles));
 
 try, slreq.editor(); catch, end   % open the editor if a display is available
 

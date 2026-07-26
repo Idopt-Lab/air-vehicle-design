@@ -194,11 +194,11 @@ components and the Aircraft/Airframe/Propulsion/FuelSystem hierarchy; the `Physi
 on every part; the 16 leaf masses against the Brandt ground truth; the composite fractions and fuel
 capacities; the mass roll-up for **self-consistency** (each subtotal = sum of parts — never against
 a target); the OEW and cost MoMs (`Goal = Minimize`); the realization covers all 9 roles; the four
-infrastructure parts realize no role; and that REQ_022/026/P01 were wired with their Implement and
-Verify links.
+infrastructure parts realize no role; and that REQ_022/026/P01 carry their **Implement** links.
 
-**Requirement verification** (the tests the Verify links point to) — one file per requirement, so
-each requirement's "is it met?" is self-contained:
+**Requirement verification** — one file per requirement, so each requirement's "is it met?" is
+self-contained. These are the tests the manual **"Verified by"** links point to (see the README —
+verify links are added by hand; the generator makes Implement links only):
 - `F16AMaterialsVerificationTest.m` → `REQ_F16A_022`: airframe composite ≈ 19% ≤ 20% ✔ (**passes**).
 - `F16AFuelVerificationTest.m` → `REQ_F16A_P01`: available fuel ≥ mission fuel — **fails on purpose**
   until the mission-fuel analysis is connected (see above). Isolating it in its own file keeps the

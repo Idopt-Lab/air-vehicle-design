@@ -55,11 +55,12 @@ function generate_f16a_physical()
 %
 %   Requirements: REQ_F16A_026 (cost) is a Measure of Merit (minimize), homed
 %   here and Implement-linked from the Aircraft. REQ_F16A_022 (materials) is
-%   Implement-linked from the Airframe and VERIFIED by a test (composite
-%   fraction roll-up <= 20%). REQ_F16A_P01 (fuel volume) is Implement-linked
-%   from the FuelSystem and VERIFIED by a test (available >= required fuel);
-%   its mission-fuel side is a stub, so that verification is pending (fails).
-%   These are the project's first requirement-to-test "verified by" links.
+%   Implement-linked from the Airframe; REQ_F16A_P01 (fuel volume) is
+%   Implement-linked from the FuelSystem. Their "Verified by" links to the
+%   verification tests (F16AMaterialsVerificationTest / F16AFuelVerificationTest)
+%   are added MANUALLY in the Requirements Editor -- see section 8 and
+%   docs/README.md (the programmatic slreq API can't set up a working
+%   "Verified by" for a MATLAB unit test on its own).
 %
 %   Idempotent: re-run to regenerate from scratch. Requires the L model and
 %   the requirement set to exist first (run generate_f16a_logical.m and the
@@ -131,12 +132,11 @@ cleanupFiles = [dictFile, modelFile, slmxFile, profFile, allocFile, ...
     fullfile(physDir, modelName + ".slxc"), ...
     staleRoot + ".slx", staleRoot + ".slxc", staleRoot + "~mdl.slmx", ...
     fullfile(thisDir, profileName + ".xml"), fullfile(pwd, profileName + ".xml"), ...
-    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx"), ...
-    ... % the requirement-set link sets hold THIS layer's Verify links; delete
-    ... % them so verify links regenerate to the current test files (otherwise a
-    ... % stale Verify link survives and the create-if-absent guard skips it).
-    fullfile(reqDir, "f16a~slreqx.slmx"), ...
-    fullfile(reqDir, "f16a_physical_derived~slreqx.slmx")];
+    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx")];
+    % NOTE: the requirement-set link sets (f16a~slreqx.slmx,
+    % f16a_physical_derived~slreqx.slmx) are intentionally NOT deleted here --
+    % they can hold MANUAL Verify links (see section 8), which regeneration
+    % must preserve.
 for f = cleanupFiles
     if isfile(f); delete(f); end
 end
@@ -340,10 +340,23 @@ alloc.save();
 relocate(allocName + ".mldatx", allocFile, thisDir);
 
 % ---------------------------------------------------------------------
-% 8) Cost Measure of Merit (from a cost-model function) + requirement links:
-%    cost MoM (Implement), materials (Implement + the project's first VERIFY
-%    link), and fuel volume (Implement + Verify). The verify links point at
-%    F16APhysicalVerificationTest, whose tests check the requirements are met.
+% 8) Cost Measure of Merit (from a cost-model function) + IMPLEMENT links.
+%
+%    Implement links (component -> requirement) are created here and show as
+%    "Implemented by" in the Requirements Editor once the models are loaded
+%    (see F16AOpenForReview).
+%
+%    "Verified by" links (requirement -> verification test) are NOT created
+%    here. ISSUE (R2026a): the programmatic slreq API cannot produce a working
+%    "Verified by" for a MATLAB unit test on its own -- that needs the
+%    project's Digital Thread artifact tracking, a manual project setting. So
+%    verify links are added MANUALLY in the Requirements Editor, linking each
+%    requirement to its OWN verification test:
+%        REQ_F16A_022  ->  F16AMaterialsVerificationTest
+%        REQ_F16A_P01  ->  F16AFuelVerificationTest
+%    (see docs/README.md "Verification links are added manually"). The
+%    generator no longer touches the requirement-set link sets, so a manual
+%    verify link is never overwritten by regeneration.
 % ---------------------------------------------------------------------
 unitCost = F16APhysicalCostModel(m);   % stub returns NaN ("not yet computed")
 % num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
@@ -352,30 +365,25 @@ save_system(modelName, char(modelFile));
 
 origSet = slreq.load(origFile);
 physSet = slreq.load(physDerFile);
-% Each requirement's Verify link points to its OWN verification test file
-% (kept separate from the model-machinery tests and from each other).
-matVtFile  = which("F16AMaterialsVerificationTest");
-fuelVtFile = which("F16AFuelVerificationTest");
-if isempty(matVtFile) || isempty(fuelVtFile)
-    error("Verification test files not found on the path (needed for the verify links).");
-end
 
 airframeC = lookup(m, Path=char(S + "Airframe"));
 fuelSysC  = lookup(m, Path=char(S + "FuelSystem"));
 
 % Cost MoM -> REQ_026 (Implement, from the Aircraft).
 linkImplement(aircraft, find(origSet, Id="REQ_F16A_026"));
-% Materials -> REQ_022: implemented by the Airframe, VERIFIED by F16AMaterialsVerificationTest.
+% Materials -> REQ_022 (Implement, from the Airframe; Verify link added manually).
 linkImplement(airframeC, find(origSet, Id="REQ_F16A_022"));
-linkVerify(find(origSet, Id="REQ_F16A_022"), matVtFile);
-% Fuel volume -> REQ_P01: implemented by the FuelSystem, VERIFIED by F16AFuelVerificationTest.
+% Fuel volume -> REQ_P01 (Implement, from the FuelSystem; Verify link added manually).
 linkImplement(fuelSysC, find(physSet, Id="REQ_F16A_P01"));
-linkVerify(find(physSet, Id="REQ_F16A_P01"), fuelVtFile);
 
 save(origSet);
 save(physSet);
-savePhysicalLinkSets();   % F16A_Physical model link set + the verify link sets
+savePhysicalLinkSets();   % F16A_Physical model link set (Implement links) only
 save_system(modelName, char(modelFile));
+
+fprintf("%s\n", "REMINDER: add the Verify links MANUALLY in the Requirements Editor -- " + ...
+    "REQ_F16A_022 -> F16AMaterialsVerificationTest, " + ...
+    "REQ_F16A_P01 -> F16AFuelVerificationTest.");
 
 % ---------------------------------------------------------------------
 % 9) Run the roll-ups so the shipped model already carries subtotals and the
@@ -440,29 +448,13 @@ end
 end
 
 % =====================================================================
-function linkVerify(req, testFile)
-%LINKVERIFY Create a Verify link from a requirement to a test file, so the
-%   requirement is "verified by" that test. Idempotent (skips if one exists).
-%   Direction is requirement -> test file (the working slreq form); the link
-%   is stored in the requirement set's link set.
-if isempty(req); return; end
-ol = req.outLinks();
-for k = 1:numel(ol)
-    if string(ol(k).Type) == "Verify"; return; end
-end
-vl = slreq.createLink(req, char(testFile));
-vl.Type = "Verify";
-end
-
-% =====================================================================
 function savePhysicalLinkSets()
-%SAVEPHYSICALLINKSETS Save the F16A_Physical model link set (Implement links)
-%   and the requirement-set link sets that hold the new Verify links, without
-%   re-writing the functional or logical layers' link sets.
+%SAVEPHYSICALLINKSETS Save only the F16A_Physical model link set (its Implement
+%   links), leaving the functional/logical model link sets and every
+%   requirement-set link set (which may hold MANUAL Verify links) untouched.
 lnkSets = slreq.find(Type="LinkSet");
 for i = 1:numel(lnkSets)
-    a = string(lnkSets(i).Artifact);
-    if contains(a, "F16A_Physical") || endsWith(a, ".slreqx")
+    if contains(string(lnkSets(i).Artifact), "F16A_Physical")
         save(lnkSets(i));
     end
 end

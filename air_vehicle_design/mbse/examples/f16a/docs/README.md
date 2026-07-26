@@ -148,13 +148,26 @@ This matters because of how Requirements Toolbox stores links. An **Implement** 
 set. So if you open only `f16a.slreqx`, the Functional/Logical/Physical model link sets are not
 loaded, and requirements look un-implemented — e.g. `REQ_F16A_020/023/024/025` (Logical) and
 `REQ_F16A_022/026` + `REQ_F16A_P01` (Physical) show no implement link. Loading the models (what
-`F16AOpenForReview` does) brings those link sets in and the links appear. **Verify** links live in
-the requirement set's own link set, so they show even without the models loaded.
+`F16AOpenForReview` does) brings those link sets in and the links appear.
 
-(Automated pass/fail *verification status* for the MATLAB-based tests is not populated by the
-Verify link alone — that needs Test Manager result import, a future step. The Verify link itself is
-the traceability: `REQ_F16A_022` → `F16AMaterialsVerificationTest` and `REQ_F16A_P01` →
-`F16AFuelVerificationTest`.)
+### Verification links are added manually (known issue)
+
+The **generators create Implement links only.** The **"Verified by" links must be added by hand** in
+the Requirements Editor. In R2026a the programmatic `slreq` API can't create a working "Verified by"
+for a MATLAB unit test on its own — a MATLAB test file can't be a link *source*, and the working
+"Verified by" relies on the project's **Digital Thread artifact tracking** (a manual project
+setting, enabled from the project's *requirements/traceability* settings). So each time you add a
+verified requirement, link it manually to its verification test:
+
+| Requirement | Link "Verified by" to |
+|-------------|-----------------------|
+| `REQ_F16A_022` (composite ≤ 20%) | `F16AMaterialsVerificationTest` |
+| `REQ_F16A_P01` (fuel volume) | `F16AFuelVerificationTest` |
+
+Each verification test is a single, self-contained suite that checks exactly that one requirement,
+so it is safe to run as the requirement's verification. The generator prints this reminder and never
+touches the requirement-set link sets, so a manual verify link is **not** overwritten by
+regeneration.
 
 ## Prerequisites
 

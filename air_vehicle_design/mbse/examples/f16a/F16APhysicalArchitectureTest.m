@@ -248,26 +248,24 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "REQ_F16A_026 should be marked a Measure of Merit (keyword 'minimize').");
         end
 
-        function testMaterialsRequirementLinked(testCase)
-            % Machinery check (NOT the verification itself): the generator wired
-            % REQ_F16A_022 with an Implement link (from Airframe) and a Verify
-            % link (to F16AMaterialsVerificationTest). The actual "is it met?"
-            % check lives in that verification test.
+        function testMaterialsRequirementImplemented(testCase)
+            % Machinery: the generator Implement-links REQ_F16A_022 from the
+            % Airframe. The "Verified by" link (to F16AMaterialsVerificationTest)
+            % is added MANUALLY in the Requirements Editor (see README), so it is
+            % deliberately NOT asserted here -- the actual "is it met?" check is
+            % F16AMaterialsVerificationTest.
             req = find(testCase.OrigSet, Id="REQ_F16A_022");
             testCase.verifyNotEmpty(req, "REQ_F16A_022 not found.");
             testCase.verifyNotEmpty(req.inLinks(), "REQ_F16A_022 should be Implement-linked at P.");
-            testCase.verifyTrue(testCase.hasVerifyLink(req), ...
-                "REQ_F16A_022 should carry a Verify link to its verification test.");
         end
 
-        function testFuelRequirementLinked(testCase)
-            % Machinery check: REQ_F16A_P01 has an Implement link (from
-            % FuelSystem) and a Verify link (to F16AFuelVerificationTest).
+        function testFuelRequirementImplemented(testCase)
+            % Machinery: the generator Implement-links REQ_F16A_P01 from the
+            % FuelSystem. Its "Verified by" link (F16AFuelVerificationTest) is
+            % added manually (see README) and is not asserted here.
             req = find(testCase.PhysSet, Id="REQ_F16A_P01");
             testCase.verifyNotEmpty(req, "REQ_F16A_P01 not found.");
             testCase.verifyNotEmpty(req.inLinks(), "REQ_F16A_P01 should be Implement-linked at P.");
-            testCase.verifyTrue(testCase.hasVerifyLink(req), ...
-                "REQ_F16A_P01 should carry a Verify link to its verification test.");
         end
 
     end
@@ -278,16 +276,6 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             try, testCase.Model.lookup(Path=char(pth)); catch, tf = false; end
         end
 
-        function tf = hasVerifyLink(~, req)
-            tf = false;
-            if isempty(req); return; end
-            for links = {req.outLinks(), req.inLinks()}
-                ls = links{1};
-                for k = 1:numel(ls)
-                    if string(ls(k).Type) == "Verify"; tf = true; return; end
-                end
-            end
-        end
 
         function n = countComps(~, arch)
             n = F16APhysicalArchitectureTest.countCompsStatic(arch);
