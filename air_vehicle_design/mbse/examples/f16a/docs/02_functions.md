@@ -1,7 +1,7 @@
 # F Layer — Functions
 
 > Artifact: `architecture/F16A_Functional.slx` · Dictionary: `architecture/F16A_Functional.sldd`
-> · Generator: `generate_f16a_functional.m`
+> · Generator: `architecture/generate_f16a_functional.m`
 
 The Functions layer answers **what the aircraft must do** — as verb-phrase functions,
 independent of *how* they are implemented. It is a System Composer architecture model.

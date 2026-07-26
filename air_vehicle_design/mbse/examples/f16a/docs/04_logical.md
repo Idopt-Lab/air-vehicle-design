@@ -2,8 +2,8 @@
 
 > Artifact: `logical/F16A_Logical.slx` · Dictionary: `logical/F16A_Logical.sldd`
 > · Profile: `logical/F16A_LogicalTrades.xml` · Allocation: `logical/F16A_FunctionToLogical.mldatx`
-> · Generators: `generate_f16a_logical.m`, `generate_f16a_logical_derived_requirements.m`
-> · Trade study: `F16ALogicalTradeStudy.m`
+> · Generators: `logical/generate_f16a_logical.m`, `requirements/generate_f16a_logical_derived_requirements.m`
+> · Trade study: `logical/F16ALogicalTradeStudy.m`
 
 The Functions layer said **what** the aircraft must do. The Logical layer says **how** — in
 **solution roles** — and it teaches two ideas the earlier layers could not:

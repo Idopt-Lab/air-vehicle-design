@@ -44,49 +44,57 @@ this part exist?" and "where is this requirement satisfied?".
 ```
 mbse/examples/f16a/
 ├─ f16a.prj                              Simulink Project (open this first)
+├─ f16aRoot.m                            path anchor: absolute path to the example root
+├─ F16AOpenForReview.m                   load all models + requirement sets, open the editor
 ├─ docs/                                 <- you are here
-├─ requirements/
-│   ├─ f16a.slreqx                       R layer: sizing-derived requirements (pristine)
+├─ requirements/                         R layer
+│   ├─ f16a.slreqx                       sizing-derived requirements (pristine)
 │   ├─ generate_f16a_requirements.m      generator for the above
 │   ├─ f16a_functional_derived.slreqx    derived placeholder requirements (D01–D09)
 │   ├─ generate_f16a_derived_requirements.m
-│   ├─ f16a_logical_derived.slreqx        logical decision requirements (L01–L03)
+│   ├─ f16a_logical_derived.slreqx       logical decision requirements (L01–L03)
 │   ├─ generate_f16a_logical_derived_requirements.m
-│   ├─ f16a_physical_derived.slreqx       physical-layer requirements (P01: fuel volume)
-│   ├─ generate_f16a_physical_derived_requirements.m
-│   └─ *~slreqx.slmx                      verify link sets (requirement → test)
-├─ architecture/
-│   ├─ F16A_Functional.slx               F layer: System Composer model
+│   ├─ f16a_physical_derived.slreqx      physical-layer requirements (P01: fuel volume)
+│   └─ generate_f16a_physical_derived_requirements.m
+├─ architecture/                         F layer
+│   ├─ F16A_Functional.slx               System Composer model
 │   ├─ F16A_Functional.sldd              interface dictionary (FlightState, EngagementData)
-│   └─ F16A_Functional~mdl.slmx          requirement links (auto-generated)
-├─ generate_f16a_functional.m            builds the F model + traceability links
-├─ F16AFunctionalArchitectureTest.m      unit tests for the F layer
-├─ logical/
-│   ├─ F16A_Logical.slx                  L layer: System Composer model (9 solution roles)
+│   ├─ F16A_Functional~mdl.slmx          requirement links (auto-generated)
+│   ├─ generate_f16a_functional.m        builds the F model + traceability links
+│   └─ F16AFunctionalArchitectureTest.m  unit tests for the F layer
+├─ logical/                              L layer
+│   ├─ F16A_Logical.slx                  System Composer model (9 solution roles)
 │   ├─ F16A_Logical.sldd                 logical interface dictionary (FuelFlow, ThrustVector, …)
 │   ├─ F16A_Logical~mdl.slmx             requirement links (auto-generated)
 │   ├─ F16A_LogicalTrades.xml            stereotype profile for trade candidates
-│   └─ F16A_FunctionToLogical.mldatx     function → logical allocation set
-├─ generate_f16a_logical.m               builds the L model + profile + allocation + L links
-├─ F16ALogicalTradeStudy.m               trades the variant-role options and selects one
-├─ F16ALogicalArchitectureTest.m         unit tests for the L layer
-├─ physical/
-│   ├─ F16A_Physical.slx                 P layer: System Composer model (Aircraft + 11 assemblies)
+│   ├─ F16A_FunctionToLogical.mldatx     function → logical allocation set
+│   ├─ generate_f16a_logical.m           builds the L model + profile + allocation + L links
+│   ├─ F16ALogicalTradeStudy.m           trades the variant-role options and selects one
+│   └─ F16ALogicalArchitectureTest.m     unit tests for the L layer
+├─ physical/                             P layer
+│   ├─ F16A_Physical.slx                 System Composer model (Aircraft + 11 assemblies)
 │   ├─ F16A_Physical.sldd                physical interface dictionary (ThrustMech, ElecPower, …)
 │   ├─ F16A_Physical~mdl.slmx            requirement links (auto-generated)
 │   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit, Material, FuelTank)
-│   └─ F16A_LogicalToPhysical.mldatx     logical → physical realization allocation set
-├─ generate_f16a_physical.m              builds the P model + profiles + realization + roll-ups + links
-├─ F16APhysicalMassRollup.m              native roll-up of part masses to OEW
-├─ F16APhysicalMaterialsRollup.m         roll-up of the airframe composite fraction (REQ_022)
-├─ F16APhysicalFuelRollup.m              roll-up of available internal fuel capacity (REQ_P01)
-├─ F16APhysicalCostModel.m               cost-model hook for the unit-cost MoM (stub)
-├─ F16APhysicalMissionFuel.m             mission-fuel hook for the fuel-volume check (stub → NaN)
-├─ F16APhysicalArchitectureTest.m        machinery tests: the P model is built correctly
-├─ F16AMaterialsVerificationTest.m       "verified by" test for REQ_F16A_022 (composite ≤ 20%)
-├─ F16AFuelVerificationTest.m            "verified by" test for REQ_F16A_P01 (fuel volume) — fails until /sizing/
-└─ F16AOpenForReview.m                   load all models + requirement sets, open the editor
+│   ├─ F16A_LogicalToPhysical.mldatx     logical → physical realization allocation set
+│   ├─ generate_f16a_physical.m          builds the P model + profiles + realization + roll-ups + links
+│   ├─ F16APhysicalMassRollup.m          native roll-up of part masses to OEW
+│   ├─ F16APhysicalMaterialsRollup.m     roll-up of the airframe composite fraction (REQ_022)
+│   ├─ F16APhysicalFuelRollup.m          roll-up of available internal fuel capacity (REQ_P01)
+│   ├─ F16APhysicalCostModel.m           cost-model hook for the unit-cost MoM (stub)
+│   ├─ F16APhysicalMissionFuel.m         mission-fuel hook for the fuel-volume check (stub → NaN)
+│   └─ F16APhysicalArchitectureTest.m    machinery tests: the P model is built correctly
+└─ verification/                         requirement-verification tests (own folder)
+    ├─ F16AMaterialsVerificationTest.m   "verified by" test for REQ_F16A_022 (composite ≤ 20%)
+    ├─ F16AFuelVerificationTest.m        "verified by" test for REQ_F16A_P01 (fuel volume) — fails until /sizing/
+    └─ *VerificationTest~m.slmx          manual verify link sets (requirement → test)
 ```
+
+Every script derives the sibling layer-folder paths from `f16aRoot.m` (the example root), so
+it works regardless of which layer folder it sits in. Each layer folder — `requirements/`,
+`architecture/`, `logical/`, `physical/`, `verification/` — is on the **project path**, so
+`openProject` makes every generator, roll-up, and test resolvable by name. If you add a new
+folder, add it to the project path (Project tab → Project Path) so its files resolve too.
 
 ## How to open and run
 
@@ -109,7 +117,8 @@ generate_f16a_logical                       % -> logical/F16A_Logical.slx + prof
 generate_f16a_physical_derived_requirements % -> requirements/f16a_physical_derived.slreqx (P01 fuel)
 generate_f16a_physical                      % -> physical/F16A_Physical.slx + profiles + realization
                                             %    (runs the mass/materials/fuel roll-ups; adds the
-                                            %     cost/materials/fuel requirement + verify links)
+                                            %     cost/materials/fuel requirement Implement links;
+                                            %     verify links are added manually)
 ```
 
 Open the models and run the tests:

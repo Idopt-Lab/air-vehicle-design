@@ -2,10 +2,10 @@
 
 > Artifact: `physical/F16A_Physical.slx` · Dictionary: `physical/F16A_Physical.sldd`
 > · Profile: `physical/F16A_PhysicalProps.xml` · Allocation: `physical/F16A_LogicalToPhysical.mldatx`
-> · Generator: `generate_f16a_physical.m`
-> · Roll-ups: `F16APhysicalMassRollup.m`, `F16APhysicalMaterialsRollup.m`, `F16APhysicalFuelRollup.m`
-> · Cost hook: `F16APhysicalCostModel.m` · Mission-fuel hook: `F16APhysicalMissionFuel.m`
-> · Verification tests: `F16AMaterialsVerificationTest.m` (REQ_F16A_022), `F16AFuelVerificationTest.m` (REQ_F16A_P01)
+> · Generator: `physical/generate_f16a_physical.m`
+> · Roll-ups: `physical/F16APhysicalMassRollup.m`, `physical/F16APhysicalMaterialsRollup.m`, `physical/F16APhysicalFuelRollup.m`
+> · Cost hook: `physical/F16APhysicalCostModel.m` · Mission-fuel hook: `physical/F16APhysicalMissionFuel.m`
+> · Verification tests: `verification/F16AMaterialsVerificationTest.m` (REQ_F16A_022), `verification/F16AFuelVerificationTest.m` (REQ_F16A_P01)
 
 The Logical layer said **how** — in solution roles. The Physical layer gives **concrete parts**:
 a real decomposition of the aircraft into a wing, a fuselage, an engine, and so on. It teaches
