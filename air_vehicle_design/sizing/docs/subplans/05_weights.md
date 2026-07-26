@@ -264,11 +264,16 @@ Deliberate labelled reds, which are the **only** expected weights failures:
 TO-DO sentence** (`WeightsL1.m` / `WeightsL3.m` header text) — there is no JSON marker key to read for
 either, unlike the `_TODO_*` keys the geometry/aero TO-DO tests use.
 
-★ `TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO` is a **third** `testTODO_`-named case
-that is now **GREEN**: it was written to fail while the `requireWTO` over-guard existed, and the
-over-guard was removed in the same phase. Its docstring still says "EXPECTED RED" and still gives a
-"HOW TO RESOLVE" recipe for a change that has already landed — a stale test docstring, flagged for
-review (it is a `.m` edit, out of this documentation step's scope).
+★ There was briefly a **third** `testTODO_`-named case,
+`TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO`, written to fail while the `requireWTO`
+over-guard existed. The over-guard was removed in the same phase, so the test went green while its
+docstring still said "EXPECTED RED" and still gave a resolve-recipe for landed work. It has since
+been **deleted** — a `testTODO_` marker whose condition is satisfied has nothing left to guard, and
+leaving it would have invited a future reader to "fix" a passing test by re-adding the over-guard.
+The principle it encoded survives in `WeightsL2`/`WeightsL3`'s `requireWTO` docstrings and in
+`TestWeightsL3.testWTODependentPropertiesErrorWhenWTOUnset`: **a guard must encode a real
+dependency, not a house style** (todo §P4-18). So the suite has **two** `testTODO_` cases in weights,
+both red by design.
 
 **Tier 2 — Brandt comparison report (informational, NOT pass/fail, not in `run_all_tests`).**
 

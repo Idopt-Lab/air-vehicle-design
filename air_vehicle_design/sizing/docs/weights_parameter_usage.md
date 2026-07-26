@@ -178,10 +178,9 @@ argument required, no silent default, per CLAUDE.md. `F16WeightsL1(json_path)` i
 needs no requirement.
 
 ★ **`F16GeomL1` is a consumer as built, not pending.** `F16GeomL1.m:64` takes `req_path` and `:90` sets
-`obj.M_max = R.design_mach`, replacing the deleted `f16a_L1.json .geometry.M_max`. The shipped
-`f16a_requirements.json` `_comment` still says *"★ F16GeomL1 IS PENDING … F16GeomL1.m:79 must be
-repointed here"* — **that sentence is now stale**; it describes work that has landed. Flagged (a `.json`
-edit, outside this documentation step): todo 2026-07-25 Phase 4 §P4-20.
+`obj.M_max = R.design_mach`, replacing the deleted `f16a_L1.json .geometry.M_max`. The
+`f16a_requirements.json` `_comment` and the `f16a_L1.json .geometry._note` both record it as landed
+(they briefly described it as pending — corrected 2026-07-25/26, todo Phase 4 §P4-20).
 
 ### A.3.2 The `design_mach` citation — a mis-attribution to avoid, STILL OPEN
 
@@ -678,11 +677,14 @@ The three ±-tolerance OEW-vs-Brandt gates (`TestWeightsL1.testOEWWithinBrandsVa
 as-built −18.19 % it sat a hair inside its ±20 % band, so the only ways to keep it green would have been
 to widen the tolerance or to re-derive the expected from the answer — both the self-referential trap.
 
-★ `TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO` is the eleventh `testTODO_`-named case in
-the suite and the only one that **passes**: it was written to be red while the `requireWTO` over-guard
-existed, and the over-guard was removed in the same phase. Its docstring still says "EXPECTED RED" and
-still gives a resolve-recipe for work already done — a stale test docstring, flagged for review
-(§P4-18).
+★ `TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO` was briefly an eleventh
+`testTODO_`-named case and the only one that **passed**: written to be red while the `requireWTO`
+over-guard existed, it went green when the over-guard was removed in the same phase, leaving a
+docstring that said "EXPECTED RED" and gave a resolve-recipe for landed work. It has since been
+**deleted** — a marker whose condition is satisfied guards nothing, and leaving it would have invited
+a future reader to re-add the over-guard to make the docstring true again. The suite therefore has
+**ten** `testTODO_` cases, all red by design. The principle survives in the `requireWTO` docstrings:
+a guard must encode a real dependency, not a house style (§P4-18).
 
 ### F.5 ★ §P4-17 — L3's landing gear was frozen under mutation too — **FIXED**
 

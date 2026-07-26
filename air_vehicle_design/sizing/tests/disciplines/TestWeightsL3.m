@@ -816,11 +816,14 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   Phase-1e/1f precedent: a Dependent that needs a gross weight must
         %   ERROR with an identified message rather than return NaN. The five
         %   asserted here all genuinely carry W_dg (or W_l = 0.95*W_TO).
-        %   W_installed_engine is deliberately NOT asserted either way: its
-        %   equations (Eqs. 15.7-15.15) do not use W_TO at all, so whether it
-        %   should be guarded is the same open question flagged at L2 by
-        %   TestWeightsL2.testTODO_PureAreaDerivedShouldNotRequireWTO. Asserting
-        %   the current behaviour here would freeze that question shut.
+        %   W_installed_engine is deliberately NOT guarded and NOT asserted
+        %   here: its equations (Eqs. 15.7-15.15) are built from thrust and
+        %   component geometry and do not use W_TO at all. That follows the
+        %   settled principle from the same phase -- A GUARD MUST ENCODE A REAL
+        %   DEPENDENCY, NOT A HOUSE STYLE (todo 2026-07-25 Phase 4 §P4-18, where
+        %   an earlier "uniformity" over-guard was removed at both L2 and L3).
+        %   If one of these formulas later gains a W_TO term, add the guard
+        %   then, and assert it here then.
             w = TestWeightsL3.makeW3();
             tc.verifyTrue(isnan(w.W_TO), 'Precondition: W_TO unset.');
             tc.verifyError(@() w.W_l, 'F16WeightsL3:WTONotSet', ...

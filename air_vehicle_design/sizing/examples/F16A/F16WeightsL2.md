@@ -341,7 +341,7 @@ identical either way, which is precisely why every pre-Phase-4 test — all of w
 | `testBrandtEngineAlternateIsNeverSummedIntoOEW` | **ADDED** | `W_en_brandt` is report-only; `OEW` must not move when it is read |
 | `testConstructorRequiresAllFourArguments`, `testWrongGeomTierErrorsAtConstruction` | **ADDED** | No silent default; passing an `F16GeomL1` must throw at construction |
 | `testDesignMachComesFromRequirementsFile` | **ADDED** | `design_mach` provenance is the requirements file, not `.weights` |
-| ★ `testTODO_PureAreaDerivedShouldNotRequireWTO` | **PRESENT, and now GREEN** | It was written to be red while the `requireWTO` over-guard existed; the over-guard was removed in the same phase, so it passes. Its docstring still says "EXPECTED RED" and still gives a resolve-recipe for work already done — **stale test docstring, flagged for review** (a `.m` edit, out of the docs step's scope). todo §P4-18 |
+| ★ `testTODO_PureAreaDerivedShouldNotRequireWTO` | **DELETED** | Written to be red while the `requireWTO` over-guard existed; the over-guard was removed in the same phase, leaving a green `testTODO_` whose docstring said "EXPECTED RED" and gave a resolve-recipe for landed work. A marker whose condition is satisfied guards nothing, and keeping it would have invited a future reader to re-add the over-guard to make the docstring true. The principle it encoded — **a guard must encode a real dependency, not a house style** — now lives in `requireWTO`'s own docstring at both levels (todo §P4-18). todo §P4-18 |
 
 The stale header reference block is fixed: `TestWeightsL2.m` no longer states
 `[Brandt] OEW = 19,148 lbf [Brandt F-16A.xls, sheet "Wt", B12]`.
