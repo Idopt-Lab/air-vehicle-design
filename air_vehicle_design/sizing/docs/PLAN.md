@@ -63,8 +63,19 @@ require the path — no silent default). Geometry, aerodynamics, and propulsion 
 JSON (the `.propulsion` block lives in `f16a_L{1,2}.json` — propulsion is L1/L2 only); only weights
 still uses its own older per-discipline input style.
 
-**Tier count per discipline (2026):** Geometry and Propulsion are L1/L2 only (no L3); Aerodynamics
-and Weights are L1/L2/L3.
+**Tier count per discipline (as of 2026-07-25):** Geometry, Aerodynamics and Weights are L1/L2/L3.
+**Propulsion is L1/L2 only** — there is no `PropL3`/`PropulsionModelL3`/`F16PropL3` and none is
+planned; the L3 rung pairs `F16AeroL3` with `F16PropL2`, and L3 propulsion figures in any report must
+be labelled "computed by `F16PropL2`".
+
+Geometry's L3 tier was eliminated on 2026-07-22, reinstated on 2026-07-24, and **promoted on
+2026-07-25 to the full L3 geometry tier** consumed by L3 geometry, aerodynamics and weights. It is the
+physical/T.O. tier: where a physical value differs from Brandt's, `GeomL3` uses the physical one (VT LE
+sweep 47.5° vs 40°, `L_fus` 47.5 vs 46.5, HT span 18.5 ft as the PRIMARY span so `AR_ht` = 3.169 is
+derived). Those divergences are intentional and are annotated `BY DESIGN` in the comparison reports.
+Geometry also now takes an **injected propulsion object** (`F16GeomL{2,3}(json_path, prop)`), since the
+nacelle diameter and hence duct wetted area are sized from engine thrust. See
+`examples/F16A/F16GeomL3.md`; the code is authoritative over any prose here that still says otherwise.
 
 **What is NOT in the F-16 layer:** Brandt's calibrated intermediate values (e.g., Cfe=0.005908, e_osw=0.9086 back-calculated from his spreadsheet) must NOT be hardcoded into the F-16 subclasses. Those are outputs of Brandt's calibration process, not F-16 specification data. The framework computes e_osw, Cf, CD0, etc. from general textbook equations using F-16 spec inputs.
 
@@ -93,20 +104,20 @@ air_vehicle_design/sizing/
 │   │   ├── aerodynamics/  AeroModelL1/L2/L3.m,  AeroL1/L2/L3.m
 │   │   ├── propulsion/    PropulsionModelL1/L2.m,  PropL1/L2.m            (no L3)
 │   │   ├── weights/       WeightsModelL1/L2/L3.m,  WeightsL1/L2/L3.m
-│   │   └── geometry/      GeometryModelL1/L2.m,  GeomL1/L2.m              (no L3)
+│   │   └── geometry/      GeometryModelL1/L2/L3.m,  GeomL1/L2/L3.m
 │   └── constraints/     ConstraintAnalysis.m, ConstraintSetImporter.m,
 │                        PointPerformanceBase.m, Only_TbyW.m, Only_WbyS.m, Both_WbyS_TbyW.m,
 │                        ThrustConstraint.m, TakeoffConstraint.m, LandingConstraint.m, StallConstraint.m
 │   (src/mission/ and src/sizing/ NOT yet built — steps 7–8)
 ├── tests/
 │   ├── core/            TestAircraftState.m
-│   ├── disciplines/     TestAeroL1/L2/L3.m, TestGeomL1/L2.m, TestPropL1/L2.m, TestWeightsL1/L2/L3.m
+│   ├── disciplines/     TestAeroL1/L2/L3.m, TestGeomL1/L2/L3.m, TestPropL1/L2.m, TestWeightsL1/L2/L3.m
 │   └── constraints/     TestConstraintAnalysis.m, TestF16ConstraintSet.m, TestConstraintSetImporter.m,
 │                        Test{Thrust,Takeoff,Landing,Stall}Constraint.m
 ├── examples/F16A/       (flat — no disciplines/ subfolders)
 │   ├── f16a_L1.json, f16a_L2.json, f16a_L3.json     ← unified per-level inputs (.geometry/.aerodynamics/.propulsion; .propulsion in L1/L2 only)
 │   ├── f16a_spec_path.m
-│   ├── F16GeomL1.m, F16GeomL2.m
+│   ├── F16GeomL1.m, F16GeomL2.m, F16GeomL3.m
 │   ├── F16AeroL1.m, F16AeroL2.m, F16AeroL3.m
 │   ├── F16PropL1.m, F16PropL2.m
 │   ├── F16WeightsL1.m, F16WeightsL2.m, F16WeightsL3.m

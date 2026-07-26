@@ -1,14 +1,20 @@
 # Subplan 02 — Geometry
 
-**Status:** Implemented (L1 + L2 only; **no L3** — former L3 merged into L2)
-**Depends on:** Step 1 (AircraftState)
+**Status:** Implemented — **L1 + L2 + L3**. (The 2026-07-22 "no L3, former L3 merged into L2" decision was reversed on 2026-07-24 and the tier was promoted on 2026-07-25 to the full L3 geometry tier consumed by L3 geometry, aerodynamics and weights.)
+**Depends on:** Step 1 (AircraftState), plus a propulsion object — geometry now takes one by injection
 **Blocks:** Steps 3, 4, 5 (all disciplines read geometry)
 
 ---
 
 ## Objectives
 
-Implement `GeometryBase` and two generic fidelity levels (L1, L2 — geometry has **no L3**). Then implement F-16-specific geometry subclasses that wire in F-16 **specification** parameters (AR, taper, sweep, fuselage dimensions) so the general regression and planform equations are evaluated at the correct F-16 inputs. Geometry is a **data carrier** — it provides dimensional data (S_ref, S_wet, b, cbar, L_fus, …) to aerodynamics, weights, and the sizing loop.
+Implement `GeometryBase` and three generic fidelity levels (L1, L2, L3). Then implement F-16-specific geometry subclasses that wire in F-16 **specification** parameters (AR, taper, sweep, fuselage dimensions) so the general regression and planform equations are evaluated at the correct F-16 inputs. Geometry is a **data carrier** — it provides dimensional data (S_ref, S_wet, b, cbar, L_fus, Amax, …) to aerodynamics, weights, and the sizing loop.
+
+**L3 is the physical / T.O. tier**, not simply "L2 with more detail": where a physical or T.O. 1F-16A-1 value differs from Brandt's, `GeomL3` uses the physical one (VT LE sweep 47.5° vs 40°, `L_fus` 47.5 vs 46.5, HT span 18.5 ft taken as the primary span so `AR_ht` = 3.169 is derived). Those divergences are intentional and are annotated `BY DESIGN` in `geometry_brandt_comparison.md`.
+
+Two structural points that post-date this subplan's original text — the authoritative write-up is `examples/F16A/F16GeomL3.md`:
+- **Geometry receives an injected propulsion object** (`F16GeomL{2,3}(json_path, prop)`): the nacelle diameter, and hence duct wetted area and CD0, is sized from engine SLS thrust, which is engine data rather than airframe data.
+- **`Amax` is tier-specific by design** — L2 uses the fuselage-envelope ellipse (the low-fidelity form per `readme_geom.md` §7), L3 the whole-aircraft area-ruled buildup that Raymer Eq. 12.44 requires. Do not unify them.
 
 ---
 

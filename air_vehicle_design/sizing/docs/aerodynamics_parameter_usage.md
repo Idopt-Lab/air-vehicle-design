@@ -111,5 +111,13 @@ max-thickness-line sweep, and its optional `(S_exposed/S_ref)·F` fuselage-lift 
   primitives) are implemented and unit-tested but not yet consumed by any constraint/orchestrator —
   the constraint classes call only `drag_polar` and clean `get_CLmax`.
 - **Transonic band** (0.95 < M < 1.05) is not modeled — `drag_polar` returns NaN there.
-- **Wave drag** carries `Amax_ft2`/`L_aircraft_ft` as L3 aero inputs because the geometry object
-  exposes no area-ruled max cross-section (see `F16AeroL3.md`).
+- **Wave drag** reads `Amax_ft2`/`L_aircraft_ft` LIVE from the injected geometry object — both are
+  `Dependent` (Phase 2 sub-step 2h, 2026-07-25). They were previously stored L3 *aero* inputs holding
+  Brandt's frozen geometry OUTPUTS, so the Sears-Haack term could not respond to a fuselage change at
+  all; the `.aerodynamics.wave_drag` JSON block is deleted. What `Amax` means is tier-specific and
+  deliberately so: `F16GeomL3` returns the whole-aircraft **area-ruled** buildup (24.7037 ft²) that
+  Raymer Eq. 12.44 wants, while `F16GeomL2` returns the fuselage-envelope ellipse (27.4889 ft²),
+  which `readme_geom.md` §7 classifies as the low-fidelity form. Injecting an L2 geometry into
+  `F16AeroL3` therefore substitutes a fuselage-only quantity for a whole-aircraft one and inflates
+  `CD0_wave` ~23%. With the area-ruled value, `CD0_wave` sits −0.54% from the Brandt-referenced term
+  with `E_WD` = 2.2 unchanged — no retune. See `F16GeomL3.md` §D.

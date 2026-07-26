@@ -104,7 +104,15 @@ Concretely, for F-16 aerodynamics at L1: `AerodynamicsBase` (abstract) ← `Aero
 
 This pattern repeats identically for propulsion (`PropL*`/`PropulsionModelL*`), weights (`WeightsL*`/`WeightsModelL*`), and geometry (`GeomL*`/`GeometryModelL*`).
 
-**2026-07-22 exception — Geometry has no L3.** Geometry is L1/L2 only; there is no `GeomL3`/`GeometryModelL3`/`F16GeomL3` tier (Aerodynamics, Propulsion, and Weights are unaffected and keep their full L1/L2/L3 structure). Rationale: Geometry's former L3 tier only added a variable-tc wetted-area formula option and a duct component, neither meaningfully different in fidelity from L2, so both were folded into L2 as additional method options instead of being kept as a separate tier. See `sizing/src/disciplines/geometry/GeomL2.md` for the full writeup.
+**Geometry HAS an L3 tier (reinstated 2026-07-24, promoted 2026-07-25).** `GeomL3`/`GeometryModelL3`/`F16GeomL3` exist and are the full L3 geometry tier, consumed by L3 geometry, aerodynamics **and** weights. This reverses the 2026-07-22 "Geometry has no L3" decision recorded in earlier versions of this file and still echoed in some `sizing/docs/` prose — the code is authoritative.
+
+L3 geometry is the **physical / T.O.** tier: where a physical or T.O. 1F-16A-1 value differs from Brandt's, GeomL3 uses the physical one. Those divergences are intentional fidelity differences, **not errors**, and comparison reports annotate them `BY DESIGN`: VT LE sweep 47.5° vs L2's 40°, fuselage length 47.5 ft vs 46.5, and HT span 18.5 ft taken as the PRIMARY span (so `AR_ht` = `B_h²/S_ht` = 3.169 is *derived*, not Brandt's 3.0). Naming: the exposed-planform members carry an explicit `_exposed_` infix (`AR_exposed_ht`, `lambda_exposed_vt`, …) so that `AR_ht`/`lambda_ht`/`S_ht`/`S_vt` mean FULL planform at **both** tiers — an earlier version had the same names meaning different things on the two tiers, which silently fed exposed values into full-planform equations.
+
+Two consequences worth knowing before touching geometry:
+- **Geometry takes an injected propulsion object**: `F16GeomL2(json_path, prop)` / `F16GeomL3(json_path, prop)`. The nacelle diameter — and hence duct wetted area and CD0 — is sized from engine SLS thrust, which is engine data, not airframe data. `T_AB_SLS_lb` is `Dependent` on `prop.T_SL`; it is no longer a geometry input at either level.
+- **`Amax` is tier-specific, deliberately.** L2 uses the fuselage-envelope ellipse `(pi/4)·W·H` (the low-fidelity form, per `VnV/BrandtF16A/readme_geom.md` §7). L3 uses the whole-aircraft **area-ruled buildup** that Raymer Eq. 12.44's Sears-Haack term actually wants. Do not "unify" these — using the envelope form at L3 is a fidelity inversion, and was a real bug.
+
+There is still **no L3 propulsion tier** (no `PropL3`/`PropulsionModelL3`/`F16PropL3`), and none is planned: the L3 rung pairs `F16AeroL3` with `F16PropL2`, and anything reporting L3 propulsion numbers must label them "computed by `F16PropL2`". See `sizing/examples/F16A/F16GeomL3.md` for the full L3 geometry writeup and `sizing/src/disciplines/geometry/GeomL2.md` for the historical L2-merge note.
 
 ### Layer split (generic vs. aircraft-specific)
 
