@@ -28,10 +28,47 @@ st_36_140 = AircraftState(36000, 1.40);  % 36 kft M=1.4  (2nd combat turn)
 st_36_160 = AircraftState(36000, 1.60);  % 36 kft M=1.6  (dash / supersonic aero / polar_actual)
 st_50_087 = AircraftState(50000, 0.87);  % 50 kft M=0.87 (max altitude)
 
+% ── Discipline objects ────────────────────────────────────────────────── %
+% Built up front because every section below injects them. Geometry takes the
+% propulsion object (the nacelle diameter, and so duct wetted area and CD0, is
+% sized from engine thrust); weights takes geometry, propulsion and the
+% requirements file. There is no L3 propulsion tier, so F16PropL2 serves both
+% the L2 and L3 rungs -- any L3 propulsion figure here is computed by F16PropL2.
+prop = F16PropL2(f16a_spec_path(2));
+g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+g2 = F16GeomL2(f16a_spec_path(2), prop);
+g3 = F16GeomL3(f16a_spec_path(3), prop);
+
 % ── Weights ───────────────────────────────────────────────────────────── %
-w1 = F16WeightsL1();
-w2 = F16WeightsL2();
-w3 = F16WeightsL3();
+% Phase 4 (2026-07-25) reshaped the weights classes. L2/L3 now take the
+% requirements file plus injected geometry and propulsion objects:
+%   F16WeightsL{2,3}(json_path, req_path, geom, prop)
+% L2 injects F16GeomL2, L3 injects F16GeomL3 (the physical/T.O. tier), and
+% both take F16PropL2 -- there is no L3 propulsion tier. The requirements file
+% supplies the cruise condition (for the SFC dependency injection) and the
+% design Mach (for the Raymer Eq. 10.10 engine weight).
+%
+% The objects come from the Discipline-objects block above. L1 is unchanged: it
+% is a pure type-based statistical estimate with no geometry or engine data.
+%
+% Two Phase-4 fixes are visible in the numbers below. OEW is now a function of
+% its ARGUMENT rather than of a frozen 0.17*31377 baked into the constructor
+% (review finding #5), and the L3 landing-gear group now responds to W_TO at
+% all -- it was bit-identical at 31,377 / 45,000 / 60,000 lbf because the
+% landing weight was Brandt's frozen Wt!B41 output and weight_landing_gear
+% took no W_TO argument (todo 2026-07-25 Phase 4 §P4-17).
+w1 = F16WeightsL1(f16a_spec_path(1));
+w2 = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g2, prop);
+w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
+
+% Set the current TOGW iterate on the objects. The W_TO-dependent group
+% properties (W_all_else_empty, W_landing_gear, ...) are Dependent getters and
+% now ERROR rather than silently returning a stale or NaN value when W_TO has
+% not been set -- which is the point of the Phase-4 change, and is exactly what
+% a sizing loop does each iteration. The OEW(W_TO) methods take W_TO as an
+% argument and do not need this, but the property reads below do.
+w2.W_TO = W_TO;
+w3.W_TO = W_TO;
 
 oew          = [w1.OEW(W_TO), w2.OEW(W_TO), w3.OEW(W_TO)];
 wefrac       = oew / W_TO;
@@ -44,7 +81,7 @@ we_roskam_L1 = w1.compute_We_roskam(W_TO);
 % same pattern as e.g. the [PROPULSION] "TSFC_mil, 36kft" row above.
 t2_tail = w2.weight_tail(W_TO);
 t3_tail = w3.weight_tail(W_TO);
-lg3     = w3.weight_landing_gear();
+lg3     = w3.weight_landing_gear(W_TO);   % now takes W_TO -- see the section note
 eng3    = w3.weight_engine_section(W_TO);
 sys3    = w3.weight_systems(W_TO);
 
@@ -82,33 +119,51 @@ ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ..
            b.brandt.W_avionics + b.brandt.W_armament;
 
 % ── Geometry ──────────────────────────────────────────────────────────── %
-% Geometry has only L1/L2 fidelity tiers (L3 eliminated and merged into L2,
-% 2026-07-22 -- see src/disciplines/geometry/GeomL2.md's dated note). L2 now
-% carries the full HT/VT breakdown + duct that used to live on a separate
-% F16GeomL3 class, so the L3 column below is NaN throughout (not a missing
-% class -- Geometry genuinely stops at L2).
-g1 = F16GeomL1();
-g2 = F16GeomL2();
+% Geometry has all three fidelity tiers again as of 2026-07-24/25: the
+% 2026-07-22 "L3 eliminated and merged into L2" decision was REVERSED, and
+% Phase 2 promoted GeomL3 to the full L3 geometry tier consumed by L3
+% geometry + aero + weights. The L3 column below is now real, not NaN.
+%
+% L3 geometry is INTENTIONALLY divergent from L2 -- it is the physical/T.O.
+% tier, so where a physical value differs from Brandt's it uses the physical
+% one: VT LE sweep 47.5 vs 40, L_fus 47.5 vs 46.5, HT span 18.5 ft taken as
+% PRIMARY (making AR_ht a derived 3.1690 rather than Brandt's 3.0). It also
+% uses Roskam Vol. II Eq. 12.1 for lifting-surface S_wet where L2's official
+% choice is the same formula but L3 additionally carries the T.O. root/tip t/c
+% splits. L2-vs-L3 differences here are therefore EXPECTED, not errors --
+% see examples/F16A/F16GeomL3.md §4/§3 for the full accounting.
+%
+% Geometry also takes the propulsion object: the nacelle diameter -- and so
+% duct wetted area and total S_wet -- is sized from engine thrust.
 
-swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),      NaN];
-lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                NaN];
-sw_wing = [NaN,                g2.get_S_wet_wing(),      NaN];
-sw_ht   = [NaN,                g2.get_S_wet_HT(),        NaN];
-sw_vt   = [NaN,                g2.get_S_wet_VT(),        NaN];
-sw_fus  = [NaN,                g2.get_S_wet_fuselage(),  NaN];
-sw_duct = [NaN,                g2.get_S_wet_duct(),      NaN];
+swet    = [g1.get_S_wet(W_TO), g2.get_S_wet(),          g3.get_S_wet()];
+lfus    = [g1.get_L_fus(W_TO), g2.L_fus,                g3.L_fus];
+sw_wing = [NaN,                g2.get_S_wet_wing(),     g3.get_S_wet_wing()];
+sw_ht   = [NaN,                g2.get_S_wet_HT(),       g3.get_S_wet_HT()];
+sw_vt   = [NaN,                g2.get_S_wet_VT(),       g3.get_S_wet_VT()];
+sw_fus  = [NaN,                g2.get_S_wet_fuselage(), g3.get_S_wet_fuselage()];
+sw_duct = [NaN,                g2.get_S_wet_duct(),     g3.get_S_wet_duct()];
 
 % ── Aerodynamics ──────────────────────────────────────────────────────── %
-a1 = F16AeroL1();
-a2 = F16AeroL2();
-a3 = F16AeroL3();
+% L3 aero injects g3, the L3 geometry tier -- NOT g2. This line still passed g2
+% after Phase 2 repointed the other L3 consumers (F16ConstraintSet,
+% aerodynamics_brandt_comparison), so the L3 aero column here was silently
+% computed on L2 geometry; corrected in Phase 4. The L3 aero numbers below
+% therefore move: L3 geometry is the physical/T.O. tier (VT LE sweep 47.5 vs 40,
+% L_fus 47.5 vs 46.5) and its Amax is the area-ruled buildup rather than L2's
+% fuselage-envelope ellipse.
+a1 = F16AeroL1(f16a_spec_path(1));
+a2 = F16AeroL2(g2, f16a_spec_path(2));
+a3 = F16AeroL3(g3, f16a_spec_path(3));
 
 pu1 = a1.drag_polar(st_36_160); pu2 = a2.drag_polar(st_36_160); pu3 = a3.drag_polar(st_36_160);
 
 cd0_sup    = [pu1.CD0, pu2.CD0, pu3.CD0];
 k1_sup     = [pu1.K1,  pu2.K1,  pu3.K1 ];
 clmax      = [a1.get_CLmax(st_SL_050), a2.get_CLmax(st_SL_050), a3.get_CLmax(st_SL_050)];
-e_osw      = [a1.get_e_osw(), a2.get_e_osw(), a3.get_e_osw()];
+% L1 is geometry-free (Mattingly type-curve) and has no Oswald-efficiency
+% concept -> N/A; L2/L3 use Raymer Eq. 12.48/12.49 (official e).
+e_osw      = [NaN, a2.get_e_osw(), a3.get_e_osw()];
 cl_alpha_M0  = [NaN, a2.get_CL_alpha(0.0), a3.get_CL_alpha(0.0)];
 cl_alpha_M06 = [NaN, a2.get_CL_alpha(0.6), a3.get_CL_alpha(0.6)];
 
@@ -117,7 +172,9 @@ cl_alpha_M06 = [NaN, a2.get_CL_alpha(0.6), a3.get_CL_alpha(0.6)];
 % for L3's gear-strut Reynolds-number lookup (compute_Delta_CD0_geardown).
 st_hld = AircraftState(0, 0.2);
 
-cd0_clean_hld = [a1.get_CD0(), a2.get_CD0(), a3.drag_polar(st_hld).CD0];
+% L1 clean CD0 is the Mattingly type-curve value at the HLD reference state
+% (geometry-free); L2 is the Cfe*Swet/Sref clean estimate; L3 the buildup.
+cd0_clean_hld = [a1.drag_polar(st_hld).CD0, a2.get_CD0(), a3.drag_polar(st_hld).CD0];
 d_cd0_TO      = [a1.get_Delta_CD0_TO(), a2.get_Delta_CD0_TO(), a3.get_Delta_CD0_TO(st_hld)];
 d_cd0_L       = [a1.get_Delta_CD0_L(),  a2.get_Delta_CD0_L(),  a3.get_Delta_CD0_L(st_hld)];
 cd0_TO_total  = cd0_clean_hld + d_cd0_TO;
@@ -176,8 +233,8 @@ for iC = 1:nCon
 end
 
 % ── Propulsion (L3 not yet implemented → NaN) ─────────────────────────── %
-p1 = F16PropL1();
-p2 = F16PropL2();
+p1 = F16PropL1(f16a_spec_path(1));
+p2 = F16PropL2(f16a_spec_path(2));
 
 % alpha_AB and alpha_mil at each constraint condition
 % L1: density-ratio lapse only (no mil/AB split) → alpha_mil = NaN for L1
@@ -228,7 +285,7 @@ e_osw_ref = 1 / (pi * b.geom.AR * b.brandt.polar_model(1,4));   % Brandt K1 → 
 % (linear supersonic K1 theory breaks down near M=1 and at high Mach; L1/L2
 % have no drag-rise model; L3 has a whole-aircraft wave-drag term
 % [F16AeroL3.compute_CD0_wave, Raymer Eqs. 12.44-12.45, corrected 2026-07-23
-% to use whole-aircraft Amax/l per F16AeroL3_wave_drag_fix.md] that closes
+% to use whole-aircraft Amax/l per F16AeroL3.md] that closes
 % most of rows 4-5's gap but does not fully eliminate rows 3-5's divergence).
 T_asub = table();
 for iM = 1:nBrandt
@@ -348,13 +405,22 @@ fprintf('  [AERO sub]   L3 CD0 now includes CD0_misc = (Dq_gun_port+Dq_hook_USAF
 fprintf('  [AERO sub]   Mach rows 1-2 (M<=Mcrit) are the trustworthy Brandt comparison; rows 3-5\n');
 fprintf('               (transonic/supersonic) diverge by design -- L1/L2 have no drag-rise model,\n');
 fprintf('               L3''s wave-drag term (Eqs.12.44-12.45) uses whole-aircraft Amax/l (corrected\n');
-fprintf('               2026-07-23, see F16AeroL3_wave_drag_fix.md) and closes most but not all of the\n');
+fprintf('               2026-07-23, see F16AeroL3.md) and closes most but not all of the\n');
 fprintf('               gap; Raymer''s linear supersonic K1 (Eq.12.51) also breaks\n');
 fprintf('               down near M=1 and at high Mach for this low-AR, high-sweep wing.\n');
-fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L1/L2/L3 all use the same Raymer Eq.12.48/49\n');
-fprintf('               formula (obj.AR, obj.Lambda_LE_deg). CL_alpha L2/L3 (Raymer Eq.12.6, both use\n');
-fprintf('               Lambda_c4_deg=37deg); L1=N/A (no finite-wing lift-slope method at that fidelity).\n');
-fprintf('  [AERO sub]   CLmax: L1/L3 Roskam historical table; L2 Raymer sweep-corrected formula.\n');
+fprintf('  [AERO sub]   e_osw ref: 1/(pi*AR*K1_Brandt); L2/L3 use Raymer Eq.12.48/49 (injected AR,\n');
+fprintf('               Lambda_LE). L1=N/A (geometry-free Mattingly type-curve, no Oswald e). CL_alpha\n');
+fprintf('               L2/L3 (Raymer Eq.12.6, injected quarter-chord sweep ~32.2deg, NOT the old 37);\n');
+fprintf('               L1=N/A (no finite-wing lift-slope method at that fidelity).\n');
+fprintf('  [AERO sub]   CLmax: L1 Roskam Pt.I Table 3.1 fighter-column mean (1.50, clean); L2/L3 Raymer\n');
+fprintf('               Eq.12.15 sweep-corrected (0.9*cl_max_2D*cos(Lambda_c4)) = 0.914; vortex lift\n');
+fprintf('               from the LEX/strake is NOT modeled at any level.\n');
+fprintf('               The L1->L2 STEP (1.50 -> 0.914) IS DELIBERATE, not a bug: 1.50 is a type-only\n');
+fprintf('               statistical mean over a fighter column dominated by straight/moderately-swept\n');
+fprintf('               wings; 0.914 is geometry-based and correctly penalizes a thin 40deg-swept wing.\n');
+fprintf('               Different questions at different fidelities; neither is calibrated to the other.\n');
+fprintf('               One table throughout at L1 (2026-07-25): the TO/landing increments are Table 3.1\n');
+fprintf('               differences, so the clean base must be Table 3.1 too. AeroL1.md has the detail.\n');
 fprintf('  [AERO sup]   K2=0 for M>=1 (linearized supersonic theory) — enforced at all fidelity levels.\n');
 fprintf('  [AERO hld]   L1: pure tabulation, Roskam Airplane Design Pt.I, Table 3.1 (CLmax by category,\n');
 fprintf('               "fighter" row) and Table 3.6 (Delta_CD0/e by flap config, flaps+gear).\n');

@@ -1,6 +1,37 @@
 # Cruise & Supersonic Combat Turn (Combat Turn 2) — error scrape
 
-## RESOLUTION (2026-07-23) — Cruise alpha-basis fix implemented
+## AMENDMENT (2026-07-25) — the 2026-07-23 fix never reached the production path
+
+The §"RESOLUTION (2026-07-23)" below is **half true**. `ThrustConstraint` gained
+the `powerSetting` argument and `TestThrustConstraint` began passing `"mil"`, so
+the before/after table below is real *for that test*. But
+`examples/F16A/F16ConstraintSet.m` — the path `run_F16_constraint_diagram` and
+every comparison report actually use — kept building all six thrust rows with
+`ThrustConstraint`'s `"AB"` default. Production Cruise therefore stayed on the
+afterburner lapse and stayed ~2.6× low until 2026-07-25, when
+`F16ConstraintSet.mapPowerSetting` wired the setting from the workbook's `AB%`
+column (0 → mil, 100 → AB). Found by the max-effort code review.
+
+Two corrections to the numbers below, both verified live 2026-07-25:
+
+- **The post-fix Cruise agreement is now +16.6…+21.3% (L2) and +12.0…+14.7%
+  (L3)**, not the +8.9…+12.4% / +5.8…+10.7% tabulated below. The difference is
+  NOT from the power-setting fix — it was confirmed by measuring the same
+  quantity against `HEAD`'s pre-2026-07-25 `AeroL2.m`/`F16GeomL2.m`, which give
+  the identical +16.6…+21.3%. It comes from geometry/aero work committed
+  *between* 2026-07-23 and now: the duct is now inside `GeomL2.get_S_wet`
+  (S_wet 1371 → 1466.77 ft², so Cruise `CD0` 0.01599 → **0.01711**, +7.0%), and
+  `CL_alpha` changed, moving `K2` −0.00734 → **−0.00520**. §1a/§1b's tables are
+  therefore stale snapshots of the 2026-07-23 tree, kept as a historical record.
+- **The optimum design point does not move.** At all three fidelity levels the
+  `ConstraintAnalysis` optimum is byte-identical before and after this fix
+  (L1 76.00 psf / 0.7932; L2 62.00 / 0.8081; L3 62.00 / 1.0005) because **Stall
+  is the binding constraint at the optimum, not Cruise**. The fix still matters:
+  the Cruise curve itself was wrong by a factor ~2.2, which drives `TW_margin`
+  at cruise, any design where Cruise does bind, and the per-condition required
+  T/W every report prints.
+
+## RESOLUTION (2026-07-23) — Cruise alpha-basis fix implemented (partial, see amendment above)
 
 Per §2 below, implemented and verified via `run_all_tests`
 (1168/1169 tests pass; the sole failure,
@@ -41,7 +72,7 @@ residual already documented for Combat Turn 2's AB branch in §3).
 
 **Status: documentation only, no `.m` files edited.** Live-verified via
 `matlab -batch` against the current (uncommitted) working tree, which already
-includes the `F16AeroL3` wave-drag fix (`F16AeroL3_wave_drag_fix.md`). Scope:
+includes the `F16AeroL3` wave-drag fix (`F16AeroL3.md`). Scope:
 `ThrustConstraint`'s two worst-performing F-16 conditions in
 `tests/constraints/TestThrustConstraint.m` —
 
@@ -190,7 +221,7 @@ model at a supersonic design point.
 
 **L3 already fixes most of this.** `F16AeroL3.compute_CD0_wave`
 (`examples/F16A/F16AeroL3.m:343-...`, Raymer Eqs. 12.44-12.45, landed this
-session per `F16AeroL3_wave_drag_fix.md`) brings CD0 to 0.03988 — only **1.8%
+session per `F16AeroL3.md`) brings CD0 to 0.03988 — only **1.8%
 low** vs. Brandt's 0.04063 — and the required_TW gap collapses accordingly,
 from −30–63% down to a flat **−8.4% to −8.9%**.
 
@@ -241,7 +272,7 @@ Independent of §2's alpha-basis issue: `F16AeroL3`'s Raymer component
 skin-friction buildup (`AeroL3.get_CD0_buildup`, unaffected by the wave-drag
 fix since M=0.87 < 1.2) computes CD0=0.01536 at Cruise — **9.6% below**
 Brandt's 0.01700, and further below than L1/L2's flat-Cfe 0.01599 (−6.0%).
-The wave-drag fix in `F16AeroL3_wave_drag_fix.md` only touches the `M≥1.2`
+The wave-drag fix in `F16AeroL3.md` only touches the `M≥1.2`
 branch and does not touch this. This is a small contributor next to §2's
 dominant alpha-basis gap, but is a distinct, real discrepancy worth a look in
 its own right if/when Aerodynamics gets its own deep-dive pass (component

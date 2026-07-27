@@ -1,47 +1,34 @@
 classdef (Abstract) PropulsionModelL2 < PropulsionBase
-%PROPULSIONMODELL2  Tier-2a abstract enforcer for Level-2 propulsion.
+%PROPULSIONMODELL2  Tier-2 abstract enforcer for Level-2 propulsion.
 %
-%   Inherits PropulsionBase directly (NOT PropulsionModelL1 — each fidelity
-%   enforcer independently satisfies the Tier-1 contract).
+%   Inherits PropulsionBase directly, not another PropulsionModelLN.
 %
-%   Level-2 propulsion uses the Mattingly analytical engine model:
-%     thrust_lapse — Mattingly AED 2nd ed. Eq. 2.54 (low-BPR mixed turbofan)
-%     TSFC         — Mattingly AED 2nd ed. Eq. 3.12 + 3.55 coefficients
+%   L2 is the Mattingly parametric model, with separate mil (dry) and AB (wet)
+%   branches for both thrust lapse and TSFC.
 %
-%   Student classes supply the engine-specific constants (C1_mil, C2_mil,
-%   C1_AB, C2_AB, TR) as Constant properties.
+%   The C1/C2 TSFC coefficients are NOT abstract members: they are
+%   engine-class constants selected by engine_type inside the PropL2 toolbox.
+%   A concrete class supplies engine_type and the throttle ratio.
 %
-%   Inheritance: PropulsionBase → PropulsionModelL2 → F16PropL2
+%   Toolbox companion: src/disciplines/propulsion/PropL2.md
 
     properties (Abstract)
-        TR          % double; — throttle ratio (typical AAF: 1.05–1.08)
-    end
-
-    
-    properties (Abstract, Constant)
-        C1      % TSFC model: mil/AB power, Eq. 3.55a coefficient 1
-        C2      % TSFC model: mil/AB power, Eq. 3.55a coefficient 2
-        % F-16 example shoudl include C1_mil, C2_mil, C1_AB, C2_AB.
-        
+        engine_type % string; selects the PropL2 TSFC coefficient set
+        TR          % throttle ratio
     end
 
     methods (Abstract)
-         % Note: citations not required for abstract enforcers because it's
-         % not a concrete implementation, just a requirement.
 
-         % TODO (7/15/2026): "mil" and "AB" are too specific. These must be
-         % broadly applicable across many design categories. Remove the
-         % "mil" and "AB" suffix.
-        %COMPUTE_THRUST_LAPSE_MIL  Mil-power lapse α_mil.
+        %COMPUTE_THRUST_LAPSE_MIL  Mil-power lapse.  [Mattingly 2nd ed. Eq. 2.54b]
         alpha_mil = compute_thrust_lapse_mil(obj, state)
 
-        %COMPUTE_THRUST_LAPSE_AB  Afterburner lapse α_AB.
+        %COMPUTE_THRUST_LAPSE_AB  Afterburner lapse.  [Mattingly 2nd ed. Eq. 2.54a]
         alpha_AB = compute_thrust_lapse_AB(obj, state)
 
-        %COMPUTE_TSFC_MIL  Mil-power TSFC in 1/hr.
+        %COMPUTE_TSFC_MIL  Mil-power TSFC [1/hr].  [Mattingly 2nd ed. Eq. 3.55a]
         c_t_mil = compute_TSFC_mil(obj, state)
 
-        %COMPUTE_TSFC_AB  Afterburner TSFC in 1/hr.
+        %COMPUTE_TSFC_AB  Afterburner TSFC [1/hr].  [Mattingly 2nd ed. Eq. 3.55b]
         c_t_AB = compute_TSFC_AB(obj, state)
 
     end

@@ -1,118 +1,96 @@
-# GeometryBase.m — companion doc
+# GeometryBase
 
-Tier 1, abstract. `classdef (Abstract) GeometryBase < handle`. No concrete equations today —
-pure interface enforcement.
+Tier-1 abstract enforcer (`classdef (Abstract) GeometryBase < handle`) for every geometry discipline
+class. It declares the minimum contract orchestrators rely on, and provides the fidelity-independent
+identities every level shares. No per-aircraft data, no per-fidelity equations.
 
-## Current contents (as of this doc)
+---
 
-### Abstract properties
+## 1. Inheritance
+
+```
+GeometryBase → GeometryModelLN (abstract) → F16GeomLN (concrete)
+```
+
+Each `GeometryModelLN` enforcer inherits `GeometryBase` **directly**, not `GeometryModelL(N-1)`.
+
+The `GeomL1` / `GeomL2` / `GeomL3` static toolboxes hold the per-fidelity equations and are **not**
+in this chain — concrete classes call them as `GeomLN.method(...)`.
+
+**Geometry has all three tiers, L1 / L2 / L3.** L1 is statistical (regressions on `W_TO`), L2 is the
+Brandt-reference tier, L3 is the physical / T.O. 1F-16A-1 tier.
+
+## 2. Abstract contract
+
+Properties every concrete class must define:
+
 | Property | Meaning |
 |---|---|
-| `S_ref` | Wing reference area, ft² |
-| `S_wet` | Total aircraft wetted area, ft² |
+| `S_ref` | wing reference area, ft² |
+| `S_wet` | total aircraft wetted area, ft² |
 
-### Abstract methods
-| Method | Computes | Citation |
+Methods every concrete class must implement:
+
+| Method | Notes |
+|---|---|
+| `get_S_ref(obj)` | wing reference area, ft² |
+| `get_S_wet(obj, W_TO)` | total wetted area, ft². The `(obj, W_TO)` signature is the widest any implementer needs — L1's statistical regression needs TOGW, while L2/L3 have real planform geometry and implement `get_S_wet(obj)` with no second argument. MATLAB does not enforce matching arity between an abstract declaration and its concrete override, so this is legal |
+
+This contract is deliberately **narrow**, and that has a consequence worth knowing: a bare
+`GeometryBase` type guard is too weak for anything that reads real geometry. `F16AeroL2`/`L3` read
+~20 members off the injected object, so their guards were narrowed to
+`mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])`.
+
+## 3. Concrete utilities
+
+Fidelity-independent identities, shared unchanged across all levels. Each takes only scalars and
+returns a scalar.
+
+| Method | Formula | Source |
 |---|---|---|
-| `get_S_ref(obj)` | Wing reference area, ft² | none — pass-through to a stored/input value, no equation |
-| `get_S_wet(obj, W_TO)` | Total aircraft wetted area, ft² | none at this tier — dispatches to L1/L2 toolbox equations (see `GeomL1.md`/`GeomL2.md`; Geometry has no L3 — merged into L2 on 2026-07-22, see `GeomL2.md`'s header note). `W_TO` is unused by the L2 implementation; kept only so the same method signature works at every fidelity level (see the in-file `TODO (7/8/2026)` at `GeometryBase.m:23-24`). |
+| `compute_root_chord(S_ref, b, lambda)` | `2·S_ref/(b(1+λ))` | Raymer 7th ed. Eq. 7.6 |
+| `compute_tip_chord(c_root, lambda)` | `λ·c_root` | Raymer 7th ed. Eq. 7.7 |
+| `compute_mac(c_root, lambda)` | `(2/3)·c_root·(1+λ+λ²)/(1+λ)` | Raymer 7th ed. Eq. 7.8 |
+| `compute_span(AR, S_ref)` | `sqrt(AR·S_ref)` | definitional (`AR = b²/S_ref`) |
+| `convert_sweep(Lambda_LE_deg, AR, lambda, x)` | **MIRRORED** surfaces: `tan Λ_x = tan Λ_LE − (4/AR)·x(1−λ)/(1+λ)`; `x = 0.25` gives quarter-chord, `x = 1.0` trailing edge | standard planform identity (§4) |
+| `convert_sweep_panel(Lambda_LE_deg, AR, lambda, x)` | **SINGLE-PANEL** surfaces: same identity with `2/AR` | as above (§4) |
+| `compute_Amax_elliptical(W_max, H_max)` | `(π/4)·W_max·H_max` — the max cross-section of the equivalent elliptical fuselage the model already assumes when it feeds `D_fus = (W+H)/2` into Roskam Eq. 12.3 | standard elliptical identity (§5) |
+| `compute_nacelle_diameter(T_AB_SLS_lb)` | `sqrt(T_AB_SLS/1900)`; F-16A → 3.537 ft | [Brandt `Engn(s)` tab `D_engine`; `readme_geom.md` §3] |
 
-No equations, no coefficients, no concrete methods exist in this file at present.
+Argument validators guard the denominators: `lambda` is `mustBeNonnegative` (protects `1+λ`), areas /
+spans / chords are `mustBePositive`, and `x` is constrained to `[0,1]`.
 
----
+The last two live here rather than in a per-fidelity toolbox because both `F16GeomL2` and `F16GeomL3`
+call them. They were briefly authored into `GeomL3`, which made the L2 concrete class depend on the
+L3 toolbox — a layering inversion, moved here to remove it.
 
-## Task 2 — equations approved for the next implementation phase (Base tier)
+## 4. Conventions — sweep-angle conversion, mirrored vs. single-panel
 
-These are **not implemented yet**. They are documented here as the exact spec for whichever
-agent implements Step 2 next. All four are fidelity-independent planform identities that
-belong in `GeometryBase` (or a Base-tier static toolbox alongside it) because every fidelity
-level ≥ L2 needs them and the equations themselves never change with fidelity — only which
-inputs feed them does.
+`GeometryBase.m`'s `convert_sweep` / `convert_sweep_panel` citation notes point readers here.
 
-### Root chord
-```
-c_root = 2*S_ref / (b*(1+lambda))
-```
-**Citation:** Raymer, *Aircraft Design: A Conceptual Approach*, 7th ed., Eq. 7.6.
+The coefficient follows from what root→tip spans:
 
-### Tip chord
-```
-c_tip = lambda * c_root
-```
-**Citation:** Raymer 7th ed., Eq. 7.7.
+- **Mirrored** (`convert_sweep`) — root→tip spans the **semi**span `b/2`, and `AR = b²/S` is defined
+  on the full mirrored planform. `tan Λ_x = tan Λ_LE − x(c_root − c_tip)/(b/2)`, which with
+  `c_root = 2S/(b(1+λ))` gives the **4/AR** form. Use for the wing and a conventional horizontal tail.
+- **Single panel** (`convert_sweep_panel`) — a vertical tail is one panel: root→tip spans the **full**
+  `b`, and `AR = b²/S` is defined on that single panel. The same derivation over `b` instead of `b/2`
+  gives **2/AR**, exactly half.
 
-### Mean aerodynamic chord (MAC / cbar)
-```
-cbar = (2/3) * c_root * (1 + lambda + lambda^2) / (1 + lambda)
-```
-**Citation:** Raymer 7th ed., Eq. 7.8.
+Passing a single-panel AR to `convert_sweep` double-counts the taper term. That was a live defect
+until 2026-07-25: the F-16's VT trailing-edge sweep read a physically impossible **0.33°** where the
+correct value is **22.90°** (quarter-chord 32.24° → **36.31°**). Verified against the repo's own VT
+chords (`readme_geom.md` §4.3: `S_vt` = 60, `AR_vt` = 1.6, `λ_vt` = 0.5 → `b_vt` = 9.798,
+`c_root` = 8.165, `c_tip` = 4.082).
 
-### Span
-```
-b = sqrt(AR * S_ref)
-```
-**Citation:** definitional (AR ≡ b²/S_ref by definition of aspect ratio) — not a numbered
-textbook equation. Already used informally as a comment in `F16GeomL2.m:32` (`b_wing = 30 % ft
-[sqrt(AR*S) = sqrt(3*300)]`) but never actually called by code anywhere in the active tree.
-(Formerly also appeared in `F16GeomL3.m`, now merged into `F16GeomL2.m` — see `GeomL2.md`'s
-header note on the 2026-07-22 L3-elimination decision.)
+## 5. To-dos
 
-### Sweep-angle conversion (LE sweep → sweep at any chord-fraction station)
-**Status: CITATION UNRESOLVED — do not implement against a guessed equation number.**
+| Item | Status |
+|---|---|
+| `convert_sweep` and `convert_sweep_panel` are cited as a standard planform-geometry identity, not to a specific textbook equation — no Raymer/Roskam edition and equation could be pinned to either against the references in this repo | accepted by decision (2026-07-21) |
+| `compute_Amax_elliptical` likewise has **no** known Raymer/Roskam/Mattingly/Brandt equation number and appears in no reference extract here. Documented as a standard identity following the `convert_sweep` precedent; no equation number was invented | todo §4 — pin a citation or accept the status in writing |
+| `compute_nacelle_diameter` hardcodes **1900**, which silently assumes an afterburning engine — Brandt uses `Engn(s)!L22` = 1900 only when `T_dry ≠ T_AB`, and `L10` = 2000 otherwise | todo §18 |
 
-The quantity needed is the standard "convert leading-edge sweep to sweep at chord fraction x"
-identity, e.g. in the general form
-```
-tan(Lambda_x) = tan(Lambda_LE) - (4/AR) * x * (1-lambda)/(1+lambda)
-```
-(x=0.25 for quarter-chord, x=0.5 for mid-chord, etc.) This is the formula that, applied
-correctly, would fix the F16GeomL2/L3 wing `QC_sweep_wing = 37` bug flagged in
-`docs/darshan-verification/2026-07-21_steps_01-05_review.md` (correct value ≈32.2° at this
-aircraft's own AR=3.0/λ=0.2275/Λ_LE=40°).
-
-I searched for an authoritative citation and could **not** pin one down within what this repo
-gives access to:
-- `temp_AI/docs/disciplines/reference_extracts/*.md` (all 9 files: `raymer_data.md`,
-  `roskam_vol1_data.md`, `roskam_vol2_data.md`, `roskam_vol3_data.md`, `mattingly_data.md`,
-  `metabook_data.md`, `nicolai_data.md`, `usaf_f16_data.md`, `f35_data.md`) — grepped for
-  "sweep", "tan(", "quarter-chord", "Λ_c" — no sweep-conversion identity with an equation
-  number appears anywhere in these extracts. `metabook_data.md:351` has an unrelated MAC
-  x-location formula that uses `tan(Lambda_LE)` but is not a sweep-conversion identity itself.
-- `docs/PLAN.md`'s Rules section (Rule 7) points to two directories for physical references —
-  `...\temp_AI\docs\disciplines\reference_extracts` (checked above) and two more paths under
-  `C:\Users\John Freeman\Desktop\...\Documents\{References,Readings}` — **these two are on a
-  different, stale machine and are not present in this repo or accessible from this one.**
-  I cannot check them.
-- `docs/subplans/02_geometry.md` does not cite a sweep-conversion formula at all; it only
-  lists sweep as a raw spec input, never as a derived quantity.
-
-**Action for the next phase:** either (a) get access to a Raymer/Roskam PDF to pin the exact
-edition/chapter/equation number before writing this into a toolbox docstring, or (b) if the
-identity is being taken as a standard aerodynamics identity independent of any specific
-textbook, cite it as such explicitly (e.g. "standard swept-wing planform geometry identity,
-uncited to a specific textbook edition") rather than attaching a Raymer/Roskam number that
-was not actually verified against the text.
-
-**RESOLVED (2026-07-21, user decision):** go with option (b) — implement `convert_sweep` next
-phase, cited in the docstring as "standard swept-wing planform geometry identity (uncited — no
-specific textbook edition/equation number verified against source text)." Not a blocker; proceed
-with implementation.
-
----
-
-## Note: edition mismatch to flag for the user
-
-The Task-2 equations above were specified using **Raymer 7th ed.** section/equation numbers.
-Every existing citation elsewhere in `GeomL1.m`/`GeomL2.m`/`GeomL3.m` and their tests cites
-**Raymer 6th ed.** (e.g. `GeomL1.m`'s `L_fus` regression cites "Raymer, 6th ed., Table 6.3";
-`AeroL1.m`/`AeroL3.m` cite "Raymer 6th ed." throughout). Raymer's chapter/equation numbering is
-not guaranteed identical between the 6th and 7th editions. This is not a VnV/BrandtF16A
-discrepancy (so it does not go in `VnV/BrandtF16A/todo.md`), but it is a citation-consistency
-gap worth resolving before implementation: confirm whether the project intends to standardize
-on 7th ed. going forward (re-citing the existing 6th-ed. equations to their 7th-ed. numbers) or
-keep 6th ed. as the project standard and re-derive Eq. 7.6/7.7/7.8's 6th-ed. equivalents.
-
-**RESOLVED (2026-07-21, user decision):** don't worry about it for now — cite each equation to
-whichever edition it was actually verified against (7th ed. for the new Task-2 chord/MAC
-equations, 6th ed. for everything pre-existing). A mixed-edition citation set across the codebase
-is accepted for the time being; not a blocker for implementation.
+Brandt's `Geom!B20` = 25.110556 ft² is **not** a comparison target for `compute_Amax_elliptical`: it
+is a whole-aircraft area-ruled `MAX` net of an engine flow-through deduction, a different quantity
+(F-16A envelope 27.4889, +9.47 %). L3 computes the area-ruled figure instead — see `F16GeomL3.md` §4.

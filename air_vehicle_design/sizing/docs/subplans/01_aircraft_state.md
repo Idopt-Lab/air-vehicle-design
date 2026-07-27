@@ -1,14 +1,14 @@
 # Subplan 01 — AircraftState
 
-**Status:** Placeholder — not started
-**Depends on:** Step 0 (baseline JSON)
+**Status:** Implemented (`src/core/AircraftState.m`)
+**Depends on:** Nothing
 **Blocks:** All subsequent steps
 
 ---
 
 ## Objectives
 
-Implement `AircraftState`, the common flight-condition input passed to every discipline method. Must compute and cache standard atmosphere properties at construction so disciplines can call `state.rho`, `state.q`, etc. without re-querying the atmosphere.
+Implement `AircraftState`, the common flight-condition input passed to every discipline method. Computes standard atmosphere properties once at construction and stores them so disciplines can read `state.rho`, `state.q`, etc. without re-querying the atmosphere.
 
 ---
 
@@ -23,11 +23,12 @@ Implement `AircraftState`, the common flight-condition input passed to every dis
 
 ## Design Notes
 
-- Handle class (reference semantics — same object passed to aero, prop, etc.)
+- **Value class (not handle)** — immutable. All fields are `SetAccess = private` and set once in the constructor; there is no set-method, so reassigning after construction (e.g. `s.mach = ...`) errors.
 - Constructor: `AircraftState(altitude_ft, mach)`
 - Calls MATLAB `atmosisa` internally; converts all outputs to **English units** (°R, lbf/ft², slug/ft³, ft/s)
-- Body velocities (u, v, w) and angles (alpha, beta, phi, theta) default to trimmed straight-and-level flight; L1/L2 disciplines only read `altitude`, `mach`, `q`, `rho`, `V`
-- Inspired by NPTEL `AircraftState` (Python) but: English units, MATLAB `Dependent` properties where recomputation is needed, atmosphere cached at construction (not recomputed on every property access)
+- Also carries the dimensionless ratios `theta`/`delta`/`theta_0`/`delta_0` (Mattingly Eq. 2.52) used by constraint/mission equations
+- No `Dependent` properties and nothing is cached-then-mutated — every field is a plain private property computed once at construction, so no value can go stale
+- Inspired by NPTEL `AircraftState` (Python) but in English units and immutable-value semantics
 
 ---
 
@@ -54,7 +55,7 @@ Implement `AircraftState`, the common flight-condition input passed to every dis
 | Tropopause, M=1 | alt=36,089 ft, M=1 | q matches 1/2 rho a² | ±0.1% |
 | F-16 cruise | alt=2,500 ft, M=0.85 | q finite and positive | — |
 | Defaults | alt=10k, M=0.5 | alpha=0, beta=0, phi=0 | exact |
-| Immutability of atmosphere | change mach after construction | q does NOT update (cached) | exact |
+| Immutability | attempt to reassign `mach` after construction | assignment errors (private, read-only) | exact |
 
 ---
 

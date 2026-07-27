@@ -1,58 +1,59 @@
 classdef (Abstract) WeightsModelL3 < WeightsBase
-     %WEIGHTSMODELL3  Tier-2a abstract enforcer for Level-3 weight estimation.
-     %
-     %   Inherits WeightsBase directly (NOT WeightsModelL1 or L2).
-     %
-     %   Level-3 method: Raymer §15.3.1 Fighter/Attack component-buildup.
-     %   Each group is declared as an abstract method; WeightsL3 implements them.
-     %   The student class provides all aircraft-specific geometry inputs.
-     %
-     %   OEW = sum of structural group + engine section group + systems group.
-     %
-     %   SOURCE:
-     %     Raymer, "Aircraft Design: A Conceptual Approach," 6th ed., AIAA, 2018,
-     %     §15.3.1 — Fighter/Attack Statistical Weights (Eqs. 15.1–15.24).
-     %
-     %   Inheritance: WeightsBase → WeightsModelL3 → F16WeightsL3
+%WEIGHTSMODELL3  Tier-2 abstract enforcer for Level-3 weights.
+%
+%   Inherits WeightsBase directly, not another WeightsModelLN.
+%
+%   L3 is the [Raymer 7th ed. Sec. 15.3.1] fighter/attack component buildup,
+%   Eqs. 15.1-15.24, plus [Eq. 10.10] for the dry engine weight, which is not a
+%   Sec. 15.3.1 equation. Most geometry arrives by dependency injection from a
+%   geometry object rather than as literals on the concrete class.
+%
+%     OEW = structural + landing gear + engine section + systems
+%
+%   The DERIVED properties below must be Dependent getters on the concrete
+%   class, never stored values.
+%
+%   Toolbox companion: src/disciplines/weights/WeightsL3.md
 
      properties (Abstract)
-          W_wings
-          W_tail
-          W_fuselage
-          W_installed_engine
-          W_subsystems % Includes landing gear
-
+          W_wings            % DERIVED [lbf]  [Eq. 15.1]
+          W_tail             % DERIVED struct(HT, VT) [lbf]  [Eq. 15.2, 15.3]
+          W_fuselage         % DERIVED [lbf]  [Eq. 15.4]
+          W_installed_engine % DERIVED group total [lbf]  [Eq. 15.7-15.15]
+          W_subsystems       % DERIVED group total [lbf]  [Eq. 15.16-15.24]
+          %                    Does NOT include the landing gear: OEW adds
+          %                    weight_landing_gear's .main + .nose separately.
      end
 
      methods (Abstract)
 
-          %WEIGHT_WING  Wing structural weight [lbf].  [Raymer Eq. 15.1]
+          %WEIGHT_WING  [Raymer 7th ed. Eq. 15.1]
           W = weight_wing(obj, W_TO)
 
-          %WEIGHT_TAIL  Horizontal + vertical tail structural weight [lbf].  [Raymer Eqs. 15.2-15.3]
-          %   Returns struct with fields HT [lbf] and VT [lbf].
+          %WEIGHT_TAIL  Struct with fields HT and VT.
+          %   [Raymer 7th ed. Eq. 15.2 and 15.3]
           W = weight_tail(obj, W_TO)
 
-          %WEIGHT_FUSELAGE  Fuselage structural weight [lbf].  [Raymer Eq. 15.4]
+          %WEIGHT_FUSELAGE  [Raymer 7th ed. Eq. 15.4]
           W = weight_fuselage(obj, W_TO)
 
-          %WEIGHT_LANDING_GEAR  Main + nose landing-gear weight [lbf].  [Raymer Eqs. 15.5-15.6]
-          %   Returns struct with fields main [lbf] and nose [lbf].
-          W = weight_landing_gear(obj)
+          %WEIGHT_LANDING_GEAR  Struct with fields main and nose.
+          %   [Raymer 7th ed. Eq. 15.5 and 15.6]
+          %   W_TO is REQUIRED: the landing weight the equations take is derived
+          %   from it, so the group scales with gross weight.
+          W = weight_landing_gear(obj, W_TO)
 
-          %WEIGHT_ENGINE_SECTION  Total propulsion group weight [lbf].
-          %   Includes: bare/dry engine weight (vendor/spec data), engine mounts
-          %   (15.7), firewall (15.8), engine section (15.9), air induction (15.10),
-          %   tailpipe (15.11), engine cooling (15.12), oil cooling (15.13),
-          %   engine controls (15.14), starter (15.15).
-          %   Returns struct with one field per sub-component plus .total.
+          %WEIGHT_ENGINE_SECTION  Propulsion group [lbf], struct of members plus
+          %   .total.  Dry engine [Raymer 7th ed. Eq. 10.10] plus mounts (15.7),
+          %   firewall (15.8), section (15.9), induction (15.10), tailpipe
+          %   (15.11), cooling (15.12), oil (15.13), controls (15.14), starter
+          %   (15.15).
+          %   The engine weight passed in must be UNINSTALLED: those items ARE
+          %   the installation, so a lumped x1.3 factor would double-count them.
           W = weight_engine_section(obj, W_TO)
 
-          %WEIGHT_SYSTEMS  Avionics, fuel, flight controls, and furnishings group [lbf].
-          %   Includes: fuel system (15.16), flight controls (15.17), instruments (15.18),
-          %   hydraulics (15.19), electrical (15.20), avionics (15.21),
-          %   furnishings (15.22), air cond/anti-ice (15.23), handling gear (15.24).
-          %   Returns struct with one field per sub-component plus .total.
+          %WEIGHT_SYSTEMS  Systems group [lbf], struct of members plus .total.
+          %   [Raymer 7th ed. Eq. 15.16-15.24]. Contains no landing-gear term.
           W = weight_systems(obj, W_TO)
 
      end

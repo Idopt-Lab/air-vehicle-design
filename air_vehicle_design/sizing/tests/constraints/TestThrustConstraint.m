@@ -69,7 +69,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 
         function testIsaPointPerformanceBase(tc)
             state = AircraftState(0, 0.5);
-            obj   = ThrustConstraint("Toy", state, F16AeroL1(), F16PropL2(), 1.0);
+            obj   = ThrustConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 1.0);
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
@@ -78,19 +78,19 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % as TakeoffConstraint -- see ThrustConstraint.m/
             % Both_WbyS_TbyW.m headers.
             state = AircraftState(0, 0.5);
-            obj   = ThrustConstraint("Toy", state, F16AeroL1(), F16PropL2(), 1.0);
+            obj   = ThrustConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 1.0);
             tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
         end
 
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.5);
-            obj   = ThrustConstraint("Toy", state, F16AeroL1(), F16PropL2(), 1.0);
+            obj   = ThrustConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 1.0);
             tc.verifyTrue(isa(obj, 'handle'));
         end
 
         function testNamePropertySet(tc)
             state = AircraftState(0, 0.5);
-            obj   = ThrustConstraint("Max Mach", state, F16AeroL1(), F16PropL2(), 1.0);
+            obj   = ThrustConstraint("Max Mach", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 1.0);
             tc.verifyEqual(obj.name, "Max Mach");
         end
 
@@ -98,7 +98,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % n and Ps default to 1.0 and 0.0 (sustained, unaccelerated flight)
             % when omitted, per the constructor's arguments block.
             state = AircraftState(0, 0.5);
-            obj   = ThrustConstraint("Toy", state, F16AeroL1(), F16PropL2(), 0.9);
+            obj   = ThrustConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 0.9);
             tc.verifyEqual(obj.n, 1.0);
             tc.verifyEqual(obj.Ps, 0.0);
         end
@@ -117,8 +117,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             %
             %   T_SL/W_TO = (beta/alpha) * { (q/(beta*WS)) *
             %                 [K1*(n*beta*WS/q)^2 + K2*(n*beta*WS/q) + CD0] + Ps/V }
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
             beta  = 0.95;
             n     = 2.0;
@@ -155,8 +155,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % TW_margin's 2nd/3rd (available/required) outputs directly,
             % rather than just its combined margin, so both underlying
             % constraint values are independently verified too.
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
             obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 2.0, 50);
 
@@ -190,8 +190,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % the required and available values behind each margin: required
             % must be identical between the two calls (same condition, same
             % WS_actual), only available should move.
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
             obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 2.0, 50);
 
@@ -216,8 +216,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % WS_actual, margin must be ~0 -- the definitional boundary
             % between feasible (>=0) and infeasible (<0). Prints/verifies
             % required and available explicitly equal one another here.
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
             obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 2.0, 50);
 
@@ -238,8 +238,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
         function testRequiredTWVectorizedOverWS(tc)
             % Constraint diagrams sweep W/S -- required_TW must vectorize
             % cleanly and stay finite over a physically reasonable range.
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             obj   = ThrustConstraint("Toy", state, aero, prop, 0.95, 1.0, 0.0);
 
@@ -256,8 +256,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % analytic minimum at x* = sqrt(A/B). Bracket that minimum
             % (rather than guessing fixed W/S points, which may not bracket
             % it for an arbitrary condition) to confirm the "bucket" shape.
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             beta  = 0.95;
             n     = 1.0;
@@ -290,7 +290,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % since Brandt's formula and normalization differ from Mattingly
             % Eq. 2.54 (F16Baseline Sec. 11 comment).
             b     = F16Baseline();
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
             received = prop.thrust_lapse(state);
             expected = b.constraints.dash.alpha_AB;   % 0.5770 [Brandt Consts AT23]
@@ -301,7 +301,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 
         function testF16MaxMachDragPolarK2ZeroSupersonic(tc)
             b     = F16Baseline();
-            aero  = F16AeroL3();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
             polar = aero.drag_polar(state);
             fprintf('\n    Max Mach polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
@@ -322,7 +322,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % wave-drag rise. L3 now reads CLOSE to Brandt (within about
             % +2.5% to +3.0% across the sweep) since F16AeroL3.compute_CD0_wave
             % was fixed to use the true whole-aircraft Amax/length (Raymer
-            % 6th ed. Eqs. 12.44-12.45, see F16AeroL3_wave_drag_fix.md) instead
+            % 6th ed. Eqs. 12.44-12.45, see F16AeroL3.md) instead
             % of a fuselage-only approximation -- "higher fidelity is more
             % accurate" now holds here, reversing the earlier state where L3
             % (fuselage-only wave drag) undershot even L1's flat estimate.
@@ -377,8 +377,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % expected to differ from Brandt's flight-calibrated polar (see
             % subplans/06_constraint_analysis.md, "Tests" section note).
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
             obj   = ThrustConstraint("Max Mach", state, aero, prop, 0.8997, 1.0, 0.0);
 
@@ -404,7 +404,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % the Max Alt condition should be in the neighborhood of Brandt's
             % alpha_AB -- same AbsTol as the Max Mach/Cruise alpha checks.
             b     = F16Baseline();
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
             received = prop.thrust_lapse(state);
             expected = b.constraints.max_alt.alpha_AB;   % 0.17029 [Brandt Consts AT25]
@@ -415,7 +415,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 
         function testF16MaxAltDragPolarSubsonic(tc)
             b     = F16Baseline();
-            aero  = F16AeroL3();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
             polar = aero.drag_polar(state);
             fprintf('\n    Max Alt polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
@@ -476,8 +476,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Cruise).
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
             obj   = ThrustConstraint("Max Alt", state, aero, prop, 0.8997, 1.0, 0.0);
 
@@ -505,7 +505,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Brandt's alpha_AB -- same AbsTol as the Max Mach/Max Alt/Cruise
             % alpha checks.
             b     = F16Baseline();
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
             received = prop.thrust_lapse(state);
             expected = b.constraints.combat_sub.alpha_AB;   % 0.681777 [Brandt Consts AT26]
@@ -516,7 +516,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 
         function testF16CombatSubDragPolarSubsonic(tc)
             b     = F16Baseline();
-            aero  = F16AeroL3();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
             polar = aero.drag_polar(state);
             fprintf('\n    Combat Turn 1 polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
@@ -580,8 +580,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
             obj   = ThrustConstraint("Combat Turn 1", state, aero, prop, 0.8997, b.constraints.combat_sub.n, 0.0);
 
@@ -605,7 +605,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % the Combat Turn 2 condition should be in the neighborhood of
             % Brandt's alpha_AB -- same AbsTol as the other AB conditions.
             b     = F16Baseline();
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
             received = prop.thrust_lapse(state);
             expected = b.constraints.combat_sup.alpha_AB;   % 0.556558 [Brandt Consts AT27]
@@ -621,7 +621,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % reference, not asserted against, per this framework's own
             % linearized-theory K2=0 supersonic assumption (AeroL1.K2_value).
             b     = F16Baseline();
-            aero  = F16AeroL3();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
             polar = aero.drag_polar(state);
             fprintf('\n    Combat Turn 2 polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
@@ -642,7 +642,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % L3 now reads much closer (~8.4-8.9% low across the sweep) since
             % compute_CD0_wave was fixed to use the true whole-aircraft
             % Amax/length instead of a fuselage-only approximation (see
-            % F16AeroL3_wave_drag_fix.md) -- textbook CD0/K1 buildup vs.
+            % F16AeroL3.md) -- textbook CD0/K1 buildup vs.
             % Brandt's flight-calibrated polar accounts for the remainder.
             % Which F16Baseline() table this prints against ("original" or
             % "corrected" -- see F16Baseline.m section 11b; Combat Turn 2 is
@@ -689,8 +689,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
             obj   = ThrustConstraint("Combat Turn 2", state, aero, prop, 0.8997, b.constraints.combat_sup.n, 0.0);
 
@@ -730,7 +730,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Max Mach alpha check; the paired implementation agent's sanity
             % check found this lands ~0.032 absolute off, well inside it.
             b     = F16Baseline();
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
             received = prop.thrust_lapse_mil_on_AB_scale(state);
             expected = b.constraints.cruise.alpha_mil_T_AB;   % 0.171083 [Brandt Consts AU24]
@@ -742,7 +742,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 
         function testF16CruiseDragPolarSubsonic(tc)
             b     = F16Baseline();
-            aero  = F16AeroL3();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
             polar = aero.drag_polar(state);
             fprintf('\n    Cruise polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
@@ -812,8 +812,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % powerSetting="mil" (see this section's header comment) so it's
             % now much closer than before this fix.
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
             obj   = ThrustConstraint("Cruise", state, aero, prop, 0.8997, 1.0, 0.0, "mil");
 
@@ -842,7 +842,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % the Ps condition should be in the neighborhood of Brandt's
             % alpha_AB -- same AbsTol as the other AB conditions.
             b     = F16Baseline();
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
             received = prop.thrust_lapse(state);
             expected = b.constraints.ps.alpha_AB;   % 0.853550 [Brandt Consts AT28]
@@ -853,7 +853,7 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
 
         function testF16PsDragPolarSubsonic(tc)
             b     = F16Baseline();
-            aero  = F16AeroL3();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
             polar = aero.drag_polar(state);
             fprintf('\n    Ps polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
@@ -915,8 +915,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
             obj   = ThrustConstraint("Excess Power", state, aero, prop, 0.8997, ...
                 b.constraints.ps.n, b.constraints.ps.Ps_fps);
@@ -937,8 +937,8 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
             % that ThrustConstraint is actually using the nonzero Ps input,
             % not silently ignoring it.
             b     = F16Baseline();
-            aero  = F16AeroL3();
-            prop  = F16PropL2();
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
             WS    = b.constraint.WS_opt;
 
@@ -963,14 +963,14 @@ classdef TestThrustConstraint < matlab.unittest.TestCase
         %   No F16PropL3 exists yet, so L3 pairs F16AeroL3 with F16PropL2.
             switch fidelityLevel
                 case 'L1'
-                    aero = F16AeroL1();
-                    prop = F16PropL1();
+                    aero = F16AeroL1(f16a_spec_path(1));
+                    prop = F16PropL1(f16a_spec_path(1));
                 case 'L2'
-                    aero = F16AeroL2();
-                    prop = F16PropL2();
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+                    prop = F16PropL2(f16a_spec_path(2));
                 case 'L3'
-                    aero = F16AeroL3();
-                    prop = F16PropL2();
+                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+                    prop = F16PropL2(f16a_spec_path(2));
                 otherwise
                     error('TestThrustConstraint:buildDisciplines:UnknownFidelity', ...
                         'Unknown fidelity level "%s".', fidelityLevel);

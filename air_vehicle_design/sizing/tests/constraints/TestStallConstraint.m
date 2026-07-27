@@ -30,7 +30,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
 
         function testIsaPointPerformanceBase(tc)
             state = AircraftState(0, 0.217466);
-            obj   = StallConstraint("Toy", state, F16AeroL1());
+            obj   = StallConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)));
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
@@ -38,19 +38,19 @@ classdef TestStallConstraint < matlab.unittest.TestCase
             % Stall belongs to the Only_WbyS category, same as
             % LandingConstraint -- see StallConstraint.m/Only_WbyS.m headers.
             state = AircraftState(0, 0.217466);
-            obj   = StallConstraint("Toy", state, F16AeroL1());
+            obj   = StallConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)));
             tc.verifyTrue(isa(obj, 'Only_WbyS'));
         end
 
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.217466);
-            obj   = StallConstraint("Toy", state, F16AeroL1());
+            obj   = StallConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)));
             tc.verifyTrue(isa(obj, 'handle'));
         end
 
         function testNamePropertySet(tc)
             state = AircraftState(0, 0.217466);
-            obj   = StallConstraint("Stall", state, F16AeroL1());
+            obj   = StallConstraint("Stall", state, F16AeroL1(f16a_spec_path(1)));
             tc.verifyEqual(obj.name, "Stall");
         end
 
@@ -61,7 +61,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
             % an F-16 discipline object as a concrete AerodynamicsBase).
             % Independently derived form of the same equation, not a copy of
             % StallConstraint's own algebra.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.3);
 
             CLmax    = aero.get_CLmax(state);
@@ -78,7 +78,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
         function testWSMaxIncreasesWithStallSpeed(tc)
             % A higher stall-speed requirement (higher Mach, same altitude)
             % permits a higher wing loading -- more dynamic pressure at CLmax.
-            aero = F16AeroL1();
+            aero = F16AeroL1(f16a_spec_path(1));
 
             obj_slow = StallConstraint("Slow", AircraftState(0, 0.15), aero);
             obj_fast = StallConstraint("Fast", AircraftState(0, 0.30), aero);
@@ -99,7 +99,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
             % (available/required) outputs directly so both underlying
             % constraint values are independently verified, not just their
             % combined margin.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.3);
             obj   = StallConstraint("Toy", state, aero);
 
@@ -127,7 +127,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
         % --- Vertical-wall required_TW encoding -----------------------------
 
         function testRequiredTWZeroAtOrBelowLimit(tc)
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.217466);
             obj   = StallConstraint("Toy", state, aero);
             WS_limit = obj.WS_max();
@@ -137,7 +137,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
         end
 
         function testRequiredTWInfAboveLimit(tc)
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.217466);
             obj   = StallConstraint("Toy", state, aero);
             WS_limit = obj.WS_max();
@@ -149,7 +149,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
         function testRequiredTWVectorizedOverWS(tc)
             % Constraint diagrams sweep W/S -- required_TW must vectorize
             % cleanly, staying finite below the limit and Inf above it.
-            aero  = F16AeroL1();
+            aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.217466);
             obj   = StallConstraint("Toy", state, aero);
             WS_limit = obj.WS_max();
@@ -193,11 +193,11 @@ classdef TestStallConstraint < matlab.unittest.TestCase
         %BUILDAERO  F-16 aerodynamics discipline object for a fidelity level.
             switch fidelityLevel
                 case 'L1'
-                    aero = F16AeroL1();
+                    aero = F16AeroL1(f16a_spec_path(1));
                 case 'L2'
-                    aero = F16AeroL2();
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
                 case 'L3'
-                    aero = F16AeroL3();
+                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
                 otherwise
                     error('TestStallConstraint:buildAero:UnknownFidelity', ...
                         'Unknown fidelity level "%s".', fidelityLevel);

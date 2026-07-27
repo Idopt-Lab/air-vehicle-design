@@ -1,30 +1,32 @@
 classdef (Abstract) WeightsModelL1 < WeightsBase
-%WEIGHTSMODELL1  Tier-2a abstract enforcer for Level-1 weight estimation.
+%WEIGHTSMODELL1  Tier-2 abstract enforcer for Level-1 weights.
 %
-%   Inherits WeightsBase directly (NOT WeightsModelL2 or L3 — each fidelity
-%   enforcer independently satisfies the Tier-1 contract).
+%   Inherits WeightsBase directly, not another WeightsModelLN.
 %
-%   Level-1 methods (both are statistical regressions):
-%     (1) Raymer Table 3.1 power-law:  We/Wto = Kvs × A × W_TO^C
-%         Central estimate.  A, C, Kvs from aircraft-category lookup.
-%     (2) Roskam Eq. 2.16 log-log:     log10(W_E) = (log10(W_TO) − A) / B
-%         Minimum achievable W_E for that class — a lower bound, not a central
-%         estimate.  Compare with (1) to gauge design margin.
+%   L1 is a statistical empty-weight fraction: a power law in W_TO with an
+%   independent regression as a lower bound. No geometry, no engine data, so a
+%   concrete L1 class injects nothing.
 %
-%   Inheritance: WeightsBase → WeightsModelL1 → F16WeightsL1
+%   No DERIVED properties are declared. OEW is a method taking W_TO, and at
+%   this tier the whole model is one closed-form evaluation, so there is
+%   nothing to recompute on read.
+%
+%   Toolbox companion: src/disciplines/weights/WeightsL1.md
+
+    properties (Abstract)
+        aircraft_category   % string; selects the coefficient rows
+    end
 
     methods (Abstract)
 
-        %COMPUTE_WE_FRACTION  OEW/Wto fraction via Raymer Table 3.1 power law.
-        %   W_TO             — candidate gross weight [lbf].
-        %   aircraft_category — optional string (e.g. 'jet_fighter').
-        %                       Defaults to obj.aircraft_category when omitted.
-        %   Returns dimensionless fraction We/Wto ∈ (0, 1).
+        %COMPUTE_WE_FRACTION  OEW/W_TO fraction.  [Raymer 7th ed. Table 3.1]
+        %   aircraft_category is optional; defaults to obj.aircraft_category.
         OEW_frac = compute_We_fraction(obj, W_TO, aircraft_category)
 
-        %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf] via Roskam Eq. 2.16.
-        %   W_TO — candidate gross weight [lbf].
-        %   Returns minimum W_E [lbf].  Lower bound — actual OEW ≥ this value.
+        %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].
+        %   [Roskam Part I Eq. 2.16 with Table 2.15]
+        %   A LOWER BOUND: an actual OEW should exceed it, and it must never be
+        %   reported as an OEW estimate.
         W_E = compute_We_roskam(obj, W_TO)
 
     end

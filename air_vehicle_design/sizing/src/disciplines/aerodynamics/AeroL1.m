@@ -1,221 +1,154 @@
 classdef AeroL1
-%AEROL1  Level-1 aerodynamics static toolbox.
+%AEROL1  Level-1 aerodynamics static toolbox: aircraft type only, no geometry.
 %
-%   Call as AeroL1.method_name(args) — no instantiation required.
-%   Not in the inheritance chain.  Student classes (F16AeroL1, etc.) inherit
-%   from AeroModelL1 and call these statics to implement each abstract method.
+%   Call as AeroL1.method(...); never instantiated, not in the inheritance
+%   chain. F16AeroL1 inherits AeroModelL1 and delegates to these statics.
 %
-%   TWO TIERS of statics:
-%     High-level  — take the student object (obj) and return a computed result.
-%                   Student implementations are a single delegation line.
-%     Low-level   — pure math; take only scalars/arrays.  AeroL2/L3 also call
-%                   these for the shared K1/K2 equations.
+%   Two tiers: high-level statics take the concrete object; low-level statics
+%   take only scalars and arrays.
 %
-%   EQUATIONS:
-%     CD0 = Cf * (S_wet / S_ref)
-%       Raymer, "Aircraft Design: A Conceptual Approach," 6th ed., §12.3
-%     e_osw (Λ_LE < 30°):  1.78*(1-0.045*AR^0.68) - 0.64       Eq. 12.48
-%     e_osw (Λ_LE ≥ 30°):  4.61*(1-0.045*AR^0.68)*cos(Λ)^0.15 - 3.1  Eq. 12.49
-%     K1 subsonic:   1/(pi*AR*e)                                 Eq. 12.50
-%     K1 supersonic: AR*(M^2-1)*cos(Λ_LE)/(4*AR*beta - 2)       Eq. 12.51
-%                    where beta = sqrt(M^2-1)
-%     K2 subsonic:   -2*K1_sub*CL_minD                          Brandt §4.3
-%     K2 supersonic: 0
-%     LD_max = K_LD * sqrt(AR_wet)                              Raymer Eq. 3.12
-%     AR_wet = b^2 / S_wet                                      Raymer Eq. 3.11
+%   Drag polar: [Mattingly 2nd ed. Eq. 2.9], with CD0(M) and K1(M) interpolated
+%   from the fighter "Current" type-curves [Mattingly 2nd ed. Fig. 2.10, 2.11]
+%   and K2 = 0 for an uncambered fighter [Mattingly 2nd ed. Sec. 2.3.1].
+%   CLmax and the high-lift increments: [Roskam Vol. I Table 3.1, Table 3.6].
+%
+%   TODO: Mattingly Fig. 2.10/2.11 are not in this repo. The curve blocks in
+%   f16a_L1.json are seeded from 5 AAF worked-example points and marked
+%   _placeholder. Guarded by TestAeroL1.testTODO_MattinglyCurvesArePlaceholder.
+%
+%   Companion doc: src/disciplines/aerodynamics/AeroL1.md
 
-% These are tables for tabulations.
+% Type-based tables (no geometry): Roskam CLmax by category and the
+% high-lift-device Delta_CD0 / e-osw table. Consumed by F16AeroL1's
+% CLmax and HLD-delta methods.
      properties (Constant)
-          CLmax_table = AeroL1.build_CLmax_table()    % Useful for designs with and without high-lift devices
-          Delta_CD0   = AeroL1.build_DeltaCD0_table() % For designs with high-lift devices
+          CLmax_table = AeroL1.build_CLmax_table()    % Roskam Vol. I Table 3.1 (clean/TO/landing CLmax by type)
+          Delta_CD0   = AeroL1.build_DeltaCD0_table() % Roskam Vol. I Table 3.6 (Delta_CD0/e by flap+gear config)
      end
 
     methods (Static)
 
         % ================================================================== %
         % HIGH-LEVEL: take the student object, return the result.
-        % Student implementations delegate with one line, e.g.:
-        %   function polar = drag_polar(obj, state)
-        %       polar = AeroL1.drag_polar(obj, state);
-        %   end
         % ================================================================== %
 
         function polar = drag_polar(obj, state)
-        %DRAG_POLAR  Assemble L1 drag polar from the student object's properties.
-        %   Returns struct(CD0, K1, K2).
-            M      = state.mach;
-            cd0    = AeroL1.get_CD0(obj);
-            e      = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
-            k1_sub = AeroL1.K1_subsonic(e, obj.AR);
-            k2     = AeroL1.K2_value(k1_sub, obj.CL_minD, M);
-            if M < 1
-                k1 = k1_sub;
-            else
-                k1 = AeroL1.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
-            end
-            polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
+        %DRAG_POLAR  Assemble the Mattingly type-curve drag polar.
+        %   Returns struct(CD0, K1, K2). CD0(M)/K1(M) are interpolated from the
+        %   student object's Mattingly Fig. 2.10/2.11 "Current" curve tables;
+        %   K2 = 0 for the fighter/uncambered type.  Mattingly AED Eq. 2.9.
+            polar = AeroL1.mattingly_polar(obj.cd0_curve_mach, obj.cd0_curve_value, ...
+                                           obj.k1_curve_mach,  obj.k1_curve_value, ...
+                                           state.mach, obj.design_type);
         end
 
         function CLmax = get_CLmax(obj)
-        %GET_CLMAX  Historical CLmax from aircraft-type lookup.
-            CLmax = AeroL1.lookup_CLmax(obj.aircraft_category);
-        end
-
-        function e = get_e_osw(obj)
-        %GET_E_OSW  Oswald efficiency from obj.AR and obj.Lambda_LE_deg.
-            e = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
-        end
-
-        function val = get_CD0(obj)
-        %GET_CD0  CD0 = Cf * S_wet / S_ref.
-            val = AeroL1.CD0_from_Cf(AeroL1.lookup_Cf(obj.aircraft_category), ...
-                                     obj.S_wet, obj.S_ref);
-        end
-
-        function val = get_K1(obj, M)
-        %GET_K1  Induced-drag factor; subsonic or supersonic form.
-            e = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
-            if M < 1
-                val = AeroL1.K1_subsonic(e, obj.AR);
-            else
-                val = AeroL1.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
-            end
-        end
-
-        function val = get_K2(obj, K1_sub, M)
-        %GET_K2  Polar-offset term; zero at M >= 1.
-            val = AeroL1.K2_value(K1_sub, obj.CL_minD, M);
-        end
-
-        function val = compute_K(e_osw, AR)
-        %COMPUTE_K  Subsonic induced-drag factor K = 1/(pi*e_osw*AR).
-            val = AeroL1.K1_subsonic(e_osw, AR);
-        end
-
-        function val = compute_LD_max(K_LD, AR_wet)
-        %COMPUTE_LD_MAX  Statistical LD_max = K_LD * sqrt(AR_wet).  Raymer Eq. 3.12.
-            val = K_LD * sqrt(AR_wet);
-        end
-
-        function val = compute_AR_wet(b, S_wet)
-        %COMPUTE_AR_WET  Wetted aspect ratio AR_wet = b^2 / S_wet.  Raymer Eq. 3.11.
-            val = b^2 / S_wet;
-        end
-
-        function val = compute_CL_minD(airfoil_type, CL_min)
-        %COMPUTE_CL_MIND  CL at minimum drag.
-        %   Cambered: caller supplies CL_min.  Uncambered/symmetric: 0.
-            if strcmp(airfoil_type, 'cambered')
-                val = CL_min;
-            else
-                val = 0;
-            end
+            CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_category, "CL_max_clean");
         end
 
         % ================================================================== %
-        % LOW-LEVEL: pure math — scalars/arrays only, no object access.
-        % AeroL2/L3 and student classes may call these directly.
+        % LOW-LEVEL: pure math -- scalars/arrays only, no object access.
         % ================================================================== %
 
-        function e = oswald_eff(AR, Lambda_LE_deg)
-        %OSWALD_EFF  Raymer 6th ed. Eq. 12.48 (Λ < 30°) or Eq. 12.49 (Λ ≥ 30°).
-        % TODO: Consider moving to AeroL2 since it takes wing geometry (AR,
-        % Lambda_LE_deg) rather than just an aircraft category. Kept here because
-        % it is called by AeroL1, AeroL2, and AeroL3 drag_polar paths.
-            if Lambda_LE_deg < 30
-                e = 1.78 * (1 - 0.045 * AR^0.68) - 0.64;
-            else
-                e = 4.61 * (1 - 0.045 * AR^0.68) * cosd(Lambda_LE_deg)^0.15 - 3.1;
+        function polar = mattingly_polar(cd0_mach, cd0_value, k1_mach, k1_value, M, design_type)
+        %MATTINGLY_POLAR  {CD0(M), K1(M), K2} from the Mattingly Fig. 2.10/2.11
+        %   curves.  Mattingly AED 2nd ed. Eq. 2.9 (fighter K2=0, Sec. 2.3.1).
+        %   cd0_mach/cd0_value, k1_mach/k1_value -- the "Current" curve (mach,
+        %   value) breakpoint vectors. M -- flight Mach. design_type -- airfoil
+        %   camber class ("uncambered" -> K2=0).
+            cd0 = AeroL1.interp_curve(cd0_mach, cd0_value, M);
+            k1  = AeroL1.interp_curve(k1_mach,  k1_value,  M);
+            k2  = AeroL1.mattingly_K2(design_type);
+            polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
+        end
+
+        function v = interp_curve(mach_pts, val_pts, M)
+            arguments
+                mach_pts (1,:) double {mustBeReal}
+                val_pts  (1,:) double {mustBeReal}
+                M        (1,1) double {mustBeReal}
+            end
+            if numel(mach_pts) ~= numel(val_pts)
+                error('AeroL1:curveLengthMismatch', ...
+                    'mach_pts has %d elements but val_pts has %d.', ...
+                    numel(mach_pts), numel(val_pts));
+            end
+            if numel(mach_pts) < 2
+                error('AeroL1:curveTooShort', ...
+                    'A value-vs-Mach curve needs at least 2 breakpoints (got %d).', ...
+                    numel(mach_pts));
+            end
+            if any(diff(mach_pts) <= 0)
+                error('AeroL1:curveNotAscending', ...
+                    ['Curve Mach breakpoints must be strictly ascending (got %s). ', ...
+                     'interp_curve clamps to the first/last element as the range ', ...
+                     'bounds, so an unsorted or duplicated vector clamps wrongly ', ...
+                     'or returns NaN.'], mat2str(mach_pts));
+            end
+            Mc = min(max(M, mach_pts(1)), mach_pts(end));
+            v  = interp1(mach_pts, val_pts, Mc, 'linear');
+        end
+
+        function K2 = mattingly_K2(design_type)
+            switch string(design_type)
+                case "uncambered"
+                    K2 = 0;
+                otherwise
+                    error('AeroL1:unsupportedDesignType', ...
+                        ['L1 Mattingly type-curve K2 is only defined for the ' ...
+                         'uncambered (fighter) type (K2=0, Mattingly Sec. 2.3.1). ' ...
+                         'design_type="%s" needs a cambered-type K2=-2*K''''*CL_min ' ...
+                         'curve fit that is not yet in the repo (TODO).'], design_type);
             end
         end
 
-        function K1 = K1_subsonic(e_osw, AR)
-        %K1_SUBSONIC  K1 = 1/(pi*AR*e)  [Raymer 6th ed. Eq. 12.50].
-            K1 = 1 / (pi * AR * e_osw);
-        end
-
-        function K1 = K1_supersonic(M, AR, Lambda_LE_deg)
-        %K1_SUPERSONIC  Linearized supersonic K1  [Raymer 6th ed. Eq. 12.51].
-        %   Valid for M > 1.
-            if M <= 1
-                error('AeroL1:subsonicMach', ...
-                    'K1_supersonic called with M=%.3f; use K1_subsonic for M<1.', M);
+        function rowName = to_CLmax_table_row(aircraft_category)
+            arguments
+                aircraft_category (1,1) string
             end
-            beta = sqrt(M^2 - 1);
-            K1   = AR * (M^2 - 1) * cosd(Lambda_LE_deg) / (4 * AR * beta - 2);
-        end
-
-        function K2 = K2_value(K1_sub, CL_minD, M)
-        %K2_VALUE  Polar-offset term.
-        %   K2 = -2*K1_sub*CL_minD  (subsonic)   [Brandt et al. §4.3]
-        %   K2 = 0                  (M >= 1)
-            if M >= 1
-                K2 = 0;
-            else
-                K2 = -2 * K1_sub * CL_minD;
-            end
-        end
-
-        function CD0 = CD0_from_Cf(Cf, S_wet, S_ref)
-        %CD0_FROM_CF  CD0 = Cf * S_wet / S_ref  [Raymer 6th ed. §12.3].
-            CD0 = Cf * S_wet / S_ref;
-        end
-
-        function Cf = lookup_Cf(aircraft_category)
-        %LOOKUP_CF  Type-based wetted-area friction coefficient.
-        %   Source: Raymer 6th ed. Table 12.3.
             switch aircraft_category
-                case 'jet_fighter',    Cf = 0.0035;
-                case 'military_cargo', Cf = 0.0035;
-                case 'transport_jet',  Cf = 0.0030;
-                case 'business_jet',   Cf = 0.0030;
-                case 'general_aviation_single', Cf = 0.0055;
-                case 'general_aviation_twin',   Cf = 0.0045;
-                case 'sailplane',               Cf = 0.0020;
+                case {"jet_fighter", "fighter"}
+                    rowName = "fighter";          % Roskam Vol. I Table 3.1's own name
+                otherwise
+                    rowName = aircraft_category;  % pass through; the caller validates
+            end
+        end
+
+        function CLmax = roskam_CLmax_value(aircraft_category, column)
+            arguments
+                aircraft_category (1,1) string
+                column            (1,1) string {mustBeMember(column, ["CL_max_clean","CL_max_TO","CL_max_L"])}
+            end
+            T   = AeroL1.CLmax_table;
+            row = T(T.AircraftType == AeroL1.to_CLmax_table_row(aircraft_category), :);
+            if isempty(row)
+                error('AeroL1:unknownAircraftType', ...
+                    ['Unknown aircraft_category "%s" for Roskam Table 3.1 (no row "%s"). ', ...
+                     'Known rows: %s.'], aircraft_category, ...
+                     AeroL1.to_CLmax_table_row(aircraft_category), ...
+                     strjoin(cellstr(T.AircraftType), ', '));
+            end
+            CLmax = mean(row.(column){1});
+        end
+
+        function CLmax = lookup_CLmax(aircraft_type)
+            switch string(aircraft_type)
+                case {"fighter", "jet_fighter"}, CLmax = 0.90;
+                case "military_cargo",           CLmax = 1.20;
+                case "transport_jet",            CLmax = 1.30;
+                case "business_jet",             CLmax = 1.10;
+                case "general_aviation_single",  CLmax = 1.30;
+                case "general_aviation_twin",    CLmax = 1.20;
+                case "sailplane",                CLmax = 1.40;
                 otherwise
                     error('AeroL1:unknownCategory', ...
-                        'Unknown aircraft_category "%s". Add it to AeroL1.lookup_Cf.', ...
-                        aircraft_category);
-            end
-        end
-
-        function CLmax = lookup_CLmax(aircraft_category)
-        %LOOKUP_CLMAX  Clean CLmax by aircraft type (historical, no HLD).
-        %   Source: Roskam, "Airplane Design Vol. I," Table 3.3.
-            switch aircraft_category
-                case 'jet_fighter',    CLmax = 0.90;
-                case 'military_cargo', CLmax = 1.20;
-                case 'transport_jet',  CLmax = 1.30;
-                case 'business_jet',   CLmax = 1.10;
-                case 'general_aviation_single', CLmax = 1.30;
-                case 'general_aviation_twin',   CLmax = 1.20;
-                case 'sailplane',               CLmax = 1.40;
-                otherwise
-                    error('AeroL1:unknownCategory', ...
-                        'Unknown aircraft_category "%s". Add it to AeroL1.lookup_CLmax.', ...
-                        aircraft_category);
-            end
-        end
-
-        function val = lookup_K_LD(aircraft_category)
-        %LOOKUP_K_LD  K_LD factor for statistical LD_max estimate.
-        %   LD_max = K_LD * sqrt(AR_wet)  [Raymer 6th ed. p. 40, Eq. 3.12].
-            switch aircraft_category
-                case 'jet_fighter',    val = 14;
-                case 'military_cargo', val = 13;
-                case 'transport_jet',  val = 15.5;
-                case 'business_jet',   val = 15.5;
-                case 'general_aviation_single', val = 11;
-                case 'general_aviation_twin',   val = 11;
-                case 'sailplane',               val = 15;
-                otherwise
-                    error('AeroL1:unknownCategory', ...
-                        'Unknown aircraft_category "%s". Add it to AeroL1.lookup_K_LD.', ...
-                        aircraft_category);
+                        'Unknown aircraft_type "%s". Add it to AeroL1.lookup_CLmax.', ...
+                        aircraft_type);
             end
         end
 
     end
+
 methods (Static, Access = private)
 
           function quantity = normalize_DeltaCD0_quantity(quantity)

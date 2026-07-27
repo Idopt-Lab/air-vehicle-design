@@ -1,480 +1,483 @@
 classdef TestAeroL3 < matlab.unittest.TestCase
-     %TESTAERO L3  Unit tests for AeroL3 toolbox and F16AeroL3 student class.
-     %
-     %   Formula references:
-     %     Re  = rho*V*l/mu                               Raymer Eq. 12.25
-     %     mu  = Sutherland's law (English units)          Raymer §12.3.1
-     %     Cf_lam  = 1.328/sqrt(Re)                        Raymer Eq. 12.26
-     %     Cf_turb = 0.455/(log10(Re)^2.58*(1+0.144*M^2)^0.65)  Raymer Eq. 12.27
-     %     FF_surf = (1+0.6/xmax*tc+100*tc^4)*(1.34*M^0.18*cos(Lm)^0.28)   Eq. 12.30
-     %     FF_body = 1+5/f^1.5+f/400 (f<=6) or 1+60/f^3+f/400 (f>6)
-     %               f=L/D                                Raymer Eq. 12.31
-     %     CD_wave = E_WD*[1-0.386*(M-1.2)^0.57*(1-(pi*Lambda_LE^0.77)/100)]
-     %               *(9*pi/2)*(A_max/l)^2/S_ref  (M>=1.2)  Raymer Eqs. 12.44-12.45
-     %               -- F-16-specific (F16AeroL3.compute_CD0_wave), not a
-     %               generic AeroL3 toolbox method; A_max/l are WHOLE-AIRCRAFT
-     %               values (Amax_ft2=25.110556 ft^2, L_aircraft_ft=48.304 ft,
-     %               net of engine flow-through area, [Brandt Geom!B20/H47/B21]),
-     %               not fuselage-component-only -- see below and
-     %               F16AeroL3_wave_drag_fix.md.
-     %
-     %   Pre-computed values used as expected results:
-     %
-     %   SUTHERLAND at T=518.67 R (sea level):
-     %     mu = 3.737e-7 * 1 * (518.67+198.6)/(518.67+198.6) = 3.737e-7 slug/(ft·s)
-     %
-     %   CF_LAM at Re=1e6: 1.328/sqrt(1e6) = 1.328/1000 = 0.001328
-     %   CF_TURB at Re=1e7, M=0.5:
-     %     Cf = 0.455 / (log10(1e7)^2.58 * (1+0.144*0.25)^0.65)
-     %        = 0.455 / (7^2.58 * 1.036^0.65)
-     %        = 0.455 / (7^2.58 * 1.023)
-     %     7^2.58 = exp(2.58*ln7) = exp(2.58*1.9459) = exp(5.020) = 151.4
-     %     Cf = 0.455 / (151.4*1.023) = 0.455/154.9 = 0.002937
-     %
-     %   FF_SURFACE: tc=0.04, x_c_max=0.40, Lambda_m=35 deg, M=0.5
-     %     = (1+0.6/0.40*0.04+100*0.04^4)*(1.34*0.5^0.18*cos(35)^0.28)
-     %     = (1+0.060+2.56e-4)*1.34*0.8827*0.9458
-     %     = 1.0603 * 1.119 = 1.1864
-     %
-     %   FF_BODY: L=47.5 ft, D=5.0 ft, f=9.5 (>6 -> 60/f^3 form)
-     %     = 1 + 60/9.5^3 + 9.5/400
-     %   FF_BODY: F-16 duct, L=14.0 ft, D=3.15 ft, f=4.444 (<=6 -> 5/f^1.5 form)
-     %     = 1 + 5/4.444^1.5 + 4.444/400
-     %
-     %   PHYSICAL TOLERANCE vs Raymer Fig 12.32 reported F-16 CD0:
-     %     M=0.5: ~0.020;  M=1.2: ~0.035;  M=1.5: ~0.047
-     %     Tests use ±40% tolerance — L3 component model omits many real-world
-     %     drag items (gaps, fillets, antenna protuberances, etc.).
+%TESTAEROL3  Tier-1 unit/correctness tests for the AeroL3 toolbox + F16AeroL3.
+%
+%   L3 is the Raymer Eq. 12.24 component drag build-up plus the F16's own
+%   supersonic wave-drag term (Eqs. 12.44/12.45, M>=1.2):
+%     CD0 = [sum_c (Cf_c*FF_c*Q_c*S_wet_c)]/S_ref + CD0_misc + CD0_LandP
+%       Cf_lam  = 1.328/sqrt(Re)                        Eq. 12.26
+%       Cf_turb = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Eq. 12.27
+%       Re_cut  = 38.21*(l/k)^1.053 (sub) / 44.62*(l/k)^1.053*M^1.16 (sup)  Eq. 12.28/29
+%       FF_surf = (1+0.6/x*tc+100*tc^4)*(1.34*M^0.18*cos(Lm)^0.28)  Eq. 12.30
+%       FF_body = 1+5/f^1.5+f/400 (f<=6) or 1+60/f^3+f/400 (f>6)     Eq. 12.31
+%     CD_wave = E_WD*[1-0.386*(M-1.2)^0.57*(1-(pi*L_LE^0.77)/100)]
+%               *(9*pi/2)*(A_max/l)^2/S_ref   (M>=1.2)   Eqs. 12.44/12.45
+%       (F16-specific F16AeroL3.compute_CD0_wave; A_max/l are WHOLE-AIRCRAFT
+%        inputs, not the fuselage component)
+%     K1/K2/CLmax as at L2. Transonic band (0.95<M<1.05) NOT modeled -> NaN.
+%
+%   The shared skin-friction primitives (dyn_viscosity, Cf_turbulent) live in
+%   the AeroL2 toolbox (single source of truth); the AeroL3 buildup calls them.
+%   Tests reference them at their real home (AeroL2.*) -- the old tests that
+%   called AeroL3.dyn_viscosity / AeroL3.Cf_turbulent are updated accordingly.
+%
+%   Every "expected" is HAND-COMPUTED from the cited formula with independent
+%   inputs and the arithmetic shown inline (RelTol 1e-4). No Brandt-comparison
+%   assertions -- those live in the separate aerodynamics_brandt_comparison.m
+%   report.
+%
+%   NOTE ON DELETED TESTS (do not re-add): testPopulateHLDDeltasFillsProperties
+%   called g.populate_HLD_deltas / Delta_CD0_TO_flap -- neither the method nor
+%   those properties exist on the rewritten F16AeroL3 (removed). The Brandt
+%   actual-polar comparison (testDragPolarVsBrandtActualAtDash) and Brandt
+%   Mach-point / constraint-condition comparisons moved to the report.
+%
+%   testTODO_* are DELIBERATELY-FAILING placeholders for citations still marked
+%   _TODO in f16a_L3.json's .aerodynamics (the only expected run_all_tests failures).
 
-     properties (Constant)
-          TOL_ABS  = 1e-6
-          TOL_PCT  = 0.40    % ±40% physical tolerance vs Raymer Fig 12.32
-     end
+    methods (Static, Access = private)
+        function a = makeAero()
+        %MAKEAERO  A fresh F16AeroL3 with an injected F16GeomL2: aero constants
+        %   from the unified L3 JSON, geometry from the unified L2 JSON.
+        %   Constructors require explicit paths -- no defaults.
+        %
+        %   GEOMETRY TIER, deliberate (2026-07-25): Phase 2 promoted GeomL3 to a
+        %   full L3 geometry tier, so an F16GeomL3 is now injectable here too
+        %   (testGeometryInjectionRejectsWrongTierAtConstruction proves it).
+        %   These tests keep the L2 geometry on purpose: every expected value in
+        %   this file is hand-computed either from a bare AeroL2/AeroL3 static
+        %   (geometry-independent) or from the L2 wing/fuselage envelope, and
+        %   the file's job is the AeroL3 FORMULAS, not the L3 planform. Switching
+        %   the injected tier is a comparison-report concern (the aerodynamics comparison report),
+        %   not a unit-test one.
+        %   PHASE-2 CONSTRUCTOR CHANGE: F16GeomL2 takes a REQUIRED injected
+        %   propulsion object -- the nacelle diameter is sqrt(T_AB_SLS/1900),
+        %   engine data rather than airframe data.
+            a = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                          f16a_spec_path(3));
+        end
+        function J = readAeroL3JSON()
+        %READAEROL3JSON  The .aerodynamics block of the unified L3 JSON.
+            J = jsondecode(fileread(f16a_spec_path(3))).aerodynamics;
+        end
+    end
 
-     % Brandt "Aero" A6:E10 tabulates the model polar at 5 Mach points
-     % (b.brandt.polar_model rows): M = 0.1000, 0.8727(=Mcrit), 1.0547,
-     % 1.5000, 2.0000. Tests below that compare against Brandt values use
-     % these same rows/Mach numbers rather than arbitrary points.
-     properties (TestParameter)
-          brandtRow      = {1, 2, 3, 4, 5};
-          constraintName = {'cruise', 'combat_sub', 'dash', 'max_alt', 'combat_sup', 'ps'};
-     end
+    methods (Test)
 
-     % ------------------------------------------------------------------ %
-     methods (Test)
+        % ================================================================== %
+        % Skin-friction primitives (shared, homed in AeroL2; Cf_lam in AeroL3)
+        % ================================================================== %
 
-          % --- Sutherland viscosity ----------------------------------------
+        function testViscosityAtSeaLevel(tc)
+            % Sutherland (English): at T = T_ref = 518.67 R the two ratio terms
+            % are exactly 1, so mu = mu_ref = 3.737e-7 slug/(ft*s).
+            tc.verifyEqual(AeroL2.dyn_viscosity(518.67), 3.737e-7, 'AbsTol', 1e-12);
+        end
 
-          function testViscosityAtSL(tc)
-               % At T=518.67 R (ISA sea level), mu = 3.737e-7 slug/(ft·s).
-               expected = 3.737e-7;
-               received = AeroL3.dyn_viscosity(518.67);
-               fprintf('\n    mu at SL: received = %.4e,  expected = %.4e slug/(ft·s)\n', ...
-                    received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', 1e-10, ...
-                    'Sutherland mu at SL should equal mu_ref (T=T_ref).');
-          end
+        function testViscosityIncreasesWithTemperature(tc)
+            % Sutherland: mu rises with temperature for a gas.
+            tc.verifyGreaterThan(AeroL2.dyn_viscosity(700), AeroL2.dyn_viscosity(400));
+        end
 
-          function testViscosityIncreasesWithTemp(tc)
-               % Sutherland: mu increases with temperature for gases.
-               mu_cold = AeroL3.dyn_viscosity(400);    % below std day
-               mu_hot  = AeroL3.dyn_viscosity(700);    % above std day
-               fprintf('\n    mu(400R)=%.3e  mu(700R)=%.3e  (mu should increase)\n', mu_cold, mu_hot);
-               tc.verifyGreaterThan(mu_hot, mu_cold);
-          end
+        function testCfLaminarFormula(tc)
+            % Cf_lam = 1.328/sqrt(Re). Re=1e6 -> 1.328/1000 = 0.001328.
+            tc.verifyEqual(AeroL3.Cf_laminar(1e6), 0.001328, 'RelTol', 1e-4);
+        end
 
-          % --- Cf formulas -------------------------------------------------
+        function testCfTurbulentFormula(tc)
+            % Eq. 12.27: Cf = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65].
+            % Independent Re=1e7, M=0.5:
+            %   log10(1e7) = 7 ; 7^2.58 = 151.4056
+            %   1+0.144*0.25 = 1.036 ; 1.036^0.65 = 1.0233346
+            %   Cf = 0.455/(151.4056*1.0233346) = 0.455/154.9391 = 0.0029354
+            tc.verifyEqual(AeroL2.Cf_turbulent(1e7, 0.5), 0.0029354495, 'RelTol', 1e-4);
+        end
 
-          function testCfLaminar(tc)
-               % Cf_lam = 1.328/sqrt(1e6) = 0.001328
-               expected = 1.328 / sqrt(1e6);   % = 0.001328  (Blasius formula is the primary source)
-               received = AeroL3.Cf_laminar(1e6);
-               fprintf('\n    Cf_lam (Re=1e6): received = %.6f,  expected = %.6f\n', ...
-                    received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ABS);
-          end
+        function testCfTurbGreaterThanLaminar(tc)
+            tc.verifyGreaterThan(AeroL2.Cf_turbulent(1e7, 0.3), AeroL3.Cf_laminar(1e7));
+        end
 
-          function testCfTurbGreaterThanCfLam(tc)
-               % For the same Re, turbulent Cf > laminar Cf.
-               Re = 1e7;  M = 0.3;
-               tc.verifyGreaterThan(AeroL3.Cf_turbulent(Re, M), AeroL3.Cf_laminar(Re), ...
-                    'Turbulent Cf must exceed laminar Cf at same Re.');
-          end
+        function testCfTurbDecreasesWithRe(tc)
+            tc.verifyGreaterThan(AeroL2.Cf_turbulent(1e6, 0.3), AeroL2.Cf_turbulent(1e8, 0.3));
+        end
 
-          function testCfTurbDecreasesWithRe(tc)
-               % Higher Re → lower turbulent Cf (thinner boundary layer).
-               Cf_lo = AeroL3.Cf_turbulent(1e6, 0.3);
-               Cf_hi = AeroL3.Cf_turbulent(1e8, 0.3);
-               fprintf('\n    Cf_turb: Re=1e6 → %.5f,  Re=1e8 → %.5f\n', Cf_lo, Cf_hi);
-               tc.verifyGreaterThan(Cf_lo, Cf_hi);
-          end
+        function testComputeReScalesLinearlyWithLength(tc)
+            % Re = rho*V*l/mu is linear in reference length l (structural check
+            % of the wiring, independent of the atmosphere values).
+            state = AircraftState(0, 0.5);
+            re1 = AeroL2.compute_Re(state, 5.0);
+            re2 = AeroL2.compute_Re(state, 10.0);
+            tc.verifyEqual(re2, 2*re1, 'RelTol', 1e-10);
+        end
 
-          % --- drag_polar vs Brandt ACTUAL (flight-measured) polar ---------
+        % ================================================================== %
+        % Cutoff Reynolds (Raymer Eq. 12.28 / 12.29)
+        % ================================================================== %
 
-          function testDragPolarVsBrandtActualAtDash(tc)
-               % Sanity check against Brandt's ACTUAL (flight-measured) polar
-               % table [Brandt Aero!M6:Q10] at 36 kft, M=1.6 -- a different
-               % reference table than polar_model used elsewhere in this file
-               % (see fidelity_comparison.m "[AERO — SUP]" section). M=1.6
-               % now includes the corrected whole-aircraft wave-drag term
-               % (get_CD0_buildup adds it for M>=1.2 -- see
-               % testCD0AtBrandtMachPoints; Amax_ft2/L_aircraft_ft are now
-               % whole-aircraft values net of engine flow-through, per
-               % F16AeroL3_wave_drag_fix.md -- no separate wing/boat-tail
-               % wave-drag term is needed since Brandt's Amax cross-section
-               % table already sums wing+tail+nacelle area at the governing
-               % station; canopy wave drag remains unmodeled, no citable
-               % geometry available anywhere in this repo) -- still a
-               % loosely-toleranced (RelTol 0.50) check.
-               b       = F16Baseline();
-               g       = F16AeroL3();
-               state   = AircraftState(36000, 1.60);
-               polar   = g.drag_polar(state);
-               CD0_ref = b.brandt.polar_actual(4,3);   % 0.0461 [Brandt Aero!O9]
-               K1_ref  = b.brandt.polar_actual(4,4);   % 0.3400 [Brandt Aero!P9]
-               fprintf('\n    dash (actual polar ref): CD0=%.4f (ref %.4f), K1=%.4f (ref %.4f)\n', ...
-                    polar.CD0, CD0_ref, polar.K1, K1_ref);
-               tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
-               tc.verifyGreaterThan(polar.K1, 0, 'K1 must be positive.');
-               tc.verifyEqual(polar.CD0, CD0_ref, 'RelTol', 0.50, ...
-                    'CD0 deviates >50% from Brandt actual-polar reference even with wave drag included.');
-               tc.verifyLessThan(polar.K1, 5*K1_ref, ...
-                    'K1 is more than 5x Brandt actual-polar reference -- check for a gross error.');
-          end
+        function testReCutoffSubFormula(tc)
+            % Re_cut = 38.21*(l/k)^1.053. Independent l=10, k=2.08e-5:
+            %   l/k = 480769.23 ; (l/k)^1.053 = 961787.90 ; *38.21 = 3.674992e7
+            tc.verifyEqual(AeroL3.Re_cutoff_sub(10, 2.08e-5), 3.674992e7, 'RelTol', 1e-4);
+        end
 
-          % --- Full CD0 buildup (physical range) ---------------------------
+        function testReCutoffSupFormula(tc)
+            % Re_cut = 44.62*(l/k)^1.053*M^1.16. l=10, k=2.08e-5, M=1.5:
+            %   base 44.62*(l/k)^1.053 = 4.291498e7 ; 1.5^1.16 = 1.6005375
+            %   -> 4.291498e7*1.6005375 = 6.868703e7
+            tc.verifyEqual(AeroL3.Re_cutoff_sup(10, 2.08e-5, 1.5), 6.868703e7, 'RelTol', 1e-4);
+        end
 
-          function testCD0PhysicalRangeSL_M05(tc)
-               % At sea level, M=0.5: expect CD0 in [0.008, 0.030].
-               % Raymer Fig 12.32 reference: 0.020.  Tolerance ±40%.
-               g        = F16AeroL3();
-               state    = AircraftState(0, 0.5);
-               received = g.get_CD0_buildup(state);
-               ref      = 0.020;
-               lo       = ref * (1 - tc.TOL_PCT);   % 0.012
-               hi       = ref * (1 + tc.TOL_PCT);   % 0.028
-               fprintf('\n    CD0 (SL, M=0.5): received = %.5f,  Raymer ref = %.3f  (%.1f%%)\n', ...
-                    received, ref, 100*(received-ref)/ref);
-               fprintf('    tolerance band: [%.4f, %.4f]\n', lo, hi);
-               tc.verifyGreaterThan(received, lo, ...
-                    sprintf('CD0 %.4f is >40%% below Raymer reference %.3f.', received, ref));
-               tc.verifyLessThan(received, hi, ...
-                    sprintf('CD0 %.4f is >40%% above Raymer reference %.3f.', received, ref));
-          end
+        % ================================================================== %
+        % Form factors (Raymer Eq. 12.30 surface / Eq. 12.31 body)
+        % ================================================================== %
 
-          % --- Verification across Brandt's tabulated Mach breakpoints -----
+        function testFFSurfaceFormula(tc)
+            % Eq. 12.30: (1+0.6/x*tc+100*tc^4)*(1.34*M^0.18*cos(Lm)^0.28).
+            % Independent tc=0.04, x=0.40, Lm=32 deg, M=0.5:
+            %   thickness = 1 + 0.6/0.40*0.04 + 100*0.04^4
+            %             = 1 + 0.06 + 0.0000256 = 1.0602560 (0.6/0.40*0.04=0.06)
+            %   comp = 1.34*0.5^0.18*cos(32)^0.28
+            %        = 1.34*0.8827030*0.9548997 = 1.1294763
+            %   FF = 1.0602560*1.1294763 = 1.1975341
+            tc.verifyEqual(AeroL3.FF_surface(0.04, 0.40, 32, 0.5), 1.1975340572, 'RelTol', 1e-4);
+        end
 
-          function testCD0AtBrandtMachPoints(tc, brandtRow)
-               % L3's from-scratch Raymer component buildup is a physically
-               % different method than Brandt's calibrated equivalent skin-
-               % friction coefficient (Cfe=0.0037, back-calculated from
-               % flight-test data and implicitly absorbing excrescence/gap
-               % drag beyond what a clean buildup captures) -- see subplan
-               % 03_aerodynamics.md: "our textbook methods will give
-               % different numbers" from Brandt's calibrated values.
-               %
-               % Rows 1-2 (subsonic, sea level): the buildup's compressibility
-               % term (1+0.144*M^2)^0.65 in Cf_turbulent legitimately lowers
-               % CD0 as M rises toward Mcrit, while Brandt's model is flat
-               % there -- so the gap widens from row 1 to row 2 (-6% to
-               % -17%, with CD0_misc's Table 12.7 gun-port + hook terms
-               % included). ±20% brackets both.
-               % Row 3 (M=1.0547): still transonic (<1.2), below the wave-
-               % drag term's Raymer Eqs. 12.44-12.45 domain (get_CD0_buildup
-               % only adds it for M>=1.2 -- see F16AeroL3.compute_CD0_wave),
-               % so CD0 is still expected to read low here; positivity only.
-               % Rows 4-5 (M=1.5, 2.0): now include the corrected WHOLE-
-               % AIRCRAFT wave-drag term (Amax_ft2=25.110556, L_aircraft_ft=
-               % 48.304 [Brandt Geom!B20/H47/B21] -- see
-               % F16AeroL3_wave_drag_fix.md; this raised (Amax/l)^2 by ~58%
-               % over the old fuselage-only approximation), which closes
-               % nearly all of the previous gap: row 4 improves from ~-69%
-               % (pre-wave-drag) to ~-28% (fuselage-only wave drag, now
-               % corrected) to ~-5% (hand-computed: generic buildup ~0.01248
-               % + CD_wave 0.02550 = ~0.0380 vs Brandt=0.0399); row 5 from
-               % ~-64% to ~-30% to ~-7% (~0.01117 + CD_wave 0.02362 = ~0.0348
-               % vs Brandt=0.0373). ±40% (tc.TOL_PCT) brackets both with wide
-               % margin now -- not re-tightened here since these hand
-               % estimates back out the pre-fix "generic-only" contribution
-               % from this comment's own previously-recorded rounded values;
-               % test-verifier should confirm the live-computed gap.
-               b        = F16Baseline();
-               M        = b.brandt.polar_model(brandtRow, 1);
-               CD0_ref  = b.brandt.polar_model(brandtRow, 3);
-               g        = F16AeroL3();
-               state    = AircraftState(0, M);
-               received = g.get_CD0_buildup(state);
-               fprintf('\n    CD0 (M=%.4f, SL): received = %.4f,  Brandt = %.4f  (%+.1f%%)\n', ...
-                    M, received, CD0_ref, 100*(received-CD0_ref)/CD0_ref);
-               if ismember(brandtRow, [1, 2])
-                    tc.verifyEqual(received, CD0_ref, 'RelTol', 0.20, ...
-                         sprintf('CD0 at M=%.4f deviates >20%% from Brandt.', M));
-               elseif ismember(brandtRow, [4, 5])
-                    tc.verifyEqual(received, CD0_ref, 'RelTol', tc.TOL_PCT, ...
-                         sprintf('CD0 at M=%.4f (with wave drag) deviates >%.0f%% from Brandt.', M, 100*tc.TOL_PCT));
-               else
-                    tc.verifyGreaterThan(received, 0, 'CD0 must be positive.');
-               end
-          end
+        function testFFSurfaceGuardsZeroXcMax(tc)
+            % x_c_max is a 0.6/x denominator -> mustBePositive guard.
+            tc.verifyError(@() AeroL3.FF_surface(0.04, 0, 32, 0.5), ...
+                'MATLAB:validators:mustBePositive');
+        end
 
-          % --- Supersonic wave drag (F-16-specific, Raymer Eqs. 12.44-12.45) -
+        function testFFBodyFinenessGreaterThan6(tc)
+            % Eq. 12.31 (f>6 branch): 1 + 60/f^3 + f/400. F16 fuselage-like
+            % L=46.5, D=5 -> f=9.3:
+            %   60/9.3^3 = 60/804.357 = 0.0745938 ; 9.3/400 = 0.023250
+            %   FF = 1 + 0.0745938 + 0.023250 = 1.0978437
+            tc.verifyEqual(AeroL3.FF_body(46.5, 5), 1.0978437438, 'RelTol', 1e-4);
+        end
 
-          function testCD0WaveFormula(tc)
-               % Hand-computed at M=1.5, SL, using the CORRECTED whole-
-               % aircraft Amax/l [Brandt Geom!B20/H47/B21, cross-validated
-               % against BrandtGeometry.m's independent computeAmax()/
-               % aircraft_length_ft, agreement within 0.002%/0.000% -- see
-               % F16AeroL3_wave_drag_fix.md]:
-               %   Amax_ft2 = 25.110556 ft^2 (whole-aircraft max cross-section,
-               %              net of engine flow-through area -- NOT
-               %              pi*(D_comp(4)/2)^2=19.634954, the old
-               %              fuselage-only cylinder approximation)
-               %   L_aircraft_ft = 48.304 ft (nose to aftmost of fuselage/
-               %              nozzle/VT-TE -- NOT l_ref_comp(4)=47.5 ft, the
-               %              old fuselage-component-only length)
-               %   Lambda_LE=40 deg, E_WD=2.2 (unchanged, correctly cited).
-               %   (M-1.2)^0.57       = 0.3^0.57 = 0.503453        (unchanged by fix)
-               %   1-(pi*40^0.77/100) = 0.462057                    (unchanged by fix)
-               %   bracket = 1-0.386*0.503453*0.462057 = 0.910207   (unchanged by fix)
-               %   Amax/l = 25.110556/48.304 = 0.5198442
-               %   searshaack = (9*pi/2)*(0.5198442)^2
-               %              = 14.1371669*0.2702380 = 3.8203997
-               %   CD_wave = 2.2*0.910207*3.8203997/300 = 0.02550060
-               g        = F16AeroL3();
-               state    = AircraftState(0, 1.5);
-               expected = 0.02550060;  % Raymer 6th ed. Eqs. 12.44-12.45 (Sears-Haack + sweep/Mach correction)
-               received = g.compute_CD0_wave(state);
-               fprintf('\n    CD_wave (M=1.5): received = %.8f,  expected = %.8f\n', received, expected);
-               tc.verifyEqual(received, expected, 'RelTol', 1e-4);
-          end
+        function testFFBodyFinenessAtMost6(tc)
+            % Eq. 12.31 (f<=6 branch): 1 + 5/f^1.5 + f/400. Duct-like L=14,
+            % D=3.15 -> f=4.4444:
+            %   5/4.4444^1.5 = 0.5336344 ; 4.4444/400 = 0.0111111
+            %   FF = 1 + 0.5336344 + 0.0111111 = 1.5447455
+            tc.verifyEqual(AeroL3.FF_body(14, 3.15), 1.5447454663, 'RelTol', 1e-4);
+        end
 
-          function testCD0WaveDecreasesTowardHigherSupersonicMach(tc)
-               % Raymer Eq. 12.45's (M-1.2)^0.57 factor grows with M, shrinking
-               % the bracket term -- so CD_wave should decrease from M=1.5 to
-               % M=2.0 (0.02550 -> 0.02362, whole-aircraft Amax/l per the
-               % wave-drag fix -- see F16AeroL3_wave_drag_fix.md, hand-computed
-               % the same way as testCD0WaveFormula), matching the physical
-               % expectation that wave drag due to volume eases somewhat as
-               % Mach increases further past the transonic/low-supersonic peak.
-               g   = F16AeroL3();
-               cd_wave_15 = g.compute_CD0_wave(AircraftState(0, 1.5));
-               cd_wave_20 = g.compute_CD0_wave(AircraftState(0, 2.0));
-               fprintf('\n    CD_wave: M=1.5 -> %.5f,  M=2.0 -> %.5f\n', cd_wave_15, cd_wave_20);
-               tc.verifyGreaterThan(cd_wave_15, cd_wave_20);
-          end
+        function testFFBodyGuardsNonPositiveDiameter(tc)
+            % D_body is a fineness-ratio denominator -> mustBePositive guard.
+            tc.verifyError(@() AeroL3.FF_body(46.5, 0), ...
+                'MATLAB:validators:mustBePositive');
+        end
 
-          function testCD0BuildupUnchangedBelowMach1_2(tc)
-               % Below the wave-drag term's Raymer Eqs. 12.44-12.45 domain
-               % (M<1.2), get_CD0_buildup must equal the generic AeroL3
-               % buildup exactly -- no wave-drag term added yet (transonic
-               % fairing gap, M=1.05 here).
-               g       = F16AeroL3();
-               state   = AircraftState(0, 1.05);
-               withWave    = g.get_CD0_buildup(state);
-               genericOnly = AeroL3.get_CD0_buildup(g, state);
-               fprintf('\n    CD0 buildup at M=1.05: F16AeroL3=%.6f,  generic AeroL3=%.6f\n', withWave, genericOnly);
-               tc.verifyEqual(withWave, genericOnly, 'AbsTol', 1e-12, ...
-                    'get_CD0_buildup must not add wave drag below M=1.2.');
-          end
+        % ================================================================== %
+        % Supersonic wave drag (F16-specific, Raymer Eqs. 12.44/12.45) -- HEADLINE
+        % ================================================================== %
 
-          function testCD0BuildupIncludesWaveAboveMach1_2(tc)
-               % At/above M=1.2, F16AeroL3.get_CD0_buildup must equal the
-               % generic AeroL3 buildup plus this class's own CD_wave term --
-               % confirms the F-16-specific override actually adds the term
-               % (rather than, e.g., silently no-op'ing) and that it's additive.
-               g       = F16AeroL3();
-               state   = AircraftState(0, 1.5);
-               received     = g.get_CD0_buildup(state);
-               expected     = AeroL3.get_CD0_buildup(g, state) + g.compute_CD0_wave(state);
-               fprintf('\n    CD0 buildup at M=1.5: received = %.6f,  generic+wave = %.6f\n', received, expected);
-               tc.verifyEqual(received, expected, 'AbsTol', 1e-12);
-          end
+        function testCD0WaveFormula(tc)
+            % UPDATED 2026-07-25 (Phase 2). Amax_ft2 / L_aircraft_ft are no
+            % longer frozen aero INPUTS read from a .aerodynamics.wave_drag JSON
+            % block (that block is deleted); they are Dependent on the injected
+            % geometry object. The old expected value used Brandt's geometry
+            % OUTPUTS Amax=25.110556 / l=48.304 [Geom!B20/H47/B21]; the geometry
+            % now supplies its own envelope figures, so this expected value is
+            % re-derived from the geometry INPUTS instead.
+            %
+            % Hand-computed at M=1.5, SL, from the geometry inputs
+            % (W_max_fuselage=7.0 ft, H_max_fuselage=5.0 ft, overall
+            % L_aircraft=47.65 ft) and the aero inputs (Lambda_LE=40 deg,
+            % E_WD=2.2, S_ref=300 ft^2):
+            %   Amax = (pi/4)*W*H = (pi/4)*7*5 = 27.4889357 ft^2
+            %          [standard elliptical-cross-section identity,
+            %           GeometryBase.compute_Amax_elliptical -- no equation
+            %           number exists; todo.md 2026-07-25 Phase 2 §4]
+            %   Amax/l   = 27.4889357/47.65 = 0.5768927
+            %   (Amax/l)^2                  = 0.3328052
+            %   (D/q)_SH = (9*pi/2)*0.3328052 = 14.1371669*0.3328052
+            %            = 4.7049220                                   [Eq. 12.44]
+            %   (M-1.2)^0.57   = 0.3^0.57          = 0.5034532
+            %   pi*40^0.77/100 = pi*17.1232498/100 = 0.5379428
+            %   bracket = 1 - 0.386*0.5034532*(1-0.5379428) = 0.9102071  [Eq. 12.45]
+            %   CD_wave = 2.2*0.9102071*4.7049220/300 = 0.0314047
+            % (The old 0.0255006 value is +23.15% below this -- the shift is
+            % REPORTED, not absorbed by retuning E_WD; see F16GeomL3.md §4.)
+            g        = TestAeroL3.makeAero();
+            received = g.compute_CD0_wave(AircraftState(0, 1.5));
+            tc.verifyEqual(received, 0.0314046569, 'RelTol', 1e-4);
+        end
 
-          function testDragPolarCD0MatchesGetCD0BuildupSupersonic(tc)
-               % drag_polar's CD0 must flow through the same F-16 override as
-               % calling get_CD0_buildup directly -- regression test for the
-               % drag_polar override that routes CD0 through obj.get_CD0_buildup
-               % (polymorphically) instead of the generic AeroL3.drag_polar,
-               % which bypasses instance overrides by calling
-               % AeroL3.get_CD0_buildup(obj,...) as a static function.
-               g     = F16AeroL3();
-               state = AircraftState(0, 1.5);
-               polar = g.drag_polar(state);
-               fprintf('\n    drag_polar CD0=%.6f vs get_CD0_buildup=%.6f (M=1.5)\n', ...
-                    polar.CD0, g.get_CD0_buildup(state));
-               tc.verifyEqual(polar.CD0, g.get_CD0_buildup(state), 'AbsTol', 1e-12, ...
-                    'drag_polar CD0 must include the F-16 wave-drag term, same as get_CD0_buildup.');
-          end
+        function testCD0WaveTracksFuselageEnvelopeLive(tc)
+            % PHASE-2 POSITIVE CONTROL for a previously DEAD path. Amax_ft2 was
+            % a frozen 25.110556 aero input, so the Eq. 12.44 Sears-Haack term
+            % could not respond to ANY fuselage change: mutating the geometry
+            % envelope left CD0 bit-identical. It is now Dependent on
+            % geom.Amax = (pi/4)*W_max*H_max, so widening the fuselage must move
+            % both Amax and the supersonic CD0.
+            %   W_max 7.0 -> 8.0 ft, H_max 5.0:
+            %     Amax     = (pi/4)*8*5      = 31.4159265 ft^2
+            %     (Amax/l) = 31.4159265/47.65 = 0.6593060
+            %     (D/q)_SH = (9*pi/2)*0.4346843 = 6.1441843
+            %     CD_wave  = 2.2*0.9102071*6.1441843/300 = 0.0410183
+            %   i.e. exactly (8/7)^2 = 1.3061224 times the baseline 0.0314047,
+            %   since the term is linear in W_max^2.
+            g     = TestAeroL3.makeAero();
+            state = AircraftState(0, 1.5);
+            tc.verifyEqual(g.Amax_ft2, 27.4889357189, 'RelTol', 1e-9, ...
+                'Amax_ft2 must be the live geometry envelope (pi/4)*7*5, not Brandt''s 25.110556.');
+            g.geom.W_max_fuselage = 8.0;   % optimizer-style in-place mutation
+            tc.verifyEqual(g.Amax_ft2, 31.4159265359, 'RelTol', 1e-9, ...
+                'Amax_ft2 must track the mutated fuselage width with no reconstruction.');
+            tc.verifyEqual(g.compute_CD0_wave(state), 0.0410183274, 'RelTol', 1e-4, ...
+                'The Eq. 12.44 wave term must follow the fuselage envelope (previously a dead path).');
+        end
 
-          % --- Verification at Brandt's constraint-analysis conditions -----
+        function testGeometryInjectionRejectsWrongTierAtConstruction(tc)
+            % PHASE-2 NARROWED GUARD (2026-07-25). The geometry argument was
+            % `geom (1,1) GeometryBase`, which declares only
+            % S_ref/S_wet/get_S_ref/get_S_wet while this class reads ~20 members
+            % off obj.geom. A wrong tier constructed cleanly and then either died
+            % mid-run inside get.S_wet_comp or -- worse, before the Phase-2
+            % rename -- resolved AR_ht/lambda_ht to the EXPOSED planform where
+            % Raymer Eq. 7.8 needs the FULL one, giving a wrong HT MAC, Reynolds
+            % number and Eq. 12.30 form factor with no error and no warning. The
+            % guard is now mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]),
+            % so a bad tier fails HERE.
+            g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+            tc.verifyError(@() F16AeroL3(g1, f16a_spec_path(3)), ...
+                'MATLAB:validators:mustBeA', ...
+                'An L1 geometry object must be rejected at F16AeroL3 construction.');
+            % Positive control: both accepted tiers still construct.
+            tc.verifyClass(F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                f16a_spec_path(3)), 'F16AeroL3');
+            tc.verifyClass(F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
+                f16a_spec_path(3)), 'F16AeroL3');
+        end
 
-          function testDragPolarAtConstraintConditions(tc, constraintName)
-               % Additional verification at the six (alt, Mach) points Brandt
-               % tabulates on the "Consts" sheet for constraint analysis --
-               % cruise, combat_sub, dash, max_alt, combat_sup, ps (see
-               % F16Baseline b.constraints.*). Unlike L1/L2, L3's component
-               % buildup is altitude-sensitive (Reynolds number depends on
-               % rho/mu), so evaluating it away from sea level is meaningful.
-               % F16Baseline b.constraints.*.CD0/K1/K2 now carry Brandt's own
-               % drag-polar coefficients at each condition (Consts sheet).
-               % K1 is unaffected by altitude in this framework (Oswald-based,
-               % no Reynolds dependence) so it gets the same ±20% comparison
-               % as L1/L2 at the M~0.87 points. CD0 is Reynolds-sensitive and
-               % is only sanity-checked here -- see testCD0AtBrandtMachPoints,
-               % where even the sea-level M=0.8727 point already sits at -17%;
-               % moving off sea level (combat_sub@20kft, max_alt@50kft) shifts
-               % Re further and risks exceeding a tight numeric tolerance for
-               % reasons unrelated to a real bug.
-               b     = F16Baseline();
-               c     = b.constraints.(constraintName);
-               g     = F16AeroL3();
-               state = AircraftState(c.alt_ft, c.mach);
-               polar = g.drag_polar(state);
-               fprintf('\n    %-11s alt=%6.0f  M=%.2f: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                    constraintName, c.alt_ft, c.mach, polar.CD0, polar.K1, polar.K2, c.CD0, c.K1, c.K2);
-               tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
-               tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
-               tc.verifyTrue(isfinite(polar.CD0) && isfinite(polar.K1) && isfinite(polar.K2), ...
-                    'drag_polar outputs must be finite.');
-               if c.mach >= 1
-                    tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, 'K2 must be 0 supersonic.');
-               end
-               if ismember(constraintName, {'cruise', 'combat_sub', 'max_alt', 'ps'})
-                    tc.verifyEqual(polar.K1, c.K1, 'RelTol', 0.20, ...
-                         sprintf('K1 at %s deviates >20%% from Brandt.', constraintName));
-               end
-          end
+        function testCD0WaveDecreasesTowardHigherMach(tc)
+            % The (M-1.2)^0.57 factor grows with M, shrinking the bracket, so
+            % CD_wave eases from M=1.5 to M=2.0.
+            g = TestAeroL3.makeAero();
+            tc.verifyGreaterThan(g.compute_CD0_wave(AircraftState(0, 1.5)), ...
+                                 g.compute_CD0_wave(AircraftState(0, 2.0)));
+        end
 
-          function testDragPolarReturnsStruct(tc)
-               g     = F16AeroL3();
-               state = AircraftState(0, 0.5);
-               polar = g.drag_polar(state);
-               tc.verifyTrue(isstruct(polar));
-               tc.verifyTrue(isfield(polar,'CD0'));
-               tc.verifyTrue(isfield(polar,'K1'));
-               tc.verifyTrue(isfield(polar,'K2'));
-               fprintf('\n    CD0=%.5f  K1=%.5f  K2=%.5f  (M=0.5 SL)\n', ...
-                    polar.CD0, polar.K1, polar.K2);
-          end
+        function testBuildupUnchangedBelowMach1p2(tc)
+            % Below the Eq. 12.41 domain (M=1.05 < 1.2) the F16 override adds NO
+            % wave drag: get_CD0_buildup must equal the generic AeroL3 buildup.
+            g      = TestAeroL3.makeAero();
+            state  = AircraftState(0, 1.05);
+            tc.verifyEqual(g.get_CD0_buildup(state), AeroL3.get_CD0_buildup(g, state), ...
+                'AbsTol', 1e-12);
+        end
 
-          function testK2SupersonicZero(tc)
-               g     = F16AeroL3();
-               state = AircraftState(35000, 1.2);
-               polar = g.drag_polar(state);
-               tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, ...
-                    'K2 must be 0 supersonic.');
-          end
+        function testBuildupIncludesWaveAboveMach1p2(tc)
+            % At M=1.5 (>=1.2) the override adds exactly compute_CD0_wave on top
+            % of the generic buildup (additive; confirms it is not a no-op).
+            g     = TestAeroL3.makeAero();
+            state = AircraftState(0, 1.5);
+            tc.verifyEqual(g.get_CD0_buildup(state), ...
+                AeroL3.get_CD0_buildup(g, state) + g.compute_CD0_wave(state), 'AbsTol', 1e-12);
+        end
 
-          % --- Inheritance / interface compliance --------------------------
+        function testDragPolarCD0RoutesThroughOverride(tc)
+            % drag_polar's CD0 must flow through the instance's get_CD0_buildup
+            % (dynamic dispatch), so it INCLUDES the F16 wave-drag term at M=1.5
+            % -- regression guard for the override-vs-static dispatch bug.
+            g     = TestAeroL3.makeAero();
+            state = AircraftState(0, 1.5);
+            tc.verifyEqual(g.drag_polar(state).CD0, g.get_CD0_buildup(state), 'AbsTol', 1e-12);
+        end
 
-          function testIsaAerodynamicsBase(tc)
-               g = F16AeroL3();
-               tc.verifyTrue(isa(g, 'AerodynamicsBase'));
-          end
+        % ================================================================== %
+        % Buildup physical-plausibility (coarse band, NOT a ground-truth fit)
+        % ================================================================== %
 
-          function testIsaAeroModelL3(tc)
-               g = F16AeroL3();
-               tc.verifyTrue(isa(g, 'AeroModelL3'));
-          end
+        function testBuildupSubsonicPositiveAndPlausible(tc)
+            % Sea-level M=0.5 clean CD0 from the component sum must be a
+            % positive, physically plausible fighter value. Broad band
+            % [0.005, 0.05] -- a sanity guard, not a fit to any ground truth
+            % (the component model omits gaps/fillets/excrescences).
+            g   = TestAeroL3.makeAero();
+            cd0 = g.get_CD0_buildup(AircraftState(0, 0.5));
+            tc.verifyGreaterThan(cd0, 0.005);
+            tc.verifyLessThan(cd0, 0.05);
+        end
 
-          function testNotIsaAeroModelL2(tc)
-               g = F16AeroL3();
-               tc.verifyFalse(isa(g, 'AeroModelL2'), ...
-                    'L3 must NOT inherit from the L2 enforcer.');
-          end
+        % ================================================================== %
+        % Transonic guard (mandatory) + supersonic K2
+        % ================================================================== %
 
-          function testIsHandleClass(tc)
-               g = F16AeroL3();
-               tc.verifyTrue(isa(g, 'handle'));
-          end
+        function testDragPolarTransonicReturnsNaN(tc)
+            g = TestAeroL3.makeAero();
+            w = warning('off', 'AeroL3:transonicNotModeled');
+            cleanup = onCleanup(@() warning(w)); %#ok<NASGU>
+            polar = g.drag_polar(AircraftState(0, 1.0));
+            tc.verifyTrue(isnan(polar.CD0));
+            tc.verifyTrue(isnan(polar.K1));
+            tc.verifyTrue(isnan(polar.K2));
+        end
 
-          % --- High-lift-device / gear deltas (flap + slat + gear buildup) -
-          %   Delta_e_osw: Roskam Table 3.6 (tabulated, no closed form).
-          %   Delta_CLmax: Raymer Table 12.2 + Eq. 12.21, flap AND slat.
-          %   Delta_CD0: Raymer Eq. 12.61 (flap) + Eq. 12.61 form (slat,
-          %     F_flap/delta_flap/Cf swapped for the LE device's own
-          %     F_slat/delta_slat/chord) + component buildup (gear, via
-          %     compute_Delta_CD0_geardown).
-          %   Delta_CDi: Raymer Eq. 12.62 (flap) + Eq. 12.62 form (slat).
+        function testDragPolarTransonicWarns(tc)
+            g = TestAeroL3.makeAero();
+            tc.verifyWarning(@() g.drag_polar(AircraftState(0, 1.0)), ...
+                'AeroL3:transonicNotModeled');
+        end
 
-          function testDeltaEoswNegative(tc)
-               g = F16AeroL3();
-               fprintf('\n    Delta_e_osw: TO=%.4f  L=%.4f\n', g.get_Delta_e_osw_TO(), g.get_Delta_e_osw_L());
-               tc.verifyLessThan(g.get_Delta_e_osw_TO(), 0);
-               tc.verifyLessThan(g.get_Delta_e_osw_L(), g.get_Delta_e_osw_TO());
-          end
+        function testGetK1TransonicThrows(tc)
+            g = TestAeroL3.makeAero();
+            tc.verifyError(@() g.get_K1(1.0), 'AeroL3:transonicNotModeled');
+        end
 
-          function testDeltaCD0PositiveAndOrdered(tc)
-               % Approach-speed state for the gear Reynolds-number lookup.
-               g     = F16AeroL3();
-               state = AircraftState(0, 0.2);
-               dcd0_TO = g.get_Delta_CD0_TO(state);
-               dcd0_L  = g.get_Delta_CD0_L(state);
-               fprintf('\n    Delta_CD0: TO=%.4f  L=%.4f\n', dcd0_TO, dcd0_L);
-               tc.verifyGreaterThan(dcd0_TO, 0);
-               tc.verifyGreaterThan(dcd0_L, dcd0_TO);
-          end
+        function testDragPolarSupersonicK2Zero(tc)
+            g     = TestAeroL3.makeAero();
+            polar = g.drag_polar(AircraftState(0, 1.5));
+            tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12);
+        end
 
-          function testDeltaCD0SlatPositive(tc)
-               % Eq. 12.61 form (F_slat/delta_slat/c_slat_over_c) should give
-               % a positive parasite-drag increment, same sign as the flap.
-               g   = F16AeroL3();
-               val = g.Delta_CD0_slat(g.delta_slat_TO_deg);
-               fprintf('\n    Delta_CD0_slat(TO) = %.5f\n', val);
-               tc.verifyGreaterThan(val, 0);
-          end
+        % ================================================================== %
+        % Optimization-ready DI guards (mirror TestGeomL2)
+        % ================================================================== %
 
-          function testDeltaCDiIncludesSlat(tc)
-               % get_Delta_CDi_TO/L must exceed the flap-only Eq. 12.62 term
-               % now that the slat contributes via the Eq. 12.62 form too.
-               g            = F16AeroL3();
-               flapOnly     = g.Delta_CDi_flap(g.Delta_CLmax_flap('TO'));
-               total        = g.get_Delta_CDi_TO();
-               fprintf('\n    Delta_CDi_TO: flap-only=%.4f  flap+slat=%.4f\n', flapOnly, total);
-               tc.verifyGreaterThan(total, flapOnly);
-          end
+        function testDerivedTracksMutatedGeometryLiveOnRead(tc)
+            % LIVE-RECOMPUTE: mutate the injected geometry in place; the
+            % derived AR and the (S_wet-dependent) component buildup must both
+            % track the change with no reconstruction.
+            g    = TestAeroL3.makeAero();
+            AR0  = g.AR;
+            cd00 = g.get_CD0_buildup(AircraftState(0, 0.5));
+            g.geom.AR_wing = g.geom.AR_wing + 1;
+            tc.verifyEqual(g.AR, AR0 + 1, 'AbsTol', 1e-12);
+            tc.verifyNotEqual(g.get_CD0_buildup(AircraftState(0, 0.5)), cd00, ...
+                'Component buildup must change after the injected AR is mutated.');
+        end
 
-          function testDeltaCD0GeardownPositive(tc)
-               g     = F16AeroL3();
-               state = AircraftState(0, 0.2);
-               dcd0_gear = g.compute_Delta_CD0_geardown(state);
-               fprintf('\n    Delta_CD0_geardown = %.5f\n', dcd0_gear);
-               tc.verifyGreaterThan(dcd0_gear, 0);
-          end
+        function testDerivedPropertiesAreReadOnly(tc)
+            g = TestAeroL3.makeAero();
+            tc.verifyError(@() setfield(g, 'AR', 5),          'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'S_ref', 300),     'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'S_wet_comp', 0),  'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'CD0_misc', 0),    'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
 
-          function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
-               % L3 adds the LE slat on top of the TE flap; total Delta_CLmax
-               % must exceed the flap-only contribution.
-               g = F16AeroL3();
-               flapOnly = g.Delta_CLmax_flap('TO');
-               total    = g.get_Delta_CLmax_TO();
-               fprintf('\n    Delta_CLmax_TO: flap-only=%.4f  flap+slat=%.4f\n', flapOnly, total);
-               tc.verifyGreaterThan(total, flapOnly);
-          end
+        % ================================================================== %
+        % High-lift-device / gear deltas -- ordering/sign only
+        % ================================================================== %
 
-          function testCLmaxTotalVsBrandtTakeoffLanding(tc)
-               % L3 has both flap and slat -- tightest tolerance of the three
-               % fidelity levels, consistent with this suite's L1->L3 pattern.
-               b = F16Baseline();
-               g = F16AeroL3();
-               fprintf('\n    CLmax_TO: received=%.4f  Brandt=%.4f\n', g.get_CLmax_TO(), b.brandt.CLmax_TO);
-               fprintf('    CLmax_L:  received=%.4f  Brandt=%.4f\n', g.get_CLmax_L(), b.brandt.CLmax_land);
-               tc.verifyEqual(g.get_CLmax_TO(), b.brandt.CLmax_TO,   'RelTol', 0.40);
-               tc.verifyEqual(g.get_CLmax_L(),  b.brandt.CLmax_land, 'RelTol', 0.40);
-          end
+        function testDeltaCD0SlatPositive(tc)
+            % LE slat parasite increment (Eq. 12.61 form) is positive.
+            g = TestAeroL3.makeAero();
+            tc.verifyGreaterThan(g.Delta_CD0_slat(g.delta_slat_TO_deg), 0);
+        end
 
-          function testPopulateHLDDeltasFillsProperties(tc)
-               % The Delta_*_flap/slat/gear properties pre-date this feature
-               % (placeholders); confirm populate_HLD_deltas actually sets them.
-               g     = F16AeroL3();
-               state = AircraftState(0, 0.2);
-               g     = g.populate_HLD_deltas(state);
-               tc.verifyNotEmpty(g.Delta_CD0_TO_flap);
-               tc.verifyNotEmpty(g.Delta_CD0_TO_gear);
-               tc.verifyNotEmpty(g.Delta_CL_max_TO_slat);
-               tc.verifyGreaterThan(g.Delta_CD0_TO_slat, 0, ...
-                    'Slat CD0 increment should be positive (Eq. 12.61 form, delta_slat=17 deg).');
-          end
+        function testDeltaCD0GeardownPositive(tc)
+            % Landing-gear component-buildup increment is positive.
+            g = TestAeroL3.makeAero();
+            tc.verifyGreaterThan(g.compute_Delta_CD0_geardown(AircraftState(0, 0.2)), 0);
+        end
 
-     end
+        function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
+            % L3 adds the LE slat on top of the TE flap -> total > flap alone.
+            g = TestAeroL3.makeAero();
+            tc.verifyGreaterThan(g.get_Delta_CLmax_TO(), g.Delta_CLmax_flap('TO'));
+        end
+
+        % ================================================================== %
+        % Inheritance / interface compliance
+        % ================================================================== %
+
+        function testIsaAerodynamicsBase(tc)
+            tc.verifyTrue(isa(TestAeroL3.makeAero(), 'AerodynamicsBase'));
+        end
+
+        function testIsaAeroModelL3(tc)
+            tc.verifyTrue(isa(TestAeroL3.makeAero(), 'AeroModelL3'));
+        end
+
+        function testNotIsaAeroModelL2(tc)
+            tc.verifyFalse(isa(TestAeroL3.makeAero(), 'AeroModelL2'));
+        end
+
+        function testIsHandleClass(tc)
+            tc.verifyTrue(isa(TestAeroL3.makeAero(), 'handle'));
+        end
+
+        % ================================================================== %
+        % Domain guards + L2/L3 consistency (added 2026-07-25).
+        % ================================================================== %
+
+        function testCD0BuildupErrorsAtZeroMach(tc)
+            % The Raymer Eq. 12.24 buildup is Reynolds-based. At M=0 every
+            % component Re is 0, so Cf_laminar(0)=Inf while the Eq. 12.30 form
+            % factor's 1.34*M^0.18 term is 0 -- the product used to evaluate to
+            % NaN and return a NaN whole-aircraft CD0 with no warning. NaN makes
+            % every > / < comparison in a constraint solve FALSE, so the point
+            % was reported satisfied. AircraftState permits mach=0, so this must
+            % error at the buildup.
+            a3 = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                           f16a_spec_path(3));
+            tc.verifyError(@() a3.drag_polar(AircraftState(0, 0)), ...
+                'AeroL3:machOutOfDomain', ...
+                'The L3 component buildup must reject M=0, not return NaN CD0.');
+        end
+
+        function testCfLaminarRejectsZeroReynolds(tc)
+            % Re=0 -> Inf, Re<0 -> complex. Both are guarded at the primitive.
+            tc.verifyError(@() AeroL3.Cf_laminar(0), 'MATLAB:validators:mustBePositive');
+            tc.verifyError(@() AeroL3.Cf_laminar(-1), 'MATLAB:validators:mustBePositive');
+            % Sanity: a physical Re still works -- Raymer Eq. 12.26,
+            % 1.328/sqrt(1e6) = 1.328e-3 exactly.
+            tc.verifyEqual(AeroL3.Cf_laminar(1e6), 1.328e-3, 'RelTol', 1e-12);
+        end
+
+        function testCD0BuildupFiniteAtSmallPositiveMach(tc)
+            % The guard must reject only M=0, not a legitimate low-speed point.
+            a3 = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+                           f16a_spec_path(3));
+            polar = a3.drag_polar(AircraftState(0, 0.1));
+            tc.verifyTrue(isfinite(polar.CD0) && polar.CD0 > 0, ...
+                'CD0 must be finite and positive at a small nonzero Mach.');
+        end
+
+        function testL3LiftSlopeMatchesL2ForSameGeometryAndAirfoil(tc)
+            % L3 used to call AeroL2.CL_alpha with three arguments, so Raymer
+            % Eq. 12.8's eta silently fell back to 0.95 while L2 -- the LOWER
+            % fidelity level -- used the real NACA 64A204 slope (0.105/deg ->
+            % eta = 6.016/(2*pi) = 0.957). Same wing, same airfoil, two answers.
+            % With identical injected geometry the two levels must now agree
+            % exactly: both are the same Raymer Eq. 12.6 evaluation.
+            g  = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            a2 = F16AeroL2(g, f16a_spec_path(2));
+            a3 = F16AeroL3(g, f16a_spec_path(3));
+            for M = [0, 0.6, 0.87]
+                tc.verifyEqual(a3.get_CL_alpha(M), a2.get_CL_alpha(M), 'RelTol', 1e-12, ...
+                    sprintf(['L3 and L2 CL_alpha must agree at M=%.2f for identical ' ...
+                             'geometry and airfoil.'], M));
+            end
+            tc.verifyEqual(a3.cl_alpha_2D, 0.105*180/pi, 'RelTol', 1e-12, ...
+                'F16AeroL3.cl_alpha_2D must be the JSON per-deg slope converted to 1/rad.');
+        end
+
+        % ================================================================== %
+        % DELIBERATELY-FAILING TODO (unverified citations) -- see header.
+        % ================================================================== %
+
+        function testTODO_EWDCalibrationInput(tc)
+            % E_WD = 2.2 is a TUNED wave-drag multiplier back-checked to
+            % Brandt/Casey, NOT a measured F16 datum. f16a_L3.json's .aerodynamics
+            % still carries "_TODO_wave_drag_factor_E_WD". FAILS until it is
+            % either sourced or explicitly accepted as a calibration knob.
+            J = TestAeroL3.readAeroL3JSON();
+            tc.verifyFalse(isfield(J, 'x_TODO_wave_drag_factor_E_WD'), ...
+                'TODO: E_WD=2.2 is a tuned calibration input, not a spec value.');
+        end
+
+        function testTODO_RoughnessTableCitation(tc)
+            % surface_roughness k cites Raymer Table 12.2 (the high-lift
+            % Delta_cl_max table); the roughness table is 12.4/12.5 -- citation
+            % drift. f16a_L3.json's .aerodynamics still carries "_TODO_table_number".
+            J = TestAeroL3.readAeroL3JSON();
+            tc.verifyFalse(isfield(J.surface_roughness_k_ft, 'x_TODO_table_number'), ...
+                'TODO: surface-roughness k table number is miscited (12.2 vs 12.4/12.5).');
+        end
+
+    end
 end

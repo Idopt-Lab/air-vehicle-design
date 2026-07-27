@@ -1,46 +1,42 @@
 classdef (Abstract) WeightsModelL2 < WeightsBase
-%WEIGHTSMODELL2  Tier-2a abstract enforcer for Level-2 weight estimation.
+%WEIGHTSMODELL2  Tier-2 abstract enforcer for Level-2 weights.
 %
-%   Inherits WeightsBase directly (NOT WeightsModelL1 — each fidelity
-%   enforcer independently satisfies the Tier-1 contract).
+%   Inherits WeightsBase directly, not another WeightsModelLN.
 %
-%   Level-2 method: Raymer Table 15.2 component/surface-density buildup.
-%   Each structural surface is weighted by lbf/ft² unit weight (fighter row).
-%   Installed engine weight and all-else-empty are set directly by the student
-%   class (not computed here — those require L3 detail).
+%   L2 is surface density x area for the structural groups, plus fractions of
+%   gross weight for landing gear, installed engine and all-else-empty.
 %
-%   Interpretation: L2 breaks OEW into physical groups so students can see
-%   where mass lives.  Compare total against the L1 Roskam lower bound
-%   (now in WeightsL1.compute_We_roskam) and the L1 Raymer central estimate
-%   to gauge fidelity improvement.
+%   The DERIVED properties below must be Dependent getters on the concrete
+%   class, never stored values.
 %
-%   Inheritance: WeightsBase → WeightsModelL2 → F16WeightsL2
+%   Toolbox companion: src/disciplines/weights/WeightsL2.md
 
     properties (Abstract)
-        W_wings            % computed wing structural weight [lbf]
-        W_landing_gear     % computed total landing gear weight [lbf]
-        W_tail             % computed tail weights; struct(HT, VT) after weight_tail call [lbf]
-        W_fuselage         % computed fuselage structural weight [lbf]
-        W_installed_engine % installed engine weight [lbf]; set by student class
-        W_all_else_empty   % systems/equipment group [lbf]; set by student class
+        W_wings            % DERIVED [lbf]
+        W_landing_gear     % DERIVED [lbf]
+        W_tail             % DERIVED struct(HT, VT) [lbf]
+        W_fuselage         % DERIVED [lbf]
+        W_installed_engine % DERIVED [lbf]
+        W_all_else_empty   % DERIVED [lbf]
     end
 
     methods (Abstract)
 
-        %WEIGHT_WING  Wing structural weight [lbf].  [Raymer Table 15.2]
-        %   Surface-density estimate: 9 lbf/ft² × S_w for fighters.
+        %WEIGHT_WING  [Raymer 7th ed. Table 15.2]
+        %   W_TO is accepted for API consistency but does not enter the formula.
         W = weight_wing(obj, W_TO)
 
-        %WEIGHT_TAIL  HT + VT tail structural weights [lbf].  [Raymer Table 15.2]
-        %   Returns struct with fields HT and VT.
+        %WEIGHT_TAIL  Struct with fields HT and VT.  [Raymer 7th ed. Table 15.2]
+        %   W_TO is accepted for API consistency but does not enter the formula.
         W = weight_tail(obj, W_TO)
 
-        %WEIGHT_FUSELAGE  Fuselage structural weight [lbf].  [Raymer Table 15.2]
-        %   Surface-density estimate: 4.8 lbf/ft² × S_wet_fus for fighters.
+        %WEIGHT_FUSELAGE  On WETTED area.  [Raymer 7th ed. Table 15.2]
+        %   W_TO is accepted for API consistency but does not enter the formula.
         W = weight_fuselage(obj, W_TO)
 
-        %WEIGHT_LANDING_GEAR  Total landing gear weight [lbf].  [AE481 metabook §7]
-        %   Fraction-based: 0.033 × W_TO for non-Navy fighters.
+        %WEIGHT_LANDING_GEAR  [AE481 metabook Sec. 7]
+        %   Must be evaluated at the PASSED W_TO: this term genuinely scales
+        %   with gross weight.
         W = weight_landing_gear(obj, W_TO)
 
     end

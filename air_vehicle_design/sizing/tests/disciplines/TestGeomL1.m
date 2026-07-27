@@ -34,7 +34,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±30% of Brandt reference to cover known regression scatter.
             b        = F16Baseline();
             expected = b.brandt.S_wet;   % 1371.09 ft^2 [Brandt L3]
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             received = g.get_S_wet_statistical(tc.TOGW);
             fprintf('\n    S_wet_statistical: received = %.2f ft^2,  expected (Brandt) = %.2f ft^2\n', ...
                 received, expected);
@@ -48,7 +48,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±20% of USAF TO reference value.
             b        = F16Baseline();
             expected = b.geom.L_fus;   % 47.50 ft [T.O. 1F-16A-1, Fig. 1-2]
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             received = g.get_L_fus(tc.TOGW);
             fprintf('\n    get_L_fus:         received = %.2f ft,    expected (TO) = %.2f ft\n', ...
                 received, expected);
@@ -59,7 +59,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testGetSwetCallsStatistical(tc)
         % Structural: get_S_wet(W_TO) must delegate to get_S_wet_statistical(W_TO).
         % Both calls should return bit-identical results.
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             via_base = g.get_S_wet(tc.TOGW);
             via_impl = g.get_S_wet_statistical(tc.TOGW);
             fprintf('\n    get_S_wet (base):  %.6f ft^2\n', via_base);
@@ -73,7 +73,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
 
         function testSwetMonotonicallyIncreasing(tc)
         % Positive regression exponent d=0.7506 → heavier ⟹ more wetted area.
-            g  = F16GeomL1();
+            g  = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             S1 = g.get_S_wet_statistical(tc.W_TO_2);   % W_TO = 20000 lbf
             S2 = g.get_S_wet_statistical(tc.TOGW);     % W_TO = 31377 lbf
             fprintf('\n    S_wet at W_TO=20000: %.2f ft^2\n', S1);
@@ -85,14 +85,14 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % --- Unknown category error --------------------------------------
 
         function testUnknownCategoryThrows(tc)
-            g = F16GeomL1();
+            g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g.aircraft_category = "flying_car";
             tc.verifyError(@() g.get_S_wet_statistical(tc.TOGW), ...
                 'GeomL1:unknownCategory');
         end
 
         function testUnknownCategoryLfusThrows(tc)
-            g = F16GeomL1();
+            g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g.aircraft_category = "flying_car";
             tc.verifyError(@() g.get_L_fus(tc.TOGW), ...
                 'GeomL1:unknownCategory');
@@ -103,7 +103,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testSrefMutable(tc)
         % Sizing loop updates S_ref in-place on the handle object.
         % Expected: get_S_ref() returns 250 after assignment.
-            g = F16GeomL1();
+            g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g.S_ref = 250;
             received = g.get_S_ref();
             fprintf('\n    S_ref after assignment: received = %.2f ft^2,  expected = 250.00 ft^2\n', ...
@@ -141,7 +141,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % F16GeomL1's default M_max=2.0, aircraft_category='jet_fighter' --
         % get_AR_eq(obj) must equal the same hand-computed value as above.
             expected = 3.5186639569;
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             received = g.get_AR_eq();
             fprintf('\n    get_AR_eq: received = %.10f,  hand-computed = %.10f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6, ...
@@ -236,7 +236,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testGetControlSurfaceFractionObjectLevel(tc)
         % High-level get_control_surface_fraction(obj, surface) reads
         % obj.aircraft_category and delegates to the same lookup.
-            g        = F16GeomL1();
+            g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             received = GeomL1.get_control_surface_fraction(g, 'elevator');
             fprintf('\n    get_control_surface_fraction(elevator): received = %.4f\n', received);
             tc.verifyEqual(received, 0.30, 'AbsTol', 1e-9);
@@ -245,6 +245,48 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testUnknownCategoryControlSurfaceThrows(tc)
             tc.verifyError(@() GeomL1.compute_control_surface_fraction('flying_car', 'elevator'), ...
                 'GeomL1:unknownCategory');
+        end
+
+        % ================================================================== %
+        % S_wet / L_fuselage are DERIVED, not frozen zeros (added 2026-07-25).
+        %
+        % Both were plain properties initialised to 0 and commented "populated
+        % by get_S_wet(obj, W_TO)" -- which only ever RETURNED a value, never
+        % assigned. So both stayed 0 for the object's life, and because
+        % F16AeroL2/L3 accept any GeometryBase, injecting an F16GeomL1 gave
+        % CD0 = Cfe*0/S_ref = 0: silent zero parasite drag, infinite L/D.
+        % ================================================================== %
+
+        function testSWetTracksWTOAndMatchesRegression(tc)
+            % The Dependent getter must equal the Roskam Table 3.5 regression
+            % called directly, and must MOVE when W_TO moves (the staleness the
+            % conversion removes).
+            g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+            g.W_TO = 31377;
+            tc.verifyEqual(g.S_wet, g.get_S_wet(31377), 'RelTol', 1e-12, ...
+                'S_wet must equal the statistical regression at the current W_TO.');
+            tc.verifyGreaterThan(g.S_wet, 0, 'S_wet must be positive, never the old frozen 0.');
+            s1 = g.S_wet;  l1 = g.L_fuselage;
+            g.W_TO = 45000;
+            tc.verifyGreaterThan(g.S_wet, s1, ...
+                'S_wet must increase with W_TO -- a frozen value would not move.');
+            tc.verifyGreaterThan(g.L_fuselage, l1, ...
+                'L_fuselage must increase with W_TO -- a frozen value would not move.');
+        end
+
+        function testDerivedAreasErrorWhenWTOUnset(tc)
+            % Reading either derived quantity before W_TO is set is a caller
+            % error, not a 0. Erroring here is the entire point of the change.
+            g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+            tc.verifyError(@() g.S_wet,      'F16GeomL1:WTONotSet');
+            tc.verifyError(@() g.L_fuselage, 'F16GeomL1:WTONotSet');
+        end
+
+        function testDerivedAreasAreReadOnly(tc)
+            % Dependent with no set-method: assigning to an output must error.
+            g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+            tc.verifyError(@() setfield(g, 'S_wet', 1234), ...
+                'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         % --- Deliberately-failing TODO test: Raymer Table 6.5 aileron gap ---

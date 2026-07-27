@@ -1,145 +1,170 @@
-# Geometry parameter usage table
+# Geometry parameter usage
 
-**2026-07-22 note:** Geometry's L3 fidelity tier has been eliminated and merged into L2 (user
-decision — see `src/disciplines/geometry/GeomL2.md`'s dated note for full rationale). This table
-was originally written while `GeomL3`/`F16GeomL3`/`GeometryModelL3` still existed as a separate
-tier; references to those below have been reframed to L2 (`GeomL2`/`F16GeomL2`), since that is
-where the content now lives. This does **not** apply to Aerodynamics, Propulsion, or Weights —
-`AeroL3`, `WeightsL3`, etc. below are untouched and still refer to a real, separate L3 tier for
-those disciplines.
+Which geometric quantity is produced at which fidelity level, by which member, under what citation,
+and who consumes it. As-built from `src/base/GeometryBase.m`,
+`src/disciplines/geometry/GeomL{1,2,3}.m` + `GeometryModelL{1,2,3}.m`, and
+`examples/F16A/F16GeomL{1,2,3}.m`. Companions: `aerodynamics_parameter_usage.md`,
+`propulsion_parameter_usage.md`, `weights_parameter_usage.md`.
 
-Which discipline/fidelity/function consumes which geometric parameter, and under what citation.
-Derived by reading `src/base/AerodynamicsBase.m`, `src/disciplines/aerodynamics/AeroL1.m`,
-`AeroL2.m`, `AeroL3.m`, `examples/F16A/F16AeroL1.m`, `F16AeroL2.m`, `F16AeroL3.m`,
-`src/base/PropulsionBase.m`, `src/disciplines/propulsion/PropL1.m`, `PropL2.m`,
-`examples/F16A/F16PropL1.m`, `F16PropL2.m`, `src/base/WeightsBase.m`,
-`src/disciplines/weights/WeightsL1.m`, `WeightsL2.m`, `WeightsL3.m`,
-`examples/F16A/F16WeightsL1.m`, `F16WeightsL2.m`, `F16WeightsL3.m`.
-
-## Headline finding: no live data flow
-
-**No orchestrator file exists yet in the active tree** (`SizingLoop*.m`, `ConstraintAnalysis*.m`,
-`MissionAnalysis*.m` — grepped for, none found outside `temp_Casey/`). As a result, every
-discipline's F-16 Tier-3 class independently **re-hardcodes its own copy** of whatever
-geometric numbers it needs; nothing reads a `F16GeomL2` instance's properties or
-method outputs at runtime. Where two disciplines hardcode the "same" quantity, the numbers
-sometimes agree and sometimes silently disagree (see the `AR_HT`/`AR_VT`/`S_wet_fus` rows
-below) — a direct consequence of nothing being computed once and shared.
-
-## Propulsion consumes zero geometric parameters
-
-Confirmed directly: `PropulsionBase.m`, `PropL1.m`, `PropL2.m`, `F16PropL1.m`, `F16PropL2.m`
-contain no reference to `S_ref`, `AR`, `b`, any sweep angle, chord, `S_wet`, or any fuselage/duct
-dimension as an *input*. Propulsion only **produces** engine geometry as outputs
-(`PropL2.engine_length_nonAB/AB`, `engine_diam_nonAB/AB` — Raymer 6th ed. Eqs. 10.5/10.6/10.11/10.12,
-functions of thrust `T`, Mach `M`, bypass ratio `BPR` only), and nothing in the active codebase
-reads those outputs back in — `F16GeomL2`'s duct properties (`D_inlet`, `D_exit`, `L_duct`,
-formerly on `F16GeomL3` before the L3-to-L2 merge) are independently hardcoded estimates, not
-sourced from a `PropL2` call.
+Geometry is **L1 / L2 / L3**. L1 is a statistical tier (regressions on `W_TO`, no planform); L2 is
+the Brandt-reference tier; L3 is the physical / T.O. 1F-16A-1 tier, so L2↔L3 differences are
+intentional fidelity divergences, not errors.
 
 ---
 
-## Wing reference / planform parameters
+## 1. Downstream consumers
 
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `S_ref` | `AerodynamicsBase.compute_CL(L,q,S_ref)` | `CL = L/(q*S_ref)` — definitional | |
-| `S_ref` | `AeroL1.get_CD0` → `CD0_from_Cf(Cf, S_wet, S_ref)` | Raymer 6th ed. §12.3 | Also used identically by `AeroL2.get_CD0` (delegates to `AeroL1`) |
-| `S_ref` | `AeroL3.get_CD0_buildup` (normalizes `cd0_sum / obj.S_ref`) | Raymer 6th ed. §12.3 component-buildup form | |
-| `S_ref` | `AeroL2.compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)` / `AeroL3` same | Raymer 6th ed. Eq. 12.21 | **Never called anywhere in the active tree — see "Dead/unwired parameters" below** |
-| `S_ref` | `WeightsL2`/`WeightsL3` — indirectly, via each discipline's own hardcoded `S_w` (see Wing structural row below), not read from Geometry's `S_ref` | — | |
-| `S_ref` | *(planned, Task 2)* `S_HT = c_HT*cbar*S_ref/L_HT`, `S_VT = c_VT*b*S_ref/L_VT` | Raymer 7th ed. Table 6.4 | Not implemented yet — see `GeomL1.md` |
-| `AR` (wing) | `AeroL1.oswald_eff(AR, Lambda_LE_deg)` | Raymer 6th ed. Eq. 12.48 (Λ<30°) / 12.49 (Λ≥30°) | |
-| `AR` | `AeroL1.K1_subsonic(e, AR)` | Raymer 6th ed. Eq. 12.50 | |
-| `AR` | `AeroL1.K1_supersonic(M, AR, Lambda_LE_deg)` | Raymer 6th ed. Eq. 12.51 | Guaranteed crash at exactly M=1.0 — separately flagged in the 2026-07-21 review, not re-litigated here |
-| `AR` | `AeroL2.CL_alpha(AR, Lambda_c4_deg, M)` (via `get_CL_alpha`) | Raymer 6th ed. Eq. 12.6 | |
-| `AR` | `AeroL2`/`AeroL3.get_CL_max_values` — `wing_param = (C1+1)*AR*cosd(Lambda_LE_deg)` | Raymer 6th ed. Fig. 12.13/12.9 AR check | |
-| `AR` | `WeightsL3.wing(...)` — `S_w^0.622 * AR^0.785 * ...` | Raymer 6th ed. Eq. 15.1 | Consumed as `obj.AR_w` on `F16WeightsL3` (independently hardcoded `3.0`, happens to agree with `F16GeomL2.AR_wing=3.0`) |
-| `b` (span) | `AeroL1.compute_AR_wet(b, S_wet)` | Raymer 6th ed. Eq. 3.11 | **Dead/unwired — see below** |
-| `b` | `AeroL2`/`AeroL3.compute_F(d, b)` (fuselage lift interference factor) | Raymer 6th ed. Eq. 12.9 | **Dead/unwired — see below** |
-| `b` | *(planned, Task 2)* `S_VT = c_VT*b*S_ref/L_VT` | Raymer 7th ed. Table 6.4 | Not implemented yet |
-| `Lambda_LE_deg` (wing LE sweep) | `AeroL1.oswald_eff`, `K1_supersonic` (see `AR` rows above) | Raymer 6th ed. Eqs. 12.48/12.49/12.51 | |
-| `Lambda_LE_deg` | `AeroL2`/`AeroL3.get_CL_max_values` (`wing_param` formula, see above) | Raymer 6th ed. Fig. 12.13/12.9 | |
-| `Lambda_LE_deg` | `AeroL3.get_CL_alpha` (generic toolbox static — **approximation**, uses `Lambda_LE_deg` in place of `Lambda_c4_deg`; own comment admits this) | Raymer 6th ed. Eq. 12.6 | `F16AeroL3.get_CL_alpha` (the concrete override, `F16AeroL3.m:225-228`) does NOT use this approximation — it calls `AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M)` directly, correctly using quarter-chord sweep. Documenting the toolbox-level approximation exists but is bypassed by the F-16 concrete class. |
-| `Lambda_LE_deg` | `WeightsL3.wing(...)` — `cos(Lambda_LE)^(-1.0)` | Raymer 6th ed. Eq. 15.1 | Code comment flags uncertainty: "some editions use quarter-chord sweep — verify sweep definition" (`WeightsL3.m:56-57`) — documenting the existing uncertainty, not resolving it |
-| `Lambda_c4_deg` (wing quarter-chord sweep) | `AeroL2.CL_alpha` (via `get_CL_alpha`) | Raymer 6th ed. Eq. 12.6 | **This is the property carrying the 37°/should-be-32.2° bug — see `F16GeomL2.md`.** Hardcoded independently (again) as `37` directly on `F16AeroL2`/`F16AeroL3`, not read from `F16GeomL2` at all — same wrong number duplicated a third and fourth time. |
-| `Lambda_c4_deg` | `AeroL2.CLmax_clean(cl_max_2D, Lambda_c4_deg)` (via `get_CLmax`) | Raymer 6th ed. §12.2 | Same 37° value, same bug propagation |
-| `Lambda_c4_deg` | `F16AeroL3.get_CL_alpha` override (see above) | Raymer 6th ed. Eq. 12.6 | |
-| `lambda_wing` (taper) | `WeightsL3.wing(...)` — `(1+lambda)^0.05` | Raymer 6th ed. Eq. 15.1 | Consumed as `obj.lambda_w` (independently hardcoded `0.2275` on `F16WeightsL3`, agrees with `F16GeomL2`) |
-| `S_csw` (wing control-surface area) | `WeightsL3.wing(...)` — `S_csw^0.04` | Raymer 6th ed. Eq. 15.1 | `F16WeightsL3.S_csw=69.0` annotated "estimate; from WeightLevel3.m hardcode; verify" — not sourced from any Geometry class (Geometry has no control-surface-area property at all today; Task 2's planned `C_e/c`/`C_r/c` fractions, `GeomL1.md`, would let this become a computed value) |
-| `tc_root` (wing) | `WeightsL3.wing(...)` — `tc_root^(-0.4)` | Raymer 6th ed. Eq. 15.1 | Consumed as `obj.tc_root` (independently hardcoded `0.04`, agrees with `F16GeomL2.tc_wing`/`tc_r_wing`) |
-
-## Chords / MAC (Base-tier, planned)
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `c_root`, `c_tip` | *(planned, Task 2)* not consumed by any existing discipline function today — no discipline reads `F16GeomL2.c_root_wing`/`c_tip_wing` anywhere | Raymer 7th ed. Eqs. 7.6/7.7 | Currently hardcoded, never computed, and never consumed downstream either — fully inert today |
-| `cbar` (MAC) | *(planned, Task 2)* `S_HT = c_HT*cbar*S_ref/L_HT` | Raymer 7th ed. Table 6.4 / Eq. 7.8 | No `cbar` property exists anywhere in the codebase today (confirmed by grep) — independent hand-computation from the stated F-16 geometry gives ≈11.32 ft |
-
-## S_wet (total and per-component)
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `S_wet` (total) | `AeroL1`/`AeroL2.get_CD0` → `CD0_from_Cf(Cf, S_wet, S_ref)` | Raymer 6th ed. §12.3 | `F16AeroL1/L2.S_wet=1371` hardcoded from `[Brandt F-16A.xls Main!L3]` — independent of `F16GeomL1/L2`'s own `get_S_wet()` output, which the constructors never call |
-| `S_wet_comp` (per-component array: wing/HT/VT/fus/duct) | `AeroL3.get_CD0_buildup` — `cd0_sum += cf_eff*ff_i*Q_comp(i)*S_wet_comp(i)` | Raymer 6th ed. component-buildup method, Eqs. 12.25–12.31 | `F16AeroL3.S_wet_comp = [397, 130, 111, 644, 139]` — these numbers match `F16GeomL2.md`'s "with duct" class-level validation comment (wing≈397, HT≈130, VT≈111, fus≈645, duct≈139 — formerly `F16GeomL3.m`'s docstring before the L3-to-L2 merge) almost exactly, strongly suggesting they were **hand-copied from that comment once**, not live-read from a `F16GeomL2` object at runtime. No code path connects the two classes. |
-| `S_wet_fus` | `WeightsL2.weight_fuselage` — `W = rho_fus * obj.S_wet_fus` | Raymer 6th ed. Table 15.2 | `F16WeightsL2.S_wet_fus = 750` ft², annotated "estimate; verify TO 1F-16A-1" — **disagrees with `F16GeomL2`'s own computed-in-comment fuselage S_wet (≈644.7 ft², Roskam Eq. 12.3 at D=5.0/L=47.5) by ≈16%.** Flagging as a cross-file inconsistency; not a VnV/BrandtF16A discrepancy (both files are in the active `examples/` tree) so not logged to `VnV/BrandtF16A/todo.md`, but worth the same kind of "compute once, share" fix. |
-
-## Thickness ratio / component geometry (AeroL3 CD0 buildup)
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `tc_comp` (per-component t/c) | `AeroL3.FF_surface(tc, x_c_max, Lambda_m_deg, M)` | Raymer 6th ed. Eq. 12.30 | Wing `tc_comp=0.04` matches `F16GeomL2.tc_r_wing`/`tc_t_wing`; HT `tc_comp=0.047` and VT `tc_comp=0.042` are each close to (but not exactly) the average of `F16GeomL2`'s own root/tip t/c pairs — independently chosen, not computed from the Geometry class |
-| `l_ref_comp` (per-component reference length — MAC for surfaces, overall length for bodies) | `AeroL3.compute_Re(state, l_ref)`, `Re_cutoff_sub/sup` | Raymer 6th ed. Eqs. 12.25/12.28/12.29 | Wing entry hardcoded `12.0` ft — does not match the ≈11.32 ft MAC an independent hand-computation gives from `F16GeomL2`'s own stated root/tip chords (no `cbar` property exists to compare against directly) |
-| `D_comp` (per-component diameter, bodies only) | `AeroL3.FF_body(L_body, D_body)` (via `is_body_comp` branch) | Raymer 6th ed. Eq. 12.31 | Fuselage `D_comp=5.0` agrees with `F16GeomL2.D_fus=5.0`; duct `D_comp=3.15` = average of `F16GeomL2.D_inlet=3.4`/`D_exit=2.9`, consistent but independently computed, not read live |
-| `x_c_max_comp` | `AeroL3.FF_surface` (same as `tc_comp` row) | Raymer 6th ed. Eq. 12.30 | Airfoil-level datum (chordwise location of max thickness), not a planform quantity Geometry produces — sourced independently `[T.O.; Raymer Table 12.6]` |
-| `Lambda_m_comp` (sweep at max-thickness line, per component) | `AeroL3.FF_surface` (same) | Raymer 6th ed. Eq. 12.30 | Wing `Lambda_m_comp=35°`; a spot-check using the (unresolved-citation) sweep-conversion identity at the wing's own AR/λ/Λ_LE and x=0.40 (the wing's own `x_c_max_comp`) gives ≈26.7°, and at x=0.50 gives ≈22.8° — neither matches 35°. Not deeply investigated further here (this is an Aero-owned, not Geometry-owned, hardcoded estimate), but flagging as a further instance of the same "estimated, not computed" pattern. |
-
-## Fuselage L/D/W
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `D_fus`, `L_fus` | `GeomL2.compute_s_wet_fus_cyl` | Roskam Vol. II Eq. 12.3 | Within Geometry itself — the one place a "computed from inputs" chain genuinely runs today |
-| `L_fus` | `WeightsL3.fuselage(...)` — `L_fus^0.5` | Raymer 6th ed. Eq. 15.4 | Consumed as `obj.L_fus` (hardcoded `47.5`, agrees with `F16GeomL2.L_fus`) |
-| `D_fus` | `WeightsL3.fuselage(...)` — `D_fus^0.849` | Raymer 6th ed. Eq. 15.4 | Agrees (`5.0` both places) |
-| `W_fus` (max fuselage width) | `WeightsL3.fuselage(...)` — `W_fus^0.685` | Raymer 6th ed. Eq. 15.4 | `F16WeightsL3.W_fus=7.0` ft — **disagrees with `F16GeomL2.W_max_fuselage=5.0`** ft for what both name "max fuselage width." (`7.0` actually matches the live Brandt `Main!C32` max-width cell, `5.0` does not — see Task 4 findings — so Weights' number happens to be the value Brandt's own workbook uses, while Geometry's is an independent T.O.-cross-section estimate.) Flagging the cross-file mismatch; not resolving. |
-| `W_max_fuselage`, `H_max_fuselage` | **Not consumed anywhere** — declared `Abstract` in `GeometryModelL2` but no `GeomL2.m` method reads them (`get_S_wet_fuselage` reads `D_fus`/`L_fus` only) | — | Dead properties within Geometry itself, not just cross-discipline |
-
-## Tail areas, AR, taper, sweep (HT/VT)
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `S_ht`/`S_ht` | `WeightsL2.weight_tail` — `W.HT = rho_ht*obj.S_ht` | Raymer 6th ed. Table 15.2 | `F16WeightsL2.S_ht=63.70` agrees with `F16GeomL2.S_exposed_ht`/`S_exposed_HT` |
-| `S_vt` | `WeightsL2.weight_tail` — `W.VT = rho_vt*obj.S_vt` | Raymer 6th ed. Table 15.2 | Agrees, `54.75` both places |
-| `S_ht`, `F_w`, `B_h` | `WeightsL3.horizontal_tail(...)` | Raymer 6th ed. Eq. 15.2 | `F_w=7.0` (fuselage width at HT) — same `7.0` vs `5.0` mismatch noted in the fuselage-width row above; `B_h` computed in `F16WeightsL3`'s constructor as `sqrt(AR_ht*S_ht)`, i.e. **is** actually computed, just from `F16WeightsL3`'s own independently-hardcoded `AR_ht`, not from Geometry |
-| `AR_ht` (HT aspect ratio) | `F16WeightsL3` constructor (`B_h = sqrt(obj.AR_ht * obj.S_ht)`) and `WeightsL3.vertical_tail` (indirectly, `AR_vt` for VT) | — | `F16WeightsL3.AR_ht = 2.114` **disagrees with `F16GeomL2.AR_HT = 4.81`** for the same physical quantity — see `F16GeomL2.md`. `2.114` matches `temp_AI/docs/disciplines/reference_extracts/usaf_f16_data.md`'s reported HT aspect ratio; `4.81` is `F16GeomL2`'s own `b_HT^2/S_exposed_HT` computed-in-comment value from its own (differently sourced) `b_HT=17.5` estimate. |
-| `S_vt`, `H_t`, `H_v`, `M_design`, `L_t`, `S_r`, `AR_vt`, `lambda_vt`, `Lambda_LE_vt` | `WeightsL3.vertical_tail(...)` | Raymer 6th ed. Eq. 15.3 | `F16WeightsL3.AR_vt = 1.294` **disagrees with `F16GeomL2.AR_VT = 1.45`** — same pattern as `AR_ht` above; `1.294` matches `usaf_f16_data.md`. `lambda_vt=0.437` and `Lambda_LE_vt=47.5` DO agree with `F16GeomL2`. `L_t=22.0` ft annotated "estimate; verify TO 1F-16A-1" — no Geometry-class tail-arm property exists to compare against (Task 2's planned `L_HT=L_VT=0.475*L_fus` would give `0.475*47.5=22.56` ft, coincidentally close). `S_r=50.0` ft² annotated "estimate; from WeightLevel3.m code" — Task 2's planned rudder chord fraction (`C_r/c=0.33`, Raymer 7th ed. Table 6.5) would let this become a computed value once VT chord geometry is computed. |
-
-## Control-surface areas
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `S_flapped`, `Lambda_HL_deg` | `AeroL2`/`AeroL3.compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)` | Raymer 6th ed. Eq. 12.21 | **Dead/unwired — see below.** No `F16AeroL2`/`F16AeroL3` property or call site supplies real values; the method is defined but never invoked. |
-| control-surface chord fractions (elevator, rudder, aileron) | *(planned, Task 2)* `C_e/c=0.30`, `C_r/c=0.33` (jet fighter, Raymer 7th ed. Table 6.5); aileron fraction NOT available in the given table | Raymer 7th ed. Table 6.5 | Not implemented; no existing consumer either — `S_csw` (Weights L3) and `S_cs` (Weights L3 flight-controls) are both currently independent hardcoded estimates, not computed from a chord-fraction × tail/wing planform relationship |
-| `S_csw` (wing control-surface area) | `WeightsL3.wing(...)` | Raymer 6th ed. Eq. 15.1 | See Wing-parameters section above |
-| `S_cs` (total control-surface area) | `WeightsL3.flight_controls(M, S_cs, N_s, N_c)` | Raymer 6th ed. Eq. 15.17 | `F16WeightsL3.S_cs=190` ft², annotated "estimate: flaperon+HT+rudder+LEF" — sum of components none of which exist as Geometry outputs today |
-
-## Engine/duct geometry
-
-| Parameter | Consumed by | Citation | Notes |
-|---|---|---|---|
-| `D_inlet`, `D_exit`, `L_duct` | `GeomL2.get_S_wet_duct` → `compute_s_wet_duct` (formerly `GeomL3`, moved into `GeomL2` per the 2026-07-22 L3-elimination decision) | Raymer 6th ed. §7.3 (frustum lateral-area formula) | Within Geometry itself |
-| `D_e` (engine face/nozzle diameter) | `WeightsL3.air_induction`, `tailpipe`, `engine_cooling` | Raymer 6th ed. Eqs. 15.10/15.11/15.12 | `F16WeightsL3.D_e=3.33` ft — independent estimate, not derived from `F16GeomL2.D_inlet=3.4`/`D_exit=2.9`, and not read from any `PropL2` engine-sizing output either (recall: Propulsion produces engine diameter as an output via `engine_diam_AB`, but nothing calls it and feeds it here) |
-| `L_d`, `L_s` | `WeightsL3.air_induction` | Raymer 6th ed. Eq. 15.10 | Independent estimates, not sourced from `F16GeomL2.L_duct` |
-| `L_tp`, `L_sh`, `L_ec` | `WeightsL3.tailpipe`/`engine_cooling`/`oil_cooling` | Raymer 6th ed. Eqs. 15.11/15.12/15.13 | Independent estimates; no Geometry-class equivalent exists |
-
----
-
-## Dead / unwired parameters (confirmed by grep — zero call sites with real arguments anywhere outside their own definitions, and no orchestrator file exists in the active tree to wire them)
-
-| Parameter | Formal parameter of | Would-be citation |
+| Consumer | Reads | Via |
 |---|---|---|
-| `b` (wing span) | `AeroL1.compute_AR_wet(b, S_wet)` | Raymer 6th ed. Eq. 3.11 |
-| `b`, `d` (fuselage diameter) | `AeroL2`/`AeroL3.compute_F(d, b)` | Raymer 6th ed. Eq. 12.9 |
-| `S_flapped`, `Lambda_HL_deg` | `AeroL2`/`AeroL3.compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)` | Raymer 6th ed. Eq. 12.21 |
+| Aerodynamics L2 / L3 | `S_ref`, `S_wet`, `AR_wing`, sweeps, taper, t/c, per-component wetted areas / lengths / diameters, `Amax`, `L_aircraft` | constructor DI, live through `Dependent` getters |
+| Weights L2 / L3 | exposed areas, tail planform, fuselage envelope, control-surface areas, duct/engine lengths | constructor DI, live through `Dependent` getters |
+| Constraints | nothing directly — geometry reaches them through the geometry→aero chain (`drag_polar`, `get_CLmax`) | indirect |
+| Propulsion | nothing. `PropL2` *produces* engine length/diameter as outputs nothing reads back | — |
 
-Confirmed via `grep -r "compute_AR_wet\|compute_F(\|compute_Delta_CL_max_values"` across `tests/` (zero matches) and across `src/`/`examples/` (matches only in the methods' own definitions/delegation chains, never a call site supplying real geometry). No `SizingLoop*.m`/`ConstraintAnalysis*.m`/`MissionAnalysis*.m` orchestrator file exists yet in the active tree, which is the reason nothing calls these with real values — consistent with Steps 6–8 (constraints/mission/sizing) not having started per `CLAUDE.md`'s step list.
+Aerodynamics L1 and weights L1 are geometry-free.
+
+---
+
+## 2. Dependency injection
+
+| Direction | Mechanism | What crosses |
+|---|---|---|
+| propulsion → geometry | `F16GeomL2(json_path, prop)` / `F16GeomL3(json_path, prop)`, both arguments required | exactly one number: `prop.T_SL` = 23,770 lbf. `T_AB_SLS_lb` is `Dependent` on it, so `D_inlet` → duct `S_wet` → `CD0` tracks a thrust change instead of a frozen copy |
+| geometry → aerodynamics | `F16AeroL2(geom, json_path)` / `F16AeroL3(geom, json_path)`; guard `mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])` | every geometric quantity aero uses; nothing geometric is stored on an aero class |
+| geometry → weights | `F16WeightsL2(json_path, req_path, geom, prop)` requires `GeometryModelL2`; `F16WeightsL3(…)` requires `GeometryModelL3` | 21 `Dependent` getters on `F16WeightsL3` read `obj.geom.*`; the former hardcoded geometry constants are gone |
+| geometry → propulsion | none | — |
+
+The guards cannot catch an L2-vs-L3 mix-up: both tiers satisfy the aero contract by design, so a
+wrong-but-valid injection yields plausible numbers rather than an error. Only reading the call site
+catches it.
+
+**Three DI name traps** — each wrong-but-valid wiring produces a plausible number:
+
+| Weights wants | Must read | NOT |
+|---|---|---|
+| Raymer Eq. 15.4 structural depth | `geom.H_max_fuselage` = 5.0 | `geom.D_fus` = 6.0 (Roskam Eq. 12.3 equivalent diameter) |
+| Eq. 15.2 exposed HT area | `geom.S_exposed_ht` = 51.1486 | `geom.S_ht` = 108 (full reference) |
+| Eq. 15.3 exposed VT area | `geom.S_exposed_vt` = 40.8897 | `geom.S_vt` = 60 (full reference) |
+
+`AR_ht` / `lambda_ht` / `S_ht` / `S_vt` mean **full planform at both tiers**; the exposed values carry
+an explicit `_exposed_` infix (`AR_exposed_ht`, `lambda_exposed_vt`, …). The weights-side `AR_ht` /
+`lambda_ht` were dead and are deleted, not re-pointed.
+
+---
+
+## 3. Quantity → level, member, citation
+
+### Planform (per surface: wing, HT, VT)
+
+| Quantity | Member | Formula | Citation |
+|---|---|---|---|
+| span | `compute_span(AR, S_ref)` | `sqrt(AR·S)` | definitional |
+| root / tip chord | `compute_root_chord` / `compute_tip_chord` | `2S/(b(1+λ))`; `λ·c_root` | Raymer 7th ed. Eq. 7.6 / 7.7 |
+| MAC | `compute_mac(c_root, lambda)` | `(2/3)c_root(1+λ+λ²)/(1+λ)` | Raymer 7th ed. Eq. 7.8 |
+| sweep at `x`, **mirrored** (wing, HT) | `convert_sweep(Λ_LE, AR, λ, x)` | `tan Λ_x = tan Λ_LE − (4/AR)x(1−λ)/(1+λ)` | standard planform identity (`GeometryBase.md`) |
+| sweep at `x`, **single panel** (VT) | `convert_sweep_panel(…)` | same with `2/AR` | as above |
+| exposed area | `S_exposed_*` | full planform clipped at `W_max_fuselage/2` (wing, HT) or `H_max_fuselage/2` (VT) | `readme_geom.md` §4.3 |
+
+### Wetted areas
+
+| Quantity | Member | Citation |
+|---|---|---|
+| lifting surfaces | `S_wet_wing` / `_ht` / `_vt` | Roskam Vol. II Eq. 12.1, fed the root/tip t/c splits |
+| fuselage | `get_S_wet_fuselage()` | Roskam Vol. II Eq. 12.3 |
+| duct | `get_S_wet_duct()` | Raymer 6th ed. §7.3 (frustum) |
+
+### Fuselage / nacelle
+
+| Quantity | Member | Formula | Citation |
+|---|---|---|---|
+| equivalent diameter | `D_fus` | `(W_max + H_max)/2` | Roskam Vol. II Eq. 12.3 |
+| nacelle diameter | `D_inlet` | `sqrt(T_AB_SLS/1900)` | `[Brandt Geom!C475; Engn(s)!L22 = 1900]` |
+| engine length | `L_engine` | `4.5·D` | `[Brandt Geom!D475]` |
+| max cross-section, **L2** | `compute_Amax_elliptical(W, H)` | `(π/4)·W·H` — fuselage envelope, low-fidelity form | `readme_geom.md` §7 |
+| max cross-section, **L3** | `GeomL3.get_Amax` | `MAX` over 20 rescaled frame stations of (fuselage + wing + HT + VT + nacelle) less `n_engines·πD²/5` | `[Brandt Geom!H26:H45 → H47 → B20]` |
+
+`Amax` is tier-split deliberately. Raymer Eq. 12.44's Sears-Haack term wants a whole-aircraft
+area-ruled value; the envelope ellipse is fuselage-only. Injecting an L2 geometry into `F16AeroL3`
+substitutes one for the other and inflates `CD0_wave` ~23 %.
+
+### L1 (statistical, functions of `W_TO`)
+
+| Quantity | Member | Citation |
+|---|---|---|
+| total wetted area | `S_wet` (`Dependent` on input `W_TO`) | Roskam Vol. I Table 3.5 |
+| fuselage length | `L_fuselage` (`Dependent` on input `W_TO`) | Raymer 6th ed. Table 6.3 |
+| equivalent AR | `get_AR_eq()` (from `M_max`) | Raymer 7th ed. Table 4.1, dogfighter row |
+
+`W_TO` is a genuine L1 input; both getters **error** while it is unset rather than returning a
+placeholder. `M_max` comes from `f16a_requirements.json .design_mach`, not the spec file.
+
+---
+
+## 4. As-built values
+
+Computed live 2026-07-26. `BY DESIGN` = intentional L2↔L3 fidelity divergence; `definitional` =
+different quantity, not an agreement check.
+
+| Quantity | L1 | L2 | L3 | Brandt | Note |
+|---|---|---|---|---|---|
+| `S_ref` | 300 | 300 | 300 | `Main!B18` 300 | — |
+| `AR_wing` | `get_AR_eq` 3.518664 | 3.0 | 3.0 | `Main!B19` 3 | L1 is a different estimator |
+| `lambda_wing` | — | 0.2275 | 0.2275 | `Main!B20` 0.2275 | — |
+| `LE_sweep_wing` | — | 40° | 40° | `Main!B21` 40 | — |
+| `tc_wing` | — | 0.04 | 0.04 | `Main!B22` NACA 1404 | — |
+| `cbar_wing` | — | 11.320179 | 11.320179 | — | — |
+| `QC_sweep_wing` | — | 32.183178° | 32.183178° | 28.153° | definitional (exposed-panel basis) |
+| `S_exposed_wing` | — | 196.22607 | 196.22607 | `Geom!H7` 196.22607 | agreement |
+| `S_exposed_ht` | — | 49.847251 | **51.148643** | `Geom!H8` 49.84725 | **BY DESIGN** (+2.61 %) |
+| `S_exposed_vt` | — | 40.889669 | 40.889669 | `Geom!H10` 40.88967 | agreement (no sweep term — cannot diverge) |
+| `S_ht` / `S_vt` (full) | — | 108 / 60 | 108 / 60 | `Main!C18`/`H18` | — |
+| HT span | — | `b_ht` 18.0 derived | **`B_h` 18.5 INPUT** (primary) | 18.0 | **BY DESIGN** (+2.78 %) |
+| `AR_ht` | — | 3.0 INPUT | **3.1689815 DERIVED** = `B_h²/S_ht` | `Main!C19` 3.0 | **BY DESIGN**; must never be stored at L3 |
+| `c_root_ht` / `c_tip_ht` | — | 9.7759674 / 2.2240326 | **9.5117521 / 2.1639236** | — | **BY DESIGN** |
+| `QC_sweep_ht` / `TE_sweep_ht` | — | 32.183178 / −0.00024285 | **32.639955 / 2.5616932** | `Main!C27` TE ≈ 0 | **BY DESIGN** |
+| `LE_sweep_vt` | — | 40° | **47.5°** | `Main!H21` 40 | **BY DESIGN** (T.O. value) |
+| `QC_sweep_vt` / `TE_sweep_vt` | — | 36.313393 / 22.900799 | **44.629262 / 34.00525** | `Main!H27` TE = 0 literal | **BY DESIGN**; both tiers use the `2/AR` panel form |
+| `tc_ht` / `tc_vt` | — | 0.0475 / 0.0415 | 0.0475 / 0.0415 | `Main!C22`/`H22` 0.04 uniform | definitional — root/tip split `[T.O. 1F-16A-1 §I]` |
+| `S_wet_wing` | — | 396.37666 | 396.37666 | `Geom!B14` 392.02044 | definitional (formula family) |
+| `S_wet_ht` | — | 101.38789 | **104.03488** | `Geom!B16` 99.58484 | **BY DESIGN** |
+| `S_wet_vt` | — | 83.139828 | 83.139828 | `Geom!B17` 81.68938 | definitional |
+| fuselage `S_wet` | — | 730.30232 | **749.13368** | `Geom!B3` 730.422 | **BY DESIGN** (`L_fus` 47.5) |
+| duct `S_wet` | — | 155.56636 | 155.56636 | `Geom!B4` 41.515 (nacelle) | definitional (different quantity) |
+| total `S_wet` | 1763.0171 @ `W_TO` 31,377 | 1466.7731 | 1488.2514 | 1331.134 corrected | definitional — Brandt's total carries strake/nacelle terms with no framework analog |
+| `L_fus` | 52.742584 @ 31,377 | 46.5 | **47.5** | `Main!B32` 46.5 | **BY DESIGN** (+2.15 %) |
+| `D_fus` (equivalent) | — | 6.0 | 6.0 | low-fi `D_avg` | — |
+| `W_max` / `H_max` fuselage | — | 7.0 / 5.0 | 7.0 / 5.0 | `Main!C32`/`D32` | — |
+| `Amax` | — | **27.488936** (envelope ellipse) | **24.703652** (area-ruled) | `Geom!B20` 25.110556 | L2 definitional; L3 **BY DESIGN** (−1.62 %, the 47.5 ft fuselage). Round-trip: at `L_fus` 46.5, L3 returns 25.110534 |
+| `L_aircraft` | — | 47.65 | 47.65 | `Geom!B21` 48.303947 | definitional — spec dimension vs a `MAX()` extent |
+| `D_inlet` | — | 3.5370222 | 3.5370222 | `Geom!C475` 3.537022 | agreement (positive control on the propulsion DI) |
+| `L_engine` | — | — | 15.9166 | `Geom!D475` | — |
+| `T_AB_SLS_lb` | — | 23,770 (via `prop.T_SL`) | 23,770 (via `prop.T_SL`) | `Main!D29` | `Dependent`, not an input |
+
+### L3-only inputs (feed the area-ruled `Amax`)
+
+| Input | Value | Citation |
+|---|---|---|
+| `x_apex_wing` | 17.786 ft | `[Brandt Main!B23]` |
+| `x_le_ht` / `x_le_vt` | 36.0 / 36.0 ft | `[Brandt Main!C23 / H23]` |
+| `x_inlet` | 15.0 ft | `[Brandt Main!F31]` — not 14.0, which is the duct length |
+| `n_engines` | 1 | `[Brandt Main!B28]` |
+| `frames_normalized` | 20 × 3 | `[Brandt Main!A34:F53]` ÷ his envelope (46.5 / 7.0 / 5.0) |
+
+Frames are stored **normalized** so `Amax` responds to the fuselage envelope. Stored raw it responded
+to `W_max_fuselage` with the wrong sign and to `H_max_fuselage` not at all. `Amax` is deliberately
+non-linear in `W_max_fuselage`: a wider fuselage grows every frame section *and* eats more exposed
+wing root.
+
+---
+
+## 5. Open items
+
+| Item | Status |
+|---|---|
+| `Amax` has no pinnable textbook citation at either tier | todo §4; L3's frame-rescaling assumption also uncited |
+| `L_aircraft` = 47.65 ft is traceable to no in-repo document | guarded red by `TestGeomL3.testTODO_OverallLengthCitationNotPinned`; todo §6 |
+| L1 aileron-area fraction not available | guarded red by `TestGeomL1.testTODO_AileronFractionNotAvailable` |
+| `compute_nacelle_diameter` hardcodes 1900, silently assuming an afterburning engine (Brandt uses 2000 when `T_dry = T_AB`) | todo §18 |
+| `engine.n_engines` sits in `.geometry` only because no propulsion class exposes an engine count | should migrate to `.propulsion` + DI, as `T_AB_SLS_lb` did; todo §22 |
+| `F16GeomL2.mainwheel_S_front` / `nosewheel_S_front` | defined, unused |
+| HLD/gear delta methods | implemented and unit-tested, not yet consumed — mission/sizing (steps 7–8) not built |

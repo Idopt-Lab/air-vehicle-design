@@ -42,7 +42,7 @@ Process, with two hard human-approval gates before autonomous looping starts:
 
 **Two test tiers, never blended**: unit/correctness tests (`tests/disciplines/Test*.m`, gate `run_all_tests`, must be green — deliberately-failing TODO tests for missing citations are the only expected exception, and must be clearly labeled as such) vs. a separate Brandt comparison report (e.g. `examples/F16A/*_brandt_comparison.m`, exports console/JSON/`.md`) that checks agreement with ground truth — informational, not pass/fail, and never used to backfill a unit test's "expected" value.
 
-See `.claude/agents/*.md` for each role's full brief, and `docs/darshan-verification/` for the review that motivated this process.
+See `.claude/agents/*.md` for each role's full brief.
 
 ## Running tests
 
@@ -71,9 +71,13 @@ Target MATLAB version is R2022b+ — use `arguments` blocks and `mustBe*` valida
 
 ### Core
 - `src/core/AircraftState.m` — immutable **value** class (not `handle`) representing ISA atmosphere at a given altitude/Mach. Built via MATLAB's `atmosisa`, converted to English units (lbf, ft, slug, ft/s, deg R). Carries `theta`/`delta`/`theta_0`/`delta_0` per Mattingly Eq. 2.52. Passed into most discipline methods as the flight-condition argument.
-- `baseline/F16Baseline.m` — the actual ground-truth data source used by tests: a struct of cited Brandt/Raymer/Mattingly/T.O. values (geometry, weights, engine, sizing targets), extracted via `baseline/extract_brandt.m`. Tests compare computed results against `F16Baseline()` fields with `RelTol` tolerances (looser at L1, tighter at L3) rather than exact equality — exact agreement with Brandt is explicitly not the goal.
+- `baseline/F16Baseline.m` — a struct of cited Brandt/Raymer/Mattingly/T.O. values (geometry, weights, engine, sizing targets). **Deprecated**, kept only because the weights and constraint tests still compare against `F16Baseline()` fields; geometry and aerodynamics now validate against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`. Tests use `RelTol` tolerances (looser at L1, tighter at L3), not exact equality — exact agreement with Brandt is explicitly not the goal.
 
-  Note: PLAN.md's Step 0 describes a JSON-based data model (`examples/F16A/requirements.json` + `aircraft_spec.json`). That JSON layer does not exist in the tree yet — `F16Baseline.m` is the mechanism actually in use. Don't assume the JSON files exist without checking.
+  Discipline inputs come from the unified per-level JSON `examples/F16A/f16a_L{1,2,3}.json` — one file per fidelity level, with `.geometry`/`.aerodynamics`/`.propulsion`/`.weights` blocks read by the matching `F16Geom*`/`F16Aero*`/`F16Prop*`/`F16Weights*` classes (resolved via `f16a_spec_path(level)`; constructors require the path — no silent default). **All four disciplines now read this unified JSON** — the older per-discipline input style is gone.
+
+  **Requirements are a SEPARATE file** (added 2026-07-25): `examples/F16A/f16a_requirements.json`, resolved via `f16a_requirements_path()` — no `level` argument, because requirements do not vary with fidelity. This partly revives PLAN.md's Step-0 two-file model: the `requirements.json` half is real, the `aircraft_spec.json` half was not revived (per-level spec files serve that role). The distinction to keep: a **spec** file says what the aircraft *is* (areas, sweeps, thrust, airfoil); the **requirements** file says what it must *do*. Currently minimal — cruise altitude/Mach and design Mach — and expected to grow into the full requirement set with constraint and mission analysis. Consumers today: `F16WeightsL2/L3` (cruise condition for the SFC dependency injection, design Mach for the Raymer Eq. 10.10 engine weight) and `F16GeomL1` (design Mach → `AR_eq`).
+
+  One canonical `aircraft_category` sits at the top level of each spec file, not inside a discipline block. It selects rows in six different textbook tables, and those tables name their categories differently (Roskam's CLmax table prints `fighter`, the others `jet_fighter`), so each lookup translates the canonical value to its own table's row name — see `AeroL1.to_CLmax_table_row`. **Do not rename a table row to match the key**: the row name is what the textbook prints, and the citation depends on it.
 
 ### The three-tier discipline pattern
 
@@ -104,7 +108,15 @@ Concretely, for F-16 aerodynamics at L1: `AerodynamicsBase` (abstract) ← `Aero
 
 This pattern repeats identically for propulsion (`PropL*`/`PropulsionModelL*`), weights (`WeightsL*`/`WeightsModelL*`), and geometry (`GeomL*`/`GeometryModelL*`).
 
-**2026-07-22 exception — Geometry has no L3.** Geometry is L1/L2 only; there is no `GeomL3`/`GeometryModelL3`/`F16GeomL3` tier (Aerodynamics, Propulsion, and Weights are unaffected and keep their full L1/L2/L3 structure). Rationale: Geometry's former L3 tier only added a variable-tc wetted-area formula option and a duct component, neither meaningfully different in fidelity from L2, so both were folded into L2 as additional method options instead of being kept as a separate tier. See `sizing/src/disciplines/geometry/GeomL2.md` for the full writeup.
+**Geometry HAS an L3 tier (reinstated 2026-07-24, promoted 2026-07-25).** `GeomL3`/`GeometryModelL3`/`F16GeomL3` exist and are the full L3 geometry tier, consumed by L3 geometry, aerodynamics **and** weights. This reverses the 2026-07-22 "Geometry has no L3" decision recorded in earlier versions of this file and still echoed in some `sizing/docs/` prose — the code is authoritative.
+
+L3 geometry is the **physical / T.O.** tier: where a physical or T.O. 1F-16A-1 value differs from Brandt's, GeomL3 uses the physical one. Those divergences are intentional fidelity differences, **not errors**, and comparison reports annotate them `BY DESIGN`: VT LE sweep 47.5° vs L2's 40°, fuselage length 47.5 ft vs 46.5, and HT span 18.5 ft taken as the PRIMARY span (so `AR_ht` = `B_h²/S_ht` = 3.169 is *derived*, not Brandt's 3.0). Naming: the exposed-planform members carry an explicit `_exposed_` infix (`AR_exposed_ht`, `lambda_exposed_vt`, …) so that `AR_ht`/`lambda_ht`/`S_ht`/`S_vt` mean FULL planform at **both** tiers — an earlier version had the same names meaning different things on the two tiers, which silently fed exposed values into full-planform equations.
+
+Two consequences worth knowing before touching geometry:
+- **Geometry takes an injected propulsion object**: `F16GeomL2(json_path, prop)` / `F16GeomL3(json_path, prop)`. The nacelle diameter — and hence duct wetted area and CD0 — is sized from engine SLS thrust, which is engine data, not airframe data. `T_AB_SLS_lb` is `Dependent` on `prop.T_SL`; it is no longer a geometry input at either level.
+- **`Amax` is tier-specific, deliberately.** L2 uses the fuselage-envelope ellipse `(pi/4)·W·H` (the low-fidelity form, per `VnV/BrandtF16A/readme_geom.md` §7). L3 uses the whole-aircraft **area-ruled buildup** that Raymer Eq. 12.44's Sears-Haack term actually wants. Do not "unify" these — using the envelope form at L3 is a fidelity inversion, and was a real bug.
+
+There is still **no L3 propulsion tier** (no `PropL3`/`PropulsionModelL3`/`F16PropL3`), and none is planned: the L3 rung pairs `F16AeroL3` with `F16PropL2`, and anything reporting L3 propulsion numbers must label them "computed by `F16PropL2`". See `sizing/examples/F16A/F16GeomL3.md` for the full L3 geometry writeup and `sizing/src/disciplines/geometry/GeomL2.md` for the historical L2-merge note.
 
 ### Layer split (generic vs. aircraft-specific)
 
@@ -125,6 +137,6 @@ Do **not** compute a derived quantity once in the constructor and freeze it into
 
 ### Tests
 
-`tests/` mirrors `src/`'s layout (`tests/core/`, `tests/disciplines/`). Test classes subclass `matlab.unittest.TestCase`; each documents the hand-computed expected value inline in a comment block above the `properties (Constant)` block, then asserts `verifyEqual(received, expected, 'RelTol', tol, message)` against either the hand-computed formula result or an `F16Baseline()` field. Generic-class tests and F-16-specific tests are not yet split into separate `tests/disciplines/` vs `tests/examples/F16A/` folders as PLAN.md's target layout describes — currently they live together in `tests/disciplines/`.
+`tests/` mirrors `src/`'s layout (`tests/core/`, `tests/disciplines/`, `tests/constraints/`). Test classes subclass `matlab.unittest.TestCase`; each documents the hand-computed expected value inline in a comment block above the `properties (Constant)` block, then asserts `verifyEqual(received, expected, 'RelTol', tol, message)` against either the hand-computed formula result or an `F16Baseline()` field. Generic-class tests and F-16-specific tests are not yet split into separate `tests/disciplines/` vs `tests/examples/F16A/` folders as PLAN.md's target layout describes — currently they live together in `tests/disciplines/`.
 
 `.asv` files (MATLAB autosave) appear throughout `src/` — they're gitignored; ignore them when reading the tree.

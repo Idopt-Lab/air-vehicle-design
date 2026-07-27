@@ -1,0 +1,195 @@
+{
+  "_comment": "F-16A Block 10/15 Level-3 inputs (physical / T.O. geometry tier). Read by F16GeomL3, F16AeroL3, F16WeightsL3; aero component order wing, horizontal_tail, vertical_tail, fuselage, duct. Full docs: F16GeomL3.md (authoritative for .geometry), F16AeroL3.md, F16WeightsL3.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
+  "_cite": "Main!/Geom!/Engn(s)!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; todo = VnV/BrandtF16A/todo.md.",
+
+  "aircraft_category": "jet_fighter",
+  "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
+
+  "geometry": {
+    "_src": "FULL-planform surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %), 23 = 'X Location' (x_apex_ft / x_le_ft). Per-block _src below cites only the keys that depart from that map.",
+    "_note": "Intentional divergences from L2 (vertical_tail.sweep_LE_deg, fuselage.length_ft, horizontal_tail.span_ft): F16GeomL3.md §2/§4. Derived quantities are Dependent getters; engine SLS thrust arrives by DI. ★ horizontal_tail has NO 'AR' key by design -- S_ft2 + span_ft fix the planform, AR_ht is Dependent; do not add one (todo 2026-07-25 §7). ★ MIXED PROVENANCE, OPEN: full-planform tail areas/AR/taper are Brandt's, carried alongside TO/USAF sweeps and span (todo 2026-07-25 §3).",
+
+    "wing": {
+      "_src": "tc_ratio = Main!B22's 1404 -> 4%; AR and tc_ratio corroborated [TO Fig. 1-2, NACA 64A204]; S_csw_ft2 [TO Fig. 1-2, flaperon 31.32 + LEF 36.71; != Main!F18 LE-flap 21.314, todo 2026-07-21 Finding 5]; x_apex_ft [live cell 17.785833 -- 17.786 is the scoped value, do not 'correct', F16GeomL3.md §2 #35]",
+      "S_ft2":        300.0,
+      "AR":           3.0,
+      "taper":        0.2275,
+      "sweep_LE_deg": 40.0,
+      "tc_ratio":     0.04,
+      "S_csw_ft2":    68.03,
+      "x_apex_ft":    17.786
+    },
+
+    "horizontal_tail": {
+      "_src": "tc_root, tc_tip [TO Sec. I biconvex]; AR_exposed, taper_exposed EXPOSED-planform [TO/USAF; unreconciled with Brandt exposed geometry, todo 2026-07-24 GeomL3 §1]; span_ft [USAF 3-view]; F_w_ft [Main!C32 max-width proxy, estimate]",
+      "S_ft2":         108.0,
+      "taper":         0.2275,
+      "sweep_LE_deg":  40.0,
+      "tc_root":       0.060,
+      "tc_tip":        0.035,
+      "AR_exposed":    2.114,
+      "taper_exposed": 0.390,
+      "span_ft":       18.5,
+      "F_w_ft":        7.0,
+      "x_le_ft":       36.0
+    },
+
+    "vertical_tail": {
+      "_src": "AR is single-panel [Main!H19]; sweep_LE_deg PHYSICAL [TO], diverges from L2's 40 [Main!H21]; tc_root, tc_tip [TO Sec. I biconvex]; AR_exposed, taper_exposed EXPOSED-planform [TO/USAF; todo 2026-07-24 GeomL3 §1]; rudder_area_ft2 [TO Fig. 1-2]; H_t_ft, H_v_ft giving H_t/H_v = 0, conventional tail [Raymer §15.3]",
+      "S_ft2":           60.0,
+      "AR":              1.6,
+      "taper":           0.5,
+      "sweep_LE_deg":    47.5,
+      "tc_root":         0.053,
+      "tc_tip":          0.030,
+      "AR_exposed":      1.294,
+      "taper_exposed":   0.437,
+      "rudder_area_ft2": 11.65,
+      "H_t_ft":          0,
+      "H_v_ft":          1,
+      "x_le_ft":         36.0
+    },
+
+    "fuselage": {
+      "_src": "length_ft PHYSICAL [TO] -- diverges from L2's 46.5 [Main!B32], todo 2026-07-24 GeomL3 §3; max_width_ft [Main!C32; TO]; max_depth_ft = H_max, the Raymer Eq. 15.4 structural depth, NOT the derived D_fus [Main!D32; naming clash todo 2026-07-24 GeomL3 §5]",
+      "length_ft":    47.5,
+      "max_width_ft": 7.0,
+      "max_depth_ft": 5.0,
+
+      "_frames_normalized_src": "20-station cross-section table [Main!A34:F53, via read-only GroundTruth/f16a_geometry.json fuselage.frames; readme_geom.md §2], divided by BRANDT's envelope: x/46.5 [Main!B32] (not L3's 47.5), w/7.0 [Main!C32], h/5.0 [Main!D32]. z_chine/z columns dropped -- they cancel exactly out of the frame area [readme_geom.md §4.2]. Feeds the area-ruled Amax [Geom!H26:H45 -> H47 -> B20]. ★ The affine-rescaling assumption is UNCITED (todo 2026-07-25 Phase 2 §4b). ★ h_over_Hmax peaks at 1.50, the canopy bulge -- NOT a typo. Receipts + canopy arithmetic: F16GeomL3.md §2/§6.",
+      "frames_normalized": [
+        {"frame": 1,  "x_over_L": 0.0521505376344086,  "w_over_Wmax": 0.2857142857142857, "h_over_Hmax": 0.3},
+        {"frame": 2,  "x_over_L": 0.10752688172043011, "w_over_Wmax": 0.4571428571428572, "h_over_Hmax": 0.44000000000000006},
+        {"frame": 3,  "x_over_L": 0.1935483870967742,  "w_over_Wmax": 0.5142857142857143, "h_over_Hmax": 0.6},
+        {"frame": 4,  "x_over_L": 0.25806451612903225, "w_over_Wmax": 0.6,                "h_over_Hmax": 1},
+        {"frame": 5,  "x_over_L": 0.2903225806451613,  "w_over_Wmax": 0.6285714285714287, "h_over_Hmax": 1.2},
+        {"frame": 6,  "x_over_L": 0.3225806451612903,  "w_over_Wmax": 0.5714285714285714, "h_over_Hmax": 1.5},
+        {"frame": 7,  "x_over_L": 0.36505376344086027, "w_over_Wmax": 0.6428571428571429, "h_over_Hmax": 1.4},
+        {"frame": 8,  "x_over_L": 0.43010752688172044, "w_over_Wmax": 0.8571428571428571, "h_over_Hmax": 1.2},
+        {"frame": 9,  "x_over_L": 0.4693548387096774,  "w_over_Wmax": 0.9285714285714286, "h_over_Hmax": 1.1},
+        {"frame": 10, "x_over_L": 0.521505376344086,   "w_over_Wmax": 0.9285714285714286, "h_over_Hmax": 1},
+        {"frame": 11, "x_over_L": 0.5736559139784947,  "w_over_Wmax": 0.7857142857142857, "h_over_Hmax": 1},
+        {"frame": 12, "x_over_L": 0.6258064516129033,  "w_over_Wmax": 0.7857142857142857, "h_over_Hmax": 1},
+        {"frame": 13, "x_over_L": 0.6779569892473118,  "w_over_Wmax": 0.9285714285714286, "h_over_Hmax": 1},
+        {"frame": 14, "x_over_L": 0.7301075268817205,  "w_over_Wmax": 1,                  "h_over_Hmax": 1},
+        {"frame": 15, "x_over_L": 0.782258064516129,   "w_over_Wmax": 1,                  "h_over_Hmax": 1},
+        {"frame": 16, "x_over_L": 0.8344086021505376,  "w_over_Wmax": 1,                  "h_over_Hmax": 1},
+        {"frame": 17, "x_over_L": 0.8865591397849463,  "w_over_Wmax": 1,                  "h_over_Hmax": 0.9},
+        {"frame": 18, "x_over_L": 0.9387096774193548,  "w_over_Wmax": 1,                  "h_over_Hmax": 0.8},
+        {"frame": 19, "x_over_L": 0.9908602150537635,  "w_over_Wmax": 1,                  "h_over_Hmax": 0.8},
+        {"frame": 20, "x_over_L": 1,                   "w_over_Wmax": 1,                  "h_over_Hmax": 0.734}
+      ]
+    },
+
+    "engine": {
+      "_src": "duct_length_ft = L_duct [Main!F32, label E32 'Compr Face'; readme_geom.md §3]; x_inlet_ft [Main!F31, label E31 'Inlet(s):', live-verified]; n_engines [Main!B28]",
+      "_note": "★ TRAP: the read-only GroundTruth/f16a_geometry.json key inlet_x_ft = 14.0 is MISLABELLED -- 14.0 is Main!F32, the duct length, not an x-station; the real inlet station is Main!F31 = 15.0. Do not 'correct' x_inlet_ft to 14.0 (todo 2026-07-25 Phase 2 §18). ★ n_engines is in .geometry only because no propulsion class exposes an engine count; should move to .propulsion + DI (todo §22). ★ The Amax flow-through deduction n_engines*pi*D_engine^2/5 [Geom!H47] is a bare literal with no workbook justification (todo §5, OPEN).",
+      "duct_length_ft": 14.0,
+      "x_inlet_ft":     15.0,
+      "n_engines":      1
+    },
+
+    "overall_length_ft": 47.65,
+    "_overall_length_ft_src": "L_aircraft, ft; feeds only the Raymer Eq. 12.44 (Amax/l)^2 term. Published F-16A length 47 ft 7.75 in = 47.6458 ft. Distinct from fuselage.length_ft.",
+    "_TODO_overall_length_ft": "overall_length_ft = 47.65 is traceable to no document in this repo; remove this key when pinned to a primary source. todo 2026-07-25 Phase 2 §6; Geom!B21 does not pin it (F16GeomL3.md §2).",
+
+    "tail_arm_ft": 22.0,
+    "_tail_arm_ft_src": "L_t, wing 1/4-MAC to HT 1/4-MAC, ft [estimate, unpinned; verify TO] -- non-derivable, no MAC x-stations in the model. todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12.",
+    "total_control_surface_area_ft2": 190,
+    "_total_control_surface_area_ft2_src": "S_cs, ft2 = flaperon + HT + rudder + LEF [estimate, unpinned]; feeds Raymer Eq. 15.17. todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12."
+  },
+
+  "aerodynamics": {
+    "_src": "per-component x_c_max, Q, f_lam, is_body [Raymer Tbl 12.6]; surface_roughness_k_ft [Raymer Tbl 12.4/12.5 'smooth paint']; wave_drag_factor_E_WD [Raymer Eq. 12.41, tuned to Brandt aero.Ewd]; CD0_LandP [Raymer Sec. 12.5]; misc_drag_areas [Raymer Tbl 12.7]",
+
+    "airfoil": {
+      "_src": "NACA 64A204 section data [TO Fig. 1-2 for the designation]; same values as f16a_L2.json .aerodynamics.airfoil",
+      "name": "NACA 64A204",
+      "alpha_L0_deg": -1.01,
+      "cl_max_2D": 1.20,
+      "cl_alpha_per_deg": 0.105,
+      "_TODO_cl_alpha_per_deg": "cl_alpha = 0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guard: TestAeroL2.testTODO_ClAlpha2DUnverified (same value at L2)."
+    },
+
+    "x_c_max":                {"wing": 0.40,   "horizontal_tail": 0.35,   "vertical_tail": 0.35,   "fuselage": 0.0,     "duct": 0.0},
+    "interference_factor_Q":  {"wing": 1.0,    "horizontal_tail": 1.05,   "vertical_tail": 1.05,   "fuselage": 1.0,     "duct": 1.0},
+    "laminar_fraction_f_lam": {"wing": 0.05,   "horizontal_tail": 0.05,   "vertical_tail": 0.05,   "fuselage": 0.0,     "duct": 0.0},
+    "is_body":                {"wing": false,  "horizontal_tail": false,  "vertical_tail": false,  "fuselage": true,    "duct": true},
+    "surface_roughness_k_ft": {"wing": 2.08e-5, "horizontal_tail": 2.08e-5, "vertical_tail": 2.08e-5, "fuselage": 2.08e-5, "duct": 2.08e-5,
+      "_TODO_table_number": "roughness k table is Raymer Tbl 12.4/12.5, not 12.2 (citation drift); remove this key when corrected. Guard: TestAeroL3.testTODO_RoughnessTableCitation."},
+
+    "wave_drag_factor_E_WD": 2.2,
+    "_TODO_wave_drag_factor_E_WD": "E_WD = 2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or accepted as a calibration knob. Guard: TestAeroL3.testTODO_EWDCalibrationInput.",
+    "_amax_via_DI": "Amax and L_aircraft are NOT aero inputs: both arrive by DI from the geometry object (Amax a Dependent, area-ruled at L3; L_aircraft = .geometry.overall_length_ft). F16GeomL3.md §4.",
+    "CD0_LandP": 0.0010,
+    "misc_drag_areas": {"Dq_gun_port_ft2": 0.20, "Dq_hook_USAF_ft2": 0.10}
+  },
+
+  "weights": {
+    "_src": "N_z ultimate = 1.5 x 9g [TO §5; Raymer §15.3.1]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. REQUIREMENTS (design_mach, cruise.altitude_ft, cruise.mach) are NOT here: examples/F16A/f16a_requirements.json.",
+    "_note": "Raymer §15.3.1 exponents/coefficients are hardcoded literals in the WeightsL3 toolbox and a standing verify-against-book item (todo 2026-07-24 §3a). They are NOT aircraft_category-selected: WeightsL3 implements only the Fighter/Attack build-up, so there is one path and no lookup -- an earlier version of this note claimed otherwise and was wrong (todo 2026-07-25 §P4-9). Brandt's Wt-tab psf model stores n_ult = 9 [Main!Q27] -- a different model, do not conflate with N_z.",
+    "_not_inputs": "Removed in Phase 3 (2026-07-25); every one settled in Phase 4 -- rationale in F16WeightsL3.md §3. Geometry (S_w, AR_w, tc_root, lambda_w, Lambda_LE_w, S_csw, S_ht, F_w, B_h, S_vt, AR_vt, lambda_vt, Lambda_LE_vt, H_t, H_v, L_t, S_r, L_fus, D_fus, W_fus, S_cs) arrives by DI from F16GeomL3; AR_ht/lambda_ht were DEAD (read by no equation) and stay deleted (todo §P4-6). T_max duplicated .propulsion.T_SL, by DI from the injected prop object. W_en is DERIVED from Raymer Eq. 10.10 (prop.T_SL, design_mach, prop.bypass_ratio), UNINSTALLED at L3 -- no x1.3, because §15.3.1 adds mounts/firewall/section/induction/tailpipe/cooling/oil/controls/starter separately (decision 1). W_energy [Wt!B6 = B3-B4-B5-B12] is a back-calculated Brandt output: a NaN state input set by mission analysis. W_l is DERIVED = 0.95*W_TO so the landing-gear group tracks the sizing loop (decision 4); Brandt Wt!B41 = 20680.70 [=SUM(B16:B32)] is now a comparison reference only, and the 0.95 factor has NO repo citation (todo §P4-16). V_t is RESTORED as an input above (decision 3). SFC_mission is DERIVED by DI = prop.get_TSFC(AircraftState(cruise.altitude_ft, cruise.mach)) at the requirements cruise point 36000 ft / M 0.87 = 1.007116 1/hr (decision 2). ★ CORRECTION OF THE RECORD: the Phase-3 reason given for deleting SFC_mission -- that it 'duplicates what PropL2.get_TSFC computes' -- was FALSE. get_TSFC never returns Brandt's Main!C30 = 0.70 (0.903000 at SLS/M0.01, 1.007116 at 36 kft/M0.87). The true reason it is not an input is that it is now a DI evaluated at the cruise condition, and the resulting +43.87 % divergence from 0.70 is accepted BY DECISION -- two deliberate causes, a real cruise point vs Brandt's single stored SLS constant, and uninstalled vs Brandt's already-installed 0.70. todo §P4-15.",
+    "N_z": 13.5,
+    "W_payload_fixed": 700,
+    "W_payload_expendable": 4400,
+
+    "wing": {
+      "_src": "Raymer Eq. 15.1. K_dw not a delta wing, K_vs not variable sweep [Raymer]",
+      "K_dw": 1.0,
+      "K_vs": 1.0
+    },
+
+    "horizontal_tail": {
+      "_src": "Raymer Eq. 15.2. K_rht all-moving tail [Raymer §15.3]",
+      "K_rht": 1.047
+    },
+
+    "vertical_tail": {
+      "_src": "Raymer Eq. 15.3. K_dwf not a delta-wing fuselage [Raymer]. M_design = 2.0 DELETED -- the design Mach is a REQUIREMENT, read as design_mach from examples/F16A/f16a_requirements.json (todo §P4-14); it also feeds Eq. 15.17 and Raymer Eq. 10.10, so it was never a vertical-tail input.",
+      "K_dwf": 1.0
+    },
+
+    "landing_gear": {
+      "_src": "Raymer Eqs. 15.5-15.6. N_nw [TO]; K_cb not carrier-based, K_tpg not kneeling gear [Raymer]; N_l [standard military; verify TO §5]; L_m, L_n [estimates, unpinned]",
+      "N_l": 2.67,
+      "L_m": 5.5,
+      "L_n": 3.5,
+      "K_cb": 1.0,
+      "K_tpg": 1.0,
+      "N_nw": 1
+    },
+
+    "engine_section": {
+      "_src": "Raymer Eqs. 15.7-15.15. N_en [TO]; S_fw = 0 no piston firewall on a jet, K_vg fixed-geometry inlet, K_d [Raymer]; D_e, L_tp, L_sh, L_ec, L_d, L_s [estimates, unpinned]",
+      "N_en": 1,
+      "S_fw": 0,
+      "D_e": 3.33,
+      "L_tp": 4.5,
+      "L_sh": 8.0,
+      "L_ec": 5.0,
+      "L_d": 7.5,
+      "L_s": 3.0,
+      "K_vg": 1.0,
+      "K_d": 1.0
+    },
+
+    "systems": {
+      "_src": "Raymer Eqs. 15.16-15.24. V_t total fuel volume, gal, RESTORED as an input (settled decision 3) [Brandt-style arithmetic: Wt!B6 = 6296.30 lbf / 6.7 lb-per-gal ~= 940 -- see _TODO_V_t]; N_gen [TO]; N_c = 1 single-seat; K_vsh no variable-sweep hydraulics, K_mc for <=2 generators [Raymer]; V_i, V_p, N_t, N_s, N_ci, N_u, R_kva, L_a, W_uav [estimates, unpinned; F-16 Block 10]. SFC_mission is NOT here: it is DERIVED by DI at the requirements cruise condition -- see _not_inputs.",
+      "V_t": 940,
+      "_TODO_V_t": "★ PROVENANCE OPEN. V_t = 940 gal is deliberately an INPUT rather than V_t = W_energy / rho_fuel, because the 6.7 lb/gal density behind the 940 is cited NOWHERE in this repo (grepped air_vehicle_design/sizing/ 2026-07-25: 6.7 lb/gal appears only in an F16WeightsL3.m comment, and no JP-4/JP-5/JP-8 density is cited in metabook_data.md, raymer_data.md, readme_wt.md or F16Baseline.m) -- deriving it would substitute an uncited constant for a Brandt-traceable figure. The arithmetic also gives 939.746, not 940, so the literal is itself rounded. Eq. 15.16 is weakly sensitive (fuel system 386.742 at 939.746 vs 386.794 at 940). Remove this key when the user supplies a cited fuel density. todo 2026-07-25 Phase 4 §P4-5b.",
+      "V_i": 500,
+      "V_p": 0,
+      "N_t": 3,
+      "N_s": 4,
+      "N_c": 1,
+      "N_ci": 3,
+      "N_u": 5,
+      "R_kva": 80,
+      "L_a": 10.0,
+      "N_gen": 1,
+      "W_uav": 1500,
+      "K_vsh": 1.0,
+      "K_mc": 1.0
+    }
+  }
+}

@@ -1,33 +1,35 @@
 classdef AeroL2
-%AEROL2  Level-2 aerodynamics static toolbox.
+%AEROL2  Level-2 aerodynamics static toolbox: geometry-dependent clean polar.
 %
-%   Call as AeroL2.method_name(args) — no instantiation required.
-%   Not in the inheritance chain.  Student classes (F16AeroL2, etc.) inherit
-%   from AeroModelL2 and call these statics to implement each abstract method.
+%   Call as AeroL2.method(...); never instantiated, not in the inheritance
+%   chain. F16AeroL2 inherits AeroModelL2 and delegates to these statics.
 %
-%   EQUATIONS ADDED AT L2 vs L1:
-%     CL_alpha (finite-wing lift-curve slope, per rad):
-%       2*pi*AR / (2 + sqrt(4 + (AR*beta/eta)^2*(1 + tan^2(Λ_tc)/beta^2))) * (S_exposed/S_ref)*F
-%       Raymer, "Aircraft Design: A Conceptual Approach," 6th ed., Eq. 12.6
-%       where beta = sqrt(1 - M^2), Λ_tc ≈ Λ_c4 (quarter-chord sweep),
-%       eta = Cl_alpha_2D/(2*pi/beta) or 0.95 if unknown (Eq. 12.8), and
-%       (S_exposed/S_ref)*F default to 1 when not supplied by the caller.
+%   All geometry is read from the injected geometry object through the concrete
+%   class's Dependent getters; this toolbox never sees a hardcoded geometry
+%   number. The skin-friction primitives (dyn_viscosity, compute_Re,
+%   Cf_turbulent) live here as the single source of truth and are also called
+%   by the L3 component buildup.
 %
-%     CLmax (clean, no high-lift devices):
-%       0.9 * cl_max_2D * cos(Λ_c4)   [Raymer 6th ed. §12.2]
+%   Sources: [Raymer 6th ed. Eq. 12.23] parasite drag; [Table 12.3] Cfe;
+%   [Eq. 12.48/12.49] Oswald e; [Eq. 12.50/12.51] K1; [Eq. 12.6] lift slope;
+%   [Eq. 12.15] clean CLmax; [Eq. 12.25/12.27] Reynolds number and Cf;
+%   [Sec. 12.3.1] viscosity. K2 subsonic follows [Brandt Sec. 4.3, Aero!G17].
 %
-%     Fuselage lift interference factor F  [Raymer 6th ed. Eq. 12.9]:
-%       1.07*(1 + d/b)^2
+%   TRANSONIC BAND (MACH_SUBSONIC_MAX < M < MACH_SUPERSONIC_MIN) is not
+%   modelled: Eq. 12.51 has a pole at 4*AR*beta = 2 (M ~ 1.014 at AR = 3), so
+%   that band returns NaN as an explicit "not modelled" signal rather than a
+%   singular value.
 %
-%     CL at minimum drag  [Brandt et al. §4.3]:
-%       CL_minD = CL_alpha * (-deg2rad(alpha_L0) / 2)
+%   Companion doc: src/disciplines/aerodynamics/AeroL2.md
 
-% Tables for tabulation.
-     properties (Constant)
-          k_lambda = [0.88, 0.95]
-          k_ww = 1.85; % Part of the wing "buried" in the fuselage (Airplane Design Vol 3, Roskam, p 167)
-          Delta_cl_max_table = table({'plain'; 'split'; 'slotted'; 'fowler'; 'double slotted'; 'triple slotted'; 'fixed slat'; 'leading-edge flap'; 'Kruger flap'; 'slat'}, [0.9; 0.9; 1.3; 1.3; 1.6; 1.9; 0.2; 0.3; 0.3; 0.4], 'VariableNames',["High-Lift Device", "Delta_cl_max"]);
-     end
+    properties (Constant)
+        % Transonic-band boundaries (see class header). Subsonic below
+        % MACH_SUBSONIC_MAX; supersonic at/above MACH_SUPERSONIC_MIN; the band
+        % in between is "not modeled". MACH_SUPERSONIC_MIN=1.05 sits clear of
+        % the Eq. 12.51 pole at M~1.014 (AR=3).
+        MACH_SUBSONIC_MAX  = 0.95
+        MACH_SUPERSONIC_MIN = 1.05
+    end
 
     methods (Static)
 
@@ -36,93 +38,110 @@ classdef AeroL2
         % ================================================================== %
 
         function polar = drag_polar(obj, state)
-        %DRAG_POLAR  L2 drag polar — CD0/K1 same formulae as L1; K2 uses
-        %   L2's own CL_alpha(M)-based CL_minD (see get_K2) rather than L1's
-        %   fixed CL_minD=0, since L2 has real lift-curve-slope/alpha_L0 data.
+        %DRAG_POLAR  L2 clean drag polar {CD0, K1, K2} at the flight state.
+        %   Subsonic: Cfe-based CD0, Oswald K1, camber K2. Supersonic:
+        %   turbulent-Cf CD0, linearized K1 (Eq. 12.51), K2=0. Transonic band
+        %   returns NaN (not modeled -- avoids the Eq. 12.51 pole).
             M      = state.mach;
-            cd0    = AeroL2.get_CD0(obj);
-            e      = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
-            k1_sub = AeroL1.K1_subsonic(e, obj.AR);
-            k2     = AeroL2.get_K2(obj, k1_sub, M);
-            if M < 1
-                k1 = k1_sub;
-            else
-                k1 = AeroL1.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
+            regime = AeroL2.flight_regime(M);
+            switch regime
+                case "transonic"
+                    warning('AeroL2:transonicNotModeled', ...
+                        ['L2 drag polar is not modeled in the transonic band ' ...
+                         '(%.2f < M=%.4f < %.2f): the Raymer Eq. 12.51 supersonic ' ...
+                         'K1 is singular near M=1. Returning NaN.'], ...
+                        AeroL2.MACH_SUBSONIC_MAX, M, AeroL2.MACH_SUPERSONIC_MIN);
+                    polar = struct('CD0', NaN, 'K1', NaN, 'K2', NaN);
+                case "subsonic"
+                    cd0 = AeroL2.get_CD0(obj);
+                    e   = AeroL2.get_e_osw(obj);
+                    k1  = AeroL2.K1_subsonic(e, obj.AR);
+                    k2  = AeroL2.get_K2(obj, k1, M);
+                    polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
+                otherwise   % "supersonic"
+                    cd0 = AeroL2.get_CD0_supersonic(obj, state);
+                    k1  = AeroL2.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
+                    k2  = 0;   % K2=0 for M>=1 (linearized supersonic theory) [Brandt Sec. 4.3]
+                    polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
             end
-            polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
         end
 
         function CLmax = get_CLmax(obj)
-        %GET_CLMAX  Geometry-based clean CLmax.  Raymer 6th ed. §12.2.
-        %   Reads obj.cl_max_2D and obj.Lambda_c4_deg.
+        %GET_CLMAX  Geometry-based clean CLmax.  Raymer 6th ed. Eq. 12.15.
+        %   Reads obj.cl_max_2D (airfoil) and obj.Lambda_c4_deg (injected
+        %   quarter-chord sweep). See CLmax_clean for the F-16 vortex-lift
+        %   limitation.
             CLmax = AeroL2.CLmax_clean(obj.cl_max_2D, obj.Lambda_c4_deg);
         end
 
         function e = get_e_osw(obj)
-        %GET_E_OSW  Oswald efficiency — same Raymer formula as L1.
-            e = AeroL1.oswald_eff(obj.AR, obj.Lambda_LE_deg);
+        %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49).
+        %   Selected by obj.e_method ("official"). Brandt's own e0 (Aero!G12)
+        %   is available as the SEPARATE static oswald_eff_brandt for the
+        %   comparison report ONLY -- it is never what drag_polar returns.
+            switch string(obj.e_method)
+                case "official"
+                    e = AeroL2.oswald_eff(obj.AR, obj.Lambda_LE_deg);
+                otherwise
+                    error('AeroL2:unknownEMethod', ...
+                        ['e_method="%s" is not recognized. The official K1 must ' ...
+                         'use Raymer Eq. 12.48/12.49 (e_method="official"); ' ...
+                         'Brandt e0 is a comparison-only alternate ' ...
+                         '(AeroL2.oswald_eff_brandt), never the drag_polar value.'], ...
+                        obj.e_method);
+            end
         end
 
         function val = get_CD0(obj)
-        %GET_CD0  CD0 = Cf * S_wet / S_ref  (same formula as L1).
-            val = AeroL1.get_CD0(obj);
+        %GET_CD0  Subsonic clean CD0 = Cfe*(S_wet/S_ref).  Raymer Eq. 12.23.
+        %   Cfe (obj.Cfe) is the genuine Raymer Table 12.3 spec value
+        %   (0.0035, AF fighter); S_wet/S_ref are read live from the injected
+        %   geometry object.
+            val = AeroL2.CD0_from_Cf(obj.Cfe, obj.S_wet, obj.S_ref);
+        end
+
+        function val = get_CD0_supersonic(obj, state)
+            Re  = AeroL2.compute_Re(state, obj.L_char);
+            Cf  = AeroL2.Cf_turbulent(Re, state.mach);
+            val = AeroL2.CD0_from_Cf(Cf, obj.S_wet, obj.S_ref);
         end
 
         function val = get_K1(obj, M)
-        %GET_K1  Induced-drag factor — same formula as L1.
-            val = AeroL1.get_K1(obj, M);
+        %GET_K1  Induced-drag factor at Mach M (subsonic or supersonic branch).
+        %   Transonic band errors (use drag_polar for the NaN signal).
+            regime = AeroL2.flight_regime(M);
+            switch regime
+                case "subsonic"
+                    val = AeroL2.K1_subsonic(AeroL2.get_e_osw(obj), obj.AR);
+                case "supersonic"
+                    val = AeroL2.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
+                otherwise
+                    error('AeroL2:transonicNotModeled', ...
+                        'K1 not modeled in the transonic band (M=%.4f).', M);
+            end
         end
 
         function val = get_K2(obj, K1_sub, M)
-        %GET_K2  Polar-offset term.
-        %   CL_minD = CL_alpha(M) * (-deg2rad(alpha_L0) / 2)  [Brandt et al. §4.3],
-        %   evaluated at the current Mach since CL_alpha is Mach-dependent
-        %   (Raymer 6th ed. Eq. 12.6). alpha_L0 is a genuine NACA 64A204
-        %   airfoil spec value (not a Brandt-calibrated output).
-            CL_alpha_M = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M);
+        %GET_K2  Polar-offset term (Convention A).
+        %   Subsonic: CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2)
+        %   [Brandt Sec. 4.3], then K2 = -2*K1_sub*CL_minD. Nonzero for the
+        %   F-16's cambered NACA 64A204 (design_CL=0.2). M>=1: K2=0.
+            CL_alpha_M = AeroL2.get_CL_alpha(obj, M);
             CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
-            val        = AeroL1.K2_value(K1_sub, CL_minD, M);
-        end
-
-        function val = compute_K(e_osw, AR)
-        %COMPUTE_K  Subsonic induced-drag factor K = 1/(pi*e_osw*AR).
-            val = AeroL1.K1_subsonic(e_osw, AR);
-        end
-
-        function val = compute_CL_minD(CL_alpha, alpha_L0)
-        %COMPUTE_CL_MIND  CL at minimum drag.
-        %   CL_minD = CL_alpha * (-deg2rad(alpha_L0) / 2)  [Brandt et al. §4.3]
-            val = CL_alpha * (-deg2rad(alpha_L0) / 2);
-        end
-
-        function val = get_CL_max_values(obj, AR, Lambda_LE_deg, CL_max_base, Delta_CL_max, cl_max, CL_max_cl_max)
-        %GET_CL_MAX_VALUES  Clean CLmax via Raymer Fig. 12.13/12.9 AR check.
-        %   Reads obj.C1 (tabulated constant from Raymer Fig. 12.12).
-            wing_param = (obj.C1 + 1) * AR * cosd(Lambda_LE_deg);
-            if wing_param < 2
-                val = CL_max_base + Delta_CL_max;
-            else
-                val = CL_max_cl_max * cl_max + Delta_CL_max;
-            end
+            val        = AeroL2.K2_value(K1_sub, CL_minD, M);
         end
 
         function val = get_CL_alpha(obj, M)
-        %GET_CL_ALPHA  Finite-wing lift-curve slope; reads geometry from obj.
-        %   Passes obj.Cl_alpha_2D (2-D airfoil lift-curve slope, 1/rad)
-        %   through to AeroL2.CL_alpha when the student class supplies it;
-        %   otherwise the Raymer Eq. 12.8 eta~0.95 default is used.
-            if isprop(obj, 'Cl_alpha_2D')
-                Cl_alpha_2D = obj.Cl_alpha_2D;
-            else
-                Cl_alpha_2D = [];
+            if ~isprop(obj, 'cl_alpha_2D') || isempty(obj.cl_alpha_2D)
+                error('AeroL2:missingClAlpha2D', ...
+                    ['%s must define a non-empty cl_alpha_2D [1/rad] to use ', ...
+                     'get_CL_alpha (Raymer Eq. 12.8 eta term). Read it from the ', ...
+                     'input JSON''s .aerodynamics.airfoil.cl_alpha_per_deg ', ...
+                     '(x 180/pi), or call AeroL2.CL_alpha directly with an empty ', ...
+                     'slope to opt into the eta = 0.95 default deliberately.'], ...
+                    class(obj));
             end
-            val = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M, [], [], [], Cl_alpha_2D);
-        end
-
-        function val = compute_F(d, b)
-        %COMPUTE_F  Fuselage lift interference factor.
-        %   F = 1.07*(1 + d/b)^2  [Raymer 6th ed. Eq. 12.9]
-            val = 1.07 * (1 + d/b)^2;
+            val = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M, [], [], [], obj.cl_alpha_2D);
         end
 
         function val = compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
@@ -133,13 +152,6 @@ classdef AeroL2
         end
 
         function val = lookup_Delta_cl_max_values(liftdevice, config, cp_c)
-        %LOOKUP_DELTA_CL_MAX_VALUES  Section cl_max increment for a given HLD type.
-        %   liftdevice — "plain","split","slotted","fowler","double slotted",
-        %                "triple slotted","fixed slot","leading-edge flap",
-        %                "kruger flap","slat"
-        %   config     — "takeoff"/"TO" or "landing"/"L"
-        %   cp_c       — c'/c for chord-changing devices
-        %   Raymer 6th ed. §12.5.
             switch liftdevice
                 case {'plain','split'},          base = 0.9;
                 case 'slotted',                  base = 1.3;
@@ -163,34 +175,135 @@ classdef AeroL2
         end
 
         % ================================================================== %
-        % LOW-LEVEL: pure math — scalars only.
+        % LOW-LEVEL: pure math -- scalars/arrays only, no object access.
+        % Shared with L3 (single source of truth for the induced/skin-friction
+        % primitives).
         % ================================================================== %
 
+        function regime = flight_regime(M)
+        %FLIGHT_REGIME  Classify Mach into "subsonic"/"transonic"/"supersonic"
+        %   per the AeroL2 transonic-band constants. The transonic band is not
+        %   modeled (avoids the Raymer Eq. 12.51 K1 pole near M=1).
+            arguments
+                M (1,1) double {mustBeReal, mustBeNonnegative}
+            end
+            if M < AeroL2.MACH_SUBSONIC_MAX
+                regime = "subsonic";
+            elseif M >= AeroL2.MACH_SUPERSONIC_MIN
+                regime = "supersonic";
+            else
+                regime = "transonic";
+            end
+        end
+
+        function e = oswald_eff(AR, Lambda_LE_deg)
+        %OSWALD_EFF  OFFICIAL Oswald span efficiency.
+        %   Raymer 6th ed. Eq. 12.48 (Lambda_LE < 30 deg) / Eq. 12.49 (>= 30 deg).
+            arguments
+                AR            (1,1) double {mustBePositive}
+                Lambda_LE_deg (1,1) double {mustBeReal}
+            end
+            if Lambda_LE_deg < 30
+                e = 1.78 * (1 - 0.045 * AR^0.68) - 0.64;
+            else
+                e = 4.61 * (1 - 0.045 * AR^0.68) * cosd(Lambda_LE_deg)^0.15 - 3.1;
+            end
+        end
+
+        function e = oswald_eff_brandt(AR, Lambda_LE_deg)
+            arguments
+                AR            (1,1) double {mustBePositive}
+                Lambda_LE_deg (1,1) double {mustBeReal}
+            end
+            e = max(0.4, 4.6 * (1 - 0.033 * AR^0.53) * cosd(Lambda_LE_deg)^0.1 - 3.3);
+        end
+
+        function K1 = K1_subsonic(e_osw, AR)
+        %K1_SUBSONIC  K1 = 1/(pi*AR*e)  [Raymer 6th ed. Eq. 12.50].
+            arguments
+                e_osw (1,1) double {mustBePositive}
+                AR    (1,1) double {mustBePositive}
+            end
+            K1 = 1 / (pi * AR * e_osw);
+        end
+
+        function K1 = K1_supersonic(M, AR, Lambda_LE_deg)
+            arguments
+                M             (1,1) double {mustBeReal}
+                AR            (1,1) double {mustBePositive}
+                Lambda_LE_deg (1,1) double {mustBeReal}
+            end
+            if M <= 1
+                error('AeroL2:subsonicMach', ...
+                    'K1_supersonic called with M=%.3f; use K1_subsonic for M<1.', M);
+            end
+            beta = sqrt(M^2 - 1);
+            K1   = AR * (M^2 - 1) * cosd(Lambda_LE_deg) / (4 * AR * beta - 2);
+        end
+
+        function K2 = K2_value(K1_sub, CL_minD, M)
+        %K2_VALUE  Polar-offset term (Convention A).
+        %   K2 = -2*K1_sub*CL_minD  (M<1)   [Brandt Sec. 4.3 / Aero!G17]
+        %   K2 = 0                  (M>=1)  (linearized supersonic theory)
+            if M >= 1
+                K2 = 0;
+            else
+                K2 = -2 * K1_sub * CL_minD;
+            end
+        end
+
+        function Cfe = lookup_Cfe(aircraft_category)
+            arguments
+                aircraft_category (1,1) string
+            end
+            switch aircraft_category
+                case {"jet_fighter", "fighter"}, Cfe = 0.0035;  % Air Force fighter
+                case "navy_fighter",             Cfe = 0.0040;
+                case "bomber",                   Cfe = 0.0030;
+                case "civil_transport",          Cfe = 0.0026;
+                case "military_cargo",           Cfe = 0.0035;  % high-upsweep fuselage
+                case "supersonic_cruise",        Cfe = 0.0025;  % clean supersonic cruise
+                case "light_aircraft_single",    Cfe = 0.0055;
+                case "light_aircraft_twin",      Cfe = 0.0045;
+                case "prop_seaplane",            Cfe = 0.0065;
+                case "jet_seaplane",             Cfe = 0.0040;
+                otherwise
+                    error('AeroL2:unknownAircraftCategory', ...
+                        ['Unknown aircraft_category "%s" for the Raymer Table 12.3 ', ...
+                         'Cfe lookup. Add the row with its cited table value rather ', ...
+                         'than passing a number in through the input JSON.'], ...
+                        aircraft_category);
+            end
+        end
+
+        function CD0 = CD0_from_Cf(Cf, S_wet, S_ref)
+        %CD0_FROM_CF  Equivalent-skin-friction CD0 = Cf*(S_wet/S_ref).
+        %   Raymer 6th ed. Eq. 12.23 / Table 12.3.  S_ref guarded positive.
+            arguments
+                Cf    (1,1) double {mustBeNonnegative}
+                S_wet (1,1) double {mustBeNonnegative}
+                S_ref (1,1) double {mustBePositive}
+            end
+            CD0 = Cf * S_wet / S_ref;
+        end
+
+        function CL_minD = compute_CL_minD(CL_alpha, alpha_L0_deg)
+        %COMPUTE_CL_MIND  CL at minimum drag.
+        %   CL_minD = CL_alpha * (-deg2rad(alpha_L0)/2)  [Brandt Sec. 4.3].
+        %   Uncambered airfoil (alpha_L0 = 0) -> CL_minD = 0 -> K2 = 0.
+            CL_minD = CL_alpha * (-deg2rad(alpha_L0_deg) / 2);
+        end
+
         function CL_a = CL_alpha(AR, Lambda_c4_deg, M, S_exposed, S_ref, F, Cl_alpha_2D)
-        %CL_ALPHA  Finite-wing CL_alpha via Raymer 6th ed. Eq. 12.6.
-        %   AR           — aspect ratio
-        %   Lambda_c4_deg— quarter-chord sweep (deg); used as approx. for Λ_tc
-        %   M            — Mach number (subsonic; clamped to 0.99 internally)
-        %   S_exposed, S_ref, F — (optional) exposed wing planform area [ft^2],
-        %                  reference area [ft^2], and fuselage lift-interference
-        %                  factor [Raymer Eq. 12.9, AeroL2.compute_F]. When any
-        %                  is omitted, (S_exposed/S_ref)*F defaults to 1 -- Raymer
-        %                  notes the true product is capped at ~0.98, so this is
-        %                  a documented, cited approximation for callers (no
-        %                  current student class supplies real S_exposed/F yet).
-        %   Cl_alpha_2D  — (optional) 2-D airfoil lift-curve slope [1/rad].
-        %                  eta = Cl_alpha_2D / (2*pi/beta)  [Raymer Eq. 12.8]
-        %                  when supplied; eta = 0.95 (Raymer's "if unknown"
-        %                  default) otherwise.
             if nargin < 6 || isempty(S_exposed) || isempty(S_ref) || isempty(F)
                 exposed_factor = 1;
             else
                 exposed_factor = (S_exposed / S_ref) * F;
             end
             M    = min(M, 0.99);
-            beta = sqrt(1 - M^2);
+            beta = sqrt(1 - M^2);   % Raymer Eq. 12.7
             if nargin < 7 || isempty(Cl_alpha_2D)
-                eta = 0.95;   % Raymer Eq. 12.8 default when 2-D Cl_alpha is unknown
+                eta = 0.95;   % Raymer Eq. 12.8 default when 2-D Cl_alpha unknown
             else
                 eta = Cl_alpha_2D / (2*pi/beta);   % Raymer Eq. 12.8
             end
@@ -201,14 +314,31 @@ classdef AeroL2
         end
 
         function CLmax = CLmax_clean(cl_max_2D, Lambda_c4_deg)
-        %CLMAX_CLEAN  Wing clean CLmax.  Raymer 6th ed. §12.15.
-        % TODO (2026-07-21): Citation "§12.2" appears wrong. Per
-        % reference_extracts/raymer_data.md, the swept-wing clean-CLmax relation
-        % CL_max = 0.9·Cl_max·cos(Λ_0.25c) is Raymer Eq. 12.15 (§12.4 Lift), not
-        % §12.2. Formula itself is correct; fix the equation/section number.
-        %   CLmax = 0.9 * cl_max_2D * cos(Lambda_c4_deg)
-        % Note (Casey, 7/22/2026): Fixed citation. Equation 12.15 is correct.
             CLmax = 0.9 * cl_max_2D * cosd(Lambda_c4_deg);
+        end
+
+        function mu = dyn_viscosity(T_atm_R)
+        %DYN_VISCOSITY  Sutherland's law, English units (Raymer 6th ed. Sec. 12.3.1).
+        %   Returns mu in slug/(ft*s).  mu_ref=3.737e-7 at T_ref=518.67 R,
+        %   Sutherland constant C=198.6 R.  Shared with the L3 component buildup.
+            mu_ref = 3.737e-7;
+            T_ref  = 518.67;
+            C_suth = 198.6;
+            mu     = mu_ref * (T_atm_R/T_ref)^1.5 * (T_ref+C_suth)/(T_atm_R+C_suth);
+        end
+
+        function Re = compute_Re(state, l_ref)
+        %COMPUTE_RE  Re = rho*V*l/mu  (Raymer 6th ed. Eq. 12.25).
+        %   Shared with the L3 component buildup.
+            mu = AeroL2.dyn_viscosity(state.T_atm);
+            Re = state.rho * state.V * l_ref / mu;
+        end
+
+        function Cf = Cf_turbulent(Re, M)
+        %CF_TURBULENT  Compressible turbulent flat-plate Cf.
+        %   Cf = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Raymer 6th ed. Eq. 12.27.
+        %   Shared with the L3 component buildup and the L2 supersonic CD0.
+            Cf = 0.455 / (log10(Re)^2.58 * (1 + 0.144*M^2)^0.65);
         end
 
     end

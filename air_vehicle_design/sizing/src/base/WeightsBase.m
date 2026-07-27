@@ -1,31 +1,38 @@
 classdef (Abstract) WeightsBase < handle
-     %WEIGHTSBASE  Tier-1 base enforcer for all weight estimation discipline classes.
-     %
-     %   Declares OEW(obj, W_TO) → scalar lbf as the top-level method, plus
-     %   the five sizing-loop weight properties that all student classes must expose.
-     %
-     %   Sizing-loop closure:  W_TO = OEW + W_energy + W_payload_fixed + W_payload_expendable
-     %
-     %   Inheritance chain per fidelity level:
-     %     WeightsBase → WeightsModelLN (abstract) → F16WeightsLN (student class)
-     %
-     %   WeightsL1/L2/L3 are standalone static toolboxes — NOT in this chain.
-     %   Student classes call them via WeightsL1.method(obj, W_TO) etc.
+%WEIGHTSBASE  Tier-1 abstract enforcer for all weight-estimation classes.
+%
+%   Declares the four sizing-loop weight properties and the top-level method.
+%
+%   Inheritance: WeightsBase -> WeightsModelLN (abstract) -> F16WeightsLN
+%   The WeightsLN static toolboxes are NOT in this chain.
+%
+%   Sizing-loop closure:
+%     W_TO = OEW + W_energy + W_payload_fixed + W_payload_expendable
+%
+%   Companion doc: src/base/WeightsBase.md
+%
+%   TODO: no WeightsL{1,2,3} static reads W_energy or either payload, so the
+%   closure above is not enforced anywhere and those three properties are inert
+%   until the sizing loop lands (PLAN.md step 8).
 
-     properties (Abstract)
-          W_TO               % candidate gross takeoff weight [lbf]; set by sizing loop
-          W_energy           % total internal fuel/battery weight [lbf]
-          W_payload_expendable % payload weight [lbf]
-          W_payload_fixed    % fixed equipment weight [lbf] (includes crew)
-     end
+    properties (Abstract)
+        W_TO                 % lbf — candidate gross takeoff weight; NaN until the sizing loop sets it
+        W_energy             % lbf — total internal fuel/battery weight; NaN until mission analysis sets it
+        W_payload_expendable % lbf — expendable payload (stores)
+        W_payload_fixed      % lbf — fixed equipment, including crew
+    end
 
-     methods (Abstract)
+    methods (Abstract)
 
-          %OEW  Operating empty weight [lbf] at a candidate takeoff weight.
-          %   W_TO — candidate gross takeoff weight [lbf].
-          %   Returns OEW [lbf].  Must satisfy OEW < W_TO for all physical designs.
-          oew = OEW(obj, W_TO)
+        %OEW  Operating empty weight [lbf] at a candidate takeoff weight.
+        %   Must satisfy OEW < W_TO for all physical designs.
+        %
+        %   OEW stays a METHOD at every level: it takes W_TO as an argument, so
+        %   it recomputes on every call and cannot go stale. Concrete classes
+        %   must never cache it, and every W_TO-dependent term inside must be
+        %   evaluated at the PASSED W_TO, not at obj.W_TO.
+        oew = OEW(obj, W_TO)
 
-     end
+    end
 
 end

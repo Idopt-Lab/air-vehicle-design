@@ -23,6 +23,10 @@ classdef ConstraintAnalysis
 %   special-cases the RENDERING of wall-type constraints (a vertical dashed
 %   line rather than a curve).
 %
+%   Inf is therefore MEANINGFUL and is accepted; NaN is not, and is rejected
+%   at construction by assertNoNaN below -- see that method for why the
+%   distinction matters and why the check cannot be a plain ~isfinite.
+%
 %   DESIGN POINT [Raymer, "Aircraft Design: A Conceptual Approach," 6th ed.,
 %   AIAA, 2018, ch. 5 -- constraint diagram methodology: the feasible region
 %   is bounded below by the upper envelope of all T/W-vs-W/S constraint
@@ -75,7 +79,9 @@ classdef ConstraintAnalysis
             obj.TW_table = zeros(numel(constraints), numel(WS_range));
             for i = 1:numel(constraints)
                 obj.names(i)      = constraints{i}.name;
-                obj.TW_table(i,:) = constraints{i}.required_TW(WS_range);
+                row               = constraints{i}.required_TW(WS_range);
+                ConstraintAnalysis.assertNoNaN(row, WS_range, constraints{i}.name, i);
+                obj.TW_table(i,:) = row;
             end
         end
 
@@ -149,6 +155,45 @@ classdef ConstraintAnalysis
         %REPORT  Print the optimum W/S and T/W to the console.
             [WS_opt, TW_opt] = obj.optimal_point();
             fprintf('Optimum design point: W/S = %.2f lbf/ft^2, T/W = %.4f\n', WS_opt, TW_opt);
+        end
+
+    end
+
+    methods (Static, Access = private)
+
+        function assertNoNaN(row, WS_range, name, idx)
+        %ASSERTNONAN  Reject a NaN required_TW curve at aggregation time.
+        %
+        %   WHY NaN AND NOT ~isfinite (added 2026-07-26). Inf is a LEGAL,
+        %   documented value here: wall-type constraints encode "infeasible
+        %   above my W/S limit" as Inf (class header above; LandingConstraint.m).
+        %   Erroring on Inf would break every wall constraint. NaN carries no
+        %   such meaning and is always a modelling failure.
+        %
+        %   WHY IT MUST BE CAUGHT: MATLAB's max/min OMIT NaN by default, so a
+        %   NaN row silently drops out of the envelope
+        %   `max(obj.TW_table, [], 1)` -- the aggregate reads as if that
+        %   condition had never been supplied, and optimal_point() returns a
+        %   design point that satisfies one fewer constraint than the caller
+        %   asked for, with no warning. That is the same "unevaluable reads as
+        %   satisfied" failure mode Both_WbyS_TbyW.required_TW guards against;
+        %   this is the second layer, at the one place every constraint TYPE
+        %   (thrust, wall, takeoff, landing) funnels through -- including the
+        %   ones that never route through the Master Equation and so never see
+        %   the Both_WbyS_TbyW check at all.
+            bad = isnan(row);
+            if any(bad)
+                first = find(bad, 1);
+                error('ConstraintAnalysis:nanConstraintCurve', ...
+                    ['Constraint "%s" (constraints{%d}) returned NaN required_TW at ', ...
+                     '%d of %d wing loadings (first at W/S = %g lbf/ft^2). NaN would be ', ...
+                     'silently OMITTED from the max() envelope, so the design point would ', ...
+                     'be computed as though this condition did not exist. Inf is the ', ...
+                     'legal way to say "infeasible here" (see LandingConstraint); NaN ', ...
+                     'means the condition could not be evaluated -- usually a drag polar ', ...
+                     'or thrust lapse that is not modeled at this flight condition.'], ...
+                    name, idx, sum(bad), numel(row), WS_range(first));
+            end
         end
 
     end

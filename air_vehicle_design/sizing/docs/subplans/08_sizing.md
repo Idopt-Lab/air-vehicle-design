@@ -147,7 +147,7 @@ For the F-16 (delta wing + conventional tail + no canard): the fractions from Ta
 |-------|------|------|---------|---------|-------------|------|
 | design_study_01_L1 | F16AeroL1 | F16PropL1 | F16WeightsL1 | MissionAnalysisL1 | F16ConstraintSet | SizingLoopL1 |
 | design_study_02_L2 | F16AeroL2 | F16PropL2 | F16WeightsL2 | MissionAnalysisL2 | F16ConstraintSet | SizingLoopL2 |
-| design_study_03_L3 | F16AeroL3 | F16PropL3 | F16WeightsL3 | MissionAnalysisL3 | F16ConstraintSet | SizingLoopL2 |
+| design_study_03_L3 | F16AeroL3 | F16PropL2 (no PropL3) | F16WeightsL3 | MissionAnalysisL3 | F16ConstraintSet | SizingLoopL2 |
 
 ---
 

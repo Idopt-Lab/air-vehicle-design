@@ -1,0 +1,57 @@
+{
+  "_comment": "F-16A Block 10/15 Level-2 inputs. Read by F16GeomL2, F16AeroL2, F16PropL2, F16WeightsL2. Full docs: F16GeomL2.md, F16AeroL2.md, F16PropL2.md, F16WeightsL2.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
+  "_cite": "Main!/Engn(s)!/Miss!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly AED 2nd ed.; todo = VnV/BrandtF16A/todo.md.",
+
+  "aircraft_category": "jet_fighter",
+  "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
+
+  "geometry": {
+    "_src": "Surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %; wing B22 = 1404 -> 4%, corroborated TO Fig. 1-2 NACA 64A204). tc_root, tc_tip [TO Sec. I biconvex]. fuselage length_ft, max_width_ft, max_height_ft [Main!B32/C32/D32]. engine duct_length_ft [Main!F32, label E32 'Compr Face'].",
+    "_note": "Row map also in F16GeomL2.md / F16GeomL3.md §2. Derived quantities are Dependent getters; engine SLS thrust arrives by DI from .propulsion.T_SL.",
+    "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04},
+    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_root": 0.060, "tc_tip": 0.035},
+    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_root": 0.053, "tc_tip": 0.030},
+    "fuselage":        {"length_ft": 46.5, "max_width_ft": 7.0, "max_height_ft": 5.0},
+    "engine":          {"duct_length_ft": 14.0},
+    "overall_length_ft": 47.65,
+    "_overall_length_ft_src": "L_aircraft, ft; feeds only the Raymer Eq. 12.44 (Amax/l)^2 term. Published F-16A length 47 ft 7.75 in = 47.6458 ft. Distinct from fuselage.length_ft.",
+    "_TODO_overall_length_ft": "overall_length_ft = 47.65 is traceable to no document in this repo; remove this key when pinned to a primary source. todo 2026-07-25 Phase 2 §6; Geom!B21 does not pin it (F16GeomL3.md §2)."
+  },
+
+  "aerodynamics": {
+    "_src": "e_method 'official' [Raymer Eq. 12.48/12.49]; airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
+    "e_method": "official",
+    "airfoil": {
+      "name": "NACA 64A204",
+      "airfoiltype": "cambered",
+      "design_CL": 0.2,
+      "alpha_L0_deg": -1.01,
+      "cl_max_2D": 1.20,
+      "cl_alpha_per_deg": 0.105,
+      "_TODO_alpha_L0_deg": "alpha_L0 = -1.01 unverified against a primary NACA 64A204 source (thin-airfoil band -1.4 to -1.9); remove when pinned. Guard: TestAeroL2.testTODO_AlphaL0Unverified.",
+      "_TODO_cl_max_2D": "cl_max_2D = 1.20 (Abbott & von Doenhoff) conflicts with NTRS-19870017427's 1.0; remove when reconciled. Guard: TestAeroL2.testTODO_ClMax2DUnverified.",
+      "_TODO_cl_alpha_per_deg": "cl_alpha = 0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guard: TestAeroL2.testTODO_ClAlpha2DUnverified."
+    }
+  },
+
+  "propulsion": {
+    "_src": "engine_type [F100-PW-200 class; selects the PropL2 Mattingly Eq. 3.55a/b TSFC coefficients]; engine_model [descriptor]; T_SL AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]; T_SL_mil, dry SLS lbf [Engn(s)!T_mil_SLS = Main!C29]; T_t4_max_F [Mattingly Tbl C.4, F100-PW-100]; TSFC_install_factor [Miss!C25 = Main!C25]; bypass_ratio [F100-PW-200 class, unpinned -- see _TODO key]",
+    "_note": "Installed = uninstalled x 1.08. Brandt's stored SLS TSFCs (0.70 mil / 2.20 AB) are ALREADY installed -- do not double-apply [todo 2026-07-24 §4]. TR [Mattingly Eq. D.6] and T_SL_wet (= T_SL) are derived.",
+    "engine_type": "low_bypass_turbofan_AB",
+    "engine_model": "F100-PW-200",
+    "T_SL":     23770.0,
+    "T_SL_mil": 15000.0,
+    "T_t4_max_F": 2566.0,
+    "TSFC_install_factor": 1.08,
+    "bypass_ratio": 0.71,
+    "_TODO_bypass_ratio": "BPR = 0.71 for the F100-PW-200 is not traceable to any document in this repo -- added for the Raymer Eq. 10.10 engine-weight term that Phase 4 wires. Remove this key when pinned to a primary source (TO 1F-16A-1, Jane's, or a P&W datasheet). todo 2026-07-25 Phase 3."
+  },
+
+  "weights": {
+    "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants.",
+    "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. design_mach (Raymer Eq. 10.10 M^0.25) is NOT here either -- it is a REQUIREMENT, read from examples/F16A/f16a_requirements.json. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio, then x1.3 installed -- the x1.3 applies at L2 ONLY, F16WeightsL2.md §4) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
+    "N_en": 1,
+    "W_payload_fixed": 700,
+    "W_payload_expendable": 4400
+  }
+}

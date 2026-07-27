@@ -1,0 +1,79 @@
+{
+  "_comment": "F-16A Block 10/15 Level-1 inputs (type/statistical). Read by F16GeomL1, F16AeroL1, F16PropL1, F16WeightsL1. Full docs: F16GeomL1.md, AeroL1.md, F16PropL1.md, F16WeightsL1.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
+  "_cite": "Main!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly AED 2nd ed.; todo = VnV/BrandtF16A/todo.md.",
+
+  "aircraft_category": "jet_fighter",
+  "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Roskam I Tbl 3.5 (S_wet) / Raymer Tbl 6.3 (L_fus) / Raymer 7th Tbl 4.1 (AR_eq) / Raymer Tbl 3.1 + Roskam I Tbl 2.15 (empty weight) / Roskam I Tbl 3.1 (CLmax) / Raymer Tbl 12.3 (Cfe) rows. Those tables name their categories differently (Roskam's CLmax table says 'fighter'), so each lookup translates this canonical value to its own table's row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key: the row name is what the textbook prints.",
+
+  "geometry": {
+    "_note": "★ NO INPUTS AT L1. M_max = 2.0 was DELETED here (Phase 4, 2026-07-25): it was the THIRD copy of the design max Mach, which now lives once in examples/F16A/f16a_requirements.json as design_mach [Brandt Main! aircraft.Mmax; GroundTruth/f16a_geometry.json:9]. It is still CONSUMED -- F16GeomL1 feeds it to GeomL1.get_AR_eq (Raymer 7th Tbl 4.1, GeomL1.m:121-129) -- so this is a consolidation, not a removal. The repoint has LANDED: F16GeomL1(json_path, req_path) reads design_mach from the requirements file. todo 2026-07-25 Phase 4 §P4-14."
+  },
+
+  "aerodynamics": {
+    "_src": "design_type [Mattingly Sec. 2.3.1: uncambered -> K2=0]; curve [Mattingly Figs. 2.10/2.11 technology arrays]",
+    "design_type": "uncambered",
+    "curve": "Current",
+
+    "cd0_curve": {
+      "_src": "[Mattingly Fig. 2.10 CD0(M) fighter] via 5 AAF worked points (mattingly_data.md PART 9); Future = copy of Current",
+      "_placeholder": true,
+      "Current": [
+        {"mach": 0.0, "value": 0.016},
+        {"mach": 0.8, "value": 0.016},
+        {"mach": 0.9, "value": 0.016},
+        {"mach": 1.2, "value": 0.028},
+        {"mach": 1.5, "value": 0.028},
+        {"mach": 1.6, "value": 0.028},
+        {"mach": 1.8, "value": 0.028},
+        {"mach": 2.0, "value": 0.028}
+      ],
+      "Future": [
+        {"mach": 0.0, "value": 0.016},
+        {"mach": 0.8, "value": 0.016},
+        {"mach": 0.9, "value": 0.016},
+        {"mach": 1.2, "value": 0.028},
+        {"mach": 1.5, "value": 0.028},
+        {"mach": 1.6, "value": 0.028},
+        {"mach": 1.8, "value": 0.028},
+        {"mach": 2.0, "value": 0.028}
+      ]
+    },
+
+    "k1_curve": {
+      "_src": "[Mattingly Fig. 2.11 K1(M) fighter] via 5 AAF worked points (mattingly_data.md PART 9); Future = copy of Current",
+      "_placeholder": true,
+      "Current": [
+        {"mach": 0.0, "value": 0.18},
+        {"mach": 0.8, "value": 0.18},
+        {"mach": 0.9, "value": 0.18},
+        {"mach": 1.2, "value": 0.20},
+        {"mach": 1.5, "value": 0.27},
+        {"mach": 1.6, "value": 0.288},
+        {"mach": 1.8, "value": 0.324},
+        {"mach": 2.0, "value": 0.360}
+      ],
+      "Future": [
+        {"mach": 0.0, "value": 0.18},
+        {"mach": 0.8, "value": 0.18},
+        {"mach": 0.9, "value": 0.18},
+        {"mach": 1.2, "value": 0.20},
+        {"mach": 1.5, "value": 0.27},
+        {"mach": 1.6, "value": 0.288},
+        {"mach": 1.8, "value": 0.324},
+        {"mach": 2.0, "value": 0.360}
+      ]
+    }
+  },
+
+  "propulsion": {
+    "_src": "engine_type [F100-PW-200 class; selects PropL1 lapse m=0.6 (Martins metabook Eq. 10.9) + TSFC rows (Raymer Tbl 3.3)]; T_SL AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]. T_SL_wet is NOT an input: it is Dependent on T_SL (same quantity, AB name).",
+    "engine_type": "low_bypass_turbofan_AB",
+    "T_SL": 23770.0
+  },
+
+  "weights": {
+    "_src": "W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Regression coefficients are aircraft_category-selected toolbox Constants (Raymer Tbl 3.1 / Roskam I Tbl 2.15); edition/table drift: todo 2026-07-24 §3c. W_energy is NOT an input: internal fuel is a mission-analysis OUTPUT (Brandt Wt!B6 = W_TO - payload - OEW is back-calculated), set by the sizing loop.",
+    "W_payload_fixed": 700,
+    "W_payload_expendable": 4400
+  }
+}

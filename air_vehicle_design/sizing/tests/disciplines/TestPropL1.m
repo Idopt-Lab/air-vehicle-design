@@ -1,416 +1,273 @@
 classdef TestPropL1 < matlab.unittest.TestCase
-%TESTPROPL1  Unit tests for PropL1 toolbox and F16PropL1 student class.
+%TESTPROPL1  Unit tests for the PropL1 toolbox and the F16PropL1 student class.
 %
-%   Formula references:
-%     thrust_lapse: α = σ^m,  σ = ρ/ρ_SL, m from engine-type table
-%       J.R.R.A. Martins, AE481 course notes (metabook), Eq. 10.7 (turbojet, m=1.0) / Eq. 10.9 (turbofan, m=0.6)
-%     TSFC: categorical lookup by engine type — cruise and loiter only.
-%       Raymer 6th ed. Table 3.3; values in lbf_fuel/(hr·lbf_thrust):
-%         low_bypass_turbofan_AB / low_bypass_turbofan: cruise=0.80, loiter=0.70 1/hr
-%         high_bypass_turbofan:                         cruise=0.50, loiter=0.40 1/hr
-%         turbojet / turbojet_AB:                       cruise=0.90, loiter=0.80 1/hr
-%         turboprop:                                    cruise=0.90, loiter=0.80 1/hr
-%       AB operation is NOT modelled — see L2/L3 for AB TSFC (Mattingly Eq. 3.55).
+%   TIER-1 UNIT TESTS ONLY — every "expected" is either an independent
+%   published datum (Raymer Table 3.3, Martins Eq. 10.7/10.9, a standard-
+%   atmosphere table, or a real engine spec) or hand arithmetic. NOTHING here
+%   reads f16a_ground_truth.json or any Brandt engine-MODEL output as an
+%   expected value — the Mattingly/L1-vs-Brandt closeness comparison lives in
+%   examples/F16A/propulsion_brandt_comparison.m (informational, not a test).
 %
-%   Pre-computed expected values:
-%     SLS (alt=0, M=0): σ = 1.0 → α = 1.0
+%   Constructor is required-JSON-path: F16PropL1(f16a_spec_path(1)). The no-arg
+%   form now errors MATLAB:minrhs (covered by testNoArgConstructorErrors).
 %
-%     At 36 kft, M=0.87 (cruise constraint state):
-%       ρ ≈ 0.000707 slug/ft³  [atmosisa → AircraftState]
-%       σ = 0.000707 / 0.002377 = 0.2975
-%       α = 0.2975^0.6 ≈ 0.484   (L1 does NOT match Brandt deck ≈0.34;
-%       σ^m with m=0.6 is a rough turbofan approximation — Mattingly L2 is more accurate)
-%
-%   F-16A takeoff speed estimate (used in testThrustLapseAtTakeoff):
-%     V_stall = sqrt(2·TOGW/(ρ_SL·S_ref·CLmax_TO))
-%             = sqrt(2·31377/(0.002377·300·1.2785)) = 262.3 ft/s
-%     V_TO = 1.2·V_stall = 314.8 ft/s  [Brandt, "Introduction to Aeronautics: A Design Perspective"]
-%     M_TO = V_TO/a_SLS = 314.8/1116.45 = 0.282
-%     Sources: TOGW=31377 lbf, S_ref=300 ft², CLmax_TO=1.2785 [Brandt F-16A.xls]
-%              ρ_SL=0.002377 slug/ft³, a_SLS=1116.45 ft/s     [Mattingly App. B]
+%   FORMULA / SOURCE REFERENCES:
+%     thrust lapse: α = σ^m, σ = ρ/ρ_SL, m from engine-type table
+%       [J.R.R.A. Martins, AE481 course notes (metabook), Eq. 10.7 (turbojet,
+%        m=1.0) / Eq. 10.9 (turbofan, m=0.6)] — citation resolved to Martins
+%        per VnV/BrandtF16A/todo.md 2026-07-24 Entry 1.
+%     TSFC: categorical cruise/loiter lookup by engine type
+%       [Raymer 6th ed. Table 3.3, values in 1/hr]:
+%         low_bypass_turbofan(_AB): cruise 0.80 / loiter 0.70
+%         high_bypass_turbofan:     cruise 0.50 / loiter 0.40
+%         turbojet(_AB) / turboprop: cruise 0.90 / loiter 0.80
 
     properties (Constant)
-        TOL_TIGHT = 1e-6    % formula-level; exact arithmetic
-        TOL_ATM   = 1e-4    % ISA/conversion rounding at SLS conditions
+        % Exact-arithmetic tolerance for closed-form table/power-law checks
+        % (no atmosphere model involved) — these are bit-for-bit reproducible.
+        TOL_EXACT = 1e-12
+        % ρ_SL, English units [Mattingly App. B]. Used only to build a density
+        % argument whose ratio to ρ_SL is a known constant (never as an
+        % expected value).
+        RHO_SL = 0.002377
     end
 
-    % Brandt's six constraint-analysis (alt, Mach) conditions [Brandt
-    % "Consts" sheet] -- same points fidelity_comparison.m evaluates
-    % thrust_lapse/get_TSFC at for all three fidelity levels.
-    properties (TestParameter)
-        constraintName = {'cruise', 'combat_sub', 'dash', 'max_alt', 'combat_sup', 'ps'};
-    end
-
-    % ---------------------------------------------------------------------- %
     methods (Test)
 
-        % --- Low-level primitive: sigma_lapse --------------------------------
+        % ================================================================== %
+        % CONSTRUCTOR CONTRACT
+        % ================================================================== %
 
-        % Note (Casey): This is logical, but may be unnecessary.
-        function testSigmaLapseAtOne(tc)
-            % Purpose: verify the identity case — σ=1 at sea level returns α=1.
-            % At ρ=ρ_SL: σ=ρ/ρ_SL=1 → α=1^m=1.0 for any m.
-            % Source: Martins AE481 course notes (metabook), Eq. 10.9; ρ_SL=0.002377 slug/ft³ [Mattingly App. B]
-            expected = 1.0;
-            received = PropL1.sigma_lapse(0.002377, 0.6);
-            fprintf('\n    sigma_lapse(ρ_SL, m=0.6): received = %.6f,  expected = %.6f\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ATM);
+        function testNoArgConstructorErrors(tc)
+            % The constructor now REQUIRES a JSON path (arguments block, no
+            % default) — the old silent no-arg default is gone.
+            tc.verifyError(@() F16PropL1(), 'MATLAB:minrhs');
         end
 
-        % Note (Casey): This is logical, but may be unnecessary.
-        function testSigmaLapseFormula(tc)
-            % Purpose: verify σ^m produces correct output for m=0.6 (turbofan) and m=1.0 (turbojet).
-            % At half sea-level density: σ=0.5 → α=0.5^m.
-            % Source: Martins AE481 course notes (metabook), Eqs. 10.7 / 10.9; ρ_SL=0.002377 [Mattingly App. B]
-            rho_half    = 0.5 * 0.002377;   % slug/ft³
-            expected_tf = 0.5^0.6;           % turbofan (m=0.6)  [Martins Eq. 10.9]
-            expected_tj = 0.5^1.0;           % turbojet (m=1.0)  [Martins Eq. 10.7]
-            received_tf = PropL1.sigma_lapse(rho_half, 0.6);
-            received_tj = PropL1.sigma_lapse(rho_half, 1.0);
-            fprintf('\n    sigma_lapse(0.5·ρ_SL): turbofan(m=0.6)=%.6f, turbojet(m=1.0)=%.6f\n', ...
-                received_tf, received_tj);
-            tc.verifyEqual(received_tf, expected_tf, 'AbsTol', tc.TOL_TIGHT);
-            tc.verifyEqual(received_tj, expected_tj, 'AbsTol', tc.TOL_TIGHT);
+        function testTSLWetLoadedFromJson(tc)
+            % Constructor must read T_SL_wet from the L1 input JSON. 23,770 lbf
+            % is the F100-PW-200 AB (max) SLS thrust — a genuine engine SPEC
+            % datum [T.O. 1F-16A-1 Sec. I; Brandt Main!D29], not a Brandt-model
+            % output. Hardcoded here (not read from any ground-truth file).
+            g = F16PropL1(f16a_spec_path(1));
+            tc.verifyEqual(g.T_SL_wet, 23770, 'AbsTol', 1.0, ...
+                'T_SL_wet must load as the F100-PW-200 AB SLS thrust (23,770 lbf).');
         end
 
-        % --- Low-level: TSFC table lookup ------------------------------------
-
-        % Note (Casey): Tests if the table lookup works for each engine type.
-        function testTSFCTableLowBypassAB(tc)
-            % Purpose: verify Raymer cruise/loiter TSFC for low-bypass turbofan with AB.
-            % This is the engine category for the F-16 (F100-PW-200).
-            % AB capability does NOT affect Raymer cruise/loiter TSFC — same values as dry.
-            % Source: Raymer 6th ed. Table 3.3 — low-bypass turbofan.
-            expected_cruise = 0.80;   % 1/hr  [Raymer Table 3.3]
-            expected_loiter = 0.70;   % 1/hr  [Raymer Table 3.3]
-            tbl = PropL1.lookup_TSFC_table('low_bypass_turbofan_AB');
-            fprintf('\n    TSFC low_bypass_turbofan_AB: cruise=%.2f 1/hr,  loiter=%.2f 1/hr\n', ...
-                tbl.cruise, tbl.loiter);
-            tc.verifyEqual(tbl.cruise, expected_cruise, 'AbsTol', tc.TOL_TIGHT, ...
-                'Cruise TSFC should be 0.80 1/hr.');
-            tc.verifyEqual(tbl.loiter, expected_loiter, 'AbsTol', tc.TOL_TIGHT, ...
-                'Loiter TSFC should be 0.70 1/hr.');
+        function testTSLWetConsistentWithF100PW100(tc)
+            % Cross-check T_SL_wet against the F100-PW-100 published SLS thrust
+            % (predecessor engine). 23,700 lbf [Mattingly AED 2nd ed., Table
+            % C.4, p. 522] is an INDEPENDENT reference; the -200 (23,770) is
+            % 0.3% above it, so RelTol 1% brackets both.
+            g = F16PropL1(f16a_spec_path(1));
+            tc.verifyEqual(g.T_SL_wet, 23700, 'RelTol', 0.01, ...
+                'T_SL_wet must agree with F100-PW-100 App.C reference (23,700 lbf) within 1%.');
         end
 
-        function testTSFCTableLowBypassTurbofan(tc)
-            % Purpose: verify cruise/loiter TSFC for low-bypass turbofan (dry, no AB).
-            % Same Raymer table values as the _AB variant — AB does not affect cruise/loiter.
-            % Source: Raymer 6th ed. Table 3.3 — low-bypass turbofan.
-            expected_cruise = 0.80;   % 1/hr  [Raymer Table 3.3]
-            expected_loiter = 0.70;   % 1/hr  [Raymer Table 3.3]
-            tbl = PropL1.lookup_TSFC_table('low_bypass_turbofan');
-            fprintf('\n    TSFC low_bypass_turbofan: cruise=%.2f 1/hr,  loiter=%.2f 1/hr\n', ...
-                tbl.cruise, tbl.loiter);
-            tc.verifyEqual(tbl.cruise, expected_cruise, 'AbsTol', tc.TOL_TIGHT);
-            tc.verifyEqual(tbl.loiter, expected_loiter, 'AbsTol', tc.TOL_TIGHT);
+        % ================================================================== %
+        % LOW-LEVEL: sigma_lapse  (α = σ^m)
+        % ================================================================== %
+
+        function testSigmaLapseAtSeaLevelIsOne(tc)
+            % Identity: at ρ=ρ_SL, σ=1, so α=1^m=1 for ANY m. Independent
+            % mathematical fact (1 raised to any power is 1).
+            tc.verifyEqual(PropL1.sigma_lapse(tc.RHO_SL, 0.6), 1.0, ...
+                'AbsTol', tc.TOL_EXACT, 'α must be exactly 1 at sea-level density.');
+            tc.verifyEqual(PropL1.sigma_lapse(tc.RHO_SL, 1.0), 1.0, ...
+                'AbsTol', tc.TOL_EXACT);
         end
 
-        function testTSFCTableHighBypassTurbofan(tc)
-            % Purpose: verify cruise/loiter TSFC for high-bypass turbofan (transport).
-            % Source: Raymer 6th ed. Table 3.3 — high-bypass turbofan.
-            expected_cruise = 0.50;   % 1/hr  [Raymer Table 3.3]
-            expected_loiter = 0.40;   % 1/hr  [Raymer Table 3.3]
-            tbl = PropL1.lookup_TSFC_table('high_bypass_turbofan');
-            fprintf('\n    TSFC high_bypass_turbofan: cruise=%.2f 1/hr,  loiter=%.2f 1/hr\n', ...
-                tbl.cruise, tbl.loiter);
-            tc.verifyEqual(tbl.cruise, expected_cruise, 'AbsTol', tc.TOL_TIGHT);
-            tc.verifyEqual(tbl.loiter, expected_loiter, 'AbsTol', tc.TOL_TIGHT);
+        function testSigmaLapseHalfDensityHandComputed(tc)
+            % Feed a density of exactly 0.5·ρ_SL so σ=0.5 by construction; the
+            % expected is hand-evaluated 0.5^m (independent arithmetic), which
+            % catches a wrong ρ_SL, an inverted ratio, or a wrong exponent path.
+            %   0.5^0.6 = 0.659754 (turbofan, Martins Eq. 10.9)
+            %   0.5^1.0 = 0.500000 (turbojet, Martins Eq. 10.7)
+            rho_half = 0.5 * tc.RHO_SL;
+            tc.verifyEqual(PropL1.sigma_lapse(rho_half, 0.6), 0.659753955386447, ...
+                'AbsTol', 1e-12, 'σ^0.6 at half sea-level density (turbofan).');
+            tc.verifyEqual(PropL1.sigma_lapse(rho_half, 1.0), 0.5, ...
+                'AbsTol', tc.TOL_EXACT, 'σ^1.0 at half sea-level density (turbojet).');
         end
 
-        function testTSFCTableTurbojet(tc)
-            % Purpose: verify cruise/loiter TSFC for turbojet (with or without AB).
-            % Raymer Table 3.3 has no AB column — turbojet_AB maps to same values.
-            % Source: Raymer 6th ed. Table 3.3 — turbojet.
-            expected_cruise = 0.90;   % 1/hr  [Raymer Table 3.3]
-            expected_loiter = 0.80;   % 1/hr  [Raymer Table 3.3]
-            tbl_dry = PropL1.lookup_TSFC_table('turbojet');
-            tbl_AB  = PropL1.lookup_TSFC_table('turbojet_AB');
-            fprintf('\n    TSFC turbojet: cruise=%.2f 1/hr,  loiter=%.2f 1/hr\n', ...
-                tbl_dry.cruise, tbl_dry.loiter);
-            tc.verifyEqual(tbl_dry.cruise, expected_cruise, 'AbsTol', tc.TOL_TIGHT);
-            tc.verifyEqual(tbl_dry.loiter, expected_loiter, 'AbsTol', tc.TOL_TIGHT);
-            tc.verifyEqual(tbl_AB.cruise,  expected_cruise, 'AbsTol', tc.TOL_TIGHT, ...
-                'turbojet_AB must share cruise TSFC with turbojet.');
-            tc.verifyEqual(tbl_AB.loiter,  expected_loiter, 'AbsTol', tc.TOL_TIGHT, ...
-                'turbojet_AB must share loiter TSFC with turbojet.');
+        % ================================================================== %
+        % LOW-LEVEL: lapse-exponent table  (matches the cited Martins Eqs.)
+        % ================================================================== %
+
+        function testLapseExponentTurbofanIs0p6(tc)
+            % m=0.6 for the low-bypass AB turbofan (F-16 engine class).
+            % [Martins metabook Eq. 10.9]
+            tc.verifyEqual(PropL1.lookup_lapse_exponent('low_bypass_turbofan_AB'), 0.6, ...
+                'AbsTol', tc.TOL_EXACT);
         end
 
-        function testTSFCTableTurboprop(tc)
-            % Purpose: verify cruise/loiter TSFC for turboprop.
-            % Source: Raymer 6th ed. Table 3.3 — turboprop.
-            expected_cruise = 0.90;   % 1/hr  [Raymer Table 3.3]
-            expected_loiter = 0.80;   % 1/hr  [Raymer Table 3.3]
-            tbl = PropL1.lookup_TSFC_table('turboprop');
-            fprintf('\n    TSFC turboprop: cruise=%.2f 1/hr,  loiter=%.2f 1/hr\n', ...
-                tbl.cruise, tbl.loiter);
-            tc.verifyEqual(tbl.cruise, expected_cruise, 'AbsTol', tc.TOL_TIGHT);
-            tc.verifyEqual(tbl.loiter, expected_loiter, 'AbsTol', tc.TOL_TIGHT);
+        function testLapseExponentTurbojetIs1p0(tc)
+            % m=1.0 for a turbojet — thrust scales linearly with density.
+            % [Martins metabook Eq. 10.7]
+            tc.verifyEqual(PropL1.lookup_lapse_exponent('turbojet_AB'), 1.0, ...
+                'AbsTol', tc.TOL_EXACT);
         end
 
-        function testTSFCTableUnknownThrows(tc)
-            % Purpose: verify that an unrecognized engine type raises an error
-            % rather than silently returning a wrong TSFC value.
-            tc.verifyError(@() PropL1.lookup_TSFC_table('ramjet'), ...
-                'PropL1:unknownEngineType');
-        end
-
-        % --- Low-level: lapse exponent lookup --------------------------------
-
-        function testLapseExponentLowBPFTurbofanAB(tc)
-            % Purpose: verify m=0.6 for low-bypass turbofan with AB (F-16 engine category).
-            % Source: Martins AE481 course notes (metabook), Eq. 10.9
-            expected = 0.6;
-            received = PropL1.lookup_lapse_exponent('low_bypass_turbofan_AB');
-            fprintf('\n    lapse exponent low_bypass_turbofan_AB: %.1f  (expected: %.1f)\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
-        end
-
-        function testLapseExponentTurbojet(tc)
-            % Purpose: verify m=1.0 for turbojet (thrust scales linearly with density).
-            % Source: Martins AE481 course notes (metabook), Eq. 10.7
-            expected = 1.0;
-            received = PropL1.lookup_lapse_exponent('turbojet_AB');
-            fprintf('\n    lapse exponent turbojet_AB: %.1f  (expected: %.1f)\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT);
-        end
-
-        function testLapseExponentTurbojetGreaterThanTurbofan(tc)
-            % Purpose: verify m_turbojet (1.0) > m_turbofan (0.6).
-            % A turbojet drops thrust faster with altitude — higher exponent means
-            % steeper lapse.  [Martins Eqs. 10.7 / 10.9]
-            m_tj = PropL1.lookup_lapse_exponent('turbojet');
-            m_tf = PropL1.lookup_lapse_exponent('low_bypass_turbofan_AB');
-            fprintf('\n    turbojet m=%.1f  vs  turbofan m=%.1f\n', m_tj, m_tf);
-            tc.verifyGreaterThan(m_tj, m_tf, ...
-                'Turbojet must have higher lapse exponent than turbofan.');
+        function testLapseExponentTurbojetExceedsTurbofan(tc)
+            % Qualitative: a turbojet sheds thrust faster with altitude, so its
+            % lapse exponent must exceed the turbofan's. [Martins Eqs. 10.7/10.9]
+            tc.verifyGreaterThan(PropL1.lookup_lapse_exponent('turbojet'), ...
+                PropL1.lookup_lapse_exponent('low_bypass_turbofan_AB'));
         end
 
         function testLapseExponentUnknownThrows(tc)
-            % Purpose: verify that an unrecognized engine type raises an error.
             tc.verifyError(@() PropL1.lookup_lapse_exponent('ramjet'), ...
                 'PropL1:unknownEngineType');
         end
 
-        % --- High-level: thrust lapse ----------------------------------------
+        % ================================================================== %
+        % LOW-LEVEL: TSFC table  (transcription of Raymer Table 3.3)
+        % ================================================================== %
+        % Each expected is Raymer 6th ed. Table 3.3's published cruise/loiter
+        % SFC for that engine class — an EXTERNAL datum. These verify the code
+        % transcribed the published table faithfully (exact match).
+
+        function testTSFCTableLowBypassTurbofan(tc)
+            for key = {'low_bypass_turbofan', 'low_bypass_turbofan_AB'}
+                tbl = PropL1.lookup_TSFC_table(key{1});
+                tc.verifyEqual(tbl.cruise, 0.80, 'AbsTol', tc.TOL_EXACT, ...
+                    sprintf('%s cruise TSFC must be Raymer Table 3.3 = 0.80 1/hr.', key{1}));
+                tc.verifyEqual(tbl.loiter, 0.70, 'AbsTol', tc.TOL_EXACT, ...
+                    sprintf('%s loiter TSFC must be Raymer Table 3.3 = 0.70 1/hr.', key{1}));
+            end
+        end
+
+        function testTSFCTableHighBypassTurbofan(tc)
+            tbl = PropL1.lookup_TSFC_table('high_bypass_turbofan');
+            tc.verifyEqual(tbl.cruise, 0.50, 'AbsTol', tc.TOL_EXACT);   % [Raymer Table 3.3]
+            tc.verifyEqual(tbl.loiter, 0.40, 'AbsTol', tc.TOL_EXACT);
+        end
+
+        function testTSFCTableTurbojet(tc)
+            for key = {'turbojet', 'turbojet_AB'}
+                tbl = PropL1.lookup_TSFC_table(key{1});
+                tc.verifyEqual(tbl.cruise, 0.90, 'AbsTol', tc.TOL_EXACT);   % [Raymer Table 3.3]
+                tc.verifyEqual(tbl.loiter, 0.80, 'AbsTol', tc.TOL_EXACT);
+            end
+        end
+
+        function testTSFCTableTurboprop(tc)
+            tbl = PropL1.lookup_TSFC_table('turboprop');
+            tc.verifyEqual(tbl.cruise, 0.90, 'AbsTol', tc.TOL_EXACT);   % [Raymer Table 3.3]
+            tc.verifyEqual(tbl.loiter, 0.80, 'AbsTol', tc.TOL_EXACT);
+        end
+
+        function testTSFCTableUnknownThrows(tc)
+            tc.verifyError(@() PropL1.lookup_TSFC_table('ramjet'), ...
+                'PropL1:unknownEngineType');
+        end
+
+        % ================================================================== %
+        % HIGH-LEVEL: F16PropL1.get_thrust_lapse / thrust_lapse
+        % ================================================================== %
+
+        function testThrustLapseSeaLevelIsMachIndependent(tc)
+            % L1 has NO Mach term (density-only). At SLS σ=1, so α=1 for every
+            % Mach. Independent fact (σ=1 → 1); also confirms the L1 model
+            % carries no Mach correction.
+            g = F16PropL1(f16a_spec_path(1));
+            a_lo = g.get_thrust_lapse(AircraftState(0, 0.3));
+            a_hi = g.get_thrust_lapse(AircraftState(0, 0.9));
+            tc.verifyEqual(a_lo, 1.0, 'AbsTol', 1e-4, 'α must be ~1 at SLS (σ=1).');
+            tc.verifyEqual(a_hi, 1.0, 'AbsTol', 1e-4);
+            tc.verifyEqual(a_lo, a_hi, 'AbsTol', 1e-12, ...
+                'L1 α must be identical across Mach at fixed altitude (no Mach term).');
+        end
+
+        function testThrustLapseAtAltitudeVsPublishedISA(tc)
+            % Independent quantitative check of the full α = σ^m chain at
+            % 36,000 ft. The standard-atmosphere density ratio at 36 kft is
+            % σ = 0.2971 [Mattingly App. B ISA table]; hand-evaluating the
+            % turbofan law gives
+            %   α = 0.2971^0.6 = 0.4828   (own arithmetic).
+            % 'received' comes from AircraftState's atmosisa density (an
+            % independent atmosphere source from the published table), so an
+            % AbsTol of 0.01 covers atmosisa-vs-table σ round-off
+            % (~0.3% in σ → ~0.2% in α) plus the table's 4-digit rounding.
+            g = F16PropL1(f16a_spec_path(1));
+            received = g.get_thrust_lapse(AircraftState(36000, 0.87));
+            tc.verifyEqual(received, 0.4828, 'AbsTol', 0.01, ...
+                'α at 36 kft must match σ^0.6 with σ from the published ISA table.');
+        end
 
         function testThrustLapseDecreasesWithAltitude(tc)
-            % Purpose: verify monotonic decrease of α with altitude at constant Mach.
-            % L1 model: α=σ^m; σ decreases with altitude → α must decrease.
-            % At SLS M=0.5: σ=1 → α=1.0.  [Martins Eq. 10.9]
-            % At 36 kft M=0.5: σ<1 → α<1.0.  [Martins Eq. 10.9; ISA from Mattingly App. B]
-            expected_SL = 1.0;   % σ=1 at SLS regardless of Mach  [Raymer §5.4]
-            g        = F16PropL1();
-            alpha_SL = g.compute_thrust_lapse(AircraftState(0,     0.5));
-            alpha_36 = g.compute_thrust_lapse(AircraftState(36000, 0.5));
-            fprintf('\n    α: SL=%.4f (expected=%.4f),  36kft=%.4f\n', ...
-                alpha_SL, expected_SL, alpha_36);
-            tc.verifyEqual(alpha_SL, expected_SL, 'AbsTol', tc.TOL_ATM, ...
-                'α at SLS must be exactly 1.0 (σ=1).');
-            tc.verifyGreaterThan(alpha_SL, alpha_36, ...
+            % Monotonic: σ falls with altitude, so α must fall. [Martins Eq. 10.9]
+            g = F16PropL1(f16a_spec_path(1));
+            tc.verifyGreaterThan(g.get_thrust_lapse(AircraftState(0, 0.5)), ...
+                g.get_thrust_lapse(AircraftState(36000, 0.5)), ...
                 'Thrust lapse must decrease with altitude.');
         end
 
-        function testThrustLapseAtTakeoff(tc)
-            % Purpose: verify α=1 at the F-16 estimated takeoff Mach at SLS.
-            % L1 is density-only (σ^m, no Mach term); at SLS σ=1 for any Mach → α=1.0.
-            % L1 limitation: no AB/mil split (that's L2), no Mach correction.
-            %   L2/L3 give α_AB=1.0, α_mil=0.6 at SLS.
-            %   Brandt gives 0.955/0.940 at M_TO=0.282 (Mach-corrected, wet/dry split).
-            %
-            % Takeoff Mach derived from F-16A baseline data:
-            %   V_stall = sqrt(2·TOGW/(ρ_SL·S_ref·CLmax_TO))
-            %   V_TO    = 1.2·V_stall  [Brandt, "Introduction to Aeronautics: A Design Perspective"]
-            %   M_TO    = V_TO/a_SLS ≈ 0.282
-            % Sources:
-            %   TOGW=31377 lbf, S_ref=300 ft², CLmax_TO=1.2785  [Brandt F-16A.xls]
-            %   ρ_SL=0.002377 slug/ft³, a_SLS=1116.45 ft/s      [Mattingly App. B]
-            b       = F16Baseline();
-            g       = F16PropL1();
-            V_stall = sqrt(2 * b.brandt.TOGW / ...
-                          (b.atm.rho_std * b.geom.S_ref * b.brandt.CLmax_TO));
-            V_TO    = 1.2 * V_stall;
-            M_TO    = V_TO / b.atm.a_std;
-            expected = 1.0;   % σ=1 at SLS → α=1 for any Mach  [Martins Eq. 10.9]
-            received = g.compute_thrust_lapse(AircraftState(0, M_TO));
-            fprintf('\n    M_TO=%.4f,  α_L1(SLS)=%.6f,  expected=%.6f\n', M_TO, received, expected);
-            fprintf('    L1 limitation: no AB/mil split, no Mach correction.\n');
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_ATM, ...
-                'L1 thrust lapse at takeoff SLS must be 1.0 (σ=1 regardless of Mach).');
+        function testThrustLapseEntryPointsAgree(tc)
+            % Interface consistency: the PropulsionBase API method
+            % thrust_lapse and the L1-specific get_thrust_lapse are two public
+            % entry points that must return the identical value.
+            g = F16PropL1(f16a_spec_path(1));
+            state = AircraftState(20000, 0.7);
+            tc.verifyEqual(g.thrust_lapse(state), g.get_thrust_lapse(state), ...
+                'AbsTol', tc.TOL_EXACT, 'thrust_lapse and get_thrust_lapse must agree.');
         end
 
-        % TODO (7/14/2026): Include "dry" and "wet" split, too.
-        function testThrustLapsePhysicalRange(tc)
-            % Purpose: verify α at a realistic cruise state falls in a physically
-            % plausible range for the σ^m law (m=0.6 for low-bypass turbofan).
-            % At 36 kft M=0.87: σ≈0.297 → α=0.297^0.6≈0.487.  Bounds [0.2, 0.7]
-            % conservatively bracket σ^0.6 for ISA altitudes between 25–50 kft.
-            % Source: Martins AE481 course notes (metabook), Eq. 10.9; ISA density [Mattingly App. B]
-            g        = F16PropL1();
-            state    = AircraftState(36000, 0.87);
-            received = g.compute_thrust_lapse(state);
-            fprintf('\n    α at 36kft M=0.87: %.4f  [expected range: 0.20–0.70]\n', received);
-            tc.verifyGreaterThan(received, 0.20, 'α below physical lower bound.');
-            tc.verifyLessThan(received,   0.70, 'α above physical upper bound.');
+        % ================================================================== %
+        % HIGH-LEVEL: F16PropL1.get_TSFC / lookup_TSFC (Mach segment logic)
+        % ================================================================== %
+
+        function testGetTSFCCruiseSegment(tc)
+            % M >= 0.4 selects the cruise column (0.80 1/hr) [Raymer Table 3.3].
+            g = F16PropL1(f16a_spec_path(1));
+            tc.verifyEqual(g.get_TSFC(AircraftState(0, 0.5)), 0.80, ...
+                'AbsTol', tc.TOL_EXACT, 'M>=0.4 must return cruise TSFC 0.80 1/hr.');
         end
 
-        % --- High-level: thrust lapse at all six Brandt constraint conditions -
-
-        function testThrustLapseAtConstraintConditions(tc, constraintName)
-            % Purpose: verify thrust_lapse follows the sigma^m formula
-            % (PropL1.sigma_lapse, independently tested above) at every one
-            % of Brandt's six constraint-analysis conditions -- L1's
-            % density-only model has no Mach term, so alpha depends solely
-            % on altitude. fidelity_comparison.m evaluates thrust_lapse at
-            % all six; only 'cruise' had a (range-only) test before this.
-            % Source: Martins AE481 course notes (metabook), Eq. 10.9.
-            b        = F16Baseline();
-            c        = b.constraints.(constraintName);
-            g        = F16PropL1();
-            state    = AircraftState(c.alt_ft, c.mach);
-            m        = PropL1.lookup_lapse_exponent(g.engine_type);
-            expected = PropL1.sigma_lapse(state.rho, m);
-            received = g.thrust_lapse(state);
-            fprintf('\n    %-11s alt=%6.0f M=%.2f: alpha received=%.4f  sigma^m formula=%.4f\n', ...
-                constraintName, c.alt_ft, c.mach, received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT, ...
-                'thrust_lapse must equal the sigma_lapse(rho,m) formula at every constraint condition.');
-            tc.verifyGreaterThan(received, 0, 'alpha must be positive.');
-            tc.verifyLessThanOrEqual(received, 1.0, 'alpha must not exceed 1.0 (SLS maximum).');
+        function testGetTSFCLoiterSegment(tc)
+            % M < 0.4 selects the loiter column (0.70 1/hr) [Raymer Table 3.3].
+            g = F16PropL1(f16a_spec_path(1));
+            tc.verifyEqual(g.get_TSFC(AircraftState(0, 0.2)), 0.70, ...
+                'AbsTol', tc.TOL_EXACT, 'M<0.4 must return loiter TSFC 0.70 1/hr.');
         end
 
-        function testThrustLapseVsBrandtAtConstraintConditions(tc, constraintName)
-            % Purpose: DIAGNOSTIC ONLY (not a closeness assertion, same
-            % pattern as TestThrustConstraint.m's testF16*RequiredTWTable and
-            % testF16CombatSupDragPolarK2ZeroSupersonic) -- prints
-            % F16PropL1.thrust_lapse against Brandt's alpha_AB at all six
-            % constraint conditions. Before this test, NOTHING in the suite
-            % compared L1's alpha to Brandt at any condition (see
-            % examples/F16A/cruise_and_combatturn2_error_scrape.md Sec 4 and
-            % examples/F16A/remaining_constraints_scrape.md Sec 2-3), which let
-            % a >2x error at Max Alt (50,000 ft) go completely unnoticed --
-            % PropL1's sigma^m density-only law has no Mach term and, per
-            % those docs' live findings, degrades badly at both extreme
-            % altitude (Max Alt: alpha 90% too high) and supersonic Mach vs.
-            % subsonic at the same altitude (identical alpha predicted for
-            % Max Mach M=1.6 and Combat Turn 2 M=1.4, both at 36,000 ft, which
-            % is not physically plausible for a real afterburning engine).
-            % L1 is compared against alpha_AB (not alpha_mil_T_AB) at every
-            % condition, including Cruise -- L1 has no mil/AB throttle
-            % concept at all (unlike F16PropL2, see PropulsionBase.m's
-            % thrust_lapse_mil_on_AB_scale default fallback), so alpha_AB is
-            % the only basis it can be compared against.
-            % No AbsTol assertion: at Max Alt/Cruise the gap exceeds 2x, so a
-            % tolerance loose enough to pass there would be meaningless
-            % everywhere else -- this deliberately mirrors how
-            % ThrustConstraint's required_TW diagnostic tables assert only
-            % finiteness/positivity, not closeness, for known-divergent
-            % fidelity-model comparisons.
-            b        = F16Baseline();
-            c        = b.constraints.(constraintName);
-            g        = F16PropL1();
-            state    = AircraftState(c.alt_ft, c.mach);
-            received = g.thrust_lapse(state);
-            expected = c.alpha_AB;
-            pct_diff = 100 * (received - expected) / expected;
-            fprintf('\n    %-11s alt=%6.0f M=%.2f: L1 alpha=%.6f  Brandt alpha_AB=%.6f  diff=%+.1f%%\n', ...
-                constraintName, c.alt_ft, c.mach, received, expected, pct_diff);
-            tc.verifyGreaterThan(received, 0, 'alpha must be positive.');
-            tc.verifyLessThanOrEqual(received, 1.0, 'alpha must not exceed 1.0 (SLS maximum).');
+        function testGetTSFCEntryPointsAgree(tc)
+            % Interface consistency: get_TSFC and lookup_TSFC must agree.
+            g = F16PropL1(f16a_spec_path(1));
+            state = AircraftState(0, 0.5);
+            tc.verifyEqual(g.get_TSFC(state), g.lookup_TSFC(state), ...
+                'AbsTol', tc.TOL_EXACT);
         end
-
-        % --- Base-class delegation consistency --------------------------------
-
-        function testThrustLapseMatchesCompute(tc)
-            % Purpose: verify PropulsionBase.thrust_lapse delegates to
-            % F16PropL1.compute_thrust_lapse without modification.
-            g        = F16PropL1();
-            state    = AircraftState(20000, 0.7);
-            expected = g.compute_thrust_lapse(state);   % canonical L1 path
-            received = g.thrust_lapse(state);            % base-class delegation
-            fprintf('\n    thrust_lapse vs compute_thrust_lapse at 20kft M=0.7: %.6f\n', received);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT, ...
-                'Base thrust_lapse must delegate to compute_thrust_lapse exactly.');
-        end
-
-        function testGetTSFCMatchesLookup(tc)
-            % Purpose: verify PropulsionBase.get_TSFC delegates to
-            % F16PropL1.lookup_TSFC without modification.
-            g        = F16PropL1();
-            state    = AircraftState(0, 0.5);
-            expected = g.lookup_TSFC(state);   % canonical L1 path
-            received = g.get_TSFC(state);       % base-class delegation
-            fprintf('\n    get_TSFC vs lookup_TSFC at M=0.5: %.6f 1/hr\n', received);
-            tc.verifyEqual(received, expected, 'AbsTol', tc.TOL_TIGHT, ...
-                'Base get_TSFC must delegate to lookup_TSFC exactly.');
-        end
-
-        % --- T_SL_wet matches baseline ----------------------------------------
-
-        function testTSLMatchesBaseline(tc)
-            % Purpose: verify T_SL_wet is set to the Brandt-reported AB SLS thrust.
-            % Source: Brandt F-16A.xls sheet "Main" cell D29 — T_max=23,770 lbf.
-            b        = F16Baseline();
-            g        = F16PropL1();
-            expected = b.engine.T_max;   % 23,770 lbf  [Brandt D29]
-            received = g.T_SL_wet;
-            fprintf('\n    T_SL_wet: received = %.0f lbf,  expected = %.0f lbf\n', ...
-                received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1.0, ...
-                'T_SL_wet must match Brandt T_max (AB).');
-        end
-
-        function testTSLWetConsistentWithF100PW100(tc)
-            % Purpose: cross-check T_SL_wet against the F100-PW-100 real-world
-            % reported SLS thrust — the predecessor engine to the F100-PW-200.
-            % The -200 variant (Brandt: 23,770 lbf) is 0.3% above the -100 reference.
-            % RelTol=0.01 (±1%) accommodates both values.
-            % Source: Mattingly AED 2nd ed., Table C.4, p. 522.
-            b        = F16Baseline();
-            g        = F16PropL1();
-            expected = b.engine.F100PW100.T_max;   % 23,700 lbf  [Mattingly Table C.4]
-            received = g.T_SL_wet;
-            fprintf('\n    T_SL_wet: %.0f lbf  |  F100-PW-100 App.C anchor: %.0f lbf  (delta: %+.0f lbf)\n', ...
-                received, expected, received - expected);
-            tc.verifyEqual(received, expected, 'RelTol', 0.01, ...
-                'T_SL_wet must agree with F100-PW-100 Appendix C reference (23,700 lbf) within 1%.');
-        end
-
-        % --- Unknown engine type ---------------------------------------------
 
         function testUnknownEngineTypeThrows(tc)
-            % Purpose: verify that an unrecognized engine_type raises an error
-            % rather than silently returning an incorrect TSFC value.
-            g = F16PropL1();
+            % A mutated (unknown) engine_type must error rather than silently
+            % returning a wrong TSFC.
+            g = F16PropL1(f16a_spec_path(1));
             g.engine_type = "ramjet";
-            state = AircraftState(0, 0.5);
-            tc.verifyError(@() g.lookup_TSFC(state), 'PropL1:unknownEngineType');
+            tc.verifyError(@() g.lookup_TSFC(AircraftState(0, 0.5)), ...
+                'PropL1:unknownEngineType');
         end
 
-        % --- Inheritance / interface compliance ------------------------------
+        % ================================================================== %
+        % INHERITANCE / INTERFACE COMPLIANCE
+        % ================================================================== %
 
         function testIsaPropulsionBase(tc)
-            % Purpose: verify F16PropL1 satisfies the top-level PropulsionBase
-            % abstract contract (required for orchestrator DI).
-            tc.verifyTrue(isa(F16PropL1(), 'PropulsionBase'), ...
-                'F16PropL1 must satisfy PropulsionBase contract.');
+            tc.verifyTrue(isa(F16PropL1(f16a_spec_path(1)), 'PropulsionBase'), ...
+                'F16PropL1 must satisfy the PropulsionBase contract.');
         end
 
         function testIsaPropulsionModelL1(tc)
-            % Purpose: verify F16PropL1 inherits from the L1 fidelity enforcer.
-            tc.verifyTrue(isa(F16PropL1(), 'PropulsionModelL1'));
+            tc.verifyTrue(isa(F16PropL1(f16a_spec_path(1)), 'PropulsionModelL1'));
         end
 
         function testNotIsaPropulsionModelL2(tc)
-            % Purpose: verify L1 does NOT inherit from the L2 enforcer.
-            % Fidelity levels must be independent inheritance chains from PropulsionBase.
-            tc.verifyFalse(isa(F16PropL1(), 'PropulsionModelL2'), ...
+            tc.verifyFalse(isa(F16PropL1(f16a_spec_path(1)), 'PropulsionModelL2'), ...
                 'L1 must NOT inherit from the L2 enforcer.');
         end
 
         function testIsHandleClass(tc)
-            % Purpose: verify F16PropL1 is a handle class (required for
-            % constructor dependency injection to pass by reference).
-            tc.verifyTrue(isa(F16PropL1(), 'handle'));
+            tc.verifyTrue(isa(F16PropL1(f16a_spec_path(1)), 'handle'));
         end
 
     end

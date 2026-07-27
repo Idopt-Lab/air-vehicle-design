@@ -1,21 +1,16 @@
 classdef AircraftState
-%AIRCRAFTSTATE  Immutable ISA atmosphere state at a given altitude and Mach number.
+%AIRCRAFTSTATE  Immutable ISA atmosphere state at a given altitude and Mach.
 %
-%   s = AircraftState(altitude_ft, mach) calls MATLAB atmosisa, converts to
-%   English units, and computes the dimensionless ratios used throughout the
-%   constraint and mission analysis equations.
+%   s = AircraftState(altitude_ft, mach) builds the flight condition passed
+%   into most discipline methods. All outputs are English units: lbf, ft, slug,
+%   ft/s, deg R.
 %
-%   All outputs are in English units: lbf, ft, slug, ft/s, deg R.
+%   VALUE class (not handle): properties are set once in the constructor.
 %
-%   This is a VALUE class (not handle). Properties are set once in the
-%   constructor and are not writable from outside.
+%   Atmosphere: MATLAB Aerospace Toolbox atmosisa (ICAO 1993).
+%   Ratios: [Mattingly 2nd ed. Eq. 2.52]
 %
-%   CITATIONS:
-%     theta/delta/theta_0/delta_0 definitions:
-%       Mattingly, Heiser, Pratt, "Aircraft Engine Design" 2nd ed.,
-%       AIAA, 2002, Eq. 2.52a-b.
-%     Standard atmosphere:
-%       MATLAB Aerospace Toolbox, atmosisa (ICAO 1993 standard).
+%   Companion doc: src/core/AircraftState.md
 
     % ------------------------------------------------------------------ %
     properties (Constant, Access = private)

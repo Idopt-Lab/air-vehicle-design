@@ -16,11 +16,13 @@ Rewrite the AOE 4065 sizing framework from scratch using correct OOP, referenced
 
 **Hybrid: Abstract interfaces (inheritance) + constructor dependency injection (composition).**
 
-- **Discipline classes** use MATLAB abstract base classes (enforces contract at instantiation).
-  `AerodynamicsBase`, `PropulsionBase`, `WeightsBase`, `GeometryBase`, `MissionBase`, `TailSizingBase`
-  Each concrete level (`AeroLevel1`, `AeroLevel2`, …) inherits from the base.
+- **Discipline classes** use MATLAB abstract base classes (enforce the contract at instantiation).
+  Bases that exist: `AerodynamicsBase`, `PropulsionBase`, `WeightsBase`, `GeometryBase`. Each
+  fidelity level follows the three-tier pattern below (`AeroL1` → `AeroModelL1` → `F16AeroL1`, …).
 
-- **System-level orchestrators** (`SizingLoopL1`, `SizingLoopL2`, `ConstraintAnalysis`, `MissionAnalysisL1`, …) are **not** subclassed. They receive discipline objects through their constructor. Pure composition here.
+- **System-level orchestrators** receive discipline objects through their constructor (pure
+  composition), never subclassed. Built so far: `ConstraintAnalysis` (+ `F16ConstraintSet`). The
+  sizing loop and mission analysis (`SizingLoop*`, `MissionAnalysis*`) are not yet built.
 
 Why: MATLAB abstract classes give compile-time contract enforcement. DI into orchestrators makes unit testing easy without deep inheritance chains.
 
@@ -28,127 +30,132 @@ Why: MATLAB abstract classes give compile-time contract enforcement. DI into orc
 
 ---
 
-## Two-Layer Discipline Pattern
+## Three-tier discipline pattern
 
-Discipline classes have two layers:
-
-**Layer 1 — Generic (`src/disciplines/`):**
-Implements broadly applicable textbook equations (Raymer, Roskam, Mattingly, Nicolai) parameterized for any aircraft. No aircraft-specific numbers are hardcoded. A student can instantiate these directly by supplying the required parameters.
-
-**Layer 2 — Aircraft-specific (`examples/<aircraft>/disciplines/`):**
-Subclasses the generic class and provides aircraft-specific **specification inputs** — design parameters taken from the aircraft's public specification (AR, sweep, taper ratio, engine type, airfoil, load factor, etc.). The equations used are still the same general textbook equations from Layer 1. The subclass does not override the equations; it wires in the aircraft's known design parameters so the user doesn't have to supply them manually each time. The sizing loop and constraint analysis receive a Layer 2 object and call it through the abstract base interface — they never know which layer they are talking to.
+Each discipline is implemented across three inheritance tiers plus a standalone static toolbox
+(authoritative detail in the repo-root `CLAUDE.md`):
 
 ```
-AerodynamicsBase  (abstract — defines the contract)
+src/base/<Disc>Base.m                     Tier 1 — abstract; the methods orchestrators call
+       ↑                                           + shared concrete utilities
+src/disciplines/<disc>/<Disc>ModelLN.m    Tier 2 — abstract enforcer for level N (inherits Base)
        ↑
-  AeroLevel1      (generic — Raymer Table 12.3 Cf lookup, K_LD lookup,
-                   parameterized for any aircraft type)
-       ↑
- F16AeroLevel1    (F-16 specific — constructor calls super with
-                   aircraft_type='air force fighter', design_type='jet fighter';
-                   equations are unchanged)
+examples/<AC>/<AC><Disc>LN.m              Tier 3 — concrete per-aircraft class; each method a
+                                                   one-line delegation into the toolbox
 ```
+
+Alongside sits the static toolbox `src/disciplines/<disc>/<Disc>LN.m` (e.g. `AeroL1`) — a
+`methods (Static)` classdef holding the cited textbook equations, called as `AeroL1.method(...)`,
+never instantiated, not in the inheritance chain. Example chain: `AerodynamicsBase` ← `AeroModelL1`
+← `F16AeroL1`, with equations in the `AeroL1` toolbox.
+
+**Layer split (generic vs aircraft-specific).** Tiers 1–2 and the toolbox are generic, parameterized
+textbook equations (Layer 1, `src/`). The Tier-3 concrete class (Layer 2, `examples/<aircraft>/`)
+supplies the aircraft's genuine spec data (AR, sweep, taper, t/c, engine, airfoil) — it never changes
+the equations. Concrete classes split properties into plain mutable **inputs** (set once from JSON)
+and `properties (Dependent)` **derived** getters that recompute live; `examples/F16A/F16GeomL2.m` is
+the reference. `F16AeroL2/L3` also receive an injected geometry object (dependency injection) — aero
+owns no geometry.
+
+**Inputs** come from the unified per-level JSON `examples/F16A/f16a_L{1,2,3}.json` (one file per
+level, `.geometry`/`.aerodynamics`/`.propulsion`/`.weights` blocks; `f16a_spec_path(level)`;
+constructors require the path — no silent default). Geometry, aerodynamics, propulsion **and weights**
+all read this unified JSON (the `.propulsion` block lives in `f16a_L{1,2}.json` — propulsion is L1/L2
+only). The older per-discipline weights input style is gone as of 2026-07-25 (Phase-4 weights
+redesign).
+
+**Requirements** are a *second*, fidelity-independent input file: `examples/F16A/f16a_requirements.json`,
+resolved by `examples/F16A/f16a_requirements_path.m` (no `level` argument — that absence is the
+documentation that requirements do not vary with fidelity). It holds what the aircraft must **do**
+(`cruise.altitude_ft`, `cruise.mach`, `design_mach`); spec data — what the aircraft **is** — stays in
+`f16a_L{1,2,3}.json`. Consumers today: `F16WeightsL2`, `F16WeightsL3`, `F16GeomL1`. It is expected to
+grow into the full requirement set with constraint and mission analysis. See "Step 0" below — this is
+the partial revival of the Step-0 `requirements.json`.
+
+**Tier count per discipline (as of 2026-07-25):** Geometry, Aerodynamics and Weights are L1/L2/L3.
+**Propulsion is L1/L2 only** — there is no `PropL3`/`PropulsionModelL3`/`F16PropL3` and none is
+planned; the L3 rung pairs `F16AeroL3` **and `F16WeightsL3`** with `F16PropL2`, and L3 propulsion
+figures in any report must be labelled "computed by `F16PropL2`".
+
+**Weights dependency injection (2026-07-25).** `F16WeightsL2(json_path, req_path, geom, prop)` with
+`geom` = `F16GeomL2`; `F16WeightsL3(json_path, req_path, geom, prop)` with `geom` = **`F16GeomL3`**.
+Both `prop` = `F16PropL2`. All four arguments required at both levels; the `geom` type guard sits at
+the L2/L3 **enforcer** (`GeometryModelL2` / `GeometryModelL3`), not at `GeometryBase`, so a wrong tier
+fails at construction instead of resolving property names to different physical quantities mid-run.
+`F16WeightsL1(json_path)` injects nothing — its two regressions take only `W_TO` and
+`aircraft_category`. No `AircraftState` is injected anywhere in weights: `F16WeightsL3` reads the
+cruise condition from the requirements file and builds the state itself.
+
+Geometry's L3 tier was eliminated on 2026-07-22, reinstated on 2026-07-24, and **promoted on
+2026-07-25 to the full L3 geometry tier** consumed by L3 geometry, aerodynamics and weights. It is the
+physical/T.O. tier: where a physical value differs from Brandt's, `GeomL3` uses the physical one (VT LE
+sweep 47.5° vs 40°, `L_fus` 47.5 vs 46.5, HT span 18.5 ft as the PRIMARY span so `AR_ht` = 3.169 is
+derived). Those divergences are intentional and are annotated `BY DESIGN` in the comparison reports.
+Geometry also now takes an **injected propulsion object** (`F16GeomL{2,3}(json_path, prop)`), since the
+nacelle diameter and hence duct wetted area are sized from engine thrust. See
+`examples/F16A/F16GeomL3.md`; the code is authoritative over any prose here that still says otherwise.
 
 **What is NOT in the F-16 layer:** Brandt's calibrated intermediate values (e.g., Cfe=0.005908, e_osw=0.9086 back-calculated from his spreadsheet) must NOT be hardcoded into the F-16 subclasses. Those are outputs of Brandt's calibration process, not F-16 specification data. The framework computes e_osw, Cf, CD0, etc. from general textbook equations using F-16 spec inputs.
 
-**What the F-16 subclass wires in (specification data only):**
-
-| Generic class | What the F-16 subclass provides |
-|---------------|----------------------------------|
-| `AeroLevel1` | `aircraft_type = 'air force fighter'` → Raymer Table 12.3 gives Cf; `design_type = 'jet fighter'` → K_LD = 14 from Raymer |
-| `AeroLevel2` | AR=3.0, λ=0.2, Λ_LE=40° (F-16 spec) → e_osw computed via Raymer eq 12.48 |
-| `AeroLevel3` | Airfoil = NACA 64A-204, tc=0.04, x/c at max thickness; component geometry from F-16 spec |
-| `PropulsionLevel1` | `engine_type = 'low_bypass_mixed_turbofan'` → picks TSFC table row |
-| `PropulsionLevel2` | BPR and engine class for F100-PW-200 → Mattingly correlations |
-| `WeightsLevel1` | `aircraft_type = 'jet fighter'` → Raymer Table 6.1 gives A=2.34, C=−0.13 |
-| `WeightsLevel2` | AR=3.0, M_max=2.05, N_z=9.0 from F-16 MIL-SPEC |
-| `GeometryLevel1` | `aircraft_type = 'fighter'` → Roskam regression coefficients |
-| `GeometryLevel2` | AR=3.0, λ=0.2, Λ_LE=40°, tc=0.04 from F-16 spec |
+**What the F-16 subclass wires in:** genuine spec inputs only — e.g. wing AR=3.0, λ=0.2275, Λ_LE=40°,
+t/c=0.04, S_ref=300 ft²; airfoil NACA 64A204; engine F100-PW-200 — plus type classifiers (fighter /
+jet_fighter) that select the right regression/table rows. All via the `.geometry`/`.aerodynamics`
+blocks of `f16a_L{1,2,3}.json`.
 
 **Brandt's output values** (W_TO=31,377 lb, OEW=19,980 lb, W_fuel≈6,000 lb, T_SL=23,770 lb) are the **validation target** — we compare our framework's sizing output against them after running. We do not use Brandt's intermediate values (Cfe, e_osw, etc.) as inputs. Expect ±10–20% agreement at L1, ±5–10% at L2/L3; exact agreement is not the goal.
 
-**Tests for generic classes** go in `tests/disciplines/` — use representative parameter values.
-**Tests for F-16 classes** go in `tests/examples/F16A/` — compare framework outputs against Brandt's sizing outputs with appropriate tolerances.
+**Tests:** unit/correctness tests live in `tests/disciplines/` and `tests/constraints/` (generic and
+F-16 concrete tests are not split into a separate `tests/examples/F16A/` folder). The Brandt
+comparison reports (`examples/F16A/*_brandt_comparison.m`) are informational only, never used to
+backfill a unit test's expected value.
 
 ---
 
-## Directory Layout (new — do not touch `temp_Casey/` or `temp_AI/`)
+## Directory Layout (do not touch `temp_Casey/` or `temp_AI/`)
 
 ```
 air_vehicle_design/sizing/
 ├── src/
-│   ├── core/
-│   │   └── AircraftState.m
-│   ├── base/
-│   │   ├── AerodynamicsBase.m
-│   │   ├── PropulsionBase.m
-│   │   ├── WeightsBase.m
-│   │   ├── GeometryBase.m
-│   │   ├── MissionBase.m
-│   │   └── TailSizingBase.m
-│   ├── disciplines/                        ← LAYER 1: generic equations, any aircraft
-│   │   ├── aerodynamics/   (AeroLevel1, AeroLevel2, AeroLevel3)
-│   │   ├── propulsion/     (PropulsionLevel1, PropulsionLevel2, PropulsionLevel3)
-│   │   ├── weights/        (WeightsLevel1, WeightsLevel2, WeightsLevel3)
-│   │   ├── geometry/       (GeometryLevel1, GeometryLevel2, GeometryLevel3)
-│   │   └── tail_sizing/    (TailSizingLevel1)
-│   ├── constraints/
-│   │   ├── ConstraintAnalysis.m
-│   │   ├── PointPerformanceBase.m
-│   │   ├── LandingConstraint.m
-│   │   └── ThrustConstraint.m
-│   ├── mission/
-│   │   ├── MissionAnalysisL1.m
-│   │   ├── MissionAnalysisL2.m
-│   │   ├── MissionAnalysisL3.m
-│   │   └── segments/
-│   │       ├── MissionSegmentBase.m
-│   │       ├── TakeoffSegment.m, ClimbSegment.m, CruiseSegment.m
-│   │       ├── DashSegment.m, CombatSegment.m, LoiterSegment.m
-│   │       └── DescentSegment.m, LandingSegment.m
-│   └── sizing/
-│       ├── SizingLoopL1.m
-│       └── SizingLoopL2.m
+│   ├── core/            AircraftState.m  (value class)
+│   ├── base/            AerodynamicsBase.m, PropulsionBase.m, WeightsBase.m, GeometryBase.m
+│   ├── disciplines/     (Tier-2 enforcers <Disc>ModelLN.m + static toolboxes <Disc>LN.m)
+│   │   ├── aerodynamics/  AeroModelL1/L2/L3.m,  AeroL1/L2/L3.m
+│   │   ├── propulsion/    PropulsionModelL1/L2.m,  PropL1/L2.m            (no L3)
+│   │   ├── weights/       WeightsModelL1/L2/L3.m,  WeightsL1/L2/L3.m
+│   │   └── geometry/      GeometryModelL1/L2/L3.m,  GeomL1/L2/L3.m
+│   └── constraints/     ConstraintAnalysis.m, ConstraintSetImporter.m,
+│                        PointPerformanceBase.m, Only_TbyW.m, Only_WbyS.m, Both_WbyS_TbyW.m,
+│                        ThrustConstraint.m, TakeoffConstraint.m, LandingConstraint.m, StallConstraint.m
+│   (src/mission/ and src/sizing/ NOT yet built — steps 7–8)
 ├── tests/
-│   ├── core/                    TestAircraftState.m
-│   ├── disciplines/             TestAeroLevel1.m, TestPropLevel1.m … (generic classes)
-│   ├── constraints/             TestConstraintAnalysis.m
-│   ├── mission/                 TestMissionL1.m
-│   ├── sizing/                  TestSizingLoops.m
-│   └── examples/
-│       └── F16A/                TestF16AeroLevel1.m, TestF16PropLevel1.m … (F-16 classes)
-├── examples/
-│   └── F16A/
-│       ├── requirements.json        ← stakeholder inputs (mission + point performance)
-│       ├── aircraft_spec.json       ← F-16A design data + validation targets
-│       ├── disciplines/                          ← LAYER 2: F-16-specific overrides
-│       │   ├── aerodynamics/  (F16AeroLevel1, F16AeroLevel2, F16AeroLevel3)
-│       │   ├── propulsion/    (F16PropulsionLevel1, F16PropulsionLevel2, F16PropulsionLevel3)
-│       │   ├── weights/       (F16WeightsLevel1, F16WeightsLevel2, F16WeightsLevel3)
-│       │   ├── geometry/      (F16GeometryLevel1, F16GeometryLevel2, F16GeometryLevel3)
-│       │   └── tail_sizing/   (F16TailSizingLevel1)
-│       ├── constraints/       (F16ConstraintSet — defines the 8 F-16 constraint points)
-│       ├── design_study_01_L1.m
-│       ├── design_study_02_L2.m
-│       └── design_study_03_L3.m
-└── docs/
-    ├── PLAN.md                  (this file)
-    └── subplans/
-        ├── 01_aircraft_state.md
-        ├── 02_geometry.md
-        ├── 03_aerodynamics.md
-        ├── 04_propulsion.md
-        ├── 05_weights.md
-        ├── 06_constraint_analysis.md
-        ├── 07_mission_analysis.md
-        └── 08_sizing.md
+│   ├── core/            TestAircraftState.m
+│   ├── disciplines/     TestAeroL1/L2/L3.m, TestGeomL1/L2/L3.m, TestPropL1/L2.m, TestWeightsL1/L2/L3.m
+│   └── constraints/     TestConstraintAnalysis.m, TestF16ConstraintSet.m, TestConstraintSetImporter.m,
+│                        Test{Thrust,Takeoff,Landing,Stall}Constraint.m
+├── examples/F16A/       (flat — no disciplines/ subfolders)
+│   ├── f16a_L1.json, f16a_L2.json, f16a_L3.json     ← unified per-level SPEC inputs (.geometry/.aerodynamics/.propulsion/.weights; .propulsion in L1/L2 only)
+│   ├── f16a_spec_path.m
+│   ├── f16a_requirements.json, f16a_requirements_path.m   ← fidelity-INDEPENDENT REQUIREMENTS (cruise condition, design_mach); read by F16WeightsL2/L3 + F16GeomL1
+│   ├── F16GeomL1.m, F16GeomL2.m, F16GeomL3.m
+│   ├── F16AeroL1.m, F16AeroL2.m, F16AeroL3.m
+│   ├── F16PropL1.m, F16PropL2.m
+│   ├── F16WeightsL1.m, F16WeightsL2.m, F16WeightsL3.m
+│   ├── F16ConstraintSet.m, Constraints.xlsx, run_F16_constraint_diagram.m
+│   ├── {geometry,aerodynamics,propulsion,weights}_brandt_comparison.m (+ .json/.md), fidelity_comparison.m (+ .json/.xlsx)
+│   └── per-file companion .md docs
+├── VnV/BrandtF16A/
+│   ├── GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth (.geometry/.aerodynamics/.propulsion/.weights)
+│   └── todo.md                             ← dated discrepancy / open-decision log (user-review items)
+├── baseline/            F16Baseline.m, extract_brandt.m   (deprecated)
+└── docs/                PLAN.md, {aerodynamics,geometry,propulsion,weights}_parameter_usage.md,
+                         subplans/01_aircraft_state … 08_sizing.md
 ```
 
 ---
 
 ## F-16A Validation Targets (Brandt spreadsheet)
 
-These are the **sizing outputs** we compare our framework against after running — not inputs to any discipline equation. They are stored in `examples/F16A/aaircraft_spec.json` under a `"validation_targets"` key so they live alongside the aircraft data but are clearly labelled. Brandt's intermediate calibration values (Cfe, e_osw, CD0, lapse rates) must not be stored or used as discipline inputs.
+These are the **sizing outputs** we compare our framework against after running — not inputs to any discipline equation. They live in `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` (with `.geometry`/`.aerodynamics`/`.propulsion` sections), clearly separated from the toolbox inputs. Brandt's intermediate calibration values (Cfe, e_osw, CD0, lapse rates) must not be stored or used as discipline inputs.
 
 | Quantity | Value | Source |
 |---|---|---|
@@ -171,53 +178,56 @@ These are the **sizing outputs** we compare our framework against after running 
 
 Each step ends with: **Claude runs MATLAB, all tests pass, then STOP for professor review.**
 
+Status reflects the code tree (this table historically went stale — trust `git log` and `src/`).
+
 | Step | Title | Subplan | Status |
 |------|-------|---------|--------|
-| 0 | Baseline JSON + Test Infrastructure | *(no subplan)* | Not started |
-| 1 | AircraftState | [01_aircraft_state.md](subplans/01_aircraft_state.md) | Not started |
-| 2 | Geometry | [02_geometry.md](subplans/02_geometry.md) | Not started |
-| 3 | Aerodynamics | [03_aerodynamics.md](subplans/03_aerodynamics.md) | Not started |
-| 4 | Propulsion | [04_propulsion.md](subplans/04_propulsion.md) | Not started |
-| 5 | Weights | [05_weights.md](subplans/05_weights.md) | Not started |
-| 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Done — implemented, tested, audited against Brandt |
+| 0 | Inputs + Test Infrastructure | *(superseded; `requirements.json` half PARTLY revived 2026-07-25 — see below)* | Superseded |
+| 1 | AircraftState | [01_aircraft_state.md](subplans/01_aircraft_state.md) | Done |
+| 2 | Geometry (L1/L2) | [02_geometry.md](subplans/02_geometry.md) | Done |
+| 3 | Aerodynamics (L1/L2/L3) | [03_aerodynamics.md](subplans/03_aerodynamics.md) | Done |
+| 4 | Propulsion (L1/L2) | [04_propulsion.md](subplans/04_propulsion.md) | Done |
+| 5 | Weights (L1/L2/L3) | [05_weights.md](subplans/05_weights.md) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
+| 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Done |
 | 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Not started |
 | 8 | Sizing | [08_sizing.md](subplans/08_sizing.md) | Not started |
 
 ---
 
-### Step 0 — Baseline JSON + Test Infrastructure
+### Step 0 — Inputs & Test Infrastructure (superseded)
 
-**Input files (read-only, do not modify):**
-- `temp_Casey/inputs/Requirements.xlsx` — point performance requirements (alt, Mach, n, AB%, PS, field distances)
-- `temp_Casey/inputs/Constraints.xlsx` — overlapping data plus β (W/W_TO) and μ per constraint
-- `temp_Casey/inputs/Mission_Profile.xlsx` — CAP mission segment sequence
-- `temp_Casey/inputs/F-16A Block 50.xlsx` — F-16A aircraft specification (geometry, propulsion, weight data)
+**CORRECTED 2026-07-25 — the two-file model is now PARTLY REAL.** This section previously read "the
+originally-planned two-file JSON data model (`requirements.json` + `aircraft_spec.json`) was never
+built." The **requirements half now exists**: `examples/F16A/f16a_requirements.json` +
+`examples/F16A/f16a_requirements_path.m`, introduced by the Phase-4 weights redesign (2026-07-25),
+because the design max Mach existed in three places and the cruise condition existed in none that a
+weights class could reach. It is **minimal** — `cruise.altitude_ft`, `cruise.mach`, `design_mach`, i.e.
+only what weights needed — and it is fidelity-independent by design (no `_L{1,2,3}` suffix, no `level`
+argument on the resolver). The `aircraft_spec.json` half was **not** revived: spec data stays in the
+unified per-level `f16a_L{1,2,3}.json`.
 
-Note: `DesignGeometries.xlsx` was deleted. `F-16A Block 50.xlsx` is the sole geometry source.
+The boundary the two files enforce: **requirements = what the aircraft must DO; spec = what the
+aircraft IS.** Reference areas, AR, taper, sweep, t/c, fuselage envelope, thrust and engine model are
+spec and must never migrate into the requirements file — it is fidelity-independent and will become the
+most cross-cut input in the repo once constraint and mission analysis extend it.
 
-**Data model — two JSON files:**
+Known residual duplication: `design_mach` is now the single source for `F16WeightsL2`, `F16WeightsL3`
+and `F16GeomL1`, but a full consolidation of every requirement-like value is still pending
+(`VnV/BrandtF16A/todo.md` 2026-07-25 Phase 4 §P4-14), and the value 2.0 must be cited to **Brandt**
+`Main! aircraft.Mmax`, **not** to the T.O. 1F-16A-1 Mach limit, which is a different number, 2.05
+(§P4-13).
 
-`examples/F16A/requirements.json` — **stakeholder inputs only** (what the aircraft must do):
-- Point performance requirements: flight conditions (alt, Mach, n, AB%, PS, β, μ, distances)
-- Mission profile: CAP segment sequence, payload weights
-- Rules: (1) values that disciplines must compute are NOT stored here (e.g., CLmax — computed by aerodynamics); (2) Requirements.xlsx and Constraints.xlsx overlap on flight conditions — write each datum once, from Requirements.xlsx as primary; (3) β and μ from Constraints.xlsx are stakeholder-specified, so they belong here
+As implemented:
+- **Discipline spec inputs**: the unified per-level `examples/F16A/f16a_L{1,2,3}.json` (`.geometry`/
+  `.aerodynamics`/`.propulsion`/`.weights` blocks; resolved via `f16a_spec_path(level)`).
+- **Requirements**: `examples/F16A/f16a_requirements.json` (via `f16a_requirements_path()`).
+- **Constraint conditions**: `examples/F16A/Constraints.xlsx`, read via `ConstraintSetImporter`.
+- **Validation ground truth**: `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`.
+- **Test runner**: `tests/run_all_tests.m`.
 
-`examples/F16A/aaircraft_spec.json` — **F-16A design data** (what the specific aircraft is):
-- Everything from F-16A Block 50.xlsx: general config, wing/tail/fuselage geometry, propulsion, weight coefficients, tail volume coefficients
-- Any F-16-specific data that appeared in other deleted/overlapping Excel files belongs here, not in requirements.json
-
-**Actions:**
-1. Read the 4 remaining Excel files. For any discrepancy or duplicate between files, stop and ask the professor before writing to JSON.
-2. Construct `examples/F16A/requirements.json` and `examples/F16A/aaircraft_spec.json` using the data model above.
-3. Create `tests/RunAllTests.m` — runs full suite with `runtests`.
-4. Update `temp_AI/docs/00_framework_overview.md` to reference new `src/` layout and link subplans.
-
-**What must NOT go in either JSON (computed by disciplines):**
-- CLmax at any flight condition — computed by `aero.CLmax(state)`. Excel values (CLmax_TO=1.276, CLmax_land=1.426) are verification targets only.
-- CD0, K1, K2, e, alpha_dry — discipline outputs. The OldConstraints sheet in Constraints.xlsx has these; they must not be imported.
-- Fuel fractions, TSFC per segment — discipline outputs from MissionAnalysisL1.
-
-**Verification:** `runtests('tests/')` — zero tests, zero failures (empty suite passes). **STOP.**
+Computed quantities (CLmax, CD0, K1/K2, e, fuel fractions) are never stored as inputs — they are
+discipline outputs / verification targets only. The Brandt workbook, readmes, `cell-map.md`, and
+ground truth all live under `VnV/BrandtF16A/`.
 
 ---
 
@@ -247,7 +257,22 @@ See [subplans/04_propulsion.md](subplans/04_propulsion.md). **STOP after tests p
 
 ### Step 5 — Weights
 
-See [subplans/05_weights.md](subplans/05_weights.md). **STOP after tests pass.**
+See [subplans/05_weights.md](subplans/05_weights.md) — rewritten to as-built 2026-07-25.
+**STOP after tests pass.**
+
+As built (Phase-4 redesign, 2026-07-25): L1 = `[Raymer 7th ed. Table 3.1]` power law +
+`[Roskam Part I Eq. 2.16]` minimum bound; L2 = `[Raymer 7th ed. Table 15.2]` psf × area +
+`[AE481 metabook Sec. 7]` fractions; L3 = `[Raymer 7th ed. §15.3.1, Eqs. 15.1–15.24]` component
+build-up on a `[Raymer 7th ed. Eq. 10.10]` dry engine weight. `OEW(31377)` = 19110.3126 (L1) /
+15664.6483 (L2) / 15705.3313 (L3) lbf against `Brandt Wt!B12` = 19980.700578.
+Property split: L1 5 inputs / 0 derived; L2 7 inputs + 2 injected objects / 12 `Dependent`;
+L3 43 inputs + 2 injected objects / 31 `Dependent`.
+Two standing labelled-red TO-DOs remain by design (Raymer Table 6.1 coefficients absent from the repo;
+every §15.3.1 exponent unverified against the printed book), plus open user decisions on the `K_d = 0`
+silent zero, the uncited `0.95` landing-weight factor and the uncited 6.7 lb/gal fuel density — all
+enumerated in `subplans/05_weights.md` §8 and `VnV/BrandtF16A/todo.md`.
+Comparison report: `examples/F16A/weights_brandt_comparison.{m,json,md}` — informational, 45 data rows
+in 7 sections, **not** in `run_all_tests`.
 
 ---
 
@@ -277,7 +302,7 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 4. No feature added beyond what the step requires.
 5. Each subplan `.md` is written/expanded at the start of its implementation step.
 6. After each step: STOP and wait for professor to review code and run MATLAB independently.
-7. Do not search the internet unless explicitly asked to. Use locally available resources and references. You may use files in C:\Users\John Freeman\Desktop\Academics\VRMastersProgram\code\air-vehicle-design\air_vehicle_design\sizing\temp_AI\docs\disciplines\reference_extracts, C:\Users\John Freeman\Desktop\Academics\VRMastersProgram\Documents\References (this contains information on a few real-world jets and contains a text from Nicolai), and C:\Users\John Freeman\Desktop\Academics\VRMastersProgram\Documents\Readings, as well as other directories allowed.
+7. Do not search the internet unless explicitly asked to. Use locally available resources: `temp_AI/docs/disciplines/reference_extracts/` (Raymer/Roskam/Mattingly/Nicolai extracts) and `VnV/BrandtF16A/` (Brandt workbook, readmes, cell-map).
 
 ---
 
@@ -288,9 +313,9 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 - L2: Left for future work — Raymer Chapter 16 (not in scope for current implementation).
 
 **Control surfaces at L2 sizing:**
-In addition to tail sizing, `SizingLoopL2` performs a quick control surface sizing pass each iteration using Raymer Figure 6.3 (typical configurations) and Table 6.5 (historical area fractions). Outputs: aileron area (fraction of S_ref), elevator area (fraction of S_HT), rudder area (fraction of S_VT). Stored on the geometry object; used by WeightsLevel3 for control system weight.
+In addition to tail sizing, `SizingLoopL2` performs a quick control surface sizing pass each iteration using Raymer Figure 6.3 (typical configurations) and Table 6.5 (historical area fractions). Outputs: aileron area (fraction of S_ref), elevator area (fraction of S_HT), rudder area (fraction of S_VT). Stored on the geometry object; used by `F16WeightsL3` for control system weight.
 
 **Constraint conditions:**
-Sourced from `temp_Casey/inputs/Constraints.xlsx` and `Requirements.xlsx`. See Step 6 subplan for full table. β = 0.8997 for all operational constraints; β = 1.0 for takeoff and landing. Key note: Requirements.xlsx gives field length = 7,999 ft; Constraints.xlsx uses ground roll = 4,000 ft. Both preserved in `requirements.json / aaircraft_spec.json`; implementation uses ground roll for the constraint equation.
+The implementation reads `examples/F16A/Constraints.xlsx` via `ConstraintSetImporter`. See the Step 6 subplan for the condition table. β = 0.8997 for operational constraints, β = 1.0 for takeoff/landing; the ground-roll distance (4,000 ft) is used for the field constraint equation.
 
-**Airfoil:** F-16A Block 50.xlsx lists NACA 1404 for the main wing (cambered, alpha_L0 = −1.047°, cl_alpha = 0.10/deg, t/c = 0.04). DesignGeometries.xlsx lists NACA 65A — may refer to a different block. Use NACA 1404 data from F-16A Block 50.xlsx as authoritative.
+**Airfoil:** the aero discipline uses **NACA 64A204** (T.O. 1F-16A-1 Fig. 1-2, root & tip) as authoritative. Brandt's NACA 1404 (alpha_L0 = −1.047°, t/c = 0.04) is used only in the Brandt-alternate comparison path.

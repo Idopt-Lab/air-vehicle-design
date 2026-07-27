@@ -14,7 +14,7 @@ modeling simplification, not a bug. Both Plot Deliverables below are built:
 
 ## Objectives
 
-Implement the generic constraint analysis framework. The F-16-specific constraint set (8 point performance conditions) is defined in `examples/F16A/constraints/F16ConstraintSet.m` using values extracted from the input Excel files. Key deliverables:
+Implement the generic constraint analysis framework. The F-16-specific constraint set (8 conditions read from the workbook + a 9th stall condition appended in code) is defined in `examples/F16A/F16ConstraintSet.m` (flat directory) using values read from `examples/F16A/Constraints.xlsx` via `ConstraintSetImporter`. Key deliverables:
 1. `optimal_point(aero, prop)` — returns (W/S, T/W) design point.
 2. `plot_diagram()` — constraint diagram with feasible region shaded.
 3. Same API produces valid diagrams with L1, L2, L3 discipline objects.
@@ -23,33 +23,43 @@ Implement the generic constraint analysis framework. The F-16-specific constrain
 
 ## Files to Create
 
-### Layer 1 — Generic (`src/`)
+### Layer 1 — Generic (`src/constraints/`)
 
 | File | Purpose |
 |------|---------|
-| `src/constraints/PointPerformanceBase.m` | Abstract base for all constraint types |
-| `src/constraints/LandingConstraint.m` | Upper bound on W/S (landing, stall) |
-| `src/constraints/ThrustConstraint.m` | Master equation (cruise, turn, dash, climb, takeoff) |
-| `src/constraints/ConstraintAnalysis.m` | Aggregator — receives a list of constraints, computes optimal point + diagram |
+| `PointPerformanceBase.m` | Abstract base for all constraint types — declares `required_TW`, `name` |
+| `Only_TbyW.m` | Abstract category: constraints that bound T/W only (adds `TW_margin`) |
+| `Only_WbyS.m` | Abstract category: constraints that bound W/S only (adds `WS_margin`) |
+| `Both_WbyS_TbyW.m` | Abstract category: constraints on the T/W-vs-W/S curve (adds `TW_margin`) |
+| `ThrustConstraint.m` | Mattingly Master Equation (cruise, turn, dash, climb) — `< Both_WbyS_TbyW` |
+| `TakeoffConstraint.m` | Ground-roll takeoff case — `< Both_WbyS_TbyW` |
+| `LandingConstraint.m` | Landing ground-roll upper bound on W/S — `< Only_WbyS` |
+| `StallConstraint.m` | Stall-speed upper bound on W/S — `< Only_WbyS` |
+| `ConstraintAnalysis.m` | Aggregator — receives a list of constraints, computes optimal point + diagram |
+| `ConstraintSetImporter.m` | Generic reader for a Constraints.xlsx-style conditions workbook |
 
-### Layer 2 — F-16 specific (`examples/F16A/`)
+### Layer 2 — F-16 specific (`examples/F16A/`, flat directory)
 
 | File | Purpose |
 |------|---------|
-| `examples/F16A/constraints/F16ConstraintSet.m` | Instantiates the 8 F-16 constraint points from `requirements.json / aircraft_spec.json`; returns a configured `ConstraintAnalysis` object |
+| `examples/F16A/F16ConstraintSet.m` | Reads the 8 F-16 conditions from `Constraints.xlsx` (via `ConstraintSetImporter`), appends a 9th stall condition, wires each to the F-16 aero/prop objects, returns a configured `ConstraintAnalysis` |
 
-### Tests
+### Tests (`tests/constraints/`)
 
 | File | Tests |
 |------|-------|
-| `tests/constraints/TestConstraintAnalysis.m` | Generic: test with toy constraints |
-| `tests/examples/F16A/TestF16ConstraintSet.m` | F-16: optimal W/S and T/W within expected range |
+| `TestConstraintAnalysis.m` | Generic aggregator with toy/stub constraints |
+| `TestThrustConstraint.m`, `TestTakeoffConstraint.m`, `TestLandingConstraint.m`, `TestStallConstraint.m` | Per-constraint correctness |
+| `TestConstraintSetImporter.m` | Workbook reader |
+| `TestF16ConstraintSet.m` | F-16: optimal W/S and T/W within expected range (uses `FixedAeroStub.m`) |
 
 ---
 
 ## Design Notes
 
-`ConstraintAnalysis` receives a list of `PointPerformanceBase` objects and the discipline objects via constructor (DI). It does not know it is running F-16 constraints. All condition-specific data (β, n, PS, alt, Mach, distances) lives in `F16ConstraintSet` and ultimately in `requirements.json / aircraft_spec.json`.
+`ConstraintAnalysis` receives a list of `PointPerformanceBase` objects and the discipline objects via constructor (DI). It does not know it is running F-16 constraints. All condition-specific data (β, n, PS, alt, Mach, distances) is assembled by `F16ConstraintSet`, which reads it from `examples/F16A/Constraints.xlsx` via `ConstraintSetImporter`.
+
+Constraint hierarchy: `PointPerformanceBase` → category (`Only_TbyW` / `Only_WbyS` / `Both_WbyS_TbyW`, each adding the margin method for its axis) → concrete constraint (`ThrustConstraint`, `TakeoffConstraint`, `LandingConstraint`, `StallConstraint`).
 
 Inspired by NPTEL notebook (`NPTEL_Fighter_Aircraft_Sizing.ipynb`) class hierarchy, improved for MATLAB + English units.
 
@@ -57,7 +67,7 @@ Inspired by NPTEL notebook (`NPTEL_Fighter_Aircraft_Sizing.ipynb`) class hierarc
 
 ## F-16 Constraint Conditions
 
-Source: `examples/F16A/requirements.json` (populated from Requirements.xlsx as primary; β and μ from Constraints.xlsx). Data is written once — no duplication between the two Excel sources.
+Source: `examples/F16A/Constraints.xlsx`, read by `ConstraintSetImporter` and wired into constraint objects by `F16ConstraintSet`. The 8 rows below are the workbook conditions; a 9th (Stall) is appended in `F16ConstraintSet` because the workbook has no Stall row yet.
 
 **CLmax is NOT a constraint input.** The constraint analysis calls `aero.CLmax(state)` at the relevant flight condition. The discipline computes it. Values from Constraints.xlsx (CLmax_TO=1.276, CLmax_land=1.426) are verification targets — see table below.
 
@@ -81,7 +91,7 @@ Source: `examples/F16A/requirements.json` (populated from Requirements.xlsx as p
 | 7 | Takeoff | 0 | k_TO = 1.2 | 4,000 | 0.03 |
 | 8 | Landing | 0 | k_L = 1.3 | 4,000 | 0.50 |
 
-**Note on distances:** Requirements.xlsx quotes a field length of 7,999 ft; Constraints.xlsx uses a ground roll of 4,000 ft. Both are stored in `requirements.json`; constraint equations use the ground roll value. The two values imply different runway models — flag this for professor confirmation during Step 0 (before JSON is written).
+**Note on distances:** Requirements.xlsx quotes a field length of 7,999 ft; Constraints.xlsx uses a ground roll of 4,000 ft. The constraint equations use the ground roll value from Constraints.xlsx. The two values imply different runway models — flagged for professor confirmation.
 
 **CLmax verification targets** (from Constraints.xlsx — computed values to compare against, not inputs):
 
@@ -151,15 +161,15 @@ drop it (exercised by `TestF16ConstraintSet.m`'s `testBuildWithoutStallReturnsEi
 
 ## Tests
 
-### Generic (`tests/constraints/TestConstraintAnalysis.m`)
+### Generic (`tests/constraints/TestConstraintAnalysis.m` + per-constraint `Test*Constraint.m`)
 | Test | Expected | Tolerance |
 |------|----------|-----------|
 | ThrustConstraint returns finite T/W over W/S sweep | no NaN, no Inf | exact |
 | LandingConstraint returns positive W/S limit | > 0 | exact |
 | optimal_point: W/S ≤ landing limit | physical | exact |
-| Works with mock aero/prop objects | converges | — |
+| Works with mock aero/prop objects (`FixedAeroStub`) | converges | — |
 
-### F-16 specific (`tests/examples/F16A/TestF16ConstraintSet.m`)
+### F-16 specific (`tests/constraints/TestF16ConstraintSet.m`)
 | Test | Expected | Tolerance |
 |------|----------|-----------|
 | Optimal W/S (any discipline level) | in range 80–130 psf | physics bounds |
@@ -177,6 +187,6 @@ Note: We do not test against Brandt's exact W/S=104.59 psf or T/W=0.7575. The te
 
 ```matlab
 runtests('tests/constraints/TestConstraintAnalysis.m')
-runtests('tests/examples/F16A/TestF16ConstraintSet.m')
+runtests('tests/constraints/TestF16ConstraintSet.m')
 ```
 All tests must pass before Step 7 begins.
