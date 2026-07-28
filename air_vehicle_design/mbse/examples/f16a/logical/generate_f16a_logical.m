@@ -1,8 +1,8 @@
 function generate_f16a_logical()
 %GENERATE_F16A_LOGICAL Build the F-16A Logical-layer architecture (RFLP "L").
 %   Creates logical/F16A_Logical.slx (a System Composer model of solution-
-%   role components), its interface dictionary logical/F16A_Logical.sldd, a
-%   trade-candidate stereotype profile logical/F16A_LogicalTrades.xml, and
+%   role components), its interface dictionary logical/F16A_Logical.sldd, the
+%   solution-option stereotype profile logical/F16A_LogicalOptions.xml, and
 %   the allocation set logical/F16A_FunctionToLogical.mldatx that ties
 %   each function (RFLP "F") to the logical role that realizes it. It also
 %   Implement-links the logical roles back to the requirements (RFLP "R")
@@ -11,15 +11,27 @@ function generate_f16a_logical()
 %   Where the Functional layer says WHAT the aircraft must do, the Logical
 %   layer says HOW -- in solution roles -- and, crucially, records that a
 %   role can usually be realized more than one way. Three roles are modelled
-%   as VARIANT COMPONENTS, each holding two competing choices; a trade study
-%   (F16ALogicalTradeStudy.m) scores the options and selects one.
+%   as VARIANT COMPONENTS, each holding two competing KINDS.
+%
+%   L PRESENTS THE OPTIONS; L DOES NOT DECIDE.
+%   A logical option is an architectural KIND -- a configuration commitment
+%   that is free of technology, vendor and numbers. "SingleEngine" is a kind;
+%   "F100-PW-200" is a product, and products live at P. So nothing built here
+%   carries a mass, a cost, a TRL or a benefit score, and nothing here picks a
+%   winner. The decision is made one layer down, by
+%   physical/F16APhysicalTradeStudy.m: it scores the concrete parameterized
+%   candidates at P and writes the outcome back into this model -- the active
+%   variant choice, SolutionOption.Selected, SolutionOption.DecisionRef, and an
+%   Implement link from the winning kind to its decision requirement
+%   (REQ_F16A_L01..L03). Until that has run, this model ships UNRESOLVED.
+%   For the boundary rule and its grounding, see docs/06_methodology.md.
 %
 %   Structure (root architecture = F16ASolutionRoles):
 %     F16ASolutionRoles
 %       |- Airframe               (VARIANT: BlendedCrankedDelta | ConventionalTrapWing)
-%       |- PropulsionSystem       (VARIANT: SingleEngine_F100   | TwinEngine_LWF)
+%       |- PropulsionSystem       (VARIANT: SingleEngine        | TwinEngine)
 %       |- FuelSystem
-%       |- FlightControlSystem    (VARIANT: AnalogFBW           | HydroMechanical)
+%       |- FlightControlSystem    (VARIANT: FlyByWire           | HydroMechanical)
 %       |- LandingGear            (constraint-driven; no function allocated)
 %       |- AvionicsSuite
 %       |- CommunicationSystem
@@ -40,18 +52,28 @@ function generate_f16a_logical()
 %     022 (materials) and 026 (cost) stay deferred to the Physical layer.
 %
 %   Idempotent: re-run to regenerate from scratch. Requires the F model and
-%   the requirement sets to exist first (run generate_f16a_functional.m and
-%   generate_f16a_logical_derived_requirements.m before this).
+%   the origin requirement set to exist first (run generate_f16a_requirements.m
+%   and generate_f16a_functional.m before this). It does NOT need the decision
+%   requirements REQ_F16A_L01..L03 -- those are linked by the physical trade
+%   study, so L stays independent of whether P has run (D-010).
 %
 %   -----------------------------------------------------------------------
 %   R2026a API NOTES -- these calls are new to this repo (the F layer used
 %   only plain components + slreq links). Confirm on first run; each is
 %   isolated in a helper below so a signature fix touches one place:
 %     * Variants:   addVariantComponent, addChoice, setActiveChoice
-%                   (helper addVariantRole).
+%                   (helper addVariantRole). getChoices returns the choices
+%                   ALPHABETICALLY, not in creation order, so never rely on
+%                   creation order -- always address a choice by name.
 %     * Profile:    systemcomposer.profile.Profile.createProfile, addStereotype
 %                   (AppliesTo=), addStereotype-property addProperty(Type=,
 %                   DefaultValue=), applyProfile, applyStereotype, setProperty.
+%                   A stereotype CANNOT be applied to a variant component
+%                   (applyStereotype errors on systemcomposer.arch.
+%                   VariantComponent) -- it goes on the variant's CHOICES,
+%                   which is exactly where SolutionOption belongs anyway.
+%                   Property values and defaults are evaluated as MATLAB
+%                   expressions, so a string literal must be quoted: "'TBD'".
 %     * Allocation: systemcomposer.allocation.createAllocationSet, getScenario,
 %                   scenario.allocate(srcElem, dstElem), alloc.save.
 %   As in generate_f16a_functional.m, connect ports with the TWO-argument
@@ -61,7 +83,8 @@ function generate_f16a_logical()
 
 modelName   = "F16A_Logical";
 funcName    = "F16A_Functional";
-profileName = "F16A_LogicalTrades";
+profileName = "F16A_LogicalOptions";
+oldProfName = "F16A_LogicalTrades";   % retired (D-008); cleaned up, never written
 allocName   = "F16A_FunctionToLogical";
 
 thisDir  = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
@@ -77,21 +100,18 @@ origFile = fullfile(reqDir, "f16a.slreqx");
 
 if ~isfolder(logiDir); mkdir(logiDir); end
 
-% Prerequisites (this generator links into the requirement sets and loads the
-% F model, and its final step runs the trade study against the decision reqs).
-derFile = fullfile(reqDir, "f16a_logical_derived.slreqx");
+% Prerequisites: this generator Implement-links into the ORIGIN requirement set
+% and loads the F model. The decision requirements (f16a_logical_derived.slreqx)
+% are deliberately NOT required here -- they are linked by the physical trade
+% study, so L neither reads nor depends on them (D-010).
 if ~isfile(origFile)
     error("Missing %s. Run generate_f16a_requirements first.", origFile);
-end
-if ~isfile(derFile)
-    error("Missing %s. Run generate_f16a_logical_derived_requirements first.", derFile);
 end
 if ~isfile(fullfile(archDir, funcName + ".slx"))
     error("Missing %s.slx. Run generate_f16a_functional first.", funcName);
 end
 
 % Make the models, dictionary, profile and requirement sets resolvable by name.
-addpath(thisDir);   % so F16ALogicalTradeStudy is on the path
 addpath(logiDir);
 addpath(archDir);
 addpath(reqDir);
@@ -116,10 +136,15 @@ try, systemcomposer.close(modelName, true); catch, end %#ok<CTCH>
 bdclose("all");
 Simulink.data.dictionary.closeAll("-discard");
 staleRoot = fullfile(thisDir, modelName);   % guard against artifacts saved to cwd
+% Both the current profile and the RETIRED F16A_LogicalTrades profile are
+% deleted from all three places a save can land, so a re-run of an older
+% working copy leaves no stale profile behind for applyProfile to find.
 cleanupFiles = [dictFile, modelFile, slmxFile, profFile, allocFile, ...
     fullfile(logiDir, modelName + ".slxc"), ...
     staleRoot + ".slx", staleRoot + ".slxc", staleRoot + "~mdl.slmx", ...
     fullfile(thisDir, profileName + ".xml"), fullfile(pwd, profileName + ".xml"), ...
+    fullfile(logiDir, oldProfName + ".xml"), ...
+    fullfile(thisDir, oldProfName + ".xml"), fullfile(pwd, oldProfName + ".xml"), ...
     fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx")];
 for f = cleanupFiles
     if isfile(f); delete(f); end
@@ -163,16 +188,19 @@ comms  = addComponent(root, "CommunicationSystem");     %#ok<NASGU> constraint-d
 weapon = addComponent(root, "WeaponSystem");
 bay    = addComponent(root, "MissionSystemsBay");       %#ok<NASGU> constraint-driven, no ports
 
-% Variant roles: each holds two competing choices; active = production F-16A.
+% Variant roles: each holds two competing KINDS -- architectural topologies,
+% named without reference to any technology, supplier or programme. The first
+% name listed becomes the active choice (see addVariantRole), which before the
+% physical trade has run is a PLACEHOLDER, NOT A DECISION.
 % Boundary ports are declared here (added to every choice and propagated to
 % the variant boundary -- see addVariantRole), so the wiring below can use
 % them exactly like a plain component's ports.
 airframe = addVariantRole(root, "Airframe", ...
     ["BlendedCrankedDelta","ConventionalTrapWing"], {"ThrustIn","in",tv; "ControlIn","in",cc});
 prop     = addVariantRole(root, "PropulsionSystem", ...
-    ["SingleEngine_F100","TwinEngine_LWF"], {"FuelIn","in",ff; "ThrustOut","out",tv});
+    ["SingleEngine","TwinEngine"], {"FuelIn","in",ff; "ThrustOut","out",tv});
 fcs      = addVariantRole(root, "FlightControlSystem", ...
-    ["AnalogFBW","HydroMechanical"], {"ControlOut","out",cc});
+    ["FlyByWire","HydroMechanical"], {"ControlOut","out",cc});
 
 % ---------------------------------------------------------------------
 % 4) Light logical backbone (typed connections between 6 of the 9 roles).
@@ -201,43 +229,47 @@ save_system(modelName, char(modelFile));   % save into logical/
 try, set_param(modelName, "SimulationCommand", "update"); catch, end %#ok<CTCH>
 
 % ---------------------------------------------------------------------
-% 6) Trade-candidate stereotype profile + property values on the choices.
+% 6) Solution-option stereotype profile, applied to every kind.
+%    Deliberately minimal: a kind carries NO Mass_lb, NO UnitCost_USD, NO
+%    TRL and NO Benefit -- those are properties of a part, and a part exists
+%    only at P (docs/06_methodology.md). All this stereotype records is
+%    WHETHER a kind was selected and WHERE the decision is written down;
+%    both are left open here and filled in by F16APhysicalTradeStudy.
 %    Generated programmatically (no fragile hand-written XML), consistent
 %    with the repo's idempotent-generator philosophy.
 % ---------------------------------------------------------------------
 profile = systemcomposer.profile.Profile.createProfile(profileName);
-st = profile.addStereotype("TradeCandidate", AppliesTo="Component");
-st.addProperty("Mass_lb",      Type="double",  DefaultValue="0");
-st.addProperty("UnitCost_USD", Type="double",  DefaultValue="0");
-st.addProperty("TRL",          Type="int32",   DefaultValue="5");
-st.addProperty("Benefit",      Type="double",  DefaultValue="0");
-st.addProperty("Selected",     Type="boolean", DefaultValue="false");
+st = profile.addStereotype("SolutionOption", AppliesTo="Component");
+st.addProperty("Selected",    Type="boolean", DefaultValue="false");
+% String defaults are evaluated as MATLAB expressions, so quote the literal.
+st.addProperty("DecisionRef", Type="string",  DefaultValue="'TBD'");
 profile.save();
 relocate(profileName + ".xml", profFile, thisDir);   % ensure it lands in logical/
 
 applyProfile(m, profileName);
 
-% {choicePath, Mass_lb, UnitCost_USD, TRL, Benefit}
-% Illustrative teaching values (not authoritative F-16 data). Tuned so the
-% production-F-16A choice wins each weighted trade -- but for a DIFFERENT
-% reason each time (see F16ALogicalTradeStudy.m).
+% Apply SolutionOption to the six kinds. It goes on the CHOICES, never on the
+% variant role itself: applyStereotype errors on a VariantComponent in R2026a
+% (Stage-0 probe) -- and a role is not an option, so it has nothing to select.
+% Every kind starts unselected with DecisionRef 'TBD': the L layer presents the
+% options and leaves the decision open. F16APhysicalTradeStudy writes the
+% winner's Selected=true and its DecisionRef (the id of the decision
+% requirement, e.g. "'REQ_F16A_L01'" -- string values are evaluated, so the
+% same quoting applies there).
 S = "F16A_Logical/";
-tradeRows = {
-    S+"PropulsionSystem/SingleEngine_F100",    3800, 4.5e6, 8, 8.0;
-    S+"PropulsionSystem/TwinEngine_LWF",       5200, 6.8e6, 7, 8.5;
-    S+"FlightControlSystem/AnalogFBW",         1200, 1.5e6, 6, 9.0;
-    S+"FlightControlSystem/HydroMechanical",   1800, 1.0e6, 9, 6.0;
-    S+"Airframe/BlendedCrankedDelta",          5400, 7.0e6, 7, 9.5;
-    S+"Airframe/ConventionalTrapWing",         5900, 6.2e6, 8, 6.5;
-};
-for i = 1:size(tradeRows,1)
-    c = lookup(m, Path=char(tradeRows{i,1}));
-    applyStereotype(c, profileName + ".TradeCandidate");
-    setProperty(c, profileName + ".TradeCandidate.Mass_lb",      string(tradeRows{i,2}));
-    setProperty(c, profileName + ".TradeCandidate.UnitCost_USD", string(tradeRows{i,3}));
-    setProperty(c, profileName + ".TradeCandidate.TRL",          string(tradeRows{i,4}));
-    setProperty(c, profileName + ".TradeCandidate.Benefit",      string(tradeRows{i,5}));
-    setProperty(c, profileName + ".TradeCandidate.Selected",     "false");
+kinds = [
+    S+"PropulsionSystem/SingleEngine"
+    S+"PropulsionSystem/TwinEngine"
+    S+"FlightControlSystem/FlyByWire"
+    S+"FlightControlSystem/HydroMechanical"
+    S+"Airframe/BlendedCrankedDelta"
+    S+"Airframe/ConventionalTrapWing"
+];
+for i = 1:numel(kinds)
+    c = lookup(m, Path=char(kinds(i)));
+    applyStereotype(c, profileName + ".SolutionOption");
+    setProperty(c, profileName + ".SolutionOption.Selected",    "false");
+    setProperty(c, profileName + ".SolutionOption.DecisionRef", "'TBD'");
 end
 save_system(modelName, char(modelFile));
 
@@ -299,28 +331,28 @@ save(origSet);
 saveLogicalLinkSets();   % only the F16A_Logical link set (leave F's slmx untouched)
 save_system(modelName, char(modelFile));
 
-% ---------------------------------------------------------------------
-% 9) Run the trade study so the shipped model already reflects the
-%    selected options (active variant choice + Selected flag) and the
-%    decision requirements (REQ_F16A_L01..L03) are Implement-linked to the
-%    chosen option. This is also the explicit "now justify the choice"
-%    teaching step and can be re-run standalone.
-% ---------------------------------------------------------------------
-F16ALogicalTradeStudy();
-
 nComp = countComps(m.Architecture);
 fprintf("Built %s with %d components (3 variant roles), %d allocation edges, %d L Implement links.\n", ...
     modelName, nComp, size(edges,1), size(lLinks,1));
+fprintf("Options are UNRESOLVED: every kind has Selected=false, DecisionRef='TBD', " + ...
+    "and the active choice is a placeholder.\nRun F16APhysicalTradeStudy to decide.\n");
 
 end
 
 % =====================================================================
 function vc = addVariantRole(parentArch, roleName, choiceNames, portSpecs)
-%ADDVARIANTROLE Add a variant component (a role with competing options).
-%   choiceNames : string array of choice names (first = active/production).
+%ADDVARIANTROLE Add a variant component (a role with competing kinds).
+%   choiceNames : string array of choice names; the first is made active.
 %   portSpecs   : Nx3 cell {name, dir, iface}; added to EVERY choice and
 %                 propagated to the variant boundary so the role can be wired
 %                 like a plain component. Pass {} for a port-free variant.
+%
+%   A variant needs exactly one active choice to be a valid model, so one is
+%   set here. Before the physical trade study has run that active choice is a
+%   PLACEHOLDER, NOT A DECISION -- it says only "first in the list". The
+%   decision, when it is made at P, is recorded by SolutionOption.Selected,
+%   SolutionOption.DecisionRef and the decision requirement it points at; the
+%   active flag merely follows.
 %
 %   R2026a specifics learned the hard way:
 %     * addVariantComponent seeds two default choices ("Component",
