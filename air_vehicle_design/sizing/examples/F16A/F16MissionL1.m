@@ -77,7 +77,7 @@ classdef F16MissionL1 < MissionModelL1
         %   properties; missiondata/n_segments/total_range_nm_given are
         %   produced live by their Dependent getters.
             if nargin == 0
-                json_path = fullfile(fileparts(mfilename('fullpath')), 'mission_profile.json');
+                json_path = fullfile(fileparts(mfilename('fullpath')), 'jsons', 'mission_profile.json');
             end
             S = MissionProfileImporter.read_json(json_path);
 

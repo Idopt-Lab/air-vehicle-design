@@ -103,7 +103,7 @@ classdef TestMissionProfileImporter < matlab.unittest.TestCase
 
         function p = jsonPath()
             p = fullfile(fileparts(mfilename('fullpath')), '..', '..', ...
-                'examples', 'F16A', 'mission_profile.json');
+                'examples', 'F16A', 'jsons', 'mission_profile.json');
         end
 
     end

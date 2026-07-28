@@ -60,7 +60,7 @@ classdef F16MissionL3 < MissionModelL3
         %F16MISSIONL3  Construct from examples/F16A/mission_profile.json
         %   (default) or an explicit override path.
             if nargin == 0
-                json_path = fullfile(fileparts(mfilename('fullpath')), 'mission_profile.json');
+                json_path = fullfile(fileparts(mfilename('fullpath')), 'jsons', 'mission_profile.json');
             end
             S = MissionProfileImporter.read_json(json_path);
 

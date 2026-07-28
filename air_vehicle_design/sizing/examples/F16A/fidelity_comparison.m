@@ -484,7 +484,7 @@ fprintf('\n%s\n\n', BAR);
 
 script_dir = fileparts(mfilename('fullpath'));
 out_xlsx   = fullfile(script_dir, 'fidelity_comparison.xlsx');
-out_json   = fullfile(script_dir, 'fidelity_comparison.json');
+out_json   = fullfile(script_dir, 'jsons', 'fidelity_comparison.json');
 
 % ── Excel (single sheet) ──────────────────────────────────────────────── %
 if exist(out_xlsx, 'file'); delete(out_xlsx); end

@@ -37,7 +37,7 @@ classdef TestAeroL1 < matlab.unittest.TestCase
         %READAEROJSON  Load an examples/F16A aero JSON by filename.
             this_dir    = fileparts(mfilename('fullpath'));
             sizing_root = fileparts(fileparts(this_dir));
-            J = jsondecode(fileread(fullfile(sizing_root, 'examples', 'F16A', name)));
+            J = jsondecode(fileread(fullfile(sizing_root, 'examples', 'F16A', 'jsons', name)));
         end
     end
 

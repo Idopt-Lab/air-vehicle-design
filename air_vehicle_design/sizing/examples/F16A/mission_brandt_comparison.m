@@ -61,7 +61,7 @@ function data = mission_brandt_comparison()
 %     [CAP]     examples/F16A/mission_profile.json (F-16A CAP profile)
 
 script_dir = fileparts(mfilename('fullpath'));
-json_path  = fullfile(script_dir, 'mission_brandt_comparison.json');
+json_path  = fullfile(script_dir, 'jsons', 'mission_brandt_comparison.json');
 data       = jsondecode(fileread(json_path));
 
 W_TO = data.W_TO_lbf;   % 31,377 lbf -- this file's own registered value
@@ -170,7 +170,7 @@ fprintf(fid, '%s', jsonencode(data, 'PrettyPrint', true));
 fclose(fid);
 fprintf('  JSON     -> %s (updated in place)\n', json_path);
 
-out_md = fullfile(script_dir, 'mission_brandt_comparison.md');
+out_md = fullfile(script_dir, 'mds', 'mission_brandt_comparison.md');
 write_markdown(data, out_md, W_TO, now_str);
 fprintf('  Markdown -> %s\n\n', out_md);
 

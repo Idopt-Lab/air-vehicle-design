@@ -260,8 +260,8 @@ meta.footer = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'aerodynamics_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'aerodynamics_brandt_comparison.md');
+out_json = fullfile(script_dir, 'jsons', 'aerodynamics_brandt_comparison.json');
+out_md   = fullfile(script_dir, 'mds', 'aerodynamics_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

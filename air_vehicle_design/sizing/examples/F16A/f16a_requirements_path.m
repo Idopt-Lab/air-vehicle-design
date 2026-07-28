@@ -23,5 +23,5 @@ function p = f16a_requirements_path()
 %   injection; design_mach for the Raymer Eq. 10.10 engine weight) and
 %   F16GeomL1 (design_mach -> GeomL1.get_AR_eq, Raymer 7th ed. Table 4.1).
     here = fileparts(mfilename('fullpath'));
-    p = fullfile(here, 'f16a_requirements.json');
+    p = fullfile(here, 'jsons', 'f16a_requirements.json');
 end

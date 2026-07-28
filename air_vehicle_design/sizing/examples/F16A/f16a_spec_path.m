@@ -7,5 +7,5 @@ function p = f16a_spec_path(level)
         level (1,1) double {mustBeMember(level, [1 2 3])}
     end
     here = fileparts(mfilename('fullpath'));
-    p = fullfile(here, sprintf('f16a_L%d.json', level));
+    p = fullfile(here, 'jsons', sprintf('f16a_L%d.json', level));
 end
