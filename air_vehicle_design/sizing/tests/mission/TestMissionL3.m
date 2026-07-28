@@ -180,8 +180,8 @@ classdef TestMissionL3 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testSegmentCombatDropAppliedOnceNotPerSubInterval(tc)
-            aero = F16AeroL3();
-            prop = F16PropL2();
+            aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop = F16PropL2(f16a_spec_path(2));
             W_in = 22000; t_min = 2; W_drop = 4400; N = 5;
             [W_out, fuel_used] = MissionL3.segment_combat(W_in, aero, prop, 25000, 0.80, t_min, "Wet", W_drop, N);
             fprintf('\n    L3 segment_combat (N=%d): W_out=%.4f, fuel_used=%.4f\n', N, W_out, fuel_used);
@@ -196,8 +196,8 @@ classdef TestMissionL3 < matlab.unittest.TestCase
 
         function testGetMissionFuelWeightMonotonicWithRealObjects(tc)
             md = TestMissionL3.capLikeMissiondata();
-            aero = F16AeroL3();
-            prop = F16PropL2();   % see file header -- no F16PropL3 exists
+            aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop = F16PropL2(f16a_spec_path(2));   % see file header -- no F16PropL3 exists
             [W_fuel, breakdown] = MissionL3.get_mission_fuel(md, 31377, aero, prop);
 
             TestMissionL3.print_segment_fuel_and_weight_table(md.segment_names, breakdown.fuel_used_lbf, breakdown.W_after_lbf);
@@ -230,8 +230,8 @@ classdef TestMissionL3 < matlab.unittest.TestCase
 
         function testComputeFuelWithRealDisciplineObjectsIsPositive(tc)
             obj  = F16MissionL3();
-            aero = F16AeroL3();
-            prop = F16PropL2();   % see file header -- no F16PropL3 exists
+            aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop = F16PropL2(f16a_spec_path(2));   % see file header -- no F16PropL3 exists
             W_TO = 31377;
             W_fuel = obj.compute_fuel(aero, prop, W_TO);
             tc.verifyGreaterThan(W_fuel, 0);
@@ -242,8 +242,8 @@ classdef TestMissionL3 < matlab.unittest.TestCase
             % Same wide, subplan-cited bound as L1/L2 -- see TestMissionL2's
             % identical comment for why a narrower bound isn't used here.
             obj  = F16MissionL3();
-            aero = F16AeroL3();
-            prop = F16PropL2();
+            aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            prop = F16PropL2(f16a_spec_path(2));
             W_TO = 31377;
             W_fuel = obj.compute_fuel(aero, prop, W_TO);
             ratio = W_fuel / W_TO;

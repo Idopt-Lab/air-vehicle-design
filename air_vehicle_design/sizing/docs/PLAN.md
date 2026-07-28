@@ -189,7 +189,7 @@ Status reflects the code tree (this table historically went stale — trust `git
 | 4 | Propulsion (L1/L2) | [04_propulsion.md](subplans/04_propulsion.md) | Done |
 | 5 | Weights (L1/L2/L3) | [05_weights.md](subplans/05_weights.md) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
 | 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Done |
-| 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Not started |
+| 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Done (`0b0dfb4`/`40dfdf2`/`9510bc3`) |
 | 8 | Sizing | [08_sizing.md](subplans/08_sizing.md) | Not started |
 
 ---

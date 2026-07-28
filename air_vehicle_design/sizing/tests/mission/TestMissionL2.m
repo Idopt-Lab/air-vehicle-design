@@ -47,7 +47,7 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testSelectTSFCDryDispatchesToGetTSFC(tc)
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 0.87);
             expected = prop.get_TSFC(state);
             received = MissionL2.select_TSFC(prop, state, "Dry");
@@ -55,7 +55,7 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testSelectTSFCWetDispatchesToComputeTSFCAB(tc)
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 1.60);
             expected = prop.compute_TSFC_AB(state);
             received = MissionL2.select_TSFC(prop, state, "Wet");
@@ -65,7 +65,7 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testSelectTSFCUnknownFlagErrors(tc)
-            prop  = F16PropL2();
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.5);
             tc.verifyError(@() MissionL2.select_TSFC(prop, state, "Moist"), 'MissionL2:unknownDryOrWet');
         end
@@ -75,8 +75,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testSegmentCruiseWiring(tc)
-            aero  = F16AeroL2();
-            prop  = F16PropL2();
+            aero  = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(40000, 0.87);
             W_in  = 25000;
             R_ft  = 189.879 * 6080;
@@ -97,8 +97,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testSegmentDashWiringUsesABTsfc(tc)
-            aero  = F16AeroL2();
-            prop  = F16PropL2();
+            aero  = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(40000, 1.60);
             W_in  = 24000;
             R_ft  = 49.968 * 6080;
@@ -115,8 +115,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testSegmentCombatWiringAppliesDropCorrectly(tc)
-            aero  = F16AeroL2();
-            prop  = F16PropL2();
+            aero  = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(25000, 0.80);
             W_in  = 22000; t_min = 2; W_drop = 4400;
 
@@ -138,8 +138,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testSegmentLoiterWiring(tc)
-            aero  = F16AeroL2();
-            prop  = F16PropL2();
+            aero  = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.31);
             W_in  = 21000; t_min = 20;
 
@@ -206,8 +206,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
             % what MissionL3.segment_climb (the shared integrator) returns
             % directly at N=20, since the two methods use entirely different
             % physics (Roskam Table 2.1 percentage vs. real T/D/TSFC).
-            aero = F16AeroL2();
-            prop = F16PropL2();
+            aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop = F16PropL2(f16a_spec_path(2));
             W_in = 30000;
 
             [W_out_L2, fuel_used_L2] = MissionL2.segment_climb(W_in, aero, prop, 0, 40000, 0.282, 0.87);
@@ -251,8 +251,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
 
         function testGetMissionFuelWeightMonotonicAndDropAccounting(tc)
             md = TestMissionL2.capLikeMissiondata();
-            aero = F16AeroL2();
-            prop = F16PropL2();
+            aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop = F16PropL2(f16a_spec_path(2));
             [W_fuel, breakdown] = MissionL2.get_mission_fuel(md, 31377, aero, prop);
 
             TestMissionL2.print_segment_fuel_and_weight_table(md.segment_names, breakdown.fuel_used_lbf, breakdown.W_after_lbf);
@@ -294,8 +294,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
 
         function testComputeFuelWithRealDisciplineObjectsIsPositive(tc)
             obj  = F16MissionL2();
-            aero = F16AeroL2();
-            prop = F16PropL2();
+            aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop = F16PropL2(f16a_spec_path(2));
             W_TO = 31377;
             W_fuel = obj.compute_fuel(aero, prop, W_TO);
             tc.verifyGreaterThan(W_fuel, 0);
@@ -313,8 +313,8 @@ classdef TestMissionL2 < matlab.unittest.TestCase
             % tighter, justified bound is left as a follow-up if the
             % coordinator wants one derived from a real reference mission.
             obj  = F16MissionL2();
-            aero = F16AeroL2();
-            prop = F16PropL2();
+            aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+            prop = F16PropL2(f16a_spec_path(2));
             W_TO = 31377;
             W_fuel = obj.compute_fuel(aero, prop, W_TO);
             ratio = W_fuel / W_TO;
