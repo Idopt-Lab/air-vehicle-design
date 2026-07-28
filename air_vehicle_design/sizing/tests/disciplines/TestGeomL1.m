@@ -113,13 +113,19 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % Task 2 additions (2026-07-22): AR_eq, tail-volume-coefficient
-        % chain, control-surface chord fractions -- see GeomL1.md's "Task 2"
-        % section for full citations/derivations. Every "expected"/"hand-
-        % computed" value below was computed independently from the cited
-        % formula and constants (Raymer 7th ed. Table 4.1/6.4/6.5) -- never
-        % by calling the GeomL1 method under test to generate its own
-        % oracle.
+        % Task 2 additions (2026-07-22): AR_eq, control-surface chord
+        % fractions -- see GeomL1.md's "Task 2" section for full citations/
+        % derivations. Every "expected"/"hand-computed" value below was
+        % computed independently from the cited formula and constants
+        % (Raymer 7th ed. Table 4.1/6.5) -- never by calling the GeomL1
+        % method under test to generate its own oracle.
+        %
+        % RETIRED 2026-07-28: the tail-volume-coefficient chain tests that
+        % used to live here (testTailVolumeCoeffsF16,
+        % testUnknownCategoryTailVolumeThrows, testTailArmFormula,
+        % testSHTFormula, testSVTFormula) moved with the equations they
+        % tested to the new tail-sizing discipline's TailL1 toolbox -- see
+        % TailL1.md Sec. 6. Tail sizing is not geometry's job.
         % ================================================================== %
 
         % --- Equivalent aspect ratio (dogfighter regression) ---------------
@@ -153,67 +159,6 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % is implemented; any other category must error, not interpolate.
             tc.verifyError(@() GeomL1.compute_AR_eq('flying_car', 2.0), ...
                 'GeomL1:unknownCategory');
-        end
-
-        % --- Tail-volume-coefficient chain ----------------------------------
-
-        function testTailVolumeCoeffsF16(tc)
-        % Raymer 7th ed. Table 6.4 "Jet fighter" row base (c_HT=0.40,
-        % c_VT=0.07), with F-16-specific text corrections: RSS/active FCS
-        % (both *= (1-0.10)) and all-moving tail (c_HT additionally
-        % *= (1-0.125)). Hand-computed: c_HT = 0.40*0.90*0.875 = 0.315,
-        % c_VT = 0.07*0.90 = 0.063.
-            [c_HT, c_VT] = GeomL1.compute_tail_volume_coeffs('jet_fighter', true, true);
-            fprintf('\n    c_HT: received = %.10f,  hand-computed = 0.3150000000\n', c_HT);
-            fprintf('    c_VT: received = %.10f,  hand-computed = 0.0630000000\n', c_VT);
-            tc.verifyEqual(c_HT, 0.315, 'AbsTol', 1e-9, 'c_HT does not match hand-computed 0.315.');
-            tc.verifyEqual(c_VT, 0.063, 'AbsTol', 1e-9, 'c_VT does not match hand-computed 0.063.');
-        end
-
-        function testUnknownCategoryTailVolumeThrows(tc)
-            tc.verifyError(@() GeomL1.compute_tail_volume_coeffs('flying_car', true, true), ...
-                'GeomL1:unknownCategory');
-        end
-
-        function testTailArmFormula(tc)
-        % L_HT = L_VT = 0.475*L_fus [Raymer aft-single-engine text rule,
-        % midpoint of the stated 0.45-0.50 range]. Uses the F-16's own
-        % Brandt Main-tab fuselage length (46.5 ft --
-        % VnV/BrandtF16A/GroundTruth/f16a_geometry.json fuselage.length_ft)
-        % as a representative real L_fus -- deliberately NOT computed via
-        % GeomL1's own L_fus regression (compute_l_fus_regression), so this
-        % test cannot share a failure mode with that formula.
-        %   Hand-computed: 0.475 * 46.5 = 22.0875 ft.
-            L_fus_brandt = 46.5;   % ft [Brandt Main!B32]
-            expected     = 22.0875;
-            received     = GeomL1.compute_tail_arm(L_fus_brandt);
-            fprintf('\n    tail arm: received = %.10f ft,  hand-computed = %.10f ft\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
-                'Tail arm does not match hand-computed 0.475*L_fus.');
-        end
-
-        function testSHTFormula(tc)
-        % S_HT = c_HT*cbar*S_ref/L_HT [Raymer 7th ed. Table 6.4].
-        % Representative values chosen independently (NOT reused from any
-        % existing sanity-check number in the docs): cbar=12 ft,
-        % S_ref=300 ft^2, L_HT=20 ft, c_HT=0.315.
-        %   Hand-computed: 0.315*12*300/20 = 56.7 ft^2.
-            expected = 56.7;
-            received = GeomL1.compute_S_HT(0.315, 12, 300, 20);
-            fprintf('\n    S_HT: received = %.10f ft^2,  hand-computed = %.10f ft^2\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
-                'S_HT does not match hand-computed c_HT*cbar*S_ref/L_HT.');
-        end
-
-        function testSVTFormula(tc)
-        % S_VT = c_VT*b*S_ref/L_VT [Raymer 7th ed. Table 6.4].
-        % Representative values: b=30 ft, S_ref=300 ft^2, L_VT=20 ft, c_VT=0.063.
-        %   Hand-computed: 0.063*30*300/20 = 28.35 ft^2.
-            expected = 28.35;
-            received = GeomL1.compute_S_VT(0.063, 30, 300, 20);
-            fprintf('\n    S_VT: received = %.10f ft^2,  hand-computed = %.10f ft^2\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
-                'S_VT does not match hand-computed c_VT*b*S_ref/L_VT.');
         end
 
         % --- Control-surface chord fractions ---------------------------------

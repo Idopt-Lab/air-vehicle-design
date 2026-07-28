@@ -6,11 +6,16 @@ classdef GeomL1
 %
 %   Sources: [Roskam Vol. I Table 3.5] wetted area; [Raymer 6th ed. Table 6.3]
 %   fuselage length; [Raymer 7th ed. Table 4.1] equivalent aspect ratio;
-%   [Raymer 7th ed. Table 6.4] tail volume; [Raymer 7th ed. Table 6.5] control
-%   surfaces.
+%   [Raymer 7th ed. Table 6.5] control surfaces.
 %
 %   Only the jet-fighter rows of the Raymer tables are implemented; any other
 %   category errors rather than being guessed.
+%
+%   RETIRED 2026-07-28: compute_tail_volume_coeffs, lookup_tail_volume_coeffs,
+%   compute_tail_arm, compute_S_HT, compute_S_VT moved to the new tail-sizing
+%   discipline's TailL1 toolbox (src/disciplines/tail_sizing/TailL1.m) --
+%   tail sizing is not geometry's job. See TailL1.md Sec. 6 for the full
+%   migration/discrepancy-resolution record.
 %
 %   Companion doc: src/disciplines/geometry/GeomL1.md
 
@@ -102,70 +107,6 @@ classdef GeomL1
                     error('GeomL1:unknownCategory', ...
                         'Unknown aircraft_category "%s" for AR_eq — only the Raymer 7th ed. Table 4.1 jet-fighter (dogfighter) row is implemented.', cat);
             end
-        end
-
-        function [c_HT, c_VT] = compute_tail_volume_coeffs(aircraft_category, has_rss, has_all_moving_tail)
-        %COMPUTE_TAIL_VOLUME_COEFFS  Tail volume coefficients with Raymer's
-        %   text corrections applied.  [Raymer 7th ed. Table 6.4 + text]
-        %     has_rss             — relaxed static stability: -10 % on both
-        %     has_all_moving_tail — all-moving stabilator: -12.5 % on c_HT
-        %                           (midpoint of Raymer's 10-15 % range)
-            arguments
-                aircraft_category
-                has_rss (1,1) logical
-                has_all_moving_tail (1,1) logical
-            end
-            [c_HT, c_VT] = GeomL1.lookup_tail_volume_coeffs(aircraft_category);
-            if has_rss
-                c_HT = c_HT * (1 - 0.10);
-                c_VT = c_VT * (1 - 0.10);
-            end
-            if has_all_moving_tail
-                c_HT = c_HT * (1 - 0.125);
-            end
-        end
-
-        function [c_HT, c_VT] = lookup_tail_volume_coeffs(cat)
-        %LOOKUP_TAIL_VOLUME_COEFFS  Base coefficients, before text corrections.
-        %   [Raymer 7th ed. Table 6.4, jet-fighter row]
-            switch cat
-                case 'jet_fighter', c_HT = 0.40; c_VT = 0.07;
-                otherwise
-                    error('GeomL1:unknownCategory', ...
-                        'Unknown aircraft_category "%s" for tail-volume coefficients — only the Raymer 7th ed. Table 6.4 jet-fighter row is implemented.', cat);
-            end
-        end
-
-        function L = compute_tail_arm(L_fus)
-        %COMPUTE_TAIL_ARM  Tail moment arm [ft] as a fraction of fuselage
-        %   length.  [Raymer 7th ed., aft-mounted single-engine text rule;
-        %   0.475 is the midpoint of the stated 0.45-0.50 range]
-            arguments
-                L_fus (1,1) double {mustBePositive}
-            end
-            L = 0.475 * L_fus;
-        end
-
-        function val = compute_S_HT(c_HT, cbar, S_ref, L_HT)
-        %COMPUTE_S_HT  Horizontal-tail area [ft^2].  [Raymer 7th ed. Table 6.4]
-            arguments
-                c_HT  (1,1) double {mustBeNonnegative}
-                cbar  (1,1) double {mustBePositive}
-                S_ref (1,1) double {mustBePositive}
-                L_HT  (1,1) double {mustBePositive}
-            end
-            val = c_HT * cbar * S_ref / L_HT;
-        end
-
-        function val = compute_S_VT(c_VT, b, S_ref, L_VT)
-        %COMPUTE_S_VT  Vertical-tail area [ft^2].  [Raymer 7th ed. Table 6.4]
-            arguments
-                c_VT  (1,1) double {mustBeNonnegative}
-                b     (1,1) double {mustBePositive}
-                S_ref (1,1) double {mustBePositive}
-                L_VT  (1,1) double {mustBePositive}
-            end
-            val = c_VT * b * S_ref / L_VT;
         end
 
         function val = compute_control_surface_fraction(aircraft_category, surface)

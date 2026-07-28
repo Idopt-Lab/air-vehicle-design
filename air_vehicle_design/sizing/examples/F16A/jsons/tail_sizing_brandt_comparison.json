@@ -1,0 +1,76 @@
+{
+  "generated": "2026-07-28",
+  "aircraft": "F-16A Block 10/15",
+  "title": "F-16A Block 10/15 — Tail Sizing vs Ground Truth",
+  "condition": "Wing geometry from F16GeomL2 (S_ref=300 ft^2, AR_wing=3.0, lambda_wing=0.2275, L_fus=46.5 ft).",
+  "referenceDesc": "Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.tail_sizing`] -- Main!C18 (S_ht), Main!H18 (S_vt).",
+  "secondDesc": "No second source for this discipline yet -- L3 (Raymer Ch. 16 stability-and-control sizing) is a documented-TODO stub, see examples/F16A/tail_sizing_brandt_comparison.m header and TestTailL3.m.",
+  "rows": [
+    {
+      "parameter": "[HORIZONTAL TAIL AREA S_ht]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "S_ht, L1 volume-coefficient method [ft^2]",
+      "fidelity": "L1",
+      "computed": "48.4327",
+      "reference": "108.0000",
+      "pctDiff": "-55.15%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt Main!C18",
+      "notes": "Raymer 7th ed. Table 6.4 jet-fighter row (c_HT=0.40) corrected for RSS (-10%) and the F-16's all-moving stabilator (-12.5%): net c_HT=0.315. A historical-average, category-level coefficient method is not expected to reproduce one specific real aircraft's back-calculated area tightly; the corrections applied here REDUCE c_HT below Raymer's already-low end, which widens this gap relative to the flat, uncorrected 0.40 the now-superseded TailSizingLevel1 used. Not a defect -- see this script's header."
+    },
+    {
+      "parameter": "S_ht, L2 Nicolai/Carichner F-16 coefficient [ft^2]",
+      "fidelity": "L2",
+      "computed": "46.1264",
+      "reference": "108.0000",
+      "pctDiff": "-57.29%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt Main!C18",
+      "notes": "Nicolai & Carichner Table 11.6, \"General Dynamics F-16\" row (C_HT=0.3, an F-16-SPECIFIC measured coefficient, not a generic category row). Same tail arm (0.475*L_fus) as L1 -- L2's fidelity gain is confined to the coefficient source and wing-geometry precision, not the arm."
+    },
+    {
+      "parameter": "[VERTICAL TAIL AREA S_vt]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "S_vt, L1 volume-coefficient method [ft^2]",
+      "fidelity": "L1",
+      "computed": "25.6706",
+      "reference": "60.0000",
+      "pctDiff": "-57.22%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt Main!H18",
+      "notes": "Raymer 7th ed. Table 6.4 jet-fighter row (c_VT=0.07) corrected for RSS only (-10%, no VT-specific text correction exists): net c_VT=0.063."
+    },
+    {
+      "parameter": "S_vt, L2 Nicolai/Carichner F-16 coefficient [ft^2]",
+      "fidelity": "L2",
+      "computed": "38.3022",
+      "reference": "60.0000",
+      "pctDiff": "-36.16%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt Main!H18",
+      "notes": "Nicolai & Carichner Table 11.6, \"General Dynamics F-16\" row (C_VT=0.094, an F-16-SPECIFIC measured coefficient)."
+    }
+  ]
+}

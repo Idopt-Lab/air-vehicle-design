@@ -323,5 +323,12 @@
       "n_ult":            {"value": 9, "_source": "Brandt Main!Q27 (design limit load x 1.5). readme_wt.md §3 / cell-map.md Main!Q27. NB framework L3 uses N_z=13.5 (=1.5x9, ultimate) in Raymer §15.3.1; Brandt's psf model uses n_ult=9 -- DIFFERENT models (see f16a_L3.json .weights _N_z_note)."},
       "weight_scale_pct": {"value": 100, "_source": "Brandt Main!O27 (global weight scale; 100 = no scaling). readme_wt.md §3."}
     }
+  },
+
+  "tail_sizing": {
+    "_comment": "F-16A Block 10/15 Brandt Main-tab GIVEN tail-surface reference areas, recorded here as the tail-sizing discipline's (src/disciplines/tail_sizing/TailSizing_scribe_plan.md) L1/L2 comparison targets. SAME numbers as geometry.inputs_on_Main_tab.pitch_control_HT.S_ft2 / .vertical_tail.S_ft2 above and examples/F16A/F16GeomL2.m's S_ht/S_vt geometry inputs (one shared truth, not a new independent figure) -- these are Brandt's own real F-16 spec-sheet areas (a GIVEN input on his Main tab, not a value he back-calculated by calibrating his own model), so per CLAUDE.md's rule against hardcoding Brandt's back-calculated calibration values as discipline inputs, they are fine to use here as ground-truth VALIDATION TARGETS, exactly like S_ref=300 is used elsewhere in this file. NOT a toolbox input: TailL1/TailL2 independently PREDICT S_ht/S_vt from volume-coefficient methods (Raymer 7th ed. Table 6.4 text-corrected coefficients at L1; Nicolai & Carichner Table 11.6 F-16 row at L2) -- compare their predicted output against this block. NEVER backfill a unit-test expected value from this block (matches the standing rule already stated at the top of this file).",
+    "_source": "Brandt-F16-A.xls Main!C18 (S_ht, 'pitch_control_HT' column) / Main!H18 (S_vt, 'vertical_tail' column), already cited in examples/F16A/F16GeomL2.m:145,153 and reproduced verbatim in geometry.inputs_on_Main_tab above.",
+    "S_ht_ft2": {"value": 108.0, "_source": "Brandt Main!C18. F16GeomL2.m:145 ('full reference planform area'). Also geometry.inputs_on_Main_tab.pitch_control_HT.S_ft2 in this file."},
+    "S_vt_ft2": {"value": 60.0, "_source": "Brandt Main!H18. F16GeomL2.m:153 ('full reference planform area'). Also geometry.inputs_on_Main_tab.vertical_tail.S_ft2 in this file."}
   }
 }

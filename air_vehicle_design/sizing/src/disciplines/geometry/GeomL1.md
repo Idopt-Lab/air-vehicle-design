@@ -25,9 +25,13 @@ There is no planform.
 | `get_L_fus(obj, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
 | `get_AR_eq(obj)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
 | `get_control_surface_fraction(obj, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
-| `compute_tail_volume_coeffs(cat, has_rss, has_all_moving_tail)` | $c_{HT}$, $c_{VT}$ | Raymer 7th ed. Table 6.4 + text |
-| `compute_tail_arm(L_{fus})` | tail moment arm [ft] | Raymer 7th ed. text rule |
-| `compute_S_HT`, `compute_S_VT` | tail areas [ft²] | Raymer 7th ed. Table 6.4 |
+
+**RETIRED 2026-07-28**: `compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`,
+`compute_S_HT`, `compute_S_VT` — moved to the new tail-sizing discipline's `TailL1` toolbox
+(`src/disciplines/tail_sizing/TailL1.m`). Tail sizing is not geometry's job; see `TailL1.md` Sec. 6
+for the full migration/discrepancy-resolution record (two competing L1 tail-sizing implementations
+existed in this repo — the orphaned copy that lived here is the one that survived, ported verbatim
+into `TailL1`).
 
 ## 3. Equations
 
@@ -42,24 +46,6 @@ $$L_{fus} = a\,W_{TO}^{\,C}$$
 **Equivalent aspect ratio** — Raymer 7th ed. Table 4.1, jet-fighter (dogfighter) row:
 
 $$AR_{eq} = a\,M_{max}^{\,C}$$
-
-**Tail areas from volume coefficients** — Raymer 7th ed. Table 6.4:
-
-$$S_{HT} = \frac{c_{HT}\,\bar{c}\,S_{ref}}{L_{HT}} \qquad
-  S_{VT} = \frac{c_{VT}\,b\,S_{ref}}{L_{VT}}$$
-
-**Tail moment arm** — Raymer 7th ed., aft-mounted single-engine text rule (0.475 is the midpoint of
-the stated 0.45–0.50 range):
-
-$$L_{HT} = L_{VT} = 0.475\,L_{fus}$$
-
-**Tail-volume text corrections** applied on top of the Table 6.4 base values:
-
-$$c_{HT},\,c_{VT} \mathrel{\times}= (1 - 0.10) \quad \text{if relaxed static stability}$$
-$$c_{HT} \mathrel{\times}= (1 - 0.125) \quad \text{if all-moving stabilator}$$
-
-The 0.125 is the midpoint of Raymer's stated 10–15 % range. For the F-16 both apply, giving
-$c_{HT} = 0.315$ and $c_{VT} = 0.063$.
 
 ## 4. Coefficients
 
@@ -82,9 +68,8 @@ $c_{HT} = 0.315$ and $c_{VT} = 0.063$.
 | `transport_jet` | 0.67 | 0.43 |
 | `military_cargo` | 0.23 | 0.50 |
 
-Jet-fighter only: `lookup_AR_eq` $a = 5.416$, $C = -0.6222$; `lookup_tail_volume_coeffs`
-$c_{HT} = 0.40$, $c_{VT} = 0.07$; `lookup_control_surface_fraction` elevator 0.30 (the
-all-moving-tail row value, not a hinged-elevator fraction), rudder 0.33.
+Jet-fighter only: `lookup_AR_eq` $a = 5.416$, $C = -0.6222$; `lookup_control_surface_fraction`
+elevator 0.30 (the all-moving-tail row value, not a hinged-elevator fraction), rudder 0.33.
 
 Every lookup errors (`GeomL1:unknownCategory`) for an unlisted category rather than guessing.
 
