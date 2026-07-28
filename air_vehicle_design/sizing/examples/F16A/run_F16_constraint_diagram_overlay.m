@@ -17,9 +17,11 @@
 %   capped at a common ceiling (headroom above the largest finite value
 %   across all three levels) before plotting.
 %
-%   Includes Stall (F16ConstraintSet's 9th, sanity-check-only condition --
+%   Excludes Stall (F16ConstraintSet's 9th, sanity-check-only condition --
 %   not one of Constraints.xlsx's 8 rows, no Brandt reference row exists for
-%   it) alongside the 8 Constraints.xlsx-derived conditions.
+%   it) by default -- see F16ConstraintSet.m's header: at L2/L3 its
+%   geometry-based clean-CLmax wall was found to silently dominate the
+%   design point rather than merely act as a sanity check.
 
 levels = ["L1", "L2", "L3"];
 colors = lines(numel(levels));

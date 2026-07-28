@@ -18,10 +18,11 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 %   testRequiredTWMatchesHandComputedEquation checks required_TW against an
 %   independently written form of the same equation (not a copy of
 %   TakeoffConstraint's own algebra) using the same aero/prop discipline
-%   outputs (get_CLmax, drag_polar, thrust_lapse -- each already unit-tested
-%   elsewhere). testEquationReproducesBrandtTakeoffPoint drives the actual
-%   production code path with Brandt's own inputs (mu, CD0, CLmax_TO,
-%   alpha_AB) and checks it reproduces his tabulated value directly.
+%   outputs (get_CLmax_TO, get_Delta_CD0_TO, drag_polar, thrust_lapse --
+%   each already unit-tested elsewhere). testEquationReproducesBrandtTakeoffPoint
+%   drives the actual production code path with Brandt's own inputs (mu,
+%   CD0, CLmax_TO, alpha_AB) and checks it reproduces his tabulated value
+%   directly.
 %
 %   The F-16 Takeoff field condition [subplans/06_constraint_analysis.md
 %   "Field constraints" table]: sea level, k_TO=1.2, S_G=4,000 ft, mu=0.03,
@@ -46,7 +47,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
         function testIsaPointPerformanceBase(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'PointPerformanceBase'));
         end
 
@@ -55,19 +56,19 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % as ThrustConstraint -- see TakeoffConstraint.m/
             % Both_WbyS_TbyW.m headers.
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
         end
 
         function testIsHandleClass(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'handle'));
         end
 
         function testNamePropertySet(tc)
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Takeoff", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
+            obj   = TakeoffConstraint("Takeoff", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyEqual(obj.name, "Takeoff");
         end
 
@@ -75,7 +76,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % beta and k_TO default to 1.0 and 1.2 (field constraints, per
             % subplans/06_constraint_analysis.md) when omitted.
             state = AircraftState(0, 0.1);
-            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000);
+            obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyEqual(obj.beta, 1.0);
             tc.verifyEqual(obj.k_TO, 1.2);
         end
@@ -87,7 +88,11 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % uses the F-16 discipline objects as a concrete
             % AerodynamicsBase/PropulsionBase pair). Independently derived
             % form of the same equation, not a copy of TakeoffConstraint's
-            % own algebra.
+            % own algebra. Uses the FLAPPED takeoff CLmax/CD0
+            % (get_CLmax_TO(), drag_polar(state).CD0 + get_Delta_CD0_TO())
+            % since that is what compute_B/compute_C now call -- see
+            % TakeoffConstraint.m's header. F16AeroL1's get_Delta_CD0_TO
+            % takes no state argument (only F16AeroL3's does).
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
@@ -97,8 +102,8 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             k_TO  = 1.15;
             WS    = 90;
 
-            CLmax_TO = aero.get_CLmax(state);
-            CD0_TO   = aero.drag_polar(state).CD0;
+            CLmax_TO = aero.get_CLmax_TO();
+            CD0_TO   = aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO();
             alpha    = prop.thrust_lapse(state);
             rho      = state.rho;
             g        = 32.174;
@@ -138,11 +143,15 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             WS       = 90;   % b.constraints.takeoff.WS_psf(11)
 
             % Drive the actual production code path (TakeoffConstraint.required_TW,
-            % which internally calls aero.get_CLmax(state)/aero.drag_polar(state)
-            % and prop.thrust_lapse(state)) via fixed-value aero/prop stubs
-            % carrying Brandt's own numbers, rather than re-deriving the
-            % equation by hand in the test -- this way the test would catch a
-            % bug in TakeoffConstraint.m's own algebra.
+            % which internally calls aero.get_CLmax_TO()/(aero.drag_polar(state).CD0
+            % + aero.get_Delta_CD0_TO()) and prop.thrust_lapse(state)) via
+            % fixed-value aero/prop stubs carrying Brandt's own already-
+            % flapped numbers directly (FixedAeroStub's
+            % get_CLmax_TO/get_Delta_CD0_TO just echo the constructor's
+            % CLmax/CD0 and 0, respectively -- see FixedAeroStub.m's header),
+            % rather than re-deriving the equation by hand in the test --
+            % this way the test would catch a bug in TakeoffConstraint.m's
+            % own algebra.
             aeroStub = FixedAeroStub(CLmax_TO, CD0_TO);
             propStub = FixedPropStub(alpha_AB);
             state    = AircraftState(0, 0.1);
@@ -264,8 +273,8 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
             WS = 80;
             TW = obj.required_TW(WS);
-            fprintf('\n    Takeoff required_TW at WS=%.2f: %.4f (CLmax used=%.4f)\n', ...
-                WS, TW, aero.get_CLmax(state));
+            fprintf('\n    Takeoff required_TW at WS=%.2f: %.4f (CLmax_TO used=%.4f)\n', ...
+                WS, TW, aero.get_CLmax_TO());
             tc.verifyGreaterThan(TW, 0, 'required_TW must be positive.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end

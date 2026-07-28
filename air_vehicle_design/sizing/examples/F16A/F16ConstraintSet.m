@@ -1,6 +1,6 @@
 classdef F16ConstraintSet
-%F16CONSTRAINTSET  Builds the F-16's 9 point-performance/field/stall
-%   constraint objects: 8 from examples/F16A/Constraints.xlsx, plus a Stall
+%F16CONSTRAINTSET  Builds the F-16's 8 point-performance/field constraint
+%   objects from examples/F16A/Constraints.xlsx, plus an optional 9th Stall
 %   condition not yet present in that workbook (see STALL_MACH below).
 %
 %   Layer-2 (aircraft-specific) wiring: reads the F-16's constraint
@@ -12,8 +12,27 @@ classdef F16ConstraintSet
 %   Takeoff/Landing, TakeoffConstraint/LandingConstraint (ground-roll
 %   equations) for those two -- wired to the F-16 aero/prop discipline
 %   objects for the requested fidelity level. A 9th constraint, Stall
-%   (StallConstraint), is appended directly rather than read from the sheet
-%   (see STALL_MACH's comment for why).
+%   (StallConstraint), can be appended directly rather than read from the
+%   sheet (see STALL_MACH's comment for why) -- EXCLUDED BY DEFAULT
+%   (changed 2026-07-27; was included by default until then).
+%
+%   WHY includeStall NOW DEFAULTS TO FALSE: Stall has no Brandt reference
+%   row to validate its CLmax against (StallConstraint.m's header), and at
+%   L2/L3 its wall sits on AeroL2/L3's geometry-based CLEAN CLmax estimate
+%   (Raymer Eq. 12.15, ~0.91 -- see F16AeroL2.m/F16AeroL3.m's documented
+%   1.50-vs-0.91 clean-CLmax discontinuity vs. L1's Roskam-table value).
+%   That low CLmax put Stall's wall at W/S~=62-64 psf, tighter than every
+%   real Constraints.xlsx condition, so it silently became the BINDING
+%   constraint and pulled the reported optimum down to W/S~=62 at L2/L3 --
+%   vs. Brandt's own W/S=104.59 and Casey's legacy-code result of ~125
+%   (user-reported 2026-07-27, contradicting `TestF16ConstraintSet.m`'s
+%   prior comment that this was "a real, physically expected shift, not a
+%   bug"; it was a bug). Dropping Stall from the default build raises L2/L3
+%   to W/S~=83 -- still short of Brandt/legacy, but that residual gap
+%   traces to the same already-documented aero/propulsion fidelity gaps
+%   (CD0, thrust-lapse) affecting the real Landing/Takeoff/thrust curves,
+%   not to this class. Stall is still available as a sanity-check overlay
+%   via includeStall=true; it just no longer determines the design point.
 %
 %   See sizing/docs/subplans/06_constraint_analysis.md, "F-16 Constraint
 %   Conditions" tables, for the condition data; the constraint equations
@@ -58,18 +77,18 @@ classdef F16ConstraintSet
         %   in Constraints.xlsx row order (plus a trailing Stall condition,
         %   unless includeStall is false), ready to hand to ConstraintAnalysis
         %   (as-is, or trimmed/reordered by the caller first).
-        %   includeStall -- default true (used by TestF16ConstraintSet.m's
-        %   9-constraint checks and both F-16 constraint DIAGRAM deliverables,
-        %   run_F16_constraint_diagram.m/run_F16_constraint_diagram_overlay.m).
-        %   Stall was never one of subplans/06_constraint_analysis.md's
-        %   original 8 diagram constraints (Constraints.xlsx only has 8 rows;
-        %   Stall was added later as a 9th, sanity-check-only condition -- see
-        %   this class's header and StallConstraint.m's "no Brandt reference
-        %   row exists" note); pass includeStall=false to drop it, e.g. to
-        %   reproduce only the 8 Constraints.xlsx-derived conditions.
+        %   includeStall -- default false (changed 2026-07-27; see this
+        %   class's header for why). Stall was never one of
+        %   subplans/06_constraint_analysis.md's original 8 diagram
+        %   constraints (Constraints.xlsx only has 8 rows; Stall was added
+        %   later as a 9th, sanity-check-only condition -- see this class's
+        %   header and StallConstraint.m's "no Brandt reference row exists"
+        %   note); pass includeStall=true to add it back as an overlay, e.g.
+        %   for a sanity-check plot -- but note it will again dominate
+        %   optimal_point() at L2/L3 if you do.
             arguments
                 fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])} = "L3"
-                includeStall  (1,1) logical = true
+                includeStall  (1,1) logical = false
             end
 
             [aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);

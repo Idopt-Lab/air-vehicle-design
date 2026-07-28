@@ -7,7 +7,8 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 %   each itself -- see ConstraintAnalysis.m's header. These tests exercise
 %   the AGGREGATION logic (envelope, argmin, mixed thrust/wall-type
 %   rendering) using real ThrustConstraint/TakeoffConstraint/LandingConstraint
-%   objects wired to F16AeroL1()/F16PropL2() as concrete stand-ins, the same
+%   objects wired to F16AeroL1(f16a_spec_path(1))/F16PropL2(f16a_spec_path(2))
+%   as concrete stand-ins, the same
 %   convention TestThrustConstraint/TestTakeoffConstraint/TestLandingConstraint
 %   use ("not F-16-specific data, just uses the F-16 discipline objects as a
 %   concrete AerodynamicsBase/PropulsionBase pair") -- NOT re-testing each
@@ -93,7 +94,17 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.8);
-            WS_range = 20:2:200;
+            % Widened from 20:2:200 (2026-07-27): LandingConstraint now uses
+            % F16AeroL1's FLAPPED get_CLmax_L()=2.10/get_Delta_CD0_L() rather
+            % than clean values (see LandingConstraint.m's header), and L1's
+            % Roskam Table 3.1 category-mean CLmax_L is a documented
+            % overshoot vs. the real F-16 (2.10 vs. Brandt's 1.4260, +47%,
+            % see aerodynamics_brandt_comparison.md) -- this pushes this toy
+            % LandingConstraint's WS_max (mu=0.5, S_FR=4000 ft) to ~205 psf,
+            % above the old range's 200 ceiling. 260 comfortably re-brackets
+            % it; the other WS_range = 20:2:200 sites below in this file were
+            % widened for the same reason.
+            WS_range = 20:2:260;
 
             thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
@@ -110,7 +121,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.8);
-            WS_range = 20:2:200;
+            WS_range = 20:2:260;   % widened -- see testMixedThrustAndLandingRespectsWSLimit's comment
 
             thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
@@ -135,10 +146,10 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             % so the fill should have zero height (top == bottom) at W/S
             % values beyond the landing wall's limit, and positive height
             % below it.
-            aero  = F16AeroL1();
-            prop  = F16PropL2();
+            aero  = F16AeroL1(f16a_spec_path(1));
+            prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.8);
-            WS_range = 20:2:200;
+            WS_range = 20:2:260;   % widened -- see testMixedThrustAndLandingRespectsWSLimit's comment
 
             thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
@@ -222,7 +233,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             % every wall-type constraint.
             aero    = F16AeroL1(f16a_spec_path(1));
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
-            WS_range = 20:2:200;
+            WS_range = 20:2:260;   % widened -- see testMixedThrustAndLandingRespectsWSLimit's comment
 
             ca = ConstraintAnalysis({landing}, WS_range);
             tc.verifyTrue(any(isinf(ca.TW_table(1,:))), ...

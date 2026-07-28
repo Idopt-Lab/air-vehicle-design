@@ -7,10 +7,16 @@ classdef LandingConstraint < Only_WbyS
 %   and the current-iteration aerodynamics discipline object, returns the
 %   upper bound this landing requirement imposes on wing loading W/S --
 %   NOT a required T/W. CLmax_land and CD0_land are pulled fresh from
-%   aero.get_CLmax(state)/aero.drag_polar(state) each call -- not constraint
-%   inputs, same convention as TakeoffConstraint (see that class's header
-%   and sizing/docs/subplans/06_constraint_analysis.md, "CLmax is NOT a
-%   constraint input").
+%   aero.get_CLmax_L()/(aero.drag_polar(state).CD0 + aero.get_Delta_CD0_L(...))
+%   each call -- not constraint inputs, same convention as TakeoffConstraint
+%   (see that class's header and sizing/docs/subplans/06_constraint_analysis.md,
+%   "CLmax is NOT a constraint input"). get_CLmax_L/get_Delta_CD0_L are the
+%   flapped-landing-configuration methods every F16AeroLN class implements
+%   (cited Roskam/Raymer flap CLmax delta and CD0 increment) but which are
+%   not part of the enforced AerodynamicsBase interface (see "NOTE ON
+%   CLmax/CD0 BASIS" below) -- so an AerodynamicsBase subclass used here
+%   must implement them, same requirement TakeoffConstraint places on its
+%   aero object.
 %
 %   Unlike ThrustConstraint/TakeoffConstraint (Both_WbyS_TbyW category),
 %   this condition constrains W/S directly and has no thrust dependence at
@@ -64,9 +70,10 @@ classdef LandingConstraint < Only_WbyS
 %
 %   where rho comes from the sea-level AircraftState; g is standard gravity,
 %   included for the same English lbf/lbf-basis reason as TakeoffConstraint.m;
-%   CLmax_land from aero.get_CLmax(state), CD0_land from
-%   aero.drag_polar(state).CD0; mu is the braking-surface friction
-%   coefficient (0.50 for the F-16 landing field constraint, per
+%   CLmax_land from aero.get_CLmax_L(), CD0_land from
+%   aero.drag_polar(state).CD0 + aero.get_Delta_CD0_L(...) (the flapped
+%   landing configuration -- see "NOTE ON CLmax/CD0 BASIS" below); mu is the
+%   braking-surface friction coefficient (0.50 for the F-16 landing field constraint, per
 %   subplans/06_constraint_analysis.md's "Field constraints" table -- not
 %   defaulted here since it is a runway/braking-system property, not a
 %   universal margin, same reasoning as TakeoffConstraint.m's S_G); k_L is
@@ -77,15 +84,28 @@ classdef LandingConstraint < Only_WbyS
 %   W_TO in this simplified framework, ignoring fuel burned before
 %   touchdown).
 %
-%   NOTE ON CLmax/CD0 BASIS: aero.get_CLmax(state)/aero.drag_polar(state)
-%   return the CLEAN (no high-lift-device) values -- the generic
-%   AerodynamicsBase interface has no flapped-landing-config argument yet
-%   (same documented gap as TakeoffConstraint.m's header and the subplan's
-%   "TODO (high-lift configuration)" note). So even with the corrected
-%   equation above, this class's WS_max will read well below Brandt's
-%   138.742 when driven by clean CLmax/CD0 -- see
-%   TestLandingConstraint.m's F-16 diagnostic, which is not an
-%   exact-match assertion for that reason.
+%   NOTE ON CLmax/CD0 BASIS: WS_max() uses the FLAPPED landing configuration
+%   -- aero.get_CLmax_L() for CLmax_land, and aero.drag_polar(state).CD0 +
+%   aero.get_Delta_CD0_L(...) for CD0_land -- not the clean values
+%   aero.get_CLmax(state)/aero.drag_polar(state).CD0 return. get_CLmax_L and
+%   get_Delta_CD0_L are ad-hoc methods every F16AeroLN class implements
+%   (cited Roskam/Raymer flap-CLmax delta and CD0 increment) but which are
+%   NOT part of the enforced AerodynamicsBase interface (only drag_polar and
+%   get_CLmax are abstract there) -- reconciling a first-class high-lift-
+%   config argument into that interface is still a TODO
+%   (subplans/06_constraint_analysis.md), so any AerodynamicsBase subclass
+%   passed to this constructor must implement get_CLmax_L/get_Delta_CD0_L
+%   itself. get_Delta_CD0_L's signature is not uniform across fidelity
+%   levels: F16AeroL1/L2 take no argument, F16AeroL3 takes the flight state
+%   (a gear-strut Reynolds-number lookup) -- WS_max() below dispatches on
+%   this via metaclass reflection on aero's declared InputNames, since
+%   neither nargin(@obj.aero.get_Delta_CD0_L) (returns -1 for bound
+%   instance-method handles) nor a try/catch is a reliable way to detect
+%   arity. Even with this fix, WS_max may still sit below Brandt's flight-
+%   calibrated 138.742 -- this framework's flap/slat CLmax/CD0 buildups are
+%   textbook estimates, not Brandt's calibrated flapped values -- see
+%   TestLandingConstraint.m's F-16 diagnostic, which is not an exact-match
+%   assertion for that reason.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Landing"
@@ -93,7 +113,7 @@ classdef LandingConstraint < Only_WbyS
 
     properties (SetAccess = private)
         state   % AircraftState -- sea-level landing flight condition
-        aero    % AerodynamicsBase -- supplies CLmax_land/CD0_land
+        aero    % AerodynamicsBase -- supplies CLmax_land/CD0_land via get_CLmax_L()/(drag_polar(state).CD0 + get_Delta_CD0_L(...))
         S_FR    % double, ft -- required landing free-roll/braking ground-roll distance
         mu      % double -- braking-surface friction coefficient
         beta    % double -- landing weight fraction W_land/W_TO
@@ -129,16 +149,47 @@ classdef LandingConstraint < Only_WbyS
         function WS = WS_max(obj)
         %WS_MAX  Upper bound on wing loading W/S [lbf/ft^2] this landing
         %   requirement imposes. See class header for the equation and
-        %   citation. CLmax_land/CD0_land are pulled fresh from the aero
-        %   discipline object each call, so this tracks the current-
-        %   iteration aerodynamics.
-            CLmax_land = obj.aero.get_CLmax(obj.state);
-            CD0_land   = obj.aero.drag_polar(obj.state).CD0;
-            rho        = obj.state.rho;
-            g          = LandingConstraint.G_FTS2;
+        %   citation. CLmax_land/CD0_land are the FLAPPED landing values
+        %   (get_CLmax_L/get_Delta_CD0_L, see "NOTE ON CLmax/CD0 BASIS"),
+        %   pulled fresh from the aero discipline object each call, so this
+        %   tracks the current-iteration aerodynamics.
+            CLmax_land     = obj.aero.get_CLmax_L();
+            Delta_CD0_land = LandingConstraint.get_Delta_CD0_L_dispatched(obj.aero, obj.state);
+            CD0_land       = obj.aero.drag_polar(obj.state).CD0 + Delta_CD0_land;
+            rho            = obj.state.rho;
+            g              = LandingConstraint.G_FTS2;
 
             WS = (rho * g * obj.S_FR * (obj.mu * CLmax_land + LandingConstraint.DRAG_FACTOR * CD0_land)) ...
                 / (obj.k_L^2 * obj.beta);
+        end
+
+    end
+
+    methods (Static, Access = private)
+
+        function delta = get_Delta_CD0_L_dispatched(aero, state)
+        %GET_DELTA_CD0_L_DISPATCHED  Calls aero.get_Delta_CD0_L() with or
+        %   without the flight state, matching whichever arity aero's
+        %   fidelity level declares (F16AeroL1/L2 take none, F16AeroL3 takes
+        %   state for a gear-strut Reynolds-number lookup -- see class
+        %   header "NOTE ON CLmax/CD0 BASIS"). Dispatches via metaclass
+        %   reflection on the method's declared InputNames, since
+        %   nargin(@aero.get_Delta_CD0_L) returns -1 for bound instance-
+        %   method handles and is not a reliable arity check.
+            mc = metaclass(aero);
+            m  = findobj(mc.MethodList, 'Name', 'get_Delta_CD0_L');
+            if isempty(m)
+                error('LandingConstraint:missingGetDeltaCD0L', ...
+                    ['aero (class %s) has no get_Delta_CD0_L method -- every ', ...
+                     'AerodynamicsBase subclass passed to LandingConstraint must ', ...
+                     'implement the flapped-landing get_CLmax_L/get_Delta_CD0_L ', ...
+                     'methods (see class header "NOTE ON CLmax/CD0 BASIS").'], class(aero));
+            end
+            if numel(m.InputNames) >= 2
+                delta = aero.get_Delta_CD0_L(state);
+            else
+                delta = aero.get_Delta_CD0_L();
+            end
         end
 
     end

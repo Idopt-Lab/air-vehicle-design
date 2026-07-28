@@ -8,15 +8,20 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 %   function of wing loading W/S. Belongs to the Both_WbyS_TbyW category
 %   (see that class's header) -- it supplies the A/B/C/D terms below (A=D=0;
 %   B and C survive, see equation below); Both_WbyS_TbyW assembles them into
-%   required_TW(WS). CLmax_TO is pulled fresh from aero.get_CLmax(state)
-%   each call -- not a constraint input, per
+%   required_TW(WS). CLmax_TO/CD0_TO are pulled fresh from
+%   aero.get_CLmax_TO()/(aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO(...))
+%   each call -- not constraint inputs, per
 %   sizing/docs/subplans/06_constraint_analysis.md ("CLmax is NOT a
 %   constraint input. The constraint analysis calls aero.CLmax(state) at
-%   the relevant flight condition."). Using the generic get_CLmax(state)
-%   interface (clean CLmax) rather than F16AeroL3's ad-hoc get_CLmax_TO is
-%   intentional here -- reconciling a first-class high-lift-config
-%   argument into the AerodynamicsBase interface is flagged as an
-%   explicit TODO in that subplan, out of scope for this generic class.
+%   the relevant flight condition."). get_CLmax_TO/get_Delta_CD0_TO are the
+%   flapped-takeoff-configuration methods every F16AeroLN class implements
+%   (cited Roskam/Raymer flap CLmax delta and CD0 increment) but which are
+%   NOT part of the enforced AerodynamicsBase interface (only drag_polar and
+%   get_CLmax are abstract there) -- reconciling a first-class high-lift-
+%   config argument into that interface is still a TODO in that subplan, out
+%   of scope for this generic class; any AerodynamicsBase subclass passed
+%   here must implement get_CLmax_TO/get_Delta_CD0_TO itself (see
+%   compute_C's header for the get_Delta_CD0_TO arity note).
 %
 %   EQUATION [Mattingly, Heiser, Pratt, "Aircraft Engine Design," 2nd ed.,
 %   AIAA, 2002 -- the same point-performance Master Equation ThrustConstraint
@@ -56,8 +61,10 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 %   this framework's AircraftState is weight-based (English lbf/lbf T/W),
 %   not the notebook's mass-based T/mass (N/kg) convention -- rho (mass
 %   density) must be converted to a weight density via g for the ratio to
-%   come out dimensionless; CLmax_TO from aero.get_CLmax(state); CD0_TO from
-%   aero.drag_polar(state).CD0; alpha from prop.thrust_lapse(state); beta is
+%   come out dimensionless; CLmax_TO from aero.get_CLmax_TO(); CD0_TO from
+%   aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO(...) (the flapped
+%   takeoff configuration -- see class header and compute_C's header);
+%   alpha from prop.thrust_lapse(state); beta is
 %   the takeoff weight fraction (1.0 for field constraints, per
 %   subplans/06_constraint_analysis.md "Field constraints" table -- takeoff
 %   burns negligible fuel before brake release); k_TO is the liftoff-speed
@@ -75,7 +82,7 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 
     properties (SetAccess = private)
         state   % AircraftState -- sea-level takeoff flight condition
-        aero    % AerodynamicsBase -- supplies CLmax_TO/CD0_TO via get_CLmax(state)/drag_polar(state)
+        aero    % AerodynamicsBase -- supplies CLmax_TO/CD0_TO via get_CLmax_TO()/(drag_polar(state).CD0 + get_Delta_CD0_TO(...))
         prop    % PropulsionBase -- supplies alpha via thrust_lapse(state)
         S_G     % double, ft -- required takeoff ground-roll distance
         mu      % double -- ground-roll rolling-friction coefficient
@@ -125,7 +132,10 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 
         function B = compute_B(obj)
         %COMPUTE_B  See class header for the equation and citation.
-            CLmax_TO = obj.aero.get_CLmax(obj.state);
+        %   CLmax_TO is the FLAPPED takeoff value (aero.get_CLmax_TO()), not
+        %   the clean aero.get_CLmax(state) -- see the class header's
+        %   discussion of get_CLmax_TO/get_Delta_CD0_TO above.
+            CLmax_TO = obj.aero.get_CLmax_TO();
             alpha    = obj.get_alpha();
             rho      = obj.state.rho;
 
@@ -135,11 +145,20 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 
         function C = compute_C(obj)
         %COMPUTE_C  Ground-roll drag/rolling-friction correction. See class
-        %   header for the equation and citation. CLmax_TO/CD0_TO pulled
+        %   header for the equation and citation. CLmax_TO/CD0_TO are the
+        %   FLAPPED takeoff values (aero.get_CLmax_TO(),
+        %   aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO(...)), pulled
         %   fresh from the aero discipline object each call, same convention
-        %   as compute_B.
-            CLmax_TO = obj.aero.get_CLmax(obj.state);
-            CD0_TO   = obj.aero.drag_polar(obj.state).CD0;
+        %   as compute_B. get_Delta_CD0_TO's signature is not uniform across
+        %   fidelity levels: F16AeroL1/L2 take no argument, F16AeroL3 takes
+        %   the flight state (gear-strut Reynolds-number lookup) -- dispatched
+        %   via metaclass reflection on aero's declared InputNames (see
+        %   TakeoffConstraint.get_Delta_CD0_TO_dispatched), since neither
+        %   nargin(@obj.aero.get_Delta_CD0_TO) (returns -1 for bound
+        %   instance-method handles) nor a try/catch is a reliable arity check.
+            CLmax_TO       = obj.aero.get_CLmax_TO();
+            Delta_CD0_TO   = TakeoffConstraint.get_Delta_CD0_TO_dispatched(obj.aero, obj.state);
+            CD0_TO         = obj.aero.drag_polar(obj.state).CD0 + Delta_CD0_TO;
 
             C = TakeoffConstraint.DRAG_FACTOR * CD0_TO / (obj.beta * CLmax_TO) + obj.mu;
         end
@@ -156,6 +175,35 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
         %   Both_WbyS_TbyW.TW_margin uses this exact same alpha -- never an
         %   independently-supplied value that could disagree with it.
             alpha = obj.prop.thrust_lapse(obj.state);
+        end
+
+    end
+
+    methods (Static, Access = private)
+
+        function delta = get_Delta_CD0_TO_dispatched(aero, state)
+        %GET_DELTA_CD0_TO_DISPATCHED  Calls aero.get_Delta_CD0_TO() with or
+        %   without the flight state, matching whichever arity aero's
+        %   fidelity level declares (F16AeroL1/L2 take none, F16AeroL3 takes
+        %   state for a gear-strut Reynolds-number lookup -- see compute_C's
+        %   header). Dispatches via metaclass reflection on the method's
+        %   declared InputNames, since nargin(@aero.get_Delta_CD0_TO)
+        %   returns -1 for bound instance-method handles and is not a
+        %   reliable arity check.
+            mc = metaclass(aero);
+            m  = findobj(mc.MethodList, 'Name', 'get_Delta_CD0_TO');
+            if isempty(m)
+                error('TakeoffConstraint:missingGetDeltaCD0TO', ...
+                    ['aero (class %s) has no get_Delta_CD0_TO method -- every ', ...
+                     'AerodynamicsBase subclass passed to TakeoffConstraint must ', ...
+                     'implement the flapped-takeoff get_CLmax_TO/get_Delta_CD0_TO ', ...
+                     'methods (see class header).'], class(aero));
+            end
+            if numel(m.InputNames) >= 2
+                delta = aero.get_Delta_CD0_TO(state);
+            else
+                delta = aero.get_Delta_CD0_TO();
+            end
         end
 
     end

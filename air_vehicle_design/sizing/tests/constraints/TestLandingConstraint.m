@@ -14,7 +14,8 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 %   testWSMaxMatchesHandComputedEquation checks WS_max against an
 %   independently written form of the same equation (not a copy of
 %   LandingConstraint's own algebra) using the same aero discipline
-%   output (get_CLmax/drag_polar -- already unit-tested elsewhere).
+%   output (get_CLmax_L/get_Delta_CD0_L/drag_polar -- already unit-tested
+%   elsewhere).
 %
 %   testEquationReproducesBrandtLandingPoint plugs Brandt's own landing
 %   inputs (mu=0.50, CLmax_land=1.4288, CD0=0.062, K1/K2 from
@@ -30,15 +31,16 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 %   beta=1.0. testF16LandingWSMaxByFidelityLevel (parameterized over L1/L2/L3)
 %   computes each fidelity level's OWN flapped-landing CLmax/CD0
 %   (get_CLmax_L() + clean-CD0-plus-get_Delta_CD0_L(), the same assembly
-%   examples/F16A/fidelity_comparison.m uses -- ad-hoc methods present on
-%   every F16AeroLN class but not part of the generic AerodynamicsBase
-%   interface, same documented gap as TakeoffConstraint.m's header and the
-%   subplan's "TODO (high-lift configuration)" note), feeds them through a
-%   FixedAeroStub into the real WS_max(), and prints -- organized by
-%   fidelity level -- the CD0/K1/K2/CLmax used, the computed W/S, Brandt's
-%   reference W/S (138.742), and the relative % error. Only plausibility is
-%   asserted, not closeness: L1/L2/L3's flap/slat buildups are still
-%   textbook estimates, not Brandt's flight-calibrated flapped values.
+%   examples/F16A/fidelity_comparison.m uses and the same assembly WS_max()
+%   itself now calls -- ad-hoc methods present on every F16AeroLN class but
+%   still not part of the generic AerodynamicsBase interface, see
+%   LandingConstraint.m's header "NOTE ON CLmax/CD0 BASIS"), feeds them
+%   through a FixedAeroStub into the real WS_max(), and prints -- organized
+%   by fidelity level -- the CD0/K1/K2/CLmax used, the computed W/S,
+%   Brandt's reference W/S (138.742), and the relative % error. Only
+%   plausibility is asserted, not closeness: L1/L2/L3's flap/slat buildups
+%   are still textbook estimates, not Brandt's flight-calibrated flapped
+%   values.
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};
@@ -90,6 +92,11 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % data, just uses an F-16 discipline object as a concrete
             % AerodynamicsBase). Independently derived form of the same
             % equation, not a copy of LandingConstraint's own algebra.
+            % Uses the FLAPPED landing CLmax/CD0 (get_CLmax_L(),
+            % drag_polar(state).CD0 + get_Delta_CD0_L()) since that is what
+            % WS_max() now calls -- see LandingConstraint.m's header "NOTE
+            % ON CLmax/CD0 BASIS". F16AeroL1's get_Delta_CD0_L takes no
+            % state argument (only F16AeroL3's does).
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             S_FR  = 3500;
@@ -97,8 +104,8 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             beta  = 0.98;
             k_L   = 1.25;
 
-            CLmax_land = aero.get_CLmax(state);
-            CD0_land   = aero.drag_polar(state).CD0;
+            CLmax_land = aero.get_CLmax_L();
+            CD0_land   = aero.drag_polar(state).CD0 + aero.get_Delta_CD0_L();
             rho        = state.rho;
             g          = 32.174;
 
@@ -135,10 +142,14 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             beta  = 1.0;
 
             % Drive the actual production code path (LandingConstraint.WS_max,
-            % which internally calls aero.get_CLmax(state)/aero.drag_polar(state))
-            % via a fixed-value aero stub carrying Brandt's own numbers, rather
-            % than re-deriving the equation by hand in the test -- this way the
-            % test would catch a bug in LandingConstraint.m's own algebra.
+            % which internally calls aero.get_CLmax_L()/(aero.drag_polar(state).CD0
+            % + aero.get_Delta_CD0_L())) via a fixed-value aero stub carrying
+            % Brandt's own already-flapped numbers directly (FixedAeroStub's
+            % get_CLmax_L/get_Delta_CD0_L just echo the constructor's
+            % CLmax/CD0 and 0, respectively -- see FixedAeroStub.m's header),
+            % rather than re-deriving the equation by hand in the test --
+            % this way the test would catch a bug in LandingConstraint.m's
+            % own algebra.
             stub = FixedAeroStub(CLmax, CD0, K1, K2);
             state = AircraftState(0, 0.1);
             obj = LandingConstraint("Landing", state, stub, S_FR, mu, beta, k_L);
@@ -280,10 +291,12 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % Diagnostic only: evaluates WS_margin at Brandt's own actual
             % design point (W_TO=b.brandt.TOGW, S_ref=b.geom.S_ref ->
             % WS_actual=b.constraint.WS_opt=104.59) using this framework's
-            % own (clean-CLmax) WS_max() -- already documented (class header,
-            % "NOTE ON CLmax/CD0 BASIS") to read below Brandt's flapped
-            % WS_land=138.742, so a negative margin here is expected, not a
-            % bug -- printed for visibility, not asserted for closeness.
+            % own L1 flapped-landing WS_max() (get_CLmax_L/get_Delta_CD0_L)
+            % -- still built from textbook estimates, not Brandt's flight-
+            % calibrated flapped values (class header, "NOTE ON CLmax/CD0
+            % BASIS"), so it may still not exactly match Brandt's flapped
+            % WS_land=138.742 and the sign of the margin here is not asserted
+            % -- printed for visibility, not asserted for closeness.
             b     = F16Baseline();
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);

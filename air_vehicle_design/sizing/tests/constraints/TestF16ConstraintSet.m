@@ -2,7 +2,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %TESTF16CONSTRAINTSET  Unit tests for F16ConstraintSet (Layer-2 wiring of
 %   the F-16's 8 constraint conditions from examples/F16A/Constraints.xlsx
 %   into concrete ThrustConstraint/TakeoffConstraint/LandingConstraint
-%   objects, plus a 9th Stall condition appended directly as a
+%   objects, plus an OPTIONAL 9th Stall condition appended directly as a
 %   StallConstraint -- see F16ConstraintSet.m's header) and its end-to-end
 %   use with ConstraintAnalysis.
 %
@@ -13,6 +13,14 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %   flight-calibrated design point exactly (see ThrustConstraint.m/
 %   TakeoffConstraint.m/LandingConstraint.m headers for the documented
 %   modeling gaps).
+%
+%   includeStall DEFAULTS TO FALSE (changed 2026-07-27, see
+%   F16ConstraintSet.m's header): Stall has no Brandt reference row and was
+%   found to silently dominate optimal_point() at L2/L3 via its low
+%   geometry-based clean CLmax, pulling the reported design point to
+%   W/S~=62 vs. Brandt's 104.59 / Casey's legacy ~125 (user-reported
+%   2026-07-27). Tests that need the 9-constraint (Stall-included) build
+%   now pass includeStall=true explicitly.
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};
@@ -20,27 +28,30 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 
     methods (Test)
 
-        function testBuildReturnsNineConstraints(tc, fidelityLevel)
+        function testBuildDefaultReturnsEightConstraints(tc, fidelityLevel)
+            % includeStall now defaults to false (see class header) -- the
+            % default build returns only the 8 Constraints.xlsx-derived
+            % conditions, no Stall row.
             constraints = F16ConstraintSet.build(fidelityLevel);
-            tc.verifyEqual(numel(constraints), 9);
+            tc.verifyEqual(numel(constraints), 8);
+            names = cellfun(@(c) c.name, constraints);
+            tc.verifyFalse(any(names == "Stall"));
             for i = 1:numel(constraints)
                 tc.verifyTrue(isa(constraints{i}, 'PointPerformanceBase'));
             end
         end
 
-        function testBuildWithoutStallReturnsEightConstraints(tc, fidelityLevel)
-            % includeStall=false should drop only the Stall row, leaving
-            % the 8 Constraints.xlsx-derived conditions untouched. The
-            % constraint-diagram scripts (run_F16_constraint_diagram*.m)
-            % use the includeStall=true default and plot all 9.
-            constraints = F16ConstraintSet.build(fidelityLevel, false);
-            tc.verifyEqual(numel(constraints), 8);
+        function testBuildWithStallReturnsNineConstraints(tc, fidelityLevel)
+            % includeStall=true adds the Stall row back as a 9th, sanity-
+            % check-only condition -- available, but no longer the default.
+            constraints = F16ConstraintSet.build(fidelityLevel, true);
+            tc.verifyEqual(numel(constraints), 9);
             names = cellfun(@(c) c.name, constraints);
-            tc.verifyFalse(any(names == "Stall"));
+            tc.verifyTrue(any(names == "Stall"));
         end
 
         function testTakeoffLandingAndStallRowsUseCorrectClasses(tc)
-            constraints = F16ConstraintSet.build("L3");
+            constraints = F16ConstraintSet.build("L3", true);
             names = cellfun(@(c) c.name, constraints);
 
             takeoff = constraints{names == "Takeoff"};
@@ -158,7 +169,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % Stall isn't a Constraints.xlsx row (unlike the other 8) -- see
             % F16ConstraintSet.m's header -- so this pins down the hardcoded
             % flight condition directly: Mach 0.217466 at sea level.
-            constraints = F16ConstraintSet.build("L3");
+            constraints = F16ConstraintSet.build("L3", true);
             names = cellfun(@(c) c.name, constraints);
             stall = constraints{names == "Stall"};
             tc.verifyEqual(stall.state.altitude_ft, 0);
@@ -176,18 +187,21 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             fprintf('\n    [%s] F-16 optimum: W/S=%.2f, T/W=%.4f  (Brandt reference: W/S=%.2f, T/W=%.4f)\n', ...
                 fidelityLevel, WS_opt, TW_opt, b.constraint.WS_opt, b.constraint.TW_opt);
 
-            % Lower bound dropped from 70 to 50 psf after adding the Stall
-            % constraint (StallConstraint, WS_max ~ 55-63 psf across fidelity
-            % levels): Stall is now the BINDING constraint (tighter than the
-            % previous ~76-83 psf optimum driven by the thrust-type
-            % conditions), pulling the optimum down to 55-62 psf -- a real,
-            % physically expected shift (a slower stall speed requirement
-            % caps wing loading more aggressively than combat-turn/dash
-            % thrust requirements did alone), not a bug; see
-            % ThrustConstraint.m/TakeoffConstraint.m/LandingConstraint.m/
-            % StallConstraint.m headers for the already-documented per-
-            % fidelity modeling gaps driving the remaining spread.
-            tc.verifyGreaterThanOrEqual(WS_opt, 50, sprintf('[%s] Optimal W/S below plausible range.', fidelityLevel));
+            % CORRECTED 2026-07-27 (was: bound loosened 70->50 psf to
+            % accommodate Stall becoming the binding constraint, reasoned at
+            % the time as "a real, physically expected shift, not a bug" --
+            % that reasoning was wrong, per user report: Stall's wall used
+            % AeroL2/L3's low geometry-based clean CLmax (~0.91, no Brandt
+            % validation) and pulled the optimum to W/S~=62, vs. Brandt's
+            % own 104.59 and Casey's legacy-code ~125). F16ConstraintSet.build
+            % now excludes Stall by default (see its header), which restores
+            % the optimum to W/S~=76-83 here -- still below Brandt/legacy,
+            % but that residual gap traces to the already-documented
+            % aero/propulsion fidelity gaps (CD0, thrust-lapse) on the real
+            % Constraints.xlsx conditions, not to constraint-set wiring; see
+            % ThrustConstraint.m/TakeoffConstraint.m/LandingConstraint.m
+            % headers.
+            tc.verifyGreaterThanOrEqual(WS_opt, 70, sprintf('[%s] Optimal W/S below plausible range.', fidelityLevel));
             tc.verifyLessThanOrEqual(WS_opt, 130, sprintf('[%s] Optimal W/S above plausible range.', fidelityLevel));
             % T/W upper bound raised 1.0 -> 1.1: at L3 the Max Mach (supersonic
             % dash) condition is the binding thrust constraint, and with the

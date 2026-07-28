@@ -4,7 +4,9 @@
 `tests/constraints/`), including the TW/WS margin methods and a post-implementation accuracy audit
 against Brandt (`examples/F16A/cruise_and_combatturn2_error_scrape.md`,
 `examples/F16A/remaining_constraints_scrape.md`) — every flagged gap traces to a cited, documented
-modeling simplification, not a bug. Both Plot Deliverables below are built:
+modeling simplification, not a bug, EXCEPT ONE: the optional Stall condition was found (2026-07-27,
+user-reported) to silently dominate `optimal_point()` at L2/L3, which WAS a bug — see "Plot
+Deliverables" below for the fix (`includeStall` now defaults to `false`). Both Plot Deliverables below are built:
 `examples/F16A/run_F16_constraint_diagram.m` (single fidelity) and
 `examples/F16A/run_F16_constraint_diagram_overlay.m` (L1/L2/L3 fidelity-sensitivity overlay).
 **Depends on:** Steps 1–5 (all disciplines needed to run constraints at all fidelities)
@@ -150,12 +152,15 @@ class matches Brandt's own equation exactly — see below and `TakeoffConstraint
    would be too busy to read; the envelope is exactly what `optimal_point()` reduces to for the
    design-point decision).
 
-Both diagrams include Stall alongside the 8 Constraints.xlsx-derived conditions
-(`F16ConstraintSet.build`'s `includeStall` argument defaults to `true`) — Stall was never one of
-Constraints.xlsx's 8 rows (see F16ConstraintSet.m's header) and has no Brandt reference row to
-validate against (StallConstraint.m's header), but it is still a real sanity-check condition, so
-it's plotted like the rest. `F16ConstraintSet.build(fidelityLevel, false)` remains available to
-drop it (exercised by `TestF16ConstraintSet.m`'s `testBuildWithoutStallReturnsEightConstraints`).
+Both diagrams EXCLUDE Stall by default (changed 2026-07-27; `F16ConstraintSet.build`'s
+`includeStall` argument now defaults to `false`) — Stall was never one of Constraints.xlsx's 8 rows
+(see F16ConstraintSet.m's header) and has no Brandt reference row to validate against
+(StallConstraint.m's header). It was found to silently BIND the reported design point at L2/L3 via
+its geometry-based clean-CLmax wall (~W/S=62-64 psf, tighter than every real condition), pulling the
+reported optimum to W/S~=62 vs. Brandt's 104.59 and Casey's legacy-code ~125 (user-reported
+2026-07-27) — not the harmless sanity check it was assumed to be. `F16ConstraintSet.build(fidelityLevel, true)`
+remains available to add it back as an overlay (exercised by `TestF16ConstraintSet.m`'s
+`testBuildWithStallReturnsNineConstraints`), but doing so reintroduces that binding behavior.
 
 ---
 
