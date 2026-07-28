@@ -69,7 +69,10 @@ classdef GeomL3
             val = obj.S_exposed_wing;
         end
 
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         function val = get_Amax(obj)
+            % This basically locates the maximum cross-sectional area of the entire plane, including the fuselage
+            % and wings combined.
             [x, w, h] = GeomL3.denormalize_frames(obj.frames_normalized, ...
                             obj.L_fus, obj.W_max_fuselage, obj.H_max_fuselage);
 
@@ -133,6 +136,7 @@ classdef GeomL3
             A = (2/pi) * w .* h;
         end
 
+        
         function val = compute_c_root_exposed(c_root, c_tip, span_root_to_tip, span_clipped)
             arguments
                 c_root           (1,1) double {mustBePositive}
@@ -202,6 +206,7 @@ classdef GeomL3
             A(x >= x_start & x <= x_end) = n_engines * pi * D_engine^2 / 4;
         end
 
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         function val = compute_Amax_area_ruled(A_total_stations, n_engines, D_engine)
             arguments
                 A_total_stations (:,1) double

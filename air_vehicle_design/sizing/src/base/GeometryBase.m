@@ -102,6 +102,7 @@ end
             Lambda_x_deg = atand(tan_Lambda_x);
         end
 
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         function val = compute_Amax_elliptical(W_max, H_max)
         %COMPUTE_AMAX_ELLIPTICAL  Max cross-section of an equivalent elliptical
         %   fuselage [ft^2]. Feeds the Sears-Haack term [Raymer 6th ed. Eq. 12.44].
@@ -119,6 +120,7 @@ end
             val = (pi/4) * W_max * H_max;
         end
 
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         function val = compute_nacelle_diameter(T_AB_SLS_lb)
         %COMPUTE_NACELLE_DIAMETER  Engine/nacelle diameter [ft] from SLS
         %   afterburning thrust.  [Brandt F-16A.xls, Engn(s) tab, D_engine]

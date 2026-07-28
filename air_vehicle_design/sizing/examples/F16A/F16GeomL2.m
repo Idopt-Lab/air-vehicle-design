@@ -170,6 +170,19 @@ classdef F16GeomL2 < GeometryModelL2
 
         % ── Injected collaborator (NOT numeric spec data) ─────────────────── %
         prop                       % (1,1) PropulsionBase — injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb, which sizes the nacelle diameter (Phase 2/3a, 2026-07-25). Concrete-only: not in the GeometryModelL2 abstract contract (it is engine, not airframe, data; a different concrete class may size its duct differently).
+
+        % ── Control-surface areas (sizing-loop OUTPUTS, not JSON inputs) ──── %
+        % NaN until SizingLoopL2 sets them (src/sizing/SizingLoopL2.m,
+        % src/sizing/ControlSurfaceSizer.m -- docs/subplans/08_sizing.md).
+        % Plain (not Dependent) because ControlSurfaceSizer computes them
+        % externally from geom's OTHER properties (S_ref/S_ht/S_vt) each
+        % iteration -- there is no closed-form get.S_ail/etc. in terms of
+        % this object's own inputs alone. Not part of the GeometryModelL2
+        % abstract contract (engine/control-system sizing, not airframe spec
+        % data); a different concrete class may size these differently.
+        S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3]
+        S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator; see F16 ControlSurfaceSizer wiring)
+        S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]
     end
 
     % ======================================================================= %

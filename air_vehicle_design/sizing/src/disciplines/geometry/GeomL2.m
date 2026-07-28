@@ -169,6 +169,7 @@ classdef GeomL2
             val = sum(dS);
         end
 
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         function P = compute_frame_perimeter(w, h, z_chine, z_center)
         %COMPUTE_FRAME_PERIMETER  Perimeter [ft] of one fuselage frame under the
         %   cosine cross-section model.  [Brandt F-16A.xls, Geom frame model]

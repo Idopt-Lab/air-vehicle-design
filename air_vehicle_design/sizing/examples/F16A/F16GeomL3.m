@@ -246,6 +246,19 @@ classdef F16GeomL3 < GeometryModelL3
 
         % -- Injected collaborator (NOT numeric spec data) ------------------- %
         prop                       % (1,1) PropulsionBase -- injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb (Phase 2/3a). At the L3 rung this is an F16PropL2: no L3 propulsion tier exists (locked decision 2026-07-25).
+
+        % -- Control-surface areas (sizing-loop OUTPUTS, not JSON inputs) ---- %
+        % NaN until SizingLoopL2 sets them (src/sizing/SizingLoopL2.m,
+        % src/sizing/ControlSurfaceSizer.m -- docs/subplans/08_sizing.md).
+        % Plain (not Dependent), same rationale as F16GeomL2's identically-
+        % named properties (see that class's header): ControlSurfaceSizer
+        % computes them externally each iteration, so there is no closed-form
+        % get.S_ail/etc. Distinct from S_r/S_csw/S_cs above, which are
+        % separate fixed WEIGHTS-equation inputs (T.O./estimate figures), not
+        % sizing-loop outputs -- no naming collision, but don't conflate them.
+        S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3]
+        S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator; see F16 ControlSurfaceSizer wiring)
+        S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]
     end
 
     % ===================================================================== %
