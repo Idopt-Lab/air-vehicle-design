@@ -75,7 +75,8 @@ original five so a losing candidate can state what it is.
 **Decision** `DataProvenance ∈ {Datasheet, Reference, Estimate, Simulation}` on every candidate.
 Illustrative teaching numbers are allowed only as `Estimate`, and every `Estimate` is listed in this
 log.
-**Consequences** `f16a-data` holds a veto at every gate. See D-101 for the estimates introduced.
+**Consequences** `f16a-data` holds a veto at every gate. Every `Estimate` is recorded in the
+decision-log entry for the stage that introduced it.
 
 ### D-008 · The logical profile is renamed to reflect that L no longer trades
 **Stage** 0 · **Decided by** user · **Date** 2026-07-28
@@ -216,3 +217,38 @@ a case-insensitive test would reject a perfectly good kind name.
 **Consequences** `REQ_F16A_L02`'s frozen text still says "*analog* fly-by-wire" and `L01`'s still
 frames the pick as the YF-16/YF-17 flyoff. Both are historical framing in a decision record rather
 than model vocabulary — left alone deliberately, flagged for `f16a-scribe` at Stage 6.
+
+### D-021 · Unset trade parameters must fail safe, not fail cheap
+**Stage** 2 audit · **Decided by** f16a-data (finding) + orchestrator · **Date** 2026-07-28
+**Problem found** `TradeCandidate.UnitCost_USD` was declared with `DefaultValue="0"`. Stage 3 applies
+this stereotype to candidates; any candidate that forgets to set cost would silently carry **$0** —
+and under a ratio value function `$0` is not neutral, it is either a divide-by-zero or an infinitely
+good score. The same shape of bug applies to `TRL`, which defaulted to an invented `5`.
+**Decision** `UnitCost_USD` defaults to `NaN` (confirmed by probe: `DefaultValue="NaN"` is accepted
+on a double property and reads back `NaN`). `TRL` cannot hold `NaN` — `int32` rejects it — so it
+defaults to `0`, which is outside the valid TRL 1–9 scale, and the trade study **errors** on a
+candidate whose TRL is still 0 rather than scoring it.
+**Why** A default that silently produces a *plausible* number is worse than one that stops the run.
+Cost is `NaN` everywhere by D-005, and a default of 0 is a hole in that rule.
+
+### D-022 · `04_logical.md`'s trade section is rewritten in Stage 3, not Stage 6
+**Stage** 2 audit · **Decided by** f16a-data (finding) + orchestrator · **Date** 2026-07-28
+**Problem found** `docs/04_logical.md` still documents `F16ALogicalTradeStudy.m` — deleted in Stage 1
+— together with six invented `UnitCost_USD` figures ($4.5M/$6.8M/$1.5M/$1.0M/$7.0M/$6.2M), six
+invented masses, the retired min–max scoring, superseded weights, the degenerate 0.60/0.40 scores,
+and the pre-D-020 vendor kind names.
+**Decision** Pull the rewrite of that section forward from Stage 6 into Stage 3.
+**Why** Those invented cost figures are a live D-005 violation sitting in a published teaching doc.
+They must not still be there when Stage 3 introduces the *real* candidate parameters one file away —
+a student comparing the two would be reading two contradictory trades.
+
+### D-023 · The fuel split is an Estimate and will be tagged as one
+**Stage** 2 audit · **Decided by** f16a-data (finding) + orchestrator · **Date** 2026-07-28
+**Problem found** The three tanks carry 2100 lb each (6300 total) described as "matching the Brandt
+internal-fuel weight". Brandt's actual mission fuel is **6296.30 lb** (`Wt!B6`); 3 × 2100 is an even
+split of a rounded figure — an `Estimate` in substance, carrying no provenance tag because the
+`FuelTank` stereotype has no `DataProvenance` property. Pre-existing since before this restructure.
+**Decision** Stage 3 adds `DataProvenance` to `FuelTank` and tags the three capacities `Estimate`,
+with the Brandt figure named in the generator comment.
+**Why** Now that D-007's vocabulary exists, this is the most conspicuous untagged number left in the
+model, and "no agent invents a number" has to apply to the numbers that were already there.

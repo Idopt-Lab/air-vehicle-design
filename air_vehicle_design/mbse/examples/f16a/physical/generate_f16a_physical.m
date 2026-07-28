@@ -5,10 +5,13 @@ function generate_f16a_physical()
 %   physical/F16A_Physical.sldd, the stereotype profile
 %   physical/F16A_PhysicalProps.xml, and the realization allocation set
 %   physical/F16A_LogicalToPhysical.mldatx that ties each logical role
-%   (RFLP "L") to the physical part(s) that realize it.
+%   (RFLP "L") to the physical part(s) that realize it. Two of the profile's
+%   properties are typed by the enumeration classes physical/F16ASourceKind.m
+%   and physical/F16ADataProvenance.m, which must be on the MATLAB path
+%   whenever the profile is loaded (physical/ is on the f16a project path).
 %
 %   Where the Logical layer says HOW in solution roles, the Physical layer
-%   gives CONCRETE PARTS. Its two teaching ideas:
+%   gives CONCRETE PARTS. Its three teaching ideas:
 %     1. Roll-up analysis. Each part carries a Mass_lb; a NATIVE System
 %        Composer parametric analysis (F16APhysicalMassRollup, the ex2
 %        instantiate/iterate pattern) sums part masses up the tree to a
@@ -19,6 +22,34 @@ function generate_f16a_physical()
 %        MeasureOfMerit stereotype on the Aircraft component. OEW comes from
 %        the mass roll-up; cost comes from a cost-model FUNCTION
 %        (F16APhysicalCostModel, a stub for now) -- NOT a roll-up.
+%     3. EVERY PART CAN ANSWER WHY IT EXISTS. A Rationale stereotype
+%        (SourceKind, Justification, TraceRef) on all 23 components turns
+%        "why is this here?" from a code comment into a queryable model
+%        property (D-006). SourceKind is a validated vocabulary, not free
+%        text -- the F16ASourceKind enumeration (D-011):
+%          RealizesFunction         a logical role has to be realized
+%          SatisfiesRequirement     a requirement demands the part directly
+%          TradeWinner              it won the physical trade study
+%          TradeAlternative         it lost, and is kept so the decision is
+%                                   auditable
+%          ConstraintDriven         it comes from a constraint of building an
+%                                   airplane, not from a function above it
+%          SupportingInfrastructure it exists only to serve other parts
+%        TraceRef says what the part is answerable to: a logical role, a
+%        requirement, or -- for the four SupportingInfrastructure parts
+%        (Electrical, Hydraulics, ECS, SecondaryStructure) -- the physical
+%        part it serves. Two of those dependencies are real modelled port
+%        connections: Electrical -> Avionics on ElecPower, Hydraulics ->
+%        FlightControls on HydPower.
+%
+%   Also declared here but NOT YET APPLIED TO ANYTHING: the TradeCandidate
+%   stereotype (RealizesRole, RealizesKind, Mass_lb, Benefit, TRL,
+%   UnitCost_USD, DataProvenance, Selected) and the F16ADataProvenance
+%   enumeration {Datasheet, Reference, Estimate, Simulation} that types its
+%   provenance tag. They are the data a concrete parameterized candidate
+%   carries into the trade study; the candidates themselves arrive in the next
+%   stage, and the vocabulary is defined first so the profile is complete
+%   before any part depends on it. See D-006, D-007, D-011.
 %
 %   Structure (23 components; the Aircraft component is the system-of-interest
 %   that holds the OEW/cost MoMs), 16 mass-bearing leaves:
@@ -51,7 +82,9 @@ function generate_f16a_physical()
 %     WeaponSystem -> ArmamentSupport; MissionSystemsBay -> ArmamentSupport.
 %   Electrical, Hydraulics, ECS and SecondaryStructure realize NO single
 %   logical role -- supporting infrastructure, the symmetric echo of L's
-%   constraint-driven (function-less) roles.
+%   constraint-driven (function-less) roles. That is no longer only a comment:
+%   each carries Rationale.SourceKind = SupportingInfrastructure and a TraceRef
+%   naming the part it serves (section 6b).
 %
 %   Requirements: REQ_F16A_026 (cost) is a Measure of Merit (minimize), homed
 %   here and Implement-linked from the Aircraft. REQ_F16A_022 (materials) is
@@ -76,7 +109,22 @@ function generate_f16a_physical()
 %       Direction="Postorder") then iterate(inst,"Postorder",@fn,Recurse=true)
 %       then getValue -- see F16APhysicalMassRollup.
 %     * String stereotype-property defaults are evaluated as expressions, so
-%       quote the literal: DefaultValue="'Minimize'".
+%       quote the literal: DefaultValue="'Minimize'". They also READ BACK WITH
+%       THE QUOTES, so every reader strips them: erase(value, "'").
+%     * ENUMERATION-typed properties work (addProperty(..., Type="F16ASourceKind"))
+%       and a plain MATLAB enumeration classdef is enough -- no int32 base
+%       needed -- as long as the classdef is on the path. WRITE the value
+%       FULLY QUALIFIED AND UNQUOTED ("F16ASourceKind.TradeWinner") or as a
+%       QUOTED BARE MEMBER ("'TradeWinner'"); any other form errors. It READS
+%       BACK QUOTED, exactly like a string property, so use the same
+%       erase(..., "'") on the way out.
+%     * applyStereotype ERRORS on a systemcomposer.arch.VariantComponent: a
+%       stereotype goes on the variant's CHOICES, never on the role wrapper
+%       (D-013). Reach those choices with getChoices -- NOT with
+%       .Architecture.Components, which returns them on a freshly built
+%       in-memory model but ZERO on the same model saved and reloaded. The
+%       tree walks below (applyStereotypeToTree, assertRationaleComplete) are
+%       already written that way; the P model has no variants yet.
 %     * connect(src,dst) two-argument form only.
 %   -----------------------------------------------------------------------
 
@@ -234,14 +282,46 @@ mat.addProperty("CompositeFraction", Type="double", DefaultValue="0");   % 0..1 
 % FuelTank: fuel capacity per tank -> available-fuel roll-up (REQ_P01).
 tank = profile.addStereotype("FuelTank", AppliesTo="Component");
 tank.addProperty("FuelCapacity_lb", Type="double", DefaultValue="0");
+% Rationale: why does this part exist? (D-006). Applied to EVERY component
+% below, so the question has a modelled answer rather than a code comment.
+% SourceKind is a real MATLAB enumeration (D-011): the vocabulary is validated
+% and shows as a dropdown in the Property Inspector instead of a free string.
+% Enum and string DEFAULTS are evaluated as MATLAB expressions -- write an enum
+% fully qualified and unquoted, a string literal quoted.
+rat = profile.addStereotype("Rationale", AppliesTo="Component");
+rat.addProperty("SourceKind",    Type="F16ASourceKind", ...
+    DefaultValue="F16ASourceKind.RealizesFunction");
+rat.addProperty("Justification", Type="string", DefaultValue="'TBD'");
+rat.addProperty("TraceRef",      Type="string", DefaultValue="'TBD'");
+% TradeCandidate: the parameterized data a physical candidate carries into the
+% trade study -- which role and kind it realizes, the numbers it is scored on,
+% where each number came from, and whether it won.
+% DECLARED HERE, APPLIED TO NOTHING YET. The candidates it belongs on are the
+% variant choices added in the next stage; the vocabulary is defined first so
+% the profile is complete and the enumeration classes are exercised before any
+% part depends on them. This is deliberate, not an oversight.
+tc = profile.addStereotype("TradeCandidate", AppliesTo="Component");
+tc.addProperty("RealizesRole",   Type="string",  DefaultValue="'TBD'");
+tc.addProperty("RealizesKind",   Type="string",  DefaultValue="'TBD'");
+tc.addProperty("Mass_lb",        Type="double",  DefaultValue="0");
+tc.addProperty("Benefit",        Type="double",  DefaultValue="0");
+tc.addProperty("TRL",            Type="int32",   DefaultValue="5");
+tc.addProperty("UnitCost_USD",   Type="double",  DefaultValue="0");
+tc.addProperty("DataProvenance", Type="F16ADataProvenance", ...
+    DefaultValue="F16ADataProvenance.Estimate");
+tc.addProperty("Selected",       Type="boolean", DefaultValue="false");
 profile.save();
 relocate(profileName + ".xml", profFile, thisDir);
 
 applyProfile(m, profileName);
 
-% Apply PhysicalItem to the Aircraft and every component beneath it.
+% Apply PhysicalItem AND Rationale to the Aircraft and every component beneath
+% it: every part carries a mass (so an assembly can hold its written subtotal)
+% and every part carries a reason for existing. The values follow below.
 applyStereotype(aircraft, profileName + ".PhysicalItem");
-applyPhysItemToTree(ac, profileName);
+applyStereotypeToTree(ac, profileName + ".PhysicalItem");
+applyStereotype(aircraft, profileName + ".Rationale");
+applyStereotypeToTree(ac, profileName + ".Rationale");
 
 % Leaf masses (Brandt ground truth, lbf). FuelSystem = 0 on purpose.
 S = "F16A_Physical/Aircraft/";
@@ -300,6 +380,123 @@ for i = 1:size(fuelRows,1)
     applyStereotype(c, profileName + ".FuelTank");
     setProperty(c, profileName + ".FuelTank.FuelCapacity_lb", string(fuelRows{i,2}));
 end
+
+% ---------------------------------------------------------------------
+% 6b) Rationale: why does each of these parts exist? (D-006)
+%
+%   The whole point is that the answer is a QUERYABLE MODEL PROPERTY and not a
+%   comment: you can ask the model for every ConstraintDriven part, or for
+%   everything the Electrical system is there to serve. SourceKind is drawn
+%   from the F16ASourceKind enumeration, so the vocabulary is validated rather
+%   than free text; TraceRef names WHAT the part is answerable to -- a logical
+%   role, a requirement, or (for supporting infrastructure) the physical part
+%   it serves.
+%
+%   The four SupportingInfrastructure parts are the interesting ones.
+%   Electrical, Hydraulics, ECS and SecondaryStructure realize NO logical role;
+%   until now their reason for existing lived only in the comment in section 7.
+%   Their TraceRef points at what they serve, and two of those dependencies are
+%   real MODELLED port connections built in section 4 -- Electrical -> Avionics
+%   on ElecPower, Hydraulics -> FlightControls on HydPower. ECS and
+%   SecondaryStructure serve their targets thermally and structurally, with no
+%   modelled port.
+%
+%   Writing convention: an enum value goes in FULLY QUALIFIED AND UNQUOTED
+%   ("F16ASourceKind.TradeWinner"); a string value is evaluated as a MATLAB
+%   expression and so must be quoted (quoteLit below). Both read back WITH the
+%   quotes -- strip with erase(..., "'"), as MeasureOfMerit.Goal already does.
+% ---------------------------------------------------------------------
+% Logical-role path prefix. Section 7 keeps its own copy (as L) so each section
+% stays readable on its own; both are the same string.
+LR = "F16A_Logical/";
+% {component path, SourceKind (unquoted enum), Justification, TraceRef}
+ratRows = {
+    "F16A_Physical/Aircraft", "F16ASourceKind.SatisfiesRequirement", ...
+        "Exists as the system of interest: the single deliverable the program buys, and therefore the only level at which empty weight and unit flyaway cost can be stated as objectives to minimize.", ...
+        "REQ_F16A_026";
+
+    S+"Airframe", "F16ASourceKind.RealizesFunction", ...
+        "Exists to carry every flight and ground load through one structural path, realizing the logical Airframe role that must generate lift and maintain structural integrity.", ...
+        LR+"Airframe";
+    S+"Airframe/Wing", "F16ASourceKind.RealizesFunction", ...
+        "Exists because lift has to be produced by a dedicated surface; it also provides the span for roll control, the store stations, and the wet volume the fuel system uses.", ...
+        LR+"Airframe";
+    S+"Airframe/Fuselage", "F16ASourceKind.RealizesFunction", ...
+        "Exists to house the pilot, engine, fuel and avionics in one load-carrying body and to react the wing, tail and landing-gear loads into a single structure.", ...
+        LR+"Airframe";
+    S+"Airframe/HorizontalTail", "F16ASourceKind.RealizesFunction", ...
+        "Exists to supply the pitching moment needed to trim and maneuver the aircraft, which the wing alone cannot generate about the center of gravity.", ...
+        LR+"Airframe";
+    S+"Airframe/VerticalTail", "F16ASourceKind.RealizesFunction", ...
+        "Exists to supply the directional stability and yaw control authority that a wing-body has no way to produce on its own.", ...
+        LR+"Airframe";
+    S+"Airframe/Nacelles", "F16ASourceKind.RealizesFunction", ...
+        "Exists to enclose and support the installed engine, feeding its thrust and inertia loads into the fuselage structure rather than through the engine case.", ...
+        LR+"Airframe";
+    S+"Airframe/Strakes", "F16ASourceKind.RealizesFunction", ...
+        "Exists to shed a controlled vortex over the wing root at high angle of attack, sustaining lift and departure resistance well past the angle at which a plain wing would stall.", ...
+        LR+"Airframe";
+
+    S+"Propulsion", "F16ASourceKind.RealizesFunction", ...
+        "Exists to realize the logical PropulsionSystem role, turning stored fuel energy into the thrust without which no other flight function is available.", ...
+        LR+"PropulsionSystem";
+    S+"Propulsion/Engine", "F16ASourceKind.RealizesFunction", ...
+        "Exists as the thrust-producing machine itself, the part that fixes installed thrust-to-weight and therefore the acceleration, climb and sustained-turn performance the mission demands.", ...
+        LR+"PropulsionSystem";
+    S+"Propulsion/InletDuct", "F16ASourceKind.RealizesFunction", ...
+        "Exists to deliver the engine its demanded airflow with acceptable pressure recovery and distortion across the whole flight envelope, which a bare engine face cannot do.", ...
+        LR+"PropulsionSystem";
+
+    S+"FuelSystem", "F16ASourceKind.RealizesFunction", ...
+        "Exists to store the mission fuel and feed it to the engine at the demanded rate in every attitude, realizing the logical FuelSystem role.", ...
+        LR+"FuelSystem";
+    S+"FuelSystem/FwdFuselageTank", "F16ASourceKind.SatisfiesRequirement", ...
+        "Exists to hold the forward share of the internal fuel the mission requires, placed ahead of the center of gravity so that burn sequencing can keep the aircraft in balance.", ...
+        "REQ_F16A_P01";
+    S+"FuelSystem/AftFuselageTank", "F16ASourceKind.SatisfiesRequirement", ...
+        "Exists to hold the aft share of the internal fuel the mission requires, balancing the forward tank so the center of gravity stays within limits as fuel is consumed.", ...
+        "REQ_F16A_P01";
+    S+"FuelSystem/WingTank", "F16ASourceKind.SatisfiesRequirement", ...
+        "Exists to turn volume the wing structure already encloses into usable tankage, meeting the internal-fuel requirement without growing the fuselage and relieving wing bending in flight.", ...
+        "REQ_F16A_P01";
+
+    S+"FlightControls", "F16ASourceKind.RealizesFunction", ...
+        "Exists to convert pilot commands into surface deflections with the authority, rate and stability augmentation the logical FlightControlSystem role requires.", ...
+        LR+"FlightControlSystem";
+    S+"Avionics", "F16ASourceKind.RealizesFunction", ...
+        "Exists to give the pilot the sensing, navigation and communication picture the kill chain runs on, and is the one part that realizes both the avionics-suite role and the communication role.", ...
+        LR+"AvionicsSuite; " + LR+"CommunicationSystem";
+    S+"ArmamentSupport", "F16ASourceKind.RealizesFunction", ...
+        "Exists to mount, condition and release the stores, realizing both the weapon-employment role and the mission-systems bay that houses the equipment those weapons depend on.", ...
+        LR+"WeaponSystem; " + LR+"MissionSystemsBay";
+
+    S+"LandingGear", "F16ASourceKind.ConstraintDriven", ...
+        "Exists because the aircraft has to support itself, take off and land on a runway at all; its geometry is set by the tipback and rollover limits, not by any function allocated from above.", ...
+        "REQ_F16A_023; REQ_F16A_024";
+
+    S+"Electrical", "F16ASourceKind.SupportingInfrastructure", ...
+        "Exists only to serve the parts around it: it generates, converts and distributes the electrical power the avionics cannot run without, a dependency modelled explicitly as the ElecPower connection from its PowerOut port to the Avionics PowerIn port.", ...
+        S+"Avionics";
+    S+"Hydraulics", "F16ASourceKind.SupportingInfrastructure", ...
+        "Exists only to serve the flight controls: it supplies the pressurized hydraulic power the actuators need to drive surfaces against air loads, a dependency modelled explicitly as the HydPower connection from its HydOut port to the FlightControls HydIn port.", ...
+        S+"FlightControls";
+    S+"ECS", "F16ASourceKind.SupportingInfrastructure", ...
+        "Exists only because the avionics and the crew it serves need their bay and cockpit held inside temperature, pressure and humidity limits; unlike the electrical path this dependency is thermal and so carries no modelled port connection.", ...
+        S+"Avionics";
+    S+"SecondaryStructure", "F16ASourceKind.SupportingInfrastructure", ...
+        "Exists to account for the fairings, doors, access panels and mountings that no primary structural member owns but that the airframe cannot be assembled or maintained without.", ...
+        S+"Airframe";
+};
+for i = 1:size(ratRows,1)
+    c = lookup(m, Path=char(ratRows{i,1}));
+    setProperty(c, profileName + ".Rationale.SourceKind",    ratRows{i,2});
+    setProperty(c, profileName + ".Rationale.Justification", quoteLit(ratRows{i,3}));
+    setProperty(c, profileName + ".Rationale.TraceRef",      quoteLit(ratRows{i,4}));
+end
+% Guard: no part may ship with the placeholder rationale. Catches a component
+% added without a matching ratRows entry (the failure mode this section exists
+% to prevent) before the model is saved.
+assertRationaleComplete(m.Architecture, profileName);
 
 % Declare the two Measures of Merit on the Aircraft (Goal defaults to
 % "Minimize"; values filled later: OEW by the roll-up, UnitCost_USD by the
@@ -400,16 +597,87 @@ fmt = "Built %s with %d components (%d realization L->P edges). " + ...
     "available fuel=%.0f lb.\n";
 fprintf(fmt, modelName, nComp, size(edges,1), results.OEW, ...
     100*mats.CompositeFraction, fuel.AvailableFuel_lb);
+fprintf("Rationale set on %d of %d components. TradeCandidate is DECLARED " + ...
+    "but applied to nothing yet -- the candidates it belongs on arrive in the " + ...
+    "next stage.\n", size(ratRows,1), nComp);
 
 end
 
 % =====================================================================
-function applyPhysItemToTree(arch, profileName)
-%APPLYPHYSITEMTOTREE Apply PhysicalItem to every component under an arch.
+function applyStereotypeToTree(arch, qualifiedStereotype)
+%APPLYSTEREOTYPETOTREE Apply one stereotype to every component under an arch.
+%   QUALIFIEDSTEREOTYPE is "<profile>.<stereotype>", e.g.
+%   "F16A_PhysicalProps.Rationale". Used for both PhysicalItem and Rationale:
+%   every part must be able to report a mass and a reason for existing.
+%
+%   VARIANT-SAFE, by construction rather than by luck (Stage-0 probe):
+%     * applyStereotype ERRORS on a systemcomposer.arch.VariantComponent, so a
+%       variant is skipped rather than stereotyped -- a role wrapper is not a
+%       part and has nothing to justify; its candidates do (D-013). The
+%       variant's instance node still reports the rolled-up mass.
+%     * a variant's children are reached with getChoices, NEVER with
+%       .Architecture.Components -- the latter returned the choices on a
+%       freshly built in-memory model but ZERO on the same model saved and
+%       reloaded, which would silently skip every candidate.
+%   The P model has no variant components today; the candidates arrive in the
+%   next stage, and this walk is written to meet them without changing.
 for c = arch.Components
-    applyStereotype(c, profileName + ".PhysicalItem");
-    applyPhysItemToTree(c.Architecture, profileName);
+    if isa(c, "systemcomposer.arch.VariantComponent")
+        for ch = getChoices(c)
+            applyStereotype(ch, qualifiedStereotype);
+            applyStereotypeToTree(ch.Architecture, qualifiedStereotype);
+        end
+    else
+        applyStereotype(c, qualifiedStereotype);
+        applyStereotypeToTree(c.Architecture, qualifiedStereotype);
+    end
 end
+end
+
+% =====================================================================
+function s = quoteLit(txt)
+%QUOTELIT Wrap a literal for a string-typed stereotype property.
+%   A string property value is evaluated as a MATLAB expression, so the literal
+%   has to arrive quoted ("'text'"); getProperty then hands it back WITH the
+%   quotes, and every reader strips them with erase(..., "'") -- the convention
+%   MeasureOfMerit.Goal and its test already use. An apostrophe inside the text
+%   would close the literal early, so it is doubled (the MATLAB escape).
+s = "'" + replace(string(txt), "'", "''") + "'";
+end
+
+% =====================================================================
+function assertRationaleComplete(arch, profileName, prefix)
+%ASSERTRATIONALECOMPLETE Fail if any part still carries the default Rationale.
+%   Walks the same variant-safe path as applyStereotypeToTree and errors on the
+%   first component whose Justification is still the 'TBD' placeholder, so a
+%   newly added part cannot ship without an answer to "why do I exist?".
+%   Reads with erase(..., "'"): string properties come back quoted.
+%   PREFIX accumulates the component path for the error message (optional).
+if nargin < 3; prefix = ""; end
+for c = arch.Components
+    if isa(c, "systemcomposer.arch.VariantComponent")
+        % Variant wrappers carry no Rationale (D-013); their choices do.
+        for ch = getChoices(c)
+            checkOne(ch, prefix + string(c.Name) + "/" + string(ch.Name));
+            assertRationaleComplete(ch.Architecture, profileName, ...
+                prefix + string(c.Name) + "/" + string(ch.Name) + "/");
+        end
+    else
+        checkOne(c, prefix + string(c.Name));
+        assertRationaleComplete(c.Architecture, profileName, ...
+            prefix + string(c.Name) + "/");
+    end
+end
+
+    function checkOne(comp, pathStr)
+        why = erase(string(getProperty(comp, ...
+            char(profileName + ".Rationale.Justification"))), "'");
+        if why == "" || why == "TBD"
+            error("generate_f16a_physical:rationaleMissing", ...
+                "Component %s has no Rationale.Justification -- add a row to ratRows.", ...
+                pathStr);
+        end
+    end
 end
 
 % =====================================================================
