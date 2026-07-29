@@ -53,10 +53,12 @@ function generate_f16a_physical()
 %        the F16ADataProvenance enumeration {Datasheet, Reference, Estimate,
 %        Simulation}, because P is the only layer that carries numbers and so
 %        the only layer that must say where each one came from (D-007).
-%        Selected is FALSE on all seven candidates here: no trade has run yet,
-%        so nothing has won, and every candidate's SourceKind is
-%        TradeAlternative until the trade study flips the winners to
-%        TradeWinner. See D-006, D-007, D-011.
+%        Section 6c builds those candidates unselected -- nothing has won until
+%        something has been scored -- and SECTION 7B THEN RUNS THE TRADE
+%        (F16APhysicalTradeStudy), which selects one candidate per role, flips
+%        its SourceKind to TradeWinner, and calls back into the Logical layer to
+%        set the winning KIND. L presents the options; P decides (D-001).
+%        See D-006, D-007, D-011, D-015.
 %
 %   Structure (30 components; the Aircraft component is the system-of-interest
 %   that holds the OEW/cost MoMs). "|=" marks a VARIANT role -- the wrapper is
@@ -84,12 +86,14 @@ function generate_f16a_physical()
 %   ConventionalTrapWing to match would mean inventing six part masses and six
 %   composite fractions for an aircraft that was never built.
 %
-%   The ACTIVE choice is BlendedCrankedDelta / F100_PW_200 / FlyByWire, so the
-%   active configuration still rolls up to OEW = 19,980.73 lb. That is a
+%   The candidates are built with the ACTIVE choice at BlendedCrankedDelta /
+%   F100_PW_200 / FlyByWire. Between section 3 and section 7b that is a
 %   PLACEHOLDER, NOT A DECISION -- the same convention generate_f16a_logical.m
-%   uses -- until F16APhysicalTradeStudy sets it from the score. (The trade
-%   will pick these same three. That is the point of a validated example, not
-%   a coincidence.)
+%   uses -- and section 7b then re-asserts it FROM THE SCORE. The trade picks
+%   those same three, which is why the active configuration still rolls up to
+%   OEW = 19,980.73 lb: a trade that selects the production configuration
+%   cannot change what the production aeroplane weighs. That agreement is the
+%   point of a validated example, not a coincidence.
 %
 %   Leaf masses on the ACTIVE path are Brandt F-16A ground-truth weights (lbf,
 %   design point W_TO = 31,377 lb) and sum to OEW ~= 19,980.7 lb. The fuel
@@ -100,7 +104,10 @@ function generate_f16a_physical()
 %   sum).
 %
 %   Three roll-ups (see F16APhysical*Rollup). All three report the ACTIVE
-%   configuration -- a roll-up over every candidate would be meaningless:
+%   configuration -- a roll-up over every candidate would be meaningless -- and
+%   they run in section 9, AFTER the trade study of section 7b, so what they
+%   measure is the configuration the trade SELECTED rather than the placeholder
+%   the build happened to start from:
 %     * Mass    -> OEW (native instantiate/iterate; a MoM to minimize).
 %     * Material-> airframe mass-weighted composite fraction (~0.1928 with
 %                  BlendedCrankedDelta active), the "verified by" side of
@@ -138,10 +145,23 @@ function generate_f16a_physical()
 %   are added MANUALLY in the Requirements Editor -- see section 8 and
 %   docs/README.md (the programmatic slreq API can't set up a working
 %   "Verified by" for a MATLAB unit test on its own).
+%   The DECISION requirements REQ_F16A_L01..L03 are a separate matter: they are
+%   Implement-linked from the winning LOGICAL kinds by the trade study in
+%   section 7b, not from anything in this model, because what implements
+%   "single engine was selected" is the selected option, not a part (D-010).
 %
-%   Idempotent: re-run to regenerate from scratch. Requires the L model and
-%   the requirement set to exist first (run generate_f16a_logical.m and the
-%   requirement generators before this).
+%   BUILD ORDER, and why it is this order:
+%     build (3-5) -> stereotypes and parameters (6-6c) -> realization (7)
+%     -> TRADE (7b) -> requirement links (8) -> roll-ups (9)
+%   The trade needs the stereotypes to have data to read and the allocation set
+%   to already name the candidates; the roll-ups need the trade to have run, or
+%   they would report a configuration nobody chose.
+%
+%   Idempotent: re-run to regenerate from scratch. Requires the L model and the
+%   requirement sets to exist first (run generate_f16a_logical.m and the three
+%   requirement generators before this) -- including
+%   requirements/f16a_logical_derived.slreqx, which is where section 7b records
+%   the decisions.
 %
 %   -----------------------------------------------------------------------
 %   R2026a API NOTES (see generate_f16a_logical.m for the shared ones):
@@ -200,17 +220,26 @@ profFile = fullfile(physDir, profileName + ".xml");
 allocFile= fullfile(physDir, allocName + ".mldatx");
 origFile = fullfile(reqDir, "f16a.slreqx");
 physDerFile = fullfile(reqDir, "f16a_physical_derived.slreqx");
+logiDerFile = fullfile(reqDir, "f16a_logical_derived.slreqx");
 
 if ~isfolder(physDir); mkdir(physDir); end
 
-% Prerequisites: this generator loads the L model (allocation source) and
-% links into the base requirement set (cost MoM, materials) and the
-% physical-derived set (fuel volume).
+% Prerequisites: this generator loads the L model (allocation source, and the
+% model the trade study writes its decision back into) and links into the base
+% requirement set (cost MoM, materials), the physical-derived set (fuel volume)
+% and -- through section 7b -- the logical-derived DECISION set.
 if ~isfile(origFile)
     error("Missing %s. Run generate_f16a_requirements first.", origFile);
 end
 if ~isfile(physDerFile)
     error("Missing %s. Run generate_f16a_physical_derived_requirements first.", physDerFile);
+end
+% D-019 moved this dependency from L to P: L no longer needs the decision
+% requirements, the trade study in section 7b does. Checked here rather than
+% inside the trade so the generator fails before it has built anything.
+if ~isfile(logiDerFile)
+    error("Missing %s. Run generate_f16a_logical_derived_requirements first -- the " + ...
+        "trade study in section 7b records its decisions there.", logiDerFile);
 end
 if ~isfile(fullfile(logiDir, logiName + ".slx"))
     error("Missing %s.slx. Run generate_f16a_logical first.", logiName);
@@ -572,10 +601,13 @@ end
 %   That is accurate rather than pessimistic -- no trade has run at this point
 %   in the build, so nothing has won, and a candidate that claimed to be the
 %   winner before the study executed would be recording a decision that was
-%   never made. F16APhysicalTradeStudy flips the three winners to TradeWinner.
-%   Their TraceRef is the DECISION requirement for the role (REQ_F16A_L01
-%   propulsion, L02 flight control, L03 airframe), not a logical role: a
-%   candidate is answerable to the decision it is an option in.
+%   never made. Section 7b runs F16APhysicalTradeStudy, which flips the three
+%   winners to TradeWinner and rewrites every Justification here to state the
+%   result it got; the text below is what the part says about itself BEFORE the
+%   verdict, and the trade preserves it behind its own sentence rather than
+%   overwriting it. Their TraceRef is the DECISION requirement for the role
+%   (REQ_F16A_L01 propulsion, L02 flight control, L03 airframe), not a logical
+%   role: a candidate is answerable to the decision it is an option in.
 % ---------------------------------------------------------------------
 % Logical-role path prefix. Section 7 keeps its own copy (as L) so each section
 % stays readable on its own; both are the same string.
@@ -723,9 +755,14 @@ assertRationaleComplete(m.Architecture, profileName);
 %   spelling: string(num2str(NaN)), never string(NaN) -- the latter is
 %   <missing> and setProperty rejects it.
 %
-%   SELECTED IS FALSE ON ALL SEVEN. The trade study has not run. Stage 4's
-%   F16APhysicalTradeStudy sets it from the score, and only then does the
-%   active variant choice above stop being a placeholder.
+%   SELECTED IS FALSE ON ALL SEVEN, HERE. The candidates are built unselected
+%   because at this line nothing has been scored yet. Section 7b then runs
+%   F16APhysicalTradeStudy, which sets Selected from the score -- and only then
+%   does the active variant choice above stop being a placeholder. Do not
+%   pre-select a winner here to "save a step": the value of this file is that
+%   the model is in a defensible state at every line of it, and a candidate
+%   marked selected before the trade would be a decision with no arithmetic
+%   behind it.
 %
 %   {path, RealizesRole, RealizesKind, Mass_lb, TRL, Benefit, DataProvenance}
 % ---------------------------------------------------------------------
@@ -808,6 +845,40 @@ alloc.save();
 relocate(allocName + ".mldatx", allocFile, thisDir);
 
 % ---------------------------------------------------------------------
+% 7b) THE DECISION. Everything above builds the question; this makes the call.
+%
+%    F16APhysicalTradeStudy discovers the candidates section 6c parameterized
+%    (it reads them out of the model -- there is no candidate list in it),
+%    scores each role with the declared value functions of D-015, and records
+%    the outcome in four places: the active variant choice and
+%    TradeCandidate.Selected here at P, the Rationale of every candidate here
+%    at P, the active KIND plus SolutionOption.Selected/DecisionRef back at L,
+%    and an Implement link from each winning kind to its decision requirement
+%    REQ_F16A_L01..L03. It saves the P model, the L model, the decision
+%    requirement set and the L model link set itself.
+%
+%    WHY IT RUNS HERE AND NOT SOMEWHERE ELSE IN THIS FILE.
+%      * AFTER 6c, because the trade reads TradeCandidate -- with no parameters
+%        there is nothing to score.
+%      * AFTER 7, because the allocation edges name the candidates; building
+%        realization against a set of options and then deciding is OOSEM's
+%        order (allocate to concrete elements first, then evaluate), not ours
+%        to reverse (docs/06_methodology.md).
+%      * BEFORE 9, and this is the one that matters. The roll-ups measure the
+%        ACTIVE configuration. Run them first and they would report whatever
+%        placeholder section 3 happened to set; run them after the trade and
+%        the OEW, composite fraction and fuel figures the shipped model carries
+%        describe the aircraft the trade CHOSE. The whole restructure exists to
+%        make that sentence true.
+%
+%    The trade selects the production configuration, so the active choice does
+%    not actually move -- but it is now set BY the score rather than by the
+%    order the generator wrote its candidates in, which is the difference
+%    between a decision and a default.
+% ---------------------------------------------------------------------
+trades = F16APhysicalTradeStudy();
+
+% ---------------------------------------------------------------------
 % 8) Cost Measure of Merit (from a cost-model function) + IMPLEMENT links.
 %
 %    Implement links (component -> requirement) are created here and show as
@@ -864,6 +935,11 @@ fprintf("%s\n", "REMINDER: add the Verify links MANUALLY in the Requirements Edi
 % 9) Run the roll-ups so the shipped model already carries subtotals and the
 %    OEW Measure of Merit, and print the materials/fuel figures. Each can be
 %    re-run standalone.
+%
+%    THEY MEASURE THE DECIDED CONFIGURATION. All three follow the ACTIVE
+%    choice, and section 7b has just set that from the score, so these are not
+%    "the numbers of some configuration" -- they are the numbers of the one the
+%    trade selected. Running them before 7b would have measured a placeholder.
 % ---------------------------------------------------------------------
 results = F16APhysicalMassRollup();
 mats    = F16APhysicalMaterialsRollup();
@@ -877,10 +953,20 @@ fprintf(fmt, modelName, nComp, size(edges,1), results.OEW, ...
     100*mats.CompositeFraction, fuel.AvailableFuel_lb);
 fprintf("Rationale set on %d of %d components (the %d variant role wrappers " + ...
     "cannot carry one -- D-013).\n", size(ratRows,1), nComp, nComp - size(ratRows,1));
-fprintf("%d TradeCandidates parameterized across 3 variation points, " + ...
-    "Selected=false on every one: the trade study has NOT run. The active " + ...
-    "choice (BlendedCrankedDelta / F100_PW_200 / FlyByWire) is a PLACEHOLDER.\n" + ...
-    "Run F16APhysicalTradeStudy to decide.\n", size(candRows,1));
+% The trade has run (section 7b): report what it decided, read back from the
+% ranked tables it returned rather than restated here.
+tradedRoles = string(trades.keys);
+picks = strings(1, numel(tradedRoles));
+for i = 1:numel(tradedRoles)
+    T = trades(char(tradedRoles(i)));
+    picks(i) = tradedRoles(i) + " -> " + T.Candidate(T.Rank == 1) + ...
+        " (" + T.Kind(T.Rank == 1) + ", score " + sprintf("%.5f", T.Score(T.Rank == 1)) + ")";
+end
+fprintf("%d TradeCandidates parameterized across %d variation points and TRADED " + ...
+    "(section 7b): %s.\nThe active choice is now the trade's OUTPUT, not a " + ...
+    "placeholder, and the roll-ups above measure it. The alternatives stay in the " + ...
+    "model as the options that were rejected (D-002).\n", ...
+    size(candRows,1), numel(tradedRoles), strjoin(picks, "; "));
 
 end
 
@@ -985,11 +1071,11 @@ function vc = addVariantRole(parentArch, roleName, choiceNames, activeName, port
 %                 plain component. Omit or pass {} for a port-free variant.
 %
 %   A variant needs exactly one active choice to be a valid model, so one is
-%   set here. Until F16APhysicalTradeStudy has run, that active choice is a
+%   set here. Between this line and section 7b that active choice is a
 %   PLACEHOLDER, NOT A DECISION -- the identical convention (and wording)
-%   generate_f16a_logical.m uses for the kinds. What makes it a decision is
-%   TradeCandidate.Selected, the trade log and the decision requirement; the
-%   active flag merely follows.
+%   generate_f16a_logical.m uses for the kinds -- and section 7b re-asserts it
+%   from the score. What makes it a decision is TradeCandidate.Selected, the
+%   trade log and the decision requirement; the active flag merely follows.
 %
 %   Deliberately kept API-compatible with the L generator's helper of the same
 %   name, so the two layers' variant mechanics can be read side by side.

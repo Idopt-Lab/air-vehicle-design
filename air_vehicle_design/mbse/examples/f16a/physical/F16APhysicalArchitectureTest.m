@@ -51,6 +51,26 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %       the OWNING set, model paths through lookup. A negative control in
     %       the same test proves the resolver can still say no, so a rename
     %       breaks the suite instead of breaking traceability silently.
+    %     * The decision (Stage 4) -- the trade study records its verdict in
+    %       four places, and this file checks all four agree: exactly one
+    %       Selected candidate per role AND it is the active variant choice;
+    %       TradeWinner/TradeAlternative rationale with the score cited in the
+    %       winner's justification; an Implement link on each of
+    %       REQ_F16A_L01..L03 (D-010 -- the links are created by the PHYSICAL
+    %       trade study, so the assertion lives here and not in the L suite);
+    %       and OEW still measuring the configuration that was selected.
+    %       The winners are asserted by IDENTITY (F100_PW_200,
+    %       BlendedCrankedDelta, FlyByWire -- ground truth about the F-16A);
+    %       the scores that produce them only by ORDERING.
+    %
+    %   THIS FILE NEVER RUNS THE TRADE STUDY. F16APhysicalTradeStudy writes to
+    %   two models, a requirement set and a link set; a test that invoked it
+    %   would be mutating the artifacts it is meant to be checking, and would
+    %   pass even if the shipped model had never had the decision written into
+    %   it. Every Stage-4 assertion below reads the SHIPPED model state, which
+    %   the generator produced by running the trade before the roll-ups.
+    %   Roll-ups are called with Persist=false for the same reason: a test run
+    %   must not leave the working tree dirty.
     %
     %   NOT COVERED HERE -- and why
     %     * Any weight or cost TARGET. OEW and unit cost are objectives to
@@ -62,9 +82,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %       so this file asserts its RANGE and its ORDERING (who is lightest,
     %       who has the best benefit) and never the figure itself. Pinning an
     %       Estimate would turn a data revision into a test failure.
-    %     * The trade SCORES and the winner. The trade study runs at Stage 4;
-    %       Selected is still false on all seven here, and this file says so
-    %       rather than anticipating a result.
+    %     * The trade SCORES themselves. 0.879 / 0.913 / 0.856 are what a
+    %       declared value function returns from illustrative Estimates
+    %       (D-015); pinning them would turn a data revision into a test
+    %       failure. What IS asserted is that the winner's justification cites
+    %       a score at all, that the winners are the production configuration,
+    %       and that the engine is not won on benefit -- the ordering that
+    %       carries the lesson.
     %     * The variant ROLE wrappers. A stereotype cannot be applied to a
     %       systemcomposer.arch.VariantComponent at all (D-013), so "every
     %       part has a Rationale" means every part that can carry one; the
@@ -229,6 +253,34 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         % 6296.30 lb mission fuel -- an Estimate in substance, so it must say
         % so in the model now that FuelTank has a DataProvenance property.
         FuelTankProvenance = "Estimate";
+
+        % --- Stage 4: the recorded decision ------------------------------
+        % The production F-16A. This is GROUND TRUTH about the aeroplane that
+        % was actually built, so it is asserted as an IDENTITY -- unlike the
+        % scores that produce it, which are illustrative and are asserted only
+        % as orderings. Sorted, because selectedCandidateNames sorts.
+        ExpectedWinners = ["BlendedCrankedDelta","F100_PW_200","FlyByWire"];
+        % The rationale a candidate must carry once the trade has run: the
+        % winner won, everybody else is on the record as an alternative that
+        % was considered. "TradeAlternative on the losers" is the half that
+        % keeps D-002 honest -- a losing candidate that says nothing is just
+        % an orphan box.
+        WinnerSourceKind      = "TradeWinner";
+        AlternativeSourceKind = "TradeAlternative";
+        % A winner's justification must CITE the score it won on, so the
+        % number in the model and the number in the story cannot drift apart.
+        % The PATTERN is asserted, never the value (D-015): a 0.dd token.
+        % Anchored to "0." on purpose -- a mass (4730.23), a benefit (8.2) and
+        % a TRL (8) all fail to match, so this cannot be satisfied by the
+        % other numbers a justification is likely to mention.
+        ScoreTokenPattern = "0\.\d\d+";
+        % D-010's assertion, in its new home. These three decision
+        % requirements are Implement-linked BY THE PHYSICAL TRADE STUDY, which
+        % is precisely why the check is here and not in the L suite: asserting
+        % it at L would make the L suite pass or fail depending on whether P
+        % had been run.
+        DecisionRequirements = ["REQ_F16A_L01","REQ_F16A_L02","REQ_F16A_L03"];
+        ImplementLinkType    = "Implement";
     end
 
     methods (TestClassSetup)
@@ -426,7 +478,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % test reads ARCHITECTURE paths, which include the choice level.
             % Asserting the two agree is what stops the restructure quietly
             % changing what "the airframe weighs" means.
-            r = F16APhysicalMassRollup();
+            r = testCase.massRollup();
             afRoot        = testCase.AC + "Airframe/" + testCase.BrandtAirframe + "/";
             expAirframe   = testCase.sumMasses(afRoot + testCase.AirframeParts);
             expPropulsion = testCase.sumMasses([ ...
@@ -740,12 +792,14 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % here -- the active configuration is pinned by the numbers it
             % produces (OEW, the materials roll-up), not by a name in a test.
             %
-            % Second half: the trade study has NOT run at Stage 3, so no
-            % candidate may claim Selected. Active choice and Selected are
-            % different things -- one is how the model is configured, the
-            % other is the trade's recorded verdict -- and conflating them is
-            % how a design "decision" gets made by whoever built the model.
-            % Stage 4 sets Selected on the winners and flips this assertion.
+            % Second half, a GLOBAL count: the trade has run, so the model
+            % carries exactly as many selected candidates as there are roles
+            % to decide -- no more (two winners for one role) and no fewer (a
+            % role the trade never reached). Active choice and Selected remain
+            % different things: one is how the model is configured, the other
+            % is the trade's recorded verdict. That they must AGREE, per role,
+            % is testTradeSelectedExactlyOneWinnerPerRole; this is only the
+            % arithmetic that would catch a whole role dropping out.
             d = testCase.activeChoiceDefects();
             testCase.verifyEmpty(d.NoActive, ...
                 "Variant role without exactly one active choice: " + ...
@@ -754,9 +808,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "Active choice is not one of the role's own candidates: " + ...
                 strjoin(d.Foreign, ", ") + ".");
             T = testCase.candidateTable();
-            testCase.verifyEmpty(T.Path(T.Selected), ...
-                "Selected is the trade study's output (Stage 4), not the generator's: " + ...
-                strjoin(T.Path(T.Selected), ", ") + " already claim to be selected.");
+            testCase.verifyEqual(sum(T.Selected), size(testCase.VariantRows,1), ...
+                "Expected one selected candidate per variant role (" + ...
+                size(testCase.VariantRows,1) + "), found " + sum(T.Selected) + ...
+                ": {" + strjoin(T.Path(T.Selected), ", ") + "}.");
         end
 
         function testOEWCountsOnlyTheActiveConfiguration(testCase)
@@ -771,7 +826,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % nothing else in the suite would notice. Both sums are computed
             % here FROM THE MODEL and compared, so the diagnostic names the
             % two figures instead of just reporting a tolerance miss.
-            r = F16APhysicalMassRollup();
+            r = testCase.massRollup();
             activeSum = testCase.leafMassSum("active");
             allSum    = testCase.leafMassSum("all");
             testCase.verifyEqual(r.OEW, testCase.ExpectedOEW_lb, "AbsTol", 0.05, ...
@@ -937,6 +992,186 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.verifyEmpty(offenders, ...
                 "Expected FuelTank.DataProvenance = " + testCase.FuelTankProvenance + ...
                 " on every tank (D-023): " + strjoin(offenders, ", ") + ".");
+        end
+
+        % ---------------- Stage 4: the recorded decision -----------------
+
+        function testTradeSelectedExactlyOneWinnerPerRole(testCase)
+            % The trade writes its verdict in two independent places -- the
+            % candidate's Selected flag and the variant's ACTIVE CHOICE -- and
+            % this is the assertion that they say the same thing.
+            %
+            % Disagreement is the specific failure worth catching, because
+            % each half looks fine on its own. A model whose active choice is
+            % the F100 while Selected sits on the F110 has a decision that was
+            % HALF WRITTEN: every mass number would describe the F100 and
+            % every trade report the F110, and nothing else in this suite
+            % would notice. Two-selected-in-one-role is the same bug seen from
+            % the other side -- a re-run that recorded a new winner without
+            % clearing the old one.
+            d = testCase.tradeSelectionDefects();
+            testCase.verifyEmpty(d.WrongCount, ...
+                "A role must have exactly one selected candidate -- the trade picks " + ...
+                "one winner, and a re-run must clear the previous one: " + ...
+                strjoin(d.WrongCount, "; ") + ".");
+            testCase.verifyEmpty(d.Disagree, ...
+                "The trade's verdict (TradeCandidate.Selected) and the model's " + ...
+                "configuration (the active variant choice) disagree, so the decision " + ...
+                "was only half written: " + strjoin(d.Disagree, "; ") + ".");
+        end
+
+        function testWinnersCarryTradeWinnerRationale(testCase)
+            % D-006 says every part must be able to answer "why do you exist?"
+            % by query. After a trade, three of the seven candidates have a
+            % new answer and four have a different one, and both matter: the
+            % winner says TradeWinner, and every loser says TradeAlternative
+            % -- on the record as an option that was considered and rejected,
+            % which is the entire reason D-002 keeps losers in the model.
+            %
+            % The winner must also CITE ITS SCORE. Without that the rationale
+            % and the arithmetic are two unrelated artifacts, and a re-scored
+            % trade could change the winner while leaving a justification that
+            % still argues for the old one. The score VALUE is not asserted
+            % (D-015: it is computed from Estimates); only that a score-shaped
+            % token is there.
+            d = testCase.winnerRationaleDefects();
+            testCase.verifyEqual(d.NumWinners, size(testCase.VariantRows,1), ...
+                "Found " + d.NumWinners + " selected candidates, expected " + ...
+                size(testCase.VariantRows,1) + ". With none, every winner check " + ...
+                "below would pass vacuously.");
+            testCase.verifyEmpty(d.WrongKind, ...
+                "Rationale.SourceKind must be " + testCase.WinnerSourceKind + " on the " + ...
+                "selected candidate and " + testCase.AlternativeSourceKind + " on every " + ...
+                "other (found -> expected): " + strjoin(d.WrongKind, "; ") + ".");
+            testCase.verifyEmpty(d.ThinJustification, ...
+                "A winner's Justification is shorter than " + ...
+                testCase.MinJustificationLength + " characters -- the trade rewrote it " + ...
+                "with something that does not explain anything: " + ...
+                strjoin(d.ThinJustification, "; ") + ".");
+            testCase.verifyEmpty(d.NoScore, ...
+                "A winner's Justification cites no score (no token matching " + ...
+                testCase.ScoreTokenPattern + "), so the rationale in the model and the " + ...
+                "arithmetic that produced it are not tied together: " + ...
+                strjoin(d.NoScore, "; ") + ".");
+        end
+
+        function testDecisionRequirementsImplemented(testCase)
+            % D-010, arriving in its new home. REQ_F16A_L01..L03 record three
+            % decisions L is not allowed to make, and they stay UNIMPLEMENTED
+            % from Stage 1 until the physical trade study answers them
+            % (D-019). Because it is P that writes these links, this is a P
+            % assertion: putting it in the L suite would make L pass or fail
+            % according to whether P had been run, which is the layer coupling
+            % the whole restructure removes.
+            %
+            % The link TYPE is checked, not just its existence. A Relate or a
+            % Derive link would leave the requirement showing as unimplemented
+            % in the Requirements Editor while this test went green.
+            d = testCase.decisionRequirementDefects();
+            testCase.verifyEmpty(d.Missing, ...
+                "Decision requirement not found in f16a_logical_derived.slreqx: " + ...
+                strjoin(d.Missing, ", ") + ".");
+            testCase.verifyEmpty(d.Unlinked, ...
+                "Decision requirement has no incoming link. The physical trade study " + ...
+                "is what implements these (D-010, D-019); until it runs they are " + ...
+                "correctly un-implemented, and after it runs this is how we know it " + ...
+                "did: " + strjoin(d.Unlinked, ", ") + ".");
+            testCase.verifyEmpty(d.NotImplement, ...
+                "Decision requirement is linked but not by an " + ...
+                testCase.ImplementLinkType + " link, so it still reads as " + ...
+                "unimplemented (id -> link types found): " + ...
+                strjoin(d.NotImplement, "; ") + ".");
+        end
+
+        function testProductionConfigurationWins(testCase)
+            % The one Stage-4 assertion made on VALUES rather than
+            % relationships, because these three names are ground truth about
+            % an aeroplane that exists: the F-16A flew with an F100-PW-200, a
+            % blended cranked-delta wing with LERX, and fly-by-wire.
+            %
+            % The scores are NOT asserted. They are computed from illustrative
+            % Estimates (D-015) and revising them is legitimate; a revision
+            % that changed the WINNER is not, because the example would then
+            % be teaching a trade study that picks an aircraft nobody built.
+            % That is the line this test draws.
+            won = testCase.selectedCandidateNames();
+            testCase.verifyEqual(won, sort(testCase.ExpectedWinners), ...
+                "The trade must select the production F-16A configuration. Selected: {" + ...
+                strjoin(won, ", ") + "}, expected: {" + ...
+                strjoin(sort(testCase.ExpectedWinners), ", ") + "}.");
+        end
+
+        function testEngineTradeIsNotWonOnBenefit(testCase)
+            % The lesson of D-015, made executable. The engine trade exists to
+            % show that a weighted trade is not a beauty contest: the F100
+            % wins with a MID-PACK benefit (the F110 is rated higher) because
+            % it is the most mature and the lightest installed. That is a
+            % real trade-off, and it is the only thing in this example that
+            % demonstrates one.
+            %
+            % It is also fragile in a specific way. Nothing stops a future
+            % data revision from nudging the F100's benefit to the top of its
+            % role: every other test would stay green, the F100 would still
+            % win, and the example would quietly have become "the best
+            % candidate at everything also scores best" -- which teaches
+            % nothing. So the RELATIONSHIP is asserted in both directions:
+            % not the best on benefit, uniquely the best on the two criteria
+            % it is actually supposed to win on.
+            %
+            % The winner is read from the model's Selected flag rather than
+            % from BrandtEngine, so this describes the trade's real output.
+            role   = "PropulsionSystem";
+            winner = testCase.selectedPathInRole(role);
+            testCase.verifyNumElements(winner, 1, ...
+                "Expected exactly one selected propulsion candidate; found " + ...
+                numel(winner) + ". Nothing below can be judged without one.");
+            testCase.verifyFalse(any(ismember(winner, testCase.highestBenefitPaths(role))), ...
+                "The winning engine now has the highest Benefit of its role. The engine " + ...
+                "trade is supposed to be won on maturity and installed mass DESPITE a " + ...
+                "mid-pack benefit (D-015) -- with this data there is no trade-off left " + ...
+                "to teach, only a candidate that is best at everything.");
+            testCase.verifyEqual(testCase.highestTRLPaths(role), winner, ...
+                "The winning engine must be the uniquely most mature candidate of its " + ...
+                "role -- TRL is one of the two criteria it wins on (D-015). Highest " + ...
+                "TRL: {" + strjoin(testCase.highestTRLPaths(role), ", ") + "}, winner: " + ...
+                strjoin(winner, ", ") + ".");
+            testCase.verifyEqual(testCase.lowestMassPaths(role), winner, ...
+                "The winning engine must be the uniquely lightest candidate of its role " + ...
+                "-- installed mass is the other criterion it wins on (D-015). Lightest: {" + ...
+                strjoin(testCase.lowestMassPaths(role), ", ") + "}, winner: " + ...
+                strjoin(winner, ", ") + ".");
+        end
+
+        function testOEWReflectsTheSelectedConfiguration(testCase)
+            % The decision and the measurement, tied together. OEW is still
+            % the Brandt 19,980.73 lb -- a trade that picks the production
+            % configuration cannot change what the production aeroplane
+            % weighs (D-003) -- and it is the sum over the candidates the
+            % trade SELECTED.
+            %
+            % That second sum is what makes this different from
+            % testOEWCountsOnlyTheActiveConfiguration, which walks the ACTIVE
+            % CHOICE. Here the walk descends by TradeCandidate.Selected
+            % instead, so the number is derived from the verdict rather than
+            % from the configuration. The two agree only because the decision
+            % was written consistently, which is exactly the property worth
+            % measuring: if the trade ever selected one candidate while
+            % leaving another active, the OEW the aircraft reports would stop
+            % describing the aircraft the trade chose.
+            r = testCase.massRollup();
+            selectedSum = testCase.leafMassSum("selected");
+            testCase.verifyEqual(r.OEW, testCase.ExpectedOEW_lb, "AbsTol", 0.05, ...
+                "OEW must still be the Brandt " + testCase.ExpectedOEW_lb + " lb; the " + ...
+                "trade selects the production configuration, so it changes no mass (D-003).");
+            testCase.verifyEqual(selectedSum, testCase.ExpectedOEW_lb, "AbsTol", 0.05, ...
+                "Summing the leaves under the SELECTED candidates gives " + selectedSum + ...
+                " lb, not " + testCase.ExpectedOEW_lb + " lb. Either a winner carries " + ...
+                "the wrong PhysicalItem.Mass_lb, or a role has no winner at all and its " + ...
+                "whole subtree dropped out of the sum.");
+            testCase.verifyEqual(r.OEW, selectedSum, "AbsTol", 0.05, ...
+                "The roll-up (" + r.OEW + " lb, which follows the ACTIVE choice) and the " + ...
+                "sum over the SELECTED candidates (" + selectedSum + " lb) disagree: the " + ...
+                "aircraft is not configured with the candidates the trade chose.");
         end
 
     end
@@ -1390,12 +1625,18 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function s = leafMassSum(testCase, mode)
-            % Total leaf Mass_lb over the whole model. mode="active"
-            % descends into getActiveChoice at a variant -- the aeroplane
-            % that is actually configured; mode="all" descends into every
-            % getChoices branch -- what a walk that forgot about variants
-            % would count. The difference between the two is the entire
-            % point of D-012, so both are computed rather than assumed.
+            % Total leaf Mass_lb over the whole model, under three different
+            % readings of what "the aircraft" means at a variant:
+            %   "active"   -- getActiveChoice: the aeroplane the model is
+            %                 CONFIGURED as. What the roll-up measures.
+            %   "selected" -- TradeCandidate.Selected: the aeroplane the trade
+            %                 CHOSE. Independent of the configuration, which
+            %                 is what makes comparing the two worth doing
+            %                 (testOEWReflectsTheSelectedConfiguration).
+            %   "all"      -- getChoices: what a walk that forgot about
+            %                 variants would count -- three engines and two
+            %                 airframes. The D-012 failure mode, computed so
+            %                 it can be shown NOT to be happening.
             s = 0;
             for c = testCase.Model.Architecture.Components
                 s = s + testCase.subtreeLeafMass(c, mode);
@@ -1407,7 +1648,8 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % overwritten with the sum of their children by the roll-up.
             if isa(comp, "systemcomposer.arch.VariantComponent")
                 branches = testCase.choicesOf(comp);
-                if mode == "active"; branches = testCase.activeChoiceOf(comp); end
+                if mode == "active";   branches = testCase.activeChoiceOf(comp); end
+                if mode == "selected"; branches = testCase.selectedChoices(comp); end
                 s = 0;
                 for i = 1:numel(branches)
                     s = s + testCase.subtreeLeafMass(branches(i), mode);
@@ -1622,6 +1864,202 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % Last token of a slash-separated component path.
             parts = split(string(pth), "/");
             s = parts(end);
+        end
+
+        function names = leafNames(testCase, paths)
+            % leafName over an array, keeping the caller's orientation so a
+            % failure message reads in the order the table produced.
+            names = strings(size(paths));
+            for i = 1:numel(paths)
+                names(i) = testCase.leafName(paths(i));
+            end
+        end
+
+        % ---------------- Stage 4: the recorded decision -----------------
+
+        function r = massRollup(~)
+            % The mass roll-up, run WITHOUT persisting. The roll-up's normal
+            % job includes writing OEW back to the aircraft's MeasureOfMerit
+            % and saving the model; doing that from a test would leave the
+            % working tree dirty after every run and, worse, would mean the
+            % suite had modified the artifact it was checking. Persist=false
+            % skips both.
+            %
+            % The fallback is deliberate and NOISY. If the option is ever
+            % renamed the suite still produces real assertion results instead
+            % of erroring out of three tests, but the warning says plainly
+            % that the run has just dirtied the model -- so this cannot go
+            % unnoticed the way a silent catch would.
+            try
+                r = F16APhysicalMassRollup(Persist=false);
+            catch ME
+                warning("F16APhysicalArchitectureTest:persistOption", ...
+                    "F16APhysicalMassRollup(Persist=false) failed (%s); falling back " + ...
+                    "to the persisting call, which WILL modify and re-save " + ...
+                    "F16A_Physical.slx. Fix the option name in massRollup.", ME.message);
+                r = F16APhysicalMassRollup();
+            end
+        end
+
+        function sel = selectedChoices(testCase, vc)
+            % The choices of a variant that the trade SELECTED, read from
+            % TradeCandidate.Selected. Deliberately not getActiveChoice: this
+            % is the decision, not the configuration, and the whole value of
+            % the "selected" mass walk is that it can disagree with the
+            % active one.
+            choices = testCase.choicesOf(vc);
+            keep = false(1, numel(choices));
+            qualified = testCase.Profile + "." + testCase.CandidateStereotype + ".Selected";
+            for i = 1:numel(choices)
+                keep(i) = testCase.propBool(choices(i), qualified);
+            end
+            sel = choices(keep);
+        end
+
+        function d = tradeSelectionDefects(testCase)
+            % Per role: exactly one Selected candidate, and it is the active
+            % variant choice. Defects are split by kind so the failure says
+            % which of the two halves of the decision went wrong.
+            d.WrongCount = strings(1,0);
+            d.Disagree   = strings(1,0);
+            T = testCase.candidateTable();
+            for i = 1:size(testCase.VariantRows,1)
+                rel  = string(testCase.VariantRows{i,1});
+                role = string(testCase.VariantRows{i,2});
+                rows = T(T.ExpectedRole == role, :);
+                won  = rows.Path(rows.Selected);
+                if numel(won) ~= 1
+                    d.WrongCount(end+1) = role + " has " + numel(won) + " selected {" + ...
+                        strjoin(testCase.leafNames(won), ", ") + "}";
+                    continue
+                end
+                active = testCase.activeChoiceOf(testCase.componentAt(testCase.AC + rel));
+                if numel(active) ~= 1
+                    d.Disagree(end+1) = rel + " has " + numel(active) + ...
+                        " active choices, so nothing can agree with it";
+                    continue
+                end
+                if string(active.Name) ~= testCase.leafName(won)
+                    d.Disagree(end+1) = role + ": Selected='" + testCase.leafName(won) + ...
+                        "' but the active choice is '" + string(active.Name) + "'";
+                end
+            end
+        end
+
+        function d = winnerRationaleDefects(testCase)
+            % One pass over all seven candidates. Every candidate owes a
+            % SourceKind that matches its Selected flag; a winner additionally
+            % owes a justification of real length that cites a score.
+            d.NumWinners        = 0;
+            d.WrongKind         = strings(1,0);
+            d.ThinJustification = strings(1,0);
+            d.NoScore           = strings(1,0);
+            T = testCase.candidateTable();
+            for i = 1:height(T)
+                expected = testCase.AlternativeSourceKind;
+                if T.Selected(i); expected = testCase.WinnerSourceKind; end
+                if T.SourceKind(i) ~= expected
+                    d.WrongKind(end+1) = T.Path(i) + " '" + T.SourceKind(i) + ...
+                        "' -> '" + expected + "'";
+                end
+                if ~T.Selected(i); continue; end
+                d.NumWinners = d.NumWinners + 1;
+                c = testCase.componentAt(testCase.AC + T.Path(i));
+                just = testCase.rationaleText(c, "Justification");
+                if strlength(just) < testCase.MinJustificationLength
+                    d.ThinJustification(end+1) = T.Path(i) + " (" + ...
+                        strlength(just) + " chars)";
+                end
+                if isempty(regexp(just, testCase.ScoreTokenPattern, "once"))
+                    d.NoScore(end+1) = T.Path(i) + " -> '" + just + "'";
+                end
+            end
+        end
+
+        function names = selectedCandidateNames(testCase)
+            % The leaf names of every selected candidate, sorted, so the
+            % comparison against ExpectedWinners does not depend on the order
+            % CandidateRows happens to list them in.
+            T = testCase.candidateTable();
+            names = sort(reshape(testCase.leafNames(T.Path(T.Selected)), 1, []));
+        end
+
+        function pth = selectedPathInRole(testCase, role)
+            % The selected candidate's path within one role, as the table
+            % holds it. Returns 0 or >1 elements when the decision is
+            % missing or duplicated, which the caller reports rather than
+            % papering over.
+            T = testCase.candidateTable();
+            rows = T(T.ExpectedRole == string(role), :);
+            pth = rows.Path(rows.Selected);
+        end
+
+        function paths = highestTRLPaths(testCase, role)
+            % The candidate path(s) with the highest TRL in one role. Plural
+            % on purpose: a tie is a real result and the caller's equality
+            % check reports it as one.
+            T = testCase.candidateTable();
+            rows = T(T.ExpectedRole == string(role), :);
+            paths = rows.Path(rows.TRL == max(rows.TRL));
+        end
+
+        function paths = lowestMassPaths(testCase, role)
+            % The candidate path(s) with the lowest traded Mass_lb in one
+            % role -- the numerator of D-015's mass-ratio value function is
+            % the role's baseline, so "lightest" and "best on mass" are the
+            % same statement.
+            T = testCase.candidateTable();
+            rows = T(T.ExpectedRole == string(role), :);
+            paths = rows.Path(rows.Mass_lb == min(rows.Mass_lb));
+        end
+
+        function d = decisionRequirementDefects(testCase)
+            % D-010: REQ_F16A_L01..L03 each carry an incoming Implement link,
+            % written by the physical trade study. Split by kind so "the
+            % requirement is gone", "nothing links to it" and "something
+            % links to it but not as an implementation" are distinguishable.
+            d.Missing      = strings(1,0);
+            d.Unlinked     = strings(1,0);
+            d.NotImplement = strings(1,0);
+            for id = testCase.DecisionRequirements
+                r = testCase.findRequirement(testCase.LogiSet, id);
+                if isempty(r)
+                    d.Missing(end+1) = id;
+                    continue
+                end
+                links = testCase.incomingLinks(r);
+                if isempty(links)
+                    d.Unlinked(end+1) = id;
+                    continue
+                end
+                types = testCase.linkTypes(links);
+                if ~ismember(testCase.ImplementLinkType, types)
+                    d.NotImplement(end+1) = id + " -> {" + ...
+                        strjoin(types, ", ") + "}";
+                end
+            end
+        end
+
+        function links = incomingLinks(~, req)
+            % inLinks on a requirement, or empty. Wrapped so a requirement
+            % with no link set at all is reported as unlinked rather than
+            % erroring out of the test.
+            try, links = req.inLinks(); catch, links = []; end
+        end
+
+        function types = linkTypes(~, links)
+            % The Type of each link ('Implement', 'Verify', 'Derive', ...).
+            % An unreadable type is surfaced as a token rather than dropped,
+            % so an API change shows up in the failure message instead of
+            % quietly emptying the list.
+            types = strings(1,0);
+            for i = 1:numel(links)
+                try
+                    types(end+1) = string(links(i).Type);       %#ok<AGROW>
+                catch
+                    types(end+1) = "<unreadable>";              %#ok<AGROW>
+                end
+            end
         end
     end
 end

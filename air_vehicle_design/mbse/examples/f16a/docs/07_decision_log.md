@@ -273,3 +273,43 @@ generator comment says so.
 **Why** Without that note, `DataProvenance = Reference` on `F100_PW_200` would imply its Benefit of
 8.2 is sourced from Brandt, which it is not — it is our judgement. Overclaiming provenance is the
 failure mode D-007 exists to prevent, so the tag has to state precisely what it covers.
+
+### D-026 · Dropping a criterion is a general rule, not a cost special case
+**Stage** 4 · **Decided by** orchestrator + f16a-physical · **Date** 2026-07-29
+**Decision** `F16APhysicalTradeStudy` drops **any** criterion for which no candidate of a role
+carries a value, and renormalizes the remaining weights. Cost falls out of that rule because it is
+`NaN`; it is not named as a special case in the scoring code.
+**Consequences** The printed table shows `UnitCost_USD DROPPED` and the declared weights
+`0.40/0.20/0.20/0.20` renormalizing to `0.50/0.25/0.25` — so the weights in D-015 are *derived at run
+time*, not typed in. The day `F16APhysicalCostModel` returns real numbers, cost re-enters the trade
+with **no code change**. That property is the reason for the general rule.
+
+### D-027 · The callback keys on the kind, and `DecisionRef` is written on every kind
+**Stage** 4 · **Decided by** f16a-physical · **Date** 2026-07-29
+**Decision** The cross-layer write-back resolves the L kind from the winner's `RealizesKind`, never
+from the candidate name — the mapping is many-to-one (`F100_PW_200` and `F110_GE_100` both realize
+`SingleEngine`). And `DecisionRef` is set on **every kind of the role**, not only the winner.
+**Why** Keying on the candidate name would work today by coincidence and break the moment a
+different single-engine candidate won. Writing `DecisionRef` on the losers too means a reader who
+clicks the rejected `TwinEngine` lands on the requirement that explains *why it lost*, instead of on
+`TBD` — the rejection is part of the decision record.
+
+### D-028 · Decision links are rebuilt, not created-if-absent
+**Stage** 4 · **Decided by** f16a-physical · **Date** 2026-07-29
+**Decision** Before linking a winning kind to its decision requirement, the trade study removes any
+existing inbound link whose source artifact is the L model, then creates one fresh link.
+**Why** A create-if-absent guard cannot fix the case that matters: re-running after the winner
+changes would leave the *previous* winner's link in place, so two kinds would claim to implement the
+same decision. Scoping the removal to L-model sources leaves a hand-made Verify link from a test
+file untouched.
+
+### D-029 · Roll-ups do not write during tests
+**Stage** 4 · **Decided by** user + f16a-physical · **Date** 2026-07-29
+**Decision** `F16APhysicalMassRollup` takes `Persist` (default `true`); with `Persist=false` it skips
+writing the OEW Measure of Merit and skips `save_system`. The test suite always calls it read-only.
+**Why** The suite was writing to the very model it was testing — which can mask a generator defect
+(the tests would "repair" a model the generator built wrong) and leaves a dirty working tree after
+every run. The materials and fuel roll-ups were already read-only and needed no change.
+**Not done** The suite still computes the roll-up three times (~10 s). Measured and accepted: the
+warm suite is ~17 s, and the earlier "15 minutes" was a cold-start artifact, not a property of the
+tests.

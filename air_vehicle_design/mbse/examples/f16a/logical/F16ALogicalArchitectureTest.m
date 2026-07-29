@@ -22,6 +22,12 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
     %       name is free of vendor, program and digit tokens; and neither the
     %       kinds nor the L profile declares Mass_lb, UnitCost_USD, TRL or
     %       Benefit.
+    %     * The decision, IF one has been recorded -- L ships undecided and is
+    %       written to later by the physical trade study, so
+    %       testSelectedKindIsConsistentWithItsDecisionRef is written to hold
+    %       in BOTH states: nothing selected and every DecisionRef 'TBD', or
+    %       one kind per role selected, active, and pointing at a well-formed
+    %       REQ_F16A_L0x. What it forbids is the state in between.
     %
     %   NOT COVERED HERE -- and why
     %     * WHICH kind wins. L presents options, it does not decide. The trade
@@ -32,10 +38,13 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
     %       suite pass or fail depending on whether P had been run -- exactly
     %       the layer coupling this restructure removes. They are asserted in
     %       F16APhysicalArchitectureTest instead (D-010).
-    %     * The VALUE of SolutionOption.Selected. Before the trade runs no kind
-    %       is selected; afterwards exactly one per role is. Both are
-    %       legitimate states of a correctly built L model, so this suite
-    %       checks only that the property exists and is readable.
+    %     * WHETHER anything is selected. Before the trade runs no kind is;
+    %       afterwards exactly one per role is. Both are legitimate states of
+    %       a correctly built L model, so testEveryKindCarriesSolutionOption
+    %       checks only that the property exists and is readable, and
+    %       testSelectedKindIsConsistentWithItsDecisionRef checks the
+    %       INTERNAL CONSISTENCY of whichever state the model is in rather
+    %       than requiring one of them.
     %     * Any design target (mass, cost, static margin). Those live in the
     %       per-requirement verification suites, never in a machinery test.
     %
@@ -87,6 +96,17 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
         % "ConventionalTrapWing" contains the substring "pW", so a
         % case-insensitive "PW" test would fire on a perfectly good kind name.
         VendorTokens      = ["F100","F110","PW","GE","LWF","Analog"];
+        % The DecisionRef an UNDECIDED kind carries, straight from the L
+        % generator's DefaultValue="'TBD'". L ships in this state and stays in
+        % it until the physical trade study writes a decision back (D-001).
+        UndecidedRef       = "TBD";
+        % A recorded decision names one of the three L-layer decision
+        % requirements. Only the SHAPE is asserted here: which requirement
+        % belongs to which role, and whether it is really Implement-linked, is
+        % the physical trade study's business and is asserted in
+        % F16APhysicalArchitectureTest (D-010). Asserting the mapping here
+        % would re-couple the L suite to whether P has run.
+        DecisionRefPattern = "^REQ_F16A_L0\d$";
     end
 
     methods (TestClassSetup)
@@ -316,6 +336,57 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
                 strjoin(unreadable, ", ") + ".");
         end
 
+        function testSelectedKindIsConsistentWithItsDecisionRef(testCase)
+            % L is legitimately UNDECIDED until the physical trade study runs
+            % (D-001, D-019), and this test is written so that both states
+            % pass. That conditional structure IS the assertion: it encodes
+            % that "no kind is selected and every DecisionRef says TBD" is a
+            % correct L model, not a broken one -- which is why this suite can
+            % still be run on a freshly generated L model with no P layer in
+            % existence, exactly as D-010 requires.
+            %
+            % What it forbids is the state in between, where the decision was
+            % started and not finished:
+            %   * two kinds of one role claiming to be selected -- a re-run
+            %     that recorded a new winner without clearing the old one;
+            %   * a selected kind that is not the ACTIVE choice, so the model
+            %     is configured as one thing and says it decided another;
+            %   * a selected kind whose DecisionRef is still 'TBD', i.e. a
+            %     decision with no decision record behind it;
+            %   * an UNDECIDED role whose kinds already cite a decision
+            %     requirement -- the mirror image, a record with no decision;
+            %   * two roles citing the SAME decision requirement, which would
+            %     mean one requirement is standing in for two decisions.
+            %
+            % The decision requirements' Implement links are deliberately NOT
+            % checked here. Those are written by P (D-010).
+            d = testCase.selectionConsistencyDefects();
+            testCase.verifyEmpty(d.MultipleSelected, ...
+                "A role must not have more than one selected kind -- the trade picks " + ...
+                "one, and a re-run must clear the previous one: " + ...
+                strjoin(d.MultipleSelected, "; ") + ".");
+            testCase.verifyEmpty(d.NotActive, ...
+                "The selected kind must be the role's ACTIVE variant choice, or the " + ...
+                "model is configured as one thing while claiming to have decided " + ...
+                "another: " + strjoin(d.NotActive, "; ") + ".");
+            testCase.verifyEmpty(d.BadDecisionRef, ...
+                "A selected kind must cite the decision requirement that records the " + ...
+                "choice -- a well-formed REQ_F16A_L0x, never the '" + ...
+                testCase.UndecidedRef + "' it ships with: " + ...
+                strjoin(d.BadDecisionRef, "; ") + ".");
+            testCase.verifyEmpty(d.UndecidedButReferenced, ...
+                "This role has selected nothing, yet its kinds already cite a decision " + ...
+                "requirement. An undecided option must read '" + testCase.UndecidedRef + ...
+                "': a decision record with no decision behind it is worse than a blank " + ...
+                "one, because it reads as settled: " + ...
+                strjoin(d.UndecidedButReferenced, "; ") + ".");
+            testCase.verifyEmpty(d.DuplicateDecisionRef, ...
+                "Two roles cite the same decision requirement, so one requirement is " + ...
+                "standing in for two independent decisions (D-016 evaluates the three " + ...
+                "variation points separately): " + ...
+                strjoin(d.DuplicateDecisionRef, "; ") + ".");
+        end
+
         function testAllocatedComponentsResolve(testCase)
             % Sampled allocation endpoints resolve in both models.
             samples = { ...
@@ -540,6 +611,93 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
                         hits(end+1) = string(kinds{i}.Name) + "." + propertyShortNames(k); %#ok<AGROW>
                     end
                 end
+            end
+        end
+
+        function s = optionText(testCase, elem, propertyShortName)
+            % One SolutionOption property as plain text. A string property
+            % stores its value as a MATLAB EXPRESSION, so DefaultValue="'TBD'"
+            % reads back as 'TBD' WITH the quotes (Stage-0 finding 7) and they
+            % have to be stripped. "" when the property cannot be read, which
+            % fails whatever comparison it feeds rather than propagating
+            % <missing> through logical indexing.
+            qualified = testCase.Profile + "." + testCase.OptionStereotype + "." + ...
+                propertyShortName;
+            try
+                s = strtrim(erase(string(getProperty(elem, char(qualified))), "'"));
+            catch
+                s = "";
+            end
+            if ~isscalar(s) || ismissing(s); s = ""; end
+        end
+
+        function tf = isSelected(testCase, elem)
+            % SolutionOption.Selected as a logical. Read through optionText so
+            % it copes with the value arriving as a logical, as "true"/"false"
+            % or as a quoted expression, without caring which.
+            tf = ismember(lower(testCase.optionText(elem, "Selected")), ["true","1"]);
+        end
+
+        function names = namesOf(~, comps)
+            names = strings(1,0);
+            for i = 1:numel(comps)
+                names(end+1) = string(comps(i).Name);   %#ok<AGROW>
+            end
+        end
+
+        function d = selectionConsistencyDefects(testCase)
+            % One pass per variant role, branching on whether that role has
+            % been decided. BOTH branches are legitimate -- see the test's
+            % comment -- so this collects the ways each state can be
+            % internally inconsistent rather than requiring either one.
+            d.MultipleSelected       = strings(1,0);
+            d.NotActive              = strings(1,0);
+            d.BadDecisionRef         = strings(1,0);
+            d.UndecidedButReferenced = strings(1,0);
+            d.DuplicateDecisionRef   = strings(1,0);
+            cited = strings(1,0);   % DecisionRefs claimed by a decided role
+            for role = string(fieldnames(testCase.Kinds))'
+                vc = testCase.Model.lookup(Path=char(testCase.Root + role));
+                choices = getChoices(vc);
+                names   = testCase.namesOf(choices);
+                picked  = false(1, numel(choices));
+                refs    = strings(1, numel(choices));
+                for i = 1:numel(choices)
+                    picked(i) = testCase.isSelected(choices(i));
+                    refs(i)   = testCase.optionText(choices(i), "DecisionRef");
+                end
+                if sum(picked) == 0
+                    stray = names(refs ~= testCase.UndecidedRef);
+                    for s = stray
+                        d.UndecidedButReferenced(end+1) = role + "/" + s + " -> '" + ...
+                            refs(names == s) + "'";
+                    end
+                    continue
+                end
+                if sum(picked) > 1
+                    d.MultipleSelected(end+1) = role + " -> {" + ...
+                        strjoin(names(picked), ", ") + "}";
+                    continue
+                end
+                won    = names(picked);
+                ref    = refs(picked);
+                active = getActiveChoice(vc);
+                if numel(active) ~= 1
+                    d.NotActive(end+1) = role + " has " + numel(active) + ...
+                        " active kinds, so nothing can agree with it";
+                elseif string(active.Name) ~= won
+                    d.NotActive(end+1) = role + ": Selected='" + won + ...
+                        "' but the active kind is '" + string(active.Name) + "'";
+                end
+                if isempty(regexp(ref, testCase.DecisionRefPattern, "once"))
+                    d.BadDecisionRef(end+1) = role + "/" + won + " -> '" + ref + "'";
+                    continue
+                end
+                if ismember(ref, cited)
+                    d.DuplicateDecisionRef(end+1) = role + "/" + won + " -> '" + ...
+                        ref + "' (already cited by another role)";
+                end
+                cited(end+1) = ref;   %#ok<AGROW>
             end
         end
 

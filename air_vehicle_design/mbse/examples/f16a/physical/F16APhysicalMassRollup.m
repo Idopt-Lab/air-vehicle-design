@@ -1,4 +1,4 @@
-function results = F16APhysicalMassRollup()
+function results = F16APhysicalMassRollup(options)
 %F16APHYSICALMASSROLLUP Roll part masses up to the F-16A empty weight (OEW).
 %   RESULTS = F16APHYSICALMASSROLLUP() instantiates the physical architecture
 %   physical/F16A_Physical.slx and rolls each part's Mass_lb up the tree
@@ -7,6 +7,20 @@ function results = F16APhysicalMassRollup()
 %   struct with the key figures and a per-assembly table, and it writes the
 %   computed OEW into the aircraft root's MeasureOfMerit.OEW_lb so the shipped
 %   model already carries the mass Measure of Merit.
+%
+%   RESULTS = F16APHYSICALMASSROLLUP(Persist=false) computes and returns
+%   exactly the same numbers but WRITES NOTHING: it skips both the setProperty
+%   of the OEW Measure of Merit and the save_system. Default is true, so the
+%   generator is unaffected.
+%
+%   READ-ONLY MODE EXISTS FOR THE TEST SUITE. This function is called by tests
+%   that are asserting on the very model it would otherwise re-save, which
+%   makes a test run a WRITE to the artifact under test: the .slx changes
+%   timestamp (and, if a value ever differed, content) simply because somebody
+%   ran the suite. Reading the model and modifying it are separate jobs, and a
+%   test may only do the first. Persist=false is that separation.
+%   The other two roll-ups (F16APhysicalMaterialsRollup,
+%   F16APhysicalFuelRollup) need no such option -- they already only read.
 %
 %   RESULTS fields: OEW, Airframe, Propulsion, Engine, AirframeLessEngine, Table.
 %
@@ -44,6 +58,12 @@ function results = F16APhysicalMassRollup()
 %
 %   Requires physical/F16A_Physical.slx to exist (run generate_f16a_physical,
 %   which itself calls this as its final step).
+
+arguments
+    % Write the OEW Measure of Merit back into the model and save it. True for
+    % the generator, false for anything that is only asking what the model says.
+    options.Persist (1,1) logical = true
+end
 
 modelName   = "F16A_Physical";
 profileName = "F16A_PhysicalProps";
@@ -114,12 +134,19 @@ results = struct( ...
     Table = T);
 
 % --- Record OEW as the mass Measure of Merit on the Aircraft component ----
-setProperty(lookup(m, Path=char(acPath)), char(oewMomProp), string(OEW));
-save_system(modelName, char(modelFile));
+% Both statements are inside the guard, and both have to be: writing the
+% property without saving would leave the in-memory model dirty for whatever
+% runs next, which is its own kind of side effect.
+if options.Persist
+    setProperty(lookup(m, Path=char(acPath)), char(oewMomProp), string(OEW));
+    save_system(modelName, char(modelFile));
+end
 
 method = "native System Composer analysis";
 if ~useNative; method = "hand recursion (native fallback)"; end
-fprintf("\n=== F-16A mass roll-up (%s) ===\n", method);
+mode = "";
+if ~options.Persist; mode = ", read-only: OEW MoM not written, model not saved"; end
+fprintf("\n=== F-16A mass roll-up (%s%s) ===\n", method, mode);
 disp(T);
 fprintf("Airframe subtotal   : %10.2f lb\n", airframe);
 fprintf("Propulsion subtotal : %10.2f lb\n", propulsion);
