@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-26",
+  "generated": "2026-07-29",
   "aircraft": "F-16A Block 10/15",
   "title": "F-16A Block 10/15 — Weights vs Ground Truth",
   "condition": "W_TO = 31377 lbf [Brandt Wt!B3 = Main!O15].",
@@ -51,22 +51,22 @@
       "notes": "The quantity L1 actually estimates -- the Raymer Tbl 3.1 power law returns a FRACTION, and the OEW row above is that fraction times W_TO. Reported separately because the fraction is what the sizing loop will iterate on, and because comparing fractions removes the W_TO basis from the comparison entirely. Reference is Brandt Wt!B12 / Wt!B3."
     },
     {
-      "parameter": "OEW, Tbl 15.2 psf buildup + Raymer W_en [lbf]",
+      "parameter": "OEW, Tbl 15.2 psf buildup + Raymer W_en + strake [lbf]",
       "fidelity": "L2",
-      "computed": "15664.65",
+      "computed": "15754.65",
       "reference": "19980.70",
-      "pctDiff": "-21.60%",
+      "pctDiff": "-21.15%",
       "secondSource": "19148.08",
       "divergence": "",
       "cite": "Brandt Wt!B12 (=SUM(B10:B11))",
-      "notes": "OFFICIAL L2. wing 9 / HT 4 / VT 5.3 psf on EXPOSED planform + fuselage 4.8 psf on WETTED area [Raymer Tbl 15.2] + LG 0.033*W_TO, installed engine 1.3 x bare, all-else 0.17*W_TO [AE481 metabook Sec. 7]. Of the gap to Brandt, 2733.68 lbf (13.68 % of Wt!B12) is Brandt components with NO framework analog -- see section 5."
+      "notes": "OFFICIAL L2. wing 9 / HT 4 / VT 5.3 psf on EXPOSED planform + fuselage 4.8 psf on WETTED area [Raymer Tbl 15.2] + LG 0.033*W_TO, installed engine 1.3 x bare, all-else 0.17*W_TO [AE481 metabook Sec. 7] + strake 4.5 psf x 20 ft^2 = 90.00 lbf [Brandt Main!D18/Wt!H7, ADDED 2026-07-29]. Of the remaining gap to Brandt, 2643.68 lbf (13.23 % of Wt!B12) is Brandt components with NO framework analog at any fidelity level (nacelles/other-structure/armament-support -- strake itself is modeled at both L2 and L3 now) -- see section 5."
     },
     {
       "parameter": "OEW, Tbl 15.2 psf buildup + Brandt W_en alt [lbf]",
       "fidelity": "L2",
-      "computed": "16787.35",
+      "computed": "16877.35",
       "reference": "19980.70",
-      "pctDiff": "-15.98%",
+      "pctDiff": "-15.53%",
       "secondSource": "19148.08",
       "divergence": "BY DESIGN",
       "cite": "Brandt Wt!B12 (=SUM(B10:B11))",
@@ -75,31 +75,31 @@
     {
       "parameter": "OEW, Tbl 15.2 psf + Brandt W_en x1.3 -- REJECTED [lbf]",
       "fidelity": "--",
-      "computed": "18206.42",
+      "computed": "18296.42",
       "reference": "19980.70",
-      "pctDiff": "-8.88%",
+      "pctDiff": "-8.43%",
       "secondSource": "19148.08",
       "divergence": "DEFINITIONAL",
       "cite": "Brandt Wt!B12 (=SUM(B10:B11))",
       "notes": "REJECTED VARIANT, reported so the decision is auditable. Applies the metabook's x1.3 to a formula readme_wt.md:230 states IS ALREADY the installed-engine weight, i.e. it installs twice. It agrees BEST with Brandt of every L2 option, and that is precisely why it is rejected: agreement produced by a double-counted factor is not agreement. Not a candidate."
     },
     {
-      "parameter": "OEW, Raymer Sec. 15.3.1 buildup [lbf]",
+      "parameter": "OEW, Raymer Sec. 15.3.1 buildup + strake [lbf]",
       "fidelity": "L3",
-      "computed": "15705.33",
+      "computed": "15795.33",
       "reference": "19980.70",
-      "pctDiff": "-21.40%",
+      "pctDiff": "-20.95%",
       "secondSource": "19148.08",
       "divergence": "",
       "cite": "Brandt Wt!B12 (=SUM(B10:B11))",
-      "notes": "OFFICIAL L3, at the settled decisions: UNINSTALLED W_en (no x1.3), W_l = 0.95*W_TO, SFC_mission by DI at the requirements cruise point. Eqs. 15.1-15.24 group mass differently from Brandt's psf model, and the same 2733.68 lbf of unmodelled Brandt components applies."
+      "notes": "OFFICIAL L3, at the settled decisions: UNINSTALLED W_en (no x1.3), W_l = 0.95*W_TO, SFC_mission by DI at the requirements cruise point, + strake 4.5 psf x 20 ft^2 = 90.00 lbf [Brandt Main!D18/Wt!H7, ADDED 2026-07-29]. Eqs. 15.1-15.24 group mass differently from Brandt's psf model, and the remaining 2643.68 lbf (13.23 %) of unmodelled Brandt components (nacelles/other-structure/armament-support) applies -- see section 5."
     },
     {
       "parameter": "OEW, Sec. 15.3.1 with W_en x1.3 -- REJECTED [lbf]",
       "fidelity": "--",
-      "computed": "16546.06",
+      "computed": "16636.06",
       "reference": "19980.70",
-      "pctDiff": "-17.19%",
+      "pctDiff": "-16.74%",
       "secondSource": "19148.08",
       "divergence": "DEFINITIONAL",
       "cite": "Brandt Wt!B12 (=SUM(B10:B11))",
@@ -216,15 +216,26 @@
       "notes": "No framework nacelle-weight component exists at any fidelity level. Brandt: 4.5 psf x his half-buried nacelle area (Geom!B4). Counted in the section-5 gap tally."
     },
     {
-      "parameter": "Strakes -- NOT MODELED [lbf]",
-      "fidelity": "N/A",
-      "computed": "N/A",
+      "parameter": "Strakes [lbf]",
+      "fidelity": "L2",
+      "computed": "90.00",
       "reference": "90.00",
-      "pctDiff": " - ",
+      "pctDiff": "+0.00%",
       "secondSource": "90.00",
-      "divergence": "DEFINITIONAL",
+      "divergence": "",
       "cite": "Brandt Wt!H9",
-      "notes": "No framework strake component exists -- the same gap the geometry report records for strake wetted/exposed area. Brandt: 4.5 psf x 20 ft^2. Counted in the section-5 gap tally."
+      "notes": "ADDED 2026-07-29 (F16WeightsL2.m S_strake/k_strake). Framework: 4.5 psf x 20 ft^2 [Brandt Main!D18/Wt!H7 -- borrowed directly, since Raymer Tbl 15.2 has no strake/LERX category]. EXACT BY CONSTRUCTION (same coefficient and area as Brandt's own row)."
+    },
+    {
+      "parameter": "Strakes [lbf]",
+      "fidelity": "L3",
+      "computed": "90.00",
+      "reference": "90.00",
+      "pctDiff": "+0.00%",
+      "secondSource": "90.00",
+      "divergence": "",
+      "cite": "Brandt Wt!H9",
+      "notes": "ADDED 2026-07-29 (F16WeightsL3.m S_strake/k_strake). Framework: 4.5 psf x 20 ft^2 [Brandt Main!D18/Wt!H7 -- borrowed directly, since Raymer Sec. 15.3.1 has no strake/LERX equation]. EXACT BY CONSTRUCTION (same coefficient and area as Brandt's own row; same value/status as the L2 row above)."
     },
     {
       "parameter": "Structural subtotal, Tbl 15.2 (wing+fus+HT+VT) [lbf]",
@@ -235,7 +246,7 @@
       "secondSource": "N/A",
       "divergence": "DEFINITIONAL",
       "cite": "Brandt Wt!B9",
-      "notes": "NOT LIKE-FOR-LIKE: Brandt's Wt!B9 = SUM(C9:H9) also contains nacelles (186.82) and strakes (90.00), for which the framework has no analog, and two of the four shared items use his FULL-planform tail areas. Group-level agreement is not meaningful here."
+      "notes": "NOT LIKE-FOR-LIKE: Brandt's Wt!B9 = SUM(C9:H9) also contains nacelles (186.82, still no framework analog) and strakes (90.00, modeled at L2 since 2026-07-29 but as its own separate OEW term, not summed into THIS subtotal), and two of the four shared items use his FULL-planform tail areas. Group-level agreement is not meaningful here."
     },
     {
       "parameter": "Structural subtotal, Eqs. 15.1-15.4 (wing+fus+HT+VT) [lbf]",
@@ -405,9 +416,9 @@
     {
       "parameter": "Airframe (structure + systems, engine excluded) [lbf]",
       "fidelity": "L3",
-      "computed": "12323.63",
+      "computed": "12413.63",
       "reference": "15250.47",
-      "pctDiff": "-19.19%",
+      "pctDiff": "-18.60%",
       "secondSource": "N/A",
       "divergence": "DEFINITIONAL",
       "cite": "Brandt Wt!B10 (=B9+SUM(B23:B31))",
@@ -546,15 +557,15 @@
       "notes": "---"
     },
     {
-      "parameter": "NOT MODELED total (nacelles+strakes+other structure+armament) [lbf]",
+      "parameter": "NOT MODELED total (nacelles+other structure+armament) [lbf]",
       "fidelity": "N/A",
       "computed": "N/A",
-      "reference": "2733.68",
+      "reference": "2643.68",
       "pctDiff": " - ",
       "secondSource": "N/A",
       "divergence": "DEFINITIONAL",
-      "cite": "Brandt Wt!G9 + H9 + B29 + B31",
-      "notes": "186.82 + 90.00 + 2016.86 + 440.00 = 2733.68 lbf = 13.68 % of Brandt Wt!B12. This is the single largest identified contributor to every OEW row's negative %Diff in section 1, and it is a MISSING-COMPONENT gap, not an equation error. Mirrors the geometry report's strake-gap treatment (todo 2026-07-25 Sec. 23)."
+      "cite": "Brandt Wt!G9 + B29 + B31",
+      "notes": "186.82 + 2016.86 + 440.00 = 2643.68 lbf = 13.23 % of Brandt Wt!B12. Strake (Wt!H9 = 90.00) is EXCLUDED here since 2026-07-29 -- modeled at both L2 and L3 now, see the Strakes rows above. This remains the single largest identified contributor to every OEW row's negative %Diff in section 1, and it is a MISSING-COMPONENT gap, not an equation error."
     },
     {
       "parameter": "[6. SENSITIVITY TO THE ITEMS STILL OPEN AFTER THE 2026-07-25 DECISIONS -- Brandt = N/A, each applied ALONE on the settled L3 OEW base]",
@@ -570,7 +581,7 @@
     {
       "parameter": "OEW with L_d <- geom.L_duct (7.5 -> 14.0 ft) [lbf]",
       "fidelity": "L3",
-      "computed": "15906.80",
+      "computed": "15996.80",
       "reference": "N/A",
       "pctDiff": " - ",
       "secondSource": "N/A",
@@ -581,7 +592,7 @@
     {
       "parameter": "OEW with D_e <- geom.D_exit (3.33 -> 3.537022 ft) [lbf]",
       "fidelity": "L3",
-      "computed": "15730.27",
+      "computed": "15820.27",
       "reference": "N/A",
       "pctDiff": " - ",
       "secondSource": "N/A",
@@ -592,7 +603,7 @@
     {
       "parameter": "OEW with design_mach <- T.O. limit (2.0 -> 2.05) [lbf]",
       "fidelity": "L3",
-      "computed": "15725.41",
+      "computed": "15815.41",
       "reference": "N/A",
       "pctDiff": " - ",
       "secondSource": "N/A",
@@ -603,13 +614,13 @@
     {
       "parameter": "OEW with K_d = 0 (legal STRAIGHT-DUCT input) [lbf]",
       "fidelity": "L3",
-      "computed": "15477.79",
+      "computed": "15567.79",
       "reference": "N/A",
       "pctDiff": " - ",
       "secondSource": "N/A",
       "divergence": "DEFINITIONAL",
       "cite": "todo Sec. P4-11 (OPEN, unguarded by decision 6)",
-      "notes": "! THE ONLY PLACE THIS SILENT ZERO IS VISIBLE ANYWHERE. K_d = 0 is documented in WeightsL3.air_induction as the legitimate straight-duct value, and 0^0.182 = 0, so a legal documented input SILENTLY ZEROES the entire Eq. 15.10 air-induction component: 227.54 -> 0.0000 lbf, OEW 15705.33 -> 15477.79 (-227.54). No error, no warning, not even a NaN. NO GUARD IS ADDED, by explicit user decision 6, and there is deliberately NO unit test for this either -- testing unguarded behaviour would manufacture a false green. COROLLARY: if K_d = 0 is legal then the code's K_d cannot be Raymer's multiplicative base, because a straight duct does not weigh nothing, so the term's exponent or placement is itself suspect (todo Sec. 3a row 7). A guard alone would mask that."
+      "notes": "! THE ONLY PLACE THIS SILENT ZERO IS VISIBLE ANYWHERE. K_d = 0 is documented in WeightsL3.air_induction as the legitimate straight-duct value, and 0^0.182 = 0, so a legal documented input SILENTLY ZEROES the entire Eq. 15.10 air-induction component: 227.54 -> 0.0000 lbf, OEW 15795.33 -> 15567.79 (-227.54). No error, no warning, not even a NaN. NO GUARD IS ADDED, by explicit user decision 6, and there is deliberately NO unit test for this either -- testing unguarded behaviour would manufacture a false green. COROLLARY: if K_d = 0 is legal then the code's K_d cannot be Raymer's multiplicative base, because a straight duct does not weigh nothing, so the term's exponent or placement is itself suspect (todo Sec. 3a row 7). A guard alone would mask that."
     }
   ]
 }
