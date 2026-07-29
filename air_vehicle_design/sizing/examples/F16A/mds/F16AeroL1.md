@@ -3,9 +3,14 @@
 F-16A Block 10/15 Level-1 aerodynamics. `classdef F16AeroL1 < AeroModelL1`; every contract method is
 a one-line delegation into the `AeroL1` static toolbox.
 
-**L1 is geometry-free.** The drag polar is the Mattingly Fig. 2.10/2.11 fighter "Current" type-curve,
-which consumes no geometry, so this class takes **no** geometry object — contrast `F16AeroL2`/`L3`,
-whose constructors require one.
+**L1 takes no injected geometry object** — contrast `F16AeroL2`/`L3`, whose constructors require one.
+CD0(M) is still the Mattingly Fig. 2.10 fighter "Current" type-curve (geometry-free). **K1(M) is
+equation-based** (changed 2026-07-29): `AeroL1.k1_from_geometry` reuses `AeroL2`'s own Raymer
+equations (Eq. 12.48–12.50 subsonic, Eq. 12.51 supersonic), fed the real F-16 wing `AR`/`Lambda_LE_deg`
+— two genuine spec scalars read directly from JSON, not an injected geometry object. This replaced the
+old Mattingly Fig. 2.11 generic K1 curve (flat 0.18 subsonic), which was ~55% higher than Brandt's
+calibrated F-16 K1=0.1160 and pulled `design_study_01_L1`'s optimum W/S down to 76 instead of Brandt's
+104.59 (see `F16AeroL1.m`'s class header / git history for the full diagnostic).
 
 ---
 
@@ -26,11 +31,12 @@ Plain mutable `properties`, set once by the constructor.
 
 | Property | Value | Meaning / citation |
 |---|---|---|
-| `aircraft_category` | `"jet_fighter"` | The one canonical top-level class flag. Selects the Roskam CLmax row (translated to that table's own `fighter` row name by `AeroL1.to_CLmax_table_row`) and the Mattingly fighter curves |
+| `aircraft_category` | `"jet_fighter"` | The one canonical top-level class flag. Selects the Roskam CLmax row (translated to that table's own `fighter` row name by `AeroL1.to_CLmax_table_row`) and the Mattingly fighter curve |
 | `design_type` | `"uncambered"` | → `K2 = 0` [Mattingly §2.3.1] |
-| `curve` | `"Current"` | Selects the Mattingly technology curve ("Current"/"Future") |
+| `curve` | `"Current"` | Selects the Mattingly CD0 technology curve ("Current"/"Future") |
 | `cd0_curve_mach` / `cd0_curve_value` | breakpoint vectors | Mattingly Fig. 2.10 CD0-vs-Mach |
-| `k1_curve_mach` / `k1_curve_value` | breakpoint vectors | Mattingly Fig. 2.11 K1-vs-Mach |
+| `AR` | `3.0` | Real F-16 wing aspect ratio (same value as `f16a_L2.json` `.geometry.wing.AR`) — feeds `AeroL1.k1_from_geometry`, NOT a curve |
+| `Lambda_LE_deg` | `40.0` | Real F-16 wing LE sweep, deg (same value as `.geometry.wing.sweep_LE_deg`) — feeds `AeroL1.k1_from_geometry` |
 
 ## 3. Derived
 
@@ -42,7 +48,7 @@ None. L1 owns no geometry, so there are no `Dependent` getters on this class.
 
 | Method | Delegates to / does | Source |
 |---|---|---|
-| `drag_polar(state)` | `AeroL1.drag_polar` → `{CD0(M), K1(M), K2 = 0}` | Mattingly AED 2nd ed. Eq. 2.9, Fig. 2.10/2.11 |
+| `drag_polar(state)` | `AeroL1.drag_polar` → `{CD0(M) [curve], K1(M) [equation], K2 = 0}` | Mattingly AED 2nd ed. Eq. 2.9 / Fig. 2.10; Raymer Eq. 12.48-12.50/12.51 for K1 |
 | `get_CLmax(~)` | `AeroL1.get_CLmax` → `roskam_CLmax_value(category, "CL_max_clean")` | Roskam Vol. I Table 3.1 |
 | `get_Delta_CLmax_{TO,L}` | Table 3.1 column difference vs the clean column | Roskam Table 3.1 |
 | `get_CLmax_{TO,L}` | clean + the matching increment | Roskam Table 3.1 |
@@ -57,7 +63,7 @@ uses, so the clean base and the increments are guaranteed to come from one table
 
 | Quantity | Value |
 |---|---|
-| `drag_polar(36 kft, M 0.87)` | `CD0` 0.016000, `K1` 0.180000, `K2` 0 |
+| `drag_polar(36 kft, M 0.87)` | `CD0` 0.016000 [curve], `K1` 0.1168 [Raymer Eq. 12.48-12.50, AR=3.0/sweep=40deg], `K2` 0 |
 | `get_CLmax` | **1.50** (fighter clean mean) |
 | `get_CLmax_TO` / `_L` | 1.70 / 2.10 |
 
@@ -73,4 +79,4 @@ L1→L2 step (1.50 vs 0.913 from Raymer Eq. 12.15) is large and intentional — 
 
 | Item | Guard |
 |---|---|
-| The Mattingly Fig. 2.10/2.11 curves in `f16a_L1.json` are placeholder data (5 AAF worked points, not the digitized figures) | `TestAeroL1.testTODO_MattinglyCurvesArePlaceholder` — red until replaced |
+| The Mattingly Fig. 2.10 CD0 curve in `f16a_L1.json` is placeholder data (5 AAF worked points, not the digitized figure) | `TestAeroL1.testTODO_MattinglyCurvesArePlaceholder` — red until replaced |

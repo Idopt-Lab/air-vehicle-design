@@ -10,9 +10,12 @@
   },
 
   "aerodynamics": {
-    "_src": "design_type [Mattingly Sec. 2.3.1: uncambered -> K2=0]; curve [Mattingly Figs. 2.10/2.11 technology arrays]",
+    "_src": "design_type [Mattingly Sec. 2.3.1: uncambered -> K2=0]; curve [Mattingly Fig. 2.10 CD0 technology array]; AR/Lambda_LE_deg [real F-16 wing spec, same values as f16a_L2.json .geometry.wing -- Brandt Main! tab -- feeding AeroL1.k1_from_geometry (Raymer Eq. 12.48-12.50/12.51), NOT a curve table -- see F16AeroL1.m class header]",
     "design_type": "uncambered",
     "curve": "Current",
+
+    "AR": 3.0,
+    "Lambda_LE_deg": 40.0,
 
     "cd0_curve": {
       "_src": "[Mattingly Fig. 2.10 CD0(M) fighter] via 5 AAF worked points (mattingly_data.md PART 9); Future = copy of Current",
@@ -36,31 +39,6 @@
         {"mach": 1.6, "value": 0.028},
         {"mach": 1.8, "value": 0.028},
         {"mach": 2.0, "value": 0.028}
-      ]
-    },
-
-    "k1_curve": {
-      "_src": "[Mattingly Fig. 2.11 K1(M) fighter] via 5 AAF worked points (mattingly_data.md PART 9); Future = copy of Current",
-      "_placeholder": true,
-      "Current": [
-        {"mach": 0.0, "value": 0.18},
-        {"mach": 0.8, "value": 0.18},
-        {"mach": 0.9, "value": 0.18},
-        {"mach": 1.2, "value": 0.20},
-        {"mach": 1.5, "value": 0.27},
-        {"mach": 1.6, "value": 0.288},
-        {"mach": 1.8, "value": 0.324},
-        {"mach": 2.0, "value": 0.360}
-      ],
-      "Future": [
-        {"mach": 0.0, "value": 0.18},
-        {"mach": 0.8, "value": 0.18},
-        {"mach": 0.9, "value": 0.18},
-        {"mach": 1.2, "value": 0.20},
-        {"mach": 1.5, "value": 0.27},
-        {"mach": 1.6, "value": 0.288},
-        {"mach": 1.8, "value": 0.324},
-        {"mach": 2.0, "value": 0.360}
       ]
     }
   },

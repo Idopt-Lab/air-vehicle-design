@@ -1,11 +1,18 @@
 classdef TestAeroL1 < matlab.unittest.TestCase
 %TESTAEROL1  Tier-1 unit/correctness tests for the AeroL1 toolbox + F16AeroL1.
 %
-%   L1 is a GEOMETRY-FREE Mattingly type-curve drag polar (Aero deep-dive
-%   Phase C):
+%   L1's drag polar (Aero deep-dive Phase C, K1 changed to equation-based
+%   2026-07-29 -- see F16AeroL1.m's class header for the full diagnostic):
 %     CD = CD0(M) + K1(M)*CL^2 + K2*CL         Mattingly AED 2nd ed. Eq. 2.9
-%     CD0(M), K1(M)  interpolated from the fighter "Current" curve tables
-%                    (f16a_L1.json .aerodynamics cd0_curve / k1_curve)
+%     CD0(M)         interpolated from the fighter "Current" curve table
+%                    (f16a_L1.json .aerodynamics cd0_curve) -- still geometry-free
+%     K1(M)          AeroL1.k1_from_geometry(AR, Lambda_LE_deg, M): real F-16
+%                    wing AR=3.0/Lambda_LE_deg=40.0 (genuine spec scalars, NOT
+%                    an injected geometry object) through AeroL2's own Raymer
+%                    equations -- Eq. 12.48-12.50 subsonic (M<0.95), Eq. 12.51
+%                    supersonic (M>=1.05), NaN in the transonic band between
+%                    (AeroL2.flight_regime; matches L2/L3's convention -- a
+%                    real behavior change from the old smooth Mattingly curve)
 %     K2 = 0         uncambered fighter          Mattingly Sec. 2.3.1
 %     CLmax = 1.50   fighter clean, ONE table    Roskam Vol. I Table 3.1
 %                    (TO 1.70 / landing 2.10; the increments are Table 3.1
@@ -71,37 +78,87 @@ classdef TestAeroL1 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % Mattingly polar assembly (interpolation + K2 rule) at F16AeroL1 level
+        % K1 from geometry (Raymer Eq. 12.48-12.50 subsonic / 12.51 supersonic)
+        % -- AeroL1.k1_from_geometry, low-level: pure math, no object access.
+        % Reuses the exact same AeroL2 primitives TestAeroL2 already
+        % hand-derives (testOswaldEffEq1249Swept/testK1Subsonic/SupersonicFormula),
+        % so the intermediate e_osw/K1 values here are the same numbers, not
+        % re-derived independently.
         % ================================================================== %
 
-        function testDragPolarInterpolatedAtMach1p05(tc)
-            % Full F16AeroL1.drag_polar at M=1.05 exercises real interpolation
-            % on the fighter "Current" curves. Breakpoints straddle 1.05:
-            %   CD0: (0.9,0.016)->(1.2,0.028); K1: (0.9,0.18)->(1.2,0.20).
-            %   frac = (1.05-0.9)/(1.2-0.9) = 0.15/0.30 = 0.5
-            %   CD0 = 0.016 + 0.5*(0.028-0.016) = 0.016 + 0.006 = 0.022
-            %   K1  = 0.18  + 0.5*(0.20 -0.18 ) = 0.18  + 0.010 = 0.190
+        function testK1FromGeometrySubsonic(tc)
+            % M=0.5 (< AeroL2.MACH_SUBSONIC_MAX=0.95) -> subsonic branch.
+            % AR=3, Lambda_LE_deg=40 (real F-16 wing spec, matches
+            % f16a_L2.json .geometry.wing) -> Eq. 12.49 (Lambda_LE>=30):
+            %   e_osw = 4.61*(1-0.045*3^0.68)*cos(40)^0.15 - 3.1 = 0.9086192166
+            %   (same hand-derivation as TestAeroL2.testOswaldEffEq1249Swept)
+            %   K1 = 1/(pi*AR*e_osw) = 1/(pi*3*0.9086192166) = 0.1167742146
+            received = AeroL1.k1_from_geometry(3, 40, 0.5);
+            tc.verifyEqual(received, 0.1167742146, 'RelTol', 1e-6);
+        end
+
+        function testK1FromGeometrySupersonic(tc)
+            % M=1.6 (>= AeroL2.MACH_SUPERSONIC_MIN=1.05) -> supersonic branch,
+            % Eq. 12.51: K1 = AR*(M^2-1)*cos(Lambda_LE)/(4*AR*beta-2),
+            % beta=sqrt(M^2-1). AR=3, Lambda_LE_deg=40, M=1.6:
+            %   beta = sqrt(1.56) = 1.2489996
+            %   num  = 3*1.56*cos(40) = 4.68*0.7660444 = 3.5850879
+            %   den  = 4*3*1.2489996 - 2 = 14.987995 - 2 = 12.987995
+            %   K1   = 3.5850879/12.987995 = 0.2760309
+            received = AeroL1.k1_from_geometry(3, 40, 1.6);
+            tc.verifyEqual(received, 0.2760308993, 'RelTol', 1e-6);
+        end
+
+        function testK1FromGeometryTransonicNaN(tc)
+            % Between AeroL2.MACH_SUBSONIC_MAX=0.95 and MACH_SUPERSONIC_MIN=1.05
+            % neither branch applies (Eq. 12.51 has a pole near M=1, same "not
+            % modeled" convention as AeroL2.drag_polar -- see AeroL1.m/AeroL2.m
+            % class headers). M=1.0 is the midpoint of that band.
+            received = AeroL1.k1_from_geometry(3, 40, 1.0);
+            tc.verifyTrue(isnan(received), ...
+                'K1 must be NaN in the transonic band (Eq. 12.51 pole near M=1).');
+        end
+
+        % ================================================================== %
+        % Full drag_polar assembly at F16AeroL1 level: CD0 curve-interpolated,
+        % K1 equation-based (changed 2026-07-29), K2 from the Mattingly rule.
+        % ================================================================== %
+
+        function testDragPolarAtMach1p05(tc)
+            % Full F16AeroL1.drag_polar at M=1.05: CD0 still interpolates the
+            % Mattingly "Current" curve (breakpoints straddle 1.05); K1 is now
+            % AeroL1.k1_from_geometry's SUPERSONIC branch (flight_regime(1.05)
+            % = "supersonic", AeroL2.MACH_SUPERSONIC_MIN=1.05).
+            %   CD0: (0.9,0.016)->(1.2,0.028), frac=(1.05-0.9)/0.3=0.5
+            %        CD0 = 0.016 + 0.5*(0.028-0.016) = 0.022
+            %   K1  = AeroL2.K1_supersonic(1.05, 3, 40) = 0.1278907226
+            %        (beta=sqrt(1.05^2-1)=0.3201562, num=3*0.1025*cos(40)
+            %        =0.2355587, den=4*3*0.3201562-2=1.8418744,
+            %        K1=0.2355587/1.8418744=0.1278907)
             %   K2  = 0 (uncambered fighter, Mattingly Sec. 2.3.1)
             a     = F16AeroL1(f16a_spec_path(1));
             polar = a.drag_polar(AircraftState(0, 1.05));
-            tc.verifyEqual(polar.CD0, 0.022, 'RelTol', 1e-4);
-            tc.verifyEqual(polar.K1,  0.190, 'RelTol', 1e-4);
-            tc.verifyEqual(polar.K2,  0.0,   'AbsTol', 1e-12);
+            tc.verifyEqual(polar.CD0, 0.022,        'RelTol', 1e-4);
+            tc.verifyEqual(polar.K1,  0.1278907226, 'RelTol', 1e-6);
+            tc.verifyEqual(polar.K2,  0.0,           'AbsTol', 1e-12);
         end
 
-        function testDragPolarNoTransonicNaN(tc)
-            % L1 has NO transonic guard (a tabulated figure has no Eq.12.51
-            % pole) -- it must return finite values at M=1.0, unlike L2/L3.
-            % Hand-computed at M=1.0:
-            %   frac = (1.0-0.9)/(1.2-0.9) = 0.1/0.3 = 1/3
-            %   CD0 = 0.016 + (1/3)*(0.028-0.016) = 0.016 + 0.004 = 0.020
-            %   K1  = 0.18  + (1/3)*(0.20 -0.18 ) = 0.18 + 0.006667 = 0.1866667
+        function testDragPolarK1TransonicNaNCD0StaysFinite(tc)
+            % CHANGED BEHAVIOR (2026-07-29): unlike the old Mattingly K1
+            % curve (a smooth table, no pole), the new equation-based K1 has
+            % a real transonic gap (Eq. 12.51 pole near M=1, same as L2/L3 --
+            % see AeroL1.k1_from_geometry). At M=1.0, K1 is now NaN. CD0 is
+            % UNAFFECTED -- it still interpolates the Mattingly curve, which
+            % has no such gap, so drag_polar's CD0 stays finite even while K1
+            % does not. (Superseded testDragPolarNoTransonicNaN, which
+            % asserted the opposite of the new K1 behavior; do not re-add it.)
+            %   CD0: frac=(1.0-0.9)/0.3=1/3, CD0=0.016+(1/3)*0.012=0.020
+            %   K1 = NaN (transonic band)
             a     = F16AeroL1(f16a_spec_path(1));
             polar = a.drag_polar(AircraftState(0, 1.0));
-            tc.verifyTrue(all(isfinite([polar.CD0, polar.K1, polar.K2])), ...
-                'L1 drag polar must stay finite through the transonic band.');
-            tc.verifyEqual(polar.CD0, 0.020,            'RelTol', 1e-4);
-            tc.verifyEqual(polar.K1,  0.18 + 0.02/3,    'RelTol', 1e-4);
+            tc.verifyEqual(polar.CD0, 0.020, 'RelTol', 1e-4);
+            tc.verifyTrue(isnan(polar.K1), 'K1 must be NaN in the transonic band.');
+            tc.verifyEqual(polar.K2, 0.0, 'AbsTol', 1e-12);
         end
 
         function testMattinglyK2ZeroForUncambered(tc)
@@ -264,19 +321,20 @@ classdef TestAeroL1 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testTODO_MattinglyCurvesArePlaceholder(tc)
-            % The Mattingly Fig. 2.10 (CD0) / Fig. 2.11 (K1) fighter curves are
-            % NOT in the repo -- f16a_L1.json's .aerodynamics cd0_curve/k1_curve
-            % blocks are seeded from 5 AAF worked points and marked
-            % "_placeholder": true. This FAILS on purpose until the real
-            % digitized curves replace the placeholder (remove the
-            % "_placeholder" flags to turn it green).
+            % The Mattingly Fig. 2.10 CD0 fighter curve is NOT in the repo --
+            % f16a_L1.json's .aerodynamics cd0_curve block is seeded from 5
+            % AAF worked points and marked "_placeholder": true. This FAILS
+            % on purpose until the real digitized curve replaces the
+            % placeholder (remove the "_placeholder" flag to turn it green).
+            % NOTE (2026-07-29): this was previously CD0(M)/K1(M) -- K1 no
+            % longer comes from a curve (see AeroL1.k1_from_geometry / class
+            % header), so it is no longer a placeholder and is dropped here.
             A = TestAeroL1.readAeroJSON('f16a_L1.json').aerodynamics;
-            isPlaceholder = (isfield(A.cd0_curve, 'x_placeholder') && A.cd0_curve.x_placeholder) || ...
-                            (isfield(A.k1_curve,  'x_placeholder') && A.k1_curve.x_placeholder);
+            isPlaceholder = isfield(A.cd0_curve, 'x_placeholder') && A.cd0_curve.x_placeholder;
             tc.verifyFalse(isPlaceholder, ...
-                ['TODO: Mattingly Fig. 2.10/2.11 fighter CD0(M)/K1(M) curves are ' ...
-                 'PLACEHOLDER data (5 AAF worked points, not the digitized figures). ' ...
-                 'Transcribe the real curves and clear "_placeholder".']);
+                ['TODO: Mattingly Fig. 2.10 fighter CD0(M) curve is PLACEHOLDER ' ...
+                 'data (5 AAF worked points, not the digitized figure). ' ...
+                 'Transcribe the real curve and clear "_placeholder".']);
         end
 
     end

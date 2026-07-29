@@ -265,12 +265,63 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         end
 
         function testSupersonicCD0IsPositiveFinite(tc)
-            % L2 supersonic CD0 = Cf(Re,M)*S_wet/S_ref (skin friction only, NO
-            % wave drag -- that is L3). Just check it is a positive finite
-            % number at M=1.5; the (low) magnitude vs Brandt is a report item.
+            % The GENERIC AeroL2.get_CD0_supersonic toolbox static is skin
+            % friction only (no wave drag -- see its own header); F16AeroL2
+            % overrides drag_polar's supersonic branch to add Brandt's own
+            % wave-drag term on top (see testSupersonicCD0ExceedsSubsonic and
+            % testComputeCD0WaveMatchesBrandtFormula below), so a.drag_polar
+            % here exercises the F-16-specific path, not the bare toolbox one.
+            % Just check it is a positive finite number at M=1.5.
             a     = TestAeroL2.makeAero();
             polar = a.drag_polar(AircraftState(0, 1.5));
             tc.verifyTrue(isfinite(polar.CD0) && polar.CD0 > 0);
+        end
+
+        % ================================================================== %
+        % F-16-specific supersonic wave drag (F16AeroL2, added 2026-07-29)
+        % ================================================================== %
+
+        function testComputeCD0WaveMatchesBrandtFormula(tc)
+            % CD0_wave = (4.5*pi/S_ref)*(Amax/L_aircraft)^2 * E_WD
+            %            * (0.74 + 0.37*cos(Lambda_LE)) * [1 - 0.3*sqrt(M - M_CD0max)]
+            % M_CD0max = (1/cos(Lambda_LE))^0.2   [Brandt F-16A.xls Aero!B8/G8]
+            % Using the F-16's genuine live spec/geometry values (Amax=27.4889
+            % [fuselage-envelope ellipse, F16GeomL2], L_aircraft=47.65, S_ref=300,
+            % E_WD=2.2, Lambda_LE=40 deg) at M=1.6:
+            %   M_CD0max = (1/cos(40))^0.2 = (1/0.7660444)^0.2 = 1.0547395
+            %   Dq_SH = 4.5*pi*(27.4889357/47.65)^2 = 14.137167*0.33266322 = 4.70290...
+            %   CD0_wave = (4.70290.../300)*2.2*(0.74+0.37*0.7660444)*(1-0.3*sqrt(1.6-1.0547395))
+            %            = 0.01567633*2.2*1.02344643*0.77841... = 0.0274891 (see RelTol)
+            a  = TestAeroL2.makeAero();
+            st = AircraftState(0, 1.6);
+            M_CD0max = (1/cosd(a.Lambda_LE_deg))^0.2;
+            Dq_SH    = 4.5*pi*(a.Amax_ft2/a.L_aircraft_ft)^2;
+            expected = (Dq_SH/a.S_ref) * a.E_WD * (0.74 + 0.37*cosd(a.Lambda_LE_deg)) ...
+                * (1 - 0.3*sqrt(1.6 - M_CD0max));
+            tc.verifyEqual(a.compute_CD0_wave(st), expected, 'RelTol', 1e-10);
+            tc.verifyEqual(a.compute_CD0_wave(st), 0.0274890893, 'RelTol', 1e-6);
+        end
+
+        function testSupersonicCD0ExceedsSubsonic(tc)
+            % Physical sanity the pre-fix code violated: supersonic CD0 (wave
+            % drag added) must exceed the subsonic CD0 at the same aircraft,
+            % never read BELOW it. Guards the exact regression the 2026-07-29
+            % investigation found (Max Mach CD0 was 0.00787, below the
+            % subsonic 0.01711 -- backwards).
+            a = TestAeroL2.makeAero();
+            cd0_sub = a.drag_polar(AircraftState(0, 0.8)).CD0;
+            cd0_sup = a.drag_polar(AircraftState(0, 1.6)).CD0;
+            tc.verifyGreaterThan(cd0_sup, cd0_sub);
+        end
+
+        function testCD0WaveClampedBelowMCD0max(tc)
+            % M_CD0max = 1.0547395 for Lambda_LE=40 deg. Just above
+            % MACH_SUPERSONIC_MIN (1.05) but below M_CD0max, the sqrt argument
+            % would be negative; compute_CD0_wave must clamp it to 0 (a flat
+            % wave-drag-onset plateau) rather than return a complex/NaN value.
+            a = TestAeroL2.makeAero();
+            val = a.compute_CD0_wave(AircraftState(0, 1.06));
+            tc.verifyTrue(isreal(val) && isfinite(val));
         end
 
         % ================================================================== %
@@ -434,6 +485,18 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             J = TestAeroL2.readAeroL2JSON();
             tc.verifyFalse(isfield(J.airfoil, 'x_TODO_cl_alpha_per_deg'), ...
                 'TODO: NACA 64A204 2-D lift slope (0.105/deg) is an unpinned estimate.');
+        end
+
+        function testTODO_EWDCalibrationInput(tc)
+            % E_WD = 2.2 is a TUNED wave-drag multiplier back-checked to
+            % Brandt/Casey, NOT a measured F-16 datum (same status as
+            % F16AeroL3's identical E_WD -- TestAeroL3.testTODO_EWDCalibrationInput).
+            % f16a_L2.json's .aerodynamics still carries
+            % "_TODO_wave_drag_factor_E_WD". FAILS until it is either sourced
+            % or explicitly accepted as a calibration knob.
+            J = TestAeroL2.readAeroL2JSON();
+            tc.verifyFalse(isfield(J, 'x_TODO_wave_drag_factor_E_WD'), ...
+                'TODO: E_WD=2.2 is a tuned calibration input, not a spec value.');
         end
 
     end

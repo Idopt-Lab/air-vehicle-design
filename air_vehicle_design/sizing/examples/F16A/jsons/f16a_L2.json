@@ -19,7 +19,7 @@
   },
 
   "aerodynamics": {
-    "_src": "e_method 'official' [Raymer Eq. 12.48/12.49]; airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
+    "_src": "e_method 'official' [Raymer Eq. 12.48/12.49]; airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]; wave_drag_factor_E_WD [Brandt F-16A.xls Aero tab Sears-Haack wave-drag term, same source/value as f16a_L3.json]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
     "e_method": "official",
     "airfoil": {
       "name": "NACA 64A204",
@@ -31,7 +31,10 @@
       "_TODO_alpha_L0_deg": "alpha_L0 = -1.01 unverified against a primary NACA 64A204 source (thin-airfoil band -1.4 to -1.9); remove when pinned. Guard: TestAeroL2.testTODO_AlphaL0Unverified.",
       "_TODO_cl_max_2D": "cl_max_2D = 1.20 (Abbott & von Doenhoff) conflicts with NTRS-19870017427's 1.0; remove when reconciled. Guard: TestAeroL2.testTODO_ClMax2DUnverified.",
       "_TODO_cl_alpha_per_deg": "cl_alpha = 0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guard: TestAeroL2.testTODO_ClAlpha2DUnverified."
-    }
+    },
+    "wave_drag_factor_E_WD": 2.2,
+    "_TODO_wave_drag_factor_E_WD": "E_WD = 2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or accepted as a calibration knob. Same value/status as f16a_L3.json's identical key. Guard: TestAeroL2.testTODO_EWDCalibrationInput.",
+    "_amax_via_DI": "Amax and L_aircraft are NOT aero inputs: both arrive by DI from the injected L2 geometry object (Amax a Dependent, FUSELAGE-ENVELOPE ellipse at L2, distinct from L3's area-ruled buildup; L_aircraft = .geometry.overall_length_ft)."
   },
 
   "propulsion": {

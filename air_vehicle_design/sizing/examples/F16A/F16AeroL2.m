@@ -3,7 +3,22 @@ classdef F16AeroL2 < AeroModelL2
 %
 %   Inherits AeroModelL2 (abstract enforcer).  L2 is the GEOMETRY-DEPENDENT
 %   clean drag polar + finite-wing lift; every abstract method delegates to the
-%   AeroL2 static toolbox.
+%   AeroL2 static toolbox, EXCEPT drag_polar's supersonic branch (see below).
+%
+%   SUPERSONIC WAVE DRAG (added 2026-07-29): the generic AeroL2 toolbox's
+%   supersonic CD0 is turbulent skin friction only (no wave-drag term -- see
+%   AeroL2.get_CD0_supersonic's header), which reads LOWER than the subsonic
+%   CD0 at the F-16's M=1.6 Max Mach point -- physically backwards, and found
+%   to be the dominant reason the L2 constraint diagram's Max Mach curve read
+%   ~70-80% low vs. Brandt across the whole W/S range. This class overrides
+%   drag_polar to add Brandt's own whole-aircraft wave-drag increment
+%   (compute_CD0_wave, Brandt Aero!B8/G8) on top of the subsonic CD0 for
+%   M >= MACH_SUPERSONIC_MIN -- deliberately kept HERE (F-16-specific), not in
+%   the generic toolbox, since it is Brandt's own tuned formula (E_WD=2.2),
+%   not a generic textbook equation another aircraft could reuse untuned. This
+%   is intentionally simpler than L3's full Raymer Eq. 12.44/12.45 buildup
+%   (F16AeroL3.compute_CD0_wave) -- no per-component analysis, just the
+%   whole-aircraft Sears-Haack term -- appropriate to L2's fidelity tier.
 %
 %   ============================================================================
 %   DEPENDENCY INJECTION + INPUT vs DERIVED (optimization-ready design).
@@ -68,6 +83,14 @@ classdef F16AeroL2 < AeroModelL2
         delta_flap_TO_deg = 15
         delta_flap_L_deg  = 20
         k_f_flap          = 0.28    % Raymer 6th ed. Eq. 12.62 (partial-span)
+
+        %E_WD  Wave-drag efficiency factor [Brandt F-16A.xls Aero tab, Aero!B8
+        %   formula; VnV/BrandtF16A/BrandtAerodynamics.m's Ewd / readme_aero.md
+        %   "Wave drag factor (Sears-Haack reference)"]. A TUNED calibration
+        %   input (back-checked to Brandt/Casey, not a measured F-16 datum) --
+        %   same value/status as F16AeroL3's E_WD; see f16a_L2.json's
+        %   "_TODO_wave_drag_factor_E_WD" and TestAeroL2.testTODO_EWDCalibrationInput.
+        E_WD
     end
 
     % ======================================================================= %
@@ -93,6 +116,15 @@ classdef F16AeroL2 < AeroModelL2
         taper             % —     wing taper ratio             <- geom.lambda_wing
         L_char            % ft    characteristic length for the aircraft-level
                           %       supersonic Reynolds number   <- geom.L_fus
+
+        %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, read LIVE
+        %   from the injected geometry object (mirrors F16AeroL3's identically-
+        %   named Dependent pair). TIER-SPECIFIC, deliberately: obj.geom.Amax is
+        %   the fuselage-ENVELOPE ellipse (pi/4)*W*H at L2 -- the correct
+        %   L2-fidelity form per F16GeomL2.m's Amax getter and CLAUDE.md's Amax
+        %   tiering note -- NOT L3's area-ruled buildup. Do not "unify" the two.
+        Amax_ft2          % ft^2  <- geom.Amax (fuselage-envelope ellipse at L2)
+        L_aircraft_ft     % ft    <- geom.L_aircraft
     end
 
     methods
@@ -133,6 +165,7 @@ classdef F16AeroL2 < AeroModelL2
             obj.cl_max_2D    = af.cl_max_2D;
             % JSON gives the 2-D lift slope per degree; Raymer Eq. 12.8 uses 1/rad.
             obj.cl_alpha_2D  = af.cl_alpha_per_deg * 180/pi;
+            obj.E_WD         = A.wave_drag_factor_E_WD;
         end
 
         % ---- Dependent geometry getters (live from obj.geom) -------------- %
@@ -148,10 +181,64 @@ classdef F16AeroL2 < AeroModelL2
         function v = get.Lambda_c4_deg(obj); v = obj.geom.QC_sweep_wing; end
         function v = get.taper(obj);         v = obj.geom.lambda_wing;   end
         function v = get.L_char(obj);        v = obj.geom.L_fus;         end
+        function v = get.Amax_ft2(obj);      v = obj.geom.Amax;          end
+        function v = get.L_aircraft_ft(obj); v = obj.geom.L_aircraft;    end
 
         % ---- Core contract (base) ----------------------------------------- %
         function polar = drag_polar(obj, state)
-            polar = AeroL2.drag_polar(obj, state);
+        %DRAG_POLAR  Subsonic/transonic: unchanged, delegates to the generic
+        %   AeroL2 toolbox. Supersonic: F-16-SPECIFIC override -- the generic
+        %   toolbox's AeroL2.get_CD0_supersonic is turbulent skin friction only
+        %   (no wave drag; see its own header), which reads BELOW the subsonic
+        %   CD0 at the F-16's Max Mach point (M=1.6) -- physically backwards,
+        %   and the dominant reason the L2 constraint diagram's Max Mach curve
+        %   used to read 70-80% low vs. Brandt across the full W/S range
+        %   (2026-07-29 investigation). This class instead adds Brandt's own
+        %   whole-aircraft wave-drag increment (compute_CD0_wave) on top of the
+        %   subsonic CD0, matching the "CD0 = CD0_subsonic + CD_wave" split
+        %   Brandt's own Aero-tab methodology uses. K1/K2 are untouched (the
+        %   generic K1_supersonic already tracks Brandt's supersonic K1 to a
+        %   few percent -- not part of the gap this override fixes).
+            M = state.mach;
+            regime = AeroL2.flight_regime(M);
+            if regime == "supersonic"
+                cd0 = AeroL2.get_CD0(obj) + obj.compute_CD0_wave(state);
+                k1  = AeroL2.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
+                polar = struct('CD0', cd0, 'K1', k1, 'K2', 0);
+            else
+                polar = AeroL2.drag_polar(obj, state);
+            end
+        end
+
+        function val = compute_CD0_wave(obj, state)
+        %COMPUTE_CD0_WAVE  Whole-aircraft supersonic wave-drag increment.
+        %   [Brandt F-16A.xls Aero tab, Aero!B8/G8 -- Sears-Haack volume-wave-
+        %   drag term; VnV/BrandtF16A/BrandtAerodynamics.m's aero_at_mach,
+        %   readme_aero.md "Wave drag factor (Sears-Haack reference)"]:
+        %     CD0_wave = (4.5*pi/S_ref)*(Amax/L_aircraft)^2 * E_WD
+        %                * (0.74 + 0.37*cos(Lambda_LE)) * [1 - 0.3*sqrt(M - M_CD0max)]
+        %     M_CD0max = (1/cos(Lambda_LE))^0.2                          [Aero!G8]
+        %   Distinct from Raymer Eq. 12.44/12.45's own sweep/Mach fairing used
+        %   at L3 (F16AeroL3.compute_CD0_wave) -- same (9*pi/2)=(4.5*pi)
+        %   Sears-Haack coefficient, different empirical correction terms; this
+        %   is Brandt's own formula, not a Raymer-textbook one, so it is kept
+        %   here (F-16-specific) rather than folded into the generic AeroL2
+        %   toolbox. Amax/L_aircraft read LIVE from the injected L2 geometry
+        %   (obj.geom.Amax = fuselage-envelope ellipse, the L2-fidelity form --
+        %   see the Amax_ft2 property comment).
+        %
+        %   Clamped at M_CD0max via max(0, ...): Brandt's own worksheet only
+        %   applies this term for M >= M_wave, fairing linearly from Mcrit in
+        %   the transition band below that -- reproducing that finer transonic
+        %   fairing is out of scope here (AeroL2's transonic band, 0.95-1.05,
+        %   is already explicitly "not modeled"); the clamp just keeps the
+        %   sqrt real for the narrow sliver between MACH_SUPERSONIC_MIN (1.05)
+        %   and M_CD0max (1.0547 for the F-16's 40 deg LE sweep).
+            M = state.mach;
+            M_CD0max = (1 / cosd(obj.Lambda_LE_deg))^0.2;
+            Dq_SH = 4.5*pi * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
+            val = (Dq_SH / obj.S_ref) * obj.E_WD * (0.74 + 0.37*cosd(obj.Lambda_LE_deg)) ...
+                * (1 - 0.3*sqrt(max(0, M - M_CD0max)));
         end
 
         function CLmax = get_CLmax(obj, ~)

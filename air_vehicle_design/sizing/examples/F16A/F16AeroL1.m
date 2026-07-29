@@ -1,23 +1,46 @@
 classdef F16AeroL1 < AeroModelL1
 %F16AEROL1  F-16A Block 10 Level-1 aerodynamics student class.
 %
-%   Inherits AeroModelL1 (abstract enforcer).  L1 is GEOMETRY-FREE: the drag
-%   polar is the Mattingly Fig. 2.10/2.11 fighter "Current" type-curve
-%   (CD = CD0(M) + K1(M)*CL^2 + K2*CL, K2=0 for the uncambered fighter type,
-%   Mattingly AED 2nd ed. Eq. 2.9), and CLmax is a Roskam type-based lookup.
-%   Every abstract method delegates to the AeroL1 static toolbox.
+%   Inherits AeroModelL1 (abstract enforcer). The drag polar is
+%   CD = CD0(M) + K1(M)*CL^2 + K2*CL (Mattingly AED 2nd ed. Eq. 2.9), and
+%   CLmax is a Roskam type-based lookup. Every abstract method delegates to
+%   the AeroL1 static toolbox.
 %
-%   NO GEOMETRY: the Mattingly type-curve polar consumes no geometry, so this
-%   class takes NO geometry object (contrast F16AeroL2/L3, whose constructors
-%   require an injected geometry object). Inputs come from the .aerodynamics
-%   block of the unified L1 JSON (f16a_spec_path(1)): aircraft type / camber
-%   class / technology-curve selector, plus the folded-in Mattingly Fig.
-%   2.10 (CD0) / Fig. 2.11 (K1) "Current"/"Future" curve tables.
+%   CD0(M): interpolated from the Mattingly Fig. 2.10 fighter "Current"
+%   type-curve (still geometry-free -- see cd0_curve_mach/value below).
+%
+%   K1(M): EQUATION-BASED, NOT A CURVE (changed 2026-07-29, user direction --
+%   see git history for the full diagnostic trail). Previously interpolated
+%   Mattingly's GENERIC Fig. 2.11 fighter type-curve (flat 0.18 subsonic),
+%   which was ~55% higher than Brandt's own calibrated F-16 K1=0.1160 and,
+%   because ThrustConstraint's induced-drag term scales with K1*n^2
+%   (ThrustConstraint.m compute_B), pulled design_study_01_L1's
+%   optimal_point() down to W/S=76.00 instead of Brandt's W/S=104.59 (the
+%   "Combat Subsonic" n=4.5 sustained-turn condition rose ~55% steeper than
+%   Brandt's own chart and became binding too soon). K1 is now computed by
+%   AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach), which
+%   reuses AeroL2's own Raymer equations (Eq. 12.48-12.50 subsonic, Eq. 12.51
+%   supersonic) fed the F-16's real wing AR/sweep (this class's AR/
+%   Lambda_LE_deg properties below) -- reproduces Brandt's calibrated K1 to
+%   within 0.7% at subsonic Mach (e_osw=0.9086, K1=0.1168 vs. Brandt's
+%   0.1160) essentially from first principles, and raises
+%   design_study_01_L1's WS_opt to 111.00 (T/W=0.7252), much closer to
+%   Brandt. See AeroL1.m's class header ("K1 -- EQUATION-BASED, NOT A CURVE")
+%   for the equations and the resulting transonic-NaN-band caveat (K1 is
+%   NaN for 0.95<=M<1.05 -- CD0 has no such gap).
+%
+%   AR/Lambda_LE_deg ARE GENUINE SPEC DATA, NOT A GEOMETRY OBJECT: this class
+%   still takes NO geometry object (contrast F16AeroL2/L3, whose constructors
+%   require an injected geometry object) -- AR and Lambda_LE_deg are two
+%   scalar wing-spec inputs read directly from the .aerodynamics JSON block
+%   (same real F-16 values as f16a_L2.json's .geometry.wing: AR=3.0,
+%   sweep_LE_deg=40.0), the same "Layer 2 wires in genuine spec data" pattern
+%   every other Tier-3 class uses, not derived/computed geometry.
 %
 %   Inheritance: AerodynamicsBase -> AeroModelL1 -> F16AeroL1
 %
-%   Expected outputs (F-16A "Current" fighter curve, placeholder data):
-%     drag_polar(M=0.6): CD0~0.016, K1~0.18, K2=0
+%   Expected outputs (F-16A "Current" fighter curve for CD0; equation-based K1):
+%     drag_polar(M=0.6): CD0~0.016, K1~0.1168 [Raymer Eq. 12.48-12.50, AR=3.0/sweep=40deg], K2=0
 %     get_CLmax        : 1.50  [Roskam Vol. I Table 3.1, fighter clean mean]
 %     get_CLmax_TO     : 1.70  [Table 3.1 fighter TO mean]
 %     get_CLmax_L      : 2.10  [Table 3.1 fighter landing mean]
@@ -31,21 +54,27 @@ classdef F16AeroL1 < AeroModelL1
 %   (Raymer Eq. 12.15, geometry-based) -- see AeroL1.get_CLmax's header.
 
     % ======================================================================= %
-    % INPUTS -- aircraft-type / technology-curve spec data (from JSON;
-    % mutable). L1 owns NO geometry, so there are no Dependent geometry getters
-    % here (contrast F16AeroL2/L3).
+    % INPUTS -- aircraft-type / technology-curve spec data, plus AR/Lambda_LE_deg
+    % (genuine wing spec scalars, NOT an injected geometry object -- see class
+    % header). All from JSON; mutable. L1 owns NO geometry object, so there are
+    % no Dependent geometry getters here (contrast F16AeroL2/L3).
     % ======================================================================= %
     properties
-        aircraft_category % string; canonical class flag, read from the single top-level key. Selects the Roskam CLmax row (translated to that table's own "fighter" name by AeroL1.to_CLmax_table_row) and the Mattingly fighter curves.
+        aircraft_category % string; canonical class flag, read from the single top-level key. Selects the Roskam CLmax row (translated to that table's own "fighter" name by AeroL1.to_CLmax_table_row) and the Mattingly fighter curve.
         design_type       % string; "uncambered" -> K2=0 (Mattingly Sec. 2.3.1)
-        curve             % string; Mattingly technology curve ("Current"/"Future")
+        curve             % string; Mattingly technology curve ("Current"/"Future"), CD0 only (see class header)
 
-        % Mattingly Fig. 2.10 (CD0) / Fig. 2.11 (K1) "Current"-curve breakpoints,
-        % (mach, value) vectors read from the placeholder curve JSONs.
+        % Mattingly Fig. 2.10 "Current"-curve breakpoints, (mach, value)
+        % vectors read from the placeholder CD0 curve JSON. K1 no longer
+        % comes from a curve -- see AR/Lambda_LE_deg below and class header.
         cd0_curve_mach
         cd0_curve_value
-        k1_curve_mach
-        k1_curve_value
+
+        % Real F-16 wing spec data (same values as f16a_L2.json's
+        % .geometry.wing) feeding AeroL1.k1_from_geometry -- see class header
+        % "K1 -- EQUATION-BASED, NOT A CURVE".
+        AR                % --  wing aspect ratio
+        Lambda_LE_deg     % deg wing leading-edge sweep
     end
 
     methods
@@ -53,11 +82,12 @@ classdef F16AeroL1 < AeroModelL1
         function obj = F16AeroL1(json_path)
         %F16AEROL1  Construct from a required unified L1 input JSON path
         %   (f16a_spec_path(1)); reads its .aerodynamics block (aircraft type,
-        %   camber class, technology-curve selector, and the folded-in
-        %   Mattingly Fig. 2.10/2.11 curve tables). No silent default: the path
-        %   must be supplied. L1 is geometry-free -- it takes NO geometry object
-        %   (contrast F16AeroL2/L3, whose constructors require an injected
-        %   geometry object).
+        %   camber class, technology-curve selector, the folded-in Mattingly
+        %   Fig. 2.10 CD0 curve table, and the real wing AR/Lambda_LE_deg used
+        %   to compute K1 -- see class header). No silent default: the path
+        %   must be supplied. L1 takes NO injected geometry object (contrast
+        %   F16AeroL2/L3) -- AR/Lambda_LE_deg are genuine spec scalars read
+        %   directly, same as every other Layer-2 aircraft-specific input.
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
@@ -72,11 +102,11 @@ classdef F16AeroL1 < AeroModelL1
             obj.curve         = string(A.curve);
 
             cd0_curve = A.cd0_curve.(char(obj.curve));
-            k1_curve  = A.k1_curve.(char(obj.curve));
             obj.cd0_curve_mach  = [cd0_curve.mach];
             obj.cd0_curve_value = [cd0_curve.value];
-            obj.k1_curve_mach   = [k1_curve.mach];
-            obj.k1_curve_value  = [k1_curve.value];
+
+            obj.AR            = A.AR;
+            obj.Lambda_LE_deg = A.Lambda_LE_deg;
         end
 
         function polar = drag_polar(obj, state)
