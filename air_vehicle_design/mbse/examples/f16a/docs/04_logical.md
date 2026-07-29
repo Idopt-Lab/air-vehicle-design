@@ -1,9 +1,10 @@
 # L Layer — Logical
 
 > Artifact: `logical/F16A_Logical.slx` · Dictionary: `logical/F16A_Logical.sldd`
-> · Profile: `logical/F16A_LogicalTrades.xml` · Allocation: `logical/F16A_FunctionToLogical.mldatx`
+> · Profile: `logical/F16A_LogicalOptions.xml` · Allocation: `logical/F16A_FunctionToLogical.mldatx`
 > · Generators: `logical/generate_f16a_logical.m`, `requirements/generate_f16a_logical_derived_requirements.m`
-> · Trade study: `logical/F16ALogicalTradeStudy.m`
+> · Test: `logical/F16ALogicalArchitectureTest.m`
+> · The decision that resolves this layer is made one layer down, at P.
 
 The Functions layer said **what** the aircraft must do. The Logical layer says **how** — in
 **solution roles** — and it teaches two ideas the earlier layers could not:
@@ -11,9 +12,14 @@ The Functions layer said **what** the aircraft must do. The Logical layer says *
 1. **Allocation.** A *new* traceability relationship, distinct from the `Implement` links of R↔F:
    each function is **allocated** to the logical role that realizes it. Allocation lives in its own
    queryable artifact (an *allocation set*), separate from either model.
-2. **Options, plural.** A role can usually be realized more than one way. The Logical layer is where
-   you lay the **candidate solutions** side by side, run a **trade study**, and **select** one — and
-   where you keep a record of *why*. Three roles here carry competing options as **variant components**.
+2. **Options, plural — presented, not decided.** A role can usually be realized more than one way.
+   The Logical layer is where you lay the **candidate kinds** side by side and keep every one of
+   them in the model. It is *not* where you pick. Three roles here carry competing kinds as
+   **variant components**, and all three ship **unresolved**.
+
+That second idea is the one this layer got wrong in an earlier version of the example, and
+[`06_methodology.md`](06_methodology.md) exists to explain why. Read it if you want the reasoning
+before the mechanics.
 
 ## The solution roles
 
@@ -34,7 +40,7 @@ graph TD
   Root --> MB["MissionSystemsBay"]
 ```
 
-`▽` marks a **variant** role (competing options — see below).
+`▽` marks a **variant** role (competing kinds — see below).
 
 | Role | What it *is* (not how built) |
 |------|------------------------------|
@@ -111,7 +117,7 @@ responsibility precedes quantification.
 
 ## Light logical backbone
 
-The teaching focus of L is allocation and trades, not internal data flow, so the model is mostly a
+The teaching focus of L is allocation and options, not internal data flow, so the model is mostly a
 role decomposition with a **small, curated set of typed connections** — enough to show that logical
 interfaces exist, echoing the F layer's own mix of a flow view and a pure-decomposition view.
 
@@ -124,98 +130,182 @@ interfaces exist, echoing the F layer's own mix of a flow view and a pure-decomp
 
 Six roles carry ports; `LandingGear`, `CommunicationSystem`, and `MissionSystemsBay` stay port-free.
 
-## Design alternatives, trade & selection
+## Design options — presented, not decided
 
 Here is the headline lesson of the Logical layer. The Functions layer described *what* must be done
-without committing to *how*; there is usually **more than one credible way**, and choosing is part
-of the design. We model this with System Composer **variant components**: a variant role holds
-several **choices**, all kept in the model, with exactly **one active**.
+without committing to *how*; there is usually **more than one credible way**. L's job is to
+**enumerate** those ways and hold them open. We model this with System Composer **variant
+components**: a variant role holds several **kinds**, all kept in the model.
+
+A **kind** is an architectural *topology* — a configuration commitment that is free of technology,
+vendor and numbers. Three roles are modelled this way:
 
 ```mermaid
 graph TD
-  PS["PropulsionSystem ▽"]
-  PS --> A["SingleEngine_F100 ✔ (active)"]
-  PS --> B["TwinEngine_LWF"]
+  PS["PropulsionSystem ▽"] --> P1["SingleEngine"] & P2["TwinEngine"]
+  AF["Airframe ▽"] --> A1["BlendedCrankedDelta"] & A2["ConventionalTrapWing"]
+  FCS["FlightControlSystem ▽"] --> F1["FlyByWire"] & F2["HydroMechanical"]
 ```
 
-Three roles are modelled this way — each a real, documentable F-16 decision, and each dominated by a
-**different** driver, so the trades resolve for different reasons:
+| Variant role | Kinds | The question the pair asks |
+|--------------|-------|----------------------------|
+| `PropulsionSystem` | `SingleEngine` · `TwinEngine` | one thrust unit, or two? |
+| `Airframe` | `BlendedCrankedDelta` · `ConventionalTrapWing` | blended wing-body with LERX, or a discrete trapezoidal wing on a fuselage? |
+| `FlightControlSystem` | `FlyByWire` · `HydroMechanical` | an electrical command path, or mechanical linkages? |
 
-| Variant role | Choice A (production F-16A) | Choice B (alternative) | Dominant driver |
-|--------------|------------------------------|-------------------------|-----------------|
-| `PropulsionSystem` | `SingleEngine_F100` — one P&W F100 | `TwinEngine_LWF` — twin engine | cost / weight / maturity |
-| `FlightControlSystem` | `AnalogFBW` — analog fly-by-wire, relaxed static stability | `HydroMechanical` — conventional linkages | agility (benefit) |
-| `Airframe` | `BlendedCrankedDelta` — cropped delta + LERX | `ConventionalTrapWing` — trapezoidal wing | performance + structural efficiency |
+Note that no box above is ticked. That is the point.
 
-These recall the real F-16 program: the single- vs twin-engine **Lightweight Fighter flyoff**
-(YF-16 vs YF-17); the F-16 being the **first production fly-by-wire fighter**; and its distinctive
-**blended cranked-delta** planform.
+### Why the kind names changed
 
-### The trade study
+These were once called `SingleEngine_F100`, `TwinEngine_LWF` and `AnalogFBW`. The rename is not
+cosmetic — it *is* the lesson. Apply the third of the three-question tests in
+[`06_methodology.md`](06_methodology.md): **swap the technology underneath the box; does its name
+still make sense?** `SingleEngine` outlives the F100. `SingleEngine_F100` does not — it is a
+product, and products live at P (D-017, D-020).
 
-`F16ALogicalTradeStudy.m` reads each choice's `TradeCandidate` stereotype properties, min-max
-normalizes each criterion (`Benefit`, `TRL` more-is-better; `Mass_lb`, `UnitCost_USD`
-less-is-better), and computes a weighted score (weights `Benefit 0.40`, `TRL 0.20`, `Mass_lb 0.20`,
-`UnitCost_USD 0.20`). The property values are **illustrative teaching numbers**, tuned so the
-production choice wins — but each for a different reason:
+`testKindsAreTechnologyNeutral` makes that an executable rule. It reads the six names **out of the
+model** (not out of a constant, so renaming a kind in the generator is caught) and fails on any
+digit or any of `F100 F110 PW GE LWF Analog`. The token match is deliberately **case-sensitive**:
+`ConventionalTrapWing` contains the substring `pW`, so a case-insensitive check would reject a
+perfectly good kind name.
 
-**PropulsionSystem** — single engine wins on cost, weight, and maturity (loses only raw benefit):
+### Why L cannot answer "which one?"
 
-| Choice | Mass_lb | UnitCost_USD | TRL | Benefit | Score |
-|--------|--------:|-------------:|----:|--------:|------:|
-| SingleEngine_F100 ✔ | 3800 | 4.5M | 8 | 8.0 | **0.60** |
-| TwinEngine_LWF | 5200 | 6.8M | 7 | 8.5 | 0.40 |
+Because a logical role has no mass. Only a *part* has a mass — and a part exists only at P. To score
+these six kinds here you would have to invent a mass, a cost, a TRL and a benefit for each of them,
+including for configurations that were never built. Every one of those numbers would be a fiction
+manufactured solely to make a script return a winner, and the model would then carry a decision it
+had no evidence for.
 
-**FlightControlSystem** — fly-by-wire wins on agility benefit and control weight, outweighing its
-lower maturity and higher cost:
+So L commits to nothing. The decision needs **concrete parameterized candidates** — real
+alternatives with sourced data and a provenance tag — and those live at the Physical layer
+([`05_physical.md`](05_physical.md)). Keeping every kind alive until the parameterized trade can
+decide is the set-based discipline described in [`06_methodology.md`](06_methodology.md).
 
-| Choice | Mass_lb | UnitCost_USD | TRL | Benefit | Score |
-|--------|--------:|-------------:|----:|--------:|------:|
-| AnalogFBW ✔ | 1200 | 1.5M | 6 | 9.0 | **0.60** |
-| HydroMechanical | 1800 | 1.0M | 9 | 6.0 | 0.40 |
+### What a kind carries
 
-**Airframe** — the blended delta wins on maneuver benefit and structural efficiency, outweighing
-lower maturity and higher aero-development cost:
+The profile `logical/F16A_LogicalOptions.xml` declares exactly one stereotype, `SolutionOption`,
+applied to all six kinds. It goes on the **choices**, never on the variant role itself —
+`applyStereotype` errors on a `VariantComponent` in R2026a, and a role is not an option, so it has
+nothing to select.
 
-| Choice | Mass_lb | UnitCost_USD | TRL | Benefit | Score |
-|--------|--------:|-------------:|----:|--------:|------:|
-| BlendedCrankedDelta ✔ | 5400 | 7.0M | 7 | 9.5 | **0.60** |
-| ConventionalTrapWing | 5900 | 6.2M | 8 | 6.5 | 0.40 |
+| Property | Type | Value as L ships it | Written by |
+|----------|------|---------------------|-----------|
+| `Selected` | boolean | `false` on all six kinds | the physical trade study |
+| `DecisionRef` | string | `'TBD'` on all six kinds | the physical trade study |
 
-### How the decision is recorded
+That is the whole stereotype: **whether** a kind was selected, and **where** the decision is written
+down. There is no `Mass_lb`, no `UnitCost_USD`, no `TRL` and no `Benefit` anywhere at L — not on a
+kind, and not declared in the profile. `testKindsCarryNoTradeNumerics` enforces both halves, and the
+profile half is the load-bearing one: it fails if somebody re-adds `Mass_lb` to the L profile *even
+before any component applies it*.
 
-The pick is captured **three reinforcing ways** so it is both machine-usable and auditable:
+**The active choice is a placeholder, not a decision.** A variant needs exactly one active choice to
+be a valid model, so the generator sets one — the first name in the list. It means "first in the
+list", nothing more. `testExactlyOneActiveChoice` asserts that each role has exactly one active kind
+and that it is one of its own; it deliberately does **not** assert which.
 
-1. **Active variant choice** — the model itself now shows the selected option active.
-2. **`Selected` stereotype flag** — a queryable boolean on the winning choice.
-3. **Decision requirement** — `REQ_F16A_L01`–`L03` (in `f16a_logical_derived.slreqx`) state the
-   choice, with the weighted-score reasoning in the `Rationale`; the winning choice is
-   Implement-linked to it. This is the RFLP story in miniature: functional analysis and trade
-   studies *feed back* into requirements.
+The generator says so on every run:
 
-The alternatives are **not** deleted — they remain in the model as the options that were traded.
+```
+Options are UNRESOLVED: every kind has Selected=false, DecisionRef='TBD', and the active
+choice is a placeholder.
+Run F16APhysicalTradeStudy to decide.
+```
+
+### How the decision comes back
+
+`physical/F16APhysicalTradeStudy.m` parameterizes the concrete candidates behind each kind (a
+physical candidate names the kind it realizes through a `RealizesKind` property), scores them, and
+then writes the outcome **back into this model**. It is a deliberate, documented cross-layer write —
+the one exception to layer independence, and it touches only this model's own link set and
+stereotype values:
+
+1. sets the **active variant choice** to the winning kind;
+2. sets `SolutionOption.Selected = true` on that kind;
+3. writes `SolutionOption.DecisionRef` with the id of the decision requirement;
+4. **Implement-links** the winning kind to `REQ_F16A_L01`–`L03` in
+   `requirements/f16a_logical_derived.slreqx`.
+
+**The decision requirement is the authoritative record.** Its `Rationale` states the value
+functions, the weights, and the reason that candidate won. The active variant flag and the
+`Selected` boolean are **derived artifacts** — queryable and convenient, but reconstructible from
+the requirement. If the two ever disagree, the requirement is right and the model needs
+regenerating. This is the RFLP story in miniature: analysis *feeds back* into requirements.
+
+The alternatives are **not** deleted. They stay in the model as the options that were traded.
+
+> **Current status — the L model on disk is unresolved.** The physical trade study has not been
+> built yet, so all six kinds still read `Selected=false` / `DecisionRef='TBD'`, each active choice
+> is still the placeholder, and `REQ_F16A_L01`–`L03` have **no incoming Implement links** — they
+> show as un-implemented in the Requirements Editor. That is the expected state of this layer
+> between its own build and the physical trade, not a defect (D-019).
+
+### Why these are the credible options
+
+Each pair is a real, documentable F-16 decision, and each is dominated by a **different** concern —
+which is why they are worth three separate trades rather than one:
+
+| Pair | Where the real program argued it out | What dominates the argument |
+|------|--------------------------------------|-----------------------------|
+| single vs twin engine | the **Lightweight Fighter flyoff** (YF-16 vs YF-17) | maturity and installed weight, against the engine-out survivability a single installation gives up |
+| fly-by-wire vs hydro-mechanical | the F-16 was the **first production fighter to fly a fly-by-wire flight control system** — which is what makes relaxed static stability usable | agility, against the maturity of a proven mechanical path |
+| blended cranked delta vs conventional trapezoidal wing | the F-16's distinctive **blended cranked-delta planform with LERX** | high-alpha and sustained-turn performance plus structural efficiency, against aero-development risk |
+
+Read that table as *why these two options are the ones worth putting in the model* — **not** as why
+one of them already won. The outcome, when there is one, is read off `REQ_F16A_L01`–`L03`; the
+numbers behind it are read off the physical candidates.
 
 ### Allocation targets the role, not the choice
 
 Functions allocate to the **variant role** (e.g. `ProduceThrust → PropulsionSystem`), never to a
-specific choice. Allocation states *which role owns the function*; the variant choice states *which
-candidate currently fills the role*. Re-run the trade, flip the active choice — and not a single
-allocation link changes. Keeping those two decisions decoupled is the whole point.
+specific kind. Allocation states *which role owns the function*; the kind states *which candidate
+topology fills the role*. Keeping those two decisions decoupled is the whole point.
+
+This restructure is the proof. All three pairs of kinds were renamed — `SingleEngine_F100` →
+`SingleEngine`, `TwinEngine_LWF` → `TwinEngine`, `AnalogFBW` → `FlyByWire` — and **not one of the 14
+allocation edges changed**, because not one of them ever named a kind. Re-run the trade, flip the
+active choice, or swap the technology underneath it entirely: the allocation set is untouched.
 
 ## Verification
 
-`F16ALogicalArchitectureTest.m` (15 tests) checks: the 9 roles exist; the 4 interfaces are defined;
-the six wired roles are fully connected and the three constraint roles are port-free; the allocation
-set exists with 14 edges from 13 leaves (Target fans out to 2); **no phase is allocated**; 020/023/
-024/025 are implemented from L while 022 stays deferred (026 is reclassified as a cost MoM, homed at
-P); the three variant roles each have two choices
-and exactly one active; every choice carries the `TradeCandidate` stereotype; the trade study ranks
-and returns a unique winner per role; the `Selected` flag and active choice match the top score; and
-each decision requirement `L01`–`L03` is linked from its winner.
+`F16ALogicalArchitectureTest.m` — **14 tests**. It is a **machinery** suite: it asks "is the L model
+built correctly?", never "is this the right design?".
+
+| Group | What is checked |
+|-------|-----------------|
+| Structure | the 9 roles exist and the root has exactly 9 components; the 4 interfaces and their elements; the 6 wired roles have every port connected and the 3 constraint roles are port-free |
+| Allocation | the set and its scenario exist; 13 distinct source functions, 14 edges, `Target` the only fan-out; no phase or composite is ever a source; sampled endpoints resolve in both models |
+| Requirements | 020/023/024/025 each carry an Implement link from L |
+| Options | each variant role exposes exactly its two named kinds, with exactly one active; every kind carries `SolutionOption` with both properties present and readable; the six kind names are free of digits and vendor/program tokens; neither the kinds nor the profile declares `Mass_lb`, `UnitCost_USD`, `TRL` or `Benefit` |
+
+### What the suite deliberately does *not* check
+
+The previous suite had 15 tests and four of them were about the retired Logical-layer trade: that
+every choice carried a `TradeCandidate` stereotype, that the trade study ran and ranked, that
+`Selected` matched the top score, and that each decision requirement was linked from its winner.
+Three of those went away with the script they tested. The fourth **moved**:
+
+- **Which kind wins** is not asserted. L presents options; the trade runs at P.
+- **The `REQ_F16A_L01`–`L03` Implement links** are not asserted here. They are created by the
+  physical trade study, so checking them at L would make the L suite pass or fail depending on
+  whether P had been run — exactly the layer coupling this restructure removes. That assertion
+  belongs to `F16APhysicalArchitectureTest` (**D-010**), which will carry it once the trade study
+  exists.
+- **The value of `Selected`** is not asserted. It is `false` everywhere before the trade and `true`
+  on one kind per role afterwards; both are legitimate states of a correctly built L model, so the
+  suite checks only that the property exists and reads back.
+
+Three tests were added in their place — `testKindsCarryNoTradeNumerics`,
+`testKindsAreTechnologyNeutral` and `testEveryKindCarriesSolutionOption` — so the suite now fails
+the moment a number or a decision creeps back into L.
 
 ## Next
 
 The **Physical layer (P)** ([`05_physical.md`](05_physical.md)) realizes each logical role with
 concrete parts — refining the airframe into wing/fuselage/empennage — rolls those parts' masses up
 to the aircraft's Operating Empty Weight, and records OEW and unit cost as **Measures of Merit** to
-minimize (homing the cost requirement `REQ_F16A_026`), closing out the RFLP model.
+minimize (homing the cost requirement `REQ_F16A_026`). It is also where this layer's three open
+questions get answered: P parameterizes the candidates behind each kind, scores them, and writes the
+decision back here. For *why* the trade lives there and not here, see
+[`06_methodology.md`](06_methodology.md).

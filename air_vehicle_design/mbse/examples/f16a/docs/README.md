@@ -26,7 +26,7 @@ this part exist?" and "where is this requirement satisfied?".
 |-------|--------|----------|
 | **R** – Requirements | ✅ Done | `requirements/f16a.slreqx` (26 requirements) |
 | **F** – Functions | ✅ Done | `architecture/F16A_Functional.slx` (26 functions, 39 links) |
-| **L** – Logical | ✅ Done | `logical/F16A_Logical.slx` (9 roles, 3 with traded options; allocation set with 14 edges) |
+| **L** – Logical | ✅ Done | `logical/F16A_Logical.slx` (9 roles, 3 presenting technology-neutral **kinds** — the choice between them is decided at P; allocation set with 14 edges) |
 | **P** – Physical | ✅ Done | `physical/F16A_Physical.slx` (23 components; realization allocation; mass/materials/fuel roll-ups; OEW & cost MoMs; REQ_022 & REQ_P01 *verified by* tests) |
 
 ## Documentation map
@@ -36,7 +36,7 @@ this part exist?" and "where is this requirement satisfied?".
 | [`01_requirements.md`](01_requirements.md) | The Requirements layer: how the requirements were derived from the Brandt F-16A sizing model, and how they are organized. |
 | [`02_functions.md`](02_functions.md) | The Functions layer: the functional architecture, the F2T2EA combat kill chain, the shared capability tree, and the interfaces. |
 | [`03_traceability.md`](03_traceability.md) | The requirement → function link matrix, the derived placeholder requirements, and known coverage gaps. |
-| [`04_logical.md`](04_logical.md) | The Logical layer: the solution roles, the function → logical allocation set, the requirements L now owns, and the design-alternative variant roles with their trade study and selection. |
+| [`04_logical.md`](04_logical.md) | The Logical layer: the solution roles, the function → logical allocation set, the requirements L now owns, and the variant roles that present competing technology-neutral kinds — presented here, decided at P. |
 | [`05_physical.md`](05_physical.md) | The Physical layer: the physical decomposition, the mass roll-up to Operating Empty Weight, the OEW and unit-cost Measures of Merit, and the logical → physical realization allocation. |
 
 ## Folder layout
@@ -66,10 +66,9 @@ mbse/examples/f16a/
 │   ├─ F16A_Logical.slx                  System Composer model (9 solution roles)
 │   ├─ F16A_Logical.sldd                 logical interface dictionary (FuelFlow, ThrustVector, …)
 │   ├─ F16A_Logical~mdl.slmx             requirement links (auto-generated)
-│   ├─ F16A_LogicalTrades.xml            stereotype profile for trade candidates
+│   ├─ F16A_LogicalOptions.xml           stereotype profile for solution options (Selected, DecisionRef)
 │   ├─ F16A_FunctionToLogical.mldatx     function → logical allocation set
 │   ├─ generate_f16a_logical.m           builds the L model + profile + allocation + L links
-│   ├─ F16ALogicalTradeStudy.m           trades the variant-role options and selects one
 │   └─ F16ALogicalArchitectureTest.m     unit tests for the L layer
 ├─ physical/                             P layer
 │   ├─ F16A_Physical.slx                 System Composer model (Aircraft + 11 assemblies)
@@ -113,7 +112,8 @@ generate_f16a_derived_requirements          % -> requirements/f16a_functional_de
 generate_f16a_functional                    % -> architecture/F16A_Functional.slx + links
 generate_f16a_logical_derived_requirements  % -> requirements/f16a_logical_derived.slreqx (L01–L03)
 generate_f16a_logical                       % -> logical/F16A_Logical.slx + profile + allocation + links
-                                            %    (calls F16ALogicalTradeStudy to select the traded options)
+                                            %    (presents the solution kinds; ships them UNRESOLVED —
+                                            %     the physical trade study decides and writes back)
 generate_f16a_physical_derived_requirements % -> requirements/f16a_physical_derived.slreqx (P01 fuel)
 generate_f16a_physical                      % -> physical/F16A_Physical.slx + profiles + realization
                                             %    (runs the mass/materials/fuel roll-ups; adds the

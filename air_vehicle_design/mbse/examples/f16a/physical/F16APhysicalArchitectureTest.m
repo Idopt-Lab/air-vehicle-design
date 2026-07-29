@@ -5,17 +5,21 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %   requirement in verification/.
     %
     %   COVERED HERE
-    %     * Structure   -- 23 components: Aircraft, 11 assemblies, 8 parts,
-    %       3 fuel tanks, each resolving at its expected path, the 9 leaf
-    %       assemblies childless.
-    %     * Stereotypes -- PhysicalItem on Aircraft and all 19 descendants,
-    %       Material on every airframe part, FuelTank on every tank.
-    %     * Masses      -- the 16 mass-bearing leaves against the Brandt
-    %       ground truth; FuelSystem and the tanks carry zero OEW mass
-    %       because fuel is a consumable.
+    %     * Structure   -- 30 components: Aircraft, 11 assemblies (three of
+    %       them VARIANT roles), the 7 trade candidates those variants hold,
+    %       8 parts, 3 fuel tanks, each resolving at its expected path, the
+    %       7 non-variant leaf assemblies childless.
+    %     * Stereotypes -- PhysicalItem on every component that can carry one
+    %       (all 30 minus the 3 variant role wrappers), Material on every
+    %       airframe structural part, FuelTank on every tank, TradeCandidate
+    %       on each of the 7 candidates.
+    %     * Masses      -- the 16 mass-bearing leaves of the ACTIVE
+    %       configuration against the Brandt ground truth; FuelSystem and the
+    %       tanks carry zero OEW mass because fuel is a consumable.
     %     * Roll-up     -- self-consistency only: each assembly subtotal is
-    %       the sum of its parts, OEW is the sum of all leaves, and
-    %       airframe-less-engine is OEW minus engine.
+    %       the sum of its parts, OEW is the sum of the ACTIVE leaves (never
+    %       the all-candidates sum), and airframe-less-engine is OEW minus
+    %       engine.
     %     * Measures of Merit -- OEW and unit cost both exist with
     %       Goal = Minimize; cost is the uncomputed placeholder (NaN).
     %     * Realization -- the L->P allocation set exists, every one of the
@@ -32,14 +36,35 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %     * TradeCandidate (Stage 2) -- DECLARED in the profile with its
     %       eight properties, so the Stage-3 generator cannot quietly invent
     %       a different parameter set.
+    %     * Candidates (Stage 3) -- each of the 7 carries TradeCandidate with
+    %       a RealizesRole/RealizesKind pair that RESOLVES in the L model, a
+    %       positive mass and benefit, a TRL inside the 1..9 scale (D-021's
+    %       fail-safe default of 0 is outside it on purpose), a NaN cost, and
+    %       a DataProvenance from the four-member vocabulary.
+    %     * Active configuration (Stage 3) -- exactly one active choice per
+    %       variant role, and OEW counts THAT configuration only: 19,980.73
+    %       lb, demonstrably not the all-candidates sum. The materials
+    %       roll-up follows the active airframe candidate's own parts rather
+    %       than a hard-coded path.
+    %     * TraceRefs (Stage 3) -- every reference in every Rationale.TraceRef
+    %       is resolved for real: requirement ids through slreq.load + find in
+    %       the OWNING set, model paths through lookup. A negative control in
+    %       the same test proves the resolver can still say no, so a rename
+    %       breaks the suite instead of breaking traceability silently.
     %
     %   NOT COVERED HERE -- and why
     %     * Any weight or cost TARGET. OEW and unit cost are objectives to
     %       minimize, not thresholds, so a pass/fail budget here would be a
     %       design verdict smuggled into a machinery test.
-    %     * Whether TradeCandidate is APPLIED anywhere. Nothing carries it
-    %       until Stage 3 creates the candidates, and asserting an empty
-    %       application set now would just have to be deleted later.
+    %     * The VALUES of the illustrative candidate parameters. Three
+    %       candidate masses are Brandt ground truth and are asserted as
+    %       numbers; every other TRL, benefit and mass is a teaching Estimate,
+    %       so this file asserts its RANGE and its ORDERING (who is lightest,
+    %       who has the best benefit) and never the figure itself. Pinning an
+    %       Estimate would turn a data revision into a test failure.
+    %     * The trade SCORES and the winner. The trade study runs at Stage 4;
+    %       Selected is still false on all seven here, and this file says so
+    %       rather than anticipating a result.
     %     * The variant ROLE wrappers. A stereotype cannot be applied to a
     %       systemcomposer.arch.VariantComponent at all (D-013), so "every
     %       part has a Rationale" means every part that can carry one; the
@@ -65,12 +90,23 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %       checked in the PROFILE, before and regardless of what applies it.
     %     * Enumerations -- meta.class.fromName(...).EnumerationMemberList,
     %       which is empty when the classdef is not on the path.
+    %     * Variants    -- getChoices for every choice, getActiveChoice for
+    %       the active configuration. Two path spaces coexist (Stage-0
+    %       finding 3): ARCHITECTURE paths carry the choice level
+    %       (.../Airframe/BlendedCrankedDelta/Wing) and are what this file
+    %       and lookup use; INSTANCE paths do not (.../Airframe/Wing) and are
+    %       what the roll-ups use. Both are exercised here, in
+    %       testMassRollupSelfConsistent.
+    %     * Requirements-- slreq.load per set + find(set, Id=...), which
+    %       returns EMPTY rather than erroring for an unknown id -- which is
+    %       what makes it usable as a resolver in testTraceRefsResolve.
 
     properties
         Model      % F16A_Physical
         LogiModel  % F16A_Logical (realization source)
         OrigSet    % f16a.slreqx (REQ_F16A_022 materials, REQ_F16A_026 cost MoM)
         PhysSet    % f16a_physical_derived.slreqx (REQ_F16A_P01 fuel volume)
+        LogiSet    % f16a_logical_derived.slreqx (REQ_F16A_L01..L03 decisions)
         Alloc      % F16A_LogicalToPhysical allocation set
         Profile = "F16A_PhysicalProps";
         AC      = "F16A_Physical/Aircraft/";
@@ -81,6 +117,9 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "FlightControls","Avionics","Electrical","Hydraulics","ECS", ...
             "ArmamentSupport","SecondaryStructure"];
         AirframeParts   = ["Wing","Fuselage","HorizontalTail","VerticalTail","Nacelles","Strakes"];
+        % Propulsion's own children: the Engine VARIANT ROLE (whose
+        % candidates are listed in CandidateRows) plus the inlet duct, which
+        % stays a plain part shared by every engine candidate (D-009).
         PropulsionParts = ["Engine","InletDuct"];
         FuelTanks       = ["FwdFuselageTank","AftFuselageTank","WingTank"];
         LogicalRoles = ["Airframe","PropulsionSystem","FuelSystem", ...
@@ -88,23 +127,40 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "CommunicationSystem","WeaponSystem","MissionSystemsBay"];
         % Parts that realize NO single logical role (supporting infrastructure).
         UnrealizedParts = ["Electrical","Hydraulics","ECS","SecondaryStructure"];
+        % The three candidates that carry Brandt ground truth, and therefore
+        % the choice level that the airframe/engine/flight-control paths gain
+        % (D-003). Named for WHAT THEY ARE, not for "the active one": which
+        % candidate is active is read from the model, never assumed here.
+        BrandtAirframe       = "BlendedCrankedDelta";   % the only decomposed candidate
+        BrandtEngine         = "F100_PW_200";
+        BrandtFlightControls = "FlyByWire";
         % Ground-truth mass-bearing leaves {relative path, lbf}. FuelSystem
-        % (0 lbf) is intentionally excluded and checked separately.
+        % (0 lbf) is intentionally excluded and checked separately. These 16
+        % are the ACTIVE configuration; they sum to ExpectedOEW_lb.
         MassRows = { ...
-            "Airframe/Wing",1785.95;  "Airframe/Fuselage",3652.11; ...
-            "Airframe/HorizontalTail",648.00; "Airframe/VerticalTail",360.00; ...
-            "Airframe/Nacelles",186.82; "Airframe/Strakes",90.00; ...
-            "Propulsion/Engine",4730.23; "Propulsion/InletDuct",728.60; ...
-            "LandingGear",1066.82; "FlightControls",472.44; "Avionics",2541.54; ...
+            "Airframe/BlendedCrankedDelta/Wing",1785.95; ...
+            "Airframe/BlendedCrankedDelta/Fuselage",3652.11; ...
+            "Airframe/BlendedCrankedDelta/HorizontalTail",648.00; ...
+            "Airframe/BlendedCrankedDelta/VerticalTail",360.00; ...
+            "Airframe/BlendedCrankedDelta/Nacelles",186.82; ...
+            "Airframe/BlendedCrankedDelta/Strakes",90.00; ...
+            "Propulsion/Engine/F100_PW_200",4730.23; "Propulsion/InletDuct",728.60; ...
+            "LandingGear",1066.82; "FlightControls/FlyByWire",472.44; "Avionics",2541.54; ...
             "Electrical",533.41; "Hydraulics",367.11; "ECS",360.84; ...
             "ArmamentSupport",440.00; "SecondaryStructure",2016.86};
+        % Brandt ground truth, asserted as NUMBERS because that is what they
+        % are. OEW is unchanged by the restructure (D-003) -- that invariance
+        % is the whole point of testOEWCountsOnlyTheActiveConfiguration.
+        ExpectedOEW_lb            = 19980.73;
+        BrandtAirframeMass_lb     =  6722.88;
+        ExpectedCompositeFraction =   0.1928;
 
         % --- Stage 2: rationale and the trade vocabulary -----------------
-        % How many components the architecture-side walk must reach. Stage 2
-        % is purely additive, so it is still 23; Stage 3's variant choices
-        % raise it. Asserted so a walk that silently skips a subtree (the
-        % classic getChoices trap) fails loudly instead of passing empty.
-        ExpectedComponentCount = 23;
+        % How many components the architecture-side walk must reach: the 23
+        % of Stage 2 plus Stage 3's 7 variant choices. Asserted so a walk
+        % that silently skips a subtree (the classic getChoices trap) fails
+        % loudly instead of passing empty.
+        ExpectedComponentCount = 30;
         RationaleStereotype = "Rationale";
         % A rationale that reads "engine" is not a rationale. 20 characters
         % is a floor on effort, not a style rule -- it is deliberately far
@@ -120,6 +176,59 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         CandidateStereotype = "TradeCandidate";
         CandidateProperties = ["Benefit","DataProvenance","Mass_lb", ...
             "RealizesKind","RealizesRole","Selected","TRL","UnitCost_USD"];
+
+        % --- Stage 3: the variant roles and their candidates ---------------
+        % {variant path under Aircraft, logical role it realizes, #candidates}
+        % The variant components themselves carry NO stereotype (D-013), so
+        % they are excluded from every per-part check; what they own is the
+        % choice, and that is what is asserted about them.
+        VariantRows = { ...
+            "Airframe",          "Airframe",            2; ...
+            "Propulsion/Engine", "PropulsionSystem",    3; ...
+            "FlightControls",    "FlightControlSystem", 2};
+        % {candidate path under Aircraft, logical role, logical kind,
+        %  expected DataProvenance}
+        % NO Mass/TRL/Benefit column ON PURPOSE. Three of these masses are
+        % Brandt ground truth and are already asserted as numbers in MassRows;
+        % every other figure is an illustrative Estimate (D-007), so this file
+        % asserts the RELATIONSHIPS between them -- valid range, ordering,
+        % agreement with the parts actually modelled -- and never the values.
+        % Role and kind ARE asserted exactly: they are structural claims that
+        % must resolve in the L model, not numbers.
+        CandidateRows = { ...
+            "Airframe/BlendedCrankedDelta",           "Airframe",            "BlendedCrankedDelta",  "Reference"; ...
+            "Airframe/ConventionalTrapWing",          "Airframe",            "ConventionalTrapWing", "Estimate";  ...
+            "Propulsion/Engine/F100_PW_200",          "PropulsionSystem",    "SingleEngine",         "Reference"; ...
+            "Propulsion/Engine/F110_GE_100",          "PropulsionSystem",    "SingleEngine",         "Estimate";  ...
+            "Propulsion/Engine/TwinEngine_Surrogate", "PropulsionSystem",    "TwinEngine",           "Estimate";  ...
+            "FlightControls/FlyByWire",               "FlightControlSystem", "FlyByWire",            "Reference"; ...
+            "FlightControls/HydroMechanical",         "FlightControlSystem", "HydroMechanical",      "Estimate"};
+        % The TRL scale. 1..9 inclusive; D-021 deliberately defaults the
+        % property to 0 -- OUTSIDE the scale -- so an unset TRL is caught here
+        % and by the trade study rather than silently scoring as "mid-pack".
+        TRLScale = [1 9];
+        % Rationale kinds a trade candidate may legitimately carry. Both are
+        % allowed so this assertion survives Stage 4, when the trade study
+        % promotes three of the seven from TradeAlternative to TradeWinner.
+        CandidateSourceKinds = ["TradeAlternative","TradeWinner"];
+        % The three requirement sets a TraceRef can name, keyed by id prefix.
+        % Every TraceRef must resolve in the set that OWNS it, not just
+        % somewhere: 022/023/024/026 in f16a.slreqx, P01 in the physical
+        % derived set, L01..L03 in the logical derived set.
+        RequirementPrefix = "REQ_F16A_";
+        LogicalPathPrefix  = "F16A_Logical/";
+        PhysicalPathPrefix = "F16A_Physical/";
+        % Deliberately unresolvable references, used as the negative control
+        % INSIDE testTraceRefsResolve so a resolver that says yes to
+        % everything cannot make that test pass vacuously. One per form, plus
+        % a bare token that matches no form at all.
+        BogusTraceRefs = ["REQ_F16A_999", "REQ_F16A_L99", "REQ_F16A_P99", ...
+            "F16A_Logical/NoSuchRole", "F16A_Physical/Aircraft/NoSuchPart", ...
+            "F16A_Physical/Aircraft/Airframe/NoSuchCandidate", "Wing"];
+        % D-023: the 3 x 2100 lb fuel split is an even division of Brandt's
+        % 6296.30 lb mission fuel -- an Estimate in substance, so it must say
+        % so in the model now that FuelTank has a DataProvenance property.
+        FuelTankProvenance = "Estimate";
     end
 
     methods (TestClassSetup)
@@ -135,6 +244,9 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.LogiModel = systemcomposer.loadModel("F16A_Logical");
             testCase.OrigSet   = slreq.load(fullfile(thisDir, "requirements", "f16a.slreqx"));
             testCase.PhysSet   = slreq.load(fullfile(thisDir, "requirements", "f16a_physical_derived.slreqx"));
+            % Loaded for testTraceRefsResolve: the candidates trace to the
+            % L01-L03 decision requirements, which live only in this set.
+            testCase.LogiSet   = slreq.load(fullfile(thisDir, "requirements", "f16a_logical_derived.slreqx"));
             testCase.Alloc     = systemcomposer.allocation.load("F16A_LogicalToPhysical");
             testCase.addTeardown(@() testCase.Alloc.close());
             testCase.addTeardown(@() bdclose("all"));
@@ -145,40 +257,76 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     methods (Test)
 
         function testPhysicalComponentsExist(testCase)
-            % 23 components; root holds one Aircraft; Aircraft holds 11
-            % assemblies; Airframe 6 parts, Propulsion 2, FuelSystem 3 tanks.
+            % 30 components; root holds one Aircraft; Aircraft holds 11
+            % assemblies; the 3 variant roles hold 2/3/2 candidates; the
+            % decomposed airframe candidate holds the 6 structural parts;
+            % Propulsion holds the Engine variant plus InletDuct; FuelSystem
+            % 3 tanks.
+            %
+            % Child counts for the variant roles go through getChoices, NOT
+            % .Architecture.Components -- the latter returns 0 for a variant
+            % on a LOADED model (Stage-0 finding 6), which would turn every
+            % count below into a false pass.
             testCase.verifyEqual(testCase.countComps(), testCase.ExpectedComponentCount, ...
-                "Expected 23 components (Aircraft + 11 assemblies + 8 parts + 3 tanks).");
+                "Expected 30 components (Aircraft + 11 assemblies + 7 candidates + 8 parts + 3 tanks).");
             testCase.verifyEqual(numel(testCase.Model.Architecture.Components), 1, ...
                 "Root should hold exactly one component (Aircraft).");
             ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
             testCase.verifyEqual(numel(ac.Architecture.Components), 11, ...
                 "Aircraft should hold 11 assemblies.");
-            af = testCase.Model.lookup(Path=char(testCase.AC + "Airframe"));
-            testCase.verifyEqual(numel(af.Architecture.Components), 6, "Airframe should have 6 parts.");
-            pr = testCase.Model.lookup(Path=char(testCase.AC + "Propulsion"));
-            testCase.verifyEqual(numel(pr.Architecture.Components), 2, "Propulsion should have 2 parts.");
-            fs = testCase.Model.lookup(Path=char(testCase.AC + "FuelSystem"));
+            choiceDefects = testCase.variantChoiceCountDefects();
+            testCase.verifyEmpty(choiceDefects, ...
+                "Variant role does not hold its expected number of candidates: " + ...
+                strjoin(choiceDefects, ", ") + ".");
+            bcd = testCase.componentAt(testCase.AC + "Airframe/" + testCase.BrandtAirframe);
+            testCase.verifyEqual(numel(bcd.Architecture.Components), 6, ...
+                testCase.BrandtAirframe + " should hold the 6 structural parts (D-003).");
+            pr = testCase.componentAt(testCase.AC + "Propulsion");
+            testCase.verifyEqual(numel(pr.Architecture.Components), 2, ...
+                "Propulsion should hold the Engine variant plus InletDuct.");
+            fs = testCase.componentAt(testCase.AC + "FuelSystem");
             testCase.verifyEqual(numel(fs.Architecture.Components), 3, "FuelSystem should have 3 tanks.");
         end
 
         function testHierarchyCorrect(testCase)
-            % Every assembly resolves under Aircraft; Airframe/Propulsion
-            % parts resolve under their parent; the 9 leaf assemblies are
-            % childless.
+            % Every assembly resolves under Aircraft; the 6 structural parts
+            % resolve under the DECOMPOSED airframe candidate (the choice
+            % level D-003 adds); every candidate resolves under its variant
+            % role; the remaining leaf assemblies are childless.
             for a = testCase.Assemblies
                 testCase.verifyTrue(testCase.resolves(testCase.AC + a), "Missing assembly: " + a);
             end
             for p = testCase.AirframeParts
-                testCase.verifyTrue(testCase.resolves(testCase.AC + "Airframe/" + p), "Missing Airframe part: " + p);
+                testCase.verifyTrue( ...
+                    testCase.resolves(testCase.AC + "Airframe/" + testCase.BrandtAirframe + "/" + p), ...
+                    "Missing Airframe part: " + p);
             end
             for p = testCase.PropulsionParts
-                testCase.verifyTrue(testCase.resolves(testCase.AC + "Propulsion/" + p), "Missing Propulsion part: " + p);
+                testCase.verifyTrue(testCase.resolves(testCase.AC + "Propulsion/" + p), ...
+                    "Missing Propulsion child: " + p);
+            end
+            for i = 1:size(testCase.CandidateRows,1)
+                testCase.verifyTrue(testCase.resolves(testCase.AC + string(testCase.CandidateRows{i,1})), ...
+                    "Missing candidate: " + string(testCase.CandidateRows{i,1}));
             end
             for t = testCase.FuelTanks
                 testCase.verifyTrue(testCase.resolves(testCase.AC + "FuelSystem/" + t), "Missing fuel tank: " + t);
             end
-            leafAsm = setdiff(testCase.Assemblies, ["Airframe","Propulsion","FuelSystem"]);
+            % The three variant roles must really BE variant components. A
+            % plain component with two children would satisfy every path
+            % assertion above and still have no notion of an active
+            % configuration, so the class is checked explicitly.
+            for i = 1:size(testCase.VariantRows,1)
+                vc = testCase.componentAt(testCase.AC + string(testCase.VariantRows{i,1}));
+                testCase.verifyClass(vc, "systemcomposer.arch.VariantComponent", ...
+                    string(testCase.VariantRows{i,1}) + " must be a variant component.");
+            end
+            % Childlessness is only meaningful for NON-variant components:
+            % a variant reports 0 children on a loaded model whether or not
+            % it has choices (Stage-0 finding 6), so FlightControls is
+            % excluded here and covered by the variant checks instead.
+            leafAsm = setdiff(testCase.Assemblies, ...
+                ["Airframe","Propulsion","FuelSystem","FlightControls"]);
             for a = leafAsm
                 c = testCase.Model.lookup(Path=char(testCase.AC + a));
                 testCase.verifyEmpty(c.Architecture.Components, a + " should be a leaf.");
@@ -186,18 +334,22 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testPhysicalItemStereotypeApplied(testCase)
-            % Aircraft and every one of its 19 descendants carry PhysicalItem.
-            paths = "F16A_Physical/Aircraft";
-            paths = [paths, testCase.AC + testCase.Assemblies];
-            paths = [paths, testCase.AC + "Airframe/" + testCase.AirframeParts];
-            paths = [paths, testCase.AC + "Propulsion/" + testCase.PropulsionParts];
-            paths = [paths, testCase.AC + "FuelSystem/" + testCase.FuelTanks];
-            for pth = paths
-                c = testCase.Model.lookup(Path=char(pth));
-                sters = string(c.getStereotypes());
-                testCase.verifyTrue(any(contains(sters, "PhysicalItem")), ...
-                    "PhysicalItem not applied to " + pth);
-            end
+            % Every component that CAN carry a stereotype carries
+            % PhysicalItem -- the 30 the walk reaches, minus the 3 variant
+            % role wrappers, which applyStereotype rejects outright (D-013).
+            % The part list is DISCOVERED by the walk rather than enumerated,
+            % so a candidate added without a mass is caught the day it
+            % appears; the expected COUNT is asserted first so a walk that
+            % reached nothing could not make the sweep pass empty.
+            [parts, paths] = testCase.stereotypableParts();
+            testCase.verifyEqual(numel(parts), ...
+                testCase.ExpectedComponentCount - size(testCase.VariantRows,1), ...
+                "Expected " + (testCase.ExpectedComponentCount - size(testCase.VariantRows,1)) + ...
+                " stereotype-bearing components (30 walked minus the 3 variant roles), found " + ...
+                numel(parts) + ".");
+            missing = testCase.partsWithoutStereotype(parts, paths, "PhysicalItem");
+            testCase.verifyEmpty(missing, ...
+                "PhysicalItem not applied to: " + strjoin(missing, ", ") + ".");
         end
 
         function testLeafMassesMatchGroundTruth(testCase)
@@ -206,7 +358,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             for i = 1:size(testCase.MassRows,1)
                 rel = string(testCase.MassRows{i,1});
                 exp = testCase.MassRows{i,2};
-                c = testCase.Model.lookup(Path=char(testCase.AC + rel));
+                c = testCase.componentAt(testCase.AC + rel);
                 v = str2double(string(getProperty(c, testCase.Profile + ".PhysicalItem.Mass_lb")));
                 testCase.verifyEqual(v, exp, "AbsTol", 0.01, rel + " mass mismatch.");
                 testCase.verifyGreaterThan(v, 0, rel + " should be a mass-bearing leaf.");
@@ -217,19 +369,32 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testAirframeCompositeFractionsSet(testCase)
-            % Every airframe part carries a Material stereotype with a
-            % CompositeFraction in [0,1]; at least the tails are composite-heavy.
+            % Every airframe structural part carries a Material stereotype
+            % with a CompositeFraction in [0,1]; at least the tails are
+            % composite-heavy. The LUMPED airframe candidate needs one too --
+            % without it, switching the active choice would silently drop the
+            % airframe composite fraction to zero and REQ_F16A_022 would be
+            % "met" by an aircraft with no material data at all.
+            afRoot = testCase.AC + "Airframe/" + testCase.BrandtAirframe + "/";
             for p = testCase.AirframeParts
-                c = testCase.Model.lookup(Path=char(testCase.AC + "Airframe/" + p));
+                c = testCase.componentAt(afRoot + p);
                 testCase.verifyTrue(any(contains(string(c.getStereotypes()), "Material")), ...
                     "Material stereotype not applied to " + p);
-                cf = str2double(string(getProperty(c, testCase.Profile + ".Material.CompositeFraction")));
+                cf = testCase.propNum(c, testCase.Profile + ".Material.CompositeFraction");
                 testCase.verifyGreaterThanOrEqual(cf, 0, p + " CompositeFraction < 0.");
                 testCase.verifyLessThanOrEqual(cf, 1, p + " CompositeFraction > 1.");
             end
-            vt = testCase.Model.lookup(Path=char(testCase.AC + "Airframe/VerticalTail"));
-            cfvt = str2double(string(getProperty(vt, testCase.Profile + ".Material.CompositeFraction")));
+            vt = testCase.componentAt(afRoot + "VerticalTail");
+            cfvt = testCase.propNum(vt, testCase.Profile + ".Material.CompositeFraction");
             testCase.verifyGreaterThan(cfvt, 0.3, "VerticalTail should be composite-heavy (graphite skins).");
+            % The lumped candidate: a Material stereotype with a fraction in
+            % range. The VALUE is an Estimate (D-007) and is not asserted.
+            lumped = testCase.componentAt(testCase.AC + "Airframe/ConventionalTrapWing");
+            testCase.verifyTrue(any(contains(string(lumped.getStereotypes()), "Material")), ...
+                "Material stereotype not applied to the lumped airframe candidate.");
+            cfLumped = testCase.propNum(lumped, testCase.Profile + ".Material.CompositeFraction");
+            testCase.verifyGreaterThanOrEqual(cfLumped, 0, "ConventionalTrapWing CompositeFraction < 0.");
+            testCase.verifyLessThanOrEqual(cfLumped, 1, "ConventionalTrapWing CompositeFraction > 1.");
         end
 
         function testFuelTankCapacities(testCase)
@@ -237,7 +402,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % capacity and zero dry (OEW) mass; total ~ 6300 lb.
             total = 0;
             for t = testCase.FuelTanks
-                c = testCase.Model.lookup(Path=char(testCase.AC + "FuelSystem/" + t));
+                c = testCase.componentAt(testCase.AC + "FuelSystem/" + t);
                 testCase.verifyTrue(any(contains(string(c.getStereotypes()), "FuelTank")), ...
                     "FuelTank stereotype not applied to " + t);
                 cap = str2double(string(getProperty(c, testCase.Profile + ".FuelTank.FuelCapacity_lb")));
@@ -251,14 +416,29 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
 
         function testMassRollupSelfConsistent(testCase)
             % The roll-up is internally consistent: each assembly subtotal is
-            % the sum of its parts and OEW is the sum of all leaves. This
-            % checks the traversal, NOT any weight target/budget.
+            % the sum of its parts and OEW is the sum of all ACTIVE leaves.
+            % This checks the traversal, NOT any weight target/budget.
+            %
+            % It is also where the TWO PATH SPACES meet (Stage-0 finding 3).
+            % The roll-up reads INSTANCE paths, in which the active choice
+            % node is elided -- .../Airframe and .../Propulsion/Engine are
+            % still valid there and already carry the rolled-up value. This
+            % test reads ARCHITECTURE paths, which include the choice level.
+            % Asserting the two agree is what stops the restructure quietly
+            % changing what "the airframe weighs" means.
             r = F16APhysicalMassRollup();
-            expAirframe   = testCase.sumMasses(testCase.AC + "Airframe/" + testCase.AirframeParts);
-            expPropulsion = testCase.sumMasses(testCase.AC + "Propulsion/" + testCase.PropulsionParts);
-            expOEW        = sum([testCase.MassRows{:,2}]);   % all mass-bearing leaves
+            afRoot        = testCase.AC + "Airframe/" + testCase.BrandtAirframe + "/";
+            expAirframe   = testCase.sumMasses(afRoot + testCase.AirframeParts);
+            expPropulsion = testCase.sumMasses([ ...
+                testCase.AC + "Propulsion/Engine/" + testCase.BrandtEngine, ...
+                testCase.AC + "Propulsion/InletDuct"]);
+            expEngine     = testCase.sumMasses(testCase.AC + "Propulsion/Engine/" + testCase.BrandtEngine);
+            expOEW        = sum([testCase.MassRows{:,2}]);   % all active mass-bearing leaves
             testCase.verifyEqual(r.Airframe,   expAirframe,   "AbsTol", 0.01, "Airframe subtotal != sum of parts.");
             testCase.verifyEqual(r.Propulsion, expPropulsion, "AbsTol", 0.01, "Propulsion subtotal != sum of parts.");
+            testCase.verifyEqual(r.Engine,     expEngine,     "AbsTol", 0.01, ...
+                "The rolled-up Engine mass must be the ACTIVE engine candidate's mass, " + ...
+                "not a sum over all three candidates.");
             testCase.verifyEqual(r.OEW,        expOEW,        "AbsTol", 0.05, "OEW != sum of leaf masses.");
             testCase.verifyEqual(r.AirframeLessEngine, r.OEW - r.Engine, "AbsTol", 1e-6, ...
                 "Airframe-less-engine must equal OEW - Engine.");
@@ -298,13 +478,27 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testRealizationCoversAllLogicalRoles(testCase)
-            % Every one of the 9 logical roles is a realization source; the
-            % Airframe role fans out to its 6 structural parts.
+            % Every one of the 9 logical roles is a realization source, and a
+            % role with candidates is realized by ALL of them. A losing
+            % alternative genuinely does realize the role -- that is what
+            % makes the trade a decision rather than a formality -- so
+            % narrowing the realization set to the active choice would hide
+            % exactly the options L went to the trouble of enumerating
+            % (D-002).
             [srcCounts, ~] = testCase.allocEndpoints();
             missing = setdiff(testCase.LogicalRoles, string(keys(srcCounts)));
             testCase.verifyEmpty(missing, "Logical roles not realized: " + strjoin(missing, ", "));
-            testCase.verifyGreaterThanOrEqual(srcCounts("Airframe"), 6, ...
-                "Airframe should realize to >= 6 parts.");
+            thin = testCase.rolesNotRealizedByAllTheirCandidates();
+            testCase.verifyEmpty(thin, ...
+                "A variant role must be realized by every candidate that could fill it: " + ...
+                strjoin(thin, ", ") + ".");
+            % The 1->many teaching moment MOVED with the restructure: it used
+            % to be Airframe decomposing into 6 structural parts (those now
+            % sit one level down, under a candidate, and realize the role
+            % through it). It is now PropulsionSystem -> 3 mutually exclusive
+            % engine candidates plus the InletDuct they all share (D-009).
+            testCase.verifyGreaterThanOrEqual(srcCounts("PropulsionSystem"), 4, ...
+                "PropulsionSystem should realize to >= 4 parts (3 engine candidates + InletDuct).");
         end
 
         function testUnrealizedInfrastructureParts(testCase)
@@ -413,6 +607,14 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 testCase.DataProvenanceClass, ...
                 testCase.CandidateStereotype + ".DataProvenance must be typed " + ...
                 testCase.DataProvenanceClass + ", not a free string.");
+            % D-023 adds the same provenance tag to FuelTank, so the oldest
+            % untagged number in the model (the 3 x 2100 lb fuel split) can
+            % finally say what it is. Typed, for the same reason as above.
+            testCase.verifyEqual( ...
+                testCase.declaredPropertyType("FuelTank", "DataProvenance"), ...
+                testCase.DataProvenanceClass, ...
+                "FuelTank.DataProvenance must be typed " + testCase.DataProvenanceClass + ...
+                " (D-023), not a free string.");
             testCase.verifyEqual(testCase.enumerationMembers(testCase.SourceKindClass), ...
                 sort(testCase.SourceKindMembers), ...
                 testCase.SourceKindClass + " must resolve on the path with exactly the six " + ...
@@ -441,6 +643,302 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "missing: " + strjoin(missing, ", ") + ".");
         end
 
+        % ---------------- Stage 3: candidates and the active set ---------
+
+        function testCandidatesCarryTradeParameters(testCase)
+            % Each of the seven candidates is a fully constituted trade
+            % candidate BEFORE anything scores it: it applies TradeCandidate,
+            % it names a role and a kind that actually EXIST in the L model
+            % (a typo here would silently drop a candidate out of its role's
+            % trade), its mass and benefit are positive, its TRL is inside
+            % the 1..9 scale, its cost is the honest NaN of D-005, and its
+            % numbers carry a provenance tag from the four-member vocabulary.
+            %
+            % The RANGE checks matter more than they look. D-021 defaults TRL
+            % to 0 -- deliberately OUTSIDE the scale -- precisely so that "we
+            % forgot to set it" cannot masquerade as a plausible mid-pack
+            % value, and this is the assertion that collects on that choice.
+            % Values are never asserted: three masses are Brandt ground truth
+            % (asserted in MassRows) and the rest are Estimates.
+            T = testCase.candidateTable();
+            testCase.verifyEqual(height(T), size(testCase.CandidateRows,1), ...
+                "The candidate table must cover all seven candidates.");
+            testCase.verifyEmpty(T.Path(~T.Found), ...
+                "Candidate not found in the model: " + strjoin(T.Path(~T.Found), ", ") + ".");
+            testCase.verifyEmpty(T.Path(~T.HasStereotype), ...
+                "TradeCandidate not applied to: " + ...
+                strjoin(T.Path(~T.HasStereotype), ", ") + ".");
+            testCase.verifyEmpty(T.Path(T.Role ~= T.ExpectedRole), ...
+                "RealizesRole mismatch (found -> expected): " + ...
+                strjoin(T.Path(T.Role ~= T.ExpectedRole) + " '" + ...
+                        T.Role(T.Role ~= T.ExpectedRole) + "' -> '" + ...
+                        T.ExpectedRole(T.Role ~= T.ExpectedRole) + "'", ", ") + ".");
+            testCase.verifyEmpty(T.Path(~T.RoleResolves), ...
+                "RealizesRole does not name a role that exists in the L model: " + ...
+                strjoin(T.Path(~T.RoleResolves) + " -> '" + T.Role(~T.RoleResolves) + "'", ", ") + ".");
+            testCase.verifyEmpty(T.Path(T.Kind ~= T.ExpectedKind), ...
+                "RealizesKind mismatch (found -> expected): " + ...
+                strjoin(T.Path(T.Kind ~= T.ExpectedKind) + " '" + ...
+                        T.Kind(T.Kind ~= T.ExpectedKind) + "' -> '" + ...
+                        T.ExpectedKind(T.Kind ~= T.ExpectedKind) + "'", ", ") + ".");
+            testCase.verifyEmpty(T.Path(~T.KindResolves), ...
+                "RealizesKind does not name a kind that exists under its role in the L model: " + ...
+                strjoin(T.Path(~T.KindResolves) + " -> '" + T.Kind(~T.KindResolves) + "'", ", ") + ".");
+            testCase.verifyEmpty(T.Path(~(T.Mass_lb > 0)), ...
+                "TradeCandidate.Mass_lb must be positive on: " + ...
+                strjoin(T.Path(~(T.Mass_lb > 0)), ", ") + ".");
+            testCase.verifyEmpty(T.Path(~(T.Benefit > 0)), ...
+                "TradeCandidate.Benefit must be positive on: " + ...
+                strjoin(T.Path(~(T.Benefit > 0)), ", ") + ".");
+            badTRL = ~(T.TRL >= testCase.TRLScale(1) & T.TRL <= testCase.TRLScale(2));
+            testCase.verifyEmpty(T.Path(badTRL), ...
+                "TRL outside the 1..9 scale (D-021 defaults it to 0 on purpose, so this " + ...
+                "is what an unset TRL looks like): " + ...
+                strjoin(T.Path(badTRL) + " -> " + T.TRL(badTRL), ", ") + ".");
+            badProv = ~ismember(T.DataProvenance, testCase.DataProvenanceMembers);
+            testCase.verifyEmpty(T.Path(badProv), ...
+                "DataProvenance outside the " + testCase.DataProvenanceClass + " vocabulary: " + ...
+                strjoin(T.Path(badProv) + " -> '" + T.DataProvenance(badProv) + "'", ", ") + ".");
+            wrongProv = T.DataProvenance ~= T.ExpectedProvenance;
+            testCase.verifyEmpty(T.Path(wrongProv), ...
+                "DataProvenance mismatch -- a Brandt figure must be tagged Reference and a " + ...
+                "teaching value Estimate (D-007): " + ...
+                strjoin(T.Path(wrongProv) + " '" + T.DataProvenance(wrongProv) + "' -> '" + ...
+                        T.ExpectedProvenance(wrongProv) + "'", ", ") + ".");
+            % A candidate must also SAY it is one. TradeWinner is accepted
+            % alongside TradeAlternative so this survives Stage 4.
+            badKind = ~ismember(T.SourceKind, testCase.CandidateSourceKinds);
+            testCase.verifyEmpty(T.Path(badKind), ...
+                "Rationale.SourceKind on a candidate must be one of " + ...
+                strjoin(testCase.CandidateSourceKinds, "/") + ": " + ...
+                strjoin(T.Path(badKind) + " -> '" + T.SourceKind(badKind) + "'", ", ") + ".");
+        end
+
+        function testCostIsNaNEverywhere(testCase)
+            % D-005 in one assertion: there is NO cost model, therefore there
+            % must be NO cost number -- not on the aircraft Measure of Merit,
+            % not on any of the seven candidates. A visible NaN is an honest
+            % "pending"; a plausible-looking figure would be an invented one,
+            % and the ratio value functions of D-015 would happily score it.
+            % This is the test that has to fail the day somebody types a
+            % dollar amount anywhere in the trade.
+            ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
+            momCost = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD");
+            testCase.verifyTrue(isnan(momCost), ...
+                "Aircraft MeasureOfMerit.UnitCost_USD is " + momCost + ...
+                " -- cost must stay NaN until F16APhysicalCostModel computes one (D-005).");
+            T = testCase.candidateTable();
+            priced = ~isnan(T.UnitCost_USD);
+            testCase.verifyEmpty(T.Path(priced), ...
+                "Candidates carry a cost number with no cost model behind it (D-005): " + ...
+                strjoin(T.Path(priced) + " -> " + T.UnitCost_USD(priced), ", ") + ".");
+        end
+
+        function testExactlyOneActiveCandidatePerRole(testCase)
+            % Each variant role resolves exactly one active choice, and that
+            % choice is one of its OWN candidates. WHICH one is not asserted
+            % here -- the active configuration is pinned by the numbers it
+            % produces (OEW, the materials roll-up), not by a name in a test.
+            %
+            % Second half: the trade study has NOT run at Stage 3, so no
+            % candidate may claim Selected. Active choice and Selected are
+            % different things -- one is how the model is configured, the
+            % other is the trade's recorded verdict -- and conflating them is
+            % how a design "decision" gets made by whoever built the model.
+            % Stage 4 sets Selected on the winners and flips this assertion.
+            d = testCase.activeChoiceDefects();
+            testCase.verifyEmpty(d.NoActive, ...
+                "Variant role without exactly one active choice: " + ...
+                strjoin(d.NoActive, ", ") + ".");
+            testCase.verifyEmpty(d.Foreign, ...
+                "Active choice is not one of the role's own candidates: " + ...
+                strjoin(d.Foreign, ", ") + ".");
+            T = testCase.candidateTable();
+            testCase.verifyEmpty(T.Path(T.Selected), ...
+                "Selected is the trade study's output (Stage 4), not the generator's: " + ...
+                strjoin(T.Path(T.Selected), ", ") + " already claim to be selected.");
+        end
+
+        function testOEWCountsOnlyTheActiveConfiguration(testCase)
+            % The load-bearing one. Turning three components into variant
+            % roles must not change what the aircraft weighs: OEW is still
+            % the Brandt 19,980.73 lb (D-003).
+            %
+            % The failure this guards against is the quiet one. An
+            % architecture-side walk that recurses through getChoices instead
+            % of getActiveChoice sums every candidate and inflates OEW by the
+            % four losers -- a number that is still a plausible aeroplane, so
+            % nothing else in the suite would notice. Both sums are computed
+            % here FROM THE MODEL and compared, so the diagnostic names the
+            % two figures instead of just reporting a tolerance miss.
+            r = F16APhysicalMassRollup();
+            activeSum = testCase.leafMassSum("active");
+            allSum    = testCase.leafMassSum("all");
+            testCase.verifyEqual(r.OEW, testCase.ExpectedOEW_lb, "AbsTol", 0.05, ...
+                "OEW must be the Brandt " + testCase.ExpectedOEW_lb + " lb; the variant " + ...
+                "restructure adds candidates, it does not add mass (D-003).");
+            testCase.verifyEqual(activeSum, testCase.ExpectedOEW_lb, "AbsTol", 0.05, ...
+                "The active-configuration leaf sum computed here is " + activeSum + ...
+                " lb, not " + testCase.ExpectedOEW_lb + " lb.");
+            testCase.verifyEqual(r.OEW, activeSum, "AbsTol", 0.05, ...
+                "The roll-up (" + r.OEW + " lb) and the active-only walk (" + activeSum + ...
+                " lb) disagree.");
+            % Non-vacuity: if the losing candidates carried no PhysicalItem
+            % mass, the two sums would be identical and the check below could
+            % never detect double counting. A lumped candidate with no mass
+            % is also a real bug -- selecting it would delete its weight.
+            testCase.verifyGreaterThan(allSum, activeSum + 1, ...
+                "The all-candidates sum (" + allSum + " lb) is not meaningfully larger than " + ...
+                "the active sum (" + activeSum + " lb): the inactive candidates carry no " + ...
+                "PhysicalItem.Mass_lb, so this test cannot detect double counting -- and " + ...
+                "activating one of them would silently drop its weight from OEW.");
+            testCase.verifyLessThan(r.OEW, allSum - 1, ...
+                "OEW (" + r.OEW + " lb) has reached the ALL-CANDIDATES sum (" + allSum + ...
+                " lb): the roll-up is counting inactive candidates. Descend into " + ...
+                "getActiveChoice, not getChoices (D-012).");
+        end
+
+        function testCandidateMassMatchesItsModelledParts(testCase)
+            % The mass a candidate is SCORED on must be the mass it would
+            % actually contribute. For the decomposed airframe candidate that
+            % means TradeCandidate.Mass_lb equals the sum of its six parts;
+            % for a lumped candidate it means it equals its own
+            % PhysicalItem.Mass_lb. Without this, the trade study can score a
+            % candidate on one number while the model builds another, and the
+            % roll-up and the decision quietly stop describing the same
+            % aeroplane.
+            T = testCase.candidateTable();
+            off = abs(T.Mass_lb - T.ModelledMass_lb) > 0.01;
+            testCase.verifyEmpty(T.Path(off), ...
+                "TradeCandidate.Mass_lb disagrees with the mass the model actually " + ...
+                "carries (scored -> modelled): " + ...
+                strjoin(T.Path(off) + " " + T.Mass_lb(off) + " -> " + T.ModelledMass_lb(off), ", ") + ".");
+        end
+
+        function testCandidateOrderingMatchesTheIntendedLesson(testCase)
+            % Relationships, not values (the parameters are Estimates). Two
+            % orderings carry the teaching content of D-015:
+            %   * in every role the production candidate is the lightest, so
+            %     the mass-ratio value function points at the F-16A that was
+            %     actually built;
+            %   * the winning engine does NOT have the best Benefit. That is
+            %     the whole point of the engine trade -- it is won on
+            %     maturity and installed mass despite a mid-pack benefit --
+            %     and if a data revision ever makes the winner best at
+            %     everything, the example stops teaching a trade-off.
+            heavier = testCase.rolesWhereBrandtCandidateIsNotLightest();
+            testCase.verifyEmpty(heavier, ...
+                "The production candidate is not the lightest in: " + ...
+                strjoin(heavier, ", ") + ". D-015 scores mass as a ratio to the Brandt " + ...
+                "baseline, so this changes which candidate the trade should pick.");
+            best = testCase.highestBenefitPaths("PropulsionSystem");
+            testCase.verifyNotEmpty(best, ...
+                "No propulsion candidate has a readable Benefit, so the ordering below " + ...
+                "cannot be judged either way.");
+            testCase.verifyFalse( ...
+                ismember("Propulsion/Engine/" + testCase.BrandtEngine, best), ...
+                "The production engine now has the highest Benefit of its role. The engine " + ...
+                "trade is supposed to be won on maturity and installed mass DESPITE a " + ...
+                "mid-pack benefit (D-015) -- with this data there is no trade-off left to teach.");
+        end
+
+        function testMaterialsRollupFollowsActiveAirframe(testCase)
+            % REQ_F16A_022's evidence must describe the aeroplane that is
+            % actually configured. The roll-up is compared against a fraction
+            % this test computes over the ACTIVE airframe candidate's own
+            % parts, discovered from the model -- not over a hard-coded
+            % .../Airframe/Wing path, which is exactly what would keep
+            % working while silently reporting the wrong airframe.
+            %
+            % The airframe MASS is the sharper discriminator: 6722.88 lb is
+            % the decomposed candidate, 7300 lb would be the lumped one, and
+            % ~14023 lb would be both at once.
+            mats = F16APhysicalMaterialsRollup();
+            a = testCase.activeAirframeMaterials();
+            % The roll-up now reports WHICH airframe its number describes.
+            % Compared against the model's active choice, not a name in this
+            % file, so the two cannot drift apart unnoticed.
+            testCase.verifyEqual(string(mats.ActiveCandidate), a.ActiveName, ...
+                "The materials roll-up says it describes '" + string(mats.ActiveCandidate) + ...
+                "' but the model's active airframe candidate is '" + a.ActiveName + "'.");
+            testCase.verifyEqual(a.NumParts, numel(testCase.AirframeParts), ...
+                "The active airframe candidate exposes " + a.NumParts + " parts, expected " + ...
+                numel(testCase.AirframeParts) + " -- the roll-up is not looking at the " + ...
+                "decomposed candidate.");
+            testCase.verifyEqual(mats.AirframeMass_lb, testCase.BrandtAirframeMass_lb, ...
+                "AbsTol", 0.01, ...
+                "The materials roll-up weighs " + mats.AirframeMass_lb + " lb of airframe; " + ...
+                "the active configuration is " + testCase.BrandtAirframeMass_lb + " lb.");
+            testCase.verifyEqual(mats.CompositeFraction, a.CompositeFraction, "AbsTol", 1e-9, ...
+                "The roll-up's composite fraction (" + mats.CompositeFraction + ") differs " + ...
+                "from the mass-weighted fraction over the active candidate's own parts (" + ...
+                a.CompositeFraction + ").");
+            testCase.verifyEqual(mats.CompositeFraction, testCase.ExpectedCompositeFraction, ...
+                "AbsTol", 5e-4, ...
+                "Airframe composite fraction should be ~" + testCase.ExpectedCompositeFraction + ...
+                " for the active configuration.");
+        end
+
+        function testTraceRefsResolve(testCase)
+            % Until now "all 26 TraceRefs resolve" was a one-off manual
+            % audit: a renamed component or a re-issued requirement id would
+            % have broken traceability while the suite stayed green, because
+            % nothing ever tried to FOLLOW a reference. This does. Every
+            % reference in every Rationale.TraceRef is split on "; " and
+            % resolved for real -- requirement ids through find() in the set
+            % that OWNS them, model paths through lookup on the L or P model.
+            %
+            % The negative control comes first and runs through the SAME
+            % resolver. A resolver that returns true unconditionally would
+            % make the sweep below meaningless, so the test proves it can
+            % still say no before it trusts it saying yes.
+            resolvedBogus = testCase.BogusTraceRefs(arrayfun( ...
+                @(r) testCase.traceRefResolves(r), testCase.BogusTraceRefs));
+            testCase.verifyEmpty(resolvedBogus, ...
+                "The TraceRef resolver claims these deliberately bogus references resolve: " + ...
+                strjoin(resolvedBogus, ", ") + ". Every assertion below it is worthless.");
+            % A requirement id must resolve in its OWN set. If the sets were
+            % not really distinct, routing by id prefix would be untested.
+            testCase.verifyEmpty(testCase.findRequirement(testCase.OrigSet, "REQ_F16A_P01"), ...
+                "REQ_F16A_P01 is visible in f16a.slreqx, so routing a TraceRef to the " + ...
+                "physical derived set proves nothing.");
+            testCase.verifyEmpty(testCase.findRequirement(testCase.OrigSet, "REQ_F16A_L01"), ...
+                "REQ_F16A_L01 is visible in f16a.slreqx, so routing a TraceRef to the " + ...
+                "logical derived set proves nothing.");
+            % The sweep.
+            refs = testCase.allTraceRefs();
+            [parts, ~] = testCase.stereotypableParts();
+            testCase.verifyGreaterThanOrEqual(numel(refs), numel(parts), ...
+                "Collected " + numel(refs) + " references from " + numel(parts) + ...
+                " parts -- every part owes at least one, so references are being lost " + ...
+                "before they are ever checked.");
+            % All three forms must actually be exercised, so dropping a whole
+            % form cannot shrink this test into a green subset of itself.
+            testCase.verifyTrue(any(startsWith(refs, testCase.RequirementPrefix)), ...
+                "No requirement-id TraceRef was checked at all.");
+            testCase.verifyTrue(any(startsWith(refs, testCase.LogicalPathPrefix)), ...
+                "No logical-model-path TraceRef was checked at all.");
+            testCase.verifyTrue(any(startsWith(refs, testCase.PhysicalPathPrefix)), ...
+                "No physical-model-path TraceRef was checked at all.");
+            unresolved = testCase.unresolvedTraceRefs();
+            testCase.verifyEmpty(unresolved, ...
+                "TraceRef does not resolve -- the reference names something that no longer " + ...
+                "exists, or is not written in a recognised form (REQ_F16A_*, " + ...
+                "F16A_Logical/..., F16A_Physical/...): " + strjoin(unresolved, ", ") + ".");
+        end
+
+        function testFuelTankProvenanceTagged(testCase)
+            % D-023. The 3 x 2100 lb split is an even division of a rounded
+            % figure, not Brandt's 6296.30 lb mission fuel -- an Estimate in
+            % substance that carried no tag only because FuelTank had nowhere
+            % to put one. It is the oldest untagged number in the model, and
+            % "no agent invents a number" has to apply retroactively.
+            offenders = testCase.tanksWithProvenanceOtherThan(testCase.FuelTankProvenance);
+            testCase.verifyEmpty(offenders, ...
+                "Expected FuelTank.DataProvenance = " + testCase.FuelTankProvenance + ...
+                " on every tank (D-023): " + strjoin(offenders, ", ") + ".");
+        end
+
     end
 
     % =====================================================================
@@ -451,8 +949,54 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     methods (Access = private)
 
         function tf = resolves(testCase, pth)
-            tf = true;
-            try, testCase.Model.lookup(Path=char(pth)); catch, tf = false; end
+            tf = ~isempty(testCase.componentAt(pth));
+        end
+
+        function c = componentAt(testCase, fullPath)
+            % A component by its ARCHITECTURE path -- the path space that
+            % carries the variant choice level (Stage-0 finding 3), e.g.
+            % .../Airframe/BlendedCrankedDelta/Wing. lookup is tried first;
+            % if it cannot cross a variant boundary the getChoices-aware walk
+            % resolves the same path, so a candidate, a child of a candidate
+            % and a plain part are all reached by one call. Returns EMPTY
+            % when the path names nothing, which every caller reports.
+            try, c = testCase.Model.lookup(Path=char(fullPath)); catch, c = []; end
+            if ~isempty(c); return; end
+            [comps, paths] = testCase.walkComponents();
+            idx = find(paths == erase(string(fullPath), testCase.PhysicalPathPrefix), 1);
+            if ~isempty(idx); c = comps{idx}; end
+        end
+
+        function v = propNum(~, comp, qualified)
+            % A numeric stereotype property. NaN when the property cannot be
+            % read at all -- which for UnitCost_USD is indistinguishable from
+            % the honest NaN, and for everything else fails the range check
+            % it feeds, so nothing is swallowed.
+            try, v = str2double(string(getProperty(comp, char(qualified)))); catch, v = NaN; end
+        end
+
+        function s = propText(~, comp, qualified)
+            % An enumeration or string stereotype property as plain text.
+            % Both come back QUOTED (Stage-0 findings 1 and 7). "" when the
+            % property is absent, so a comparison against it fails rather
+            % than propagating <missing> through logical indexing.
+            try, s = strtrim(erase(string(getProperty(comp, char(qualified))), "'")); catch, s = ""; end
+            if ~isscalar(s) || ismissing(s); s = ""; end
+        end
+
+        function tf = propBool(testCase, comp, qualified)
+            % A boolean stereotype property. Read through propText so it
+            % copes with the value arriving as a logical, as "true"/"false"
+            % or as a quoted expression, without caring which.
+            tf = ismember(lower(testCase.propText(comp, qualified)), ["true","1"]);
+        end
+
+        function v = massOf(testCase, comp)
+            % A component's own PhysicalItem.Mass_lb; 0 when it carries none
+            % (an assembly, or a variant role wrapper that cannot hold the
+            % stereotype at all).
+            v = testCase.propNum(comp, testCase.Profile + ".PhysicalItem.Mass_lb");
+            if isnan(v); v = 0; end
         end
 
         function s = shortName(~, qualified)
@@ -594,13 +1138,8 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % failure says what the model actually claims.
             hits = strings(1,0);
             for nm = partNames
-                found = true;
-                try
-                    c = testCase.Model.lookup(Path=char(testCase.AC + nm));
-                catch
-                    found = false;
-                end
-                if ~found
+                c = testCase.componentAt(testCase.AC + nm);
+                if isempty(c)
                     hits(end+1) = nm + " (not found)";   %#ok<AGROW>
                     continue
                 end
@@ -720,8 +1259,318 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         function s = sumMasses(testCase, paths)
             s = 0;
             for pth = paths
-                c = testCase.Model.lookup(Path=char(pth));
-                s = s + str2double(string(getProperty(c, testCase.Profile + ".PhysicalItem.Mass_lb")));
+                s = s + testCase.massOf(testCase.componentAt(pth));
+            end
+        end
+
+        % ---------------- Stage 3: variants, candidates, traces ----------
+
+        function choices = choicesOf(~, comp)
+            % Every choice of a variant component. getChoices is the ONLY
+            % reliable accessor on a LOADED model (Stage-0 finding 6).
+            % Returns empty for anything that is not a variant, so a caller
+            % reports "0 choices" instead of erroring out of its test.
+            try, choices = getChoices(comp); catch, choices = []; end
+        end
+
+        function active = activeChoiceOf(~, comp)
+            % The single active choice of a variant component, or empty.
+            try, active = getActiveChoice(comp); catch, active = []; end
+        end
+
+        function names = namesOf(~, comps)
+            names = strings(1,0);
+            for i = 1:numel(comps)
+                names(end+1) = string(comps(i).Name);   %#ok<AGROW>
+            end
+        end
+
+        function missing = partsWithoutStereotype(testCase, parts, paths, stereotypeShortName)
+            missing = strings(1,0);
+            for i = 1:numel(parts)
+                if ~ismember(stereotypeShortName, testCase.appliedStereotypes(parts{i}))
+                    missing(end+1) = paths(i);   %#ok<AGROW>
+                end
+            end
+        end
+
+        function d = variantChoiceCountDefects(testCase)
+            % Each variant role holds the number of candidates it is meant
+            % to hold, counted through getChoices.
+            d = strings(1,0);
+            for i = 1:size(testCase.VariantRows,1)
+                rel = string(testCase.VariantRows{i,1});
+                expected = testCase.VariantRows{i,3};
+                vc = testCase.componentAt(testCase.AC + rel);
+                if isempty(vc)
+                    d(end+1) = rel + " (not found)";   %#ok<AGROW>
+                    continue
+                end
+                n = numel(testCase.choicesOf(vc));
+                if n ~= expected
+                    d(end+1) = rel + " holds " + n + ", expected " + expected;   %#ok<AGROW>
+                end
+            end
+        end
+
+        function d = activeChoiceDefects(testCase)
+            % One active choice per variant role, and it belongs to that
+            % role. Defects are collected by kind so the failure says which
+            % of the two things went wrong.
+            d.NoActive = strings(1,0);
+            d.Foreign  = strings(1,0);
+            for i = 1:size(testCase.VariantRows,1)
+                rel = string(testCase.VariantRows{i,1});
+                vc = testCase.componentAt(testCase.AC + rel);
+                active = testCase.activeChoiceOf(vc);
+                if numel(active) ~= 1
+                    d.NoActive(end+1) = rel + " (" + numel(active) + " active)";
+                    continue
+                end
+                own = testCase.namesOf(testCase.choicesOf(vc));
+                if ~ismember(string(active.Name), own)
+                    d.Foreign(end+1) = rel + " -> '" + string(active.Name) + ...
+                        "' not among {" + strjoin(own, ", ") + "}";
+                end
+            end
+        end
+
+        function T = candidateTable(testCase)
+            % Every trade parameter of every candidate, read once, in one
+            % place. Each test above then asks a single question of this
+            % table instead of re-walking the model -- and every getProperty
+            % call for the TradeCandidate stereotype lives here.
+            rows = testCase.CandidateRows;
+            n = size(rows,1);
+            Path = strings(n,1); ExpectedRole = strings(n,1);
+            ExpectedKind = strings(n,1); ExpectedProvenance = strings(n,1);
+            Found = false(n,1); HasStereotype = false(n,1);
+            Role = strings(n,1); Kind = strings(n,1);
+            RoleResolves = false(n,1); KindResolves = false(n,1);
+            Mass_lb = nan(n,1); Benefit = nan(n,1); TRL = nan(n,1);
+            UnitCost_USD = nan(n,1); DataProvenance = strings(n,1);
+            Selected = false(n,1); SourceKind = strings(n,1);
+            ModelledMass_lb = nan(n,1);
+            tc = testCase.Profile + "." + testCase.CandidateStereotype + ".";
+            for i = 1:n
+                Path(i)               = string(rows{i,1});
+                ExpectedRole(i)       = string(rows{i,2});
+                ExpectedKind(i)       = string(rows{i,3});
+                ExpectedProvenance(i) = string(rows{i,4});
+                c = testCase.componentAt(testCase.AC + Path(i));
+                Found(i) = ~isempty(c);
+                if ~Found(i); continue; end
+                HasStereotype(i)   = ismember(testCase.CandidateStereotype, ...
+                                              testCase.appliedStereotypes(c));
+                Role(i)            = testCase.propText(c, tc + "RealizesRole");
+                Kind(i)            = testCase.propText(c, tc + "RealizesKind");
+                % Resolved against the L MODEL, not against a list in this
+                % file: the claim "this realizes that kind" is only worth
+                % anything if the kind is still there under that role.
+                RoleResolves(i)    = testCase.pathResolves(testCase.LogiModel, ...
+                                        testCase.LogicalPathPrefix + Role(i));
+                KindResolves(i)    = testCase.pathResolves(testCase.LogiModel, ...
+                                        testCase.LogicalPathPrefix + Role(i) + "/" + Kind(i));
+                Mass_lb(i)         = testCase.propNum(c, tc + "Mass_lb");
+                Benefit(i)         = testCase.propNum(c, tc + "Benefit");
+                TRL(i)             = testCase.propNum(c, tc + "TRL");
+                UnitCost_USD(i)    = testCase.propNum(c, tc + "UnitCost_USD");
+                DataProvenance(i)  = testCase.propText(c, tc + "DataProvenance");
+                Selected(i)        = testCase.propBool(c, tc + "Selected");
+                SourceKind(i)      = testCase.rationaleText(c, "SourceKind");
+                % What the candidate would actually contribute to OEW: its
+                % own mass if it is a lumped block, the sum of its parts if
+                % it is decomposed.
+                ModelledMass_lb(i) = testCase.subtreeLeafMass(c, "all");
+            end
+            T = table(Path, ExpectedRole, ExpectedKind, ExpectedProvenance, Found, ...
+                HasStereotype, Role, Kind, RoleResolves, KindResolves, Mass_lb, ...
+                Benefit, TRL, UnitCost_USD, DataProvenance, Selected, SourceKind, ...
+                ModelledMass_lb);
+        end
+
+        function s = leafMassSum(testCase, mode)
+            % Total leaf Mass_lb over the whole model. mode="active"
+            % descends into getActiveChoice at a variant -- the aeroplane
+            % that is actually configured; mode="all" descends into every
+            % getChoices branch -- what a walk that forgot about variants
+            % would count. The difference between the two is the entire
+            % point of D-012, so both are computed rather than assumed.
+            s = 0;
+            for c = testCase.Model.Architecture.Components
+                s = s + testCase.subtreeLeafMass(c, mode);
+            end
+        end
+
+        function s = subtreeLeafMass(testCase, comp, mode)
+            % Leaves only: assemblies carry no mass of their own, they are
+            % overwritten with the sum of their children by the roll-up.
+            if isa(comp, "systemcomposer.arch.VariantComponent")
+                branches = testCase.choicesOf(comp);
+                if mode == "active"; branches = testCase.activeChoiceOf(comp); end
+                s = 0;
+                for i = 1:numel(branches)
+                    s = s + testCase.subtreeLeafMass(branches(i), mode);
+                end
+                return
+            end
+            kids = comp.Architecture.Components;
+            if isempty(kids)
+                s = testCase.massOf(comp);
+                return
+            end
+            s = 0;
+            for k = kids
+                s = s + testCase.subtreeLeafMass(k, mode);
+            end
+        end
+
+        function a = activeAirframeMaterials(testCase)
+            % The mass-weighted composite fraction of whichever airframe
+            % candidate is ACTIVE, computed over the parts that candidate
+            % actually exposes. Discovering the parts is the point: a
+            % hard-coded .../Airframe/Wing would keep working while
+            % describing an airframe the aircraft is not configured with.
+            a = struct(CompositeFraction = NaN, AirframeMass_lb = 0, ...
+                NumParts = 0, ActiveName = "");
+            vc = testCase.componentAt(testCase.AC + "Airframe");
+            active = testCase.activeChoiceOf(vc);
+            if numel(active) ~= 1; return; end
+            a.ActiveName = string(active.Name);
+            parts = active.Architecture.Components;
+            a.NumParts = numel(parts);
+            if a.NumParts == 0; return; end
+            m  = zeros(1, a.NumParts);
+            cf = zeros(1, a.NumParts);
+            for i = 1:a.NumParts
+                m(i)  = testCase.massOf(parts(i));
+                cf(i) = testCase.propNum(parts(i), testCase.Profile + ".Material.CompositeFraction");
+            end
+            a.AirframeMass_lb   = sum(m);
+            a.CompositeFraction = sum(m .* cf) / sum(m);
+        end
+
+        function hits = rolesWhereBrandtCandidateIsNotLightest(testCase)
+            % Roles in which the production (Brandt) candidate is not the
+            % lightest of its set. A RELATIONSHIP, because the competing
+            % masses are Estimates and their values are not assertable.
+            hits = strings(1,0);
+            T = testCase.candidateTable();
+            brandt = ["Airframe/" + testCase.BrandtAirframe, ...
+                      "Propulsion/Engine/" + testCase.BrandtEngine, ...
+                      "FlightControls/" + testCase.BrandtFlightControls];
+            for i = 1:size(testCase.VariantRows,1)
+                role = string(testCase.VariantRows{i,2});
+                rows = T(T.ExpectedRole == role, :);
+                mine = rows.Path(ismember(rows.Path, brandt));
+                if numel(mine) ~= 1
+                    hits(end+1) = role + " (no single production candidate)";   %#ok<AGROW>
+                    continue
+                end
+                lightest = rows.Path(rows.Mass_lb == min(rows.Mass_lb));
+                if ~ismember(mine, lightest)
+                    hits(end+1) = role + " (lightest is " + strjoin(lightest, " / ") + ")";   %#ok<AGROW>
+                end
+            end
+        end
+
+        function paths = highestBenefitPaths(testCase, role)
+            % The candidate path(s) with the highest Benefit in one role.
+            % EMPTY when no benefit is readable, so a test that asks "is the
+            % production candidate the best?" can tell "no" apart from
+            % "there is nothing to compare".
+            T = testCase.candidateTable();
+            rows = T(T.ExpectedRole == string(role), :);
+            paths = rows.Path(rows.Benefit == max(rows.Benefit));
+        end
+
+        function refs = splitTraceRef(~, txt)
+            % One TraceRef may name several things, written "a; b". Split
+            % and trimmed, so each reference is resolved on its own.
+            refs = strtrim(split(string(txt), ";"))';
+            refs = refs(strlength(refs) > 0);
+        end
+
+        function refs = allTraceRefs(testCase)
+            % Every individual reference carried by every part, flattened.
+            refs = strings(1,0);
+            [parts, ~] = testCase.stereotypableParts();
+            for i = 1:numel(parts)
+                refs = [refs, testCase.splitTraceRef( ...
+                    testCase.rationaleText(parts{i}, "TraceRef"))];   %#ok<AGROW>
+            end
+        end
+
+        function bad = unresolvedTraceRefs(testCase)
+            % Every reference that does not resolve, reported with the part
+            % that carries it so the failure names both ends of the broken
+            % link.
+            bad = strings(1,0);
+            [parts, paths] = testCase.stereotypableParts();
+            for i = 1:numel(parts)
+                for ref = testCase.splitTraceRef(testCase.rationaleText(parts{i}, "TraceRef"))
+                    if ~testCase.traceRefResolves(ref)
+                        bad(end+1) = paths(i) + " -> '" + ref + "'";   %#ok<AGROW>
+                    end
+                end
+            end
+        end
+
+        function tf = traceRefResolves(testCase, ref)
+            % The resolver. Three recognised forms, and ONLY three: a
+            % requirement id, a logical-model path, a physical-model path.
+            % Anything else returns false rather than being waved through --
+            % an unrecognised TraceRef is untraceable by definition.
+            ref = strtrim(string(ref));
+            tf = false;
+            if startsWith(ref, testCase.RequirementPrefix)
+                tf = ~isempty(testCase.findRequirement(testCase.requirementSetFor(ref), ref));
+            elseif startsWith(ref, testCase.LogicalPathPrefix)
+                tf = testCase.pathResolves(testCase.LogiModel, ref);
+            elseif startsWith(ref, testCase.PhysicalPathPrefix)
+                tf = ~isempty(testCase.componentAt(ref));
+            end
+        end
+
+        function reqSet = requirementSetFor(testCase, ref)
+            % Which set OWNS an id. Routing by prefix, so a reference that
+            % resolves in the wrong set does not count as resolved:
+            % REQ_F16A_P* is physical-derived, REQ_F16A_L* is
+            % logical-derived, everything else is the original f16a set.
+            reqSet = testCase.OrigSet;
+            if startsWith(ref, testCase.RequirementPrefix + "P"); reqSet = testCase.PhysSet; end
+            if startsWith(ref, testCase.RequirementPrefix + "L"); reqSet = testCase.LogiSet; end
+        end
+
+        function r = findRequirement(~, reqSet, id)
+            % find on a requirement set returns EMPTY for an unknown id
+            % rather than erroring, which is what makes it usable here.
+            try, r = find(reqSet, Id=char(id)); catch, r = []; end
+        end
+
+        function tf = pathResolves(~, model, pth)
+            % Does a component path resolve in the given model? Used for the
+            % L model (roles and kinds) and as the negative control's route
+            % to a definite "no".
+            pth = string(pth);
+            tf = false;
+            if endsWith(pth, "/") || contains(pth, "//"); return; end
+            try, c = model.lookup(Path=char(pth)); catch, c = []; end
+            tf = ~isempty(c);
+        end
+
+        function hits = tanksWithProvenanceOtherThan(testCase, expected)
+            hits = strings(1,0);
+            for t = testCase.FuelTanks
+                c = testCase.componentAt(testCase.AC + "FuelSystem/" + t);
+                if isempty(c)
+                    hits(end+1) = t + " (not found)";   %#ok<AGROW>
+                    continue
+                end
+                actual = testCase.propText(c, testCase.Profile + ".FuelTank.DataProvenance");
+                if actual ~= expected
+                    hits(end+1) = t + " -> '" + actual + "'";   %#ok<AGROW>
+                end
             end
         end
 
@@ -738,6 +1587,41 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 dstNames(end+1) = string(a.Target.Name); %#ok<AGROW>
             end
             dstNames = unique(dstNames);
+        end
+
+        function map = allocTargetsByRole(testCase)
+            % Realization targets grouped by the logical role they came
+            % from. allocEndpoints only counts and de-duplicates; this keeps
+            % the PAIRING, which is what "is this candidate realized?" needs.
+            scenario = testCase.Alloc.getScenario("Scenario 1");
+            map = containers.Map();
+            for a = scenario.Allocations
+                s = char(a.Source.Name);
+                t = string(a.Target.Name);
+                if isKey(map, s); map(s) = [map(s), t]; else; map(s) = t; end
+            end
+        end
+
+        function hits = rolesNotRealizedByAllTheirCandidates(testCase)
+            hits = strings(1,0);
+            targets = testCase.allocTargetsByRole();
+            for i = 1:size(testCase.CandidateRows,1)
+                role = string(testCase.CandidateRows{i,2});
+                name = testCase.leafName(string(testCase.CandidateRows{i,1}));
+                if ~isKey(targets, char(role))
+                    hits(end+1) = role + " (realizes nothing) -> " + name;   %#ok<AGROW>
+                    continue
+                end
+                if ~ismember(name, targets(char(role)))
+                    hits(end+1) = role + " -> " + name;   %#ok<AGROW>
+                end
+            end
+        end
+
+        function s = leafName(~, pth)
+            % Last token of a slash-separated component path.
+            parts = split(string(pth), "/");
+            s = parts(end);
         end
     end
 end

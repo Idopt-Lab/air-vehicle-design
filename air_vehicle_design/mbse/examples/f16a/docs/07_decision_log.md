@@ -252,3 +252,24 @@ split of a rounded figure — an `Estimate` in substance, carrying no provenance
 with the Brandt figure named in the generator comment.
 **Why** Now that D-007's vocabulary exists, this is the most conspicuous untagged number left in the
 model, and "no agent invents a number" has to apply to the numbers that were already there.
+
+### D-024 · Realization retargets at candidates: 15 edges become 14
+**Stage** 3 · **Decided by** f16a-physical (correction) + orchestrator · **Date** 2026-07-28
+**Decision** `F16A_LogicalToPhysical` now allocates `Airframe → {BlendedCrankedDelta,
+ConventionalTrapWing}` (2), `PropulsionSystem → {Engine/F100_PW_200, Engine/F110_GE_100,
+Engine/TwinEngine_Surrogate, InletDuct}` (4), `FlightControlSystem → {FlyByWire, HydroMechanical}`
+(2), and the other six roles one each (6) = **14 edges**.
+**Correction** The orchestrator's brief said "still 15 edges", which does not add up against its own
+list — the old 15 counted Airframe's six *decomposition* edges, which are now internal to a
+candidate. The generator prints `size(edges,1)` and self-reported 14.
+**Consequences** The 1→many teaching moment moves from `Airframe` (6 structural parts) to
+`PropulsionSystem` (4 candidates + the shared inlet). Any test or doc asserting 15 must say 14.
+
+### D-025 · `DataProvenance` qualifies the mass, not the judgement
+**Stage** 3 · **Decided by** f16a-physical · **Date** 2026-07-28
+**Decision** A candidate carries one `DataProvenance` tag, and it qualifies its **`Mass_lb`**.
+`Benefit` and `TRL` are judgement on a declared scale even on a `Reference`-tagged candidate, and the
+generator comment says so.
+**Why** Without that note, `DataProvenance = Reference` on `F100_PW_200` would imply its Benefit of
+8.2 is sourced from Brandt, which it is not — it is our judgement. Overclaiming provenance is the
+failure mode D-007 exists to prevent, so the tag has to state precisely what it covers.

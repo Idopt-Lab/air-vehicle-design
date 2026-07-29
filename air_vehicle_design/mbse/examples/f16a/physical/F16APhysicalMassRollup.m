@@ -23,6 +23,25 @@ function results = F16APhysicalMassRollup()
 %   but it is NOT rolled up here -- it comes from a cost-model function
 %   (F16APhysicalCostModel); see the Physical-layer doc for that contrast.
 %
+%   THIS IS AN ACTIVE-CONFIGURATION ROLL-UP, AND IT IS ONE FOR FREE.
+%   The physical model has three variant roles (Airframe, Propulsion/Engine,
+%   FlightControls) holding seven candidates between them, and summing all
+%   seven would be meaningless -- an aircraft has one engine fit, not three.
+%   The native path needs no filter to get that right: instantiate/iterate
+%   traverses ONLY the active choice (Stage-0 finding 2, D-012), so the
+%   analysis function below is a plain postorder sum with no "Selected"
+%   handling anywhere in it. Deliberate, not an omission.
+%
+%   The instance also FLATTENS a variant (finding 3): the active choice node is
+%   elided and its children lifted under the variant node, so the INSTANCE path
+%   is ".../Aircraft/Airframe/Wing" while the ARCHITECTURE path is now
+%   ".../Aircraft/Airframe/BlendedCrankedDelta/Wing". Every path in this file
+%   is an instance path and therefore did NOT change when the candidates were
+%   introduced -- rd("...Airframe") and rd("...Propulsion/Engine") still name
+%   the variant node and still return the active configuration's mass. Only the
+%   archMass fallback, which walks the ARCHITECTURE, had to learn about
+%   variants; see its comment.
+%
 %   Requires physical/F16A_Physical.slx to exist (run generate_f16a_physical,
 %   which itself calls this as its final step).
 
@@ -40,7 +59,11 @@ m = systemcomposer.loadModel(modelName);
 acPath = modelName + "/Aircraft";     % the system-of-interest component
 S = acPath + "/";
 
-% Names of the top-level assemblies (order matches the model).
+% Names of the top-level assemblies, for the reported table. Each is read by
+% path, so this is presentation order only -- it no longer matches the order
+% the generator creates them in (the two variant roles are added after the nine
+% plain ones), and nothing depends on it. Airframe and FlightControls name
+% VARIANT nodes here; see the note above on why that path still resolves.
 assemblies = ["Airframe","Propulsion","LandingGear","FuelSystem", ...
     "FlightControls","Avionics","Electrical","Hydraulics","ECS", ...
     "ArmamentSupport","SecondaryStructure"];
@@ -63,6 +86,13 @@ catch ME
     rd = @(p) archMass(lookup(m, Path=char(p)), massProp);
 end
 
+% These four paths are unchanged by the variant restructure, and that is a
+% consequence of the flattening described above rather than an accident:
+% "Airframe" and "Propulsion/Engine" name the VARIANT NODES, whose instance
+% nodes carry the active candidate's rolled-up mass. Reading
+% ".../Airframe/BlendedCrankedDelta" here would be wrong twice over -- it is an
+% architecture path, and it would hard-code one candidate into a roll-up whose
+% whole job is to follow whichever one is active.
 OEW        = rd(acPath);
 airframe   = rd(S + "Airframe");
 propulsion = rd(S + "Propulsion");
@@ -103,8 +133,10 @@ function f16aMassRollup(instance, varargin) %#ok<INUSD>
 %F16AMASSROLLUP Analysis function: sum Mass_lb bottom-up, write each subtotal.
 %   Mirrors ex2/CostAndWeightRollupAnalysis: a leaf keeps its own Mass_lb; an
 %   assembly (and the root) is overwritten with the sum of its children, so
-%   the Analysis Viewer shows the roll-up at every level. Weight only, no
-%   variant "active" filtering (the Physical layer has no variants).
+%   the Analysis Viewer shows the roll-up at every level. Weight only, and NO
+%   variant "active" filtering ON PURPOSE: the instance the iterator walks
+%   already contains only the active choice (D-012 / Stage-0 finding 2), so a
+%   filter here would be dead code that looked load-bearing.
     if ~instance.isComponent(); return; end
     rollupAndSet(instance);
 
@@ -134,6 +166,23 @@ end
 % =====================================================================
 function v = archMass(comp, prop)
 %ARCHMASS Fallback: recursively sum leaf Mass_lb under a model component.
+%   Used only when instantiate/iterate is unavailable. Unlike the native path
+%   above, this walks the ARCHITECTURE, which contains EVERY candidate of every
+%   variant role -- so without the first branch it would add the F100, the F110
+%   AND the twin-engine surrogate together and report an aircraft with three
+%   engines and two airframes (D-012 / Stage-0 finding 2 is exactly this
+%   asymmetry: the instance filters, the architecture does not).
+%
+%   getActiveChoice is the right accessor here rather than getChoices: this
+%   function must reproduce the native path's number, and the native path sees
+%   the active configuration. It also sidesteps finding 6 -- a variant's
+%   .Architecture.Components returns ZERO on a saved-and-reloaded model, so the
+%   old code would have silently treated every variant role as a massless leaf
+%   instead of loudly over-counting. Both failure modes are gone.
+if isa(comp, "systemcomposer.arch.VariantComponent")
+    v = archMass(getActiveChoice(comp), prop);
+    return;
+end
 kids = comp.Architecture.Components;
 if isempty(kids)
     v = str2double(string(getProperty(comp, char(prop))));
