@@ -12,7 +12,11 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %         todo Sec. P4-7): LG 0.033*W_TO, installed engine 1.3 x bare,
 %         all-else-empty 0.17*W_TO.
 %     OEW = W_wings + W_tail.HT + W_tail.VT + W_fuselage + W_landing_gear
-%           + W_installed_engine + W_all_else_empty
+%           + W_installed_engine + W_all_else_empty + W_strake
+%     (c) Strake (LERX), ADDED 2026-07-29: Brandt F-16A.xls Main!D18 (S_strake
+%         = 20 ft^2) / Wt!H7 (k_strake = 4.5 lbf/ft^2) -- the only available
+%         source, since Raymer Table 15.2 has no strake/LERX category. See
+%         F16WeightsL2.m's S_strake/k_strake property comment.
 %
 %   CONSTRUCTOR (Phase 4, 2026-07-25):
 %     F16WeightsL2(json_path, req_path, geom, prop) -- all four REQUIRED.
@@ -81,13 +85,16 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %                            = 3607.5085 lbf   (the x1.3 is L2-ONLY)
 %     (9) W_en_brandt = 0.199 * 23770 = 4730.23 lbf (exact) -- ALTERNATE,
 %         already installed, never summed into OEW.
-%    (10) OEW(31377) = (1)+(2)+(3)+(4)+(5)+(8)+(6)
+%    (10) OEW(31377) = (1)+(2)+(3)+(4)+(5)+(8)+(6)+(12)
 %           1766.034621 + 199.389004 = 1965.423625
 %                       + 216.715246 = 2182.138871
 %                       + 3505.451136 = 5687.590007
 %                       + 1035.441    = 6723.031007
 %                       + 3607.5085   = 10330.539507
-%                       + 5334.09     = 15664.629507 lbf
+%                       + 5334.09     = 15664.629507
+%                       + 90.00       = 15754.629507 lbf
+%    (12) W_strake = k_strake * S_strake = 4.5 * 20 = 90.00 lbf (exact)
+%         [Brandt Main!D18 / Wt!H7]. ADDED 2026-07-29.
 %    (11) Finding-#5 identity: only the LG and all-else terms scale with W_TO,
 %         so for any W1, W2:
 %           OEW(W2) - OEW(W1) = (0.17 + 0.033) * (W2 - W1)
@@ -280,9 +287,23 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   The expected value is the hand-summed component list, so a change
         %   in any one component, coefficient or injected area breaks it.
             w = TestWeightsL2.makeW2();
-            tc.verifyEqual(w.OEW(31377), 15664.629507, 'RelTol', 1e-5, ...
+            tc.verifyEqual(w.OEW(31377), 15754.629507, 'RelTol', 1e-5, ...
                 ['L2 OEW(31377) must equal the hand-summed Table 15.2 + metabook ' ...
-                 'Sec. 7 buildup = 15664.629507 lbf.']);
+                 'Sec. 7 + strake buildup = 15754.629507 lbf.']);
+        end
+
+        function testStrakeWeightHandComputed(tc)
+        %TESTSTRAKEWEIGHTHANDCOMPUTED  Header row (12). ADDED 2026-07-29.
+        %   k_strake * S_strake = 4.5 * 20 = 90.00 lbf exactly [Brandt
+        %   Main!D18 / Wt!H7]. No W_TO dependence -- pure area x density,
+        %   same pattern as the other structural groups.
+            w = TestWeightsL2.makeW2();
+            tc.verifyEqual(w.W_strake, 90.00, 'AbsTol', 1e-9, ...
+                'W_strake must be k_strake * S_strake = 4.5 * 20 = 90.00 lbf.');
+            tc.verifyEqual(w.S_strake, 20.0, 'AbsTol', 1e-9, ...
+                'S_strake must be read from f16a_L2.json as 20.0 ft^2 [Brandt Main!D18].');
+            tc.verifyEqual(w.k_strake, 4.5, 'AbsTol', 1e-9, ...
+                'k_strake must be read from f16a_L2.json as 4.5 lbf/ft^2 [Brandt Wt!H7].');
         end
 
         function testOEWEqualsSumOfItsComponents(tc)
@@ -294,9 +315,9 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
             W_t   = w.weight_tail(W_TO);
             total = w.weight_wing(W_TO) + W_t.HT + W_t.VT + w.weight_fuselage(W_TO) ...
                     + w.weight_landing_gear(W_TO) + WeightsL2.weight_installed_engine(w) ...
-                    + WeightsL2.weight_all_else_empty(w, W_TO);
+                    + WeightsL2.weight_all_else_empty(w, W_TO) + w.W_strake;
             tc.verifyEqual(w.OEW(W_TO), total, 'AbsTol', 1e-9, ...
-                'OEW must equal the exact sum of its seven component terms.');
+                'OEW must equal the exact sum of its eight component terms.');
         end
 
     end
@@ -356,7 +377,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   must not consult it. If OEW ever reads obj.W_TO this returns NaN.
             w = TestWeightsL2.makeW2();
             tc.verifyTrue(isnan(w.W_TO), 'obj.W_TO must be NaN until set.');
-            tc.verifyEqual(w.OEW(31377), 15664.629507, 'RelTol', 1e-5, ...
+            tc.verifyEqual(w.OEW(31377), 15754.629507, 'RelTol', 1e-5, ...
                 'OEW must be computable with obj.W_TO unset.');
         end
 
@@ -420,26 +441,28 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
             tc.verifyNotEqual(w.W_installed_engine, 1.3 * w.W_en_brandt, ...
                 'The REJECTED double-installed 1.3*0.199*T variant must not be used.');
             oew_official = w.OEW(31377);
-            tc.verifyLessThan(abs(oew_official - 15664.629507), 1e-3 * 15664.629507, ...
+            tc.verifyLessThan(abs(oew_official - 15754.629507), 1e-3 * 15754.629507, ...
                 'OEW must be built on the Raymer engine weight, not the Brandt alternate.');
         end
 
     end
 
     % ------------------------------------------------------------------ %
-    % REVIEW FINDING #12 -- the 12 Dependent properties
+    % REVIEW FINDING #12 -- the Dependent properties (12 -> 13, W_strake
+    % added 2026-07-29)
     % ------------------------------------------------------------------ %
 
     methods (Test)
 
-        function testAllTwelveDependentPropertiesExist(tc)
-        %TESTALLTWELVEDEPENDENTPROPERTIESEXIST  The declared INPUT/DERIVED split.
-        %   F16WeightsL2.md §2: 7 inputs (6 numeric + 1 string) + 2 injected
-        %   objects; 12 Dependent. A count change means the split moved and the
-        %   sweeps below no longer cover what they claim to.
+        function testAllThirteenDependentPropertiesExist(tc)
+        %TESTALLTHIRTEENDEPENDENTPROPERTIESEXIST  The declared INPUT/DERIVED split.
+        %   F16WeightsL2.md §2: 9 inputs (8 numeric + 1 string) + 2 injected
+        %   objects; 13 Dependent (12 + W_strake, added 2026-07-29). A count
+        %   change means the split moved and the sweeps below no longer cover
+        %   what they claim to.
             names = TestWeightsL2.dependentNames();
-            tc.verifyEqual(numel(names), 12, ...
-                'F16WeightsL2 must declare exactly 12 Dependent properties.');
+            tc.verifyEqual(numel(names), 13, ...
+                'F16WeightsL2 must declare exactly 13 Dependent properties.');
         end
 
         function testNoDependentPropertyIsNonFinite(tc)
@@ -447,7 +470,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   W_wings / W_landing_gear / W_tail / W_fuselage were declared
         %   abstract, satisfied with "= NaN", and never assigned by any code --
         %   so a consumer reading the documented contract got NaN. Sweeps ALL
-        %   12 Dependents (metaclass-derived, so a newly added one is covered
+        %   13 Dependents (metaclass-derived, so a newly added one is covered
         %   automatically) at a set W_TO and requires every scalar, including
         %   every field of the W_tail struct, to be finite.
             w = TestWeightsL2.makeW2();
@@ -455,8 +478,8 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
             vals = TestWeightsL2.flattenDependents(w);
             tc.verifyTrue(all(isfinite(vals)), ...
                 'No Dependent property may read NaN or Inf at W_TO = 31377.');
-            tc.verifyEqual(numel(vals), 13, ...
-                'Sweep must cover 12 Dependents = 13 scalars (W_tail has HT and VT).');
+            tc.verifyEqual(numel(vals), 14, ...
+                'Sweep must cover 13 Dependents = 14 scalars (W_tail has HT and VT).');
         end
 
         function testGenuinelyWTODependentPropertiesErrorWhenWTOUnset(tc)
@@ -565,7 +588,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   which testGenuinelyWTODependentPropertiesErrorWhenWTOUnset asserts.
             w = TestWeightsL2.makeW2();
             tc.verifyTrue(isnan(w.W_TO), 'Precondition: W_TO unset.');
-            for name = ["W_wings", "W_tail", "W_fuselage", "W_installed_engine"]
+            for name = ["W_wings", "W_tail", "W_fuselage", "W_installed_engine", "W_strake"]
                 tc.verifyTrue(TestWeightsL2.readsWithoutError(w, char(name)), ...
                     sprintf(['%s has no W_TO dependence (its toolbox method takes ' ...
                              'W_TO as ~) and must be readable without one -- a guard ' ...

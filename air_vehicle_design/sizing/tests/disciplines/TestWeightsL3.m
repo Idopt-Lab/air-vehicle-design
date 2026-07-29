@@ -234,10 +234,14 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %          + 422.007 + 1945.418 + 217.6 + 297.7628 + 10.04064 = 4578.039 lbf
 %
 %   OEW(31377) = wing + HT + VT + fuselage + LG.main + LG.nose
-%                + engine group + systems group
+%                + engine group + systems group + strake
 %              = 2396.944 + 200.5104 + 313.0505 + 3674.18 + 989.843
-%                + 170.9044 + 3381.6847 + 4578.039
-%              = 15705.156 lbf
+%                + 170.9044 + 3381.6847 + 4578.039 + 90.00
+%              = 15795.156 lbf
+%
+%   Strake (ADDED 2026-07-29): k_strake * S_strake = 4.5 * 20 = 90.00 lbf
+%   exact [Brandt Main!D18 / Wt!H7]. See F16WeightsL3.m's S_strake/k_strake
+%   property comment.
 %
 %   TOLERANCE RATIONALE. Every hand value above is decimal arithmetic carried
 %   to ~8 significant figures through 1-4 chained exp/ln series evaluations,
@@ -650,8 +654,22 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testOEWHandComputed(tc)
         %TESTOEWHANDCOMPUTED  Header total -- replaces the removed +-40 % gate.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.OEW(31377), 15705.156, 'RelTol', 1e-3, ...
-                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 buildup = 15705.156 lbf.');
+            tc.verifyEqual(w.OEW(31377), 15795.156, 'RelTol', 1e-3, ...
+                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15795.156 lbf.');
+        end
+
+        function testStrakeWeightHandComputed(tc)
+        %TESTSTRAKEWEIGHTHANDCOMPUTED  ADDED 2026-07-29.
+        %   k_strake * S_strake = 4.5 * 20 = 90.00 lbf exactly [Brandt
+        %   Main!D18 / Wt!H7]. No W_TO dependence -- pure area x density,
+        %   same as F16WeightsL2's identical term.
+            w = TestWeightsL3.makeW3();
+            tc.verifyEqual(w.W_strake, 90.00, 'AbsTol', 1e-9, ...
+                'W_strake must be k_strake * S_strake = 4.5 * 20 = 90.00 lbf.');
+            tc.verifyEqual(w.S_strake, 20.0, 'AbsTol', 1e-9, ...
+                'S_strake must be read from f16a_L3.json as 20.0 ft^2 [Brandt Main!D18].');
+            tc.verifyEqual(w.k_strake, 4.5, 'AbsTol', 1e-9, ...
+                'k_strake must be read from f16a_L3.json as 4.5 lbf/ft^2 [Brandt Wt!H7].');
         end
 
         function testOEWEqualsSumOfItsGroups(tc)
@@ -663,9 +681,10 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             W_lg  = w.weight_landing_gear(W_TO);
             total = w.weight_wing(W_TO) + W_t.HT + W_t.VT + w.weight_fuselage(W_TO) ...
                     + W_lg.main + W_lg.nose ...
-                    + w.weight_engine_section(W_TO).total + w.weight_systems(W_TO).total;
+                    + w.weight_engine_section(W_TO).total + w.weight_systems(W_TO).total ...
+                    + w.W_strake;
             tc.verifyEqual(w.OEW(W_TO), total, 'AbsTol', 1e-9, ...
-                'OEW must equal the exact sum of its eight group terms.');
+                'OEW must equal the exact sum of its nine group terms.');
         end
 
         function testOEWScalesWithItsArgument(tc)
@@ -684,7 +703,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %TESTOEWWORKSWITHWTOUNSET  OEW is a pure function of its argument.
             w = TestWeightsL3.makeW3();
             tc.verifyTrue(isnan(w.W_TO), 'obj.W_TO must be NaN until set.');
-            tc.verifyEqual(w.OEW(31377), 15705.156, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.OEW(31377), 15795.156, 'RelTol', 1e-3, ...
                 'OEW must be computable with obj.W_TO unset.');
         end
 
@@ -781,25 +800,27 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
     end
 
     % ------------------------------------------------------------------ %
-    % REVIEW FINDING #12 -- the 31 Dependent properties
+    % REVIEW FINDING #12 -- the Dependent properties (31 -> 32, W_strake
+    % added 2026-07-29)
     % ------------------------------------------------------------------ %
 
     methods (Test)
 
-        function testAllThirtyOneDependentPropertiesExist(tc)
-        %TESTALLTHIRTYONEDEPENDENTPROPERTIESEXIST  The declared split.
-        %   F16WeightsL3.md §2: 43 inputs (42 numeric + 1 string) + 2
-        %   injected objects; 31 Dependent. A count change means the split moved
-        %   and the sweeps below no longer cover what they claim to.
-            tc.verifyEqual(numel(TestWeightsL3.dependentNames()), 31, ...
-                'F16WeightsL3 must declare exactly 31 Dependent properties.');
+        function testAllThirtyTwoDependentPropertiesExist(tc)
+        %TESTALLTHIRTYTWODEPENDENTPROPERTIESEXIST  The declared split.
+        %   F16WeightsL3.md §2: 45 inputs (44 numeric + 1 string) + 2
+        %   injected objects; 32 Dependent (31 + W_strake, added 2026-07-29).
+        %   A count change means the split moved and the sweeps below no
+        %   longer cover what they claim to.
+            tc.verifyEqual(numel(TestWeightsL3.dependentNames()), 32, ...
+                'F16WeightsL3 must declare exactly 32 Dependent properties.');
         end
 
         function testNoDependentPropertyIsNonFinite(tc)
         %TESTNODEPENDENTPROPERTYISNONFINITE  Finding #12's headline symptom.
         %   W_wings / W_tail / W_fuselage / W_installed_engine / W_subsystems
         %   were declared abstract, satisfied with "= NaN", and never assigned,
-        %   so a consumer reading the documented contract got NaN. Sweeps ALL 31
+        %   so a consumer reading the documented contract got NaN. Sweeps ALL 32
         %   Dependents (metaclass-derived, so a newly added one is covered) at a
         %   set W_TO, expanding the W_tail struct to its two scalars.
             w = TestWeightsL3.makeW3();
@@ -807,8 +828,8 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             vals = TestWeightsL3.flattenDependents(w);
             tc.verifyTrue(all(isfinite(vals)), ...
                 'No Dependent property may read NaN or Inf at W_TO = 31377.');
-            tc.verifyEqual(numel(vals), 32, ...
-                'Sweep must cover 31 Dependents = 32 scalars (W_tail has HT and VT).');
+            tc.verifyEqual(numel(vals), 33, ...
+                'Sweep must cover 32 Dependents = 33 scalars (W_tail has HT and VT).');
         end
 
         function testWTODependentPropertiesErrorWhenWTOUnset(tc)

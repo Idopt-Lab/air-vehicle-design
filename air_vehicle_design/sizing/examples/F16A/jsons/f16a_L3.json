@@ -190,6 +190,12 @@
       "W_uav": 1500,
       "K_vsh": 1.0,
       "K_mc": 1.0
+    },
+
+    "strake": {
+      "_src": "S_strake_ft2 [Brandt Main!D18 = 20 ft^2]; k_strake_psf [Brandt Wt!H7 = 4.5 lbf/ft^2]. Raymer §15.3.1 has NO strake/LERX equation, so Brandt's own genuine INPUT assumption for this one component is the only available source -- same value/status as f16a_L2.json's identical fields; see F16WeightsL3.m's S_strake/k_strake property comment. ADDED 2026-07-29.",
+      "S_strake_ft2": 20.0,
+      "k_strake_psf": 4.5
     }
   }
 }

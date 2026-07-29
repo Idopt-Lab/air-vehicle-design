@@ -11,17 +11,25 @@ classdef F16WeightsL3 < WeightsModelL3
 %   a vendor dry weight).
 %
 %   OEW = wing + HT + VT + fuselage + LG.main + LG.nose
-%         + engine-group.total + systems-group.total
+%         + engine-group.total + systems-group.total + W_strake
 %
-%   VALUES at W_TO = 31,377 lbf (computed live 2026-07-25):
+%   VALUES at W_TO = 31,377 lbf (computed live 2026-07-25; strake term added
+%   2026-07-29):
 %     wing 2396.77 | HT 200.54 | VT 313.06 | fuselage 3674.20
 %     LG 1160.93 (main 989.98 + nose 170.95) | engine group 3381.70
-%     systems group 4578.13 (fuel system 423.465)
-%     OEW = 15705.33 lbf  (-21.40 % vs Brandt Wt!B12 = 19980.700578;
-%                          -17.98 % vs corrections.xls 19148.08)
-%     OEW(45000) = 16869.63 | OEW(60000) = 17930.71 — the near-zero change at
+%     systems group 4578.13 (fuel system 423.465) | strake 90.00
+%     OEW = 15795.33 lbf  (-20.95 % vs Brandt Wt!B12 = 19980.700578;
+%                          -17.51 % vs corrections.xls 19148.08)
+%     OEW(45000) = 16959.63 | OEW(60000) = 18020.71 — the near-zero change at
 %     45,000 vs the pre-Phase-4 code is a COINCIDENCE of four offsetting deltas,
 %     not evidence that nothing changed (F16WeightsL3.md §4).
+%
+%   STRAKE (LERX) TERM — ADDED 2026-07-29: k_strake * S_strake = 4.5 * 20 =
+%   90.00 lbf [Brandt Main!D18 / Wt!H7]. Previously unmodeled at every fidelity
+%   level (examples/F16A/mds/weights_brandt_comparison.md section 5); mirrors
+%   F16WeightsL2's identical addition. See the S_strake/k_strake property
+%   comment for why this borrows Brandt's own coefficient rather than a
+%   Raymer §15.3.1 equation (there is no strake equation in that section).
 %
 %   ★ STANDING TO-DO, NOT CLEARED: EVERY §15.3.1 EXPONENT.
 %   Locked decision (user 2026-07-24, "approach 2"): keep every current code
@@ -36,7 +44,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %   ============================================================================
 %   INPUT vs DERIVED — the optimization-ready pattern (CLAUDE.md; reference
 %   implementation examples/F16A/F16GeomL2.m).
-%   43 INPUTS (42 numeric + 1 string) + 2 injected objects; 31 DERIVED.
+%   45 INPUTS (44 numeric + 1 string) + 2 injected objects; 32 DERIVED (31 + W_strake, added 2026-07-29).
 %
 %   Phase 4 moved 32 of the former 72 plain properties: 23 frozen geometry
 %   literals (21 to geometry DI, 2 deleted as dead), 2 frozen propulsion literals
@@ -184,6 +192,25 @@ classdef F16WeightsL3 < WeightsModelL3
         K_mc  = 1.0   % --  <= 2 generators [Raymer 7th ed. §15.3.1, Eq. 15.20 flag]
 
         % ================================================================== %
+        %  STRAKE (LERX), ADDED 2026-07-29
+        % ================================================================== %
+        %S_STRAKE, K_STRAKE  Strake structural weight inputs -- previously
+        %   unmodeled at every fidelity level (examples/F16A/mds/
+        %   weights_brandt_comparison.md section 5: 13.68% of Brandt Wt!B12).
+        %   [Brandt F-16A.xls Main!D18 = 20 ft^2 / Wt!H7 = 4.5 lbf/ft^2].
+        %   CROSS-MODEL BORROW, DELIBERATE: Raymer §15.3.1 (Eqs. 15.1-15.24, this
+        %   class's official component buildup) has NO strake/LERX equation --
+        %   it is not a component that section of the book covers at all. No
+        %   Raymer alternative exists, so Brandt's own value is the only
+        %   available source -- same reasoning already applied at L2
+        %   (F16WeightsL2.m's S_strake/k_strake property comment), and NOT the
+        %   forbidden back-calculated-output pattern: Brandt applies k_strake to
+        %   S_strake as a genuine INPUT assumption in his own worksheet, not a
+        %   value reverse-fit to a result.
+        S_strake  % ft^2      strake planform reference area   [Brandt Main!D18]
+        k_strake  % lbf/ft^2  strake structural surface density [Brandt Wt!H7]
+
+        % ================================================================== %
         %  INJECTED COLLABORATORS (NOT numeric spec data)
         % ================================================================== %
         geom   % (1,1) GeometryModelL3 — F16GeomL3, the FULL L3 geometry tier. Supplies the 21 Dependent geometry quantities below, replacing 21 frozen literals (review finding #11)
@@ -235,6 +262,7 @@ classdef F16WeightsL3 < WeightsModelL3
         W_fuselage         % lbf  [Eq. 15.4]         = 3674.20
         W_installed_engine % lbf  engine group total = 3381.70 (dry engine + Eqs. 15.7-15.15)
         W_subsystems       % lbf  systems group total = 4578.13 (Eqs. 15.16-15.24). ! Does NOT include the landing gear — see WeightsModelL3
+        W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00, added 2026-07-29 (see S_strake/k_strake property comment)
     end
 
     methods
@@ -325,6 +353,10 @@ classdef F16WeightsL3 < WeightsModelL3
             obj.N_gen = W.systems.N_gen;
             obj.W_uav = W.systems.W_uav;
             obj.K_mc  = W.systems.K_mc;
+
+            % ---- strake (ADDED 2026-07-29) ------------------------------- %
+            obj.S_strake = W.strake.S_strake_ft2;   % [Brandt Main!D18]
+            obj.k_strake = W.strake.k_strake_psf;   % [Brandt Wt!H7]
         end
 
         % ================================================================== %
@@ -335,8 +367,15 @@ classdef F16WeightsL3 < WeightsModelL3
 
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
-        %   [Raymer 7th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10]
-            oew = WeightsL3.OEW(obj, W_TO);
+        %   [Raymer 7th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10] + this class's
+        %   own strake term (Brandt Main!D18/Wt!H7 -- ADDED 2026-07-29, see the
+        %   S_strake/k_strake property comment for why it lives here rather
+        %   than in the generic WeightsL3 toolbox: §15.3.1 has no strake
+        %   equation, so it is not a quantity another aircraft's L3 weights
+        %   class could reuse unmodified).
+        %   W_strake carries no W_TO dependence (pure area x density), so it is
+        %   simply added on top.
+            oew = WeightsL3.OEW(obj, W_TO) + obj.W_strake;
         end
 
         function W = weight_wing(obj, W_TO)
@@ -602,6 +641,15 @@ classdef F16WeightsL3 < WeightsModelL3
             % Systems GROUP total, Eqs. 15.16-15.24. Contains NO landing-gear
             % term; OEW adds the gear separately (WeightsModelL3, §P4-10).
             v = WeightsL3.weight_systems(obj, obj.requireWTO('W_subsystems')).total;
+        end
+
+        function v = get.W_strake(obj)
+            % ADDED 2026-07-29. k_strake * S_strake = 4.5 * 20 = 90.00 lbf
+            % [Brandt Wt!H9 = 4.5*20 = 90.00 exact]. Pure area x density, no
+            % W_TO dependence -- same pattern as F16WeightsL2's W_strake. See
+            % the S_strake/k_strake property comment for the cross-model-borrow
+            % rationale.
+            v = obj.k_strake * obj.S_strake;
         end
 
     end

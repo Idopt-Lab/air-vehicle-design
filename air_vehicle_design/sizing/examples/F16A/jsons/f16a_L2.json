@@ -51,10 +51,13 @@
   },
 
   "weights": {
-    "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants.",
+    "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants. S_strake_ft2/k_strake_psf [Brandt F-16A.xls Main!D18 / Wt!H7 -- Raymer Tbl 15.2 has NO strake/LERX category, so Brandt's own genuine INPUT assumption for this one component is the only available source; see F16WeightsL2.m's W_strake getter for the cross-model-borrow rationale].",
     "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. design_mach (Raymer Eq. 10.10 M^0.25) is NOT here either -- it is a REQUIREMENT, read from examples/F16A/f16a_requirements.json. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio, then x1.3 installed -- the x1.3 applies at L2 ONLY, F16WeightsL2.md §4) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
     "N_en": 1,
     "W_payload_fixed": 700,
-    "W_payload_expendable": 4400
+    "W_payload_expendable": 4400,
+    "S_strake_ft2": 20.0,
+    "k_strake_psf": 4.5,
+    "_strake_src": "S_strake_ft2 = strake planform reference area [Brandt Main!D18 = 20 ft^2]; k_strake_psf = strake structural surface density [Brandt Wt!H7 = 4.5 lbf/ft^2]. W_strake = k_strake_psf * S_strake_ft2 = 90.00 lbf (added 2026-07-29 -- was previously an unmodeled ~13.7%-of-OEW gap, see examples/F16A/mds/weights_brandt_comparison.md section 5)."
   }
 }
