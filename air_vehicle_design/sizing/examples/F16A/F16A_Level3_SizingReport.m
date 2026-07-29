@@ -1,0 +1,263 @@
+%% F-16A Level 3 Sizing Report
+% Runs the L3 (W_TO, T_SL) sizing study (|design_study_03_L3|, which reuses
+% SizingLoopL2 wired to F16AeroL3/F16GeomL3/F16WeightsL3/F16MissionL3 --
+% see that driver's header for why no separate SizingLoopL3 exists) and
+% reports:
+%
+% * Sizing convergence (W_TO, OEW, fuel weight per iteration)
+% * A detailed component/subsystem weight breakdown (F16WeightsL3's Raymer
+%   Sec. 15.3.1 buildup: weight_wing/weight_tail/weight_fuselage/
+%   weight_landing_gear/weight_engine_section/weight_systems)
+% * Real aerodynamic-coefficient breakdown at each mission segment
+%   (F16AeroL3.drag_polar component buildup + supersonic wave drag)
+% * An internal fuel-volume check (F16WeightsL3's V_t/V_i/V_p inputs vs.
+%   the converged mission fuel weight)
+%
+% NOTE ON FILE FORMAT: this file is authored as a plain .m script with
+% Live-Editor-compatible "%%" section breaks. Open it in MATLAB and use
+% View > Open in Live Editor, or File > Save As > Live Script (.mlx), for
+% the rendered inline-figure/rich-text presentation.
+%
+% Every object/method called below already exists in src/ or examples/F16A/
+% -- this script only wires them together and reports; no discipline
+% equations are implemented here.
+
+% clear; clc; close all;
+
+%% Run the L3 design study
+% design_study_03_L3 builds fresh F16AeroL3/F16GeomL3/F16WeightsL3/
+% F16MissionL3 objects (F16PropL2 stands in for propulsion -- there is no
+% L3 propulsion tier, see that driver's header), wires them into
+% SizingLoopL2, and runs it to convergence. The second output (objs)
+% exposes those same objects, already mutated to their converged state.
+
+W_TO_guess = 30000;
+T_SL_guess = 20000;
+[result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess);
+
+% TW_opt = the constraint-diagram-optimal thrust loading SizingLoopL2.run()
+% computes ONCE (before iterating) and holds fixed for the whole loop --
+% see that class's header (design_study_03_L3 reuses SizingLoopL2
+% unmodified). Every iteration re-derives T_SL = TW_opt*W_TO from the
+% CURRENT W_TO; S_ref is a fixed JSON input here and is never touched by
+% the loop (unlike L1, where it's solved for). Calling objs.con's own
+% optimal_point() again here (ConstraintAnalysis is a pure value class, and
+% con is never mutated during the run) reproduces the identical TW_opt the
+% loop actually used -- its W/S output is unused at L2/L3.
+[~, TW_opt] = objs.con.optimal_point();
+
+fprintf('\n=== F-16A Level 3 Sizing Result ===\n');
+fprintf('  Converged:  %d\n', result.converged);
+fprintf('  Iterations: %d\n', result.n_iter);
+fprintf('  W_TO:       %.1f lbf  (Brandt = 31377 lbf, %+.1f%%)\n', ...
+    result.W_TO, 100*(result.W_TO - 31377)/31377);
+fprintf('  S_ref:      %.2f ft^2 (fixed JSON input at L3 -- held CONSTANT for the whole run, never solved for)\n', result.S_ref);
+fprintf('  T_SL:       %.1f lbf  (Brandt = 23770 lbf, %+.1f%%; COMPUTED BY F16PropL2, no L3 propulsion tier exists)\n', ...
+    result.T_SL, 100*(result.T_SL - 23770)/23770);
+fprintf('  Optimum thrust loading (T/W)_opt = %.4f  (from ConstraintAnalysis.optimal_point, fixed for the whole run)\n', TW_opt);
+fprintf('  T_SL:       initial = %.1f lbf (T_SL_guess)  ->  final = %.1f lbf\n', ...
+    result.history(1).T_SL, result.T_SL);
+
+last = result.history(end);
+fprintf('  S_ht=%.3f ft^2  S_vt=%.3f ft^2  S_ail=%.3f ft^2  S_elev=%.3f ft^2  S_rud=%.3f ft^2\n', ...
+    last.S_ht, last.S_vt, last.S_ail, last.S_elev, last.S_rud);
+
+%% Sizing convergence plots (W_TO, OEW, fuel weight, T_SL per iteration)
+% Straight from SizingLoopL2.run's own returned history. T_SL tracks W_TO
+% every iteration (T_SL = TW_opt*W_TO) since TW_opt is fixed for the whole
+% loop. S_ref does NOT get its own convergence plot: it is a fixed JSON
+% input at L3 (unlike L1), never touched by SizingLoopL2 -- its history
+% struct has no S_ref field to plot, by design.
+
+iters     = [result.history.iter];
+WTO_hist  = [result.history.W_TO];
+OEW_hist  = [result.history.W_OEW];
+Fuel_hist = [result.history.W_fuel];
+TSL_hist  = [result.history.T_SL];
+
+% All 4 quantities on one graph -- W_TO, OEW, W_fuel, and T_SL are all in
+% lbf, so no secondary axis is needed (unlike L1's S_ref, which is ft^2).
+
+figure('Name', 'L3 Sizing Convergence');
+plot(iters, WTO_hist, '-o', 'LineWidth', 1.5); hold on;
+plot(iters, OEW_hist, '-s', 'LineWidth', 1.5);
+plot(iters, Fuel_hist, '-^', 'LineWidth', 1.5);
+plot(iters, TSL_hist, '-d', 'LineWidth', 1.5);
+grid on;
+xlabel('Iteration'); ylabel('Weight [lbf]');
+legend('W_{TO}', 'OEW', 'W_{fuel}', 'T_{SL} (computed by F16PropL2)', 'Location', 'best');
+title(sprintf('F-16A Level 3 Sizing Convergence (T_{SL} = W_{TO} \\times (T/W)_{opt}, (T/W)_{opt} = %.4f; S_{ref} = %.2f ft^2 fixed)', TW_opt, result.S_ref));
+
+%% Detailed component / subsystem weight breakdown
+% Calls F16WeightsL3's own group- and subcomponent-weight methods at the
+% converged W_TO -- these are the exact terms WeightsL3.OEW sums (see that
+% toolbox's OEW method); nothing here is a new equation, just re-reading
+% what OEW already computed, broken out down to the individual Raymer
+% Sec. 15.3.1 line items (Eqs. 15.7-15.24).
+
+W_TO_final = result.W_TO;
+W_wing = objs.wts.weight_wing(W_TO_final);
+W_tail = objs.wts.weight_tail(W_TO_final);              % struct(HT, VT)
+W_fus  = objs.wts.weight_fuselage(W_TO_final);
+W_lg   = objs.wts.weight_landing_gear(W_TO_final);       % struct(main, nose)
+W_eng  = objs.wts.weight_engine_section(W_TO_final);     % struct(engine,mounts,firewall,section,induction,tailpipe,cooling,oil,controls,starter,total)
+W_sys  = objs.wts.weight_systems(W_TO_final);            % struct(fuel_sys,flight_ctrl,instruments,hydraulics,electrical,avionics,furnishings,ac_antiice,handling,total)
+
+% ---- Group-level breakdown (same granularity as the L2 report) -------- %
+groupLabelList = {'Wing', 'Horizontal Tail', 'Vertical Tail', 'Fuselage', ...
+    'Main Gear', 'Nose Gear', 'Engine Group', 'Systems Group', 'Mission Fuel', ...
+    'Fixed Payload', 'Expendable Payload'};
+groupLabels = categorical(groupLabelList, groupLabelList, 'Ordinal', true);
+groupValues = [W_wing, W_tail.HT, W_tail.VT, W_fus, W_lg.main, W_lg.nose, ...
+    W_eng.total, W_sys.total, result.history(end).W_fuel, ...
+    objs.wts.W_payload_fixed, objs.wts.W_payload_expendable];
+
+groupTable = table(groupLabels(:), groupValues(:), 'VariableNames', {'Component', 'Weight_lbf'});
+disp('Level 3 group-level weight breakdown:');
+disp(groupTable);
+
+figure('Name', 'L3 Group Weight Breakdown', 'Position', [100 100 1100 500]);
+bar(groupLabels, groupValues);
+grid on; ylabel('Weight [lbf]'); xtickangle(30);
+title('F-16A Level 3 Group-Level Weight Breakdown');
+
+fprintf('\n  Check: sum(groups) - OEW(W_TO_final) = %.4f lbf (should be ~0)\n', ...
+    (W_wing + W_tail.HT + W_tail.VT + W_fus + W_lg.main + W_lg.nose + W_eng.total + W_sys.total) ...
+    - objs.wts.OEW(W_TO_final));
+
+% ---- Detailed subcomponent breakdown (engine section + systems) -------- %
+detailLabelList = {'Engine (dry)', 'Engine Mounts', 'Firewall', 'Engine Section', ...
+    'Air Induction', 'Tailpipe', 'Engine Cooling', 'Oil Cooling', 'Engine Controls', 'Starter', ...
+    'Fuel System', 'Flight Controls', 'Instruments', 'Hydraulics', 'Electrical', ...
+    'Avionics', 'Furnishings', 'AC & Anti-Ice', 'Handling Gear'};
+detailLabels = categorical(detailLabelList, detailLabelList, 'Ordinal', true);
+detailValues = [W_eng.engine, W_eng.mounts, W_eng.firewall, W_eng.section, W_eng.induction, ...
+    W_eng.tailpipe, W_eng.cooling, W_eng.oil, W_eng.controls, W_eng.starter, ...
+    W_sys.fuel_sys, W_sys.flight_ctrl, W_sys.instruments, W_sys.hydraulics, W_sys.electrical, ...
+    W_sys.avionics, W_sys.furnishings, W_sys.ac_antiice, W_sys.handling];
+
+detailTable = table(detailLabels(:), detailValues(:), 'VariableNames', {'Subcomponent', 'Weight_lbf'});
+disp('Level 3 detailed engine-section / systems subcomponent breakdown:');
+disp(detailTable);
+
+figure('Name', 'L3 Detailed Subcomponent Weight Breakdown', 'Position', [100 100 1500 700]);
+bar(detailLabels, detailValues);
+grid on; ylabel('Weight [lbf]'); xtickangle(45);
+title('F-16A Level 3 Detailed Engine-Section / Systems Subcomponent Weight Breakdown');
+
+%% Real aerodynamic-coefficient breakdown at each mission segment
+% F16MissionL3's mission-fuel closure genuinely calls F16AeroL3.drag_polar
+% (component-buildup CD0 + supersonic wave drag, Eq. 12.41) and F16PropL2
+% per segment, sub-integrated at N=40 (Cruise/Dash/Combat/Loiter) or N=40
+% energy-height steps (Climb) -- see MissionL3's header. This section calls
+% MissionL3.get_mission_fuel directly (the same static F16MissionL3.
+% compute_fuel delegates to) to recover its second output (breakdown,
+% including the per-segment starting weight W_after_lbf), which
+% F16MissionL3.compute_fuel itself discards -- then re-evaluates
+% F16AeroL3.drag_polar/compute_CL/compute_CD ONCE per segment at that
+% segment's tabulated end condition and starting weight, as a
+% single-point representative snapshot (NOT the same N=40-subdivided
+% integral MissionL3 computes internally -- this is a coarser report-only
+% evaluation of the same underlying drag_polar/compute_CL/compute_CD
+% methods). Ground-roll/fixed-fraction segments (startup/taxi/takeoff/
+% landing) are not evaluated -- there is no steady-level-flight condition
+% to define CL/CD for them.
+
+[~, breakdown] = MissionL3.get_mission_fuel(objs.miss.missiondata, W_TO_final, objs.aero, objs.prop);
+
+missiondata = objs.miss.missiondata;
+names   = missiondata.segment_names;
+alt_ft  = missiondata.alt_ft;
+mach    = missiondata.mach_end;
+n       = numel(names);
+
+W_start = zeros(1, n);
+W_start(1) = W_TO_final;
+if n > 1
+    W_start(2:end) = breakdown.W_after_lbf(1:end-1);
+end
+
+aero_segments = ["climb", "cruise", "dash", "combat", "loiter"];
+
+CD0 = nan(1, n); K1 = nan(1, n); K2 = nan(1, n);
+CL  = nan(1, n); CD = nan(1, n); LD = nan(1, n);
+
+for i = 1:n
+    seg = MissionL1.normalize_segment_name(names(i));
+    if ~ismember(seg, aero_segments)
+        continue
+    end
+    state = AircraftState(alt_ft(i), mach(i));
+    polar = objs.aero.drag_polar(state);
+    CD0(i) = polar.CD0;
+    K1(i)  = polar.K1;
+    K2(i)  = polar.K2;
+    CL(i)  = objs.aero.compute_CL(W_start(i), state.q, objs.geom.S_ref);
+    CD(i)  = objs.aero.compute_CD(polar.CD0, polar.K1, polar.K2, CL(i));
+    LD(i)  = CL(i) / CD(i);
+end
+
+aeroTable = table(names(:), alt_ft(:), mach(:), W_start(:), CD0(:), K1(:), K2(:), CL(:), CD(:), LD(:), ...
+    'VariableNames', {'Segment', 'Altitude_ft', 'Mach', 'W_start_lbf', 'CD0', 'K1', 'K2', 'CL', 'CD', 'L_D'});
+disp('Level 3 aerodynamic-coefficient breakdown by mission segment:');
+disp(aeroTable);
+
+figure('Name', 'L3 Aerodynamic Coefficient Breakdown');
+tiledlayout(3, 1);
+nexttile;
+bar(categorical(names, names, 'Ordinal', true), CD0);
+grid on; ylabel('CD_0'); title('F-16A Level 3 CD_0 by Mission Segment (component buildup + wave drag)');
+nexttile;
+bar(categorical(names, names, 'Ordinal', true), CL);
+grid on; ylabel('C_L'); title('F-16A Level 3 C_L by Mission Segment');
+nexttile;
+bar(categorical(names, names, 'Ordinal', true), LD);
+grid on; ylabel('L/D'); title('F-16A Level 3 L/D by Mission Segment');
+
+figure('Name', 'L3 Mission Fuel by Segment');
+bar(categorical(names, names, 'Ordinal', true), breakdown.fuel_used_lbf);
+grid on; ylabel('Fuel Used [lbf]');
+title('F-16A Level 3 Mission Fuel by Segment');
+
+%% Internal fuel-volume check
+% F16WeightsL3 carries fuel-tank-volume INPUTS (V_t = total internal fuel
+% volume, V_i = integral/wing tank volume, V_p = pressurised tank volume;
+% see that class's properties block) that feed Raymer Eq. 15.9's fuel-
+% system weight, but nothing in the framework compares them against the
+% mission's actual fuel burn. This is a diagnostic sanity check only (not
+% part of the sizing-loop closure), mirroring the legacy Level 3 example
+% script's optional "SubsystemsLevel3.checkfuelvol" section.
+%
+% FUEL DENSITY: 6.7 lb/gal is NOT a new citation introduced here -- it is
+% the exact conversion factor already documented (and flagged OPEN
+% provenance, todo section P4-5b) in F16WeightsL3.m's own V_t property
+% comment, used there to justify V_t = 940 gal from Brandt Wt!B6 =
+% 6296.30 lbf. Reused here only as a diagnostic capacity check, not as a
+% new discipline equation.
+
+FUEL_DENSITY_LB_PER_GAL = 6.7;   % [F16WeightsL3.m V_t comment; open provenance, todo P4-5b]
+
+V_t = objs.wts.V_t;
+V_i = objs.wts.V_i;
+V_p = objs.wts.V_p;
+W_fuel_final = result.history(end).W_fuel;
+V_required_gal = W_fuel_final / FUEL_DENSITY_LB_PER_GAL;
+margin_pct = 100 * (V_t - V_required_gal) / V_required_gal;
+isSufficient = V_t >= V_required_gal;
+
+volumeTable = table(V_t, V_i, V_p, W_fuel_final, V_required_gal, margin_pct, isSufficient, ...
+    'VariableNames', {'V_t_gal', 'V_i_gal', 'V_p_gal', 'W_fuel_lbf', 'V_required_gal', 'Margin_pct', 'IsSufficient'});
+disp('Level 3 internal fuel-volume check:');
+disp(volumeTable);
+
+fprintf('\nInternal fuel-volume check: V_t = %.1f gal available vs. %.1f gal required for W_fuel = %.1f lbf (%+.1f%% margin) -> %s\n', ...
+    V_t, V_required_gal, W_fuel_final, margin_pct, string(isSufficient));
+if ~isSufficient
+    warning('F16A_Level3_SizingReport:fuelVolumeShortfall', ...
+        'Converged mission fuel requires more volume than the assumed V_t input provides.');
+end
+
+%% Final summary
+fprintf('\n=== F-16A Level 3 Final Summary ===\n');
+fprintf('  W_TO = %.1f lbf, OEW = %.1f lbf, W_fuel = %.1f lbf, S_ref = %.2f ft^2, T_SL = %.1f lbf\n', ...
+    result.W_TO, objs.wts.OEW(W_TO_final), W_fuel_final, result.S_ref, result.T_SL);

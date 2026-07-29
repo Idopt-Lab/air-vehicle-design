@@ -1,4 +1,4 @@
-function result = design_study_03_L3(W_TO_guess, T_SL_guess)
+function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %DESIGN_STUDY_03_L3  F-16A Level-3 sizing study.
 %
 %   result = design_study_03_L3(W_TO_guess, T_SL_guess) builds fresh
@@ -9,6 +9,14 @@ function result = design_study_03_L3(W_TO_guess, T_SL_guess)
 %   design study -> SizingLoopL2"): sizing has no per-fidelity-level
 %   equation set of its own, only a state-variable count (2 at both L2 and
 %   L3), so no new SizingLoopL3 class exists or is needed.
+%
+%   [result, objs] = design_study_03_L3(...) additionally returns the
+%   handle objects (objs.aero/prop/wts/geom/miss/con/tail/ctrl) in their
+%   final, converged state -- e.g. for post-processing/reporting scripts
+%   (F16A_Level3_SizingReport.m) that need to call further methods on them
+%   (weight/aero breakdowns, fuel-volume check) after the loop has
+%   converged. Optional and additive: existing single-output callers
+%   (tests/sizing/TestF16SizingStudies.m) are unaffected.
 %
 %   TAIL SIZING (updated 2026-07-28): uses F16TailL1, same as
 %   design_study_02_L2 -- see that file's header for why (SizingLoopL2's
@@ -52,4 +60,7 @@ function result = design_study_03_L3(W_TO_guess, T_SL_guess)
 
     loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);
+
+    objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
+        'miss', miss, 'con', con, 'tail', tail, 'ctrl', ctrl);
 end

@@ -1,4 +1,4 @@
-function result = design_study_02_L2(W_TO_guess, T_SL_guess)
+function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %DESIGN_STUDY_02_L2  F-16A Level-2 sizing study.
 %
 %   result = design_study_02_L2(W_TO_guess, T_SL_guess) builds fresh
@@ -9,6 +9,15 @@ function result = design_study_02_L2(W_TO_guess, T_SL_guess)
 %   convergence. Unlike L1, S_ref is a fixed JSON input here, never solved
 %   for -- only T_SL updates each iteration, alongside re-sizing the tail
 %   and control surfaces.
+%
+%   [result, objs] = design_study_02_L2(...) additionally returns the
+%   handle objects (objs.aero/prop/wts/geom/miss/con/tail/ctrl) in their
+%   final, converged state -- e.g. for post-processing/reporting scripts
+%   (F16A_Level2_SizingReport.m) that need to call further methods on them
+%   (weight/aero breakdowns) after the loop has converged. Optional and
+%   additive: existing single-output callers (tests/sizing/
+%   TestF16SizingStudies.m, tests/sizing/TestControlSurfaceSizer.m) are
+%   unaffected.
 %
 %   TAIL SIZING (updated 2026-07-28): uses F16TailL1 (Raymer 7th ed. Table
 %   6.4 volume-coefficient method, c_HT=0.315/c_VT=0.063, tail arm
@@ -64,4 +73,7 @@ function result = design_study_02_L2(W_TO_guess, T_SL_guess)
 
     loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);
+
+    objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
+        'miss', miss, 'con', con, 'tail', tail, 'ctrl', ctrl);
 end

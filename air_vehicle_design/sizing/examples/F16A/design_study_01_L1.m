@@ -1,10 +1,18 @@
-function result = design_study_01_L1(W_TO_guess)
+function [result, objs] = design_study_01_L1(W_TO_guess)
 %DESIGN_STUDY_01_L1  F-16A Level-1 sizing study.
 %
 %   result = design_study_01_L1(W_TO_guess) builds fresh F16AeroL1/F16PropL1/
 %   F16WeightsL1/F16GeomL1/F16MissionL1 discipline objects plus the F-16's
 %   L1 constraint set (F16ConstraintSet.build("L1")), wires them into
 %   SizingLoopL1, and runs it to convergence.
+%
+%   [result, objs] = design_study_01_L1(...) additionally returns the
+%   handle objects (objs.aero/prop/wts/geom/miss/con) in their final,
+%   converged state -- e.g. for post-processing/reporting scripts
+%   (F16A_Level1_SizingReport.m) that need to call further methods on them
+%   (weight/aero breakdowns) after the loop has converged. Optional and
+%   additive: existing single-output callers (tests/sizing/
+%   TestF16SizingStudies.m) are unaffected.
 %
 %   result = design_study_01_L1() uses a default initial guess of 30,000
 %   lbf -- deliberately off Brandt's 31,377 lbf target, so a passing
@@ -32,4 +40,7 @@ function result = design_study_01_L1(W_TO_guess)
 
     loop = SizingLoopL1(aero, prop, wts, geom, miss, con);
     result = loop.run(W_TO_guess);
+
+    objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
+        'miss', miss, 'con', con);
 end
