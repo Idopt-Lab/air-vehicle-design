@@ -32,8 +32,18 @@ classdef SizingLoopL1 < handle
 %   pseudocode and the legacy F-16 L1 driver script
 %   (temp_Casey/.../F16A_Level1_Sizing_ClassBased_Example.m:284,286).
 %
-%   Closure [WeightsBase.m header]: W_TO_new = OEW(W_TO) + W_payload_fixed
-%   + W_payload_expendable + W_fuel, under-relaxed toward the prior W_TO.
+%   Closure: Raymer's TOGW iteration ("Eq. 3.4" per the user; reproduced
+%   as Algorithm 1 / Eqs. 2.1-2.2 in temp_AI/docs/disciplines/
+%   reference_extracts/metabook_data.md:78-83):
+%     W_TO_new = W_payload / (1 - We/W_TO - W_fuel/W_TO)
+%   with We=OEW(W_TO) and W_fuel=miss.compute_fuel(...) evaluated at the
+%   CURRENT W_TO guess, under-relaxed toward the prior W_TO. Supersedes an
+%   earlier additive closure [WeightsBase.m header: W_TO_new = OEW(W_TO) +
+%   W_payload_fixed + W_payload_expendable + W_fuel] -- both solve
+%   w = W_payload + we(w) + wf(w) for w, just rearranged, so they share the
+%   same fixed point (confirmed empirically on the F-16A L1 design study:
+%   41,437.5 lbf vs. the additive form's 41,433.1 lbf, a 0.01% gap). This
+%   form converges in far fewer iterations (8 vs. 81 on that same study).
 %
 %   CORRECTIONS TO subplan 08's PSEUDOCODE (verified against the as-built
 %   APIs):
@@ -111,7 +121,13 @@ classdef SizingLoopL1 < handle
                 obj.wts.W_TO     = W_TO;
                 obj.wts.W_energy = W_fuel;
 
-                W_TO_new = W_OEW + obj.wts.W_payload_fixed + obj.wts.W_payload_expendable + W_fuel;
+                % Raymer TOGW iteration (see header): W_TO_new = W_payload /
+                % (1 - We/W_TO - W_fuel/W_TO), fractions evaluated at the
+                % current W_TO guess.
+                W_payload = obj.wts.W_payload_fixed + obj.wts.W_payload_expendable;
+                f_empty   = W_OEW / W_TO;
+                f_fuel    = W_fuel / W_TO;
+                W_TO_new  = W_payload / (1 - f_empty - f_fuel);
                 difference = W_TO_new - W_TO;
 
                 history(end+1) = struct('iter', iter, 'W_TO', W_TO, 'S_ref', S_ref, ...
