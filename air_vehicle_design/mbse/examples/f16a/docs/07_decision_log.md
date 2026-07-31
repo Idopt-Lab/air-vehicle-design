@@ -313,3 +313,93 @@ every run. The materials and fuel roll-ups were already read-only and needed no 
 **Not done** The suite still computes the roll-up three times (~10 s). Measured and accepted: the
 warm suite is ~17 s, and the earlier "15 minutes" was a cold-start artifact, not a property of the
 tests.
+
+### D-030 · Inventory of every invented number
+**Stage** 5 audit · **Raised by** f16a-data (**VETO**) · **Date** 2026-07-31
+**Problem found** D-007 requires every `Estimate` to be listed in this log. None of the 19 values
+introduced by Stages 3–4 were. Worse, three comments in `generate_f16a_physical.m` asserted that they
+*were* "listed in docs/07_decision_log.md, as D-007 requires" — a provenance system whose code lies
+about where its provenance lives is worse than one that makes no claim. The rule the team wrote for
+itself was being broken by the team's own record.
+**Decision** This entry is the inventory, and it is the thing D-007 points at. Every number below is
+**invented for teaching**. None is F-16 data. Do not cite any of them.
+
+| Value | Component | Property | Tag | Why this number |
+|---|---|---|---|---|
+| 7300 lb | `ConventionalTrapWing` | `Mass_lb` | Estimate | No such aircraft was built. Assumed ~8.6% heavier than the blended delta, on the argument that a discrete wing-body is structurally less efficient |
+| 5100 lb | `F110_GE_100` | `Mass_lb` | Estimate | The F110 is real but post-dates the F-16A; installed mass scaled off the F100 figure |
+| 6400 lb | `TwinEngine_Surrogate` | `Mass_lb` | Estimate | Stands in for a twin installation of the YF-17 class. Not a specific engine pair |
+| 700 lb | `HydroMechanical` | `Mass_lb` | Estimate | A conventional control system for this class, assumed heavier than the fly-by-wire group |
+| 0.12 | `ConventionalTrapWing` | `CompositeFraction` | Estimate | Aluminium-dominant conventional airframe |
+| 0.15 / 0.10 / 0.55 / 0.70 / 0.05 / 0.50 | Wing / Fuselage / HorizTail / VertTail / Nacelles / Strakes | `CompositeFraction` | Estimate | Educated guess grounded in real F-16 composite usage (graphite/epoxy tail skins, carbon-fibre wing leading edge, fibreglass strakes) — **and tuned so the mass-weighted fraction lands just inside `REQ_F16A_022`'s 20% cap.** Pre-existing, Stage-0 era. Stated plainly because numbers chosen to make a requirement pass are exactly the kind that must not look sourced |
+| 9.5 / 6.5 · 9.0 / 6.0 · 8.2 / 8.6 / 7.8 | the 7 candidates | `Benefit` | judgement (D-025) | Declared 0–10 scale. Relative ordering carries the teaching, the absolute values carry nothing |
+| 7 / 8 · 6 / 9 · 8 / 4 / 6 | the 7 candidates | `TRL` | judgement (D-025) | Declared 1–9 scale. F110's 4 encodes "not available in the F-16A timeframe" — the fact that decides the engine trade |
+| 3 × 2100 lb | the fuel tanks | `FuelCapacity_lb` | Estimate | See D-023: Brandt's figure is 6296.30 lb (`Wt!B6`) |
+
+`Benefit` and `TRL` supply **0.75 of every trade score** and are unauditable in principle — they trace
+to nothing. That is precisely why they must be *recorded*, since they can never be *checked*.
+**Consequences** The three false generator comments are corrected to point here. `Material` gains a
+`DataProvenance` property so the composite fractions can be tagged in the model rather than only in
+prose (D-031).
+
+### D-031 · `Material` carries provenance too
+**Stage** 5 audit · **Raised by** f16a-data (**VETO**) · **Date** 2026-07-31
+**Problem found** `Material` declared only `CompositeFraction`, so all seven composite fractions were
+invented numbers with **no tag at all** — the exact gap D-023 closed for `FuelTank`, left open one
+stereotype over.
+**Decision** Add `DataProvenance` to `Material` and tag all seven fractions `Estimate`.
+**Why** An untagged invented number is a veto by the data agent's charter. The provenance vocabulary
+is worth nothing if it is applied only where someone happened to remember.
+
+### D-032 · The aircraft cost MoM defaults to NaN as well
+**Stage** 5 audit · **Raised by** f16a-data · **Date** 2026-07-31
+**Problem found** `MeasureOfMerit.UnitCost_USD` still defaulted to `0`. No live violation — the
+generator writes `NaN` explicitly from the cost stub — but it is the same latent hole D-021 closed on
+`TradeCandidate`: a future path that applies the stereotype without writing the property would ship
+`$0` as the aircraft's flyaway cost.
+**Decision** Default it to `NaN` too.
+
+### D-033 · `Benefit` is bounded at both ends, and its scale is 1–10
+**Stage** 5 audit · **Raised by** f16a-mbse-method · **Date** 2026-07-31
+**Problem found** The trade study's guards were asymmetric: `TRL` was boxed both ends (1–9, integer),
+but `Benefit` was only checked `> 0` despite declaring a 0–10 scale. `7.8` mistyped as `78` gives
+`v = B/10 = 7.8`, contributing **3.90** where the legitimate maximum contribution of any criterion is
+0.50 — `TwinEngine_Surrogate` would score ≈4.24 against F100's 0.87875 and win. Being finite, it
+would slip past the `isfinite` check, flip `RealizesKind` to `TwinEngine`, change the L model's
+active kind and Implement-link `REQ_F16A_L01` from the wrong kind. **A dropped decimal point could
+propagate a wrong decision into requirements traceability, silently.**
+**Decision** Enforce `1 ≤ Benefit ≤ 10`. The scale is stated as **1–10 with 0 meaning "not set"** —
+`Benefit`'s stereotype default is `0`, so zero was already doing sentinel duty exactly as TRL's does
+under D-021; the declared "0–10" contradicted the guard that rejected it. Code, comment and guard now
+agree.
+**Why it matters** This is the file's own philosophy applied consistently: an out-of-range parameter
+must stop the trade, not be scored.
+
+### D-034 · "Decided by" is decisive against the runner-up, and now says so
+**Stage** 5 audit · **Raised by** f16a-mbse-method · **Date** 2026-07-31
+**Problem found** `decisiveCriterion` computes the winner's largest weighted advantage over the
+**rank-2** candidate, but the printed table and the stored `Rationale.Justification` stated it as a
+property of the decision overall. Propulsion reports "decided by TRL" (+0.125 over `F110_GE_100`);
+measured against `TwinEngine_Surrogate` the same winner's largest advantage is Mass (+0.0652) ahead
+of TRL (+0.0625). Same victory, different "deciding" criterion depending on the rival.
+**Decision** Fix by wording — say *against the runner-up* in both the printed output and the stored
+justification. Scores, ranks and winners were never affected; what was overclaimed is the **audit
+trail**, which is the thing this script exists to produce.
+**Deferred** Rival-independent decisiveness — which criterion, if removed, would change the winner —
+is a real sensitivity calculation and is left as future work rather than faked.
+
+### D-035 · The mass value function is unbounded above (known limit)
+**Stage** 5 audit · **Raised by** f16a-mbse-method · **Date** 2026-07-31
+**Problem found** `v = M_baseline / M` has no ceiling, while `B/10` and `(TRL−1)/8` are capped at 1.0
+by their declared scales. A candidate lighter than its baseline — a 3500 lb engine gives `v = 1.351`,
+contributing 0.338 against the 0.25 the other criteria are capped at — makes the declared weights
+`0.50/0.25/0.25` stop describing actual influence.
+**Decision** Record it as a known limit and **warn** at run time when any value function exceeds 1.0,
+naming the candidate and criterion. Do not cap (that discards real information about a genuinely
+better candidate) and do not error (that rejects a legitimate one). The check is written generically,
+because `UnitCost_USD` inherits the identical `C_baseline/C` shape the day a cost model lands.
+**Why it is not merely theoretical** No current candidate is lighter than its baseline, so nothing
+is wrong today — but the trade study's headline feature is that candidates are *discovered, not
+declared*, and its own header invites adding a fourth engine. That is precisely the action that arms
+this.
+**Proper fix, deferred** A bounded value function over a declared range per criterion.

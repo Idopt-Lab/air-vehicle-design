@@ -19,27 +19,37 @@ options/decision split**: L enumerates the *kinds*, P parameterizes the *candida
 | | Logical option (**kind**) | Physical candidate |
 |---|---|---|
 | Answers | *What shape of solution?* | *Built out of what, exactly?* |
-| Examples | `SingleEngine` / `TwinEngine`; `FlyByWire` / `HydroMechanical`; `BlendedCrankedDelta` / `ConventionalTrapWing` | `F100_PW_200` and its rivals |
-| Carries | a name and a rationale | `Mass_lb`, `TRL`, `Benefit`, `Provenance`, `Rationale` |
+| Examples | `SingleEngine` / `TwinEngine`; `FlyByWire` / `HydroMechanical`; `BlendedCrankedDelta` / `ConventionalTrapWing` | `F100_PW_200`, `F110_GE_100`, `TwinEngine_Surrogate`, … |
+| Carries | a name and a rationale (`SolutionOption { Selected, DecisionRef }`) | `TradeCandidate { RealizesRole, RealizesKind, Mass_lb, Benefit, TRL, UnitCost_USD, DataProvenance, Selected }`, plus the `Rationale` every physical part carries |
 | Owns the decision? | **No** — it holds the *active* kind, written back from P | **Yes** — the trade runs here |
 | Survives a technology generation? | Yes | No |
 
+The propulsion role is the one that shows the shape of the mapping, because it is the one where it
+is **many-to-one**: two of the three engine candidates realize the same kind.
+
 ```mermaid
 graph LR
-  subgraph L["L — kinds (technology-neutral)"]
+  subgraph L["L — kinds: technology-neutral, no numbers, no winner"]
     K1["SingleEngine"]
     K2["TwinEngine"]
   end
-  subgraph P["P — candidates (parameterized, sourced)"]
-    C1["F100_PW_200<br/>Mass · TRL · Benefit · Provenance"]
-    C2["other single-engine candidates"]
-    C3["twin-engine candidates"]
+  subgraph P["P — candidates: parameterized, provenance-tagged"]
+    C1["F100_PW_200<br/>4730.23 lb · TRL 8 · Benefit 8.2 · Reference"]
+    C2["F110_GE_100<br/>5100 lb · TRL 4 · Benefit 8.6 · Estimate"]
+    C3["TwinEngine_Surrogate<br/>6400 lb · TRL 6 · Benefit 7.8 · Estimate"]
   end
-  K1 --> C1
-  K1 --> C2
-  K2 --> C3
-  P -. "trade decides → sets active kind, links REQ" .-> L
+  K1 -- "realized by" --> C1
+  K1 -- "realized by" --> C2
+  K2 -- "realized by" --> C3
+  P -. "trade decides → active kind + SolutionOption.Selected/DecisionRef, Implement-links REQ_F16A_L01" .-> L
 ```
+
+In the model the arrow is stored the other way round, as a `RealizesKind` string **on the
+candidate** — and that is the direction that matters, because it is **many-to-one**: `F100_PW_200`
+and `F110_GE_100` both say `SingleEngine`. That is why the cross-layer write-back resolves the
+winning kind from `RealizesKind` and never from the candidate's name (D-027) — the name is not a key
+into the option set. `Airframe` and `FlightControlSystem` happen to be 1 : 1 today, which is a fact
+about this example's candidate list, not a property of the pattern.
 
 ### The three-question test
 
@@ -110,30 +120,121 @@ kinds are **not deleted** from the L model, and L commits to nothing until P has
 
 Read this section before repeating any of the above in a report.
 
-- **The "MDAO" is a scripted trade study, not MDAO.** It is a weighted-sum score over a handful of
+- **The "MDAO" is a scripted trade study, not MDAO.** It is a weighted sum over a handful of
   discrete, pre-enumerated candidates. There is no optimizer, no design-variable continuum, no
   coupled disciplinary analysis, no convergence. Citation [4] is the *pattern we are following*,
-  not a description of what the code does. The optimizer is left as a **hook**.
-- **The scoring is deliberately coarse.** With min–max normalization over only two candidates,
-  every criterion normalizes to {0, 1}, so a "score" is just the sum of the weights of the criteria
-  a candidate wins — the *margin* carries no information. Do not read 0.60 vs 0.40 as "50% better."
+  not a description of what the code does. The optimizer is left as a **hook**, and the word
+  "MDAO" is kept out of the file names, function names and comments on purpose (D-018).
+- **The scoring is a declared value function per criterion — and it did not start that way.**
+  An earlier version of this example normalized each criterion **min–max across the candidates of a
+  role**. At two candidates that is degenerate: every criterion collapses to {0, 1}, so a "score"
+  was only the sum of the weights a candidate happened to win, which is why every winner scored
+  0.60 and every loser 0.40 and the *margin* carried nothing. But the degeneracy was the symptom.
+  The real defect is that min–max is **sample-dependent**: a candidate's score is a function of
+  which rivals are in the set, so adding or removing a candidate rescales everyone, and two
+  candidates neither of whose data changed can **swap places** — the rank-reversal problem. The
+  scoring is now a **value function declared in advance**, independent of the candidate set:
+  `Benefit → B/10` on a stated 0–10 scale, `TRL → (TRL−1)/8` on the 1–9 scale, and
+  `Mass_lb → M_baseline/M` against a fixed baseline — the mass carried by the role's
+  `DataProvenance = Reference` candidate, so `v > 1` reads "lighter than the as-built F-16A". The
+  weights actually applied are `Benefit 0.50 · TRL 0.25 · Mass 0.25` (see the cost bullet below for
+  where they come from). Adding a fourth engine now changes that engine's score and nothing else.
+  The price is that you must state the scale you mean, and that is the cheaper of the two prices.
+  **This example changed because of the analysis in this file** (D-015) — the method note is not a
+  write-up of what was built, it is what caught the defect.
 - **Each variation point is decided independently.** Three binary kinds is a 2×2×2 = 8-point
-  morphological box, but we evaluate 3 pairs, not 8 combinations — an explicit assumption that the
-  choices do not interact. The morphological literature warns they usually do
-  ([[Pahl & Beitz]][pahl]); a real study would search combinations.
-- **The candidate numbers are illustrative, and say so.** Every physical candidate carries a
-  `Provenance` tag. Where a value is a teaching estimate rather than a sourced figure, the tag says
-  so. Do not cite them as F-16 data.
-- **Cost is `NaN` and excluded from scoring.** Unit flyaway cost stays a **pending Measure of
-  Merit** (see [`05_physical.md`](05_physical.md)); it is not modelled, and we do not invent a
-  number to fill the column. Weights are renormalized over the criteria that *do* have values.
+  morphological box, but we evaluate 3 pairs — 7 candidates in 3 trades — not 8 combinations. That
+  is an explicit assumption that the choices do not interact (D-016), and in this particular
+  aircraft it is **demonstrably false**: relaxed static stability pays off only *with* fly-by-wire,
+  which is the actual F-16 story. The morphological literature warns that variation points usually
+  do interact ([[Pahl & Beitz]][pahl]); a real study would search combinations.
+- **The candidate numbers are illustrative, and say so.** Every candidate carries a
+  `DataProvenance` tag. Three are `Reference` — the Brandt F-16A component weights this model
+  already used (Propulsion 4730.23, Airframe 6722.88, FlightControls 472.44 lb). Four are
+  `Estimate` — 5100 / 6400 / 7300 / 700 lb are **teaching values chosen to make the trade
+  instructive**, not figures for any aircraft that was built. Do not cite them as F-16 data. And
+  read the tag narrowly: it qualifies the candidate's **`Mass_lb`** and nothing else (D-025). Every
+  invented number in this example, with the reasoning behind each, is inventoried in **D-030**.
+- **Cost is `NaN`, and it is dropped by a *general* rule rather than a special case.** Unit flyaway
+  cost stays a **pending Measure of Merit** (see [`05_physical.md`](05_physical.md)); it is not
+  modelled, and we do not invent a number to fill the column. But nothing in the trade study says
+  "exclude cost". The rule it implements is: **a criterion no candidate of the role carries a value
+  for is dropped, and the remaining weights are renormalized over the criteria that do** (D-026).
+  Cost falls out of that rule because it is `NaN` everywhere. Two things follow. The weights are
+  *derived at run time*, not typed in — declared `0.40 / 0.20 / 0.20 / 0.20` over the four criteria,
+  renormalizing to the `0.50 / 0.25 / 0.25` above — and **the day a cost model exists, cost re-enters the score
+  with no change to the scoring code.** That property is the reason for writing it as a rule. A
+  criterion with values on *some* candidates is neither dropped nor scored: it stops the run,
+  because a partial column would score the candidates that have data against the ones that do not.
 - **It is set-based in structure only.** True SBD converges by intersecting feasible regions across
   disciplines; we keep the options in the model and defer the decision, then resolve it with a
   single weighted score. The *discipline* is borrowed; the *mechanism* is classical concept
-  selection.
+  selection. What we do keep is the non-deletion: a losing candidate stays in the P model tagged
+  `SourceKind = TradeAlternative`, carrying a justification that says what it lost on and by how
+  much, and a losing kind stays in the L model.
 - **The active kind at L is derived, not authored.** It is written back by the P-layer trade. The
   authoritative record of the decision is the **decision requirement** and its `Rationale`, not the
-  variant flag.
+  variant flag — which is why `DecisionRef` is written on **every** kind of a role and not only on
+  the winner (D-027): a reader who clicks the rejected kind should land on the document that says
+  why it lost.
+
+### What the value functions assume
+
+Declaring a value function fixes the rank-reversal problem. It does not make the scoring objective,
+and the note would be dishonest if it stopped at the fix.
+
+- **It is an additive model, and additivity is an assumption.** The score is `Σ wᵢ · vᵢ(xᵢ)` — a
+  weighted sum of single-criterion values, the simplest member of the **multi-attribute
+  value/utility** family whose standard reference is [[Keeney & Raiffa 1993]][keeney]. The additive
+  form is not free: it is valid only under **independence conditions** on the decision-maker's
+  preferences — informally, the mass-versus-TRL tradeoff must not depend on what the benefit rating
+  happens to be. Nobody elicited or checked those conditions here. The additive form is used because
+  it is simple and legible, not because it was justified.
+- **A weight is a scaling constant, not a statement of importance.** This is the error the
+  decision-analysis literature complains about most, and it belongs in a teaching example precisely
+  because the trap is so natural. In an additive value model a weight means something only *relative
+  to the declared range* of its criterion — change the range and the correct weight changes with it
+  — so `Benefit 0.50` is **not** a free-standing claim that benefit is "half of what matters".
+  Parnell & Trainor state it for a systems-engineering audience: *"weights depend on both importance
+  and variation of the range of the attribute. Many analysts, not familiar with the mathematical
+  theory, assess weights using only importance"* ([[Parnell & Trainor 2009]][parnell]), and Keeney
+  catalogues it among twelve recurring mistakes in value tradeoffs ([[Keeney 2002]][keeney2002]).
+  Ours are declared directly — `0.40 / 0.20 / 0.20 / 0.20`, chosen by the author of this example and
+  never swing-weighted against the criterion ranges. They are an input, not a result, and no
+  sensitivity study backs them. That bites hardest on the airframe and flight-control trades, both
+  decided by `Benefit`, the criterion carrying the largest share.
+- **Each value function is linear, and that is a third assumption.** `B/10` and `(TRL−1)/8` are
+  straight lines, so the model asserts that TRL 3 → 4 is worth exactly as much as TRL 8 → 9. For
+  technology readiness that is almost certainly wrong — the maturity risk that matters is
+  concentrated at the low end of the scale. Nothing here establishes that these declared scales are
+  linear *in value*; they were chosen because they are legible, and a declared-but-wrong shape is
+  still a declared shape.
+- **`M_baseline/M` is a ratio scale anchored on the as-built aircraft, and it is unbounded.** The
+  baseline is the role's `DataProvenance = Reference` candidate — the Brandt figure — so **the
+  Brandt candidate scores exactly 1.0 on mass in every role, by construction.** That is a property
+  of how the scale was built, not a finding about the F-16. Note also the asymmetry: `B/10` and
+  `(TRL−1)/8` are bounded on [0, 1] by their declared scales, but `M_baseline/M` has no upper bound
+  — a candidate at half the baseline mass would score 2.0 on that one criterion and could win on it
+  alone. No candidate in this set is lighter than its baseline, so it never bites here, and nothing
+  in the code prevents it. The three criteria are therefore summed as if commensurable when their
+  ranges are not — which is the weight-versus-range problem two bullets up, in its most concrete
+  form: a criterion whose range is open-ended cannot have a defensible scaling constant at all.
+- **`Benefit` and `TRL` are judgement on a declared scale, not measurements.** They are our 0–10 and
+  1–9 rankings, and they are judgement on the `Reference` candidates too:
+  `DataProvenance = Reference` on `F100_PW_200` says its *mass* is sourced, not that its Benefit of
+  8.2 or its TRL of 8 is (D-025). Neither is derived from a model and nothing rolls up into either.
+  Add the weights up and the honest accounting is uncomfortable: **0.75 of every score is declared
+  opinion** — the same figure D-030 arrives at from the data side — and of the remaining 0.25 only
+  the three `Reference` masses are sourced, the four `Estimate` masses being teaching values. These
+  two criteria are *unauditable in principle*: they trace to nothing, which is exactly why they have
+  to be recorded. The scoring is transparent about this rather than hiding it, but transparency is
+  not the same as evidence.
+- **The answer was known before the trade was run.** The F-16A exists; the production configuration
+  wins all three roles. The `Estimate` masses and the Benefit and TRL judgements were chosen to
+  make that outcome legible and to make the engine trade instructive — the F100 wins on maturity
+  and installed mass *despite* trailing the F110 on Benefit, which is the lesson the numbers were
+  picked to teach. This is a **retrodictive** exercise. It demonstrates the machinery, the
+  arithmetic and the audit trail; it is not evidence about aeroplanes.
 
 ## Further reading
 
@@ -153,6 +254,9 @@ Read this section before repeating any of the above in a report.
 | Singer, Doerry & Buckley, *Naval Engineers J.* 121(4), 2009 | "What Is Set-Based Design?" — feasibility before decision | [10.1111/j.1559-3584.2009.00226.x][singer] |
 | Toche, Pellerin & Fortin, *Design Science* 6, 2020 | SBD review; convergence vs evolution | [10.1017/dsj.2020.16][toche] |
 | Riaz, Guenov & Molina-Cristobal, *J. Aircraft* 54(1), 2017 | Set-based design applied to aircraft | [10.2514/1.C033747][riaz] |
+| Keeney & Raiffa, *Decisions with Multiple Objectives: Preferences and Value Trade-Offs*, Cambridge UP 1993 (orig. Wiley 1976) | The additive multi-attribute value/utility model and its independence conditions | ISBN 0-521-43883-7 · [10.1017/CBO9781139174084][keeney] |
+| Parnell & Trainor, *Using the Swing Weight Matrix to Weight Multiple Objectives*, INCOSE IS 19(1), 2009, 283–298 | Weights depend on the attribute *range*, not importance alone — stated for systems engineers | [10.1002/j.2334-5837.2009.tb00949.x][parnell] |
+| Keeney, *Common Mistakes in Making Value Trade-Offs*, *Operations Research* 50(6), 2002, 935–945 | Twelve recurring errors in value tradeoffs, including importance-only weighting | [10.1287/opre.50.6.935.357][keeney2002] |
 
 [arcadia]: https://mbse-capella.org/arcadia.html
 [voirin]: https://shop.elsevier.com/books/model-based-system-and-architecture-engineering-with-the-arcadia-method/voirin/978-1-78548-169-7
@@ -168,3 +272,6 @@ Read this section before repeating any of the above in a report.
 [singer]: https://doi.org/10.1111/j.1559-3584.2009.00226.x
 [toche]: https://doi.org/10.1017/dsj.2020.16
 [riaz]: https://doi.org/10.2514/1.C033747
+[keeney]: https://doi.org/10.1017/CBO9781139174084
+[parnell]: https://doi.org/10.1002/j.2334-5837.2009.tb00949.x
+[keeney2002]: https://doi.org/10.1287/opre.50.6.935.357

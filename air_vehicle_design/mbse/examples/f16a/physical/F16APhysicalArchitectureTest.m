@@ -62,6 +62,20 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %       The winners are asserted by IDENTITY (F100_PW_200,
     %       BlendedCrankedDelta, FlyByWire -- ground truth about the F-16A);
     %       the scores that produce them only by ORDERING.
+    %     * Provenance is COMPLETE (Stage 5) -- the assertion the Stage-5
+    %       audit had to make by hand. Every stereotype the P profile
+    %       declares that carries engineering values a human chose must
+    %       declare DataProvenance typed by F16ADataProvenance; the required
+    %       set is COMPUTED (all declared stereotypes minus a named,
+    %       commented exemption list) rather than listed, so a stereotype
+    %       added tomorrow is in it the day it appears. Every component
+    %       carrying one of those stereotypes must hold a tag from the
+    %       four-member vocabulary, and the ten values D-030 inventories as
+    %       invented -- 7 CompositeFraction, 3 FuelCapacity_lb -- must say
+    %       Estimate, with the COUNT pinned so an eleventh cannot arrive
+    %       unrecorded (D-030, D-031). Cost DEFAULTS are checked too: a
+    %       declared default of 0 is a latent $0 that the value check alone
+    %       never sees (D-021, D-032).
     %
     %   THIS FILE NEVER RUNS THE TRADE STUDY. F16APhysicalTradeStudy writes to
     %   two models, a requirement set and a link set; a test that invoked it
@@ -281,6 +295,69 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         % had been run.
         DecisionRequirements = ["REQ_F16A_L01","REQ_F16A_L02","REQ_F16A_L03"];
         ImplementLinkType    = "Implement";
+
+        % --- Stage 5 audit: no invented number without a tag -------------
+        % The property that carries a provenance tag, and the ONE list of
+        % stereotypes exempt from carrying it.
+        %
+        % THE CHECK IS WRITTEN THE OTHER WAY ROUND from the obvious one. It
+        % does not enumerate the stereotypes that need provenance; it takes
+        % every stereotype the P profile DECLARES, subtracts this exemption
+        % list, and requires the remainder to declare DataProvenance. So a
+        % stereotype added tomorrow to hold engineering values is in the
+        % required set on the day it appears and FAILS until somebody either
+        % tags it or writes its name below -- and writing a name below is a
+        % visible line in a diff with a reason next to it, which is what an
+        % exemption ought to cost. Listing "Material, FuelTank,
+        % TradeCandidate need tags" instead would pass by omission forever,
+        % which is precisely how the Material gap survived to Stage 5.
+        %
+        % Why each exemption, so the decision is readable and not inherited:
+        %   PhysicalItem   -- Mass_lb is Brandt ground truth throughout the
+        %                     as-built decomposition. The four INVENTED
+        %                     candidate masses are tagged on TradeCandidate,
+        %                     which is where they are scored (D-025).
+        %   Rationale      -- SourceKind, Justification, TraceRef: prose and
+        %                     references, no numbers to source.
+        %   MeasureOfMerit -- OEW_lb is COMPUTED by the roll-up and
+        %                     UnitCost_USD is NaN pending a cost model
+        %                     (D-005). Neither is a value a human chose, and
+        %                     a provenance tag on a computed number would be
+        %                     the overclaiming D-025 warns against.
+        ProvenanceProperty          = "DataProvenance";
+        ProvenanceExemptStereotypes = ["MeasureOfMerit","PhysicalItem","Rationale"];
+        % Non-vacuity floor: the stereotypes known TODAY to carry chosen
+        % engineering values. Asserted as a SUBSET of the computed required
+        % set, never as an equality -- an equality would make the computed
+        % set decorative and quietly restore the pass-by-omission this test
+        % exists to remove.
+        KnownValueBearingStereotypes = ["FuelTank","Material","TradeCandidate"];
+        EstimateProvenance = "Estimate";
+        % D-030's inventory of invented numbers, as a CENSUS the model must
+        % match: {stereotype, the property whose value was invented, how many
+        % components carry it}. Every value under these two stereotypes is
+        % tagged Estimate without exception, and the count is pinned: an
+        % eighth composite fraction or a fourth tank is an eighth or fourth
+        % invented number, and D-030 has to grow a row before this can go
+        % green again.
+        %
+        % TradeCandidate is deliberately NOT here. Three of its seven are
+        % Brandt figures tagged Reference, so its per-candidate expectation
+        % lives in CandidateRows and is asserted by
+        % testCandidatesCarryTradeParameters.
+        InventedEstimateCensus = { ...
+            "Material", "CompositeFraction", 7; ...   % 6 structural parts + the lumped candidate
+            "FuelTank", "FuelCapacity_lb",   3};      % the three internal tanks
+        % D-021 / D-032: a cost property must DECLARE NaN, not a number that
+        % looks like data. Checked in the PROFILE, because the VALUE check
+        % (testCostIsNaNEverywhere) passes happily while the default is a
+        % latent $0 -- the generator overwrites it every run, so the hole is
+        % invisible until some other path applies the stereotype without
+        % writing the property.
+        CostDefault    = "NaN";
+        CostProperties = { ...
+            "MeasureOfMerit", "UnitCost_USD"; ...   % D-032, the hole the Stage-5 audit found
+            "TradeCandidate", "UnitCost_USD"};      % D-021, closed at Stage 2 -- kept as a regression guard
     end
 
     methods (TestClassSetup)
@@ -774,6 +851,26 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % and the ratio value functions of D-015 would happily score it.
             % This is the test that has to fail the day somebody types a
             % dollar amount anywhere in the trade.
+            %
+            % The DECLARED DEFAULT is checked first, and it is checked
+            % because reading the value alone is what let the last hole
+            % hide. MeasureOfMerit.UnitCost_USD defaulted to 0 for five
+            % stages while this test stayed green, because the generator
+            % happens to write NaN over it on every run (D-032). The latent
+            % $0 was one code path away: anything that applied the
+            % stereotype without writing the property would have shipped a
+            % flyaway cost of zero, and under D-015's ratio value functions
+            % a $0 is not neutral -- it is a divide-by-zero or an infinitely
+            % good score. That is the same bug D-021 closed on
+            % TradeCandidate, which is kept in the sweep as a regression
+            % guard rather than assumed to stay fixed.
+            badDefaults = testCase.costPropertiesNotDefaultingToNaN();
+            testCase.verifyEmpty(badDefaults, ...
+                "A cost property must DECLARE " + testCase.CostDefault + " as its " + ...
+                "default, not a number that reads as data (D-021, D-032). A value " + ...
+                "assertion cannot see this: the generator overwrites the default " + ...
+                "every run (stereotype.property -> declared default): " + ...
+                strjoin(badDefaults, ", ") + ".");
             ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
             momCost = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD");
             testCase.verifyTrue(isnan(momCost), ...
@@ -1172,6 +1269,129 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "The roll-up (" + r.OEW + " lb, which follows the ACTIVE choice) and the " + ...
                 "sum over the SELECTED candidates (" + selectedSum + " lb) disagree: the " + ...
                 "aircraft is not configured with the candidates the trade chose.");
+        end
+
+        % ---------------- Stage 5 audit: provenance is complete ----------
+
+        function testProvenanceDeclaredOnEveryValueBearingStereotype(testCase)
+            % The gap the Stage-5 audit had to find BY HAND, made
+            % executable. testRationaleVocabularyIsClosed already asserted
+            % that TradeCandidate.DataProvenance and Rationale.SourceKind
+            % are enum-typed -- but nothing anywhere said WHICH stereotypes
+            % owe a DataProvenance at all. So Material could declare
+            % CompositeFraction and nothing else, seven invented numbers sat
+            % in the shipped model with no tag of any kind, and the whole
+            % suite stayed green (D-031). The provenance vocabulary is worth
+            % nothing if it is applied only where somebody happened to
+            % remember.
+            %
+            % FAIL-CLOSED, which is the entire design of this test. It does
+            % not check a list of stereotypes that need provenance; it takes
+            % every stereotype the P profile DECLARES, subtracts
+            % ProvenanceExemptStereotypes, and requires the remainder to
+            % declare DataProvenance typed by F16ADataProvenance. A
+            % stereotype added tomorrow to hold engineering values is
+            % therefore in the required set the day it appears and fails
+            % until somebody either tags it or names it as an exemption --
+            % and naming an exemption is a line in a diff with a reason
+            % beside it, which is what an exemption should cost. The
+            % obvious alternative, listing the three stereotypes that need
+            % tags, passes by omission forever; that is how the Material
+            % gap survived five stages.
+            profileNames = testCase.physicalProfileNames();
+            testCase.verifyTrue(ismember(testCase.Profile, profileNames), ...
+                "The P model does not resolve the " + testCase.Profile + " profile, " + ...
+                "so there is no declared stereotype set to reason about. Resolved: {" + ...
+                strjoin(profileNames, ", ") + "}.");
+            d = testCase.provenanceDeclarationDefects();
+            % Non-vacuity, from both ends. An empty required set would make
+            % the sweep below pass while asserting nothing -- whether it got
+            % there because the profile walk found no stereotypes or because
+            % the exemption list swallowed them all.
+            testCase.verifyNotEmpty(d.Required, ...
+                "No stereotype requires provenance, so this test asserts nothing. " + ...
+                "Either the profile walk reached no stereotypes or every one of them " + ...
+                "has been exempted.");
+            missingKnown = setdiff(testCase.KnownValueBearingStereotypes, d.Required);
+            testCase.verifyEmpty(missingKnown, ...
+                "These stereotypes carry engineering values a human chose and must be " + ...
+                "in the required set, but are not: " + strjoin(missingKnown, ", ") + ...
+                ". Either they are no longer declared by the profile, or somebody has " + ...
+                "exempted them -- and an exemption is how an invented number stops " + ...
+                "being checked.");
+            testCase.verifyEmpty(d.StaleExemption, ...
+                "Exempted stereotype is not declared by the profile at all, so the " + ...
+                "exemption is stale -- and a stale exemption is a trap: it silently " + ...
+                "exempts whatever takes that name next: " + ...
+                strjoin(d.StaleExemption, ", ") + ".");
+            testCase.verifyEmpty(d.Undeclared, ...
+                "Stereotype carries engineering values but declares no " + ...
+                testCase.ProvenanceProperty + " property, so its numbers cannot be " + ...
+                "tagged in the model at all -- exactly the D-031 gap. Add the " + ...
+                "property, or name the stereotype in ProvenanceExemptStereotypes " + ...
+                "with a reason: " + strjoin(d.Undeclared, ", ") + ".");
+            testCase.verifyEmpty(d.WrongType, ...
+                testCase.ProvenanceProperty + " must be typed " + ...
+                testCase.DataProvenanceClass + " so the vocabulary is validated " + ...
+                "rather than free text (D-011); with a string property 'Estimte' is " + ...
+                "a valid tag and every provenance query quietly misses that part " + ...
+                "(stereotype -> declared type): " + strjoin(d.WrongType, ", ") + ".");
+        end
+
+        function testInventedNumbersAreTagged(testCase)
+            % The other half of D-031, and the half that reads the MODEL.
+            % Declaring DataProvenance on a stereotype means nothing if a
+            % component can apply that stereotype and leave the tag
+            % unreadable, so this walks every component -- through
+            % getChoices, so the seven candidates are reached at all
+            % (Stage-0 finding 6) -- and requires each one carrying a
+            % value-bearing stereotype to hold a tag from the four-member
+            % vocabulary.
+            %
+            % Then the sharper claim, which is what D-030 actually records.
+            % The seven CompositeFraction values and the three fuel
+            % capacities are not merely tagged, they are tagged ESTIMATE:
+            % the composite fractions were tuned until the mass-weighted
+            % figure landed just inside REQ_F16A_022's 20% cap, and a number
+            % chosen to make a requirement pass is the last number in the
+            % model that may look sourced. The fuel split is Brandt's
+            % 6296.30 lb rounded and divided three ways (D-023).
+            %
+            % The COUNT is pinned to the inventory on purpose. Tagging is a
+            % property of the values that exist; the census is a property of
+            % the LOG. An eighth composite fraction is an eighth invented
+            % number, and D-030 has to grow a row for it before this test
+            % can go green again -- which is the discipline D-007 asks for
+            % and D-030 exists because nobody kept.
+            %
+            % TradeCandidate is deliberately outside the Estimate census:
+            % three of its seven are Brandt figures tagged Reference, so its
+            % per-candidate expectation lives in CandidateRows and is
+            % asserted by testCandidatesCarryTradeParameters.
+            d = testCase.provenanceTagDefects();
+            testCase.verifyNotEmpty(d.Checked, ...
+                "No component carries a value-bearing stereotype, so nothing was " + ...
+                "checked and every assertion below is vacuous. A walk that skips a " + ...
+                "variant's choices reports exactly this (Stage-0 finding 6).");
+            testCase.verifyEmpty(d.Untagged, ...
+                "Component carries a stereotype that holds chosen engineering values, " + ...
+                "but its " + testCase.ProvenanceProperty + " is not one of {" + ...
+                strjoin(testCase.DataProvenanceMembers, ", ") + "}. An untagged " + ...
+                "invented number is what D-007 forbids and what f16a-data vetoes " + ...
+                "(path [stereotype] -> found): " + strjoin(d.Untagged, ", ") + ".");
+            c = testCase.estimateCensusDefects();
+            testCase.verifyEmpty(c.CountMismatch, ...
+                "The model carries a different number of invented values than D-030 " + ...
+                "inventories. Each of these is a number somebody chose, so the " + ...
+                "decision log has to list it before the census can match again " + ...
+                "(D-007, D-030): " + strjoin(c.CountMismatch, "; ") + ".");
+            testCase.verifyEmpty(c.NotEstimate, ...
+                "These values are invented for teaching and must say so: expected " + ...
+                testCase.ProvenanceProperty + " = " + testCase.EstimateProvenance + ...
+                ". Tagging one of them Reference or Datasheet would claim a source " + ...
+                "that does not exist, which is the failure mode D-007 was written to " + ...
+                "prevent (path [stereotype.property] -> found): " + ...
+                strjoin(c.NotEstimate, ", ") + ".");
         end
 
     end
@@ -2045,6 +2265,203 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % with no link set at all is reported as unlinked rather than
             % erroring out of the test.
             try, links = req.inLinks(); catch, links = []; end
+        end
+
+        % ---------------- Stage 5 audit: provenance is complete ----------
+
+        function n = profileName(~, prof)
+            % One profile's name, "" when it cannot be read -- which the
+            % caller reports as "the P profile did not resolve" rather than
+            % erroring out of the test.
+            try, n = string(prof.Name); catch, n = ""; end
+            if ~isscalar(n) || ismissing(n); n = ""; end
+        end
+
+        function names = physicalProfileNames(testCase)
+            % Names of every profile the P model resolves. Used to SCOPE the
+            % declared-stereotype set by name: a second profile attached to
+            % the model must not be able to widen the set of stereotypes
+            % this file demands provenance from, nor to satisfy the demand
+            % on another profile's behalf.
+            profs = testCase.physicalProfiles();
+            names = strings(1, numel(profs));
+            for i = 1:numel(profs)
+                names(i) = testCase.profileName(profs(i));
+            end
+        end
+
+        function names = declaredStereotypeNames(testCase)
+            % Every stereotype declared by the F16A_PhysicalProps profile,
+            % and only that profile. This is the SOURCE of the required set,
+            % which is why it is read from the profile rather than from a
+            % list in this file: a list would have to be edited for a new
+            % stereotype to be checked, and "somebody forgot to edit the
+            % list" is the failure this whole test is about.
+            names = strings(1,0);
+            profs = testCase.physicalProfiles();
+            for i = 1:numel(profs)
+                if testCase.profileName(profs(i)) ~= testCase.Profile
+                    continue
+                end
+                stereotypes = profs(i).Stereotypes;
+                for j = 1:numel(stereotypes)
+                    names(end+1) = testCase.shortName(string(stereotypes(j).Name));   %#ok<AGROW>
+                end
+            end
+            names = reshape(unique(names), 1, []);
+        end
+
+        function d = provenanceDeclarationDefects(testCase)
+            % The fail-closed set arithmetic, in one place.
+            %   Required       -- declared stereotypes MINUS the exemptions.
+            %                     Computed, never listed.
+            %   Undeclared     -- required but has no DataProvenance property.
+            %   WrongType      -- has one, but not typed by the enumeration.
+            %   StaleExemption -- exempts a stereotype that no longer exists,
+            %                     which leaves a name primed to exempt
+            %                     whatever is called that next.
+            declared = testCase.declaredStereotypeNames();
+            d.Required       = reshape(setdiff(declared, testCase.ProvenanceExemptStereotypes), 1, []);
+            d.StaleExemption = reshape(setdiff(testCase.ProvenanceExemptStereotypes, declared), 1, []);
+            d.Undeclared     = strings(1,0);
+            d.WrongType      = strings(1,0);
+            for i = 1:numel(d.Required)
+                stereo = d.Required(i);
+                actual = testCase.declaredPropertyType(stereo, testCase.ProvenanceProperty);
+                if actual == ""
+                    d.Undeclared(end+1) = stereo;   %#ok<AGROW>
+                elseif actual ~= testCase.DataProvenanceClass
+                    d.WrongType(end+1) = stereo + " -> '" + actual + "'";   %#ok<AGROW>
+                end
+            end
+        end
+
+        function d = provenanceTagDefects(testCase)
+            % One pass over every stereotype-bearing part. For each
+            % value-bearing stereotype a part applies, its DataProvenance
+            % must read back inside the four-member vocabulary.
+            %
+            % Checked records every (part, stereotype) pair actually
+            % examined, so the caller can prove the sweep saw something --
+            % an empty Untagged list means nothing on its own.
+            d.Checked  = strings(1,0);
+            d.Untagged = strings(1,0);
+            % The SAME computed set the declaration check uses, so the two
+            % halves of D-031 can never drift apart: whatever a stereotype
+            % is required to declare, its carriers are required to fill in.
+            declared = testCase.provenanceDeclarationDefects();
+            required = declared.Required;
+            [parts, paths] = testCase.stereotypableParts();
+            for i = 1:numel(parts)
+                applied = testCase.appliedStereotypes(parts{i});
+                hits = required(ismember(required, applied));
+                for k = 1:numel(hits)
+                    where = paths(i) + " [" + hits(k) + "]";
+                    d.Checked(end+1) = where;   %#ok<AGROW>
+                    actual = testCase.propText(parts{i}, testCase.Profile + "." + ...
+                        hits(k) + "." + testCase.ProvenanceProperty);
+                    if ~ismember(actual, testCase.DataProvenanceMembers)
+                        d.Untagged(end+1) = where + " -> '" + actual + "'";   %#ok<AGROW>
+                    end
+                end
+            end
+        end
+
+        function d = estimateCensusDefects(testCase)
+            % D-030's inventory, checked against the model two ways: the
+            % carriers are DISCOVERED by the walk (so a new one cannot hide)
+            % and their number is compared with the inventory (so a new one
+            % cannot arrive unrecorded). Every value under these stereotypes
+            % is invented, so anything other than Estimate is a provenance
+            % overclaim rather than a difference of opinion.
+            d.CountMismatch = strings(1,0);
+            d.NotEstimate   = strings(1,0);
+            [parts, paths] = testCase.stereotypableParts();
+            for r = 1:size(testCase.InventedEstimateCensus,1)
+                stereo    = string(testCase.InventedEstimateCensus{r,1});
+                valueProp = string(testCase.InventedEstimateCensus{r,2});
+                expected  = testCase.InventedEstimateCensus{r,3};
+                carriers  = 0;
+                for i = 1:numel(parts)
+                    if ~ismember(stereo, testCase.appliedStereotypes(parts{i}))
+                        continue
+                    end
+                    carriers = carriers + 1;
+                    actual = testCase.propText(parts{i}, testCase.Profile + "." + ...
+                        stereo + "." + testCase.ProvenanceProperty);
+                    if actual ~= testCase.EstimateProvenance
+                        d.NotEstimate(end+1) = paths(i) + " [" + stereo + "." + ...
+                            valueProp + "] -> '" + actual + "'";   %#ok<AGROW>
+                    end
+                end
+                if carriers ~= expected
+                    d.CountMismatch(end+1) = stereo + "." + valueProp + " is carried by " + ...
+                        carriers + " components, D-030 inventories " + expected;   %#ok<AGROW>
+                end
+            end
+        end
+
+        function s = declaredDefaultText(~, prop)
+            % Property.DefaultValue is the STORED MATLAB EXPRESSION -- "NaN",
+            % "0", "'Minimize'", "F16ADataProvenance.Estimate" -- and is
+            % documented as a string or, for a property carrying units, a
+            % [value unit] pair, so the first element is the value. A string
+            % literal arrives QUOTED (Stage-0 finding 7) and the quotes come
+            % off here. "" when it cannot be read at all, which every caller
+            % reports as a defect rather than swallowing.
+            try
+                raw = string(prop.DefaultValue);
+            catch
+                s = "";
+                return
+            end
+            if isempty(raw); s = ""; return; end
+            s = strtrim(erase(raw(1), "'"));
+            if ismissing(s); s = ""; end
+        end
+
+        function v = declaredPropertyDefault(testCase, stereotypeShortName, propertyShortName)
+            % The declared DEFAULT of one stereotype property, read from the
+            % PROFILE. The sibling of declaredPropertyType, and the reason
+            % both exist: a default is a claim the profile makes about every
+            % element that will ever apply the stereotype, and no amount of
+            % reading VALUES off today's components can see it.
+            v = "";
+            profs = testCase.physicalProfiles();
+            for i = 1:numel(profs)
+                stereotypes = profs(i).Stereotypes;
+                for j = 1:numel(stereotypes)
+                    if testCase.shortName(string(stereotypes(j).Name)) ~= stereotypeShortName
+                        continue
+                    end
+                    props = stereotypes(j).Properties;
+                    for k = 1:numel(props)
+                        if testCase.shortName(string(props(k).Name)) == propertyShortName
+                            v = testCase.declaredDefaultText(props(k));
+                            return
+                        end
+                    end
+                end
+            end
+        end
+
+        function hits = costPropertiesNotDefaultingToNaN(testCase)
+            % Cost properties whose declared default is not NaN. Reported
+            % with what was found, because the values mean different things:
+            % '0' is D-021's hole still open, '' is the stereotype or the
+            % property not being declared at all. Compared case-insensitively
+            % -- MATLAB accepts nan, NaN and NAN as the same expression, and
+            % this test is about the VALUE being a non-number, not about how
+            % somebody spelled it.
+            hits = strings(1,0);
+            for r = 1:size(testCase.CostProperties,1)
+                stereo = string(testCase.CostProperties{r,1});
+                prop   = string(testCase.CostProperties{r,2});
+                actual = testCase.declaredPropertyDefault(stereo, prop);
+                if upper(actual) ~= upper(testCase.CostDefault)
+                    hits(end+1) = stereo + "." + prop + " -> '" + actual + "'";   %#ok<AGROW>
+                end
+            end
         end
 
         function types = linkTypes(~, links)

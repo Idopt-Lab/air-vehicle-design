@@ -21,7 +21,8 @@ function results = F16APhysicalTradeStudy()
 %     2. P, rationale -- Rationale.SourceKind becomes TradeWinner on the winner
 %        and TradeAlternative on every loser, and each Justification is
 %        rewritten to state the result it actually got: its score, its rank, the
-%        margin, and WHICH CRITERION decided it (D-006).
+%        margin, and WHICH CRITERION DECIDED IT AGAINST THE RUNNER-UP -- stated
+%        with that qualifier because that is all it is (D-006, D-034).
 %     3. L, the cross-layer callback -- in logical/F16A_Logical.slx the role's
 %        active choice becomes the winner's RealizesKind, SolutionOption
 %        .Selected goes true on that kind and false on its sibling, and
@@ -51,13 +52,23 @@ function results = F16APhysicalTradeStudy()
 %   SCORING: DECLARED VALUE FUNCTIONS, NOT MIN-MAX (D-015)
 %
 %   Each criterion carries a value function that maps a raw number to a value
-%   on 0..1-ish WITHOUT reference to the other candidates:
+%   on 0..1 WITHOUT reference to the other candidates:
 %
-%     Benefit       v = B / 10                  benefit is declared on 0..10
+%     Benefit       v = B / 10                  benefit is declared on 1..10,
+%                                               0 meaning "not set" (D-033)
 %     TRL           v = (TRL - 1) / 8           TRL is declared on 1..9
 %     Mass_lb       v = M_baseline / M          ratio to the role's baseline;
 %                                               v > 1 means lighter than it
 %     UnitCost_USD  v = C_baseline / C          same shape; no values yet
+%
+%   THE 1.0 CEILING IS NOT UNIFORM. Benefit and TRL are capped at 1.0 by their
+%   declared scales, which the guards below enforce. The two RATIO criteria are
+%   not capped by anything: a candidate lighter than the baseline scores v > 1
+%   and therefore contributes MORE than its declared weight allows, at which
+%   point 0.50/0.25/0.25 has stopped describing relative influence. That is not
+%   capped (the advantage is real) and not rejected (the candidate is
+%   legitimate) -- it is WARNED about, so the reader knows the weights no
+%   longer mean what they say (D-035).
 %
 %   Min-max normalization was retired for two reasons. It is DEGENERATE AT
 %   n = 2 -- every criterion collapses to {0,1}, so a score is just the sum of
@@ -89,11 +100,23 @@ function results = F16APhysicalTradeStudy()
 %   The run errors, naming the candidate, on: a TRL outside 1..9 (D-021 makes 0
 %   the deliberate "unset" sentinel, precisely so it cannot pass for a
 %   mid-maturity guess); a non-positive Mass_lb (it is the denominator of the
-%   mass value function); a non-positive Benefit; a role with fewer than two
-%   candidates (that is not a trade); a criterion with values on some
-%   candidates but not all (a partial column scores the ones that happen to
-%   carry data against the ones that do not); and a TIE for first place, which
-%   is a decision the data cannot make and must not be broken by sort order.
+%   mass value function); a Benefit outside 1..10, BOUNDED AT BOTH ENDS for the
+%   same reason TRL is (D-033) -- 0 is the stereotype default and so the same
+%   "not set" sentinel, and the UPPER bound is the one that matters, because
+%   B/10 is the term a slipped decimal point can win a trade with: 78 typed for
+%   7.8 contributes 3.90 where 0.50 is the legitimate maximum contribution of
+%   any criterion, and being finite it sails straight past the isfinite net;
+%   a role with fewer than two candidates (that is not a trade); a criterion
+%   with values on some candidates but not all (a partial column scores the
+%   ones that happen to carry data against the ones that do not); and a TIE for
+%   first place, which is a decision the data cannot make and must not be
+%   broken by sort order.
+%
+%   It WARNS, and carries on, when a value function returns more than the 1.0
+%   its declared scale implies (D-035). Only the unbounded ratio criteria can
+%   reach that, and there the honest response is neither to cap (which discards
+%   a real advantage) nor to error (which rejects a legitimate candidate) but
+%   to say out loud that the weights no longer describe relative influence.
 %
 %   IDEMPOTENT. Re-running writes the same active choices, the same flags, the
 %   same justifications and the same links. Justifications are rewritten from
@@ -135,6 +158,15 @@ logiProfile = "F16A_LogicalOptions";
 % Rationale.Justification. It is what makes the rewrite idempotent: everything
 % before it is regenerated, everything after it is carried through untouched.
 JUSTSENTINEL = " || ";
+
+% How far above 1.0 a value function has to land before the run reports it as
+% exceeding the ceiling its declared scale implies (D-035). Sitting EXACTLY on
+% the ceiling is not an exceedance and must not warn: the Reference candidate's
+% M_baseline/M is exactly 1, and HydroMechanical's TRL of 9 gives (9-1)/8 =
+% exactly 1. Both are IEEE-exact, so the tolerance guards nothing today -- it
+% is there so a future value function that lands on its ceiling through an
+% inexact division cries wolf at nobody.
+CEILINGTOL = 1e-9;
 
 % Role -> the requirement the decision is recorded in. The ONLY declared
 % mapping in this file (see the header): candidates are discovered, decision
@@ -184,7 +216,10 @@ try, slreq.load(logiName); catch, end %#ok<CTCH>
 % Weight is the DECLARED weight, before any criterion is dropped; Value is the
 % value function v(raw, baseline) of D-015; Rule is what gets printed and
 % written into the rationale, so the model states its own scoring scheme.
-% Benefit and TRL ignore the baseline argument -- their scale is absolute.
+% Benefit and TRL ignore the baseline argument -- their scale is absolute, and
+% because checkParameters boxes both of them at both ends their value cannot
+% exceed 1.0. The two ratio criteria have no such ceiling, which is what the
+% D-035 check below exists to report.
 crit = struct( ...
     "Name",   {"Benefit",   "TRL",         "Mass_lb",      "UnitCost_USD"}, ...
     "Weight", {0.40,        0.20,          0.20,           0.20}, ...
@@ -301,6 +336,39 @@ for r = 1:numel(roles)
             "A value function returned a non-finite result for role %s. Check the " + ...
             "baseline and the raw parameters.", role);
     end
+
+    % ---- a value above its declared ceiling weakens the weights (D-035) ---
+    % WARN, do not cap and do not error. Benefit and TRL cannot get here --
+    % checkParameters boxes them, so B/10 and (TRL-1)/8 top out at 1.0. The
+    % RATIO criteria have no ceiling at all: a candidate lighter than the
+    % baseline scores v > 1 and contributes more than its weight allows, so
+    % the renormalized 0.50/0.25/0.25 stops describing relative influence.
+    % Capping would throw away a genuine advantage and erroring would reject a
+    % legitimate candidate; the only honest option left is to say so. Written
+    % over the criteria GENERICALLY rather than against Mass_lb by name,
+    % because UnitCost_USD inherits the identical C_baseline/C shape the day a
+    % cost model lands and would otherwise arrive with the check missing.
+    for kk = 1:nKept
+        k = keptIdx(kk);
+        for i = 1:n
+            if V(i,kk) > 1 + CEILINGTOL
+                warning("F16APhysicalTradeStudy:valueAboveCeiling", ...
+                    "Candidate %s scores v = %.4f on %s (%s), above the 1.0 ceiling " + ...
+                    "the declared scales imply. It contributes %.5f to the score " + ...
+                    "where its renormalized weight %.3f is the most the weighting " + ...
+                    "intends any criterion to be worth, so the declared weights no " + ...
+                    "longer describe relative influence for role %s. NOTHING IS " + ...
+                    "CAPPED: the value is real and the candidate genuinely beats the " + ...
+                    "baseline on this criterion. Read the score knowing the weights " + ...
+                    "understate this criterion. Recorded as a known limit in D-035 " + ...
+                    "of docs/07_decision_log.md; the fix is a bounded value function " + ...
+                    "over a declared range per criterion, which is deferred.", ...
+                    rc(i).Path, V(i,kk), crit(k).Name, crit(k).Rule, ...
+                    w(kk) * V(i,kk), w(kk), role);
+            end
+        end
+    end
+
     score = V * w(:);
 
     % ---- rank, and refuse to break a tie ---------------------------------
@@ -468,6 +536,16 @@ function checkParameters(rc, raw, crit)
 %   cannot be scored as "mid-maturity", and this is where that choice collects.
 %   A non-positive mass is worse than wrong: it is the denominator of the mass
 %   value function, so it would be an infinite score or a divide-by-zero.
+%
+%   BENEFIT IS BOXED AT BOTH ENDS, LIKE TRL (D-033). Its stereotype default is
+%   0, so 0 is doing exactly the sentinel duty TRL's 0 does, and the usable
+%   scale is 1..10. The UPPER bound is the one that earns its keep: B/10 is
+%   the highest-weighted term in the score and the only one an out-of-range
+%   value can run away with. 78 typed for 7.8 contributes 3.90 against a
+%   legitimate per-criterion maximum of 0.50 -- enough to hand the propulsion
+%   trade to TwinEngine_Surrogate, flip the L model's active kind and
+%   Implement-link REQ_F16A_L01 from the wrong one. It is finite, so isfinite
+%   never sees it; only a declared ceiling does.
 kB = critIdx(crit, "Benefit");
 kT = critIdx(crit, "TRL");
 kM = critIdx(crit, "Mass_lb");
@@ -487,10 +565,15 @@ for i = 1:numel(rc)
             "denominator of the mass value function M_baseline/M.", rc(i).Path, ms);
     end
     b = raw(i, kB);
-    if ~isfinite(b) || b <= 0
+    if ~isfinite(b) || b < 1 || b > 10
         error("F16APhysicalTradeStudy:badBenefit", ...
-            "Candidate %s carries Benefit = %g. Benefit must be positive on the " + ...
-            "declared 0..10 scale.", rc(i).Path, b);
+            "Candidate %s carries Benefit = %g. Benefit must lie on the declared " + ...
+            "1..10 scale; 0 is the stereotype default and therefore the 'unset' " + ...
+            "sentinel, exactly as TRL's 0 is under D-021. The upper bound is not " + ...
+            "decoration: at v = B/10 with the heaviest weight in the trade, 78 typed " + ...
+            "for 7.8 contributes 3.90 where 0.50 is the most any criterion can " + ...
+            "legitimately be worth, and a finite out-of-range value is invisible to " + ...
+            "every other check in this file (D-033).", rc(i).Path, b);
     end
 end
 end
@@ -576,17 +659,34 @@ end
 win = order(1);
 rup = order(2);
 [dName, dDelta] = decisiveCriterion(V, w, crit, keptIdx, win, rup);
-fprintf("  -> SELECTED %s (kind %s), score %s, margin %s over %s; decided by %s (%s).\n", ...
+fprintf("  -> SELECTED %s (kind %s), score %s, margin %s over %s; decided AGAINST " + ...
+    "THAT RUNNER-UP by %s (%s).\n", ...
     rc(win).Name, rc(win).Kind, fmtScore(score(win)), ...
     fmtDelta(score(win) - score(rup)), rc(rup).Name, dName, fmtDelta(dDelta));
+fprintf("     (decisiveness is measured against %s only -- a different rival can make a " + ...
+    "different criterion decisive, so this is not a property of the decision as a " + ...
+    "whole; D-034.)\n", rc(rup).Name);
 end
 
 % =====================================================================
 function [name, delta] = decisiveCriterion(V, w, crit, keptIdx, win, other)
-%DECISIVECRITERION The criterion that contributes most of the winner's margin.
+%DECISIVECRITERION The criterion carrying most of the winner's margin over ONE rival.
 %   Weighted, because an unweighted comparison would credit a criterion the
-%   trade barely cares about. This is what "which criterion decided it" means
-%   here, and it is what goes into the rationale the model carries.
+%   trade barely cares about.
+%
+%   IT IS RIVAL-RELATIVE, AND EVERY CALLER MUST SAY SO (D-034). This answers
+%   "what separated WIN from OTHER", not "what decided the trade". Callers pass
+%   the rank-2 candidate, and the answer changes with the rival: the F100 beats
+%   F110 on TRL (+0.12500) but beats TwinEngine_Surrogate on Mass_lb (+0.06523,
+%   ahead of TRL's +0.06250). Same winner, same scores, different "deciding"
+%   criterion. So the printed line and the stored Justification both name the
+%   runner-up rather than stating this as a property of the decision -- the
+%   scores were never wrong here, the AUDIT TRAIL was, and the audit trail is
+%   what this script exists to produce.
+%
+%   A rival-independent answer -- which criterion, if removed, would change the
+%   winner -- is a genuine sensitivity calculation and is deferred rather than
+%   faked (D-034).
 d = w .* (V(win,:) - V(other,:));
 [delta, kk] = max(d);
 name = crit(keptIdx(kk)).Name;
@@ -614,8 +714,11 @@ end
 function txt = winnerSentence(rc, win, rup, n, score, V, w, crit, keptIdx, ...
     critText, reqId, kindName)
 %WINNERSENTENCE What the winner says about itself afterwards.
-%   It names the score, the margin, the criterion that carried it, and -- the
-%   part worth having -- the criteria it LOST and won anyway. That is the whole
+%   It names the score, the margin, the criterion that carried it AGAINST THE
+%   RUNNER-UP -- every comparison in this sentence is against that one rival and
+%   the sentence says so, because it is the model's permanent audit trail and
+%   must not claim more than it measured (D-034) -- and, the part worth having,
+%   the criteria it LOST and won anyway. That is the whole
 %   lesson of the engine trade: the F100 beats the F110 on maturity and
 %   installed mass DESPITE a lower benefit rating, and the model should say so
 %   rather than leave a reader to infer it from a column of numbers.
@@ -626,15 +729,18 @@ trails  = otherCriteria(d, crit, keptIdx, dName, @(x) x < 0);
 
 txt = "Trade study result: SELECTED. Score " + fmtScore(score(win)) + " against " + ...
     fmtScore(score(rup)) + " for " + rc(rup).Name + " (rank 1 of " + n + ", margin " + ...
-    fmtDelta(score(win) - score(rup)) + "). Decided by " + dName + ", worth " + ...
-    fmtDelta(dDelta) + " of that margin";
+    fmtDelta(score(win) - score(rup)) + "). Decided against that runner-up by " + ...
+    dName + ", worth " + fmtDelta(dDelta) + " of that margin";
 if strlength(leads) > 0
-    txt = txt + "; it also leads on " + leads;
+    txt = txt + "; it also leads that runner-up on " + leads;
 end
 if strlength(trails) > 0
     txt = txt + ", and it wins DESPITE trailing " + rc(rup).Name + " on " + trails;
 end
-txt = txt + ". " + critText + " The decision is recorded in " + reqId + " and written " + ...
+txt = txt + ". Decisiveness here is measured against " + rc(rup).Name + " only: another " + ...
+    "rival can make another criterion decisive, so " + dName + " is what separated this " + ...
+    "candidate from the runner-up, not a property of the decision as a whole (D-034). " + ...
+    critText + " The decision is recorded in " + reqId + " and written " + ...
     "back to the Logical layer as the active " + kindName + " kind.";
 end
 

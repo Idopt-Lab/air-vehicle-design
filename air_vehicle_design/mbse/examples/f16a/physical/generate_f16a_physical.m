@@ -397,12 +397,27 @@ pit = profile.addStereotype("PhysicalItem", AppliesTo="Component");
 pit.addProperty("Mass_lb", Type="double", DefaultValue="0");
 mom = profile.addStereotype("MeasureOfMerit", AppliesTo="Component");
 mom.addProperty("OEW_lb",       Type="double", DefaultValue="0");   % <- mass roll-up
-mom.addProperty("UnitCost_USD", Type="double", DefaultValue="0");   % <- cost-model function
+% UNITCOST_USD DEFAULTS TO NaN, NOT 0 (D-032) -- the same fail-safe rule D-021
+% applied to TradeCandidate, closed here on the aircraft-level Measure of Merit.
+% Nothing reads this default today: section 8 writes the cost-model result
+% explicitly, and that result is NaN by D-005. It matters for the path that does
+% not exist yet -- anything that applies MeasureOfMerit without writing the
+% property would otherwise ship $0 as the aircraft's flyaway cost, and $0 is not
+% a neutral placeholder but an unbeatably good one. A default that silently
+% produces a plausible number is worse than one that stops the run.
+mom.addProperty("UnitCost_USD", Type="double", DefaultValue="NaN"); % <- cost-model function
 % String defaults are evaluated as MATLAB expressions, so quote the literal.
 mom.addProperty("Goal",         Type="string", DefaultValue="'Minimize'");
 % Material: composite fraction per part -> airframe composite roll-up (REQ_022).
+% DataProvenance is on this stereotype too (D-031). Every composite fraction in
+% this model is an invented number; until D-031 they carried no provenance tag
+% at all -- precisely the gap D-023 closed for FuelTank, left open one
+% stereotype over. An untagged invented number is not a smaller problem than a
+% mistagged one.
 mat = profile.addStereotype("Material", AppliesTo="Component");
 mat.addProperty("CompositeFraction", Type="double", DefaultValue="0");   % 0..1 of part mass
+mat.addProperty("DataProvenance",    Type="F16ADataProvenance", ...
+    DefaultValue="F16ADataProvenance.Estimate");
 % FuelTank: fuel capacity per tank -> available-fuel roll-up (REQ_P01).
 % DataProvenance is on this stereotype too (D-023). A tank capacity is a number
 % like any other, and "no agent invents a number" has to apply to the numbers
@@ -427,7 +442,7 @@ rat.addProperty("TraceRef",      Type="string", DefaultValue="'TBD'");
 % where each number came from, and whether it won. Applied to the seven
 % candidates in section 6c.
 %
-% UNSET PARAMETERS MUST FAIL SAFE, NOT FAIL CHEAP (D-021). Two defaults here
+% UNSET PARAMETERS MUST FAIL SAFE, NOT FAIL CHEAP (D-021). Three defaults here
 % look wrong on purpose:
 %   * UnitCost_USD defaults to NaN, not 0. Cost is NaN everywhere by D-005, and
 %     under a ratio value function a silent $0 is not neutral -- it is either a
@@ -438,11 +453,16 @@ rat.addProperty("TraceRef",      Type="string", DefaultValue="'TBD'");
 %     data: the trade study ERRORS on a candidate still carrying TRL 0 rather
 %     than scoring it. The previous default of 5 was an invented number that
 %     would have scored as a plausible mid-maturity candidate.
+%   * Benefit defaults to 0, which is likewise OUTSIDE its usable 1..10 scale
+%     and means "not set" (D-033). The trade study boxes Benefit at BOTH ends,
+%     as it does TRL: v = B/10 carries the heaviest weight in the score, so an
+%     out-of-range benefit is the one parameter a slipped decimal point can win
+%     a trade with, and it is finite so no isfinite check would catch it.
 tc = profile.addStereotype("TradeCandidate", AppliesTo="Component");
 tc.addProperty("RealizesRole",   Type="string",  DefaultValue="'TBD'");
 tc.addProperty("RealizesKind",   Type="string",  DefaultValue="'TBD'");
 tc.addProperty("Mass_lb",        Type="double",  DefaultValue="0");
-tc.addProperty("Benefit",        Type="double",  DefaultValue="0");
+tc.addProperty("Benefit",        Type="double",  DefaultValue="0");     % <- outside 1..10 on purpose
 tc.addProperty("TRL",            Type="int32",   DefaultValue="0");     % <- outside 1..9 on purpose
 tc.addProperty("UnitCost_USD",   Type="double",  DefaultValue="NaN");   % <- D-005: cost is pending
 tc.addProperty("DataProvenance", Type="F16ADataProvenance", ...
@@ -468,7 +488,9 @@ applyStereotypeToTree(ac, profileName + ".Rationale");
 % PROVENANCE. Every mass below is a Brandt F-16A ground-truth weight
 % (Reference) EXCEPT the four losing-candidate masses, which are illustrative
 % teaching ESTIMATES and are marked inline. They are not F-16 data and must
-% never be cited as such (D-007); each is listed in docs/07_decision_log.md.
+% never be cited as such (D-007); each is inventoried, with the reasoning
+% behind the figure, in entry D-030 of docs/07_decision_log.md -- the single
+% place every invented number in this model is recorded.
 %
 % INTERIOR NODES ARE NOT LISTED. BlendedCrankedDelta is an interior node: its
 % PhysicalItem.Mass_lb stays at the default 0 and the roll-up writes its
@@ -510,19 +532,28 @@ for i = 1:size(massRows,1)
 end
 
 % Airframe material split: CompositeFraction per structural part (fraction of
-% the part's mass that is composite). Educated guess grounded in real F-16
-% composite usage -- graphite/epoxy tail skins, carbon-fiber wing leading
-% edge, fiberglass strakes; aluminum fuselage/nacelles -- tuned so the
-% mass-weighted airframe composite fraction (~0.1928) sits within the 20% cap
-% of the Brandt reference material mix (REQ_F16A_022).
+% the part's mass that is composite).
+%
+% EVERY FRACTION BELOW IS AN INVENTED NUMBER. Not one is F-16 data. All of them
+% are tagged Estimate in the model (D-031) and inventoried in entry D-030 of
+% docs/07_decision_log.md, which records why each was chosen.
+%
+% The six on the decomposed candidate are an educated guess grounded in real
+% F-16 composite usage -- graphite/epoxy tail skins, carbon-fiber wing leading
+% edge, fiberglass strakes; aluminum fuselage/nacelles -- AND THEN TUNED SO THE
+% MASS-WEIGHTED AIRFRAME COMPOSITE FRACTION SITS WITHIN THE 20% CAP OF
+% REQ_F16A_022. Read that literally: these are numbers picked to make a
+% requirement pass. The materials roll-up therefore demonstrates that the
+% roll-up and the constraint check WORK; it is not evidence that the F-16A
+% meets a composite cap, and must not be quoted as if it were.
 %
 % ConventionalTrapWing gets ONE fraction for the whole lumped block, so the
 % materials roll-up is DEFINED whichever airframe candidate is active -- an
 % undefined constraint on the inactive branch would be a hole in REQ_F16A_022
-% the moment the trade picked differently. 0.12 is an ESTIMATE: a conventional
-% aluminium trapezoidal-wing airframe of this era carries less composite than
-% the blended cranked delta, whose graphite/epoxy tail skins are most of the
-% 0.1928. It is not an F-16 figure and is listed in docs/07_decision_log.md.
+% the moment the trade picked differently. Its value is an ESTIMATE on the
+% argument that a conventional aluminium trapezoidal-wing airframe of this era
+% carries less composite than the blended cranked delta, whose graphite/epoxy
+% tail skins dominate that candidate's fraction; see D-030.
 compRows = {
     AFC+"Wing",                        0.15;
     AFC+"Fuselage",                    0.10;
@@ -536,6 +567,11 @@ for i = 1:size(compRows,1)
     c = lookup(m, Path=char(compRows{i,1}));
     applyStereotype(c, profileName + ".Material");
     setProperty(c, profileName + ".Material.CompositeFraction", string(compRows{i,2}));
+    % Tagged, not assumed (D-031): the tag is written on every row rather than
+    % left to the stereotype default, so the model states the provenance of
+    % each fraction even if the default is ever changed. Enum value written
+    % fully qualified and unquoted.
+    setProperty(c, profileName + ".Material.DataProvenance", "F16ADataProvenance.Estimate");
 end
 
 % Internal fuel tanks: 2100 lb usable each, 6300 lb total.
@@ -727,18 +763,23 @@ assertRationaleComplete(m.Architecture, profileName);
 %   (Propulsion 4730.23, Airframe 6722.88, FlightControls 472.44 lb) -- the same
 %   figures the mass roll-up produces for the active configuration, which is
 %   why the trade's baselines and the model agree by construction. The other
-%   four are tagged Estimate: 7300 / 5100 / 6400 / 700 lb are ILLUSTRATIVE
-%   TEACHING VALUES chosen to make the trade instructive. THEY ARE NOT F-16
-%   DATA, no aircraft was ever built to them, and they must never be cited as
-%   such. Each is listed in docs/07_decision_log.md, as D-007 requires.
+%   four are tagged Estimate: their masses are ILLUSTRATIVE TEACHING VALUES
+%   chosen to make the trade instructive. THEY ARE NOT F-16 DATA, no aircraft
+%   was ever built to them, and they must never be cited as such. Each one --
+%   and every other invented number in this model, including the Benefit and
+%   TRL judgements below -- is inventoried in entry D-030 of
+%   docs/07_decision_log.md. That entry is what D-007's "every Estimate is
+%   listed in the decision log" points at; do not restate the figures here,
+%   because a second list is a list that can disagree with the first.
 %
 %   READ THE TAG NARROWLY. There is ONE DataProvenance per candidate and it
 %   qualifies the MASS -- the only measurable, disputable, dimensioned figure a
-%   candidate carries. Benefit (0..10) and TRL (1..9) are ENGINEERING JUDGEMENT
-%   on a declared scale for every candidate including the Reference ones: they
-%   are a teaching ranking, not a measured maturity assessment, and no tag on
-%   this stereotype would make them otherwise. Do not read "Reference" as
-%   "these three numbers are sourced".
+%   candidate carries. Benefit (1..10, 0 meaning "not set" -- D-033) and TRL
+%   (1..9, 0 meaning "not set" -- D-021) are ENGINEERING JUDGEMENT on a declared
+%   scale for every candidate including the Reference ones: they are a teaching
+%   ranking, not a measured maturity assessment, and no tag on this stereotype
+%   would make them otherwise. Do not read "Reference" as "these three numbers
+%   are sourced".
 %
 %   MASS_LB HERE IS NOT PHYSICALITEM.MASS_LB. This is the TRADED figure: the
 %   number the candidate is scored on, a property of the candidate as an
