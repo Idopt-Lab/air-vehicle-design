@@ -118,6 +118,16 @@ function results = F16APhysicalTradeStudy()
 %   a real advantage) nor to error (which rejects a legitimate candidate) but
 %   to say out loud that the weights no longer describe relative influence.
 %
+%   THREE OF THOSE GUARDS LIVE IN F16APhysicalTradeGuards.m, NOT HERE -- the
+%   parameter bounds, the tie refusal and the ceiling warning. They are pure
+%   arithmetic over declared values, and while they were local functions of
+%   this file the only way to make one fire was to run the whole study against
+%   the shipped artifacts: a negative test that would corrupt two models and a
+%   requirement set on the very day the guard it was checking had been
+%   refactored away. Lifting them out makes each assertable on its own. The
+%   identifiers they throw are unchanged, and so is every number and every
+%   character this file prints and writes.
+%
 %   IDEMPOTENT. Re-running writes the same active choices, the same flags, the
 %   same justifications and the same links. Justifications are rewritten from
 %   scratch each run -- the trade sentence is regenerated and the part's
@@ -147,7 +157,8 @@ function results = F16APhysicalTradeStudy()
 %   Requires the P model, the L model and the decision requirement set to exist
 %   (run generate_f16a_physical.m, which calls this as its section 7b).
 %
-%   See also GENERATE_F16A_PHYSICAL, GENERATE_F16A_LOGICAL, F16APHYSICALMASSROLLUP.
+%   See also F16APHYSICALTRADEGUARDS, GENERATE_F16A_PHYSICAL,
+%   GENERATE_F16A_LOGICAL, F16APHYSICALMASSROLLUP.
 
 modelName   = "F16A_Physical";
 profileName = "F16A_PhysicalProps";
@@ -158,15 +169,6 @@ logiProfile = "F16A_LogicalOptions";
 % Rationale.Justification. It is what makes the rewrite idempotent: everything
 % before it is regenerated, everything after it is carried through untouched.
 JUSTSENTINEL = " || ";
-
-% How far above 1.0 a value function has to land before the run reports it as
-% exceeding the ceiling its declared scale implies (D-035). Sitting EXACTLY on
-% the ceiling is not an exceedance and must not warn: the Reference candidate's
-% M_baseline/M is exactly 1, and HydroMechanical's TRL of 9 gives (9-1)/8 =
-% exactly 1. Both are IEEE-exact, so the tolerance guards nothing today -- it
-% is there so a future value function that lands on its ceiling through an
-% inexact division cries wolf at nobody.
-CEILINGTOL = 1e-9;
 
 % Role -> the requirement the decision is recorded in. The ONLY declared
 % mapping in this file (see the header): candidates are discovered, decision
@@ -217,9 +219,9 @@ try, slreq.load(logiName); catch, end %#ok<CTCH>
 % value function v(raw, baseline) of D-015; Rule is what gets printed and
 % written into the rationale, so the model states its own scoring scheme.
 % Benefit and TRL ignore the baseline argument -- their scale is absolute, and
-% because checkParameters boxes both of them at both ends their value cannot
-% exceed 1.0. The two ratio criteria have no such ceiling, which is what the
-% D-035 check below exists to report.
+% because F16APhysicalTradeGuards.checkParameters boxes both of them at both
+% ends their value cannot exceed 1.0. The two ratio criteria have no such
+% ceiling, which is what the D-035 check below exists to report.
 crit = struct( ...
     "Name",   {"Benefit",   "TRL",         "Mass_lb",      "UnitCost_USD"}, ...
     "Weight", {0.40,        0.20,          0.20,           0.20}, ...
@@ -285,7 +287,10 @@ for r = 1:numel(roles)
             raw(i,k) = readNum(rc(i).Comp, profileName + ".TradeCandidate." + crit(k).Name);
         end
     end
-    checkParameters(rc, raw, crit);
+    % Only the candidates' PATHS go across, never the struct that holds their
+    % component handles: the guard names an offender in its message and has no
+    % other business with the model (D-021, D-033).
+    F16APhysicalTradeGuards.checkParameters([rc.Path], raw, crit);
 
     % ---- the baseline for the ratio criteria -----------------------------
     isRef = [rc.Provenance] == "Reference";
@@ -339,46 +344,26 @@ for r = 1:numel(roles)
 
     % ---- a value above its declared ceiling weakens the weights (D-035) ---
     % WARN, do not cap and do not error. Benefit and TRL cannot get here --
-    % checkParameters boxes them, so B/10 and (TRL-1)/8 top out at 1.0. The
-    % RATIO criteria have no ceiling at all: a candidate lighter than the
+    % the parameter guard boxes them, so B/10 and (TRL-1)/8 top out at 1.0.
+    % The RATIO criteria have no ceiling at all: a candidate lighter than the
     % baseline scores v > 1 and contributes more than its weight allows, so
     % the renormalized 0.50/0.25/0.25 stops describing relative influence.
     % Capping would throw away a genuine advantage and erroring would reject a
-    % legitimate candidate; the only honest option left is to say so. Written
-    % over the criteria GENERICALLY rather than against Mass_lb by name,
-    % because UnitCost_USD inherits the identical C_baseline/C shape the day a
-    % cost model lands and would otherwise arrive with the check missing.
-    for kk = 1:nKept
-        k = keptIdx(kk);
-        for i = 1:n
-            if V(i,kk) > 1 + CEILINGTOL
-                warning("F16APhysicalTradeStudy:valueAboveCeiling", ...
-                    "Candidate %s scores v = %.4f on %s (%s), above the 1.0 ceiling " + ...
-                    "the declared scales imply. It contributes %.5f to the score " + ...
-                    "where its renormalized weight %.3f is the most the weighting " + ...
-                    "intends any criterion to be worth, so the declared weights no " + ...
-                    "longer describe relative influence for role %s. NOTHING IS " + ...
-                    "CAPPED: the value is real and the candidate genuinely beats the " + ...
-                    "baseline on this criterion. Read the score knowing the weights " + ...
-                    "understate this criterion. Recorded as a known limit in D-035 " + ...
-                    "of docs/07_decision_log.md; the fix is a bounded value function " + ...
-                    "over a declared range per criterion, which is deferred.", ...
-                    rc(i).Path, V(i,kk), crit(k).Name, crit(k).Rule, ...
-                    w(kk) * V(i,kk), w(kk), role);
-            end
-        end
-    end
+    % legitimate candidate; the only honest option left is to say so. The
+    % check is written over the criteria GENERICALLY rather than against
+    % Mass_lb by name, because UnitCost_USD inherits the identical
+    % C_baseline/C shape the day a cost model lands and would otherwise arrive
+    % with the check missing. It says nothing today: no candidate is lighter
+    % than its role's baseline.
+    F16APhysicalTradeGuards.warnAboveCeiling([rc.Path], V, w, crit, keptIdx, role);
 
     score = V * w(:);
 
     % ---- rank, and refuse to break a tie ---------------------------------
-    [sorted, order] = sort(score, "descend");
-    if abs(sorted(1) - sorted(2)) <= 1e-9
-        error("F16APhysicalTradeStudy:tie", ...
-            "Role %s is a tie for first place: %s and %s both score %.6f. Sort order " + ...
-            "is not a decision -- separate them with data or add a criterion.", ...
-            role, rc(order(1)).Name, rc(order(2)).Name, sorted(1));
-    end
+    % The guard ranks as well as checks, so this file does not sort a second
+    % time: the ordering the tie test was applied to IS the ordering used
+    % below to pick the winner and the runner-up.
+    order  = F16APhysicalTradeGuards.rankRefusingTies([rc.Name], score, role);
     rankOf = zeros(n,1);
     rankOf(order) = 1:n;
     win = order(1);
@@ -526,66 +511,6 @@ function out = emptyCandidate()
 %   Field order must match candidateAt exactly, or the concatenation fails.
 out = struct("Comp", {}, "Owner", {}, "OwnerPath", {}, "Path", {}, ...
     "Name", {}, "Role", {}, "Kind", {}, "Provenance", {});
-end
-
-% =====================================================================
-function checkParameters(rc, raw, crit)
-%CHECKPARAMETERS Stop the trade on a parameter that cannot honestly be scored.
-%   D-021 in force: an unset parameter must fail safe, not fail cheap. TRL
-%   defaults to 0 -- deliberately outside the 1..9 scale -- so that "we forgot"
-%   cannot be scored as "mid-maturity", and this is where that choice collects.
-%   A non-positive mass is worse than wrong: it is the denominator of the mass
-%   value function, so it would be an infinite score or a divide-by-zero.
-%
-%   BENEFIT IS BOXED AT BOTH ENDS, LIKE TRL (D-033). Its stereotype default is
-%   0, so 0 is doing exactly the sentinel duty TRL's 0 does, and the usable
-%   scale is 1..10. The UPPER bound is the one that earns its keep: B/10 is
-%   the highest-weighted term in the score and the only one an out-of-range
-%   value can run away with. 78 typed for 7.8 contributes 3.90 against a
-%   legitimate per-criterion maximum of 0.50 -- enough to hand the propulsion
-%   trade to TwinEngine_Surrogate, flip the L model's active kind and
-%   Implement-link REQ_F16A_L01 from the wrong one. It is finite, so isfinite
-%   never sees it; only a declared ceiling does.
-kB = critIdx(crit, "Benefit");
-kT = critIdx(crit, "TRL");
-kM = critIdx(crit, "Mass_lb");
-for i = 1:numel(rc)
-    t = raw(i, kT);
-    if ~isfinite(t) || t < 1 || t > 9 || mod(t,1) ~= 0
-        error("F16APhysicalTradeStudy:badTRL", ...
-            "Candidate %s carries TRL = %g. TRL must be an integer on the declared " + ...
-            "1..9 scale; 0 is the D-021 'unset' sentinel and an unset parameter stops " + ...
-            "the trade rather than being scored as a plausible mid-pack value.", ...
-            rc(i).Path, t);
-    end
-    ms = raw(i, kM);
-    if ~isfinite(ms) || ms <= 0
-        error("F16APhysicalTradeStudy:badMass", ...
-            "Candidate %s carries Mass_lb = %g. Mass must be positive -- it is the " + ...
-            "denominator of the mass value function M_baseline/M.", rc(i).Path, ms);
-    end
-    b = raw(i, kB);
-    if ~isfinite(b) || b < 1 || b > 10
-        error("F16APhysicalTradeStudy:badBenefit", ...
-            "Candidate %s carries Benefit = %g. Benefit must lie on the declared " + ...
-            "1..10 scale; 0 is the stereotype default and therefore the 'unset' " + ...
-            "sentinel, exactly as TRL's 0 is under D-021. The upper bound is not " + ...
-            "decoration: at v = B/10 with the heaviest weight in the trade, 78 typed " + ...
-            "for 7.8 contributes 3.90 where 0.50 is the most any criterion can " + ...
-            "legitimately be worth, and a finite out-of-range value is invisible to " + ...
-            "every other check in this file (D-033).", rc(i).Path, b);
-    end
-end
-end
-
-% =====================================================================
-function k = critIdx(crit, name)
-%CRITIDX Index of a criterion by name; errors rather than returning empty.
-k = find([crit.Name] == string(name), 1);
-if isempty(k)
-    error("F16APhysicalTradeStudy:noSuchCriterion", ...
-        "No criterion named %s is declared.", string(name));
-end
 end
 
 % =====================================================================

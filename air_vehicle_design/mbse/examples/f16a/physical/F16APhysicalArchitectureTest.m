@@ -38,9 +38,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %       a different parameter set.
     %     * Candidates (Stage 3) -- each of the 7 carries TradeCandidate with
     %       a RealizesRole/RealizesKind pair that RESOLVES in the L model, a
-    %       positive mass and benefit, a TRL inside the 1..9 scale (D-021's
-    %       fail-safe default of 0 is outside it on purpose), a NaN cost, and
-    %       a DataProvenance from the four-member vocabulary.
+    %       positive mass, a Benefit inside the declared 1..10 scale and a
+    %       TRL inside the integer 1..9 scale (D-021 and D-033 both make 0
+    %       the fail-safe "unset" default, outside the scale on purpose), a
+    %       NaN cost, and a DataProvenance from the four-member vocabulary.
+    %       Both scales are the ones the trade study's own guards enforce,
+    %       and a negative control proves they can still reject.
     %     * Active configuration (Stage 3) -- exactly one active choice per
     %       variant role, and OEW counts THAT configuration only: 19,980.73
     %       lb, demonstrably not the all-candidates sum. The materials
@@ -110,6 +113,44 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %     * The "Verified by" links. Those are added by hand in the
     %       Requirements Editor (see README); the "is it met?" answer is the
     %       matching suite in verification/.
+    %     * THE TRADE STUDY'S GUARDS FIRING -- now covered ELSEWHERE. Stage 5
+    %       gave F16APhysicalTradeStudy guards that stop the run on a
+    %       parameter that cannot honestly be scored -- Benefit outside 1..10
+    %       (D-033), TRL outside the integer 1..9 (D-021), a non-positive
+    %       mass, a role without exactly one Reference baseline, a tie for
+    %       first place -- and a warning, without capping, when a value
+    %       function exceeds the 1.0 ceiling its declared scale implies
+    %       (D-035). This file still pins their INPUT CONTRACT against the
+    %       shipped model and still never makes one fire, but that is now a
+    %       DIVISION OF LABOUR rather than a limitation.
+    %
+    %       Three of them -- checkParameters, the tie check and the ceiling
+    %       check -- have been lifted into F16APhysicalTradeGuards, a class of
+    %       pure static methods with no model handle anywhere in it, and
+    %       F16APhysicalTradeGuardsTest makes every one of them fire. That is
+    %       where the negative tests belong: they touch no artifact, so they
+    %       do not want this file's TestClassSetup, which loads two models,
+    %       three requirement sets and an allocation set before anything runs.
+    %
+    %       Why they were never written HERE, which is still the reason not to
+    %       move them back: while the guards lived inside
+    %       F16APhysicalTradeStudy.m the only way to reach one was to run the
+    %       whole study, and that run is safe only for as long as the guard
+    %       still WORKS. A test that set Benefit = 78 would stop early today
+    %       and, on the day somebody refactored the bound away -- the exact
+    %       defect such a test exists to catch -- would sail past, pick the
+    %       wrong winner, and save_system a wrong active choice, a wrong
+    %       active kind in the L model and a wrong Implement link on
+    %       REQ_F16A_L01 into the shipped artifacts. A negative test whose
+    %       failure mode is corrupting the repository is worse than no test.
+    %
+    %       What is STILL not covered anywhere: the study's guards that are
+    %       entangled with the discovery walk (:tooFewCandidates,
+    %       :candidateNotAChoice, :splitRole, :baselineNotUnique,
+    %       :partialCriterion, :nothingToScore) and those that need a model
+    %       handle (:logicalRoleNotVariant, :noSuchKind, :missingRequirement,
+    %       the artifact-exists checks). Their input contract is the
+    %       "guard rails" section below and that is all there is.
     %
     %   R2026a APIs exercised here, each isolated in one helper below so a
     %   signature fix touches one place:
@@ -241,10 +282,61 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "Propulsion/Engine/TwinEngine_Surrogate", "PropulsionSystem",    "TwinEngine",           "Estimate";  ...
             "FlightControls/FlyByWire",               "FlightControlSystem", "FlyByWire",            "Reference"; ...
             "FlightControls/HydroMechanical",         "FlightControlSystem", "HydroMechanical",      "Estimate"};
-        % The TRL scale. 1..9 inclusive; D-021 deliberately defaults the
-        % property to 0 -- OUTSIDE the scale -- so an unset TRL is caught here
-        % and by the trade study rather than silently scoring as "mid-pack".
-        TRLScale = [1 9];
+        % The TRL scale. 1..9 inclusive AND INTEGER; D-021 deliberately
+        % defaults the property to 0 -- OUTSIDE the scale -- so an unset TRL is
+        % caught here and by the trade study rather than silently scoring as
+        % "mid-pack". Integrality is part of the scale, not a nicety: TRL is an
+        % ordinal maturity level and the trade study's guard rejects a
+        % fractional one outright.
+        %
+        % TAKEN FROM THE CODE THAT ENFORCES IT, not restated. These used to be
+        % literals with a note explaining that checkParameters was a local
+        % function of F16APhysicalTradeStudy.m and could not be imported. It is
+        % now F16APhysicalTradeGuards, which exposes its bounds as constants
+        % precisely so a test can take them from the enforcer -- so the test
+        % and the guard can no longer drift apart, and a scale widened in the
+        % code cannot leave this file agreeing with a bound that is gone.
+        TRLScale = F16APhysicalTradeGuards.TRLScale;
+        % The Benefit scale, D-033. BOXED AT BOTH ENDS, for the same reason TRL
+        % is. 0 is the stereotype default and therefore the same "unset"
+        % sentinel; the UPPER bound is the one that earns its keep, because
+        % v = B/10 carries the heaviest weight in the trade and a slipped
+        % decimal point is FINITE and so invisible to every isfinite check --
+        % 78 typed for 7.8 contributes 3.90 where 0.50 is the most any
+        % criterion may legitimately be worth, which hands the propulsion trade
+        % to TwinEngine_Surrogate, flips the L model's active kind and
+        % Implement-links REQ_F16A_L01 from the wrong kind.
+        BenefitScale = F16APhysicalTradeGuards.BenefitScale;
+        % The negative control for both scales. Every value here MUST be
+        % rejected and every value in the Accepted* lists MUST pass, judged by
+        % the SAME predicates the candidate sweeps use -- so a scale quietly
+        % widened to admit awkward data fails here instead of going green.
+        %   0     the stereotype default: "nobody set this" (D-021, D-033)
+        %   78    7.8 with a slipped decimal point -- D-033's entire case, and
+        %         the reason the upper bound exists at all
+        %   10.5  just past the top of the declared scale
+        %   -1    negative merit is not a point on a 1..10 scale
+        %   NaN   an unreadable property must stop the trade, not score as 0
+        %   Inf   what the isfinite net is there for
+        RejectedBenefits = [0, 78, 10.5, -1, NaN, Inf];
+        AcceptedBenefits = [1, 7.8, 10];
+        %   0     D-021's "unset" sentinel, the reason TRL is boxed below 1
+        %   10    one past the top of the 1..9 scale
+        %   4.5   TRL is an ordinal level, not a continuous quantity
+        RejectedTRLs = [0, 10, 4.5, -1, NaN, Inf];
+        AcceptedTRLs = [1, 6, 9];
+        % D-015's ratio baseline: the role's DataProvenance = Reference
+        % candidate. The trade study requires exactly one per role -- with none
+        % there is no scale, with two there is no answer to "which one" -- and
+        % divides every mass ratio by its mass.
+        BaselineProvenance = "Reference";
+        % How far above 1.0 a value function must land before it counts as
+        % exceeding the ceiling its declared scale implies (D-035). The
+        % Reference candidate's own M_baseline/M is exactly 1 and must not
+        % register as an exceedance. Taken from the guard, for the same reason
+        % the two scales above are: this used to MIRROR the trade study's
+        % CeilingTol by hand, and a mirror is a copy waiting to disagree.
+        ValueCeilingTol = F16APhysicalTradeGuards.CeilingTol;
         % Rationale kinds a trade candidate may legitimately carry. Both are
         % allowed so this assertion survives Stage 4, when the trade study
         % promotes three of the seven from TradeAlternative to TradeWinner.
@@ -816,13 +908,32 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.verifyEmpty(T.Path(~(T.Mass_lb > 0)), ...
                 "TradeCandidate.Mass_lb must be positive on: " + ...
                 strjoin(T.Path(~(T.Mass_lb > 0)), ", ") + ".");
-            testCase.verifyEmpty(T.Path(~(T.Benefit > 0)), ...
-                "TradeCandidate.Benefit must be positive on: " + ...
-                strjoin(T.Path(~(T.Benefit > 0)), ", ") + ".");
-            badTRL = ~(T.TRL >= testCase.TRLScale(1) & T.TRL <= testCase.TRLScale(2));
+            % Benefit is BOXED AT BOTH ENDS, matching the trade study's own
+            % guard (D-033). "> 0" was the assertion here for five stages and
+            % it was WEAKER THAN THE CODE IT CHECKS: it admits 78, and 78 is
+            % not a hypothetical -- it is 7.8 with a slipped decimal point,
+            % worth 3.90 against a legitimate per-criterion maximum of 0.50,
+            % which is enough to hand the propulsion trade to the wrong
+            % candidate and Implement-link REQ_F16A_L01 from the wrong kind
+            % without anything else in this suite noticing.
+            badBenefit = ~arrayfun(@(b) testCase.onBenefitScale(b), T.Benefit);
+            testCase.verifyEmpty(T.Path(badBenefit), ...
+                "TradeCandidate.Benefit outside the declared " + testCase.BenefitScale(1) + ...
+                ".." + testCase.BenefitScale(2) + " scale (D-033). 0 is the stereotype " + ...
+                "default and therefore the 'unset' sentinel, exactly as TRL's 0 is under " + ...
+                "D-021; the UPPER bound is the one that matters, because v = B/10 is the " + ...
+                "heaviest-weighted term in the trade and an out-of-range value is FINITE " + ...
+                "and so invisible to every other check: " + ...
+                strjoin(T.Path(badBenefit) + " -> " + T.Benefit(badBenefit), ", ") + ".");
+            % Range AND integrality, because the trade study's guard checks
+            % both and a test weaker than its guard is a test that will one day
+            % be cited as evidence the guard is unnecessary.
+            badTRL = ~arrayfun(@(t) testCase.onTRLScale(t), T.TRL);
             testCase.verifyEmpty(T.Path(badTRL), ...
-                "TRL outside the 1..9 scale (D-021 defaults it to 0 on purpose, so this " + ...
-                "is what an unset TRL looks like): " + ...
+                "TRL outside the integer " + testCase.TRLScale(1) + ".." + ...
+                testCase.TRLScale(2) + " scale (D-021 defaults it to 0 on purpose, so " + ...
+                "this is what an unset TRL looks like; a fractional TRL is not a point " + ...
+                "on an ordinal maturity scale at all): " + ...
                 strjoin(T.Path(badTRL) + " -> " + T.TRL(badTRL), ", ") + ".");
             badProv = ~ismember(T.DataProvenance, testCase.DataProvenanceMembers);
             testCase.verifyEmpty(T.Path(badProv), ...
@@ -1392,6 +1503,189 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "that does not exist, which is the failure mode D-007 was written to " + ...
                 "prevent (path [stereotype.property] -> found): " + ...
                 strjoin(c.NotEstimate, ", ") + ".");
+        end
+
+        % ------- Stage 5 audit: the trade study's guard rails -------------
+        %
+        % READ THIS BEFORE ADDING TO THIS SECTION -- it is about what these
+        % three tests deliberately do NOT do, and where the other half is.
+        %
+        % Stage 5 gave F16APhysicalTradeStudy guards that stop the run on a
+        % parameter that cannot honestly be scored, and D-035's warning for a
+        % value function above its declared ceiling. NONE OF THEM IS MADE TO
+        % FIRE HERE, and none should be. What these three pin is the guards'
+        % INPUT CONTRACT, read off the SHIPPED MODEL: the same bounds, the
+        % same baseline-uniqueness rule, the same ceiling, plus a negative
+        % control proving the bounds can still say no. That is the DATA half
+        % -- somebody types 78, adds a second Reference candidate, or clones a
+        % candidate's parameters -- and it needs the model to be loaded, which
+        % is why it lives in this file.
+        %
+        % THE CODE HALF -- the guard itself being weakened or deleted -- is
+        % F16APhysicalTradeGuardsTest, and it is a separate file for a
+        % concrete reason. checkParameters, the tie check and the ceiling
+        % check now live in F16APhysicalTradeGuards, a class of pure static
+        % methods; making one fire is a two-line verifyError on its
+        % identifier with no artifact in sight. Attaching that to THIS file's
+        % TestClassSetup -- two models, three requirement sets, an allocation
+        % set -- would make the one suite whose whole property is touching no
+        % artifact fail whenever a model failed to load.
+        %
+        % Why it was not simply written here in the first place, which is
+        % also why it must not be moved back: while the guards were LOCAL
+        % functions of F16APhysicalTradeStudy.m the only way to reach one was
+        % to run the whole study, and that run stops early only while the
+        % guard still works. Feeding it Benefit = 78 would, on the day the
+        % bound was refactored away, run to completion and save a wrong
+        % winner, a wrong L active kind and a wrong Implement link into the
+        % shipped artifacts -- corrupting the repository precisely when the
+        % test was supposed to catch something.
+        %
+        % The bounds these tests judge by are now IMPORTED from the guard
+        % (TRLScale / BenefitScale / ValueCeilingTol above), so the data half
+        % and the code half cannot be checking different numbers.
+        %
+        % What is still uncovered in BOTH files: the study's guards that are
+        % entangled with the discovery walk or that need a model handle. Those
+        % are named in "NOT COVERED HERE" at the top.
+
+        function testTradeParameterScalesRejectWhatTheyExistToReject(testCase)
+            % The negative control for the two range sweeps in
+            % testCandidatesCarryTradeParameters, in the same shape as
+            % testTraceRefsResolve's BogusTraceRefs: a check that can only
+            % ever say yes asserts nothing, so the scales are made to say NO
+            % before they are trusted to say yes.
+            %
+            % It also makes the BOUNDS THEMSELVES load-bearing. Without it,
+            % the cheapest way to make an awkward Benefit pass is to widen
+            % BenefitScale, and every other assertion in this file stays
+            % green -- the test would have been quietly converted into the
+            % "> 0" it just replaced. The two values that matter are not
+            % arbitrary: 0 is the stereotype default meaning "nobody set
+            % this" (D-021, D-033), and 78 is 7.8 with a slipped decimal
+            % point, which D-033 traces all the way to a wrong Implement
+            % link on REQ_F16A_L01.
+            %
+            % Both directions are asserted. A scale that rejects everything
+            % would pass the first half and fail the aeroplane.
+            wronglyAccepted = testCase.RejectedBenefits( ...
+                arrayfun(@(b) testCase.onBenefitScale(b), testCase.RejectedBenefits));
+            testCase.verifyEmpty(wronglyAccepted, ...
+                "The Benefit scale accepts values it exists to reject: {" + ...
+                testCase.numList(wronglyAccepted) + "}. 0 is the 'unset' sentinel " + ...
+                "and 78 is 7.8 with a slipped decimal point (D-033) -- if either passes, " + ...
+                "the Benefit sweep in testCandidatesCarryTradeParameters is no stronger " + ...
+                "than the '> 0' it replaced.");
+            wronglyRejected = testCase.AcceptedBenefits( ...
+                ~arrayfun(@(b) testCase.onBenefitScale(b), testCase.AcceptedBenefits));
+            testCase.verifyEmpty(wronglyRejected, ...
+                "The Benefit scale rejects legitimate values: {" + ...
+                testCase.numList(wronglyRejected) + "}. The declared scale is " + ...
+                testCase.BenefitScale(1) + ".." + testCase.BenefitScale(2) + " INCLUSIVE, " + ...
+                "so a scale that excludes its own endpoints would fail candidates that " + ...
+                "are perfectly well specified.");
+            wronglyAcceptedTRL = testCase.RejectedTRLs( ...
+                arrayfun(@(t) testCase.onTRLScale(t), testCase.RejectedTRLs));
+            testCase.verifyEmpty(wronglyAcceptedTRL, ...
+                "The TRL scale accepts values it exists to reject: {" + ...
+                testCase.numList(wronglyAcceptedTRL) + "}. 0 is D-021's fail-safe " + ...
+                "default -- the whole reason TRL is boxed below 1 is that an unset TRL " + ...
+                "must not score as a plausible mid-pack value -- and 4.5 is not a point " + ...
+                "on an ordinal maturity scale.");
+            wronglyRejectedTRL = testCase.AcceptedTRLs( ...
+                ~arrayfun(@(t) testCase.onTRLScale(t), testCase.AcceptedTRLs));
+            testCase.verifyEmpty(wronglyRejectedTRL, ...
+                "The TRL scale rejects legitimate values: {" + ...
+                testCase.numList(wronglyRejectedTRL) + "}. The declared scale is " + ...
+                testCase.TRLScale(1) + ".." + testCase.TRLScale(2) + " inclusive.");
+        end
+
+        function testRatioBaselineIsUniqueAndNothingBeatsIt(testCase)
+            % Two of the trade study's guards, checked as preconditions on
+            % the shipped data because they cannot be checked as behaviour.
+            %
+            % FIRST, the baseline is unique per role. Every ratio value
+            % function divides by the mass of the role's
+            % DataProvenance = Reference candidate (D-015), so with none
+            % there is no scale at all and with two there is no answer to
+            % "which one" -- which is why the trade study refuses to run.
+            % This is a genuinely different claim from
+            % rolesWhereBrandtCandidateIsNotLightest, which keys on the
+            % hard-coded production names in this file; here the baseline is
+            % discovered from the PROVENANCE TAG, exactly as the trade study
+            % discovers it, so a retagged candidate is caught.
+            %
+            % SECOND, D-035's ceiling. v = M_baseline/M has no upper bound,
+            % unlike B/10 and (TRL-1)/8 which their declared scales cap at
+            % 1.0. A candidate lighter than its baseline scores above 1 and
+            % contributes more than its renormalized weight allows, at which
+            % point 0.50/0.25/0.25 has stopped describing relative influence.
+            %
+            % A FAILURE OF THE SECOND HALF IS NOT A BUG IN THE TRADE STUDY.
+            % D-035 decided, correctly, neither to cap (that discards a real
+            % advantage) nor to error (that rejects a legitimate candidate)
+            % but to WARN. So this is a tripwire, not a verdict: it says the
+            % known limit has gone from theoretical to armed, the run now
+            % emits F16APhysicalTradeStudy:valueAboveCeiling, and the scores
+            % must be read knowing the weights understate that criterion.
+            % The honest response is to confirm the decision still holds and
+            % then to do the deferred fix -- a bounded value function over a
+            % declared range per criterion -- not to delete the offending
+            % candidate.
+            d = testCase.baselineDefects();
+            testCase.verifyNotEmpty(d.Checked, ...
+                "No candidate was scored against a baseline, so both assertions below " + ...
+                "are vacuous. Either the candidate table is empty or no role has a " + ...
+                testCase.BaselineProvenance + "-tagged candidate at all.");
+            testCase.verifyEmpty(d.NoUniqueBaseline, ...
+                "A role must have EXACTLY ONE candidate tagged DataProvenance = " + ...
+                testCase.BaselineProvenance + ". It is the baseline every ratio value " + ...
+                "function divides by (D-015): with none there is no scale, with two " + ...
+                "there is no answer to which one, and the trade study stops rather " + ...
+                "than guess: " + strjoin(d.NoUniqueBaseline, "; ") + ".");
+            testCase.verifyEmpty(d.AboveCeiling, ...
+                "A candidate is LIGHTER THAN ITS ROLE'S BASELINE, so the mass value " + ...
+                "function M_baseline/M exceeds the 1.0 ceiling the declared scales " + ...
+                "imply and the renormalized weights no longer describe relative " + ...
+                "influence (D-035). This is a KNOWN LIMIT, not a defect in the " + ...
+                "candidate: nothing is capped and nothing is rejected, the trade study " + ...
+                "warns and carries on, and the advantage is real. What it means is that " + ...
+                "the scores for this role must be read knowing the weights understate " + ...
+                "this criterion, and that D-035's deferred fix -- a bounded value " + ...
+                "function over a declared range per criterion -- now has a live case: " + ...
+                strjoin(d.AboveCeiling, "; ") + ".");
+        end
+
+        function testNoRoleHasTwoIdenticallyParameterizedCandidates(testCase)
+            % The tie guard's precondition. The trade study REFUSES to break
+            % a tie for first place -- sort order is not a decision, and a
+            % model that let one through would record a winner the data
+            % never chose -- so the shipped data must not be able to produce
+            % one trivially.
+            %
+            % Two candidates of a role carrying the same Benefit, TRL and
+            % Mass_lb tie under ANY weighting, whatever the weights are
+            % renormalized to and whichever criteria get dropped. That is
+            % the one tie that can be ruled out by looking at inputs alone,
+            % and it is the one a copy-paste in generate_f16a_physical.m
+            % actually produces.
+            %
+            % IT DOES NOT PROVE THERE IS NO TIE. Two candidates with
+            % different parameters can still score equal, and detecting that
+            % needs the score -- which this file deliberately does not
+            % recompute, because a test that re-derived the trade study's
+            % arithmetic would agree with it by construction and catch
+            % nothing (the V&V rule against writing the assertion and the
+            % code the same way). The unique winner that the shipped data
+            % actually produces is asserted from the MODEL, by
+            % testTradeSelectedExactlyOneWinnerPerRole.
+            dupes = testCase.duplicateParameterDefects();
+            testCase.verifyEmpty(dupes, ...
+                "Two candidates of one role carry identical trade parameters, so they " + ...
+                "score identically under any weighting and the role is a tie for first " + ...
+                "place. The trade study errors rather than break it " + ...
+                "(F16APhysicalTradeStudy:tie): sort order is not a decision. Separate " + ...
+                "them with data or add a criterion: " + strjoin(dupes, "; ") + ".");
         end
 
     end
@@ -2460,6 +2754,115 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 actual = testCase.declaredPropertyDefault(stereo, prop);
                 if upper(actual) ~= upper(testCase.CostDefault)
                     hits(end+1) = stereo + "." + prop + " -> '" + actual + "'";   %#ok<AGROW>
+                end
+            end
+        end
+
+        % ---------------- Stage 5 audit: the guard rails -----------------
+
+        function s = numList(~, values)
+            % A numeric array as "0, 78, NaN" for a failure message.
+            %
+            % NOT string(values). string(NaN) is <missing> (Stage-0 gotcha,
+            % the same one that makes setProperty reject it), and strjoin
+            % ERRORS on a string array containing a missing element -- so
+            % the obvious spelling would blow up the diagnostic in exactly
+            % the case that produces it, since NaN is one of the values
+            % these controls exist to reject. compose formats it as text
+            % instead. reshape because compose follows the input's shape
+            % and strjoin wants a row.
+            s = strjoin(reshape(compose("%g", values), 1, []), ", ");
+        end
+
+        function tf = onBenefitScale(testCase, b)
+            % Is a Benefit on its declared scale? THE predicate -- used by
+            % the candidate sweep and by the negative control that proves it
+            % can reject, so the control cannot drift away from the rule it
+            % is controlling. isfinite first, and short-circuited, so NaN
+            % (an unreadable property) and Inf are rejected here rather than
+            % propagating through the comparison.
+            tf = isfinite(b) && b >= testCase.BenefitScale(1) && b <= testCase.BenefitScale(2);
+        end
+
+        function tf = onTRLScale(testCase, t)
+            % Is a TRL on its declared scale? Range AND integrality, because
+            % the trade study's guard checks both: TRL is an ordinal
+            % maturity level, so 4.5 is not a low reading, it is not a
+            % reading at all.
+            tf = isfinite(t) && t >= testCase.TRLScale(1) && t <= testCase.TRLScale(2) && ...
+                mod(t, 1) == 0;
+        end
+
+        function d = baselineDefects(testCase)
+            % Per role: find the ratio baseline the way the TRADE STUDY
+            % finds it -- by the DataProvenance tag, not by the production
+            % names hard-coded in this file -- require it to be unique, and
+            % evaluate D-015's mass value function for every candidate of
+            % the role against it.
+            %
+            % Checked records every candidate actually scored, so the caller
+            % can prove the sweep saw something: an empty AboveCeiling list
+            % means nothing on its own.
+            d.NoUniqueBaseline = strings(1,0);
+            d.AboveCeiling     = strings(1,0);
+            d.Checked          = strings(1,0);
+            T = testCase.candidateTable();
+            for i = 1:size(testCase.VariantRows,1)
+                role = string(testCase.VariantRows{i,2});
+                rows = T(T.ExpectedRole == role, :);
+                ref  = rows(rows.DataProvenance == testCase.BaselineProvenance, :);
+                if height(ref) ~= 1
+                    % reshape because strjoin wants a ROW; candidateTable
+                    % holds Path as a column, so the slice arrives as one.
+                    d.NoUniqueBaseline(end+1) = role + " has " + height(ref) + ...
+                        " candidates tagged " + testCase.BaselineProvenance + " {" + ...
+                        strjoin(reshape(testCase.leafNames(ref.Path), 1, []), ", ") + "}";   %#ok<AGROW>
+                    continue
+                end
+                baseline = ref.Mass_lb;
+                for k = 1:height(rows)
+                    d.Checked(end+1) = rows.Path(k);   %#ok<AGROW>
+                    % The value function verbatim from D-015. A zero or
+                    % negative mass gives Inf or a negative here and lands
+                    % in AboveCeiling; that is the trade study's badMass
+                    % guard, and the Mass_lb > 0 sweep in
+                    % testCandidatesCarryTradeParameters reports it first.
+                    v = baseline / rows.Mass_lb(k);
+                    if v > 1 + testCase.ValueCeilingTol
+                        d.AboveCeiling(end+1) = rows.Path(k) + " -> v = " + ...
+                            sprintf("%.4f", v) + " (baseline " + ...
+                            testCase.leafName(ref.Path) + " = " + baseline + " lb, this " + ...
+                            "candidate = " + rows.Mass_lb(k) + " lb)";   %#ok<AGROW>
+                    end
+                end
+            end
+        end
+
+        function dupes = duplicateParameterDefects(testCase)
+            % Pairs of candidates within one role whose scored parameters
+            % are indistinguishable. Compared with a tolerance rather than
+            % by exact equality: two masses that differ in the last bit
+            % would separate the candidates arithmetically while being the
+            % same number in every sense the trade study cares about, and a
+            % margin that small is not a decision either.
+            dupes = strings(1,0);
+            T = testCase.candidateTable();
+            for i = 1:size(testCase.VariantRows,1)
+                role = string(testCase.VariantRows{i,2});
+                rows = T(T.ExpectedRole == role, :);
+                for a = 1:height(rows)
+                    for b = a+1:height(rows)
+                        same = abs(rows.Benefit(a) - rows.Benefit(b)) <= 1e-9 && ...
+                               abs(rows.TRL(a)     - rows.TRL(b))     <= 1e-9 && ...
+                               abs(rows.Mass_lb(a) - rows.Mass_lb(b)) <= 1e-9;
+                        if same
+                            dupes(end+1) = role + ": " + ...
+                                testCase.leafName(rows.Path(a)) + " and " + ...
+                                testCase.leafName(rows.Path(b)) + " both carry Benefit=" + ...
+                                rows.Benefit(a) + ", TRL=" + rows.TRL(a) + ", Mass_lb=" + ...
+                                rows.Mass_lb(a);   %#ok<AGROW>
+                        end
+                    end
                 end
             end
         end

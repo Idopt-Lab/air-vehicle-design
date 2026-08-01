@@ -99,9 +99,49 @@ belongs where physical components exist.
 The [Logical layer](04_logical.md) picks up the four that a **solution role or its geometry**
 can satisfy (020, 023, 024, 025). The [Physical layer](05_physical.md) then takes the last two:
 cost (026) becomes a **Measure of Merit** to minimize, homed on the `Aircraft`; materials (022) — a
-genuine ≤ 20% design *constraint* — is implemented by the `Airframe` and **verified by** a test that
-rolls up the airframe composite fraction (the project's first requirement-to-test *verify* link).
-The Physical layer also adds `REQ_F16A_P01` (fuel-volume sufficiency), likewise verified by a test.
+genuine ≤ 20% design *constraint* — is implemented by the `Airframe` variant role and **verified by**
+a test that rolls up the airframe composite fraction (the project's first requirement-to-test
+*verify* link). The Physical layer also adds `REQ_F16A_P01` (fuel-volume sufficiency), likewise
+verified by a test.
+
+## Downstream: the other two relationships
+
+R→F is `Implement`. The layers below add two more relationship *kinds*, each with its own artifact
+— which is the point worth taking away: traceability is not one link type, and it does not all live
+in one file.
+
+| Relationship | From → to | Stored in | Count |
+|---|---|---|:-:|
+| **Implement** | function → requirement | `architecture/F16A_Functional~mdl.slmx` | 39 |
+| **Allocation** | function → logical role | `logical/F16A_FunctionToLogical.mldatx` | 14 edges |
+| **Realization** | logical role → physical part | `physical/F16A_LogicalToPhysical.mldatx` | 14 edges |
+
+**Realization targets candidates, not variant wrappers.** Three logical roles are realized by the
+competing *candidates* that could fill them — `Airframe` by 2, `PropulsionSystem` by 3 engine
+candidates plus the shared `InletDuct`, `FlightControlSystem` by 2 — and the other six roles one each,
+for **14** edges. The 1→many teaching moment therefore moved: it used to be `Airframe` fanning out to
+its six structural parts (now one level down, inside a candidate), and it is now `PropulsionSystem`
+fanning out to four (D-024). Details in [`05_physical.md`](05_physical.md).
+
+### The decision requirements (L01–L03)
+
+> Artifact: `requirements/f16a_logical_derived.slreqx` · Generator:
+> `requirements/generate_f16a_logical_derived_requirements.m`
+
+Three requirements record the *decisions* the design had to make. They are **not** implemented by a
+function or by a part — what implements "single engine was selected" is the **selected option**. So
+their Implement links are created by `physical/F16APhysicalTradeStudy.m`, from the **winning logical
+kind** in `F16A_Logical.slx`, once the trade over the physical candidates has run (D-001, D-010):
+
+| Decision req | Role decided | Implement-linked from the winning kind |
+|---|---|---|
+| REQ_F16A_L01 | PropulsionSystem | `SingleEngine` |
+| REQ_F16A_L02 | FlightControlSystem | `FlyByWire` |
+| REQ_F16A_L03 | Airframe | `BlendedCrankedDelta` |
+
+Between the L build and the physical trade these three show as **un-implemented** in the Requirements
+Editor. That is the expected state, not a gap: the trade study is what answers them, and the
+requirement — not the variant flag — is the authoritative record of the decision.
 
 ## Checking traceability yourself
 
@@ -117,3 +157,13 @@ Or run the automated check:
 ```matlab
 runtests("F16AFunctionalArchitectureTest")   % includes the link-count assertions
 ```
+
+To see the L01–L03 decision links you must load the **L model** as well —
+`F16AOpenForReview` does it, and the README explains why an Implement link lives in the implementing
+model's link set rather than in the requirement set.
+
+## Next
+
+The [Logical layer](04_logical.md) picks up the allocation relationship; the
+[Physical layer](05_physical.md) adds realization, the trade study that writes L01–L03, and the
+project's first *verified by* links.
