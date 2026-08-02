@@ -8,6 +8,21 @@ function generate_f16a_requirements()
 %   noted as such in the Description for traceability but are not
 %   themselves requirement values.
 %
+%   EXACTLY ONE REQUIREMENT IN THIS SET BREAKS THAT RULE, AND THIS IS IT:
+%   REQ_F16A_025 (static margin). Its -6 %MAC to +1 %MAC band is DESIGN
+%   INTENT stated for this teaching example -- not an Excel cell of any
+%   kind, input or computed. The -6 %MAC lower bound has no cited source:
+%   it is an Estimate (house rule 1) and is inventoried as one in D-030.
+%   D-046 put it in THIS set deliberately, rather than in a derived set,
+%   so the exception is admitted here instead of being routed around.
+%
+%   The count is exact and is meant to be audited. Every other requirement
+%   here either states an Excel input-cell value (001-022) or states no
+%   value at all -- 023 and 024 are open TBD placeholders (a student
+%   exercise, D-046) and 026 is a Measure of Merit to minimize, not a
+%   threshold. So REQ_F16A_025 is the only place in this set where a
+%   numeric criterion rests on something other than the workbook.
+%
 %   Idempotent: re-run to regenerate from scratch. Any existing f16a.slreqx
 %   (and its in-memory copy) is cleared first, so no manual delete is needed.
 
@@ -22,7 +37,7 @@ reqFile = fullfile(thisDir, "f16a.slreqx");
 slreq.clear();
 if isfile(reqFile); delete(reqFile); end
 rs = slreq.new(fullfile(thisDir, "f16a"));
-rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab. DRAFT - for RFLP Requirements phase review.";
+rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab: only Excel INPUT cells become requirement values. One documented exception, REQ_F16A_025, whose static-margin band is design intent rather than a workbook cell and whose lower bound is an Estimate (D-046, inventoried in D-030). DRAFT - for RFLP Requirements phase review.";
 
 % ---- Root container ----
 root = add(rs, Id="REQ_F16A_000", Summary="F-16A top-level aircraft requirements", ...
@@ -196,17 +211,35 @@ r.Rationale = "Bounds lateral ground stability (resistance to tip-over in crossw
 r.Keywords = ["draft","auto-generated","todo"];
 
 % ---- Stability & Control container ----
-% NOTE: No program-specified static margin bounds exist yet. TODO
-% placeholder references the Brandt F-16A model's computed CG/neutral
-% point results for context only.
+% REQ_F16A_025 carries bounds as of D-046: relaxed static stability,
+% -6 %MAC to +1 %MAC. Those bounds are a stated DESIGN INTENT for this
+% teaching example, not a measured property of the real aeroplane -- the
+% -6 %MAC lower bound is an illustrative teaching value with no cited
+% source, inventoried as such in D-030. The requirement text says so; keep
+% the two in step if either changes.
+%
+% 025 is the ONLY one of the three former TBD placeholders
+% to gain criteria -- the tipback and rollover angles (023/024) stay
+% deliberately open as student exercises, because the conventions in which
+% BrandtBalanceStabControl states them do not obviously match the USAF/USN
+% specifications they would be checked against (D-046). Working out whether
+% they do is the assignment.
+%
+% NO "verify" KEYWORD, deliberately. 025 has a verification test
+% (F16AStaticMarginVerificationTest) and so do REQ_F16A_022 and
+% REQ_F16A_P01; none of the three is keyworded for it. The Verify LINK is
+% the authoritative record that a requirement has a test, and it is added
+% by hand in the Requirements Editor -- a generator-written keyword saying
+% the same thing is a derived fact stored where it can drift out of step
+% with the link, which is exactly what D-027 and D-040 forbid.
 sc = add(root, Id="REQ_F16A_SC", Summary="Stability and control requirements");
 sc.Type = "Container";
 sc.Keywords = ["draft","auto-generated"];
 
-r = add(sc, Id="REQ_F16A_025", Summary="Static margin (TODO)", ...
-    Description="TODO: the aircraft shall maintain a static margin between TBD %MAC and TBD %MAC across the operational CG range (takeoff through landing weight). No program-specified bounds have been provided yet. For reference only: the Brandt F-16A reference model computes xnp ~ 26.168 ft, xcg_TO ~ 26.193 ft, and xcg_land ~ 26.137 ft (BrandtBalanceStabControl validation targets) -- these are analysis outputs of the reference aircraft, not design requirement values.");
-r.Rationale = "Bounds longitudinal stability/controllability margin used to size the horizontal tail/stabilator and permissible CG travel.";
-r.Keywords = ["draft","auto-generated","todo"];
+r = add(sc, Id="REQ_F16A_025", Summary="Static margin (relaxed static stability)", ...
+    Description="The aircraft shall exhibit RELAXED STATIC STABILITY: the static margin SM = (x_np - x_cg)/MAC shall lie between -6 %MAC and +1 %MAC across the operational CG range (takeoff through landing weight). The band is deliberately asymmetric about zero. The negative lower bound is the design intent -- a near-neutral to slightly unstable configuration reduces trim drag and improves instantaneous turn performance, and is flyable only because the flight control system supplies artificial stability (see REQ_F16A_L02). The +1 %MAC upper bound caps how STABLE the aircraft may become: without it, a conventionally stable aeroplane would satisfy a requirement whose whole purpose is to exclude one. Verification method: static margin at takeoff weight and at landing weight, both within the band (F16AStaticMarginVerificationTest). For reference only, and read narrowly: the Brandt F-16A reference model COMPUTES SM_TO = -0.2602 %MAC and SM_land = +0.2065 %MAC (BrandtBalanceStabControl, measured 2026-08-02). A separate pair of figures, -0.22 % and +0.27 %, is often quoted alongside those: it is the expected-value pair the SIZING SUITE's own regression test checks the two computed outputs against (sizing/VnV/BrandtF16A/tests/test_BrandtBalanceStabControl.m, AbsTol 0.001). That pair comes from the sizing test suite and from nowhere else -- it is not a workbook cell and is not in the workbook cell map, so it must not be cited as a workbook validation target. Both computed margins are inside the band, so the reference aircraft MEETS this requirement -- but it does so from the STABLE end, because that model's neutral point is a simplified approximation. It does NOT reproduce the strongly relaxed static stability the F-16A is generally described as having. The -6 %MAC figure is an illustrative teaching value, not sourced data (D-030). A pass here must not be read as evidence that the model demonstrates relaxed static stability.");
+r.Rationale = "Bounds longitudinal stability/controllability margin used to size the horizontal tail/stabilator and permissible CG travel. Stated as a two-sided band rather than a one-sided limit because BOTH directions are failures with opposite meanings: too negative exceeds the authority the flight control system is assumed to have, while too positive is a conventionally stable aircraft -- which would invalidate the premise of the fly-by-wire decision posed by REQ_F16A_L02, since relaxed static stability is the benefit that decision turns on.";
+r.Keywords = ["draft","auto-generated"];
 
 % ---- Cost container (a Measure of Merit, not a "shall" threshold) ----
 % Cost is an OBJECTIVE TO MINIMIZE, not a pass/fail limit. A hard "unit
