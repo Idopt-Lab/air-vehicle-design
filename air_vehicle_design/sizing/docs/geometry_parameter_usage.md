@@ -77,7 +77,7 @@ an explicit `_exposed_` infix (`AR_exposed_ht`, `lambda_exposed_vt`, …). The w
 
 | Quantity | Member | Formula | Citation |
 |---|---|---|---|
-| equivalent diameter | `D_fus` | `(W_max + H_max)/2` | Roskam Vol. II Eq. 12.3 |
+| equivalent diameter | `D_fus` | `(W_max + H_max)/2` | `[Brandt F-16A.xls, Geom!B3]` (Roskam Vol. II Eq. 12.3 is the fuselage `S_wet` formula this feeds, not the averaging step itself) |
 | nacelle diameter | `D_inlet` | `sqrt(T_AB_SLS/1900)` | `[Brandt Geom!C475; Engn(s)!L22 = 1900]` |
 | engine length | `L_engine` | `4.5·D` | `[Brandt Geom!D475]` |
 | max cross-section, **L2** | `compute_Amax_elliptical(W, H)` | `(π/4)·W·H` — fuselage envelope, low-fidelity form | `readme_geom.md` §7 |

@@ -22,8 +22,8 @@ classdef GeomL2
         %GET_S_WET  Total wetted area [ft^2]: wing + HT + VT + fuselage + duct.
         %   Takes no W_TO argument (contrast L1). The duct is included
         %   unconditionally; a concrete class with no duct should set
-        %   D_inlet = D_exit = L_duct = 0, which degenerates the frustum
-        %   formula to zero.
+        %   D_inlet = D_exit = L_duct = 0, which warns and gives 0 duct
+        %   wetted area (see compute_s_wet_duct).
             val = GeomL2.get_S_wet_wing(obj)     + GeomL2.get_S_wet_HT(obj) + ...
                   GeomL2.get_S_wet_VT(obj)        + GeomL2.get_S_wet_fuselage(obj) + ...
                   GeomL2.get_S_wet_duct(obj);
@@ -202,11 +202,22 @@ classdef GeomL2
         function val = compute_s_wet_duct(D_inlet, D_exit, L_duct)
         %COMPUTE_S_WET_DUCT  Duct wetted area [ft^2] as a right circular frustum.
         %   [Raymer 6th ed. Sec. 7.3]. Degenerates to a cylinder when
-        %   D_inlet == D_exit.
+        %   D_inlet == D_exit. A concrete class with no duct sets
+        %   D_inlet = D_exit = L_duct = 0; this is treated as "no duct given"
+        %   rather than a normal zero-length duct, so it warns and returns 0
+        %   instead of silently degenerating (a genuine spec omission should
+        %   be visible, not indistinguishable from a design choice).
             arguments
                 D_inlet (1,1) double {mustBeNonnegative}
                 D_exit  (1,1) double {mustBeNonnegative}
-                L_duct  (1,1) double {mustBePositive}
+                L_duct  (1,1) double {mustBeNonnegative}
+            end
+            if D_inlet == 0 && D_exit == 0 && L_duct == 0
+                warning('GeomL2:noDuctGeometry', ...
+                    ['No duct geometry given (D_inlet = D_exit = L_duct = 0); ' ...
+                     'returning 0 duct wetted area.']);
+                val = 0;
+                return;
             end
             r1  = D_inlet / 2;
             r2  = D_exit  / 2;

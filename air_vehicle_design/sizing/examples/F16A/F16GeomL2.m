@@ -453,8 +453,9 @@ classdef F16GeomL2 < GeometryModelL2
         function v = get.D_fus(obj)
             % JUDGMENT CALL: the L2 .geometry block has no D_fus field (width/height
             % only), so the equivalent diameter reuses Brandt's own low-fi
-            % D_avg convention (compute_s_wet_fus_brandt_lowfi) fed to the
-            % official Roskam Eq. 12.3 formula (get_S_wet_fuselage).
+            % D_avg convention [Brandt F-16A.xls, Geom!B3] (same formula as
+            % compute_s_wet_fus_brandt_lowfi) fed to the official Roskam
+            % Eq. 12.3 formula (get_S_wet_fuselage).
             v = (obj.W_max_fuselage + obj.H_max_fuselage) / 2;
         end
         function v = get.Amax(obj)

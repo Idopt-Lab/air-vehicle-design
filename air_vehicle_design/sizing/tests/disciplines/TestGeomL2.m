@@ -640,6 +640,17 @@ classdef TestGeomL2 < matlab.unittest.TestCase
                 'Constant-section duct should give pi*D*L.');
         end
 
+        function testDuctNoDuctGivesWarningAndZero(tc)
+        % D_inlet = D_exit = L_duct = 0 means "no duct given," not a
+        % zero-length duct. compute_s_wet_duct must warn, not error, and
+        % must return 0 (fixes the earlier mustBePositive-on-L_duct
+        % contradiction with GET_S_WET's own documented no-duct convention).
+            received = tc.verifyWarning(@() GeomL2.compute_s_wet_duct(0, 0, 0), ...
+                'GeomL2:noDuctGeometry', ...
+                'A design with no duct geometry must warn, not error or fail silently.');
+            tc.verifyEqual(received, 0, 'No-duct case must give 0 duct wetted area.');
+        end
+
         function testDuctSwetVsBrandtNacelle(tc)
         % F16GeomL2's own D_inlet=D_exit (Brandt nacelle-diameter formula,
         % D=sqrt(T_AB_SLS_lb/1900)) vs Brandt's own nacelle S_wet ground
