@@ -109,7 +109,7 @@ Source: `examples/F16A/Constraints.xlsx`, read by `ConstraintSetImporter` and wi
 ### ThrustConstraint — Mattingly Master Equation
 | Quantity | Equation | Reference |
 |----------|----------|-----------|
-| T/W | (β/α) × [q × CD0/(β × W/S) + K2 × (n × β/q)^2 × W/S + K1 × n × β/α + PS/V] | Mattingly, Aircraft Engine Design; `temp_AI/docs/disciplines/07_constraints.md` |
+| T/W | (β/α) × [q × CD0/(β × W/S) + K1 × (n × β/q)^2 × W/S + K2 × n × β/α + PS/V] | Mattingly, Aircraft Engine Design; `temp_AI/docs/disciplines/07_constraints.md` |
 | α | `prop.thrust_lapse(state)` — AB or mil depending on AB% flag | PropulsionBase |
 | CD0, K1, K2 | `aero.drag_polar(state)` | AerodynamicsBase |
 | q | `state.q` | AircraftState |
