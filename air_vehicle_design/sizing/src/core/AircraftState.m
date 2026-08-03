@@ -8,7 +8,7 @@ classdef AircraftState
 %   VALUE class (not handle): properties are set once in the constructor.
 %
 %   Atmosphere: MATLAB Aerospace Toolbox atmosisa (ICAO 1993).
-%   Ratios: [Mattingly 2nd ed. Eq. 2.52]
+%   Ratios: [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.52]
 %
 %   Companion doc: src/core/AircraftState.md
 

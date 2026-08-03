@@ -33,7 +33,7 @@ Atmosphere from MATLAB's `atmosisa` (ICAO 1993 standard), converted to English u
 
 $$V = M\,a \qquad q = \tfrac{1}{2}\rho V^{2}$$
 
-Dimensionless ratios [Mattingly 2nd ed. Eq. 2.52]:
+Dimensionless ratios [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.52]:
 
 $$\theta = \frac{T}{T_{\text{std}}} \qquad \delta = \frac{P}{P_{\text{std}}}$$
 
