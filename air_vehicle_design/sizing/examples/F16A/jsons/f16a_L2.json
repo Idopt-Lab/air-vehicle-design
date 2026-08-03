@@ -59,5 +59,46 @@
     "S_strake_ft2": 20.0,
     "k_strake_psf": 4.5,
     "_strake_src": "S_strake_ft2 = strake planform reference area [Brandt Main!D18 = 20 ft^2]; k_strake_psf = strake structural surface density [Brandt Wt!H7 = 4.5 lbf/ft^2]. W_strake = k_strake_psf * S_strake_ft2 = 90.00 lbf (added 2026-07-29 -- was previously an unmodeled ~13.7%-of-OEW gap, see examples/F16A/mds/weights_brandt_comparison.md section 5)."
+  },
+
+  "subsystems": {
+    "_note": "NOT YET IMPLEMENTED -- no F16SubsystemsL2/F16LandingGearL2 class exists yet (docs/subplans/09_subsystems.md, Casey-approved, scribe-complete 2026-07-31; io pass 2026-07-31). Geometry-derived inputs: Raymer Eq. 7.14 fuselage volume off GeomL2's envelope-ellipse A_top/A_side, Roskam Eq. 6.2/6.3 wing volume, Nicolai Ch. 8 packaging/density tables, Raymer Ch. 11 landing-gear statistics. Universal textbook-equation coefficients (Raymer Eq. 7.14's 3.4 factor; Roskam Eq. 6.2's 0.54 coefficient and its own tau_w=(t/c)_tip/(t/c)_root definition, Eq. 6.3) are NOT duplicated here -- they belong in the future SubsystemsL2 toolbox code as equation constants, same code/JSON split already used for Raymer Eq. 12.48-12.51's coefficients in AeroL2. Full citation detail: docs/subplans/09_subsystems.md Equations & Citations §5-9c.",
+
+    "fuel": {
+      "fuel_type": "JP-4",
+      "density_lb_per_gal": 6.5,
+      "_cite_fuel": "Same selection/citation as f16a_L1.json .subsystems.fuel -- [Nicolai & Carichner, Table 8.6, p.210]; see that file's _cite_fuel for the full note.",
+      "packaging_factor_category": "Integral tank — wing",
+      "packaging_factor": 0.75,
+      "_cite_packaging_factor": "[Nicolai & Carichner, p.210, unnumbered 'Fuel Tank Packaging Factors' table] (docs/subplans/09_subsystems.md Equations & Citations §1) -- 'Integral tank — wing' row = 0.75. EXPLICIT JUDGMENT CALL, FLAG FOR SIGN-OFF: no source in this repo independently states which of the table's five rows (0.80 Integral tank -- shallow fuselage, 0.85 Integral tank -- deep fuselage, 0.75 Integral tank -- wing, 0.75 Bladder tank -- fuselage, 0.65 Bladder tank -- wing) matches the F-16's actual tank construction; 'Integral tank -- wing' was picked as representative of this fighter's wet-wing tankage. The full table belongs in the future SubsystemsL2 toolbox code as a Constant (same split as AeroL1.CLmax_table); this key only records which row is selected. Per subplan Eq. §5b, this factor multiplies the FUSELAGE raw volume (Raymer Eq. 7.14 output) before the fuel-sufficiency check -- Roskam's wing-volume formula (Eq. 6.2/6.3) already yields a usable volume and is NOT multiplied by a second packaging factor."
+    },
+
+    "avionics": {
+      "density_lb_per_ft3": 45.0,
+      "_cite_density_lb_per_ft3": "[Nicolai & Carichner, §8.1.11, p.210] flat average avionics density, 45 lb/ft3. DECIDED fidelity split (Casey, 2026-07-31; docs/subplans/09_subsystems.md Equations & Citations §4): L2/L3 switch from L1's Raymer-derived 37.5 lb/ft3 to Nicolai's flat 45, consistent with L2+ already pulling fuel-packaging factors from the same Nicolai Ch. 8 section.",
+      "aircraft_category_table_row": "Fighters",
+      "weight_fraction": 0.055,
+      "_cite_weight_fraction": "Same selection/citation as f16a_L1.json .subsystems.avionics.weight_fraction -- [Raymer Table 11.6, p.375] Fighters 0.03-0.08, midpoint chosen. EXPLICIT JUDGMENT CALL, see that file's note for the low-end (0.03) alternative."
+    },
+
+    "landing_gear": {
+      "_note": "F16LandingGearL2 -- F-16-only, no abstract Base tier (docs/subplans/09_subsystems.md Files to Create). Consumes W_TO (already a plain STATE property on F16WeightsL2) to get the per-wheel load W_w for Raymer's statistical tire-sizing formula.",
+      "gear_load_split": {"main_pct": 90, "nose_pct": 10},
+      "_cite_gear_load_split": "[Raymer 6th ed. Ch. 11, p.344, prose]: 'the main tires carry about 90% of the total aircraft weight ... Nose tires carry only about 10% of the static load.' DECIDED default (Casey, 2026-07-31; docs/subplans/09_subsystems.md Equations & Citations §8). The Brandt-workbook-derived alternate split (26.7% main / 73.3% nose, computed by BrandtBalanceStabControl.m off the uncross-checked f16a_geometry.json gear block) is deliberately NOT wired in -- standing, non-blocking discrepancy logged at VnV/BrandtF16A/todo.md, 2026-07-31 entry 'Subsystems deep-dive, Phase A ... gear block provenance and implied gear-load-split'. Comparison data: VnV/BrandtF16A/GroundTruth/f16a_subsystems_ground_truth.json.",
+      "tire_sizing": {
+        "aircraft_category_table_row": "Jet fighter/trainer",
+        "diameter_coeff_A": 1.59,
+        "diameter_coeff_B": 0.302,
+        "width_coeff_A": 0.0980,
+        "width_coeff_B": 0.467,
+        "_cite_tire_sizing": "[Raymer 6th ed., Ch. 11, Table 11.1 'Statistical Tire Sizing,' p.344] Jet fighter/trainer row: D_main[in] = diameter_coeff_A * W_w^diameter_coeff_B, Width_main[in] = width_coeff_A * W_w^width_coeff_B, W_w = static load on one main wheel [lb] (docs/subplans/09_subsystems.md Equations & Citations §9/§9b). The table's other three rows (General aviation A=1.51/B=0.349, Business twin A=2.69/B=0.251, Transport/bomber A=1.63/B=0.315, plus their width coefficients) belong in the future F16LandingGearL2 toolbox code as the full Table 11.1 Constant (same JSON/code split as AeroL1.CLmax_table); this key only records the F-16's own applicable row."
+      },
+      "nose_tire_fraction_of_main": 0.80,
+      "_cite_nose_tire_fraction_of_main": "[Raymer 6th ed., Ch. 11, Table 11.1 page, prose]: nose tire assumed 60-100% of main-tire size, no F-16-specific point value given (docs/subplans/09_subsystems.md Equations & Citations §9c). 0.80 = range midpoint. EXPLICIT JUDGMENT CALL, FLAG FOR SIGN-OFF: the subplan itself calls this 'a designer's choice within a stated range, not a citable point value.' Comparison-report data point: VnV/BrandtF16A/GroundTruth/f16a_subsystems_ground_truth.json's landing_gear_tire_diameter block gives d_nose_ft=1.5 / d_main_ft=2.0, i.e. ratio 0.75 -- close to, but not verification of, this 0.80 pick (that block carries two open provenance/load-split caveats of its own)."
+    },
+
+    "_TODO_battery_specific_volume": "GAP -- no citable BATTERY VOLUMETRIC energy density (kWh/ft3, kWh/L, or an equivalent pack density in lb/ft3) exists anywhere in this repo for the battery-electric fuel-volume-check alternative path. Only GRAVIMETRIC specific energy is cited: [Nicolai & Carichner, Table 14.2, p.363] batteries 0.27 kWh/lb (Li-S projected 0.336 kWh/lb by 2015); temp_AI's fast_data.md Table 11 (Mokotoff et al.) gives a generic 0.35-1.55 kWh/kg design-space bound, also gravimetric. Ships as a documented-gap marker, matching TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo's convention (the CLAUDE.md-permitted citation-gap exception) -- NOT a blocker to implementing the liquid-fuel volume path. docs/subplans/09_subsystems.md Equations & Citations §7 (re-confirmed still open by Casey, 2026-07-31, after re-scanning all 31 temp_AI reference-extract files). Remove this key (and add a cited 'battery' sub-block) only when the user supplies a genuine volumetric energy/pack density.",
+
+    "_TODO_gear_bay_volume_packaging": "GAP -- no textbook bay-volume (tire+strut stowage) packaging formula was found anywhere in this repo. Raymer's landing-gear chapter (Ch. 11) covers tire/strut/shock-absorber SIZE, not a bay-VOLUME packaging estimate the way Nicolai's Ch. 8 fuel/avionics sections give one; a geometric-envelope assumption (e.g. tire footprint x a retraction-clearance multiplier) would need either a citation or an explicit 'engineering judgment, uncited' label, neither of which is settled. docs/subplans/09_subsystems.md Equations & Citations §11. This means the landing-gear contribution to the Subsystems internal-volume total (Objectives §3) is not yet computable -- tire/strut SIZE (see .landing_gear.tire_sizing above) is unaffected. Remove this key (and add the packaging-formula inputs it would need) only when a source, or an explicitly-labeled uncited assumption, is supplied."
   }
 }

@@ -433,5 +433,71 @@ citation that does not exist yet. Full record in `TailSizing_scribe_plan.md` §6
 
 ---
 
+## 2026-07-31 — Subsystems deep-dive, Phase A (documentation): `gear` block provenance and implied gear-load-split
+
+**Context:** scribe documentation pass for the brand-new Subsystems discipline
+(`docs/subplans/09_subsystems.md`), researching a citable source for the new `F16LandingGearL2`/`L3`
+classes' "gear-load-split" input (what fraction of `W_TO` each gear carries, needed to get the
+per-wheel load `W_w` that Raymer's statistical tire-sizing formula, Table 11.1, takes as its argument).
+Did **not** open the live `Brandt-F16-A.xls` in this pass (documentation-only; no MATLAB MCP/COM tool
+was available in this session) — both findings below are from the repo's existing JSON/`.m`/`.md`
+files and need a live-workbook check before either is trusted or corrected.
+
+### Finding 1 — `f16a_geometry.json`'s `gear` block has no cell citation and no corroboration elsewhere in `VnV/BrandtF16A`
+`GroundTruth/f16a_geometry.json`'s top-level `"gear"` object (`x_nose_ft=22.0`, `x_main_ft=37.7`,
+`y_main_ft=6.0`, `h_nose_ft=5.3`, `h_main_ft=5.3`, `d_nose_ft=1.5`, `d_main_ft=2.0`) carries only
+`"_source": "Gear tab — landing gear geometry"` — no cell letter/number, unlike every other block in
+that file. Grepped `readme_geom.md` (its own §2 "Input Schema" table, which is supposed to be the
+complete list of `f16a_geometry.json` input regions) and `GroundTruth/cell-map.md` for any mention of
+"gear"/"tire"/"Gear" — **zero matches in either file.** The block IS consumed live, by
+`BrandtBalanceStabControl.m:211-221` (`obj.inp.gear.x_nose_ft` etc., feeding `gear_main_pct`,
+`gear_nose_pct`, `tipback_deg`, `rollover_deg`), and `readme_bsc.md:39` does note *"`gear` JSON section
+→ longitudinal / lateral gear geometry"* as a cross-tab dependency — but with no cell reference either,
+and it never mentions `d_nose_ft`/`d_main_ft` (the tire diameters) at all, which `BrandtBalanceStabControl.m`
+also never reads (only `x_nose`, `x_main`, `y_main`, `h_main` are used by that class — the two tire
+diameters exist only in the raw JSON, unused and uncross-checked by any `.m` file in this repo).
+
+**Why it matters now:** the Subsystems deep-dive wants to use `d_nose_ft=1.5`/`d_main_ft=2.0` (18 in /
+24 in) as an independent comparison-report data point for the new Raymer-statistical tire-sizing
+formula. Doing so on data with no cell address and no cross-check anywhere else in `VnV/BrandtF16A`
+would be citing a number this project cannot itself currently trace back to the workbook.
+
+### Finding 2 — `BrandtBalanceStabControl`'s computed gear-load-split (26.7 % main / 73.3 % nose) contradicts the typical/textbook fighter split
+`readme_bsc.md`'s own "Gear load split" equation, `%W_main = 100·(x_cg−x_nose)/(x_main−x_nose)`, applied
+to the stored values above plus the documented validation target `xcg_TO ≈ 26.193 ft`
+(`readme_bsc.md:66`), gives: `%W_main = 100·(26.193−22.0)/(37.7−22.0) = 26.7%`, `%W_nose = 73.3%` —
+exactly matching `readme_bsc.md:68`'s own stated validation target ("Gear split about 26.7% main /
+73.3% nose"), so this is not an arithmetic slip in the code; the formula and the stored numbers are
+**self-consistent** with each other.
+
+The problem is that this result contradicts well-established fighter landing-gear practice, including a
+source already in this repo: `temp_AI/docs/disciplines/reference_extracts/08_fuselage_sizing.md` §8.1.7
+(Nicolai & Carichner, p.202): *"Nose gear rule of thumb: 20% of TOGW on the nose wheel for good
+steering."* It also contradicts Raymer's stated typical split (Ch. 11 p.344 prose, *"the main tires
+carry about 90% of the total aircraft weight... Nose tires carry only about 10%"* — see
+`docs/subplans/09_subsystems.md` Equations & Citations §8). A real F-16 nose gear carrying 73% of
+`W_TO` (vs. main gear's 27%) would be a radically unconventional, almost certainly incorrect,
+weight-and-balance configuration for a tricycle-gear fighter. The likely candidates are: `x_nose_ft`/
+`x_main_ft` in the uncross-checked `gear` block (Finding 1) being wrong, mislabeled, or measured in a
+different sense than "gear station from the aircraft's coordinate origin"; or `xcg_TO_ft` itself being
+off; or the two aircraft-type-agnostic textbook rules of thumb simply not applying well to this specific
+airframe/coordinate convention. **Not adjudicating between these** — logging for the next person to
+check against the live `Brandt-F16-A.xls` "Gear" tab and, ideally, the BSC tab's own `gear_main_pct`
+cell if the Excel model itself computes one.
+
+**Why it matters now:** the new `F16LandingGearL2`/`F16LandingGearL3` classes need a gear-load-split
+input to convert `W_TO` into the per-wheel load `W_w` that Raymer's Table 11.1 tire-sizing formula
+takes as its argument. `docs/subplans/09_subsystems.md` recommends defaulting to Raymer's own stated
+90%/10% (needs no geometry, matches the discipline's "statistical method" framing) and explicitly
+**not** wiring in the Brandt-derived 26.7%/73.3% split until this is resolved. **Flagging for user
+review — not resolved here**, per the standing scribe rule. Needs: (a) a live-`Brandt-F16-A.xls` COM
+read of the actual "Gear" tab cells (correcting `baseline/extract_brandt.m`'s stale hardcoded path
+first, per the standard todo.md convention used elsewhere in this file) to get real cell references for
+`x_nose_ft`/`x_main_ft`/`d_nose_ft`/`d_main_ft`, and (b) a decision on whether `xcg_TO_ft` or the gear
+station values are the more likely source of the discrepancy, or whether it is not a discrepancy at all
+(e.g. a coordinate-convention misunderstanding on this reviewer's part).
+
+---
+
 *No entries resolved. Add new dated sections above this line for future discrepancies; do not
 edit or remove prior entries.*
