@@ -236,7 +236,7 @@ The trade records its verdict in **four** places:
 |---|-------|-----------------|
 | 1 | **P**, configuration | `setActiveChoice` on the role variant; `TradeCandidate.Selected` true on the winner, false on the rest |
 | 2 | **P**, rationale | `Rationale.SourceKind` → `TradeWinner` / `TradeAlternative`, and every `Justification` rewritten to state the score, rank, margin and the criterion that decided it against the runner-up |
-| 3 | **L**, cross-layer callback | the role's active **kind**; `SolutionOption.Selected`; `SolutionOption.DecisionRef` — written on **every** kind of the role, so a reader who clicks the *rejected* kind lands on the record of why it lost (**D-027**) |
+| 3 | **L**, cross-layer callback | the role's active **kind**; `SolutionOption.Selected`; `SolutionOption.DecisionRef` — written on **every** kind of the role, so a reader who clicks the *rejected* kind reaches the decision requirement instead of a `'TBD'`, and from there the rejected candidate in row 2 whose `Justification` says what it lost on (**D-027**, **D-049**) |
 | 4 | **R**, traceability | an **Implement link** from the winning kind to `REQ_F16A_L01` (propulsion), `L02` (flight control), `L03` (airframe) |
 
 Rows 1, 2 and 4 are asserted by `F16APhysicalArchitectureTest`; row 3 — the L-side write-back — is
@@ -507,7 +507,7 @@ As of `Rationale`, that is no longer only a comment — see the table above.
 | `REQ_F16A_026` — unit flyaway cost | Measure of Merit | Reclassified from a "≤ $68.4M" threshold to *minimize cost*; Implement-linked from `Aircraft`; value from the cost-model function (`NaN` pending) |
 | `REQ_F16A_022` — composite ≤ 20% | Constraint | Implement-linked from the `Airframe` variant role; **Verified by** the materials roll-up (0.1928 ≤ 0.20 ✔ — see the honesty note above) |
 | `REQ_F16A_P01` — fuel volume sufficiency | Constraint | New (in `f16a_physical_derived.slreqx`); Implement-linked from `FuelSystem`; **Verified by** the fuel roll-up vs mission fuel (*pending* — mission-fuel stub) |
-| `REQ_F16A_L01`–`L03` — the three decisions | Decision record | **Implement-linked from the winning logical _kinds_** by the trade study — not from anything in this model, because what implements "single engine was selected" is the selected option, not a part (**D-010**) |
+| `REQ_F16A_L01`–`L03` — the three decisions | Decision posed at R, answered here | **Implement-linked from the winning logical _kinds_** by the trade study — not from anything in this model, because what implements *"which kind shall realize this role?"* is the **selected option**, not a part (**D-010**) |
 
 `REQ_F16A_P01` lives in a new physical-derived set, keeping the sizing-derived `f16a.slreqx`
 pristine (the same pattern as the functional- and logical-derived sets).

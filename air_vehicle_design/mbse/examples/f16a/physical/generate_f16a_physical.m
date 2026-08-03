@@ -1116,7 +1116,8 @@ function vc = addVariantRole(parentArch, roleName, choiceNames, activeName, port
 %   PLACEHOLDER, NOT A DECISION -- the identical convention (and wording)
 %   generate_f16a_logical.m uses for the kinds -- and section 7b re-asserts it
 %   from the score. What makes it a decision is TradeCandidate.Selected, the
-%   trade log and the decision requirement; the active flag merely follows.
+%   winner's Rationale.Justification and the Implement link to the decision
+%   requirement (D-040); the active flag merely follows.
 %
 %   Deliberately kept API-compatible with the L generator's helper of the same
 %   name, so the two layers' variant mechanics can be read side by side.

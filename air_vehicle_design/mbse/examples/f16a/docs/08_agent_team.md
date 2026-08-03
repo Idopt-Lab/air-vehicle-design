@@ -50,6 +50,10 @@ This file is the **single source of truth for house rules**. Every agent reads i
 8. **Gates.** Work is staged; at the end of a stage the orchestrator presents the diff, the new
    decision-log entries and the test results, and asks the human to approve. Nothing starts before
    its gate clears. One commit per stage.
+9. **Cite by name, not by line number.** Point at a requirement id, function, class or heading, never
+   `file.m:240` — line numbers rot on the next edit; Stage 1's comment trim invalidated five citations
+   in one pass. The exception is `07_decision_log.md`, which is append-only: a dated entry citing
+   lines as they were is not wrong, it is dated, and is left alone.
 
 ## R2026a API findings (Stage-0 probe)
 

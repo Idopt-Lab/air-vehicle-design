@@ -128,10 +128,11 @@ fanning out to four (D-024). Details in [`05_physical.md`](05_physical.md).
 > Artifact: `requirements/f16a_logical_derived.slreqx` · Generator:
 > `requirements/generate_f16a_logical_derived_requirements.m`
 
-Three requirements record the *decisions* the design had to make. They are **not** implemented by a
-function or by a part — what implements "single engine was selected" is the **selected option**. So
-their Implement links are created by `physical/F16APhysicalTradeStudy.m`, from the **winning logical
-kind** in `F16A_Logical.slx`, once the trade over the physical candidates has run (D-001, D-010):
+Three requirements pose the *decisions* the design had to make. They are **not** implemented by a
+function or by a part — what implements *"which of these kinds shall realize this role?"* is the
+**selected option**, the kind that answers it. So their Implement links are created by
+`physical/F16APhysicalTradeStudy.m`, from the **winning logical kind** in `F16A_Logical.slx`, once
+the trade over the physical candidates has run (D-001, D-010):
 
 | Decision req | Role decided | Implement-linked from the winning kind |
 |---|---|---|
@@ -140,8 +141,12 @@ kind** in `F16A_Logical.slx`, once the trade over the physical candidates has ru
 | REQ_F16A_L03 | Airframe | `BlendedCrankedDelta` |
 
 Between the L build and the physical trade these three show as **un-implemented** in the Requirements
-Editor. That is the expected state, not a gap: the trade study is what answers them, and the
-requirement — not the variant flag — is the authoritative record of the decision.
+Editor. That is the expected state, not a gap: the requirement is where the decision is **posed and
+anchored**, and the trade study is what answers it. The verdict itself lives at P — in the winning
+candidate's `Rationale.Justification` — and arrives here as the Implement link above (**D-040**).
+This does not hand authority back to the variant flag: the flag stays **derived**, written by the
+trade rather than authored (**D-027**), so reading the active choice is still not reading the
+decision.
 
 ## Checking traceability yourself
 

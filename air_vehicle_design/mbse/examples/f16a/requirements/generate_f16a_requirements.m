@@ -1,43 +1,33 @@
 function generate_f16a_requirements()
 %GENERATE_F16A_REQUIREMENTS Build the F-16A top-level requirements set.
-%   Creates mbse/examples/f16a/requirements/f16a.slreqx with DRAFT top-level aircraft
-%   requirements derived from sizing/VnV/BrandtF16A, cross-referenced
-%   against Brandt-F16-A.xls (Main tab, mission block J32:Y39 and
-%   constraints block R1:X13). Only Excel INPUT cells (literal values,
-%   not formulas) are stated as requirements; computed/formula cells are
-%   noted as such in the Description for traceability but are not
-%   themselves requirement values.
+%   Creates requirements/f16a.slreqx with the DRAFT top-level aircraft
+%   requirements derived from sizing/VnV/BrandtF16A and cross-referenced
+%   against Brandt-F16-A.xls (Main tab: mission block J32:Y39, constraints
+%   block R1:X13).
 %
-%   EXACTLY ONE REQUIREMENT IN THIS SET BREAKS THAT RULE, AND THIS IS IT:
-%   REQ_F16A_025 (static margin). Its -6 %MAC to +1 %MAC band is DESIGN
-%   INTENT stated for this teaching example -- not an Excel cell of any
-%   kind, input or computed. The -6 %MAC lower bound has no cited source:
-%   it is an Estimate (house rule 1) and is inventoried as one in D-030.
-%   D-046 put it in THIS set deliberately, rather than in a derived set,
-%   so the exception is admitted here instead of being routed around.
+%   THE RULE: only Excel INPUT cells become requirement values. Computed
+%   cells are named in a Description for traceability but are never stated
+%   as a requirement value.
 %
-%   The count is exact and is meant to be audited. Every other requirement
-%   here either states an Excel input-cell value (001-022) or states no
-%   value at all -- 023 and 024 are open TBD placeholders (a student
-%   exercise, D-046) and 026 is a Measure of Merit to minimize, not a
-%   threshold. So REQ_F16A_025 is the only place in this set where a
-%   numeric criterion rests on something other than the workbook.
+%   THE ONE EXCEPTION, and the count is meant to be audited: REQ_F16A_025's
+%   -6 %MAC to +1 %MAC static-margin band is design intent for this teaching
+%   example, not a workbook cell, and its lower bound is an Estimate (D-046,
+%   inventoried in D-030). Every other requirement here either states an
+%   Excel input value or states no value at all.
 %
-%   Idempotent: re-run to regenerate from scratch. Any existing f16a.slreqx
-%   (and its in-memory copy) is cleared first, so no manual delete is needed.
+%   Idempotent: re-run to regenerate from scratch.
 
-% Save into this script's own requirements/ folder, independent of pwd
-% (the name stays "f16a" so the file is f16a.slreqx, which the Functional
-% layer loads by that path in generate_f16a_functional.m).
+% Save into this script's own requirements/ folder, independent of pwd. The
+% name stays "f16a": the Functional layer loads requirements/f16a.slreqx by
+% that path (generate_f16a_functional.m).
 thisDir = fileparts(mfilename("fullpath"));
 reqFile = fullfile(thisDir, "f16a.slreqx");
 
-% Idempotent clean rebuild: drop any in-memory copy and the existing file
-% so slreq.new does not error on an already-existing set.
+% Clean rebuild so slreq.new does not error on an existing set.
 slreq.clear();
 if isfile(reqFile); delete(reqFile); end
 rs = slreq.new(fullfile(thisDir, "f16a"));
-rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab: only Excel INPUT cells become requirement values. One documented exception, REQ_F16A_025, whose static-margin band is design intent rather than a workbook cell and whose lower bound is an Estimate (D-046, inventoried in D-030). DRAFT - for RFLP Requirements phase review.";
+rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab: only Excel INPUT cells become requirement values. One documented exception, REQ_F16A_025, whose static-margin band is design intent rather than a workbook cell and whose lower bound is an Estimate (D-046, D-030). DRAFT - for RFLP Requirements phase review.";
 
 % ---- Root container ----
 root = add(rs, Id="REQ_F16A_000", Summary="F-16A top-level aircraft requirements", ...
@@ -45,13 +35,10 @@ root = add(rs, Id="REQ_F16A_000", Summary="F-16A top-level aircraft requirements
 root.Type = "Container";
 root.Keywords = ["draft","auto-generated"];
 
-% =====================================================================
-% Mission container - one requirement per mission-profile segment,
-% stating only the Excel INPUT cells from Main!J32:Y39. Three
-% zero-duration "Patrol" placeholder waypoints and the degenerate
-% "Climb2" re-entry node (0 min, same condition as Climb) are excluded
-% as non-independent, behaviorally trivial segments.
-% =====================================================================
+% ---- Mission container: one requirement per mission-profile segment,
+% stating only the Excel INPUT cells from Main!J32:Y39. Excluded as
+% non-independent: three zero-duration "Patrol" placeholder waypoints and
+% the degenerate "Climb2" re-entry node (0 min, same condition as Climb).
 mission = add(root, Id="REQ_F16A_MISSION", Summary="Mission profile requirements");
 mission.Type = "Container";
 mission.Keywords = ["draft","auto-generated"];
@@ -106,12 +93,8 @@ r = add(mission, Id="REQ_F16A_010", Summary="Landing condition", ...
 r.Rationale = "Fixes the sea-level landing condition; actual ground-roll performance is verified against the landing field-length requirement.";
 r.Keywords = ["draft","auto-generated"];
 
-% =====================================================================
-% Point Performance container - one requirement per constraint condition
-% from Main!R1:X13, stating only Excel INPUT cells. Duplicate "Ps" rows
-% 9-10 (a documented copy/paste artifact, formula-tied to row 8) are
-% excluded as non-independent.
-% =====================================================================
+% ---- Point performance container: one requirement per constraint
+% condition from Main!R1:X13, stating only Excel INPUT cells.
 perf = add(root, Id="REQ_F16A_PERF", Summary="Point performance requirements");
 perf.Type = "Container";
 perf.Keywords = ["draft","auto-generated"];
@@ -192,69 +175,47 @@ r.Rationale = "Bounds material technology assumptions used in the DAPCA IV cost 
 r.Keywords = ["draft","auto-generated"];
 
 % ---- Balance container ----
-% NOTE: No program-specified minimum values exist yet for these two
-% requirements. TODO placeholders reference the Brandt F-16A model's
-% computed results (BrandtBalanceStabControl) for context only -- those
-% are analysis outputs of the reference model, not design requirements.
+% 023 and 024 stay TBD deliberately -- a standing student exercise (D-046).
 balance = add(root, Id="REQ_F16A_BALANCE", Summary="Balance requirements");
 balance.Type = "Container";
 balance.Keywords = ["draft","auto-generated"];
 
 r = add(balance, Id="REQ_F16A_023", Summary="Tipback angle (TODO)", ...
-    Description="TODO: the aircraft shall provide a main-gear tipback angle of at least TBD deg across the operational CG range. No program-specified minimum has been provided yet. For reference only: the Brandt F-16A reference model computes a tipback angle of about 21.5 deg (BrandtBalanceStabControl validation target) -- this is an analysis output of the reference aircraft, not a design requirement value.");
+    Description="TODO: the aircraft shall provide a main-gear tipback angle of at least TBD deg across the operational CG range. The criterion is deliberately blank -- a standing student exercise (D-046). For reference only: the Brandt F-16A model computes about 21.5 deg (BrandtBalanceStabControl), an analysis output of the reference aircraft, not a design requirement value.");
 r.Rationale = "Ensures adequate ground clearance/rotation margin during takeoff rotation without a tail strike.";
 r.Keywords = ["draft","auto-generated","todo"];
 
 r = add(balance, Id="REQ_F16A_024", Summary="Rollover angle (TODO)", ...
-    Description="TODO: the aircraft shall provide a rollover angle of at least TBD deg across the operational CG and gear track range. No program-specified minimum has been provided yet. For reference only: the Brandt F-16A reference model computes a rollover angle of about 74.4 deg (BrandtBalanceStabControl validation target) -- this is an analysis output of the reference aircraft, not a design requirement value.");
+    Description="TODO: the aircraft shall provide a rollover angle of at least TBD deg across the operational CG and gear track range. The criterion is deliberately blank -- a standing student exercise (D-046), which includes establishing which convention the angle is stated in. For reference only: the Brandt F-16A model computes about 74.4 deg (BrandtBalanceStabControl), an analysis output of the reference aircraft, not a design requirement value.");
 r.Rationale = "Bounds lateral ground stability (resistance to tip-over in crosswind taxi/turning operations).";
 r.Keywords = ["draft","auto-generated","todo"];
 
-% ---- Stability & Control container ----
-% REQ_F16A_025 carries bounds as of D-046: relaxed static stability,
-% -6 %MAC to +1 %MAC. Those bounds are a stated DESIGN INTENT for this
-% teaching example, not a measured property of the real aeroplane -- the
-% -6 %MAC lower bound is an illustrative teaching value with no cited
-% source, inventoried as such in D-030. The requirement text says so; keep
-% the two in step if either changes.
-%
-% 025 is the ONLY one of the three former TBD placeholders
-% to gain criteria -- the tipback and rollover angles (023/024) stay
-% deliberately open as student exercises, because the conventions in which
-% BrandtBalanceStabControl states them do not obviously match the USAF/USN
-% specifications they would be checked against (D-046). Working out whether
-% they do is the assignment.
-%
-% NO "verify" KEYWORD, deliberately. 025 has a verification test
-% (F16AStaticMarginVerificationTest) and so do REQ_F16A_022 and
-% REQ_F16A_P01; none of the three is keyworded for it. The Verify LINK is
-% the authoritative record that a requirement has a test, and it is added
-% by hand in the Requirements Editor -- a generator-written keyword saying
-% the same thing is a derived fact stored where it can drift out of step
-% with the link, which is exactly what D-027 and D-040 forbid.
+% ---- Stability & control container ----
+% 025 carries the -6 %MAC to +1 %MAC band as of D-046. The -6 %MAC lower
+% bound is an Estimate, inventoried in D-030; keep the requirement text and
+% that entry in step if either changes.
+% No "verify" keyword here, nor on 022 or P01: the Verify link is the record
+% that a requirement has a test, and a generator-written keyword restating
+% it is a derived fact that can drift out of step with the link (D-048).
 sc = add(root, Id="REQ_F16A_SC", Summary="Stability and control requirements");
 sc.Type = "Container";
 sc.Keywords = ["draft","auto-generated"];
 
 r = add(sc, Id="REQ_F16A_025", Summary="Static margin (relaxed static stability)", ...
-    Description="The aircraft shall exhibit RELAXED STATIC STABILITY: the static margin SM = (x_np - x_cg)/MAC shall lie between -6 %MAC and +1 %MAC across the operational CG range (takeoff through landing weight). The band is deliberately asymmetric about zero. The negative lower bound is the design intent -- a near-neutral to slightly unstable configuration reduces trim drag and improves instantaneous turn performance, and is flyable only because the flight control system supplies artificial stability (see REQ_F16A_L02). The +1 %MAC upper bound caps how STABLE the aircraft may become: without it, a conventionally stable aeroplane would satisfy a requirement whose whole purpose is to exclude one. Verification method: static margin at takeoff weight and at landing weight, both within the band (F16AStaticMarginVerificationTest). For reference only, and read narrowly: the Brandt F-16A reference model COMPUTES SM_TO = -0.2602 %MAC and SM_land = +0.2065 %MAC (BrandtBalanceStabControl, measured 2026-08-02). A separate pair of figures, -0.22 % and +0.27 %, is often quoted alongside those: it is the expected-value pair the SIZING SUITE's own regression test checks the two computed outputs against (sizing/VnV/BrandtF16A/tests/test_BrandtBalanceStabControl.m, AbsTol 0.001). That pair comes from the sizing test suite and from nowhere else -- it is not a workbook cell and is not in the workbook cell map, so it must not be cited as a workbook validation target. Both computed margins are inside the band, so the reference aircraft MEETS this requirement -- but it does so from the STABLE end, because that model's neutral point is a simplified approximation. It does NOT reproduce the strongly relaxed static stability the F-16A is generally described as having. The -6 %MAC figure is an illustrative teaching value, not sourced data (D-030). A pass here must not be read as evidence that the model demonstrates relaxed static stability.");
-r.Rationale = "Bounds longitudinal stability/controllability margin used to size the horizontal tail/stabilator and permissible CG travel. Stated as a two-sided band rather than a one-sided limit because BOTH directions are failures with opposite meanings: too negative exceeds the authority the flight control system is assumed to have, while too positive is a conventionally stable aircraft -- which would invalidate the premise of the fly-by-wire decision posed by REQ_F16A_L02, since relaxed static stability is the benefit that decision turns on.";
+    Description="The aircraft shall exhibit RELAXED STATIC STABILITY: the static margin SM = (x_np - x_cg)/MAC shall lie between -6 %MAC and +1 %MAC across the operational CG range (takeoff through landing weight). The band is asymmetric on purpose: the negative lower bound is the design intent, and the +1 %MAC upper bound caps how STABLE the aircraft may become, so that a conventionally stable aeroplane cannot satisfy it. Verification method: static margin at takeoff weight and at landing weight, both within the band (F16AStaticMarginVerificationTest). For reference only: the Brandt F-16A model computes SM_TO = -0.26 %MAC and SM_land = +0.21 %MAC (BrandtBalanceStabControl; D-047). Both are in band, so the reference aircraft MEETS this requirement -- but from the STABLE end. It does not reproduce the strongly relaxed static stability the F-16A is generally described as having. The -6 %MAC figure is an illustrative teaching value, not sourced data (D-030). A pass here is not evidence to the contrary.");
+r.Rationale = "Bounds the longitudinal stability margin that sizes the horizontal tail/stabilator and the permissible CG travel. It is a two-sided band because both directions are failures with opposite meanings: too negative exceeds the authority the flight control system is assumed to have, too positive is a conventionally stable aircraft, which removes the premise of the fly-by-wire decision posed by REQ_F16A_L02 (D-046).";
 r.Keywords = ["draft","auto-generated"];
 
-% ---- Cost container (a Measure of Merit, not a "shall" threshold) ----
-% Cost is an OBJECTIVE TO MINIMIZE, not a pass/fail limit. A hard "unit
-% flyaway cost <= $X" requirement is the wrong construct in conceptual
-% design: affordability is traded against weight, materials, and production
-% quantity, and lower is always better. So REQ_F16A_026 is stated as a
-% Measure of Merit (MoM). The Physical layer carries it on a MeasureOfMerit
-% stereotype and will populate its value from a cost-model function.
+% ---- Cost container ----
+% Cost is an objective to minimize, not a pass/fail threshold, so 026 is a
+% Measure of Merit; the Physical layer carries and populates it (D-043).
 cost = add(root, Id="REQ_F16A_COST", Summary="Cost measure of merit");
 cost.Type = "Container";
 cost.Keywords = ["draft","auto-generated"];
 
 r = add(cost, Id="REQ_F16A_026", Summary="Unit flyaway cost (minimize)", ...
-    Description="Unit flyaway cost shall be MINIMIZED. This is a Measure of Merit (design objective), not a pass/fail threshold: a lower unit flyaway cost is always preferred, and cost is traded against weight, materials, and production quantity. For reference only, the Brandt F-16A DAPCA IV model computes a unit flyaway cost of about $68.4M (program-year dollars) for the reference aircraft -- that is a reference-aircraft analysis output for context, not an acceptance limit.");
-r.Rationale = "Cost is an objective to minimize, driving material/weight and production-quantity decisions. Modeling it as a MoM (rather than a 'shall not exceed' limit) reflects how affordability is actually traded in conceptual design; it is homed at the Physical layer as a MeasureOfMerit whose value comes from a cost-model function.";
+    Description="Unit flyaway cost shall be MINIMIZED. This is a Measure of Merit (design objective), not a pass/fail threshold: lower is always preferred, and cost is traded against weight, materials and production quantity. For reference only, the Brandt F-16A DAPCA IV model computes about $68.4M (program-year dollars) for the reference aircraft -- context, not an acceptance limit.");
+r.Rationale = "Cost is an objective to minimize, driving material, weight and production-quantity decisions. It is a Measure of Merit rather than a 'shall not exceed' limit because that is how affordability is traded in conceptual design, and it is homed at the Physical layer (D-043).";
 r.Keywords = ["draft","auto-generated","moe","objective","minimize"];
 
 save(rs);

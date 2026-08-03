@@ -1136,3 +1136,75 @@ over.
   future numeric threshold written into a requirement gets a D-030 row.
 **Traces to** D-030 · D-046 · D-047 · D-007 · D-023 · `REQ_F16A_025` ·
 `verification/F16AStaticMarginVerificationTest.m` · `requirements/generate_f16a_requirements.m`
+
+### D-049 · Where a reader who clicks a *rejected* kind lands, now that the requirement holds no verdict
+**Stage** 1 · **Decided by** orchestrator + f16a-scribe · **Date** 2026-08-02
+**Problem found** D-040 makes the decision requirement a pure question, which falsifies the *stated
+purpose* of D-027 in four documentation sites. `DecisionRef` is written on every kind so that "a
+reader who clicks the rejected kind should land on the document that says why it lost" — and after
+D-040, no requirement says why anything lost. Two of the four sites were not on the work list
+(`docs/05_physical.md:239` and `docs/04_logical.md:273`, line numbers as at the Stage-0 commit); both
+repeat the same sentence, which is how a claim that is wrong once becomes wrong in four places.
+**Decision** D-027's **mechanism is unchanged** — every kind of a role still carries `DecisionRef`.
+Its stated purpose is restated as a **two-hop trail**: rejected kind → the decision requirement,
+which poses the choice and names where the answer is → the rejected **candidate** at P that realizes
+that kind, whose `Rationale.SourceKind` is `TradeAlternative` and whose `Justification` states the
+deficit, the criterion it lost most on and by how much. The docs now say the loser "reaches the
+requirement rather than a `'TBD'`", never "lands on the record of why it lost".
+**Alternatives considered**
+- *Drop `DecisionRef` from the losers*, since the requirement no longer explains the loss. Rejected:
+  it is the **only outbound reference a rejected kind carries** — `SolutionOption` holds nothing else,
+  the Implement link is made only from the winner, and the realization allocation runs role → candidate
+  and never touches a kind. Removing it returns the loser to the `'TBD'` dead end D-027 closed.
+- *Have the trade study write the loss reason onto the losing kind at L.* Rejected for the reason
+  D-040 rejected its own option (b), one layer over: a second copy of the verdict, in a place it can
+  drift from the copy at P. L is also the layer forbidden to hold trade numerics
+  (`testKindsCarryNoTradeNumerics`).
+**Consequences** D-027's *purpose* is narrower than it was written to be, and the docs say the
+narrower thing. Its *value* is arguably higher: it is now the single edge keeping a rejected kind
+attached to the audit trail at all. The honest caveat, which the docs state: the trail's second hop is
+a **property match** (`TradeCandidate.RealizesKind` = the kind's name), not a link the tool can
+follow — `F16APhysicalArchitectureTest` asserts that `RealizesKind` names a kind that exists under its
+role in the L model, but a human reader makes that hop by hand.
+**Traces to** D-027 · D-040 · D-037 · D-002 · `docs/03_traceability.md` · `docs/04_logical.md` ·
+`docs/05_physical.md` · `docs/06_methodology.md` · `physical/F16APhysicalTradeStudy.m` (`loserSentence`)
+
+### D-050 · The programme history moves to the docs, labelled history and not rationale
+**Stage** 1 · **Decided by** orchestrator + f16a-scribe · **Date** 2026-08-02
+**Problem found** A6 rewrote `REQ_F16A_L01`–`L03` into pure questions (D-037, D-040) and in doing so
+deleted real teaching content from the example: the Lightweight Fighter competition and the
+YF-16/YF-17 flyoff, *"the first production fighter to fly a fly-by-wire flight control system"*, and
+the statement that the winning combination **is** the production F-16A configuration. Two of the three
+already had a second home in `docs/04_logical.md`'s "Why these are the credible options" table; the
+production-configuration claim did not, surviving only in `testProductionConfigurationWins`'s comment
+and in `06_methodology.md`'s retrodictive-honesty bullet. Losing it silently would have made A6 a net
+cost.
+**Decision** The historical framing lives in **prose, in `docs/04_logical.md`**, in a new
+`#### History, not rationale` subsection under the existing options table — never in a requirement
+`Description`, a kind name or a `Rationale`. It is written to three rules:
+1. **Labelled as history.** The three facts are stated as facts about an aircraft that exists, with
+   `testProductionConfigurationWins` named as where the model pins them (identities only, not scores).
+2. **Explicitly not the model's reason.** The section states that no criterion, value function or
+   weight in the trade reads a name — even the ratio baselines key on the role's
+   `DataProvenance = Reference` candidate — so renaming all seven candidates changes nothing, and a
+   reader who treats "that is what really happened" as the reason has put back the premise A6 removed.
+3. **The converse trap named too.** That independence is not evidence about aeroplanes: the parameters
+   were chosen by someone who knew the answer, the exercise is retrodictive, and the reader is sent to
+   `06_methodology.md` for the accounting that 0.75 of every score is declared opinion.
+**Alternatives considered**
+- *Let it go.* Rejected: the programme history is why the F-16A is a good case study, and D-020 never
+  banned it — `testKindsAreTechnologyNeutral` is executable against **model artifacts**, not prose.
+- *Keep it in the requirement `Rationale`, which is not the `Description`.* Rejected: it is the same
+  defect one field over. A rationale that recites the real outcome still lets a reader read the answer
+  out of the requirement, which is exactly what D-040 exists to make impossible.
+- *Home it in `05_physical.md`, next to the trade.* Rejected on placement: a reader meets the options
+  at L and forms the "why did this win" question there, so the caveat has to arrive with the options
+  rather than one layer later. `06_methodology.md` keeps the deeper retrodictive argument and is
+  linked, not duplicated.
+**Consequences** D-020's deferred note (L02's "analog fly-by-wire" wording, L01's YF-16/YF-17 framing)
+is now closed on both sides: removed from the model by A6, preserved in the docs by this entry. The
+two historical claims carry **no `DataProvenance` tag** and need none — neither is a number entering
+the model — but the section says so out loud, because after the D-048 veto an untagged assertion that
+reads like design justification is the failure mode being guarded against.
+**Traces to** D-037 · D-040 · D-020 · D-015 · D-030 · `docs/04_logical.md` ·
+`physical/F16APhysicalArchitectureTest.m` (`testProductionConfigurationWins`) · `docs/06_methodology.md`

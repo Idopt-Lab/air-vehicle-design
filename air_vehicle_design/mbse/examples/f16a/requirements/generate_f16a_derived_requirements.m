@@ -1,31 +1,25 @@
 function generate_f16a_derived_requirements()
 %GENERATE_F16A_DERIVED_REQUIREMENTS Build the F-16A derived functional requirements set.
-%   Creates requirements/f16a_functional_derived.slreqx with DRAFT
-%   PLACEHOLDER requirements identified during the Functional-layer (RFLP
-%   "F") analysis. These capture aircraft functions that are required to
-%   complete the mission -- Aviate (maneuver, fuel management), Navigate,
-%   Communicate, and the F2T2EA kill-chain sub-functions (Find, Fix,
-%   Track, Target, Assess) -- but that are NOT present in the
-%   sizing-derived requirement set (f16a.slreqx).
+%   Creates requirements/f16a_functional_derived.slreqx with the DRAFT
+%   PLACEHOLDER requirements identified during Functional-layer (RFLP "F")
+%   analysis -- Aviate (maneuver, fuel management), Navigate, Communicate,
+%   and the F2T2EA kill-chain steps (Find, Fix, Track, Target, Assess) --
+%   that the sizing-derived set (f16a.slreqx) does not cover. Each is linked
+%   back to the function that implements it (generate_f16a_functional.m).
 %
-%   The original f16a.slreqx is kept pristine (Excel-input provenance
-%   only). This separate set documents the RFLP story: functional
-%   decomposition surfaces needs the initial requirements did not capture,
-%   which are then recorded as DERIVED requirements and linked back to the
-%   functions that implement them (see generate_f16a_functional.m).
+%   The quantitative criteria stay TBD deliberately: D01-D09 are a standing
+%   student exercise (D-045), not an omission awaiting closure.
 %
-%   Quantitative acceptance criteria are intentionally left as TBD
-%   placeholders for the program/class to define.
+%   Kept separate so f16a.slreqx stays pristine to its Excel-input
+%   provenance; see docs/03_traceability.md for the RFLP story.
 %
-%   Idempotent: re-run to regenerate from scratch. Any existing
-%   f16a_functional_derived.slreqx (and its in-memory copy) is cleared first.
+%   Idempotent: re-run to regenerate from scratch.
 
 % Save into this script's own requirements/ folder, independent of pwd.
 thisDir = fileparts(mfilename("fullpath"));
 reqFile = fullfile(thisDir, "f16a_functional_derived.slreqx");
 
-% Idempotent clean rebuild: drop any in-memory copy and the existing file
-% so slreq.new does not error on an already-existing set.
+% Clean rebuild so slreq.new does not error on an existing set.
 slreq.clear();
 if isfile(reqFile); delete(reqFile); end
 rs = slreq.new(fullfile(thisDir, "f16a_functional_derived"));

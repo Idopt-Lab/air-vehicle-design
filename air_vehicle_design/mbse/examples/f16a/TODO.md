@@ -535,8 +535,14 @@ It has no stereotype and so no `DataProvenance` slot, so it is inventoried in **
 (row appended 2026-08-02) and tagged `Estimate`. The band is **unchanged** — −6 % to +1 % stands
 exactly as D-046 set it — what changed is that it may no longer be quoted as F-16A data.
 
-**It passes — and be precise about why.** `SM_TO` = **−0.260 %MAC** and `SM_land` = **+0.206 %MAC**
-(measured). The −0.22 % / +0.27 % pair often quoted alongside these is **not** a workbook figure: it
+**It passes — and be precise about why.** `SM_TO` = **−0.260 %MAC** and `SM_land` = **+0.2065 %MAC**
+(measured). *(`+0.206` was a truncation of `+0.2065`, not a rounding; corrected here 2026-08-02. The
+same truncation stands at **three** places in the committed decision log — `07_decision_log.md:805`,
+`:1050` (D-047's "Result — 3/3 passing") and `:1054` — and is **not** edited there, because the log is
+append-only history, exactly as D-015's superseded "0–10" scale is left in place. D-046's `+0.21 %MAC`
+at `:941` is a correct 2-dp rounding and is not the same defect. The full-precision figures live in
+`docs/01_requirements.md`, under *`025` — no longer a placeholder*; `REQ_F16A_025`'s Description in
+`requirements/generate_f16a_requirements.m` states them to 2 dp.)* The −0.22 % / +0.27 % pair often quoted alongside these is **not** a workbook figure: it
 is the expected value in `sizing/VnV/BrandtF16A/tests/test_BrandtBalanceStabControl.m:68,72`
 (−0.00219 / +0.00272, `AbsTol` 0.001), and that test file is the only place in the repo it appears —
 it is not in `GroundTruth/cell-map.md` (which has no BSC section) nor in `readme_bsc.md`'s validation
@@ -565,7 +571,8 @@ follow-up steps are not.**
 Code Analyzer is clean on both files.
 
 **No `verify` keyword, and that is deliberate** — an earlier revision of this item (and of D-047) said
-`025` gains one. It does not. `generate_f16a_requirements.m:228-234` records why: `REQ_F16A_022` and
+`025` gains one. It does not. The comment above `REQ_F16A_SC` in `generate_f16a_requirements.m`
+records why: `REQ_F16A_022` and
 `REQ_F16A_P01` also have verification tests and are also not keyworded, because **the Verify link is
 the authoritative record that a requirement has a test**. A generator-written keyword restating that
 is a derived fact stored where it can drift out of step with the link — the failure mode D-027 and
@@ -588,11 +595,14 @@ never asked for, making results depend on suite order.
 
 0. ~~**Apply the canonical −6 %MAC sentence**~~ — **DONE in source** (D-048 part 3). It reads: *"the
    strongly relaxed static stability the F-16A is generally described as having. The −6 %MAC figure is
-   an illustrative teaching value, not sourced data (D-030)."* Verified verbatim in all four places:
-   `generate_f16a_requirements.m:240` (`REQ_F16A_025`'s reference text),
-   `verification/F16AStaticMarginVerificationTest.m:80`, `docs/07_decision_log.md` (D-044 and D-046),
-   and this register. One wording, so they cannot drift into four different hedges. **Only the shipped
-   `.slreqx` still has the old text** — which is step 1, and is why step 1 must not be skipped.
+   an illustrative teaching value, not sourced data (D-030)."* Verified verbatim in all **five**
+   places: `generate_f16a_requirements.m` (`REQ_F16A_025`'s reference text),
+   `F16AStaticMarginVerificationTest.m` (class help block), `docs/07_decision_log.md` (D-044 and
+   D-046), `docs/01_requirements.md` (*`025` — no longer a placeholder*, **added Stage 1**, when `025`
+   stopped being described as a placeholder), and this register. One wording, so they cannot drift into five different hedges.
+   D-048 part 3 needs no amendment — it states a universal rule and lists no sites, so a fifth site
+   satisfies it. **Only the shipped `.slreqx` still has the old text** — which is step 1, and is why
+   step 1 must not be skipped.
 1. **Regenerate `requirements/f16a.slreqx`.** The shipped set still reads `TBD`; only the generator has
    the band. This is **not** a one-file re-run: `slreq.new` builds a fresh set, so the F/L/P models'
    Implement links resolve into the old one — the **whole documented chain** in README "Regenerate the

@@ -83,14 +83,84 @@ conditions the aircraft must sustain (`Ps = 0`) or the field lengths it must mee
 | 020 | Weight | Permanent payload 700 lb |
 | 021 | Weight | Expendable payload 4,400 lb (released in Combat) |
 | 022 | Materials | Composite fraction ≤ 20% (Al 65 / CF 20 / Ti 10 / Steel 5 / FG 0) |
-| 023 | Balance | Tipback angle — **TODO**, no program minimum yet |
-| 024 | Balance | Rollover angle — **TODO**, no program minimum yet |
-| 025 | Stability & Control | Static margin — **TODO**, no program bounds yet |
+| 023 | Balance | Tipback angle — **deliberately blank; student exercise** (D-046) |
+| 024 | Balance | Rollover angle — **deliberately blank; student exercise** (D-046) |
+| 025 | Stability & Control | Static margin `SM = (x_np − x_cg)/MAC` within **−6 … +1 %MAC** — relaxed static stability |
 | 026 | Cost | Unit flyaway cost — **Measure of Merit (minimize)**, homed at the Physical layer |
 
-**26 requirements total** across 8 concern containers. Requirements 023–025 are honest
-`TODO` placeholders: the Brandt model computes these as *outputs*, but no design *minimum*
-has been specified, so they carry no requirement value yet.
+**26 requirements total** across 8 concern containers.
+
+#### `023` and `024` — the blanks *are* the assignment
+
+They are not an omission waiting to be closed. Brandt's model computes a tipback angle and a
+rollover angle, but it states them in conventions that do not obviously match the USAF/USN limits
+they would be checked against — and working out whether they do, then naming and bounding the
+quantity correctly, **is the exercise** (**D-046**). Writing values in would take it away. Both keep
+their `todo` keyword and their `TBD` text on purpose, and the `rollover` → `overturn` rename is
+deferred with them, because calling Brandt's quantity "the overturn angle" would assert the very
+identification that is in doubt. The nine derived functional requirements `REQ_F16A_D01`–`D09` are
+blank for the same reason (**D-045**; see [`03_traceability.md`](03_traceability.md)).
+
+#### `025` — no longer a placeholder
+
+D-046 gave it a real, two-sided, checkable band:
+
+> The static margin `SM = (x_np − x_cg)/MAC` shall lie between **−6 %MAC** and **+1 %MAC** across
+> the operational CG range (takeoff through landing weight).
+
+The band is asymmetric on purpose. The negative lower bound is the design intent — a near-neutral to
+slightly unstable configuration cuts trim drag and buys instantaneous turn rate, and is flyable only
+because the flight control system supplies artificial stability, which is the same fact
+`REQ_F16A_L02`'s fly-by-wire decision turns on. The `+1 %MAC` upper bound caps how *stable* the
+aircraft may become; without it a conventionally stable aeroplane would satisfy a requirement whose
+whole purpose is to exclude one. `verification/F16AStaticMarginVerificationTest.m` checks both
+CG-range endpoints against the band and passes 3/3 (**D-047**).
+
+**At what weight, and which end of the CG range.** `SM_TO` is evaluated at the sizing point
+`W_TO` = 31,377 lb. `SM_land` is **not** — `BrandtBalanceStabControl.run` builds the landing case
+itself, by zeroing the expendable payload and all three fuel thirds.
+
+| Condition | Weight (lb) | `x_cg` (ft) | End of CG range |
+|---|---|---|---|
+| Takeoff | 31,377 (the sizing point) | 26.1979 | **aft** |
+| Landing | 20,677.61 (derived by `run`) | 26.1451 | **forward** |
+
+Landing weight derives two independent ways: `W_empty` 19,977.61 + `perm_payload` 700, and `W_TO`
+31,377 − `exp_payload` 4,400 − `W_fuel` 6,299.39. Substituting the *validation-target* fuel figure
+6,296.30 gives 20,680.70 instead — a 3 lb gap of the `.m`-vs-`.xls` kind D-036 records for mass, so
+do not "correct" this derivation from the target column.
+
+The ordering is counter-intuitive and easy to get backwards — it *was* backwards in the verification
+test until Stage 1. Landing CG is 0.0528 ft **forward** of takeoff, so **takeoff is the aft end** of
+the operational range: expendable payload and fuel sit at ~26.3 ft, aft of the CG, so releasing and
+burning them moves it forward. `x_np` = 26.1684 ft falls between the two endpoints, which is why the
+two margins straddle zero.
+
+> **The band is design intent tagged `Estimate`, not sourced data.** −6 %MAC carries no citation:
+> `/sizing/` has no static-margin criterion, no specification is quoted, and nothing computes it. It
+> has no stereotype and therefore no `DataProvenance` slot, so it is inventoried in **D-030**'s table
+> of invented numbers instead (**D-048**) — the first *requirement threshold* in that table rather
+> than a component property. The reference model meets the band from the **stable** end
+> (`SM_TO` = −0.2602 %MAC, `SM_land` = +0.2065 %MAC): it does **not** reproduce the strongly relaxed
+> static stability the F-16A is generally described as having. The −6 %MAC figure is an illustrative
+> teaching value, not sourced data (D-030). A pass here is not evidence to the contrary.
+
+**What the shipped artifact currently holds** — ⚠ *delete this paragraph when the requirement set is
+regenerated; it describes a state that regeneration ends.* The band lives in the **generator**, and
+the `requirements/f16a.slreqx` committed to this repository still carries the pre-D-046 text: *"a
+static margin between TBD %MAC and TBD %MAC"*, keyword `todo`. Regenerating it is not a one-file
+re-run — `slreq.new` builds a fresh set, so every Implement link from F, L and P has to be rebuilt
+with it, i.e. the whole chain in the README's *Regenerate the artifacts*. Outstanding work, tracked as
+TODO **B3** step 1.
+
+**The Verify link is a separate gap, and it is durable.** `REQ_F16A_025` →
+`F16AStaticMarginVerificationTest` has to be added **by hand** in the Requirements Editor, because in
+R2026a a MATLAB test file cannot be a link *source* — the same tool limitation that already applies to
+`REQ_F16A_022` and `REQ_F16A_P01` (see [`README.md`](README.md), *"Verification links are added
+manually"*). Regenerating the requirement set does **not** create it, so this sentence outlives the
+paragraph above.
+
+#### `026` and `022` — an objective and a real constraint
 
 `REQ_F16A_026` (cost) is stated as a **Measure of Merit**, not a "shall not exceed" threshold: a
 hard cost ceiling is the wrong construct in conceptual design — cost is an objective you

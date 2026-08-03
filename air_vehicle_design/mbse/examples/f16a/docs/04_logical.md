@@ -245,11 +245,32 @@ many-to-one — `F100_PW_200` and `F110_GE_100` both realize `SingleEngine` — 
 the candidate would fail to find its option the moment the *other* single-engine candidate won, which
 is exactly when you would want it to work (D-027).
 
-**The decision requirement is the authoritative record.** Its `Rationale` states the value
-functions, the weights, and the reason that candidate won. The active variant flag and the
-`Selected` boolean are **derived artifacts** — queryable and convenient, but reconstructible from
-the requirement. If the two ever disagree, the requirement is right and the model needs
-regenerating. This is the RFLP story in miniature: analysis *feeds back* into requirements.
+**The requirement is where the decision is posed; the verdict lives where it was computed.**
+`REQ_F16A_L01`–`L03` state the question — *which of the kinds L presents shall realize this role?* —
+and name the artifacts that answer it. They carry no winner, no weights and no scores, because
+nothing in the R layer computes any of those (**D-037**, **D-040**). The verdict is written in
+exactly two places, both by `F16APhysicalTradeStudy`: the **winning candidate's
+`Rationale.Justification`** at P — which states the score, the rank, the margin, the value functions
+and weights it was scored on, and the criterion that carried it against the *named* runner-up — and
+the **Implement link** from the winning kind, which is what turns the requirement from
+*un-implemented* to *implemented* in the Requirements Editor.
+
+> ⚠ **Load-bearing.** The claim about weights and value functions rests on the compact
+> `Criteria (D-015): Benefit B/10 w=0.500; …` clause that `criteriaSentence` (in
+> `physical/F16APhysicalTradeStudy.m`) writes into the winner's `Justification`. If a future trim
+> removes that clause, this paragraph becomes false — trim the sentence with it.
+
+The active variant flag and the `Selected` boolean are therefore still **derived artifacts** —
+queryable and convenient, and reconstructible, but from the **trade**, not from the requirement:
+re-running `F16APhysicalTradeStudy` reproduces all four of its writes verbatim, which is what
+"derived" means here. If a flag and the trade's output ever disagree, the trade is right and the
+model needs regenerating.
+
+**None of that touches the feedback loop, which is the reason the trade writes back at all.** The
+Implement link that lands on `REQ_F16A_L01`–`L03` is created by a scoring script two layers down, not
+authored by hand at R: an open question in a requirement set, closed by an analysis. That is the RFLP
+story in miniature — analysis *feeds back* into requirements. What moved is only *where the reasoning
+is kept*, and it moved to where it is produced.
 
 The alternatives are **not** deleted. They stay in the model as the options that were traded.
 
@@ -271,8 +292,12 @@ plus **3 created by the physical trade study**, from each winning kind into
 Editor, sourced from the L model.
 
 Note the third column: `DecisionRef` is written on the **rejected** kind too. That is deliberate
-(D-027) — a reader who clicks `TwinEngine` should land on the requirement that explains why it lost,
-not on a `TBD`.
+(D-027) — a reader who clicks `TwinEngine` reaches `REQ_F16A_L01`, the requirement that posed the
+choice, instead of a `'TBD'` dead end. `REQ_F16A_L01` does not itself say why `TwinEngine` lost; under
+D-040 no requirement says why anything lost. It names where the answer is, and the answer is one hop
+further — the P candidate `TwinEngine_Surrogate`, which realizes this kind and carries
+`Rationale.SourceKind = TradeAlternative` with a `Justification` stating its deficit and the criterion
+it lost most on (**D-049**).
 
 > **If you regenerate only the L layer, you will get the unresolved model back — and that is
 > correct, not a defect.** `generate_f16a_logical` alone leaves every kind at `Selected=false` /
@@ -297,10 +322,48 @@ which is why they are worth three separate trades rather than one:
 | fly-by-wire vs hydro-mechanical | the F-16 was the **first production fighter to fly a fly-by-wire flight control system** — which is what makes relaxed static stability usable | agility, against the maturity of a proven mechanical path |
 | blended cranked delta vs conventional trapezoidal wing | the F-16's distinctive **blended cranked-delta planform with LERX** | high-alpha and sustained-turn performance plus structural efficiency, against aero-development risk |
 
-Read that table as *why these two options are the ones worth putting in the model* — **not** as why
-one of them won. The outcome is read off `REQ_F16A_L01`–`L03`, and the numbers behind it off the
-physical candidates; neither is read off this table, which would still be worth writing if the trade
-had gone the other way.
+**This framing used to live in the requirement text, and deliberately no longer does.**
+`REQ_F16A_L01` once read *"…a single afterburning turbofan (Pratt & Whitney F100 class), rather than
+a twin-engine installation"*, and L01 and L03 called their winners *the production F-16A
+configuration*. All of it was removed, because a requirement that already contains its answer is a
+decision **claim** and not a decision record (**D-037**, **D-040**). D-020's technology-neutrality
+ban is executable against the **model artifacts** — `testKindsAreTechnologyNeutral` scans the six
+kind names — and it was never a ban on knowing the history. Prose is the right home for that, and
+this section is the home.
+
+#### History, not rationale
+
+The three kinds that win **are** the production F-16A configuration. The aeroplane flew with an
+F100-PW-200, a blended cranked-delta wing with LERX, and fly-by-wire — the first production fighter
+to do so. Those are checkable facts about an aircraft that exists, and
+`testProductionConfigurationWins` pins them, asserting the three winner *identities* and deliberately
+**not** their scores (`physical/F16APhysicalArchitectureTest.m:1294`). Neither claim is a number
+entering the model, so neither carries a `DataProvenance` tag; both are context, and neither is a
+design justification.
+
+**It is not why the model chooses what it chooses, and nothing in the model can see it.** The trade
+declares **four** criteria and scores the three that some candidate of the role carries a value for —
+`Mass_lb`, `Benefit`, `TRL`; `UnitCost_USD` is dropped at run time by the general rule of **D-026**,
+not by a special case naming cost. And no criterion, value function or weight reads a *name*: even
+the ratio baselines are keyed on the role's `DataProvenance = Reference`
+candidate, not on any candidate being called `F100_PW_200`. Rename all seven candidates and the
+scoring is unchanged — the same rows win. (`testProductionConfigurationWins` would fail, which is
+precisely its job: it is the one assertion in the example made on *values* rather than on
+relationships.) A reader who takes "that is what really happened" as the model's reason has put back
+the premise the requirement rewrite just removed.
+
+**The converse trap is the more tempting one.** That independence does *not* make the result evidence
+about aeroplanes. The `Estimate` masses and the `Benefit`/`TRL` judgements were chosen by the author
+of this example, who knew the answer, so the exercise is **retrodictive**: it demonstrates the
+machinery, the arithmetic and the audit trail, and it establishes nothing about the F-16A.
+[`06_methodology.md`](06_methodology.md) gives the full accounting, including the uncomfortable one —
+0.75 of every score is declared opinion.
+
+So read the table above as *why these two options are the ones worth putting in the model* — **not**
+as why one of them won. The outcome is read off the **Implement links** on `REQ_F16A_L01`–`L03`
+(which kind implements each decision), and the reasoning and the numbers behind it off the
+**physical candidates**' justifications; neither is read off this table, which would still be worth
+writing if the trade had gone the other way.
 
 ### Allocation targets the role, not the choice
 

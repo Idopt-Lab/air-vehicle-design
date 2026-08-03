@@ -618,78 +618,72 @@ name = crit(keptIdx(kk)).Name;
 end
 
 % =====================================================================
+% docs/04_logical.md claims the winner's Justification states the value functions
+% and the weights it was scored on. This clause is the only thing that makes that
+% true -- trim it there too, or not at all.
 function txt = criteriaSentence(crit, keptIdx, w, dropped, refName)
-%CRITERIASENTENCE The scoring scheme, in words, for the model to carry.
+%CRITERIASENTENCE The scoring scheme the model carries: functions, weights, baseline.
+%   ONE SENTENCE. It states the scheme; it does not explain it. Why declared
+%   value functions rather than min-max, and why a criterion nobody carries is
+%   dropped and the rest renormalized, are D-015 and D-005 in
+%   docs/07_decision_log.md -- cited, not restated (D-036's rule for numbers,
+%   applied to prose).
 parts = strings(1, numel(keptIdx));
 for kk = 1:numel(keptIdx)
     k = keptIdx(kk);
     parts(kk) = crit(k).Name + " " + crit(k).Rule + " w=" + sprintf("%.3f", w(kk));
 end
-txt = "Scored on declared value functions (D-015): " + strjoin(parts, "; ") + ...
-    ". Ratio baselines are the values carried by " + refName + ", the role's " + ...
-    "DataProvenance = Reference candidate.";
+txt = "Criteria (D-015): " + strjoin(parts, "; ") + "; ratio baseline " + refName;
 if ~isempty(dropped)
-    txt = txt + " " + strjoin(dropped, ", ") + " was dropped because no candidate of " + ...
-        "this role carries a value for it, and the remaining weights were renormalized " + ...
-        "(D-005).";
+    txt = txt + "; " + strjoin(dropped, ", ") + " dropped, no values (D-005)";
 end
+txt = txt + ".";
 end
 
 % =====================================================================
 function txt = winnerSentence(rc, win, rup, n, score, V, w, crit, keptIdx, ...
     critText, reqId, kindName)
-%WINNERSENTENCE What the winner says about itself afterwards.
-%   It names the score, the margin, the criterion that carried it AGAINST THE
-%   RUNNER-UP -- every comparison in this sentence is against that one rival and
-%   the sentence says so, because it is the model's permanent audit trail and
-%   must not claim more than it measured (D-034) -- and, the part worth having,
-%   the criteria it LOST and won anyway. That is the whole
-%   lesson of the engine trade: the F100 beats the F110 on maturity and
-%   installed mass DESPITE a lower benefit rating, and the model should say so
-%   rather than leave a reader to infer it from a column of numbers.
+%WINNERSENTENCE What the winner says about itself afterwards. Three sentences.
+%   Verdict, score, rank, margin over the NAMED runner-up, and the criterion
+%   that carried it against that rival -- plus what it trailed on and won
+%   anyway, which is the engine trade's whole lesson. Naming the rival is what
+%   keeps the claim honest: decisiveness is rival-relative, and D-034 says why.
 d = w .* (V(win,:) - V(rup,:));
 [dName, dDelta] = decisiveCriterion(V, w, crit, keptIdx, win, rup);
-leads   = otherCriteria(d, crit, keptIdx, dName, @(x) x > 0);
-trails  = otherCriteria(d, crit, keptIdx, dName, @(x) x < 0);
+trails = otherCriteria(d, crit, keptIdx, dName, @(x) x < 0);
 
-txt = "Trade study result: SELECTED. Score " + fmtScore(score(win)) + " against " + ...
-    fmtScore(score(rup)) + " for " + rc(rup).Name + " (rank 1 of " + n + ", margin " + ...
-    fmtDelta(score(win) - score(rup)) + "). Decided against that runner-up by " + ...
-    dName + ", worth " + fmtDelta(dDelta) + " of that margin";
-if strlength(leads) > 0
-    txt = txt + "; it also leads that runner-up on " + leads;
-end
+txt = "Trade study: SELECTED (rank 1 of " + n + "), score " + fmtScore(score(win)) + ...
+    " against " + fmtScore(score(rup)) + " for runner-up " + rc(rup).Name + ", margin " + ...
+    fmtDelta(score(win) - score(rup)) + "; decided against that rival by " + dName + ...
+    " (" + fmtDelta(dDelta) + ")";
 if strlength(trails) > 0
-    txt = txt + ", and it wins DESPITE trailing " + rc(rup).Name + " on " + trails;
+    txt = txt + ", despite trailing it on " + trails;
 end
-txt = txt + ". Decisiveness here is measured against " + rc(rup).Name + " only: another " + ...
-    "rival can make another criterion decisive, so " + dName + " is what separated this " + ...
-    "candidate from the runner-up, not a property of the decision as a whole (D-034). " + ...
-    critText + " The decision is recorded in " + reqId + " and written " + ...
-    "back to the Logical layer as the active " + kindName + " kind.";
+txt = txt + ". " + critText + " Recorded in " + reqId + "; L active kind " + kindName + ".";
 end
 
 % =====================================================================
 function txt = loserSentence(rc, i, win, n, score, rankOf, V, w, crit, keptIdx, ...
     critText, reqId)
-%LOSERSENTENCE What a rejected candidate says about itself afterwards.
-%   A loser is kept in the model on purpose (D-002), so it has to be able to
-%   say what it lost and by how much -- otherwise "the alternatives remain
-%   visible" is a claim about geometry rather than about traceability.
+%LOSERSENTENCE What a rejected candidate says about itself afterwards. Three sentences.
+%   THIS IS HOP 2 OF THE D-049 TRAIL and the only place a rejected option's
+%   reasoning exists: the requirement it was sent to poses the question and
+%   holds no verdict (D-040). So rank, deficit, the criterion it lost most on,
+%   and what it still leads the winner on all have to survive here (D-002).
 d = w .* (V(i,:) - V(win,:));
 [worst, kk] = min(d);
 wName = crit(keptIdx(kk)).Name;
 leads = otherCriteria(d, crit, keptIdx, wName, @(x) x > 0);
 
-txt = "Trade study result: NOT SELECTED (rank " + rankOf(i) + " of " + n + "). Score " + ...
+txt = "Trade study: NOT SELECTED (rank " + rankOf(i) + " of " + n + "), score " + ...
     fmtScore(score(i)) + " against " + fmtScore(score(win)) + " for the selected " + ...
-    rc(win).Name + " (deficit " + fmtDelta(score(i) - score(win)) + "). It lost most on " + ...
+    rc(win).Name + ", deficit " + fmtDelta(score(i) - score(win)) + "; lost most on " + ...
     wName + " (" + fmtDelta(worst) + ")";
 if strlength(leads) > 0
     txt = txt + ", though it leads the winner on " + leads;
 end
-txt = txt + ". " + critText + " It is retained in the model as the alternative that was " + ...
-    "traded, so " + reqId + " can be read against the option it rejected (D-002).";
+txt = txt + ". " + critText + " Retained as the traded alternative (D-002); decision " + ...
+    "recorded in " + reqId + ".";
 end
 
 % =====================================================================
@@ -744,10 +738,14 @@ function kindComp = writeLogicalDecision(lm, logiName, logiProfile, role, kindNa
 %   other single-engine candidate won, which is exactly when you would want it
 %   to work.
 %
-%   DecisionRef is written to EVERY kind of the role, not only the winner: the
-%   decision requirement is the record of the whole decision, including the
-%   rejection, so a reader who clicks the losing kind should be sent to the
-%   document that says why it lost rather than to a 'TBD'.
+%   DecisionRef is written to EVERY kind of the role, not only the winner
+%   (D-027) -- it is the only outbound reference a rejected kind carries, so
+%   without it that kind is a 'TBD' dead end. The requirement it points at is a
+%   JUNCTION, NOT A TERMINUS: D-040 keeps REQ_F16A_L01..L03 pure questions, so
+%   a rejected kind reaches the question and, one hop further, the rejected P
+%   candidate realizing it, whose Justification holds the reasoning (D-049).
+%   Caveat: that second hop is a property match (RealizesKind = the kind's
+%   name), asserted by the P suite but not a link any tool can follow.
 lvc = lookup(lm, Path=char(logiName + "/" + role));
 if ~isa(lvc, "systemcomposer.arch.VariantComponent")
     error("F16APhysicalTradeStudy:logicalRoleNotVariant", ...

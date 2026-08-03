@@ -172,11 +172,15 @@ Read this section before repeating any of the above in a report.
   selection. What we do keep is the non-deletion: a losing candidate stays in the P model tagged
   `SourceKind = TradeAlternative`, carrying a justification that says what it lost on and by how
   much, and a losing kind stays in the L model.
-- **The active kind at L is derived, not authored.** It is written back by the P-layer trade. The
-  authoritative record of the decision is the **decision requirement** and its `Rationale`, not the
-  variant flag — which is why `DecisionRef` is written on **every** kind of a role and not only on
-  the winner (D-027): a reader who clicks the rejected kind should land on the document that says
-  why it lost.
+- **The active kind at L is derived, not authored.** It is written back by the P-layer trade, so it
+  is an *output* of the decision and not the decision itself. The **decision requirement** is where
+  the decision is posed and where its trail is anchored; the reasoning that settles it is the trade
+  study's output, carried by the candidates' `Rationale.Justification` at P (D-040). That is also why
+  `DecisionRef` is written on **every** kind of a role and not only on the winner (D-027): it is the
+  only outbound reference a rejected kind carries, so without it a reader who clicks the loser reaches
+  a `'TBD'` and stops. With it the loser joins the same trail as the winner — requirement, then the
+  rejected *candidate* that realizes that kind, whose `Rationale` is a `TradeAlternative` justification
+  saying what it lost on and by how much (D-002, D-049).
 
 ### What the value functions assume
 
