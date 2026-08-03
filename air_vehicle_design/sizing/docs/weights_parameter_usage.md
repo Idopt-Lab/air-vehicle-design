@@ -74,7 +74,7 @@ side.
 
 ### L3 — Raymer §15.3.1 fighter/attack component build-up
 
-Eqs. 15.1–15.24, Raymer 7th ed. Grouped as the class groups them:
+Eqs. 15.1–15.24, Raymer 6th ed. Grouped as the class groups them:
 
 | Group | Components (equation) |
 |---|---|
@@ -126,13 +126,17 @@ Computed live 2026-07-26 at `W_TO` = 31,377 lbf.
 | Landing gear | 1035.4410 | 1160.9336 | 1066.8180 | `Wt!B23` |
 | Engine group | 3607.5273 | 3381.6984 | 4730.2300 | `Wt!B11` |
 | Systems / all-else | 5334.0900 | 4578.1340 | — | distributed |
-| **OEW** | **15664.648** | **15705.331** | **19980.7006** | **`Wt!B12`** |
+| Strake | 90.0000 | — (not modeled) | 90.0000 | `Wt!H9` |
+| **OEW** | **15754.648** | **15705.331** | **19980.7006** | **`Wt!B12`** |
 | L1 OEW | 19110.313 | — | — | — |
 
 Brandt's HT/VT rows use the **full** planform areas (108 / 60); the framework uses the **exposed**
-areas per Raymer's definition, so those two rows are `DEFINITIONAL`, not a divergence. Brandt also
-carries nacelle (186.82), strake (90.00), other-structure (2016.86) and armament-support (440.00)
-line items with no framework analog — about 2733.68 lbf, 13.68 % of `Wt!B12`.
+areas per Raymer's definition, so those two rows are `DEFINITIONAL`, not a divergence. Strake
+(`k_strake=4.5 lbf/ft^2 * S_strake=20 ft^2 = 90.00 lbf`, `[Brandt Main!D18 / Wt!H7]`) was added to
+`F16WeightsL2` 2026-07-29 -- see `F16WeightsL2.m`'s `S_strake`/`k_strake` property comment; not yet
+ported to L3. Brandt also carries nacelle (186.82), other-structure (2016.86) and armament-support
+(440.00) line items with no framework analog at any fidelity level — about 2643.68 lbf, 13.23 % of
+`Wt!B12`, still unmodeled.
 
 Other live L3 values: `W_l` = 29808.15 (`0.95·W_TO`; Brandt's `Wt!B41` = 20680.70 is a
 back-calculated output of his own weight statement, a different quantity); `SFC_mission` = 1.007116

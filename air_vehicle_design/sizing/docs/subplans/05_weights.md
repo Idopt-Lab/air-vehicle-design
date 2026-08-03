@@ -22,9 +22,9 @@ Three fidelity levels of empty-weight estimation, each a textbook method with a 
 
 | Level | Method | Primary citation |
 |---|---|---|
-| L1 | statistical empty-weight regressions on `W_TO` only | `[Raymer 7th ed. Table 3.1]` (central) + `[Roskam Part I Eq. 2.16 + Table 2.15]` (minimum bound) |
-| L2 | surface-density (psf × area) structural groups + fraction-based engine/all-else | `[Raymer 7th ed. Table 15.2]` + `[AE481 metabook Sec. 7, "Fraction-Based Weight Estimates"]` |
-| L3 | Fighter/Attack statistical component build-up, 24 equations | `[Raymer 7th ed. §15.3.1, Eqs. 15.1–15.24]` + `[Raymer 7th ed. Eq. 10.10]` (engine dry weight) |
+| L1 | statistical empty-weight regressions on `W_TO` only | `[Raymer 6th ed. Table 3.1]` (central) + `[Roskam Part I Eq. 2.16 + Table 2.15]` (minimum bound) |
+| L2 | surface-density (psf × area) structural groups + fraction-based engine/all-else | `[Raymer 6th ed. Table 15.2]` + `[AE481 metabook Sec. 7, "Fraction-Based Weight Estimates"]` |
+| L3 | Fighter/Attack statistical component build-up, 24 equations | `[Raymer 6th ed. §15.3.1, Eqs. 15.1–15.24]` + `[Raymer 7th ed. Eq. 10.10]` (engine dry weight) |
 
 Single abstract output contract at every level: `OEW(W_TO) → scalar [lbf]`.
 
@@ -98,7 +98,7 @@ w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);   % g3
 - L1 injects nothing: both regressions take only `W_TO` and `aircraft_category`.
 
 `F16GeomL1(json_path, req_path)` also reads `design_mach` from the requirements file (its `M_max`
-drives `[Raymer 7th ed. Table 4.1]` `AR_eq`), so the requirements file has a geometry consumer too.
+drives `[Raymer 6th ed. Table 4.1]` `AR_eq`), so the requirements file has a geometry consumer too.
 
 ---
 
@@ -150,7 +150,7 @@ revision over-guarded them "for uniformity"; see the todo entry for why that was
 
 | Quantity | Formula | Citation | Constants (jet fighter) |
 |---|---|---|---|
-| `We/Wto` | `K_vs · A · W_TO^C` | `[Raymer 7th ed. Table 3.1]` | A = 2.34, C = −0.13, `K_vs` = 1.00 (1.04 variable sweep). Transcribed from `metabook_data.md:20-26` |
+| `We/Wto` | `K_vs · A · W_TO^C` | `[Raymer 6th ed. Table 3.1]` | A = 2.34, C = −0.13, `K_vs` = 1.00 (1.04 variable sweep). Transcribed from `metabook_data.md:20-26` |
 | `OEW` | `(We/Wto) · W_TO` | definition | — |
 | `W_E` minimum bound | `W_E = 10^((log10 W_TO − A)/B)` | `[Roskam Part I Eq. 2.16 + Table 2.15]` | A = 0.5091, B = 0.9505. Transcribed from `roskam_vol1_data.md:47` (equation) + `:53-63` (table) |
 
@@ -161,10 +161,10 @@ Roskam value is a **lower bound** by construction and is never summed into `OEW`
 
 | Quantity | Formula | Coefficient | Citation |
 |---|---|---|---|
-| Wing | `9.0 · S_w` (EXPOSED planform) | 9 psf | `[Raymer 7th ed. Table 15.2]`, `metabook_data.md:321` |
-| HT | `4.0 · S_ht` (EXPOSED) | 4 psf | `[Raymer 7th ed. Table 15.2]`, `:322` |
-| VT | `5.3 · S_vt` (EXPOSED) | 5.3 psf | `[Raymer 7th ed. Table 15.2]`, `:323` |
-| Fuselage | `4.8 · S_wet_fus` (**WETTED**) | 4.8 psf | `[Raymer 7th ed. Table 15.2]`, `:324` |
+| Wing | `9.0 · S_w` (EXPOSED planform) | 9 psf | `[Raymer 6th ed. Table 15.2]`, `metabook_data.md:321` |
+| HT | `4.0 · S_ht` (EXPOSED) | 4 psf | `[Raymer 6th ed. Table 15.2]`, `:322` |
+| VT | `5.3 · S_vt` (EXPOSED) | 5.3 psf | `[Raymer 6th ed. Table 15.2]`, `:323` |
+| Fuselage | `4.8 · S_wet_fus` (**WETTED**) | 4.8 psf | `[Raymer 6th ed. Table 15.2]`, `:324` |
 | Landing gear | `0.033 · W_TO` | 0.033 | `[AE481 metabook Sec. 7, "Fraction-Based Weight Estimates"]`, `:330` — ★ **NOT Raymer Table 15.2** |
 | Installed engine | `1.3 · N_en · W_en` | 1.3 | `[AE481 metabook Sec. 7]`, `:333`. **L2-only** — see §5.3 |
 | All-else-empty | `0.17 · W_TO` | 0.17 | `[AE481 metabook Sec. 7]`, `:334` |
@@ -177,7 +177,7 @@ Raymer table number attached. Citing 0.033 / 1.3 / 0.17 to "Table 15.2" is wrong
 
 ### 5.3 `WeightsL3` — Raymer §15.3.1, Eqs. 15.1–15.24
 
-One consistent citation for the whole file: `[Raymer 7th ed. §15.3.1]`, **section only** — the former
+One consistent citation for the whole file: `[Raymer 6th ed. §15.3.1]`, **section only** — the former
 mix of "p.572" (header) and "p.602" (methods) pointed at the same content via book-page vs PDF-page
 numbering (`raymer_data.md:115`, PDF = book + 30) and is unified.
 
@@ -299,7 +299,7 @@ Alt | Divergence | Source | Notes`.
 
 | Item | Status | Where |
 |---|---|---|
-| Every §15.3.1 exponent unverified against the physical book — 62-row checklist; 2 CONFLICT (Eq. 15.13 `N_en^1.023`, Eq. 15.3 `cos(Λ_vt)^−0.323`, code values **KEPT** by decision) / 9 FROM-CODE / 24 VERIFY / 27 IMAGE-ONLY / 5 extract-clean | **STANDING**, guarded red | todo §3a; `TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified` |
+| Every §15.3.1 exponent unverified against the physical book — 62-row checklist; 2 CONFLICT (Eq. 15.13 `N_en^1.023`, Eq. 15.3 `cos(Λ_vt)^−0.323`, code values **KEPT** by decision) / 8 FROM-CODE / 26 VERIFY / 26 IMAGE-ONLY (corrected 2026-07-30 by a direct recount of the recovered 62-row table -- the previous "9/24/27/5" breakdown summed to 67, not 62, and did not match the table; the table itself has always had exactly 62 rows) | **STANDING**, guarded red | todo §3a; `TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified` |
 | Raymer **Table 6.1** coefficients are not present anywhere in this repo; user to supply. Code uses Table 3.1 | **STANDING**, guarded red | todo §P4-8; `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` |
 | `K_d = 0` is a documented, legal straight-duct value and `0^0.182 = 0`, so it **silently zeroes the entire 227.54 lbf air-induction component** — no error, no warning, not even a `NaN` (`OEW` reads 15477.7874). **No guard is added, by explicit user decision 6.** `H_v = 0`, `L_s = 0`, `V_t = 0` likewise unguarded | **OPEN** | todo §P4-11 |
 | The `0.95` in `W_l = 0.95·W_TO` has **no citation in the repo** | **OPEN** | todo §P4-16 |
@@ -337,7 +337,7 @@ Recorded because the old text was quoted elsewhere and its errors propagated.
 
 | # | Old claim | Correction |
 |---|---|---|
-| 1 | `OEW/W_TO = A·W_TO^C` cited to **"Raymer 6th ed, Table 6.1"** (old `:81`, `:88`) | Code cites **`[Raymer 7th ed. Table 3.1]`**, and its four coefficient rows match `metabook_data.md:20-26` exactly. **Table 6.1's coefficients are not in this repo at all.** This subplan's own Table 6.1 line was the *sole* source of that claim; it is kept here as a **standing TO-DO** (§8) rather than deleted, and is guarded by `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` |
+| 1 | `OEW/W_TO = A·W_TO^C` cited to **"Raymer 6th ed, Table 6.1"** (old `:81`, `:88`) | Code cites **`[Raymer 6th ed. Table 3.1]`**, and its four coefficient rows match `metabook_data.md:20-26` exactly. **Table 6.1's coefficients are not in this repo at all.** This subplan's own Table 6.1 line was the *sole* source of that claim; it is kept here as a **standing TO-DO** (§8) rather than deleted, and is guarded by `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` |
 | 2 | L2 = "Raymer eq 6.1 multi-parameter regression", `OEW = W_TO·(a + b·W_TO^c1·AR^c2·(T/W)^c3·(W/S)^c4·M_max^c5)·K_vs` with a 7-coefficient jet-fighter row | **No such method exists and none was ever built.** L2 is Raymer **Table 15.2** surface density (psf × area) plus the metabook Sec. 7 fractions (§5.2). No `AR`, no `T/W`, no `W/S` enters L2 weights |
 | 3 | Fuselage = "Raymer eq **15.5**" | Fuselage is **Eq. 15.4**. Eq. 15.5 is the **main landing gear** |
 | 4 | Installed engine = "Raymer **eqs 7.13–7.17**, `W_dry + W_oil + W_starter`" | The engine group is **Eqs. 15.7–15.15** on top of a dry weight from **Eq. 10.10** |

@@ -4,7 +4,7 @@ classdef WeightsL2
 %   Call as WeightsL2.method(...); never instantiated, not in the inheritance
 %   chain. F16WeightsL2 inherits WeightsModelL2 and delegates to these statics.
 %
-%   Structural groups: [Raymer 7th ed. Table 15.2] psf surface densities on
+%   Structural groups: [Raymer 6th ed. Table 15.2] psf surface densities on
 %   real areas. Landing gear, installed engine and all-else-empty: the AE481
 %   metabook Sec. 7 fraction table -- a SEPARATE, unnumbered table, not
 %   Table 15.2, which in the repo extract carries only the psf densities.
@@ -68,7 +68,7 @@ classdef WeightsL2
 
         function rho = wing_unit_weight(aircraft_category)
         %WING_UNIT_WEIGHT  Wing structural surface density [lbf/ft^2].
-        %   [Raymer 7th ed. Table 15.2; metabook_data.md:321 — all three rows]
+        %   [Raymer 6th ed. Table 15.2; metabook_data.md:321 — all three rows]
             switch lower(aircraft_category)
                 case 'jet_fighter',      rho = 9.0;   % fighters [metabook_data.md:321]
                 case 'jet_transport',    rho = 10.0;  % transport/bomber [metabook_data.md:321]
@@ -81,7 +81,7 @@ classdef WeightsL2
 
         function rho = HT_unit_weight(aircraft_category)
         %HT_UNIT_WEIGHT  Horizontal tail structural surface density [lbf/ft^2].
-        %   [Raymer 7th ed. Table 15.2; metabook_data.md:322 — all three rows]
+        %   [Raymer 6th ed. Table 15.2; metabook_data.md:322 — all three rows]
             switch lower(aircraft_category)
                 case 'jet_fighter',      rho = 4.0;   % fighters [metabook_data.md:322]
                 case 'jet_transport',    rho = 5.5;   % transport/bomber [metabook_data.md:322]
@@ -94,7 +94,7 @@ classdef WeightsL2
 
         function rho = VT_unit_weight(aircraft_category)
         %VT_UNIT_WEIGHT  Vertical tail structural surface density [lbf/ft^2].
-        %   [Raymer 7th ed. Table 15.2; metabook_data.md:323 — all three rows]
+        %   [Raymer 6th ed. Table 15.2; metabook_data.md:323 — all three rows]
             switch lower(aircraft_category)
                 case 'jet_fighter',      rho = 5.3;   % fighters [metabook_data.md:323]
                 case 'jet_transport',    rho = 5.5;   % transport/bomber [metabook_data.md:323]
@@ -107,7 +107,7 @@ classdef WeightsL2
 
         function rho = fus_unit_weight(aircraft_category)
         %FUS_UNIT_WEIGHT  Fuselage structural surface density [lbf/ft^2].
-        %   [Raymer 7th ed. Table 15.2; metabook_data.md:324 — all three rows]
+        %   [Raymer 6th ed. Table 15.2; metabook_data.md:324 — all three rows]
             switch lower(aircraft_category)
                 case 'jet_fighter',      rho = 4.8;   % fighters [metabook_data.md:324]
                 case 'jet_transport',    rho = 5.0;   % transport/bomber [metabook_data.md:324]

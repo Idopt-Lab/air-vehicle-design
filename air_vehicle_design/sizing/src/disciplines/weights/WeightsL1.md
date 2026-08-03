@@ -18,7 +18,7 @@ engine data — which is why L1 is the only weights level that injects nothing.
 
 ## 2. Equations
 
-**Central estimate** [Raymer 7th ed. Table 3.1] — the power law returns a *fraction*, and OEW is that
+**Central estimate** [Raymer 6th ed. Table 3.1] — the power law returns a *fraction*, and OEW is that
 fraction times gross weight:
 
 $$\frac{W_e}{W_{TO}} = K_{vs}\,A\,W_{TO}^{\,C}
@@ -35,7 +35,7 @@ magnitude is not an error measure.
 
 ## 3. Coefficients
 
-`lookup_coeffs` [Raymer 7th ed. Table 3.1]:
+`lookup_coeffs` [Raymer 6th ed. Table 3.1]:
 
 | Category | $A$ | $C$ | $K_{vs}$ |
 |---|---|---|---|

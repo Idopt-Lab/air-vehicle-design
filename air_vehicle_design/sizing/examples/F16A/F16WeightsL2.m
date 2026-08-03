@@ -6,7 +6,7 @@ classdef F16WeightsL2 < WeightsModelL2
 %   are duplicated here.
 %
 %   METHOD:
-%     Structural group — Raymer 7th ed. Table 15.2 surface density (psf × area):
+%     Structural group — Raymer 6th ed. Table 15.2 surface density (psf × area):
 %       wing 9, HT 4, VT 5.3 lbf/ft^2 on the EXPOSED planform areas;
 %       fuselage 4.8 lbf/ft^2 on the WETTED area.
 %     Engine + all-else — AE481 metabook Sec. 7 "Fraction-Based Weight
@@ -134,7 +134,7 @@ classdef F16WeightsL2 < WeightsModelL2
         %   examples/F16A/mds/weights_brandt_comparison.md section 5: 13.68% of
         %   Brandt Wt!B12). [Brandt F-16A.xls Main!D18 = 20 ft^2 (planform
         %   reference area) / Wt!H7 = 4.5 lbf/ft^2 (structural surface density)].
-        %   CROSS-MODEL BORROW, DELIBERATE: Raymer 7th ed. Table 15.2 (this
+        %   CROSS-MODEL BORROW, DELIBERATE: Raymer 6th ed. Table 15.2 (this
         %   class's official structural-group source) has NO strake/LERX row --
         %   it is not a category that table's generic aircraft-structure
         %   regression covers. Unlike wing/fuselage/HT/VT (where Brandt's own
@@ -172,9 +172,9 @@ classdef F16WeightsL2 < WeightsModelL2
         W_en_brandt % lbf  ALTERNATE, already installed [Brandt Wt!B11] = 4730.2300 — comparison report only, NEVER summed into OEW
 
         % -- Component / group weights (6) — WeightsModelL2's abstract set -- %
-        W_wings            % lbf  [Raymer 7th ed. Tbl 15.2]  9.0 · S_w        = 1766.03
+        W_wings            % lbf  [Raymer 6th ed. Tbl 15.2]  9.0 · S_w        = 1766.03
         W_tail             % struct(HT, VT) lbf [Tbl 15.2]  4.0·S_ht / 5.3·S_vt = 199.39 / 216.72
-        W_fuselage         % lbf  [Raymer 7th ed. Tbl 15.2]  4.8 · S_wet_fus  = 3505.45
+        W_fuselage         % lbf  [Raymer 6th ed. Tbl 15.2]  4.8 · S_wet_fus  = 3505.45
         W_landing_gear     % lbf  [AE481 metabook Sec. 7]    0.033 · W_TO     = 1035.44 at 31377
         W_installed_engine % lbf  [AE481 metabook Sec. 7]    1.3 · N_en · W_en = 3607.53
         W_all_else_empty   % lbf  [AE481 metabook Sec. 7]    0.17 · W_TO      = 5334.09 at 31377 / 7650.00 at 45000 — ★ this is review finding #5
@@ -231,7 +231,7 @@ classdef F16WeightsL2 < WeightsModelL2
 
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
-        %   [Raymer 7th ed. Table 15.2 + AE481 metabook Sec. 7] + this class's
+        %   [Raymer 6th ed. Table 15.2 + AE481 metabook Sec. 7] + this class's
         %   own strake term (Brandt Main!D18/Wt!H7 -- ADDED 2026-07-29, see the
         %   S_strake/k_strake property comment for why it lives here rather
         %   than in the generic WeightsL2 toolbox: Raymer Table 15.2 has no

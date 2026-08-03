@@ -5,7 +5,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %   satisfied by a single delegation line to WeightsL3 statics — no equations are
 %   duplicated here.
 %
-%   METHOD: Raymer 7th ed. §15.3.1 Fighter/Attack statistical component buildup,
+%   METHOD: Raymer 6th ed. §15.3.1 Fighter/Attack statistical component buildup,
 %   Eqs. 15.1–15.24, plus the dry engine weight from Raymer Eq. 10.10 (which is
 %   NOT a §15.3.1 equation — §15.3.1 supplies the installation hardware on top of
 %   a vendor dry weight).
@@ -35,7 +35,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %   Locked decision (user 2026-07-24, "approach 2"): keep every current code
 %   value — including the two documented code-vs-extract CONFLICTS, Eq. 15.13
 %   N_en^1.023 and Eq. 15.3 cos(Λ_vt)^(-0.323) — re-cite them to a consistent
-%   Raymer 7th ed. §15.3.1 reference, and do NOT declare them book-verified. The
+%   Raymer 6th ed. §15.3.1 reference, and do NOT declare them book-verified. The
 %   complete 62-row checklist and the FROM-CODE / VERIFY / IMAGE-ONLY breakdown
 %   are in WeightsL3.m's header and VnV/BrandtF16A/todo.md 2026-07-24 §3a.
 %   Guard: TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified must stay
@@ -139,12 +139,12 @@ classdef F16WeightsL3 < WeightsModelL3
         % ================================================================== %
         %  LOAD FACTOR, RAYMER CONFIGURATION FLAGS, REQUIREMENTS
         % ================================================================== %
-        N_z         = 13.5  % --   ULTIMATE load factor = 1.5 x 9g limit [T.O. 1F-16A-1 §5; Raymer 7th ed. §15.3.1 defines N_z as ultimate]. ! Do NOT conflate with Brandt's n_ult = 9 [Main!Q27, live-confirmed inside Wt!C9's formula as Main!Q27^0.2] — that is his own psf model's exponent base, a different model
-        K_dw        = 1.0   % --   not a delta wing        [Raymer 7th ed. §15.3.1, Eq. 15.1 flag]
-        K_vs        = 1.0   % --   not variable sweep      [Raymer 7th ed. §15.3.1, Eq. 15.1 flag]
-        K_rht       = 1.047 % --   rolling (all-moving) horizontal tail [Raymer 7th ed. §15.3]. ! Applied in Eq. 15.3 (VT), not Eq. 15.2 — that is how the book prints it, not a mix-up. The JSON keys it under .weights.horizontal_tail because the FLAG describes the HT
-        K_dwf       = 1.0   % --   not a delta-wing fuselage [Raymer 7th ed. §15.3.1, Eq. 15.4 flag]
-        K_vsh       = 1.0   % --   no variable-sweep hydraulics [Raymer 7th ed. §15.3.1, Eq. 15.19 flag]
+        N_z         = 13.5  % --   ULTIMATE load factor = 1.5 x 9g limit [T.O. 1F-16A-1 §5; Raymer 6th ed. §15.3.1 defines N_z as ultimate]. ! Do NOT conflate with Brandt's n_ult = 9 [Main!Q27, live-confirmed inside Wt!C9's formula as Main!Q27^0.2] — that is his own psf model's exponent base, a different model
+        K_dw        = 1.0   % --   not a delta wing        [Raymer 6th ed. §15.3.1, Eq. 15.1 flag]
+        K_vs        = 1.0   % --   not variable sweep      [Raymer 6th ed. §15.3.1, Eq. 15.1 flag]
+        K_rht       = 1.047 % --   rolling (all-moving) horizontal tail [Raymer 6th ed. §15.3]. ! Applied in Eq. 15.3 (VT), not Eq. 15.2 — that is how the book prints it, not a mix-up. The JSON keys it under .weights.horizontal_tail because the FLAG describes the HT
+        K_dwf       = 1.0   % --   not a delta-wing fuselage [Raymer 6th ed. §15.3.1, Eq. 15.4 flag]
+        K_vsh       = 1.0   % --   no variable-sweep hydraulics [Raymer 6th ed. §15.3.1, Eq. 15.19 flag]
 
         design_mach = 2.0   % --   design maximum Mach. From f16a_requirements.json, NOT .weights: it is an aircraft REQUIREMENT. Feeds Eq. 15.3's M^0.341, Eq. 15.17's M^0.003 AND Raymer Eq. 10.10's M^0.25 — it was never a vertical-tail input, which is why .weights.vertical_tail.M_design was deleted as a duplicate. [Brandt Main! aircraft.Mmax = 2.0; GroundTruth/f16a_geometry.json:9] ★ NOT the T.O. 1F-16A-1 operating Mach LIMIT 2.05 [GroundTruth/f16a_ground_truth.json:228]; 2.0 != 2.05 (-2.44 %), live W_en sensitivity +0.62 %. todo §P4-13
         cruise_altitude_ft = 36000 % ft  cruise altitude at which SFC_mission is evaluated. From f16a_requirements.json [Brandt Consts! row 24 cruise condition, pct_AB = 0 i.e. dry/mil; GroundTruth/f16a_ground_truth.json .propulsion.thrust_lapse_at_constraint_conditions cruise row, live-verified 2026-07-24]
@@ -156,23 +156,23 @@ classdef F16WeightsL3 < WeightsModelL3
         N_l   = 2.67  % --  landing load factor  [standard military; verify T.O. §5 — estimate, unpinned]
         L_m   = 5.5   % ft  main-gear extended strut length [estimate, unpinned]. ! Converted to INCHES (x12) inside WeightsL3.weight_landing_gear per Raymer's Eq. 15.5 nomenclature
         L_n   = 3.5   % ft  nose-gear extended strut length [estimate, unpinned]; same inch conversion (Eq. 15.6)
-        K_cb  = 1.0   % --  not carrier-based    [Raymer 7th ed. §15.3.1, Eq. 15.5 flag]
-        K_tpg = 1.0   % --  not kneeling gear    [Raymer 7th ed. §15.3.1, Eq. 15.5 flag]
+        K_cb  = 1.0   % --  not carrier-based    [Raymer 6th ed. §15.3.1, Eq. 15.5 flag]
+        K_tpg = 1.0   % --  not kneeling gear    [Raymer 6th ed. §15.3.1, Eq. 15.5 flag]
         N_nw  = 1     % --  number of nose wheels [T.O. 1F-16A-1]
 
         % ================================================================== %
         %  ENGINE SECTION INPUTS  (T_max, W_en are DERIVED by propulsion DI)
         % ================================================================== %
         N_en  = 1     % --  number of engines [T.O. 1F-16A-1]. Not derivable: no propulsion class exposes an engine count (todo 2026-07-25 Phase 2 §22)
-        S_fw  = 0     % ft^2 firewall area — no piston firewall on a jet, so Eq. 15.8 returns 0 [Raymer 7th ed. §15.3.1]
+        S_fw  = 0     % ft^2 firewall area — no piston firewall on a jet, so Eq. 15.8 returns 0 [Raymer 6th ed. §15.3.1]
         D_e   = 3.33  % ft  engine exit-nozzle diameter, ~40 in [estimate, unpinned]. ⚠ A cited geometry analog EXISTS with a different value — geom.D_exit = 3.537022 — and wiring it is an OPEN decision worth +24.94 lbf on OEW (todo §P4-4). Deliberately NOT wired this phase
         L_tp  = 4.5   % ft  tailpipe length      [estimate, unpinned]; no repo geometry analog
         L_sh  = 8.0   % ft  engine shroud length [estimate, unpinned]; no analog
         L_ec  = 5.0   % ft  engine-controls run  [estimate, unpinned]; no analog
         L_d   = 7.5   % ft  inlet duct length    [estimate, unpinned]. ⚠ A cited geometry analog EXISTS with a very different value — geom.L_duct = 14.0 [Brandt Main!F32], +86.7 %, worth +201.47 lbf on OEW — and wiring it is an OPEN decision (todo §P4-4). Deliberately NOT wired this phase
         L_s   = 3.0   % ft  splitter/bypass length [estimate, unpinned]. ⚠ L_s = 0 makes Eq. 15.10's (L_s/L_d)^(-0.373) = Inf; left UNGUARDED by decision 6 (todo §P4-11)
-        K_vg  = 1.0   % --  fixed-geometry inlet [Raymer 7th ed. §15.3.1, Eq. 15.10 flag]
-        K_d   = 1.0   % --  duct-shape flag [Raymer 7th ed. §15.3.1; "use 1.0 as baseline; verify from §15.3.1"]. ★ K_d = 0 is documented in WeightsL3.air_induction as the legitimate STRAIGHT-DUCT value, and 0^0.182 = 0, so that legal input SILENTLY ZEROES the entire 227.54 lbf air-induction component — no error, no warning, not even a NaN (L3 OEW would read 15477.79 instead of 15705.33). NO GUARD IS ADDED, by explicit user decision 6 (2026-07-25), and this description is deliberately not softened. §P4-11 stays OPEN
+        K_vg  = 1.0   % --  fixed-geometry inlet [Raymer 6th ed. §15.3.1, Eq. 15.10 flag]
+        K_d   = 1.0   % --  duct-shape flag [Raymer 6th ed. §15.3.1; "use 1.0 as baseline; verify from §15.3.1"]. ★ K_d = 0 is documented in WeightsL3.air_induction as the legitimate STRAIGHT-DUCT value, and 0^0.182 = 0, so that legal input SILENTLY ZEROES the entire 227.54 lbf air-induction component — no error, no warning, not even a NaN (L3 OEW would read 15477.79 instead of 15705.33). NO GUARD IS ADDED, by explicit user decision 6 (2026-07-25), and this description is deliberately not softened. §P4-11 stays OPEN
 
         % ================================================================== %
         %  SYSTEMS INPUTS  (SFC_mission is DERIVED by propulsion DI)
@@ -189,7 +189,7 @@ classdef F16WeightsL3 < WeightsModelL3
         L_a   = 10.0  % ft  electrical lead length [estimate, unpinned]
         N_gen = 1     % --  number of generators [T.O. 1F-16A-1]
         W_uav = 1500  % lbf UNINSTALLED avionics weight [estimate, unpinned; F-16 Block 10 simple suite]
-        K_mc  = 1.0   % --  <= 2 generators [Raymer 7th ed. §15.3.1, Eq. 15.20 flag]
+        K_mc  = 1.0   % --  <= 2 generators [Raymer 6th ed. §15.3.1, Eq. 15.20 flag]
 
         % ================================================================== %
         %  STRAKE (LERX), ADDED 2026-07-29
@@ -367,7 +367,7 @@ classdef F16WeightsL3 < WeightsModelL3
 
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
-        %   [Raymer 7th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10] + this class's
+        %   [Raymer 6th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10] + this class's
         %   own strake term (Brandt Main!D18/Wt!H7 -- ADDED 2026-07-29, see the
         %   S_strake/k_strake property comment for why it lives here rather
         %   than in the generic WeightsL3 toolbox: §15.3.1 has no strake
@@ -489,7 +489,7 @@ classdef F16WeightsL3 < WeightsModelL3
             v = obj.geom.LE_sweep_vt;
         end
         function v = get.H_t(obj)
-            v = obj.geom.H_t;              % 0 — conventional (non-T) tail [Raymer 7th ed. §15.3]
+            v = obj.geom.H_t;              % 0 — conventional (non-T) tail [Raymer 6th ed. §15.3]
         end
         function v = get.H_v(obj)
             % 1 — "any nonzero denominator" for Eq. 15.3's (1 + H_t/H_v)^0.5.

@@ -8,7 +8,7 @@ classdef F16WeightsL1 < WeightsModelL1
 %   METHODS (both statistical regressions on takeoff gross weight):
 %     (1) Raymer Table 3.1 power law:  We/Wto = K_vs · A · W_TO^C
 %         Central estimate.  jet_fighter: A = 2.34, C = -0.13, K_vs = 1.00.
-%         [Raymer 7th ed. Table 3.1]  ** OEW delegates to this one. **
+%         [Raymer 6th ed. Table 3.1]  ** OEW delegates to this one. **
 %     (2) Roskam Eq. 2.16 log-log:     W_E_min = 10^((log10(W_TO)-A)/B)
 %         MINIMUM achievable W_E — a lower bound, never summed into OEW.
 %         jet_fighter: A = 0.5091, B = 0.9505.
@@ -110,12 +110,12 @@ classdef F16WeightsL1 < WeightsModelL1
         % ================================================================== %
 
         function oew = OEW(obj, W_TO)
-        %OEW  Operating empty weight [lbf].  [Raymer 7th ed. Table 3.1]
+        %OEW  Operating empty weight [lbf].  [Raymer 6th ed. Table 3.1]
             oew = WeightsL1.OEW(obj, W_TO);
         end
 
         function frac = compute_We_fraction(obj, W_TO, aircraft_category)
-        %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 7th ed. Table 3.1]
+        %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 6th ed. Table 3.1]
         %   The optional third argument overrides obj.aircraft_category.
             if nargin < 3
                 aircraft_category = obj.aircraft_category;

@@ -4,7 +4,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %   Tests: WeightsL1 (static toolbox) + F16WeightsL1 (student class).
 %
 %   TWO L1 METHODS tested here:
-%     (1) Raymer 7th ed. Table 3.1 power law -- central estimate
+%     (1) Raymer 6th ed. Table 3.1 power law -- central estimate
 %         (We/Wto = Kvs * A * W_TO^C).  OEW delegates to this one.
 %     (2) Roskam Part I Eq. 2.16 log-log   -- MINIMUM achievable W_E bound.
 %
@@ -150,7 +150,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
             frac = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 31377);
             tc.verifyEqual(frac, 0.60905389, 'RelTol', 1e-5, ...
                 ['We/Wto must equal 1.00*2.34*31377^(-0.13) = 0.60905389 ' ...
-                 '[Raymer 7th ed. Tbl 3.1; metabook_data.md:22].']);
+                 '[Raymer 6th ed. Tbl 3.1; metabook_data.md:22].']);
         end
 
         function testWeRoskamHandComputed(tc)
@@ -210,7 +210,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
             g = TestWeightsL1.makeW1();
             tc.verifyEqual(g.OEW(31377), 19110.284, 'RelTol', 1e-5, ...
                 ['L1 OEW(31377) must equal (1.00*2.34*31377^-0.13)*31377 = ' ...
-                 '19110.284 lbf [Raymer 7th ed. Tbl 3.1; metabook_data.md:22].']);
+                 '19110.284 lbf [Raymer 6th ed. Tbl 3.1; metabook_data.md:22].']);
         end
 
         function testRoskamBoundHandComputed(tc)

@@ -22,15 +22,15 @@ classdef (Abstract) WeightsModelL2 < WeightsBase
 
     methods (Abstract)
 
-        %WEIGHT_WING  [Raymer 7th ed. Table 15.2]
+        %WEIGHT_WING  [Raymer 6th ed. Table 15.2]
         %   W_TO is accepted for API consistency but does not enter the formula.
         W = weight_wing(obj, W_TO)
 
-        %WEIGHT_TAIL  Struct with fields HT and VT.  [Raymer 7th ed. Table 15.2]
+        %WEIGHT_TAIL  Struct with fields HT and VT.  [Raymer 6th ed. Table 15.2]
         %   W_TO is accepted for API consistency but does not enter the formula.
         W = weight_tail(obj, W_TO)
 
-        %WEIGHT_FUSELAGE  On WETTED area.  [Raymer 7th ed. Table 15.2]
+        %WEIGHT_FUSELAGE  On WETTED area.  [Raymer 6th ed. Table 15.2]
         %   W_TO is accepted for API consistency but does not enter the formula.
         W = weight_fuselage(obj, W_TO)
 

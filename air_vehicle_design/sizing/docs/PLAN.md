@@ -260,10 +260,12 @@ See [subplans/04_propulsion.md](subplans/04_propulsion.md). **STOP after tests p
 See [subplans/05_weights.md](subplans/05_weights.md) — rewritten to as-built 2026-07-25.
 **STOP after tests pass.**
 
-As built (Phase-4 redesign, 2026-07-25): L1 = `[Raymer 7th ed. Table 3.1]` power law +
-`[Roskam Part I Eq. 2.16]` minimum bound; L2 = `[Raymer 7th ed. Table 15.2]` psf × area +
-`[AE481 metabook Sec. 7]` fractions; L3 = `[Raymer 7th ed. §15.3.1, Eqs. 15.1–15.24]` component
-build-up on a `[Raymer 7th ed. Eq. 10.10]` dry engine weight. `OEW(31377)` = 19110.3126 (L1) /
+As built (Phase-4 redesign, 2026-07-25; edition citations corrected 2026-07-30 against the physical
+6th ed. PDF, pp. 572-574 -- Eqs. 15.1-15.24 confirmed verbatim there): L1 = `[Raymer 6th ed. Table 3.1]`
+power law + `[Roskam Part I Eq. 2.16]` minimum bound; L2 = `[Raymer 6th ed. Table 15.2]` psf × area +
+`[AE481 metabook Sec. 7]` fractions; L3 = `[Raymer 6th ed. §15.3.1, Eqs. 15.1–15.24]` component
+build-up on a `[Raymer 7th ed. Eq. 10.10]` dry engine weight (7th ed. confirmed correct for this one
+equation only, per Sarojini). `OEW(31377)` = 19110.3126 (L1) /
 15664.6483 (L2) / 15705.3313 (L3) lbf against `Brandt Wt!B12` = 19980.700578.
 Property split: L1 5 inputs / 0 derived; L2 7 inputs + 2 injected objects / 12 `Dependent`;
 L3 43 inputs + 2 injected objects / 31 `Dependent`.

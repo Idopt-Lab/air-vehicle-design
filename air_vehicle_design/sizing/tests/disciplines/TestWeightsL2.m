@@ -4,7 +4,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %   Tests: WeightsL2 (static toolbox) + F16WeightsL2 (student class).
 %
 %   METHOD, and the two source tables it mixes:
-%     (a) Raymer 7th ed. Table 15.2 surface density (psf x area) for structure:
+%     (a) Raymer 6th ed. Table 15.2 surface density (psf x area) for structure:
 %         wing 9.0, HT 4.0, VT 5.3 lbf/ft^2 on the EXPOSED planform areas;
 %         fuselage 4.8 lbf/ft^2 on the WETTED area.
 %     (b) AE481 metabook Sec. 7 "Fraction-Based Weight Estimates" (a SEPARATE,

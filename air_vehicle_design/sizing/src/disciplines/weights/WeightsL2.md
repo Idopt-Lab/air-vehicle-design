@@ -18,7 +18,7 @@ landing gear, installed engine and all-else-empty.
 
 ## 2. Equations
 
-**Structural groups** [Raymer 7th ed. Table 15.2], surface density on real areas:
+**Structural groups** [Raymer 6th ed. Table 15.2], surface density on real areas:
 
 $$W_{wing} = \rho_w S_w \qquad
   W_{HT} = \rho_{ht} S_{ht} \qquad

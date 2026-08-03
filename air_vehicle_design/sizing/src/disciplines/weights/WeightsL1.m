@@ -4,7 +4,7 @@ classdef WeightsL1
 %   Call as WeightsL1.method(...); never instantiated, not in the inheritance
 %   chain. F16WeightsL1 inherits WeightsModelL1 and delegates to these statics.
 %
-%   Central estimate: [Raymer 7th ed. Table 3.1] empty-weight-fraction power
+%   Central estimate: [Raymer 6th ed. Table 3.1] empty-weight-fraction power
 %   law. Independent lower bound: [Roskam Part I Eq. 2.16 with Table 2.15].
 %   Both take only W_TO -- L1 has no geometry and no engine data.
 %
@@ -27,7 +27,7 @@ classdef WeightsL1
 
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] via the Raymer Table 3.1 power law.
-        %   [Raymer 7th ed. Table 3.1]  The OFFICIAL L1 answer — see the class
+        %   [Raymer 6th ed. Table 3.1]  The OFFICIAL L1 answer — see the class
         %   header for why the Raymer central estimate is used here rather than
         %   the Roskam lower bound.
         %   W_TO — candidate gross weight [lbf].
@@ -35,7 +35,7 @@ classdef WeightsL1
         end
 
         function frac = compute_We_fraction(obj, W_TO, aircraft_category)
-        %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 7th ed. Table 3.1]
+        %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 6th ed. Table 3.1]
         %   aircraft_category defaults to obj.aircraft_category when omitted.
             if nargin < 3
                 aircraft_category = obj.aircraft_category;
@@ -58,7 +58,7 @@ classdef WeightsL1
 
         function frac = We_fraction_power_law(Kvs, A, C, W_TO)
         %WE_FRACTION_POWER_LAW  We/Wto = K_vs · A · W_TO^C.
-        %   [Raymer 7th ed. Table 3.1; metabook_data.md:20-26]
+        %   [Raymer 6th ed. Table 3.1; metabook_data.md:20-26]
         %   Kvs  — variable-sweep factor: 1.04 (VS) or 1.00 (fixed) [metabook_data.md:20-22].
         %   A, C — category constants from Raymer Table 3.1.
         %   W_TO — takeoff gross weight [lbf].
@@ -81,7 +81,7 @@ classdef WeightsL1
         %   temp_AI/docs/disciplines/reference_extracts/metabook_data.md, which
         %   is the AE481 metabook's copy of Raymer Table 3.1 (a SECONDARY
         %   source citing Raymer, not Raymer itself).
-        %   [! verify all rows against the printed Raymer 7th ed. Table 3.1
+        %   [! verify all rows against the printed Raymer 6th ed. Table 3.1
         %      before citing as book-verified — todo §P4-8]
         %   A is the US-unit coefficient (the extract also lists A (SI), unused).
         %   K_vs = 1.00 fixed sweep / 1.04 variable sweep [metabook_data.md:20-22];
@@ -91,13 +91,13 @@ classdef WeightsL1
         %   for completeness rather than added speculatively.
             switch lower(aircraft_category)
                 case 'jet_fighter'
-                    c = struct('A', 2.34, 'C', -0.13, 'Kvs', 1.00); % [Raymer 7th ed. Tbl 3.1; metabook_data.md:22]
+                    c = struct('A', 2.34, 'C', -0.13, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:22]
                 case 'military_cargo_bomber'
-                    c = struct('A', 0.93, 'C', -0.07, 'Kvs', 1.00); % [Raymer 7th ed. Tbl 3.1; metabook_data.md:23]
+                    c = struct('A', 0.93, 'C', -0.07, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:23]
                 case 'jet_transport'
-                    c = struct('A', 1.02, 'C', -0.06, 'Kvs', 1.00); % [Raymer 7th ed. Tbl 3.1; metabook_data.md:24]
+                    c = struct('A', 1.02, 'C', -0.06, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:24]
                 case 'jet_trainer'
-                    c = struct('A', 1.59, 'C', -0.10, 'Kvs', 1.00); % [Raymer 7th ed. Tbl 3.1; metabook_data.md:26]
+                    c = struct('A', 1.59, 'C', -0.10, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:26]
                 otherwise
                     error('WeightsL1:UnknownCategory', ...
                           'Unknown aircraft_category "%s". Add row to lookup_coeffs.', ...

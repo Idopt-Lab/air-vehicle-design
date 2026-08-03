@@ -4,7 +4,7 @@ Level-3 weights static toolbox (`classdef WeightsL3`, `methods (Static)` only). 
 `WeightsL3.method(...)`; never instantiated and not in the inheritance chain. `F16WeightsL3` inherits
 `WeightsModelL3` and delegates here.
 
-**L3 is the [Raymer 7th ed. Sec. 15.3.1] fighter/attack component buildup** — Eqs. 15.1–15.24, one
+**L3 is the [Raymer 6th ed. Sec. 15.3.1] fighter/attack component buildup** — Eqs. 15.1–15.24, one
 equation per component, grouped into structural / landing gear / engine / systems.
 
 ---

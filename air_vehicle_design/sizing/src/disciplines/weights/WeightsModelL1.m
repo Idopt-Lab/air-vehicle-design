@@ -19,7 +19,7 @@ classdef (Abstract) WeightsModelL1 < WeightsBase
 
     methods (Abstract)
 
-        %COMPUTE_WE_FRACTION  OEW/W_TO fraction.  [Raymer 7th ed. Table 3.1]
+        %COMPUTE_WE_FRACTION  OEW/W_TO fraction.  [Raymer 6th ed. Table 3.1]
         %   aircraft_category is optional; defaults to obj.aircraft_category.
         OEW_frac = compute_We_fraction(obj, W_TO, aircraft_category)
 

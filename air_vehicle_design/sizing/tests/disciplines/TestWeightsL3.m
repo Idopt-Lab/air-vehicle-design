@@ -3,7 +3,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %
 %   Tests: WeightsL3 (static toolbox) + F16WeightsL3 (student class).
 %
-%   METHOD: Raymer 7th ed. Sec. 15.3.1 Fighter/Attack statistical component
+%   METHOD: Raymer 6th ed. Sec. 15.3.1 Fighter/Attack statistical component
 %   buildup, Eqs. 15.1-15.24, plus the dry engine weight from Raymer Eq. 10.10
 %   (NOT a Sec. 15.3.1 equation -- Sec. 15.3.1 supplies the installation
 %   hardware on top of a vendor dry weight).
@@ -39,9 +39,11 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   ======================================================================== %
 %
 %   ! STANDING TO-DO, NOT CLEARED: EVERY Sec. 15.3.1 EXPONENT IS UNVERIFIED
-%   AGAINST THE BOOK (2 code-vs-extract CONFLICTS, 9 FROM-CODE, 24 [verify],
-%   27 IMAGE-ONLY -- the 62-row checklist is VnV/BrandtF16A/todo.md 2026-07-24
-%   Sec. 3a). Locked decision (user 2026-07-24, "approach 2"): keep every code
+%   AGAINST THE BOOK (2 code-vs-extract CONFLICTS, 8 FROM-CODE, 26 [verify],
+%   26 IMAGE-ONLY -- the 62-row checklist is VnV/BrandtF16A/todo.md 2026-07-24
+%   Sec. 3a; counts corrected 2026-07-30 by a direct recount of the recovered
+%   table -- the previous 9/24/27 figures summed to 67, not the table's
+%   actual 62 rows). Locked decision (user 2026-07-24, "approach 2"): keep every code
 %   value, re-cite consistently, do NOT declare them book-verified. The
 %   hand-computed tests below therefore verify that the code EVALUATES the
 %   equation it documents -- they do NOT and cannot verify that the documented
@@ -987,17 +989,23 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %                     N_en^1.023 (extract 1.078) and Eq. 15.3
         %                     cos(Lambda_vt)^-0.323 (extract -1.0). At N_en = 1
         %                     the first is numerically invisible on the F-16A.
-        %     FROM-CODE (9)   absent from the extract entirely; the value comes
+        %     FROM-CODE (8)   absent from the extract entirely; the value comes
         %                     from this project's prior WeightLevel3.m, not the
         %                     book -- Eq. 15.10 N_en^1.498, (L_s/L_d)^-0.373 and
         %                     the linear D_e; Eq. 15.14 N_en^1.008, L_ec^0.222;
         %                     Eq. 15.17 N_c^0.127; Eq. 15.5 L_m^0.973;
-        %                     Eq. 15.6 N_nw^0.525.
-        %     VERIFY (24)     present in raymer_data.md but OCR-flagged.
-        %     IMAGE-ONLY (27) Eqs. 15.1-15.7; no equation-page image exists in
+        %                     Eq. 15.6 N_nw^0.525. (8 items enumerated here;
+        %                     corrected 2026-07-30 from a previously-claimed 9)
+        %     VERIFY (26)     present in raymer_data.md but OCR-flagged.
+        %     IMAGE-ONLY (26) Eqs. 15.1-15.7; no equation-page image exists in
         %                     this repo, so a former claim that they had been
         %                     "re-verified letter-for-letter" was not checkable
-        %                     and has been withdrawn.
+        %                     and has been withdrawn. (Counts corrected
+        %                     2026-07-30 by a direct recount of the recovered
+        %                     62-row table; the previous 24/27 figures, plus a
+        %                     separately-claimed "5 extract-clean" that does
+        %                     not appear as its own row category, summed to
+        %                     67, not 62.)
         %   Plus two Eq. 15.1 specifics: tc_root^-0.4's superscript is illegible
         %   in the printed line-wrap, and the sweep STATION (LE vs quarter-chord)
         %   is unresolved.
@@ -1012,7 +1020,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   statement stands the checklist is open and this test is red.
         %
         %   HOW TO RESOLVE: work todo.md 2026-07-24 Sec. 3a against the printed
-        %   Raymer 7th ed. Sec. 15.3.1, record the verification, then rewrite
+        %   Raymer 6th ed. Sec. 15.3.1, record the verification, then rewrite
         %   WeightsL3.m's header. Do NOT change any exponent VALUE to make this
         %   green (the two CONFLICTs are locked at their code values), and do NOT
         %   delete the header statement without doing the verification.
