@@ -29,6 +29,10 @@ this part exist?" and "where is this requirement satisfied?".
 | **L** – Logical | ✅ Done | `logical/F16A_Logical.slx` (9 roles, 3 presenting technology-neutral **kinds** — the choice between them is decided at P; allocation set with 14 edges) |
 | **P** – Physical | ✅ Done | `physical/F16A_Physical.slx` (**30 components**, incl. 7 parameterized candidates across 3 variant roles; **trade study** that scores them, decides, and writes the decision back to L and to REQ_F16A_L01–L03; realization allocation with 14 edges; mass/materials/fuel roll-ups; OEW & cost MoMs; REQ_022 & REQ_P01 *verified by* tests) |
 
+Three requirements carry a "verified by" test, and they are in **three different states** — met,
+evaluated-and-violated, and not evaluated at all. Two of the three are red, for reasons that are not
+the same reason; [see below](#three-requirements-three-verification-states).
+
 ## Documentation map
 
 | Document | Contents |
@@ -58,7 +62,8 @@ mbse/examples/f16a/
 │   ├─ f16a_logical_derived.slreqx       logical decision requirements (L01–L03)
 │   ├─ generate_f16a_logical_derived_requirements.m
 │   ├─ f16a_physical_derived.slreqx      physical-layer requirements (P01: fuel volume)
-│   └─ generate_f16a_physical_derived_requirements.m
+│   ├─ generate_f16a_physical_derived_requirements.m
+│   └─ F16ARequirementsTest.m            unit tests for the R layer
 ├─ architecture/                         F layer
 │   ├─ F16A_Functional.slx               System Composer model
 │   ├─ F16A_Functional.sldd              interface dictionary (FlightState, EngagementData)
@@ -100,7 +105,15 @@ mbse/examples/f16a/
 │                                        (touches no model — runs on a bare checkout)
 └─ verification/                         requirement-verification tests (own folder)
     ├─ F16AMaterialsVerificationTest.m   "verified by" test for REQ_F16A_022 (composite ≤ 20%)
-    ├─ F16AFuelVerificationTest.m        "verified by" test for REQ_F16A_P01 (fuel volume) — fails until /sizing/
+    ├─ F16AFuelVerificationTest.m        "verified by" test for REQ_F16A_P01 (fuel volume) — red BY
+    │                                    DESIGN and permanently, because nothing is computed yet
+    │                                    (D-042): the requirement is UNEVALUATED
+    ├─ F16AStaticMarginVerificationTest.m
+    │                                    "verified by" test for REQ_F16A_025 (static margin negative,
+    │                                    ≥ −6 %MAC); the only verification that leaves the MBSE model,
+    │                                    reading /sizing/ read-only through a PathFixture. 2 pass,
+    │                                    1 red BY DESIGN: the requirement IS evaluated and IS
+    │                                    VIOLATED at landing (D-051) — a different red from the above
     └─ *VerificationTest~m.slmx          manual verify link sets (requirement → test)
 ```
 
@@ -160,6 +173,15 @@ systemcomposer.openModel("F16A_Logical")
 systemcomposer.openModel("F16A_Physical")
 systemcomposer.allocation.editor            % inspect the allocation matrices (F→L and L→P)
 F16APhysicalMassRollup                       % print the mass roll-up and OEW
+runtests("F16ARequirementsTest")             % 9 tests — machinery: the R layer's four requirement
+                                             % sets are built correctly. The bans (no vendor or
+                                             % programme token, no decimal literal in the decision
+                                             % requirements), the keyword rules (`todo` marks
+                                             % exactly the 11 student exercises AS A SET; no
+                                             % `verify` keyword anywhere), REQ_025's criterion and
+                                             % its D-030 Estimate label, REQ_026's `minimize`, the
+                                             % 35/10/4/2 item counts over 51 unique ids, and
+                                             % Summary/Description/Rationale on every non-container
 runtests("F16AFunctionalArchitectureTest")
 runtests("F16ALogicalArchitectureTest")      % 15 tests — machinery: the L model is built correctly
 runtests("F16APhysicalArchitectureTest")     % 39 tests — machinery: the P model is built correctly,
@@ -170,9 +192,48 @@ runtests("F16APhysicalTradeGuardsTest")      % 32 cases (19 methods, 3 parameter
                                              % guards still REFUSE what they exist to refuse.
                                              % Needs no project and no models: it tests a pure class
 runtests("F16AMaterialsVerificationTest")    % REQ_F16A_022 met (composite ≤ 20%) — passes
-runtests("F16AFuelVerificationTest")         % REQ_F16A_P01 — FAILS on purpose (mission-fuel
-                                             % stub) until /sizing/ is connected
+runtests("F16AStaticMarginVerificationTest") % 3 tests — 2 PASS, 1 FAILS BY DESIGN. REQ_F16A_025
+                                             % wants a negative static margin (≥ −6 %MAC) at both
+                                             % ends of the CG range: takeoff meets it at −0.2602
+                                             % %MAC, landing VIOLATES it at +0.2065 %MAC (D-051).
+                                             % Reads /sizing/ read-only. The third test,
+                                             % testAnalysisProducedUsableMargins, still PASSES —
+                                             % which is how you know the red is a real violation
+                                             % and not a broken analysis
+runtests("F16AFuelVerificationTest")         % REQ_F16A_P01 — FAILS BY DESIGN, but NOT for the same
+                                             % reason: the mission-fuel analysis is a permanent stub
+                                             % (D-042), so nothing was computed and the requirement
+                                             % is UNEVALUATED, not violated
 ```
+
+**Two of those reds are by design, and they are different reds.** The whole sweep is **106 cases with
+2 intentional failures**; a run that reports "2 tests fail" and nothing else has lost the point.
+
+### Three requirements, three verification states
+
+| Requirement | Test | State | What it teaches |
+|---|---|---|---|
+| `REQ_F16A_022` composite ≤ 20% | `F16AMaterialsVerificationTest` | 🟢 **met** | the requirement holds, and the evidence is a roll-up over the model itself |
+| `REQ_F16A_P01` fuel volume | `F16AFuelVerificationTest` | 🔴 **unevaluated** | verification is set up, linked and traceable — but the required side is `NaN`, so *nothing has been checked yet* (D-042) |
+| `REQ_F16A_025` static margin | `F16AStaticMarginVerificationTest` | 🔴 **violated** | the requirement *was* evaluated, against a real number, and **the design does not meet it** (D-051) |
+
+A requirement can be met, not met, or not yet judged — and a red square tells you which only if you
+read why. The example shipped the first and the third state for a long time and called them
+"green" and "the failing test". `REQ_F16A_025` supplies the middle one: **evaluated, and unsatisfied**,
+which is the state a real programme spends most of its life in and the one nothing else here shows.
+
+Two consequences worth holding on to:
+
+- **A pending verification is not a failing design; a failing verification is not a broken tool.**
+  `REQ_F16A_P01` says nothing at all about the fuel system's adequacy. `REQ_F16A_025` says something
+  quite specific about the aircraft's balance.
+- **`testAnalysisProducedUsableMargins` passing is what separates them.** It was built (D-047) so that
+  *"the aircraft violates `REQ_F16A_025`"* and *"the analysis that evaluates it is broken"* could never
+  arrive looking identical — a check the example previously described and never had to use. It is
+  green while its two siblings split 1–1, so the landing margin is a number the model really produced.
+- **The landing failure is a property of the reference model, not of the F-16A.** Brandt's neutral
+  point is a simplified approximation, and the CG crosses it as fuel burns off. See
+  [`01_requirements.md`](01_requirements.md#025) before quoting it as a fact about the aeroplane.
 
 The P layer's tests are split three ways on purpose, and each split has a reason:
 
@@ -183,9 +244,11 @@ The P layer's tests are split three ways on purpose, and each split has a reason
   refuse. Proving that inside the trade study would mean running a script that writes two models and
   a requirement set — and it would pass right up until the guard was deleted, then write a wrong
   decision into the repo. See [`05_physical.md`](05_physical.md#verification).
-- The two `*VerificationTest` files — **requirement verification**, referenced by the Verify links.
-  Each requirement's Verify link points to its **own** file, so `REQ_F16A_022`'s verifier is
-  all-green and `REQ_F16A_P01`'s intentional failure stays isolated.
+- The three `*VerificationTest` files — **requirement verification**, referenced by the Verify links.
+  Each requirement's Verify link points to its **own** file, which is what keeps the two by-design
+  reds **isolated and legible**: `REQ_F16A_022`'s verifier stays all-green, and `REQ_F16A_P01`'s
+  pending state and `REQ_F16A_025`'s violation are each reported by the suite that owns them. One
+  combined suite would report "2 failures" and hide the fact that they mean different things.
 
 ## Reviewing requirement traceability
 
@@ -193,7 +256,9 @@ To see **Implemented by / Verified by** links in the Requirements Editor, load t
 first — then open the editor:
 
 ```matlab
-F16AOpenForReview      % loads the 3 models + 4 requirement sets, opens the Requirements Editor
+F16AOpenForReview      % loads the 3 models, the 4 requirement sets and every verification link set,
+                       % prints which requirements are verified and which test still needs a hand
+                       % link, then opens the Requirements Editor
 ```
 
 This matters because of how Requirements Toolbox stores links. An **Implement** link
@@ -210,21 +275,47 @@ so their links live in the **L model's** link set — not the P model's, and not
 ### Verification links are added manually (known issue)
 
 The **generators create Implement links only.** The **"Verified by" links must be added by hand** in
-the Requirements Editor. In R2026a the programmatic `slreq` API can't create a working "Verified by"
-for a MATLAB unit test on its own — a MATLAB test file can't be a link *source*, and the working
-"Verified by" relies on the project's **Digital Thread artifact tracking** (a manual project
-setting, enabled from the project's *requirements/traceability* settings). So each time you add a
-verified requirement, link it manually to its verification test:
+the Requirements Editor, and the reason is a single R2026a tool limitation: **a MATLAB test file
+cannot be a link *source***, so the programmatic `slreq` API cannot mint a working "Verified by" for
+a unit test on its own. So each time you add a verified requirement, link it manually to its
+verification test:
 
-| Requirement | Link "Verified by" to |
-|-------------|-----------------------|
-| `REQ_F16A_022` (composite ≤ 20%) | `F16AMaterialsVerificationTest` |
-| `REQ_F16A_P01` (fuel volume) | `F16AFuelVerificationTest` |
+| Requirement | Link "Verified by" to | State |
+|-------------|-----------------------|-------|
+| `REQ_F16A_022` (composite ≤ 20%) | `F16AMaterialsVerificationTest` | linked |
+| `REQ_F16A_P01` (fuel volume) | `F16AFuelVerificationTest` | linked |
+| `REQ_F16A_025` (static margin negative, ≥ −6 %MAC) | `F16AStaticMarginVerificationTest` | linked (2026-08-03) |
+
+All three are now linked, so this table has no outstanding row — but it stays, because the *reason*
+it exists has not gone away: the next verified requirement will need the same hand-made link.
+
+**A red test is still a linked test, and that is the point of linking them.** `REQ_F16A_P01` and
+`REQ_F16A_025` both fail by design, and both are traceable from the requirement to the evidence that
+judged it. Verification traceability records *that the requirement was checked* — not that it passed.
 
 Each verification test is a single, self-contained suite that checks exactly that one requirement,
-so it is safe to run as the requirement's verification. The generator prints this reminder and never
-touches the requirement-set link sets, so a manual verify link is **not** overwritten by
-regeneration.
+so it is safe to run as the requirement's verification.
+
+**A hand-made link is not fragile.** The generator prints this reminder and never touches the
+requirement-set link sets, and the links survive a rebuild: measured after regenerating all four
+requirement sets, `REQ_F16A_022` and `REQ_F16A_P01` still report `Implement, Verify`. `slreq.new`
+builds a fresh set, but with the requirement ids and their order unchanged the hand-made links still
+resolve. Regeneration is therefore not a reason to defer making one.
+
+**When a Verify link seems to be missing, it is usually not loaded.** A link lives in the link set of
+the artifact that *makes* it — the same rule the Implement links above illustrate — so a Verify link
+made from a MATLAB test lives in `verification/<TestName>~m.slmx`, and until that set is loaded the
+requirement reads Implement-only. Loading those sets is what `F16AOpenForReview` is for. This one is
+measured rather than reasoned: with the project's **Digital Thread artifact tracking** enabled, the
+links still did not appear until each `~m.slmx` was explicitly `slreq.load`-ed — so the project
+setting is not what makes them work.
+
+`F16AOpenForReview` **globs** `verification/*~m.slmx` rather than naming link sets, and then reports
+what it found by reading the artifacts: which requirements carry a Verify link, and which
+`*VerificationTest.m` has none on disk. No requirement id and no test name is typed into it. So the
+table above and the tool cannot drift apart — the `025` link was made on 2026-08-03, its
+`F16AStaticMarginVerificationTest~m.slmx` appeared beside the other two, and the glob picks it up with
+no edit to any file. The next verification test arrives the same way.
 
 ## Prerequisites
 

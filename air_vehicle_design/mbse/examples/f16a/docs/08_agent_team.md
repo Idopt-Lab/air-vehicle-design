@@ -57,8 +57,9 @@ This file is the **single source of truth for house rules**. Every agent reads i
 
 ## R2026a API findings (Stage-0 probe)
 
-Measured on this machine with a throwaway model, not recalled from documentation. These drive real
-design choices, so they are recorded here rather than buried in a comment.
+Measured on this machine — the Stage-0 rows on a throwaway model, the later ones on the example's own
+artifacts — not recalled from documentation. These drive real design choices, so they are recorded
+here rather than buried in a comment.
 
 | # | Question | Finding | Consequence |
 |---|---|---|---|
@@ -70,6 +71,7 @@ design choices, so they are recorded here rather than buried in a comment.
 | 6 | Reaching a variant's choices (Stage 1) | `getChoices(vc)` is the **only** reliable accessor. `vc.Architecture.Components` returned the 2 choices on a freshly built in-memory model but **0** on the same model saved and reloaded | Any architecture-side walk — generator, roll-up fallback, test, component count — must special-case a `VariantComponent` and use `getChoices` (or `getActiveChoice` when it wants the active configuration only). A recursion over `.Architecture.Components` will silently skip every candidate on a loaded model |
 | 7 | String properties (Stage 1) | A string stereotype property stores its default/value as a MATLAB **expression**: write `"'TBD'"`, and `getProperty` hands back `'TBD'` **with the quotes** | Write quoted, read with `erase(…, "'")` — the same convention the `MeasureOfMerit.Goal` property and its test already use |
 | 8 | What the flattened variant node *holds* (Stage 3) | Finding 3 said the active choice node is elided; measured further: the variant's instance node then **carries the active choice's own property value**, including when that choice is a **leaf**. `Engine ▽ → F100_PW_200` reports 4730.23 lb at the `…/Propulsion/Engine` instance node | The mass roll-up needed **no change** to become an active-configuration roll-up across three new variation points — `rd(S+"Airframe")` and `rd(S+"Propulsion/Engine")` keep working verbatim. Had it gone the other way, both leaf candidates would have contributed 0 and OEW would have read 14,778.06 lb |
+| 9 | Does regenerating a requirement set orphan a **hand-made Verify link**? (Stage 2) | **No.** All four sets were rebuilt through `slreq.new`, and `REQ_F16A_022` and `REQ_F16A_P01` still reported `Implement, Verify` afterwards: with requirement ids and their order unchanged, the links held in `verification/*~m.slmx` still resolve. Confirmed by a second route: **every SID was preserved**, sid↔customId identical old-vs-new in all four sets — which is why the links held, and the boundary of the guarantee. Measured alongside it — nothing *loads* those sets automatically: not opening the models, and not the project's Digital Thread artifact tracking. Only an explicit `slreq.load` does | A hand-made Verify link may be made **before** the next rebuild; re-linking need not be paired with regeneration, which is how TODO A2b/B3 had been sequenced. And a Verify link that looks missing is almost always one whose link set is unloaded — the job `F16AOpenForReview` exists to do |
 
 Pre-existing gotchas that still hold: connect ports with the **two-argument** `connect(src,dst)`;
 unload allocation sets and profiles *before* closing models/dictionaries in a generator's cleanup;

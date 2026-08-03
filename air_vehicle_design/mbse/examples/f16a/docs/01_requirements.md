@@ -85,45 +85,57 @@ conditions the aircraft must sustain (`Ps = 0`) or the field lengths it must mee
 | 022 | Materials | Composite fraction ≤ 20% (Al 65 / CF 20 / Ti 10 / Steel 5 / FG 0) |
 | 023 | Balance | Tipback angle — **deliberately blank; student exercise** (D-046) |
 | 024 | Balance | Rollover angle — **deliberately blank; student exercise** (D-046) |
-| 025 | Stability & Control | Static margin `SM = (x_np − x_cg)/MAC` within **−6 … +1 %MAC** — relaxed static stability |
+| 025 | Stability & Control | Static margin `SM = (x_np − x_cg)/MAC` shall be **negative**, and not below −6 %MAC — relaxed static stability. **The reference model violates it at landing** (D-051) |
 | 026 | Cost | Unit flyaway cost — **Measure of Merit (minimize)**, homed at the Physical layer |
 
 **26 requirements total** across 8 concern containers.
 
-#### `023` and `024` — the blanks *are* the assignment
+#### `025`
 
-They are not an omission waiting to be closed. Brandt's model computes a tipback angle and a
-rollover angle, but it states them in conventions that do not obviously match the USAF/USN limits
-they would be checked against — and working out whether they do, then naming and bounding the
-quantity correctly, **is the exercise** (**D-046**). Writing values in would take it away. Both keep
-their `todo` keyword and their `TBD` text on purpose, and the `rollover` → `overturn` rename is
-deferred with them, because calling Brandt's quantity "the overturn angle" would assert the very
-identification that is in doubt. The nine derived functional requirements `REQ_F16A_D01`–`D09` are
-blank for the same reason (**D-045**; see [`03_traceability.md`](03_traceability.md)).
+**D-051 replaces D-046's two-sided band, and the requirement now fails.** The criterion is
 
-#### `025` — no longer a placeholder
+> **−6 %MAC ≤ `SM` < 0** across the operational CG range — negative at takeoff **and** at landing.
 
-D-046 gave it a real, two-sided, checkable band:
+Upper bound **strict**, lower bound **inclusive**. The strict zero is not a threshold anyone chose:
+a negative static margin — CG aft of the neutral point — is what relaxed static stability *is*. That
+is why D-046's `+1 %MAC` allowance had to go, because it let a conventionally stable aeroplane satisfy
+a requirement written to exclude one. The `−6 %MAC` floor stays, capping instability at what the
+flight control system is assumed able to stabilize; without a floor an arbitrarily unstable design
+would pass, and `REQ_F16A_L02`'s fly-by-wire justification quietly assumes the instability is
+*bounded*.
 
-> The static margin `SM = (x_np − x_cg)/MAC` shall lie between **−6 %MAC** and **+1 %MAC** across
-> the operational CG range (takeoff through landing weight).
+**The reference model meets it at takeoff and violates it at landing** —
+`verification/F16AStaticMarginVerificationTest.m` runs **2 pass, 1 fail**, by design and permanently:
 
-The band is asymmetric on purpose. The negative lower bound is the design intent — a near-neutral to
-slightly unstable configuration cuts trim drag and buys instantaneous turn rate, and is flyable only
-because the flight control system supplies artificial stability, which is the same fact
-`REQ_F16A_L02`'s fly-by-wire decision turns on. The `+1 %MAC` upper bound caps how *stable* the
-aircraft may become; without it a conventionally stable aeroplane would satisfy a requirement whose
-whole purpose is to exclude one. `verification/F16AStaticMarginVerificationTest.m` checks both
-CG-range endpoints against the band and passes 3/3 (**D-047**).
+| Condition | Weight (lb) | `x_cg` (ft) | End of CG range | `SM` (%MAC) | `REQ_F16A_025` |
+|---|---|---|---|---|---|
+| Takeoff | 31,377 (the sizing point) | 26.1979 | **aft** | **−0.2602** | met |
+| Landing | 20,677.61 (derived by `run`) | 26.1451 | **forward** | **+0.2065** | **VIOLATED** |
 
-**At what weight, and which end of the CG range.** `SM_TO` is evaluated at the sizing point
-`W_TO` = 31,377 lb. `SM_land` is **not** — `BrandtBalanceStabControl.run` builds the landing case
-itself, by zeroing the expendable payload and all three fuel thirds.
+`x_np` = 26.1684 ft falls between the two endpoints, so the CG **crosses the neutral point** during the
+mission and the two margins straddle zero. Burning fuel and releasing stores moves the CG *forward*,
+so landing is the forward, most-stable end — the end where this requirement bites.
 
-| Condition | Weight (lb) | `x_cg` (ft) | End of CG range |
-|---|---|---|---|
-| Takeoff | 31,377 (the sizing point) | 26.1979 | **aft** |
-| Landing | 20,677.61 (derived by `run`) | 26.1451 | **forward** |
+**This is the example's third verification state, and it was built on purpose.** `REQ_F16A_022` is
+met. `REQ_F16A_P01` is red because nothing has been computed (D-042) — *unevaluated*. `REQ_F16A_025`
+is red because something **was** computed and the design does not meet it — *violated*. Those are
+different facts wearing the same colour, and the distinction is the lesson; see
+[`README.md`](README.md#three-requirements-three-verification-states). Two earlier decisions had a run
+at this: D-044 wanted `REQ_F16A_024` to be *"the example's first requirement the reference aircraft does
+not meet"*, and D-046 set that aside — correctly, since the gear-angle conventions are ambiguous —
+but widened `025` until the reference figure fitted inside it, and the lesson went with it. D-051
+takes the criterion the physics implies and accepts the red.
+
+**The two ends of the requirement do not have the same standing.**
+
+| End | Criterion | Provenance |
+|---|---|---|
+| Upper, `< 0` | the sign of the margin | **definition** — relaxed static stability *is* negative static margin. Not a figure, nothing to tag |
+| Lower, `−6 %MAC` | how unstable is too unstable | **`Estimate`** — uncited, inventoried in **D-030**, and the price of the requirement meaning anything at the unstable end |
+
+**At what weight.** `SM_TO` is evaluated at the sizing point `W_TO` = 31,377 lb. `SM_land` is **not** —
+`BrandtBalanceStabControl.run` builds the landing case itself, by zeroing the expendable payload and
+all three fuel thirds.
 
 Landing weight derives two independent ways: `W_empty` 19,977.61 + `perm_payload` 700, and `W_TO`
 31,377 − `exp_payload` 4,400 − `W_fuel` 6,299.39. Substituting the *validation-target* fuel figure
@@ -133,32 +145,42 @@ do not "correct" this derivation from the target column.
 The ordering is counter-intuitive and easy to get backwards — it *was* backwards in the verification
 test until Stage 1. Landing CG is 0.0528 ft **forward** of takeoff, so **takeoff is the aft end** of
 the operational range: expendable payload and fuel sit at ~26.3 ft, aft of the CG, so releasing and
-burning them moves it forward. `x_np` = 26.1684 ft falls between the two endpoints, which is why the
-two margins straddle zero.
+burning them moves it forward. Getting this backwards inverts which end fails.
 
-> **The band is design intent tagged `Estimate`, not sourced data.** −6 %MAC carries no citation:
-> `/sizing/` has no static-margin criterion, no specification is quoted, and nothing computes it. It
-> has no stereotype and therefore no `DataProvenance` slot, so it is inventoried in **D-030**'s table
-> of invented numbers instead (**D-048**) — the first *requirement threshold* in that table rather
-> than a component property. The reference model meets the band from the **stable** end
-> (`SM_TO` = −0.2602 %MAC, `SM_land` = +0.2065 %MAC): it does **not** reproduce the strongly relaxed
-> static stability the F-16A is generally described as having. The −6 %MAC figure is an illustrative
-> teaching value, not sourced data (D-030). A pass here is not evidence to the contrary.
+> **⚠ The landing violation is a property of the reference model, not of the F-16A.** Brandt's neutral
+> point is a simplified approximation (`readme_bsc.md`: *"a simplified neutral point"*, *"the fuselage
+> destabilizing correction is simplified to a width-scaled offset"*), so the model lands near neutral
+> and drifts *stable* as fuel burns off. It does **not** reproduce
+> the strongly relaxed static stability the F-16A is generally described as having.
+> The −6 %MAC figure is an illustrative teaching value, not sourced data (D-030).
+> So the red at landing is evidence that the requirement and its verification work — **not** a finding
+> about the aeroplane, and not something to quote as one.
+>
+> *(Both sentences above are D-048's canonical wording, kept unwrapped so they stay greppable. Improve
+> the prose around them, not them — see TODO **A14**.)*
+>
+> The `−6 %MAC` floor itself carries no citation: `/sizing/` has no static-margin criterion, no
+> specification is quoted, and nothing computes it. It has no stereotype and therefore no
+> `DataProvenance` slot, so it is inventoried in **D-030**'s table of invented numbers instead
+> (**D-048**) — the first *requirement threshold* in that table rather than a component property.
+> D-051 narrowed that row: the `+1 %MAC` end left the model, the `−6 %MAC` end did not.
 
-**What the shipped artifact currently holds** — ⚠ *delete this paragraph when the requirement set is
-regenerated; it describes a state that regeneration ends.* The band lives in the **generator**, and
-the `requirements/f16a.slreqx` committed to this repository still carries the pre-D-046 text: *"a
-static margin between TBD %MAC and TBD %MAC"*, keyword `todo`. Regenerating it is not a one-file
-re-run — `slreq.new` builds a fresh set, so every Implement link from F, L and P has to be rebuilt
-with it, i.e. the whole chain in the README's *Regenerate the artifacts*. Outstanding work, tracked as
-TODO **B3** step 1.
-
-**The Verify link is a separate gap, and it is durable.** `REQ_F16A_025` →
-`F16AStaticMarginVerificationTest` has to be added **by hand** in the Requirements Editor, because in
-R2026a a MATLAB test file cannot be a link *source* — the same tool limitation that already applies to
+**The Verify link was hand-made, and it holds.** `REQ_F16A_025` → `F16AStaticMarginVerificationTest`
+had to be added **by hand** in the Requirements Editor (done 2026-08-03), because in R2026a a MATLAB
+test file cannot be a link *source* — the same tool limitation that produced the hand-made links on
 `REQ_F16A_022` and `REQ_F16A_P01` (see [`README.md`](README.md), *"Verification links are added
-manually"*). Regenerating the requirement set does **not** create it, so this sentence outlives the
-paragraph above.
+manually"*). All three verified requirements are now linked.
+
+What is durable is that limitation, **not** a risk of losing the links you make. Measured after the
+full seven-generator rebuild of all four requirement sets: `REQ_F16A_022` and `REQ_F16A_P01` both
+still report `Implement, Verify`. `slreq.new` builds a fresh set, but with the requirement ids and
+their order unchanged the hand-made links still resolve, so regeneration does not orphan them — which
+is why rewording `025` under D-051 does not cost it the link it just gained.
+
+**And note what the link now records.** `REQ_F16A_025` is *verified by* a test it **fails**. That is
+not a contradiction: a Verify link records that the requirement is checked and by what, never that the
+check passed. A requirement with no link and a requirement with a red link are very different states,
+and only one of them is a gap.
 
 #### `026` and `022` — an objective and a real constraint
 

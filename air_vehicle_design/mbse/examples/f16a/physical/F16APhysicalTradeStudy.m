@@ -644,18 +644,23 @@ end
 function txt = winnerSentence(rc, win, rup, n, score, V, w, crit, keptIdx, ...
     critText, reqId, kindName)
 %WINNERSENTENCE What the winner says about itself afterwards. Three sentences.
-%   Verdict, score, rank, margin over the NAMED runner-up, and the criterion
-%   that carried it against that rival -- plus what it trailed on and won
-%   anyway, which is the engine trade's whole lesson. Naming the rival is what
-%   keeps the claim honest: decisiveness is rival-relative, and D-034 says why.
+%   THE MARGIN IS DECOMPOSED INTO EVERY KEPT CRITERION, so the terms printed in
+%   the sentence add up to the margin printed in the same sentence and a reader
+%   can check it without re-running the trade. That closure is the property to
+%   protect here: drop a term to shorten this and the sentence starts
+%   contradicting itself. Naming the rival keeps the claim honest -- decisiveness
+%   is rival-relative, and D-034 says why.
 d = w .* (V(win,:) - V(rup,:));
-[dName, dDelta] = decisiveCriterion(V, w, crit, keptIdx, win, rup);
-trails = otherCriteria(d, crit, keptIdx, dName, @(x) x < 0);
+dName = decisiveCriterion(V, w, crit, keptIdx, win, rup);
+% Every kept criterion, in declared order (the order printRole's columns use).
+% The "" excludes nothing: this is the whole decomposition, not a selection.
+terms  = otherCriteria(d, crit, keptIdx, "", @(x) true);
+trails = criteriaNamesWhere(d, crit, keptIdx, @(x) x < 0);
 
 txt = "Trade study: SELECTED (rank 1 of " + n + "), score " + fmtScore(score(win)) + ...
     " against " + fmtScore(score(rup)) + " for runner-up " + rc(rup).Name + ", margin " + ...
-    fmtDelta(score(win) - score(rup)) + "; decided against that rival by " + dName + ...
-    " (" + fmtDelta(dDelta) + ")";
+    fmtDelta(score(win) - score(rup)) + " = " + terms + "; decided against that rival by " + ...
+    dName;
 if strlength(trails) > 0
     txt = txt + ", despite trailing it on " + trails;
 end
@@ -666,19 +671,26 @@ end
 function txt = loserSentence(rc, i, win, n, score, rankOf, V, w, crit, keptIdx, ...
     critText, reqId)
 %LOSERSENTENCE What a rejected candidate says about itself afterwards. Three sentences.
-%   THIS IS HOP 2 OF THE D-049 TRAIL and the only place a rejected option's
-%   reasoning exists: the requirement it was sent to poses the question and
-%   holds no verdict (D-040). So rank, deficit, the criterion it lost most on,
-%   and what it still leads the winner on all have to survive here (D-002).
+%   HOP 2 OF THE D-049 TRAIL, and the only place a rejected option's reasoning
+%   exists anywhere: DecisionRef sends a losing kind to a requirement that poses
+%   the question and holds no answer (D-040), so the trail ends at this string.
+%   The deficit therefore DECOMPOSES INTO EVERY KEPT CRITERION and the printed
+%   terms sum to the printed deficit -- drop one to shorten this and the single
+%   artifact an auditor has stops adding up (D-002). Signs are this candidate's
+%   own, it minus the winner, and the sentence says so: decomposed with the
+%   WINNER's signs every term would flip and the total would still look right.
 d = w .* (V(i,:) - V(win,:));
-[worst, kk] = min(d);
-wName = crit(keptIdx(kk)).Name;
-leads = otherCriteria(d, crit, keptIdx, wName, @(x) x > 0);
+[~, kk] = min(d);
+wName  = crit(keptIdx(kk)).Name;
+% Same two calls, same reasons, as winnerSentence: the whole decomposition,
+% then names only for the clause that follows it.
+terms  = otherCriteria(d, crit, keptIdx, "", @(x) true);
+leads  = criteriaNamesWhere(d, crit, keptIdx, @(x) x > 0);
 
 txt = "Trade study: NOT SELECTED (rank " + rankOf(i) + " of " + n + "), score " + ...
     fmtScore(score(i)) + " against " + fmtScore(score(win)) + " for the selected " + ...
-    rc(win).Name + ", deficit " + fmtDelta(score(i) - score(win)) + "; lost most on " + ...
-    wName + " (" + fmtDelta(worst) + ")";
+    rc(win).Name + ", deficit " + fmtDelta(score(i) - score(win)) + ...
+    " (this candidate minus the winner) = " + terms + "; lost most on " + wName;
 if strlength(leads) > 0
     txt = txt + ", though it leads the winner on " + leads;
 end
@@ -688,12 +700,27 @@ end
 
 % =====================================================================
 function s = otherCriteria(d, crit, keptIdx, excludeName, test)
-%OTHERCRITERIA "Mass_lb (+0.0181), Benefit (-0.0200)" for the criteria that pass TEST.
+%OTHERCRITERIA "Mass_lb (+0.01813), Benefit (-0.02000)" for the criteria that pass TEST.
+%   Pass excludeName = "" and a test of @(x) true to get the WHOLE
+%   decomposition, which is what winnerSentence's margin closure needs.
 parts = strings(1,0);
 for kk = 1:numel(keptIdx)
     nm = crit(keptIdx(kk)).Name;
     if nm == excludeName || ~test(d(kk)); continue; end
     parts(end+1) = nm + " (" + fmtDelta(d(kk)) + ")";   %#ok<AGROW>
+end
+s = strjoin(parts, ", ");
+end
+
+% =====================================================================
+function s = criteriaNamesWhere(d, crit, keptIdx, test)
+%CRITERIANAMESWHERE "Benefit" -- the NAMES of the criteria whose delta passes TEST.
+%   Names only, no numbers: winnerSentence has already printed every delta in
+%   its margin decomposition, and reprinting one two clauses later is the
+%   padding this file just spent a pass removing.
+parts = strings(1,0);
+for kk = 1:numel(keptIdx)
+    if test(d(kk)); parts(end+1) = crit(keptIdx(kk)).Name; end   %#ok<AGROW>
 end
 s = strjoin(parts, ", ");
 end

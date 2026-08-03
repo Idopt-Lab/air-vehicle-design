@@ -49,27 +49,41 @@ Line 118: *"Project health is confirmed by `runChecks(currentProject)` (12/12 pa
 shipped state measured **10/12**; after A1/A1b it is genuinely **12/12**, so the line is true
 again. No edit needed — but re-verify if the project file set is ever trimmed.
 
-### A2b · The "Verified by" links do not appear, and the project is not why
+### ~~A2b · The "Verified by" links do not appear, and the project is not why~~ — FIXED, Stage 2
 
-`F16AOpenForReview` loads the three models and four requirement sets, but never loads the two
+As found: `F16AOpenForReview` loaded the three models and four requirement sets, but never the two
 `~m.slmx` link sets in `verification/`. So `REQ_F16A_022` and `REQ_F16A_P01` show **Implement
 only** in the Requirements Editor — the manual Verify links the README tells you to make are
 present and correct on disk, but invisible.
 
 Tested cold (index deleted) with the verification files in the project and out of it: membership
-makes **no** difference. The fix is two lines in `F16AOpenForReview.m`:
+makes **no** difference. It also means `docs/README.md` was misleading where it attributed the
+working Verify link to "the project's Digital Thread artifact tracking (a manual project setting)":
+artifact tracking is enabled, and the links still do not load without an explicit `slreq.load`.
 
-```matlab
-slreq.load(fullfile(thisDir,"verification","F16AMaterialsVerificationTest~m.slmx"));
-slreq.load(fullfile(thisDir,"verification","F16AFuelVerificationTest~m.slmx"));
+**The shape of the fix is not what this item first prescribed** — it asked for **two literal
+`slreq.load` lines**, one per link set. That is *not* what was built, and the difference matters:
+`F16AOpenForReview` **globs** `verification/*~m.slmx` instead
+of naming link sets, so a link set that does not exist yet cannot break the load, and a new
+verification test needs no edit here. It then **reports what it found** by reading the artifacts —
+which requirements carry a Verify link, and which `*VerificationTest.m` has none on disk. No
+requirement id and no test name is typed into the file. Measured output today:
+
+```
+Loaded 3 models, 4 requirement sets, 2 verification link set(s).
+Verified by a test: REQ_F16A_022, REQ_F16A_P01.
+Still to link BY HAND in the Requirements Editor: F16AStaticMarginVerificationTest (no link set on disk).
 ```
 
-Verified: with these, both requirements report `Implement, Verify`.
+The bare-checkout case was tested too, both link sets moved aside: it degrades cleanly to *"Verified
+by a test: none"*, lists all three tests, and does not error. When the `025` link is made, the third
+id joins line 2 and line 3 disappears — with no edit to any file. **Nothing enumerates link sets any
+more**, so this item cannot go stale again as verification tests are added.
 
-This also means `docs/README.md:210–216` is misleading where it attributes the working Verify
-link to "the project's Digital Thread artifact tracking (a manual project setting)". Artifact
-tracking is enabled in the project, and the links still do not load without the explicit
-`slreq.load`.
+The wrong explanation is also out of `docs/README.md`: *"Verification links are added manually"* now
+gives the link-set-of-the-making-artifact rule, states that artifact tracking is measurably not what
+makes the links work, and describes the glob-and-report shape. **D3** below can drop its "the
+explanation is wrong" clause.
 
 ### A3 · `docs/02_functions.md` still says the trade study lives at L
 
@@ -365,9 +379,10 @@ Static analysis over all 13 `.m` files is otherwise clean. What it reports:
   `.keys` and `results(char(role))` call sites move with it.
 - **Not a defect:** `generate_f16a_physical.m:993` "format might not agree with the argument count" is
   a false positive — 6 conversion specs, 6 arguments; the analyzer cannot resolve the `fmt` variable.
-- **Coverage gap worth a decision some day:** F, L and P each have an architecture test suite.
-  `generate_f16a_requirements.m` — 26 requirements, the provenance root of everything downstream — has
-  **none**. Not urgent, but it is the one layer whose output nothing asserts.
+- **~~Coverage gap worth a decision some day~~ — being closed, Stage 2:** F, L and P each have an
+  architecture test suite; `generate_f16a_requirements.m` — 26 requirements, the provenance root of
+  everything downstream — had **none**. `requirements/F16ARequirementsTest.m` (`f16a-vnv`) is the R
+  layer's first suite. Register it in `f16a.prj` and re-run `runChecks` expecting 12/12.
 
 ### A11 · Rename `architecture/` → `functions/` — DECIDED (**D-039**)
 
@@ -420,6 +435,114 @@ RFLP letter's concern is visible in the filesystem.
 
 **Give this its own stage and its own gate.** It touches the project registry, which is the one thing in
 this example that has drifted before. Do not bundle it with A2b/A3.
+
+---
+
+> **A12–A13 come from `f16a-data`'s Stage-2 audit (2026-08-02).** Both are **byte-identical to HEAD**
+> — pre-existing, not Stage 2 regressions, and neither blocked that gate. Neither is in any other
+> register.
+
+### A12 · `PhysicalItem` declares no `DataProvenance` — and it is the stereotype holding OEW
+
+`physical/F16A_PhysicalProps.xml` declares `PhysicalItem { Mass_lb }` and nothing else. So **14 of the
+16 mass-bearing leaves that sum to OEW = 19,980.73 lb carry no provenance tag at all.** Only
+`F100_PW_200` and `FlyByWire` are tagged, and only incidentally — they also carry `TradeCandidate`,
+which declares its own `DataProvenance`.
+
+This is the gap **D-023** closed for `FuelTank` and **D-031** closed for `Material`, left one
+stereotype over — the one holding the example's headline figure. The whole claim of this example is
+that every number says where it came from. The number on the front page does not.
+
+**The values are fine; only the claim is missing.** `f16a-data` traced all 14 to
+`sizing/VnV/BrandtF16A/BrandtWeight.m` — `W_wing` 1785.95, `W_fuse` 3652.11, `W_pitch` 648.00,
+`W_vert` 360.00, `W_nacelles` 186.82, `W_strakes` 90.00, `W_gear` 1066.82, `W_elec` 533.41, `W_hyd`
+367.11, `W_ECS` 360.84, `W_other` 2016.86, `W_avionics` 2541.54, `W_armament` 440.00 — plus
+`W_inlet_duct` 728.60 from `readme_wt.md` §5.10 (`Wt!B24`). Every one is `Reference`. Nothing to
+re-derive; the model simply does not say so.
+
+**Sequencing — your call, not ours.** **A4** / **D-036** makes `F16APhysicalArchitectureTest` read
+these same masses from `BrandtWeight.m` directly. Adding the property in that stage lands the test
+that *proves* they are `Reference` together with the property that *claims* it. The alternative is to
+tag them now and let the proof follow.
+
+### A13 · Two seed rationale narratives make unsourced claims about real hardware
+
+The per-candidate `Rationale.Justification` narratives seeded by `generate_f16a_physical.m` — the text
+after the `||` — are clean on **five of the seven** candidates: they describe generic architecture
+kinds, and their checkable claims are model-backed (`FlyByWire`'s *"the lightest candidate"* is
+472.44 lb against 700 ✓). The two that name **real hardware** are not.
+
+| Candidate | Claim | Why it does not hold |
+|---|---|---|
+| `F100_PW_200` | *"high-bypass-for-its-class"*, *"a thrust-to-weight above one"* | Number-shaped with **no backing property** — P carries no thrust anywhere, so these trace to nothing |
+| `F100_PW_200` | *"already in production and already qualified"*, *"Its appeal is maturity and installed mass, not peak thrust"* | Uncited, and restates the model's own `TRL` 8 as fact about the real engine — **D-030** inventories TRL as judgement on a declared scale that "traces to nothing" |
+| `F110_GE_100` | *"the higher-thrust single-engine candidate"*, *"a wider stall-free operating margin"* | Same missing property; neither thrust nor stall margin exists at P |
+| `F110_GE_100` | *"a maturity level that does not yet support a production commitment"* | Same TRL-as-fact problem, from `TRL` 4 |
+
+This is the **Stage-0 veto category** — claims about a real aircraft carried on evidence that does not
+support them — sitting in a field nobody had audited: `docs/` and this register mention
+`Rationale.Justification` **nowhere**.
+
+**What it wants** (`f16a-physical`): a citation or a hedge on each claim, and a decision-log entry
+recording which was chosen. Not urgent and not a gate blocker, but it is the one place in the example
+where real hardware is described on the model's own invented scale.
+
+### A14 · Two agents paraphrased the same canonical sentence in one stage — FINDING, open question
+
+D-048 part 3 requires **one canonical sentence, verbatim, everywhere the −6 %MAC figure is mentioned**:
+
+> `The -6 %MAC figure is an illustrative teaching value, not sourced data (D-030).`
+
+In Stage 2 it was rewritten **twice, independently**: by `f16a-requirements` in the requirement
+`Description`, and by `f16a-vnv` in the test help block. Both were caught and reverted. **Neither
+author saw the other's copy.**
+
+**A third was suspected and disproved, and that is worth keeping.** `f16a-scribe`'s copy in
+`docs/01_requirements.md` was reported as a third paraphrase; it was **verbatim and correct all
+along**, and counted zero only because it was **line-wrapped across two lines** and the grep that
+looked for it did not normalize whitespace. The count went into this entry before the measurement was
+rechecked — in a register that exists to insist numbers are traceable, which is why it is corrected
+here in full rather than quietly.
+
+**Why review does not catch the real ones.** Both paraphrases were *improvements* — shorter, better
+fitted to their context, more informative in isolation. Nothing looks wrong on the page. The failure
+is only visible across artifacts, which is the one view no single agent has.
+
+**The guard coverage is one-sided:**
+
+| Site | Guarded by |
+|---|---|
+| `REQ_F16A_025` `Description` (`generate_f16a_requirements.m`) | **`F16ARequirementsTest`** — fired on its first stage of existence, and caught the paraphrase there |
+| `F16AStaticMarginVerificationTest.m` help block | nothing — the second paraphrase, caught by review |
+| `docs/01_requirements.md` | nothing — held anyway, but nothing was watching it |
+| `TODO.md` (×2) | nothing |
+| `docs/07_decision_log.md` (×3) | nothing — **and correctly so:** the log is append-only history, so its copies are dated quotations, not live text. A checker must **exempt** it |
+
+**Three ways an ad-hoc grep gets canonical text wrong — two false negatives and a false positive.**
+This trio is the most reusable thing in this entry:
+
+| # | Trap | Wrong answer it gives |
+|---|---|---|
+| 1 | **Line wrap.** A verbatim copy split across two lines matches no single-line pattern | **False negative** — a correct copy is reported missing (this is what produced the phantom third paraphrase) |
+| 2 | **Minus sign.** Markdown carries `−6 %MAC` (U+2212); MATLAB source carries `-6 %MAC` (ASCII), and must | **False negative** — a grep for either form finds only its half of the copies |
+| 3 | **Reading a miss as a rewrite.** Traps 1 and 2 return "not found", which looks identical to "someone paraphrased it" | **False positive** — a paraphrase is recorded where none happened |
+
+So: keep canonical text **unwrapped** at every site, and any checker must normalize whitespace **and**
+the minus sign before comparing. Trap 3 is the reason this needs a real check rather than a grep: an
+ad-hoc grep is exactly what a careful person reaches for, and it was wrong here in both directions
+within one stage.
+
+**Open question — where does a cross-artifact canonical-text check live?** `f16a-vnv` correctly
+declined to build one inside a verification suite: a requirement-verification test asserting the
+wording of a doc file is the wrong home, and the check spans `requirements/`, `verification/`,
+`docs/` and this file. Candidates: extend `F16ARequirementsTest` (already owns the one working guard,
+but it is an R-layer suite); a new project-level `F16ADocConsistencyTest`; or a build-tool/`buildfile`
+check. **Whoever decides also decides the scope** — this sentence only, or every phrase the log
+declares canonical. Not urgent; nothing is currently wrong. But nothing has changed about the
+mechanism: **two independent paraphrases in one stage**, every unguarded site still unguarded, and the
+only copy that held is the only one a test was watching — which fired on its first stage of existence.
+The corrected count does not weaken that. If anything trap 3 above strengthens it, since the
+alternative to a real checker is the ad-hoc grep that got this entry's own number wrong.
 
 ---
 
@@ -495,7 +618,25 @@ number in a real model's clothes (D-005, D-030).
 The applied trade weights therefore stay `0.50 / 0.25 / 0.25` **permanently**. (This also removes the
 reason I gave for sequencing A6 before B2 — see *Suggested order*.)
 
-### B3 · `REQ_F16A_023 / 024 / 025` — DECIDED (**D-046**): **only `025` gets criteria** · `025` **BUILT** (**D-047**)
+### B3 · `REQ_F16A_023 / 024 / 025` — DECIDED (**D-046**): **only `025` gets criteria** · `025` **BUILT** (**D-047**) · **`025`'s criterion REVISED and now FAILING (D-051)**
+
+> ### ⚠ Everything below about `025`'s **two-sided band** is superseded — **D-051, 2026-08-03**
+>
+> The criterion is now **`−6 %MAC ≤ SM < 0`**: negative at **both** ends of the CG range, upper bound
+> strict, lower bound inclusive. Three things in the account below are no longer true, and they are
+> left in place because the reasoning that got there is worth reading:
+>
+> | Below it says | Now |
+> |---|---|
+> | the band is `−6 … +1 %MAC` | the `+1 %MAC` allowance is **gone** — a positive margin is a violation. `−6 %MAC` is unchanged |
+> | *"Both are inside [−6, +1], so the requirement is met at both ends"* | `SM_TO` = −0.2602 %MAC **meets**; `SM_land` = +0.2065 %MAC **VIOLATES**. The verification is **2 pass / 1 fail, by design** |
+> | D-030 inventories `−6 %MAC / +1 %MAC` | the row is **narrowed**, not retired: `+1 %` left the model, `−6 %` is still live and still `Estimate` |
+>
+> **Why**, in one line: the example taught *met* (`022`) and *unevaluated* (`P01`, D-042) and had no
+> requirement that is **evaluated and not met** — the state a real programme lives in. D-044 wanted
+> `024` to carry that lesson, D-046 correctly withdrew `024` and then widened `025` until the
+> reference figure fitted inside it, and the lesson went with it. D-051 takes it back.
+> The three-state distinction is documented in `docs/README.md` and `docs/01_requirements.md`.
 
 The definition check flagged below was accepted. Rather than resolve the gear-angle conventions now,
 **the ambiguity becomes the assignment.**
@@ -504,7 +645,7 @@ The definition check flagged below was accepted. Rather than resolve the gear-an
 |---|---|---|
 | `023` tipback angle | **No criteria.** Stays a placeholder — student exercise | stays |
 | `024` rollover/overturn angle | **No criteria.** Stays a placeholder — student exercise | stays |
-| `025` static margin | **Real, checkable requirement** — see below | **comes off** |
+| `025` static margin | **Real, checkable requirement** — see below. **Criterion revised by D-051; the reference model now fails it at landing** | **comes off** |
 
 **`023` / `024` — nothing is written in.** The USAF 16–25° tipback band and the 63° / 54° USAF / USN
 overturn limits do **not** go into the model. They join `REQ_F16A_D01`–`D09` (D-045) as standing
@@ -601,19 +742,39 @@ never asked for, making results depend on suite order.
    D-046), `docs/01_requirements.md` (*`025` — no longer a placeholder*, **added Stage 1**, when `025`
    stopped being described as a placeholder), and this register. One wording, so they cannot drift into five different hedges.
    D-048 part 3 needs no amendment — it states a universal rule and lists no sites, so a fifth site
-   satisfies it. **Only the shipped `.slreqx` still has the old text** — which is step 1, and is why
-   step 1 must not be skipped.
-1. **Regenerate `requirements/f16a.slreqx`.** The shipped set still reads `TBD`; only the generator has
-   the band. This is **not** a one-file re-run: `slreq.new` builds a fresh set, so the F/L/P models'
-   Implement links resolve into the old one — the **whole documented chain** in README "Regenerate the
-   artifacts" has to run. Heavy and artifact-writing, so left as a deliberate step.
-2. **Add the Verify link by hand** — `REQ_F16A_025` → `F16AStaticMarginVerificationTest`, in the
-   Requirements Editor (**D3** / README "Verification links are added manually"). That makes it the
-   **third** row in that README table.
-3. **Extend A2b to three link sets.** `F16AOpenForReview` must load
-   `verification/F16AStaticMarginVerificationTest~m.slmx` alongside the two A2b already adds, or the
-   new Verify link will be invisible for exactly the reason A2b documents. Register the new test file
-   in `f16a.prj` (it *is* inside the project root) and confirm `runChecks` is 12/12.
+   satisfies it. **The shipped `.slreqx` was the last holder of the old text** — that was step 1,
+   done in Stage 2, so the artifact now carries whatever the generator carries.
+1. ~~**Regenerate `requirements/f16a.slreqx`**~~ — **DONE, Stage 2.** The whole documented chain ran:
+   four `.slreqx`, three models, both allocation sets. Verified on the rebuilt artifact —
+   `REQ_F16A_025` now summarises as *"Static margin (relaxed static stability)"*, carries the −6/+1
+   %MAC band in its Description, and keeps only `draft, auto-generated`; the `todo` keyword is gone.
+   `docs/01_requirements.md` has lost the self-cancelling *"what the shipped artifact currently
+   holds"* paragraph this step existed to end.
+2. ~~**Add the Verify link by hand**~~ — **DONE 2026-08-03.** `REQ_F16A_025` →
+   `F16AStaticMarginVerificationTest` was made in the Requirements Editor;
+   `verification/F16AStaticMarginVerificationTest~m.slmx` exists and holds a `Verify` link to
+   `f16a:33` (= `REQ_F16A_025`). All three rows of the README table are now linked and **B3 has no
+   open steps left**. Note the link now points at a test the requirement **fails** — which is correct:
+   a Verify link records that the requirement is checked, not that it passed.
+
+   > **Measured, Stage 2 — a hand-made Verify link SURVIVES regeneration; plan accordingly.** After
+   > the full rebuild of all four requirement sets, `REQ_F16A_022` and `REQ_F16A_P01` both still
+   > report `Implement, Verify`. `slreq.new` builds a fresh set, but with requirement ids and their
+   > order unchanged the hand-made links still resolve — it does **not** mint SIDs that orphan them.
+   > This retires the assumption behind *Suggested order*'s A2b item, that the regeneration and the
+   > hand-links had to land in one pass or be redone; step 2 can be done whenever, and only **one**
+   > link is outstanding rather than three. Do not re-plan around the old assumption. It is a
+   > measurement, not a decision, which is why it is here and not in `07_decision_log.md`.
+   >
+   > **The mechanism, confirmed independently by `f16a-data`:** regeneration **preserved every SID** —
+   > the sid↔customId maps are identical old-vs-new in all four sets (`f16a:28` → `REQ_F16A_022`,
+   > `f16a_physical_derived:2` → `REQ_F16A_P01`). That is *why* the links held, and it is also the
+   > boundary of the guarantee: it holds while ids and their order are unchanged, and not otherwise.
+3. ~~**Extend A2b to three link sets.**~~ — **OBSOLETE, Stage 2: there is nothing to extend.**
+   `F16AOpenForReview` globs `verification/*~m.slmx`, so
+   `F16AStaticMarginVerificationTest~m.slmx` is picked up the moment step 2 creates it, and the
+   tool's printed report follows with no edit anywhere. The registry half is done — the test file
+   is in `f16a.prj` (63 files) and `runChecks` is 12/12.
 
 <details><summary>The exercise brief — keep this, it is what makes 023/024 a good assignment</summary>
 
@@ -694,22 +855,26 @@ are listed so a future sweep does not "fix" them.
 | Marker | Where | Why it stays |
 |---|---|---|
 | **D1** · `DefaultValue="'TBD'"` on `DecisionRef`, `Justification`, `TraceRef`, `RealizesRole`, `RealizesKind` | `F16A_LogicalOptions.xml`, `F16A_PhysicalProps.xml`, both generators | Deliberate sentinels. `assertRationaleComplete` *aborts the build* on any surviving `'TBD'` rationale, and an L model shipping `DecisionRef='TBD'` is the correct unresolved state (D-019). |
-| **D2** · `TODO`/`TBD` in requirement text | `generate_f16a_requirements.m` (`023`, `024`), `generate_f16a_derived_requirements.m` (`D01`–`D09`) | **Settled 2026-08-02, and it now covers more than it used to.** All eleven are permanent student exercises: `D01`–`D09` by **D-045**, and tipback/overturn by **D-046** — the latter withheld *because* the angle conventions do not obviously match the USAF/USN specs, which is the exercise. **`025` is the one exception and leaves this table**: D-046 gives it a real −6 %…+1 %MAC band, so its `TODO` text is genuine work under **B3**. |
-| **D3** · "Verification links are added manually (known issue)" | `docs/README.md:210` | An R2026a Requirements Toolbox limitation, not our defect: a MATLAB test file cannot be a link *source*. The links themselves are made and correct — but see **A2b**, they are not being *loaded*, and the paragraph's explanation of why is wrong. |
+| **D2** · `TODO`/`TBD` in requirement text | `generate_f16a_requirements.m` (`023`, `024`), `generate_f16a_derived_requirements.m` (`D01`–`D09`) | **Settled 2026-08-02, and it now covers more than it used to.** All eleven are permanent student exercises: `D01`–`D09` by **D-045**, and tipback/overturn by **D-046** — the latter withheld *because* the angle conventions do not obviously match the USAF/USN specs, which is the exercise. **`025` is the one exception and leaves this table**: D-046 gave it a real criterion (revised by **D-051** to `−6 %MAC ≤ SM < 0`), so its `TODO` text was genuine work under **B3**, and B3 is now closed. |
+| **D3** · "Verification links are added manually (known issue)" | `docs/README.md`, *"Verification links are added manually"* | An R2026a Requirements Toolbox limitation, not our defect: a MATLAB test file cannot be a link *source*. **Cleaned up Stage 2** — the links are made and correct, **A2b** now loads them, and the paragraph's wrong explanation (Digital Thread artifact tracking) is gone. Two hand-made links exist and survive regeneration; `REQ_F16A_025`'s is the one still to make (B3 step 2). |
 | **D4** · `UnitCost_USD` is `NaN` ~~everywhere~~ **on the candidates** | trade study, both profiles | **Narrowed 2026-08-02 by D-043.** A visible `NaN` is the honest "pending Measure of Merit"; a `0` default would be an unbeatably good score under a ratio value function (D-021, D-032). Stays true and stays right **on the seven candidates, permanently** — cost never enters the trade. The *aircraft* `MeasureOfMerit.UnitCost_USD` stops being `NaN` under **B2**. |
-| **D5** · D-030's inventory of invented numbers | `docs/07_decision_log.md:317` | A *record*, not a backlog. The numbers are meant to stay invented and tagged `Estimate`; the entry exists so they can never be cited as F-16 data. **The table is a living inventory** — D-030's decision text is committed history and is never rewritten, but new invented numbers get **appended** to it (D-038 requires a new number to "appear in D-030"). Grew from 19 to 20 on 2026-08-02 when the `REQ_F16A_025` **−6 %/+1 %MAC band** was tagged `Estimate` under **D-048** — the first *requirement threshold* in the table rather than a component property, and the reason house rule 1 now explicitly covers acceptance criteria. |
-| **D6** · `F16AFuelVerificationTest` fails | `verification/` | Intentional and documented. **Permanent as of D-042** — B1 was decided as *never*, so this is settled rather than conditional. The `TODO:` marker in `F16APhysicalMissionFuel.m:17` belongs in this table too, and its help block should say "by design" (see B1). |
+| **D5** · D-030's inventory of invented numbers | `docs/07_decision_log.md:317` | A *record*, not a backlog. The numbers are meant to stay invented and tagged `Estimate`; the entry exists so they can never be cited as F-16 data. **The table is a living inventory** — D-030's decision text is committed history and is never rewritten, but new invented numbers get **appended** to it (D-038 requires a new number to "appear in D-030"). Grew from 19 to 20 on 2026-08-02 when the `REQ_F16A_025` **−6 %/+1 %MAC band** was tagged `Estimate` under **D-048** — the first *requirement threshold* in the table rather than a component property, and the reason house rule 1 now explicitly covers acceptance criteria. **Still 20 on 2026-08-03**, but that row is the first ever to *change*: **D-051** narrowed it, `+1 %MAC` leaving the model (replaced by a strict zero, which is a definition and not inventoried) while `−6 %MAC` stays live. The convention it set — annotate and date, never rewrite and never delete — is written under the table. |
+| **D6** · `F16AFuelVerificationTest` fails | `verification/` | Intentional and documented. **Permanent as of D-042** — B1 was decided as *never*, so this is settled rather than conditional. The `TODO:` marker in `F16APhysicalMissionFuel.m:17` belongs in this table too, and its help block should say "by design" (see B1). **No longer the only by-design red (D-051), and the difference is the teaching point:** this one is red because nothing was computed (`REQ_F16A_P01` is *unevaluated*); `F16AStaticMarginVerificationTest`'s landing case is red because something *was* computed and `REQ_F16A_025` is *violated*. Do not "fix" either, and do not let a sweep report them as the same thing. |
+| **D7** · `F16AStaticMarginVerificationTest` fails at landing | `verification/` | **By design and permanent (D-051).** `SM_land` = +0.2065 %MAC violates `REQ_F16A_025`'s negative-margin criterion; `SM_TO` = −0.2602 %MAC meets it, and `testAnalysisProducedUsableMargins` passes — which is what shows the red is a violation rather than a broken analysis. It is a property of Brandt's simplified neutral point, **not** a finding about the F-16A. |
 
 ---
 
 ## Suggested order
 
-- ~~**A1 / A1b / A2**~~ — done. Project is 12/12; 92/92 tests still pass.
+- ~~**A1 / A1b / A2**~~ — done. Project is 12/12; **106 cases, 2 by-design reds** (`F16AFuelVerificationTest`
+  entire, and `F16AStaticMarginVerificationTest`'s landing case — different reds, see **D6**/**D7**).
   (**A5** needs nothing — verified not a defect.)
-1. **A2b — now THREE link sets, not two** (D-047 adds a third verification test). It makes the model's
-   "verified by" relationships actually visible; right now the headline feature of the P layer does not
-   show up in the tool. Pair it with regenerating `f16a.slreqx` (B3 step 1) and hand-adding the two
-   outstanding Verify links, so the requirement set and the link sets land consistent in one pass.
+- ~~**A2b + B3 steps 1 and 3**~~ — **done, Stage 2.** `F16AOpenForReview` globs the link sets and
+  reports what is linked, `f16a.slreqx` is regenerated, and the R layer has its first test suite
+  (`F16ARequirementsTest`, 9/9).
+- ~~**B3 step 2**~~ — **done 2026-08-03.** The hand-made `REQ_F16A_025` Verify link exists; **B3 is
+  closed**. Its `025` criterion was then revised by **D-051** (negative margin; the model fails at
+  landing) — see the banner at the head of B3.
 2. **A3 + A8 + A9 + A10** — one documentation-and-lint commit. A3 is the last pre-D-001 sentence, A8
    is two stale scale claims and two broken links, A9 is a copy-the-P-generator fix, A10 is
    suppressions and commas. Nothing here needs a decision.
@@ -723,10 +888,11 @@ are listed so a future sweep does not "fix" them.
    part 2 dropped by **D-041**). Standalone.
 6. **A4** — decided (**"Right"**, sourced from `BrandtWeight.m`; see **D-036**). What remains is
    implementation: the cross-model comparison, its tolerance, and the path teardown.
-7. ~~**B3 — `025` only**~~ — **source work DONE** (**D-047**): the test passes 3/3 and the generator
-   carries the band. What is left is items 1–3 of B3 above (regenerate the requirement set, hand-add
-   the Verify link, extend `F16AOpenForReview` + register the file), which fold naturally into step 1.
-   `023`/`024` need no code — they are in the item-3 doc sweep.
+7. ~~**B3 — `025` only**~~ — **CLOSED.** The test was built (**D-047**), the requirement set
+   regenerated, step 3 turned out obsolete, and the hand-made Verify link landed 2026-08-03.
+   **D-051** then revised the criterion to `−6 %MAC ≤ SM < 0`, so the test is now **2 pass / 1 fail
+   by design** and the generator, the test and `F16ARequirementsTest` move with it. `023`/`024` need
+   no code — they are in the doc sweep above.
 8. **B2** — the cost model as a whole-aircraft MoM (**D-043**). The five "cost re-enters the trade"
    rewordings are the part that is easy to forget and the part that would otherwise leave the docs
    claiming something the code will not do.

@@ -1,29 +1,60 @@
 classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
     %F16ASTATICMARGINVERIFICATIONTEST Verify REQ_F16A_025 (relaxed static stability).
-    %   Checks SM = (x_np - x_cg)/MAC against the -6..+1 %MAC band at takeoff
-    %   AND landing weight -- "across the operational CG range" (D-046).
+    %   Checks SM = (x_np - x_cg)/MAC against REQ_F16A_025's criterion,
+    %   -6 %MAC <= SM < 0, at takeoff AND at landing weight -- "across the
+    %   operational CG range" (D-046). The upper end is STRICT: neutral is not
+    %   negative. Zero sat in the INTERIOR of the old -6 .. +1 %MAC band, so
+    %   that edge is new.
     %
-    %   The only verification here that leaves the MBSE model: P holds no
-    %   neutral point, CG or MAC, none being a property of a part, so the check
-    %   delegates read-only to sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m,
-    %   reached by PATH rather than project membership (D-047).
+    %   THIS SUITE IS EXPECTED TO BE RED -- 2 pass, 1 fail, the failure being
+    %   the LANDING case. Measured 2026-08-02: SM_TO = -0.26 %MAC (MET),
+    %   SM_land = +0.21 %MAC (VIOLATED). Burning fuel and releasing stores, both
+    %   carried aft, move the CG FORWARD (x_cg 26.1979 -> 26.1451 ft), so landing
+    %   is the most-stable end of the range -- and the most-stable end is where a
+    %   relaxed-stability requirement bites. Do not make it pass: the design does
+    %   not meet the requirement, and a Verify-linked test reporting green while
+    %   its requirement is violated is the dishonesty this example teaches against.
     %
-    %   Computed SM_TO = -0.26 %MAC, SM_land = +0.21 %MAC (2026-08-02): both in
-    %   band, so REQ_F16A_025 is MET -- but from the near-neutral STABLE end,
-    %   Brandt's neutral point being a simplified approximation, not as evidence
-    %   of the strongly relaxed static stability the F-16A is generally
-    %   described as having. The -6 %MAC figure is an illustrative teaching
-    %   value, not sourced data (D-030, D-048).
+    %   Three verification states now ship, and the two reds differ. REQ_F16A_022
+    %   is MET (F16AMaterialsVerificationTest, green). REQ_F16A_P01 is PENDING --
+    %   red because its required value is NaN, so it is UNEVALUATED (D-042). This
+    %   one is VIOLATED -- red because it WAS evaluated and the answer is no.
+    %   testAnalysisProducedUsableMargins is what separates the last two and must
+    %   stay GREEN: it demonstrates, rather than asserts, that the landing margin
+    %   is a finite number from an analysis that ran.
+    %
+    %   The bounds differ in kind. The upper is a DEFINITION -- relaxed static
+    %   stability IS negative static margin, zero being where the sign changes,
+    %   not a chosen figure. The lower is invented, and is labelled so:
+    %   The -6 %MAC figure is an illustrative teaching value, not sourced data
+    %   (D-030).
+    %
+    %   That last sentence is CANONICAL (D-048 part 3): it is copied verbatim
+    %   into every artifact that mentions the figure, so that the log, the
+    %   requirement and this test cannot drift into three different hedges. Do
+    %   not reword it, however much better the rewording reads. The copy in the
+    %   requirement artifact is guarded by a test; the copy here and the ones in
+    %   docs/ are guarded by nothing, which is why this file is where it drifted.
+    %
+    %   The one verification that leaves the MBSE model: P holds no neutral
+    %   point, CG or MAC, none being a property of a part, so this delegates
+    %   read-only to sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m, reached by
+    %   PATH rather than project membership (D-047).
     %
     %   See also F16AMATERIALSVERIFICATIONTEST, F16AFUELVERIFICATIONTEST.
 
     properties (Constant)
-        % REQ_F16A_025's band (D-046), a FRACTION of MAC to match run()'s SM_TO
-        % / SM_land -- so -0.06 is -6 %MAC. Declared once so it cannot be widened
-        % in one test and left alone elsewhere (D-047 guarantee 5). Both bounds are
-        % Estimate-class, inventoried in D-030, not traceable to /sizing/.
-        SMLower_fracMAC = -0.06
-        SMUpper_fracMAC =  0.01
+        % REQ_F16A_025's criterion (D-046), as FRACTIONS of MAC to match run()'s
+        % SM_TO / SM_land -- so -0.06 is -6 %MAC. The two ends are compared
+        % DIFFERENTLY and the names say which: at least the lower bound
+        % (inclusive), strictly BELOW the upper one. Declared once each so a
+        % bound cannot be relaxed for the failing case and left alone elsewhere
+        % (D-047 guarantee 5): the constraint and every message line that names a
+        % criterion INTERPOLATE these, none retypes them. SMLower_fracMAC is
+        % Estimate-class, inventoried in D-030; its canonical label is in the
+        % help block above and is not repeated here.
+        SMLower_fracMAC       = -0.06
+        SMMustBeBelow_fracMAC =  0
 
         % The sizing point handed to run() (Wt!B3), and the weight SM_TO is
         % evaluated at -- stated, not assumed. NOT the weight for SM_land:
@@ -69,6 +100,9 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
             % A dependency check run before the requirement is judged: it separates
             % "the aircraft violates REQ_F16A_025" from "the analysis that evaluates
             % it is broken" (D-047 guarantee 3). A NaN margin is not a violation.
+            % Now load-bearing rather than precautionary: this suite ships one
+            % genuine failure, and this test staying GREEN is what proves the
+            % landing red is a violation and not a broken run.
             testCase.assertTrue(isfield(testCase.Balance, "SM_TO") && ...
                 isfield(testCase.Balance, "SM_land"), ...
                 "BrandtBalanceStabControl.run did not return SM_TO / SM_land. The " + ...
@@ -87,47 +121,60 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
                 "analysis, not a requirement violation.");
         end
 
-        function testTakeoffStaticMarginWithinBand(testCase)
-            % The AFT end of the CG range -- heaviest, full fuel, full stores.
-            % Stores and fuel sit aft of the CG, so using them moves it forward.
+        function testTakeoffStaticMarginIsNegative(testCase)
+            % The AFT end of the CG range -- heaviest, full fuel, full stores --
+            % and so the LEAST stable end. Stores and fuel sit aft of the CG, so
+            % using them moves it forward. EXPECTED TO PASS.
             testCase.verifyThat(testCase.Balance.SM_TO, ...
-                testCase.inBandConstraint(), ...
-                testCase.bandMessage("takeoff", testCase.Balance.SM_TO));
+                testCase.criterionConstraint(), ...
+                testCase.criterionMessage("takeoff", testCase.Balance.SM_TO));
         end
 
-        function testLandingStaticMarginWithinBand(testCase)
-            % The FORWARD end: fuel burnt, stores released. "Across the
-            % operational CG range" means both ends must hold -- checking only
-            % takeoff verifies half a requirement (D-047 guarantee 4).
+        function testLandingStaticMarginIsNegative(testCase)
+            % The FORWARD end: fuel burnt, stores released, and so the MOST
+            % stable end. EXPECTED TO FAIL -- SM_land is positive and
+            % REQ_F16A_025 is violated. "Across the operational CG range" is
+            % what puts this end in scope: checking only takeoff verifies half a
+            % requirement and would report this design compliant (D-047
+            % guarantee 4).
             testCase.verifyThat(testCase.Balance.SM_land, ...
-                testCase.inBandConstraint(), ...
-                testCase.bandMessage("landing", testCase.Balance.SM_land));
+                testCase.criterionConstraint(), ...
+                testCase.criterionMessage("landing", testCase.Balance.SM_land));
         end
     end
 
     methods (Access = private)
-        function c = inBandConstraint(testCase)
-            %INBANDCONSTRAINT The REQ_F16A_025 band as a unittest constraint,
-            %   built from the class constants rather than restated.
+        function c = criterionConstraint(testCase)
+            %CRITERIONCONSTRAINT REQ_F16A_025's criterion as a unittest
+            %   constraint, built from the class constants rather than restated.
+            %   Not named "inBand": the two ends are compared differently.
+            %   IsGreaterThanOrEqualTo at the lower end, IsLessThan -- NOT
+            %   IsLessThanOrEqualTo -- at the upper, because a margin of exactly
+            %   zero is neutral, and neutral is not negative. Zero sat in the
+            %   interior of the old -6 .. +1 %MAC band, so nothing before now
+            %   depended on which comparison was used there.
             import matlab.unittest.constraints.IsGreaterThanOrEqualTo
-            import matlab.unittest.constraints.IsLessThanOrEqualTo
+            import matlab.unittest.constraints.IsLessThan
             c = IsGreaterThanOrEqualTo(testCase.SMLower_fracMAC) & ...
-                IsLessThanOrEqualTo(testCase.SMUpper_fracMAC);
+                IsLessThan(testCase.SMMustBeBelow_fracMAC);
         end
 
-        function msg = bandMessage(testCase, condition, sm)
-            %BANDMESSAGE A failure message that says which way it failed.
-            %   Three outcomes, not two: below the lower bound is too unstable for
-            %   the assumed FCS authority; above the upper is conventionally stable,
-            %   not the relaxed configuration REQ_F16A_L02 was justified by; and
-            %   non-finite is a broken analysis. That third branch is a bug fix --
-            %   `NaN < x` is false, so a NaN margin fell to the else and was
-            %   reported as conventionally stable.
+        function msg = criterionMessage(testCase, condition, sm)
+            %CRITERIONMESSAGE A failure message that says which way it failed
+            %   and, for the landing case, teaches why that red is the answer.
+            %   Violation has two opposite directions -- below the floor is more
+            %   unstable than the FCS is assumed to handle, at or above the
+            %   ceiling is not relaxed at all -- plus two further outcomes:
+            %   satisfied, which this is never SHOWN for but is BUILT for on
+            %   every call and so must stay true, and non-finite, a broken
+            %   analysis. That last branch is a bug fix: `NaN < x` is false, so a
+            %   NaN margin fell to the else and was reported as a verdict.
 
-            % Bounds INTERPOLATED from the constants, never typed: literal text
-            % here would name one band while "Required:" below named another.
+            % Both bounds are INTERPOLATED from the constants, never typed:
+            % literal text here would name one criterion while "Required:" below
+            % named another.
             lowerPct = 100 * testCase.SMLower_fracMAC;
-            upperPct = 100 * testCase.SMUpper_fracMAC;
+            upperPct = 100 * testCase.SMMustBeBelow_fracMAC;
             if ~isfinite(sm)
                 why = "NOT A FINITE NUMBER -- the analysis did not produce a static " + ...
                     "margin, so REQ_F16A_025 has not been evaluated at all, in either " + ...
@@ -137,14 +184,27 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
                     "fix the analysis before drawing any conclusion about stability";
             elseif sm < testCase.SMLower_fracMAC
                 why = sprintf( ...
-                    "MORE NEGATIVE than the %+.1f %%MAC lower bound -- more unstable " + ...
-                    "than the flight control system is assumed to be able to stabilize", ...
-                    lowerPct);
+                    "BELOW the %g %%MAC lower bound -- more unstable than the flight " + ...
+                    "control system is assumed to be able to stabilize", lowerPct);
+            elseif sm >= testCase.SMMustBeBelow_fracMAC
+                why = sprintf( ...
+                    "NOT BELOW the %g %%MAC upper bound -- the aircraft is MORE " + ...
+                    "STABLE at this end of the CG range than REQ_F16A_025 allows. " + ...
+                    "That bound is STRICT: a margin exactly equal to it does not " + ...
+                    "satisfy the requirement, neutral stability not being relaxed " + ...
+                    "stability; and a margin at or above zero is conventional " + ...
+                    "stability, which is not the relaxed configuration REQ_F16A_L02's " + ...
+                    "fly-by-wire selection was justified by. The margin printed above " + ...
+                    "is a finite number, so the analysis RAN and the requirement WAS " + ...
+                    "evaluated: this red is a genuine VIOLATION, not a broken run. " + ...
+                    "Contrast F16AFuelVerificationTest, whose red means UNEVALUATED -- " + ...
+                    "its required value is NaN (D-042)", upperPct);
             else
                 why = sprintf( ...
-                    "MORE POSITIVE than the %+.1f %%MAC upper bound -- conventionally " + ...
-                    "stable, which is not the relaxed configuration REQ_F16A_L02's " + ...
-                    "fly-by-wire selection was justified by", upperPct);
+                    "within [%g, %g) %%MAC and therefore SATISFIES REQ_F16A_025 here. " + ...
+                    "If you are reading this, the check failed for some reason other " + ...
+                    "than the criterion: distrust the diagnostic, not the aircraft", ...
+                    lowerPct, upperPct);
             end
 
             % Which weight this condition is. Printing W_TO for landing would
@@ -167,10 +227,38 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
             end
 
             msg = sprintf( ...
-                "REQ_F16A_025 NOT met at %s (%s): static margin %.4f %%MAC is %s. " + ...
-                "Required: %+.1f %%MAC <= SM <= %+.1f %%MAC. Source: " + ...
-                "sizing/VnV/BrandtF16A/BrandtBalanceStabControl.", ...
-                condition, atWeight, 100*sm, why, lowerPct, upperPct);
+                "REQ_F16A_025 %s at %s (%s): static margin %+.4f %%MAC is %s. " + ...
+                "Required: %g %%MAC <= SM < %g %%MAC -- inclusive at the lower end, " + ...
+                "STRICT at the upper -- at BOTH ends of the operational CG range. " + ...
+                "Source: sizing/VnV/BrandtF16A/BrandtBalanceStabControl. %s", ...
+                verdictOf(sm, testCase.SMLower_fracMAC, testCase.SMMustBeBelow_fracMAC), ...
+                condition, atWeight, 100*sm, why, lowerPct, upperPct, ...
+                testCase.acrossTheRangeSentence());
+        end
+
+        function s = acrossTheRangeSentence(testCase)
+            %ACROSSTHERANGESENTENCE Both ends, both verdicts, and why the CG
+            %   moves the way it does. Appended to EVERY failure message, so a
+            %   reader who sees only the one red also sees the other end MET --
+            %   which is what makes this a requirement violation and not a broken
+            %   analysis. Every figure is read back from the run, so it cannot
+            %   claim a verdict the constraint disagrees with, nor quote a margin
+            %   the analysis no longer computes.
+            smTO    = fieldOrNaN(testCase.Balance, "SM_TO");
+            smLand  = fieldOrNaN(testCase.Balance, "SM_land");
+            loBound = testCase.SMLower_fracMAC;
+            hiBound = testCase.SMMustBeBelow_fracMAC;
+            s = sprintf( ...
+                "ACROSS THE OPERATIONAL CG RANGE: takeoff SM_TO = %+.4f %%MAC (%s); " + ...
+                "landing SM_land = %+.4f %%MAC (%s). Burning fuel and releasing " + ...
+                "stores -- both carried AFT -- move the CG FORWARD, x_cg %.4f ft at " + ...
+                "takeoff to %.4f ft at landing, so landing is the forward, MOST " + ...
+                "STABLE end of the range; and the most stable end is where a " + ...
+                "requirement for relaxed static stability bites first.", ...
+                100*smTO, verdictOf(smTO, loBound, hiBound), ...
+                100*smLand, verdictOf(smLand, loBound, hiBound), ...
+                fieldOrNaN(testCase.Balance, "xcg_TO_ft"), ...
+                fieldOrNaN(testCase.Balance, "xcg_land_ft"));
         end
     end
 
@@ -184,4 +272,26 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
             d = fullfile(avd, "sizing", "VnV", "BrandtF16A");
         end
     end
+end
+
+% ---------------------------------------------------------------------------
+
+function word = verdictOf(sm, loBound, hiBound)
+%VERDICTOF How one margin stands against REQ_F16A_025, in one word.
+%   Derived from the SAME bounds the constraint uses, with the same strictness
+%   at each end, so no message reports a verdict the constraint contradicts.
+word = "MET";
+if ~isfinite(sm)
+    word = "NOT EVALUATED";
+elseif sm < loBound || sm >= hiBound
+    word = "NOT MET";
+end
+end
+
+function v = fieldOrNaN(s, name)
+%FIELDORNAN S.(NAME), or NaN when the field is absent.
+%   So that building a DIAGNOSTIC can never itself error and replace a clean
+%   failure with a stack trace; NaN prints, and reads as NOT EVALUATED.
+v = NaN;
+if isfield(s, name); v = s.(name); end
 end

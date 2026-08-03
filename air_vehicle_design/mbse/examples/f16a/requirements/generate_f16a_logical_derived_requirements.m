@@ -44,7 +44,7 @@ r.Keywords = ["draft","derived","logical","decision"];
 % ---- L02: Flight control architecture ----
 r = add(root, Id="REQ_F16A_L02", Summary="Flight control: fly-by-wire or hydro-mechanical?", ...
     Description="The FlightControlSystem role shall be realized by exactly one of the kinds the Logical layer presents for it -- FlyByWire or HydroMechanical. The choice is made by the Physical-layer trade study (physical/F16APhysicalTradeStudy.m), which scores the concrete parameterized flight-control candidates realizing each kind. This requirement poses the decision and does not contain its answer (D-040).");
-r.Rationale = "It is worth posing rather than assuming because only a control system able to supply artificial stability makes the relaxed static-stability band of REQ_F16A_025 flyable.";
+r.Rationale = "It is worth posing rather than assuming because only a control system able to supply artificial stability makes the negative static margin REQ_F16A_025 requires flyable.";
 r.Keywords = ["draft","derived","logical","decision"];
 
 % ---- L03: Airframe / wing planform ----

@@ -451,12 +451,17 @@ quoted as if it were.
 > close enough to be useful for the roll-up and dishonest to present as data — exactly the
 > distinction the provenance vocabulary exists to make, and it is tagged `Estimate` in the model.
 
-This verification is **intentionally failing for now**. The mission-fuel hook is a **stub** returning
-`NaN` (we do not invent a mission-fuel number), so `available (6300) ≥ NaN` is false and the test
-fails — an honest, traceable **"verification pending"** marker. It goes green once
-`F16APhysicalMissionFuel` is wired to the mission analysis in [`/sizing/`](../../../sizing). This is
-the correct way to show a requirement whose verification is set up but not yet satisfied: a red test
-with a clear reason, not a silent gap.
+This verification is **intentionally failing, permanently** (**D-042**). The mission-fuel hook is a
+**stub** returning `NaN` (we do not invent a mission-fuel number), so `available (6300) ≥ NaN` is
+false and the test fails — an honest, traceable **"verification pending"** marker. It does **not** go
+green later: the pending state *is* the deliverable, and wiring it to `/sizing/` would teach the
+opposite lesson. This is the correct way to show a requirement whose verification is set up but not
+yet satisfied: a red test with a clear reason, not a silent gap.
+
+**Do not confuse it with the example's other red.** `REQ_F16A_P01` is **unevaluated** — nothing has
+been computed, so the requirement is neither met nor violated. `REQ_F16A_025` (static margin) **is**
+evaluated and **is violated** (**D-051**). Same colour, different fact; see
+[`README.md`](README.md#three-requirements-three-verification-states).
 
 ## Realization — the L→P relationship
 

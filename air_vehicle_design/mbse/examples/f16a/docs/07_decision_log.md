@@ -335,7 +335,7 @@ itself was being broken by the team's own record.
 | 9.5 / 6.5 · 9.0 / 6.0 · 8.2 / 8.6 / 7.8 | the 7 candidates | `Benefit` | judgement (D-025) | Declared 0–10 scale. Relative ordering carries the teaching, the absolute values carry nothing |
 | 7 / 8 · 6 / 9 · 8 / 4 / 6 | the 7 candidates | `TRL` | judgement (D-025) | Declared 1–9 scale. F110's 4 encodes "not available in the F-16A timeframe" — the fact that decides the engine trade |
 | 3 × 2100 lb | the fuel tanks | `FuelCapacity_lb` | Estimate | See D-023: Brandt's figure is 6296.30 lb (`Wt!B6`) |
-| −6 %MAC / +1 %MAC | `REQ_F16A_025` | requirement band — no stereotype, so no `DataProvenance` slot; tagged here instead | Estimate | −6 % is a figure commonly repeated for the F-16's subsonic relaxed static stability, but no source is cited and `/sizing/` contains none (verified: no static-margin criterion anywhere in `VnV/BrandtF16A/`). +1 % is pure design intent, invented to exclude a conventionally stable aeroplane. Do not cite either |
+| −6 %MAC / ~~+1 %MAC~~ | `REQ_F16A_025` | requirement band — no stereotype, so no `DataProvenance` slot; tagged here instead | Estimate | **Narrowed 2026-08-03 by D-051: the `+1 %MAC` end is gone, the `−6 %MAC` end is live — see the note below.** −6 % is a figure commonly repeated for the F-16's subsonic relaxed static stability, but no source is cited and `/sizing/` contains none (verified: no static-margin criterion anywhere in `VnV/BrandtF16A/`). +1 % is pure design intent, invented to exclude a conventionally stable aeroplane. Do not cite either |
 
 > *Static-margin row appended **2026-08-02**, at the Stage-0 gate, under **D-046** — the decision that
 > introduced the band. D-030 is committed history and is not rewritten; its table is the project's
@@ -343,6 +343,21 @@ itself was being broken by the team's own record.
 > extends the inventory rather than altering the decision. Raised by `f16a-data` (**VETO**): the band
 > shipped untagged, and it is not `Reference` (no criterion in `/sizing/`), not `Datasheet` (no source
 > cited) and not `Simulation` (nothing computes it).*
+>
+> *Static-margin row **narrowed 2026-08-03** under **D-051**, which reshapes the criterion to
+> **−6 %MAC ≤ `SM` < 0**. The `+1 %MAC` upper bound is **gone** — replaced by a strict zero, which is
+> the definition of relaxed static stability rather than a chosen figure, and so is not inventoried.
+> The `−6 %MAC` lower bound is **unchanged and still live**: still uncited, still `Estimate`, still
+> here. The row now inventories **one** invented number instead of two. **The inventory stays at 20
+> rows.***
+>
+> ***How a row changes, since this is the first one that has.*** *It is **annotated and dated, never
+> rewritten and never deleted.** The log is append-only, so deleting a value would erase the record
+> that it was ever in the model — and this table is also the answer to "was that figure ever cited as
+> data?", which a deleted row cannot give. Leaving it unmarked is the opposite failure: an inventory
+> listing a number the model no longer contains misleads as surely as one omitting a number it does.
+> So the original text stays verbatim, the departed value gains a strikethrough, and the cell names
+> **the date and the entry that changed it**. Read struck values as history; count live ones.*
 
 `Benefit` and `TRL` supply **0.75 of every trade score** and are unauditable in principle — they trace
 to nothing. That is precisely why they must be *recorded*, since they can never be *checked*.
@@ -1208,3 +1223,150 @@ the model — but the section says so out loud, because after the D-048 veto an 
 reads like design justification is the failure mode being guarded against.
 **Traces to** D-037 · D-040 · D-020 · D-015 · D-030 · `docs/04_logical.md` ·
 `physical/F16APhysicalArchitectureTest.m` (`testProductionConfigurationWins`) · `docs/06_methodology.md`
+
+### D-051 · The static margin must be NEGATIVE, and the reference model fails it at landing
+**Stage** 2 · **Decided by** user · **Date** 2026-08-03 · **Supersedes part 3 of D-046** · **Narrows
+D-030's static-margin row**
+**Decision** `REQ_F16A_025`'s two-sided **−6 … +1 %MAC** band is replaced by a **negative-margin**
+criterion with the same floor:
+
+> **−6 %MAC ≤ `SM` < 0**, where `SM = (x_np − x_cg)/MAC` — lower bound **inclusive**, upper bound
+> **strict** — at **both ends** of the operational CG range, takeoff *and* landing.
+
+The requirement's own wording lives in `generate_f16a_requirements.m`; this entry states the criterion,
+not the prose. What changed is the **upper bound**: `+1 %MAC` becomes a strict zero, so a positive
+static margin is now a violation rather than a small allowance. `SM_TO` = **−0.2602 %MAC** meets it;
+`SM_land` = **+0.2065 %MAC** violates it, so `F16AStaticMarginVerificationTest` goes **3/3 → 2 pass,
+1 fail** — deliberately, and permanently.
+
+**Why: the example teaches two verification outcomes and needs the third.** A requirement can be met,
+or not evaluated at all, or **evaluated and not met**. Until now this example shipped the first two
+and called them by their colour:
+
+| Requirement | Test | State | What it teaches |
+|---|---|---|---|
+| `REQ_F16A_022` | `F16AMaterialsVerificationTest` | green | requirement met, evidence in the model |
+| `REQ_F16A_P01` | `F16AFuelVerificationTest` | red — **unevaluated** | verification set up and traceable, nothing computed yet (`NaN`, D-042) |
+| `REQ_F16A_025` | `F16AStaticMarginVerificationTest` | red — **violated** | evaluated, and the design does not meet it |
+
+The middle state is the one a real programme spends most of its life in, and no artifact here showed
+it. **The two reds are not the same red**, and telling them apart is the lesson: a reader who counts
+"two tests fail" and stops has missed the whole of it.
+
+**D-044 saw this and D-046 lost it — that is the honest way to record this entry.** D-044 wanted
+`REQ_F16A_024` to fail on purpose: *"it would be the example's first requirement the reference
+aircraft does not meet … One requirement is unsatisfied; the other is unevaluated."* D-046 then
+withdrew `023`/`024` to the exercise list — correctly, because D-044's own blocking check showed the
+gear-angle conventions are ambiguous and *"the same number supports opposite verdicts"* — and gave
+`025` a band wide enough that the reference figure fitted inside it. The lesson went out with the
+requirement that was carrying it, and nothing recorded the loss. Stated plainly: **the previous
+decision chose a criterion the model passes; this one chooses the criterion the physics implies and
+accepts the red.** `025` is the right carrier for it precisely where `024` was the wrong one — a sign
+test on a computed margin has no convention to argue about.
+
+**Provenance: one invented number instead of two — a real improvement, and a modest one.** D-046's
+band had two invented ends. The upper one is now gone on principle rather than by preference: **zero
+is a definition, not a figure.** Relaxed static stability *is* a negative static margin, so the strict
+`< 0` is where the sign changes and nothing about it was chosen. The lower bound is a different case
+and must not be described as if it were the same one:
+
+| End | Now | Provenance |
+|---|---|---|
+| Upper, `< 0` | strict zero | **definition** — not a figure, nothing to tag, not inventoried |
+| Lower, `−6 %MAC` | unchanged | **`Estimate`, still uncited, still in D-030** — the row is narrowed, not retired |
+
+So `f16a-data`'s Stage-0 veto and **D-048** stand almost entirely: the `−6 %MAC` figure keeps its tag,
+keeps its D-030 row, and keeps D-048 part 3's canonical sentence, which still has a subject to hedge.
+What D-048 loses is only its part-1 claim that the band is *unchanged*, at the upper end alone.
+
+**The floor's `Estimate` tag is the price of the requirement being meaningful at the unstable end, and
+this entry pays it knowingly.** `f16a-requirements` argued the other way, and argued it well: **any**
+floor is an uncited claim about how much instability the flight control system can stabilize, so a
+bare *"negative"* would leave `REQ_F16A_025` resting on no invented number at all — a provenance
+property nothing else in this example can claim. That reasoning is correct. It was **reversed within
+the stage** because a requirement satisfied by an aeroplane no FCS could fly is not a useful
+requirement: without a floor, an arbitrarily unstable design passes. The floor is therefore not free
+and is not presented as free — it buys a meaningful lower end and costs one `Estimate`, and the trade
+is recorded here so nobody has to re-derive it.
+
+**Second-order, and the reason the floor earns its keep:** `REQ_F16A_L02`'s fly-by-wire justification
+implicitly assumes **bounded** instability — artificial stability is what makes a relaxed-stability
+aeroplane flyable, and no control system supplies it without limit. With no floor, that premise is
+carried by prose and by nothing assertable. With `−6 %MAC`, the requirement carries it.
+
+**Why the model fails at landing — and what the failure is a property of.** Burning fuel and releasing
+stores moves the CG **forward**, so landing is the forward, *most stable* end of the operational range
+and is where the requirement bites. Measured 2026-08-03 by running `BrandtBalanceStabControl` at
+`W_TO` = 31,377 lb:
+
+| Condition | `x_cg` (ft) | End of CG range | `SM` (%MAC) | Verdict |
+|---|---|---|---|---|
+| Takeoff | 26.1979 | aft | **−0.2602** | meets |
+| Landing | 26.1451 | forward | **+0.2065** | **violates** |
+
+`x_np` = 26.1684 ft falls between the two, which is why the margins straddle zero at all — the CG
+crosses the neutral point during the mission, and 0.0528 ft of travel is all it takes.
+**The failure is a property of the reference model, not of the F-16A.** Brandt's neutral point is a
+simplified approximation (`readme_bsc.md`: *"a simplified neutral point"*, *"the fuselage
+destabilizing correction is simplified to a width-scaled offset"*), which is why this model drifts
+*stable* at light weight where the real aeroplane does not. Do not quote the landing violation as a
+finding about the aircraft; quote it as what a requirement doing its job looks like against an
+approximate analysis.
+
+**Alternatives considered**
+- *Keep D-046's `+1 %MAC` allowance.* Rejected — that is the decision being corrected. A criterion
+  widened until the reference figure fits inside it is not a criterion, and D-046 said so itself:
+  *"it is met because the band is wide enough to admit a near-neutral result."*
+- *A bare "negative" with no floor.* `f16a-requirements`' proposal, argued on provenance and rejected
+  on meaning — see the paragraph above. It is the strongest alternative here and the reasoning is
+  worth keeping, not the outcome.
+- *Wait for a **sourced** floor before requiring one.* Rejected: there is nothing to wait on. No
+  specification for the F-16A's design static margin has been located, and the requirement would sit
+  unbounded below in the meantime. The honest move is the one D-048 already made — keep the figure,
+  tag it `Estimate`, inventory it, and never quote it as F-16A data.
+- *Make `REQ_F16A_024` the failing requirement instead*, as D-044 intended. Rejected by D-046 and still
+  rejected: until the overturn-angle convention is settled the failure is **not established**, and
+  writing in a failure that might be a definition mismatch would put a false claim about a real
+  aircraft into a teaching model. `025` fails on arithmetic nobody disputes.
+- *Add a fourth, deliberately-failing requirement and leave `025` green.* Rejected: a requirement
+  invented to fail teaches less than a real one that does, and the example already carries `025`.
+
+**Consequences**
+1. **`F16AStaticMarginVerificationTest` is 2 pass / 1 fail, by design.** The suite sweep stays at
+   **106 cases** and goes from **1 by-design red to 2**. Anything that says "one intentional failure"
+   is now wrong.
+2. **`testAnalysisProducedUsableMargins` still passes, and that is the point.** D-047 guarantee 3 built
+   a dependency check so that *"the aircraft violates `REQ_F16A_025`"* and *"the analysis that
+   evaluates it is broken"* could never arrive looking identical. That distinction was described but
+   never exercised; it is now **demonstrated**. A green dependency check beside a red requirement check
+   is what proves the landing failure is a real violation and not a broken reader.
+3. **D-047's headline result is superseded**, not corrected: *"Result — 3/3 passing"* was true of the
+   band it was testing. The test's machinery, its `PathFixture`, its six guarantees and its read-only
+   contract are all unchanged.
+4. **D-030's static-margin row is narrowed, not retired** — two invented figures become one. The
+   inventory stays at **20 rows**, and the convention for annotating a row that changes is set in the
+   note under that table (the first time one has).
+5. **Docs.** The three-state distinction is stated where a reader meets the tests
+   (`docs/README.md` run block and verification discussion) and where they meet the requirement
+   (`docs/01_requirements.md`, `025`). TODO **B3**'s account of `025`, **D2**, **D5** and **D6** are
+   all updated.
+6. **The Implement link and `REQ_F16A_L02` are untouched.** A negative static margin is still what the
+   fly-by-wire decision rests on; the requirement now states that premise instead of a band around it.
+7. **D-048 part 3's canonical `−6 %MAC` sentence must survive the rewrite.** The floor is still an
+   `Estimate`, so the sentence still has a job, and it must still read identically in the requirement
+   `Description`, `F16AStaticMarginVerificationTest`'s help block, `docs/01_requirements.md` and this
+   log. A rewrite that drops it on the way past would reopen D-048 without deciding anything.
+   *Measured during this stage: it was independently **paraphrased twice** — by `f16a-requirements` in
+   the requirement text and by `f16a-vnv` in the test help block, neither seeing the other's copy, both
+   versions an improvement in isolation. Both reverted. Only the requirement-artifact copy is guarded
+   by a test, and it is the one that held. (A third paraphrase was reported and disproved — that copy
+   was verbatim but line-wrapped, so the grep looking for it returned nothing.) The finding, the three
+   ways a text check gets this wrong, and the open question of where a cross-artifact guard should
+   live are TODO **A14**.*
+8. **The Verify link `REQ_F16A_025 → F16AStaticMarginVerificationTest` was hand-made on 2026-08-03**
+   and is unaffected by the reword (ids and their order are unchanged, so it resolves — the Stage-2
+   measurement). All three verified requirements are now linked, and two of the three links point at
+   a red test. That is the correct state: a Verify link records that a requirement is checked, not
+   that it passed.
+**Traces to** `REQ_F16A_025` · `REQ_F16A_L02` · `verification/F16AStaticMarginVerificationTest.m` ·
+`requirements/generate_f16a_requirements.m` · D-044 · D-046 · D-047 · D-048 · D-030 · D-042 · TODO B3

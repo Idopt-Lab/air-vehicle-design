@@ -10,10 +10,12 @@ function generate_f16a_requirements()
 %   as a requirement value.
 %
 %   THE ONE EXCEPTION, and the count is meant to be audited: REQ_F16A_025's
-%   -6 %MAC to +1 %MAC static-margin band is design intent for this teaching
-%   example, not a workbook cell, and its lower bound is an Estimate (D-046,
-%   inventoried in D-030). Every other requirement here either states an
-%   Excel input value or states no value at all.
+%   -6 %MAC static-margin floor is design intent for this teaching example,
+%   not a workbook cell, and is an Estimate (inventoried in D-030). It is
+%   now the ONLY such figure -- D-046's +1 %MAC upper bound is replaced by a
+%   strict SM < 0, which is the definition of relaxed static stability
+%   rather than a chosen number. Every other requirement here either states
+%   an Excel input value or states no value at all.
 %
 %   Idempotent: re-run to regenerate from scratch.
 
@@ -27,7 +29,7 @@ reqFile = fullfile(thisDir, "f16a.slreqx");
 slreq.clear();
 if isfile(reqFile); delete(reqFile); end
 rs = slreq.new(fullfile(thisDir, "f16a"));
-rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab: only Excel INPUT cells become requirement values. One documented exception, REQ_F16A_025, whose static-margin band is design intent rather than a workbook cell and whose lower bound is an Estimate (D-046, D-030). DRAFT - for RFLP Requirements phase review.";
+rs.Description = "Top-level Aircraft Requirements for the F-16A, derived from the Brandt F-16A reference sizing model (sizing/VnV/BrandtF16A) and cross-referenced against Brandt-F16-A.xls Main tab: only Excel INPUT cells become requirement values. One documented exception, REQ_F16A_025, whose -6 %MAC static-margin floor is design intent rather than a workbook cell and is an Estimate (D-030); its upper bound is now a strict SM < 0, a definition rather than a figure. DRAFT - for RFLP Requirements phase review.";
 
 % ---- Root container ----
 root = add(rs, Id="REQ_F16A_000", Summary="F-16A top-level aircraft requirements", ...
@@ -191,9 +193,17 @@ r.Rationale = "Bounds lateral ground stability (resistance to tip-over in crossw
 r.Keywords = ["draft","auto-generated","todo"];
 
 % ---- Stability & control container ----
-% 025 carries the -6 %MAC to +1 %MAC band as of D-046. The -6 %MAC lower
-% bound is an Estimate, inventoried in D-030; keep the requirement text and
-% that entry in step if either changes.
+% 025 is -6 %MAC <= SM < 0 at BOTH ends of the CG range. The bounds are not
+% the same kind of thing: the strict upper bound is a DEFINITION (relaxed
+% static stability IS negative static margin; zero is where the sign
+% changes), while the -6 %MAC floor is an uncited Estimate, inventoried in
+% D-030 -- keep the requirement text and that entry in step if either
+% changes. D-046's +1 %MAC upper bound is retired, so D-030's static-margin
+% row now inventories one number where it lists two.
+% The reference aircraft does NOT satisfy it: SM_land = +0.21 %MAC is not
+% negative, so F16AStaticMarginVerificationTest is expected RED. That is the
+% teaching point -- a requirement evaluated and violated, which is a
+% different state from REQ_F16A_P01's evaluated-nothing (D-042).
 % No "verify" keyword here, nor on 022 or P01: the Verify link is the record
 % that a requirement has a test, and a generator-written keyword restating
 % it is a derived fact that can drift out of step with the link (D-048).
@@ -202,8 +212,8 @@ sc.Type = "Container";
 sc.Keywords = ["draft","auto-generated"];
 
 r = add(sc, Id="REQ_F16A_025", Summary="Static margin (relaxed static stability)", ...
-    Description="The aircraft shall exhibit RELAXED STATIC STABILITY: the static margin SM = (x_np - x_cg)/MAC shall lie between -6 %MAC and +1 %MAC across the operational CG range (takeoff through landing weight). The band is asymmetric on purpose: the negative lower bound is the design intent, and the +1 %MAC upper bound caps how STABLE the aircraft may become, so that a conventionally stable aeroplane cannot satisfy it. Verification method: static margin at takeoff weight and at landing weight, both within the band (F16AStaticMarginVerificationTest). For reference only: the Brandt F-16A model computes SM_TO = -0.26 %MAC and SM_land = +0.21 %MAC (BrandtBalanceStabControl; D-047). Both are in band, so the reference aircraft MEETS this requirement -- but from the STABLE end. It does not reproduce the strongly relaxed static stability the F-16A is generally described as having. The -6 %MAC figure is an illustrative teaching value, not sourced data (D-030). A pass here is not evidence to the contrary.");
-r.Rationale = "Bounds the longitudinal stability margin that sizes the horizontal tail/stabilator and the permissible CG travel. It is a two-sided band because both directions are failures with opposite meanings: too negative exceeds the authority the flight control system is assumed to have, too positive is a conventionally stable aircraft, which removes the premise of the fly-by-wire decision posed by REQ_F16A_L02 (D-046).";
+    Description="The aircraft shall exhibit RELAXED STATIC STABILITY: the static margin SM = (x_np - x_cg)/MAC shall satisfy -6 %MAC <= SM < 0 (CG aft of the neutral point) across the operational CG range, takeoff through landing -- both ends, not an average. The upper bound is STRICT and is a definition, not a figure: relaxed static stability IS negative static margin. The -6 %MAC floor caps how unstable it may be. That figure is an illustrative teaching value, not sourced data (D-030) -- the one invented number left now that D-046's upper bound is gone. Burning fuel and releasing stores moves the CG FORWARD (x_cg 26.1979 -> 26.1451 ft), so landing is the forward, most stable end, where this bites. F16AStaticMarginVerificationTest checks both; the reference model does NOT meet it: BrandtBalanceStabControl computes SM_TO = -0.26 %MAC (meets) but SM_land = +0.21 %MAC (VIOLATES), its neutral point being a simplified approximation (readme_bsc.md).");
+r.Rationale = "A negative static margin is what relaxed static stability IS: the CG sits aft of the neutral point, cutting trim drag and buying instantaneous turn rate, flyable only because the flight control system supplies artificial stability -- the premise REQ_F16A_L02's fly-by-wire decision rests on. The -6 %MAC floor caps that instability at what the system is assumed able to stabilize; without it, negative alone would admit an aeroplane nothing could fly. Requiring both ends of the CG range, not an average, keeps that true for the whole mission, not only while heavy. It also sizes the stabilator and bounds permissible CG travel.";
 r.Keywords = ["draft","auto-generated"];
 
 % ---- Cost container ----
