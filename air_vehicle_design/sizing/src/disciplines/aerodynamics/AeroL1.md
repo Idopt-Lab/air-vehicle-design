@@ -21,7 +21,7 @@ geometry buildup, so a concrete L1 class takes no geometry object.
 
 | Method | Returns | Source |
 |---|---|---|
-| `drag_polar(obj, state)` | `{CD0, K1, K2}` | Mattingly 2nd ed. Eq. 2.9 |
+| `drag_polar(obj, state)` | `{CD0, K1, K2}` | Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9 |
 | `get_CLmax(obj)` | clean CLmax | Roskam Vol. I Table 3.1 |
 | `roskam_CLmax_value(cat, column)` | range mean of one CLmax column | Roskam Vol. I Table 3.1 |
 | `lookup_CLmax(type)` | clean CLmax by type — **standalone, not wired** | Roskam Vol. I Table 3.3 |
@@ -29,16 +29,16 @@ geometry buildup, so a concrete L1 class takes no geometry object.
 
 ## 3. Equations
 
-**Drag polar** [Mattingly 2nd ed. Eq. 2.9]:
+**Drag polar** [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]:
 
 $$C_D = C_{D_0}(M) + K_1(M)\,C_L^{2} + K_2\,C_L$$
 
 $C_{D_0}(M)$ and $K_1(M)$ are interpolated by Mach from the fighter "Current" type-curves
-[Mattingly 2nd ed. Fig. 2.10 and Fig. 2.11]. A tabulated figure has no transonic pole, so the curves
+[Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10 and Fig. 2.11]. A tabulated figure has no transonic pole, so the curves
 are evaluated across the whole Mach range — contrast `AeroL2`'s Eq. 12.51 supersonic path, which
 does.
 
-$K_2 = 0$ for an uncambered fighter [Mattingly 2nd ed. Sec. 2.3.1]. Any other `design_type` errors:
+$K_2 = 0$ for an uncambered fighter [Mattingly: Aircraft Engine Design, 2nd edition Sec. 2.3.1]. Any other `design_type` errors:
 the cambered-type curve fit is not in this repo.
 
 **CLmax**, as the range mean of the aircraft type's column [Roskam Vol. I Table 3.1]:

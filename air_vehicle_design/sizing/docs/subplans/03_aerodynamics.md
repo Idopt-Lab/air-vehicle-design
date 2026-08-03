@@ -36,7 +36,7 @@ path — no silent default; `F16AeroL2/L3` also require the injected geometry ob
 ## Fidelity ladder
 
 ### L1 — aircraft-type only, NO geometry (Mattingly type-curves)
-- Polar: Mattingly AED 2nd ed. **Eq. 2.9**; fighters **K2 = 0** (§2.3.1).
+- Polar: Mattingly: Aircraft Engine Design, 2nd edition **Eq. 2.9**; fighters **K2 = 0** (§2.3.1).
 - `CD0(M)` from **Fig. 2.10**, `K1(M)` from **Fig. 2.11** — F-16 "Current" curve, interpolated by Mach.
 - Clean CLmax type-based: Roskam Vol. I Table 3.1/3.3.
 

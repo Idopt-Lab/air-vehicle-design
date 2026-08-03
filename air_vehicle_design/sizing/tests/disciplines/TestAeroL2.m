@@ -179,7 +179,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         end
 
         function testGetK2NegativeForCamberedF16(tc)
-            % The F16's cambered 64A204 (alpha_L0 = -1.01 deg) gives CL_minD>0,
+            % The F16's cambered 64A204 (alpha_L0 = -1.33 deg) gives CL_minD>0,
             % so subsonic K2 = -2*K1*CL_minD is strictly NEGATIVE (sign check;
             % the magnitude depends on the M-dependent CL_alpha).
             a  = TestAeroL2.makeAero();
@@ -434,6 +434,17 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             tc.verifyGreaterThan(a.get_Delta_CD0_L(), a.get_Delta_CD0_TO());
         end
 
+        function testLookupDeltaClMaxWarnsOnUnrecognizedConfig(tc)
+        % A config string that is not takeoff/TO or landing/L must warn
+        % loudly, not silently fall through to the full, undiminished value
+        % (per Casey's direction: "have the code scream a warning").
+            received = tc.verifyWarning(@() AeroL2.lookup_Delta_cl_max_values('slotted', 'Takeoff', 1.0), ...
+                'AeroL2:unrecognizedConfig', ...
+                'A typo''d config string must trigger a loud warning, not a silent guess.');
+            tc.verifyEqual(received, 1.3, ...
+                'The unrecognized-config fallback must still be the full, undiminished value.');
+        end
+
         % ================================================================== %
         % Inheritance / interface compliance
         % ================================================================== %
@@ -458,14 +469,18 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         % DELIBERATELY-FAILING TODO (unverified citations) -- see header.
         % ================================================================== %
 
-        function testTODO_AlphaL0Unverified(tc)
-            % alpha_L0 = -1.01 deg is NOT verified against a primary NACA
-            % 64A204 source (thin-airfoil for design_CL=0.2 suggests ~ -1.4 to
-            % -1.9 deg). f16a_L2.json's .aerodynamics still carries "_TODO_alpha_L0_deg".
-            % FAILS until pinned to a primary source (clear the _TODO key).
+        function testAlphaL0MatchesCitedValue(tc)
+        % RETIRED as a testTODO_ 2026-07-30: alpha_L0 is now cited (a
+        % compiled NACA 64A204 data summary, web-sourced, corroborated by
+        % two independent searches -- see f16a_L2.json's _cite_alpha_L0_deg
+        % for the honest caveat that primary 64A204 wind-tunnel data is
+        % scarce). Per this repo's convention (see TestWeightsL2's retired
+        % testTODO_PureAreaDerivedShouldNotRequireWTO), a satisfied TODO
+        % guard is deleted, not kept as an always-green no-op -- this is a
+        % real assertion on the new value instead.
             J = TestAeroL2.readAeroL2JSON();
-            tc.verifyFalse(isfield(J.airfoil, 'x_TODO_alpha_L0_deg'), ...
-                'TODO: NACA 64A204 alpha_L0 (-1.01 deg) is unverified in-repo.');
+            tc.verifyEqual(J.airfoil.alpha_L0_deg, -1.33, 'AbsTol', 1e-9, ...
+                'alpha_L0 must match the cited NACA 64A204 value, -1.33 deg.');
         end
 
         function testTODO_ClMax2DUnverified(tc)

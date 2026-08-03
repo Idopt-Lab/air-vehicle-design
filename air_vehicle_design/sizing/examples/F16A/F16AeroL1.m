@@ -2,7 +2,7 @@ classdef F16AeroL1 < AeroModelL1
 %F16AEROL1  F-16A Block 10 Level-1 aerodynamics student class.
 %
 %   Inherits AeroModelL1 (abstract enforcer). The drag polar is
-%   CD = CD0(M) + K1(M)*CL^2 + K2*CL (Mattingly AED 2nd ed. Eq. 2.9), and
+%   CD = CD0(M) + K1(M)*CL^2 + K2*CL (Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9), and
 %   CLmax is a Roskam type-based lookup. Every abstract method delegates to
 %   the AeroL1 static toolbox.
 %

@@ -8,7 +8,7 @@ classdef (Abstract) AerodynamicsBase < handle
 %   The AeroLN static toolboxes are NOT in this chain.
 %
 %   K-convention: CD = CD0 + K1*CL^2 + K2*CL, K1 quadratic/induced and K2
-%   linear/camber.  [Mattingly 2nd ed. Eq. 2.9]
+%   linear/camber.  [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]
 %
 %   Companion doc: src/base/AerodynamicsBase.md
 
@@ -26,7 +26,7 @@ classdef (Abstract) AerodynamicsBase < handle
     methods
 
         function CD = compute_CD(~, CD0, K1, K2, CL)
-        %COMPUTE_CD  Drag coefficient.  [Mattingly 2nd ed. Eq. 2.9]
+        %COMPUTE_CD  Drag coefficient.  [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]
             CD = CD0 + K1*CL^2 + K2*CL;
         end
 

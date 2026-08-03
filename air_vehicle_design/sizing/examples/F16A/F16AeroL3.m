@@ -61,16 +61,33 @@ classdef F16AeroL3 < AeroModelL3
 
     properties (Constant)
         % --- Trailing-edge flaperon control-surface estimates (aero spec, not
-        % geometry; not in the aero JSON). TODO: verify vs T.O. 1F-16A-1.
+        % geometry; not in the aero JSON).
+        % delta_flap_TO/L_deg = 20 deg, BOTH takeoff and landing, web-sourced
+        % 2026-07-30 (f-16.net forum + Aerosoft F-16 simulator manual, cross-
+        % checking each other): with gear down the flaperons go to 20 deg as
+        % trailing-edge flaps; during ground roll before liftoff the TEF is
+        % also 20 deg down (only retracting above 240-370 kt once airborne).
+        % Was previously an uncited 15/20 deg split (TO/L) -- the 15 deg TO
+        % figure is corrected; the two conditions use the SAME TEF setting.
         hld_TE            = "plain"
         c_flap_over_c     = 0.25
         eta_flap_in       = 0.10
         eta_flap_out      = 0.90
-        delta_flap_TO_deg = 15
+        delta_flap_TO_deg = 20
         delta_flap_L_deg  = 20
         k_f_flap          = 0.28    % Raymer 6th ed. Eq. 12.62 (partial-span)
 
         % --- Leading-edge slat (maneuvering flap) estimates.
+        % TODO: verify vs T.O. 1F-16A-1. The LEF is NOT a fixed "TO/L config"
+        % value in reality -- it is auto-scheduled by the flight control
+        % computer as a function of AoA and Mach, and sits at -2 deg only
+        % during ground roll/taxi before rotation (web-sourced 2026-07-30,
+        % same sources as the TEF note above). delta_slat_TO/L_deg = 17 here
+        % is a stand-in for the LEF position near the high-AoA rotation/
+        % touchdown condition these CLmax_TO/CLmax_L values represent, NOT
+        % the ground-roll -2 deg figure -- plugging in -2 deg would be wrong
+        % for a different flight regime. Still unpinned against a primary
+        % schedule (AoA/Mach breakpoints, not a single number).
         hld_LE            = "slat"
         c_slat_over_c     = 0.15
         eta_slat_in       = 0.0

@@ -7,9 +7,9 @@ classdef AeroL1
 %   Two tiers: high-level statics take the concrete object; low-level statics
 %   take only scalars and arrays.
 %
-%   Drag polar: [Mattingly 2nd ed. Eq. 2.9]. CD0(M) interpolated from the
-%   fighter "Current" type-curve [Mattingly 2nd ed. Fig. 2.10]; K2 = 0 for an
-%   uncambered fighter [Mattingly 2nd ed. Sec. 2.3.1]. CLmax and the high-lift
+%   Drag polar: [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]. CD0(M) interpolated from the
+%   fighter "Current" type-curve [Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10]; K2 = 0 for an
+%   uncambered fighter [Mattingly: Aircraft Engine Design, 2nd edition Sec. 2.3.1]. CLmax and the high-lift
 %   increments: [Roskam Vol. I Table 3.1, Table 3.6].
 %
 %   K1 -- EQUATION-BASED, NOT A CURVE (changed 2026-07-29, user direction):
@@ -61,7 +61,8 @@ classdef AeroL1
         %   "Current" curve table; K1 computed from the object's real wing
         %   AR/Lambda_LE_deg via k1_from_geometry (Raymer Eq. 12.48-12.50/
         %   12.51, see class header "K1 -- EQUATION-BASED"); K2 = 0 for the
-        %   fighter/uncambered type.  Mattingly AED Eq. 2.9.
+        %   fighter/uncambered type.  Mattingly: Aircraft Engine Design, 2nd
+        %   edition, Eq. 2.9.
             cd0 = AeroL1.interp_curve(obj.cd0_curve_mach, obj.cd0_curve_value, state.mach);
             k1  = AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach);
             k2  = AeroL1.mattingly_K2(obj.design_type);

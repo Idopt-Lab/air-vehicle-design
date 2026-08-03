@@ -103,9 +103,9 @@
     "_src": "per-component x_c_max, Q, f_lam, is_body [Raymer Tbl 12.6]; surface_roughness_k_ft [Raymer Tbl 12.4/12.5 'smooth paint']; wave_drag_factor_E_WD [Raymer Eq. 12.41, tuned to Brandt aero.Ewd]; CD0_LandP [Raymer Sec. 12.5]; misc_drag_areas [Raymer Tbl 12.7]",
 
     "airfoil": {
-      "_src": "NACA 64A204 section data [TO Fig. 1-2 for the designation]; same values as f16a_L2.json .aerodynamics.airfoil",
+      "_src": "NACA 64A204 section data [TO Fig. 1-2 for the designation]; same values as f16a_L2.json .aerodynamics.airfoil; alpha_L0_deg see f16a_L2.json's _cite_alpha_L0_deg (updated 2026-07-30, -1.01 -> -1.33)",
       "name": "NACA 64A204",
-      "alpha_L0_deg": -1.01,
+      "alpha_L0_deg": -1.33,
       "cl_max_2D": 1.20,
       "cl_alpha_per_deg": 0.105,
       "_TODO_cl_alpha_per_deg": "cl_alpha = 0.105/deg is an internet-band midpoint, not primary-sourced; remove when pinned. Guard: TestAeroL2.testTODO_ClAlpha2DUnverified (same value at L2)."

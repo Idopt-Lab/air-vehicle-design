@@ -48,7 +48,7 @@ None. L1 owns no geometry, so there are no `Dependent` getters on this class.
 
 | Method | Delegates to / does | Source |
 |---|---|---|
-| `drag_polar(state)` | `AeroL1.drag_polar` → `{CD0(M) [curve], K1(M) [equation], K2 = 0}` | Mattingly AED 2nd ed. Eq. 2.9 / Fig. 2.10; Raymer Eq. 12.48-12.50/12.51 for K1 |
+| `drag_polar(state)` | `AeroL1.drag_polar` → `{CD0(M) [curve], K1(M) [equation], K2 = 0}` | Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9 / Fig. 2.10; Raymer Eq. 12.48-12.50/12.51 for K1 |
 | `get_CLmax(~)` | `AeroL1.get_CLmax` → `roskam_CLmax_value(category, "CL_max_clean")` | Roskam Vol. I Table 3.1 |
 | `get_Delta_CLmax_{TO,L}` | Table 3.1 column difference vs the clean column | Roskam Table 3.1 |
 | `get_CLmax_{TO,L}` | clean + the matching increment | Roskam Table 3.1 |

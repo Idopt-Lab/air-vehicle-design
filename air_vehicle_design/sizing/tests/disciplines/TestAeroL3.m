@@ -479,5 +479,32 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                 'TODO: surface-roughness k table number is miscited (12.2 vs 12.4/12.5).');
         end
 
+        function testTODO_LEFScheduleNotPinned(tc)
+        %TESTTODO_LEFSCHEDULENOTPINNED  Deliberate, EXPECTED red.
+        %
+        %   THIS TEST IS EXPECTED TO BE RED. Added 2026-07-30 -- audit finding
+        %   A-3 noted this open item had no guarding test, unlike every other
+        %   citation gap in Aerodynamics.
+        %
+        %   WHAT IS MISSING: delta_slat_TO_deg/delta_slat_L_deg = 17 in
+        %   F16AeroL3.m is a stand-in for the leading-edge flap's real,
+        %   AoA/Mach-scheduled position near the rotation/touchdown condition
+        %   CLmax_TO/CLmax_L represent. Web research (2026-07-30) pinned the
+        %   trailing-edge flap (20 deg, both conditions) but confirmed the LEF
+        %   is not a fixed "TO/L config" value at all in the real aircraft --
+        %   it is a continuous schedule, not in this repo. 17 deg remains
+        %   unpinned against a primary source (T.O. 1F-16A-1).
+        %
+        %   HOW THIS TEST DETECTS IT: keys off F16AeroL3.m's own comment
+        %   sentence, following TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo's
+        %   pattern for a non-JSON-marker TODO. Do NOT make this green by
+        %   deleting the comment without actually pinning the schedule.
+            src = fileread(which('F16AeroL3'));
+            tc.verifyFalse(contains(src, 'Still unpinned against a primary'), ...
+                ['TODO (EXPECTED RED): the LEF schedule near rotation/touchdown ' ...
+                 'is not pinned to a primary source; F16AeroL3.m still carries ' ...
+                 'the standing TO-DO.']);
+        end
+
     end
 end

@@ -3,7 +3,7 @@ classdef TestAeroL1 < matlab.unittest.TestCase
 %
 %   L1's drag polar (Aero deep-dive Phase C, K1 changed to equation-based
 %   2026-07-29 -- see F16AeroL1.m's class header for the full diagnostic):
-%     CD = CD0(M) + K1(M)*CL^2 + K2*CL         Mattingly AED 2nd ed. Eq. 2.9
+%     CD = CD0(M) + K1(M)*CL^2 + K2*CL         Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9
 %     CD0(M)         interpolated from the fighter "Current" curve table
 %                    (f16a_L1.json .aerodynamics cd0_curve) -- still geometry-free
 %     K1(M)          AeroL1.k1_from_geometry(AR, Lambda_LE_deg, M): real F-16

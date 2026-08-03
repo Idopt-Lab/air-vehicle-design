@@ -44,7 +44,7 @@ the contract, so a wrong tier yields plausible numbers rather than an error.
 
 | Level | Function | Formula | Citation |
 |---|---|---|---|
-| L1 | `AeroL1.mattingly_polar` (interp) | `CD0(M)` from the fighter "Current" type-curve | Mattingly AED 2nd ed. Fig. 2.10, Eq. 2.9 |
+| L1 | `AeroL1.mattingly_polar` (interp) | `CD0(M)` from the fighter "Current" type-curve | Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10, Eq. 2.9 |
 | L2 subsonic | `AeroL2.get_CD0` | `Cfe·(S_wet/S_ref)` | Raymer Eq. 12.23 |
 | L2 supersonic | `AeroL2.get_CD0_supersonic` | `Cf(Re,M)·(S_wet/S_ref)` | Raymer Eq. 12.27 (Cf), 12.23 (form) |
 | L3 | `AeroL3.get_CD0_buildup` | `Σ(Cf_eff·FF·Q·S_wet)/S_ref + CD0_misc + CD0_LandP` | Raymer Eq. 12.24 |

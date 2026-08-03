@@ -123,8 +123,9 @@ classdef AeroL2
 
         function val = get_K2(obj, K1_sub, M)
         %GET_K2  Polar-offset term (Convention A).
-        %   Subsonic: CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2)
-        %   [Brandt Sec. 4.3], then K2 = -2*K1_sub*CL_minD. Nonzero for the
+        %   Subsonic: CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2) (see
+        %   compute_CL_minD -- not Brandt's own method), then
+        %   K2 = -2*K1_sub*CL_minD [Brandt Aero!G17]. Nonzero for the
         %   F-16's cambered NACA 64A204 (design_CL=0.2). M>=1: K2=0.
             CL_alpha_M = AeroL2.get_CL_alpha(obj, M);
             CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
@@ -170,6 +171,11 @@ classdef AeroL2
             elseif ismember(config, {'landing','L'})
                 val = base * 0.8;
             else
+                warning('AeroL2:unrecognizedConfig', ...
+                    ['Unrecognized high-lift config "%s" -- expected one of ' ...
+                     '''takeoff''/''TO'' or ''landing''/''L''. Using the full, ' ...
+                     'undiminished value with no takeoff/landing reduction.'], ...
+                    string(config));
                 val = base;
             end
         end
@@ -243,7 +249,9 @@ classdef AeroL2
 
         function K2 = K2_value(K1_sub, CL_minD, M)
         %K2_VALUE  Polar-offset term (Convention A).
-        %   K2 = -2*K1_sub*CL_minD  (M<1)   [Brandt Sec. 4.3 / Aero!G17]
+        %   K2 = -2*K1_sub*CL_minD  (M<1)   [Brandt Aero!G17 -- this
+        %   structure is genuinely Brandt's; see compute_CL_minD for the
+        %   CL_minD input, which is NOT Brandt's own method]
         %   K2 = 0                  (M>=1)  (linearized supersonic theory)
             if M >= 1
                 K2 = 0;
@@ -289,7 +297,14 @@ classdef AeroL2
 
         function CL_minD = compute_CL_minD(CL_alpha, alpha_L0_deg)
         %COMPUTE_CL_MIND  CL at minimum drag.
-        %   CL_minD = CL_alpha * (-deg2rad(alpha_L0)/2)  [Brandt Sec. 4.3].
+        %   CL_minD = CL_alpha * (-deg2rad(alpha_L0)/2). Standard thin-
+        %   airfoil zero-lift relation, NOT Brandt's own method (Brandt
+        %   derives an equivalent quantity from the airfoil's NACA 4-digit
+        %   designation at Aero!G20; per Casey, that method is unclear and
+        %   not being reproduced here -- this equation is kept deliberately
+        %   as the framework's own choice, corrected 2026-07-30 from a
+        %   previous, inaccurate "[Brandt Sec. 4.3]" citation that implied
+        %   this exact form was Brandt's; see audit finding A-2).
         %   Uncambered airfoil (alpha_L0 = 0) -> CL_minD = 0 -> K2 = 0.
             CL_minD = CL_alpha * (-deg2rad(alpha_L0_deg) / 2);
         end
