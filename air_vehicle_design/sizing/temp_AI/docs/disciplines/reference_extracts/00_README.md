@@ -32,27 +32,27 @@ Each scraped item carries an inline citation of the form:
 | 2  | `02_practical_aerodynamics.md`          | 2 Review of Practical Aerodynamics          | 48–86   | **done** |
 | 3  | `03_aircraft_performance_methods.md`    | 3 Aircraft Performance Methods              | 86–116  | **done** |
 | 4  | `04_operating_envelope.md`              | 4 Aircraft Operating Envelope               | 116–138 | **done** |
-| 5  | `05_takeoff_weight_estimate.md`         | 5 Preliminary Estimate of Takeoff Weight    | 138–165 | pending |
-| 6  | `06_takeoff_wing_loading.md`            | 6 Estimating the Takeoff Wing Loading       | 165–184 | pending |
-| 7  | `07_planform_and_airfoil.md`            | 7 Selecting the Planform and Airfoil        | 184–208 | pending |
-| 8  | `08_fuselage_sizing.md`                 | 8 Preliminary Fuselage Sizing and Design    | 208–234 | pending |
-| 9  | `09_high_lift_devices.md`               | 9 High-Lift Devices                         | 234–267 | pending |
-| 10 | `10_takeoff_and_landing.md`             | 10 Takeoff and Landing Analysis             | 267–295 | pending |
-| 11 | `11_tail_sizing.md`                     | 11 Preliminary Sizing of Tails              | 295–305 | pending |
-| 12 | `12_survivability_stealth.md`           | 12 Designing for Survivability (Stealth)    | 305–334 | pending |
-| 13 | `13_wing_body_aerodynamics.md`          | 13 Estimating Wing–Body Aerodynamics        | 334–366 | pending |
-| 14 | `14_propulsion_fundamentals.md`         | 14 Propulsion System Fundamentals           | 366–394 | pending |
-| 15 | `15_inlet_design.md`                    | 15 Turbine Engine Inlet Design              | 394–424 | pending |
-| 16 | `16_engine_installation.md`             | 16 Corrections for Engine Installation      | 424–446 | pending |
-| 17 | `17_propeller_propulsion.md`            | 17 Propeller Propulsion Systems             | 446–477 | pending |
-| 18 | `18_thrust_sizing.md`                   | 18 Propulsion System Thrust Sizing          | 477–501 | pending |
-| 19 | `19_structures_and_materials.md`        | 19 Structures and Materials                 | 501–561 | pending |
-| 20 | `20_refined_weight_estimate.md`         | 20 Refined Weight Estimate                  | 561–585 | pending |
-| 21 | `21_static_stability_and_control.md`    | 21 Static Stability and Control             | 585–611 | pending |
-| 22 | `22_trim_drag_and_maneuvering.md`       | 22 Trim Drag and Maneuvering Flight         | 611–623 | pending |
-| 23 | `23_control_surface_sizing.md`          | 23 Control Surface Sizing Criteria          | 623–635 | pending |
-| 24 | `24_life_cycle_cost.md`                 | 24 Life Cycle Cost                          | 635–661 | pending |
-| 25 | `25_trade_studies_and_sizing.md`        | 25 Trade Studies and Sizing                 | 661–679 | pending |
+| 5  | `05_takeoff_weight_estimate.md`         | 5 Preliminary Estimate of Takeoff Weight    | 138–165 | **done** |
+| 6  | `06_takeoff_wing_loading.md`            | 6 Estimating the Takeoff Wing Loading       | 165–184 | **done** |
+| 7  | `07_planform_and_airfoil.md`            | 7 Selecting the Planform and Airfoil        | 184–208 | **done** |
+| 8  | `08_fuselage_sizing.md`                 | 8 Preliminary Fuselage Sizing and Design    | 208–232 | **done** |
+| 9  | `09_high_lift_devices.md`               | 9 High-Lift Devices                         | 233–265 | **done** |
+| 10 | `10_takeoff_and_landing.md`             | 10 Takeoff and Landing Analysis             | 266–295 | **done** |
+| 11 | `11_tail_sizing.md`                     | 11 Preliminary Sizing of Tails              | 294–305 | **done** |
+| 12 | `12_survivability_stealth.md`           | 12 Designing for Survivability (Stealth)    | 305–332 | **done** |
+| 13 | `13_wing_body_aerodynamics.md`          | 13 Estimating Wing–Body Aerodynamics        | 333–366 | **done** |
+| 14 | `14_propulsion_fundamentals.md`         | 14 Propulsion System Fundamentals           | 355–382 | **done** |
+| 15 | `15_inlet_design.md`                    | 15 Turbine Engine Inlet Design              | 383–412 | **done** |
+| 16 | `16_engine_installation.md`             | 16 Corrections for Engine Installation      | 413–434 | **done** |
+| 17 | `17_propeller_propulsion.md`            | 17 Propeller Propulsion Systems             | 435–465 | **done** |
+| 18 | `18_thrust_sizing.md`                   | 18 Propulsion System Thrust Sizing          | 467–490 | **done** |
+| 19 | `19_structures_and_materials.md`        | 19 Structures and Materials                 | 491–550 | **done** |
+| 20 | `20_refined_weight_estimate.md`         | 20 Refined Weight Estimate                  | 551–574 | **done** |
+| 21 | `21_static_stability_and_control.md`    | 21 Static Stability and Control             | 584–609 | **done** |
+| 22 | `22_trim_drag_and_maneuvering.md`       | 22 Trim Drag and Maneuvering Flight         | 610–621 | **done** |
+| 23 | `23_control_surface_sizing.md`          | 23 Control Surface Sizing Criteria          | 622–633 | **done** |
+| 24 | `24_life_cycle_cost.md`                 | 24 Life Cycle Cost                          | 634–659 | **done** |
+| 25 | `25_trade_studies_and_sizing.md`        | 25 Trade Studies and Sizing                 | 660–677 | **done** |
 | A  | `A_conversions.md`                      | Appendix A Conversions                      | 680–692 | pending |
 | B  | `B_atmospheric_data.md`                 | Appendix B Atmospheric Data                 | 692–700 | pending |
 | C  | `C_isentropic_flow.md`                  | Appendix C Isentropic Compressible Flow     | 700–708 | pending |
