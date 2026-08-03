@@ -5,8 +5,9 @@ classdef PropL1
 %   chain. F16PropL1 inherits PropulsionModelL1 and delegates to these statics.
 %
 %   Thrust lapse: [Martins AE481 metabook Eq. 10.9], exponent by engine type
-%   per Eq. 10.7. TSFC: [Raymer 6th ed. Table 3.3], a two-value table with no
-%   Mach or afterburner dependence.
+%   per Eq. 10.7. TSFC: [Raymer 6th ed. Table 3.3] for jet engines, [Table
+%   3.4] for 'turboprop' (a different, power-specific quantity) -- a
+%   two-value table with no Mach or afterburner dependence.
 %
 %   Companion doc: src/disciplines/propulsion/PropL1.md
 
@@ -73,9 +74,12 @@ classdef PropL1
         end
 
         function tbl = lookup_TSFC_table(engine_type)
-        %LOOKUP_TSFC_TABLE  Categorical cruise/loiter TSFC by engine type (1/hr).
-        %   Source: Raymer 6th ed. Table 3.3.
-        %   Returns struct with fields .cruise and .loiter (both in 1/hr).
+        %LOOKUP_TSFC_TABLE  Categorical cruise/loiter TSFC by engine type.
+        %   Source: Raymer 6th ed. Table 3.3 (jet engines, thrust-specific,
+        %   1/hr) and Table 3.4 (propeller engines, power-specific Cbhp,
+        %   lb/hr/bhp -- a DIFFERENT physical quantity, not interchangeable
+        %   with the jet rows without a power/thrust relation).
+        %   Returns struct with fields .cruise and .loiter.
         %   AB operation is NOT modelled here — see L2/L3 Mattingly Eq. 3.55.
         %   AB capability does not affect cruise/loiter TSFC; _AB variants share
         %   the same values as their dry counterparts.
@@ -87,7 +91,15 @@ classdef PropL1
                 case 'high_bypass_turbofan'
                     tbl = struct('cruise', 0.50, 'loiter', 0.40);
                 case 'turboprop'
-                    tbl = struct('cruise', 0.90, 'loiter', 0.80);
+                    % Table 3.4 Cbhp [lb/hr/bhp], NOT Table 3.3's 1/hr basis.
+                    % Fixed 2026-07-30 (previously duplicated the turbojet
+                    % row, 0.90/0.80, which was a mis-transcription).
+                    warning('PropL1:turbopropIsPowerBasis', ...
+                        ['turboprop TSFC is Raymer Table 3.4 Cbhp [lb/hr/bhp], a ' ...
+                         'power-specific fuel consumption -- not the thrust-specific ' ...
+                         '1/hr basis every other engine_type here returns. Do not feed ' ...
+                         'this value into a thrust-basis TSFC equation without converting.']);
+                    tbl = struct('cruise', 0.50, 'loiter', 0.60);
                 otherwise
                     error('PropL1:unknownEngineType', ...
                         'Unknown engine_type "%s". Add it to PropL1.lookup_TSFC_table.', ...

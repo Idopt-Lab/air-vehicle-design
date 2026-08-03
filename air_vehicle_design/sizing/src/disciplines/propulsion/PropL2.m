@@ -4,9 +4,12 @@ classdef PropL2
 %   Call as PropL2.method(...); never instantiated, not in the inheritance
 %   chain. F16PropL2 inherits PropulsionModelL2 and delegates to these statics.
 %
-%   Sources: [Mattingly 2nd ed. Eq. 2.54a/b] thrust lapse; [Eq. 3.12 with
+%   Sources: [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a/b] thrust lapse; [Eq. 3.12 with
 %   3.55a/b] TSFC; [Eq. D.6] throttle ratio; [Raymer 6th ed. Sec. 10.3.2,
-%   Eq. 10.4-10.15] parametric engine sizing.
+%   Eq. 10.4-10.15] parametric engine sizing, EXCEPT Eq. 10.10
+%   (engine_weight_AB), confirmed 7th ed. per Sarojini -- see that method's
+%   own comment. Eq. 10.6/10.12 (engine_diam_nonAB/AB) remain an open
+%   6th-vs-7th-edition question, see their TODO(Sarojini) comments.
 %
 %   The C1/C2 TSFC coefficients are engine-class constants selected by
 %   engine_type inside lookup_TSFC_coeffs -- not class Constants and not in the
@@ -44,6 +47,13 @@ classdef PropL2
         function alpha = get_thrust_lapse_mil_on_AB_scale(obj, state)
             alpha_mil = PropL2.thrust_lapse_mil(state.delta_0, state.theta_0, obj.TR);
             alpha = alpha_mil * (obj.T_SL_mil / obj.T_SL_wet);
+            if ~isfinite(alpha) || alpha < 0 || alpha > 1.5
+                warning('PropL2:anomalousThrustLapse', ...
+                    ['get_thrust_lapse_mil_on_AB_scale returned %.4f, outside the ' ...
+                     'physically plausible (0, 1.5] band for a mil-power lapse ' ...
+                     'renormalized onto the AB thrust scale -- check the flight ' ...
+                     'condition and T_SL_mil/T_SL_wet inputs.'], alpha);
+            end
         end
 
         function c_t = get_TSFC(obj, state)
@@ -177,7 +187,16 @@ classdef PropL2
         end
 
         function D = engine_diam_nonAB(T, BPR)
+        %ENGINE_DIAM_NONAB  Statistical engine diameter, nonafterburning.
+        %   [Raymer Eq. 10.6]. D [ft] = 0.033 · T^0.5 · exp(0.04·BPR).
+        %   TODO(Sarojini): this module header cites the surrounding Eq.
+        %   10.4-10.15 block to "Raymer 6th ed.", but a recovered todo.md
+        %   decision (VnV/BrandtF16A/todo.md, 2026-07-24 Propulsion entry 3)
+        %   says this specific coefficient's equation number is 7th ed. This
+        %   repo has no 7th-ed. source to check. Confirm the edition against
+        %   your physical copy and correct whichever citation is wrong.
             D = 0.033 * T.^0.5 .* exp(0.04 * BPR);
+            PropL2.warnIfImplausibleEngineDiameter(D, 'engine_diam_nonAB');
         end
 
         function SFC = SFC_max_nonAB(BPR)
@@ -203,6 +222,14 @@ classdef PropL2
         % --- Afterburning engines (BPR 0 to <1, M_max < 2.5) -------------
 
         function W = engine_weight_AB(T, M, BPR)
+        %ENGINE_WEIGHT_AB  Statistical engine dry weight, afterburning.
+        %   [Raymer 7th ed. Eq. 10.10]. W [lbf] = 0.0637 · T^1.1 · M^0.25 · exp(-0.81·BPR).
+        %   RESOLVED 2026-07-30: confirmed 7th ed. is correct for this
+        %   equation, per Sarojini (who has the 7th edition) -- this matches
+        %   the Weights-side citation of the same equation (see
+        %   WeightsModelL3.m). Was previously a shared TODO with
+        %   engine_diam_nonAB/AB, which remain open (Eq. 10.6/10.12 are a
+        %   separate, still-unconfirmed question).
             W = 0.0637 * T.^1.1 .* M.^0.25 .* exp(-0.81 * BPR);
         end
 
@@ -213,7 +240,12 @@ classdef PropL2
         end
 
         function D = engine_diam_AB(T, BPR)
+        %ENGINE_DIAM_AB  Statistical engine diameter, afterburning.
+        %   [Raymer Eq. 10.12]. D [ft] = 0.024 · T^0.5 · exp(0.04·BPR).
+        %   TODO(Sarojini): see engine_diam_nonAB's TODO -- same 6th-vs-7th-
+        %   edition question for this coefficient.
             D = 0.024 * T.^0.5 .* exp(0.04 * BPR);
+            PropL2.warnIfImplausibleEngineDiameter(D, 'engine_diam_AB');
         end
 
         function SFC = SFC_max_AB(BPR)
@@ -234,6 +266,20 @@ classdef PropL2
         %   SFC [1/hr] = 1.04 · exp(-0.186·BPR)
         %   Cruise at 36,000 ft, M = 0.9.
             SFC = 1.04 * exp(-0.186 * BPR);
+        end
+
+        function warnIfImplausibleEngineDiameter(D, callerName)
+        %WARNIFIMPLAUSIBLEENGINEDIAMETER  Sanity-check warning, not a hard
+        %   error: a fighter-class engine diameter belongs roughly in
+        %   [1, 8] ft. Added 2026-07-30 in place of dedicated unit tests for
+        %   engine_diam_nonAB/engine_diam_AB (per Casey: give a warning for
+        %   an anomalous value rather than test every input combination).
+            if ~isfinite(D) || D < 1 || D > 8
+                warning('PropL2:implausibleEngineDiameter', ...
+                    ['%s returned D = %.4f ft, outside the physically plausible ' ...
+                     '[1, 8] ft band for a fighter-class engine -- check the ' ...
+                     'input thrust and bypass ratio.'], callerName, D);
+            end
         end
 
     end

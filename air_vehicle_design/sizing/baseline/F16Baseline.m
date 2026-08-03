@@ -217,7 +217,7 @@ b.engine.val.alt_ft           = 36000;
 b.engine.val.mach             = 0.87;
 b.engine.val.alpha_mil_approx = 0.34;   % Brandt Consts AS24 (alpha_dry, T_SL_dry basis)
 
-% F100-PW-100 real-world data  [Mattingly AED 2nd ed., Table C.4, p. 522]
+% F100-PW-100 real-world data  [Mattingly: Aircraft Engine Design, 2nd edition, Table C.4, p. 522]
 b.engine.F100PW100.T_max    = 23700;  % lbf   [Table C.4]
 b.engine.F100PW100.BPR      = 0.69;
 b.engine.F100PW100.W_dot    = 224;    % lbm/s
@@ -315,7 +315,8 @@ b.atm.a_std   = 1116.45;  % ft/s
 %  10. Brandt engine model  [Brandt F-16A.xls, "Engn(s)" sheet]
 %
 %  Brandt uses a generalized Mattingly thrust lapse with a Mach correction
-%  below TR -- different from Mattingly AED Eq. 2.54 (which PropL2 implements).
+%  below TR -- different from Mattingly: Aircraft Engine Design, 2nd edition,
+%  Eq. 2.54 (which PropL2 implements).
 %
 %  Dry lapse [Engn(s) row 4]:
 %    theta0 <= TR:  alpha_dry = delta_0*(1 - C_M_dry*M^e_M_dry)

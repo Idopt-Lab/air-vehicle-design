@@ -44,7 +44,7 @@ independently from thrust.
 | Level | Function | Formula | Citation |
 |---|---|---|---|
 | L1 | `PropL1.get_thrust_lapse` → `sigma_lapse(ρ, m)` | `α = σ^m`, `σ = ρ/ρ_SL`; `m` by engine type | Martins AE481 metabook Eq. 10.9 (turbofan m = 0.6; turbojet m = 1.0 per Eq. 10.7) |
-| L2 AB/max | `PropL2.thrust_lapse_AB(δ₀, θ₀, TR)` | θ₀ ≤ TR → δ₀; θ₀ > TR → `δ₀(1 − 3.5(θ₀−TR)/θ₀)` | Mattingly 2nd ed. Eq. 2.54a |
+| L2 AB/max | `PropL2.thrust_lapse_AB(δ₀, θ₀, TR)` | θ₀ ≤ TR → δ₀; θ₀ > TR → `δ₀(1 − 3.5(θ₀−TR)/θ₀)` | Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a |
 | L2 mil (dry) | `PropL2.thrust_lapse_mil(δ₀, θ₀, TR)` | θ₀ ≤ TR → 0.6δ₀; θ₀ > TR → `0.6δ₀(1 − 3.8(θ₀−TR)/θ₀)` | Mattingly Eq. 2.54b |
 | L2 mil-on-AB scale | `PropL2.get_thrust_lapse_mil_on_AB_scale` | `α_mil·(T_SL_mil/T_SL_wet)` | Mattingly Eq. 2.54b + Brandt `Consts` col AU convention |
 
@@ -132,7 +132,7 @@ The framework's Mattingly α_AB compares against **AT**; a dry point (cruise) co
 
 | Item | Status |
 |---|---|
-| `bypass_ratio` = 0.71 is traceable to no in-repo source | `_TODO_bypass_ratio` marker in `f16a_L2.json` |
+| ~~`bypass_ratio` = 0.71 is traceable to no in-repo source~~ **FIXED 2026-07-30** | pinned to `[Nicolai & Carichner Table 14.3, F100-PW-100]`, `_cite_bypass_ratio` in `f16a_L2.json` |
 | `PropL2` parametric sizing beyond Eq. 10.10 (engine length, diameter, cruise SFC/thrust) is implemented and unit-tested but **unwired** | geometry sizes the nacelle independently |
 | No L3 propulsion tier | by decision, not an omission — label L3 propulsion numbers "computed by `F16PropL2`" |
 

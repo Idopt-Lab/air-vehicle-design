@@ -20,7 +20,11 @@ classdef TestPropL1 < matlab.unittest.TestCase
 %       [Raymer 6th ed. Table 3.3, values in 1/hr]:
 %         low_bypass_turbofan(_AB): cruise 0.80 / loiter 0.70
 %         high_bypass_turbofan:     cruise 0.50 / loiter 0.40
-%         turbojet(_AB) / turboprop: cruise 0.90 / loiter 0.80
+%         turbojet(_AB):             cruise 0.90 / loiter 0.80
+%       [Raymer 6th ed. Table 3.4, values in lb/hr/bhp, a DIFFERENT
+%        power-specific quantity -- fixed 2026-07-30, was previously a
+%        duplicate of the turbojet row]:
+%         turboprop:                 cruise 0.50 / loiter 0.60
 
     properties (Constant)
         % Exact-arithmetic tolerance for closed-form table/power-law checks
@@ -56,7 +60,7 @@ classdef TestPropL1 < matlab.unittest.TestCase
 
         function testTSLWetConsistentWithF100PW100(tc)
             % Cross-check T_SL_wet against the F100-PW-100 published SLS thrust
-            % (predecessor engine). 23,700 lbf [Mattingly AED 2nd ed., Table
+            % (predecessor engine). 23,700 lbf [Mattingly: Aircraft Engine Design, 2nd edition, Table
             % C.4, p. 522] is an INDEPENDENT reference; the -200 (23,770) is
             % 0.3% above it, so RelTol 1% brackets both.
             g = F16PropL1(f16a_spec_path(1));
@@ -152,9 +156,13 @@ classdef TestPropL1 < matlab.unittest.TestCase
         end
 
         function testTSFCTableTurboprop(tc)
-            tbl = PropL1.lookup_TSFC_table('turboprop');
-            tc.verifyEqual(tbl.cruise, 0.90, 'AbsTol', tc.TOL_EXACT);   % [Raymer Table 3.3]
-            tc.verifyEqual(tbl.loiter, 0.80, 'AbsTol', tc.TOL_EXACT);
+        % Table 3.4 Cbhp [lb/hr/bhp], not Table 3.3's 1/hr -- must also warn,
+        % since this value is not thrust-basis like every other engine_type.
+            tbl = tc.verifyWarning(@() PropL1.lookup_TSFC_table('turboprop'), ...
+                'PropL1:turbopropIsPowerBasis', ...
+                'turboprop must warn that its TSFC is power-basis, not thrust-basis.');
+            tc.verifyEqual(tbl.cruise, 0.50, 'AbsTol', tc.TOL_EXACT);   % [Raymer Table 3.4]
+            tc.verifyEqual(tbl.loiter, 0.60, 'AbsTol', tc.TOL_EXACT);
         end
 
         function testTSFCTableUnknownThrows(tc)

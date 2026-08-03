@@ -23,7 +23,7 @@ No Mach term in the lapse, no afterburner split, no supersonic value.
 $$\alpha = \sigma^{m} \qquad \sigma = \frac{\rho}{\rho_{SL}}$$
 
 $m = 0.6$ for a turbofan, $1.0$ for a turbojet. $\rho_{SL} = 0.002377$ slug/ft³
-[Mattingly 2nd ed. App. B].
+[Mattingly: Aircraft Engine Design, 2nd edition App. B].
 
 Note what this does *not* contain: there is no Mach term, so the lapse cannot distinguish a dry from
 an afterburning power setting, and it degrades at extreme altitude and supersonic Mach. That is the

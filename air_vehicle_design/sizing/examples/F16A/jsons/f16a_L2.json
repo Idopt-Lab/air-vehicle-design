@@ -1,6 +1,6 @@
 {
   "_comment": "F-16A Block 10/15 Level-2 inputs. Read by F16GeomL2, F16AeroL2, F16PropL2, F16WeightsL2. Full docs: F16GeomL2.md, F16AeroL2.md, F16PropL2.md, F16WeightsL2.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
-  "_cite": "Main!/Engn(s)!/Miss!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly AED 2nd ed.; todo = VnV/BrandtF16A/todo.md.",
+  "_cite": "Main!/Engn(s)!/Miss!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly: Aircraft Engine Design, 2nd edition; todo = VnV/BrandtF16A/todo.md.",
 
   "aircraft_category": "jet_fighter",
   "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
@@ -38,7 +38,7 @@
   },
 
   "propulsion": {
-    "_src": "engine_type [F100-PW-200 class; selects the PropL2 Mattingly Eq. 3.55a/b TSFC coefficients]; engine_model [descriptor]; T_SL AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]; T_SL_mil, dry SLS lbf [Engn(s)!T_mil_SLS = Main!C29]; T_t4_max_F [Mattingly Tbl C.4, F100-PW-100]; TSFC_install_factor [Miss!C25 = Main!C25]; bypass_ratio [F100-PW-200 class, unpinned -- see _TODO key]",
+    "_src": "engine_type [F100-PW-200 class; selects the PropL2 Mattingly Eq. 3.55a/b TSFC coefficients]; engine_model [descriptor]; T_SL AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]; T_SL_mil, dry SLS lbf [Engn(s)!T_mil_SLS = Main!C29]; T_t4_max_F [Mattingly Tbl C.4, F100-PW-100]; TSFC_install_factor [Miss!C25 = Main!C25]; bypass_ratio [F100-PW-200 class; pinned to Nicolai & Carichner Table 14.3 F100-PW-100 -- see _cite_bypass_ratio key]",
     "_note": "Installed = uninstalled x 1.08. Brandt's stored SLS TSFCs (0.70 mil / 2.20 AB) are ALREADY installed -- do not double-apply [todo 2026-07-24 §4]. TR [Mattingly Eq. D.6] and T_SL_wet (= T_SL) are derived.",
     "engine_type": "low_bypass_turbofan_AB",
     "engine_model": "F100-PW-200",
@@ -47,7 +47,7 @@
     "T_t4_max_F": 2566.0,
     "TSFC_install_factor": 1.08,
     "bypass_ratio": 0.71,
-    "_TODO_bypass_ratio": "BPR = 0.71 for the F100-PW-200 is not traceable to any document in this repo -- added for the Raymer Eq. 10.10 engine-weight term that Phase 4 wires. Remove this key when pinned to a primary source (TO 1F-16A-1, Jane's, or a P&W datasheet). todo 2026-07-25 Phase 3."
+    "_cite_bypass_ratio": "Nicolai & Carichner Table 14.3, F100-PW-100 (direct predecessor of the F100-PW-200 this model otherwise uses); temp_AI/docs/disciplines/reference_extracts/14_propulsion_fundamentals.md:581. Pinned 2026-07-30; was previously an unresolved _TODO_bypass_ratio marker (todo 2026-07-25 Phase 3)."
   },
 
   "weights": {

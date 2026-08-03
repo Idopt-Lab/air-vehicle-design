@@ -50,7 +50,7 @@ optimization visibility would need a separate `T_t4_SLS` input, deliberately not
 
 | Method | Delegates to | Formula | Source |
 |---|---|---|---|
-| `thrust_lapse(state)` / `compute_thrust_lapse_AB` | `PropL2.thrust_lapse_AB(δ₀, θ₀, TR)` | θ₀ ≤ TR → δ₀; θ₀ > TR → `δ₀(1 − 3.5(θ₀−TR)/θ₀)` | Mattingly 2nd ed. Eq. 2.54a |
+| `thrust_lapse(state)` / `compute_thrust_lapse_AB` | `PropL2.thrust_lapse_AB(δ₀, θ₀, TR)` | θ₀ ≤ TR → δ₀; θ₀ > TR → `δ₀(1 − 3.5(θ₀−TR)/θ₀)` | Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a |
 | `compute_thrust_lapse_mil` | `PropL2.thrust_lapse_mil` | θ₀ ≤ TR → 0.6δ₀; θ₀ > TR → `0.6δ₀(1 − 3.8(θ₀−TR)/θ₀)` | Mattingly Eq. 2.54b |
 | `thrust_lapse_mil_on_AB_scale` | `PropL2.get_thrust_lapse_mil_on_AB_scale` | `α_mil·(T_SL_mil/T_SL_wet)` | Mattingly Eq. 2.54b + Brandt `Consts` col AU convention |
 | `get_TSFC(state)` / `compute_TSFC_mil` | `PropL2.TSFC_mil(C1, C2, M, θ)` | `(0.90 + 0.30M)√θ` | Mattingly Eq. 3.12 + 3.55a |
@@ -83,7 +83,7 @@ At 36,000 ft / M 0.87:
 
 | Item | Status |
 |---|---|
-| `bypass_ratio` = 0.71 is traceable to no in-repo source | `_TODO_bypass_ratio` marker in `f16a_L2.json` |
+| ~~`bypass_ratio` = 0.71 is traceable to no in-repo source~~ **FIXED 2026-07-30** | pinned to `[Nicolai & Carichner Table 14.3, F100-PW-100]`, `_cite_bypass_ratio` in `f16a_L2.json` |
 | `TR` is degenerate ≡ 1.0 — a separate `T_t4_SLS` input would be needed for real throttle-ratio visibility | accepted, deliberately not added |
 | `PropL2`'s parametric engine sizing beyond Eq. 10.10 (length, diameter, cruise SFC/thrust — Eq. 10.4–10.15) is implemented and unit-tested but **unwired**; geometry sizes the nacelle independently from `T_SL` | — |
 

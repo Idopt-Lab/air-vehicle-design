@@ -19,7 +19,7 @@ thrust lapse and TSFC. `F16PropL2` also serves the L3 rung — there is no L3 pr
 
 ## 2. Equations
 
-**Thrust lapse** [Mattingly 2nd ed. Eq. 2.54a afterburning, Eq. 2.54b military]. Both branch on the
+**Thrust lapse** [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a afterburning, Eq. 2.54b military]. Both branch on the
 total temperature ratio against the throttle ratio:
 
 $$\alpha_{AB} = \begin{cases}
@@ -33,14 +33,14 @@ $$\alpha_{mil} = \begin{cases}
 \end{cases}$$
 
 $\delta_0$ and $\theta_0$ are the total pressure and temperature ratios carried on `AircraftState`
-[Mattingly 2nd ed. Eq. 2.52].
+[Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.52].
 
 **Mil lapse on the AB scale** [Brandt F-16A.xls, Consts col AU] — needed so a dry-power condition can
 share the $T_{SL,AB}/W_{TO}$ constraint-diagram axis with AB-flown conditions:
 
 $$\alpha_{mil\to AB} = \alpha_{mil}\,\frac{T_{SL,mil}}{T_{SL,wet}}$$
 
-**TSFC** [Mattingly 2nd ed. Eq. 3.12 with the coefficients of Eq. 3.55a mil / 3.55b AB], with
+**TSFC** [Mattingly: Aircraft Engine Design, 2nd edition Eq. 3.12 with the coefficients of Eq. 3.55a mil / 3.55b AB], with
 $\theta$ the *static* temperature ratio:
 
 $$c_t = \left(C_1 + C_2 M\right)\sqrt{\theta}$$
@@ -51,7 +51,7 @@ and not in the JSON.
 
 **Installed TSFC** [Brandt Miss!C25]: $c_{t,installed} = 1.08\,c_{t,uninstalled}$.
 
-**Throttle ratio** [Mattingly 2nd ed. Eq. D.6]:
+**Throttle ratio** [Mattingly: Aircraft Engine Design, 2nd edition Eq. D.6]:
 
 $$TR = \frac{T_{t4,max}}{T_{t4,SLS}}$$
 

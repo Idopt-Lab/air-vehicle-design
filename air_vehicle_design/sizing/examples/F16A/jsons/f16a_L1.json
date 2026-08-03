@@ -1,6 +1,6 @@
 {
   "_comment": "F-16A Block 10/15 Level-1 inputs (type/statistical). Read by F16GeomL1, F16AeroL1, F16PropL1, F16WeightsL1. Full docs: F16GeomL1.md, AeroL1.md, F16PropL1.md, F16WeightsL1.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
-  "_cite": "Main!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly AED 2nd ed.; todo = VnV/BrandtF16A/todo.md.",
+  "_cite": "Main!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly: Aircraft Engine Design, 2nd edition; todo = VnV/BrandtF16A/todo.md.",
 
   "aircraft_category": "jet_fighter",
   "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Roskam I Tbl 3.5 (S_wet) / Raymer Tbl 6.3 (L_fus) / Raymer 7th Tbl 4.1 (AR_eq) / Raymer Tbl 3.1 + Roskam I Tbl 2.15 (empty weight) / Roskam I Tbl 3.1 (CLmax) / Raymer Tbl 12.3 (Cfe) rows. Those tables name their categories differently (Roskam's CLmax table says 'fighter'), so each lookup translates this canonical value to its own table's row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key: the row name is what the textbook prints.",

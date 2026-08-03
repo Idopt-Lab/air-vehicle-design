@@ -19,16 +19,16 @@ classdef (Abstract) PropulsionModelL2 < PropulsionBase
 
     methods (Abstract)
 
-        %COMPUTE_THRUST_LAPSE_MIL  Mil-power lapse.  [Mattingly 2nd ed. Eq. 2.54b]
+        %COMPUTE_THRUST_LAPSE_MIL  Mil-power lapse.  [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54b]
         alpha_mil = compute_thrust_lapse_mil(obj, state)
 
-        %COMPUTE_THRUST_LAPSE_AB  Afterburner lapse.  [Mattingly 2nd ed. Eq. 2.54a]
+        %COMPUTE_THRUST_LAPSE_AB  Afterburner lapse.  [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a]
         alpha_AB = compute_thrust_lapse_AB(obj, state)
 
-        %COMPUTE_TSFC_MIL  Mil-power TSFC [1/hr].  [Mattingly 2nd ed. Eq. 3.55a]
+        %COMPUTE_TSFC_MIL  Mil-power TSFC [1/hr].  [Mattingly: Aircraft Engine Design, 2nd edition Eq. 3.55a]
         c_t_mil = compute_TSFC_mil(obj, state)
 
-        %COMPUTE_TSFC_AB  Afterburner TSFC [1/hr].  [Mattingly 2nd ed. Eq. 3.55b]
+        %COMPUTE_TSFC_AB  Afterburner TSFC [1/hr].  [Mattingly: Aircraft Engine Design, 2nd edition Eq. 3.55b]
         c_t_AB = compute_TSFC_AB(obj, state)
 
     end

@@ -19,7 +19,7 @@ classdef TestPropL2 < matlab.unittest.TestCase
 %   form now errors MATLAB:minrhs (testNoArgConstructorErrors).
 %
 %   FORMULA / SOURCE REFERENCES:
-%     Thrust lapse — low-BPR mixed turbofan [Mattingly AED 2nd ed., Eq. 2.54]:
+%     Thrust lapse — low-BPR mixed turbofan [Mattingly: Aircraft Engine Design, 2nd edition, Eq. 2.54]:
 %       AB:  θ₀≤TR → α_AB = δ₀ ;  θ₀>TR → α_AB = δ₀(1 − 3.5(θ₀−TR)/θ₀)
 %       Mil: θ₀≤TR → α_mil = 0.6δ₀ ; θ₀>TR → α_mil = 0.6δ₀(1 − 3.8(θ₀−TR)/θ₀)
 %     TSFC [Mattingly Eq. 3.12 + 3.55, low-BPR mixed turbofan]:
@@ -100,7 +100,7 @@ classdef TestPropL2 < matlab.unittest.TestCase
         end
 
         function testLapseMilPrimitive30kft_M15(tc)
-            % GENUINE ANCHOR — Mattingly AED 2nd ed. Part-12 worked example.
+            % GENUINE ANCHOR — Mattingly: Aircraft Engine Design, 2nd edition Part-12 worked example.
             % 30 kft, M=1.5: θ,δ = 0.7940, 0.2975 [App. B]; TR = 1.07 (Part-12
             % AAF vehicle, NOT the F-16). θ₀ = θ·(1+0.2M²), δ₀ = δ·(1+0.2M²)^3.5.
             %   θ₀ = 0.7940·1.45 = 1.1513 ;  δ₀ = 0.2975·1.45^3.5 = 1.09214

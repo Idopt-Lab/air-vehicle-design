@@ -124,6 +124,181 @@ formula if a later phase re-derives these fields to match Excel bit-for-bit.
 
 ---
 
+## 2026-07-24 — Propulsion deep-dive, Phase A (documentation)
+
+**Recovery note (2026-07-30):** this section, and the sibling 2026-07-24/25 Weights and GeomL3
+sections, existed in this file and were lost during merge commit `47520d2` (its two parents had 307
+and 2421 lines; the merge result kept only 128). Several files across Propulsion and Weights still
+cite this exact section by name ("2026-07-24 entry 1/4", "P4-1" through "P4-22") — those citations
+were correct all along; the record they pointed to was just missing from the live file. Recovered
+verbatim from commit `8a2661c53a9b69d8184483c82a7a00d6902be3d3` (a parent of the merge). The Weights
+Phase-4 sections (§P4-1 through §P4-22, the 62-row exponent checklist) are not restored here — this
+recovery is scoped to Propulsion, since that is the discipline under review; the same recovery
+technique resolves the Weights side too, whenever that is prioritized.
+
+**Addendum (2026-07-30):** the 62-row exponent checklist's row COUNT (62) was always correct — it
+matches the recovered table's actual row count exactly. Its CATEGORY breakdown, quoted everywhere as
+"2 CONFLICT / 9 FROM-CODE / 24 VERIFY / 27 IMAGE-ONLY / 5 extract-clean" (summing to 67), was wrong
+in the original, lost content itself, not introduced by the merge loss. A direct recount of the
+recovered table gives the correct breakdown: **2 CONFLICT / 8 FROM-CODE / 26 VERIFY / 26 IMAGE-ONLY**,
+which sums to exactly 62 with no separate fifth category. This correction has been applied everywhere
+the wrong breakdown was quoted (`WeightsL3.m`, `TestWeightsL3.m`, `docs/subplans/05_weights.md`,
+`F16WeightsL3.md`). The full 62-row table itself is still not restored into this file.
+
+**Context:** Phase-A documentation pass for the Propulsion deep-dive (mirrors the Geometry and
+Aerodynamics deep-dives). Cross-checked the live propulsion code (`src/base/PropulsionBase.m`, the
+`PropL{1,2}` / `PropulsionModelL{1,2}` toolboxes/enforcers, `examples/F16A/F16Prop{L1,L2}.m`), the
+existing tests (`tests/disciplines/TestProp{L1,L2}.m` — read for citations only, NOT for expected
+values, per the anti-self-referential rule), the ground truth (`readme_prop.md`, `BrandtEngine.m`,
+`GroundTruth/cell-map.md` Engn(s)/Consts rows, `readme_consts.md`, `readme_mission.md`, `README.md`),
+the reference extracts (`temp_AI/docs/disciplines/reference_extracts/{mattingly,metabook,raymer}_data.md`),
+and `baseline/F16Baseline.m`. I did **not** open the live `Brandt-F16-A.xls` (documentation-only
+pass). Three items carry a **user decision dated 2026-07-24**; the rest are flagged/deferred.
+
+### Entry 1 — L1 density-lapse α = σ^m: 3-way citation split — RESOLVED (user, 2026-07-24)
+The single formula α = σ^m (σ = ρ/ρ_SL) is cited three inconsistent ways:
+- `src/disciplines/propulsion/PropL1.m:21` (also :40, :64-65, :73-74):
+  *"Source: J.R.R.A. Martins, AE481 course notes (metabook), Eqs. 10.7 / 10.9"*
+- `examples/F16A/F16PropL1.m:8-9`: *"[Martins AE481 course notes (metabook), Eq. 10.9]"*
+- `src/disciplines/propulsion/PropulsionModelL1.m:8-9` (also :20-22): *"thrust_lapse — density-ratio
+  power law: α = σ^0.6   [Raymer 6th §5.4]"*
+- `tests/disciplines/TestPropL1.m:201`: *"expected_SL = 1.0; % σ=1 at SLS regardless of Mach
+  [Raymer §5.4]"*
+- `docs/subplans/04_propulsion.md:74`: *"α (thrust lapse) | (ρ / ρ_SL)^0.6 | Raymer 6th ed, Ch 3"*
+The repo Martins extract (`metabook_data.md`) confirms Eq. 10.7 (turbojet, m=1.0) and Eq. 10.9
+(turbofan, general m; the specific m=0.6 is the Ch. 4 approximation, `metabook_data.md` line 226). No
+Raymer §5.4 extract exists in the repo (`raymer_data.md` covers Ch. 10/12/15 only) → the "Raymer §5.4"
+/ "Raymer Ch 3" citation is unverifiable AND conflicts with the verified Martins citation.
+**RESOLVED (user, 2026-07-24):** use **Martins metabook Eq. 10.9** as the source for α = σ^m. The
+`PropulsionModelL1.m` / `TestPropL1.m` "Raymer §5.4" and subplan "Raymer Ch 3" citations are to be
+corrected to Martins in the implementation step (Step 1c). No `.m`/`.json` files were edited in this
+documentation pass.
+
+### Entry 2 — Subplan TSFC units drift (/3600 → 1/s) vs. code (1/hr throughout) — RESOLVED (user, 2026-07-24)
+`docs/subplans/04_propulsion.md` states TSFC is converted to 1/s:
+- `:72-73`: *"low-BPR mixed turbofan: 0.8/hr → /3600 → 1/s"*, *"0.7/hr → /3600"*
+- `:79-80`: *"(0.9 + 0.30 × M) × sqrt(θ) [1/hr → /3600]"*, *"(1.6 + 0.27 × M) × sqrt(θ) [1/hr → /3600]"*
+The code keeps TSFC in **1/hr** everywhere, with no /3600: `PropL1.lookup_TSFC_table`/`get_TSFC`
+(0.80/0.70), `PropL2.TSFC_mil`/`TSFC_AB`, and `PropulsionBase.m:11` (*"TSFC in
+lbf_fuel/(hr·lbf_thrust) [1/hr]"*). The subplan misstates the as-built unit.
+**RESOLVED (user, 2026-07-24):** use **1/hr** for TSFC throughout — the code's 1/hr is correct; the
+subplan's `/3600 → 1/s` statements are wrong and will be corrected to 1/hr in the docs-cleanup step
+(1d, `docs/subplans/04_propulsion.md`). No `.m` change needed (code is already 1/hr).
+
+### Entry 3 — Raymer engine-diameter coeffs 0.033 (Eq. 10.6) / 0.024 (Eq. 10.12): OCR-vs-book — RESOLVED (user, 2026-07-24)
+`src/disciplines/propulsion/PropL2.m:182-183` (`engine_diam_nonAB`) uses 0.033 and `:224-225`
+(`engine_diam_AB`) uses 0.024, each with an in-code comment *"[OCR coefficient verify: book p. 284;
+metric check suggests ~0.034 / ~0.0256]"*. The repo Raymer extract (`raymer_data.md:27,33,40,46`)
+carries the identical OCR values (0.033/0.024) and the identical caveat ("metric cross-check suggests
+~0.034 / ~0.0256; verify on book p.284"). So the code faithfully matches the extract's OCR value —
+the unresolved conflict is **OCR-value vs. metric-cross-check within the extract itself**, and the
+physical Raymer 6th ed. p.284 is not in the repo. If the metric value is correct, the diameters are
+off by ~3% (nonAB) / ~6% (AB).
+**RESOLVED (user, 2026-07-24):** the coefficients **0.033 (Eq. 10.6, nonafterburning) and 0.024
+(Eq. 10.12, afterburning) are CORRECT for imperial units** and give the diameter in **ft** — the
+"metric check suggests ~0.034 / ~0.0256" note is wrong and is to be REMOVED from `PropL2.m`
+(`engine_diam_nonAB` :182-183, `engine_diam_AB` :224-225) in the implementation step (1c). User cites
+**Raymer 7th ed.** for these equation numbers; the surrounding §10.3.2 sizing block is currently
+labeled "Raymer 6th ed." in code/docs, so the edition label will be unified (6th→7th where the user's
+7th-ed numbering applies) as part of the 1c/1d citation cleanup.
+**2026-07-30 update:** Sarojini, also on this project, has the Raymer 7th edition and will confirm
+this citation when he next runs Claude Code on his own workstation — this repo currently has no 7th
+edition source, so this recovered entry's "Raymer 7th ed." attribution stays a TODO pending his check
+(see `PropL2.m`'s `engine_diam_nonAB`/`engine_diam_AB`/`engine_weight_AB` for the marker).
+
+### Entry 4 — Installed TSFC 1.08 factor: doc-vs-doc conflict on double-application — RESOLVED (user, 2026-07-24)
+The 1.08 factor lives at **Miss!C25 = Main!C25** (NOT an Engn! cell — a prior task framing assumed
+Engn!); stored in `GroundTruth/f16a_geometry.json:152` as `engine.TSFC_install_factor = 1.08`.
+Whether the stored SLS TSFCs 0.70 (mil) / 2.20 (AB) already include it is documented two contradictory
+ways:
+- **Already-installed camp:** `GroundTruth/cell-map.md:190` (*"the stored values (0.70, 2.20 hr⁻¹)
+  already include the 1.08× correction factor"*); `BrandtEngine.m:24-25` (0.70/2.20 marked
+  *"installed, calibrated at M=0 / M=0.4"*, and `thrust_dry`/`thrust_AB` apply NO further ×1.08);
+  `readme_prop.md:99-113` (SLS recovers 0.70/2.20 exactly, no 1.08 in the formula).
+- **Multiply-on-top camp:** `README.md:40` (*"Installed TSFC: uninstalled × 1.08"*), `README.md:25`;
+  `readme_mission.md:174-178,188`; `BrandtMission.m:366,372-375` (`tsfc_old_` = 1.08 · TSFC_sl_dry ·
+  (1+0.35|M|) · √θ → 0.756 at SLS). Both cannot hold.
+**RESOLVED (user, 2026-07-24):** trust cell-map / `BrandtEngine.m` / `readme_prop.md` — the stored
+0.70/2.20 **are installed** (already include 1.08); **do not double-apply.** The Brandt "expected"
+TSFC comparison column uses installed 0.70/2.20. `PropL2`'s Mattingly TSFC is uninstalled, so the
+planned wiring is `TSFC_installed = TSFC_uninstalled × 1.08` (factor from Miss!C25) — not yet applied
+in `F16PropL2` (implementation step). No files edited in this pass.
+
+### Entry 5 — Mattingly TSFC coefficients: VERIFIED AGREEMENT (logged for record, no conflict)
+`examples/F16A/F16PropL2.m:29-32` `C1_mil=0.90, C2_mil=0.30, C1_AB=1.60, C2_AB=0.27` match
+`mattingly_data.md` Eq. 3.55a (0.9/0.30) and Eq. 3.55b (1.6/0.27), low-BPR mixed turbofan, exactly.
+Thrust-lapse Eq. 2.54a/b, TR Eq. D.6, and `T_t4_max = 2566 °F` (Table C.4, F100-PW-100) also match the
+extract. No discrepancy — recorded so a future reader need not re-verify.
+
+### Entry A — Consts α column semantics (AT vs AU) — DEFERRED (user, 2026-07-24) → RESOLVED (live-xls read, 2026-07-24)
+`cell-map.md:208` maps `Consts!AU23 = α = thrust lapse = eng.run(alt, M, %AB/100).alpha_AB_ref`
+(max_mach = 100% AB → AB lapse on the T_SL_AB basis). But `tests/disciplines/TestPropL2.m` and
+`baseline/F16Baseline.m` treat `Consts!AT{23-28}` = α_AB and `Consts!AU{23-28}` = α_mil renormalized
+to the AB basis (e.g. dash: AT23 = 0.5770 = α_AB, AU23 = 0.1882 = α_mil_T_AB). So cell-map places the
+AB-lapse value at AU, whereas the test/baseline place α_AB at AT and a *different* (dry) value at AU.
+Cross-references the existing 2026-07-22 Aero Finding E (F16Baseline Consts column letters "not
+confirmed from the source screenshot"). **DEFERRED (user, 2026-07-24):** pin the per-condition α
+numbers and the correct AT/AU column semantics via a live `Brandt-F16-A.xls` COM read next pass — not
+resolved here, and no unverified per-condition α "expected" values were placed in
+`docs/propulsion_parameter_usage.md` (those rows are marked "pending live-xls read").
+
+**RESOLVED (live-xls read, 2026-07-24):** opened `GroundTruth/Brandt-F16-A.xls` via Excel COM
+(`actxserver`, read-only) and read the Consts sheet headers + rows 23–28 `.Value` and `.Formula`.
+Verified semantics from the live formulas:
+- **Consts!AS{23-28} = α_dry** (dry/mil lapse, δ₀ basis, → T_SL_dry). Live formula:
+  `=IF(AJ<='Engn(s)'!$S$1, AL·(1−'Engn(s)'!$D$4·D^'Engn(s)'!$F$4), AL·(1−'Engn(s)'!$L$4·D^'Engn(s)'!$O$4−'Engn(s)'!$R$4·(AJ−$S$1)/AJ))`
+  — uses the **dry** coefficients on Engn(s) **row 4** (AL=δ₀, AJ=θ₀, D=Mach).
+- **Consts!AT{23-28} = α_AB** (AB lapse, δ₀ basis, → T_SL_AB). Same IF form referencing Engn(s)
+  **row 15** (D15/F15/L15/O15/R15) — the AB coefficients.
+- **Consts!AU{23-28} = effective lapse on the T_SL_AB axis** (= `alpha_AB_ref`). Live formula:
+  `=(AS·Main!C$29 + F/100·(AT·Main!D$29 − AS·Main!C$29))/Main!D$29`, Main!C29=T_dry=15000,
+  Main!D29=T_AB=23770, F=%AB. For 100%-AB rows AU = AT; for the 0%-AB cruise row AU = AS·(T_dry/T_AB).
+
+So `cell-map.md:208` (AU = α thrust lapse = `alpha_AB_ref`) is **CORRECT**. `F16Baseline.m` /
+`TestPropL2.m` are correct that **AT = α_AB**, but their **"Consts AU{23-28} = alpha_mil_T_AB" cell
+citation is WRONG**: the value they use (e.g. dash 0.1882) is AS·(T_dry/T_AB) = α_dry renormalized to
+the AB basis — a **derived** quantity NOT stored in cell AU (live AU23 = 0.57698 = AT23, since row 23
+is 100% AB). The equations-expert should correct that `.m` cell citation in the implementation step.
+
+Row→condition map confirmed exactly. Live α values (Consts sheet, cells AS/AT/AU):
+
+| Consts row | Condition | alt (ft) | M | %AB | n | AS = α_dry | AT = α_AB | AU = α_eff(T_AB) |
+|---|---|---|---|---|---|---|---|---|
+| 23 | MxMach / dash | 36000 | 1.60 | 100 | 1.0 | 0.29829 | 0.57698 | 0.57698 |
+| 24 | Cruise | 36000 | 0.87 | 0 | 1.0 | 0.27111 | 0.33264 | 0.17108 |
+| 25 | Max Alt | 50000 | 0.87 | 100 | 1.0 | 0.13879 | 0.17029 | 0.17029 |
+| 26 | Cmbt Trn (sub) | 20000 | 0.87 | 100 | 4.5 | 0.55566 | 0.68178 | 0.68178 |
+| 27 | Cmbt Trn (sup) | 36000 | 1.40 | 100 | 1.4 | 0.35786 | 0.55656 | 0.55656 |
+| 28 | Ps | 10000 | 0.87 | 100 | 1.0 | 0.70273 | 0.85355 | 0.85355 |
+
+Probe check: live AT23 = 0.57698 ≈ test's 0.5770 (α_AB) ✓; live AU23 = 0.57698 ≠ test's claimed
+0.1882 (that 0.1882 = AS23·15000/23770 = α_dry-on-AB, not the content of cell AU) — confirms the AU
+mislabel. `docs/propulsion_parameter_usage.md` updated with the verified table + semantics.
+
+### Entry B — Brandt Engn AB-thrust-equation cell ROW: readme_prop row 6 vs. F16Baseline row 15 — flagged/deferred → RESOLVED (live-xls read, 2026-07-24)
+`readme_prop.md:78-83` places the AB thrust equation at **Engn row 6** (cells A6:G6 / H6:S6);
+`baseline/F16Baseline.m:340-342` cites the same AB coefficients (`C_M_AB=0.1`, `e_M_AB=0.5`,
+`C_TR_AB=2.2`) at **Engn(s) D15/F15/R15 (row 15)**. The dry equation agrees on row 4 both sides. The
+coefficient *values* match `readme_prop.md`'s AB formula (α_AB = δ₀(1 − 0.1√M − 2.2(θ₀−TR)/θ₀)); only
+the cited *row* differs (6 vs 15). Lower priority (values agree); reconcile the row reference via the
+same live-cell read as Entry A. Flagged, not resolved.
+
+**RESOLVED (live-xls read, 2026-07-24):** on the live `Engn(s)` sheet (workbook sheet 9; there is also
+a separate `Engn(s) Old` sheet 8) the **AB thrust equation is row 15** — `A15` = "ThrustAB = TslAB",
+section header `A14` = "AB:  θo ≤ TR" — with coefficients `D15 = 0.1` (Mach coeff), `F15 = 0.5` (Mach
+exponent → √M), `L15 = 0.1` / `O15 = 0.5` (above-TR Mach term), `R15 = 2.2` (θ correction); `S1 = 1.0`
+(TR). **Row 6 is the dry-TSFC section header** ("Engine Thrust-Specific Fuel Consumption") with EMPTY
+coefficient cells (D6/F6/L6/O6/R6 all blank). So `readme_prop.md`'s "Engn!row 6" for the AB thrust
+equation is **WRONG**; `F16Baseline.m`'s Engn(s) row-15 citation (D15/F15/R15) is **CORRECT** (full
+set D15/F15/L15/O15/R15). The dry thrust equation is row 4 (`D4=0.3`, `F4=1.0`, `L4=0.3`, `O4=1.0`,
+`R4=1.7`); dry TSFC row 7; AB TSFC row 19 (`A19`="TSFCAB = TSFCslAB"). `readme_prop.md`'s compact row
+scheme (dry-thrust 4 / dry-TSFC 5 / AB-thrust 6 / AB-TSFC 7) does NOT match the live sheet (dry-thrust
+4 / dry-TSFC 7 / AB-thrust 15 / AB-TSFC 19); the FORMULAS it lists are correct — only the AB (and
+dry-TSFC / AB-TSFC) row numbers are wrong. `docs/propulsion_parameter_usage.md` updated to the
+verified rows.
+
+---
+
 ## 2026-07-28 — Tail Sizing deep-dive (scribe phase)
 
 **Context:** promoting the standalone `TailSizingLevel1`/`F16TailSizingLevel1` volume-coefficient
