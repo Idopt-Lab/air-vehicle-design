@@ -30,8 +30,8 @@ classdef F16MissionL1 < MissionModelL1
 %     MissionModelL1 abstract contract), n_segments, total_range_nm_given.
 %   ============================================================================
 %
-%   Constructor loads examples/F16A/mission_profile.json by default
-%   (override by passing an explicit path), same convention as F16GeomL2.
+%   Constructor requires an explicit JSON path (mission_profile_path()); no
+%   silent default, same convention as F16GeomL2.
 %
 %   Inheritance: MissionBase -> MissionModelL1 -> F16MissionL1
 %
@@ -72,12 +72,14 @@ classdef F16MissionL1 < MissionModelL1
     methods
 
         function obj = F16MissionL1(json_path)
-        %F16MISSIONL1  Construct from examples/F16A/mission_profile.json
-        %   (default) or an explicit override path. Sets ONLY the input
-        %   properties; missiondata/n_segments/total_range_nm_given are
-        %   produced live by their Dependent getters.
-            if nargin == 0
-                json_path = fullfile(fileparts(mfilename('fullpath')), 'jsons', 'mission_profile.json');
+        %F16MISSIONL1  Construct from a required mission-profile JSON path
+        %   (mission_profile_path()). No silent default (fixed 2026-07-30,
+        %   matching every other discipline's constructor convention; see
+        %   CLAUDE.md). Sets ONLY the input properties; missiondata/
+        %   n_segments/total_range_nm_given are produced live by their
+        %   Dependent getters.
+            arguments
+                json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             S = MissionProfileImporter.read_json(json_path);
 

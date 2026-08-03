@@ -70,9 +70,9 @@ W_TO = data.W_TO_lbf;   % 31,377 lbf -- this file's own registered value
 %  COMPUTE — run the actual CAP profile through all three fidelity levels
 % ════════════════════════════════════════════════════════════════════════ %
 
-m1 = F16MissionL1();
-m2 = F16MissionL2();
-m3 = F16MissionL3();
+m1 = F16MissionL1(mission_profile_path());
+m2 = F16MissionL2(mission_profile_path());
+m3 = F16MissionL3(mission_profile_path());
 
 a1 = F16AeroL1(); p1 = F16PropL1();
 a2 = F16AeroL2(); p2 = F16PropL2();

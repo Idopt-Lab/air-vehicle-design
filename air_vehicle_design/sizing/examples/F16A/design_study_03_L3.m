@@ -50,9 +50,9 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
     geom = F16GeomL3(f16a_spec_path(3), prop);
     aero = F16AeroL3(geom, f16a_spec_path(3));
     wts  = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
-    miss = F16MissionL3();
+    miss = F16MissionL3(mission_profile_path());
 
-    constraints = F16ConstraintSet.build("L3");
+    constraints = F16ConstraintSet.build("L3"); % TODO (7/31/2026): Why does the constraint set take a fidelity level as an argument?
     con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 
     tail = F16TailL1();

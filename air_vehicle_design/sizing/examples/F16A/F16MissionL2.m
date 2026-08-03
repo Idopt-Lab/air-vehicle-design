@@ -58,10 +58,11 @@ classdef F16MissionL2 < MissionModelL2
     methods
 
         function obj = F16MissionL2(json_path)
-        %F16MISSIONL2  Construct from examples/F16A/mission_profile.json
-        %   (default) or an explicit override path.
-            if nargin == 0
-                json_path = fullfile(fileparts(mfilename('fullpath')), 'jsons', 'mission_profile.json');
+        %F16MISSIONL2  Construct from a required mission-profile JSON path
+        %   (mission_profile_path()). No silent default (fixed 2026-07-30,
+        %   matching every other discipline's constructor convention).
+            arguments
+                json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             S = MissionProfileImporter.read_json(json_path);
 

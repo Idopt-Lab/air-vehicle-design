@@ -55,6 +55,7 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %       b_rud_frac=0.90 [Raymer 6th ed. p.161, "extend to the tip of the
 %       tail or to about 90% of the tail span"].
     arguments
+         % TODO (7/31/2026): These should not be hardcoded.
         W_TO_guess (1,1) double {mustBePositive} = 30000
         T_SL_guess (1,1) double {mustBePositive} = 20000
     end
@@ -63,13 +64,15 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
     geom = F16GeomL2(f16a_spec_path(2), prop);
     aero = F16AeroL2(geom, f16a_spec_path(2));
     wts  = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), geom, prop);
-    miss = F16MissionL2();
+    miss = F16MissionL2(mission_profile_path());
 
-    constraints = F16ConstraintSet.build("L2");
+    constraints = F16ConstraintSet.build("L2"); % TODO (7/31/2026): Why does the constraint set take a fidelity level as an argument?
     con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 
+    % TODO (7/31/2026): Tail sizing is implemented in Geometry, per
+    % Sarojini.
     tail = F16TailL1();
-    ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
+    ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90); % TODO (7/31/2026): Implemented into geometry class, already.
 
     loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);

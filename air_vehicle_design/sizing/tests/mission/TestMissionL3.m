@@ -42,7 +42,7 @@ classdef TestMissionL3 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testEnergyHeightRateFormula(tc)
-            % dh_e/dt = (T-D)*V/W [Mattingly AED 2nd ed., Case 1/3 forms].
+            % dh_e/dt = (T-D)*V/W [Mattingly: Aircraft Engine Design, 2nd edition, Case 1/3 forms].
             % Independent numeric case: T=5000 lbf, D=2000 lbf, V=800 ft/s,
             % W=20000 lbf -> (5000-2000)*800/20000 = 120 ft/s.
             expected = (5000-2000)*800/20000;   % = 120
@@ -222,14 +222,14 @@ classdef TestMissionL3 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testConstructorReadsMissionProfileJSON(tc)
-            obj = F16MissionL3();
+            obj = F16MissionL3(mission_profile_path());
             tc.verifyEqual(obj.n_segments, 10);
             tc.verifyEqual(obj.segment_names(7), "Combat");
             tc.verifyEqual(obj.drop_lb(7), 4400, 'AbsTol', tc.TOL_TIGHT);
         end
 
         function testComputeFuelWithRealDisciplineObjectsIsPositive(tc)
-            obj  = F16MissionL3();
+            obj  = F16MissionL3(mission_profile_path());
             aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop = F16PropL2(f16a_spec_path(2));   % see file header -- no F16PropL3 exists
             W_TO = 31377;
@@ -241,7 +241,7 @@ classdef TestMissionL3 < matlab.unittest.TestCase
         function testComputeFuelPhysicallyPlausibleRatio(tc)
             % Same wide, subplan-cited bound as L1/L2 -- see TestMissionL2's
             % identical comment for why a narrower bound isn't used here.
-            obj  = F16MissionL3();
+            obj  = F16MissionL3(mission_profile_path());
             aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop = F16PropL2(f16a_spec_path(2));
             W_TO = 31377;
@@ -253,30 +253,30 @@ classdef TestMissionL3 < matlab.unittest.TestCase
         end
 
         function testMissiondataLiveRecomputeOnMutatedInput(tc)
-            obj = F16MissionL3();
+            obj = F16MissionL3(mission_profile_path());
             obj.RFF = obj.RFF + 0.01;
             tc.verifyEqual(obj.missiondata.RFF, obj.RFF, 'AbsTol', tc.TOL_TIGHT);
         end
 
         function testDerivedPropertiesAreReadOnly(tc)
-            obj = F16MissionL3();
+            obj = F16MissionL3(mission_profile_path());
             tc.verifyError(@() setfield(obj, 'missiondata', struct()), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(obj, 'n_segments', 5), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(obj, 'total_range_nm_given', 5), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         function testIsaMissionBaseAndMissionModelL3(tc)
-            tc.verifyTrue(isa(F16MissionL3(), 'MissionBase'));
-            tc.verifyTrue(isa(F16MissionL3(), 'MissionModelL3'));
+            tc.verifyTrue(isa(F16MissionL3(mission_profile_path()), 'MissionBase'));
+            tc.verifyTrue(isa(F16MissionL3(mission_profile_path()), 'MissionModelL3'));
         end
 
         function testNotIsaMissionModelL1OrL2(tc)
-            tc.verifyFalse(isa(F16MissionL3(), 'MissionModelL1'));
-            tc.verifyFalse(isa(F16MissionL3(), 'MissionModelL2'));
+            tc.verifyFalse(isa(F16MissionL3(mission_profile_path()), 'MissionModelL1'));
+            tc.verifyFalse(isa(F16MissionL3(mission_profile_path()), 'MissionModelL2'));
         end
 
         function testIsHandleClass(tc)
-            tc.verifyTrue(isa(F16MissionL3(), 'handle'));
+            tc.verifyTrue(isa(F16MissionL3(mission_profile_path()), 'handle'));
         end
 
     end

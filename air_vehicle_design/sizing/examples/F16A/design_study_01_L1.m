@@ -25,22 +25,23 @@ function [result, objs] = design_study_01_L1(W_TO_guess)
 %   250-360 ft^2 (+-20% of Brandt's 300 ft^2 -- which is itself an L2/L3
 %   INPUT, not an L1 target; L1's S_ref is genuinely solved for here, not
 %   expected to land exactly on 300).
-    arguments
-        W_TO_guess (1,1) double {mustBePositive} = 30000
-    end
+arguments
+     % TODO (7/31/2026): These should not be hardcoded.
+     W_TO_guess (1,1) double {mustBePositive} = 30000
+end
 
-    aero = F16AeroL1(f16a_spec_path(1));
-    prop = F16PropL1(f16a_spec_path(1));
-    wts  = F16WeightsL1(f16a_spec_path(1));
-    geom = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-    miss = F16MissionL1();
+aero = F16AeroL1(f16a_spec_path(1));
+prop = F16PropL1(f16a_spec_path(1));
+wts  = F16WeightsL1(f16a_spec_path(1));
+geom = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
+miss = F16MissionL1(mission_profile_path());
 
-    constraints = F16ConstraintSet.build("L1");
-    con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
+constraints = F16ConstraintSet.build("L1"); % TODO (7/31/2026): Why does the constraint set take a fidelity level as an argument?
+con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 
-    loop = SizingLoopL1(aero, prop, wts, geom, miss, con);
-    result = loop.run(W_TO_guess);
+loop = SizingLoopL1(aero, prop, wts, geom, miss, con);
+result = loop.run(W_TO_guess);
 
-    objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
-        'miss', miss, 'con', con);
+objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
+     'miss', miss, 'con', con);
 end

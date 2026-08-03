@@ -423,7 +423,7 @@ classdef MissionL3
         end
 
         function dhe_dt = energy_height_rate(T, D, V, W)
-        %ENERGY_HEIGHT_RATE  dh_e/dt = (T-D)*V/W  [Mattingly AED 2nd ed.,
+        %ENERGY_HEIGHT_RATE  dh_e/dt = (T-D)*V/W  [Mattingly: Aircraft Engine Design, 2nd edition,
         %   structurally consistent with Case 1/Case 3 forms, Eq. 3.17/3.20].
             dhe_dt = (T - D) * V / W;
         end

@@ -334,7 +334,7 @@ classdef TestMissionL1 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testConstructorReadsMissionProfileJSON(tc)
-            obj = F16MissionL1();
+            obj = F16MissionL1(mission_profile_path());
             tc.verifyEqual(obj.n_segments, 10);
             tc.verifyEqual(obj.segment_names(1), "Startup");
             tc.verifyEqual(obj.segment_names(7), "Combat");
@@ -346,12 +346,12 @@ classdef TestMissionL1 < matlab.unittest.TestCase
             % examples/F16A/mission_profile.json: Cruise=189.879,
             % Dash=49.968, Cruise2=239.847 nm; all other segments NaN
             % (omitted). Hand sum: 189.879+49.968+239.847 = 479.694.
-            obj = F16MissionL1();
+            obj = F16MissionL1(mission_profile_path());
             tc.verifyEqual(obj.total_range_nm_given, 479.694, 'AbsTol', 1e-3);
         end
 
         function testMissiondataPackagingMatchesInputs(tc)
-            obj = F16MissionL1();
+            obj = F16MissionL1(mission_profile_path());
             v = obj.missiondata;
             tc.verifyEqual(v.RFF, obj.RFF, 'AbsTol', tc.TOL_TIGHT);
             tc.verifyEqual(v.CLmax_TO, obj.CLmax_TO, 'AbsTol', tc.TOL_TIGHT);
@@ -360,7 +360,7 @@ classdef TestMissionL1 < matlab.unittest.TestCase
         end
 
         function testComputeFuelNeverCallsMocksAndSetsMissionFuel(tc)
-            obj  = F16MissionL1();
+            obj  = F16MissionL1(mission_profile_path());
             W_TO = 31377;
             W_fuel = obj.compute_fuel(ErroringAeroMock(), ErroringPropMock(), W_TO);
             tc.verifyGreaterThan(W_fuel, 0);
@@ -374,7 +374,7 @@ classdef TestMissionL1 < matlab.unittest.TestCase
             % Brandt-matching target; CAP and Brandt's Miss tab are
             % deliberately different profiles, see subplan's CAP-vs-Brandt
             % section).
-            obj  = F16MissionL1();
+            obj  = F16MissionL1(mission_profile_path());
             W_TO = 31377;   % F16Baseline TOGW [Brandt B38] -- common starting-weight assumption across L1/L2/L3 unit tests (user-directed 2026-07-24)
             W_fuel = obj.compute_fuel(ErroringAeroMock(), ErroringPropMock(), W_TO);
             ratio = W_fuel / W_TO;
@@ -386,7 +386,7 @@ classdef TestMissionL1 < matlab.unittest.TestCase
         function testMissiondataLiveRecomputeOnMutatedInput(tc)
             % Optimization-ready property design (CLAUDE.md): a Dependent
             % property must track a mutated input live, no reconstruction.
-            obj = F16MissionL1();
+            obj = F16MissionL1(mission_profile_path());
             obj.RFF = obj.RFF + 0.01;
             tc.verifyEqual(obj.missiondata.RFF, obj.RFF, 'AbsTol', tc.TOL_TIGHT, ...
                 'missiondata.RFF must track a mutated obj.RFF with no reconstruction.');
@@ -398,27 +398,27 @@ classdef TestMissionL1 < matlab.unittest.TestCase
         end
 
         function testDerivedPropertiesAreReadOnly(tc)
-            obj = F16MissionL1();
+            obj = F16MissionL1(mission_profile_path());
             tc.verifyError(@() setfield(obj, 'missiondata', struct()), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(obj, 'n_segments', 5), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(obj, 'total_range_nm_given', 5), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         function testIsaMissionBase(tc)
-            tc.verifyTrue(isa(F16MissionL1(), 'MissionBase'));
+            tc.verifyTrue(isa(F16MissionL1(mission_profile_path()), 'MissionBase'));
         end
 
         function testIsaMissionModelL1(tc)
-            tc.verifyTrue(isa(F16MissionL1(), 'MissionModelL1'));
+            tc.verifyTrue(isa(F16MissionL1(mission_profile_path()), 'MissionModelL1'));
         end
 
         function testNotIsaMissionModelL2OrL3(tc)
-            tc.verifyFalse(isa(F16MissionL1(), 'MissionModelL2'));
-            tc.verifyFalse(isa(F16MissionL1(), 'MissionModelL3'));
+            tc.verifyFalse(isa(F16MissionL1(mission_profile_path()), 'MissionModelL2'));
+            tc.verifyFalse(isa(F16MissionL1(mission_profile_path()), 'MissionModelL3'));
         end
 
         function testIsHandleClass(tc)
-            tc.verifyTrue(isa(F16MissionL1(), 'handle'));
+            tc.verifyTrue(isa(F16MissionL1(mission_profile_path()), 'handle'));
         end
 
     end

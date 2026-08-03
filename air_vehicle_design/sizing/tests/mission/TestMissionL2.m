@@ -279,21 +279,21 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testConstructorReadsMissionProfileJSON(tc)
-            obj = F16MissionL2();
+            obj = F16MissionL2(mission_profile_path());
             tc.verifyEqual(obj.n_segments, 10);
             tc.verifyEqual(obj.segment_names(7), "Combat");
             tc.verifyEqual(obj.drop_lb(7), 4400, 'AbsTol', tc.TOL_TIGHT);
         end
 
         function testMissiondataPackagingMatchesInputs(tc)
-            obj = F16MissionL2();
+            obj = F16MissionL2(mission_profile_path());
             v = obj.missiondata;
             tc.verifyEqual(v.RFF, obj.RFF, 'AbsTol', tc.TOL_TIGHT);
             tc.verifyEqual(v.aircraft_category, obj.aircraft_category);
         end
 
         function testComputeFuelWithRealDisciplineObjectsIsPositive(tc)
-            obj  = F16MissionL2();
+            obj  = F16MissionL2(mission_profile_path());
             aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
             prop = F16PropL2(f16a_spec_path(2));
             W_TO = 31377;
@@ -312,7 +312,7 @@ classdef TestMissionL2 < matlab.unittest.TestCase
             % the defensible choice absent a more specific citation; a truly
             % tighter, justified bound is left as a follow-up if the
             % coordinator wants one derived from a real reference mission.
-            obj  = F16MissionL2();
+            obj  = F16MissionL2(mission_profile_path());
             aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
             prop = F16PropL2(f16a_spec_path(2));
             W_TO = 31377;
@@ -324,30 +324,30 @@ classdef TestMissionL2 < matlab.unittest.TestCase
         end
 
         function testMissiondataLiveRecomputeOnMutatedInput(tc)
-            obj = F16MissionL2();
+            obj = F16MissionL2(mission_profile_path());
             obj.RFF = obj.RFF + 0.01;
             tc.verifyEqual(obj.missiondata.RFF, obj.RFF, 'AbsTol', tc.TOL_TIGHT);
         end
 
         function testDerivedPropertiesAreReadOnly(tc)
-            obj = F16MissionL2();
+            obj = F16MissionL2(mission_profile_path());
             tc.verifyError(@() setfield(obj, 'missiondata', struct()), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(obj, 'n_segments', 5), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(obj, 'total_range_nm_given', 5), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         function testIsaMissionBaseAndMissionModelL2(tc)
-            tc.verifyTrue(isa(F16MissionL2(), 'MissionBase'));
-            tc.verifyTrue(isa(F16MissionL2(), 'MissionModelL2'));
+            tc.verifyTrue(isa(F16MissionL2(mission_profile_path()), 'MissionBase'));
+            tc.verifyTrue(isa(F16MissionL2(mission_profile_path()), 'MissionModelL2'));
         end
 
         function testNotIsaMissionModelL1OrL3(tc)
-            tc.verifyFalse(isa(F16MissionL2(), 'MissionModelL1'));
-            tc.verifyFalse(isa(F16MissionL2(), 'MissionModelL3'));
+            tc.verifyFalse(isa(F16MissionL2(mission_profile_path()), 'MissionModelL1'));
+            tc.verifyFalse(isa(F16MissionL2(mission_profile_path()), 'MissionModelL3'));
         end
 
         function testIsHandleClass(tc)
-            tc.verifyTrue(isa(F16MissionL2(), 'handle'));
+            tc.verifyTrue(isa(F16MissionL2(mission_profile_path()), 'handle'));
         end
 
     end
