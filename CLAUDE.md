@@ -22,6 +22,7 @@ Non-negotiable rules from PLAN.md:
 3. `temp_Casey/` is read-only reference — cross-check equations against it, never modify or reuse its code directly.
 4. No feature added beyond what the current step requires.
 5. **After finishing a step (baseline/state → geometry → aerodynamics → propulsion → weights → constraints → mission → sizing), STOP and wait for review** — do not chain multiple steps together autonomously, even if the next step seems obvious.
+6. Claude's responses and writing are to adhere to ASD-STE100 Simplified Technical English, located in \sizing\docs\ASD-STE100_ISSUE9.pdf.
 
 Two folders are tracked in git but must stay untouched:
 - `temp_Casey/` — Casey's original (buggy) sizing implementation. Reference only; several documented bugs (e.g. calls to non-existent methods) mean its code must never be copied, only used to cross-check equations.
