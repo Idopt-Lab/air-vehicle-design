@@ -69,8 +69,9 @@ corrections and the smaller `0.475` arm fraction widen it further, not narrow it
 
 Supersedes `examples/F16TailSizingLevel1.m` (`c_HT=0.40`, `c_VT=0.07`, tail arm `0.5*L_fus`, Raymer
 6th ed.) — see `TailL1.md` Sec. 6 for the full discrepancy-resolution record. The old class and its
-test (`tests/tail_sizing/TestTailSizingLevel1.m`) are retained only until the new tests are verified
-green, per the scribe plan's "once tests pass, remove" gate — not to be used for new work.
+test (`tests/tail_sizing/TestTailSizingLevel1.m`) are deleted (removal completed 2026-07-30, per the
+scribe plan's "once tests pass, remove" gate). This class and `TailL1` are the only implementation
+now.
 
 ## 5. To-dos
 

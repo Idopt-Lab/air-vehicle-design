@@ -24,11 +24,10 @@ classdef F16TailL1 < TailSizingModelL1
 %   SUPERSEDED by the corrected set above -- see TailSizing_scribe_plan.md
 %   Sec. 2 for the full discrepancy-resolution record (two competing L1
 %   tail-sizing implementations existed in this repo; this migration
-%   adopts the corrected one). examples/F16TailSizingLevel1.m and
-%   src/disciplines/tail_sizing/TailSizingLevel1.m are SUPERSEDED by this
-%   class and TailL1 -- retained only until the new tests are verified
-%   green (per the scribe plan's "once tests pass, remove" gate), NOT to be
-%   used for new work.
+%   adopted the corrected one). examples/F16TailSizingLevel1.m and
+%   src/disciplines/tail_sizing/TailSizingLevel1.m, the old, superseded
+%   files, are DELETED (removal completed 2026-07-30) -- this class and
+%   TailL1 are the only implementation now.
 %
 %   No geometry object is injected at L1: GeometryModelL1 has no planform
 %   at all (only a W_TO regression), so the caller supplies S_ref/b/cbar/
