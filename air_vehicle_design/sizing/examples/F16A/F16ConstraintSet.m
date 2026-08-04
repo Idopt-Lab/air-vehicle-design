@@ -1,22 +1,40 @@
 classdef F16ConstraintSet
-%F16CONSTRAINTSET  Builds the F-16's 8 point-performance/field constraint
-%   objects from examples/F16A/Constraints.xlsx, plus an optional 9th Stall
-%   condition not yet present in that workbook (see STALL_MACH below).
+%F16CONSTRAINTSET  Builds the F-16's 9 constraint objects (6 thrust, 2 field,
+%   1 stall) from examples/F16A/jsons/f16a_requirements.json, with the Stall
+%   condition excluded by default.
 %
 %   Layer-2 (aircraft-specific) wiring: reads the F-16's constraint
 %   conditions (altitude, Mach, weight fraction, load factor, specific
 %   excess power for the 6 point-performance rows; field length, friction
-%   coefficient for the 2 field rows) via ConstraintSetImporter, then
-%   instantiates the matching generic Layer-1 constraint class per row.
+%   coefficient, k-factor for the 2 field rows; liftoff Mach for takeoff;
+%   Mach for stall) from the requirements JSON via
+%   ConstraintSetImporter.read_conditions, then instantiates the matching
+%   generic Layer-1 constraint class per condition using EXPLICIT JSON keys.
 %   The Master-Equation thrust rows map to the MasterEquationConstraint
-%   subtree by their own data (T9, 2026-08-04): Ps>0 -> ExcessPowerConstraint,
-%   else n>1 -> SustainedTurnConstraint, else LevelFlightConstraint. The two
-%   field rows map to TakeoffConstraint/LandingConstraint (ground-roll
-%   equations). All are wired to the F-16 aero/prop discipline objects for the
-%   requested fidelity level. A 9th constraint, Stall
-%   (StallConstraint), can be appended directly rather than read from the
-%   sheet (see STALL_MACH's comment for why) -- EXCLUDED BY DEFAULT
-%   (changed 2026-07-27; was included by default until then).
+%   subtree by their own data (T9, 2026-08-04): Ps_fps>0 ->
+%   ExcessPowerConstraint, else n>1 -> SustainedTurnConstraint, else
+%   LevelFlightConstraint. The two field rows map to TakeoffConstraint/
+%   LandingConstraint (ground-roll equations); Stall maps to StallConstraint.
+%   All are wired to the F-16 aero/prop discipline objects for the requested
+%   fidelity level. The Stall condition is EXCLUDED BY DEFAULT (changed
+%   2026-07-27; was included by default until then).
+%
+%   DATA SOURCE (changed 2026-08-04, subplan 06-refactor T3): the conditions
+%   now come from the requirements JSON, resolved by f16a_requirements_path().
+%   This replaces the previous examples/F16A/Constraints.xlsx read and its
+%   brittle mangled-column-name coupling (row.Distance_ft_ / row.PS_ft_s_ /
+%   row.AB_). power_setting ("AB"/"mil") now comes DIRECTLY from the JSON --
+%   the old AB% -> power-setting mapping is gone. The Stall condition is now a
+%   real JSON row too (it used to be hardcoded via a STALL_MACH constant).
+%
+%   ONE INTENTIONAL NUMERIC CHANGE with the JSON source: Takeoff is now
+%   evaluated at the JSON's mach_liftoff = 0.2 (the real V_liftoff/a_SL,
+%   Brandt Consts!AT32), where the Excel-era code hardcoded 0.1. rho at sea
+%   level is Mach-independent, so this shifts nothing in TakeoffConstraint's
+%   ground-roll equation (which reads only state.rho) -- the change makes the
+%   modeled liftoff condition match Brandt, it does not move the F-16
+%   optimum. Landing keeps the nominal sea-level M=0.1 state used only for its
+%   rho.
 %
 %   WHY includeStall NOW DEFAULTS TO FALSE: Stall has no Brandt reference
 %   row to validate its CLmax against (StallConstraint.m's header), and at
@@ -36,58 +54,43 @@ classdef F16ConstraintSet
 %   not to this class. Stall is still available as a sanity-check overlay
 %   via includeStall=true; it just no longer determines the design point.
 %
-%   See sizing/docs/subplans/06_constraint_analysis.md, "F-16 Constraint
+%   See examples/F16A/mds/f16a_requirements.md and
+%   sizing/docs/subplans/06_constraint_analysis.md, "F-16 Constraint
 %   Conditions" tables, for the condition data; the constraint equations
 %   themselves are cited in MasterEquationConstraint.m/TakeoffConstraint.m/
 %   LandingConstraint.m/StallConstraint.m, not repeated here.
 %
-%   POWER SETTING IS WIRED FROM THE SHEET (fixed 2026-07-25): the workbook's
-%   "AB%" column (read as row.AB_) selects each thrust row's alpha basis --
-%   0% -> powerSetting="mil" (PropulsionBase.thrust_lapse_mil_on_AB_scale),
-%   100% -> powerSetting="AB" (PropulsionBase.thrust_lapse). Before this fix
-%   every row took the "AB" default, so the F-16's one dry-power
-%   condition (Cruise, AB%=0) was built on the afterburner lapse and its
-%   required T/W came out ~2.6x low -- the ~-58% error that
-%   cruise_and_combatturn2_error_scrape.md records as FIXED. The fix had landed
-%   in the Master-Equation class/its test but never in this production build
-%   path. See mapPowerSetting below.
+%   POWER SETTING COMES DIRECTLY FROM THE JSON (2026-08-04, T3): each thrust
+%   condition carries an explicit power_setting key ("AB"/"mil") that selects
+%   its alpha basis -- "mil" -> PropulsionBase.thrust_lapse_mil_on_AB_scale,
+%   "AB" -> PropulsionBase.thrust_lapse. This replaces the earlier AB%->
+%   power-setting mapping; the JSON stores the resolved setting, so no mapping
+%   is needed here. requirePowerSetting below is a thin validator only: it
+%   errors on a missing or non-{AB,mil} value, preserving the guard that a
+%   silent "AB" default (the old cruise -58% bug,
+%   cruise_and_combatturn2_error_scrape.md) is what this build path must
+%   prevent.
 %
-%   NOT WIRED FROM THE SHEET (intentional, documented gaps -- out of scope
-%   here):
-%     Vstall -- would-be k_TO/k_L touchdown/liftoff speed margins. The sheet
-%               currently disagrees with TakeoffConstraint/LandingConstraint's
-%               documented defaults (k_TO=1.2, k_L=1.3, per subplan 06's
-%               Field Constraints table) -- Takeoff's Vstall=1.3, Landing's
-%               is blank -- so this class keeps those classes' own defaults
-%               rather than reading a value that may not be finalized.
-
-    properties (Constant, Access = private)
-        %STALL_MACH  Mach number of the F-16 stall-speed requirement, sea
-        %   level [Brandt F-16A.xls, "Ps" sheet, cell B10 -- see F16Baseline.m's
-        %   b.constraints.stall.mach, same value]. examples/F16A/Constraints.xlsx
-        %   has no Stall row yet (unlike the other 8 conditions), so this is
-        %   hardcoded here rather than read via ConstraintSetImporter; flag
-        %   for spreadsheet backfill.
-        STALL_MACH = 0.217466
-    end
+%   FIELD SPEED MARGINS: the JSON's k_factor is now passed through to
+%   TakeoffConstraint/LandingConstraint (k_TO/k_L) with the explicit keys
+%   c.k_factor. The JSON values (1.2 takeoff, 1.3 landing; Brandt Main!U12/U13)
+%   equal those classes' own defaults, so this is behavior-neutral versus the
+%   pre-T3 code that let the defaults apply -- but the requirement value now
+%   comes from the requirements file, not a src default.
 
     methods (Static)
 
         function constraints = build(fidelityLevel, includeStall)
         %BUILD  Construct the F-16's constraint objects for one fidelity
         %   level. Returns a 1xN cell array of PointPerformanceBase objects,
-        %   in Constraints.xlsx row order (plus a trailing Stall condition,
-        %   unless includeStall is false), ready to hand to ConstraintAnalysis
-        %   (as-is, or trimmed/reordered by the caller first).
+        %   in requirements-JSON condition order (Stall last), ready to hand
+        %   to ConstraintAnalysis (as-is, or trimmed/reordered by the caller
+        %   first).
         %   includeStall -- default false (changed 2026-07-27; see this
-        %   class's header for why). Stall was never one of
-        %   subplans/06_constraint_analysis.md's original 8 diagram
-        %   constraints (Constraints.xlsx only has 8 rows; Stall was added
-        %   later as a 9th, sanity-check-only condition -- see this class's
-        %   header and StallConstraint.m's "no Brandt reference row exists"
-        %   note); pass includeStall=true to add it back as an overlay, e.g.
-        %   for a sanity-check plot -- but note it will again dominate
-        %   optimal_point() at L2/L3 if you do.
+        %   class's header for why). The Stall condition is skipped unless
+        %   includeStall is true; pass includeStall=true to add it back as an
+        %   overlay, e.g. for a sanity-check plot -- but note it will again
+        %   dominate optimal_point() at L2/L3 if you do.
             arguments
                 fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])} = "L3"
                 includeStall  (1,1) logical = false
@@ -95,94 +98,99 @@ classdef F16ConstraintSet
 
             [aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);
 
-            thisFile = mfilename('fullpath');
-            xlsxPath = fullfile(fileparts(thisFile), 'Constraints.xlsx');
-            T = ConstraintSetImporter.read(xlsxPath, "Constraints");
+            cond = ConstraintSetImporter.read_conditions(f16a_requirements_path());
 
-            names = string(T.Properties.RowNames);
-            constraints = cell(1, numel(names));
-            for i = 1:numel(names)
-                name = names(i);
-                row  = T(i, :);
+            constraints = cell(1, numel(cond));
+            keep = false(1, numel(cond));
+            for i = 1:numel(cond)
+                c    = cond(i);
+                name = string(c.name);
                 switch name
                     case "Takeoff"
-                        state = AircraftState(0, 0.1);
+                        % State built at the real liftoff Mach (0.2), not the
+                        % old hardcoded 0.1 -- rho at sea level is Mach-
+                        % independent, so this only makes the modeled condition
+                        % match Brandt (Consts!AT32); it does not move the
+                        % optimum. See class header.
+                        state = AircraftState(c.altitude_ft, c.mach_liftoff);
                         constraints{i} = TakeoffConstraint(name, state, aero, prop, ...
-                            row.Distance_ft_, row.SurfaceFrictionCoefficient_mu_, row.W_Wto);
+                            c.distance_ft, c.mu, c.beta, c.k_factor);
+                        keep(i) = true;
                     case "Landing"
-                        state = AircraftState(0, 0.1);
+                        % Nominal low-Mach sea-level state used only for its
+                        % rho (LandingConstraint reads no Mach) -- kept at the
+                        % 0.1 the pre-T3 code used.
+                        state = AircraftState(c.altitude_ft, 0.1);
                         constraints{i} = LandingConstraint(name, state, aero, ...
-                            row.Distance_ft_, row.SurfaceFrictionCoefficient_mu_, row.W_Wto);
+                            c.distance_ft, c.mu, c.beta, c.k_factor);
+                        keep(i) = true;
+                    case "Stall"
+                        if includeStall
+                            state = AircraftState(c.altitude_ft, c.mach);
+                            constraints{i} = StallConstraint(name, state, aero);
+                            keep(i) = true;
+                        end
                     otherwise
                         % Master-Equation thrust row. Pick the specialization
-                        % by data (T9): Ps>0 -> ExcessPower, else n>1 ->
-                        % SustainedTurn, else LevelFlight. Ps/n missing (NaN)
-                        % read as 0/1 (sustained, unaccelerated) -- the same
-                        % defaults the old single class applied.
-                        state = AircraftState(row.Altitude_ft_, row.MachNumber);
-                        Ps = row.PS_ft_s_;
-                        if isnan(Ps)
-                            Ps = 0;
-                        end
-                        n = row.n;
-                        if isnan(n)
-                            n = 1;
-                        end
-                        powerSetting = F16ConstraintSet.mapPowerSetting(name, row.AB_);
-                        if Ps > 0
+                        % by data (T9): Ps_fps>0 -> ExcessPower, else n>1 ->
+                        % SustainedTurn, else LevelFlight.
+                        state = AircraftState(c.altitude_ft, c.mach);
+                        powerSetting = F16ConstraintSet.requirePowerSetting(name, c);
+                        if c.Ps_fps > 0
                             constraints{i} = ExcessPowerConstraint(name, state, aero, prop, ...
-                                row.W_Wto, Ps, powerSetting);
-                        elseif n > 1
+                                c.beta, c.Ps_fps, powerSetting);
+                        elseif c.n > 1
                             constraints{i} = SustainedTurnConstraint(name, state, aero, prop, ...
-                                row.W_Wto, n, powerSetting);
+                                c.beta, c.n, powerSetting);
                         else
                             constraints{i} = LevelFlightConstraint(name, state, aero, prop, ...
-                                row.W_Wto, powerSetting);
+                                c.beta, powerSetting);
                         end
+                        keep(i) = true;
                 end
             end
 
-            if includeStall
-                stallState = AircraftState(0, F16ConstraintSet.STALL_MACH);
-                constraints{end+1} = StallConstraint("Stall", stallState, aero);
-            end
+            % Drop the skipped Stall slot (includeStall=false), preserving
+            % JSON condition order for the rest.
+            constraints = constraints(keep);
         end
 
     end
 
     methods (Static, Access = private)
 
-        function powerSetting = mapPowerSetting(name, AB_percent)
-        %MAPPOWERSETTING  Workbook "AB%" -> Master-Equation powerSetting.
-        %   0% afterburner is a dry/military-power condition, whose thrust lapse
-        %   must come from PropulsionBase.thrust_lapse_mil_on_AB_scale
-        %   (T_mil/T_SL_AB) rather than the AB-basis thrust_lapse -- see
+        function powerSetting = requirePowerSetting(name, cond)
+        %REQUIREPOWERSETTING  Read + validate a thrust row's power_setting.
+        %   The requirements JSON stores the resolved setting ("AB"/"mil")
+        %   directly, so no AB%->setting mapping is needed. "mil" is a
+        %   dry/military-power condition, whose thrust lapse comes from
+        %   PropulsionBase.thrust_lapse_mil_on_AB_scale (T_mil/T_SL_AB) rather
+        %   than the AB-basis thrust_lapse -- see
         %   MasterEquationConstraint.get_alpha and
         %   cruise_and_combatturn2_error_scrape.md Sec. 2.
         %
-        %   Errors rather than defaulting on a missing or partial value: an
+        %   Errors rather than defaulting on a missing or out-of-set value: an
         %   unstated power setting silently defaulting to "AB" is exactly the
-        %   bug this method exists to prevent, and the Master-Equation classes
-        %   model only the two discrete bases (there is no partial-AB thrust
-        %   model).
+        %   bug this validator exists to prevent, and the Master-Equation
+        %   classes model only the two discrete bases (there is no partial-AB
+        %   thrust model).
             arguments
-                name       (1,1) string
-                AB_percent (1,1) double
+                name (1,1) string
+                cond (1,1) struct
             end
-            if isnan(AB_percent)
+            if ~isfield(cond, 'power_setting')
                 error('F16ConstraintSet:missingPowerSetting', ...
-                    ['Constraint row "%s" has no AB%% value. A Master-Equation ', ...
-                     'constraint needs an explicit power setting (0 = mil, 100 = AB); ', ...
-                     'fill the AB%% column in Constraints.xlsx.'], name);
+                    ['Constraint "%s" has no power_setting key. A Master-Equation ', ...
+                     'constraint needs an explicit power setting ("mil" or "AB"); ', ...
+                     'add the power_setting field to this condition in the ', ...
+                     'requirements JSON.'], name);
             end
-            switch AB_percent
-                case 0,   powerSetting = "mil";
-                case 100, powerSetting = "AB";
-                otherwise
-                    error('F16ConstraintSet:partialAfterburnerNotModeled', ...
-                        ['Constraint row "%s" specifies AB%% = %g. Only 0 (mil) ', ...
-                         'and 100 (full AB) are modeled -- PropulsionBase exposes ', ...
-                         'no partial-afterburner thrust lapse.'], name, AB_percent);
+            powerSetting = string(cond.power_setting);
+            if ~ismember(powerSetting, ["AB", "mil"])
+                error('F16ConstraintSet:invalidPowerSetting', ...
+                    ['Constraint "%s" specifies power_setting = "%s". Only "mil" ', ...
+                     'and "AB" are modeled -- PropulsionBase exposes no ', ...
+                     'partial-afterburner thrust lapse.'], name, powerSetting);
             end
         end
 
