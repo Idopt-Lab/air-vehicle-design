@@ -340,7 +340,7 @@ with no home in the reference model to support a quantity nothing else consumes.
 is the state a real programme lives in, and nothing else here shows it. Wiring it to
 `Miss!O9 = 6000.43 lb` would teach the opposite lesson, and one requirement can only teach one.
 
-### D-043 · Cost is a whole-aircraft Measure of Merit only; it never enters the trade · **OPEN**
+### D-043 · Cost is a whole-aircraft Measure of Merit only; it never enters the trade
 `F16APhysicalCostModel` gets a real DAPCA-IV implementation following
 `sizing/VnV/BrandtF16A/BrandtCost.m` and populates `MeasureOfMerit.UnitCost_USD` on `Aircraft`.
 `TradeCandidate.UnitCost_USD` stays `NaN` on all seven candidates, permanently.
@@ -351,6 +351,53 @@ cost" and none for "what does this wing candidate cost".
 **Ordering** The generator computes cost in section 8 but the roll-ups run in section 9, so OEW does
 not exist yet — move the cost write after section 9. Applied trade weights stay `0.50/0.25/0.25`
 permanently.
+
+**As built.** $68.4705M against `BrandtCost`'s ≈ $68.4M. The cross-check is sharper than a band: the
+residual is almost entirely the **3.12 lb OEW gap D-036 measured**, propagated through the
+regression — evaluating the same formulation at BrandtWeight's own 19,977.61 lb gives $68.4632M, so
+the two agree to **$7,315**, about 0.01%. The test's band is 0.5%, loose enough to be stable and
+tight enough that a real divergence fails.
+
+**It CALLS `BrandtCost.run`; it does not restate the formulation.** The first implementation copied
+the ~25 lines of DAPCA arithmetic out of `BrandtCost.m` on the grounds that `run()` demands a
+`BrandtMission` result. That was the wrong trade — it reintroduced for cost exactly the transcription
+defect D-036 had just removed for masses. Measured afterwards: calling `run()` with the MBSE OEW
+gives **$68.4705M, identical to the transcription to the cent**, so the copy bought nothing.
+
+**How the model's own OEW gets in.** `run()` reads `W_empty_lb` out of the `wt_results` struct it is
+handed and `getField_` only checks `isfield`, so a minimal `struct('W_empty_lb', <rolled-up OEW>)`
+prices *this* model instead of re-fetching Brandt's own figure. That is what keeps the result a
+`Simulation` and keeps the comparison a real cross-check rather than a tautology — passing Brandt's
+own `wt_results` would have compared Brandt to Brandt.
+
+**The mission argument is a placeholder, and provably inert.** `run()` demands a `miss_results` only
+because `validate_run_` asserts the O&M and life-cycle terms are non-NaN; `C_unit_flyaway_usd` never
+reads it, `BrandtCost.m:128–131` being its only consumers. NaN is not available — that assert is the
+whole reason a placeholder is needed. The values are `1`, not a plausible fuel burn and sortie time,
+because mission fuel is not computed in this model (D-042) and a realistic-looking placeholder is a
+number a reader could mistake for one. The O&M and LCC figures it produces are discarded.
+`testFlyawayCostIgnoresTheMissionPlaceholder` runs the reference model twice with wildly different
+mission inputs and requires an identical flyaway — and requires the O&M costs to *differ*, so the
+invariance check cannot pass vacuously. **When mission fuel is eventually computed and fed back, the
+placeholder is replaced and the O&M figures become real; the flyaway will not move.**
+
+**Cost is read from the model, cross-checked against the reference.** `Tmax` comes from the winning
+engine's `T_SL_lb` (D-053) rather than a second copy of the JSON figure, and the two are asserted
+equal: the DAPCA constants price the *reference* aircraft, so if the trade ever selected a different
+engine they would stop applying. That fails loudly instead of quietly pricing the wrong aeroplane —
+a limitation made visible rather than papered over.
+
+**Sections renumbered rather than reordered.** Section 8 keeps the Implement links; the cost
+computation and its `setProperty` became **section 9b**, after the roll-ups. Linking `Aircraft` to
+`REQ_F16A_026` says the aircraft *answers* the cost requirement and does not depend on the number
+existing yet, so the link had no reason to move.
+
+**New build-time dependency, and it is a real cost.** The generator chain now needs `/sizing/`
+present — previously only the two verification tests reached outside the project. Absent,
+`F16APhysicalCostModel` errors and names the dependency rather than inventing a rate.
+
+**`testCostIsNaNEverywhere` became `testCostIsNaNOnCandidatesOnly`.** Its old name would now be a
+false claim in the test list itself, which is the sort of thing a reader trusts without opening.
 
 ### D-044 → superseded by **D-046** and **D-051**
 Proposed criteria for `REQ_F16A_023`/`024`/`025` from USAF/USN figures. Withdrawn: its own blocking

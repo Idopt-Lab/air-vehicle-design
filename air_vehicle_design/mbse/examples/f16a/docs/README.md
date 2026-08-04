@@ -82,7 +82,7 @@ mbse/examples/f16a/
 │   ├─ F16APhysicalTradeGuards.m         the trade's guard rails as a pure class, so they can
 │   │                                    be tested WITHOUT running the study
 │   ├─ F16APhysical{Mass,Materials,Fuel}Rollup.m
-│   ├─ F16APhysicalCostModel.m           cost-model hook (stub → NaN)
+│   ├─ F16APhysicalCostModel.m           calls BrandtCost for the flyaway cost (needs /sizing/)
 │   ├─ F16APhysicalMissionFuel.m         mission-fuel hook (NaN by design)
 │   ├─ F16APhysicalArchitectureTest.m    machinery: the P model is built correctly
 │   └─ F16APhysicalTradeGuardsTest.m     negative tests; touches no artifact

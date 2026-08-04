@@ -474,8 +474,9 @@ classdef F16APhysicalTradeGuardsTest < matlab.unittest.TestCase
             % Placed BY NAME through critIdx rather than by writing a literal
             % row, so the fixture obeys the same raw-columns-follow-crit-order
             % contract the trade study does -- and so criteriaReversed needs
-            % no second copy of it. UnitCost_USD is left NaN: that is D-005's
-            % honest "no cost model", and checkParameters never reads it.
+            % no second copy of it. UnitCost_USD is left NaN because that is
+            % what a CANDIDATE carries, permanently (D-043 priced the aircraft,
+            % not the parts), and checkParameters never reads it.
             %
             % CRIT must declare all three guarded parameters; critIdx errors
             % otherwise, which is correct for a fixture but is why the

@@ -283,14 +283,15 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         %   PhysicalItem   -- Brandt ground truth; the invented candidate
         %                     masses are tagged on TradeCandidate (D-025)
         %   Rationale      -- prose and references, no numbers to source
-        %   MeasureOfMerit -- OEW is computed and cost is NaN; tagging a
-        %                     computed number is the D-025 overclaim
+        %   MeasureOfMerit -- both its numbers are COMPUTED (OEW by the roll-up,
+        %                     cost by DAPCA IV); tagging a computed number as
+        %                     though it were sourced is the D-025 overclaim
         ProvenanceProperty          = "DataProvenance";
         % PhysicalItem left this list in Stage 6 (D-036): it holds Mass_lb, an
         % engineering value like any other, and its exemption was the reason 14
         % of the 16 masses summing to OEW shipped untagged. The two that remain
-        % hold no chosen number -- Rationale holds prose, MeasureOfMerit holds a
-        % computed OEW and a NaN cost.
+        % hold no chosen number -- Rationale holds prose, MeasureOfMerit holds
+        % two computed ones.
         ProvenanceExemptStereotypes = ["MeasureOfMerit","Rationale"];
         % Non-vacuity floor: the stereotypes known TODAY to carry chosen
         % engineering values. Asserted as a SUBSET of the computed required
@@ -310,11 +311,20 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "FuelTank", "FuelCapacity_lb",   3};      % the three internal tanks
         % D-021 / D-032: a cost property must DECLARE NaN, not a number that
         % looks like data. Checked in the PROFILE, because the VALUE check
-        % (testCostIsNaNEverywhere) passes happily while the default is a
+        % (testCostIsNaNOnCandidatesOnly) passes happily while the default is a
         % latent $0 -- the generator overwrites it every run, so the hole is
         % invisible until some other path applies the stereotype without
         % writing the property.
         CostDefault    = "NaN";
+        % BrandtCost's own unit flyaway figure, as quoted in REQ_F16A_026 --
+        % the CROSS-CHECK for the aircraft's cost MoM, not its source. The band
+        % is 0.5%: the two evaluate the same DAPCA IV formulation but on
+        % different empty weights (this model's rolled-up 19,980.73 lb against
+        % BrandtWeight's computed 19,977.61 lb, D-036), which propagates to
+        % about $7.3k -- roughly 0.01%, so 0.5% is loose enough to be stable and
+        % tight enough that a real divergence fails.
+        BrandtCostReference_USD = 68.4e6;
+        CostCrossCheckRelTol    = 0.005;
         CostProperties = { ...
             "MeasureOfMerit", "UnitCost_USD"; ...   % D-032, the hole the Stage-5 audit found
             "TradeCandidate", "UnitCost_USD"};      % D-021, closed at Stage 2 -- kept as a regression guard
@@ -738,16 +748,71 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testCostMeasureOfMerit(testCase)
-            % Unit cost is the OTHER MoM (minimize), sourced from a cost-model
-            % FUNCTION (not a roll-up). The stub leaves it uncomputed (NaN);
-            % we assert the hook exists and the value is the placeholder, NOT
-            % any cost number.
+            % Unit cost is the OTHER MoM (minimize), and unlike OEW it comes
+            % from a parametric FUNCTION rather than a roll-up -- the contrast
+            % the two Measures of Merit exist to teach. Since D-043 it carries
+            % a real DAPCA IV number.
             testCase.verifyEqual(exist("F16APhysicalCostModel", "file"), 2, ...
                 "Cost-model hook F16APhysicalCostModel is missing.");
             ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
-            cost = str2double(string(getProperty(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD")));
-            testCase.verifyTrue(isnan(cost), ...
-                "Cost MoM should be the uncomputed placeholder (NaN) pending a cost model.");
+            cost = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD");
+            testCase.verifyTrue(isfinite(cost) && cost > 0, ...
+                "The aircraft's cost MoM is " + string(num2str(cost)) + ". Since D-043 " + ...
+                "it must hold a computed DAPCA IV flyaway cost, not a placeholder.");
+
+            % Within a stated band of BrandtCost's own figure. This is a
+            % CROSS-CHECK between two independent evaluations of the same
+            % formulation, not a restatement: ours runs on the MBSE model's
+            % rolled-up OEW, and the residual difference is that OEW gap
+            % (3.12 lb, D-036) propagated through the regression -- about
+            % $7.3k, well inside this band.
+            testCase.verifyEqual(cost, testCase.BrandtCostReference_USD, ...
+                "RelTol", testCase.CostCrossCheckRelTol, ...
+                "The cost model gives $" + string(num2str(cost/1e6)) + "M against " + ...
+                "BrandtCost's $" + string(num2str(testCase.BrandtCostReference_USD/1e6)) + ...
+                "M (REQ_F16A_026). A divergence beyond " + ...
+                string(num2str(100*testCase.CostCrossCheckRelTol)) + "% means the two " + ...
+                "no longer evaluate the same model -- explain it before widening this.");
+        end
+
+        function testFlyawayCostIgnoresTheMissionPlaceholder(testCase)
+            % F16APhysicalCostModel hands BrandtCost.run a PLACEHOLDER mission,
+            % because run() demands one only so validate_run_ can assert the
+            % O&M terms are non-NaN -- the flyaway never reads it. Mission fuel
+            % is deliberately not computed in this model (D-042), so that
+            % placeholder must not be able to move the cost.
+            %
+            % Measured, not asserted: run the reference model twice with wildly
+            % different mission inputs and require an IDENTICAL flyaway. If a
+            % future BrandtCost ever made the flyaway mission-dependent, the
+            % placeholder would start corrupting the aircraft's cost silently,
+            % and this is what catches it.
+            import matlab.unittest.fixtures.PathFixture
+            brandtDir = F16APhysicalArchitectureTest.brandtF16ADir();
+            testCase.assumeTrue(isfolder(brandtDir), ...
+                "The sizing reference model is absent; the cost model itself fails " + ...
+                "loudly on this, so there is nothing left for this test to add.");
+            testCase.applyFixture(PathFixture(brandtDir));
+
+            geom = BrandtGeometry(); geom.analyze();
+            eng  = BrandtEngine();   eng.analyze();
+            c    = BrandtCost(geom, eng); c.analyze();
+            We   = struct('W_empty_lb', testCase.ExpectedOEW_lb);
+
+            a = c.run(testCase.W_TO_lb, We, struct('total_fuel_lb',1,     'total_time_min',1));
+            b = c.run(testCase.W_TO_lb, We, struct('total_fuel_lb',9.9e4, 'total_time_min',7.5e3));
+
+            testCase.verifyEqual(b.C_unit_flyaway_usd, a.C_unit_flyaway_usd, ...
+                "The unit flyaway cost moved from $" + a.C_unit_flyaway_usd + " to $" + ...
+                b.C_unit_flyaway_usd + " when only the MISSION input changed. " + ...
+                "F16APhysicalCostModel passes a placeholder mission on the ground that " + ...
+                "the flyaway cannot depend on it -- that is no longer true, so the " + ...
+                "aircraft's cost MoM is being computed from an invented fuel burn.");
+            % ... and the O&M terms DO move, which is what makes the check above
+            % non-vacuous: the two runs really did differ.
+            testCase.verifyNotEqual(b.C_OM_life_usd, a.C_OM_life_usd, ...
+                "The two runs produced identical O&M costs, so the mission inputs " + ...
+                "did not actually differ and the invariance check above proved nothing.");
         end
 
         function testRealizationAllocationExists(testCase)
@@ -999,16 +1064,21 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 strjoin(T.Path(badKind) + " -> '" + T.SourceKind(badKind) + "'", ", ") + ".");
         end
 
-        function testCostIsNaNEverywhere(testCase)
-            % D-005 in one assertion: no cost model, therefore no cost number,
-            % anywhere. A visible NaN is an honest "pending".
+        function testCostIsNaNOnCandidatesOnly(testCase)
+            % THE DISTINCTION D-043 DREW, as one assertion. The AIRCRAFT now
+            % carries a real DAPCA IV flyaway cost; the seven CANDIDATES carry
+            % NaN and always will. Cost is priced for an airframe, not for a
+            % part, so there is no defensible way to split it across
+            % candidates -- and a per-candidate 0 would be an unbeatably good
+            % score under a ratio value function (D-005, D-021, D-032).
             %
             % The DECLARED DEFAULT is checked first, because reading the value
             % alone is what let the last hole hide: MeasureOfMerit.UnitCost_USD
             % defaulted to 0 for five stages while this test stayed green, the
-            % generator happening to write NaN over it every run (D-032). Under
-            % a ratio value function a $0 is not neutral -- it is a
-            % divide-by-zero or an infinitely good score.
+            % generator happening to write NaN over it every run (D-032). That
+            % check still earns its keep now that the aircraft's value is real:
+            % the default is what any OTHER path applying the stereotype would
+            % get, and it must still be NaN rather than a latent $0.
             badDefaults = testCase.costPropertiesNotDefaultingToNaN();
             testCase.verifyEmpty(badDefaults, ...
                 "A cost property must DECLARE " + testCase.CostDefault + " as its " + ...
@@ -1016,16 +1086,23 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 "assertion cannot see this: the generator overwrites the default " + ...
                 "every run (stereotype.property -> declared default): " + ...
                 strjoin(badDefaults, ", ") + ".");
-            ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
-            momCost = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD");
-            testCase.verifyTrue(isnan(momCost), ...
-                "Aircraft MeasureOfMerit.UnitCost_USD is " + momCost + ...
-                " -- cost must stay NaN until F16APhysicalCostModel computes one (D-005).");
             T = testCase.candidateTable();
             priced = ~isnan(T.UnitCost_USD);
             testCase.verifyEmpty(T.Path(priced), ...
-                "Candidates carry a cost number with no cost model behind it (D-005): " + ...
+                "A candidate carries a cost. DAPCA IV prices an AIRFRAME, not a part, " + ...
+                "so a per-candidate figure would have to be invented and would then be " + ...
+                "scored (D-043): " + ...
                 strjoin(T.Path(priced) + " -> " + T.UnitCost_USD(priced), ", ") + ".");
+
+            % ... and the other half of the distinction: the aircraft's is real.
+            % Asserted here as well as in testCostMeasureOfMerit so that "cost
+            % is NaN" can never quietly become true everywhere again.
+            ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
+            momCost = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD");
+            testCase.verifyTrue(isfinite(momCost), ...
+                "The aircraft's cost MoM is " + string(num2str(momCost)) + ". Candidates " + ...
+                "stay NaN forever, but the AIRCRAFT carries a computed cost since D-043 " + ...
+                "-- if this went back to NaN the cost model stopped running.");
         end
 
         function testExactlyOneActiveCandidatePerRole(testCase)

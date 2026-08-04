@@ -351,10 +351,34 @@ and lower is always better. Both are recorded on a `MeasureOfMerit` stereotype o
 | Unit flyaway cost (`UnitCost_USD`) | a **cost-model function** (`F16APhysicalCostModel`) |
 
 Cost is deliberately **not** a roll-up: unit flyaway cost is not the sum of part prices, it is the
-output of a parametric model (hours, production quantity, material factors — e.g. DAPCA IV). It is a
-**stub** today returning `NaN`, because we do not invent a cost number — and that contrast is itself
-the teaching point: **different MoMs are computed by different analyses**, and the architecture names
-where each one lives.
+output of a parametric model — hours, production quantity, material factors. Since D-043 it is a
+**real DAPCA IV estimate**, and `F16APhysicalCostModel` **calls** `sizing/VnV/BrandtF16A/BrandtCost.m`
+rather than restating its arithmetic — the same one-home rule D-036 applied to the Brandt masses. That
+contrast is the teaching point: **different MoMs are computed by different analyses**, and the
+architecture names where each one lives.
+
+What the MBSE side contributes is *which* empty weight to price. `BrandtCost.run` reads `W_empty_lb`
+out of the struct it is handed, so it is passed **this model's rolled-up OEW** — which is what makes
+the number a `Simulation` and the comparison below a genuine cross-check rather than Brandt against
+itself.
+
+It is tagged **`Simulation`, not `Reference`** — DAPCA IV over *this model's* OEW is an analysis
+output of this repo. `BrandtCost`'s own ≈ $68.4M (quoted in `REQ_F16A_026`) is the **cross-check, not
+the value**: ours computes **$68.47M**, and the residual difference is almost entirely the 3.12 lb
+OEW gap of D-036 propagated through the regression — about **$7.3k**, or 0.01%.
+
+**The candidates keep `NaN` forever.** DAPCA IV prices an *airframe*, not a part, so splitting it
+across candidates would mean inventing a number that then gets *scored*. Cost therefore still drops
+out of the trade — and the trigger for it re-entering remains *the candidates carrying a cost*, which
+this change does not do (D-005, D-026, D-043).
+
+Two consequences worth naming. The generator chain now needs `/sizing/` **at build time** — absent,
+`F16APhysicalCostModel` errors and names the dependency rather than inventing a rate. And
+`BrandtCost.run` insists on a mission result it uses **only** for O&M, so a **placeholder** goes in
+and only the flyaway comes out: mission fuel is not computed in this model (D-042). The placeholder
+is provably inert — `testFlyawayCostIgnoresTheMissionPlaceholder` runs the reference twice with
+wildly different mission inputs and requires the same flyaway. When mission fuel is eventually wired
+back in, the placeholder is replaced and the discarded O&M figures become real.
 
 `UnitCost_USD` **defaults to `NaN`**, not `0`. A default that silently produces a *plausible* number
 is worse than one that stops the run: under a ratio value function `$0` is not neutral, it is

@@ -321,7 +321,8 @@ rat.addProperty("TraceRef",      Type="string", DefaultValue="'TBD'");
 %
 % UNSET PARAMETERS MUST FAIL SAFE, NOT FAIL CHEAP (D-021). Three defaults here
 % look wrong on purpose:
-%   * UnitCost_USD defaults to NaN, not 0. Cost is NaN everywhere by D-005, and
+%   * UnitCost_USD defaults to NaN, not 0. Cost stays NaN on every CANDIDATE
+%     (D-043 gave only the aircraft a real one), and
 %     under a ratio value function a silent $0 is not neutral -- it is either a
 %     divide-by-zero or an infinitely good score. (DefaultValue="NaN" is
 %     accepted on a double property; probe-confirmed.)
@@ -786,7 +787,14 @@ relocate(allocName + ".mldatx", allocFile, thisDir);
 trades = F16APhysicalTradeStudy();
 
 % ---------------------------------------------------------------------
-% 8) Cost Measure of Merit (from a cost-model function) + IMPLEMENT links.
+% 8) IMPLEMENT links (component -> requirement).
+%
+%    THE COST MoM IS NOT WRITTEN HERE ANY MORE (D-043). It used to be, and it
+%    could not have been right: the cost is DAPCA IV over this model's rolled-up
+%    OEW, and the roll-ups do not run until section 9. The cost computation and
+%    its setProperty moved to section 9b; the Implement link below stays, since
+%    linking the Aircraft to REQ_F16A_026 says the aircraft ANSWERS the cost
+%    requirement and does not depend on the number existing yet.
 %
 %    Implement links (component -> requirement) are created here and show as
 %    "Implemented by" in the Requirements Editor once the models are loaded
@@ -801,11 +809,6 @@ trades = F16APhysicalTradeStudy();
 %    This generator never touches the requirement-set link sets, so a manual
 %    verify link is not overwritten by regeneration.
 % ---------------------------------------------------------------------
-unitCost = F16APhysicalCostModel(m);   % stub returns NaN ("not yet computed")
-% num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
-setProperty(aircraft, profileName + ".MeasureOfMerit.UnitCost_USD", string(num2str(unitCost)));
-save_system(modelName, char(modelFile));
-
 origSet = slreq.load(origFile);
 physSet = slreq.load(physDerFile);
 
@@ -849,6 +852,31 @@ fprintf("%s\n", "REMINDER: add the Verify links MANUALLY in the Requirements Edi
 results = F16APhysicalMassRollup();
 mats    = F16APhysicalMaterialsRollup();
 fuel    = F16APhysicalFuelRollup();
+
+% ---------------------------------------------------------------------
+% 9b) Cost Measure of Merit -- AFTER the roll-ups, because it needs OEW.
+%
+%     The teaching contrast, in the order the code now runs: OEW came from a
+%     bottom-up ROLL-UP of the parts (section 9), and cost comes from a
+%     parametric FUNCTION taking that OEW as its main driver. Two Measures of
+%     Merit on the same aircraft, arrived at two different ways.
+%
+%     Tagged Simulation, not Reference: DAPCA IV over THIS model's OEW is an
+%     analysis output of this repo. BrandtCost's own ~$68.4M (quoted in
+%     REQ_F16A_026) is the cross-check, not the value.
+%
+%     The chain now needs /sizing/ at build time: F16APhysicalCostModel CALLS
+%     BrandtCost.run rather than restating the DAPCA arithmetic, handing it this
+%     model's rolled-up OEW. Missing, it errors and names the dependency rather
+%     than inventing a rate. Its mission argument is a placeholder -- run() wants
+%     one only for the O&M terms, which are discarded (D-042).
+%
+%     TradeCandidate.UnitCost_USD stays NaN on all seven, permanently (D-043).
+% ---------------------------------------------------------------------
+unitCost = F16APhysicalCostModel(m);
+% num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
+setProperty(aircraft, profileName + ".MeasureOfMerit.UnitCost_USD", string(num2str(unitCost)));
+save_system(modelName, char(modelFile));
 
 nComp = countComps(m.Architecture);
 % The CTPCT this fprintf draws is a FALSE POSITIVE -- 6 conversion specs, 6

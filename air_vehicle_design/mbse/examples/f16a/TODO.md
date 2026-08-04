@@ -5,9 +5,8 @@ Working file, not teaching material. Open items only — what was decided and wh
 
 ## Open
 
-| # | Item | Decision | Owner |
-|---|---|---|---|
-| 1 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. | D-043 | `f16a-physical` · `f16a-data` |
+*Nothing.* D-036, D-038, D-039, D-043 and the engine-provenance item all landed; the four §Deferred
+items below are extensions, not defects.
 
 ## Deferred method work
 
@@ -36,8 +35,12 @@ Argued in the log, none of them defects — they extend the example rather than 
 - **`'TBD'` stereotype defaults** on `DecisionRef`, `Justification`, `TraceRef`, `RealizesRole`,
   `RealizesKind` are sentinels. `assertRationaleComplete` aborts the build on a surviving `'TBD'`
   rationale, and an L model shipping `DecisionRef='TBD'` is the correct unresolved state (D-019).
-- **`TradeCandidate.UnitCost_USD` is `NaN` on all seven candidates**, permanently. A `0` default would
-  be an unbeatably good score under a ratio value function (D-021, D-032, D-043).
+- **`TradeCandidate.UnitCost_USD` is `NaN` on all seven candidates**, permanently — even though the
+  **aircraft** now carries a real DAPCA IV cost (D-043). DAPCA prices an airframe, not a part. A `0`
+  default would be an unbeatably good score under a ratio value function (D-021, D-032).
+- **`T_SL_lb` is a declared property, not a criterion and not a screen** (D-053). Nothing scores on
+  it, nothing is disqualified by it, and **no T/W ratio is computed anywhere** — in the model, a test
+  or the docs. Two of the three engines are declared hypotheticals whose thrusts are invented.
 
 ## Standing rule
 
@@ -74,6 +77,7 @@ That doesn't make sense. The Engine Trade has values and properties it uses. The
 ### 3
 You have defined a Execute Mission Profile. 
 This is what the /sizing/mission_analysis does. It walks through each mission segment and computes various quantities. I want to connect the MBSE model to this analysis model. 
+Later, the fuel burn value will be used by the cost model. 
 
 
 ### 4
