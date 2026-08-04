@@ -124,5 +124,6 @@ requirement it implements. The **Logical layer** ([`04_logical.md`](04_logical.m
 function with a solution-role component — `GenerateLift` → `Airframe`, `ProduceThrust` →
 `PropulsionSystem`, `Maneuver` → `FlightControlSystem`, and so on — connected to this layer by an
 **allocation set**. It also shows that a role can be realized more than one way: three roles carry
-competing **options** (single- vs twin-engine, fly-by-wire vs hydro-mechanical, delta vs
-conventional wing), and a **trade study** selects among them.
+competing **kinds** (single- vs twin-engine, fly-by-wire vs hydro-mechanical, delta vs conventional
+wing). L **presents** those kinds and ships them unresolved; the **Physical layer decides** between
+them, because a role has no mass, cost or maturity to trade on — only a *part* does (**D-001**).

@@ -50,7 +50,7 @@ fprintf("Loaded 3 models, %d requirement sets, %d verification link set(s).\n", 
     numel(reqFiles), numel(lnkSets));
 reportVerifyLinks(vDir);
 
-try, slreq.editor(); catch, end   % open the editor if a display is available
+try slreq.editor(); catch, end   % open the editor if a display is available
 
 end
 
@@ -66,7 +66,7 @@ function reportVerifyLinks(vDir)
 verified = strings(1,0);
 reqs = slreq.find(Type="Requirement");
 for i = 1:numel(reqs)
-    try, links = reqs(i).inLinks(); catch, links = []; end
+    try links = reqs(i).inLinks(); catch, links = []; end
     for j = 1:numel(links)
         if string(links(j).Type) == "Verify"
             verified(end+1) = string(reqs(i).Id);   %#ok<AGROW>

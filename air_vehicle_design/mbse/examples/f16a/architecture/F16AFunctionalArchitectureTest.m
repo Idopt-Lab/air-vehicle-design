@@ -45,7 +45,7 @@ classdef F16AFunctionalArchitectureTest < matlab.unittest.TestCase
             testCase.verifyEqual(numel(expected), 26, "Expected 26 component paths.");
             for pth = expected
                 found = true;
-                try, testCase.Model.lookup(Path=char(pth)); catch, found = false; end
+                try testCase.Model.lookup(Path=char(pth)); catch, found = false; end
                 testCase.verifyTrue(found, "Missing component: " + pth);
             end
         end

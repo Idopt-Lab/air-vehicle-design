@@ -134,7 +134,9 @@ Read this section before repeating any of the above in a report.
   which rivals are in the set, so adding or removing a candidate rescales everyone, and two
   candidates neither of whose data changed can **swap places** — the rank-reversal problem. The
   scoring is now a **value function declared in advance**, independent of the candidate set:
-  `Benefit → B/10` on a stated 0–10 scale, `TRL → (TRL−1)/8` on the 1–9 scale, and
+  `Benefit → B/10` on a stated **1–10** scale — 0 is the stereotype property's default and means
+  *unset*, so the guard rejects it rather than scoring it (D-033) — `TRL → (TRL−1)/8` on the
+  1–9 scale, and
   `Mass_lb → M_baseline/M` against a fixed baseline — the mass carried by the role's
   `DataProvenance = Reference` candidate, so `v > 1` reads "lighter than the as-built F-16A". The
   weights actually applied are `Benefit 0.50 · TRL 0.25 · Mass 0.25` (see the cost bullet below for
@@ -162,8 +164,12 @@ Read this section before repeating any of the above in a report.
   for is dropped, and the remaining weights are renormalized over the criteria that do** (D-026).
   Cost falls out of that rule because it is `NaN` everywhere. Two things follow. The weights are
   *derived at run time*, not typed in — declared `0.40 / 0.20 / 0.20 / 0.20` over the four criteria,
-  renormalizing to the `0.50 / 0.25 / 0.25` above — and **the day a cost model exists, cost re-enters the score
-  with no change to the scoring code.** That property is the reason for writing it as a rule. A
+  renormalizing to the `0.50 / 0.25 / 0.25` above — and **the day the candidates carry a cost, cost
+  re-enters the score with no change to the scoring code.** Say *the candidates*, not *a cost model*:
+  D-043 settles that `F16APhysicalCostModel` will compute a **whole-aircraft** figure for the
+  `Aircraft`'s Measure of Merit and that `TradeCandidate.UnitCost_USD` stays `NaN`, so a cost model
+  will exist and this column will still be dropped. The generality is the reason for writing it as a
+  rule; it is not a prediction that this particular criterion returns. A
   criterion with values on *some* candidates is neither dropped nor scored: it stops the run,
   because a partial column would score the candidates that have data against the ones that do not.
 - **It is set-based in structure only.** True SBD converges by intersecting feasible regions across
@@ -223,8 +229,10 @@ and the note would be dishonest if it stopped at the fix.
   in the code prevents it. The three criteria are therefore summed as if commensurable when their
   ranges are not — which is the weight-versus-range problem two bullets up, in its most concrete
   form: a criterion whose range is open-ended cannot have a defensible scaling constant at all.
-- **`Benefit` and `TRL` are judgement on a declared scale, not measurements.** They are our 0–10 and
-  1–9 rankings, and they are judgement on the `Reference` candidates too:
+- **`Benefit` and `TRL` are judgement on a declared scale, not measurements.** They are our 1–10 and
+  1–9 rankings — 0 is the "unset" sentinel in both, deliberately off the scale so a forgotten value
+  cannot score as a plausible middling one (D-033, D-021) — and they are judgement on the
+  `Reference` candidates too:
   `DataProvenance = Reference` on `F100_PW_200` says its *mass* is sourced, not that its Benefit of
   8.2 or its TRL of 8 is (D-025). Neither is derived from a model and nothing rolls up into either.
   Add the weights up and the honest accounting is uncomfortable: **0.75 of every score is declared

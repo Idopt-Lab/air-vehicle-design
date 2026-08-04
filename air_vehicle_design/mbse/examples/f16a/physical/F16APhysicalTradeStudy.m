@@ -4,9 +4,13 @@ function results = F16APhysicalTradeStudy()
 %   physical/F16A_Physical.slx that carries the TradeCandidate stereotype,
 %   groups those candidates by the role each one says it realizes, scores the
 %   candidates of a role against one another, selects a winner per role, and
-%   WRITES THE DECISION DOWN in four places. It returns a containers.Map from
-%   role name to a ranked table, so a test can assert on the ranking without
-%   re-deriving it.
+%   WRITES THE DECISION DOWN in four places. It returns a DICTIONARY from role
+%   name to a ranked table, so a caller can report the ranking without
+%   re-deriving it. Its values are cell-held, because a table cannot live in a
+%   dictionary's value array, so a caller READS IT WITH BRACES --
+%   results{"Airframe"} is the table, results("Airframe") is the 1x1 cell
+%   around it. Keys come back from keys(results) as a string array, in the
+%   sorted role order the report is printed in (see roleTables below).
 %
 %   THIS IS THE FILE THE LAYER SPLIT EXISTS FOR. The Logical layer enumerates
 %   technology-neutral KINDS and commits to none of them; the Physical layer
@@ -87,13 +91,27 @@ function results = F16APhysicalTradeStudy()
 %
 %   Nothing here says "exclude cost". The rule is: a criterion NO candidate of
 %   the role carries a value for is dropped, and the remaining weights are
-%   renormalized over the criteria that do. UnitCost_USD is NaN everywhere
-%   because there is no cost model (F16APhysicalCostModel is a stub), so it
+%   renormalized over the criteria that do. This file scores
+%   TradeCandidate.UnitCost_USD, which is NaN on all seven candidates, so cost
 %   drops out and the run logs that it did. The declared weights are
 %   0.40 / 0.20 / 0.20 / 0.20; dropping cost renormalizes them to the
-%   0.50 / 0.25 / 0.25 that D-005 and D-015 quote. The day a cost model exists,
-%   cost re-enters the score with no change to this file -- which is the whole
-%   reason it is written as a rule instead of an exception.
+%   0.50 / 0.25 / 0.25 that D-005 and D-015 quote.
+%
+%   THE TRIGGER IS THE CANDIDATES CARRYING A COST -- NOT A COST MODEL EXISTING
+%   (D-043). Those are not the same event, and this file used to say they were.
+%   D-043 gives F16APhysicalCostModel a real DAPCA-IV implementation that
+%   populates MeasureOfMerit.UnitCost_USD on the AIRCRAFT, while
+%   TradeCandidate.UnitCost_USD stays NaN permanently -- because DAPCA IV
+%   answers "what does this aeroplane cost" and has nothing to say about "what
+%   does this wing candidate cost", and costing F110_GE_100 or
+%   ConventionalTrapWing means costing aircraft nobody built. So a cost model
+%   will exist and cost will still not re-enter: the applied weights stay
+%   0.50 / 0.25 / 0.25, and cost is demonstrated as the whole-aircraft
+%   objective (REQ_F16A_026), never as a trade criterion.
+%
+%   The MECHANISM is untouched by that and is still the whole reason this is
+%   written as a rule instead of an exception: whichever criterion's values
+%   arrive, it re-enters the score with no change to this file (D-026).
 %
 %   GUARD RAILS -- an unset parameter must stop the trade, not be scored
 %
@@ -212,7 +230,7 @@ derSet = slreq.load(derFile);
 % second run. Guarded because on a first run there may be no link set yet, and
 % the L model's link set also holds the L generator's own Implement links
 % (REQ_F16A_020/023/024/025), which must survive this run untouched.
-try, slreq.load(logiName); catch, end %#ok<CTCH>
+try slreq.load(logiName); catch, end %#ok<CTCH>
 
 % --- The criteria, declared once -----------------------------------------
 % Weight is the DECLARED weight, before any criterion is dropped; Value is the
@@ -245,7 +263,21 @@ fprintf("%d candidates discovered across %d roles in %s.\n", ...
 fprintf("Scoring: declared value functions, weights renormalized over the criteria " + ...
     "that carry values (D-005, D-015).\n");
 
-results = containers.Map();
+% The ranked table of each role, collected here and handed back as a DICTIONARY
+% (roles -> table) built in one call below. Two properties of dictionary drove
+% the shape of this, and both differ from the containers.Map it replaced:
+%   * VALUES ARE CELL-WRAPPED. A dictionary keeps its values in a value ARRAY,
+%     and a table cannot live in one, so a table is held in a cell -- which is
+%     what makes BRACES the accessor: results{role} hands back the table itself,
+%     results(role) would hand back the 1x1 cell around it.
+%   * KEY ORDER IS INSERTION ORDER, where containers.Map sorted its keys.
+%     MEASURED, Stage 3: inserting PropulsionSystem, Airframe,
+%     FlightControlSystem reads back from keys() in exactly that order, and
+%     from a containers.Map alphabetically. The two agree here only because
+%     roles came from unique() above and is therefore already sorted, so the
+%     reported role order is unchanged (docs/05_physical.md reproduces that
+%     table). Keep roles sorted, or that order moves.
+roleTables  = cell(1, numel(roles));
 winnerNames = strings(1, numel(roles));
 
 for r = 1:numel(roles)
@@ -383,7 +415,7 @@ for r = 1:numel(roles)
     T.Rank     = rankOf;
     T.Selected = (rankOf == 1);
     T = sortrows(T, "Rank");
-    results(char(role)) = T;
+    roleTables{r} = T;
 
     printRole(role, reqId, rc, refIdx, crit, keep, keptIdx, w, baseline, ...
         raw, V, score, rankOf, order);
@@ -433,6 +465,12 @@ for r = 1:numel(roles)
     end
     linkImplementOnce(kindComp, req, logiName);
 end
+
+% --- The return value ----------------------------------------------------
+% Built in one call from the sorted role list and the cell of ranked tables,
+% which is the documented constructor for a dictionary whose values are held in
+% a cell array. Insertion order is therefore roles' order, i.e. sorted.
+results = dictionary(roles, roleTables);
 
 % --- Persist -------------------------------------------------------------
 % Both models, the decision requirement set, and ONLY the F16A_Logical model

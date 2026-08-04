@@ -118,7 +118,7 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
             slreq.clear();
             % Close any set left open by a prior generate in this session, so
             % allocation.load does not fail with "already an open set".
-            try, systemcomposer.allocation.AllocationSet.closeAll(); catch, end %#ok<CTCH>
+            try systemcomposer.allocation.AllocationSet.closeAll(); catch, end %#ok<CTCH>
             testCase.Model     = systemcomposer.loadModel("F16A_Logical");
             testCase.FuncModel = systemcomposer.loadModel("F16A_Functional");
             testCase.OrigSet   = slreq.load(fullfile(thisDir, "requirements", "f16a.slreqx"));
@@ -135,7 +135,7 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
             % All 9 solution roles exist; the root has exactly 9 components.
             for role = testCase.AllRoles
                 found = true;
-                try, testCase.Model.lookup(Path=char(testCase.Root + role)); catch, found = false; end
+                try testCase.Model.lookup(Path=char(testCase.Root + role)); catch, found = false; end
                 testCase.verifyTrue(found, "Missing role: " + role);
             end
             testCase.verifyEqual(numel(testCase.Model.Architecture.Components), 9, ...
@@ -236,7 +236,7 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
                 expected = testCase.Kinds.(role);
                 for cn = expected
                     found = true;
-                    try, testCase.Model.lookup(Path=char(testCase.Root + role + "/" + cn));
+                    try testCase.Model.lookup(Path=char(testCase.Root + role + "/" + cn));
                     catch, found = false; end
                     testCase.verifyTrue(found, "Missing kind " + cn + " in " + role);
                 end
@@ -396,8 +396,8 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
                     testCase.Root + "WeaponSystem"};
             for i = 1:size(samples,1)
                 sOK = true; tOK = true;
-                try, testCase.FuncModel.lookup(Path=char(samples{i,1})); catch, sOK = false; end
-                try, testCase.Model.lookup(Path=char(samples{i,2}));     catch, tOK = false; end
+                try testCase.FuncModel.lookup(Path=char(samples{i,1})); catch, sOK = false; end
+                try testCase.Model.lookup(Path=char(samples{i,2}));     catch, tOK = false; end
                 testCase.verifyTrue(sOK, "Source not found: " + samples{i,1});
                 testCase.verifyTrue(tOK, "Target not found: " + samples{i,2});
             end

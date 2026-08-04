@@ -134,7 +134,7 @@ simply moved one level down, under the candidate that owns them:
 
 `F16APhysicalMassRollup.m` runs the roll-up the way MathWorks intends — a native architecture
 **instance** iterated bottom-up (`instantiate` → `iterate` with `Direction="Postorder"`), the
-same pattern shipped in [`../ex2`](../ex2). Each assembly's subtotal is written back so the
+same pattern shipped in [`ex2`](../../ex2). Each assembly's subtotal is written back so the
 Analysis Viewer shows the roll-up at every level:
 
 | Roll-up result | Value (lb) |
@@ -192,10 +192,16 @@ on mass in every role, by construction**, and `v > 1` would read "lighter than t
 
 **Cost falls out of a general rule, not a special case.** Nothing in the code says "exclude cost".
 The rule is: *a criterion no candidate of the role carries a value for is dropped, and the remaining
-weights are renormalized over the criteria that do* (**D-026**). `UnitCost_USD` is `NaN` everywhere
-because `F16APhysicalCostModel` is a stub, so it drops out and the run prints `UnitCost_USD DROPPED`.
-The applied weights above are therefore **derived at run time**, not typed in — and the day a cost
-model lands, cost re-enters the score with no change to the scoring code.
+weights are renormalized over the criteria that do* (**D-026**). `UnitCost_USD` is `NaN` on all seven
+candidates, so it drops out and the run prints `UnitCost_USD DROPPED`.
+The applied weights above are therefore **derived at run time**, not typed in — and the day **the
+candidates carry a cost**, cost re-enters the score with no change to the scoring code.
+
+State that trigger precisely, because the obvious phrasing of it is wrong. It is *not* "the day a
+cost model lands". `F16APhysicalCostModel` is destined to compute a **whole-aircraft** figure for the
+`Aircraft`'s Measure of Merit, and the trade reads `TradeCandidate.UnitCost_USD`, which stays `NaN` on
+all seven candidates — so a cost model will exist and cost will still not re-enter (**D-043**). The
+rule is general and would readmit any criterion; this particular column is one nobody intends to fill.
 
 Why min–max normalization was retired, and what the additive weighted sum does and does not
 justify, is [`06_methodology.md`](06_methodology.md)'s subject; read it before quoting a score.
@@ -235,7 +241,7 @@ The trade records its verdict in **four** places:
 | # | Layer | What is written |
 |---|-------|-----------------|
 | 1 | **P**, configuration | `setActiveChoice` on the role variant; `TradeCandidate.Selected` true on the winner, false on the rest |
-| 2 | **P**, rationale | `Rationale.SourceKind` → `TradeWinner` / `TradeAlternative`, and every `Justification` rewritten to state the score, rank, margin and the criterion that decided it against the runner-up |
+| 2 | **P**, rationale | `Rationale.SourceKind` → `TradeWinner` / `TradeAlternative`, and every `Justification` rewritten from scratch to state the result that candidate actually got — see below |
 | 3 | **L**, cross-layer callback | the role's active **kind**; `SolutionOption.Selected`; `SolutionOption.DecisionRef` — written on **every** kind of the role, so a reader who clicks the *rejected* kind reaches the decision requirement instead of a `'TBD'`, and from there the rejected candidate in row 2 whose `Justification` says what it lost on (**D-027**, **D-049**) |
 | 4 | **R**, traceability | an **Implement link** from the winning kind to `REQ_F16A_L01` (propulsion), `L02` (flight control), `L03` (airframe) |
 
@@ -244,6 +250,29 @@ asserted by `testSelectedKindIsConsistentWithItsDecisionRef` in the **L** suite,
 that *both* an undecided L model and a decided one pass, and forbids only the half-finished state in
 between. That split is deliberate: the L suite must not fail merely because P has not been run yet
 (**D-010**).
+
+#### What a `Justification` actually says
+
+Row 2 is where the reasoning ends up, so it is worth knowing what is in it. Winner and loser get
+**different sentences**, and neither is a summary:
+
+| | The winner's | A loser's |
+|---|---|---|
+| Result | `SELECTED (rank 1 of n)`, its score, and the runner-up's | `NOT SELECTED (rank r of n)`, its score, and the winner's |
+| The gap | the **margin** over the runner-up | the **deficit** against the winner, signed *this candidate minus the winner* |
+| Broken down | into **every kept criterion** — the printed terms sum to the printed gap, both ways | same decomposition, carrying its own signs |
+| The verdict clause | which criterion **decided it against that rival**, and any it trailed the rival on | the criterion it **lost most on**, and any it still leads the winner on |
+| Then | the criteria, their value functions, the applied weights and the ratio baseline it was scored under | identical |
+
+Two properties are load-bearing. The decomposition **closes** — a reader can add the terms up and get
+the margin without re-running anything — so shortening it would make the sentence contradict itself.
+And the deciding criterion is named **against a stated rival**, never as a property of the decision,
+because it is not one (**D-034**). The loser's sentence matters most: it is hop 2 of the D-049 trail
+and the **only** place a rejected option's reasoning exists anywhere.
+
+Each candidate's standing "why do I exist" rationale survives behind a `||` separator: everything
+before it is regenerated each run, everything after is carried through untouched. That is what makes
+re-running the trade idempotent instead of stacking two verdicts on one part.
 
 **Nothing is deleted.** A losing candidate stays in the P model and a losing kind stays in the L
 model, each carrying a justification that says what it lost on and by how much (**D-002**). Links are
@@ -525,7 +554,7 @@ pristine (the same pattern as the functional- and logical-derived sets).
 |---|---|---|
 | `F16APhysicalArchitectureTest` | *is the model built correctly?* | yes — 2 models, 3 requirement sets, an allocation set |
 | `F16APhysicalTradeGuardsTest` | *does the scoring code still refuse what it must?* | **no** — pure class, runs on a checkout with no models |
-| `F16A*VerificationTest` (×2) | *does the design meet this requirement?* | yes — via the roll-ups |
+| `F16AMaterialsVerificationTest` · `F16AFuelVerificationTest` | *does the design meet this requirement?* | yes — via the roll-ups |
 
 **Machinery** — `F16APhysicalArchitectureTest.m`, **39 tests**. It asks "is the P model built
 correctly?", never "is this the right design?".
@@ -609,21 +638,30 @@ identifier names the **contract**, not the file, and the decision log quotes tho
 self-contained. These are the tests the manual **"Verified by"** links point to:
 
 - `F16AMaterialsVerificationTest.m` → `REQ_F16A_022`: airframe composite 0.1928 ≤ 0.20 ✔ (**passes**).
-- `F16AFuelVerificationTest.m` → `REQ_F16A_P01`: available fuel ≥ mission fuel — **fails on purpose**
-  until the mission-fuel analysis is connected (see above). Isolating it in its own file keeps the
-  materials verifier all-green and the intentional failure unambiguous.
+- `F16AFuelVerificationTest.m` → `REQ_F16A_P01`: available fuel ≥ mission fuel — **fails permanently
+  and by design**, because the required side is never computed (**D-042**, see above). Isolating it
+  in its own file keeps the materials verifier all-green and the deliberate red unambiguous.
+
+The third verify link in the example, `REQ_F16A_025` → `F16AStaticMarginVerificationTest.m`, belongs
+to an **L**-layer requirement and is not the P layer's to describe — but it is the reason the P
+layer's red must be read carefully rather than counted. Two red tests, two different facts; the
+[README](README.md#three-requirements-three-verification-states) sets them side by side.
 
 ## Next
 
 The RFLP loop is now closed **and resolved**: **R → F → L → P**, with requirements, functions, roles
 and parts traceably connected, the first requirements *verified by* tests, and the three open logical
 questions answered by a trade study whose arithmetic, inputs and audit trail are all in the model.
-The immediate to-dos are to **wire `F16APhysicalMissionFuel` to the mission analysis in `/sizing/`**
-(turning the fuel-volume verification green) and to **implement `F16APhysicalCostModel`** — the
-second of which is more interesting than it looks, because by **D-026** cost re-enters the trade
-score the day it returns a number, with no change to the scoring code. Beyond that: bounded value
-functions per criterion (**D-035**), rival-independent decisiveness (**D-034**), and searching the
-2×2×2 morphological box instead of three independent pairs (**D-016**).
+The immediate to-do is to **implement `F16APhysicalCostModel`** — a real DAPCA-IV whole-aircraft
+cost feeding the `Aircraft`'s unit-cost Measure of Merit, and a whole-aircraft figure only
+(**D-043**). Beyond that: bounded value functions per criterion (**D-035**), rival-independent
+decisiveness (**D-034**), and searching the 2×2×2 morphological box instead of three independent
+pairs (**D-016**).
+
+**Wiring `F16APhysicalMissionFuel` to `/sizing/` is not on that list, and will not appear on a later
+one.** It used to head it. The pending fuel verification is a **deliverable, not a gap** (**D-042**,
+and the *Fuel volume* section above), and a to-do list that still promises to close it is telling a
+reader to expect a lesson this example decided not to teach.
 
 For *why* the trade lives here rather than at L — and for a candid account of what the weighted sum
 does not justify — see [`06_methodology.md`](06_methodology.md). For what was decided and by whom,

@@ -65,6 +65,12 @@ function generate_f16a_logical()
 %                   (helper addVariantRole). getChoices returns the choices
 %                   ALPHABETICALLY, not in creation order, so never rely on
 %                   creation order -- always address a choice by name.
+%                   getChoices is also the ONLY reliable way to reach the
+%                   choices at all: .Architecture.Components hands them back on
+%                   a freshly built in-memory model but ZERO on the same model
+%                   saved and reloaded (Stage-0 finding 6). Every walk over this
+%                   architecture -- addVariantRole and countComps below --
+%                   therefore special-cases a VariantComponent.
 %     * Profile:    systemcomposer.profile.Profile.createProfile, addStereotype
 %                   (AppliesTo=), addStereotype-property addProperty(Type=,
 %                   DefaultValue=), applyProfile, applyStereotype, setProperty.
@@ -126,13 +132,15 @@ slreq.clear();
 % dictionary is re-locked and createDictionary below fails "file already open").
 try  % close any in-memory allocation sets so createAllocationSet can reuse the name
     systemcomposer.allocation.AllocationSet.closeAll();
-catch, end %#ok<CTCH>
+catch %#ok<CTCH>
+end
 try  % drop any in-memory copies of previously-loaded profiles (closeAll
      % discards unsaved changes, so a later createProfile can reuse the name)
     systemcomposer.profile.Profile.closeAll();
-catch, end %#ok<CTCH>
+catch %#ok<CTCH>
+end
 % Now close every model and dictionary so nothing holds the files open.
-try, systemcomposer.close(modelName, true); catch, end %#ok<CTCH>
+try systemcomposer.close(modelName, true); catch, end %#ok<CTCH>
 bdclose("all");
 Simulink.data.dictionary.closeAll("-discard");
 staleRoot = fullfile(thisDir, modelName);   % guard against artifacts saved to cwd
@@ -222,11 +230,11 @@ connect(avionics.getPort("TrackOut"), weapon.getPort("TrackIn"));
 % ---------------------------------------------------------------------
 % 5) Auto-layout + save
 % ---------------------------------------------------------------------
-try, Simulink.BlockDiagram.arrangeSystem(modelName); catch, end %#ok<CTCH>
+try Simulink.BlockDiagram.arrangeSystem(modelName); catch, end %#ok<CTCH>
 save_system(modelName, char(modelFile));   % save into logical/
 % Cosmetic diagram refresh; skip quietly if the model has no root behavior
 % (this architecture has no root-level ports, unlike the F model).
-try, set_param(modelName, "SimulationCommand", "update"); catch, end %#ok<CTCH>
+try set_param(modelName, "SimulationCommand", "update"); catch, end %#ok<CTCH>
 
 % ---------------------------------------------------------------------
 % 6) Solution-option stereotype profile, applied to every kind.
@@ -331,9 +339,28 @@ save(origSet);
 saveLogicalLinkSets();   % only the F16A_Logical link set (leave F's slmx untouched)
 save_system(modelName, char(modelFile));
 
-nComp = countComps(m.Architecture);
-fprintf("Built %s with %d components (3 variant roles), %d allocation edges, %d L Implement links.\n", ...
-    modelName, nComp, size(edges,1), size(lLinks,1));
+% Component census. Every number below is counted from the model, and the
+% printed line SAYS WHICH NUMBER IS WHICH: a bare "15" does not reveal whether
+% the kinds are in it, and that ambiguity is half of what made the pre-fix
+% countComps (see the helper) hard to catch.
+% The census is composed on its own line purely for readability -- it keeps both
+% format strings down to one short literal each, and seven conversion specs
+% spread over a continuation are hard to check against seven arguments by eye.
+roles    = m.Architecture.Components;   % the top-level solution roles
+nRole    = numel(roles);
+nVariant = 0;
+nKind    = 0;
+for r = roles
+    if isa(r, "systemcomposer.arch.VariantComponent")
+        nVariant = nVariant + 1;
+        nKind    = nKind + numel(getChoices(r));   % getChoices, not .Architecture.Components
+    end
+end
+nComp = countComps(m.Architecture);     % roles AND the kinds they present
+census = sprintf("%d components (%d solution roles, %d of them variant, plus %d kinds)", ...
+    nComp, nRole, nVariant, nKind);
+fprintf("Built %s with %s, %d allocation edges, %d L Implement links.\n", ...
+    modelName, census, size(edges,1), size(lLinks,1));
 fprintf("Options are UNRESOLVED: every kind has Selected=false, DecisionRef='TBD', " + ...
     "and the active choice is a placeholder.\nRun F16APhysicalTradeStudy to decide.\n");
 
@@ -403,9 +430,28 @@ end
 % =====================================================================
 function n = countComps(arch)
 %COUNTCOMPS Recursively count components under an architecture.
+%   VARIANT-SAFE, and it has to be: a plain recursion over .Architecture
+%   .Components returns a variant's choices on a freshly built in-memory model
+%   but ZERO on the same model saved and reloaded (Stage-0 finding 6). This
+%   generator would therefore have reported 15 (the 9 roles plus their 6 kinds)
+%   while anything reloading the model reported 9 -- the two disagreeing for a
+%   reason nobody would find quickly. getChoices is the only reliable accessor.
+%   The variant WRAPPER is counted as a component (it is one in the model tree)
+%   even though it can carry no stereotype.
+%
+%   Same body as countComps in physical/generate_f16a_physical.m: the trap and
+%   the fix are identical, and the F layer needs neither because the functional
+%   model has no variants.
 n = 0;
 for c = arch.Components
-    n = n + 1 + countComps(c.Architecture);
+    n = n + 1;
+    if isa(c, "systemcomposer.arch.VariantComponent")
+        for ch = getChoices(c)
+            n = n + 1 + countComps(ch.Architecture);
+        end
+    else
+        n = n + countComps(c.Architecture);
+    end
 end
 end
 

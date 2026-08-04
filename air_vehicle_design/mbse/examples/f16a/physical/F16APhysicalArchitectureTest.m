@@ -460,7 +460,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             addpath(fullfile(thisDir, "logical"));
             addpath(fullfile(thisDir, "requirements"));
             slreq.clear();
-            try, systemcomposer.allocation.AllocationSet.closeAll(); catch, end %#ok<CTCH>
+            try systemcomposer.allocation.AllocationSet.closeAll(); catch, end %#ok<CTCH>
             testCase.Model     = systemcomposer.loadModel("F16A_Physical");
             testCase.LogiModel = systemcomposer.loadModel("F16A_Logical");
             testCase.OrigSet   = slreq.load(fullfile(thisDir, "requirements", "f16a.slreqx"));
@@ -1709,7 +1709,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % resolves the same path, so a candidate, a child of a candidate
             % and a plain part are all reached by one call. Returns EMPTY
             % when the path names nothing, which every caller reports.
-            try, c = testCase.Model.lookup(Path=char(fullPath)); catch, c = []; end
+            try c = testCase.Model.lookup(Path=char(fullPath)); catch, c = []; end
             if ~isempty(c); return; end
             [comps, paths] = testCase.walkComponents();
             idx = find(paths == erase(string(fullPath), testCase.PhysicalPathPrefix), 1);
@@ -1721,7 +1721,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % read at all -- which for UnitCost_USD is indistinguishable from
             % the honest NaN, and for everything else fails the range check
             % it feeds, so nothing is swallowed.
-            try, v = str2double(string(getProperty(comp, char(qualified)))); catch, v = NaN; end
+            try v = str2double(string(getProperty(comp, char(qualified)))); catch, v = NaN; end
         end
 
         function s = propText(~, comp, qualified)
@@ -1729,7 +1729,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % Both come back QUOTED (Stage-0 findings 1 and 7). "" when the
             % property is absent, so a comparison against it fails rather
             % than propagating <missing> through logical indexing.
-            try, s = strtrim(erase(string(getProperty(comp, char(qualified))), "'")); catch, s = ""; end
+            try s = strtrim(erase(string(getProperty(comp, char(qualified))), "'")); catch, s = ""; end
             if ~isscalar(s) || ismissing(s); s = ""; end
         end
 
@@ -2019,12 +2019,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % reliable accessor on a LOADED model (Stage-0 finding 6).
             % Returns empty for anything that is not a variant, so a caller
             % reports "0 choices" instead of erroring out of its test.
-            try, choices = getChoices(comp); catch, choices = []; end
+            try choices = getChoices(comp); catch, choices = []; end
         end
 
         function active = activeChoiceOf(~, comp)
             % The single active choice of a variant component, or empty.
-            try, active = getActiveChoice(comp); catch, active = []; end
+            try active = getActiveChoice(comp); catch, active = []; end
         end
 
         function names = namesOf(~, comps)
@@ -2301,7 +2301,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         function r = findRequirement(~, reqSet, id)
             % find on a requirement set returns EMPTY for an unknown id
             % rather than erroring, which is what makes it usable here.
-            try, r = find(reqSet, Id=char(id)); catch, r = []; end
+            try r = find(reqSet, Id=char(id)); catch, r = []; end
         end
 
         function tf = pathResolves(~, model, pth)
@@ -2311,7 +2311,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             pth = string(pth);
             tf = false;
             if endsWith(pth, "/") || contains(pth, "//"); return; end
-            try, c = model.lookup(Path=char(pth)); catch, c = []; end
+            try c = model.lookup(Path=char(pth)); catch, c = []; end
             tf = ~isempty(c);
         end
 
@@ -2558,7 +2558,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % inLinks on a requirement, or empty. Wrapped so a requirement
             % with no link set at all is reported as unlinked rather than
             % erroring out of the test.
-            try, links = req.inLinks(); catch, links = []; end
+            try links = req.inLinks(); catch, links = []; end
         end
 
         % ---------------- Stage 5 audit: provenance is complete ----------
@@ -2567,7 +2567,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % One profile's name, "" when it cannot be read -- which the
             % caller reports as "the P profile did not resolve" rather than
             % erroring out of the test.
-            try, n = string(prof.Name); catch, n = ""; end
+            try n = string(prof.Name); catch, n = ""; end
             if ~isscalar(n) || ismissing(n); n = ""; end
         end
 
@@ -2623,9 +2623,9 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 stereo = d.Required(i);
                 actual = testCase.declaredPropertyType(stereo, testCase.ProvenanceProperty);
                 if actual == ""
-                    d.Undeclared(end+1) = stereo;   %#ok<AGROW>
+                    d.Undeclared(end+1) = stereo;
                 elseif actual ~= testCase.DataProvenanceClass
-                    d.WrongType(end+1) = stereo + " -> '" + actual + "'";   %#ok<AGROW>
+                    d.WrongType(end+1) = stereo + " -> '" + actual + "'";
                 end
             end
         end
@@ -2651,11 +2651,11 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 hits = required(ismember(required, applied));
                 for k = 1:numel(hits)
                     where = paths(i) + " [" + hits(k) + "]";
-                    d.Checked(end+1) = where;   %#ok<AGROW>
+                    d.Checked(end+1) = where;
                     actual = testCase.propText(parts{i}, testCase.Profile + "." + ...
                         hits(k) + "." + testCase.ProvenanceProperty);
                     if ~ismember(actual, testCase.DataProvenanceMembers)
-                        d.Untagged(end+1) = where + " -> '" + actual + "'";   %#ok<AGROW>
+                        d.Untagged(end+1) = where + " -> '" + actual + "'";
                     end
                 end
             end
@@ -2685,12 +2685,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                         stereo + "." + testCase.ProvenanceProperty);
                     if actual ~= testCase.EstimateProvenance
                         d.NotEstimate(end+1) = paths(i) + " [" + stereo + "." + ...
-                            valueProp + "] -> '" + actual + "'";   %#ok<AGROW>
+                            valueProp + "] -> '" + actual + "'";
                     end
                 end
                 if carriers ~= expected
                     d.CountMismatch(end+1) = stereo + "." + valueProp + " is carried by " + ...
-                        carriers + " components, D-030 inventories " + expected;   %#ok<AGROW>
+                        carriers + " components, D-030 inventories " + expected;
                 end
             end
         end
@@ -2816,12 +2816,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                     % holds Path as a column, so the slice arrives as one.
                     d.NoUniqueBaseline(end+1) = role + " has " + height(ref) + ...
                         " candidates tagged " + testCase.BaselineProvenance + " {" + ...
-                        strjoin(reshape(testCase.leafNames(ref.Path), 1, []), ", ") + "}";   %#ok<AGROW>
+                        strjoin(reshape(testCase.leafNames(ref.Path), 1, []), ", ") + "}";
                     continue
                 end
                 baseline = ref.Mass_lb;
                 for k = 1:height(rows)
-                    d.Checked(end+1) = rows.Path(k);   %#ok<AGROW>
+                    d.Checked(end+1) = rows.Path(k);
                     % The value function verbatim from D-015. A zero or
                     % negative mass gives Inf or a negative here and lands
                     % in AboveCeiling; that is the trade study's badMass
@@ -2832,7 +2832,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                         d.AboveCeiling(end+1) = rows.Path(k) + " -> v = " + ...
                             sprintf("%.4f", v) + " (baseline " + ...
                             testCase.leafName(ref.Path) + " = " + baseline + " lb, this " + ...
-                            "candidate = " + rows.Mass_lb(k) + " lb)";   %#ok<AGROW>
+                            "candidate = " + rows.Mass_lb(k) + " lb)";
                     end
                 end
             end

@@ -1,21 +1,25 @@
 function requiredFuel_lb = F16APhysicalMissionFuel()
-%F16APHYSICALMISSIONFUEL Fuel required to fly the design mission (stub).
+%F16APHYSICALMISSIONFUEL Fuel required to fly the design mission (NaN by design).
 %   REQUIREDFUEL_LB = F16APHYSICALMISSIONFUEL() returns the total fuel (lb)
-%   needed to complete the F-16A design mission profile (REQ_F16A_001-010):
-%   the sum of the segment fuel burns from a mission analysis.
+%   needed to complete the F-16A design mission profile (REQ_F16A_001-010).
 %
 %   This is the "required" side of REQ_F16A_P01 (fuel volume sufficiency);
 %   the "available" side is F16APhysicalFuelRollup. The verify test checks
 %   available >= required.
 %
-%   STATUS: STUB. Returns NaN ("not yet computed") on purpose -- we do not
-%   invent a mission-fuel number. It will be connected to the mission /
-%   sizing analysis in /sizing/ (e.g. the Brandt mission model, which burns
-%   each segment and sums the fuel). Until then the comparison is NaN and the
-%   verify test FAILS -- an honest, traceable "verification pending" marker.
+%   IT RETURNS NaN BY DESIGN (D-042), permanently. No mission-fuel number is
+%   invented here, so available (6300) >= NaN is false and
+%   F16AFuelVerificationTest FAILS -- and the RED TEST IS THE DELIVERABLE: it
+%   is the example's only "verification set up, traceable, not yet satisfied"
+%   marker, the state a real programme lives in for most of its life. Wiring
+%   this to the mission analysis in /sizing/ would turn it green and teach the
+%   opposite lesson, so it is NOT wired, now or later.
+%
+%   THIS IS NOT A STUB AND NOT A TODO. D-042 lists it under "not TODOs" so
+%   that a future sweep does not "finish" it.
+%
+%   See also F16APHYSICALFUELROLLUP.
 
-% TODO: connect to the mission analysis in /sizing/ (e.g. BrandtMission) to
-% sum the design-mission segment fuel burns and return required fuel in lb.
 requiredFuel_lb = NaN;
 
 end

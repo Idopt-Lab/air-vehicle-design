@@ -367,18 +367,41 @@ model has no variants.
 
 ### A10 · Lint and housekeeping (no behaviour change)
 
-Static analysis over all 13 `.m` files is otherwise clean. What it reports:
+Static analysis over every `.m` file in the example is otherwise clean — and *otherwise clean* is
+load-bearing, so see finding 10 in `docs/08_agent_team.md` for the one suppression class that was
+suspected of hiding messages and measured not to. (The bullets below were written against **13**
+`.m` files; the example tracks **26** as of 2026-08-03, and the Stage-3 sweep covered all of them.)
+What it reports:
 
-- **~25 "extra comma is unnecessary"** (info) across the generators and test suites — all on the
-  `try, ...; catch, end` idiom. Harmless and consistent; leave them or fix them wholesale, but not
-  half.
-- **19 stale `%#ok<...>` suppressions** in `F16APhysicalArchitectureTest.m` (ll. 2626–2835) for
-  messages the analyzer no longer generates. Safe to delete.
-- **`containers.Map`** in `F16APhysicalTradeStudy.m:248` — `dictionary` is the R2022b+ replacement and
+- **~~~25 "extra comma is unnecessary"~~ — DONE, Stage 3.** 28 sites, all the `try, …; catch, end`
+  idiom, fixed wholesale. `try,` now appears in no `.m` file. **The comma after `catch` stays**, and
+  the resulting asymmetry is deliberate — house rule 10 in `docs/08_agent_team.md` records why.
+- **~~19 stale `%#ok<...>` suppressions~~ — DONE, Stage 3; the count was 9.** Measured rather than
+  estimated: **9** stale `%#ok<AGROW>`, all on struct-field growth in the Stage-5 audit helpers of
+  `F16APhysicalArchitectureTest.m` (41 → 32 suppressions), deleted by `f16a-vnv`, plus **1**
+  `%#ok<INUSD>` in `F16APhysicalMassRollup.m`. The 19 was this bullet's estimate; the register
+  carries the measurement.
+- **`containers.Map`** in `F16APhysicalTradeStudy.m` — `dictionary` is the R2022b+ replacement and
   this repo is R2026a. A contained change: `results` is returned to the generator and to tests, so
-  `.keys` and `results(char(role))` call sites move with it.
-- **Not a defect:** `generate_f16a_physical.m:993` "format might not agree with the argument count" is
-  a false positive — 6 conversion specs, 6 arguments; the analyzer cannot resolve the `fmt` variable.
+  `.keys` and `results(char(role))` call sites move with it. **Done** — `f16a-physical` migrated it,
+  and the new key-order semantics are documented in the function's own help block. **Three further
+  instances exist that this bullet never listed, all test-local and all deliberately left: see A15.**
+- **Not a defect — and, unusually, the reason is unknown.** The "format might not agree with the
+  argument count" (`CTPCT`) warning on the `fprintf` in `generate_f16a_physical.m`'s path-report
+  block is a **false positive: 6 conversion specs, 6 arguments.** That much is certain and
+  checkable, and the warning is left in place. *Why the analyzer emits it is not established.*
+  Three causes have been written into this repo and each was refuted by a later probe:
+
+  | Stated cause | Refuted by |
+  |---|---|
+  | "the analyzer cannot resolve the `fmt` variable" — this bullet, as it used to read | a six-case probe: a **literal** format with a *tainted* argument is clean |
+  | "a `+`-concatenated format always trips it" | same probe: concatenated + numeric-only, no `%s`, is clean |
+  | "an array-valued assignment taints the variable" | same probe: taint is neither necessary nor sufficient |
+
+  Two things reproduce, and are recorded **as observations, not as an explanation**: a
+  single-literal format clears it, and deleting the `arrangePaths` assignment clears it on the real
+  file. Neither reconciles with the six-case probe. **Do not write a fourth cause into the repo
+  without a probe that predicts all of these** — that is how the first three got here.
 - **~~Coverage gap worth a decision some day~~ — being closed, Stage 2:** F, L and P each have an
   architecture test suite; `generate_f16a_requirements.m` — 26 requirements, the provenance root of
   everything downstream — had **none**. `requirements/F16ARequirementsTest.m` (`f16a-vnv`) is the R
@@ -445,9 +468,19 @@ this example that has drifted before. Do not bundle it with A2b/A3.
 ### A12 · `PhysicalItem` declares no `DataProvenance` — and it is the stereotype holding OEW
 
 `physical/F16A_PhysicalProps.xml` declares `PhysicalItem { Mass_lb }` and nothing else. So **14 of the
-16 mass-bearing leaves that sum to OEW = 19,980.73 lb carry no provenance tag at all.** Only
-`F100_PW_200` and `FlyByWire` are tagged, and only incidentally — they also carry `TradeCandidate`,
-which declares its own `DataProvenance`.
+16 mass-bearing leaves that sum to OEW = 19,980.73 lb carry no provenance on their *mass*.** Only
+`F100_PW_200` and `FlyByWire` do, via `TradeCandidate`, which declares `Mass_lb` and
+`DataProvenance` together.
+
+> **Corrected 2026-08-03 by `f16a-data`, against its own Stage-2 wording — and the finding got worse.**
+> This entry used to say the 14 carried "no provenance tag **at all**", and that only those two
+> leaves were tagged. Not so: the six airframe structural leaves — `Fuselage`, `Wing`,
+> `HorizontalTail`, `VerticalTail`, `Strakes`, `Nacelles` — carry
+> `Material.DataProvenance = Estimate`. That describes their **composite fraction**, not their mass,
+> which is `Reference` and traceable to `BrandtWeight.m`. So a reader inspecting `Fuselage` does not
+> see a *missing* provenance — they see a **contradicting** one, and nothing on screen says which
+> property it belongs to. A missing tag invites a question; a wrong-looking tag answers it wrongly.
+> The 14 traced values below are unaffected and re-verified.
 
 This is the gap **D-023** closed for `FuelTank` and **D-031** closed for `Material`, left one
 stereotype over — the one holding the example's headline figure. The whole claim of this example is
@@ -518,17 +551,20 @@ is only visible across artifacts, which is the one view no single agent has.
 | `TODO.md` (×2) | nothing |
 | `docs/07_decision_log.md` (×3) | nothing — **and correctly so:** the log is append-only history, so its copies are dated quotations, not live text. A checker must **exempt** it |
 
-**Three ways an ad-hoc grep gets canonical text wrong — two false negatives and a false positive.**
-This trio is the most reusable thing in this entry:
+**Four ways an ad-hoc grep gets a text claim wrong — three false negatives and a false positive.**
+This set is the most reusable thing in this entry (traps 1–3 came from the canonical-sentence
+episode; trap 4 was added 2026-08-03 from the Stage-3 comma sweep, which is why the heading no
+longer says "canonical text" — the failure mode is not specific to it):
 
 | # | Trap | Wrong answer it gives |
 |---|---|---|
 | 1 | **Line wrap.** A verbatim copy split across two lines matches no single-line pattern | **False negative** — a correct copy is reported missing (this is what produced the phantom third paraphrase) |
 | 2 | **Minus sign.** Markdown carries `−6 %MAC` (U+2212); MATLAB source carries `-6 %MAC` (ASCII), and must | **False negative** — a grep for either form finds only its half of the copies |
 | 3 | **Reading a miss as a rewrite.** Traps 1 and 2 return "not found", which looks identical to "someone paraphrased it" | **False positive** — a paraphrase is recorded where none happened |
+| 4 | **Missing word boundary.** Checking house rule 10's claim that `try,` is gone, a naive `grep "try,"` over `.m` files returns **1** hit: the word "geome**try,**" in `physical/F16ASourceKind.m`. `grep -E "\btry,"` returns 0 | **False negative on the claim** — a true statement is reported violated, by a substring inside an unrelated word |
 
 So: keep canonical text **unwrapped** at every site, and any checker must normalize whitespace **and**
-the minus sign before comparing. Trap 3 is the reason this needs a real check rather than a grep: an
+the minus sign before comparing, **and anchor a code-token search on a word boundary.** Trap 3 is the reason this needs a real check rather than a grep: an
 ad-hoc grep is exactly what a careful person reaches for, and it was wrong here in both directions
 within one stage.
 
@@ -543,6 +579,36 @@ mechanism: **two independent paraphrases in one stage**, every unguarded site st
 only copy that held is the only one a test was watching — which fired on its first stage of existence.
 The corrected count does not weaken that. If anything trap 3 above strengthens it, since the
 alternative to a real checker is the ad-hoc grep that got this entry's own number wrong.
+
+### A15 · Three test-local `containers.Map` instances are deferred, on purpose
+
+A10 scoped the `containers.Map` → `dictionary` migration to `F16APhysicalTradeStudy.m`, which is
+**done**: its map is a **return value**, so the migration buys an interface improvement a caller can
+see. Three others exist, none of them listed in A10, all **test-local**, and all left alone in
+Stage 3:
+
+| File | Helper |
+|---|---|
+| `physical/F16APhysicalArchitectureTest.m` | `allocEndpoints`, `allocTargetsByRole` |
+| `logical/F16ALogicalArchitectureTest.m` | `sourceCounts` |
+
+Three reasons, in increasing order of weight:
+
+1. All three sit in a `methods (Access = private)` block and their maps never leave the class, so
+   the migration buys **nothing any caller can see** — the argument that carried the trade study
+   does not carry these.
+2. **`allocTargetsByRole` is not a like-for-like swap.** It stores a *string array* per key
+   (`map(s) = [map(s), t]`), and `dictionary` cannot hold non-scalar values under paren-indexing; it
+   needs cell-valued brace indexing. That is a behavioural rewrite of a helper feeding two
+   assertions, not a type substitution. (`configureDictionary("string","cell")` was **measured to
+   work** in Stage 3, so the route exists — finding 11 in `docs/08_agent_team.md`. It being possible
+   was never the objection.)
+3. **The suites could not be executed in Stage 3.** Rewriting working, unflagged code that underpins
+   most of the P suite without running it is how a lint commit produces a red gate.
+
+**Do all three in one stage, and a stage where the P and L suites can be run.** A10 states the
+wholesale-or-not-at-all rule for the comma sweep; it holds here for the same reason — a partial
+migration leaves two spellings of the same idiom in one test class with no rule distinguishing them.
 
 ---
 

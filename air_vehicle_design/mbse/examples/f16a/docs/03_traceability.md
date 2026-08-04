@@ -70,6 +70,35 @@ acceptance criteria as `TBD` (keyword `todo`). They give students a concrete exa
 how functional analysis feeds *back* into the requirements — and a to-do list to make the
 requirements complete.
 
+### The blanks are the assignment, not an omission
+
+Read that to-do list as **yours**. `D01`–`D09` are **standing student exercises** and stay `TBD`
+permanently (**D-045**) — nobody on this project is going to fill them in. No external specification
+says what "navigate", "communicate" or "fix a target" must achieve for this aircraft, so any criterion
+we wrote would be a requirement we invented; and writing one would take the exercise away. A reader
+hunting for the missing numbers is hunting for something removed on purpose.
+
+**Two more requirements join them, for a different reason** (**D-046**). `REQ_F16A_023` (tipback
+angle) and `REQ_F16A_024` (rollover angle) also keep their `TBD` text and their `todo` keyword. Here
+candidate values *do* exist — but the conventions `sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m`
+measures its angles in do not obviously match the USAF/USN specifications those angles would be
+checked against, and **the same number supports opposite verdicts** depending on which convention is
+meant. Establishing what the criterion actually is, and where it is written down, **is** the
+exercise. Writing a limit in before that is settled would put a false claim about a real aircraft
+into a teaching model.
+
+That is also why `REQ_F16A_024` is still called the **rollover** angle when *overturn* (or turnover)
+is the standard term. The rename is **deferred with the criteria, deliberately**: calling Brandt's
+quantity "the overturn angle" would assert the very identification that is in doubt. Naming it
+correctly is part of the assignment, not a prerequisite to it.
+
+**Eleven requirements carry the `todo` keyword, and they are exactly this set** — the nine above plus
+`023` and `024`. `F16ARequirementsTest` asserts that set *as a whole*, so a twelfth exercise cannot
+appear, and one of the eleven cannot be quietly answered, without a test going red. Two red
+requirements are pointedly **not** in it: `REQ_F16A_025` has a real criterion that was evaluated and
+came out *no* (**D-051**), and `REQ_F16A_P01`'s verification is pending by design (**D-042**).
+Neither is outstanding work, and neither is an exercise.
+
 > `Engage` is not in this table because it already traces to REQ_F16A_021 (payload release).
 
 ## Coverage summary
@@ -87,9 +116,9 @@ aircraft *does* — so they are deliberately left for the **Logical / Physical**
 |-------------|---------|-----------|
 | REQ_F16A_020 | Permanent payload capacity | **L** — `MissionSystemsBay` |
 | REQ_F16A_022 | Materials (composite fraction) | **P** — `Airframe`, **verified by** materials roll-up (≤ 20%) |
-| REQ_F16A_023 | Balance — tipback angle | **L** — `LandingGear` |
-| REQ_F16A_024 | Balance — rollover angle | **L** — `LandingGear` |
-| REQ_F16A_025 | Stability & control — static margin | **L** — `Airframe` |
+| REQ_F16A_023 | Balance — tipback angle | **L** — `LandingGear`; criterion deliberately blank, a student exercise (D-046) |
+| REQ_F16A_024 | Balance — rollover angle | **L** — `LandingGear`; criterion deliberately blank, a student exercise (D-046) |
+| REQ_F16A_025 | Stability & control — static margin | **L** — `Airframe`, **verified by** the static-margin test (negative margin, ≥ −6 %MAC) — **violated at landing** (D-051) |
 | REQ_F16A_026 | Unit flyaway cost (MoM) | **P** — cost Measure of Merit on `Aircraft` |
 
 This is not a gap to fix now — it is the correct RFLP behavior. A requirement about

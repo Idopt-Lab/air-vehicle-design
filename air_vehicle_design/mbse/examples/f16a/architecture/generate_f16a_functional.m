@@ -51,7 +51,7 @@ addpath(reqDir);
 % 0) Idempotent cleanup
 % ---------------------------------------------------------------------
 slreq.clear();
-try, systemcomposer.close(modelName, true); catch, end %#ok<CTCH>
+try systemcomposer.close(modelName, true); catch, end %#ok<CTCH>
 bdclose("all");
 Simulink.data.dictionary.closeAll("-discard");
 staleRoot = fullfile(thisDir, modelName);   % guard against artifacts saved to cwd
@@ -169,7 +169,7 @@ systems = ["F16A_Functional", ...
            "F16A_Functional/ProvideAircraftFunctions", ...
            "F16A_Functional/ProvideAircraftFunctions/Aviate"];
 for s = systems
-    try, Simulink.BlockDiagram.arrangeSystem(s); catch, end %#ok<CTCH>
+    try Simulink.BlockDiagram.arrangeSystem(s); catch, end %#ok<CTCH>
 end
 save_system(modelName, char(modelFile));   % save into architecture/
 set_param(modelName, "SimulationCommand", "update");

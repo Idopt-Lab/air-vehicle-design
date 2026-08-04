@@ -156,7 +156,7 @@ fprintf("Operating Empty Wt  : %10.2f lb  (MoM: minimize)\n", OEW);
 end
 
 % =====================================================================
-function f16aMassRollup(instance, varargin) %#ok<INUSD>
+function f16aMassRollup(instance, varargin)
 %F16AMASSROLLUP Analysis function: sum Mass_lb bottom-up, write each subtotal.
 %   Mirrors ex2/CostAndWeightRollupAnalysis: a leaf keeps its own Mass_lb; an
 %   assembly (and the root) is overwritten with the sum of its children, so

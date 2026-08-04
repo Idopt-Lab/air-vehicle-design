@@ -255,9 +255,9 @@ addpath(reqDir);
 %    see generate_f16a_logical.m for why the order matters).
 % ---------------------------------------------------------------------
 slreq.clear();
-try, systemcomposer.allocation.AllocationSet.closeAll(); catch, end %#ok<CTCH>
-try, systemcomposer.profile.Profile.closeAll();          catch, end %#ok<CTCH>
-try, systemcomposer.close(modelName, true);              catch, end %#ok<CTCH>
+try systemcomposer.allocation.AllocationSet.closeAll(); catch, end %#ok<CTCH>
+try systemcomposer.profile.Profile.closeAll();          catch, end %#ok<CTCH>
+try systemcomposer.close(modelName, true);              catch, end %#ok<CTCH>
 bdclose("all");
 Simulink.data.dictionary.closeAll("-discard");
 staleRoot = fullfile(thisDir, modelName);
@@ -382,7 +382,7 @@ arrangePaths = modelName + [ "", "/Aircraft", "/Aircraft/Airframe", ...
     "/Aircraft/Propulsion/Engine", "/Aircraft/FlightControls", ...
     "/Aircraft/FuelSystem"];
 for p = arrangePaths
-    try, Simulink.BlockDiagram.arrangeSystem(p); catch, end %#ok<CTCH>
+    try Simulink.BlockDiagram.arrangeSystem(p); catch, end %#ok<CTCH>
 end
 save_system(modelName, char(modelFile));
 
@@ -987,6 +987,13 @@ mats    = F16APhysicalMaterialsRollup();
 fuel    = F16APhysicalFuelRollup();
 
 nComp = countComps(m.Architecture);
+% The CTPCT this fprintf draws is a FALSE POSITIVE -- 6 conversion specs, 6
+% arguments -- and is deliberately left in place. THE MECHANISM IS NOT
+% ESTABLISHED: three attempts to name the trigger were each refuted by a later
+% probe. Two things are measured, and only these: it clears if the format is a
+% single literal, and, separately, it clears if section 5's arrangePaths
+% assignment is removed. No account yet explains both. DO NOT ACT ON A STATED
+% CAUSE -- and do not restructure this call to chase it.
 fmt = "Built %s with %d components (%d realization L->P edges). " + ...
     "OEW=%.2f lb; airframe composite=%.1f%% (REQ_022 cap 20%%); " + ...
     "available fuel=%.0f lb.\n";
@@ -996,10 +1003,17 @@ fprintf("Rationale set on %d of %d components (the %d variant role wrappers " + 
     "cannot carry one -- D-013).\n", size(ratRows,1), nComp, nComp - size(ratRows,1));
 % The trade has run (section 7b): report what it decided, read back from the
 % ranked tables it returned rather than restated here.
-tradedRoles = string(trades.keys);
+% trades is a cell-valued dictionary: keys() already hands back a string array
+% (reshaped to a row here only to keep the shape this line always had), and the
+% ranked table is read with BRACES -- trades(role) would return the 1x1 cell
+% holding it. The key order is the dictionary's INSERTION order (measured,
+% Stage 3 -- a containers.Map would have sorted instead), which is the trade's
+% own sorted role order, so this list still reads Airframe,
+% FlightControlSystem, PropulsionSystem.
+tradedRoles = reshape(keys(trades), 1, []);
 picks = strings(1, numel(tradedRoles));
 for i = 1:numel(tradedRoles)
-    T = trades(char(tradedRoles(i)));
+    T = trades{tradedRoles(i)};
     picks(i) = tradedRoles(i) + " -> " + T.Candidate(T.Rank == 1) + ...
         " (" + T.Kind(T.Rank == 1) + ", score " + sprintf("%.5f", T.Score(T.Rank == 1)) + ")";
 end
@@ -1185,8 +1199,11 @@ function n = countComps(arch)
 %   VARIANT-SAFE, and it has to be: a plain recursion over .Architecture
 %   .Components returns the choices on a freshly built in-memory model but ZERO
 %   on the same model saved and reloaded (Stage-0 finding 6), so this generator
-%   would report 30 while a test reloading the model reported 23 -- the two
-%   disagreeing for a reason nobody would find quickly. getChoices is the only
+%   would report 30 while a test reloading the model reported 17: the 7
+%   candidates vanish, and so do the 6 structural parts beneath the decomposed
+%   airframe candidate -- the two disagreeing for a reason nobody would find
+%   quickly. (L's twin of this sentence loses only its 6 kinds, because they are
+%   leaves; P's gap is bigger for exactly that reason.) getChoices is the only
 %   reliable accessor. The variant WRAPPER is counted as a component (it is one
 %   in the model tree) even though it can carry no stereotype.
 n = 0;
