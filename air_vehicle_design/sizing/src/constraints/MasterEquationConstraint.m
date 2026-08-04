@@ -106,10 +106,25 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %   ConstraintAnalysis picks a design point off a curve that does not
         %   exist. Erroring here converts that into a visible failure at the one
         %   place every Master-Equation constraint funnels through.
-            A = obj.compute_A();
-            B = obj.compute_B();
-            C = obj.compute_C();
-            D = obj.compute_D();
+        %
+        %   EFFICIENCY (T7, 2026-08-04): the drag polar and the thrust lapse
+        %   are fetched exactly ONCE per required_TW call and handed to the
+        %   four compute_* term helpers. An earlier form let each helper
+        %   re-fetch them, so one required_TW call evaluated aero.drag_polar
+        %   three times and get_alpha four times, all returning the identical
+        %   value (the state is fixed). The fetch stays INSIDE this call (not
+        %   cached on the object across calls), so the constraint still tracks
+        %   the current sizing-loop iteration and fidelity level -- an
+        %   optimizer that mutates aero/prop between calls sees fresh values.
+            polar = obj.aero.drag_polar(obj.state);
+            alpha = obj.get_alpha();
+            q     = obj.state.q;
+            V     = obj.state.V;
+
+            A = obj.compute_A(polar, alpha, q);
+            B = obj.compute_B(polar, alpha, q);
+            C = obj.compute_C(polar, alpha);
+            D = obj.compute_D(alpha, V);
             terms = [A, B, C, D];
             if ~all(isfinite(terms))
                 names = ["A", "B", "C", "D"];
@@ -136,34 +151,27 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 
     methods (Access = protected)
         %COMPUTE_A/B/C/D  Master Equation terms, see class header for the
-        %   equation and citation. Each pulls alpha (thrust lapse, via
-        %   get_alpha) and CD0/K1/K2 (drag polar) fresh from prop/aero, so
-        %   the constraint tracks the current sizing-loop iteration and
-        %   fidelity level.
+        %   equation and citation. Each TAKES the already-fetched drag polar
+        %   (CD0/K1/K2), thrust lapse alpha, dynamic pressure q, and speed V
+        %   -- required_TW fetches those once (via aero.drag_polar/get_alpha)
+        %   and passes them in, so the constraint tracks the current
+        %   sizing-loop iteration and fidelity level while evaluating the
+        %   drag polar and thrust lapse only once per call (T7, 2026-08-04).
+        %   These helpers are protected and called only from required_TW.
 
-        function A = compute_A(obj)
-            polar = obj.aero.drag_polar(obj.state);
-            alpha = obj.get_alpha();
-            q     = obj.state.q;
+        function A = compute_A(obj, polar, alpha, q) %#ok<INUSL>
             A = q * polar.CD0 / alpha;
         end
 
-        function B = compute_B(obj)
-            polar = obj.aero.drag_polar(obj.state);
-            alpha = obj.get_alpha();
-            q     = obj.state.q;
+        function B = compute_B(obj, polar, alpha, q)
             B = (q / alpha) * polar.K1 * (obj.n * obj.beta / q)^2;
         end
 
-        function C = compute_C(obj)
-            polar = obj.aero.drag_polar(obj.state);
-            alpha = obj.get_alpha();
+        function C = compute_C(obj, polar, alpha)
             C = polar.K2 * obj.n * obj.beta / alpha;
         end
 
-        function D = compute_D(obj)
-            alpha = obj.get_alpha();
-            V     = obj.state.V;
+        function D = compute_D(obj, alpha, V)
             D = (obj.beta / alpha) * (obj.Ps / V);
         end
 

@@ -139,8 +139,22 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
         %   does not exist -- error here instead, the same protection every
         %   Master-Equation constraint gets, at the one place this condition
         %   funnels through.
-            B = obj.compute_B();
-            C = obj.compute_C();
+        %
+        %   EFFICIENCY (T7, 2026-08-04): the flapped CLmax_TO, the thrust
+        %   lapse alpha, and the drag polar are fetched exactly ONCE per
+        %   required_TW call and handed to compute_B/compute_C. An earlier
+        %   form let both helpers re-fetch get_CLmax_TO (twice per call) and
+        %   compute_B re-fetch get_alpha independently. The fetch stays INSIDE
+        %   this call (not cached on the object across calls), so the
+        %   constraint still tracks the current sizing-loop iteration and
+        %   fidelity level.
+            CLmax_TO = obj.aero.get_CLmax_TO();
+            alpha    = obj.get_alpha();
+            CD0_TO   = obj.aero.drag_polar(obj.state).CD0 + ...
+                TakeoffConstraint.get_Delta_CD0_TO_dispatched(obj.aero, obj.state);
+
+            B = obj.compute_B(CLmax_TO, alpha);
+            C = obj.compute_C(CLmax_TO, CD0_TO);
             terms = [B, C];
             if ~all(isfinite(terms))
                 names = ["B", "C"];
@@ -165,36 +179,34 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
         %   W/S-linear term, C the drag/rolling-friction ground-roll
         %   correction. required_TW above assembles them into B*(W/S) + C.
 
-        function B = compute_B(obj)
+        function B = compute_B(obj, CLmax_TO, alpha)
         %COMPUTE_B  See class header for the equation and citation.
         %   CLmax_TO is the FLAPPED takeoff value (aero.get_CLmax_TO()), not
         %   the clean aero.get_CLmax(state) -- see the class header's
-        %   discussion of get_CLmax_TO/get_Delta_CD0_TO above.
-            CLmax_TO = obj.aero.get_CLmax_TO();
-            alpha    = obj.get_alpha();
-            rho      = obj.state.rho;
+        %   discussion of get_CLmax_TO/get_Delta_CD0_TO above. TAKES the
+        %   already-fetched CLmax_TO and thrust lapse alpha; required_TW
+        %   fetches them once and passes them in (T7, 2026-08-04).
+            rho = obj.state.rho;
 
             coeff = (obj.beta^2 / alpha) * (obj.k_TO^2 / (rho * TakeoffConstraint.G_FTS2 * CLmax_TO));
             B = coeff / obj.S_G;
         end
 
-        function C = compute_C(obj)
+        function C = compute_C(obj, CLmax_TO, CD0_TO)
         %COMPUTE_C  Ground-roll drag/rolling-friction correction. See class
         %   header for the equation and citation. CLmax_TO/CD0_TO are the
         %   FLAPPED takeoff values (aero.get_CLmax_TO(),
-        %   aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO(...)), pulled
-        %   fresh from the aero discipline object each call, same convention
-        %   as compute_B. get_Delta_CD0_TO's signature is not uniform across
-        %   fidelity levels: F16AeroL1/L2 take no argument, F16AeroL3 takes
-        %   the flight state (gear-strut Reynolds-number lookup) -- dispatched
-        %   via metaclass reflection on aero's declared InputNames (see
-        %   TakeoffConstraint.get_Delta_CD0_TO_dispatched), since neither
+        %   aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO(...)). TAKES
+        %   both already-fetched; required_TW fetches them once and passes
+        %   them in (T7, 2026-08-04), so get_CLmax_TO/drag_polar are each
+        %   evaluated once per required_TW call rather than twice. The CD0_TO
+        %   fetch in required_TW dispatches get_Delta_CD0_TO's non-uniform
+        %   arity across fidelity levels: F16AeroL1/L2 take no argument,
+        %   F16AeroL3 takes the flight state (gear-strut Reynolds-number
+        %   lookup) -- via metaclass reflection on aero's declared InputNames
+        %   (see TakeoffConstraint.get_Delta_CD0_TO_dispatched), since neither
         %   nargin(@obj.aero.get_Delta_CD0_TO) (returns -1 for bound
         %   instance-method handles) nor a try/catch is a reliable arity check.
-            CLmax_TO       = obj.aero.get_CLmax_TO();
-            Delta_CD0_TO   = TakeoffConstraint.get_Delta_CD0_TO_dispatched(obj.aero, obj.state);
-            CD0_TO         = obj.aero.drag_polar(obj.state).CD0 + Delta_CD0_TO;
-
             C = TakeoffConstraint.DRAG_FACTOR * CD0_TO / (obj.beta * CLmax_TO) + obj.mu;
         end
 
