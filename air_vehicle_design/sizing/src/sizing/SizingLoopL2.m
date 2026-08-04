@@ -5,48 +5,60 @@ classdef SizingLoopL2 < handle
 %   Two-state-variable (W_TO, T_SL) fixed-point iteration
 %   [docs/subplans/08_sizing.md]. Flat orchestrator, not a discipline --
 %   see SizingLoopL1.m's header for the architecture rationale (same
-%   applies here). Also drives tail sizing (an injected TailSizingBase
-%   object, e.g. F16TailL1 -- see src/disciplines/tail_sizing/) and
-%   control-surface sizing (ControlSurfaceSizer) every iteration, since
-%   both feed geometry that this loop's aero/mission objects read.
+%   applies here).
 %
-%   TAIL TYPE (updated 2026-07-28): tail is typed (1,1) TailSizingBase, the
-%   Tier-1 abstract enforcer shared by F16TailL1/F16TailL2/F16TailL3
-%   (formerly the concrete TailSizingLevel1, before that class was
-%   superseded by the tail-sizing three-tier discipline -- see
-%   src/disciplines/tail_sizing/TailSizing_scribe_plan.md Sec. 3). The
-%   run() body below still calls tail.size(S_ref, b_wing, cbar_wing, L_fus)
-%   -- the L1 four-scalar convention -- so only an L1-signature tail object
-%   (e.g. F16TailL1) is actually usable through THIS loop today; wiring an
-%   L2/L3 tail object (whose size(obj) takes no scalar arguments) through
-%   SizingLoopL2 is a separate, not-yet-done follow-up.
+%   TAIL/CONTROL-SURFACE SIZING (updated 2026-08-03): Casey's decision that
+%   tail sizing and control-surface sizing are organizationally part of the
+%   Geometry discipline, not separate disciplines/objects. The former
+%   standalone tail_sizing discipline (TailSizingBase/TailL1/L2/L3/
+%   F16TailL1/L2/L3) and src/sizing/ControlSurfaceSizer.m are RETIRED.
+%   Geometry now sizes its own tail and control surfaces via
+%   geom.size_tail() and geom.size_control_surfaces() -- both zero-arg,
+%   self-referencing methods declared on GeometryModelL2/L3's abstract
+%   contract (src/disciplines/geometry/GeometryModelL2.m,
+%   GeometryModelL3.m) and implemented by F16GeomL2/F16GeomL3 -- called
+%   each iteration by this loop below. This constructor no longer takes
+%   separate tail/ctrl arguments at all.
 %
 %   KEY DIFFERENCE FROM L1: S_ref is FIXED here, never touched by this
 %   loop -- it is a genuine input to L2/L3 geometry (read from JSON), not
 %   solved for. Only T_SL is derived from a fixed ratio and the evolving
 %   W_TO, exactly mirroring L1's S_ref/T_SL derivation pattern:
 %     T_SL = TW_opt * W_TO;   prop.T_SL = T_SL;
-%   [TW_opt] = con.optimal_point() is called ONCE, before the loop, for the
-%   same reason as SizingLoopL1 (see that class's header): since S_ref
-%   never changes during this loop, the constraint envelope cannot depend
-%   on the loop's state at all, so it's correct and cheap to compute once.
-%   The W/S output of optimal_point() is unused here (S_ref is fixed by
-%   the JSON input, not derived from W/S).
+%   UNLIKE L1, [TW_opt] = con.optimal_point() is called EVERY iteration
+%   (changed 2026-08-03 -- see ConstraintAnalysis.m's "LIVE RE-EVALUATION"
+%   header note; used to be called once before the loop, mirroring L1, on
+%   the reasoning that S_ref never changes so the envelope can't either --
+%   that reasoning missed a real feedback path: obj.prop.T_SL is assigned a
+%   few lines below, and F16GeomL2/L3's T_AB_SLS_lb is Dependent on
+%   prop.T_SL, sizing the nacelle diameter and therefore duct wetted area,
+%   S_wet, and aero.CD0 -- which the constraints read live -- so the
+%   envelope genuinely does move as this loop's T_SL state evolves). Each
+%   call here sees LAST iteration's T_SL-driven wetted area, one iteration
+%   lagged, since prop.T_SL is only updated to THIS iteration's value right
+%   after; that lag is consistent with how W_TO/T_SL themselves lag by one
+%   iteration under-relaxation. Tail/control-surface areas (S_ht/S_vt/etc.,
+%   sized below) do NOT contribute to this feedback -- they are pure
+%   functions of geom's fixed inputs, not of W_TO/T_SL (see the next
+%   paragraph) -- the nacelle/duct term is the only wetted-area component
+%   that moves during this loop. The W/S output of optimal_point() is still
+%   unused here (S_ref is fixed by the JSON input, not derived from W/S).
 %
 %   Every iteration also re-sizes the tail and control surfaces from the
 %   FIXED S_ref and the wing geometry (which also never changes during
 %   this loop, since only S_ref and geometry derived from it are touched
 %   by SizingLoopL1, not L2/L3):
-%     tail_result = tail.size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
-%     geom.S_ht = tail_result.S_ht;  geom.S_vt = tail_result.S_vt;
-%     cs_result = ctrl.size(geom);
-%     geom.S_ail = cs_result.S_ail;  geom.S_elev = cs_result.S_elev;  geom.S_rud = cs_result.S_rud;
-%   These do not depend on W_TO/T_SL either, so they are technically
-%   loop-invariant too (see ControlSurfaceSizer.m / the tail-sizing TailLN
-%   toolboxes -- both are pure functions of geom's fixed inputs) --
-%   recomputed every iteration anyway to mirror subplan 08's documented
-%   call sequence and because they are cheap; a future geom-dependent
-%   tail/control-surface method would need this recompute for correctness.
+%     tail_result = geom.size_tail();
+%     cs_result   = geom.size_control_surfaces();
+%   Both self-mutate geom's own S_ht/S_vt/S_ail/S_elev/S_rud properties
+%   internally, so no explicit geom.S_ht = tail_result.S_ht-style
+%   assignment is needed here any more. These do not depend on W_TO/T_SL
+%   either, so they are technically loop-invariant too (see GeomL1.size_tail
+%   / GeomL2.compute_control_surface_areas -- both are pure functions of
+%   geom's fixed inputs) -- recomputed every iteration anyway to mirror
+%   subplan 08's documented call sequence and because they are cheap; a
+%   future geom-dependent tail/control-surface method would need this
+%   recompute for correctness.
 %
 %   Closure: Raymer's TOGW iteration ("Eq. 3.4" per the user; reproduced
 %   as Algorithm 1 / Eqs. 2.1-2.2 in temp_AI/docs/disciplines/
@@ -59,16 +71,25 @@ classdef SizingLoopL2 < handle
 %   |W_TO_new-W_TO| < tol AND |T_SL_new-T_SL| < tol [docs/subplans/08_sizing.md].
 %   Supersedes an earlier additive closure [WeightsBase.m header] -- same
 %   fixed point either way (see SizingLoopL1.m's header for the
-%   derivation), confirmed empirically on both the F-16A L2 design study
-%   (21,181.0 vs. 21,181.6 lbf, additive form) and the L3 study, which
-%   reuses this same class (23,039.1 vs. 23,039.5 lbf) -- in both cases a
-%   <0.005% gap, with this form converging in about half the iterations.
+%   derivation). The <0.005% multiplicative-vs-additive gap and ~2x
+%   faster convergence were confirmed empirically pre-2026-08-03, when
+%   con.optimal_point() was still called once before the loop (F-16A L2:
+%   21,181.0 vs. 21,181.6 lbf; L3, reusing this same class: 23,039.1 vs.
+%   23,039.5 lbf). Both design studies still converge cleanly with the
+%   live per-iteration optimal_point() call above, but at DIFFERENT
+%   absolute numbers now that TW_opt tracks the T_SL feedback (L2:
+%   W_TO=20,994.33 lbf, T_SL=14,211.13 lbf, 15 iter; L3: W_TO=22,884.83
+%   lbf, T_SL=15,168.55 lbf, 15 iter) -- the multiplicative-vs-additive
+%   comparison itself was never re-run against the live envelope, so
+%   treat the old side-by-side numbers above as historical, not current.
 %
 %   CORRECTIONS TO subplan 08's PSEUDOCODE -- same three as SizingLoopL1.m
 %   (con.optimal_point() no-arg/two-output; prop.T_SL not prop.T0;
 %   miss.compute_fuel 3 args, payload from wts not a "req" object) -- plus:
 %     geom.S_HT/S_VT -> geom.S_ht/S_vt (F16GeomL2's actual property casing).
-
+% TODO (8/3/2026): You could move this section (72 - 100) (constructor and
+% properties) into some sort of base enforcer class that is also accessible
+% to subclasses. Apply this to SizingLoopL1, too.
     properties (SetAccess = private)
         aero
         prop
@@ -76,13 +97,11 @@ classdef SizingLoopL2 < handle
         geom
         miss
         con
-        tail
-        ctrl
     end
 
     methods
 
-        function obj = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl)
+        function obj = SizingLoopL2(aero, prop, wts, geom, miss, con)
             arguments
                 aero (1,1) AerodynamicsBase
                 prop (1,1) PropulsionBase
@@ -90,8 +109,6 @@ classdef SizingLoopL2 < handle
                 geom (1,1) GeometryBase
                 miss (1,1) MissionBase
                 con  (1,1) ConstraintAnalysis
-                tail (1,1) TailSizingBase
-                ctrl (1,1) ControlSurfaceSizer
             end
             obj.aero = aero;
             obj.prop = prop;
@@ -99,8 +116,6 @@ classdef SizingLoopL2 < handle
             obj.geom = geom;
             obj.miss = miss;
             obj.con  = con;
-            obj.tail = tail;
-            obj.ctrl = ctrl;
         end
 
         function result = run(obj, W_TO_guess, T_SL_guess, opts)
@@ -125,8 +140,6 @@ classdef SizingLoopL2 < handle
                 opts.relaxation (1,1) double {mustBeInRange(opts.relaxation, 0, 1)} = 0.5
             end
 
-            [~, TW_opt] = obj.con.optimal_point();
-
             W_TO = W_TO_guess;
             T_SL = T_SL_guess;
             converged = false;
@@ -134,20 +147,34 @@ classdef SizingLoopL2 < handle
                 'S_vt', {}, 'S_ail', {}, 'S_elev', {}, 'S_rud', {}, 'W_fuel', {}, 'W_OEW', {});
 
             for iter = 1:opts.max_iter
+                % Recomputed every iteration -- see header note above.
+                [~, TW_opt] = obj.con.optimal_point();
                 T_SL_new = TW_opt * W_TO;
-                obj.prop.T_SL = T_SL_new;
+                obj.prop.T_SL = T_SL_new; % TODO (8/3/2026): These should be moved towards the end, since they interfere with using the "guess" values.
+                % TODO (8/3/2026): Sanity check; OEW should be affected by
+                % engine weight, which is also estimated from T_SL.
 
-                tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
-                obj.geom.S_ht = tail_result.S_ht;
-                obj.geom.S_vt = tail_result.S_vt;
-
-                cs_result = obj.ctrl.size(obj.geom);
-                obj.geom.S_ail  = cs_result.S_ail;
-                obj.geom.S_elev = cs_result.S_elev;
-                obj.geom.S_rud  = cs_result.S_rud;
+                % TAIL/CONTROL-SURFACE -> WEIGHT COUPLING (documented
+                % 2026-08-03, was a TODO asking to make this clearer): the
+                % two calls below mutate obj.geom's own S_ht/S_vt/S_ail/
+                % S_elev/S_rud in place. There is no explicit argument
+                % passing those areas into obj.wts below -- the coupling is
+                % implicit, through obj.wts's OWN Dependent S_ht/S_vt
+                % getters, which read obj.geom.S_exposed_ht/S_exposed_vt
+                % live (see F16WeightsL2.m's get.S_ht/get.S_vt). So
+                % obj.wts.OEW(W_TO), a few lines down, already reflects
+                % THIS iteration's tail/control-surface sizing with no
+                % extra wiring here; skipping size_tail()/
+                % size_control_surfaces() would silently freeze OEW's
+                % tail/VT weight terms at whatever geom last held.
+                tail_result = obj.geom.size_tail();
+                cs_result   = obj.geom.size_control_surfaces();
 
                 W_fuel = obj.miss.compute_fuel(obj.aero, obj.prop, W_TO);
                 W_OEW  = obj.wts.OEW(W_TO);
+                % TODO (8/3/2026): Make a mermaid chart to see exactly what
+                % data goes where during runtime. Don't forget the loop.
+                % Also 
 
                 obj.wts.W_TO     = W_TO;
                 obj.wts.W_energy = W_fuel;
@@ -182,16 +209,17 @@ classdef SizingLoopL2 < handle
             % Re-derive T_SL/tail/control-surface state from the final W_TO
             % (the loop body above computed them from the PRE-update W_TO)
             % so the mutated geom/prop/wts objects and the returned result
-            % stay consistent with the returned W_TO/T_SL.
+            % stay consistent with the returned W_TO/T_SL. Also recompute
+            % TW_opt one more time here: the loop body's own
+            % [~, TW_opt] = obj.con.optimal_point() call each iteration
+            % reads LAST iteration's prop.T_SL-driven wetted area (see
+            % header note above), so on exit it is one iteration behind the
+            % prop.T_SL this loop just converged to.
+            [~, TW_opt] = obj.con.optimal_point();
             T_SL = TW_opt * W_TO;
             obj.prop.T_SL = T_SL;
-            tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
-            obj.geom.S_ht = tail_result.S_ht;
-            obj.geom.S_vt = tail_result.S_vt;
-            cs_result = obj.ctrl.size(obj.geom);
-            obj.geom.S_ail  = cs_result.S_ail;
-            obj.geom.S_elev = cs_result.S_elev;
-            obj.geom.S_rud  = cs_result.S_rud;
+            tail_result = obj.geom.size_tail(); %#ok<NASGU>
+            cs_result   = obj.geom.size_control_surfaces(); %#ok<NASGU>
             obj.wts.W_TO = W_TO;
 
             result = struct('W_TO', W_TO, 'S_ref', obj.geom.S_ref, 'T_SL', T_SL, ...

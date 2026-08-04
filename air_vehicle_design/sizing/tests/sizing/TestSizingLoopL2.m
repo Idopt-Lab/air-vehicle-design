@@ -9,16 +9,18 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
     methods (Static)
 
         function [loop, con, TW_opt] = buildLoop()
-        %BUILDLOOP  A SizingLoopL2 wired to mock discipline objects, a real
-        %   ConstraintAnalysis (same construction as
-        %   TestSizingLoopL1.buildLoop), and a real (generic, arbitrary-
-        %   coefficient) ControlSurfaceSizer instance -- already generic/
-        %   concrete, so no stub class is needed for it. Tail sizing uses
-        %   FixedTailStub (2026-07-28): SizingLoopL2's `tail` argument is now
-        %   typed (1,1) TailSizingBase, which the old, now-SUPERSEDED
-        %   TailSizingLevel1(0.40, 0.07) direct construction does NOT satisfy
-        %   (it inherits only handle) -- see FixedTailStub.m's header for the
-        %   full rationale.
+        %BUILDLOOP  A SizingLoopL2 wired to mock discipline objects and a
+        %   real ConstraintAnalysis (same construction as
+        %   TestSizingLoopL1.buildLoop). Tail/control-surface sizing
+        %   (updated 2026-08-03): SizingLoopL2 no longer takes separate
+        %   tail/ctrl arguments at all -- it calls geom.size_tail()/
+        %   geom.size_control_surfaces() directly, so FixedGeomStub gained
+        %   its own self-mutating size_tail()/size_control_surfaces()
+        %   methods (see FixedGeomStub.m). The formerly-separate
+        %   FixedTailStub and the generic ControlSurfaceSizer(0.20, 0.40,
+        %   0.30, 0.90, 0.30, 0.90) construction are RETIRED -- their
+        %   arbitrary coefficients/fractions moved into FixedGeomStub's own
+        %   implementation instead.
             aero_stub = FixedAeroStub(1.5, 0.02, 0.1, 0);
             prop_stub = FixedPropStub(0.5);
             state     = AircraftState(10000, 0.6);
@@ -33,10 +35,7 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
             geom.S_ref = 300;   % fixed input, never touched by SizingLoopL2
             miss = FixedMissionStub();
 
-            tail = FixedTailStub();
-            ctrl = ControlSurfaceSizer(0.20, 0.40, 0.30, 0.90, 0.30, 0.90);
-
-            loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
+            loop = SizingLoopL2(aero, prop, wts, geom, miss, con);
         end
 
     end

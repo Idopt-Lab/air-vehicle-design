@@ -305,47 +305,64 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 5. Each subplan `.md` is written/expanded at the start of its implementation step.
 6. After each step: STOP and wait for professor to review code and run MATLAB independently.
 7. Do not search the internet unless explicitly asked to. Use locally available resources: `temp_AI/docs/disciplines/reference_extracts/` (Raymer/Roskam/Mattingly/Nicolai extracts) and `VnV/BrandtF16A/` (Brandt workbook, readmes, cell-map).
+8. Claude's responses and writing are to adhere to ASD-STE100 Simplified Technical English, located in \sizing\docs\ASD-STE100_ISSUE9.pdf.
 
 ---
 
 ## Resolved Decisions
+
+**Tail sizing and control-surface sizing (absorbed into Geometry, 2026-08-03 — supersedes the
+2026-07-28 entry below):** Casey's decision: tail sizing and control-surface sizing are
+organizationally part of the Geometry discipline, not separate disciplines/objects. The standalone
+`tail_sizing` discipline (`TailSizingBase`/`TailSizingModelL{1,2,3}`/`TailL{1,2,3}`/`F16TailL{1,2,3}`)
+and `src/sizing/ControlSurfaceSizer.m` are **deleted**. Every equation/citation/coefficient carried
+over unchanged, just relocated, under clearly marked `TAIL SIZING` / `CONTROL SURFACE SIZING` banner
+comments (`grep` for either banner across `src/disciplines/geometry/` and `examples/F16A/` to find
+every absorbed section):
+- `src/disciplines/geometry/GeometryModelL1/L2/L3.m` — abstract `size_tail`
+  (L1: `(obj, S_ref, b, cbar, L_fus)`; L2/L3: `(obj)`, self-referencing) and, at L2/L3,
+  `size_control_surfaces(obj)`.
+- `src/disciplines/geometry/GeomL1.m` — the Raymer 7th ed. Table 6.4 volume-coefficient toolbox
+  (`size_tail`, `compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`,
+  `compute_S_HT`, `compute_S_VT`) ported verbatim from the deleted `TailL1.m`. F-16 net
+  `c_HT=0.315`, `c_VT=0.063` (jet-fighter row 0.40/0.07 with RSS ×(1−10%) and all-moving-tail
+  ×(1−12.5%) corrections). Tail arm `L_HT=L_VT=0.475*L_fus`. This is the PRIMARY, production path —
+  `examples/F16A/F16GeomL1/L2/L3.m` all call it (L2/L3 self-referencing their own live planform,
+  cross-calling `GeomL1.size_tail`, then self-mutating their own `S_ht`/`S_vt`).
+- `src/disciplines/geometry/GeomL2.m` — `size_tail_nicolai(obj)` (Nicolai & Carichner Table 11.6
+  F-16-specific coefficients `C_HT=0.3`, `C_VT=0.094`), ported verbatim from the deleted `TailL2.m`.
+  SECONDARY/alternate — never wired into the production sizing loop (never was, even before this
+  absorption), preserved for its citation and the informational Brandt-comparison report only; does
+  NOT self-mutate `S_ht`/`S_vt`. Also `compute_control_surface_areas` + `size_control_surfaces(obj)`
+  [Raymer 6th ed. Fig. 6.3 aileron / Table 6.5 elevator+rudder], ported verbatim from the deleted
+  `ControlSurfaceSizer.m`.
+- `src/disciplines/geometry/GeomL3.m` — `size_tail(obj)` (same PRIMARY Raymer path as L2, no Nicolai
+  secondary at L3 — that path was only ever framed as an L2-specific alternate) plus
+  `size_tail_stability_control(obj)`, the still-erroring Raymer Ch. 16 documented-TODO stub ported
+  from the deleted `TailL3.m` (error ID renamed `GeomL3:tailStabilityControlCitationNotAvailable`).
+  Also `size_control_surfaces(obj)`, reusing `GeomL2.compute_control_surface_areas` (no L3-specific
+  variant exists).
+- `SizingLoopL2.m`'s constructor no longer takes `tail`/`ctrl` arguments at all — `run()` calls
+  `obj.geom.size_tail()` / `obj.geom.size_control_surfaces()` directly, both self-mutating.
+
+Full rationale, citations, and discrepancy record for the ORIGINAL (now-superseded) three-tier
+tail_sizing discipline: `src/disciplines/tail_sizing/TailSizing_scribe_plan.md` (kept solely as the
+historical record — every other file in that directory is deleted), `VnV/BrandtF16A/todo.md`
+(2026-07-28 entries).
+
+<details><summary>Historical entry, superseded 2026-08-03 (kept for context)</summary>
 
 **Tail sizing (superseded 2026-07-28 — was a standalone helper, now a full three-tier discipline):**
 Tail sizing produces only `S_ht`/`S_vt` (horizontal/vertical tail reference areas); control-surface
 sizing stays a separate discipline (`src/sizing/ControlSurfaceSizer.m`). Files:
 `src/base/TailSizingBase.m` ← `src/disciplines/tail_sizing/TailSizingModelL{1,2,3}.m` ←
 `examples/F16A/F16TailL{1,2,3}.m`, with static toolboxes `TailL1/L2/L3.m` — same pattern as
-Aero/Geometry/Propulsion/Weights. Every level's sizing method returns exactly
-`struct('S_ht', S_ht, 'S_vt', S_vt)` — no other fields, no injected geometry object.
-- **L1** — volume-coefficient method [Raymer 7th ed. Table 6.4 + text]. F-16 net `c_HT=0.315`,
-  `c_VT=0.063` (base jet-fighter row 0.40/0.07 with RSS ×(1−10%) and all-moving-tail ×(1−12.5%)
-  corrections, both applicable to the F-16). Tail arm `L_HT=L_VT=0.475*L_fus`. This retires a
-  previously-orphaned, disagreeing L1 tail-volume implementation that existed unused inside
-  `GeomL1.m` (Raymer 7th ed., `0.475*L_fus`, RSS/all-moving-tail corrections) — its logic is what
-  became this canonical `TailL1`, replacing the old live class's uncorrected 6th-ed. `0.40/0.07`/
-  `0.5*L_fus` values.
-- **L2** — "historical sizing estimates." Same volume-coefficient form fed real L2 wing geometry
-  (injected `GeometryModelL2` object: `b_wing`/`cbar_wing`/`S_ref`/`L_fus`), but with Nicolai &
-  Carichner's F-16-**specific** measured coefficient `C_HT=0.3`, `C_VT=0.094` [Table 11.6, "General
-  Dynamics F-16" row] rather than a generic category row. Tail arm carries forward L1's
-  `0.475*L_fus` (L2 geometry has no x-station properties to do better). Reuse of geometry's
-  exposed/wetted tail-area machinery (`GeomL2`'s `Dependent` properties) is **indirect only** — tail
-  sizing returns area, the caller writes it into the geometry object, everything downstream
-  recomputes automatically; no direct-reuse accessor is added to tail sizing itself.
-- **L3** — Raymer Ch. 16 stability-and-control-based sizing. Shipped as a documented-TODO /
-  deliberately-failing-test structure (CLAUDE.md's allowed citation-gap exception) — no verifiable
-  Raymer Ch. 16 equation numbers exist anywhere in this repo's reference material today. New
-  requirements-file fields (CG range, target static margin, target `C_nβ`, crosswind condition) and
-  a new Tail→Aero DI pattern are deliberately deferred until real equations are implemented.
-- `SizingLoopL2.m`'s `tail (1,1) TailSizingLevel1` constructor type constraint must change to the
-  shared abstract base once L2/L3 tail classes exist.
-
-Full rationale, citations, and discrepancy record:
-`src/disciplines/tail_sizing/TailSizing_scribe_plan.md`, `VnV/BrandtF16A/todo.md` (2026-07-28
-entries).
+Aero/Geometry/Propulsion/Weights.
 
 **Control surfaces at L2 sizing:**
 In addition to tail sizing, `SizingLoopL2` performs a quick control surface sizing pass each iteration using Raymer Figure 6.3 (typical configurations) and Table 6.5 (historical area fractions). Outputs: aileron area (fraction of S_ref), elevator area (fraction of S_HT), rudder area (fraction of S_VT). Stored on the geometry object; used by `F16WeightsL3` for control system weight.
+
+</details>
 
 **Constraint conditions:**
 The implementation reads `examples/F16A/Constraints.xlsx` via `ConstraintSetImporter`. See the Step 6 subplan for the condition table. β = 0.8997 for operational constraints, β = 1.0 for takeoff/landing; the ground-roll distance (4,000 ft) is used for the field constraint equation.

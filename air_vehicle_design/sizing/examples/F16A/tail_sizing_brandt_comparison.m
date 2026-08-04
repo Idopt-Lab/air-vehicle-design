@@ -1,9 +1,11 @@
 function T_all = tail_sizing_brandt_comparison()
 %TAIL_SIZING_BRANDT_COMPARISON  F-16A tail sizing (L1/L2) vs ground truth.
 %
-%   Runs the actual F16TailL1/F16TailL2 discipline code and puts its S_ht/
-%   S_vt output next to Brandt's workbook values. Follows the same
-%   structure/helpers as examples/F16A/geometry_brandt_comparison.m and
+%   Runs the actual F16GeomL2 tail-sizing code (absorbed from the former
+%   tail_sizing discipline, 2026-08-03 -- see F16GeomL2.m's TAIL SIZING
+%   section) and puts its S_ht/S_vt output next to Brandt's workbook
+%   values. Follows the same structure/helpers as
+%   examples/F16A/geometry_brandt_comparison.m and
 %   examples/F16A/fidelity_comparison.m.
 %
 %   ─── HOW TO RUN ─────────────────────────────────────────────────────────
@@ -14,15 +16,16 @@ function T_all = tail_sizing_brandt_comparison()
 %     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); tail_sizing_brandt_comparison"
 %
 %   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
-%   Tail sizing has no JSON inputs of its own (scribe plan Sec. 5.3: C_HT/
-%   C_VT are hardcoded F-16 spec facts in F16TailL1/F16TailL2, not read from
-%   JSON) -- it consumes wing geometry from an F16GeomL2 object, built the
-%   usual way:
+%   Tail sizing has no JSON inputs of its own (C_HT/C_VT and
+%   C_HT_nicolai/C_VT_nicolai are hardcoded F-16 spec facts in F16GeomL2's
+%   constructor, not read from JSON) -- it reads wing geometry off the same
+%   F16GeomL2 object, built the usual way:
 %     prop = F16PropL2(f16a_spec_path(2));
 %     g2   = F16GeomL2(f16a_spec_path(2), prop);
-%   L1 tail sizing takes S_ref/b/cbar/L_fus as raw scalars (GeometryModelL1
-%   has no planform to inject); L2 tail sizing takes the injected g2 object
-%   directly and reads its geometry live.
+%   g2.size_tail() is the PRIMARY, Raymer 7th ed. volume-coefficient path;
+%   g2.size_tail_nicolai() is the SECONDARY, Nicolai & Carichner F-16-
+%   specific-coefficient path -- both self-reference g2's own live
+%   S_ref/b_wing/cbar_wing/L_fus.
 %
 %   Ground truth is separate, read here as `gt` from
 %   VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json's new `tail_sizing`
@@ -64,13 +67,11 @@ gt          = jsondecode(fileread(gt_path)).tail_sizing;
 prop = F16PropL2(f16a_spec_path(2));
 g2   = F16GeomL2(f16a_spec_path(2), prop);
 
-% ── L1: volume-coefficient method, raw scalars from g2's live geometry ── %
-tail1  = F16TailL1();
-r1     = tail1.size(g2.S_ref, g2.b_wing, g2.cbar_wing, g2.L_fus);
+% ── L1: volume-coefficient method (PRIMARY), self-referencing g2's own live geometry ── %
+r1 = g2.size_tail();
 
-% ── L2: Nicolai/Carichner F-16-specific coefficient, injected geometry ── %
-tail2  = F16TailL2(g2);
-r2     = tail2.size();
+% ── L2: Nicolai/Carichner F-16-specific coefficient (SECONDARY), same g2 ── %
+r2 = g2.size_tail_nicolai();
 
 S_ht_brandt = gt.S_ht_ft2.value;   % 108.0  [Brandt Main!C18]
 S_vt_brandt = gt.S_vt_ft2.value;   % 60.0   [Brandt Main!H18]

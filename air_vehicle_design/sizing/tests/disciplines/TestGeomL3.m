@@ -859,5 +859,127 @@ classdef TestGeomL3 < matlab.unittest.TestCase
                  '= 47.65 has no in-repo citation.']);
         end
 
+        % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+        % Migrated from the now-retired tests/disciplines/TestTailL3.m. There
+        % is no separate F16TailL3 class any more, so the type-contract tests
+        % (isa(F16TailL3(), 'TailSizingBase') etc.) have no direct equivalent
+        % and are dropped -- only "size_tail_stability_control() errors with
+        % the new ID" and the renamed deliberately-red TODO marker survive.
+        % Tail sizing is organizationally part of Geometry now (Casey's
+        % decision), not a separate tail_sizing discipline.
+        % ==================================================================================================================================== %
+
+        function testSizeTailIsPrimaryWorkingPath(tc)
+        % PRIMARY, production path (contrast size_tail_stability_control
+        % below): size_tail() must succeed and return positive S_ht/S_vt,
+        % using the SAME Raymer 7th ed. Table 6.4 math as GeomL1/F16GeomL2 --
+        % this is what design_study_03_L3 actually calls.
+            g = TestGeomL3.makeGeom();
+            result = g.size_tail();
+            tc.verifyGreaterThan(result.S_ht, 0);
+            tc.verifyGreaterThan(result.S_vt, 0);
+            tc.verifyEqual(g.S_ht, result.S_ht, 'AbsTol', 0, ...
+                'size_tail() must self-mutate obj.S_ht.');
+            tc.verifyEqual(g.S_vt, result.S_vt, 'AbsTol', 0, ...
+                'size_tail() must self-mutate obj.S_vt.');
+        end
+
+        function testSizeTailStabilityControlErrorsWithCitationNotAvailable(tc)
+        % GeomL3.size_tail_stability_control (and F16GeomL3.
+        % size_tail_stability_control, which delegates to it) must ERROR with
+        % a clear, identifiable error ID rather than returning a fabricated
+        % S_ht/S_vt or a silent NaN -- same idiom as
+        % GeomL1.lookup_control_surface_fraction's error-on-missing-aileron-
+        % fraction case. Error ID RENAMED (2026-08-03) from the deleted
+        % TailL3's 'TailL3:citationNotAvailable' to
+        % 'GeomL3:tailStabilityControlCitationNotAvailable' to fit this
+        % class's new home.
+            g = TestGeomL3.makeGeom();
+            tc.verifyError(@() g.size_tail_stability_control(), ...
+                'GeomL3:tailStabilityControlCitationNotAvailable');
+        end
+
+        function testStaticSizeTailStabilityControlErrorsWithCitationNotAvailable(tc)
+            tc.verifyError(@() GeomL3.size_tail_stability_control(struct()), ...
+                'GeomL3:tailStabilityControlCitationNotAvailable');
+        end
+
+        % --- DELIBERATE, EXPECTED-RED TODO marker --------------------------
+
+        function testTODO_TailStabilityControlEquationsNotInRepo(tc)
+        %TESTTODO_TAILSTABILITYCONTROLEQUATIONSNOTINREPO  Deliberate, EXPECTED
+        %   red. RENAMED (2026-08-03) from the deleted TestTailL3.m's
+        %   testTODO_RaymerChapter16EquationsNotInRepo -- same marker,
+        %   relocated, not a new/removed TODO (the baseline deliberately-red
+        %   TODO test count in run_all_tests is UNCHANGED by this rename).
+        %
+        %   THIS TEST IS EXPECTED TO BE RED. It is not a regression; it is the
+        %   labelled marker for a missing citation, following the convention
+        %   of TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo.
+        %
+        %   WHAT IS MISSING: Raymer 6th ed. Chapter 16 equation numbers for
+        %   (a) sizing S_HT from a required static margin/C_m_alpha given a
+        %   CG estimate, and (b) sizing S_VT from a required directional-
+        %   stability derivative (C_n_beta) target plus a crosswind-landing
+        %   criterion. Neither temp_AI/docs/disciplines/reference_extracts/
+        %   (Nicolai & Carichner, which defers these closed-form criteria to
+        %   its own Ch. 21/23, both "pending"/not extracted) nor
+        %   raymer_data.md (no Ch. 4/6/16 content) nor temp_Casey's
+        %   SandCLevel3.m (unverified citations: "eq 16.25", "fig 16.3",
+        %   "fig 16.16", forward-analysis only) nor
+        %   VnV/BrandtF16A/BrandtBalanceStabControl.m (also forward-analysis
+        %   only, not wired to this framework) supplies a verifiable equation
+        %   number. VnV/BrandtF16A/todo.md 2026-07-28 Finding 3
+        %   (status RESOLVED-DEFERRED); src/disciplines/tail_sizing/
+        %   TailSizing_scribe_plan.md Sec. 6 (historical record; that
+        %   discipline is now deleted/retired into Geometry).
+        %
+        %   HOW THIS TEST DETECTS IT: GeomL3.m's own standing header comment
+        %   on size_tail_stability_control states, in words, that "NO REAL
+        %   EQUATIONS ARE IMPLEMENTED HERE." While the source itself makes
+        %   that statement, the citation gap is open and this test is red.
+        %   Resolving it means either (a) a real, citable Raymer Ch. 16 (or
+        %   equivalent) equation is supplied and
+        %   GeomL3.size_tail_stability_control is implemented for real,
+        %   replacing the error, or (b) the coordinator makes an explicit
+        %   decision to leave this permanently a stub, in which case THIS
+        %   test (not the source comment) is what should be revisited. Do NOT
+        %   make this green by deleting the sentence without settling the
+        %   citation, and do NOT invent an equation number or a coefficient.
+            src = fileread(which('GeomL3'));
+            tc.verifyFalse(contains(src, 'NO REAL EQUATIONS ARE IMPLEMENTED HERE'), ...
+                ['TODO (EXPECTED RED): Raymer Ch. 16 stability-and-control tail-sizing ' ...
+                 'equations are not in this repo; GeomL3.m still carries the standing TODO ' ...
+                 'on size_tail_stability_control. VnV/BrandtF16A/todo.md 2026-07-28 ' ...
+                 'Finding 3; src/disciplines/tail_sizing/TailSizing_scribe_plan.md Sec. 6.']);
+        end
+
+        % ==================================================================================================================================== %
+
+        % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
+
+        function testF16GeomL3SizeControlSurfacesUsesOwnDefaultFractions(tc)
+        % F16GeomL3's own default fraction properties (0.20/0.40/0/0/0.30/
+        % 0.90) drive size_control_surfaces() -- identical defaults to
+        % F16GeomL2's, matching the deleted design_study_03_L3.m's hardcoded
+        % ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) call.
+            g      = TestGeomL3.makeGeom();
+            result = g.size_control_surfaces();
+            fprintf('\n    F16GeomL3: S_ail=%.4f  S_elev=%.4f  S_rud=%.4f\n', ...
+                result.S_ail, result.S_elev, result.S_rud);
+            tc.verifyEqual(result.S_ail, 0.20 * 0.40 * g.S_ref, 'RelTol', 1e-12);
+            tc.verifyEqual(result.S_elev, 0, 'AbsTol', 1e-12, ...
+                'F-16 elevator area must be 0 (all-moving stabilator, Table 6.5 footnote).');
+            tc.verifyEqual(result.S_rud, 0.30 * 0.90 * g.S_vt, 'RelTol', 1e-12);
+            tc.verifyEqual(g.S_ail, result.S_ail, 'AbsTol', 0, ...
+                'size_control_surfaces() must self-mutate obj.S_ail.');
+            tc.verifyEqual(g.S_elev, result.S_elev, 'AbsTol', 0, ...
+                'size_control_surfaces() must self-mutate obj.S_elev.');
+            tc.verifyEqual(g.S_rud, result.S_rud, 'AbsTol', 0, ...
+                'size_control_surfaces() must self-mutate obj.S_rud.');
+        end
+
+        % ==================================================================================================================================== %
+
     end
 end
