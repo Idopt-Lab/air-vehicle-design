@@ -90,6 +90,39 @@ conditions the aircraft must sustain (`Ps = 0`) or the field lengths it must mee
 
 **26 requirements total** across 8 concern containers.
 
+#### `023` / `024` — the gear-angle exercise
+
+Both are deliberately blank (D-046). The reason is the assignment: **Brandt's two angles may not mean
+what the specifications they would be checked against mean.**
+
+`BrandtBalanceStabControl` computes `rollover_deg = atand(h_main_ft / d_axis)` — vertical over
+horizontal, an angle measured **from the horizontal**. The standard overturn (turnover) angle
+(Raymer §11.4; Currey) is measured **from the vertical**. With the shipped inputs (`x_nose` 22.0,
+`x_main` 37.7, `y_main` 6.0, `h_main` 5.3 ft, `xcg_TO` 26.193 ft), `d_axis` = 1.497 ft, so
+`atand(5.3/1.497)` = **74.2°** and its complement `atand(1.497/5.3)` = **15.8°**. They sum to exactly
+90°. Against the standard definition the F-16A **passes the 63° limit with wide margin**; against
+Brandt's convention it fails. **The same number supports opposite verdicts, and only one of them is a
+fact about the aeroplane.**
+
+`023` has a milder version of the same problem: Brandt's
+`tipback_deg = atand((h_main + z_tail_bottom)/(L_fuse − x_main))` is a **tail-clearance / rotation**
+angle, not Raymer's tipback-from-vertical, which on the same inputs gives `atand((37.7 − 26.193)/5.3)`
+= **65°** — far outside the 16–25° band. The 21.5° that sits neatly inside that band is the
+tail-clearance figure.
+
+Two observations that stop this being settled by simply taking the complement:
+
+- **The gear load split is inverted for a tricycle aircraft** — `gear_main_pct` = 26.7 %,
+  `gear_nose_pct` = 73.3 %, i.e. three-quarters of the weight on the nose gear. Normal is 85–95 % on
+  the mains. Everything geometric downstream inherits this.
+- **The gear geometry does not match the aircraft** — Brandt's wheelbase is 15.7 ft and track 12.0 ft;
+  the F-16A's are ≈ 13.3 ft and ≈ 7.75 ft. **These are uncited approximations, not data** — quoted only
+  to show the two geometries differ by more than rounding. Do not cite either as an F-16A dimension.
+
+**Reference numbers:** USAF tipback 16–25°; overturn shall not exceed
+63° (USAF) or 54° (USN). Brandt computes ≈ 21.5° and ≈ 74.4°. **⚠ None of these four limits carries a
+document number** — no specification, revision or paragraph was supplied, and none is in `/sizing/`.
+
 #### `025`
 
 **D-051 replaces D-046's two-sided band, and the requirement now fails.** The criterion is

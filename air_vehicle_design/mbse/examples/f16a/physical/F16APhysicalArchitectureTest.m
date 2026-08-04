@@ -4,181 +4,38 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %   "is this the right design?". The design verdicts live one per
     %   requirement in verification/.
     %
-    %   COVERED HERE
-    %     * Structure   -- 30 components: Aircraft, 11 assemblies (three of
-    %       them VARIANT roles), the 7 trade candidates those variants hold,
-    %       8 parts, 3 fuel tanks, each resolving at its expected path, the
-    %       7 non-variant leaf assemblies childless.
-    %     * Stereotypes -- PhysicalItem on every component that can carry one
-    %       (all 30 minus the 3 variant role wrappers), Material on every
-    %       airframe structural part, FuelTank on every tank, TradeCandidate
-    %       on each of the 7 candidates.
-    %     * Masses      -- the 16 mass-bearing leaves of the ACTIVE
-    %       configuration against the Brandt ground truth; FuelSystem and the
-    %       tanks carry zero OEW mass because fuel is a consumable.
-    %     * Roll-up     -- self-consistency only: each assembly subtotal is
-    %       the sum of its parts, OEW is the sum of the ACTIVE leaves (never
-    %       the all-candidates sum), and airframe-less-engine is OEW minus
-    %       engine.
-    %     * Measures of Merit -- OEW and unit cost both exist with
-    %       Goal = Minimize; cost is the uncomputed placeholder (NaN).
-    %     * Realization -- the L->P allocation set exists, every one of the
-    %       9 logical roles is a realization source, and the four
-    %       supporting-infrastructure parts are deliberately not targets.
-    %     * Requirements -- 022, 026 and P01 are Implement-linked at P.
-    %     * Rationale (Stage 2) -- every part the architecture walk reaches
-    %       carries the Rationale stereotype with a SourceKind drawn from
-    %       the closed F16ASourceKind vocabulary, a non-empty TraceRef and a
-    %       Justification of real length; the four infrastructure parts say
-    %       SupportingInfrastructure explicitly; and both vocabularies are
-    %       real MATLAB enumerations rather than free strings (D-006, D-007,
-    %       D-011).
-    %     * TradeCandidate (Stage 2) -- DECLARED in the profile with its
-    %       eight properties, so the Stage-3 generator cannot quietly invent
-    %       a different parameter set.
-    %     * Candidates (Stage 3) -- each of the 7 carries TradeCandidate with
-    %       a RealizesRole/RealizesKind pair that RESOLVES in the L model, a
-    %       positive mass, a Benefit inside the declared 1..10 scale and a
-    %       TRL inside the integer 1..9 scale (D-021 and D-033 both make 0
-    %       the fail-safe "unset" default, outside the scale on purpose), a
-    %       NaN cost, and a DataProvenance from the four-member vocabulary.
-    %       Both scales are the ones the trade study's own guards enforce,
-    %       and a negative control proves they can still reject.
-    %     * Active configuration (Stage 3) -- exactly one active choice per
-    %       variant role, and OEW counts THAT configuration only: 19,980.73
-    %       lb, demonstrably not the all-candidates sum. The materials
-    %       roll-up follows the active airframe candidate's own parts rather
-    %       than a hard-coded path.
-    %     * TraceRefs (Stage 3) -- every reference in every Rationale.TraceRef
-    %       is resolved for real: requirement ids through slreq.load + find in
-    %       the OWNING set, model paths through lookup. A negative control in
-    %       the same test proves the resolver can still say no, so a rename
-    %       breaks the suite instead of breaking traceability silently.
-    %     * The decision (Stage 4) -- the trade study records its verdict in
-    %       four places, and this file checks all four agree: exactly one
-    %       Selected candidate per role AND it is the active variant choice;
-    %       TradeWinner/TradeAlternative rationale with the score cited in the
-    %       winner's justification; an Implement link on each of
-    %       REQ_F16A_L01..L03 (D-010 -- the links are created by the PHYSICAL
-    %       trade study, so the assertion lives here and not in the L suite);
-    %       and OEW still measuring the configuration that was selected.
-    %       The winners are asserted by IDENTITY (F100_PW_200,
-    %       BlendedCrankedDelta, FlyByWire -- ground truth about the F-16A);
-    %       the scores that produce them only by ORDERING.
-    %     * Provenance is COMPLETE (Stage 5) -- the assertion the Stage-5
-    %       audit had to make by hand. Every stereotype the P profile
-    %       declares that carries engineering values a human chose must
-    %       declare DataProvenance typed by F16ADataProvenance; the required
-    %       set is COMPUTED (all declared stereotypes minus a named,
-    %       commented exemption list) rather than listed, so a stereotype
-    %       added tomorrow is in it the day it appears. Every component
-    %       carrying one of those stereotypes must hold a tag from the
-    %       four-member vocabulary, and the ten values D-030 inventories as
-    %       invented -- 7 CompositeFraction, 3 FuelCapacity_lb -- must say
-    %       Estimate, with the COUNT pinned so an eleventh cannot arrive
-    %       unrecorded (D-030, D-031). Cost DEFAULTS are checked too: a
-    %       declared default of 0 is a latent $0 that the value check alone
-    %       never sees (D-021, D-032).
+    %   Covers structure (30 components), stereotypes, the 16 active-leaf
+    %   masses against the Brandt ground truth, roll-up self-consistency, the
+    %   Measures of Merit, the L->P realization, the Implement links, the
+    %   Rationale and DataProvenance every part carries, the 7 trade
+    %   candidates' parameter contract, and the four places the trade study
+    %   records its verdict.
     %
-    %   THIS FILE NEVER RUNS THE TRADE STUDY. F16APhysicalTradeStudy writes to
-    %   two models, a requirement set and a link set; a test that invoked it
-    %   would be mutating the artifacts it is meant to be checking, and would
-    %   pass even if the shipped model had never had the decision written into
-    %   it. Every Stage-4 assertion below reads the SHIPPED model state, which
-    %   the generator produced by running the trade before the roll-ups.
-    %   Roll-ups are called with Persist=false for the same reason: a test run
-    %   must not leave the working tree dirty.
+    %   What it deliberately does NOT assert:
+    %     * Weight or cost TARGETS -- those are objectives, not thresholds, and
+    %       a budget here would be a design verdict in a machinery test.
+    %     * The VALUE of any illustrative parameter, or any trade SCORE. Ranges
+    %       and orderings are asserted instead; pinning an Estimate turns a
+    %       data revision into a test failure.
+    %     * Variant ROLE wrappers -- a stereotype cannot be applied to one at
+    %       all (D-013), so "every part has a Rationale" means every part that
+    %       can carry one.
+    %     * The guards firing. Those are negative tests and live in
+    %       F16APhysicalTradeGuardsTest, which touches no artifact -- reaching
+    %       a guard from here would mean running the study, and a negative test
+    %       whose failure mode is writing a wrong decision into the repository
+    %       is worse than no test. This file pins their INPUT CONTRACT only.
     %
-    %   NOT COVERED HERE -- and why
-    %     * Any weight or cost TARGET. OEW and unit cost are objectives to
-    %       minimize, not thresholds, so a pass/fail budget here would be a
-    %       design verdict smuggled into a machinery test.
-    %     * The VALUES of the illustrative candidate parameters. Three
-    %       candidate masses are Brandt ground truth and are asserted as
-    %       numbers; every other TRL, benefit and mass is a teaching Estimate,
-    %       so this file asserts its RANGE and its ORDERING (who is lightest,
-    %       who has the best benefit) and never the figure itself. Pinning an
-    %       Estimate would turn a data revision into a test failure.
-    %     * The trade SCORES themselves. 0.879 / 0.913 / 0.856 are what a
-    %       declared value function returns from illustrative Estimates
-    %       (D-015); pinning them would turn a data revision into a test
-    %       failure. What IS asserted is that the winner's justification cites
-    %       a score at all, that the winners are the production configuration,
-    %       and that the engine is not won on benefit -- the ordering that
-    %       carries the lesson.
-    %     * The variant ROLE wrappers. A stereotype cannot be applied to a
-    %       systemcomposer.arch.VariantComponent at all (D-013), so "every
-    %       part has a Rationale" means every part that can carry one; the
-    %       wrapper's justification lives in its candidates.
-    %     * The "Verified by" links. Those are added by hand in the
-    %       Requirements Editor (see README); the "is it met?" answer is the
-    %       matching suite in verification/.
-    %     * THE TRADE STUDY'S GUARDS FIRING -- now covered ELSEWHERE. Stage 5
-    %       gave F16APhysicalTradeStudy guards that stop the run on a
-    %       parameter that cannot honestly be scored -- Benefit outside 1..10
-    %       (D-033), TRL outside the integer 1..9 (D-021), a non-positive
-    %       mass, a role without exactly one Reference baseline, a tie for
-    %       first place -- and a warning, without capping, when a value
-    %       function exceeds the 1.0 ceiling its declared scale implies
-    %       (D-035). This file still pins their INPUT CONTRACT against the
-    %       shipped model and still never makes one fire, but that is now a
-    %       DIVISION OF LABOUR rather than a limitation.
+    %   THIS FILE NEVER RUNS THE TRADE STUDY, and calls the roll-ups with
+    %   Persist=false: a test that mutated the artifacts it checks would pass
+    %   even on a model the generator never wrote the decision into, and would
+    %   leave the working tree dirty.
     %
-    %       Three of them -- checkParameters, the tie check and the ceiling
-    %       check -- have been lifted into F16APhysicalTradeGuards, a class of
-    %       pure static methods with no model handle anywhere in it, and
-    %       F16APhysicalTradeGuardsTest makes every one of them fire. That is
-    %       where the negative tests belong: they touch no artifact, so they
-    %       do not want this file's TestClassSetup, which loads two models,
-    %       three requirement sets and an allocation set before anything runs.
-    %
-    %       Why they were never written HERE, which is still the reason not to
-    %       move them back: while the guards lived inside
-    %       F16APhysicalTradeStudy.m the only way to reach one was to run the
-    %       whole study, and that run is safe only for as long as the guard
-    %       still WORKS. A test that set Benefit = 78 would stop early today
-    %       and, on the day somebody refactored the bound away -- the exact
-    %       defect such a test exists to catch -- would sail past, pick the
-    %       wrong winner, and save_system a wrong active choice, a wrong
-    %       active kind in the L model and a wrong Implement link on
-    %       REQ_F16A_L01 into the shipped artifacts. A negative test whose
-    %       failure mode is corrupting the repository is worse than no test.
-    %
-    %       What is STILL not covered anywhere: the study's guards that are
-    %       entangled with the discovery walk (:tooFewCandidates,
-    %       :candidateNotAChoice, :splitRole, :baselineNotUnique,
-    %       :partialCriterion, :nothingToScore) and those that need a model
-    %       handle (:logicalRoleNotVariant, :noSuchKind, :missingRequirement,
-    %       the artifact-exists checks). Their input contract is the
-    %       "guard rails" section below and that is all there is.
-    %
-    %   R2026a APIs exercised here, each isolated in one helper below so a
-    %   signature fix touches one place:
-    %     * Walk        -- a VariantComponent's .Architecture.Components
-    %       returns 0 on a LOADED model (Stage-0 finding 6), so every
-    %       traversal in this file goes through getChoices. The walk asserts
-    %       its own component count, because a walk that silently visits
-    %       nothing would make every per-part check pass vacuously.
-    %     * Stereotypes -- getStereotypes returns a cell array of
-    %       '<profile>.<stereotype>'; getProperty takes
-    %       "<profile>.<stereotype>.<property>" and hands ENUMERATION and
-    %       STRING values back QUOTED (Stage-0 findings 1 and 7), so they
-    %       are read with erase(..., "'").
-    %     * Profiles    -- model.Profiles -> Profile.Stereotypes ->
-    %       Stereotype.Properties(k).Name/.Type, so the vocabulary is
-    %       checked in the PROFILE, before and regardless of what applies it.
-    %     * Enumerations -- meta.class.fromName(...).EnumerationMemberList,
-    %       which is empty when the classdef is not on the path.
-    %     * Variants    -- getChoices for every choice, getActiveChoice for
-    %       the active configuration. Two path spaces coexist (Stage-0
-    %       finding 3): ARCHITECTURE paths carry the choice level
-    %       (.../Airframe/BlendedCrankedDelta/Wing) and are what this file
-    %       and lookup use; INSTANCE paths do not (.../Airframe/Wing) and are
-    %       what the roll-ups use. Both are exercised here, in
-    %       testMassRollupSelfConsistent.
-    %     * Requirements-- slreq.load per set + find(set, Id=...), which
-    %       returns EMPTY rather than erroring for an unknown id -- which is
-    %       what makes it usable as a resolver in testTraceRefsResolve.
+    %   Two path spaces coexist and both are exercised in
+    %   testMassRollupSelfConsistent: ARCHITECTURE paths carry the choice level
+    %   (.../Airframe/BlendedCrankedDelta/Wing), INSTANCE paths do not
+    %   (.../Airframe/Wing). Every traversal here goes through getChoices --
+    %   .Architecture.Components returns 0 on a loaded model.
 
     properties
         Model      % F16A_Physical
@@ -267,13 +124,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "FlightControls",    "FlightControlSystem", 2};
         % {candidate path under Aircraft, logical role, logical kind,
         %  expected DataProvenance}
-        % NO Mass/TRL/Benefit column ON PURPOSE. Three of these masses are
-        % Brandt ground truth and are already asserted as numbers in MassRows;
-        % every other figure is an illustrative Estimate (D-007), so this file
-        % asserts the RELATIONSHIPS between them -- valid range, ordering,
-        % agreement with the parts actually modelled -- and never the values.
-        % Role and kind ARE asserted exactly: they are structural claims that
-        % must resolve in the L model, not numbers.
+        % No Mass/TRL/Benefit column on purpose: those are Estimates, so this
+        % file asserts their range and ordering, never their values. Role and
+        % kind ARE asserted exactly -- they are structural claims that must
+        % resolve in the L model.
         CandidateRows = { ...
             "Airframe/BlendedCrankedDelta",           "Airframe",            "BlendedCrankedDelta",  "Reference"; ...
             "Airframe/ConventionalTrapWing",          "Airframe",            "ConventionalTrapWing", "Estimate";  ...
@@ -282,42 +136,22 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "Propulsion/Engine/TwinEngine_Surrogate", "PropulsionSystem",    "TwinEngine",           "Estimate";  ...
             "FlightControls/FlyByWire",               "FlightControlSystem", "FlyByWire",            "Reference"; ...
             "FlightControls/HydroMechanical",         "FlightControlSystem", "HydroMechanical",      "Estimate"};
-        % The TRL scale. 1..9 inclusive AND INTEGER; D-021 deliberately
-        % defaults the property to 0 -- OUTSIDE the scale -- so an unset TRL is
-        % caught here and by the trade study rather than silently scoring as
-        % "mid-pack". Integrality is part of the scale, not a nicety: TRL is an
-        % ordinal maturity level and the trade study's guard rejects a
-        % fractional one outright.
-        %
-        % TAKEN FROM THE CODE THAT ENFORCES IT, not restated. These used to be
-        % literals with a note explaining that checkParameters was a local
-        % function of F16APhysicalTradeStudy.m and could not be imported. It is
-        % now F16APhysicalTradeGuards, which exposes its bounds as constants
-        % precisely so a test can take them from the enforcer -- so the test
-        % and the guard can no longer drift apart, and a scale widened in the
-        % code cannot leave this file agreeing with a bound that is gone.
+        % The TRL scale: 1..9 inclusive AND integer. D-021 defaults the
+        % property to 0 -- outside the scale -- so an unset TRL is caught
+        % rather than silently scoring as mid-pack.
+        % Taken FROM the guard that enforces it, not restated, so the test and
+        % the guard cannot drift apart.
         TRLScale = F16APhysicalTradeGuards.TRLScale;
-        % The Benefit scale, D-033. BOXED AT BOTH ENDS, for the same reason TRL
-        % is. 0 is the stereotype default and therefore the same "unset"
-        % sentinel; the UPPER bound is the one that earns its keep, because
-        % v = B/10 carries the heaviest weight in the trade and a slipped
-        % decimal point is FINITE and so invisible to every isfinite check --
-        % 78 typed for 7.8 contributes 3.90 where 0.50 is the most any
-        % criterion may legitimately be worth, which hands the propulsion trade
-        % to TwinEngine_Surrogate, flips the L model's active kind and
-        % Implement-links REQ_F16A_L01 from the wrong kind.
+        % The Benefit scale, D-033, boxed at both ends. The UPPER bound earns
+        % its keep: 78 typed for 7.8 is FINITE, so it passes every isfinite
+        % check, contributes 3.90 where 0.50 is the legitimate maximum, and
+        % hands the propulsion trade to the wrong candidate.
         BenefitScale = F16APhysicalTradeGuards.BenefitScale;
-        % The negative control for both scales. Every value here MUST be
-        % rejected and every value in the Accepted* lists MUST pass, judged by
-        % the SAME predicates the candidate sweeps use -- so a scale quietly
-        % widened to admit awkward data fails here instead of going green.
-        %   0     the stereotype default: "nobody set this" (D-021, D-033)
-        %   78    7.8 with a slipped decimal point -- D-033's entire case, and
-        %         the reason the upper bound exists at all
-        %   10.5  just past the top of the declared scale
-        %   -1    negative merit is not a point on a 1..10 scale
-        %   NaN   an unreadable property must stop the trade, not score as 0
-        %   Inf   what the isfinite net is there for
+        % The negative control for both scales, judged by the SAME predicates
+        % the candidate sweeps use -- so a scale quietly widened to admit
+        % awkward data fails here instead of going green. In order: the unset
+        % default, a slipped decimal point, just past the top, negative, and
+        % the two non-finite cases.
         RejectedBenefits = [0, 78, 10.5, -1, NaN, Inf];
         AcceptedBenefits = [1, 7.8, 10];
         %   0     D-021's "unset" sentinel, the reason TRL is boxed below 1
@@ -388,34 +222,22 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         DecisionRequirements = ["REQ_F16A_L01","REQ_F16A_L02","REQ_F16A_L03"];
         ImplementLinkType    = "Implement";
 
-        % --- Stage 5 audit: no invented number without a tag -------------
-        % The property that carries a provenance tag, and the ONE list of
-        % stereotypes exempt from carrying it.
+        % The provenance property, and the one list of stereotypes exempt from
+        % carrying it.
         %
-        % THE CHECK IS WRITTEN THE OTHER WAY ROUND from the obvious one. It
-        % does not enumerate the stereotypes that need provenance; it takes
-        % every stereotype the P profile DECLARES, subtracts this exemption
-        % list, and requires the remainder to declare DataProvenance. So a
-        % stereotype added tomorrow to hold engineering values is in the
-        % required set on the day it appears and FAILS until somebody either
-        % tags it or writes its name below -- and writing a name below is a
-        % visible line in a diff with a reason next to it, which is what an
-        % exemption ought to cost. Listing "Material, FuelTank,
-        % TradeCandidate need tags" instead would pass by omission forever,
-        % which is precisely how the Material gap survived to Stage 5.
+        % FAIL-CLOSED, and that is the design: the check does not enumerate
+        % the stereotypes that NEED provenance, it takes every stereotype the
+        % profile declares and subtracts this list. So a stereotype added
+        % tomorrow is in the required set the day it appears. Enumerating the
+        % other way passes by omission forever -- which is how the Material
+        % gap survived five stages (D-031).
         %
-        % Why each exemption, so the decision is readable and not inherited:
-        %   PhysicalItem   -- Mass_lb is Brandt ground truth throughout the
-        %                     as-built decomposition. The four INVENTED
-        %                     candidate masses are tagged on TradeCandidate,
-        %                     which is where they are scored (D-025).
-        %   Rationale      -- SourceKind, Justification, TraceRef: prose and
-        %                     references, no numbers to source.
-        %   MeasureOfMerit -- OEW_lb is COMPUTED by the roll-up and
-        %                     UnitCost_USD is NaN pending a cost model
-        %                     (D-005). Neither is a value a human chose, and
-        %                     a provenance tag on a computed number would be
-        %                     the overclaiming D-025 warns against.
+        % Why each exemption:
+        %   PhysicalItem   -- Brandt ground truth; the invented candidate
+        %                     masses are tagged on TradeCandidate (D-025)
+        %   Rationale      -- prose and references, no numbers to source
+        %   MeasureOfMerit -- OEW is computed and cost is NaN; tagging a
+        %                     computed number is the D-025 overclaim
         ProvenanceProperty          = "DataProvenance";
         ProvenanceExemptStereotypes = ["MeasureOfMerit","PhysicalItem","Rationale"];
         % Non-vacuity floor: the stereotypes known TODAY to carry chosen
@@ -425,18 +247,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         % exists to remove.
         KnownValueBearingStereotypes = ["FuelTank","Material","TradeCandidate"];
         EstimateProvenance = "Estimate";
-        % D-030's inventory of invented numbers, as a CENSUS the model must
-        % match: {stereotype, the property whose value was invented, how many
-        % components carry it}. Every value under these two stereotypes is
-        % tagged Estimate without exception, and the count is pinned: an
-        % eighth composite fraction or a fourth tank is an eighth or fourth
-        % invented number, and D-030 has to grow a row before this can go
-        % green again.
-        %
-        % TradeCandidate is deliberately NOT here. Three of its seven are
-        % Brandt figures tagged Reference, so its per-candidate expectation
-        % lives in CandidateRows and is asserted by
-        % testCandidatesCarryTradeParameters.
+        % D-030's inventory as a CENSUS the model must match: {stereotype,
+        % invented property, how many components carry it}. The count is
+        % pinned, so an eighth composite fraction means D-030 grows a row
+        % before this goes green again.
+        % TradeCandidate is deliberately absent -- three of its seven are
+        % Reference, so its expectation lives in CandidateRows.
         InventedEstimateCensus = { ...
             "Material", "CompositeFraction", 7; ...   % 6 structural parts + the lumped candidate
             "FuelTank", "FuelCapacity_lb",   3};      % the three internal tanks
@@ -478,16 +294,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     methods (Test)
 
         function testPhysicalComponentsExist(testCase)
-            % 30 components; root holds one Aircraft; Aircraft holds 11
-            % assemblies; the 3 variant roles hold 2/3/2 candidates; the
-            % decomposed airframe candidate holds the 6 structural parts;
-            % Propulsion holds the Engine variant plus InletDuct; FuelSystem
-            % 3 tanks.
-            %
-            % Child counts for the variant roles go through getChoices, NOT
-            % .Architecture.Components -- the latter returns 0 for a variant
-            % on a LOADED model (Stage-0 finding 6), which would turn every
-            % count below into a false pass.
+            % 30 components: Aircraft holds 11 assemblies; the 3 variant roles
+            % hold 2/3/2 candidates; the decomposed airframe candidate holds
+            % the 6 structural parts; Propulsion holds Engine + InletDuct;
+            % FuelSystem 3 tanks.
+            % Variant child counts go through getChoices --
+            % .Architecture.Components returns 0 on a loaded model, which
+            % would turn every count below into a false pass.
             testCase.verifyEqual(testCase.countComps(), testCase.ExpectedComponentCount, ...
                 "Expected 30 components (Aircraft + 11 assemblies + 7 candidates + 8 parts + 3 tanks).");
             testCase.verifyEqual(numel(testCase.Model.Architecture.Components), 1, ...
@@ -636,17 +449,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testMassRollupSelfConsistent(testCase)
-            % The roll-up is internally consistent: each assembly subtotal is
-            % the sum of its parts and OEW is the sum of all ACTIVE leaves.
-            % This checks the traversal, NOT any weight target/budget.
-            %
-            % It is also where the TWO PATH SPACES meet (Stage-0 finding 3).
-            % The roll-up reads INSTANCE paths, in which the active choice
-            % node is elided -- .../Airframe and .../Propulsion/Engine are
-            % still valid there and already carry the rolled-up value. This
-            % test reads ARCHITECTURE paths, which include the choice level.
-            % Asserting the two agree is what stops the restructure quietly
-            % changing what "the airframe weighs" means.
+            % Each assembly subtotal is the sum of its parts and OEW is the sum
+            % of all ACTIVE leaves. Checks the traversal, not a weight budget.
+            % This is where the two path spaces meet: the roll-up reads
+            % INSTANCE paths (choice node elided), this test reads ARCHITECTURE
+            % paths (choice level included). Asserting they agree is what stops
+            % the variant restructure quietly changing what "the airframe
+            % weighs" means.
             r = testCase.massRollup();
             afRoot        = testCase.AC + "Airframe/" + testCase.BrandtAirframe + "/";
             expAirframe   = testCase.sumMasses(afRoot + testCase.AirframeParts);
@@ -867,20 +676,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         % ---------------- Stage 3: candidates and the active set ---------
 
         function testCandidatesCarryTradeParameters(testCase)
-            % Each of the seven candidates is a fully constituted trade
-            % candidate BEFORE anything scores it: it applies TradeCandidate,
-            % it names a role and a kind that actually EXIST in the L model
-            % (a typo here would silently drop a candidate out of its role's
-            % trade), its mass and benefit are positive, its TRL is inside
-            % the 1..9 scale, its cost is the honest NaN of D-005, and its
-            % numbers carry a provenance tag from the four-member vocabulary.
-            %
-            % The RANGE checks matter more than they look. D-021 defaults TRL
-            % to 0 -- deliberately OUTSIDE the scale -- precisely so that "we
-            % forgot to set it" cannot masquerade as a plausible mid-pack
-            % value, and this is the assertion that collects on that choice.
-            % Values are never asserted: three masses are Brandt ground truth
-            % (asserted in MassRows) and the rest are Estimates.
+            % Each candidate is fully constituted BEFORE anything scores it:
+            % TradeCandidate applied, a role and kind that EXIST in the L model
+            % (a typo would silently drop it out of its role's trade), positive
+            % mass and benefit, TRL in scale, the honest NaN cost, a provenance
+            % tag. Ranges only -- values are Estimates, and the three Brandt
+            % masses are asserted in MassRows.
             T = testCase.candidateTable();
             testCase.verifyEqual(height(T), size(testCase.CandidateRows,1), ...
                 "The candidate table must cover all seven candidates.");
@@ -908,14 +709,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.verifyEmpty(T.Path(~(T.Mass_lb > 0)), ...
                 "TradeCandidate.Mass_lb must be positive on: " + ...
                 strjoin(T.Path(~(T.Mass_lb > 0)), ", ") + ".");
-            % Benefit is BOXED AT BOTH ENDS, matching the trade study's own
-            % guard (D-033). "> 0" was the assertion here for five stages and
-            % it was WEAKER THAN THE CODE IT CHECKS: it admits 78, and 78 is
-            % not a hypothetical -- it is 7.8 with a slipped decimal point,
-            % worth 3.90 against a legitimate per-criterion maximum of 0.50,
-            % which is enough to hand the propulsion trade to the wrong
-            % candidate and Implement-link REQ_F16A_L01 from the wrong kind
-            % without anything else in this suite noticing.
+            % Benefit is boxed at both ends, matching the guard (D-033).
+            % "> 0" was the assertion here for five stages and was WEAKER than
+            % the code it checks -- it admits 78, which is 7.8 with a slipped
+            % decimal point and enough to pick the wrong winner.
             badBenefit = ~arrayfun(@(b) testCase.onBenefitScale(b), T.Benefit);
             testCase.verifyEmpty(T.Path(badBenefit), ...
                 "TradeCandidate.Benefit outside the declared " + testCase.BenefitScale(1) + ...
@@ -955,26 +752,15 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testCostIsNaNEverywhere(testCase)
-            % D-005 in one assertion: there is NO cost model, therefore there
-            % must be NO cost number -- not on the aircraft Measure of Merit,
-            % not on any of the seven candidates. A visible NaN is an honest
-            % "pending"; a plausible-looking figure would be an invented one,
-            % and the ratio value functions of D-015 would happily score it.
-            % This is the test that has to fail the day somebody types a
-            % dollar amount anywhere in the trade.
+            % D-005 in one assertion: no cost model, therefore no cost number,
+            % anywhere. A visible NaN is an honest "pending".
             %
-            % The DECLARED DEFAULT is checked first, and it is checked
-            % because reading the value alone is what let the last hole
-            % hide. MeasureOfMerit.UnitCost_USD defaulted to 0 for five
-            % stages while this test stayed green, because the generator
-            % happens to write NaN over it on every run (D-032). The latent
-            % $0 was one code path away: anything that applied the
-            % stereotype without writing the property would have shipped a
-            % flyaway cost of zero, and under D-015's ratio value functions
-            % a $0 is not neutral -- it is a divide-by-zero or an infinitely
-            % good score. That is the same bug D-021 closed on
-            % TradeCandidate, which is kept in the sweep as a regression
-            % guard rather than assumed to stay fixed.
+            % The DECLARED DEFAULT is checked first, because reading the value
+            % alone is what let the last hole hide: MeasureOfMerit.UnitCost_USD
+            % defaulted to 0 for five stages while this test stayed green, the
+            % generator happening to write NaN over it every run (D-032). Under
+            % a ratio value function a $0 is not neutral -- it is a
+            % divide-by-zero or an infinitely good score.
             badDefaults = testCase.costPropertiesNotDefaultingToNaN();
             testCase.verifyEmpty(badDefaults, ...
                 "A cost property must DECLARE " + testCase.CostDefault + " as its " + ...
@@ -995,19 +781,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testExactlyOneActiveCandidatePerRole(testCase)
-            % Each variant role resolves exactly one active choice, and that
-            % choice is one of its OWN candidates. WHICH one is not asserted
-            % here -- the active configuration is pinned by the numbers it
-            % produces (OEW, the materials roll-up), not by a name in a test.
-            %
-            % Second half, a GLOBAL count: the trade has run, so the model
-            % carries exactly as many selected candidates as there are roles
-            % to decide -- no more (two winners for one role) and no fewer (a
-            % role the trade never reached). Active choice and Selected remain
-            % different things: one is how the model is configured, the other
-            % is the trade's recorded verdict. That they must AGREE, per role,
-            % is testTradeSelectedExactlyOneWinnerPerRole; this is only the
-            % arithmetic that would catch a whole role dropping out.
+            % Each variant role resolves exactly one active choice, and it is
+            % one of its OWN candidates. WHICH one is not asserted here.
+            % Then a global count: as many selected candidates as roles to
+            % decide -- no more, no fewer. Active choice and Selected stay
+            % different things (configuration vs recorded verdict); that they
+            % AGREE per role is testTradeSelectedExactlyOneWinnerPerRole.
             d = testCase.activeChoiceDefects();
             testCase.verifyEmpty(d.NoActive, ...
                 "Variant role without exactly one active choice: " + ...
@@ -1023,17 +802,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testOEWCountsOnlyTheActiveConfiguration(testCase)
-            % The load-bearing one. Turning three components into variant
-            % roles must not change what the aircraft weighs: OEW is still
-            % the Brandt 19,980.73 lb (D-003).
-            %
-            % The failure this guards against is the quiet one. An
-            % architecture-side walk that recurses through getChoices instead
-            % of getActiveChoice sums every candidate and inflates OEW by the
-            % four losers -- a number that is still a plausible aeroplane, so
-            % nothing else in the suite would notice. Both sums are computed
-            % here FROM THE MODEL and compared, so the diagnostic names the
-            % two figures instead of just reporting a tolerance miss.
+            % Turning three components into variant roles must not change what
+            % the aircraft weighs: OEW is still the Brandt 19,980.73 lb.
+            % The failure guarded against is the quiet one -- a walk using
+            % getChoices instead of getActiveChoice sums every candidate and
+            % inflates OEW by the four losers, which is still a plausible
+            % aeroplane. Both sums are computed from the model and compared, so
+            % the diagnostic names the two figures.
             r = testCase.massRollup();
             activeSum = testCase.leafMassSum("active");
             allSum    = testCase.leafMassSum("all");
@@ -1063,13 +838,11 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
 
         function testCandidateMassMatchesItsModelledParts(testCase)
             % The mass a candidate is SCORED on must be the mass it would
-            % actually contribute. For the decomposed airframe candidate that
-            % means TradeCandidate.Mass_lb equals the sum of its six parts;
-            % for a lumped candidate it means it equals its own
-            % PhysicalItem.Mass_lb. Without this, the trade study can score a
-            % candidate on one number while the model builds another, and the
-            % roll-up and the decision quietly stop describing the same
-            % aeroplane.
+            % actually contribute: sum of its six parts for the decomposed
+            % airframe candidate, its own PhysicalItem.Mass_lb for a lumped
+            % one. Without this the trade scores one number while the model
+            % builds another, and the roll-up and the decision stop describing
+            % the same aeroplane.
             T = testCase.candidateTable();
             off = abs(T.Mass_lb - T.ModelledMass_lb) > 0.01;
             testCase.verifyEmpty(T.Path(off), ...
@@ -1079,16 +852,11 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testCandidateOrderingMatchesTheIntendedLesson(testCase)
-            % Relationships, not values (the parameters are Estimates). Two
-            % orderings carry the teaching content of D-015:
-            %   * in every role the production candidate is the lightest, so
-            %     the mass-ratio value function points at the F-16A that was
-            %     actually built;
-            %   * the winning engine does NOT have the best Benefit. That is
-            %     the whole point of the engine trade -- it is won on
-            %     maturity and installed mass despite a mid-pack benefit --
-            %     and if a data revision ever makes the winner best at
-            %     everything, the example stops teaching a trade-off.
+            % Relationships, not values. Two orderings carry D-015's teaching:
+            % in every role the production candidate is the lightest, and the
+            % winning engine does NOT have the best Benefit. If a data revision
+            % ever makes the winner best at everything, the example stops
+            % teaching a trade-off.
             heavier = testCase.rolesWhereBrandtCandidateIsNotLightest();
             testCase.verifyEmpty(heavier, ...
                 "The production candidate is not the lightest in: " + ...
@@ -1106,16 +874,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testMaterialsRollupFollowsActiveAirframe(testCase)
-            % REQ_F16A_022's evidence must describe the aeroplane that is
-            % actually configured. The roll-up is compared against a fraction
-            % this test computes over the ACTIVE airframe candidate's own
-            % parts, discovered from the model -- not over a hard-coded
-            % .../Airframe/Wing path, which is exactly what would keep
-            % working while silently reporting the wrong airframe.
-            %
-            % The airframe MASS is the sharper discriminator: 6722.88 lb is
-            % the decomposed candidate, 7300 lb would be the lumped one, and
-            % ~14023 lb would be both at once.
+            % REQ_F16A_022's evidence must describe the aeroplane actually
+            % configured, so the fraction is computed over the ACTIVE airframe
+            % candidate's own parts, DISCOVERED from the model -- a hard-coded
+            % .../Airframe/Wing path would keep working while silently
+            % reporting the wrong airframe.
+            % Airframe MASS is the sharper discriminator: 6722.88 decomposed,
+            % 7300 lumped, ~14023 both at once.
             mats = F16APhysicalMaterialsRollup();
             a = testCase.activeAirframeMaterials();
             % The roll-up now reports WHICH airframe its number describes.
@@ -1143,18 +908,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testTraceRefsResolve(testCase)
-            % Until now "all 26 TraceRefs resolve" was a one-off manual
-            % audit: a renamed component or a re-issued requirement id would
-            % have broken traceability while the suite stayed green, because
-            % nothing ever tried to FOLLOW a reference. This does. Every
-            % reference in every Rationale.TraceRef is split on "; " and
-            % resolved for real -- requirement ids through find() in the set
-            % that OWNS them, model paths through lookup on the L or P model.
-            %
-            % The negative control comes first and runs through the SAME
-            % resolver. A resolver that returns true unconditionally would
-            % make the sweep below meaningless, so the test proves it can
-            % still say no before it trusts it saying yes.
+            % Every reference in every Rationale.TraceRef is FOLLOWED, not just
+            % counted: requirement ids through find() in the set that owns
+            % them, model paths through lookup. Otherwise a renamed component
+            % breaks traceability while the suite stays green.
+            % The negative control runs first, through the SAME resolver -- a
+            % resolver that can only say yes asserts nothing.
             resolvedBogus = testCase.BogusTraceRefs(arrayfun( ...
                 @(r) testCase.traceRefResolves(r), testCase.BogusTraceRefs));
             testCase.verifyEmpty(resolvedBogus, ...
@@ -1207,16 +966,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         function testTradeSelectedExactlyOneWinnerPerRole(testCase)
             % The trade writes its verdict in two independent places -- the
             % candidate's Selected flag and the variant's ACTIVE CHOICE -- and
-            % this is the assertion that they say the same thing.
-            %
-            % Disagreement is the specific failure worth catching, because
-            % each half looks fine on its own. A model whose active choice is
-            % the F100 while Selected sits on the F110 has a decision that was
-            % HALF WRITTEN: every mass number would describe the F100 and
-            % every trade report the F110, and nothing else in this suite
-            % would notice. Two-selected-in-one-role is the same bug seen from
-            % the other side -- a re-run that recorded a new winner without
-            % clearing the old one.
+            % this asserts they say the same thing. Each half looks fine alone:
+            % active F100 with Selected on the F110 is a HALF-WRITTEN decision
+            % in which every mass describes one engine and every trade report
+            % the other.
             d = testCase.tradeSelectionDefects();
             testCase.verifyEmpty(d.WrongCount, ...
                 "A role must have exactly one selected candidate -- the trade picks " + ...
@@ -1229,19 +982,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testWinnersCarryTradeWinnerRationale(testCase)
-            % D-006 says every part must be able to answer "why do you exist?"
-            % by query. After a trade, three of the seven candidates have a
-            % new answer and four have a different one, and both matter: the
-            % winner says TradeWinner, and every loser says TradeAlternative
-            % -- on the record as an option that was considered and rejected,
-            % which is the entire reason D-002 keeps losers in the model.
-            %
-            % The winner must also CITE ITS SCORE. Without that the rationale
-            % and the arithmetic are two unrelated artifacts, and a re-scored
-            % trade could change the winner while leaving a justification that
-            % still argues for the old one. The score VALUE is not asserted
-            % (D-015: it is computed from Estimates); only that a score-shaped
-            % token is there.
+            % After the trade the winner says TradeWinner and every loser says
+            % TradeAlternative -- on the record as considered and rejected,
+            % which is the whole reason D-002 keeps losers in the model.
+            % The winner must also CITE ITS SCORE, or the rationale and the
+            % arithmetic are unrelated artifacts and a re-scored trade could
+            % change the winner while leaving a justification for the old one.
+            % Only that a score-shaped token is there, not its value.
             d = testCase.winnerRationaleDefects();
             testCase.verifyEqual(d.NumWinners, size(testCase.VariantRows,1), ...
                 "Found " + d.NumWinners + " selected candidates, expected " + ...
@@ -1264,17 +1011,13 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testDecisionRequirementsImplemented(testCase)
-            % D-010, arriving in its new home. REQ_F16A_L01..L03 record three
-            % decisions L is not allowed to make, and they stay UNIMPLEMENTED
-            % from Stage 1 until the physical trade study answers them
-            % (D-019). Because it is P that writes these links, this is a P
-            % assertion: putting it in the L suite would make L pass or fail
-            % according to whether P had been run, which is the layer coupling
-            % the whole restructure removes.
-            %
-            % The link TYPE is checked, not just its existence. A Relate or a
-            % Derive link would leave the requirement showing as unimplemented
-            % in the Requirements Editor while this test went green.
+            % D-010: REQ_F16A_L01..L03 record three decisions L may not make,
+            % and P writes their Implement links -- so this is a P assertion.
+            % In the L suite it would make L pass or fail according to whether
+            % P had run.
+            % The link TYPE is checked, not just its existence: a Relate or
+            % Derive link leaves the requirement showing as unimplemented in
+            % the Requirements Editor while this test goes green.
             d = testCase.decisionRequirementDefects();
             testCase.verifyEmpty(d.Missing, ...
                 "Decision requirement not found in f16a_logical_derived.slreqx: " + ...
@@ -1292,16 +1035,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testProductionConfigurationWins(testCase)
-            % The one Stage-4 assertion made on VALUES rather than
-            % relationships, because these three names are ground truth about
-            % an aeroplane that exists: the F-16A flew with an F100-PW-200, a
-            % blended cranked-delta wing with LERX, and fly-by-wire.
-            %
-            % The scores are NOT asserted. They are computed from illustrative
-            % Estimates (D-015) and revising them is legitimate; a revision
-            % that changed the WINNER is not, because the example would then
-            % be teaching a trade study that picks an aircraft nobody built.
-            % That is the line this test draws.
+            % Asserted on VALUES rather than relationships, because these three
+            % names are ground truth about an aeroplane that exists: the F-16A
+            % flew with an F100-PW-200, a blended cranked delta, and
+            % fly-by-wire. The scores are NOT asserted -- revising an Estimate
+            % is legitimate; a revision that changed the WINNER would make the
+            % example teach a trade study that picks an aircraft nobody built.
             won = testCase.selectedCandidateNames();
             testCase.verifyEqual(won, sort(testCase.ExpectedWinners), ...
                 "The trade must select the production F-16A configuration. Selected: {" + ...
@@ -1310,24 +1049,16 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testEngineTradeIsNotWonOnBenefit(testCase)
-            % The lesson of D-015, made executable. The engine trade exists to
-            % show that a weighted trade is not a beauty contest: the F100
-            % wins with a MID-PACK benefit (the F110 is rated higher) because
-            % it is the most mature and the lightest installed. That is a
-            % real trade-off, and it is the only thing in this example that
-            % demonstrates one.
-            %
-            % It is also fragile in a specific way. Nothing stops a future
-            % data revision from nudging the F100's benefit to the top of its
-            % role: every other test would stay green, the F100 would still
-            % win, and the example would quietly have become "the best
-            % candidate at everything also scores best" -- which teaches
-            % nothing. So the RELATIONSHIP is asserted in both directions:
-            % not the best on benefit, uniquely the best on the two criteria
-            % it is actually supposed to win on.
-            %
-            % The winner is read from the model's Selected flag rather than
-            % from BrandtEngine, so this describes the trade's real output.
+            % D-015's lesson made executable: a weighted trade is not a beauty
+            % contest. The F100 wins with a MID-PACK benefit because it is the
+            % most mature and the lightest installed -- the only real
+            % trade-off this example demonstrates.
+            % Asserted in both directions (not best on benefit, uniquely best
+            % on the two it should win on) because a data revision nudging the
+            % F100's benefit to the top would leave every other test green and
+            % quietly turn this into "the best candidate at everything wins".
+            % The winner is read from the model's Selected flag, so this
+            % describes the trade's real output.
             role   = "PropulsionSystem";
             winner = testCase.selectedPathInRole(role);
             testCase.verifyNumElements(winner, 1, ...
@@ -1351,21 +1082,14 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testOEWReflectsTheSelectedConfiguration(testCase)
-            % The decision and the measurement, tied together. OEW is still
-            % the Brandt 19,980.73 lb -- a trade that picks the production
-            % configuration cannot change what the production aeroplane
-            % weighs (D-003) -- and it is the sum over the candidates the
-            % trade SELECTED.
-            %
-            % That second sum is what makes this different from
-            % testOEWCountsOnlyTheActiveConfiguration, which walks the ACTIVE
-            % CHOICE. Here the walk descends by TradeCandidate.Selected
-            % instead, so the number is derived from the verdict rather than
-            % from the configuration. The two agree only because the decision
-            % was written consistently, which is exactly the property worth
-            % measuring: if the trade ever selected one candidate while
-            % leaving another active, the OEW the aircraft reports would stop
-            % describing the aircraft the trade chose.
+            % The decision and the measurement tied together: OEW is still
+            % 19,980.73 lb AND it is the sum over the candidates the trade
+            % SELECTED. Unlike testOEWCountsOnlyTheActiveConfiguration, which
+            % walks the active CHOICE, this walk descends by
+            % TradeCandidate.Selected -- so the number comes from the verdict
+            % rather than the configuration. They agree only because the
+            % decision was written consistently, which is the property worth
+            % measuring.
             r = testCase.massRollup();
             selectedSum = testCase.leafMassSum("selected");
             testCase.verifyEqual(r.OEW, testCase.ExpectedOEW_lb, "AbsTol", 0.05, ...
@@ -1385,30 +1109,15 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         % ---------------- Stage 5 audit: provenance is complete ----------
 
         function testProvenanceDeclaredOnEveryValueBearingStereotype(testCase)
-            % The gap the Stage-5 audit had to find BY HAND, made
-            % executable. testRationaleVocabularyIsClosed already asserted
-            % that TradeCandidate.DataProvenance and Rationale.SourceKind
-            % are enum-typed -- but nothing anywhere said WHICH stereotypes
-            % owe a DataProvenance at all. So Material could declare
-            % CompositeFraction and nothing else, seven invented numbers sat
-            % in the shipped model with no tag of any kind, and the whole
-            % suite stayed green (D-031). The provenance vocabulary is worth
-            % nothing if it is applied only where somebody happened to
-            % remember.
-            %
-            % FAIL-CLOSED, which is the entire design of this test. It does
-            % not check a list of stereotypes that need provenance; it takes
-            % every stereotype the P profile DECLARES, subtracts
-            % ProvenanceExemptStereotypes, and requires the remainder to
-            % declare DataProvenance typed by F16ADataProvenance. A
-            % stereotype added tomorrow to hold engineering values is
-            % therefore in the required set the day it appears and fails
-            % until somebody either tags it or names it as an exemption --
-            % and naming an exemption is a line in a diff with a reason
-            % beside it, which is what an exemption should cost. The
-            % obvious alternative, listing the three stereotypes that need
-            % tags, passes by omission forever; that is how the Material
-            % gap survived five stages.
+            % WHICH stereotypes owe a DataProvenance at all. Nothing said, so
+            % Material declared CompositeFraction and nothing else, seven
+            % invented numbers sat in the shipped model untagged, and the suite
+            % stayed green (D-031).
+            % FAIL-CLOSED by design: every stereotype the profile DECLARES,
+            % minus ProvenanceExemptStereotypes, must declare DataProvenance.
+            % A stereotype added tomorrow is in the required set the day it
+            % appears. Listing the three that need tags instead would pass by
+            % omission forever -- which is how the Material gap survived.
             profileNames = testCase.physicalProfileNames();
             testCase.verifyTrue(ismember(testCase.Profile, profileNames), ...
                 "The P model does not resolve the " + testCase.Profile + " profile, " + ...
@@ -1450,35 +1159,19 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testInventedNumbersAreTagged(testCase)
-            % The other half of D-031, and the half that reads the MODEL.
-            % Declaring DataProvenance on a stereotype means nothing if a
-            % component can apply that stereotype and leave the tag
-            % unreadable, so this walks every component -- through
-            % getChoices, so the seven candidates are reached at all
-            % (Stage-0 finding 6) -- and requires each one carrying a
-            % value-bearing stereotype to hold a tag from the four-member
-            % vocabulary.
-            %
-            % Then the sharper claim, which is what D-030 actually records.
-            % The seven CompositeFraction values and the three fuel
-            % capacities are not merely tagged, they are tagged ESTIMATE:
-            % the composite fractions were tuned until the mass-weighted
-            % figure landed just inside REQ_F16A_022's 20% cap, and a number
-            % chosen to make a requirement pass is the last number in the
-            % model that may look sourced. The fuel split is Brandt's
-            % 6296.30 lb rounded and divided three ways (D-023).
-            %
-            % The COUNT is pinned to the inventory on purpose. Tagging is a
-            % property of the values that exist; the census is a property of
-            % the LOG. An eighth composite fraction is an eighth invented
-            % number, and D-030 has to grow a row for it before this test
-            % can go green again -- which is the discipline D-007 asks for
-            % and D-030 exists because nobody kept.
-            %
-            % TradeCandidate is deliberately outside the Estimate census:
-            % three of its seven are Brandt figures tagged Reference, so its
-            % per-candidate expectation lives in CandidateRows and is
-            % asserted by testCandidatesCarryTradeParameters.
+            % The other half of D-031, the half that reads the MODEL. Declaring
+            % DataProvenance means nothing if a component can apply the
+            % stereotype and leave the tag unreadable, so every component is
+            % walked -- through getChoices, or the seven candidates are not
+            % reached at all.
+            % Then the sharper claim: the seven CompositeFractions and three
+            % fuel capacities are tagged ESTIMATE specifically. The fractions
+            % were tuned until the mass-weighted figure landed just inside
+            % REQ_F16A_022's cap, and a number chosen to make a requirement
+            % pass is the last one in the model that may look sourced.
+            % The COUNT is pinned to D-030 on purpose: tagging is a property of
+            % the values, the census is a property of the LOG. An eighth
+            % fraction needs an eighth row before this goes green again.
             d = testCase.provenanceTagDefects();
             testCase.verifyNotEmpty(d.Checked, ...
                 "No component carries a value-bearing stereotype, so nothing was " + ...
@@ -1505,68 +1198,36 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 strjoin(c.NotEstimate, ", ") + ".");
         end
 
-        % ------- Stage 5 audit: the trade study's guard rails -------------
+        % ------- The trade study's guard rails ----------------------------
         %
-        % READ THIS BEFORE ADDING TO THIS SECTION -- it is about what these
-        % three tests deliberately do NOT do, and where the other half is.
+        % These three pin the guards' INPUT CONTRACT against the shipped
+        % model -- the same bounds, baseline-uniqueness rule and ceiling, plus
+        % a negative control proving the bounds can still say no. That is the
+        % DATA half (somebody types 78, or adds a second Reference candidate)
+        % and it needs a loaded model, which is why it lives here.
         %
-        % Stage 5 gave F16APhysicalTradeStudy guards that stop the run on a
-        % parameter that cannot honestly be scored, and D-035's warning for a
-        % value function above its declared ceiling. NONE OF THEM IS MADE TO
-        % FIRE HERE, and none should be. What these three pin is the guards'
-        % INPUT CONTRACT, read off the SHIPPED MODEL: the same bounds, the
-        % same baseline-uniqueness rule, the same ceiling, plus a negative
-        % control proving the bounds can still say no. That is the DATA half
-        % -- somebody types 78, adds a second Reference candidate, or clones a
-        % candidate's parameters -- and it needs the model to be loaded, which
-        % is why it lives in this file.
+        % NONE OF THE GUARDS IS MADE TO FIRE HERE. The CODE half -- a guard
+        % weakened or deleted -- is F16APhysicalTradeGuardsTest, on the pure
+        % static methods of F16APhysicalTradeGuards, where making one fire is
+        % a two-line verifyError with no artifact in sight. That separation is
+        % why the guards were extracted at all: while they were local
+        % functions of the study, reaching one meant running the whole study,
+        % and on the day the bound was refactored away that run would complete
+        % and save a wrong winner, a wrong L active kind and a wrong Implement
+        % link into the shipped artifacts.
         %
-        % THE CODE HALF -- the guard itself being weakened or deleted -- is
-        % F16APhysicalTradeGuardsTest, and it is a separate file for a
-        % concrete reason. checkParameters, the tie check and the ceiling
-        % check now live in F16APhysicalTradeGuards, a class of pure static
-        % methods; making one fire is a two-line verifyError on its
-        % identifier with no artifact in sight. Attaching that to THIS file's
-        % TestClassSetup -- two models, three requirement sets, an allocation
-        % set -- would make the one suite whose whole property is touching no
-        % artifact fail whenever a model failed to load.
-        %
-        % Why it was not simply written here in the first place, which is
-        % also why it must not be moved back: while the guards were LOCAL
-        % functions of F16APhysicalTradeStudy.m the only way to reach one was
-        % to run the whole study, and that run stops early only while the
-        % guard still works. Feeding it Benefit = 78 would, on the day the
-        % bound was refactored away, run to completion and save a wrong
-        % winner, a wrong L active kind and a wrong Implement link into the
-        % shipped artifacts -- corrupting the repository precisely when the
-        % test was supposed to catch something.
-        %
-        % The bounds these tests judge by are now IMPORTED from the guard
-        % (TRLScale / BenefitScale / ValueCeilingTol above), so the data half
-        % and the code half cannot be checking different numbers.
-        %
-        % What is still uncovered in BOTH files: the study's guards that are
-        % entangled with the discovery walk or that need a model handle. Those
-        % are named in "NOT COVERED HERE" at the top.
+        % The bounds are IMPORTED from the guard (TRLScale / BenefitScale /
+        % ValueCeilingTol above), so the two halves cannot check different
+        % numbers.
 
         function testTradeParameterScalesRejectWhatTheyExistToReject(testCase)
-            % The negative control for the two range sweeps in
-            % testCandidatesCarryTradeParameters, in the same shape as
-            % testTraceRefsResolve's BogusTraceRefs: a check that can only
-            % ever say yes asserts nothing, so the scales are made to say NO
-            % before they are trusted to say yes.
-            %
-            % It also makes the BOUNDS THEMSELVES load-bearing. Without it,
-            % the cheapest way to make an awkward Benefit pass is to widen
-            % BenefitScale, and every other assertion in this file stays
-            % green -- the test would have been quietly converted into the
-            % "> 0" it just replaced. The two values that matter are not
-            % arbitrary: 0 is the stereotype default meaning "nobody set
-            % this" (D-021, D-033), and 78 is 7.8 with a slipped decimal
-            % point, which D-033 traces all the way to a wrong Implement
-            % link on REQ_F16A_L01.
-            %
-            % Both directions are asserted. A scale that rejects everything
+            % The negative control for the range sweeps in
+            % testCandidatesCarryTradeParameters: a check that can only say yes
+            % asserts nothing, so the scales are made to say NO first.
+            % It also makes the BOUNDS load-bearing -- without it, the cheapest
+            % way to pass an awkward Benefit is to widen BenefitScale, and
+            % every other assertion here stays green.
+            % Both directions are asserted: a scale that rejects everything
             % would pass the first half and fail the aeroplane.
             wronglyAccepted = testCase.RejectedBenefits( ...
                 arrayfun(@(b) testCase.onBenefitScale(b), testCase.RejectedBenefits));
@@ -1601,37 +1262,21 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testRatioBaselineIsUniqueAndNothingBeatsIt(testCase)
-            % Two of the trade study's guards, checked as preconditions on
-            % the shipped data because they cannot be checked as behaviour.
+            % Two guards checked as preconditions on the shipped data, because
+            % they cannot be checked as behaviour.
             %
-            % FIRST, the baseline is unique per role. Every ratio value
-            % function divides by the mass of the role's
-            % DataProvenance = Reference candidate (D-015), so with none
-            % there is no scale at all and with two there is no answer to
-            % "which one" -- which is why the trade study refuses to run.
-            % This is a genuinely different claim from
-            % rolesWhereBrandtCandidateIsNotLightest, which keys on the
-            % hard-coded production names in this file; here the baseline is
-            % discovered from the PROVENANCE TAG, exactly as the trade study
-            % discovers it, so a retagged candidate is caught.
+            % FIRST, the baseline is unique per role: every ratio value
+            % function divides by the role's Reference candidate's mass, so
+            % none means no scale and two means no answer. The baseline is
+            % discovered from the PROVENANCE TAG here, exactly as the trade
+            % study discovers it, so a retagged candidate is caught.
             %
-            % SECOND, D-035's ceiling. v = M_baseline/M has no upper bound,
-            % unlike B/10 and (TRL-1)/8 which their declared scales cap at
-            % 1.0. A candidate lighter than its baseline scores above 1 and
-            % contributes more than its renormalized weight allows, at which
-            % point 0.50/0.25/0.25 has stopped describing relative influence.
-            %
-            % A FAILURE OF THE SECOND HALF IS NOT A BUG IN THE TRADE STUDY.
-            % D-035 decided, correctly, neither to cap (that discards a real
-            % advantage) nor to error (that rejects a legitimate candidate)
-            % but to WARN. So this is a tripwire, not a verdict: it says the
-            % known limit has gone from theoretical to armed, the run now
-            % emits F16APhysicalTradeStudy:valueAboveCeiling, and the scores
-            % must be read knowing the weights understate that criterion.
-            % The honest response is to confirm the decision still holds and
-            % then to do the deferred fix -- a bounded value function over a
-            % declared range per criterion -- not to delete the offending
-            % candidate.
+            % SECOND, D-035's ceiling. A FAILURE OF THIS HALF IS NOT A BUG --
+            % D-035 chose to warn rather than cap or error, so this is a
+            % tripwire saying the known limit has gone from theoretical to
+            % armed and the weights now understate that criterion. The honest
+            % response is the deferred bounded-value-function fix, not deleting
+            % the offending candidate.
             d = testCase.baselineDefects();
             testCase.verifyNotEmpty(d.Checked, ...
                 "No candidate was scored against a baseline, so both assertions below " + ...
@@ -1657,27 +1302,17 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testNoRoleHasTwoIdenticallyParameterizedCandidates(testCase)
-            % The tie guard's precondition. The trade study REFUSES to break
-            % a tie for first place -- sort order is not a decision, and a
-            % model that let one through would record a winner the data
-            % never chose -- so the shipped data must not be able to produce
-            % one trivially.
+            % The tie guard's precondition. The trade study REFUSES to break a
+            % tie for first place -- sort order is not a decision -- so the
+            % shipped data must not produce one trivially. Two candidates with
+            % identical Benefit, TRL and Mass_lb tie under ANY weighting, and
+            % that is the tie a copy-paste in the generator actually produces.
             %
-            % Two candidates of a role carrying the same Benefit, TRL and
-            % Mass_lb tie under ANY weighting, whatever the weights are
-            % renormalized to and whichever criteria get dropped. That is
-            % the one tie that can be ruled out by looking at inputs alone,
-            % and it is the one a copy-paste in generate_f16a_physical.m
-            % actually produces.
-            %
-            % IT DOES NOT PROVE THERE IS NO TIE. Two candidates with
-            % different parameters can still score equal, and detecting that
-            % needs the score -- which this file deliberately does not
-            % recompute, because a test that re-derived the trade study's
-            % arithmetic would agree with it by construction and catch
-            % nothing (the V&V rule against writing the assertion and the
-            % code the same way). The unique winner that the shipped data
-            % actually produces is asserted from the MODEL, by
+            % IT DOES NOT PROVE THERE IS NO TIE. Different parameters can still
+            % score equal, and detecting that needs the score -- which this
+            % file will not recompute, because a test that re-derived the trade
+            % study's arithmetic would agree with it by construction and catch
+            % nothing. The unique winner is asserted from the MODEL, by
             % testTradeSelectedExactlyOneWinnerPerRole.
             dupes = testCase.duplicateParameterDefects();
             testCase.verifyEmpty(dupes, ...

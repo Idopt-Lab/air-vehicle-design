@@ -4,15 +4,12 @@ function r = f16aRoot()
 %   (the folder that contains f16a.prj, docs/, requirements/, architecture/,
 %   logical/, physical/, and verification/).
 %
-%   This function is the single location ANCHOR for the example. Every
-%   generator, analysis, roll-up, and test derives the paths of the layer
-%   folders from it -- e.g. fullfile(f16aRoot,"physical") -- instead of from
-%   its own file location (fileparts(mfilename("fullpath"))). That makes each
-%   script independent of WHERE it lives, so scripts can sit in their layer
-%   folder without breaking sibling-folder path resolution.
+%   The single location ANCHOR for the example: every generator, roll-up and
+%   test derives sibling-folder paths from it rather than from its own file
+%   location, so a script works wherever it sits.
 %
-%   f16aRoot.m itself must stay at the example root: it reports its own folder
-%   as the root, so moving it would move the root with it.
+%   It must stay at the example root -- it reports its own folder as the root,
+%   so moving it moves the root with it.
 
 r = fileparts(mfilename("fullpath"));
 

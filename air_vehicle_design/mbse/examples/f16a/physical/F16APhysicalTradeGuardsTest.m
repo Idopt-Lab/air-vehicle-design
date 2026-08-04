@@ -1,110 +1,44 @@
 classdef F16APhysicalTradeGuardsTest < matlab.unittest.TestCase
     %F16APHYSICALTRADEGUARDSTEST Make the trade study's guard rails actually FIRE.
-    %   The negative tests that F16APhysicalArchitectureTest could not write.
-    %   Every assertion here feeds F16APhysicalTradeGuards a value that must be
-    %   refused and checks that it IS refused, by IDENTIFIER.
+    %   The negative tests F16APhysicalArchitectureTest could not write. Every
+    %   assertion feeds F16APhysicalTradeGuards a value that must be refused and
+    %   checks that it IS refused, BY IDENTIFIER.
     %
-    %   WHY THIS IS A SEPARATE FILE AND NOT MORE OF THE ARCHITECTURE SUITE
+    %   NOTHING HERE OPENS, READS OR WRITES AN ARTIFACT -- no model, no
+    %   requirement set, no file. The candidate "paths" below are plain strings
+    %   the guards use only to name an offender. That is the whole point: this
+    %   suite runs green on a checkout with no models in it, and folding it into
+    %   the architecture suite would attach it to a TestClassSetup that loads two
+    %   models and three requirement sets, so these tests would start failing for
+    %   reasons unrelated to whether a bound still rejects 78.
     %
-    %   The repo's split is machinery-vs-requirement: a machinery suite asks
-    %   "is this model built correctly?" and a verification suite asks "does
-    %   this design meet this requirement?". This file is NEITHER, because it
-    %   is not about an artifact at all -- it is about a MATLAB class. That is
-    %   the whole reason it can exist.
+    %   It is also why the guards were extracted at all. While they were local
+    %   functions of F16APhysicalTradeStudy.m, the equivalent negative test had
+    %   to run the whole study -- and it stopped early only while the guard still
+    %   worked. On the day the guard was refactored away, the day the test exists
+    %   to catch, Benefit = 78 would sail through to save_system and put a wrong
+    %   winner into the shipped artifacts. A negative test whose failure mode is
+    %   corrupting the repository is worse than no test.
     %
-    %   The concrete cost of folding it into F16APhysicalArchitectureTest is
-    %   its TestClassSetup, which loads two System Composer models, three
-    %   requirement sets and an allocation set before any test runs. Attaching
-    %   that to the one set of tests whose defining property is TOUCHING NO
-    %   ARTIFACT would throw away exactly what the extraction bought: these
-    %   tests would then fail when a model failed to load, for reasons that
-    %   have nothing to do with whether a bound still rejects 78. Kept apart,
-    %   this suite runs green on a checkout with no models in it.
+    %   IDENTIFIERS, NEVER MESSAGE TEXT, and they keep the
+    %   F16APhysicalTradeStudy: prefix even though the code moved -- an
+    %   identifier names the CONTRACT, not the file.
     %
-    %   NOTHING HERE OPENS, READS OR WRITES AN ARTIFACT. No loadModel, no
-    %   slreq.load, no allocation set, no save_system, no roll-up, no file on
-    %   disk. The candidate "paths" below are PLAIN STRINGS that the guards use
-    %   only to name an offender in a message; nothing resolves them against a
-    %   model, and that signature change -- checkParameters taking [rc.Path]
-    %   rather than the struct array carrying live component handles -- is what
-    %   made this file writable without fabricating handle-shaped fields. The
-    %   only environmental thing this suite does is put its own folder on the
-    %   path through a PathFixture, which is restored on teardown.
+    %   BOUNDS COME FROM THE CODE THAT ENFORCES THEM (TRLScale, BenefitScale,
+    %   CeilingTol, TieTol), so widening a scale cannot leave a test agreeing
+    %   with a bound that no longer exists. The REJECTED values are deliberately
+    %   literal, because each is a specific real mistake: 0 is "nobody set this",
+    %   78 is 7.8 with a slipped decimal point, 4.5 is not a point on an ordinal
+    %   scale. Widening a scale to admit one must turn this suite red.
     %
-    %   That is the point. The negative test that WOULD have been needed while
-    %   these guards were local functions of F16APhysicalTradeStudy.m had to
-    %   run the whole study -- which writes F16A_Physical.slx, F16A_Logical.slx
-    %   and an Implement link on REQ_F16A_L01 -- and it only stopped early
-    %   while the guard still worked. On the day the guard was refactored away,
-    %   the day the test existed to catch, Benefit = 78 would have sailed
-    %   through to save_system and put a wrong winner into the shipped
-    %   artifacts. A negative test whose failure mode is corrupting the
-    %   repository is worse than no test. With the guards lifted into a pure
-    %   class, the same assertion is two lines and cannot write anything.
+    %   Boundary-INCLUSIVE is not a detail: three real value functions sit
+    %   exactly on 1.0 today (Benefit 10, TRL 9, and the Reference candidate's
+    %   own M/M), so an exclusive bound would fail the shipped model.
     %
-    %   IDENTIFIERS, NEVER MESSAGE TEXT. Every expectation below is an error or
-    %   warning ID, and every one still carries the F16APhysicalTradeStudy:
-    %   prefix even though the code now lives in F16APhysicalTradeGuards. The
-    %   identifier names the CONTRACT, not the file; the decision log quotes
-    %   these strings, so renaming them to match the new file would break the
-    %   log and this suite to gain nothing.
-    %
-    %   BOUNDS COME FROM THE CODE THAT ENFORCES THEM. Wherever a test needs an
-    %   endpoint of a declared scale it reads F16APhysicalTradeGuards.TRLScale
-    %   / .BenefitScale / .CeilingTol / .TieTol rather than restating the
-    %   number, so widening a scale cannot leave a test agreeing with a bound
-    %   that no longer exists. The REJECTED values are the opposite and are
-    %   deliberately literal: each is a specific real mistake (0 is "nobody set
-    %   this"; 78 is 7.8 with a slipped decimal point; 4.5 is not a point on an
-    %   ordinal maturity scale), so widening a scale to admit one of them must
-    %   turn this suite red rather than quietly redefine what it checks.
-    %
-    %   WHAT EACH TEST PREVENTS
-    %     * Benefit above 10 -> :badBenefit. D-033 in full: v = B/10 carries
-    %       the heaviest weight in the trade, so 78 typed for 7.8 contributes
-    %       3.90 against a legitimate per-criterion maximum of 0.50. It is
-    %       FINITE, so every isfinite check in the study is blind to it. It
-    %       hands propulsion to TwinEngine_Surrogate, flips the L model's
-    %       active kind and Implement-links REQ_F16A_L01 from the wrong kind.
-    %     * Benefit at 0 -> :badBenefit. 0 is the stereotype DEFAULT, so it
-    %       means "nobody set this" (D-033). The usable scale is 1..10.
-    %     * TRL at 0 -> :badTRL. D-021's sentinel: the property is int32 and
-    %       cannot hold NaN, so an unset TRL is 0, deliberately outside the
-    %       scale, so that "we forgot" cannot score as plausible mid-maturity.
-    %     * A fractional TRL -> :badTRL. Integrality is part of the scale: 4.5
-    %       is not a low maturity reading, it is not a reading.
-    %     * Mass_lb at or below 0 -> :badMass. It is the DENOMINATOR of
-    %       M_baseline/M, so 0 is a divide-by-zero and a negative mass is an
-    %       inverted score that still looks plausible.
-    %     * A tie for first -> :tie. Sort order is not a decision; separating
-    %       two candidates by the order they appear in would record a winner
-    %       the numbers never chose.
-    %     * A value function above 1.0 -> :valueAboveCeiling, a WARNING that
-    %       changes nothing. D-035 refused both alternatives on purpose:
-    %       capping discards the real fact that a candidate is lighter than
-    %       baseline, and erroring rejects a legitimate candidate.
-    %     * The endpoints 1, 10, 1, 9 and a value of exactly 1.0 must pass.
-    %       Boundary-INCLUSIVE is not a detail -- three real value functions
-    %       sit exactly on 1.0 today (Benefit 10, TRL 9, and the Reference
-    %       candidate's own M/M), so an exclusive bound would fail the shipped
-    %       model.
-    %
-    %   NOT TESTED HERE, AND WHY
-    %     * rankRefusingTies on a SINGLE candidate. It indexes sorted(2)
-    %       unconditionally and throws MATLAB:badsubscript, because the study's
-    %       own :tooFewCandidates guard has already refused a one-option trade
-    %       before this is reached. Pinning MATLAB:badsubscript would cement an
-    %       accident as a contract and would turn the eventual proper guard
-    %       into a test failure, so the behaviour is recorded here and not
-    %       asserted.
-    %     * The study's remaining guards. :tooFewCandidates,
-    %       :candidateNotAChoice, :splitRole, :baselineNotUnique,
-    %       :partialCriterion and :nothingToScore are checks on the SET OF
-    %       CANDIDATES THE WALK DISCOVERED and are entangled with the values
-    %       they compute on the way past; :logicalRoleNotVariant, :noSuchKind,
-    %       :missingRequirement and the artifact-exists checks need a model
-    %       handle and can never come here. Their INPUT CONTRACT is pinned
-    %       against the shipped data in F16APhysicalArchitectureTest.
+    %   NOT TESTED HERE: rankRefusingTies on a SINGLE candidate throws
+    %   MATLAB:badsubscript, and pinning that would cement an accident as a
+    %   contract. The study's discovery-walk guards need the model, and their
+    %   input contract is pinned in F16APhysicalArchitectureTest instead.
     %
     %   See also F16APHYSICALTRADEGUARDS, F16APHYSICALTRADESTUDY,
     %   F16APHYSICALARCHITECTURETEST.

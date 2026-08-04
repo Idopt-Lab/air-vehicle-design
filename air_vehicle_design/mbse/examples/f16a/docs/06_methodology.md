@@ -126,24 +126,18 @@ Read this section before repeating any of the above in a report.
   not a description of what the code does. The optimizer is left as a **hook**, and the word
   "MDAO" is kept out of the file names, function names and comments on purpose (D-018).
 - **The scoring is a declared value function per criterion — and it did not start that way.**
-  An earlier version of this example normalized each criterion **min–max across the candidates of a
-  role**. At two candidates that is degenerate: every criterion collapses to {0, 1}, so a "score"
-  was only the sum of the weights a candidate happened to win, which is why every winner scored
-  0.60 and every loser 0.40 and the *margin* carried nothing. But the degeneracy was the symptom.
-  The real defect is that min–max is **sample-dependent**: a candidate's score is a function of
-  which rivals are in the set, so adding or removing a candidate rescales everyone, and two
-  candidates neither of whose data changed can **swap places** — the rank-reversal problem. The
-  scoring is now a **value function declared in advance**, independent of the candidate set:
-  `Benefit → B/10` on a stated **1–10** scale — 0 is the stereotype property's default and means
-  *unset*, so the guard rejects it rather than scoring it (D-033) — `TRL → (TRL−1)/8` on the
-  1–9 scale, and
-  `Mass_lb → M_baseline/M` against a fixed baseline — the mass carried by the role's
-  `DataProvenance = Reference` candidate, so `v > 1` reads "lighter than the as-built F-16A". The
-  weights actually applied are `Benefit 0.50 · TRL 0.25 · Mass 0.25` (see the cost bullet below for
-  where they come from). Adding a fourth engine now changes that engine's score and nothing else.
-  The price is that you must state the scale you mean, and that is the cheaper of the two prices.
-  **This example changed because of the analysis in this file** (D-015) — the method note is not a
-  write-up of what was built, it is what caught the defect.
+  An earlier version normalized each criterion **min–max across the candidates of a role**. At two
+  candidates that is degenerate — every criterion collapses to {0, 1}, so a "score" was only the sum
+  of the weights a candidate won — but the degeneracy was the symptom. The real defect is that
+  min–max is **sample-dependent**: adding or removing a candidate rescales everyone, and two
+  candidates neither of whose data changed can **swap places**. That is the rank-reversal problem.
+  The scoring is now a value function **declared in advance**, independent of the candidate set:
+  `B/10` on a stated 1–10 scale (0 is the property default and means *unset*, so the guard rejects
+  it — D-033), `(TRL−1)/8` on 1–9, and `M_baseline/M` against the role's
+  `DataProvenance = Reference` candidate, so `v > 1` reads "lighter than the as-built F-16A".
+  Adding a fourth engine now changes that engine's score and nothing else. The price is that you
+  must state the scale you mean. **This example changed because of the analysis in this file**
+  (D-015) — the method note is not a write-up of what was built, it is what caught the defect.
 - **Each variation point is decided independently.** Three binary kinds is a 2×2×2 = 8-point
   morphological box, but we evaluate 3 pairs — 7 candidates in 3 trades — not 8 combinations. That
   is an explicit assumption that the choices do not interact (D-016), and in this particular
@@ -157,21 +151,17 @@ Read this section before repeating any of the above in a report.
   instructive**, not figures for any aircraft that was built. Do not cite them as F-16 data. And
   read the tag narrowly: it qualifies the candidate's **`Mass_lb`** and nothing else (D-025). Every
   invented number in this example, with the reasoning behind each, is inventoried in **D-030**.
-- **Cost is `NaN`, and it is dropped by a *general* rule rather than a special case.** Unit flyaway
-  cost stays a **pending Measure of Merit** (see [`05_physical.md`](05_physical.md)); it is not
-  modelled, and we do not invent a number to fill the column. But nothing in the trade study says
-  "exclude cost". The rule it implements is: **a criterion no candidate of the role carries a value
-  for is dropped, and the remaining weights are renormalized over the criteria that do** (D-026).
-  Cost falls out of that rule because it is `NaN` everywhere. Two things follow. The weights are
-  *derived at run time*, not typed in — declared `0.40 / 0.20 / 0.20 / 0.20` over the four criteria,
-  renormalizing to the `0.50 / 0.25 / 0.25` above — and **the day the candidates carry a cost, cost
-  re-enters the score with no change to the scoring code.** Say *the candidates*, not *a cost model*:
-  D-043 settles that `F16APhysicalCostModel` will compute a **whole-aircraft** figure for the
-  `Aircraft`'s Measure of Merit and that `TradeCandidate.UnitCost_USD` stays `NaN`, so a cost model
-  will exist and this column will still be dropped. The generality is the reason for writing it as a
-  rule; it is not a prediction that this particular criterion returns. A
-  criterion with values on *some* candidates is neither dropped nor scored: it stops the run,
-  because a partial column would score the candidates that have data against the ones that do not.
+- **Cost is `NaN`, and it is dropped by a *general* rule rather than a special case.** Nothing in
+  the trade study says "exclude cost". The rule is: **a criterion no candidate of the role carries a
+  value for is dropped, and the remaining weights are renormalized** (D-026). So the applied weights
+  are *derived at run time* — declared `0.40 / 0.20 / 0.20 / 0.20`, renormalizing to
+  `0.50 / 0.25 / 0.25` — and the day the candidates carry a cost, cost re-enters with no change to
+  the scoring code. Say *the candidates*, not *a cost model*: D-043 settles that
+  `F16APhysicalCostModel` computes a **whole-aircraft** figure while `TradeCandidate.UnitCost_USD`
+  stays `NaN`, so a cost model will exist and this column will still be dropped. The generality is
+  why it is written as a rule; it is not a prediction that this criterion returns.
+  A criterion with values on *some* candidates is neither dropped nor scored — it stops the run,
+  because a partial column scores the candidates that have data against the ones that do not.
 - **It is set-based in structure only.** True SBD converges by intersecting feasible regions across
   disciplines; we keep the options in the model and defer the decision, then resolve it with a
   single weighted score. The *discipline* is borrowed; the *mechanism* is classical concept
@@ -180,13 +170,12 @@ Read this section before repeating any of the above in a report.
   much, and a losing kind stays in the L model.
 - **The active kind at L is derived, not authored.** It is written back by the P-layer trade, so it
   is an *output* of the decision and not the decision itself. The **decision requirement** is where
-  the decision is posed and where its trail is anchored; the reasoning that settles it is the trade
-  study's output, carried by the candidates' `Rationale.Justification` at P (D-040). That is also why
-  `DecisionRef` is written on **every** kind of a role and not only on the winner (D-027): it is the
-  only outbound reference a rejected kind carries, so without it a reader who clicks the loser reaches
-  a `'TBD'` and stops. With it the loser joins the same trail as the winner — requirement, then the
-  rejected *candidate* that realizes that kind, whose `Rationale` is a `TradeAlternative` justification
-  saying what it lost on and by how much (D-002, D-049).
+  the decision is posed and its trail anchored; the reasoning that settles it is the trade study's
+  output, carried by the candidates' `Rationale.Justification` at P (D-040). That is also why
+  `DecisionRef` is written on **every** kind of a role, not only the winner (D-027): it is the only
+  outbound reference a rejected kind carries, so without it a reader who clicks the loser reaches a
+  `'TBD'` and stops. With it the loser joins the same trail — requirement, then the rejected
+  *candidate*, whose `TradeAlternative` justification says what it lost on (D-002, D-049).
 
 ### What the value functions assume
 
@@ -200,19 +189,17 @@ and the note would be dishonest if it stopped at the fix.
   preferences — informally, the mass-versus-TRL tradeoff must not depend on what the benefit rating
   happens to be. Nobody elicited or checked those conditions here. The additive form is used because
   it is simple and legible, not because it was justified.
-- **A weight is a scaling constant, not a statement of importance.** This is the error the
-  decision-analysis literature complains about most, and it belongs in a teaching example precisely
-  because the trap is so natural. In an additive value model a weight means something only *relative
-  to the declared range* of its criterion — change the range and the correct weight changes with it
-  — so `Benefit 0.50` is **not** a free-standing claim that benefit is "half of what matters".
-  Parnell & Trainor state it for a systems-engineering audience: *"weights depend on both importance
-  and variation of the range of the attribute. Many analysts, not familiar with the mathematical
-  theory, assess weights using only importance"* ([[Parnell & Trainor 2009]][parnell]), and Keeney
-  catalogues it among twelve recurring mistakes in value tradeoffs ([[Keeney 2002]][keeney2002]).
-  Ours are declared directly — `0.40 / 0.20 / 0.20 / 0.20`, chosen by the author of this example and
-  never swing-weighted against the criterion ranges. They are an input, not a result, and no
-  sensitivity study backs them. That bites hardest on the airframe and flight-control trades, both
-  decided by `Benefit`, the criterion carrying the largest share.
+- **A weight is a scaling constant, not a statement of importance.** In an additive value model a
+  weight means something only *relative to the declared range* of its criterion — change the range
+  and the correct weight changes with it — so `Benefit 0.50` is **not** a free-standing claim that
+  benefit is "half of what matters". Parnell & Trainor state it for a systems-engineering audience:
+  *"weights depend on both importance and variation of the range of the attribute. Many analysts,
+  not familiar with the mathematical theory, assess weights using only importance"*
+  ([[Parnell & Trainor 2009]][parnell]), and Keeney catalogues it among twelve recurring mistakes in
+  value tradeoffs ([[Keeney 2002]][keeney2002]). Ours were chosen by the author of this example and
+  never swing-weighted against the criterion ranges: an input, not a result, with no sensitivity
+  study behind them. That bites hardest on the airframe and flight-control trades, both decided by
+  `Benefit`, the criterion carrying the largest share.
 - **Each value function is linear, and that is a third assumption.** `B/10` and `(TRL−1)/8` are
   straight lines, so the model asserts that TRL 3 → 4 is worth exactly as much as TRL 8 → 9. For
   technology readiness that is almost certainly wrong — the maturity risk that matters is
@@ -220,26 +207,21 @@ and the note would be dishonest if it stopped at the fix.
   linear *in value*; they were chosen because they are legible, and a declared-but-wrong shape is
   still a declared shape.
 - **`M_baseline/M` is a ratio scale anchored on the as-built aircraft, and it is unbounded.** The
-  baseline is the role's `DataProvenance = Reference` candidate — the Brandt figure — so **the
-  Brandt candidate scores exactly 1.0 on mass in every role, by construction.** That is a property
-  of how the scale was built, not a finding about the F-16. Note also the asymmetry: `B/10` and
-  `(TRL−1)/8` are bounded on [0, 1] by their declared scales, but `M_baseline/M` has no upper bound
-  — a candidate at half the baseline mass would score 2.0 on that one criterion and could win on it
-  alone. No candidate in this set is lighter than its baseline, so it never bites here, and nothing
-  in the code prevents it. The three criteria are therefore summed as if commensurable when their
-  ranges are not — which is the weight-versus-range problem two bullets up, in its most concrete
-  form: a criterion whose range is open-ended cannot have a defensible scaling constant at all.
-- **`Benefit` and `TRL` are judgement on a declared scale, not measurements.** They are our 1–10 and
-  1–9 rankings — 0 is the "unset" sentinel in both, deliberately off the scale so a forgotten value
-  cannot score as a plausible middling one (D-033, D-021) — and they are judgement on the
-  `Reference` candidates too:
-  `DataProvenance = Reference` on `F100_PW_200` says its *mass* is sourced, not that its Benefit of
-  8.2 or its TRL of 8 is (D-025). Neither is derived from a model and nothing rolls up into either.
-  Add the weights up and the honest accounting is uncomfortable: **0.75 of every score is declared
-  opinion** — the same figure D-030 arrives at from the data side — and of the remaining 0.25 only
-  the three `Reference` masses are sourced, the four `Estimate` masses being teaching values. These
-  two criteria are *unauditable in principle*: they trace to nothing, which is exactly why they have
-  to be recorded. The scoring is transparent about this rather than hiding it, but transparency is
+  baseline is the role's `Reference` candidate, so **the Brandt candidate scores exactly 1.0 on mass
+  in every role, by construction** — a property of how the scale was built, not a finding about the
+  F-16. Note the asymmetry: `B/10` and `(TRL−1)/8` are bounded on [0, 1], but `M_baseline/M` has no
+  upper bound, so a candidate at half the baseline mass would score 2.0 and could win on that
+  criterion alone. None is lighter than its baseline today, and nothing in the code prevents it. The
+  three criteria are summed as if commensurable when their ranges are not — the weight-versus-range
+  problem in its most concrete form: **a criterion whose range is open-ended cannot have a
+  defensible scaling constant at all.**
+- **`Benefit` and `TRL` are judgement on a declared scale, not measurements.** Our 1–10 and 1–9
+  rankings — 0 is the "unset" sentinel in both, deliberately off the scale (D-033, D-021) — and they
+  are judgement on the `Reference` candidates too: `DataProvenance = Reference` on `F100_PW_200`
+  says its *mass* is sourced, not that its Benefit of 8.2 is (D-025). Add the weights up and the
+  accounting is uncomfortable: **0.75 of every score is declared opinion**, and of the remaining
+  0.25 only the three `Reference` masses are sourced. These two criteria are *unauditable in
+  principle* — they trace to nothing, which is exactly why they have to be recorded. Transparency is
   not the same as evidence.
 - **The answer was known before the trade was run.** The F-16A exists; the production configuration
   wins all three roles. The `Estimate` masses and the Benefit and TRL judgements were chosen to

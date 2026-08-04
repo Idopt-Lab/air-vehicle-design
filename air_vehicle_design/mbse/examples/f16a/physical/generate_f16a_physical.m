@@ -1,208 +1,66 @@
 function generate_f16a_physical()
 %GENERATE_F16A_PHYSICAL Build the F-16A Physical-layer architecture (RFLP "P").
-%   Creates physical/F16A_Physical.slx (a System Composer model of the
-%   concrete physical decomposition), its interface dictionary
-%   physical/F16A_Physical.sldd, the stereotype profile
-%   physical/F16A_PhysicalProps.xml, and the realization allocation set
-%   physical/F16A_LogicalToPhysical.mldatx that ties each logical role
-%   (RFLP "L") to the physical part(s) that realize it. Two of the profile's
-%   properties are typed by the enumeration classes physical/F16ASourceKind.m
-%   and physical/F16ADataProvenance.m, which must be on the MATLAB path
-%   whenever the profile is loaded (physical/ is on the f16a project path).
+%   Creates physical/F16A_Physical.slx and .sldd, the stereotype profile
+%   F16A_PhysicalProps.xml, and the F16A_LogicalToPhysical.mldatx realization
+%   allocation set (9 logical roles -> 14 edges). Two profile properties are
+%   typed by the enumerations F16ASourceKind.m and F16ADataProvenance.m, which
+%   must be on the path whenever the profile loads.
 %
-%   Where the Logical layer says HOW in solution roles, the Physical layer
-%   gives CONCRETE PARTS. Its three teaching ideas:
-%     1. Roll-up analysis. Each part carries a Mass_lb; a NATIVE System
-%        Composer parametric analysis (F16APhysicalMassRollup, the ex2
-%        instantiate/iterate pattern) sums part masses up the tree to a
-%        subtotal at every assembly and the Operating Empty Weight (OEW) at
-%        the Aircraft root component.
-%     2. Measures of Merit. OEW and unit flyaway cost are objectives to
-%        MINIMIZE, not pass/fail thresholds. They are carried on a
-%        MeasureOfMerit stereotype on the Aircraft component. OEW comes from
-%        the mass roll-up; cost comes from a cost-model FUNCTION
-%        (F16APhysicalCostModel, a stub for now) -- NOT a roll-up.
-%     3. EVERY PART CAN ANSWER WHY IT EXISTS. A Rationale stereotype
-%        (SourceKind, Justification, TraceRef) on all 27 stereotypable
-%        components -- the 30 in the tree less the 3 variant role wrappers,
-%        which can carry no stereotype at all (D-013) -- turns
-%        "why is this here?" from a code comment into a queryable model
-%        property (D-006). SourceKind is a validated vocabulary, not free
-%        text -- the F16ASourceKind enumeration (D-011):
-%          RealizesFunction         a logical role has to be realized
-%          SatisfiesRequirement     a requirement demands the part directly
-%          TradeWinner              it won the physical trade study
-%          TradeAlternative         it lost, and is kept so the decision is
-%                                   auditable
-%          ConstraintDriven         it comes from a constraint of building an
-%                                   airplane, not from a function above it
-%          SupportingInfrastructure it exists only to serve other parts
-%        TraceRef says what the part is answerable to: a logical role, a
-%        requirement, or -- for the four SupportingInfrastructure parts
-%        (Electrical, Hydraulics, ECS, SecondaryStructure) -- the physical
-%        part it serves. Two of those dependencies are real modelled port
-%        connections: Electrical -> Avionics on ElecPower, Hydraulics ->
-%        FlightControls on HydPower.
+%   Where L says HOW in solution roles, P gives CONCRETE PARTS. Four teaching
+%   ideas:
+%     1. Roll-up analysis  -- a native System Composer parametric analysis sums
+%        part masses up the tree to OEW at the Aircraft root.
+%     2. Measures of Merit -- OEW and unit cost are objectives to MINIMIZE, not
+%        thresholds. OEW comes from the roll-up; cost from a FUNCTION
+%        (F16APhysicalCostModel), which is the contrast being drawn.
+%     3. Every part answers why it exists -- a Rationale stereotype turns "why
+%        is this here?" from a comment into a queryable property (D-006), with
+%        SourceKind drawn from a validated enumeration rather than free text.
+%     4. The decision is made HERE, over concrete candidates. Three roles are
+%        VARIANT COMPONENTS holding the competing candidates that could fill
+%        them; section 7b runs F16APhysicalTradeStudy, which selects one per
+%        role and calls back to set the winning KIND at L. L presents the
+%        options; P decides (D-001).
 %
-%     4. THE DECISION IS MADE HERE, OVER CONCRETE CANDIDATES. Three roles are
-%        VARIANT COMPONENTS, each holding the competing parameterized
-%        candidates that could fill it (D-002, D-003). A candidate carries the
-%        TradeCandidate stereotype -- RealizesRole, RealizesKind, Mass_lb,
-%        Benefit, TRL, UnitCost_USD, DataProvenance, Selected -- which is the
-%        data F16APhysicalTradeStudy scores. Every number on it is tagged with
-%        the F16ADataProvenance enumeration {Datasheet, Reference, Estimate,
-%        Simulation}, because P is the only layer that carries numbers and so
-%        the only layer that must say where each one came from (D-007).
-%        Section 6c builds those candidates unselected -- nothing has won until
-%        something has been scored -- and SECTION 7B THEN RUNS THE TRADE
-%        (F16APhysicalTradeStudy), which selects one candidate per role, flips
-%        its SourceKind to TradeWinner, and calls back into the Logical layer to
-%        set the winning KIND. L presents the options; P decides (D-001).
-%        See D-006, D-007, D-011, D-015.
-%
-%   Structure (30 components; the Aircraft component is the system-of-interest
-%   that holds the OEW/cost MoMs). "|=" marks a VARIANT role -- the wrapper is
-%   not a part, it is the question "which of these?" made structural:
+%   Structure (30 components). "|=" marks a VARIANT role -- not a part, but the
+%   question "which of these?" made structural:
 %     F16A_Physical
 %       |- Aircraft
-%          |= Airframe        (variant, 2 candidates)
+%          |= Airframe        (2 candidates)
 %          |     |- BlendedCrankedDelta -> Wing Fuselage HorizontalTail
 %          |     |                         VerticalTail Nacelles Strakes
 %          |     |- ConventionalTrapWing  (single lumped block)
 %          |- Propulsion
-%          |     |= Engine    (variant, 3 candidates)
-%          |     |     |- F100_PW_200  F110_GE_100  TwinEngine_Surrogate
+%          |     |= Engine    (3 candidates: F100_PW_200 F110_GE_100
+%          |     |             TwinEngine_Surrogate)
 %          |     |- InletDuct          (common to all engine candidates, D-009)
-%          |= FlightControls  (variant, 2 candidates)
-%          |     |- FlyByWire  HydroMechanical
+%          |= FlightControls  (2 candidates: FlyByWire HydroMechanical)
 %          |- FuelSystem      |- FwdFuselageTank AftFuselageTank WingTank
 %          |- LandingGear  |- Avionics  |- Electrical  |- Hydraulics
 %          |- ECS  |- ArmamentSupport  |- SecondaryStructure
 %
-%   ASYMMETRIC DETAIL IS DELIBERATE (D-003): only the candidate that carries
-%   the Brandt decomposition is decomposed. The six structural parts are the
-%   same parts, with the same Brandt masses, as before this restructure -- they
-%   simply moved one level down, under BlendedCrankedDelta. Detailing
-%   ConventionalTrapWing to match would mean inventing six part masses and six
-%   composite fractions for an aircraft that was never built.
+%   ASYMMETRIC DETAIL IS DELIBERATE (D-003): only the candidate carrying the
+%   Brandt decomposition is decomposed. Detailing ConventionalTrapWing to match
+%   would mean inventing six part masses for an aircraft never built.
 %
-%   The candidates are built with the ACTIVE choice at BlendedCrankedDelta /
-%   F100_PW_200 / FlyByWire. Between section 3 and section 7b that is a
-%   PLACEHOLDER, NOT A DECISION -- the same convention generate_f16a_logical.m
-%   uses -- and section 7b then re-asserts it FROM THE SCORE. The trade picks
-%   those same three, which is why the active configuration still rolls up to
-%   OEW = 19,980.73 lb: a trade that selects the production configuration
-%   cannot change what the production aeroplane weighs. That agreement is the
-%   point of a validated example, not a coincidence.
+%   Leaf masses on the ACTIVE path are Brandt ground truth (lbf, W_TO = 31,377
+%   lb) and sum to OEW ~= 19,980.7 lb. The fuel tanks carry ZERO dry mass --
+%   tankage is integral to the wet structure and fuel is a consumable, a
+%   deliberate "not every part adds to OEW" lesson.
 %
-%   Leaf masses on the ACTIVE path are Brandt F-16A ground-truth weights (lbf,
-%   design point W_TO = 31,377 lb) and sum to OEW ~= 19,980.7 lb. The fuel
-%   tanks carry 0 dry mass (tankage is integral to the wet wing/fuselage;
-%   internal fuel is a consumable, not empty weight) -- a deliberate "not every
-%   part adds to OEW" lesson. Airframe-less-engine = OEW - Engine ~= 15,250.5
-%   lb is the standard airframe-unit-weight convention (NOT a structural-group
-%   sum).
-%
-%   Three roll-ups (see F16APhysical*Rollup). All three report the ACTIVE
-%   configuration -- a roll-up over every candidate would be meaningless -- and
-%   they run in section 9, AFTER the trade study of section 7b, so what they
-%   measure is the configuration the trade SELECTED rather than the placeholder
-%   the build happened to start from:
-%     * Mass    -> OEW (native instantiate/iterate; a MoM to minimize).
-%     * Material-> airframe mass-weighted composite fraction (~0.1928 with
-%                  BlendedCrankedDelta active), the "verified by" side of
-%                  REQ_F16A_022 (composite <= 20%).
-%     * Fuel    -> available internal fuel capacity (~6300 lb), the "available"
-%                  side of REQ_F16A_P01 (fuel-volume sufficiency).
-%
-%   Realization (logical role -> physical part), 9 roles, 14 edges. A role is
-%   realized by the CANDIDATES that could fill it, not by the variant wrapper:
-%     Airframe            -> BlendedCrankedDelta, ConventionalTrapWing;
-%     PropulsionSystem    -> Engine/F100_PW_200, Engine/F110_GE_100,
-%                            Engine/TwinEngine_Surrogate, InletDuct;
-%     FlightControlSystem -> FlyByWire, HydroMechanical;
-%     FuelSystem -> FuelSystem; LandingGear -> LandingGear;
-%     AvionicsSuite -> Avionics; CommunicationSystem -> Avionics;
-%     WeaponSystem -> ArmamentSupport; MissionSystemsBay -> ArmamentSupport.
-%   The 1->many teaching moment MOVED: it used to be Airframe fanning out to
-%   its six structural parts (decomposition of one role). It is now
-%   PropulsionSystem fanning out to FOUR targets, and those four are two
-%   different kinds of "many" in one edge set -- three MUTUALLY EXCLUSIVE
-%   engine candidates (pick one) plus the InletDuct that every one of them
-%   needs (D-009). Realization does not distinguish the two; the variant
-%   structure does.
-%   Electrical, Hydraulics, ECS and SecondaryStructure realize NO single
-%   logical role -- supporting infrastructure, the symmetric echo of L's
-%   constraint-driven (function-less) roles. That is no longer only a comment:
-%   each carries Rationale.SourceKind = SupportingInfrastructure and a TraceRef
-%   naming the part it serves (section 6b).
-%
-%   Requirements: REQ_F16A_026 (cost) is a Measure of Merit (minimize), homed
-%   here and Implement-linked from the Aircraft. REQ_F16A_022 (materials) is
-%   Implement-linked from the Airframe; REQ_F16A_P01 (fuel volume) is
-%   Implement-linked from the FuelSystem. Their "Verified by" links to the
-%   verification tests (F16AMaterialsVerificationTest / F16AFuelVerificationTest)
-%   are added MANUALLY in the Requirements Editor -- see section 8 and
-%   docs/README.md (the programmatic slreq API can't set up a working
-%   "Verified by" for a MATLAB unit test on its own).
-%   The DECISION requirements REQ_F16A_L01..L03 are a separate matter: they are
-%   Implement-linked from the winning LOGICAL kinds by the trade study in
-%   section 7b, not from anything in this model, because what implements
-%   "single engine was selected" is the selected option, not a part (D-010).
-%
-%   BUILD ORDER, and why it is this order:
-%     build (3-5) -> stereotypes and parameters (6-6c) -> realization (7)
-%     -> TRADE (7b) -> requirement links (8) -> roll-ups (9)
+%   BUILD ORDER, and why: build (3-5) -> stereotypes and parameters (6-6c) ->
+%   realization (7) -> TRADE (7b) -> requirement links (8) -> roll-ups (9).
 %   The trade needs the stereotypes to have data to read and the allocation set
-%   to already name the candidates; the roll-ups need the trade to have run, or
-%   they would report a configuration nobody chose.
+%   to name the candidates; the roll-ups must run after the trade or they
+%   report a configuration nobody chose.
 %
-%   Idempotent: re-run to regenerate from scratch. Requires the L model and the
-%   requirement sets to exist first (run generate_f16a_logical.m and the three
-%   requirement generators before this) -- including
-%   requirements/f16a_logical_derived.slreqx, which is where section 7b records
-%   the decisions.
+%   Idempotent. Requires the L model and the requirement sets to exist first.
 %
-%   -----------------------------------------------------------------------
-%   R2026a API NOTES (see generate_f16a_logical.m for the shared ones):
-%     * Requirement links attach to a COMPONENT, not the root architecture
-%       (slreq.createLink rejects systemcomposer.arch.Architecture), so the
-%       Aircraft component -- not the model root -- anchors the MoMs and the
-%       REQ_F16A_026 link.
-%     * Native roll-up: instantiate(arch, PROFILE_NAME, name, Function=@fn,
-%       Direction="Postorder") then iterate(inst,"Postorder",@fn,Recurse=true)
-%       then getValue -- see F16APhysicalMassRollup.
-%     * String stereotype-property defaults are evaluated as expressions, so
-%       quote the literal: DefaultValue="'Minimize'". They also READ BACK WITH
-%       THE QUOTES, so every reader strips them: erase(value, "'").
-%     * ENUMERATION-typed properties work (addProperty(..., Type="F16ASourceKind"))
-%       and a plain MATLAB enumeration classdef is enough -- no int32 base
-%       needed -- as long as the classdef is on the path. WRITE the value
-%       FULLY QUALIFIED AND UNQUOTED ("F16ASourceKind.TradeWinner") or as a
-%       QUOTED BARE MEMBER ("'TradeWinner'"); any other form errors. It READS
-%       BACK QUOTED, exactly like a string property, so use the same
-%       erase(..., "'") on the way out.
-%     * applyStereotype ERRORS on a systemcomposer.arch.VariantComponent: a
-%       stereotype goes on the variant's CHOICES, never on the role wrapper
-%       (D-013, Stage-0 finding 4). Reach those choices with getChoices -- NOT
-%       with .Architecture.Components, which returns them on a freshly built
-%       in-memory model but ZERO on the same model saved and reloaded (finding
-%       6). Every tree walk in this file (applyStereotypeToTree,
-%       assertRationaleComplete, countComps) special-cases a VariantComponent
-%       for exactly those two reasons, and each says so at the point it does.
-%     * Variants: addVariantComponent / addChoice / setActiveChoice, wrapped in
-%       addVariantRole below (the same helper generate_f16a_logical.m uses).
-%       getChoices returns choices ALPHABETICALLY, not in creation order
-%       (finding 5), so a choice is always addressed BY NAME. Variant boundary
-%       ports are not created by addPort on the variant's architecture: add the
-%       port to every choice, then updatePortsFromChoices(vc, Mode="addPorts").
-%     * ARCHITECTURE paths gain the choice level
-%       ("Aircraft/Airframe/BlendedCrankedDelta/Wing") -- every lookup here is
-%       written that way. INSTANCE paths do not: the analysis instance FLATTENS
-%       the variant (finding 3), which is why the roll-ups still read
-%       ".../Aircraft/Airframe". Two path spaces; use the right one.
-%     * connect(src,dst) two-argument form only.
-%   -----------------------------------------------------------------------
+%   Two R2026a traps this file is written around, both in 08_agent_team.md:
+%   a stereotype cannot be applied to a VariantComponent (reach its choices
+%   with getChoices, never .Architecture.Components, which returns ZERO on a
+%   reloaded model); and ARCHITECTURE paths carry the choice level while
+%   INSTANCE paths do not, so the roll-ups read ".../Aircraft/Airframe".
 
 modelName   = "F16A_Physical";
 logiName    = "F16A_Logical";
@@ -598,52 +456,37 @@ end
 % ---------------------------------------------------------------------
 % 6b) Rationale: why does each of these parts exist? (D-006)
 %
-%   The whole point is that the answer is a QUERYABLE MODEL PROPERTY and not a
+%   The point is that the answer is a QUERYABLE MODEL PROPERTY and not a
 %   comment: you can ask the model for every ConstraintDriven part, or for
-%   everything the Electrical system is there to serve. SourceKind is drawn
-%   from the F16ASourceKind enumeration, so the vocabulary is validated rather
-%   than free text; TraceRef names WHAT the part is answerable to -- a logical
-%   role, a requirement, or (for supporting infrastructure) the physical part
-%   it serves.
+%   everything Electrical is there to serve. SourceKind is drawn from the
+%   F16ASourceKind enumeration, so the vocabulary is validated; TraceRef names
+%   what the part is answerable to -- a logical role, a requirement, or (for
+%   supporting infrastructure) the physical part it serves.
 %
-%   The four SupportingInfrastructure parts are the interesting ones.
-%   Electrical, Hydraulics, ECS and SecondaryStructure realize NO logical role;
-%   until now their reason for existing lived only in the comment in section 7.
-%   Their TraceRef points at what they serve, and two of those dependencies are
-%   real MODELLED port connections built in section 4 -- Electrical -> Avionics
-%   on ElecPower, Hydraulics -> FlightControls on HydPower. ECS and
-%   SecondaryStructure serve their targets thermally and structurally, with no
-%   modelled port.
+%   The four SupportingInfrastructure parts realize NO logical role. Two of
+%   their dependencies are real MODELLED port connections from section 4 --
+%   Electrical -> Avionics on ElecPower, Hydraulics -> FlightControls on
+%   HydPower; ECS and SecondaryStructure serve thermally and structurally with
+%   no modelled port.
 %
-%   THE THREE VARIANT ROLE WRAPPERS GET NO ROW, AND MUST NOT. Airframe,
-%   Propulsion/Engine and FlightControls are systemcomposer.arch.
-%   VariantComponent objects, and applyStereotype ERRORS on one (Stage-0
-%   finding 4, D-013) -- they have no Rationale property to set. That is not a
-%   workaround for a tool limitation, it is the right answer: a variant wrapper
-%   is not a part, it is the QUESTION "which of these?", and a question has no
-%   reason to exist independent of its answers. Its justification lives in its
-%   candidates, one per option. Both tree walks below (applyStereotypeToTree,
-%   assertRationaleComplete) skip a VariantComponent BY CLASS and descend into
-%   getChoices instead, so this is enforced rather than remembered: 30
-%   components minus 3 wrappers = the 27 rows here, and assertRationaleComplete
-%   ABORTS the generator if any of the 27 is missing.
+%   THE THREE VARIANT ROLE WRAPPERS GET NO ROW, AND MUST NOT (D-013). That is
+%   not a workaround for applyStereotype erroring on them -- it is the right
+%   answer: a wrapper is not a part, it is the QUESTION "which of these?", and
+%   a question has no reason to exist independent of its answers. 30 components
+%   minus 3 wrappers = the 27 rows here, and assertRationaleComplete ABORTS the
+%   generator if any is missing.
 %
-%   Writing convention: an enum value goes in FULLY QUALIFIED AND UNQUOTED
-%   ("F16ASourceKind.TradeWinner"); a string value is evaluated as a MATLAB
-%   expression and so must be quoted (quoteLit below). Both read back WITH the
-%   quotes -- strip with erase(..., "'"), as MeasureOfMerit.Goal already does.
+%   Writing convention: an enum value goes in fully qualified and UNQUOTED
+%   ("F16ASourceKind.TradeWinner"); a string value is evaluated as an
+%   expression and must be QUOTED (quoteLit below). Both read back with the
+%   quotes -- strip with erase(..., "'").
 %
-%   CANDIDATE ROWS: all seven candidates are TradeAlternative, not TradeWinner.
-%   That is accurate rather than pessimistic -- no trade has run at this point
-%   in the build, so nothing has won, and a candidate that claimed to be the
-%   winner before the study executed would be recording a decision that was
-%   never made. Section 7b runs F16APhysicalTradeStudy, which flips the three
-%   winners to TradeWinner and rewrites every Justification here to state the
-%   result it got; the text below is what the part says about itself BEFORE the
-%   verdict, and the trade preserves it behind its own sentence rather than
-%   overwriting it. Their TraceRef is the DECISION requirement for the role
-%   (REQ_F16A_L01 propulsion, L02 flight control, L03 airframe), not a logical
-%   role: a candidate is answerable to the decision it is an option in.
+%   ALL SEVEN CANDIDATES ARE TradeAlternative HERE, not TradeWinner: no trade
+%   has run at this point, so nothing has won. Section 7b flips the three
+%   winners and adds its own sentence in front of the text below rather than
+%   overwriting it. Their TraceRef is the DECISION requirement for the role,
+%   not a logical role -- a candidate is answerable to the decision it is an
+%   option in.
 % ---------------------------------------------------------------------
 % Logical-role path prefix. Section 7 keeps its own copy (as L) so each section
 % stays readable on its own; both are the same string.
@@ -752,58 +595,33 @@ assertRationaleComplete(m.Architecture, profileName);
 % ---------------------------------------------------------------------
 % 6c) TradeCandidate: the parameters the trade study scores (D-002, D-007).
 %
-%   This is where the Physical layer earns its definition. A logical option is
-%   a name; a physical candidate is a name PLUS the numbers somebody could
-%   quote, measure or dispute -- and every one of those numbers arrives with a
-%   provenance tag, because a sourced figure and a teaching guess must not look
-%   alike in the model.
+%   A logical option is a name; a physical candidate is a name PLUS numbers
+%   somebody could quote, measure or dispute -- each arriving with a provenance
+%   tag, so a sourced figure and a teaching guess cannot look alike.
 %
-%   PROVENANCE, PLAINLY (D-007). Three candidates are tagged Reference: their
-%   masses are the Brandt F-16A component weights already carried by this model
-%   (Propulsion 4730.23, Airframe 6722.88, FlightControls 472.44 lb) -- the same
-%   figures the mass roll-up produces for the active configuration, which is
-%   why the trade's baselines and the model agree by construction. The other
-%   four are tagged Estimate: their masses are ILLUSTRATIVE TEACHING VALUES
-%   chosen to make the trade instructive. THEY ARE NOT F-16 DATA, no aircraft
-%   was ever built to them, and they must never be cited as such. Each one --
-%   and every other invented number in this model, including the Benefit and
-%   TRL judgements below -- is inventoried in entry D-030 of
-%   docs/07_decision_log.md. That entry is what D-007's "every Estimate is
-%   listed in the decision log" points at; do not restate the figures here,
-%   because a second list is a list that can disagree with the first.
+%   Three candidates are Reference (Brandt masses: Propulsion 4730.23, Airframe
+%   6722.88, FlightControls 472.44 lb). The other four are Estimate --
+%   ILLUSTRATIVE TEACHING VALUES, not F-16 data, inventoried in D-030. Do not
+%   restate the figures anywhere: a second list can disagree with the first.
 %
-%   READ THE TAG NARROWLY. There is ONE DataProvenance per candidate and it
-%   qualifies the MASS -- the only measurable, disputable, dimensioned figure a
-%   candidate carries. Benefit (1..10, 0 meaning "not set" -- D-033) and TRL
-%   (1..9, 0 meaning "not set" -- D-021) are ENGINEERING JUDGEMENT on a declared
-%   scale for every candidate including the Reference ones: they are a teaching
-%   ranking, not a measured maturity assessment, and no tag on this stereotype
-%   would make them otherwise. Do not read "Reference" as "these three numbers
-%   are sourced".
+%   READ THE TAG NARROWLY. One DataProvenance per candidate, and it qualifies
+%   the MASS. Benefit and TRL are engineering JUDGEMENT on a declared scale for
+%   every candidate including the Reference ones (D-025).
 %
-%   MASS_LB HERE IS NOT PHYSICALITEM.MASS_LB. This is the TRADED figure: the
-%   number the candidate is scored on, a property of the candidate as an
-%   OPTION. PhysicalItem.Mass_lb is the number the roll-up sums, a property of
-%   the candidate as a PART. For the six LEAF candidates the two agree
-%   trivially -- a lumped block is its own subtotal. For BlendedCrankedDelta,
-%   the one candidate that is decomposed, they differ in kind: its
-%   TradeCandidate.Mass_lb is 6722.88 (what the option weighs), while its
-%   PhysicalItem.Mass_lb stays 0 because it is an INTERIOR node whose subtotal
-%   the roll-up writes -- exactly as Airframe did before this restructure.
+%   MASS_LB HERE IS NOT PHYSICALITEM.MASS_LB. This is the TRADED figure, a
+%   property of the candidate as an OPTION; PhysicalItem.Mass_lb is what the
+%   roll-up sums, a property of it as a PART. They agree trivially for the six
+%   leaf candidates. For BlendedCrankedDelta they differ in kind: 6722.88 as an
+%   option, 0 as an interior node whose subtotal the roll-up writes.
 %
-%   UNITCOST_USD IS NaN ON ALL SEVEN (D-005). Cost is a pending Measure of
-%   Merit, not a modelled one; the trade drops it and renormalizes. Note the
-%   spelling: string(num2str(NaN)), never string(NaN) -- the latter is
-%   <missing> and setProperty rejects it.
+%   Note the NaN spelling: string(num2str(NaN)), never string(NaN) -- the
+%   latter is <missing> and setProperty rejects it.
 %
-%   SELECTED IS FALSE ON ALL SEVEN, HERE. The candidates are built unselected
-%   because at this line nothing has been scored yet. Section 7b then runs
-%   F16APhysicalTradeStudy, which sets Selected from the score -- and only then
-%   does the active variant choice above stop being a placeholder. Do not
-%   pre-select a winner here to "save a step": the value of this file is that
-%   the model is in a defensible state at every line of it, and a candidate
-%   marked selected before the trade would be a decision with no arithmetic
-%   behind it.
+%   SELECTED IS FALSE ON ALL SEVEN HERE, because nothing has been scored yet.
+%   Section 7b sets it from the score. Do not pre-select a winner to save a
+%   step -- the value of this file is that the model is defensible at every
+%   line of it, and a candidate selected before the trade is a decision with no
+%   arithmetic behind it.
 %
 %   {path, RealizesRole, RealizesKind, Mass_lb, TRL, Benefit, DataProvenance}
 % ---------------------------------------------------------------------
@@ -841,21 +659,17 @@ save_system(modelName, char(modelFile));
 % 7) Realization allocation: logical role -> physical part(s).
 %
 %    A ROLE IS REALIZED BY ITS CANDIDATES, NOT BY THE VARIANT WRAPPER. The
-%    wrapper is the open question; the candidates are the ways of answering it,
-%    and each of them genuinely does realize the role -- which is precisely why
-%    the trade is a real decision and not a formality. Allocating to the
-%    wrapper instead would say "something in here realizes the role" and hide
-%    the options the L layer went to the trouble of enumerating.
+%    wrapper is the open question; each candidate genuinely does realize the
+%    role, which is why the trade is a real decision. Allocating to the wrapper
+%    would say "something in here realizes the role" and hide the options L
+%    went to the trouble of enumerating.
 %
-%    THE 1->MANY TEACHING MOMENT MOVED. It used to be Airframe -> six
-%    structural parts: one role DECOMPOSED into the parts that together do the
-%    job. It is now PropulsionSystem -> four targets, and those four mean two
-%    different things in one edge set: three MUTUALLY EXCLUSIVE engine
-%    candidates (exactly one will be built) plus the InletDuct that all three
-%    need (D-009). Realization cannot tell those apart -- an allocation edge
-%    says only "this part is part of realizing that role". The variant
-%    structure is what carries the exclusivity, which is the point worth making
-%    to a student: allocation and variation are different relations.
+%    PropulsionSystem -> four targets is the 1->many teaching moment, and those
+%    four mean two different things in one edge set: three MUTUALLY EXCLUSIVE
+%    engine candidates plus the InletDuct all three need (D-009). Realization
+%    cannot tell them apart -- an edge says only "this part helps realize that
+%    role". The variant structure carries the exclusivity. Allocation and
+%    variation are different relations.
 % ---------------------------------------------------------------------
 srcModel = systemcomposer.loadModel(logiName);
 L = "F16A_Logical/";
@@ -888,34 +702,27 @@ relocate(allocName + ".mldatx", allocFile, thisDir);
 % ---------------------------------------------------------------------
 % 7b) THE DECISION. Everything above builds the question; this makes the call.
 %
-%    F16APhysicalTradeStudy discovers the candidates section 6c parameterized
-%    (it reads them out of the model -- there is no candidate list in it),
-%    scores each role with the declared value functions of D-015, and records
-%    the outcome in four places: the active variant choice and
-%    TradeCandidate.Selected here at P, the Rationale of every candidate here
-%    at P, the active KIND plus SolutionOption.Selected/DecisionRef back at L,
-%    and an Implement link from each winning kind to its decision requirement
-%    REQ_F16A_L01..L03. It saves the P model, the L model, the decision
-%    requirement set and the L model link set itself.
+%    F16APhysicalTradeStudy DISCOVERS the candidates section 6c parameterized
+%    (there is no candidate list in it), scores each role with D-015's declared
+%    value functions, and records the outcome in four places: the active
+%    variant choice and TradeCandidate.Selected at P, every candidate's
+%    Rationale at P, the active KIND plus SolutionOption.Selected/DecisionRef
+%    back at L, and an Implement link from each winning kind to REQ_F16A_L01..L03.
 %
-%    WHY IT RUNS HERE AND NOT SOMEWHERE ELSE IN THIS FILE.
-%      * AFTER 6c, because the trade reads TradeCandidate -- with no parameters
-%        there is nothing to score.
-%      * AFTER 7, because the allocation edges name the candidates; building
-%        realization against a set of options and then deciding is OOSEM's
-%        order (allocate to concrete elements first, then evaluate), not ours
-%        to reverse (docs/06_methodology.md).
+%    WHY IT RUNS HERE:
+%      * AFTER 6c -- the trade reads TradeCandidate; no parameters, nothing to
+%        score.
+%      * AFTER 7 -- the allocation edges name the candidates. Allocate to
+%        concrete elements, then evaluate, is OOSEM's order (06_methodology.md).
 %      * BEFORE 9, and this is the one that matters. The roll-ups measure the
-%        ACTIVE configuration. Run them first and they would report whatever
-%        placeholder section 3 happened to set; run them after the trade and
-%        the OEW, composite fraction and fuel figures the shipped model carries
-%        describe the aircraft the trade CHOSE. The whole restructure exists to
-%        make that sentence true.
+%        ACTIVE configuration, so running them first would report whatever
+%        placeholder section 3 set. After the trade, the OEW, composite
+%        fraction and fuel figures describe the aircraft the trade CHOSE.
 %
 %    The trade selects the production configuration, so the active choice does
-%    not actually move -- but it is now set BY the score rather than by the
-%    order the generator wrote its candidates in, which is the difference
-%    between a decision and a default.
+%    not move -- but it is now set BY the score rather than by the order the
+%    generator wrote its candidates in, which is the difference between a
+%    decision and a default.
 % ---------------------------------------------------------------------
 trades = F16APhysicalTradeStudy();
 
@@ -927,16 +734,13 @@ trades = F16APhysicalTradeStudy();
 %    (see F16AOpenForReview).
 %
 %    "Verified by" links (requirement -> verification test) are NOT created
-%    here. ISSUE (R2026a): the programmatic slreq API cannot produce a working
-%    "Verified by" for a MATLAB unit test on its own -- that needs the
-%    project's Digital Thread artifact tracking, a manual project setting. So
-%    verify links are added MANUALLY in the Requirements Editor, linking each
-%    requirement to its OWN verification test:
-%        REQ_F16A_022  ->  F16AMaterialsVerificationTest
-%        REQ_F16A_P01  ->  F16AFuelVerificationTest
-%    (see docs/README.md "Verification links are added manually"). The
-%    generator no longer touches the requirement-set link sets, so a manual
-%    verify link is never overwritten by regeneration.
+%    here. R2026a limitation: a MATLAB test file cannot be a link SOURCE, so
+%    the programmatic slreq API cannot mint a working "Verified by" for a unit
+%    test. Each is added MANUALLY in the Requirements Editor, linking a
+%    requirement to its OWN verification test -- see docs/README.md. (Project
+%    artifact tracking is NOT what makes them work; that was measured.)
+%    This generator never touches the requirement-set link sets, so a manual
+%    verify link is not overwritten by regeneration.
 % ---------------------------------------------------------------------
 unitCost = F16APhysicalCostModel(m);   % stub returns NaN ("not yet computed")
 % num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
@@ -1032,19 +836,13 @@ function applyStereotypeToTree(arch, qualifiedStereotype)
 %   "F16A_PhysicalProps.Rationale". Used for both PhysicalItem and Rationale:
 %   every part must be able to report a mass and a reason for existing.
 %
-%   VARIANT-SAFE, by construction rather than by luck (Stage-0 probe):
-%     * applyStereotype ERRORS on a systemcomposer.arch.VariantComponent, so a
-%       variant is skipped rather than stereotyped -- a role wrapper is not a
-%       part and has nothing to justify; its candidates do (D-013). The
-%       variant's instance node still reports the rolled-up mass.
+%   VARIANT-SAFE by construction:
+%     * applyStereotype ERRORS on a VariantComponent, so a variant is skipped
+%       rather than stereotyped -- a role wrapper is not a part (D-013). Its
+%       instance node still reports the rolled-up mass.
 %     * a variant's children are reached with getChoices, NEVER with
-%       .Architecture.Components -- the latter returned the choices on a
-%       freshly built in-memory model but ZERO on the same model saved and
-%       reloaded, which would silently skip every candidate.
-%   Both branches now carry real traffic: the P model has three variant roles,
-%   and this walk stereotypes their seven candidates while leaving the three
-%   wrappers alone. It was written this way one stage before it was needed and
-%   did not have to change when they arrived.
+%       .Architecture.Components, which returns ZERO on a reloaded model and
+%       would silently skip every candidate.
 for c = arch.Components
     if isa(c, "systemcomposer.arch.VariantComponent")
         for ch = getChoices(c)
@@ -1125,16 +923,13 @@ function vc = addVariantRole(parentArch, roleName, choiceNames, activeName, port
 %                 propagated to the variant boundary so the role wires like a
 %                 plain component. Omit or pass {} for a port-free variant.
 %
-%   A variant needs exactly one active choice to be a valid model, so one is
-%   set here. Between this line and section 7b that active choice is a
-%   PLACEHOLDER, NOT A DECISION -- the identical convention (and wording)
-%   generate_f16a_logical.m uses for the kinds -- and section 7b re-asserts it
-%   from the score. What makes it a decision is TradeCandidate.Selected, the
-%   winner's Rationale.Justification and the Implement link to the decision
-%   requirement (D-040); the active flag merely follows.
+%   A variant needs one active choice to be a valid model, so one is set here.
+%   Between this line and section 7b it is a PLACEHOLDER, NOT A DECISION -- the
+%   same convention generate_f16a_logical.m uses for the kinds. What makes it a
+%   decision is TradeCandidate.Selected, the winner's Justification and the
+%   Implement link (D-040); the active flag merely follows.
 %
-%   Deliberately kept API-compatible with the L generator's helper of the same
-%   name, so the two layers' variant mechanics can be read side by side.
+%   Kept API-compatible with the L generator's helper of the same name.
 %   R2026a specifics learned the hard way (same as L):
 %     * addVariantComponent seeds default choices ("Component", "Component1");
 %       destroy any choice we did not ask for.

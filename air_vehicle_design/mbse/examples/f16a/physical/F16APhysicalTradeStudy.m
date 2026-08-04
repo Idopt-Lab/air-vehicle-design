@@ -1,176 +1,80 @@
 function results = F16APhysicalTradeStudy()
 %F16APHYSICALTRADESTUDY Score the F-16A physical candidates and record the decision.
-%   RESULTS = F16APHYSICALTRADESTUDY() finds every component in
-%   physical/F16A_Physical.slx that carries the TradeCandidate stereotype,
-%   groups those candidates by the role each one says it realizes, scores the
-%   candidates of a role against one another, selects a winner per role, and
-%   WRITES THE DECISION DOWN in four places. It returns a DICTIONARY from role
-%   name to a ranked table, so a caller can report the ranking without
-%   re-deriving it. Its values are cell-held, because a table cannot live in a
-%   dictionary's value array, so a caller READS IT WITH BRACES --
-%   results{"Airframe"} is the table, results("Airframe") is the 1x1 cell
-%   around it. Keys come back from keys(results) as a string array, in the
-%   sorted role order the report is printed in (see roleTables below).
+%   RESULTS = F16APHYSICALTRADESTUDY() finds every component in F16A_Physical
+%   carrying the TradeCandidate stereotype, groups them by the role each says
+%   it realizes, scores the candidates of a role against one another, selects a
+%   winner, and WRITES THE DECISION DOWN in four places.
 %
-%   THIS IS THE FILE THE LAYER SPLIT EXISTS FOR. The Logical layer enumerates
-%   technology-neutral KINDS and commits to none of them; the Physical layer
-%   holds the concrete parameterized CANDIDATES and is therefore the only layer
-%   that can decide. So the trade runs here, over parts with numbers on them,
-%   and calls back into L to set the winning kind (D-001; the boundary rule and
-%   its literature grounding are in docs/06_methodology.md).
+%   Returns a DICTIONARY from role name to a ranked table. Values are
+%   cell-held, because a table cannot live in a dictionary's value array, so
+%   read it WITH BRACES: results{"Airframe"} is the table, results("Airframe")
+%   is the 1x1 cell around it. keys() returns roles in INSERTION order (where
+%   containers.Map sorted them); roles come from unique() and so are already
+%   sorted -- keep them that way or the reported order moves.
+%
+%   THIS IS THE FILE THE LAYER SPLIT EXISTS FOR. L enumerates technology-neutral
+%   KINDS and commits to none; P holds the concrete parameterized CANDIDATES and
+%   is therefore the only layer that can decide (D-001).
 %
 %   WHAT IT WRITES
 %     1. P, configuration -- setActiveChoice on the role variant, and
-%        TradeCandidate.Selected true on the winner, false on the others.
-%     2. P, rationale -- Rationale.SourceKind becomes TradeWinner on the winner
-%        and TradeAlternative on every loser, and each Justification is
-%        rewritten to state the result it actually got: its score, its rank, the
-%        margin, and WHICH CRITERION DECIDED IT AGAINST THE RUNNER-UP -- stated
-%        with that qualifier because that is all it is (D-006, D-034).
-%     3. L, the cross-layer callback -- in logical/F16A_Logical.slx the role's
-%        active choice becomes the winner's RealizesKind, SolutionOption
-%        .Selected goes true on that kind and false on its sibling, and
-%        SolutionOption.DecisionRef names the decision requirement.
-%     4. R, traceability -- an Implement link from the winning KIND to its
-%        decision requirement in requirements/f16a_logical_derived.slreqx
-%        (REQ_F16A_L01 propulsion, L02 flight control, L03 airframe), which is
-%        what turns those three from un-implemented into answered (D-010, D-019).
+%        TradeCandidate.Selected on the winner.
+%     2. P, rationale -- SourceKind becomes TradeWinner / TradeAlternative, and
+%        each Justification states the score, rank, margin and which criterion
+%        decided it AGAINST THE RUNNER-UP (D-034).
+%     3. L, the cross-layer callback -- the role's active kind, SolutionOption
+%        .Selected, and DecisionRef on every kind of the role.
+%     4. R, traceability -- an Implement link from the winning KIND to
+%        REQ_F16A_L01..L03.
 %
-%   NOTHING IS DELETED. A losing candidate stays in the P model and a losing
-%   kind stays in the L model; that is the set-based-design discipline the
-%   example borrows, and it is what keeps the decision auditable afterwards.
+%   NOTHING IS DELETED. Losing candidates stay in P and losing kinds stay in L --
+%   the set-based-design discipline that keeps the decision auditable.
 %
-%   -----------------------------------------------------------------------
-%   IT DISCOVERS ITS CANDIDATES; IT DOES NOT KNOW THEM
+%   IT DISCOVERS ITS CANDIDATES; IT DOES NOT KNOW THEM. There is no list of
+%   candidate names in this file. Add a fourth engine to the generator and it
+%   enters the propulsion trade on the next run with no edit here -- the only
+%   way a trade study can be trusted not to have quietly dropped an option. The
+%   one declared mapping is role -> decision requirement (DECISIONREQS): a new
+%   role genuinely needs a new requirement, and inventing one silently would be
+%   worse than stopping.
 %
-%   There is no list of candidate names in this file. The trade walks the P
-%   model, collects every component carrying TradeCandidate, and groups by that
-%   stereotype's RealizesRole. Add a fourth engine to generate_f16a_physical.m
-%   and it enters the propulsion trade on the next run with no edit here --
-%   which is the only way a trade study can be trusted not to have quietly
-%   dropped an option. The one thing that is declared rather than discovered is
-%   role -> decision requirement (DECISIONREQS below): a NEW ROLE genuinely
-%   needs a new requirement to record its decision in, and inventing that
-%   silently would be worse than stopping.
+%   SCORING: DECLARED VALUE FUNCTIONS, NOT MIN-MAX (D-015). Each criterion maps
+%   a raw number to a value WITHOUT reference to the other candidates:
+%     Benefit  v = B/10          TRL  v = (TRL-1)/8
+%     Mass_lb  v = M_baseline/M  UnitCost_USD  v = C_baseline/C
+%   Min-max was retired because it is degenerate at n = 2 (every criterion
+%   collapses to {0,1}) and set-dependent (adding a candidate rescores the
+%   others). A ratio criterion's baseline is the role's Reference-tagged
+%   candidate, derived from the data; a role without exactly one stops the run.
 %
-%   SCORING: DECLARED VALUE FUNCTIONS, NOT MIN-MAX (D-015)
+%   THE 1.0 CEILING IS NOT UNIFORM. Benefit and TRL are capped by their declared
+%   scales; the ratio criteria are not, so a candidate lighter than its baseline
+%   contributes more than its weight allows. That is WARNED, not capped (the
+%   advantage is real) and not rejected (the candidate is legitimate) -- D-035.
 %
-%   Each criterion carries a value function that maps a raw number to a value
-%   on 0..1 WITHOUT reference to the other candidates:
+%   COST FALLS OUT OF A GENERAL RULE (D-005, D-026). Nothing here says "exclude
+%   cost". A criterion no candidate of the role carries a value for is dropped
+%   and the remaining weights renormalized, which turns the declared
+%   0.40/0.20/0.20/0.20 into the applied 0.50/0.25/0.25.
+%   THE TRIGGER FOR COST RE-ENTERING IS THE CANDIDATES CARRYING A COST -- NOT A
+%   COST MODEL EXISTING (D-043). Those are different events, and this file used
+%   to say they were the same. D-043 gives the AIRCRAFT a real DAPCA-IV cost
+%   while TradeCandidate.UnitCost_USD stays NaN permanently, so a cost model
+%   will exist and cost will still not re-enter. The mechanism is untouched:
+%   whichever criterion's values arrive, it re-enters with no change here.
 %
-%     Benefit       v = B / 10                  benefit is declared on 1..10,
-%                                               0 meaning "not set" (D-033)
-%     TRL           v = (TRL - 1) / 8           TRL is declared on 1..9
-%     Mass_lb       v = M_baseline / M          ratio to the role's baseline;
-%                                               v > 1 means lighter than it
-%     UnitCost_USD  v = C_baseline / C          same shape; no values yet
+%   GUARD RAILS. The run errors, naming the candidate, on a TRL outside 1..9, a
+%   Benefit outside 1..10, a non-positive Mass_lb, a role with fewer than two
+%   candidates, a partial criterion column, or a TIE for first place (sort order
+%   is not a decision). THREE OF THEM LIVE IN F16APhysicalTradeGuards.m, not
+%   here -- see that file for why a negative test could not safely be written
+%   while they were local functions.
 %
-%   THE 1.0 CEILING IS NOT UNIFORM. Benefit and TRL are capped at 1.0 by their
-%   declared scales, which the guards below enforce. The two RATIO criteria are
-%   not capped by anything: a candidate lighter than the baseline scores v > 1
-%   and therefore contributes MORE than its declared weight allows, at which
-%   point 0.50/0.25/0.25 has stopped describing relative influence. That is not
-%   capped (the advantage is real) and not rejected (the candidate is
-%   legitimate) -- it is WARNED about, so the reader knows the weights no
-%   longer mean what they say (D-035).
-%
-%   Min-max normalization was retired for two reasons. It is DEGENERATE AT
-%   n = 2 -- every criterion collapses to {0,1}, so a score is just the sum of
-%   the weights a candidate happens to win and the margin carries no
-%   information -- and it is SET-DEPENDENT: adding a candidate silently
-%   rescores the others and can reverse a rank. A declared value function has
-%   neither property, at the price of having to state the scale you mean, which
-%   is a price worth paying.
-%
-%   The baseline of a ratio criterion is the value carried by the role's
-%   Reference-tagged candidate -- derived from the data, never hard-coded. A
-%   role without exactly one Reference candidate stops the run: with none there
-%   is no baseline, and with two there is no answer to "which one".
-%
-%   COST FALLS OUT OF A GENERAL RULE (D-005)
-%
-%   Nothing here says "exclude cost". The rule is: a criterion NO candidate of
-%   the role carries a value for is dropped, and the remaining weights are
-%   renormalized over the criteria that do. This file scores
-%   TradeCandidate.UnitCost_USD, which is NaN on all seven candidates, so cost
-%   drops out and the run logs that it did. The declared weights are
-%   0.40 / 0.20 / 0.20 / 0.20; dropping cost renormalizes them to the
-%   0.50 / 0.25 / 0.25 that D-005 and D-015 quote.
-%
-%   THE TRIGGER IS THE CANDIDATES CARRYING A COST -- NOT A COST MODEL EXISTING
-%   (D-043). Those are not the same event, and this file used to say they were.
-%   D-043 gives F16APhysicalCostModel a real DAPCA-IV implementation that
-%   populates MeasureOfMerit.UnitCost_USD on the AIRCRAFT, while
-%   TradeCandidate.UnitCost_USD stays NaN permanently -- because DAPCA IV
-%   answers "what does this aeroplane cost" and has nothing to say about "what
-%   does this wing candidate cost", and costing F110_GE_100 or
-%   ConventionalTrapWing means costing aircraft nobody built. So a cost model
-%   will exist and cost will still not re-enter: the applied weights stay
-%   0.50 / 0.25 / 0.25, and cost is demonstrated as the whole-aircraft
-%   objective (REQ_F16A_026), never as a trade criterion.
-%
-%   The MECHANISM is untouched by that and is still the whole reason this is
-%   written as a rule instead of an exception: whichever criterion's values
-%   arrive, it re-enters the score with no change to this file (D-026).
-%
-%   GUARD RAILS -- an unset parameter must stop the trade, not be scored
-%
-%   The run errors, naming the candidate, on: a TRL outside 1..9 (D-021 makes 0
-%   the deliberate "unset" sentinel, precisely so it cannot pass for a
-%   mid-maturity guess); a non-positive Mass_lb (it is the denominator of the
-%   mass value function); a Benefit outside 1..10, BOUNDED AT BOTH ENDS for the
-%   same reason TRL is (D-033) -- 0 is the stereotype default and so the same
-%   "not set" sentinel, and the UPPER bound is the one that matters, because
-%   B/10 is the term a slipped decimal point can win a trade with: 78 typed for
-%   7.8 contributes 3.90 where 0.50 is the legitimate maximum contribution of
-%   any criterion, and being finite it sails straight past the isfinite net;
-%   a role with fewer than two candidates (that is not a trade); a criterion
-%   with values on some candidates but not all (a partial column scores the
-%   ones that happen to carry data against the ones that do not); and a TIE for
-%   first place, which is a decision the data cannot make and must not be
-%   broken by sort order.
-%
-%   It WARNS, and carries on, when a value function returns more than the 1.0
-%   its declared scale implies (D-035). Only the unbounded ratio criteria can
-%   reach that, and there the honest response is neither to cap (which discards
-%   a real advantage) nor to error (which rejects a legitimate candidate) but
-%   to say out loud that the weights no longer describe relative influence.
-%
-%   THREE OF THOSE GUARDS LIVE IN F16APhysicalTradeGuards.m, NOT HERE -- the
-%   parameter bounds, the tie refusal and the ceiling warning. They are pure
-%   arithmetic over declared values, and while they were local functions of
-%   this file the only way to make one fire was to run the whole study against
-%   the shipped artifacts: a negative test that would corrupt two models and a
-%   requirement set on the very day the guard it was checking had been
-%   refactored away. Lifting them out makes each assertable on its own. The
-%   identifiers they throw are unchanged, and so is every number and every
-%   character this file prints and writes.
-%
-%   IDEMPOTENT. Re-running writes the same active choices, the same flags, the
-%   same justifications and the same links. Justifications are rewritten from
-%   scratch each run -- the trade sentence is regenerated and the part's
-%   standing "why do I exist" rationale is preserved behind the JUSTSENTINEL
-%   separator -- so a second run does not stack two verdicts on one part. The
-%   Implement links are rebuilt: any existing inbound link to a decision
-%   requirement whose source is the L model is removed before the new one is
-%   created, so a re-run that picked a different winner cannot leave the old
-%   link pointing at the loser.
-%   -----------------------------------------------------------------------
-%   R2026a API NOTES (measured; see docs/08_agent_team.md for the full set)
-%     * A variant's choices are reachable ONLY through getChoices. A walk over
-%       .Architecture.Components returns them on a freshly built in-memory
-%       model but ZERO on the same model saved and reloaded (finding 6) -- on a
-%       loaded model that walk would find no candidates at all and this study
-%       would report "nothing to trade".
-%     * String and ENUMERATION properties read back WITH surrounding quotes
-%       (findings 1 and 7), so every read strips them with erase(..., "'").
-%       Writing goes the other way: a string literal must arrive quoted, an
-%       enum fully qualified and unquoted.
-%     * applyStereotype/getStereotypes are not used on a VariantComponent
-%       (finding 4, D-013) -- a role wrapper is not a candidate.
-%     * A double property with no value reads back the char 'NaN', which
-%       str2double turns into NaN: that is how the cost column is detected as
-%       empty rather than as zero.
+%   IDEMPOTENT. Re-running writes the same choices, flags, justifications and
+%   links. A justification is regenerated and the part's standing rationale
+%   preserved behind JUSTSENTINEL, so runs do not stack verdicts. Implement
+%   links are rebuilt, so a re-run picking a different winner cannot leave the
+%   old link pointing at the loser.
 %
 %   Requires the P model, the L model and the decision requirement set to exist
 %   (run generate_f16a_physical.m, which calls this as its section 7b).

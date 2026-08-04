@@ -57,35 +57,16 @@ function generate_f16a_logical()
 %   requirements REQ_F16A_L01..L03 -- those are linked by the physical trade
 %   study, so L stays independent of whether P has run (D-010).
 %
-%   -----------------------------------------------------------------------
-%   R2026a API NOTES -- these calls are new to this repo (the F layer used
-%   only plain components + slreq links). Confirm on first run; each is
-%   isolated in a helper below so a signature fix touches one place:
-%     * Variants:   addVariantComponent, addChoice, setActiveChoice
-%                   (helper addVariantRole). getChoices returns the choices
-%                   ALPHABETICALLY, not in creation order, so never rely on
-%                   creation order -- always address a choice by name.
-%                   getChoices is also the ONLY reliable way to reach the
-%                   choices at all: .Architecture.Components hands them back on
-%                   a freshly built in-memory model but ZERO on the same model
-%                   saved and reloaded (Stage-0 finding 6). Every walk over this
-%                   architecture -- addVariantRole and countComps below --
-%                   therefore special-cases a VariantComponent.
-%     * Profile:    systemcomposer.profile.Profile.createProfile, addStereotype
-%                   (AppliesTo=), addStereotype-property addProperty(Type=,
-%                   DefaultValue=), applyProfile, applyStereotype, setProperty.
-%                   A stereotype CANNOT be applied to a variant component
-%                   (applyStereotype errors on systemcomposer.arch.
-%                   VariantComponent) -- it goes on the variant's CHOICES,
-%                   which is exactly where SolutionOption belongs anyway.
-%                   Property values and defaults are evaluated as MATLAB
-%                   expressions, so a string literal must be quoted: "'TBD'".
-%     * Allocation: systemcomposer.allocation.createAllocationSet, getScenario,
-%                   scenario.allocate(srcElem, dstElem), alloc.save.
-%   As in generate_f16a_functional.m, connect ports with the TWO-argument
-%   form connect(srcPort, dstPort); the three-argument form silently leaves
-%   ports unwired in R2026a.
-%   -----------------------------------------------------------------------
+%   Two R2026a traps this file is written around (full set in
+%   docs/08_agent_team.md): a variant's choices are reachable ONLY through
+%   getChoices, which returns them ALPHABETICALLY rather than in creation order
+%   -- .Architecture.Components returns ZERO on a reloaded model, so every walk
+%   here special-cases a VariantComponent and every choice is addressed by
+%   name. And a stereotype cannot be applied to a variant component; it goes on
+%   the CHOICES, which is where SolutionOption belongs anyway.
+%   Property values are evaluated as MATLAB expressions, so a string literal
+%   must be quoted ("'TBD'"), and ports connect with the TWO-argument
+%   connect(src, dst).
 
 modelName   = "F16A_Logical";
 funcName    = "F16A_Functional";
