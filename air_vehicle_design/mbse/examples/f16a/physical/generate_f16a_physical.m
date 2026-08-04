@@ -31,7 +31,7 @@ function generate_f16a_physical()
 %          |     |                         VerticalTail Nacelles Strakes
 %          |     |- ConventionalTrapWing  (single lumped block)
 %          |- Propulsion
-%          |     |= Engine    (3 candidates: F100_PW_200 F110_GE_100
+%          |     |= Engine    (3 candidates: F100_PW_200 LowThrustSingle_Surrogate
 %          |     |             TwinEngine_Surrogate)
 %          |     |- InletDuct          (common to all engine candidates, D-009)
 %          |= FlightControls  (2 candidates: FlyByWire HydroMechanical)
@@ -200,7 +200,7 @@ fctrl = addVariantRole(ac, "FlightControls", ...
 % part for no lesson, and pricing an inlet delta into the twin-engine
 % surrogate would invent a number we cannot defend.
 addVariantRole(propulsion.Architecture, "Engine", ...
-    ["F100_PW_200","F110_GE_100","TwinEngine_Surrogate"], "F100_PW_200");
+    ["F100_PW_200","LowThrustSingle_Surrogate","TwinEngine_Surrogate"], "F100_PW_200");
 addComponent(propulsion.Architecture, "InletDuct");
 
 % FuelSystem refines into three internal tanks (~2100 lb usable fuel each,
@@ -342,6 +342,21 @@ tc.addProperty("Mass_lb",        Type="double",  DefaultValue="0");
 tc.addProperty("Benefit",        Type="double",  DefaultValue="0");     % <- outside 1..10 on purpose
 tc.addProperty("TRL",            Type="int32",   DefaultValue="0");     % <- outside 1..9 on purpose
 tc.addProperty("UnitCost_USD",   Type="double",  DefaultValue="NaN");   % <- D-005: cost is pending
+% T_SL_lb: sea-level static thrust, installed TOTAL for the candidate (a twin
+% carries both engines' thrust). It exists so the engine narratives can point at
+% a property instead of at nothing -- before it, two of them asserted things
+% about thrust that the model had no way to state.
+%
+% IT IS NOT A TRADE CRITERION AND NOT A SCREEN. The criteria stay Benefit, TRL,
+% Mass_lb and UnitCost_USD; nothing is disqualified for a thrust shortfall, and
+% the trade's arithmetic and outcome are unchanged by its presence. No T/W ratio
+% is computed anywhere in this repo -- the thrusts sit beside each other and the
+% Justification says what they mean, leaving the reader to do the division.
+%
+% NaN, not 0, for the same D-021 reason as cost: only the three engines carry a
+% thrust, and 0 on the airframe and flight-control candidates would be a number
+% somebody could take seriously rather than the "not applicable" it means.
+tc.addProperty("T_SL_lb",        Type="double",  DefaultValue="NaN");
 tc.addProperty("DataProvenance", Type="F16ADataProvenance", ...
     DefaultValue="F16ADataProvenance.Estimate");
 tc.addProperty("Selected",       Type="boolean", DefaultValue="false");
@@ -394,7 +409,7 @@ massRows = {
     AFC+"Strakes",                   90.00, "Reference";
     S+"Airframe/ConventionalTrapWing", 7300.00, "Estimate";
     S+"Propulsion/Engine/F100_PW_200",         4730.23, "Reference";
-    S+"Propulsion/Engine/F110_GE_100",         5100.00, "Estimate";
+    S+"Propulsion/Engine/LowThrustSingle_Surrogate",         5100.00, "Estimate";
     S+"Propulsion/Engine/TwinEngine_Surrogate",6400.00, "Estimate";
     S+"Propulsion/InletDuct",       728.60, "Reference";
     S+"LandingGear",               1066.82, "Reference";
@@ -563,13 +578,13 @@ ratRows = {
         "Exists to realize the logical PropulsionSystem role, turning stored fuel energy into the thrust without which no other flight function is available.", ...
         LR+"PropulsionSystem";
     S+"Propulsion/Engine/F100_PW_200", "F16ASourceKind.TradeAlternative", ...
-        "Exists as the single-engine candidate already in production and already qualified: one high-bypass-for-its-class afterburning turbofan sized to give this airframe a thrust-to-weight above one, which is what buys the acceleration, climb and sustained-turn performance the mission demands. Its appeal is maturity and installed mass, not peak thrust.", ...
+        "The ONLY REAL ENGINE in this trade, and the one the F-16A actually flew with: a production-qualified afterburning turbofan delivering 23,770 lb of sea-level static thrust with afterburner, taken with its installed mass of 4730.23 lb from the Brandt F-16A reference in /sizing/. Its appeal is maturity and installed mass. Every claim in this sentence is sourced; the two candidates it is scored against are not real engines and say so.", ...
         "REQ_F16A_L01";
-    S+"Propulsion/Engine/F110_GE_100", "F16ASourceKind.TradeAlternative", ...
-        "Exists as the higher-thrust single-engine candidate: it would buy more installed thrust and a wider stall-free operating margin from the same single-engine installation, at the cost of a heavier engine and a maturity level that does not yet support a production commitment. It is the option that asks whether performance is worth waiting for.", ...
+    S+"Propulsion/Engine/LowThrustSingle_Surrogate", "F16ASourceKind.TradeAlternative", ...
+        "A HYPOTHETICAL single-engine candidate. It is not a real engine and no real product is being described: its 18,500 lb of thrust, 5100 lb of mass and TRL of 4 are invented teaching values chosen so that it loses, and it wears a surrogate name for that reason. It exists to put a second single-engine option on the table -- one whose thrust falls short of what this airframe needs at its 31,377 lb design weight -- so that SingleEngine-versus-TwinEngine is not the only question the propulsion trade asks.", ...
         "REQ_F16A_L01";
     S+"Propulsion/Engine/TwinEngine_Surrogate", "F16ASourceKind.TradeAlternative", ...
-        "Exists as the twin-engine candidate: two smaller engines instead of one, which buys engine-out survivability and lets each engine run at a lower rating, at the cost of substantially more installed mass, a second set of accessories and a duplicated installation. It is the candidate that makes the single-vs-twin architectural question a real comparison rather than an assumption.", ...
+        "A HYPOTHETICAL twin-engine candidate, two smaller engines instead of one, with invented teaching values throughout. Its 32,000 lb of combined thrust is far more than this airframe needs, and it is priced for it in the currency this model actually carries: 6400 lb installed, the heaviest option here, plus a second set of accessories and a duplicated installation. It buys engine-out survivability and lets each engine run at a lower rating. It exists to make the single-versus-twin architectural question a real comparison rather than an assumption.", ...
         "REQ_F16A_L01";
     S+"Propulsion/InletDuct", "F16ASourceKind.RealizesFunction", ...
         "Exists to deliver the engine its demanded airflow with acceptable pressure recovery and distortion across the whole flight envelope, which a bare engine face cannot do. It sits beside the engine variant rather than inside any candidate because every engine candidate needs one, and the twin-engine surrogate's mass is deliberately not adjusted to absorb an inlet delta (D-009).", ...
@@ -660,16 +675,21 @@ assertRationaleComplete(m.Architecture, profileName);
 %   line of it, and a candidate selected before the trade is a decision with no
 %   arithmetic behind it.
 %
-%   {path, RealizesRole, RealizesKind, Mass_lb, TRL, Benefit, DataProvenance}
+%   T_SL_lb is NaN on the four non-engine candidates, which have no thrust; only
+%   F100_PW_200's is Reference (f16a_geometry.json engine.T_AB_SLS_lb = 23770,
+%   n_engines = 1). The other two engines are HYPOTHETICAL and their thrusts are
+%   invented -- see the Justification texts and D-053.
+%
+%   {path, RealizesRole, RealizesKind, Mass_lb, TRL, Benefit, DataProvenance, T_SL_lb}
 % ---------------------------------------------------------------------
 candRows = {
-    S+"Propulsion/Engine/F100_PW_200",          "PropulsionSystem", "SingleEngine",          4730.23, 8, 8.2, "F16ADataProvenance.Reference";
-    S+"Propulsion/Engine/F110_GE_100",          "PropulsionSystem", "SingleEngine",          5100.00, 4, 8.6, "F16ADataProvenance.Estimate";
-    S+"Propulsion/Engine/TwinEngine_Surrogate", "PropulsionSystem", "TwinEngine",            6400.00, 6, 7.8, "F16ADataProvenance.Estimate";
-    S+"Airframe/BlendedCrankedDelta",           "Airframe",         "BlendedCrankedDelta",   6722.88, 7, 9.5, "F16ADataProvenance.Reference";
-    S+"Airframe/ConventionalTrapWing",          "Airframe",         "ConventionalTrapWing",  7300.00, 8, 6.5, "F16ADataProvenance.Estimate";
-    S+"FlightControls/FlyByWire",               "FlightControlSystem", "FlyByWire",           472.44, 6, 9.0, "F16ADataProvenance.Reference";
-    S+"FlightControls/HydroMechanical",         "FlightControlSystem", "HydroMechanical",     700.00, 9, 6.0, "F16ADataProvenance.Estimate";
+    S+"Propulsion/Engine/F100_PW_200",                "PropulsionSystem", "SingleEngine",          4730.23, 8, 8.2, "F16ADataProvenance.Reference", 23770;
+    S+"Propulsion/Engine/LowThrustSingle_Surrogate",  "PropulsionSystem", "SingleEngine",          5100.00, 4, 8.6, "F16ADataProvenance.Estimate",  18500;
+    S+"Propulsion/Engine/TwinEngine_Surrogate",       "PropulsionSystem", "TwinEngine",            6400.00, 6, 7.8, "F16ADataProvenance.Estimate",  32000;
+    S+"Airframe/BlendedCrankedDelta",                 "Airframe",         "BlendedCrankedDelta",   6722.88, 7, 9.5, "F16ADataProvenance.Reference", NaN;
+    S+"Airframe/ConventionalTrapWing",                "Airframe",         "ConventionalTrapWing",  7300.00, 8, 6.5, "F16ADataProvenance.Estimate",  NaN;
+    S+"FlightControls/FlyByWire",                     "FlightControlSystem", "FlyByWire",           472.44, 6, 9.0, "F16ADataProvenance.Reference", NaN;
+    S+"FlightControls/HydroMechanical",               "FlightControlSystem", "HydroMechanical",     700.00, 9, 6.0, "F16ADataProvenance.Estimate",  NaN;
 };
 for i = 1:size(candRows,1)
     c = lookup(m, Path=char(candRows{i,1}));
@@ -680,6 +700,8 @@ for i = 1:size(candRows,1)
     setProperty(c, profileName + ".TradeCandidate.TRL",            string(candRows{i,5}));
     setProperty(c, profileName + ".TradeCandidate.Benefit",        string(candRows{i,6}));
     setProperty(c, profileName + ".TradeCandidate.DataProvenance", candRows{i,7});
+    % num2str, not string(): string(NaN) is <missing> and setProperty rejects it.
+    setProperty(c, profileName + ".TradeCandidate.T_SL_lb",        string(num2str(candRows{i,8})));
     % Cost: NaN via num2str -- string(NaN) is <missing> and setProperty rejects it.
     setProperty(c, profileName + ".TradeCandidate.UnitCost_USD",   string(num2str(NaN)));
     % Nothing has won yet; the trade study writes the winners.
@@ -714,7 +736,7 @@ edges = {
     L+"Airframe",            S+"Airframe/BlendedCrankedDelta";
     L+"Airframe",            S+"Airframe/ConventionalTrapWing";
     L+"PropulsionSystem",    S+"Propulsion/Engine/F100_PW_200";
-    L+"PropulsionSystem",    S+"Propulsion/Engine/F110_GE_100";
+    L+"PropulsionSystem",    S+"Propulsion/Engine/LowThrustSingle_Surrogate";
     L+"PropulsionSystem",    S+"Propulsion/Engine/TwinEngine_Surrogate";
     L+"PropulsionSystem",    S+"Propulsion/InletDuct";     % common to all three (D-009)
     L+"FuelSystem",          S+"FuelSystem";

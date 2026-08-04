@@ -58,7 +58,7 @@ graph TD
   AF --> BCD["BlendedCrankedDelta ✔"] & CTW["ConventionalTrapWing"]
   BCD --> W["Wing"] & FU["Fuselage"] & HT["HorizontalTail"] & VT["VerticalTail"] & NA["Nacelles"] & SK["Strakes"]
   PR --> EN["Engine ▽"] & ID["InletDuct"]
-  EN --> E1["F100_PW_200 ✔"] & E2["F110_GE_100"] & E3["TwinEngine_Surrogate"]
+  EN --> E1["F100_PW_200 ✔"] & E2["LowThrustSingle_Surrogate"] & E3["TwinEngine_Surrogate"]
   FC --> F1["FlyByWire ✔"] & F2["HydroMechanical"]
   FS --> T1["FwdFuselageTank"] & T2["AftFuselageTank"] & T3["WingTank"]
 ```
@@ -72,7 +72,7 @@ empty-weight mass — dry tankage is integral to the wet structure and internal 
 | Variant role | Candidates | Realizes kind |
 |--------------|-----------|---------------|
 | `Airframe` | **`BlendedCrankedDelta`** ✔ · `ConventionalTrapWing` | `BlendedCrankedDelta` · `ConventionalTrapWing` |
-| `Propulsion/Engine` | **`F100_PW_200`** ✔ · `F110_GE_100` · `TwinEngine_Surrogate` | `SingleEngine` · `SingleEngine` · `TwinEngine` |
+| `Propulsion/Engine` | **`F100_PW_200`** ✔ · `LowThrustSingle_Surrogate` · `TwinEngine_Surrogate` | `SingleEngine` · `SingleEngine` · `TwinEngine` |
 | `FlightControls` | **`FlyByWire`** ✔ · `HydroMechanical` | `FlyByWire` · `HydroMechanical` |
 
 The propulsion column is **many-to-one**: two engines realize the same kind, which is why the
@@ -171,27 +171,39 @@ still not re-enter (D-043).
 
 ### The results
 
-| Role | Candidate | Kind | Benefit† | TRL† | Mass (lb) | Provenance (mass) | Score | |
-|------|-----------|------|--------:|-----:|----------:|---|--------:|:--:|
-| PropulsionSystem | **F100_PW_200** | SingleEngine | 8.2 | 8 | 4730.23 | Reference | **0.87875** | ✔ |
-| | F110_GE_100 | SingleEngine | 8.6 | 4 | 5100 | Estimate | ≈0.756 | |
-| | TwinEngine_Surrogate | TwinEngine | 7.8 | 6 | 6400 | Estimate | ≈0.731 | |
-| Airframe | **BlendedCrankedDelta** | BlendedCrankedDelta | 9.5 | 7 | 6722.88 | Reference | **0.91250** | ✔ |
-| | ConventionalTrapWing | ConventionalTrapWing | 6.5 | 8 | 7300 | Estimate | ≈0.774 | |
-| FlightControlSystem | **FlyByWire** | FlyByWire | 9.0 | 6 | 472.44 | Reference | **0.85625** | ✔ |
-| | HydroMechanical | HydroMechanical | 6.0 | 9 | 700 | Estimate | ≈0.719 | |
+| Role | Candidate | Kind | Benefit† | TRL† | Mass (lb) | `T_SL_lb`‡ | Provenance (mass) | Score | |
+|------|-----------|------|--------:|-----:|----------:|-----------:|---|--------:|:--:|
+| PropulsionSystem | **F100_PW_200** | SingleEngine | 8.2 | 8 | 4730.23 | 23,770 | Reference | **0.87875** | ✔ |
+| | LowThrustSingle_Surrogate | SingleEngine | 8.6 | 4 | 5100 | 18,500 | Estimate | ≈0.756 | |
+| | TwinEngine_Surrogate | TwinEngine | 7.8 | 6 | 6400 | 32,000 | Estimate | ≈0.731 | |
+| Airframe | **BlendedCrankedDelta** | BlendedCrankedDelta | 9.5 | 7 | 6722.88 | — | Reference | **0.91250** | ✔ |
+| | ConventionalTrapWing | ConventionalTrapWing | 6.5 | 8 | 7300 | — | Estimate | ≈0.774 | |
+| FlightControlSystem | **FlyByWire** | FlyByWire | 9.0 | 6 | 472.44 | — | Reference | **0.85625** | ✔ |
+| | HydroMechanical | HydroMechanical | 6.0 | 9 | 700 | — | Estimate | ≈0.719 | |
 
 † **`Benefit` and `TRL` are engineering judgement on a declared scale, not measurements** — on the
 `Reference` candidates too. They are inventoried as invented values in **D-030**, and between them
 they supply **0.75 of every score**.
 
-**The teaching point is the engine.** `F100_PW_200` wins **despite trailing `F110_GE_100` on
-Benefit** (8.2 against 8.6). Its margin comes from maturity: measured against that runner-up, `TRL`
-is the decisive criterion, worth +0.125 (D-034). The airframe and flight-control trades are both
-decided by `Benefit` instead — three roles, two different stories.
+‡ `T_SL_lb` is **not scored**. It is `NaN` on the four candidates that are not engines, and the
+column contributes nothing to the numbers to its right.
+
+**Only one of these engines is real** (D-053). `F100_PW_200` is the engine the F-16A flew with, and
+its mass and thrust come from the Brandt reference in `/sizing/`. `LowThrustSingle_Surrogate` and
+`TwinEngine_Surrogate` are **declared hypotheticals**: their numbers are invented teaching values,
+chosen so the real engine wins, and their names say so rather than borrowing a real designation to
+front invented data. Each candidate also carries `T_SL_lb`, its sea-level static thrust — 23,770 lb
+for the F100 against 18,500 and 32,000 for the two surrogates — which is a **declared property, not
+a criterion**: nothing scores on it, nothing is screened out by it, and no thrust-to-weight ratio is
+computed anywhere in this repo. The figures sit side by side and the narratives say what they mean.
+
+**The teaching point is the engine.** `F100_PW_200` wins **despite trailing
+`LowThrustSingle_Surrogate` on Benefit** (8.2 against 8.6). Its margin comes from maturity: measured
+against that runner-up, `TRL` is the decisive criterion, worth +0.125 (D-034). The airframe and
+flight-control trades are both decided by `Benefit` instead — three roles, two different stories.
 
 "Decided by" is **rival-relative**, and both the printed output and the stored justification say so:
-the same F100 that beats the F110 on TRL beats `TwinEngine_Surrogate` on `Mass_lb`. Same victory,
+the same F100 that beats the low-thrust surrogate on TRL beats `TwinEngine_Surrogate` on `Mass_lb`. Same victory,
 different deciding criterion depending on the rival. A rival-independent answer — which criterion, if
 removed, would change the winner — is a genuine sensitivity calculation, deferred rather than faked.
 
@@ -310,7 +322,7 @@ its own source, so two tags on one part stop competing to describe it:
 |---|---|---|
 | `Fuselage` | `Reference` — Brandt | `Material` = `Estimate` (its composite fraction) |
 | `WingTank` | `Reference` — a definitional zero | `FuelTank` = `Estimate` (its capacity) |
-| `F110_GE_100` | `Estimate` — invented, in D-030 | `TradeCandidate` = `Estimate` (as scored) |
+| `LowThrustSingle_Surrogate` | `Estimate` — invented, in D-030 | `TradeCandidate` = `Estimate` (as scored) |
 | `Airframe` | `Simulation` — the default | none; it carries no mass of its own |
 
 The default is `Simulation`, not `Estimate`: `PhysicalItem` is applied to every component, so the

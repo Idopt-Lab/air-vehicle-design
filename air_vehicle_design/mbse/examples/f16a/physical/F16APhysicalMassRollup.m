@@ -195,8 +195,9 @@ function v = archMass(comp, prop)
 %ARCHMASS Fallback: recursively sum leaf Mass_lb under a model component.
 %   Used only when instantiate/iterate is unavailable. Unlike the native path
 %   above, this walks the ARCHITECTURE, which contains EVERY candidate of every
-%   variant role -- so without the first branch it would add the F100, the F110
-%   AND the twin-engine surrogate together and report an aircraft with three
+%   variant role -- so without the first branch it would add the F100, the
+%   low-thrust surrogate AND the twin-engine surrogate together and report an
+%   aircraft with three
 %   engines and two airframes (D-012 / Stage-0 finding 2 is exactly this
 %   asymmetry: the instance filters, the architecture does not).
 %

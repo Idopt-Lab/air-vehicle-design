@@ -19,7 +19,7 @@ options/decision split**: L enumerates the *kinds*, P parameterizes the *candida
 | | Logical option (**kind**) | Physical candidate |
 |---|---|---|
 | Answers | *What shape of solution?* | *Built out of what, exactly?* |
-| Examples | `SingleEngine` / `TwinEngine`; `FlyByWire` / `HydroMechanical`; `BlendedCrankedDelta` / `ConventionalTrapWing` | `F100_PW_200`, `F110_GE_100`, `TwinEngine_Surrogate`, … |
+| Examples | `SingleEngine` / `TwinEngine`; `FlyByWire` / `HydroMechanical`; `BlendedCrankedDelta` / `ConventionalTrapWing` | `F100_PW_200`, `LowThrustSingle_Surrogate`, `TwinEngine_Surrogate`, … |
 | Carries | a name and a rationale (`SolutionOption { Selected, DecisionRef }`) | `TradeCandidate { RealizesRole, RealizesKind, Mass_lb, Benefit, TRL, UnitCost_USD, DataProvenance, Selected }`, plus the `Rationale` every physical part carries |
 | Owns the decision? | **No** — it holds the *active* kind, written back from P | **Yes** — the trade runs here |
 | Survives a technology generation? | Yes | No |
@@ -35,7 +35,7 @@ graph LR
   end
   subgraph P["P — candidates: parameterized, provenance-tagged"]
     C1["F100_PW_200<br/>4730.23 lb · TRL 8 · Benefit 8.2 · Reference"]
-    C2["F110_GE_100<br/>5100 lb · TRL 4 · Benefit 8.6 · Estimate"]
+    C2["LowThrustSingle_Surrogate<br/>5100 lb · TRL 4 · Benefit 8.6 · Estimate"]
     C3["TwinEngine_Surrogate<br/>6400 lb · TRL 6 · Benefit 7.8 · Estimate"]
   end
   K1 -- "realized by" --> C1
@@ -46,7 +46,7 @@ graph LR
 
 In the model the arrow is stored the other way round, as a `RealizesKind` string **on the
 candidate** — and that is the direction that matters, because it is **many-to-one**: `F100_PW_200`
-and `F110_GE_100` both say `SingleEngine`. That is why the cross-layer write-back resolves the
+and `LowThrustSingle_Surrogate` both say `SingleEngine`. That is why the cross-layer write-back resolves the
 winning kind from `RealizesKind` and never from the candidate's name (D-027) — the name is not a key
 into the option set. `Airframe` and `FlightControlSystem` happen to be 1 : 1 today, which is a fact
 about this example's candidate list, not a property of the pattern.
@@ -226,7 +226,7 @@ and the note would be dishonest if it stopped at the fix.
 - **The answer was known before the trade was run.** The F-16A exists; the production configuration
   wins all three roles. The `Estimate` masses and the Benefit and TRL judgements were chosen to
   make that outcome legible and to make the engine trade instructive — the F100 wins on maturity
-  and installed mass *despite* trailing the F110 on Benefit, which is the lesson the numbers were
+  and installed mass *despite* trailing the low-thrust surrogate on Benefit, which is the lesson the numbers were
   picked to teach. This is a **retrodictive** exercise. It demonstrates the machinery, the
   arithmetic and the audit trail; it is not evidence about aeroplanes.
 

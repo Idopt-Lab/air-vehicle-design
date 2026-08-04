@@ -544,7 +544,7 @@ function [name, delta] = decisiveCriterion(V, w, crit, keptIdx, win, other)
 %   IT IS RIVAL-RELATIVE, AND EVERY CALLER MUST SAY SO (D-034). This answers
 %   "what separated WIN from OTHER", not "what decided the trade". Callers pass
 %   the rank-2 candidate, and the answer changes with the rival: the F100 beats
-%   F110 on TRL (+0.12500) but beats TwinEngine_Surrogate on Mass_lb (+0.06523,
+%   LowThrustSingle_Surrogate on TRL (+0.12500) but beats TwinEngine_Surrogate on Mass_lb (+0.06523,
 %   ahead of TRL's +0.06250). Same winner, same scores, different "deciding"
 %   criterion. So the printed line and the stored Justification both name the
 %   runner-up rather than stating this as a property of the decision -- the
@@ -702,7 +702,8 @@ function kindComp = writeLogicalDecision(lm, logiName, logiProfile, role, kindNa
 %   than from a path lookup, so the caller can Implement-link it without asking
 %   lookup to cross a variant boundary on a loaded model.
 %   Keyed on the KIND, not on the winning candidate name. The mapping is
-%   many-to-one -- F100_PW_200 and F110_GE_100 both realize SingleEngine -- so a
+%   many-to-one -- F100_PW_200 and LowThrustSingle_Surrogate both realize
+%   SingleEngine -- so a
 %   callback keyed on the candidate would fail to find its option the moment the
 %   other single-engine candidate won, which is exactly when you would want it
 %   to work.

@@ -179,6 +179,22 @@ is what D-007 and house rule 1 point at; a new invented number is added here.
 | 7 / 8 · 6 / 9 · 8 / 4 / 6 | the 7 candidates | `TRL` | judgement (D-025) | Declared 1–9 scale. F110's 4 encodes "not available in the F-16A timeframe" — the fact that decides the engine trade |
 | 3 × 2100 lb | the fuel tanks | `FuelCapacity_lb` | Estimate | D-023: Brandt's figure is 6296.30 lb (`Wt!B6`) |
 | −6 %MAC | `REQ_F16A_025` | requirement floor — no stereotype, so no `DataProvenance` slot; tagged here instead | Estimate | Commonly repeated for the F-16's subsonic relaxed static stability, but **no source is cited** and `/sizing/` has no static-margin criterion. The band's upper end is a strict zero, which is a *definition* and is not inventoried (D-051) |
+| 18,500 lb | `LowThrustSingle_Surrogate` | `T_SL_lb` | Estimate | D-053. A hypothetical engine, not a real product. Chosen to sit visibly **below** what a 31,377 lb aeroplane needs, so the candidate reads as short on thrust without any ratio being computed |
+| 32,000 lb | `TwinEngine_Surrogate` | `T_SL_lb` | Estimate | D-053. Two hypothetical engines. Chosen to sit visibly **above** what is needed, so the twin's penalty is surplus capability carried at the heaviest installed mass of the three |
+
+The two rows above supersede the reading of **every `F110_GE_100` row here**: that component is now
+`LowThrustSingle_Surrogate` (D-053) and no longer claims to be a real engine at all. Both figures are
+unchanged and still `Estimate`; only their justifications changed, and neither may now be read as a
+statement about a real product:
+
+- the **5100 lb** `Mass_lb` row, from "the F110 is real but post-dates the F-16A, scaled off the
+  F100" to *invented so this candidate loses*;
+- the **`TRL` 4** in the judgement row, from "not available in the F-16A timeframe" — a claim about
+  General Electric's programme — to *an immaturity chosen so the mature candidate wins the trade*.
+  The trade outcome is unchanged; only what the number is a claim **about** has changed.
+
+`F100_PW_200`'s own `T_SL_lb` of 23,770 lb is **not** inventoried — it is `Reference`, from
+`f16a_geometry.json` `engine.T_AB_SLS_lb`.
 
 `Benefit` and `TRL` supply **0.75 of every trade score** and are unauditable in principle — they trace
 to nothing. That is exactly why they must be *recorded*, since they can never be *checked*.
@@ -445,3 +461,40 @@ no room for a 17th. That zero is what the reference states; nothing computed it,
 two-tags-two-subjects shape as the airframe leaves, inverted.
 
 **No number changed.** OEW 19,980.73, airframe 6,722.88, composite 0.1928, fuel 6,300 lb.
+
+### D-053 · One engine is real; the other two are declared hypotheticals
+`F100_PW_200` keeps its designation because its figures are sourced — mass 4730.23 lb and thrust
+23,770 lb both from the Brandt F-16A reference in `/sizing/`. `F110_GE_100` becomes
+**`LowThrustSingle_Surrogate`**, and both surrogates' `Rationale.Justification` now state plainly that
+they are hypothetical, that their numbers are invented, and that they were chosen so the real engine
+wins. `TwinEngine_Surrogate` was already honestly named and keeps its name.
+
+**Why the rename and not just a hedge.** The old text asserted things about **real hardware** that the
+model could not support: `F100_PW_200` claimed "a thrust-to-weight above one" and `F110_GE_100` "the
+higher-thrust single-engine candidate" and a stall margin — with **no thrust property anywhere at P**,
+so those traced to nothing, while the maturity claims restated the model's own `TRL` 8-vs-4 as fact
+about the real engines. Hedging the prose would have left a real manufacturer's designation fronting
+invented numbers, which is the same defect one layer down. A candidate whose figures are invented
+should not wear a name somebody can look up.
+
+**`T_SL_lb` is a declared property, not a criterion and not a screen.** The criteria stay `Benefit`,
+`TRL`, `Mass_lb`, `UnitCost_USD`; nothing is disqualified for a thrust shortfall and every score is
+unchanged — F100 0.87875, surrogate 0.75562, twin 0.73102, exactly as before. It is `NaN` on the four
+non-engine candidates, for D-021's reason: 0 is a number a reader could take seriously.
+
+**No T/W ratio is computed anywhere** — not in the model, not in a test, not in the docs, and no
+thrust requirement was added at R. Adding one would mean editing a requirement generator, re-minting
+every SID and breaking the hand-made Verify links, to state a threshold the example does not need.
+The three thrusts sit beside each other and the narratives say what they mean.
+
+**The `F100_PW_200` T/W claim was deleted, not repaired.** 23,770 lb against `W_TO` = 31,377 lb is
+0.76, so "a thrust-to-weight above one" was false as written; it holds only below about 23,770 lb
+gross, at late-mission combat weight. Restating it with that condition would have meant computing the
+ratio, which this decision declines to do, so the claim is gone and the thrust is stated in absolute
+terms instead.
+
+**Guarded, not just asserted.** `testSurrogateEnginesClaimNoRealHardware` scans the **authored** half
+of each surrogate's justification — the trade study prepends its own verdict, which legitimately names
+the winning candidate — against the same case-sensitive vendor-token list L's neutrality guard uses,
+reused rather than retyped. `testThrustDidNotBecomeATradeCriterion` reads the `Criteria (D-015):`
+clause the trade study **writes into the model**, so it checks the study that actually ran.

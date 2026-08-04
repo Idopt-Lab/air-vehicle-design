@@ -7,14 +7,7 @@ Working file, not teaching material. Open items only — what was decided and wh
 
 | # | Item | Decision | Owner |
 |---|---|---|---|
-| 1 | **Only one engine candidate is real.** Give `TradeCandidate` a `T_SL_lb`; source the F-16's own engine from Brandt and make the other two declared hypotheticals with invented thrusts — one short of the T/W it needs, one with far more than it needs and heavier for it. Rename `F110_GE_100`, which wears a real designation over invented data. | new | `f16a-physical` · `f16a-data` |
-| 2 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. | D-043 | `f16a-physical` · `f16a-data` |
-
-**Item 1 is scoped.** `T_SL_lb` is a declared property, **not a trade criterion and not a screen** —
-scoring stays `Benefit`/`TRL`/`Mass_lb`/`UnitCost_USD` and the outcome must not move. **No T/W ratio is
-computed anywhere**, in the model, a test or the docs: the three thrusts sit side by side and the
-narrative says what they mean. The twin's extra cost stays qualitative, because
-`TradeCandidate.UnitCost_USD` is `NaN` forever.
+| 1 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. | D-043 | `f16a-physical` · `f16a-data` |
 
 ## Deferred method work
 
@@ -72,8 +65,10 @@ I want you to break it into 3 separate files, one for each of the trade studies.
 - How they will read relevant values
 - How they will conduct a trade study
 - How they will inform back the model the decision made
-
 There should be lots of print statements when someone runs the script. 
+
+Is there only one stereotype for all the 3 different trade studies?
+That doesn't make sense. The Engine Trade has values and properties it uses. The other two use their own based on the type of trades they are making. So, I want there to be different stereotypes for each of the candidate.
 
 
 ### 3
@@ -87,5 +82,10 @@ R-> F mapping
 F-> L matrix
 Morphological matrix
 
+### 5
 
 You have a bunch of tests that are good for debugging and when you are making changes. But those tests are written in a manner that is hard to read and is not useful as part of the teaching. So, I want you to move them all to a new folder named "tests_for_ai_coding". In addition to moving them, try and simplify. 
+
+### 6
+The roll-up analysis are too complex for anyone to understand. This is a teaching repo. Walk them through how its happening. The code should be extremeley simple.
+There should be lots of print statements when someone runs the script. 

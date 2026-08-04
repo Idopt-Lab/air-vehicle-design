@@ -160,10 +160,29 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             "Airframe/BlendedCrankedDelta",           "Airframe",            "BlendedCrankedDelta",  "Reference"; ...
             "Airframe/ConventionalTrapWing",          "Airframe",            "ConventionalTrapWing", "Estimate";  ...
             "Propulsion/Engine/F100_PW_200",          "PropulsionSystem",    "SingleEngine",         "Reference"; ...
-            "Propulsion/Engine/F110_GE_100",          "PropulsionSystem",    "SingleEngine",         "Estimate";  ...
+            "Propulsion/Engine/LowThrustSingle_Surrogate", "PropulsionSystem",    "SingleEngine",         "Estimate";  ...
             "Propulsion/Engine/TwinEngine_Surrogate", "PropulsionSystem",    "TwinEngine",           "Estimate";  ...
             "FlightControls/FlyByWire",               "FlightControlSystem", "FlyByWire",            "Reference"; ...
             "FlightControls/HydroMechanical",         "FlightControlSystem", "HydroMechanical",      "Estimate"};
+        % The three engine candidates and their sea-level static thrust
+        % {path, T_SL_lb, provenance}. Only one of them is a real engine
+        % (D-053); the other two are declared hypotheticals whose thrusts are
+        % invented so the real one wins, and whose names say surrogate.
+        % T_SL_lb is a DECLARED PROPERTY, not a criterion and not a screen --
+        % nothing here computes a thrust-to-weight ratio, by decision.
+        EngineThrustRows = { ...
+            "Propulsion/Engine/F100_PW_200",               23770, "Reference"; ...
+            "Propulsion/Engine/LowThrustSingle_Surrogate", 18500, "Estimate";  ...
+            "Propulsion/Engine/TwinEngine_Surrogate",      32000, "Estimate"};
+        % The candidates that are NOT engines, and so carry no thrust at all.
+        NonEngineCandidates = ["Airframe/BlendedCrankedDelta", ...
+            "Airframe/ConventionalTrapWing", "FlightControls/FlyByWire", ...
+            "FlightControls/HydroMechanical"];
+        % The two hypothetical engines. Their Justification must name no real
+        % manufacturer or designation -- inventing a number and attaching it to
+        % a real product is the defect this pair exists to keep out.
+        SurrogateEngines = ["Propulsion/Engine/LowThrustSingle_Surrogate", ...
+            "Propulsion/Engine/TwinEngine_Surrogate"];
         % The TRL scale: 1..9 inclusive AND integer. D-021 defaults the
         % property to 0 -- outside the scale -- so an unset TRL is caught
         % rather than silently scoring as mid-pack.
@@ -466,7 +485,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             end
 
             % The four invented candidate masses say so, and are in D-030.
-            for rel = ["Airframe/ConventionalTrapWing", "Propulsion/Engine/F110_GE_100", ...
+            for rel = ["Airframe/ConventionalTrapWing", "Propulsion/Engine/LowThrustSingle_Surrogate", ...
                        "Propulsion/Engine/TwinEngine_Surrogate", "FlightControls/HydroMechanical"]
                 c  = testCase.componentAt(testCase.AC + rel);
                 dp = testCase.provenanceOf(c, "PhysicalItem");
@@ -474,6 +493,85 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                     rel + " is a losing candidate with an invented mass; it must be " + ...
                     "Estimate, not " + dp + ".");
             end
+        end
+
+        function testEngineThrustIsDeclaredAndOnlyOneIsReal(testCase)
+            % D-053. Each engine states a thrust; the F-16's own is Reference
+            % and comes from the Brandt ground truth, the other two are
+            % Estimate because they are invented. The four non-engine
+            % candidates carry NaN -- not 0, which would be a number a reader
+            % could take seriously (D-021's rule, applied to thrust).
+            for i = 1:size(testCase.EngineThrustRows,1)
+                rel = string(testCase.EngineThrustRows{i,1});
+                exp = testCase.EngineThrustRows{i,2};
+                c   = testCase.componentAt(testCase.AC + rel);
+                t   = testCase.propNum(c, testCase.Profile + ".TradeCandidate.T_SL_lb");
+                testCase.verifyEqual(t, exp, "AbsTol", 1e-6, ...
+                    rel + " states T_SL_lb = " + t + " lb, expected " + exp + ".");
+            end
+            for rel = testCase.NonEngineCandidates
+                c = testCase.componentAt(testCase.AC + rel);
+                t = testCase.propNum(c, testCase.Profile + ".TradeCandidate.T_SL_lb");
+                testCase.verifyTrue(isnan(t), ...
+                    rel + " is not an engine and must carry NaN thrust, not " + ...
+                    string(num2str(t)) + ".");
+            end
+        end
+
+        function testThrustDidNotBecomeATradeCriterion(testCase)
+            % T_SL_lb is a DECLARED PROPERTY, deliberately not a criterion and
+            % not a feasibility screen (D-053). Adding it to the scoring set
+            % would silently re-decide the propulsion trade -- the twin carries
+            % the MOST thrust of the three and currently loses.
+            %
+            % Read from the criteria line the trade study WRITES into each
+            % candidate's rationale, so this checks the study that actually
+            % ran rather than a list copied into this file.
+            for i = 1:size(testCase.EngineThrustRows,1)
+                rel  = string(testCase.EngineThrustRows{i,1});
+                crit = testCase.criteriaClauseOf(rel);
+                testCase.verifyNotEmpty(crit, ...
+                    rel + "'s rationale carries no 'Criteria (D-015):' clause, so " + ...
+                    "there is nothing to check and this test would pass vacuously.");
+                testCase.verifyFalse(contains(crit, "T_SL"), ...
+                    "T_SL_lb has entered the trade's criteria: " + crit + ". It is a " + ...
+                    "declared property only -- the thrust figures exist so the candidate " + ...
+                    "narratives can point at something, and the trade outcome must not " + ...
+                    "move because they were added.");
+            end
+        end
+
+        function testSurrogateEnginesClaimNoRealHardware(testCase)
+            % The two hypothetical engines carry invented numbers, so their
+            % narratives must not attach those numbers to a real product. The
+            % token list is the SAME one L's neutrality guard uses -- reused
+            % from that suite rather than retyped, and applied here to P's
+            % justification prose instead of to L's kind names.
+            %
+            % Only the AUTHORED half is checked. The trade study prepends its
+            % own verdict, which legitimately names the winning candidate
+            % (".. for the selected F100_PW_200"), so scanning the whole string
+            % would fire on the study's own honest output.
+            tokens = F16ALogicalArchitectureTest.VendorTokens;
+            for rel = testCase.SurrogateEngines
+                authored = testCase.authoredJustificationOf(rel);
+                testCase.verifyNotEmpty(authored, ...
+                    rel + " has no authored justification to check.");
+                hits = tokens(contains(authored, tokens));
+                testCase.verifyEmpty(hits, ...
+                    rel + " is a hypothetical engine with invented values, but its " + ...
+                    "authored justification names real hardware: " + strjoin(hits, ", ") + ".");
+                testCase.verifyTrue(contains(lower(authored), "hypothetical"), ...
+                    rel + " must SAY it is hypothetical. A reader who does not already " + ...
+                    "know which candidates are real cannot tell from the numbers.");
+            end
+
+            % The real one is the other half of the claim: it keeps its real
+            % designation precisely because its figures are sourced.
+            realEngine = testCase.authoredJustificationOf("Propulsion/Engine/F100_PW_200");
+            testCase.verifyFalse(contains(lower(realEngine), "hypothetical"), ...
+                "F100_PW_200 is the one real engine here and must not describe itself " + ...
+                "as hypothetical.");
         end
 
         function testNoPartCarriesDisagreeingProvenance(testCase)
@@ -1117,7 +1215,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % The trade writes its verdict in two independent places -- the
             % candidate's Selected flag and the variant's ACTIVE CHOICE -- and
             % this asserts they say the same thing. Each half looks fine alone:
-            % active F100 with Selected on the F110 is a HALF-WRITTEN decision
+            % active F100 with Selected on the surrogate is a HALF-WRITTEN decision
             % in which every mass describes one engine and every trade report
             % the other.
             d = testCase.tradeSelectionDefects();
@@ -1795,6 +1893,32 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             for pth = paths
                 s = s + testCase.massOf(testCase.componentAt(pth));
             end
+        end
+
+        function j = justificationOf(testCase, rel)
+            % A candidate's whole Rationale.Justification, quotes stripped.
+            c = testCase.componentAt(testCase.AC + rel);
+            j = erase(string(getProperty(c, ...
+                testCase.Profile + ".Rationale.Justification")), "'");
+        end
+
+        function a = authoredJustificationOf(testCase, rel)
+            % The half a human wrote. The trade study PREPENDS its verdict and
+            % separates the two with " || ", so the authored text is what
+            % follows the last separator (and the whole string before the study
+            % has run).
+            j = testCase.justificationOf(rel);
+            parts = split(j, "||");
+            a = strtrim(parts(end));
+        end
+
+        function c = criteriaClauseOf(testCase, rel)
+            % The "Criteria (D-015): ..." sentence the trade study writes into
+            % the rationale -- the study's own statement of what it scored on.
+            j = testCase.justificationOf(rel);
+            tok = regexp(j, "Criteria \(D-015\):[^|]*", "match", "once");
+            c = string(tok);
+            if ismissing(c); c = ""; end
         end
 
         function dp = provenanceOf(testCase, comp, stereotype)
