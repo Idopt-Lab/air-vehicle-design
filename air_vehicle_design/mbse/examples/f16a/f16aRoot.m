@@ -1,7 +1,7 @@
 function r = f16aRoot()
 %F16AROOT Absolute path to the F-16A RFLP example root folder.
 %   R = F16AROOT() returns the absolute path of this example's root folder
-%   (the folder that contains f16a.prj, docs/, requirements/, architecture/,
+%   (the folder that contains f16a.prj, docs/, requirements/, functions/,
 %   logical/, physical/, and verification/).
 %
 %   The single location ANCHOR for the example: every generator, roll-up and

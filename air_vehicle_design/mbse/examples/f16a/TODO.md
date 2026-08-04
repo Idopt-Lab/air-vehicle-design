@@ -9,7 +9,6 @@ Working file, not teaching material. Open items only — what was decided and wh
 |---|---|---|---|
 | 1 | **Fuel roll-up is not variant-safe** and calls `getProperty` on every child of `FuelSystem` without a stereotype check — a real defect in `physical/F16APhysicalFuelRollup.m`. Mirror `F16APhysicalMaterialsRollup.materialLeaves`. No test calls this function today; add one. | D-038 | `f16a-physical` · `f16a-vnv` |
 | 2 | **Brandt masses are transcribed twice** — `generate_f16a_physical.m` and `F16APhysicalArchitectureTest.m` each hold their own copy of the same 16 figures, so the test verifies a transcription. Have the test execute `BrandtWeight.m` instead. **Land `PhysicalItem.DataProvenance` in the same stage** (see below). | D-036 | `f16a-vnv` · `f16a-data` |
-| 3 | **`architecture/` → `functions/`.** Own stage, own gate — it touches the project registry, the one thing here that has drifted before. Finish at `runChecks` 12/12 with no unstaged `resources/project/` diff. | D-039 | `f16a-functions` |
 | 4 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. Reword the "cost re-enters the trade" claim wherever it appears: the trigger is *the candidates carry a cost*, not *a cost model exists*. | D-043 | `f16a-physical` · `f16a-data` |
 
 **Item 2 carries a second half.** `PhysicalItem` declares `{ Mass_lb }` and no `DataProvenance`, so 14

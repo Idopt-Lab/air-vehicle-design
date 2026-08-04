@@ -260,13 +260,23 @@ structural rule *a component carrying `FuelTank` IS a fuel leaf*. Error on an em
 **Why it is not hypothetical** `FuelSystem` becomes a variant role the moment the example admits a
 hybrid-electric aircraft. *Part 2 (volume) superseded by **D-041**.*
 
-### D-039 · The F layer's folder is renamed `architecture/` → `functions/` · **OPEN**
+### D-039 · The F layer's folder is renamed `architecture/` → `functions/`
 **Why** All three layers are System Composer architecture models, so `architecture/` names what F
 *shares* with L and P, while every sibling folder is named for its concern. Five other names in the
 example say *functions*. **Scope** `git mv` (so labels survive); five literal path strings in code;
 ~11 doc references; `.claude/agents/f16a-functions.md`. File names do not change. **The real cost is
 the project registry** — a `git mv` that does not propagate leaves dangling entries. Own stage, own
 gate, finish at `runChecks` 12/12.
+**As built** Six code sites, not five — `f16aRoot.m`'s help block lists its sibling folders and was
+missed at planning. Two agent files, not one: `f16a-vnv.md` names the F test by path as well. The
+local `archDir` in both generators became `fcnDir`; nothing else was renamed.
+**Measured, and the reason this needed its own stage:** MATLAB's Git integration makes
+`removeFile`/`removePath` *stage a git deletion*, so the registry cleanup silently emptied the folder
+as far as git was concerned and `git mv` then failed with "source directory is empty". The deletions
+must be restored to the index (`git restore --staged`) before the move, or the rename records as
+delete-plus-add and the history stops following the files. Labels do **not** ride along on their own:
+the four `Classification` values were captured before removal and re-applied after `addPath` +
+`addFolderIncludingChildFiles`.
 
 ### D-040 · The verdict lives where it is computed, not in the requirement
 D-037 resolved as: the requirement stays a pure question; the verdict lives in the winning candidate's

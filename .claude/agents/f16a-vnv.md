@@ -16,7 +16,7 @@ findings).
 
 | File | Kind | Checks |
 |---|---|---|
-| `architecture/F16AFunctionalArchitectureTest.m` | machinery | F model + R→F links |
+| `functions/F16AFunctionalArchitectureTest.m` | machinery | F model + R→F links |
 | `logical/F16ALogicalArchitectureTest.m` | machinery | roles, interfaces, allocation, kinds |
 | `physical/F16APhysicalArchitectureTest.m` | machinery | decomposition, stereotypes, roll-up self-consistency, realization, links |
 | `verification/F16AMaterialsVerificationTest.m` | requirement | `REQ_F16A_022` composite ≤ 20% — **passes** |

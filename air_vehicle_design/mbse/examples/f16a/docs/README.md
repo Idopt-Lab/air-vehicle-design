@@ -25,7 +25,7 @@ traceability is the whole point of MBSE: you can always answer "why does this pa
 | Layer | Artifact |
 |-------|----------|
 | **R** – Requirements | `requirements/f16a.slreqx` (26 requirements) |
-| **F** – Functions | `architecture/F16A_Functional.slx` (26 functions, 39 links) |
+| **F** – Functions | `functions/F16A_Functional.slx` (26 functions, 39 links) |
 | **L** – Logical | `logical/F16A_Logical.slx` (9 roles, 3 presenting technology-neutral **kinds** — the choice between them is decided at P; allocation set with 14 edges) |
 | **P** – Physical | `physical/F16A_Physical.slx` (30 components incl. 7 candidates across 3 variant roles; a **trade study** that scores them, decides, and writes the decision back to L and to REQ_F16A_L01–L03; realization allocation; mass/materials/fuel roll-ups; OEW & cost MoMs) |
 
@@ -60,7 +60,7 @@ mbse/examples/f16a/
 │   ├─ f16a_physical_derived.slreqx      physical requirements (P01: fuel)
 │   ├─ generate_f16a_*requirements.m     one generator per set
 │   └─ F16ARequirementsTest.m
-├─ architecture/                         F layer
+├─ functions/                            F layer
 │   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx
 │   ├─ generate_f16a_functional.m
 │   └─ F16AFunctionalArchitectureTest.m

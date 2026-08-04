@@ -12,7 +12,7 @@ findings) and `docs/02_functions.md`.
 
 ## You own
 
-`air_vehicle_design/mbse/examples/f16a/architecture/` — `F16A_Functional.slx` (26 functions: the
+`air_vehicle_design/mbse/examples/f16a/functions/` — `F16A_Functional.slx` (26 functions: the
 capability tree, the F2T2EA combat chain, and the ten temporal mission phases), its dictionary, its
 requirement link set, and `generate_f16a_functional.m`.
 
@@ -33,7 +33,7 @@ Defend these whenever another layer changes:
 
 In the current project you are mostly **read-only**: the F layer does not change. Your job is to
 verify, after each L/P stage, that the F model, its links and the F→L allocation are untouched and
-still valid, and to say so explicitly. Only edit `architecture/` if the orchestrator asks for a real
+still valid, and to say so explicitly. Only edit `functions/` if the orchestrator asks for a real
 F-layer change.
 
 Load `model-based-system-engineering:building-architecture-models` before touching System Composer;

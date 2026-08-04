@@ -1,7 +1,7 @@
 function generate_f16a_functional()
 %GENERATE_F16A_FUNCTIONAL Build the F-16A Functional-layer architecture (RFLP "F").
-%   Creates architecture/F16A_Functional.slx (a System Composer model) and
-%   its interface dictionary architecture/F16A_Functional.sldd, then links
+%   Creates functions/F16A_Functional.slx (a System Composer model) and
+%   its interface dictionary functions/F16A_Functional.sldd, then links
 %   the functions back to the requirements (RFLP "R") they implement.
 %
 %   Structure (root architecture = PerformF16AMission):
@@ -35,16 +35,16 @@ function generate_f16a_functional()
 
 modelName = "F16A_Functional";
 thisDir   = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
-archDir   = fullfile(thisDir, "architecture");
+fcnDir    = fullfile(thisDir, "functions");
 reqDir    = fullfile(thisDir, "requirements");
-dictFile  = fullfile(archDir, modelName + ".sldd");
-modelFile = fullfile(archDir, modelName + ".slx");
-slmxFile  = fullfile(archDir, modelName + "~mdl.slmx");
+dictFile  = fullfile(fcnDir, modelName + ".sldd");
+modelFile = fullfile(fcnDir, modelName + ".slx");
+slmxFile  = fullfile(fcnDir, modelName + "~mdl.slmx");
 origFile  = fullfile(reqDir, "f16a.slreqx");
 derFile   = fullfile(reqDir, "f16a_functional_derived.slreqx");
 
 % Make the model, dictionary, and requirement sets resolvable by name.
-addpath(archDir);
+addpath(fcnDir);
 addpath(reqDir);
 
 % ---------------------------------------------------------------------
@@ -56,7 +56,7 @@ bdclose("all");
 Simulink.data.dictionary.closeAll("-discard");
 staleRoot = fullfile(thisDir, modelName);   % guard against artifacts saved to cwd
 cleanupFiles = [dictFile, modelFile, slmxFile, ...
-    fullfile(archDir, modelName + ".slxc"), ...
+    fullfile(fcnDir, modelName + ".slxc"), ...
     staleRoot + ".slx", staleRoot + ".slxc", staleRoot + "~mdl.slmx"];
 for f = cleanupFiles
     if isfile(f); delete(f); end
@@ -171,7 +171,7 @@ systems = ["F16A_Functional", ...
 for s = systems
     try Simulink.BlockDiagram.arrangeSystem(s); catch, end %#ok<CTCH>
 end
-save_system(modelName, char(modelFile));   % save into architecture/
+save_system(modelName, char(modelFile));   % save into functions/
 set_param(modelName, "SimulationCommand", "update");
 
 % ---------------------------------------------------------------------

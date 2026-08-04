@@ -113,7 +113,7 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
         function openArtifacts(testCase)
             thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
             addpath(fullfile(thisDir, "logical"));
-            addpath(fullfile(thisDir, "architecture"));
+            addpath(fullfile(thisDir, "functions"));
             addpath(fullfile(thisDir, "requirements"));
             slreq.clear();
             % Close any set left open by a prior generate in this session, so

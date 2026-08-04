@@ -1,7 +1,7 @@
 # Traceability — Requirements ↔ Functions
 
-> Links live in `architecture/F16A_Functional~mdl.slmx` and are created by
-> `architecture/generate_f16a_functional.m`.
+> Links live in `functions/F16A_Functional~mdl.slmx` and are created by
+> `functions/generate_f16a_functional.m`.
 
 Traceability is what turns a diagram into a *systems* model. Every function is connected to
 the requirement it satisfies with an **Implement link** (source = function, destination =
@@ -141,7 +141,7 @@ in one file.
 
 | Relationship | From → to | Stored in | Count |
 |---|---|---|:-:|
-| **Implement** | function → requirement | `architecture/F16A_Functional~mdl.slmx` | 39 |
+| **Implement** | function → requirement | `functions/F16A_Functional~mdl.slmx` | 39 |
 | **Allocation** | function → logical role | `logical/F16A_FunctionToLogical.mldatx` | 14 edges |
 | **Realization** | logical role → physical part | `physical/F16A_LogicalToPhysical.mldatx` | 14 edges |
 

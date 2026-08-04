@@ -14,7 +14,7 @@ classdef F16AFunctionalArchitectureTest < matlab.unittest.TestCase
     methods (TestClassSetup)
         function openArtifacts(testCase)
             thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
-            addpath(fullfile(thisDir, "architecture"));
+            addpath(fullfile(thisDir, "functions"));
             addpath(fullfile(thisDir, "requirements"));
             slreq.clear();
             testCase.Model   = systemcomposer.loadModel("F16A_Functional");

@@ -76,7 +76,7 @@ allocName   = "F16A_FunctionToLogical";
 
 thisDir  = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 logiDir  = fullfile(thisDir, "logical");
-archDir  = fullfile(thisDir, "architecture");
+fcnDir   = fullfile(thisDir, "functions");
 reqDir   = fullfile(thisDir, "requirements");
 dictFile = fullfile(logiDir, modelName + ".sldd");
 modelFile= fullfile(logiDir, modelName + ".slx");
@@ -94,13 +94,13 @@ if ~isfolder(logiDir); mkdir(logiDir); end
 if ~isfile(origFile)
     error("Missing %s. Run generate_f16a_requirements first.", origFile);
 end
-if ~isfile(fullfile(archDir, funcName + ".slx"))
+if ~isfile(fullfile(fcnDir, funcName + ".slx"))
     error("Missing %s.slx. Run generate_f16a_functional first.", funcName);
 end
 
 % Make the models, dictionary, profile and requirement sets resolvable by name.
 addpath(logiDir);
-addpath(archDir);
+addpath(fcnDir);
 addpath(reqDir);
 
 % ---------------------------------------------------------------------

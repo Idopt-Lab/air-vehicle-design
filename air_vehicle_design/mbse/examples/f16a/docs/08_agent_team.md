@@ -14,7 +14,7 @@ house rules.
 |---|---|
 | **Orchestrator** (main session) | staging, gates, git |
 | **f16a-requirements** | `requirements/` — the R layer and link semantics (Implement vs Verify) |
-| **f16a-functions** | `architecture/` — the F layer and the F→L allocation |
+| **f16a-functions** | `functions/` — the F layer and the F→L allocation |
 | **f16a-logical** | `logical/` — technology-neutral *kinds*; no numbers, no decisions |
 | **f16a-physical** | `physical/` — candidates, stereotypes, roll-ups, the trade study |
 | **f16a-vnv** | all tests; writes assertions independently of whoever wrote the code |
