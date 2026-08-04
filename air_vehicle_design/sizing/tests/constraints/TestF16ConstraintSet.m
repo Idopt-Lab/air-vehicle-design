@@ -1,7 +1,8 @@
 classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %TESTF16CONSTRAINTSET  Unit tests for F16ConstraintSet (Layer-2 wiring of
 %   the F-16's 8 constraint conditions from examples/F16A/Constraints.xlsx
-%   into concrete ThrustConstraint/TakeoffConstraint/LandingConstraint
+%   into concrete MasterEquationConstraint specializations (LevelFlight/
+%   SustainedTurn/ExcessPower) and TakeoffConstraint/LandingConstraint
 %   objects, plus an OPTIONAL 9th Stall condition appended directly as a
 %   StallConstraint -- see F16ConstraintSet.m's header) and its end-to-end
 %   use with ConstraintAnalysis.
@@ -62,21 +63,40 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             tc.verifyTrue(isa(stall, 'StallConstraint'));
         end
 
-        function testThrustTypeRowsUseThrustConstraint(tc)
+        function testThrustTypeRowsUseMasterEquationSpecializations(tc)
+            % T9: each Master-Equation thrust row now builds the specialization
+            % chosen by its data -- Max Mach/Cruise/Max Alt (n=1, Ps=0) ->
+            % LevelFlightConstraint; Combat Subsonic/Supersonic (n>1, Ps=0) ->
+            % SustainedTurnConstraint; Excess Power (Ps>0) ->
+            % ExcessPowerConstraint. All remain MasterEquationConstraint (hence
+            % Both_WbyS_TbyW, hence PointPerformanceBase).
             constraints = F16ConstraintSet.build("L3");
             names = cellfun(@(c) c.name, constraints);
-            thrustNames = ["Max Mach", "Cruise", "Max Alt", "Combat Subsonic", ...
+
+            expectedClass = struct( ...
+                'MaxMach',           "LevelFlightConstraint", ...
+                'Cruise',            "LevelFlightConstraint", ...
+                'MaxAlt',            "LevelFlightConstraint", ...
+                'CombatSubsonic',    "SustainedTurnConstraint", ...
+                'CombatSupersonic',  "SustainedTurnConstraint", ...
+                'ExcessPower',       "ExcessPowerConstraint");
+            rowNames = ["Max Mach", "Cruise", "Max Alt", "Combat Subsonic", ...
                 "Combat Supersonic", "Excess Power"];
-            for name = thrustNames
+            fields = fieldnames(expectedClass);
+            for k = 1:numel(rowNames)
+                name = rowNames(k);
                 c = constraints{names == name};
-                tc.verifyTrue(isa(c, 'ThrustConstraint'), ...
-                    sprintf('"%s" should build a ThrustConstraint.', name));
+                tc.verifyClass(c, char(expectedClass.(fields{k})), ...
+                    sprintf('"%s" should build a %s.', name, expectedClass.(fields{k})));
+                tc.verifyTrue(isa(c, 'MasterEquationConstraint'), ...
+                    sprintf('"%s" should be a MasterEquationConstraint.', name));
             end
         end
 
         function testExcessPowerHasNonzeroPs(tc)
-            % Excess Power is the only row with a real PS_ft_s_ value (500);
-            % all other ThrustConstraint rows should default Ps to 0.
+            % Excess Power is the only row with a real PS_ft_s_ value (500) and
+            % so the only ExcessPowerConstraint; all other Master-Equation rows
+            % have Ps = 0.
             constraints = F16ConstraintSet.build("L3");
             names = cellfun(@(c) c.name, constraints);
             excessPower = constraints{names == "Excess Power"};
@@ -132,8 +152,10 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             cruise = constraints{names == "Cruise"};
             [aero, prop] = deal(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2)), ...
                                 F16PropL2(f16a_spec_path(2)));
-            cruise_AB = ThrustConstraint(cruise.name, cruise.state, aero, prop, ...
-                cruise.beta, cruise.n, cruise.Ps, "AB");
+            % Cruise is a LevelFlightConstraint (n=1, Ps=0). Rebuild it on the
+            % AB basis to compare the two alpha bases at the same condition.
+            cruise_AB = LevelFlightConstraint(cruise.name, cruise.state, aero, prop, ...
+                cruise.beta, "AB");
 
             alpha_mil = prop.thrust_lapse_mil_on_AB_scale(cruise.state);
             alpha_AB  = prop.thrust_lapse(cruise.state);
@@ -159,10 +181,10 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % two discrete bases), so it must error too. Exercised through the
             % private mapper via the public build path's own contract: construct
             % the two invalid cases directly.
-            tc.verifyError(@() ThrustConstraint("X", AircraftState(0, 0.5), ...
+            tc.verifyError(@() LevelFlightConstraint("X", AircraftState(0, 0.5), ...
                 F16AeroL1(f16a_spec_path(1)), F16PropL1(f16a_spec_path(1)), ...
-                0.9, 1, 0, "partial"), 'MATLAB:validators:mustBeMember', ...
-                'ThrustConstraint must reject a power setting outside {AB, mil}.');
+                0.9, "partial"), 'MATLAB:validators:mustBeMember', ...
+                'A Master-Equation constraint must reject a power setting outside {AB, mil}.');
         end
 
         function testStallConditionAtSeaLevel(tc)

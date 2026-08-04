@@ -10,17 +10,19 @@ classdef (Abstract) Only_WbyS < PointPerformanceBase
 %   class's siblings Only_TbyW.m/Both_WbyS_TbyW.m). A concrete subclass need
 %   only implement WS_max(obj), the upper bound this condition imposes on
 %   wing loading (e.g. LandingConstraint's braking ground roll,
-%   StallConstraint's stall-speed requirement) -- this class supplies the
-%   uniform required_TW(WS) interface every PointPerformanceBase condition
-%   must expose (see that class's header and ConstraintAnalysis.m), encoding
-%   the W/S limit as a vertical wall: required_TW returns 0 (no thrust
-%   penalty) at or below the limit and Inf (infeasible) above it, so
-%   ConstraintAnalysis's max-envelope combination (TW_envelope(WS) =
-%   max_i required_TW_i(WS)) excludes infeasible W/S without any special-
-%   casing (see ConstraintAnalysis.m's header). This wall encoding was
-%   previously implemented ad hoc inside LandingConstraint itself; it is
-%   factored out here so every W/S-only condition (Landing, Stall, ...)
-%   shares one implementation instead of each re-deriving it.
+%   StallConstraint's stall-speed requirement).
+%
+%   NO required_TW (removed 2026-08-04, T9): a W/S-only wall imposes no
+%   thrust demand at all, so it has no "required T/W" to report. The old
+%   0/Inf "wall curve" hack -- required_TW returning 0 below the limit and
+%   Inf above it, so it could ride ConstraintAnalysis's max-envelope
+%   uniformly -- is gone. ConstraintAnalysis now reads an Only_WbyS as an
+%   EXPLICIT W/S wall via WS_max() (excluding W/S > WS_max from the optimum
+%   search) rather than folding a fake curve into the max(). This is exactly
+%   equivalent -- below the wall the Inf-curve contributed 0 to the max, at/
+%   above it was excluded -- but honest: no condition is asked for a quantity
+%   it does not define. See ConstraintAnalysis.m and
+%   sizing/docs/subplans/06_constraint_analysis_refactor.md T9.
 
     methods (Abstract)
 
@@ -33,57 +35,32 @@ classdef (Abstract) Only_WbyS < PointPerformanceBase
 
     methods
 
-        function TW = required_TW(obj, WS)
-        %REQUIRED_TW  Vertical-wall encoding of this condition's W/S limit:
-        %   0 (no thrust penalty) at or below the limit, Inf (infeasible)
-        %   above it. WS may be scalar or array; TW is returned the same size.
-            WS_limit = obj.WS_max();
-            TW = zeros(size(WS));
-            TW(WS > WS_limit) = Inf;
-        end
-
-        function [margin, WS_available, WS_required] = WS_margin(obj, W_TO, S_ref)
-        %WS_MARGIN  Extra wing-loading "wiggle room" a candidate design has
-        %   before hitting this condition's W/S wall.
+        function g = constraint_residual(obj, dp)
+        %CONSTRAINT_RESIDUAL  Signed feasibility residual at DesignPoint dp:
+        %
+        %       g = dp.WS - obj.WS_max()    (g <= 0 feasible)
+        %
+        %   This is a W/S-WALL condition, so the residual is on the W/S axis,
+        %   not T/W: dp.TW is unused. WS_max is an UPPER bound (a design must
+        %   be AT MOST this loaded), so "available <= required" is the safe
+        %   direction. Writing it as required - available with dp.WS the
+        %   "available" wing loading and WS_max the "required" limit gives
+        %   g = dp.WS - WS_max <= 0 feasible -- the same sign convention every
+        %   other category uses (see PointPerformanceBase.m). g = -margin.
         %
         %   [Mirrors NPTEL_Fighter_Aircraft_Sizing.ipynb's
-        %   Only_WbyS.compute_constraint (cell 9): compute_WbyS_Npm2() --
-        %   this class's WS_max(), the upper bound the condition's own
-        %   physics imposes, independent of any candidate design -- is
-        %   labeled "REQUIRED VALUE" there. The notebook's two versions of
-        %   its constraint formula (one commented out as "THIS IS THE
-        %   ORIGINAL", one live) are literal sign negatives of each other
-        %   despite sharing the identical "constraint = required -
-        %   available" comment -- an authoring inconsistency, not a
-        %   deliberate convention. Working the physics through resolves it:
-        %   WS_max is an UPPER bound (a design must be AT MOST this loaded),
-        %   so "safe" means actual <= limit, i.e. margin = required -
-        %   available (limit minus actual) -- the notebook's commented-out
-        %   "ORIGINAL" line -- the opposite sign from
-        %   Both_WbyS_TbyW.TW_margin, whose required_TW is a LOWER bound.
-        %   margin >= 0 reads as "feasible, with this much W/S to spare" in
-        %   both cases, the uniform convention this framework uses (see
-        %   PointPerformanceBase.m).]
+        %   Only_WbyS.compute_constraint (cell 9), whose compute_WbyS_Npm2()
+        %   is the "REQUIRED VALUE" (this class's WS_max()); its two draft
+        %   formulas are sign negatives of each other -- working the physics
+        %   through (WS_max is an upper bound) fixes the sign to the one
+        %   returned here.]
         %
-        %   W_TO  -- the candidate design's actual gross takeoff weight
-        %            [lbf] (e.g. WeightsBase.W_TO).
-        %   S_ref -- the candidate design's actual wing reference area
-        %            [ft^2] (e.g. GeometryBase.S_ref).
-        %   Returns margin = WS_required - WS_available, where WS_required =
-        %   WS_max() and WS_available = W_TO/S_ref -- both returned as
-        %   optional 2nd/3rd outputs so callers (tests in particular) can
-        %   inspect the two values a margin was computed from, not just
-        %   their difference. margin >= 0 means the design is at or below
-        %   this condition's wing-loading limit; margin < 0 means it already
-        %   exceeds the limit by that much.
+        %   dp -- a DesignPoint (W_TO, T_SL, S_ref); only dp.WS is used.
             arguments
                 obj
-                W_TO  (1,1) double {mustBePositive}
-                S_ref (1,1) double {mustBePositive}
+                dp (1,1) DesignPoint
             end
-            WS_available = W_TO / S_ref;
-            WS_required  = obj.WS_max();
-            margin = WS_required - WS_available;
+            g = dp.WS - obj.WS_max();
         end
 
     end

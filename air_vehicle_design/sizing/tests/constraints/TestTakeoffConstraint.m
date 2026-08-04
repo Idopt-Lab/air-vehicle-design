@@ -52,9 +52,9 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
         end
 
         function testIsaBothWbySTbyW(tc)
-            % TakeoffConstraint belongs to the Both_WbyS_TbyW category, same
-            % as ThrustConstraint -- see TakeoffConstraint.m/
-            % Both_WbyS_TbyW.m headers.
+            % TakeoffConstraint belongs to the Both_WbyS_TbyW category as a
+            % DIRECT sibling of the MasterEquationConstraint subtree (T9) --
+            % see TakeoffConstraint.m/Both_WbyS_TbyW.m headers.
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyTrue(isa(obj, 'Both_WbyS_TbyW'));
@@ -166,46 +166,48 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
                 'The takeoff equation, fed Brandt''s own inputs, should reproduce Brandt''s TW_Takeoff to within 0.5%.');
         end
 
-        % --- Available/margin ------------------------------------------------
+        % --- Feasibility residual --------------------------------------------
 
-        function testTWMarginMatchesHandComputedFormula(tc)
+        function testConstraintResidualFeasibleAndInfeasible(tc)
             % Arbitrary field length/design point (not F-16-specific data).
-            % Confirms Both_WbyS_TbyW.TW_margin (shared with ThrustConstraint,
-            % see TestThrustConstraint.m) works correctly through
-            % TakeoffConstraint's own required_TW/get_alpha (affine in W/S,
-            % A=D=0, B and C nonzero -- a different code path than
-            % ThrustConstraint's bucket-shaped curve): margin = alpha*(T_SL/W_TO -
-            % required_TW(WS_actual)), where alpha is TakeoffConstraint's own
-            % get_alpha() (plain AB-basis lapse, no mil/AB distinction).
-            % Requests TW_margin's 2nd/3rd (available/required) outputs
-            % directly so both underlying constraint values are
-            % independently verified, not just their combined margin.
+            % Confirms Both_WbyS_TbyW.constraint_residual (shared with the
+            % MasterEquationConstraint subtree) works through TakeoffConstraint's
+            % own required_TW (affine in W/S, the old A=D=0 case, B and C
+            % nonzero -- a different code path than the Master Equation's
+            % bucket-shaped curve): g = required_TW(dp.WS) - dp.TW on the flat
+            % SL-static basis (NO alpha scaling). Feeds one FEASIBLE and one
+            % INFEASIBLE DesignPoint and asserts both the sign and the
+            % hand-computed value.
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, aero, prop, 3500, 0.03, 0.98, 1.15);
 
-            WS_actual = 90;
-            T_SL      = 25000;
-            W_TO      = 32000;
+            W_TO   = 32000;
+            S_ref  = W_TO / 90;               % dp.WS = 90 lbf/ft^2
+            TW_req = obj.required_TW(90);
 
-            alpha              = prop.thrust_lapse(state);
-            expected_required  = alpha * obj.required_TW(WS_actual);
-            expected_available = alpha * (T_SL / W_TO);
-            expected_margin    = expected_available - expected_required;
+            % Feasible: available T/W above required -> g < 0.
+            dp_feas   = DesignPoint(W_TO, 1.10 * TW_req * W_TO, S_ref);
+            g_feas    = obj.constraint_residual(dp_feas);
+            expected_g_feas = TW_req - dp_feas.TW;
 
-            [received_margin, received_available, received_required] = obj.TW_margin(WS_actual, T_SL, W_TO);
+            % Infeasible: available T/W below required -> g > 0.
+            dp_infeas = DesignPoint(W_TO, 0.90 * TW_req * W_TO, S_ref);
+            g_infeas  = obj.constraint_residual(dp_infeas);
+            expected_g_infeas = TW_req - dp_infeas.TW;
 
-            fprintf(['\n    TW_margin: required=%.6f  available=%.6f  margin=%.6f  ' ...
-                '(hand-computed: required=%.6f  available=%.6f  margin=%.6f)\n'], ...
-                received_required, received_available, received_margin, ...
-                expected_required, expected_available, expected_margin);
-            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
-                'TW_margin''s required output must equal alpha*required_TW(WS_actual).');
-            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
-                'TW_margin''s available output must equal alpha*T_SL/W_TO.');
-            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
-                'TW_margin must equal available minus required.');
+            fprintf(['\n    constraint_residual: required_TW=%.6f  ' ...
+                'feasible g=%.6f  infeasible g=%.6f\n'], TW_req, g_feas, g_infeas);
+
+            tc.verifyEqual(g_feas, expected_g_feas, 'RelTol', 1e-10, ...
+                'constraint_residual must equal required_TW(dp.WS) - dp.TW.');
+            tc.verifyLessThan(g_feas, 0, ...
+                'A design with more T/W available than required must be feasible (g < 0).');
+            tc.verifyEqual(g_infeas, expected_g_infeas, 'RelTol', 1e-10, ...
+                'constraint_residual must equal required_TW(dp.WS) - dp.TW.');
+            tc.verifyGreaterThan(g_infeas, 0, ...
+                'A design with less T/W available than required must be infeasible (g > 0).');
         end
 
         function testRequiredTWVectorizedOverWS(tc)

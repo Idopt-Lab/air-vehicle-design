@@ -23,7 +23,7 @@ classdef TestSizingLoopL1 < matlab.unittest.TestCase
             aero_stub = FixedAeroStub(1.5, 0.02, 0.1, 0);
             prop_stub = FixedPropStub(0.5);
             state     = AircraftState(10000, 0.6);
-            c1        = ThrustConstraint("Toy", state, aero_stub, prop_stub, 1.0, 1.0, 0);
+            c1        = LevelFlightConstraint("Toy", state, aero_stub, prop_stub, 1.0);
             con       = ConstraintAnalysis({c1}, 20:5:150);
             [WS_opt, TW_opt] = con.optimal_point();
 

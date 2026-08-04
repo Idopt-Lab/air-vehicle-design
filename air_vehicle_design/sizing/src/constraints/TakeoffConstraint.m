@@ -6,9 +6,11 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 %   current-iteration aerodynamics/propulsion discipline objects, returns
 %   the thrust-to-weight ratio required to take off within S_G as a
 %   function of wing loading W/S. Belongs to the Both_WbyS_TbyW category
-%   (see that class's header) -- it supplies the A/B/C/D terms below (A=D=0;
-%   B and C survive, see equation below); Both_WbyS_TbyW assembles them into
-%   required_TW(WS). CLmax_TO/CD0_TO are pulled fresh from
+%   (see that class's header) as a DIRECT sibling of the Master-Equation
+%   subtree (reparented 2026-08-04, T9): its required_TW is the ground-roll
+%   affine relation below (the old A=D=0 case where only B and C survive),
+%   NOT the Master Equation, so it implements required_TW itself rather than
+%   inheriting a Master-Equation assembly. CLmax_TO/CD0_TO are pulled fresh from
 %   aero.get_CLmax_TO()/(aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO(...))
 %   each call -- not constraint inputs, per
 %   sizing/docs/subplans/06_constraint_analysis.md ("CLmax is NOT a
@@ -24,8 +26,9 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 %   compute_C's header for the get_Delta_CD0_TO arity note).
 %
 %   EQUATION [Mattingly, Heiser, Pratt, "Aircraft Engine Design," 2nd ed.,
-%   AIAA, 2002 -- the same point-performance Master Equation ThrustConstraint
-%   implements (see that class's header), specialized to the ground-roll
+%   AIAA, 2002 -- the same point-performance Master Equation the
+%   MasterEquationConstraint subtree implements (see that class's header),
+%   specialized to the ground-roll
 %   (takeoff) segment via T_SL >> (D+R) and dh/dt=0, which zero the Master
 %   Equation's A and D terms and leave a B*(W_TO/S) term plus a constant C
 %   term (the drag/rolling-friction ground-roll correction below); matches
@@ -118,17 +121,49 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
             obj.k_TO  = k_TO;
         end
 
+        function TW = required_TW(obj, WS)
+        %REQUIRED_TW  T/W required to take off within S_G at wing loading(s)
+        %   WS [lbf/ft^2], per the ground-roll relation in the class header.
+        %   The old A=D=0 Master-Equation case: TW = B*(W/S) + C, with B the
+        %   W/S-linear ground-roll term and C the drag/rolling-friction
+        %   correction. WS may be scalar or array; TW is returned the same
+        %   size.
+        %
+        %   NON-FINITE SELF-GUARD (moved here from Both_WbyS_TbyW 2026-08-04,
+        %   T9): B and C are built from the aero object's flapped CLmax_TO/
+        %   CD0_TO and the propulsion object's thrust lapse, either of which
+        %   can hand back a non-finite value (a mis-injected discipline object,
+        %   or an aero model that does not cover this condition). A NaN
+        %   required_TW is silently OMITTED from ConstraintAnalysis's max()
+        %   envelope, so the condition would read as SATISFIED off a curve that
+        %   does not exist -- error here instead, the same protection every
+        %   Master-Equation constraint gets, at the one place this condition
+        %   funnels through.
+            B = obj.compute_B();
+            C = obj.compute_C();
+            terms = [B, C];
+            if ~all(isfinite(terms))
+                names = ["B", "C"];
+                bad   = names(~isfinite(terms));
+                where = sprintf('This condition is at alt=%g ft, M=%.4f.', ...
+                    obj.state.altitude_ft, obj.state.mach);
+                error('TakeoffConstraint:nonFiniteTerm', ...
+                    ['Constraint "%s": ground-roll term(s) %s are non-finite ', ...
+                     '[B C] = %s. The usual cause is a flapped CLmax_TO/CD0_TO ', ...
+                     'or thrust lapse that is not modeled at this flight ', ...
+                     'condition. %s'], ...
+                    obj.name, strjoin(bad, "/"), mat2str(terms, 6), where);
+            end
+            TW = B .* WS + C;
+        end
+
     end
 
     methods (Access = protected)
-        %COMPUTE_A/B/C/D  Master Equation terms specialized to the ground-roll
-        %   case (T_SL>>D+R, dh/dt=0 zero A and D -- see class header): B
-        %   carries the W/S-linear term, C the drag/rolling-friction
-        %   ground-roll correction.
-
-        function A = compute_A(~)
-            A = 0;
-        end
+        %COMPUTE_B/C  Ground-roll terms (T_SL>>D+R, dh/dt=0 zero the
+        %   Master-Equation A and D -- see class header): B carries the
+        %   W/S-linear term, C the drag/rolling-friction ground-roll
+        %   correction. required_TW above assembles them into B*(W/S) + C.
 
         function B = compute_B(obj)
         %COMPUTE_B  See class header for the equation and citation.
@@ -163,17 +198,13 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
             C = TakeoffConstraint.DRAG_FACTOR * CD0_TO / (obj.beta * CLmax_TO) + obj.mu;
         end
 
-        function D = compute_D(~)
-            D = 0;
-        end
-
         function alpha = get_alpha(obj)
         %GET_ALPHA  Thrust lapse (AB/max power, PropulsionBase convention --
         %   TakeoffConstraint has no mil/AB distinction to select between,
-        %   unlike ThrustConstraint.m's get_alpha). Exposed as its own
-        %   method, rather than computed inline only inside compute_B, so
-        %   Both_WbyS_TbyW.TW_margin uses this exact same alpha -- never an
-        %   independently-supplied value that could disagree with it.
+        %   unlike MasterEquationConstraint.m's get_alpha). Exposed as its own
+        %   method, rather than computed inline only inside compute_B, so the
+        %   exact alpha a condition applied can be read back (constraint_residual
+        %   itself works on the flat SL-static basis and does not use it).
             alpha = obj.prop.thrust_lapse(obj.state);
         end
 

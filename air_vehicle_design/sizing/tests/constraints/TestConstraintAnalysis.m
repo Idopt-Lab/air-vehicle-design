@@ -3,17 +3,17 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
 %   aggregator (constraint diagram + optimum design point).
 %
 %   ConstraintAnalysis takes a live list of PointPerformanceBase constraint
-%   objects (not precomputed T/W arrays) and calls required_TW(WS_range) on
-%   each itself -- see ConstraintAnalysis.m's header. These tests exercise
-%   the AGGREGATION logic (envelope, argmin, mixed thrust/wall-type
-%   rendering) using real ThrustConstraint/TakeoffConstraint/LandingConstraint
-%   objects wired to F16AeroL1(f16a_spec_path(1))/F16PropL2(f16a_spec_path(2))
-%   as concrete stand-ins, the same
-%   convention TestThrustConstraint/TestTakeoffConstraint/TestLandingConstraint
-%   use ("not F-16-specific data, just uses the F-16 discipline objects as a
-%   concrete AerodynamicsBase/PropulsionBase pair") -- NOT re-testing each
-%   constraint class's own physics, which those files already cover
-%   exhaustively.
+%   objects (not precomputed T/W arrays). For required_TW PRODUCERS it calls
+%   required_TW(WS_range); for Only_WbyS WALLS it reads WS_max() -- see
+%   ConstraintAnalysis.m's header. These tests exercise the AGGREGATION logic
+%   (producer envelope, wall restriction, argmin, mixed producer/wall
+%   rendering) using real LevelFlight/SustainedTurn/TakeoffConstraint/
+%   LandingConstraint objects wired to F16AeroL1(f16a_spec_path(1))/
+%   F16PropL2(f16a_spec_path(2)) as concrete stand-ins, the same convention
+%   the per-class tests use ("not F-16-specific data, just uses the F-16
+%   discipline objects as a concrete AerodynamicsBase/PropulsionBase pair") --
+%   NOT re-testing each constraint class's own physics, which those files
+%   already cover exhaustively.
 %
 %   Design-point definition: the optimum is the minimum, over W/S, of the
 %   upper envelope of all supplied constraints' required_TW curves (Raymer
@@ -22,20 +22,20 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
     methods (Test)
 
         function testOptimalPointMatchesIndependentEnvelopeComputation(tc)
-            % Builds 2 arbitrary ThrustConstraint conditions (different
-            % beta/n/Ps -- not F-16-specific data) and checks
+            % Builds 2 arbitrary Master-Equation conditions (different
+            % beta/n -- not F-16-specific data) and checks
             % ConstraintAnalysis.optimal_point() against an envelope/argmin
             % computed independently outside the class (looping
             % required_TW itself, exactly what ConstraintAnalysis does
             % internally) -- this exercises the aggregation wiring, not the
-            % Master Equation itself (already covered by TestThrustConstraint).
+            % Master Equation itself (already covered by the per-class tests).
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
             WS_range = 20:5:160;
 
-            c1 = ThrustConstraint("C1", state, aero, prop, 0.95, 1.0, 0.0);
-            c2 = ThrustConstraint("C2", state, aero, prop, 0.80, 3.0, 0.0);
+            c1 = LevelFlightConstraint("C1", state, aero, prop, 0.95);
+            c2 = SustainedTurnConstraint("C2", state, aero, prop, 0.80, 3.0);
 
             ca = ConstraintAnalysis({c1, c2}, WS_range);
             [WS_opt, TW_opt] = ca.optimal_point();
@@ -49,20 +49,54 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             tc.verifyEqual(TW_opt, expectedTW);
         end
 
-        function testNamesAndTWTableCachedFromConstraints(tc)
+        function testEnvelopeRecomputedOnDemandFromConstraints(tc)
+            % ConstraintAnalysis no longer caches a names/TW_table pair at
+            % construction (that could go stale when an injected discipline
+            % mutates -- see testOptimalPointTracksMutatedDiscipline). It
+            % stores only {constraints, WS_range} and rebuilds the rows on
+            % every read. This test checks the on-demand envelope() matches an
+            % independent max over each constraint's own required_TW curve.
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
             WS_range = 20:10:180;
 
-            c1 = ThrustConstraint("Cruise", state, aero, prop, 0.9);
-            c2 = ThrustConstraint("Dash", state, aero, prop, 0.85, 1.0, 0.0);
+            c1 = LevelFlightConstraint("Cruise", state, aero, prop, 0.9);
+            c2 = LevelFlightConstraint("Dash", state, aero, prop, 0.85);
 
             ca = ConstraintAnalysis({c1, c2}, WS_range);
 
-            tc.verifyEqual(ca.names, ["Cruise", "Dash"]);
-            tc.verifyEqual(ca.TW_table(1,:), c1.required_TW(WS_range));
-            tc.verifyEqual(ca.TW_table(2,:), c2.required_TW(WS_range));
+            expectedEnv = max([c1.required_TW(WS_range); c2.required_TW(WS_range)], [], 1);
+            tc.verifyEqual(ca.envelope(), expectedEnv);
+        end
+
+        function testOptimalPointTracksMutatedDiscipline(tc)
+            % RECOMPUTE-ON-READ: because ConstraintAnalysis stores only its
+            % inputs and rebuilds the rows on every read, mutating an injected
+            % discipline object AFTER construction must change the next
+            % optimal_point() -- the design point can no longer go stale off a
+            % cached TW_table. A mutable FixedAeroStub feeds a real
+            % LevelFlightConstraint; bumping its CD0 raises the A = q*CD0/alpha
+            % term (the A/(W/S) branch of the Master Equation), so the required
+            % T/W -- and hence the envelope minimum -- must rise.
+            aero  = FixedAeroStub(1.2, 0.020, 0.10, 0.0);   % CLmax, CD0, K1, K2
+            prop  = FixedPropStub(0.8);                     % alpha
+            state = AircraftState(20000, 0.8);
+            WS_range = 20:5:160;
+
+            c  = LevelFlightConstraint("Toy", state, aero, prop, 0.9);
+            ca = ConstraintAnalysis({c}, WS_range);
+
+            [WS_before, TW_before] = ca.optimal_point();
+
+            aero.CD0 = 0.060;   % triple the zero-lift drag on the SAME object
+
+            [WS_after, TW_after] = ca.optimal_point();
+
+            tc.verifyGreaterThan(TW_after, TW_before, ...
+                'Optimum T/W must rise after CD0 is increased -- proves no stale cache.');
+            tc.verifyNotEqual([WS_after, TW_after], [WS_before, TW_before], ...
+                'The design point must change after the injected aero object is mutated.');
         end
 
         function testSingleConstraintOptimalPoint(tc)
@@ -73,7 +107,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             state = AircraftState(10000, 0.8);
             WS_range = 10:2:200;
 
-            c  = ThrustConstraint("Only", state, aero, prop, 0.95, 1.0, 0.0);
+            c  = LevelFlightConstraint("Only", state, aero, prop, 0.95);
             ca = ConstraintAnalysis({c}, WS_range);
             [WS_opt, TW_opt] = ca.optimal_point();
 
@@ -86,11 +120,11 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
         % --- Mixed thrust-type + wall-type (landing) constraints -----------
 
         function testMixedThrustAndLandingRespectsWSLimit(tc)
-            % A LandingConstraint's vertical-wall required_TW (0 below its
-            % WS_max, Inf above) must exclude infeasible W/S from the
-            % optimum, combined uniformly with a thrust-type curve through
-            % the same max-envelope -- no special-casing needed for
-            % correctness (see LandingConstraint.m's header).
+            % A LandingConstraint is a W/S WALL (Only_WbyS): ConstraintAnalysis
+            % restricts the optimum search to W/S at or below its WS_max()
+            % (T9), so the optimum can never land beyond the landing limit,
+            % combined with the thrust-type producer curve through the
+            % producer envelope. See ConstraintAnalysis.m's header.
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.8);
@@ -106,7 +140,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             % widened for the same reason.
             WS_range = 20:2:260;
 
-            thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
+            thrust  = SustainedTurnConstraint("Combat Turn", state, aero, prop, 0.95, 4.5);
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
 
             ca = ConstraintAnalysis({thrust, landing}, WS_range);
@@ -123,7 +157,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             state = AircraftState(20000, 0.8);
             WS_range = 20:2:260;   % widened -- see testMixedThrustAndLandingRespectsWSLimit's comment
 
-            thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
+            thrust  = SustainedTurnConstraint("Combat Turn", state, aero, prop, 0.95, 4.5);
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
 
             ca  = ConstraintAnalysis({thrust, landing}, WS_range);
@@ -151,7 +185,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             state = AircraftState(20000, 0.8);
             WS_range = 20:2:260;   % widened -- see testMixedThrustAndLandingRespectsWSLimit's comment
 
-            thrust  = ThrustConstraint("Combat Turn", state, aero, prop, 0.95, 4.5, 0.0);
+            thrust  = SustainedTurnConstraint("Combat Turn", state, aero, prop, 0.95, 4.5);
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
 
             ca  = ConstraintAnalysis({thrust, landing}, WS_range);
@@ -181,65 +215,35 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
-            c = ThrustConstraint("Toy", state, aero, prop, 0.9);
+            c = LevelFlightConstraint("Toy", state, aero, prop, 0.9);
 
             tc.verifyError(@() ConstraintAnalysis({c, 42}, 20:10:100), ...
                 'ConstraintAnalysis:InvalidConstraint');
         end
 
-        % --- NaN vs Inf in a required_TW curve --------------------------------
+        % --- Wall handling (Only_WbyS via WS_max) -----------------------------
         %
-        % Inf and NaN are NOT interchangeable here. Inf is the documented way a
-        % wall-type constraint says "infeasible above my W/S limit"
-        % (LandingConstraint.m) and must keep working. NaN means the condition
-        % could not be evaluated, and must be rejected -- see the next test for
-        % why silence is the worst outcome.
+        % T9 removed the aggregator NaN guard and the Inf-wall-in-envelope
+        % hack: an Only_WbyS is now an explicit W/S wall, not a fake 0/Inf
+        % curve. Each required_TW PRODUCER self-guards a non-finite term
+        % (MasterEquationConstraint/TakeoffConstraint throw), so the aggregator
+        % no longer needs its own NaN check. A wall never enters the producer
+        % envelope at all -- it only restricts the optimum search via WS_max().
 
-        function testNaNConstraintCurveErrorsAtConstruction(tc)
-            % Uses NaNCurveStub rather than a real ThrustConstraint on purpose:
-            % Both_WbyS_TbyW.required_TW would throw first and the aggregator's
-            % own guard would never be reached. Constraint categories outside
-            % the Master Equation have no such upstream check, which is exactly
-            % why ConstraintAnalysis needs this one.
-            tc.verifyError(@() ConstraintAnalysis({NaNCurveStub("Bad", 3)}, 20:10:100), ...
-                'ConstraintAnalysis:nanConstraintCurve');
-        end
-
-        function testNaNIsRejectedEvenAlongsideValidConstraints(tc)
-            aero  = F16AeroL1(f16a_spec_path(1));
-            prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(10000, 0.8);
-            good  = ThrustConstraint("Good", state, aero, prop, 0.9);
-
-            tc.verifyError(@() ConstraintAnalysis({good, NaNCurveStub("Bad", 2)}, 20:10:100), ...
-                'ConstraintAnalysis:nanConstraintCurve');
-        end
-
-        function testNaNWouldOtherwiseVanishFromTheEnvelope(tc)
-            % Documents the failure mode the guard exists to prevent: MATLAB's
-            % max() OMITS NaN by default, so an unevaluable constraint would
-            % silently drop out of max(TW_table,[],1) and the design point would
-            % be computed as though it had never been supplied -- no warning,
-            % plausible-looking answer. This asserts the MATLAB behaviour
-            % directly, so the test stays meaningful if the guard is ever moved.
-            table_with_nan = [1 2 3; NaN NaN NaN];
-            tc.verifyEqual(max(table_with_nan, [], 1), [1 2 3], ...
-                'max() omits NaN -- an unguarded NaN row vanishes from the envelope.');
-        end
-
-        function testInfConstraintCurveIsStillAccepted(tc)
-            % The guard must be NaN-only. A LandingConstraint returns Inf above
-            % its W/S limit by design, so a ~isfinite() check here would break
-            % every wall-type constraint.
+        function testWallOnlySetGivesNoProducerEnvelope(tc)
+            % With a single Only_WbyS (Landing) and no producers, the producer
+            % envelope is empty -> -Inf everywhere (never NaN or Inf-from-a-
+            % fake-curve). The wall still bounds the feasible W/S band.
             aero    = F16AeroL1(f16a_spec_path(1));
             landing = LandingConstraint("Landing", AircraftState(0, 0.1), aero, 4000, 0.5);
             WS_range = 20:2:260;   % widened -- see testMixedThrustAndLandingRespectsWSLimit's comment
 
-            ca = ConstraintAnalysis({landing}, WS_range);
-            tc.verifyTrue(any(isinf(ca.TW_table(1,:))), ...
-                'Precondition: this landing wall must produce Inf somewhere in the sweep.');
-            tc.verifyFalse(any(isnan(ca.TW_table(1,:))), ...
-                'A wall constraint must encode infeasibility as Inf, never NaN.');
+            ca  = ConstraintAnalysis({landing}, WS_range);
+            env = ca.envelope();
+            tc.verifyTrue(all(env == -Inf), ...
+                'With no producers the envelope must be -Inf everywhere (walls add no curve).');
+            tc.verifyFalse(any(isnan(env)), ...
+                'The envelope must never contain NaN.');
         end
 
         % --- Report -----------------------------------------------------------
@@ -248,7 +252,7 @@ classdef TestConstraintAnalysis < matlab.unittest.TestCase
             aero  = F16AeroL1(f16a_spec_path(1));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.8);
-            c  = ThrustConstraint("Toy", state, aero, prop, 0.9);
+            c  = LevelFlightConstraint("Toy", state, aero, prop, 0.9);
             ca = ConstraintAnalysis({c}, 20:10:200);
             tc.verifyWarningFree(@() ca.report());
         end

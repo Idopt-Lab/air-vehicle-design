@@ -7,11 +7,13 @@ classdef F16ConstraintSet
 %   conditions (altitude, Mach, weight fraction, load factor, specific
 %   excess power for the 6 point-performance rows; field length, friction
 %   coefficient for the 2 field rows) via ConstraintSetImporter, then
-%   instantiates the matching generic Layer-1 constraint class per row --
-%   ThrustConstraint (Mattingly Master Equation) for every row except
-%   Takeoff/Landing, TakeoffConstraint/LandingConstraint (ground-roll
-%   equations) for those two -- wired to the F-16 aero/prop discipline
-%   objects for the requested fidelity level. A 9th constraint, Stall
+%   instantiates the matching generic Layer-1 constraint class per row.
+%   The Master-Equation thrust rows map to the MasterEquationConstraint
+%   subtree by their own data (T9, 2026-08-04): Ps>0 -> ExcessPowerConstraint,
+%   else n>1 -> SustainedTurnConstraint, else LevelFlightConstraint. The two
+%   field rows map to TakeoffConstraint/LandingConstraint (ground-roll
+%   equations). All are wired to the F-16 aero/prop discipline objects for the
+%   requested fidelity level. A 9th constraint, Stall
 %   (StallConstraint), can be appended directly rather than read from the
 %   sheet (see STALL_MACH's comment for why) -- EXCLUDED BY DEFAULT
 %   (changed 2026-07-27; was included by default until then).
@@ -36,18 +38,18 @@ classdef F16ConstraintSet
 %
 %   See sizing/docs/subplans/06_constraint_analysis.md, "F-16 Constraint
 %   Conditions" tables, for the condition data; the constraint equations
-%   themselves are cited in ThrustConstraint.m/TakeoffConstraint.m/
+%   themselves are cited in MasterEquationConstraint.m/TakeoffConstraint.m/
 %   LandingConstraint.m/StallConstraint.m, not repeated here.
 %
 %   POWER SETTING IS WIRED FROM THE SHEET (fixed 2026-07-25): the workbook's
 %   "AB%" column (read as row.AB_) selects each thrust row's alpha basis --
 %   0% -> powerSetting="mil" (PropulsionBase.thrust_lapse_mil_on_AB_scale),
 %   100% -> powerSetting="AB" (PropulsionBase.thrust_lapse). Before this fix
-%   every row took ThrustConstraint's "AB" default, so the F-16's one dry-power
+%   every row took the "AB" default, so the F-16's one dry-power
 %   condition (Cruise, AB%=0) was built on the afterburner lapse and its
 %   required T/W came out ~2.6x low -- the ~-58% error that
 %   cruise_and_combatturn2_error_scrape.md records as FIXED. The fix had landed
-%   in ThrustConstraint/TestThrustConstraint but never in this production build
+%   in the Master-Equation class/its test but never in this production build
 %   path. See mapPowerSetting below.
 %
 %   NOT WIRED FROM THE SHEET (intentional, documented gaps -- out of scope
@@ -112,14 +114,31 @@ classdef F16ConstraintSet
                         constraints{i} = LandingConstraint(name, state, aero, ...
                             row.Distance_ft_, row.SurfaceFrictionCoefficient_mu_, row.W_Wto);
                     otherwise
+                        % Master-Equation thrust row. Pick the specialization
+                        % by data (T9): Ps>0 -> ExcessPower, else n>1 ->
+                        % SustainedTurn, else LevelFlight. Ps/n missing (NaN)
+                        % read as 0/1 (sustained, unaccelerated) -- the same
+                        % defaults the old single class applied.
                         state = AircraftState(row.Altitude_ft_, row.MachNumber);
                         Ps = row.PS_ft_s_;
                         if isnan(Ps)
                             Ps = 0;
                         end
-                        constraints{i} = ThrustConstraint(name, state, aero, prop, ...
-                            row.W_Wto, row.n, Ps, ...
-                            F16ConstraintSet.mapPowerSetting(name, row.AB_));
+                        n = row.n;
+                        if isnan(n)
+                            n = 1;
+                        end
+                        powerSetting = F16ConstraintSet.mapPowerSetting(name, row.AB_);
+                        if Ps > 0
+                            constraints{i} = ExcessPowerConstraint(name, state, aero, prop, ...
+                                row.W_Wto, Ps, powerSetting);
+                        elseif n > 1
+                            constraints{i} = SustainedTurnConstraint(name, state, aero, prop, ...
+                                row.W_Wto, n, powerSetting);
+                        else
+                            constraints{i} = LevelFlightConstraint(name, state, aero, prop, ...
+                                row.W_Wto, powerSetting);
+                        end
                 end
             end
 
@@ -134,25 +153,26 @@ classdef F16ConstraintSet
     methods (Static, Access = private)
 
         function powerSetting = mapPowerSetting(name, AB_percent)
-        %MAPPOWERSETTING  Workbook "AB%" -> ThrustConstraint powerSetting.
+        %MAPPOWERSETTING  Workbook "AB%" -> Master-Equation powerSetting.
         %   0% afterburner is a dry/military-power condition, whose thrust lapse
         %   must come from PropulsionBase.thrust_lapse_mil_on_AB_scale
         %   (T_mil/T_SL_AB) rather than the AB-basis thrust_lapse -- see
-        %   ThrustConstraint.get_alpha and
+        %   MasterEquationConstraint.get_alpha and
         %   cruise_and_combatturn2_error_scrape.md Sec. 2.
         %
         %   Errors rather than defaulting on a missing or partial value: an
         %   unstated power setting silently defaulting to "AB" is exactly the
-        %   bug this method exists to prevent, and ThrustConstraint models only
-        %   the two discrete bases (there is no partial-AB thrust model).
+        %   bug this method exists to prevent, and the Master-Equation classes
+        %   model only the two discrete bases (there is no partial-AB thrust
+        %   model).
             arguments
                 name       (1,1) string
                 AB_percent (1,1) double
             end
             if isnan(AB_percent)
                 error('F16ConstraintSet:missingPowerSetting', ...
-                    ['Constraint row "%s" has no AB%% value. A ThrustConstraint ', ...
-                     'needs an explicit power setting (0 = mil, 100 = AB); ', ...
+                    ['Constraint row "%s" has no AB%% value. A Master-Equation ', ...
+                     'constraint needs an explicit power setting (0 = mil, 100 = AB); ', ...
                      'fill the AB%% column in Constraints.xlsx.'], name);
             end
             switch AB_percent
