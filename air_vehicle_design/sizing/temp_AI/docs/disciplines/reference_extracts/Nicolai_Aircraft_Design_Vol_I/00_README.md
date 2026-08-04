@@ -53,18 +53,20 @@ Each scraped item carries an inline citation of the form:
 | 23 | `23_control_surface_sizing.md`          | 23 Control Surface Sizing Criteria          | 622–633 | **done** |
 | 24 | `24_life_cycle_cost.md`                 | 24 Life Cycle Cost                          | 634–659 | **done** |
 | 25 | `25_trade_studies_and_sizing.md`        | 25 Trade Studies and Sizing                 | 660–677 | **done** |
-| A  | `A_conversions.md`                      | Appendix A Conversions                      | 680–692 | pending |
-| B  | `B_atmospheric_data.md`                 | Appendix B Atmospheric Data                 | 692–700 | pending |
-| C  | `C_isentropic_flow.md`                  | Appendix C Isentropic Compressible Flow     | 700–708 | pending |
-| D  | `D_normal_shock.md`                     | Appendix D Normal Shock Functions           | 708–714 | pending |
-| E  | `E_oblique_conical_shocks.md`           | Appendix E Oblique & Conical Shocks         | 714–726 | pending |
-| F  | `F_naca_airfoil_data.md`                | Appendix F NACA Airfoil Nomenclature/Data   | 726–744 | pending |
-| G  | `G_real_aircraft_aero_data.md`          | Appendix G Aerodynamic Data of Real Aircraft| 744–756 | pending |
-| H  | `H_wing_body_aero.md`                   | Appendix H Aerodynamics of Wing–Body Combos | 756–770 | pending |
-| I  | `I_aircraft_weights_data.md`            | Appendix I Aircraft Weights Data            | 770–796 | pending |
-| J  | `J_propulsion_data.md`                  | Appendix J Propulsion Data                  | 796–834 | pending |
-| K  | `K_miscellaneous_data.md`               | Appendix K Miscellaneous Data               | 834–755 | pending |
+| A  | `A_conversions.md`                      | Appendix A Conversions                      | 678–688 | **done** |
+| B–K | — | Appendices B–K (Atmospheric Data, Isentropic Flow, Normal Shock, Oblique & Conical Shocks, NACA Airfoil Data, Real-Aircraft Aero Data, Wing–Body Aero, Weights Data, Propulsion Data, Misc. Data) | — | **not in source** |
 
-*(PDF page ranges for appendices are approximate and will be confirmed during extraction.)*
+*(PDF page ranges above are exact, confirmed during extraction. Appendices B–K are listed in
+the book's own front matter/table of contents, but this PDF file's content ends after Appendix
+A — PDF page 688 (printed p. 679) is immediately followed by the back-of-book Index (PDF pp.
+689–755, confirmed via total page count = 755). No further appendix content exists in this
+source file to extract.)*
 
-Status values: `pending` → `in progress` → `done`.
+Status values: `pending` → `in progress` → `done` → `not in source` (content confirmed absent
+from this PDF file).
+
+## Extraction complete
+
+All 25 main chapters and the one appendix present in this PDF file (Appendix A) have been
+fully extracted, cited, and Grep-verified. Appendices B–K are not present in the source PDF
+and cannot be extracted from it.
