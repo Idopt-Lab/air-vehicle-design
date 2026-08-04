@@ -95,8 +95,11 @@ paths did not — the analysis instance *flattens* the variant, so the roll-ups 
 
 ## Mass roll-up → Operating Empty Weight
 
-Every part carries `PhysicalItem.Mass_lb`. The leaf masses on the **active** path are the Brandt
-F-16A ground-truth component weights (lbf, design point `W_TO = 31,377 lb`):
+Every part carries `PhysicalItem.Mass_lb` and, since D-036, a `DataProvenance` describing **that
+mass**. The leaf masses on the **active** path are the Brandt F-16A ground-truth component weights
+(lbf, design point `W_TO = 31,377 lb`), and `F16APhysicalArchitectureTest` now checks them by
+**executing** `sizing/VnV/BrandtF16A/BrandtWeight.m` rather than holding a second copy — so the
+figures below are a reader's convenience, not the thing the test compares against:
 
 | Assembly | Part | Mass (lb) | | Assembly (leaf) | Mass (lb) |
 |----------|------|----------:|-|-----------------|----------:|
@@ -290,11 +293,30 @@ are engineering judgement on a declared scale for *every* candidate, including t
 `DataProvenance = Reference` on `F100_PW_200` says its *mass* is sourced, not that its Benefit of 8.2
 is. Overclaiming provenance is precisely what the tag exists to prevent.
 
-Every value-bearing stereotype declares the property: `TradeCandidate`, `Material`, `FuelTank`.
-`PhysicalItem`, `Rationale` and `MeasureOfMerit` are exempt with a stated reason — the first holds
-Brandt ground truth (invented candidate masses are tagged on `TradeCandidate`, where they are
-*scored*), the second holds prose, and the third holds a **computed** OEW and a `NaN` cost, where a
-provenance tag would be its own kind of overclaiming.
+Every value-bearing stereotype declares the property: `TradeCandidate`, `Material`, `FuelTank`,
+`PhysicalItem`. Only `Rationale` and `MeasureOfMerit` are exempt with a stated reason — the first
+holds prose, the second a **computed** OEW and a `NaN` cost, where a provenance tag would be its own
+kind of overclaiming.
+
+`PhysicalItem` was itself exempt until D-036, on the argument that it held Brandt ground truth and
+the invented masses were tagged on `TradeCandidate` where they are *scored*. That was half true and
+the wrong half mattered: 14 of the 16 masses summing to OEW carried no provenance at all, and the six
+airframe structural leaves carried `Material.DataProvenance = Estimate` — which describes their
+composite fraction — sitting beside a mass that is Brandt data. A reader inspecting `Fuselage` saw a
+tag that **contradicted** its mass rather than one that was merely missing. Each property now names
+its own source, so two tags on one part stop competing to describe it:
+
+| Part | `PhysicalItem.DataProvenance` (its mass) | the other tag |
+|---|---|---|
+| `Fuselage` | `Reference` — Brandt | `Material` = `Estimate` (its composite fraction) |
+| `WingTank` | `Reference` — a definitional zero | `FuelTank` = `Estimate` (its capacity) |
+| `F110_GE_100` | `Estimate` — invented, in D-030 | `TradeCandidate` = `Estimate` (as scored) |
+| `Airframe` | `Simulation` — the default | none; it carries no mass of its own |
+
+The default is `Simulation`, not `Estimate`: `PhysicalItem` is applied to every component, so the
+ones left at the default are the interior nodes, which store no mass — their subtotal is computed by
+the roll-up on demand. Defaulting to `Estimate` would tag every subtotal an invented teaching value
+and drag all of them into D-030.
 
 `testProvenanceDeclaredOnEveryValueBearingStereotype` is written the *other* way round from the
 obvious version: it takes every stereotype the profile declares, subtracts a named exemption list,

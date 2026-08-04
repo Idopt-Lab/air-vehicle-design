@@ -7,18 +7,10 @@ Working file, not teaching material. Open items only — what was decided and wh
 
 | # | Item | Decision | Owner |
 |---|---|---|---|
-| 1 | **Brandt masses are transcribed twice** — `generate_f16a_physical.m` and `F16APhysicalArchitectureTest.m` each hold their own copy of the same 16 figures, so the test verifies a transcription. Have the test execute `BrandtWeight.m` instead. **Land `PhysicalItem.DataProvenance` in the same stage** (see below). | D-036 | `f16a-vnv` · `f16a-data` |
-| 2 | **Only one engine candidate is real.** Give `TradeCandidate` a `T_SL_lb`; source the F-16's own engine from Brandt and make the other two declared hypotheticals with invented thrusts — one short of the T/W it needs, one with far more than it needs and heavier for it. Rename `F110_GE_100`, which wears a real designation over invented data. | new | `f16a-physical` · `f16a-data` |
-| 3 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. | D-043 | `f16a-physical` · `f16a-data` |
+| 1 | **Only one engine candidate is real.** Give `TradeCandidate` a `T_SL_lb`; source the F-16's own engine from Brandt and make the other two declared hypotheticals with invented thrusts — one short of the T/W it needs, one with far more than it needs and heavier for it. Rename `F110_GE_100`, which wears a real designation over invented data. | new | `f16a-physical` · `f16a-data` |
+| 2 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. | D-043 | `f16a-physical` · `f16a-data` |
 
-**Item 1 carries a second half.** `PhysicalItem` declares `{ Mass_lb }` and no `DataProvenance`, so 14
-of the 16 masses summing to OEW carry no provenance — and six of them carry
-`Material.DataProvenance = Estimate`, which describes their *composite fraction* while their mass is
-`Reference`. A reader inspecting `Fuselage` sees a **contradicting** tag, not a missing one. Give
-`PhysicalItem` its **own** `DataProvenance` (do not overload `Material`'s) and have the gate check that
-no leaf carries two provenance tags that disagree.
-
-**Item 2 is scoped.** `T_SL_lb` is a declared property, **not a trade criterion and not a screen** —
+**Item 1 is scoped.** `T_SL_lb` is a declared property, **not a trade criterion and not a screen** —
 scoring stays `Benefit`/`TRL`/`Mass_lb`/`UnitCost_USD` and the outcome must not move. **No T/W ratio is
 computed anywhere**, in the model, a test or the docs: the three thrusts sit side by side and the
 narrative says what they mean. The twin's extra cost stays qualitative, because
@@ -59,3 +51,41 @@ Argued in the log, none of them defects — they extend the example rather than 
 Run `runChecks(currentProject)` at the end of any stage that adds, moves or renames a file, and expect
 **12/12**. The registry has drifted before, and both times it was a move or an addition that never
 propagated to the project.
+
+
+
+## These are open ToDos written by user. AI should not read this section
+
+### 1
+- For 03_traceability
+-- let's call it 05_traceability. 01 is requirements, 02 is functions, 03 is logical, 04 is physical. 
+- In 04_logical, 
+-- remove the previous decision and now the "kind names changed" portion. That is not useful anymore. Remove the "Why L cannot answer which one?" section; its also too much exposition. Little  
+-- Little more info on the stereotype and the mechanisms in place for the model to recognize which option was chosen and why
+--The implement link should exist between a requirement and this Logical layer, even if the specific option (variant) isn't decided yet. The selection happens at the Physical layer
+
+
+### 2
+The F16APhysicalTradeStudy.m is too complex for anyone to understand. 
+I want you to break it into 3 separate files, one for each of the trade studies. Write extremely simple code and walk through
+- How they will open a model
+- How they will read relevant values
+- How they will conduct a trade study
+- How they will inform back the model the decision made
+
+There should be lots of print statements when someone runs the script. 
+
+
+### 3
+You have defined a Execute Mission Profile. 
+This is what the /sizing/mission_analysis does. It walks through each mission segment and computes various quantities. I want to connect the MBSE model to this analysis model. 
+
+
+### 4
+I want to see all the views:
+R-> F mapping
+F-> L matrix
+Morphological matrix
+
+
+You have a bunch of tests that are good for debugging and when you are making changes. But those tests are written in a manner that is hard to read and is not useful as part of the teaching. So, I want you to move them all to a new folder named "tests_for_ai_coding". In addition to moving them, try and simplify. 

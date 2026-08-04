@@ -210,7 +210,7 @@ its baseline makes the declared weights stop describing influence. **Decision** 
 not cap (discards real information) and do not error (rejects a legitimate candidate). Bounded value
 functions over declared ranges are **C2**.
 
-### D-036 · The Brandt masses are referenced from the `.m` model, not transcribed twice · **OPEN**
+### D-036 · The Brandt masses are referenced from the `.m` model, not transcribed twice
 `F16APhysicalArchitectureTest` shall obtain the ground-truth masses by executing
 `sizing/VnV/BrandtF16A/BrandtWeight.m` read-only at `run(31377)` (W_TO = 31,377 lb, `Wt!B3`) and reading
 its properties. The **generator stays the only place the numbers are typed**; the test becomes a genuine
@@ -238,6 +238,27 @@ spreadsheet uses 3.1516, giving −0.37 % on `W_nacelles`/`W_inlet_duct` and ≈
 `sizing/.../tests/test_BrandtWeight.m`'s own house figures — **1 % RelTol** physics-computed, 0.1 %
 algebraically exact. Everything internal to the MBSE model stays exact. This settles the
 19980.73-vs-19980.70 and 6722.88-vs-6722.87 pairs: both correct, the drift now measured.
+
+**As built.** The 16-leaf mapping above was taken as written, including both traps. Two entries were
+**not**: `ExpectedOEW_lb` and `BrandtAirframeMass_lb` stay literals, per the Stage-6 planning
+decision that only the leaf comparison crosses into `/sizing/`. They are now redundant pins rather
+than the primary check — every leaf is verified against `BrandtWeight`, and OEW is verified to be the
+sum of the model's own leaves.
+
+**The drift is 100× what this entry predicted, and against a third number.** Executing
+`BrandtWeight.run(31377)` returns `W_empty_lb` = **19,977.61** and `W_structure_lb` = **6,722.27** —
+neither the MBSE model's 19,980.73 / 6,722.88 nor the spreadsheet figures 19,980.70 / 6,722.87 this
+entry paired them against. 19,980.70 is what `test_BrandtWeight` *asserts* at 1 % RelTol, not what
+the `.m` *computes*; the two were conflated when this entry was written. Real OEW drift is therefore
+3.12 lb (1.6e-4 relative), not the ≈0.01 % estimated. Nothing here fails — every leaf is inside its
+class — but the tolerance is doing real work rather than absorbing rounding: `Nacelles` compares
+186.82 against 186.22 and `InletDuct` 728.60 against 726.27, both 3.2e-3, which is why the 1 %
+classification is load-bearing and not decorative.
+
+**The internal and cross-model checks were separated**, which the entry did not anticipate. The old
+`sum(MassRows)` served as both "the sum of the model's leaves" and "the Brandt total"; those are now
+different numbers, so conflating them would let a cross-model difference read as an internal
+inconsistency. `sumOfLeafMasses` reads the model, `MassLeafRows` reads Brandt.
 
 **Constraints** Reach `sizing/` with a `PathFixture` (**three** levels up from `f16aRoot()`), restore
 the path on teardown; if `/sizing/` is missing, **fail loudly naming the dependency** — no skip, no
@@ -398,3 +419,29 @@ and carries `REQ_F16A_L02`'s implicit premise that the instability is *bounded*.
 is a simplified approximation, so this model drifts *stable* at light weight where the real aeroplane
 does not. The numbers, the CG-travel explanation and the three verification states are in
 [`01_requirements.md`](01_requirements.md) and [`README.md`](README.md); they are not repeated here.
+
+### D-052 · `PhysicalItem` gets its own `DataProvenance`; the default is `Simulation`
+A mass is an engineering value like any other, so the stereotype that holds it declares where it came
+from. `PhysicalItem` was on `ProvenanceExemptStereotypes` — the exemption is what let 14 of the 16
+masses summing to OEW ship untagged.
+
+**Why it was worse than a gap.** The six airframe structural leaves already carried
+`Material.DataProvenance = Estimate`, which qualifies their *composite fraction*. Beside a mass that
+is Brandt ground truth, a reader inspecting `Fuselage` saw a tag that **contradicted** the number
+next to it. Two tags on one part are only honest while each names a different property, which is why
+the fix is a second tag rather than reusing `Material`'s.
+
+**The default is `Simulation`, not `Estimate`.** `PhysicalItem` applies to every component, so the
+ones left at the default are the interior nodes. They store no mass — `F16APhysicalMassRollup`
+persists only the aircraft's OEW Measure of Merit, never a subtotal back onto a node — so the answer
+to "what does `Airframe` weigh" is computed on demand, which is what `Simulation` means. `Estimate`
+would tag every subtotal an invented teaching value and pull all of them into D-030.
+
+**The two zeros are `Reference`, not the default.** `FuelSystem` and the three tanks carry a dry mass
+of 0 because Brandt's breakdown has no tankage line — its 16 mass rows sum to `W_empty` exactly, with
+no room for a 17th. That zero is what the reference states; nothing computed it, so leaving it at
+`Simulation` would have claimed a roll-up produced it. The tanks therefore carry `FuelTank` =
+`Estimate` (their capacity, D-023) beside `PhysicalItem` = `Reference` (their dry mass) — the same
+two-tags-two-subjects shape as the airframe leaves, inverted.
+
+**No number changed.** OEW 19,980.73, airframe 6,722.88, composite 0.1928, fuel 6,300 lb.

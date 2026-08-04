@@ -44,6 +44,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         PhysSet    % f16a_physical_derived.slreqx (REQ_F16A_P01 fuel volume)
         LogiSet    % f16a_logical_derived.slreqx (REQ_F16A_L01..L03 decisions)
         Alloc      % F16A_LogicalToPhysical allocation set
+        BrandtWt   % what BrandtWeight.run(W_TO_lb) returns -- the ground truth, executed
         Profile = "F16A_PhysicalProps";
         AC      = "F16A_Physical/Aircraft/";
     end
@@ -70,26 +71,53 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         BrandtAirframe       = "BlendedCrankedDelta";   % the only decomposed candidate
         BrandtEngine         = "F100_PW_200";
         BrandtFlightControls = "FlyByWire";
-        % Ground-truth mass-bearing leaves {relative path, lbf}. FuelSystem
-        % (0 lbf) is intentionally excluded and checked separately. These 16
-        % are the ACTIVE configuration; they sum to ExpectedOEW_lb.
-        MassRows = { ...
-            "Airframe/BlendedCrankedDelta/Wing",1785.95; ...
-            "Airframe/BlendedCrankedDelta/Fuselage",3652.11; ...
-            "Airframe/BlendedCrankedDelta/HorizontalTail",648.00; ...
-            "Airframe/BlendedCrankedDelta/VerticalTail",360.00; ...
-            "Airframe/BlendedCrankedDelta/Nacelles",186.82; ...
-            "Airframe/BlendedCrankedDelta/Strakes",90.00; ...
-            "Propulsion/Engine/F100_PW_200",4730.23; "Propulsion/InletDuct",728.60; ...
-            "LandingGear",1066.82; "FlightControls/FlyByWire",472.44; "Avionics",2541.54; ...
-            "Electrical",533.41; "Hydraulics",367.11; "ECS",360.84; ...
-            "ArmamentSupport",440.00; "SecondaryStructure",2016.86};
+        % The 16 mass-bearing leaves of the ACTIVE configuration, as
+        % {relative path, BrandtWeight property, RelTol}. FuelSystem (0 lbf) is
+        % intentionally excluded and checked separately.
+        %
+        % NO MASS IS TYPED HERE (D-036). The column that used to hold 16
+        % numbers held a SECOND copy of the generator's, so the test verified a
+        % transcription: change both together and it stayed green. The figures
+        % now come from executing sizing/VnV/BrandtF16A/BrandtWeight.m, and
+        % this table is the MAPPING between the two models -- which MBSE part
+        % answers to which Brandt weight.
+        %
+        % THE TOLERANCES ARE BRANDT'S OWN (tests/test_BrandtWeight.m): 1e-2
+        % where the weight is physics-computed and the reference spreadsheet's
+        % arithmetic differs slightly (its nacelle area uses 3.1516, not pi),
+        % 1e-3 where the weight is an exact algebraic fraction of W_TO or a
+        % flat figure. InletDuct is 3.9x Nacelles, so it inherits the nacelle
+        % formula difference and is classed with it.
+        MassLeafRows = { ...
+            "Airframe/BlendedCrankedDelta/Wing",           "W_wing_lb",       1e-2; ...
+            "Airframe/BlendedCrankedDelta/Fuselage",       "W_fuse_lb",       1e-2; ...
+            "Airframe/BlendedCrankedDelta/HorizontalTail", "W_pitch_lb",      1e-3; ...
+            "Airframe/BlendedCrankedDelta/VerticalTail",   "W_vert_lb",       1e-3; ...
+            "Airframe/BlendedCrankedDelta/Nacelles",       "W_nacelles_lb",   1e-2; ...
+            "Airframe/BlendedCrankedDelta/Strakes",        "W_strakes_lb",    1e-3; ...
+            "Propulsion/Engine/F100_PW_200",               "W_engine_lb",     1e-3; ...
+            "Propulsion/InletDuct",                        "W_inlet_duct_lb", 1e-2; ...
+            "LandingGear",                                 "W_gear_lb",       1e-3; ...
+            "FlightControls/FlyByWire",                    "W_ctrl_lb",       1e-2; ...
+            "Avionics",                                    "W_avionics_lb",   1e-3; ...
+            "Electrical",                                  "W_elec_lb",       1e-3; ...
+            "Hydraulics",                                  "W_hyd_lb",        1e-3; ...
+            "ECS",                                         "W_ECS_lb",        1e-3; ...
+            "ArmamentSupport",                             "W_armament_lb",   1e-3; ...
+            "SecondaryStructure",                          "W_other_lb",      1e-2};
+        % SecondaryStructure is 1e-2 on D-036's reasoning, not on today's
+        % measured drift (8.8e-5, which 1e-3 would pass): W_other is derived as
+        % 0.30 x W_structure, W_structure includes W_nacelles, so it inherits
+        % the nacelle formula difference and belongs in that class.
         % Brandt ground truth, asserted as NUMBERS because that is what they
         % are. OEW is unchanged by the restructure (D-003) -- that invariance
         % is the whole point of testOEWCountsOnlyTheActiveConfiguration.
         ExpectedOEW_lb            = 19980.73;
         BrandtAirframeMass_lb     =  6722.88;
         ExpectedCompositeFraction =   0.1928;
+        % The sizing point BrandtWeight.run is evaluated at (Wt!B3) -- the same
+        % one F16AStaticMarginVerificationTest uses, stated rather than assumed.
+        W_TO_lb                   = 31377;
 
         % --- Stage 2: rationale and the trade vocabulary -----------------
         % How many components the architecture-side walk must reach: the 23
@@ -239,13 +267,18 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         %   MeasureOfMerit -- OEW is computed and cost is NaN; tagging a
         %                     computed number is the D-025 overclaim
         ProvenanceProperty          = "DataProvenance";
-        ProvenanceExemptStereotypes = ["MeasureOfMerit","PhysicalItem","Rationale"];
+        % PhysicalItem left this list in Stage 6 (D-036): it holds Mass_lb, an
+        % engineering value like any other, and its exemption was the reason 14
+        % of the 16 masses summing to OEW shipped untagged. The two that remain
+        % hold no chosen number -- Rationale holds prose, MeasureOfMerit holds a
+        % computed OEW and a NaN cost.
+        ProvenanceExemptStereotypes = ["MeasureOfMerit","Rationale"];
         % Non-vacuity floor: the stereotypes known TODAY to carry chosen
         % engineering values. Asserted as a SUBSET of the computed required
         % set, never as an equality -- an equality would make the computed
         % set decorative and quietly restore the pass-by-omission this test
         % exists to remove.
-        KnownValueBearingStereotypes = ["FuelTank","Material","TradeCandidate"];
+        KnownValueBearingStereotypes = ["FuelTank","Material","PhysicalItem","TradeCandidate"];
         EstimateProvenance = "Estimate";
         % D-030's inventory as a CENSUS the model must match: {stereotype,
         % invented property, how many components carry it}. The count is
@@ -288,6 +321,8 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.addTeardown(@() testCase.Alloc.close());
             testCase.addTeardown(@() bdclose("all"));
             testCase.addTeardown(@() slreq.clear());
+
+            testCase.BrandtWt = testCase.loadBrandtWeights();
         end
     end
 
@@ -387,19 +422,97 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function testLeafMassesMatchGroundTruth(testCase)
-            % The 16 mass-bearing leaves match the Brandt ground truth; the
+            % The 16 mass-bearing leaves match the Brandt ground truth AS
+            % COMPUTED BY IT (D-036), not as transcribed into this file; the
             % FuelSystem leaf is zero (fuel is a consumable, not empty weight).
-            for i = 1:size(testCase.MassRows,1)
-                rel = string(testCase.MassRows{i,1});
-                exp = testCase.MassRows{i,2};
+            %
+            % This is a genuinely CROSS-MODEL check now. It compares two
+            % independent representations of the same aircraft -- the MBSE
+            % model's stated part masses against sizing/'s calculation -- so a
+            % drift between them is what fails, which is the thing the old
+            % literal column could not detect.
+            for i = 1:size(testCase.MassLeafRows,1)
+                rel    = string(testCase.MassLeafRows{i,1});
+                prop   = string(testCase.MassLeafRows{i,2});
+                relTol = testCase.MassLeafRows{i,3};
+                testCase.assertTrue(isfield(testCase.BrandtWt, prop), ...
+                    "BrandtWeight.run returned no field '" + prop + "'. The sizing " + ...
+                    "model's interface has changed and this mapping is reading the " + ...
+                    "wrong property -- fix the mapping, do not loosen the tolerance.");
+                exp = testCase.BrandtWt.(prop);
                 c = testCase.componentAt(testCase.AC + rel);
                 v = str2double(string(getProperty(c, testCase.Profile + ".PhysicalItem.Mass_lb")));
-                testCase.verifyEqual(v, exp, "AbsTol", 0.01, rel + " mass mismatch.");
+                testCase.verifyEqual(v, exp, "RelTol", relTol, ...
+                    rel + " states " + v + " lb; BrandtWeight." + prop + " computes " + ...
+                    exp + " lb (RelTol " + relTol + ").");
                 testCase.verifyGreaterThan(v, 0, rel + " should be a mass-bearing leaf.");
             end
             fs = testCase.Model.lookup(Path=char(testCase.AC + "FuelSystem"));
             vfs = str2double(string(getProperty(fs, testCase.Profile + ".PhysicalItem.Mass_lb")));
             testCase.verifyEqual(vfs, 0, "AbsTol", 1e-9, "FuelSystem should carry zero OEW mass.");
+        end
+
+        function testEveryMassCarriesItsOwnProvenance(testCase)
+            % Each of the 16 masses summing to OEW says where IT came from.
+            % They are the ones this suite has just checked against
+            % BrandtWeight, so Reference is a claim the same test proves.
+            for i = 1:size(testCase.MassLeafRows,1)
+                rel = string(testCase.MassLeafRows{i,1});
+                c   = testCase.componentAt(testCase.AC + rel);
+                dp  = testCase.provenanceOf(c, "PhysicalItem");
+                testCase.verifyEqual(dp, "Reference", ...
+                    rel + " carries PhysicalItem.DataProvenance = " + dp + ". Its mass " + ...
+                    "was just verified against BrandtWeight, so it is Reference.");
+            end
+
+            % The four invented candidate masses say so, and are in D-030.
+            for rel = ["Airframe/ConventionalTrapWing", "Propulsion/Engine/F110_GE_100", ...
+                       "Propulsion/Engine/TwinEngine_Surrogate", "FlightControls/HydroMechanical"]
+                c  = testCase.componentAt(testCase.AC + rel);
+                dp = testCase.provenanceOf(c, "PhysicalItem");
+                testCase.verifyEqual(dp, "Estimate", ...
+                    rel + " is a losing candidate with an invented mass; it must be " + ...
+                    "Estimate, not " + dp + ".");
+            end
+        end
+
+        function testNoPartCarriesDisagreeingProvenance(testCase)
+            % THE POINT OF GIVING PhysicalItem ITS OWN TAG. The six airframe
+            % structural leaves carry BOTH Material.DataProvenance (about their
+            % composite fraction, invented -> Estimate) and
+            % PhysicalItem.DataProvenance (about their mass, Brandt ->
+            % Reference). Two different tags on one part is only honest while
+            % each names a different property; the failure mode being locked
+            % out is one tag being read as describing the whole part.
+            %
+            % So this asserts the pairing IS the expected mixed one -- if a
+            % future change makes them agree by accident, or overloads
+            % Material's tag to cover mass again, this fails.
+            afRoot = testCase.AC + "Airframe/" + testCase.BrandtAirframe + "/";
+            for p = testCase.AirframeParts
+                c    = testCase.componentAt(afRoot + p);
+                mass = testCase.provenanceOf(c, "PhysicalItem");
+                frac = testCase.provenanceOf(c, "Material");
+                testCase.verifyEqual(mass, "Reference", ...
+                    p + "'s MASS is Brandt ground truth; PhysicalItem.DataProvenance " + ...
+                    "says " + mass + ".");
+                testCase.verifyEqual(frac, "Estimate", ...
+                    p + "'s COMPOSITE FRACTION is invented (D-031); " + ...
+                    "Material.DataProvenance says " + frac + ".");
+            end
+
+            % Same shape on the fuel tanks, the other way round: an Estimate
+            % CAPACITY (D-023) beside a Reference dry mass -- the definitional
+            % zero Brandt's breakdown implies. Left at the PhysicalItem default
+            % these would read Simulation, claiming a roll-up produced a zero
+            % nothing computed.
+            for t = testCase.FuelTanks
+                c = testCase.componentAt(testCase.AC + "FuelSystem/" + t);
+                testCase.verifyEqual(testCase.provenanceOf(c, "FuelTank"), "Estimate", ...
+                    t + "'s CAPACITY is an even split of a rounded number (D-023).");
+                testCase.verifyEqual(testCase.provenanceOf(c, "PhysicalItem"), "Reference", ...
+                    t + "'s DRY MASS is a definitional zero, not a roll-up output.");
+            end
         end
 
         function testAirframeCompositeFractionsSet(testCase)
@@ -500,7 +613,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                 testCase.AC + "Propulsion/Engine/" + testCase.BrandtEngine, ...
                 testCase.AC + "Propulsion/InletDuct"]);
             expEngine     = testCase.sumMasses(testCase.AC + "Propulsion/Engine/" + testCase.BrandtEngine);
-            expOEW        = sum([testCase.MassRows{:,2}]);   % all active mass-bearing leaves
+            expOEW        = testCase.sumOfLeafMasses();   % all active mass-bearing leaves
             testCase.verifyEqual(r.Airframe,   expAirframe,   "AbsTol", 0.01, "Airframe subtotal != sum of parts.");
             testCase.verifyEqual(r.Propulsion, expPropulsion, "AbsTol", 0.01, "Propulsion subtotal != sum of parts.");
             testCase.verifyEqual(r.Engine,     expEngine,     "AbsTol", 0.01, ...
@@ -522,7 +635,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             goal = erase(string(getProperty(ac, testCase.Profile + ".MeasureOfMerit.Goal")), "'");
             testCase.verifyEqual(goal, "Minimize", "OEW MoM Goal should be Minimize.");
             oew = str2double(string(getProperty(ac, testCase.Profile + ".MeasureOfMerit.OEW_lb")));
-            testCase.verifyEqual(oew, sum([testCase.MassRows{:,2}]), "AbsTol", 0.05, ...
+            testCase.verifyEqual(oew, testCase.sumOfLeafMasses(), "AbsTol", 0.05, ...
                 "OEW MoM value should equal the mass roll-up.");
         end
 
@@ -718,7 +831,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             % (a typo would silently drop it out of its role's trade), positive
             % mass and benefit, TRL in scale, the honest NaN cost, a provenance
             % tag. Ranges only -- values are Estimates, and the three Brandt
-            % masses are asserted in MassRows.
+            % masses are asserted against the sizing model in MassLeafRows.
             T = testCase.candidateTable();
             testCase.verifyEqual(height(T), size(testCase.CandidateRows,1), ...
                 "The candidate table must cover all seven candidates.");
@@ -1684,6 +1797,50 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             end
         end
 
+        function dp = provenanceOf(testCase, comp, stereotype)
+            % A DataProvenance tag as a bare member name. Enum properties read
+            % back quoted, so strip the quotes -- the convention F16ADataProvenance
+            % documents and F16ASourceKind shares.
+            dp = erase(string(getProperty(comp, ...
+                testCase.Profile + "." + stereotype + ".DataProvenance")), "'");
+        end
+
+        function s = sumOfLeafMasses(testCase)
+            % OEW as the model states it: the sum of its OWN 16 active leaves.
+            % Deliberately NOT the sum of the Brandt figures -- that is the
+            % other model, and conflating the two would let a cross-model
+            % difference read as an internal inconsistency (or hide one).
+            s = testCase.sumMasses(testCase.AC + string(testCase.MassLeafRows(:,1))');
+        end
+
+        function w = loadBrandtWeights(testCase)
+            % EXECUTE the sizing reference model rather than transcribe it
+            % (D-036). Returns BrandtWeight.run(W_TO_lb).
+            import matlab.unittest.fixtures.PathFixture
+            brandtDir = F16APhysicalArchitectureTest.brandtF16ADir();
+
+            % ASSERT and name the dependency: a test that quietly stops
+            % checking reports unearned success. No skip, no fallback to
+            % literals -- falling back would restore the transcription D-036
+            % removed, and silently.
+            testCase.assertTrue(isfolder(brandtDir), ...
+                "The Brandt mass ground truth cannot be read: the sizing reference " + ...
+                "model was not found at " + brandtDir + ". This suite executes " + ...
+                "sizing/VnV/BrandtF16A/BrandtWeight.m, which is outside the f16a " + ...
+                "project and resolved by path rather than project membership (D-036, " + ...
+                "same delegation as D-047). It is NOT skipped when absent.");
+
+            % A PathFixture, not a bare addpath: sizing/ is three levels
+            % outside the project and leaving it on the path makes results
+            % order-dependent (D-047).
+            testCase.applyFixture(PathFixture(brandtDir));
+
+            % Read-only -- computes in memory and writes no file.
+            wt = BrandtWeight();
+            wt.analyze();
+            w = wt.run(testCase.W_TO_lb);
+        end
+
         % ---------------- Stage 3: variants, candidates, traces ----------
 
         function choices = choicesOf(~, comp)
@@ -2567,6 +2724,17 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
                     types(end+1) = "<unreadable>";              %#ok<AGROW>
                 end
             end
+        end
+    end
+
+    methods (Static, Access = private)
+        function d = brandtF16ADir()
+            %BRANDTF16ADIR Absolute path to sizing/VnV/BrandtF16A.
+            %   Anchored on f16aRoot(), the example's single location anchor, so it
+            %   survives physical/ being moved. sizing/ is three levels above the
+            %   example root, a sibling of mbse/.
+            avd = fileparts(fileparts(fileparts(f16aRoot())));
+            d = fullfile(avd, "sizing", "VnV", "BrandtF16A");
         end
     end
 end

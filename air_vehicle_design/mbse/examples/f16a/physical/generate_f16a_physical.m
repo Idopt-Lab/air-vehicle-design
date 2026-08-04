@@ -253,6 +253,25 @@ save_system(modelName, char(modelFile));
 profile = systemcomposer.profile.Profile.createProfile(profileName);
 pit = profile.addStereotype("PhysicalItem", AppliesTo="Component");
 pit.addProperty("Mass_lb", Type="double", DefaultValue="0");
+% DataProvenance is on this stereotype too, and it is ITS OWN -- Material's
+% describes that part's COMPOSITE FRACTION, not its mass. Before this, 14 of the
+% 16 masses summing to OEW carried no provenance at all, and the six airframe
+% structural leaves carried Material.DataProvenance = Estimate sitting beside a
+% mass that is Brandt ground truth: a reader inspecting Fuselage saw a tag that
+% CONTRADICTED its mass rather than one that was merely missing. Each property
+% now names its own source, so the two tags stop competing to describe one part.
+%
+% THE DEFAULT IS Simulation, NOT Estimate. PhysicalItem is applied to EVERY
+% component, so the components left at the default are the interior nodes, which
+% carry no mass of their own -- their stored Mass_lb stays 0 and the answer to
+% "what does Airframe weigh" is COMPUTED by F16APhysicalMassRollup on demand
+% (it persists only the aircraft's OEW Measure of Merit, never a subtotal back
+% onto a node). A number produced by a roll-up in this repo is exactly what
+% F16ADataProvenance.Simulation means. Defaulting to Estimate would instead tag
+% every subtotal an invented teaching value, which is false and would drag all
+% of them into D-030.
+pit.addProperty("DataProvenance", Type="F16ADataProvenance", ...
+    DefaultValue="F16ADataProvenance.Simulation");
 mom = profile.addStereotype("MeasureOfMerit", AppliesTo="Component");
 mom.addProperty("OEW_lb",       Type="double", DefaultValue="0");   % <- mass roll-up
 % UNITCOST_USD DEFAULTS TO NaN, NOT 0 (D-032) -- the same fail-safe rule D-021
@@ -361,32 +380,43 @@ applyStereotypeToTree(ac, profileName + ".Rationale");
 % (which have no parts) only the traded figure exists.
 S = "F16A_Physical/Aircraft/";
 AFC = S + "Airframe/BlendedCrankedDelta/";   % the decomposed airframe candidate
+% The third column is the mass's OWN provenance, written to
+% PhysicalItem.DataProvenance -- so the tag travels with the number instead of
+% living only in this comment. Reference = traceable to the Brandt F-16A ground
+% truth in sizing/VnV/BrandtF16A/; Estimate = illustrative teaching value,
+% inventoried in D-030.
 massRows = {
-    AFC+"Wing",                    1785.95;
-    AFC+"Fuselage",                3652.11;
-    AFC+"HorizontalTail",           648.00;
-    AFC+"VerticalTail",             360.00;
-    AFC+"Nacelles",                 186.82;
-    AFC+"Strakes",                   90.00;
-    S+"Airframe/ConventionalTrapWing", 7300.00;  % ESTIMATE (teaching value)
-    S+"Propulsion/Engine/F100_PW_200",         4730.23;
-    S+"Propulsion/Engine/F110_GE_100",         5100.00;  % ESTIMATE (teaching value)
-    S+"Propulsion/Engine/TwinEngine_Surrogate",6400.00;  % ESTIMATE (teaching value)
-    S+"Propulsion/InletDuct",       728.60;
-    S+"LandingGear",               1066.82;
-    S+"FuelSystem",                   0.00;   % dry tankage integral to airframe; fuel is consumable
-    S+"FlightControls/FlyByWire",   472.44;
-    S+"FlightControls/HydroMechanical", 700.00;  % ESTIMATE (teaching value)
-    S+"Avionics",                  2541.54;
-    S+"Electrical",                 533.41;
-    S+"Hydraulics",                 367.11;
-    S+"ECS",                        360.84;
-    S+"ArmamentSupport",            440.00;
-    S+"SecondaryStructure",        2016.86;
+    AFC+"Wing",                    1785.95, "Reference";
+    AFC+"Fuselage",                3652.11, "Reference";
+    AFC+"HorizontalTail",           648.00, "Reference";
+    AFC+"VerticalTail",             360.00, "Reference";
+    AFC+"Nacelles",                 186.82, "Reference";
+    AFC+"Strakes",                   90.00, "Reference";
+    S+"Airframe/ConventionalTrapWing", 7300.00, "Estimate";
+    S+"Propulsion/Engine/F100_PW_200",         4730.23, "Reference";
+    S+"Propulsion/Engine/F110_GE_100",         5100.00, "Estimate";
+    S+"Propulsion/Engine/TwinEngine_Surrogate",6400.00, "Estimate";
+    S+"Propulsion/InletDuct",       728.60, "Reference";
+    S+"LandingGear",               1066.82, "Reference";
+    % Zero is what the REFERENCE states, not a guess: Brandt's weight breakdown
+    % carries no separate fuel-system item -- the dry tankage sits inside the
+    % structural figures and the fuel itself is a consumable, not empty weight.
+    % Its 16 mass lines sum to W_empty exactly, with no room for a 17th.
+    S+"FuelSystem",                   0.00, "Reference";
+    S+"FlightControls/FlyByWire",   472.44, "Reference";
+    S+"FlightControls/HydroMechanical", 700.00, "Estimate";
+    S+"Avionics",                  2541.54, "Reference";
+    S+"Electrical",                 533.41, "Reference";
+    S+"Hydraulics",                 367.11, "Reference";
+    S+"ECS",                        360.84, "Reference";
+    S+"ArmamentSupport",            440.00, "Reference";
+    S+"SecondaryStructure",        2016.86, "Reference";
 };
 for i = 1:size(massRows,1)
     c = lookup(m, Path=char(massRows{i,1}));
     setProperty(c, profileName + ".PhysicalItem.Mass_lb", string(massRows{i,2}));
+    setProperty(c, profileName + ".PhysicalItem.DataProvenance", ...
+        "F16ADataProvenance." + massRows{i,3});
 end
 
 % Airframe material split: CompositeFraction per structural part (fraction of
@@ -451,6 +481,13 @@ for i = 1:size(fuelRows,1)
     applyStereotype(c, profileName + ".FuelTank");
     setProperty(c, profileName + ".FuelTank.FuelCapacity_lb", string(fuelRows{i,2}));
     setProperty(c, profileName + ".FuelTank.DataProvenance", "F16ADataProvenance.Estimate");
+    % TWO TAGS, TWO SUBJECTS. The CAPACITY above is an Estimate; the tank's DRY
+    % mass is a definitional zero and is Reference for the same reason
+    % FuelSystem's is -- Brandt's breakdown has no tankage line, the dry
+    % structure being inside the structural figures. Set explicitly rather than
+    % left at the PhysicalItem default, which is Simulation and would claim a
+    % roll-up produced this zero. Nothing computed it.
+    setProperty(c, profileName + ".PhysicalItem.DataProvenance", "F16ADataProvenance.Reference");
 end
 
 % ---------------------------------------------------------------------
