@@ -1,0 +1,208 @@
+{
+  "generated": "2026-08-04",
+  "aircraft": "F-16A Block 10/15",
+  "title": "F-16A Block 10/15 — Stability & Control vs Ground Truth",
+  "condition": "Run at Brandt's own W_TO=31377.00 lbf, W_energy=6296.30 lbf (Wt!B3/B38, Wt!B6), cruise Mach 0.87 (f16a_requirements.json, DI-reused via weights.cruise_mach).",
+  "referenceDesc": "VnV/BrandtF16A/GroundTruth/f16a_stability_control_ground_truth.json (neutral_point, cg_takeoff, cg_landing, CLa_aircraft, CLa_per_surface, aero_center) -- Brandt-F16-A.xls, sheet 'S&C (2)'.",
+  "secondDesc": "Roskam Eqns 3.17/3.19/3.24/3.38 (Brandt's OWN cited source for CLa/neutral point) -- NOT this repo's toolbox formula, and NOT in this repo at all (that specific Roskam title, \"Airplane Flight Dynamics and Automatic Flight Controls, Part I,\" is not extracted anywhere here); cited only as the explanation for the headline finding.",
+  "rows": [
+    {
+      "parameter": "[CENTER OF GRAVITY x_cg -- weighted-average identity, level-agnostic]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "x_cg, L2 [ft]",
+      "fidelity": "L2",
+      "computed": "25.7814",
+      "reference": "26.1925",
+      "pctDiff": "-1.57%",
+      "secondSource": "26.1369",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 36 (xcgTakeoff)",
+      "notes": "Run at Brandt's own W_TO/W_energy operating point. This framework's x_cg is built from a DIFFERENT component-weight/x-station table (this framework's own 10 WeightsL2 groups, re-aggregated from the legacy temp_Casey 22-row sheet -- docs/subplans/10_stability_control.md \"Component-x-location buildup\") than Brandt's own internal CG closure, so an exact match is not expected; this row checks whether the two land in the same physical neighborhood."
+    },
+    {
+      "parameter": "x_cg, L3 [ft]",
+      "fidelity": "L3",
+      "computed": "25.9524",
+      "reference": "26.1925",
+      "pctDiff": "-0.92%",
+      "secondSource": "26.1369",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 36 (xcgTakeoff)",
+      "notes": "Same component-x-station table as L2 (cg_x_ft is fidelity-independent per the input JSON's own note) -- expect the same %Diff as the L2 row above."
+    },
+    {
+      "parameter": "[AERODYNAMIC CENTERS x_acw / x_ach -- Eq. 16.12 (wing) and quarter-MAC (tail, no Mach term)]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "x_acw (wing aero center) [ft]",
+      "fidelity": "L3",
+      "computed": "26.2711",
+      "reference": "25.5890",
+      "pctDiff": "+2.67%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 16 (xacW)",
+      "notes": "Framework value includes Eq. 16.12's Mach-shift term evaluated at the real cruise Mach (0.87, in the 0.4<=M<=1.1 transonic-shift regime); Brandt's own simplified xacW value appears to omit this shift (F16SandCL3.md's own hand-check, done at M<0.4 where the shift is exactly 0, landed within +0.01% of Brandt -- the REMAINING gap at the real M=0.87 is almost entirely this shift term, not a wing-geometry wiring error). A small, EXPLAINED gap is expected here, not an exact match."
+    },
+    {
+      "parameter": "x_ach (HT aero center, quarter-MAC) [ft]",
+      "fidelity": "L3",
+      "computed": "40.7189",
+      "reference": "40.6819",
+      "pctDiff": "+0.09%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 16 (xacHS)",
+      "notes": "No Mach-shift term applied to the tail (documented simplification -- Raymer gives no Eq. 16.12-style correction for a tail surface, see SandCL3.x_ac_surface's own header)."
+    },
+    {
+      "parameter": "[LIFT-CURVE SLOPES -- linked to F16AeroL3.get_CL_alpha / SandCL3.CL_alpha_h, NOT re-derived]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "CL_alpha, wing [1/rad]",
+      "fidelity": "L3",
+      "computed": "2.5268",
+      "reference": "3.2684",
+      "pctDiff": "-22.69%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 24 (CLaW), in-sheet cite Roskam Eqn 3.24",
+      "notes": "[ROOT CAUSE, see headline finding above] Framework: Raymer Eq. 12.6/12.8 (F16AeroL3.get_CL_alpha). Brandt: Roskam Eqn 3.24 -- a DIFFERENT textbook method this repo cannot cross-check (that Roskam title is not in this repo). The ~23% gap here plausibly explains most of the x_np/SM divergence reported below, since Xnp_bar is a weighted blend dominated by this ratio."
+    },
+    {
+      "parameter": "CL_alpha, horizontal tail [1/rad]",
+      "fidelity": "L3",
+      "computed": "3.7168",
+      "reference": "3.2684",
+      "pctDiff": "+13.72%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 24 (CLaHS)",
+      "notes": "Framework: SandCL3.CL_alpha_h, reusing AeroL2.CL_alpha a second time with the HT's own AR/sweep (same Raymer Eq. 12.6/12.8 family as the wing row above, same root-cause caveat)."
+    },
+    {
+      "parameter": "CLa, aircraft (Roskam Eq. 3.24 aggregate) -- NOT MODELED",
+      "fidelity": "N/A",
+      "computed": "N/A",
+      "reference": "4.4450",
+      "pctDiff": " - ",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 32 (CLa)",
+      "notes": "This framework has no single \"aircraft CL_alpha\" quantity analogous to Roskam Eq. 3.24's aggregate -- Eqs. 16.8/16.9 combine CL_alpha_wing/CL_alpha_tail directly inside the Cm_alpha/neutral-point sum instead of forming an intermediate aircraft-level slope. Recorded as NOT MODELED, not a %Diff to chase."
+    },
+    {
+      "parameter": "[NEUTRAL POINT x_np AND STATIC MARGIN SM -- THE HEADLINE FINDING]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "x_np [ft]",
+      "fidelity": "L3",
+      "computed": "27.9558",
+      "reference": "26.1677",
+      "pctDiff": "+6.83%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 33 (xnp), in-sheet cite Roskam Eqn 3.38",
+      "notes": "Framework: Raymer Eq. 16.9 (power-off, thrust term dropped per Raymer's own p.593 sanction). Brandt: Roskam Eqn 3.38, itself built on Roskam's own CLa/CLaHS (Eqns 3.17/3.19/3.24, a different textbook method this repo cannot cross-check -- see the [ROOT CAUSE] CL_alpha rows above and docs/subplans/10_stability_control.md's \"Major new lead\" section for the full record). This gap is a real, already-diagnosed, cross-textbook-method divergence, NOT a bug -- no input/citation is adjusted here to force closer agreement."
+    },
+    {
+      "parameter": "SM (static margin, TO-loading comparison) [frac. MAC]",
+      "fidelity": "L3",
+      "computed": "0.17698",
+      "reference": "-0.00219",
+      "pctDiff": "-8187.87%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 37 (SM, takeoff loading)",
+      "notes": "Framework computes SM ~ +0.18 (comfortably stable) at this operating point vs Brandt's SM_TO ~ -0.0022 (essentially neutral, very slightly unstable at takeoff loading) -- same root cause as the x_np row above (the ~23% CL_alpha gap dominates), COMPOUNDED by the different x_cg table (see the x_cg rows above). Both factors push in the SAME direction here."
+    },
+    {
+      "parameter": "SM (static margin, vs Brandt landing-loading case) [frac. MAC]",
+      "fidelity": "L3",
+      "computed": "0.17698",
+      "reference": "0.00272",
+      "pctDiff": "+6399.40%",
+      "secondSource": "N/A",
+      "divergence": "BY DESIGN",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), row 35 (SMLndg, landing loading)",
+      "notes": "Same framework SM as the row above (this pass computes one SM at one W_energy operating point, not separate TO/landing cases) -- shown against BOTH Brandt loading cases for completeness."
+    },
+    {
+      "parameter": "[OUT OF SCOPE / NOT MODELED -- carried forward from the ground-truth JSON's own markers]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "Lateral-directional derivatives (CNB/ClB/CYB) -- OUT OF SCOPE",
+      "fidelity": "N/A",
+      "computed": "N/A",
+      "reference": "N/A",
+      "pctDiff": " - ",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), rows 39-70",
+      "notes": "docs/subplans/10_stability_control.md \"Explicitly out of scope\": lateral-directional static stability and control. Ground-truth JSON's own lateral_directional block: status \"OUT OF SCOPE\"."
+    },
+    {
+      "parameter": "Short-period dynamic response (Cmq/Cmadot/root-locus) -- OUT OF SCOPE",
+      "fidelity": "N/A",
+      "computed": "N/A",
+      "reference": "N/A",
+      "pctDiff": " - ",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt-F16-A.xls, sheet S&C (2), rows 79-118",
+      "notes": "docs/subplans/10_stability_control.md Objective: \"steady, level flight, only. No dynamic/nonsteady stability analysis.\" Ground-truth JSON's own short_period_dynamics block: status \"OUT OF SCOPE\"."
+    },
+    {
+      "parameter": "CL_w / CL_h / Cm_cg_trim (Eqs. 16.13/16.14/16.5-16.7) -- GAP-BLOCKED for the F-16",
+      "fidelity": "N/A",
+      "computed": "N/A",
+      "reference": "N/A",
+      "pctDiff": " - ",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "No Brandt analog attempted here",
+      "notes": "Documented citation GAPs (wing/tail incidence i_w/i_h; thrust x-location x_p, vertical offset z_t) -- see F16SandCL3.CL_w/CL_h/Cm_cg_trim's own headers and f16a_L3.json .stability_control._TODO_i_w_i_h / _TODO_x_p. Pinned by tests/disciplines/TestSandCL3.m's three testTODO_* deliberately-failing unit tests, not resolved or estimated here."
+    }
+  ]
+}
