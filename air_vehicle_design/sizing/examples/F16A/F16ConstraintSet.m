@@ -71,12 +71,29 @@ classdef F16ConstraintSet
 
     methods (Static)
 
-        function constraints = build(fidelityLevel, includeStall)
-        %BUILD  Construct the F-16's constraint objects for one fidelity
-        %   level. Returns a 1xN cell array of PointPerformanceBase objects,
-        %   in Constraints.xlsx row order (plus a trailing Stall condition,
-        %   unless includeStall is false), ready to hand to ConstraintAnalysis
-        %   (as-is, or trimmed/reordered by the caller first).
+        function constraints = build(aero, prop, includeStall)
+        %BUILD  Construct the F-16's constraint objects, wired to the given
+        %   aero/prop discipline objects. Returns a 1xN cell array of
+        %   PointPerformanceBase objects, in Constraints.xlsx row order
+        %   (plus a trailing Stall condition, unless includeStall is false),
+        %   ready to hand to ConstraintAnalysis (as-is, or trimmed/reordered
+        %   by the caller first).
+        %
+        %   aero, prop -- the F-16 aerodynamics/propulsion discipline
+        %     objects to wire into every constraint. PASSED IN, NOT BUILT
+        %     HERE (changed 2026-08-03; this class used to take a
+        %     fidelityLevel string and construct its own internal aero/prop
+        %     pair via buildDisciplines, duplicating whatever aero/prop a
+        %     caller like a design_study_*.m had already built for its
+        %     sizing loop). aero/prop are typically handle objects mutated
+        %     in place as a sizing loop iterates (e.g. SizingLoopL2.run()
+        %     sets prop.T_SL and, via geom, aero's wetted area, each
+        %     iteration) -- passing the SAME objects in here means every
+        %     constraint's next required_TW/drag_polar read sees that
+        %     update, instead of holding a separate, never-mutated copy.
+        %     A caller with no existing aero/prop (e.g. a standalone
+        %     diagram script) can get a fresh pair for a given fidelity
+        %     level via buildDisciplines(fidelityLevel) first.
         %   includeStall -- default false (changed 2026-07-27; see this
         %   class's header for why). Stall was never one of
         %   subplans/06_constraint_analysis.md's original 8 diagram
@@ -87,11 +104,10 @@ classdef F16ConstraintSet
         %   for a sanity-check plot -- but note it will again dominate
         %   optimal_point() at L2/L3 if you do.
             arguments
-                fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])} = "L3"
+                aero (1,1) AerodynamicsBase
+                prop (1,1) PropulsionBase
                 includeStall  (1,1) logical = false
             end
-
-            [aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);
 
             thisFile = mfilename('fullpath');
             xlsxPath = fullfile(fileparts(thisFile), 'Constraints.xlsx');
@@ -131,6 +147,47 @@ classdef F16ConstraintSet
 
     end
 
+    methods (Static)
+
+        function [aero, prop] = buildDisciplines(fidelityLevel)
+        %BUILDDISCIPLINES  Fresh F-16 aero/prop discipline pair for a
+        %   fidelity level, for callers that don't already have one to pass
+        %   into build() (e.g. a standalone diagram script). A caller that
+        %   already has aero/prop (a design study, mid sizing-loop) should
+        %   use those directly instead of calling this -- see build()'s
+        %   header for why sharing, not rebuilding, matters.
+        %
+        %   PROPULSION AT THE L3 RUNG: there is deliberately NO L3 propulsion
+        %   tier -- no PropL3/PropulsionModelL3/F16PropL3 exists, and none is
+        %   planned (user decision 2026-07-25). L3 pairs F16AeroL3 with
+        %   F16PropL2, and anything reporting L3 propulsion numbers must label
+        %   them "computed by F16PropL2". Same pairing the constraint tests use.
+        %
+        %   GEOMETRY IS NOW INJECTED INTO BOTH AERO AND PROPULSION-AWARE
+        %   GEOMETRY (Phase 2, 2026-07-25): F16GeomL{2,3} take the propulsion
+        %   object, because the nacelle diameter -- and therefore duct wetted
+        %   area and CD0 -- is sized from engine thrust. L3 now builds
+        %   F16GeomL3, the full L3 geometry tier; it previously injected
+        %   F16GeomL2, which made f16a_L3.json's whole .geometry block dead
+        %   input (an edit there changed nothing).
+            arguments
+                fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])}
+            end
+            switch fidelityLevel
+                case "L1"
+                    aero = F16AeroL1(f16a_spec_path(1));
+                    prop = F16PropL1(f16a_spec_path(1));
+                case "L2"
+                    prop = F16PropL2(f16a_spec_path(2));
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2));
+                case "L3"
+                    prop = F16PropL2(f16a_spec_path(2));
+                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
+            end
+        end
+
+    end
+
     methods (Static, Access = private)
 
         function powerSetting = mapPowerSetting(name, AB_percent)
@@ -163,35 +220,6 @@ classdef F16ConstraintSet
                         ['Constraint row "%s" specifies AB%% = %g. Only 0 (mil) ', ...
                          'and 100 (full AB) are modeled -- PropulsionBase exposes ', ...
                          'no partial-afterburner thrust lapse.'], name, AB_percent);
-            end
-        end
-
-        function [aero, prop] = buildDisciplines(fidelityLevel)
-        %BUILDDISCIPLINES  F-16 aero/prop discipline pair for a fidelity level.
-        %
-        %   PROPULSION AT THE L3 RUNG: there is deliberately NO L3 propulsion
-        %   tier -- no PropL3/PropulsionModelL3/F16PropL3 exists, and none is
-        %   planned (user decision 2026-07-25). L3 pairs F16AeroL3 with
-        %   F16PropL2, and anything reporting L3 propulsion numbers must label
-        %   them "computed by F16PropL2". Same pairing the constraint tests use.
-        %
-        %   GEOMETRY IS NOW INJECTED INTO BOTH AERO AND PROPULSION-AWARE
-        %   GEOMETRY (Phase 2, 2026-07-25): F16GeomL{2,3} take the propulsion
-        %   object, because the nacelle diameter -- and therefore duct wetted
-        %   area and CD0 -- is sized from engine thrust. L3 now builds
-        %   F16GeomL3, the full L3 geometry tier; it previously injected
-        %   F16GeomL2, which made f16a_L3.json's whole .geometry block dead
-        %   input (an edit there changed nothing).
-            switch fidelityLevel
-                case "L1"
-                    aero = F16AeroL1(f16a_spec_path(1));
-                    prop = F16PropL1(f16a_spec_path(1));
-                case "L2"
-                    prop = F16PropL2(f16a_spec_path(2));
-                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2));
-                case "L3"
-                    prop = F16PropL2(f16a_spec_path(2));
-                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
             end
         end
 

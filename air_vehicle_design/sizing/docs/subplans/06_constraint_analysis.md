@@ -158,9 +158,15 @@ Both diagrams EXCLUDE Stall by default (changed 2026-07-27; `F16ConstraintSet.bu
 (StallConstraint.m's header). It was found to silently BIND the reported design point at L2/L3 via
 its geometry-based clean-CLmax wall (~W/S=62-64 psf, tighter than every real condition), pulling the
 reported optimum to W/S~=62 vs. Brandt's 104.59 and Casey's legacy-code ~125 (user-reported
-2026-07-27) — not the harmless sanity check it was assumed to be. `F16ConstraintSet.build(fidelityLevel, true)`
+2026-07-27) — not the harmless sanity check it was assumed to be. `F16ConstraintSet.build(aero, prop, true)`
 remains available to add it back as an overlay (exercised by `TestF16ConstraintSet.m`'s
 `testBuildWithStallReturnsNineConstraints`), but doing so reintroduces that binding behavior.
+
+`F16ConstraintSet.build` takes the F-16's `aero`/`prop` discipline objects directly (changed
+2026-08-03) rather than a fidelity-level string — a caller with no existing pair (a standalone
+diagram script) gets one via `F16ConstraintSet.buildDisciplines(fidelityLevel)` first. A design
+study passes in the same `aero`/`prop` it already built for its sizing loop, so a constraint's
+next read sees whatever the loop has mutated, instead of a separate, never-updated copy.
 
 ---
 

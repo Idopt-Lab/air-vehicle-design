@@ -24,8 +24,29 @@ classdef ConstraintAnalysis
 %   line rather than a curve).
 %
 %   Inf is therefore MEANINGFUL and is accepted; NaN is not, and is rejected
-%   at construction by assertNoNaN below -- see that method for why the
-%   distinction matters and why the check cannot be a plain ~isfinite.
+%   by assertNoNaN below (on every read, not just at construction -- see
+%   "LIVE RE-EVALUATION" below) -- see that method for why the distinction
+%   matters and why the check cannot be a plain ~isfinite.
+%
+%   LIVE RE-EVALUATION (added 2026-08-03): TW_table is a Dependent property,
+%   recomputed from obj.constraints on every read, not cached from
+%   construction. Each constraint's required_TW already pulls its own
+%   aero/prop fresh on every call (e.g. ThrustConstraint.m reads
+%   obj.aero.drag_polar(obj.state) live) -- so a caller sharing those same
+%   handle objects with a live design process, e.g. SizingLoopL2 (whose
+%   prop.T_SL assignment each iteration flows into F16GeomL2/L3's nacelle
+%   diameter -> duct wetted area -> S_wet -> aero.CD0, per that geometry
+%   class's T_AB_SLS_lb property), sees the shift reflected in the very
+%   next envelope()/optimal_point()/plot_diagram() call. [see
+%   F16ConstraintSet.build()'s header, "aero/prop are typically handle
+%   objects mutated in place"] Before this change, TW_table was computed
+%   once in the constructor and frozen, which silently defeated that
+%   liveness -- optimal_point() returned the same numbers no matter how
+%   often, or when, it was called. Construction still evaluates the table
+%   once, purely to fail fast on a NaN constraint (assertNoNaN) before
+%   handing the object back to a caller; that first evaluation's result is
+%   discarded, since TW_table itself is Dependent and will recompute on the
+%   caller's first real read anyway.
 %
 %   DESIGN POINT [Raymer, "Aircraft Design: A Conceptual Approach," 6th ed.,
 %   AIAA, 2018, ch. 5 -- constraint diagram methodology: the feasible region
@@ -55,7 +76,10 @@ classdef ConstraintAnalysis
         constraints (1,:) cell
         WS_range    (1,:) double
         names       (1,:) string
-        TW_table    (:,:) double
+    end
+
+    properties (Dependent)
+        TW_table    % (:,:) double -- recomputed live on every read; see class header "LIVE RE-EVALUATION"
     end
 
     methods
@@ -76,13 +100,15 @@ classdef ConstraintAnalysis
             obj.WS_range    = WS_range;
 
             obj.names = strings(1, numel(constraints));
-            obj.TW_table = zeros(numel(constraints), numel(WS_range));
             for i = 1:numel(constraints)
-                obj.names(i)      = constraints{i}.name;
-                row               = constraints{i}.required_TW(WS_range);
-                ConstraintAnalysis.assertNoNaN(row, WS_range, constraints{i}.name, i);
-                obj.TW_table(i,:) = row;
+                obj.names(i) = constraints{i}.name;
             end
+
+            obj.evaluate_table(); % fail fast on a NaN row now; result discarded (TW_table recomputes on the caller's own first read)
+        end
+
+        function table = get.TW_table(obj)
+            table = obj.evaluate_table();
         end
 
         function env = envelope(obj)
@@ -115,8 +141,16 @@ classdef ConstraintAnalysis
         %   shading the area between the envelope and a fixed ceiling
         %   (capping the wall's Inf at that ceiling) both highlights the
         %   feasible region and naturally stops the shading at the wall.
-            [WS_opt, TW_opt] = obj.optimal_point();
-            env = obj.envelope();
+        %
+        %   Reads obj.TW_table into a LOCAL variable once (rather than
+        %   through obj.optimal_point()/obj.envelope(), each of which would
+        %   trigger its own live recompute -- see class header "LIVE
+        %   RE-EVALUATION") so every curve/marker drawn here comes from the
+        %   same evaluation instant.
+            tw_table      = obj.TW_table;
+            env           = max(tw_table, [], 1);
+            [TW_opt, idx] = min(env);
+            WS_opt        = obj.WS_range(idx);
             y_max = 1.15 * max([TW_opt, env(isfinite(env))]);
             env_capped = min(env, y_max);
 
@@ -135,7 +169,7 @@ classdef ConstraintAnalysis
                     xline(ax, obj.constraints{i}.WS_max(), '--', ...
                         'LineWidth', 2, 'Color', colors(i,:), 'DisplayName', obj.names(i));
                 else
-                    plot(ax, obj.WS_range, obj.TW_table(i,:), 'LineWidth', 2, ...
+                    plot(ax, obj.WS_range, tw_table(i,:), 'LineWidth', 2, ...
                         'DisplayName', obj.names(i), 'Color', colors(i,:));
                 end
             end
@@ -155,6 +189,23 @@ classdef ConstraintAnalysis
         %REPORT  Print the optimum W/S and T/W to the console.
             [WS_opt, TW_opt] = obj.optimal_point();
             fprintf('Optimum design point: W/S = %.2f lbf/ft^2, T/W = %.4f\n', WS_opt, TW_opt);
+        end
+
+    end
+
+    methods (Access = private)
+
+        function table = evaluate_table(obj)
+        %EVALUATE_TABLE  Loop every constraint's required_TW(WS_range) fresh
+        %   and assemble+validate the T/W table -- called by get.TW_table on
+        %   every read (see class header "LIVE RE-EVALUATION") and once more
+        %   at construction purely to validate the constraint set up front.
+            table = zeros(numel(obj.constraints), numel(obj.WS_range));
+            for i = 1:numel(obj.constraints)
+                row = obj.constraints{i}.required_TW(obj.WS_range);
+                ConstraintAnalysis.assertNoNaN(row, obj.WS_range, obj.names(i), i);
+                table(i,:) = row;
+            end
         end
 
     end

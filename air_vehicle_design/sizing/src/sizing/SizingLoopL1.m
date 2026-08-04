@@ -18,11 +18,13 @@ classdef SizingLoopL1 < handle
 %   self-normalized ratio T(alt,M)/T_SL, so changing prop.T_SL cannot
 %   perturb it either -- the constraint envelope is therefore invariant to
 %   the W_TO iteration, so computing it once is both correct and cheap. It
-%   is also therefore safe that F16ConstraintSet.build() constructs its own
-%   independent internal aero/prop copies rather than sharing handles with
-%   this loop's aero/prop -- con's frozen snapshot stays valid regardless.
-%   If a future L1 aero model becomes geometry-coupled, or the constraint
-%   envelope is ever made to depend on W_TO, this must be revisited.
+%   is also therefore safe even if a caller built con's constraints from a
+%   SEPARATE aero/prop pair rather than sharing handles with this loop's
+%   aero/prop (design_study_01_L1.m in fact shares them, via
+%   F16ConstraintSet.build(aero, prop) -- see that class's header) -- con's
+%   frozen snapshot stays valid regardless. If a future L1 aero model
+%   becomes geometry-coupled, or the constraint envelope is ever made to
+%   depend on W_TO, this must be revisited.
 %
 %   Every iteration re-derives the ABSOLUTE S_ref and T_SL from those FIXED
 %   ratios and the CURRENT W_TO guess:
@@ -55,6 +57,9 @@ classdef SizingLoopL1 < handle
 %       -- there is no "req" object with W_payload/S_ref fields anywhere in
 %       this codebase; payload comes from wts.W_payload_fixed/
 %       W_payload_expendable (WeightsBase abstract properties).
+% TODO (8/3/2026): Remember to remove extra documentation during final
+% pass. Should store the decisions and rationalization in some kind of
+% archive later. Include timestamp of comment creation.
 
     properties (SetAccess = private)
         aero
@@ -140,6 +145,10 @@ classdef SizingLoopL1 < handle
                 end
 
                 W_TO = opts.relaxation * W_TO + (1 - opts.relaxation) * W_TO_new;
+                % Note to self (Casey): Slightly different form from what I
+                % was taught, but still the same. Usually we do "W_TO =
+                % W_TO_new", but we're shaving off a little bit of weight
+                % to accelerate convergence.
             end
 
             % Re-derive S_ref/T_SL from the final W_TO (the loop body above

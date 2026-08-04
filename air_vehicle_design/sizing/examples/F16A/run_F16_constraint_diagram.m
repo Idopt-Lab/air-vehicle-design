@@ -8,15 +8,17 @@
 %   reference row, and at L2/L3 its geometry-based clean-CLmax wall was
 %   found to silently dominate the design point (W/S~=62 instead of the
 %   ~83-104 range the real Constraints.xlsx conditions + Brandt give).
-%   Pass F16ConstraintSet.build(fidelityLevel, true) to add it back as an
-%   overlay if wanted.
+%   Pass includeStall=true to F16ConstraintSet.build (i.e.
+%   F16ConstraintSet.build(aero, prop, true)) to add it back as an overlay
+%   if wanted.
 %
 %   Edit fidelityLevel and/or trim the constraints list below to analyze a
 %   different fidelity level or a subset of conditions.
 
 fidelityLevel = "L3";   % "L1" | "L2" | "L3"
 
-constraints = F16ConstraintSet.build(fidelityLevel);
+[aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);
+constraints = F16ConstraintSet.build(aero, prop);
 
 ca = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 ca.plot_diagram();
