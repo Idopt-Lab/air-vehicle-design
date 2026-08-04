@@ -7,22 +7,22 @@ Working file, not teaching material. Open items only — what was decided and wh
 
 | # | Item | Decision | Owner |
 |---|---|---|---|
-| 1 | **Fuel roll-up is not variant-safe** and calls `getProperty` on every child of `FuelSystem` without a stereotype check — a real defect in `physical/F16APhysicalFuelRollup.m`. Mirror `F16APhysicalMaterialsRollup.materialLeaves`. No test calls this function today; add one. | D-038 | `f16a-physical` · `f16a-vnv` |
-| 2 | **Brandt masses are transcribed twice** — `generate_f16a_physical.m` and `F16APhysicalArchitectureTest.m` each hold their own copy of the same 16 figures, so the test verifies a transcription. Have the test execute `BrandtWeight.m` instead. **Land `PhysicalItem.DataProvenance` in the same stage** (see below). | D-036 | `f16a-vnv` · `f16a-data` |
-| 4 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. Reword the "cost re-enters the trade" claim wherever it appears: the trigger is *the candidates carry a cost*, not *a cost model exists*. | D-043 | `f16a-physical` · `f16a-data` |
+| 1 | **Brandt masses are transcribed twice** — `generate_f16a_physical.m` and `F16APhysicalArchitectureTest.m` each hold their own copy of the same 16 figures, so the test verifies a transcription. Have the test execute `BrandtWeight.m` instead. **Land `PhysicalItem.DataProvenance` in the same stage** (see below). | D-036 | `f16a-vnv` · `f16a-data` |
+| 2 | **Only one engine candidate is real.** Give `TradeCandidate` a `T_SL_lb`; source the F-16's own engine from Brandt and make the other two declared hypotheticals with invented thrusts — one short of the T/W it needs, one with far more than it needs and heavier for it. Rename `F110_GE_100`, which wears a real designation over invented data. | new | `f16a-physical` · `f16a-data` |
+| 3 | **`F16APhysicalCostModel` is a stub.** Real DAPCA-IV flyaway estimate populating `MeasureOfMerit.UnitCost_USD` on `Aircraft`; candidates keep `NaN` forever. Move the cost write after the generator's section 9 — OEW does not exist in section 8. | D-043 | `f16a-physical` · `f16a-data` |
 
-**Item 2 carries a second half.** `PhysicalItem` declares `{ Mass_lb }` and no `DataProvenance`, so 14
+**Item 1 carries a second half.** `PhysicalItem` declares `{ Mass_lb }` and no `DataProvenance`, so 14
 of the 16 masses summing to OEW carry no provenance — and six of them carry
 `Material.DataProvenance = Estimate`, which describes their *composite fraction* while their mass is
 `Reference`. A reader inspecting `Fuselage` sees a **contradicting** tag, not a missing one. Give
 `PhysicalItem` its **own** `DataProvenance` (do not overload `Material`'s) and have the gate check that
 no leaf carries two provenance tags that disagree.
 
-**Item 4 carries a second half.** Two of the seven candidate `Rationale.Justification` narratives make
-unsourced claims about real hardware — `F100_PW_200` on thrust-to-weight and production maturity,
-`F110_GE_100` on higher thrust and stall margin. **There is no thrust property anywhere at P**, so
-those trace to nothing, and the maturity claims restate the model's own `TRL` as fact about the real
-engines. Citation or hedge, either way a log entry.
+**Item 2 is scoped.** `T_SL_lb` is a declared property, **not a trade criterion and not a screen** —
+scoring stays `Benefit`/`TRL`/`Mass_lb`/`UnitCost_USD` and the outcome must not move. **No T/W ratio is
+computed anywhere**, in the model, a test or the docs: the three thrusts sit side by side and the
+narrative says what they mean. The twin's extra cost stays qualitative, because
+`TradeCandidate.UnitCost_USD` is `NaN` forever.
 
 ## Deferred method work
 

@@ -774,7 +774,8 @@ save_system(modelName, char(modelFile));
 
 fprintf("%s\n", "REMINDER: add the Verify links MANUALLY in the Requirements Editor -- " + ...
     "REQ_F16A_022 -> F16AMaterialsVerificationTest, " + ...
-    "REQ_F16A_P01 -> F16AFuelVerificationTest.");
+    "REQ_F16A_P01 -> F16AFuelVerificationTest, " + ...
+    "REQ_F16A_025 -> F16AStaticMarginVerificationTest (one per test method).");
 
 % ---------------------------------------------------------------------
 % 9) Run the roll-ups so the shipped model already carries subtotals and the

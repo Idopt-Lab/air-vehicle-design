@@ -448,6 +448,43 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             testCase.verifyGreaterThanOrEqual(total, 6000, "Total internal fuel capacity looks too low.");
         end
 
+        function testFuelRollupDiscoversTanksByStereotype(testCase)
+            % The FIRST test to call F16APhysicalFuelRollup. Until D-038 the
+            % only caller was F16AFuelVerificationTest, which is red by design
+            % -- so the available side could have been wrong in any way at all
+            % and no green test would have moved.
+            %
+            % What is asserted is the DISCOVERY RULE, not the number: the
+            % roll-up must return exactly the parts under FuelSystem that carry
+            % a FuelTank stereotype. The walk it replaced took every child and
+            % read a capacity off it regardless, which is a different function
+            % that happens to agree while every child is a tank.
+            r = F16APhysicalFuelRollup();
+            found = sort(string(r.Table.Tank));
+            stereotyped = sort(testCase.fuelTankLeafNames());
+
+            testCase.verifyEqual(found, stereotyped, ...
+                "The roll-up returned {" + strjoin(found, ", ") + "} but the parts " + ...
+                "under FuelSystem carrying a FuelTank stereotype are {" + ...
+                strjoin(stereotyped, ", ") + "}.");
+
+            % Every name it returned must carry the stereotype -- the invariant
+            % the old walk could not state, because it never looked.
+            for t = found'
+                c = testCase.componentAt(testCase.AC + "FuelSystem/" + t);
+                testCase.verifyTrue(any(contains(string(c.getStereotypes()), "FuelTank")), ...
+                    "The roll-up counted '" + t + "', which carries no FuelTank stereotype.");
+            end
+
+            % A silent 0 is the defect being removed; it must not return as a
+            % different silent 0.
+            testCase.verifyGreaterThan(r.AvailableFuel_lb, 0, ...
+                "The roll-up totalled 0 lb. An empty walk is supposed to raise " + ...
+                "F16APhysicalFuelRollup:noFuelTanks, not report a total.");
+            testCase.verifyEqual(r.AvailableFuel_lb, sum(r.Table.FuelCapacity_lb), ...
+                "AbsTol", 1e-9, "Total does not equal the sum of the per-tank rows.");
+        end
+
         function testMassRollupSelfConsistent(testCase)
             % Each assembly subtotal is the sum of its parts and OEW is the sum
             % of all ACTIVE leaves. Checks the traversal, not a weight budget.
@@ -1839,6 +1876,21 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             end
             a.AirframeMass_lb   = sum(m);
             a.CompositeFraction = sum(m .* cf) / sum(m);
+        end
+
+        function names = fuelTankLeafNames(testCase)
+            % Names of the parts under FuelSystem that CARRY a FuelTank
+            % stereotype, discovered from the model rather than listed here.
+            % Deliberately a flat scan of the role's children, not a copy of
+            % the roll-up's recursion: if both were written the same way a
+            % common mistake would agree with itself.
+            names = strings(0,1);
+            fs = testCase.componentAt(testCase.AC + "FuelSystem");
+            for c = fs.Architecture.Components
+                if any(contains(string(c.getStereotypes()), "FuelTank"))
+                    names = [names; string(c.Name)];   %#ok<AGROW>
+                end
+            end
         end
 
         function hits = rolesWhereBrandtCandidateIsNotLightest(testCase)

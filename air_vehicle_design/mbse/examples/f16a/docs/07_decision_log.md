@@ -250,7 +250,7 @@ the decision over the kinds L presents and name where the answer is recorded. **
 that contains its answer is not a decision record, it is an unfalsifiable claim. Guarded by
 `F16ARequirementsTest` (no vendor token, no weight, no score). Closes D-020's deferred note.
 
-### D-038 · The fuel roll-up becomes variant-safe · **OPEN**
+### D-038 · The fuel roll-up becomes variant-safe
 `F16APhysicalFuelRollup` reads `fuelSys.Architecture.Components` flat and calls `getProperty` on every
 child without a stereotype check. Replace with a recursive `fuelLeaves` helper mirroring
 `F16APhysicalMaterialsRollup.materialLeaves`: descend into **`getActiveChoice`** at a variant (never
@@ -259,6 +259,12 @@ structural rule *a component carrying `FuelTank` IS a fuel leaf*. Error on an em
 (`:noFuelTanks`) — **a silent 0 is the failure being removed; do not replace it with a different one.**
 **Why it is not hypothetical** `FuelSystem` becomes a variant role the moment the example admits a
 hybrid-electric aircraft. *Part 2 (volume) superseded by **D-041**.*
+**As built** Total unchanged at 6,300 lb over the same three tanks — the point was the rule, not the
+number. `testFuelRollupDiscoversTanksByStereotype` is the first test to call the function at all
+(P suite 39 → 40 cases; sweep 106 → 107); it asserts the *discovery rule* against a set found
+independently from the model, because asserting the total would pass just as well against the walk
+being replaced. The error path (`:noFuelTanks`) is stated and unit-untested — proving it fires needs a
+model with no tanks, and building one was judged out of scope here.
 
 ### D-039 · The F layer's folder is renamed `architecture/` → `functions/`
 **Why** All three layers are System Composer architecture models, so `architecture/` names what F
