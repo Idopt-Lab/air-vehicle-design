@@ -499,5 +499,348 @@ station values are the more likely source of the discrepancy, or whether it is n
 
 ---
 
+## 2026-08-03 — Stability & Control deep-dive, Phase A (documentation): BSC-sheet cell-map gap + blocked live-workbook checks → RESOLVED (live-xls read, 2026-08-03)
+
+**Context:** scribe documentation pass for subplan 10 (Stability & Control, longitudinal static stability
+in steady level flight only — `docs/subplans/10_stability_control.md`). No MATLAB COM/`actxserver`-
+capable tool was available in this session (only `Read`/`Grep`/`Glob`/`Write`/`Edit`/`WebFetch`) — `Read`
+on any `.xlsx` fails outright ("cannot read binary files"). Two items are logged here as gaps discovered
+while trying to cross-check against live workbooks, per this file's stated scope ("or gaps discovered
+while cross-checking against the live workbook") — neither is a resolved disagreement.
+
+### Gap 1 — `GroundTruth/cell-map.md` has zero cells for the BSC (balance/stability/control) sheet
+Grepped `cell-map.md` for "BSC", "balance", "neutral point," and the sheet-name patterns used for every
+other discipline — no matches; the file documents `Main`/`Geom`/`Aero`/`Wt`/`Engn(s)`/`Consts`/`Miss`/
+`Size&Opt` sheets only. `readme_bsc.md:6` states *"Key Excel anchors are the `BSC` / balance-control
+cells for MAC, CG, gear split, tipback, and rollover"* but itself gives no cell letters/numbers anywhere
+in the file — `BrandtBalanceStabControl.m` computes everything from `geom`/`wt`/`aero` object outputs
+plus the `gear` JSON block (itself already flagged as under-cited in the 2026-07-31 entry above), never
+reading a `BSC!`-prefixed cell directly anywhere in the `.m` file. So it is unclear whether a literal
+"BSC" sheet even exists in the live workbook to cite, or whether this project's ground-truth code
+reimplements the balance/S&C logic from first principles instead of reading such a sheet. **Could not
+check which, this pass** — no live-xls access. Needs a live `Brandt-F16-A.xls` read to either (a) find
+and cell-map an actual "BSC" (or similarly-named) sheet, confirming `readme_bsc.md`'s "Key Excel anchors"
+claim with real cell references, or (b) confirm no such sheet exists and correct `readme_bsc.md`'s
+wording, which currently implies one does.
+
+**RESOLVED (live-xls read, 2026-08-03):** opened `Brandt-F16-A.xls` via MATLAB `readcell` (read-only).
+The workbook has no sheet literally named "BSC" — the sheet is named **`S&C (2)`** (118 rows × 23 cols),
+exactly the sheet this subplan's "Ground Truth" section had speculated about. Its longitudinal-static-
+stability rows (`xnp`, `xcg_Lndg`, `xcgTakeoff`, `SM`) match `readme_bsc.md`'s recorded ground-truth
+values essentially exactly (`x_np=26.1677 ft`, `x_cg_land=26.1369 ft`, `x_cg_TO=26.1925 ft`), confirming
+`readme_bsc.md`/`BrandtBalanceStabControl.m` already reads this sheet's numbers — `readme_bsc.md:6`'s
+"BSC" wording should be read as an informal nickname, not a literal sheet name; `cell-map.md` should gain
+an `S&C (2)` entry. Full cell layout (which rows hold which quantity, and their in-sheet citations —
+several rows cite **Roskam Eqns 3.17/3.19/3.24/3.38**, not Raymer Ch. 16) is now written up in
+`docs/subplans/10_stability_control.md`'s "Ground Truth" section, "Live-workbook read (2026-08-03,
+coordinator session)" subsection. Most of the sheet (lateral-directional derivatives, short-period
+dynamics) is out of this subplan's scope and was not cell-mapped in detail.
+
+### Gap 2 — `temp_Casey/inputs/F-16A Block 50.xlsx`'s `Stability&Control` sheet: existence corroborated in code; cell layout and any overlap with `BrandtBalanceStabControl` unchecked
+A different workbook from Gap 1 — `temp_Casey`'s legacy input file, not Brandt's ground-truth file.
+`temp_Casey/src/ComputationModels/StabAndCont/SandCUtils.m:10` hardcodes
+`readtable(file_name, 'Sheet', "Stability&Control", 'ReadRowName', true)` against a workbook resolved
+from `designName = "F-16A Block 50"` (`temp_Casey/examples/F-16A B Block 10 and 15/
+F16A_Level{1,3}_Sizing_ClassBased_Example.m:24`/`:31`) — strong code-side corroboration that this sheet
+exists and holds a component-name-keyed table (consumed by `SandCLevel3.get_cg` as
+`component_weight_list`/`component_weight_x_locations`). Could not open the binary `.xlsx` this pass
+(`Read` tool rejects binaries; no COM/`actxserver` tool available) to confirm the exact cell layout, or to
+check whether its component x-locations/weights duplicate or conflict with
+`BrandtBalanceStabControl.m`'s own computed `xcg_*_ft` properties (wing, fuse, pitch, vert, nacelle,
+strake, engine, gear, inlet, ctrl, elec, hyd, ECS, other, avionics, armament, fuel1/2/3) — two
+independently-sourced component-station tables that may describe the same physical aircraft. **Why it
+matters now:** `docs/subplans/10_stability_control.md`'s "Component-x-location buildup" section plans a
+brand-new S&C-owned input table built fresh from `WeightsL3`/`GeomL3`; this legacy sheet is a candidate
+pre-existing alternative (or cross-check) that has not been evaluated. Needs a live-workbook read (both
+files) before `io` builds the new table, and before deciding whether the legacy sheet's numbers should
+inform it. Full detail in `docs/subplans/10_stability_control.md`'s "Ground Truth" section, "Scribe
+follow-up (2026-08-03)" subsection.
+
+**RESOLVED (live-xls read, 2026-08-03):** opened `temp_Casey/inputs/F-16A Block 50.xlsx`'s
+`Stability&Control` sheet via MATLAB `readcell` (read-only; confirmed real per Casey directly). 24 rows
+× 5 columns: `[component name] | Weight (lbf) | CG X-Location (ft) | X-MAC | Y-MAC` (the last two columns
+unpopulated). 22 component rows: Wing, Fuselage, HT, VT, Nacelles, Strakes, Engine, Gear, Inlet duct,
+Controls, Electrical, Hydraulics, ECS, Other, Avionics, Armaments, Fixed Payload, Exp Payload 1/2, Fuel
+1/2/3 — matching `BrandtBalanceStabControl.m`'s own `xcg_*_ft` property list almost 1:1. **Not checked
+line-by-line against `BrandtBalanceStabControl.m`'s computed values** (that comparison is still future
+work, deferred to the `io` pass per `docs/subplans/10_stability_control.md`'s "Ground Truth" section) —
+this resolution closes only the "does the sheet exist, and what is its cell layout" question, not the
+"do the two sources agree" question.
+
+---
+
+## 2026-08-04 — Stability & Control deep-dive, Phase B: primary-source (Raymer 6th ed. physical PDF) read corrects the 2026-08-03 web-cross-check → RESOLVED (Casey's Fig. 16.14 chart read, 2026-08-04)
+
+**Context:** Casey supplied the actual Raymer 6th ed. PDF (`AircraftDesignAConceptualApproach_Raymer_6ed.pdf`,
+Ch. 16 starts book p.585 / PDF p.615) directly, ahead of the implementation loop. The coordinator read
+Ch. 16 in full (book pp.585–619, covering all of §16.3 "Longitudinal Static Stability and Control" plus
+the start of §16.4 "Lateral-Directional," which is out of scope and not read further) via extracted PDF
+pages (PyMuPDF page extraction to a scratch file, since the source PDF is too large for direct text
+extraction). This supersedes the 2026-08-03 web-cross-check entries in `docs/subplans/10_stability_control.md`
+("Equations & Citations" §1/§2) with a primary-source read. Three corrections and one new gap found:
+
+### Correction 1 — Eq. 16.8 is `Cm_α` (the pitching-moment DERIVATIVE), not a "full itemized Cm_cg buildup"
+The 2026-08-03 web cross-check guessed Row 3 ("Cm_cg buildup (full itemized)") was Eq. 16.8, itemizing
+`Cm_fus` as an explicit additive term alongside `Cm_cg`. **This was wrong.** Raymer's actual Eq. (16.8)
+(p.592) is:
+```
+Cm_α = CL_α(X̄cg − X̄acw) + Cm_α,fus − η_h(S_h/S_w)CL_αh(∂α_h/∂α)(X̄ach − X̄cg) + (F_pα/(qS_w))(∂α_p/∂α)(X̄cg − X̄p)
+```
+— the pitching-moment-derivative-with-respect-to-α equation, immediately followed by Eq. (16.9) (neutral
+point, solving `Cm_α=0`) and Eq. (16.10)/(16.11) (Cm_α restated in terms of `X_np`; static margin). There
+is no separately-numbered "full itemized Cm_cg" equation beyond Eq. (16.7) (coefficient form, Row 2) —
+`Cm_fus` is already inside Eq. (16.7)'s `Cm_fus` term (the web source's buildup wasn't wrong on content,
+just on which equation number it belongs to). Row 3 in the subplan should be re-labeled as `Cm_α`
+(Eq. 16.8), a genuinely distinct quantity from Row 2, not a variant of it.
+
+### Correction 2 — Eq. 16.9 DOES have a thrust term; Raymer's own text sanctions dropping it ("power-off")
+The 2026-08-03 web cross-check's source claimed "no `/57.3` conversion appears... no thrust term." The
+primary source (p.592) shows Eq. (16.9) DOES include `(F_pα/(qS_w))(∂α_p/∂α)` in both numerator and
+denominator. However, Raymer's own text immediately after (p.593) states: *"It is common to neglect the
+inlet or propeller force term `F_p` in Eq. (16.9) to determine 'power-off' stability... Power effects are
+then accounted for using a static-margin allowance based upon test data for a similar aircraft.
+Typically, these allowances for power-on will reduce the static margin by about 1–3% for jets."* This is
+now a **citable, Raymer-sanctioned simplification** (not an invented one) for implementing Eq. 16.9
+without a thrust-location input — matches Casey's own earlier, independently-recalled note about "a 2%
+reduction per unit prop-to-CG distance, normalized by MAC," which this primary-source passage appears to
+be the actual origin of.
+
+### Correction 3 — Eq. 16.25's `Cm_α,fus` formula: "per deg" units CONFIRMED exactly, resolving the `/57.3` legacy-bug question with full confidence
+Eq. (16.25) (p.603): `Cm_α,fuselage = (K_fus·W_f²·L_f)/(c·S_w)`, **explicitly labeled "per deg"** in the
+book, cited to NACA TR 711, with `K_fus` read off Fig. 16.14 (empirical chart vs. "position of root
+quarter-chord as percent of fuselage length"). This is an EXACT match, including the missing-factor bug:
+`temp_Casey/src/Disciplines/StabAndCont/SandCLevel3.m`'s `compute_cm_alpha_fuselage` (lines 455–458)
+computes exactly `(K_fus*W_f^2*L_f)/(c*S_w)` with a code comment "% per deg" and cites "Raymer 6th ed, eq
+16.25" directly — confirming the legacy code's formula is correct AS A PER-DEG QUANTITY, but every
+downstream consumer (Eqs. 16.8/16.9, which are per-RADIAN throughout) must multiply this term by
+`180/π` (≈57.3) to convert before use — exactly the missing factor flagged in the subplan's Legacy Bugs
+table 2026-08-03 entry, now upgraded from "likely, web-sourced, not independently confirmed" to
+**CONFIRMED, primary source, Raymer 6th ed. p.603, verbatim "per deg" label**.
+
+### New gap — Fig. 16.14's `K_fus` chart has no digitized/citable numeric value anywhere in this repo
+Legacy code reads `K_fus = design.geom.wings.Main.Kfus` (line 121) — a property with NO numeric
+definition found anywhere searchable in `temp_Casey` (grepped the whole `sizing/` tree for
+`Kfus`/`K_fus`: only the two `SandCLevel3.m` read-site hits and this subplan's own prose exist; no config,
+input file, or `.mat` sets a value). Fig. 16.14 is a chart (K_fus, y-axis 0–0.05, vs. x-axis "position of
+root quarter-chord as % of fuselage length," 10–60%; NACA TR 711) with no in-repo digitization. **Not
+resolved here** — flagged for the implementation phase to either (a) digitize a handful of points
+directly off the chart image with an explicit "approximate, read from Fig. 16.14, pending Casey's
+physical-book spot-check" caveat (matching this repo's existing convention for chart-sourced values, e.g.
+`AeroL1.CLmax_table`), or (b) treat as a GAP-stubbed sub-term the same way `x_p`/`i_w`/`i_h` are being
+handled elsewhere in this discipline, pending Casey's decision.
+
+### Confirmed exactly, no correction needed
+Eq. 16.4 (Row 1), Eq. 16.5/16.7 (Row 2), Eq. 16.11 (Row 5, `SM=(X̄np−X̄cg)`, no `/100`), Eq. 16.12 (Row 6 —
+**all 5 coefficients now confirmed** including the `0.4`/`1.1` breakpoints and the `2.5` exponent, not
+just the 3 Casey spot-checked on 2026-08-03), Eq. 16.13/16.14 (Rows 7/8), and Eqs. 16.15–16.18 (Row 9) all
+match the subplan's existing formulas exactly. One scope clarification on Row 9: Eqs. 16.15–16.18 are the
+GENERAL plain-flap/control-surface-deflection family (the book explicitly applies it to "elevator,
+aileron, and rudder" alike, p.596) — not a separately-numbered "elevator-specific" equation as the
+2026-08-03 entry's phrasing implied. Casey's choice to use this family (Eq. 16.16 combined with Eq.
+16.18's empirical upper-bound cubic-in-`c_e/c` form) for elevator trim, instead of the Ch. 12 high-lift
+`ΔCL_max` treatment, is confirmed correct and now fully primary-source-backed, not just web-sourced.
+
+**RESOLVED (Casey's own Fig. 16.14 chart read, 2026-08-04):** Casey read the chart directly for the F-16's
+actual root-quarter-chord position — main-wing x-location `4.0725 ft`, root-quarter-chord x-position
+`21.8625 ft` (both measured positive downstream from the nose), giving root-quarter-chord as a fraction of
+fuselage length = `21.8625/L_f` = **44.17%**. Reading Fig. 16.14 at that position gives **K_fus ≈ 0.025**.
+This is now a citable, single-scalar F-16 input (Raymer Fig. 16.14, Casey's physical-book read,
+2026-08-04) — no chart digitization/lookup table needed; `K_fus=0.025` goes into
+`examples/F16A/jsons/f16a_L3.json`'s `.stability_control` block as a new input, cited exactly this way.
+
+---
+
+## 2026-08-04 — Roskam-book search, take 2: checked the actual PDFs in Casey's Documents/Readings folder, not just extract filenames
+
+**Context:** the earlier 2026-08-04 entry's "Roskam book not in this repo" finding was based on grepping the
+in-repo `roskam_vol{1,2,3}_data.md` extracts by filename/section-number pattern, not on opening a source
+PDF directly. Casey pointed at `C:\Users\John Freeman\...\Documents\Readings\` (the same folder the Raymer
+6th-ed. PDF came from) and asked to skim any Roskam text there for the Ch. 3 "Static Longitudinal
+Stability and Control" material (Eqns 3.17/3.19/3.24/3.38) Brandt's own `S&C (2)` sheet cites.
+
+**Files present, opened directly (title page read via PyMuPDF, `AircraftDesign_vol1/2/3_Roskam.pdf` bodies
+also full-text-searched for "static longitudinal stability"/"neutral point"/"3.17"+"stability" — zero
+hits in vol1/vol2; vol3 has no OCR text layer at all, confirmed by sampling text extraction across its
+462 pages, but its title page — Part III, "Layout Design of Cockpit, Fuselage, Wing, and Empennage" — is
+a physical-layout topic, not a stability-derivative one, so it is not a plausible match regardless):**
+- `AircraftDesign_vol1_Roskam.pdf` = **Airplane Design, Part I: Preliminary Sizing of Airplanes** (2018)
+- `AircraftDesign_vol2_Roskam.pdf` = **Airplane Design, Part II: Preliminary Configuration Design and
+  Integration of the Propulsion System** (2018)
+- `AircraftDesign_vol3_Roskam.pdf` = **Airplane Design, Part III: Layout Design of Cockpit, Fuselage,
+  Wing and Empennage** (2002)
+- `airplane-design-part-1_compress.pdf` = a second copy of Part I (same title page as vol1)
+
+**CONFIRMED (direct file check, supersedes the earlier filename-based inference): none of these is
+Roskam's separate title, "Airplane Flight Dynamics and Automatic Flight Controls, Part I," the book
+Brandt's `S&C (2)` sheet's Ch. 3 numbering (3.17–3.38) actually belongs to.** That title is not present in
+this Readings folder under any filename. The "Major new lead" callout in
+`docs/subplans/10_stability_control.md` and the earlier todo.md entry both stand as written — this is
+independent confirmation, not a reversal.
+
+**Bonus finding, not what was asked but relevant:** `aircraft_design_metabook.pdf` (Martins, "The
+Metabook of Aircraft Design") has its own Ch. 8 "Stability and Control" section (pp.85–91) with an
+equivalent `Cm_cg`/neutral-point/static-margin formulation, and gives its own fuselage-moment term
+(Eq. 8.17, its own numbering) citing the SAME NACA TR 711 source as Raymer's Eq. 16.25/Fig. 16.14, with a
+digitized table (Table 8.1, `Kf` vs. wing-quarter-chord position as a fraction of fuselage length, sourced
+to Jacobs & Ward 1936 / Schlichting & Truckenbrodt 1979) instead of a chart. After reconciling the two
+formulas' different presentation (Martins divides through by `CL_αw`; Raymer's Eq. 16.25 does not — the
+two are algebraically the same `Cm_α,fus = K·W_f²·L_f/(c̄·S_w)` once Martins' extra `CL_αw` divisor is
+cancelled back out), Martins' table is a genuinely independent digitization of the same empirical curve,
+and gives K-factor magnitudes in the same rough neighborhood as Casey's own Fig. 16.14 chart-read (both
+land in a similar order of magnitude at a comparable root-quarter-chord-%-fuselage-length position, though
+not an exact match — expected, since eyeballing a chart and reading a table are both approximate, and the
+two sources digitize slightly different curve versions). This is a nice-to-have secondary cross-check for
+the already-implemented `Cm_α,fus`/`K_fus=0.025` term, not a citation gap or a reason to change the
+implemented value — flagging here for the record in case a future pass wants a second data point.
+
+---
+
+## 2026-08-04 — Roskam Flight Dynamics book supplied by Casey, opened directly: right book, equation numbers don't match Brandt's citations
+
+**Context:** immediately after the previous 2026-08-04 entry (confirming the actual "Airplane Flight
+Dynamics and Automatic Flight Controls, Part I" title was NOT in Casey's Documents/Readings folder),
+Casey added the real file there:
+`airplane-flight-dynamics-and-automatic-flight-controls-part-1_Roskam.pdf` (Jan Roskam, 1979 first
+printing, "PART I: CHAPTERS 1 THROUGH 6, Rigid Airplane Flight Dynamics (Open Loop)"). This is
+unambiguously the correct title — title page confirmed by direct render (no OCR text layer exists
+anywhere in this PDF; it is fully scanned images, so everything below was read by rendering pages and
+viewing them directly, plus a Tesseract OCR pass over ~90 pages purely to locate candidate equation
+numbers before visually confirming each one).
+
+**What was checked, page by page, against Brandt's four cited numbers (`a`/`a0L` → Eqn 3.17; `aHS` →
+Eqn 3.19; `CLa` (aircraft) → Eqn 3.24; `xbarnp`/`xnp` → Eqn 3.38 — per the 2026-08-03 live-workbook read
+recorded above):**
+
+| Brandt's citation | What this book's SAME-NUMBERED equation actually is (verified by direct page render) |
+|---|---|
+| Eqn 3.17 | `C_n = N/q̄Sb` — the YAWING MOMENT COEFFICIENT definition (Ch. 3, p.70, "Planform Span b" subsection). Not a lift-curve-slope formula. |
+| Eqn 3.19 | `Cm_α = CL_α(X_Ref − X_ac)/c̄` — pitching-moment-slope AT AN ARBITRARY REFERENCE POINT (Ch. 3, §3.4.2.1 "Aerodynamic Center," p.76). Structurally *related* to the stability problem, but not "aHS" (a lift-curve slope). |
+| Eqn 3.24 | `Cm_ac` — the WING pitching-moment coefficient about its own aerodynamic center, a span-integral formula (Ch. 3, §3.4.4, p.84). Not "CLa (aircraft)." |
+| Eqn 3.38 | Does not exist as an equation at all at this location — page 101 has **Figure 3.38** ("Section Lift Characteristics of the NACA 64A010 Airfoil," an elevator-deflection chart, §3.5 "Angle of Attack and Lift Effectiveness of Control Surfaces"), not a numbered equation, and not neutral-point content. |
+
+**Also found, for context:** Chapter 3 here ("Basic Aerodynamic Concepts") only covers airfoil/planform
+lift-curve-slope, aerodynamic-center, downwash, fuselage-AC-contribution, and control-surface
+lift-effectiveness topics (§3.1–3.7, equations run 3.1 through roughly 3.40) — it never reaches an
+aircraft-level `CLa` or a neutral-point formula at all. The actual neutral-point/static-longitudinal-
+stability material in THIS book lives in **Chapter 5, §5.1.2.2 "Static Longitudinal Stability"** (p.255,
+criterion `C_mα + C_mTα < 0`, Eqs. 5.18–5.21) — topically the right place, but under Chapter 5's own
+independent numbering, not Chapter 3's.
+
+**Conclusion: this is genuinely the right book (confirmed physically present, correct title, correct
+general subject matter for every one of Brandt's four citations), but the SPECIFIC equation numbers in
+THIS copy (1979 first printing) do not match what Brandt's `S&C (2)` sheet cites.** The most likely
+explanation is an edition/printing mismatch — Roskam revised and re-typeset this text multiple times over
+several decades, and equation numbering is known to shift between printings; Brandt's sheet may have been
+built against a later printing with different pagination/numbering than this 1979 first printing. This is
+**not resolved here** — a later printing of the same title, if one becomes available, would be the next
+thing to check; this entry documents that a direct, honest attempt was made against the copy at hand and
+did not confirm a numbering match. **No implementation changes result from this entry** — the S&C
+discipline's already-implemented citations remain Raymer 6th ed. Ch. 16 (primary-source-confirmed,
+2026-08-04 entry above), independent of this Roskam cross-check.
+
+---
+
+## 2026-08-04 — Closing x_p/i_w/i_h (Casey's request): T.O. 1F-16A-1 gives i_w for real; i_h reframed; x_p/z_t/F_p resolved; Cm_acw discovered as a new, narrower blocker
+
+**Context:** Casey asked to close the three remaining S&C citation gaps (`x_p`, `i_w`, `i_h`) flagged
+during the implementation pass earlier the same day. Found `Documents/References/DIMENSIONS F-16A_B
+Fighting Falcon Flight Manual pp6.pdf` — a 6-page excerpt of the actual **T.O. 1F-16A-1** USAF flight
+manual, General Data section — already present in Casey's project tree (not something added for this
+search), with a text layer (unlike the scanned Roskam PDF), read directly via PyMuPDF text extraction.
+
+**`i_w` — CLOSED for real.** The manual's "WINGS" data block states directly: *"Incidence ... 0°"* — a
+genuine, aircraft-specific, primary-source value. The legacy `temp_Casey` code never had this either
+(`temp_Casey/examples/F-16A B Block 10 and 15/F16A_Level3_Sizing_ClassBased_Example.m:818`: `i_w = 0;` with
+zero citation, and `SandCLevel3.m` line 142 has a commented-out `% i_w = 0; % Assume 0 for now`) — this is
+the first time this repo has a REAL source for this number, not just a repeated convenient assumption.
+Wired into `F16SandCL3.i_w_deg` (new constructor input, `f16a_L3.json .stability_control.i_w_deg`); `CL_w`
+no longer errors.
+
+**`i_h` — CLOSED, but by reframing, not by finding a spec value.** The F-16 tail is an all-moving
+stabilator (`F16GeomL3.c_elev_frac=0`, Raymer Table 6.5) — there is no fixed "installation incidence" for
+it the way there is for the wing; `i_h` IS the pilot/trim control input. `F16SandCL3.CL_h` now takes
+`i_h_deg` as a required caller-supplied argument (same standing as `alpha_deg`), not a spec lookup.
+`alpha_0Lh` (needed by the same equation) is closed too: the manual's "HORIZONTAL TAILS" data block gives
+the airfoil as "6% Biconvex" (root) / "3.5% Biconvex" (tip) — a symmetric (uncambered) section, whose
+zero-lift angle of attack is 0° by definition, not an assumption.
+
+**`x_p`/`z_t`/`F_p` — CLOSED.** Re-reading Raymer 6th ed. p.604 (already read once, 2026-08-04 earlier
+entry, but not connected to this specific gap until now) shows Eqs. 16.26–16.28 define `F_p` as
+*specifically* the inlet-front-face normal force — meaning `F16GeomL3.x_inlet` (15.0 ft) genuinely IS "the
+thrust application point" this term needs, closing the earlier objection ("no source in this repo labels
+it that"). Separately, Raymer's own text sanctions two further simplifications explicitly: p.604 ("if the
+thrust axis passes through or near the c.g., this term can be ignored" → `z_t=0`) and p.609 ("it is common
+in early conceptual design to calculate the trim condition without including the thrust effects unless the
+thrust axis is well above or below the c.g." → `F_p=0`). Both apply to the F-16 (engine on the fuselage
+centerline, near the CG).
+
+**New gap discovered while assembling the full trim equation: `Cm_acw`.** Closing `x_p`/`z_t`/`F_p` was
+not, on its own, enough to fully compute `Cm_cg_trim` (Raymer Eq. 16.5/16.7) — that equation also needs
+`Cm_acw`, the wing's own zero-lift pitching-moment coefficient about its aerodynamic center. Grepped
+`F16AeroL3.m` and every `src/disciplines/aerodynamics/*.m` file directly for any `Cm`/`Cm0`/`Cm_ac`/
+`pitching_moment` property: **none exists anywhere in this repo's Aerodynamics discipline, at any fidelity
+level.** This is a genuinely new finding, not something previously flagged in the subplan's original
+GAP list — logged here rather than invented. `F16SandCL3.Cm_cg_trim` still errors, but now with a much
+narrower, more specific reason (`F16SandCL3:wingZeroLiftMomentNotAvailable`, was
+`F16SandCL3:thrustLocationNotAvailable`). Two candidate future paths, neither pursued yet: (a) Roskam's
+own Eqn 3.24 (a span-integral `Cm_ac` formula, found during the same-day Roskam-book cross-check above) —
+would need NACA 64A204 section `cm_ac` data plus the wing's twist distribution, which the same T.O.
+1F-16A-1 excerpt happens to give directly ("Twist: At BL 54.0 ... 0°, At BL 180.0 ... 3°"); (b) a simpler
+table/chart lookup for a comparable airfoil, if one turns up. **Not resolved here.**
+
+**Not changed by this entry:** every other already-implemented S&C quantity (`x_cg`, `x_acw`, `x_ach`,
+`Cm_alpha_fus`, `x_np`, `SM`, `Cm_alpha`, `Delta_alpha_L0`) — unaffected by this closure pass.
+
+---
+
+## 2026-08-04 — Closing Cm_acw (Casey's request): Raymer Eq. 16.19 found, closes the equation; the
+## airfoil-table value itself becomes a documented USER/STUDENT-SUPPLIED input → RESOLVED
+
+**Context:** immediately after the `x_p`/`i_w`/`i_h` closure entry above, Casey asked directly:
+"Where did the `Cm_acw` term come from?" then, once shown it is Raymer Eq. 16.5/16.7's `Cm_w` term
+(the wing's own zero-lift pitching moment about its AC, with no citable value anywhere in this
+repo's Aerodynamics discipline), instructed: "Search Raymer's text for an equation for it. If you
+cannot find it, then the users/students must be able to supply their own value."
+
+**Search performed:** full-text keyword search of the Raymer 6th ed. PDF
+(`Documents/Readings/AircraftDesignAConceptualApproach_Raymer_6ed.pdf`) for `Cm_ac`/`zero-lift
+pitching moment`/`moment about the aerodynamic center`/`airfoil...moment` (PyMuPDF, all 1097
+pages). Found a direct hit at PDF page index 629 (printed p.598), Sec. "Wing Pitching Moment":
+
+> The wing pitching moment about the aerodynamic center is largely determined by the airfoil
+> pitching moment. Equation (16.19) provides an adjustment for wing aspect ratio and sweep for a
+> straight wing or an untwisted swept wing at low subsonic speeds.
+>
+> `Cm_w = Cm_0,airfoil · (A·cos²Λ)/(A + 2·cosΛ)`                                        (16.19)
+>
+> The wing twist adds an increment of approximately (−0.01) times the twist (in degrees) for a
+> typical swept wing... Transonic effects increase the magnitude of the wing pitching moment by
+> about 30% at Mach 0.8.
+
+**Outcome:** a real, citable Raymer equation DOES exist for `Cm_acw` (Eq. 16.19, p.598) — implemented
+as `SandCL3.Cm_acw_wing(Cm0_airfoil, AR, sweep_deg)`. It genuinely closes the *architecture* gap: the
+equation from AR/sweep to the 3D wing value is real and complete. But it bottoms out at
+`Cm_0,airfoil` — the wing section's OWN 2D zero-lift pitching-moment coefficient about its
+aerodynamic center — which is airfoil-table data (NACA report / Abbott & von Doenhoff), not
+something Ch. 16 derives, and no citable NACA 64A204 number was found anywhere in this repo or
+across this entire session's reading. Per Casey's own instruction, this is exactly the case where
+"the users/students must be able to supply their own value": `F16SandCL3.Cm0_airfoil_wing` is now a
+plain mutable input property, defaulting to `NaN` (`f16a_L3.json
+.stability_control.Cm0_airfoil_wing = null`). `F16SandCL3.Cm_acw`/`Cm_cg_trim` compute and return
+`NaN` gracefully — not an error — until a value is filled in; `Cm_cg_trim`'s signature also gained a
+required `i_h_deg` argument (same reframing as `CL_h`, needed to assemble the tail-lift term the
+full trim buildup requires). Wing-twist and transonic increments the same Eq. 16.19 page documents
+are deliberately NOT implemented this pass (flagged, not silently dropped) — T.O. 1F-16A-1 does give
+real twist data (BL 54.0=0°, BL 180.0=3°) for a future pass that wants that refinement.
+
+`run_all_tests` after this change: exactly the pre-existing 12-failure baseline, zero S&C failures —
+new real tests added for `SandCL3.Cm_acw_wing` (hand-computed) and for the NaN-until-supplied /
+finite-once-supplied `F16SandCL3.Cm_acw`/`Cm_cg_trim` contract (`tests/disciplines/TestSandCL3.m`).
+
+**Not changed by this entry:** `x_p`/`z_t`/`F_p`/`i_w` (resolved in the prior entry) and every other
+already-implemented S&C quantity are unaffected.
+
+---
+
 *No entries resolved. Add new dated sections above this line for future discrepancies; do not
 edit or remove prior entries.*
