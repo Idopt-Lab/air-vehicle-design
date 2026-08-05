@@ -545,3 +545,50 @@ of each surrogate's justification — the trade study prepends its own verdict, 
 the winning candidate — against the same case-sensitive vendor-token list L's neutrality guard uses,
 reused rather than retyped. `testThrustDidNotBecomeATradeCriterion` reads the `Criteria (D-015):`
 clause the trade study **writes into the model**, so it checks the study that actually ran.
+
+### D-054 · The de-bloat pass: guards that could not fire, and prose with two homes
+A review of the shipped example found assertions that reported green while checking nothing, a build
+order that could persist a model it then refused to finish, and reasoning duplicated between the help
+blocks and this log. All are corrected in place; **no number moved** — OEW 19,980.73, composite
+0.1928, fuel 6,300 lb, cost $68.47M, and every trade score unchanged.
+
+**Guards that could not fire.** `F16ALogicalArchitectureTest`'s architecture walk recursed through
+`.Architecture.Components`, which returns **zero** on a loaded VariantComponent, so the "no trade
+numerics at L" sweep reached the 9 roles and never the 6 kinds — 9 elements where the model has 15.
+It now uses `getChoices`, the same rule the P suite already followed. Separately, three anti-vacuity
+guards used `verifyNotEmpty` on a **string scalar**, and `isempty("")` is false: they now test
+`strlength` and `assert`, so the check below them cannot run on an empty clause.
+
+**A build that cannot be priced now stops before it saves.** The cost model's engine cross-check ran
+in section 9b, after 7b, 8 and 9 had each saved. A trade outcome it rejects therefore shipped a
+`.slx` carrying the new winner and a stale cost MoM, surfacing later as an unrelated-looking test
+failure. `F16APhysicalCostModel(m, PreconditionOnly=true)` now runs the moment the trade has a
+winner. Same rule, one home, evaluated at the first point it can be.
+
+**A `NaN` is never reported as a violation.** The materials roll-up could return `NaN` from an
+unreadable property and `F16AMaterialsVerificationTest` reported it as an exceeded 20% cap — a
+VIOLATED verdict on a requirement nothing had evaluated, the exact distinction D-042/D-051 exist to
+draw. Both roll-ups now name the offending part and stop; the test carries an UNEVALUATED branch.
+
+**Silent omissions became errors.** `linkImplement` skipped a requirement id that no longer resolved
+and the generator still printed its success banner; it now raises `:missingRequirement`. The mass
+roll-up hard-coded its eleven assembly names, so a twelfth was silently dropped from the printed
+table while OEW grew to include it; it now asks the aircraft what it is made of. The architecture
+test's `Persist=false` fallback re-invoked the **persisting** roll-up, turning a read-only run into
+three writes of the artifact under test; there is no fallback now.
+
+**Nothing reaches outside the project without putting it back.** `F16APhysicalCostModel` left
+`sizing/` permanently on the path, which defeats the D-047 PathFixtures — the verification suites
+would have kept passing with their own fixture deleted. It uses `onCleanup`; the two verification
+suites use `PathFixture` and close only the models they opened, not `bdclose("all")`.
+
+**One walk, one home.** `fuelLeaves` and `materialLeaves` were the same variant-safe recursion twice
+over — the D-038 failure mode waiting to happen. Both now call `F16AStereotypeLeaves`.
+
+**Prose.** Every MATLAB help block is back inside the 20-line house rule (35 for a generator): what
+the file does, its inputs and outputs, the teaching point, and a `D-0xx` citation instead of a
+restatement. Stale claims that unit cost is `NaN` everywhere (three agent briefs and
+`05_physical.md` — true of the candidates, false of the aircraft since D-043) and citations of D-036
+where D-052 was meant are corrected. `examples/ex2` regained a readme, which states that its
+requirement coverage is deliberately partial rather than leaving a reader to infer it from empty
+status columns.
