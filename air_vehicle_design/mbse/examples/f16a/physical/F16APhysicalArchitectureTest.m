@@ -540,7 +540,12 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             for i = 1:size(testCase.EngineThrustRows,1)
                 rel  = string(testCase.EngineThrustRows{i,1});
                 crit = testCase.criteriaClauseOf(rel);
-                testCase.verifyNotEmpty(crit, ...
+                % strlength, not verifyNotEmpty: criteriaClauseOf returns the
+                % string SCALAR "" on no match, and isempty("") is false -- so
+                % verifyNotEmpty would pass on exactly the input this guard
+                % exists to catch. assert, so the contains() check below cannot
+                % then pass vacuously on an empty clause.
+                testCase.assertGreaterThan(strlength(crit), 0, ...
                     rel + "'s rationale carries no 'Criteria (D-015):' clause, so " + ...
                     "there is nothing to check and this test would pass vacuously.");
                 testCase.verifyFalse(contains(crit, "T_SL"), ...
@@ -565,7 +570,10 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
             tokens = F16ALogicalArchitectureTest.VendorTokens;
             for rel = testCase.SurrogateEngines
                 authored = testCase.authoredJustificationOf(rel);
-                testCase.verifyNotEmpty(authored, ...
+                % strlength for the same reason as testThrustDidNotBecomeA-
+                % TradeCriterion: authored is a string SCALAR, so "" is not
+                % empty and the token scan below would find nothing in it.
+                testCase.assertGreaterThan(strlength(authored), 0, ...
                     rel + " has no authored justification to check.");
                 hits = tokens(contains(authored, tokens));
                 testCase.verifyEmpty(hits, ...
