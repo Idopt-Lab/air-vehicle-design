@@ -42,7 +42,9 @@ classdef F16AFuelVerificationTest < matlab.unittest.TestCase
             % A PathFixture, not a bare addpath: the suite leaves the path as
             % it found it (D-047).
             testCase.applyFixture(PathFixture({f16aRoot(), fullfile(f16aRoot(),"physical")}));
-            testCase.addTeardown(@() bdclose("all"));
+            % Close only the model this suite.s roll-up loads. bdclose("all")
+            % would also discard whatever else the user had open.
+            testCase.addTeardown(@() bdclose("F16A_Physical"));
         end
     end
 

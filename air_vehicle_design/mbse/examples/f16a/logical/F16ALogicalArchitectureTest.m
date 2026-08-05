@@ -124,7 +124,11 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
             testCase.OrigSet   = slreq.load(fullfile(thisDir, "requirements", "f16a.slreqx"));
             testCase.Alloc     = systemcomposer.allocation.load("F16A_FunctionToLogical");
             testCase.addTeardown(@() testCase.Alloc.close());
-            testCase.addTeardown(@() bdclose("all"));
+            % Close only what this suite opened. bdclose("all") would also
+            % discard unrelated models the user had open -- including the
+            % review session F16AOpenForReview sets up.
+            testCase.addTeardown(@() bdclose("F16A_Logical"));
+            testCase.addTeardown(@() bdclose("F16A_Functional"));
             testCase.addTeardown(@() slreq.clear());
         end
     end
