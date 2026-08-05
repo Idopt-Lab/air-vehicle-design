@@ -1,9 +1,9 @@
 %% run_F16_constraint_diagram_overlay
-%   Plot Deliverable #2 (docs/subplans/06_constraint_analysis.md): builds the
-%   F-16's constraint set at L1, L2, and L3 fidelity (F16ConstraintSet,
-%   reading Constraints.xlsx) and overlays all three constraint envelopes --
-%   plus each fidelity's optimum design point -- on one figure, to show
-%   fidelity sensitivity of the design point.
+%   Fidelity-sensitivity overlay: builds the F-16's constraint set at L1, L2,
+%   and L3 fidelity (F16ConstraintSet, reading f16a_requirements.json) and
+%   overlays all three constraint envelopes -- plus each fidelity's optimum
+%   design point -- on one figure, to show fidelity sensitivity of the design
+%   point.
 %
 %   Plots the envelope curve per level (TW_envelope(WS) = max_i
 %   required_TW_i(WS), see ConstraintAnalysis.m's header), not all 8

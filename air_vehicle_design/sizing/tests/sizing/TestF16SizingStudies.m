@@ -25,8 +25,7 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
 %       the optional Stall condition (includeStall, on by default at the
 %       time) silently becoming the binding constraint at L2/L3 via its
 %       unvalidated, low geometry-based clean CLmax. Fixed by defaulting
-%       includeStall to false (see F16ConstraintSet.m's header and
-%       docs/subplans/06_constraint_analysis.md); L2/L3 now give
+%       includeStall to false (see F16ConstraintSet.m's header); L2/L3 now give
 %       WS_opt~=83.0. L1's remaining ~76 (vs. ~104-125) is NOT the Stall
 %       bug -- removing Stall doesn't change L1's result at all. Printing
 %       the full L1 constraint table shows "Combat Subsonic" (n=4.5 turn)

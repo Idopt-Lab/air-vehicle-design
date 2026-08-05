@@ -2,35 +2,25 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %MASTEREQUATIONCONSTRAINT  Mattingly "Master Equation" point-performance
 %   constraint (abstract base of the thrust-condition subtree).
 %
-%   Generic Layer-1 constraint: given a flight condition (AircraftState),
-%   a load factor n, a required specific excess power Ps, a weight fraction
-%   beta = W/W_TO, and the current-iteration aerodynamics/propulsion
-%   discipline objects, returns the thrust-to-weight ratio required to
-%   sustain that condition as a function of wing loading W/S. Belongs to the
-%   Both_WbyS_TbyW category (see that class's header) and supplies the
-%   concrete required_TW(WS) that category declares abstract.
+%   Generic Layer-1 constraint. Given a flight condition (AircraftState), a
+%   load factor n, a required specific excess power Ps, a weight fraction
+%   beta = W/W_TO, and the current-iteration aero/prop discipline objects, it
+%   returns the thrust-to-weight ratio required to sustain the condition as a
+%   function of wing loading W/S. Belongs to the Both_WbyS_TbyW category and
+%   supplies the required_TW(WS) that category declares abstract. It is
+%   instantiated through thin specializations that differ only in which of
+%   (n, Ps, powerSetting) are fixed: LevelFlightConstraint (n=1, Ps=0),
+%   SustainedTurnConstraint (n>1, Ps=0), ExcessPowerConstraint (Ps>0).
 %
-%   ABSTRACT (2026-08-04): this class is the shared implementation of the
-%   Master Equation, but it is instantiated only through its thin
-%   specializations -- LevelFlightConstraint (n=1, Ps=0),
-%   SustainedTurnConstraint (n>1, Ps=0), ExcessPowerConstraint (Ps>0) --
-%   which differ only in which of (n, Ps, powerSetting) are fixed vs. free.
-%   The equation itself is identical across all of them; only (state, beta,
-%   n, Ps, powerSetting) differ. This replaces the old single ThrustConstraint
-%   class, grouping the conditions by the physics actually active in the
-%   Master Equation. See
-%   sizing/docs/subplans/06_constraint_analysis_refactor.md T9.
+%   One instance models one condition (cruise, dash/max Mach, sustained turn,
+%   climb, ...). alpha (thrust lapse) and CD0/K1/K2 (drag polar) are pulled
+%   fresh from prop/aero each call, so the constraint tracks the current
+%   sizing-loop iteration and fidelity level automatically.
 %
-%   One instance models one point-performance condition (cruise, dash/max
-%   Mach, sustained turn, climb, ...) -- alpha (thrust lapse) and CD0/K1/K2
-%   (drag polar) are pulled fresh from prop/aero each call, so the constraint
-%   tracks the current sizing-loop iteration and fidelity level automatically
-%   (never hardcoded here).
-%
-%   EQUATION  [Mattingly, "Aircraft Engine Design," 2nd ed., AIAA, 2002,
-%   the point-performance "Master Equation" specialized to steady,
-%   wings-level flight -- see also NPTEL_Fighter_Aircraft_Sizing.ipynb,
-%   "Point Performance using Mattingly's Master Equation"]:
+%   EQUATION  [Mattingly, "Aircraft Engine Design," 2nd ed., AIAA, 2002 --
+%   the point-performance "Master Equation" specialized to steady, wings-level
+%   flight; see also NPTEL_Fighter_Aircraft_Sizing.ipynb, "Point Performance
+%   using Mattingly's Master Equation"]:
 %
 %     T_SL/W_TO = A/(W_TO/S) + B*(W_TO/S) + C + D
 %       A = q*CD0/alpha
@@ -39,18 +29,18 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %       D = (beta/alpha) * (Ps/V)
 %
 %   where q, V come from AircraftState; CD0, K1, K2 from aero.drag_polar(state);
-%   alpha from prop.thrust_lapse(state) by default (AB/max-power lapse per
-%   PropulsionBase convention -- use a 100%-AB flight condition when
-%   instantiating for an afterburning point). Conditions flown at 0% AB/mil
-%   power (e.g. Cruise) should be constructed with powerSetting="mil", which
-%   draws alpha from PropulsionBase.thrust_lapse_mil_on_AB_scale(state)
-%   instead (T_mil/T_SL_AB -- still on the AB T_SL scale so the resulting
-%   T/W stays comparable with every other, AB-flown condition on the same
-%   constraint diagram). See get_alpha and
-%   sizing/examples/F16A/cruise_and_combatturn2_error_scrape.md Sec 2.
-%   beta, n, Ps are stakeholder/mission inputs specific
-%   to the condition being modeled (e.g. F-16 Max Mach: beta=0.8997, n=1.0,
-%   Ps=0 at 36,000 ft / M=1.60 -- see sizing/docs/subplans/06_constraint_analysis.md).
+%   alpha from get_alpha(). beta, n, Ps are stakeholder/mission inputs for the
+%   condition (e.g. F-16 Max Mach: beta=0.8997, n=1.0, Ps=0 at 36,000 ft /
+%   M=1.60 -- see examples/F16A/mds/f16a_requirements.md).
+%
+%   POWER SETTING. alpha is drawn on the basis the condition is constructed
+%   with: "AB" -> prop.thrust_lapse(state) (AB/max-power, the PropulsionBase
+%   default; use a 100%-AB flight condition for an afterburning point); "mil"
+%   -> prop.thrust_lapse_mil_on_AB_scale(state) (T_mil/T_SL_AB -- still on the
+%   AB T_SL scale so the resulting T/W stays comparable with every other,
+%   AB-flown condition on the same diagram). Conditions flown at 0% AB/mil
+%   power (e.g. Cruise) must use powerSetting="mil". See get_alpha and
+%   examples/F16A/mds/cruise_and_combatturn2_error_scrape.md Sec 2.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Max Mach"
@@ -94,28 +84,20 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %   Master Equation assembled from this condition's A/B/C/D terms.
         %   WS may be scalar or array; TW is returned the same size.
         %
-        %   FAILS LOUDLY ON A NON-FINITE TERM (added 2026-07-25; moved here
-        %   from Both_WbyS_TbyW 2026-08-04). The A/B/C/D terms are built from
-        %   the aero object's drag polar and the propulsion object's thrust
-        %   lapse, either of which can legitimately hand back a non-finite
-        %   value -- AeroL2 returns NaN CD0/K1 across the unmodeled transonic
-        %   band by design, and a mis-injected discipline object can produce
-        %   NaN or Inf too. A NaN required_TW is the WORST possible outcome
-        %   downstream: every > / < comparison against it is false, so a
-        %   condition that cannot be evaluated silently reads as SATISFIED and
-        %   ConstraintAnalysis picks a design point off a curve that does not
-        %   exist. Erroring here converts that into a visible failure at the one
-        %   place every Master-Equation constraint funnels through.
+        %   FAILS LOUDLY on a non-finite term. The A/B/C/D terms come from the
+        %   aero drag polar and the prop thrust lapse, either of which can
+        %   legitimately be non-finite -- AeroL2 returns NaN CD0/K1 across the
+        %   unmodeled transonic band by design, and a mis-injected discipline
+        %   object can too. A NaN required_TW is silently omitted from
+        %   ConstraintAnalysis's max() envelope, so an un-evaluable condition
+        %   would read as SATISFIED off a curve that does not exist. Erroring
+        %   here makes that a visible failure at the one place every
+        %   Master-Equation constraint funnels through.
         %
-        %   EFFICIENCY (T7, 2026-08-04): the drag polar and the thrust lapse
-        %   are fetched exactly ONCE per required_TW call and handed to the
-        %   four compute_* term helpers. An earlier form let each helper
-        %   re-fetch them, so one required_TW call evaluated aero.drag_polar
-        %   three times and get_alpha four times, all returning the identical
-        %   value (the state is fixed). The fetch stays INSIDE this call (not
-        %   cached on the object across calls), so the constraint still tracks
-        %   the current sizing-loop iteration and fidelity level -- an
-        %   optimizer that mutates aero/prop between calls sees fresh values.
+        %   The drag polar and thrust lapse are fetched once per call and
+        %   passed to the compute_* helpers; the fetch stays inside the call
+        %   (not cached across calls) so the constraint tracks the current
+        %   sizing-loop iteration and fidelity level.
             polar = obj.aero.drag_polar(obj.state);
             alpha = obj.get_alpha();
             q     = obj.state.q;
@@ -151,13 +133,10 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 
     methods (Access = protected)
         %COMPUTE_A/B/C/D  Master Equation terms, see class header for the
-        %   equation and citation. Each TAKES the already-fetched drag polar
-        %   (CD0/K1/K2), thrust lapse alpha, dynamic pressure q, and speed V
-        %   -- required_TW fetches those once (via aero.drag_polar/get_alpha)
-        %   and passes them in, so the constraint tracks the current
-        %   sizing-loop iteration and fidelity level while evaluating the
-        %   drag polar and thrust lapse only once per call (T7, 2026-08-04).
-        %   These helpers are protected and called only from required_TW.
+        %   equation and citation. Each takes the already-fetched drag polar
+        %   (CD0/K1/K2), thrust lapse alpha, dynamic pressure q, and speed V --
+        %   required_TW fetches those once and passes them in. Protected;
+        %   called only from required_TW.
 
         function A = compute_A(obj, polar, alpha, q) %#ok<INUSL>
             A = q * polar.CD0 / alpha;
@@ -177,11 +156,10 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 
         function alpha = get_alpha(obj)
         %GET_ALPHA  Thrust lapse on the basis this condition was constructed
-        %   with -- AB (T_AB/T_SL_AB, the PropulsionBase default) or mil
-        %   (T_mil/T_SL_AB, PropulsionBase.thrust_lapse_mil_on_AB_scale) --
-        %   see the powerSetting property and
-        %   cruise_and_combatturn2_error_scrape.md Sec 2 for why Cruise
-        %   specifically needs the mil basis.
+        %   with: AB (prop.thrust_lapse) or mil
+        %   (prop.thrust_lapse_mil_on_AB_scale). See the powerSetting property
+        %   and cruise_and_combatturn2_error_scrape.md Sec 2 for why Cruise
+        %   needs the mil basis.
             if obj.powerSetting == "mil"
                 alpha = obj.prop.thrust_lapse_mil_on_AB_scale(obj.state);
             else

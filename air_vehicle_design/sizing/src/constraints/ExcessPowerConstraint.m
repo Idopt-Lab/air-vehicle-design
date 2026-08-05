@@ -10,8 +10,7 @@ classdef ExcessPowerConstraint < MasterEquationConstraint
 %
 %   All physics, the A/B/C/D assembly, the non-finite self-guard, and the
 %   equation citation live in MasterEquationConstraint -- this class only
-%   fixes n=1 and takes Ps as an input. See
-%   sizing/docs/subplans/06_constraint_analysis_refactor.md T9.
+%   fixes n=1 and takes Ps as an input.
 
     methods
 

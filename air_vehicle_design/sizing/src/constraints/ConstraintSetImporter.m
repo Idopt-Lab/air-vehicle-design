@@ -1,38 +1,27 @@
 classdef ConstraintSetImporter
 %CONSTRAINTSETIMPORTER  Reads constraint conditions from a requirements JSON.
 %
-%   Generic Layer-1 utility: any aircraft's constraint requirements (one
-%   object per point-performance/field/stall condition) can be read with
-%   this, as long as the file follows the requirements-JSON layout the F-16
-%   uses (examples/F16A/jsons/f16a_requirements.json): a top-level
-%   "constraints" block whose "conditions" member is an array of condition
-%   objects. Each object carries REQUIREMENT / CONDITION data ONLY -- the
-%   flight condition and the field-performance requirement -- keyed by
-%   explicit field names (name, category, altitude_ft, mach, beta, and, per
-%   condition kind, n / Ps_fps / power_setting or distance_ft / mu / k_factor
-%   / mach_liftoff). It carries NO discipline-owned quantity (no CLmax, CD0,
-%   K1, K2, CDx, thrust-lapse alpha, or TSFC): those come from the injected
-%   aero/prop objects at run time. See examples/F16A/mds/f16a_requirements.md
-%   for the schema and full per-field citations.
+%   Generic Layer-1 utility. Any aircraft's constraint requirements (one
+%   object per point-performance/field/stall condition) can be read with this,
+%   as long as the file follows the requirements-JSON layout the F-16 uses
+%   (examples/F16A/jsons/f16a_requirements.json): a top-level "constraints"
+%   block whose "conditions" member is an array of condition objects. Each
+%   object carries REQUIREMENT / CONDITION data ONLY -- the flight condition
+%   and the field-performance requirement -- keyed by explicit field names
+%   (name, category, altitude_ft, mach, beta, and per condition kind n / Ps_fps
+%   / power_setting or distance_ft / mu / k_factor / mach_liftoff). It carries
+%   NO discipline-owned quantity (no CLmax, CD0, K1, K2, CDx, thrust-lapse
+%   alpha, or TSFC): those come from the injected aero/prop objects at run
+%   time. See examples/F16A/mds/f16a_requirements.md for the schema and
+%   per-field citations.
 %
 %   Aircraft-specific wiring of each condition into a concrete constraint
-%   object (the MasterEquationConstraint subtree, TakeoffConstraint,
-%   LandingConstraint, StallConstraint) is a Layer-2 concern -- see
-%   examples/F16A/F16ConstraintSet.m.
+%   object is a Layer-2 concern -- see examples/F16A/F16ConstraintSet.m.
 %
-%   Deliberately thin: this does NOT compute or append atmosphere columns
-%   (temperature, density, dynamic pressure, ...) -- AircraftState already
-%   derives those from altitude+Mach with its own citations (Mattingly
-%   Eq. 2.52), so recomputing them here would duplicate that logic. This
-%   class only decodes the raw per-condition requirement fields as they
-%   appear in the JSON.
-%
-%   HISTORY: this class read examples/F16A/Constraints.xlsx (a per-row Excel
-%   workbook, via readtable with VariableNamingRule='modify') until
-%   2026-08-04 (subplan 06-refactor T3). The Excel path -- and the brittle
-%   mangled-column-name coupling it forced on the caller (row.Distance_ft_,
-%   row.PS_ft_s_, row.AB_) -- was retired when the conditions moved into the
-%   requirements JSON with explicit keys.
+%   Deliberately thin: it does NOT append atmosphere columns (temperature,
+%   density, dynamic pressure) -- AircraftState derives those from
+%   altitude+Mach with its own citations (Mattingly Eq. 2.52). This class only
+%   decodes the raw per-condition requirement fields.
 
     methods (Static)
 

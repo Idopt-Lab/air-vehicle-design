@@ -3,80 +3,40 @@ classdef F16ConstraintSet
 %   1 stall) from examples/F16A/jsons/f16a_requirements.json, with the Stall
 %   condition excluded by default.
 %
-%   Layer-2 (aircraft-specific) wiring: reads the F-16's constraint
-%   conditions (altitude, Mach, weight fraction, load factor, specific
-%   excess power for the 6 point-performance rows; field length, friction
-%   coefficient, k-factor for the 2 field rows; liftoff Mach for takeoff;
-%   Mach for stall) from the requirements JSON via
-%   ConstraintSetImporter.read_conditions, then instantiates the matching
-%   generic Layer-1 constraint class per condition using EXPLICIT JSON keys.
-%   The Master-Equation thrust rows map to the MasterEquationConstraint
-%   subtree by their own data (T9, 2026-08-04): Ps_fps>0 ->
+%   Layer-2 (aircraft-specific) wiring. Reads the F-16's constraint conditions
+%   from the requirements JSON via ConstraintSetImporter.read_conditions, then
+%   instantiates the matching generic Layer-1 constraint class per condition
+%   using explicit JSON keys. The Master-Equation thrust rows map to the
+%   MasterEquationConstraint subtree by their own data: Ps_fps>0 ->
 %   ExcessPowerConstraint, else n>1 -> SustainedTurnConstraint, else
-%   LevelFlightConstraint. The two field rows map to TakeoffConstraint/
-%   LandingConstraint (ground-roll equations); Stall maps to StallConstraint.
-%   All are wired to the F-16 aero/prop discipline objects for the requested
-%   fidelity level. The Stall condition is EXCLUDED BY DEFAULT (changed
-%   2026-07-27; was included by default until then).
+%   LevelFlightConstraint. The two field rows map to
+%   TakeoffConstraint/LandingConstraint; Stall maps to StallConstraint. All are
+%   wired to the F-16 aero/prop discipline objects for the requested fidelity
+%   level. Takeoff is evaluated at the JSON's mach_liftoff = 0.2 (Brandt
+%   Consts!AT32); rho at sea level is Mach-independent, so this only makes the
+%   modeled liftoff condition match Brandt, it does not move the optimum. See
+%   examples/F16A/mds/f16a_requirements.md for the condition data; the
+%   constraint equations are cited in MasterEquationConstraint.m /
+%   TakeoffConstraint.m / LandingConstraint.m / StallConstraint.m.
 %
-%   DATA SOURCE (changed 2026-08-04, subplan 06-refactor T3): the conditions
-%   now come from the requirements JSON, resolved by f16a_requirements_path().
-%   This replaces the previous examples/F16A/Constraints.xlsx read and its
-%   brittle mangled-column-name coupling (row.Distance_ft_ / row.PS_ft_s_ /
-%   row.AB_). power_setting ("AB"/"mil") now comes DIRECTLY from the JSON --
-%   the old AB% -> power-setting mapping is gone. The Stall condition is now a
-%   real JSON row too (it used to be hardcoded via a STALL_MACH constant).
+%   WHY includeStall DEFAULTS TO FALSE: Stall has no Brandt reference row to
+%   validate its CLmax against, and at L2/L3 its wall sits on AeroL2/L3's
+%   geometry-based CLEAN CLmax estimate (~0.91 vs L1's Roskam-table ~1.50 --
+%   see F16AeroL2.m/F16AeroL3.m). That low CLmax put Stall's wall at
+%   W/S~=62-64 psf, tighter than every real condition, so it silently became
+%   the BINDING constraint and pulled the reported optimum to W/S~=62 at L2/L3
+%   (vs. Brandt's W/S=104.59). Excluding Stall by default raises L2/L3 to
+%   W/S~=83; the residual gap traces to the documented aero/propulsion fidelity
+%   gaps affecting the real curves, not to this class. Stall stays available as
+%   a sanity-check overlay via includeStall=true. The underlying clean-CLmax
+%   gap is tracked in ToDo_Darshan.md §3.
 %
-%   ONE INTENTIONAL NUMERIC CHANGE with the JSON source: Takeoff is now
-%   evaluated at the JSON's mach_liftoff = 0.2 (the real V_liftoff/a_SL,
-%   Brandt Consts!AT32), where the Excel-era code hardcoded 0.1. rho at sea
-%   level is Mach-independent, so this shifts nothing in TakeoffConstraint's
-%   ground-roll equation (which reads only state.rho) -- the change makes the
-%   modeled liftoff condition match Brandt, it does not move the F-16
-%   optimum. Landing keeps the nominal sea-level M=0.1 state used only for its
-%   rho.
-%
-%   WHY includeStall NOW DEFAULTS TO FALSE: Stall has no Brandt reference
-%   row to validate its CLmax against (StallConstraint.m's header), and at
-%   L2/L3 its wall sits on AeroL2/L3's geometry-based CLEAN CLmax estimate
-%   (Raymer Eq. 12.15, ~0.91 -- see F16AeroL2.m/F16AeroL3.m's documented
-%   1.50-vs-0.91 clean-CLmax discontinuity vs. L1's Roskam-table value).
-%   That low CLmax put Stall's wall at W/S~=62-64 psf, tighter than every
-%   real Constraints.xlsx condition, so it silently became the BINDING
-%   constraint and pulled the reported optimum down to W/S~=62 at L2/L3 --
-%   vs. Brandt's own W/S=104.59 and Casey's legacy-code result of ~125
-%   (user-reported 2026-07-27, contradicting `TestF16ConstraintSet.m`'s
-%   prior comment that this was "a real, physically expected shift, not a
-%   bug"; it was a bug). Dropping Stall from the default build raises L2/L3
-%   to W/S~=83 -- still short of Brandt/legacy, but that residual gap
-%   traces to the same already-documented aero/propulsion fidelity gaps
-%   (CD0, thrust-lapse) affecting the real Landing/Takeoff/thrust curves,
-%   not to this class. Stall is still available as a sanity-check overlay
-%   via includeStall=true; it just no longer determines the design point.
-%
-%   See examples/F16A/mds/f16a_requirements.md and
-%   sizing/docs/subplans/06_constraint_analysis.md, "F-16 Constraint
-%   Conditions" tables, for the condition data; the constraint equations
-%   themselves are cited in MasterEquationConstraint.m/TakeoffConstraint.m/
-%   LandingConstraint.m/StallConstraint.m, not repeated here.
-%
-%   POWER SETTING COMES DIRECTLY FROM THE JSON (2026-08-04, T3): each thrust
-%   condition carries an explicit power_setting key ("AB"/"mil") that selects
-%   its alpha basis -- "mil" -> PropulsionBase.thrust_lapse_mil_on_AB_scale,
-%   "AB" -> PropulsionBase.thrust_lapse. This replaces the earlier AB%->
-%   power-setting mapping; the JSON stores the resolved setting, so no mapping
-%   is needed here. requirePowerSetting below is a thin validator only: it
-%   errors on a missing or non-{AB,mil} value, preserving the guard that a
-%   silent "AB" default (the old cruise -58% bug,
-%   cruise_and_combatturn2_error_scrape.md) is what this build path must
-%   prevent.
-%
-%   FIELD SPEED MARGINS: the JSON's k_factor is now passed through to
-%   TakeoffConstraint/LandingConstraint (k_TO/k_L) with the explicit keys
-%   c.k_factor. The JSON values (1.2 takeoff, 1.3 landing; Brandt Main!U12/U13)
-%   equal those classes' own defaults, so this is behavior-neutral versus the
-%   pre-T3 code that let the defaults apply -- but the requirement value now
-%   comes from the requirements file, not a src default.
+%   POWER SETTING comes directly from the JSON: each thrust condition carries
+%   an explicit power_setting key ("AB"/"mil") selecting its alpha basis
+%   ("mil" -> PropulsionBase.thrust_lapse_mil_on_AB_scale, "AB" ->
+%   PropulsionBase.thrust_lapse -- see MasterEquationConstraint.get_alpha).
+%   requirePowerSetting below is a thin validator: it errors on a missing or
+%   non-{AB,mil} value, so a silent "AB" default cannot slip through.
 
     methods (Static)
 
@@ -86,11 +46,10 @@ classdef F16ConstraintSet
         %   in requirements-JSON condition order (Stall last), ready to hand
         %   to ConstraintAnalysis (as-is, or trimmed/reordered by the caller
         %   first).
-        %   includeStall -- default false (changed 2026-07-27; see this
-        %   class's header for why). The Stall condition is skipped unless
-        %   includeStall is true; pass includeStall=true to add it back as an
-        %   overlay, e.g. for a sanity-check plot -- but note it will again
-        %   dominate optimal_point() at L2/L3 if you do.
+        %   includeStall -- default false (see the class header for why). The
+        %   Stall condition is skipped unless includeStall is true; pass true
+        %   to add it back as an overlay, but note it will again dominate
+        %   optimal_point() at L2/L3.
             arguments
                 fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])} = "L3"
                 includeStall  (1,1) logical = false
@@ -197,19 +156,12 @@ classdef F16ConstraintSet
         function [aero, prop] = buildDisciplines(fidelityLevel)
         %BUILDDISCIPLINES  F-16 aero/prop discipline pair for a fidelity level.
         %
-        %   PROPULSION AT THE L3 RUNG: there is deliberately NO L3 propulsion
-        %   tier -- no PropL3/PropulsionModelL3/F16PropL3 exists, and none is
-        %   planned (user decision 2026-07-25). L3 pairs F16AeroL3 with
-        %   F16PropL2, and anything reporting L3 propulsion numbers must label
-        %   them "computed by F16PropL2". Same pairing the constraint tests use.
-        %
-        %   GEOMETRY IS NOW INJECTED INTO BOTH AERO AND PROPULSION-AWARE
-        %   GEOMETRY (Phase 2, 2026-07-25): F16GeomL{2,3} take the propulsion
-        %   object, because the nacelle diameter -- and therefore duct wetted
-        %   area and CD0 -- is sized from engine thrust. L3 now builds
-        %   F16GeomL3, the full L3 geometry tier; it previously injected
-        %   F16GeomL2, which made f16a_L3.json's whole .geometry block dead
-        %   input (an edit there changed nothing).
+        %   There is deliberately no L3 propulsion tier: L3 pairs F16AeroL3 with
+        %   F16PropL2 (anything reporting L3 propulsion numbers is computed by
+        %   F16PropL2). F16GeomL{2,3} take the propulsion object, because the
+        %   nacelle diameter -- and therefore duct wetted area and CD0 -- is
+        %   sized from engine thrust. L3 builds the full L3 geometry tier
+        %   F16GeomL3.
             switch fidelityLevel
                 case "L1"
                     aero = F16AeroL1(f16a_spec_path(1));

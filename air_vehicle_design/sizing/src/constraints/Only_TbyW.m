@@ -2,17 +2,13 @@ classdef (Abstract) Only_TbyW < PointPerformanceBase
 %ONLY_TBYW  Abstract category for point-performance conditions that bound
 %   thrust-to-weight ratio (T/W) directly, independent of wing loading.
 %
-%   Mirrors NPTEL_Fighter_Aircraft_Sizing.ipynb's Only_TbyW class -- see
-%   Only_WbyS.m's header for the three-category grouping this and its
-%   siblings (Only_WbyS, Both_WbyS_TbyW) implement. No F-16 constraint
-%   condition currently needs this category (Max Mach/Cruise/Max Alt/Combat
-%   Turn 1-2/Excess Power/Takeoff all depend on W/S through the Mattingly
-%   Master Equation, and Landing/Stall are W/S-only, see LandingConstraint.m/
-%   StallConstraint.m); it is provided for structural completeness, matching
-%   the notebook's three-category hierarchy, and for a future condition
-%   whose requirement is a flat T/W floor with no aerodynamic/wing-loading
-%   term. A concrete subclass need only implement TW_min(obj), the required
-%   T/W; this class returns that same value at every W/S.
+%   A concrete subclass implements TW_min(obj), the required T/W; required_TW
+%   returns that same value at every W/S. No current F-16 condition uses this
+%   category (all thrust conditions depend on W/S through the Master Equation,
+%   and Landing/Stall are W/S-only); it is kept for structural completeness of
+%   the notebook's three-category hierarchy and for a future flat-T/W-floor
+%   condition. Mirrors NPTEL_Fighter_Aircraft_Sizing.ipynb's Only_TbyW class
+%   (see Only_WbyS.m for the three-category grouping).
 
     methods (Abstract)
 
