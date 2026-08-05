@@ -439,14 +439,30 @@ classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
         end
 
         function list = descend(testCase, arch)
-            % Architecture-side walk. Per the Stage-0 probe a variant's
-            % .Architecture.Components returns its CHOICES, so this visits
-            % inactive kinds too -- which is exactly what a "no numbers
-            % anywhere at L" check needs.
+            % Architecture-side walk.
             list = {};
             for c = arch.Components
                 list{end+1} = c; %#ok<AGROW>
-                list = [list, testCase.descend(c.Architecture)]; %#ok<AGROW>
+                list = [list, testCase.descendInto(c)]; %#ok<AGROW>
+            end
+        end
+
+        function list = descendInto(testCase, comp)
+            % The one place that knows about variants. On a saved-and-reloaded
+            % model a VariantComponent's .Architecture.Components returns ZERO
+            % (Stage-0 finding 6), so getChoices is the only accessor that
+            % reaches the kinds -- and the kinds are exactly what a "no trade
+            % numerics anywhere at L" sweep is looking for. Same rule as
+            % F16APhysicalArchitectureTest.descendInto.
+            if isa(comp, "systemcomposer.arch.VariantComponent")
+                list = {};
+                choices = getChoices(comp);
+                for i = 1:numel(choices)
+                    list{end+1} = choices(i); %#ok<AGROW>
+                    list = [list, testCase.descend(choices(i).Architecture)]; %#ok<AGROW>
+                end
+            else
+                list = testCase.descend(comp.Architecture);
             end
         end
 
