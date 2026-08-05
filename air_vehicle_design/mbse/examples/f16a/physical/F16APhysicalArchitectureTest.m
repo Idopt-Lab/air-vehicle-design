@@ -287,7 +287,7 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         %                     cost by DAPCA IV); tagging a computed number as
         %                     though it were sourced is the D-025 overclaim
         ProvenanceProperty          = "DataProvenance";
-        % PhysicalItem left this list in Stage 6 (D-036): it holds Mass_lb, an
+        % PhysicalItem left this list in Stage 6 (D-052): it holds Mass_lb, an
         % engineering value like any other, and its exemption was the reason 14
         % of the 16 masses summing to OEW shipped untagged. The two that remain
         % hold no chosen number -- Rationale holds prose, MeasureOfMerit holds

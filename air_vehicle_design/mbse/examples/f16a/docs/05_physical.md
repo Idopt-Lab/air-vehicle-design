@@ -95,7 +95,7 @@ paths did not — the analysis instance *flattens* the variant, so the roll-ups 
 
 ## Mass roll-up → Operating Empty Weight
 
-Every part carries `PhysicalItem.Mass_lb` and, since D-036, a `DataProvenance` describing **that
+Every part carries `PhysicalItem.Mass_lb` and, since D-052, a `DataProvenance` describing **that
 mass**. The leaf masses on the **active** path are the Brandt F-16A ground-truth component weights
 (lbf, design point `W_TO = 31,377 lb`), and `F16APhysicalArchitectureTest` now checks them by
 **executing** `sizing/VnV/BrandtF16A/BrandtWeight.m` rather than holding a second copy — so the
@@ -310,7 +310,7 @@ Every value-bearing stereotype declares the property: `TradeCandidate`, `Materia
 holds prose, the second nothing but computed figures — the rolled-up OEW and the DAPCA IV cost — so
 a tag would only repeat what the stereotype already says.
 
-`PhysicalItem` was itself exempt until D-036, on the argument that it held Brandt ground truth and
+`PhysicalItem` was itself exempt until D-052, on the argument that it held Brandt ground truth and
 the invented masses were tagged on `TradeCandidate` where they are *scored*. That was half true and
 the wrong half mattered: 14 of the 16 masses summing to OEW carried no provenance at all, and the six
 airframe structural leaves carried `Material.DataProvenance = Estimate` — which describes their
