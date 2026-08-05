@@ -2,7 +2,7 @@
 
 > **Living document.** Maintained by Darshan Sarojini and collaborators.
 > Subplans live at `air_vehicle_design/sizing/docs/subplans/`.
-> Primary architecture reference: `temp_AI/docs/00_framework_overview.md`.
+> Primary architecture reference: the repo's top-level `CLAUDE.md` and this `PLAN.md`.
 
 ---
 
@@ -111,7 +111,7 @@ backfill a unit test's expected value.
 
 ---
 
-## Directory Layout (do not touch `temp_Casey/` or `temp_AI/`)
+## Directory Layout (do not touch `temp_Casey/`)
 
 ```
 air_vehicle_design/sizing/
@@ -146,7 +146,6 @@ air_vehicle_design/sizing/
 ├── VnV/BrandtF16A/
 │   ├── GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth (.geometry/.aerodynamics/.propulsion/.weights)
 │   └── todo.md                             ← dated discrepancy / open-decision log (user-review items)
-├── baseline/            F16Baseline.m, extract_brandt.m   (deprecated)
 └── docs/                PLAN.md, {aerodynamics,geometry,propulsion,weights}_parameter_usage.md,
                          subplans/01_aircraft_state … 08_sizing.md
 ```
@@ -188,7 +187,7 @@ Status reflects the code tree (this table historically went stale — trust `git
 | 3 | Aerodynamics (L1/L2/L3) | [03_aerodynamics.md](subplans/03_aerodynamics.md) | Done |
 | 4 | Propulsion (L1/L2) | [04_propulsion.md](subplans/04_propulsion.md) | Done |
 | 5 | Weights (L1/L2/L3) | [05_weights.md](subplans/05_weights.md) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
-| 6 | Constraint Analysis | [06_constraint_analysis.md](subplans/06_constraint_analysis.md) | Done |
+| 6 | Constraint Analysis | *(subplan removed 2026-08-04 — completed; as-is is `src/constraints/` + `examples/F16A/mds/f16a_requirements.md`)* | Done |
 | 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Done (`0b0dfb4`/`40dfdf2`/`9510bc3`) |
 | 8 | Sizing | [08_sizing.md](subplans/08_sizing.md) | Not started |
 
@@ -280,7 +279,8 @@ in 7 sections, **not** in `run_all_tests`.
 
 ### Step 6 — Constraint Analysis
 
-See [subplans/06_constraint_analysis.md](subplans/06_constraint_analysis.md). **STOP after tests pass.**
+Done. The subplan was removed on 2026-08-04 (work complete). The as-is implementation is
+`src/constraints/`; the F-16 condition data is `examples/F16A/mds/f16a_requirements.md`.
 
 ---
 
@@ -304,7 +304,7 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 4. No feature added beyond what the step requires.
 5. Each subplan `.md` is written/expanded at the start of its implementation step.
 6. After each step: STOP and wait for professor to review code and run MATLAB independently.
-7. Do not search the internet unless explicitly asked to. Use locally available resources: `temp_AI/docs/disciplines/reference_extracts/` (Raymer/Roskam/Mattingly/Nicolai extracts) and `VnV/BrandtF16A/` (Brandt workbook, readmes, cell-map).
+7. Do not search the internet unless explicitly asked to. Use locally available resources: `docs/reference_extracts/` (Raymer/Roskam/Mattingly/Nicolai extracts) and `VnV/BrandtF16A/` (Brandt workbook, readmes, cell-map).
 
 ---
 

@@ -63,8 +63,8 @@ values live in column B onward) — and critically, `A4`'s label is **"Exposed E
 Nacelles,"** not a second fuselage-S_wet number. The two actual fuselage S_wet values are at
 `B3` (low-fidelity, "1/3-cone + 2/3-cylinder" approximation, 730.422 ft²) and `D23`
 (high-fidelity frame-integration, 676.3289 ft²) — **exactly what `readme_geom.md`,
-`GroundTruth/cell-map.md`, `baseline/extract_brandt.m`, and `BrandtGeometry.m` all already,
-consistently, cite** (`extract_brandt.m:76,83`: `get("Geom","B3")` → `fus_simple`,
+`GroundTruth/cell-map.md`, `baseline/extract_brandt.m` (removed 2026-08-04), and `BrandtGeometry.m`
+all already, consistently, cite** (`extract_brandt.m:76,83`: `get("Geom","B3")` → `fus_simple`,
 `get("Geom","D23")` → `fus_accurate`; `cell-map.md:26`: `Geom!D23` = high-fidelity fuselage
 S_wet; `readme_geom.md` §4.1: "Low fidelity — Geom B3", "High fidelity — Geom D23").
 
@@ -151,8 +151,8 @@ Aerodynamics deep-dives). Cross-checked the live propulsion code (`src/base/Prop
 existing tests (`tests/disciplines/TestProp{L1,L2}.m` — read for citations only, NOT for expected
 values, per the anti-self-referential rule), the ground truth (`readme_prop.md`, `BrandtEngine.m`,
 `GroundTruth/cell-map.md` Engn(s)/Consts rows, `readme_consts.md`, `readme_mission.md`, `README.md`),
-the reference extracts (`temp_AI/docs/disciplines/reference_extracts/{mattingly,metabook,raymer}_data.md`),
-and `baseline/F16Baseline.m`. I did **not** open the live `Brandt-F16-A.xls` (documentation-only
+the reference extracts (`docs/reference_extracts/{mattingly,metabook,raymer}_data.md`),
+and `baseline/F16Baseline.m` (removed 2026-08-04). I did **not** open the live `Brandt-F16-A.xls` (documentation-only
 pass). Three items carry a **user decision dated 2026-07-24**; the rest are flagged/deferred.
 
 ### Entry 1 — L1 density-lapse α = σ^m: 3-way citation split — RESOLVED (user, 2026-07-24)
@@ -233,7 +233,7 @@ extract. No discrepancy — recorded so a future reader need not re-verify.
 ### Entry A — Consts α column semantics (AT vs AU) — DEFERRED (user, 2026-07-24) → RESOLVED (live-xls read, 2026-07-24)
 `cell-map.md:208` maps `Consts!AU23 = α = thrust lapse = eng.run(alt, M, %AB/100).alpha_AB_ref`
 (max_mach = 100% AB → AB lapse on the T_SL_AB basis). But `tests/disciplines/TestPropL2.m` and
-`baseline/F16Baseline.m` treat `Consts!AT{23-28}` = α_AB and `Consts!AU{23-28}` = α_mil renormalized
+`baseline/F16Baseline.m` (removed 2026-08-04) treat `Consts!AT{23-28}` = α_AB and `Consts!AU{23-28}` = α_mil renormalized
 to the AB basis (e.g. dash: AT23 = 0.5770 = α_AB, AU23 = 0.1882 = α_mil_T_AB). So cell-map places the
 AB-lapse value at AU, whereas the test/baseline place α_AB at AT and a *different* (dry) value at AU.
 Cross-references the existing 2026-07-22 Aero Finding E (F16Baseline Consts column letters "not
@@ -275,7 +275,7 @@ Probe check: live AT23 = 0.57698 ≈ test's 0.5770 (α_AB) ✓; live AU23 = 0.57
 0.1882 (that 0.1882 = AS23·15000/23770 = α_dry-on-AB, not the content of cell AU) — confirms the AU
 mislabel. `docs/propulsion_parameter_usage.md` updated with the verified table + semantics.
 
-### Entry B — Brandt Engn AB-thrust-equation cell ROW: readme_prop row 6 vs. F16Baseline row 15 — flagged/deferred → RESOLVED (live-xls read, 2026-07-24)
+### Entry B — Brandt Engn AB-thrust-equation cell ROW: readme_prop row 6 vs. F16Baseline (removed 2026-08-04) row 15 — flagged/deferred → RESOLVED (live-xls read, 2026-07-24)
 `readme_prop.md:78-83` places the AB thrust equation at **Engn row 6** (cells A6:G6 / H6:S6);
 `baseline/F16Baseline.m:340-342` cites the same AB coefficients (`C_M_AB=0.1`, `e_M_AB=0.5`,
 `C_TR_AB=2.2`) at **Engn(s) D15/F15/R15 (row 15)**. The dry equation agrees on row 4 both sides. The
@@ -310,16 +310,16 @@ logged for user review. **UPDATE (2026-07-28, same day):** the user has since re
 Findings 2 and 3; status lines added to each below. Finding 1 remains open (out of scope for this
 deep-dive to fix). See `TailSizing_scribe_plan.md` §§2, 5.1, 6, 7, 8 for the full decision record.
 
-### Finding 1 — Nicolai & Carichner F-16 tail-volume-coefficient value: propagation error across three `temp_AI` reference-extract files
-`temp_AI/docs/disciplines/reference_extracts/nicolai_data.md`,
-`temp_AI/docs/disciplines/reference_extracts/roskam_vol2_data.md`, and
-`temp_AI/docs/disciplines/reference_extracts/usaf_f16_data.md` all state the F-16's row in Nicolai &
+### Finding 1 — Nicolai & Carichner F-16 tail-volume-coefficient value: propagation error across three reference-extract files
+`docs/reference_extracts/nicolai_data.md`,
+`docs/reference_extracts/roskam_vol2_data.md`, and
+`docs/reference_extracts/usaf_f16_data.md` all state the F-16's row in Nicolai &
 Carichner's Table 11.6 ("Tail Volume Coefficients for Fighter Aircraft") as `C_HT=0.68, C_VT=0.041`
 (`roskam_vol2_data.md` and `usaf_f16_data.md` both cite `nicolai_data.md` as their source for this
 pair, so the error appears to originate in that one file and propagate outward).
 
 The properly page-cited, "done"-status chapter extract itself —
-`temp_AI/docs/disciplines/reference_extracts/11_tail_sizing.md` §"Table 11.6 — Tail Volume
+`docs/reference_extracts/11_tail_sizing.md` §"Table 11.6 — Tail Volume
 Coefficients for Fighter Aircraft" (*[Nicolai & Carichner, Table 11.6, p. 289]*) — reproduces the
 full table, and its "General Dynamics F-16" row reads `C_HT=0.3, C_VT=0.094`. **No row anywhere in
 the fully reproduced Table 11.6 matches `0.68`/`0.041`** — I checked every row (Convair F-106,
@@ -395,12 +395,12 @@ not a new problem) in `TailSizing_scribe_plan.md` §2.
 
 ### Finding 3 — Raymer Ch. 16 (stability-and-control-based tail sizing, the planned L3 tier) has no verifiable equation numbers anywhere in this repository
 Checked, per Rule 7, every in-repo source before flagging this as an internet-required gap:
-- `temp_AI/docs/disciplines/reference_extracts/` is entirely **Nicolai & Carichner**, not Raymer (see
+- `docs/reference_extracts/` is entirely **Nicolai & Carichner**, not Raymer (see
   that folder's own `00_README.md`). Its Chapter 11 (`11_tail_sizing.md`, "done") covers only the
   volume-coefficient method and explicitly defers criteria-based tail sizing to *its own* Chapter 21
   ("Static Stability and Control") and Chapter 23 ("Control Surface Sizing Criteria") — both listed
   **"pending"** (not yet extracted) in the same README's progress table.
-- `temp_AI/docs/disciplines/reference_extracts/raymer_data.md` (the actual Raymer OCR extract) covers
+- `docs/reference_extracts/raymer_data.md` (the actual Raymer OCR extract) covers
   only Ch. 10, 12, and 15 — no Ch. 4, 6, or 16 content exists in it at all.
 - `temp_Casey/src/Disciplines/StabAndCont/SandCLevel3.m` (read-only reference, documented bugs per
   CLAUDE.md) cites `"Raymer 6th ed, eq 16.25"` (a fuselage `C_mα` moment term) and `"fig 16.3"`/
@@ -471,7 +471,7 @@ exactly matching `readme_bsc.md:68`'s own stated validation target ("Gear split 
 **self-consistent** with each other.
 
 The problem is that this result contradicts well-established fighter landing-gear practice, including a
-source already in this repo: `temp_AI/docs/disciplines/reference_extracts/08_fuselage_sizing.md` §8.1.7
+source already in this repo: `docs/reference_extracts/08_fuselage_sizing.md` §8.1.7
 (Nicolai & Carichner, p.202): *"Nose gear rule of thumb: 20% of TOGW on the nose wheel for good
 steering."* It also contradicts Raymer's stated typical split (Ch. 11 p.344 prose, *"the main tires
 carry about 90% of the total aircraft weight... Nose tires carry only about 10%"* — see
@@ -491,8 +491,7 @@ takes as its argument. `docs/subplans/09_subsystems.md` recommends defaulting to
 90%/10% (needs no geometry, matches the discipline's "statistical method" framing) and explicitly
 **not** wiring in the Brandt-derived 26.7%/73.3% split until this is resolved. **Flagging for user
 review — not resolved here**, per the standing scribe rule. Needs: (a) a live-`Brandt-F16-A.xls` COM
-read of the actual "Gear" tab cells (correcting `baseline/extract_brandt.m`'s stale hardcoded path
-first, per the standard todo.md convention used elsewhere in this file) to get real cell references for
+read of the actual "Gear" tab cells to get real cell references for
 `x_nose_ft`/`x_main_ft`/`d_nose_ft`/`d_main_ft`, and (b) a decision on whether `xcg_TO_ft` or the gear
 station values are the more likely source of the discrepancy, or whether it is not a discrepancy at all
 (e.g. a coordinate-convention misunderstanding on this reviewer's part).
