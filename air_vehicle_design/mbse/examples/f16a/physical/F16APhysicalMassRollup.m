@@ -79,14 +79,20 @@ m = systemcomposer.loadModel(modelName);
 acPath = modelName + "/Aircraft";     % the system-of-interest component
 S = acPath + "/";
 
-% Names of the top-level assemblies, for the reported table. Each is read by
-% path, so this is presentation order only -- it no longer matches the order
-% the generator creates them in (the two variant roles are added after the nine
-% plain ones), and nothing depends on it. Airframe and FlightControls name
-% VARIANT nodes here; see the note above on why that path still resolves.
-assemblies = ["Airframe","Propulsion","LandingGear","FuelSystem", ...
-    "FlightControls","Avionics","Electrical","Hydraulics","ECS", ...
-    "ArmamentSupport","SecondaryStructure"];
+% Top-level assemblies for the reported table, READ FROM THE MODEL. A
+% hard-coded list silently drops a newly added assembly from the table while
+% OEW (read at the root) grows to include it, so the table stops summing to
+% the total printed beneath it; and a renamed assembly aborts the roll-up
+% mid-generate. Asking the aircraft what it is made of cannot do either.
+% Airframe and FlightControls are VARIANT nodes here, which is fine: the
+% variant node itself is listed by its parent, and its instance node carries
+% the active candidate's rolled-up mass.
+aircraft   = lookup(m, Path=char(acPath));
+assemblies = string({aircraft.Architecture.Components.Name});
+if isempty(assemblies)
+    error("F16APhysicalMassRollup:noAssemblies", ...
+        "%s has no components, so there is nothing to roll up.", acPath);
+end
 
 % --- Roll up: native System Composer analysis (ex2 pattern) --------------
 % Fall back to a plain recursion over the model if instantiate/iterate is
@@ -138,7 +144,7 @@ results = struct( ...
 % property without saving would leave the in-memory model dirty for whatever
 % runs next, which is its own kind of side effect.
 if options.Persist
-    setProperty(lookup(m, Path=char(acPath)), char(oewMomProp), string(OEW));
+    setProperty(aircraft, char(oewMomProp), string(OEW));
     save_system(modelName, char(modelFile));
 end
 
