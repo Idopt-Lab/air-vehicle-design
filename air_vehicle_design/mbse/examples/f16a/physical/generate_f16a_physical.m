@@ -786,6 +786,14 @@ relocate(allocName + ".mldatx", allocFile, thisDir);
 % ---------------------------------------------------------------------
 trades = F16APhysicalTradeStudy();
 
+% CAN THE RESULT BE PRICED? Asked HERE, the moment a winner exists and before
+% sections 8, 9 and 9b each save the model. The cost model's DAPCA constants
+% describe the reference aircraft, so a trade outcome with a different engine
+% cannot be priced -- and discovering that in section 9b would mean the shipped
+% .slx already carried the new winner and a new OEW with the cost Measure of
+% Merit left at NaN, surfacing later as an unrelated-looking test failure.
+F16APhysicalCostModel(m, PreconditionOnly=true);
+
 % ---------------------------------------------------------------------
 % 8) IMPLEMENT links (component -> requirement).
 %
