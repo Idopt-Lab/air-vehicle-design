@@ -61,7 +61,7 @@
     "fuel": {
       "fuel_type": "JP-4",
       "density_lb_per_gal": 6.5,
-      "_cite_fuel": "[Nicolai & Carichner, Table 8.6, p.210] JP-4 = 6.5 lb/gal (48.6 lb/ft3); docs/subplans/09_subsystems.md Equations & Citations §2. T.O. 1F-16A-1 certifies the F-16 for JP-4/JP-5/JP-8 (temp_AI/docs/disciplines/reference_extracts/usaf_f16_data.md:87, 'Fuels: JP-4 / JP-5 / JP-8'), so JP-4 is chosen here as this example's single active fuel type, not because JP-5/JP-8 are inapplicable to the airframe. The fuel-type -> density LOOKUP TABLE itself (JP-4 6.5 / JP-5 6.8 / JP-8 6.7 / Aviation gas 6.0 lb/gal) is a Nicolai Table 8.6 published constant and belongs in the future SubsystemsL1 toolbox code as a Constant, not duplicated here -- same JSON/code split as AeroL1.CLmax_table (only the selector, aircraft_category, lives in JSON; the full table lives in code)."
+      "_cite_fuel": "[Nicolai & Carichner, Table 8.6, p.210] JP-4 = 6.5 lb/gal (48.6 lb/ft3); docs/subplans/09_subsystems.md Equations & Citations §2. T.O. 1F-16A-1 certifies the F-16 for JP-4/JP-5/JP-8 (docs/reference_extracts/usaf_f16_data.md:87, 'Fuels: JP-4 / JP-5 / JP-8'), so JP-4 is chosen here as this example's single active fuel type, not because JP-5/JP-8 are inapplicable to the airframe. The fuel-type -> density LOOKUP TABLE itself (JP-4 6.5 / JP-5 6.8 / JP-8 6.7 / Aviation gas 6.0 lb/gal) is a Nicolai Table 8.6 published constant and belongs in the future SubsystemsL1 toolbox code as a Constant, not duplicated here -- same JSON/code split as AeroL1.CLmax_table (only the selector, aircraft_category, lives in JSON; the full table lives in code)."
     },
 
     "avionics": {

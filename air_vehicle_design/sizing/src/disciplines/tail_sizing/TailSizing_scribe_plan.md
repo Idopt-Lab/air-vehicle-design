@@ -206,7 +206,7 @@ Same governing identity as L1 — confirmed **algebraically identical** to two i
 sources already in-repo:
 
 - Raymer 7th ed. Table 6.4 + text (as finalized for L1, §4)
-- Nicolai & Carichner Eq. (11.1)/(11.2) [`temp_AI/docs/disciplines/reference_extracts/11_tail_sizing.md`
+- Nicolai & Carichner Eq. (11.1)/(11.2) [`docs/reference_extracts/11_tail_sizing.md`
   §§11.2–11.3, p. 286, p. 289]: `C_VT = (l_VT·S_VT)/(b·S_ref)`, `C_HT = (l_HT·S_HT)/(c̄·S_ref)` — same
   functional form, solved for the same unknowns.
 
@@ -215,13 +215,13 @@ row.**
 
 ```
 C_HT = 0.3     [Nicolai & Carichner Table 11.6, "General Dynamics F-16" row, p. 289 --
-                temp_AI/docs/disciplines/reference_extracts/11_tail_sizing.md, the page-cited,
+                docs/reference_extracts/11_tail_sizing.md, the page-cited,
                 fully-reproduced extract]
 C_VT = 0.094   [same source/row]
 ```
 
 **Explicitly NOT used:** the conflicting `C_HT=0.68, C_VT=0.041` figure that appears in
-`nicolai_data.md`/`roskam_vol2_data.md`/`usaf_f16_data.md` (three `temp_AI` reference-digest files
+`nicolai_data.md`/`roskam_vol2_data.md`/`usaf_f16_data.md` (three reference-digest files in `docs/reference_extracts/`
 that mis-transcribe the same Table 11.6 row). That transcription error stays flagged as a known
 issue in those three files — fixing them is out of scope for this deep-dive (see
 `VnV/BrandtF16A/todo.md` Finding 1, left open/unresolved-elsewhere).
@@ -301,7 +301,7 @@ number to make it pass.
 shipping a stub rather than real equations):** exact Raymer 6th ed. Chapter 16 equation numbers for
 (a) sizing `S_HT` from a required static margin/`C_mα`, or (b) sizing `S_VT` from a required
 directional-stability derivative, are not verifiable from anything in this repository —
-`temp_AI/docs/disciplines/reference_extracts/` is Nicolai & Carichner, not Raymer, and defers the
+`docs/reference_extracts/` is Nicolai & Carichner, not Raymer, and defers the
 closed-form criteria-based equations to its own Ch. 21/23, both "pending" (not extracted);
 `raymer_data.md`'s actual Raymer OCR extract has no Ch. 4/6/16 content; `temp_Casey`'s
 `SandCLevel3.m` citations ("eq 16.25", "fig 16.3", "fig 16.16") are unverified against the book and
@@ -356,7 +356,7 @@ references this doc and the todo.md entry, does not invent a passing value).
 
 Full entries are in that file. Status updated 2026-07-28 per the coordinator's decisions:
 
-### 7.1 — Nicolai & Carichner F-16 tail-volume-coefficient value: propagation error across three `temp_AI` data-digest files
+### 7.1 — Nicolai & Carichner F-16 tail-volume-coefficient value: propagation error across three reference data-digest files
 **Status: still OPEN / unresolved elsewhere — out of scope for this deep-dive.** `nicolai_data.md`,
 `roskam_vol2_data.md`, and `usaf_f16_data.md` still carry the incorrect `C_HT=0.68, C_VT=0.041`
 figure; only the correct, page-cited `11_tail_sizing.md` value (`C_HT=0.3, C_VT=0.094`) is used by

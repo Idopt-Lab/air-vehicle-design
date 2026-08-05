@@ -81,7 +81,7 @@ classdef TestTailL3 < matlab.unittest.TestCase
         %   (a) sizing S_HT from a required static margin/C_m_alpha given a
         %   CG estimate, and (b) sizing S_VT from a required directional-
         %   stability derivative (C_n_beta) target plus a crosswind-landing
-        %   criterion. Neither temp_AI/docs/disciplines/reference_extracts/
+        %   criterion. Neither docs/reference_extracts/
         %   (Nicolai & Carichner, which defers these closed-form criteria to
         %   its own Ch. 21/23, both "pending"/not extracted) nor
         %   raymer_data.md (no Ch. 4/6/16 content) nor temp_Casey's

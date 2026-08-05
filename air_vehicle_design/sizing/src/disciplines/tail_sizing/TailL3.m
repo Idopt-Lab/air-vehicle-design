@@ -12,7 +12,7 @@ classdef TailL3
 %   equation numbers for (a) sizing S_HT from a required static margin /
 %   C_m_alpha, or (b) sizing S_VT from a required directional-stability
 %   derivative, are not verifiable from anything in this repository:
-%     - temp_AI/docs/disciplines/reference_extracts/ is Nicolai & Carichner,
+%     - docs/reference_extracts/ is Nicolai & Carichner,
 %       not Raymer, and defers the closed-form criteria-based equations to
 %       its own Ch. 21/23, both "pending" (not extracted).
 %     - raymer_data.md's actual Raymer OCR extract has no Ch. 4/6/16

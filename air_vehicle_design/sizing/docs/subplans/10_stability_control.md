@@ -48,7 +48,7 @@ Only the longitudinal-stability section of Ch. 16 and its explicit equation depe
 PLAN.md's tail-sizing L3 item was deferred specifically because "no verifiable Raymer Ch. 16 equation
 numbers exist anywhere in this repo's reference material today," and the Nicolai Ch. 21 ("Static
 Stability and Control")/Ch. 23 ("Control Surface Sizing Criteria") reference extracts that could have
-substituted are both still listed "pending" in `temp_AI/docs/disciplines/reference_extracts/`. Casey has
+substituted are both still listed "pending" in `docs/reference_extracts/`. Casey has
 now supplied the Ch. 16 equation numbers directly (table above), which removes most of that citation
 risk — scribe's remaining job is to transcribe/verify Raymer's actual formulas and constants against this
 list, not to locate the equations from scratch. This subplan is written and ready for that, but per the

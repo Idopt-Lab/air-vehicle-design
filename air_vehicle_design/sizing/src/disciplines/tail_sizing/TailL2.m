@@ -9,21 +9,22 @@ classdef TailL2
 %
 %   METHOD -- same governing identity as TailL1's Raymer 7th ed. Table 6.4
 %   form, confirmed algebraically identical to Nicolai & Carichner's own
-%   Eq. (11.1)/(11.2) [temp_AI/docs/disciplines/reference_extracts/
+%   Eq. (11.1)/(11.2) [docs/reference_extracts/
 %   11_tail_sizing.md Secs. 11.2-11.3, pp. 286, 289]:
 %
 %     C_VT = (l_VT*S_VT)/(b*S_ref)      ==>  S_VT = C_VT*b*S_ref/l_VT
 %     C_HT = (l_HT*S_HT)/(cbar*S_ref)   ==>  S_HT = C_HT*cbar*S_ref/l_HT
 %
 %   COEFFICIENT SOURCE: Nicolai & Carichner Table 11.6, "General Dynamics
-%   F-16" row, p.289 [temp_AI/docs/disciplines/reference_extracts/
+%   F-16" row, p.289 [docs/reference_extracts/
 %   11_tail_sizing.md] -- an F-16-SPECIFIC measured coefficient, not a
 %   generic category row:
 %     C_HT = 0.3
 %     C_VT = 0.094
 %   EXPLICITLY NOT the conflicting C_HT=0.68, C_VT=0.041 figure that appears
 %   in nicolai_data.md / roskam_vol2_data.md / usaf_f16_data.md -- those
-%   three temp_AI digest files mis-transcribe the same Table 11.6 row
+%   three reference-digest files in docs/reference_extracts/
+%   mis-transcribe the same Table 11.6 row
 %   (flagged, left OPEN/unresolved elsewhere; see VnV/BrandtF16A/todo.md
 %   Finding 1 and TailSizing_scribe_plan.md Secs. 5.1/7.1). Fixing those
 %   three digest files is out of scope for this deep-dive.

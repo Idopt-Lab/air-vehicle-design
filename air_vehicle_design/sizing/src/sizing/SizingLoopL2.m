@@ -49,8 +49,8 @@ classdef SizingLoopL2 < handle
 %   tail/control-surface method would need this recompute for correctness.
 %
 %   Closure: Raymer's TOGW iteration ("Eq. 3.4" per the user; reproduced
-%   as Algorithm 1 / Eqs. 2.1-2.2 in temp_AI/docs/disciplines/
-%   reference_extracts/metabook_data.md:78-83), same form as
+%   as Algorithm 1 / Eqs. 2.1-2.2 in
+%   docs/reference_extracts/metabook_data.md:78-83), same form as
 %   SizingLoopL1.m:
 %     W_TO_new = W_payload / (1 - We/W_TO - W_fuel/W_TO)
 %   with We=OEW(W_TO) and W_fuel=miss.compute_fuel(...) evaluated at the

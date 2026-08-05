@@ -19,7 +19,7 @@ derivative — are not verifiable from anything in this repository:
 
 | Candidate source | Why it doesn't pin a citation |
 |---|---|
-| `temp_AI/docs/disciplines/reference_extracts/` | Nicolai & Carichner, not Raymer; defers the closed-form criteria-based equations to its own Ch. 21/23, both marked "pending" (not extracted) |
+| `docs/reference_extracts/` | Nicolai & Carichner, not Raymer; defers the closed-form criteria-based equations to its own Ch. 21/23, both marked "pending" (not extracted) |
 | `raymer_data.md` | The actual Raymer OCR extract in this repo has no Ch. 4/6/16 content |
 | `temp_Casey/SandCLevel3.m` | Cites "eq 16.25", "fig 16.3", "fig 16.16" but these are unverified against the book — forward-analysis only, read-only reference per CLAUDE.md |
 | `VnV/BrandtF16A/BrandtBalanceStabControl.m` | Likewise forward-analysis only, not wired to this framework's own weights classes |

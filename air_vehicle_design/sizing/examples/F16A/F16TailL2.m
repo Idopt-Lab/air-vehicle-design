@@ -36,10 +36,11 @@ classdef F16TailL2 < TailSizingModelL2
 %
 %   SOURCES:
 %     [Nicolai]  Nicolai & Carichner, Table 11.6, "General Dynamics F-16"
-%                row, p.289 -- temp_AI/docs/disciplines/reference_extracts/
+%                row, p.289 -- docs/reference_extracts/
 %                11_tail_sizing.md. EXPLICITLY NOT the conflicting
 %                C_HT=0.68/C_VT=0.041 figure that appears in three other
-%                temp_AI digest files (mis-transcription of the same row,
+%                reference-digest files in docs/reference_extracts/
+%                (mis-transcription of the same row,
 %                flagged, unresolved elsewhere -- todo.md Finding 1).
 %     [Raymer]   Aircraft Design, 7th ed., aft-mounted single-engine tail-
 %                arm text rule, carried forward from L1 unchanged.

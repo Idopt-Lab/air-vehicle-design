@@ -27,7 +27,7 @@ Hardcoded, **not** read from JSON (confirmed by the io agent, `TailSizing_scribe
 — Table 11.6 gives a coefficient per specific aircraft, not per generic category, so there is no
 JSON-driven lookup here (contrast `F16TailL1`, whose coefficients derive from a category-driven
 static). **Explicitly NOT** the conflicting `C_HT=0.68`/`C_VT=0.041` figure that appears in three
-`temp_AI` reference-digest files (`nicolai_data.md`, `roskam_vol2_data.md`, `usaf_f16_data.md`) — see
+reference-digest files in `docs/reference_extracts/` (`nicolai_data.md`, `roskam_vol2_data.md`, `usaf_f16_data.md`) — see
 `TailL2.md` Sec. 4 for the full note.
 
 ## 3. size(obj)

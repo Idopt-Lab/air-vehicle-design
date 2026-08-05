@@ -32,7 +32,7 @@ on every call (no cached copy), and `obj.C_HT`/`obj.C_VT` (hardcoded on `F16Tail
 
 **Governing identity** — confirmed algebraically identical to Raymer 7th ed. Table 6.4's own form
 (the basis for `TailL1`), and to Nicolai & Carichner's own Eq. (11.1)/(11.2)
-[`temp_AI/docs/disciplines/reference_extracts/11_tail_sizing.md` Secs. 11.2–11.3, pp. 286, 289]:
+[`docs/reference_extracts/11_tail_sizing.md` Secs. 11.2–11.3, pp. 286, 289]:
 
 $$C_{VT} = \frac{l_{VT}\,S_{VT}}{b\,S_{ref}} \;\Longrightarrow\; S_{VT} = \frac{C_{VT}\,b\,S_{ref}}{l_{VT}}
 \qquad
@@ -51,12 +51,12 @@ duplicated copy.
 ## 4. Coefficients
 
 Nicolai & Carichner Table 11.6, "General Dynamics F-16" row, p.289
-[`temp_AI/docs/disciplines/reference_extracts/11_tail_sizing.md`]:
+[`docs/reference_extracts/11_tail_sizing.md`]:
 
 $$C_{HT} = 0.3 \qquad C_{VT} = 0.094$$
 
 **Explicitly NOT used**: the conflicting `C_HT=0.68, C_VT=0.041` figure that appears in
-`nicolai_data.md` / `roskam_vol2_data.md` / `usaf_f16_data.md` — three `temp_AI` reference-digest
+`nicolai_data.md` / `roskam_vol2_data.md` / `usaf_f16_data.md` — three reference-digest files in `docs/reference_extracts/`
 files that mis-transcribe the same Table 11.6 row. That transcription error stays flagged as a known,
 OPEN issue in those three files (`VnV/BrandtF16A/todo.md` Finding 1) — fixing them is out of scope
 for this deep-dive.
@@ -115,4 +115,4 @@ than an F-16-specific measurement).
 ## 8. To-dos
 
 None open. The competing Nicolai coefficient transcription (`0.68`/`0.041`) remains an OPEN,
-unresolved-elsewhere item in the three `temp_AI` digest files named above (not this toolbox).
+unresolved-elsewhere item in the three reference-digest files named above (not this toolbox).

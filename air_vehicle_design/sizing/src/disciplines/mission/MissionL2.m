@@ -32,7 +32,7 @@ classdef MissionL2
 %                   the REAL flight condition's q via aero_obj.compute_CL,
 %                   using the weight at the START of the segment as the
 %                   single-point approximation -- matches
-%                   temp_AI/docs/disciplines/05_mission_analysis.md's L2
+%                   docs/subplans/07_mission_analysis.md's L2
 %                   description and the legacy Level3 code's own
 %                   aero_obj.CL(W_array(i-1), q, S_ref) convention). NO 0.866
 %                   best-range correction here -- that factor exists only to

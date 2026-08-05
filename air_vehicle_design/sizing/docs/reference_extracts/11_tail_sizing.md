@@ -202,7 +202,7 @@ conventional aft-tail configurations).*
 
 *Note: F-16 row (`C_HT = 0.3`, `C_VT = 0.094`) is directly relevant to this repo's F-16A Brandt
 baseline — useful as an independent cross-check for tail-sizing/volume-coefficient assumptions
-against `F16Baseline()`.*
+against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`.*
 
 Later the horizontal tail (aft tailplane or canard) will be sized to the preceding criteria. For
 now, use historical trends of horizontal tail volume coefficients, defined as:

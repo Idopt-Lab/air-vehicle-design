@@ -102,8 +102,8 @@ classdef F16AeroL2 < AeroModelL2
         %CFE  Equivalent skin-friction coefficient, Raymer Table 12.3, selected
         %   by aircraft_category (0.0035 for an Air Force fighter). Was a stored
         %   JSON input until Phase 3 (2026-07-25): a published table constant is
-        %   not an input, and holding it as one invited tuning it -- temp_AI's
-        %   notes record 0.005908 being used to force CD0 onto Brandt's mission
+        %   not an input, and holding it as one invited tuning it -- the
+        %   0.005908 value was used to force CD0 onto Brandt's mission
         %   polar, exactly the back-calculated-value-as-input pattern PLAN.md
         %   forbids. The JSON now supplies only the category that selects it.
         Cfe

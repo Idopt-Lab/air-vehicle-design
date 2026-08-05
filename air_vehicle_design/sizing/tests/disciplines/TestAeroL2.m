@@ -59,12 +59,12 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         function testCfeComesFromTheRaymerTableNotTheJSON(tc)
             % Cfe was a stored .aerodynamics input. A published table constant is
             % not a design variable, and holding it as an input invited tuning it:
-            % temp_AI's notes record 0.005908 being used to force CD0 onto
+            % the 0.005908 value was used to force CD0 onto
             % Brandt's mission polar -- the back-calculated-value-as-input pattern
             % PLAN.md forbids. It is now Dependent on aircraft_category.
             %
             % Expected values transcribed from the repo's own reference extract
-            % temp_AI/docs/disciplines/reference_extracts/raymer_data.md:82
+            % docs/reference_extracts/raymer_data.md:82
             % (Raymer 6th ed. Table 12.3, PDF p.447), corroborated by
             % metabook_data.md:118 -- both extracts agree on all ten rows.
             a = TestAeroL2.makeAero();

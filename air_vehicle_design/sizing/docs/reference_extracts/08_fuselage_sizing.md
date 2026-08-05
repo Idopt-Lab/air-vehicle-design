@@ -217,7 +217,7 @@ equal to six-tenths of the engine length.
 *[Nicolai & Carichner, Fig. 8.9, p. 208]* — Cutaway illustration. Key data: `W_TO = 33,000 lb`,
 `wing span = 32.8 ft`, `length = 49.3 ft`, one P&W F-100-100 turbofan. No plotted data (reference
 cutaway). **Directly relevant to this repo's F-16A Brandt baseline** — cross-check overall
-span/length against `F16Baseline()` geometry fields.
+span/length against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` geometry fields.
 
 ### Fig 8.10 — Piper Comanche internal arrangement
 *[Nicolai & Carichner, Fig. 8.10, p. 209]* — Cutaway illustration, four-place general aviation

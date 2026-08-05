@@ -4,7 +4,7 @@ classdef TestTailL2 < matlab.unittest.TestCase
 %
 %   METHOD -- same governing identity as TailL1's Raymer 7th ed. Table 6.4
 %   form, confirmed algebraically identical to Nicolai & Carichner Eq.
-%   (11.1)/(11.2) [temp_AI/docs/disciplines/reference_extracts/
+%   (11.1)/(11.2) [docs/reference_extracts/
 %   11_tail_sizing.md Secs. 11.2-11.3, pp. 286, 289]:
 %
 %     C_VT = (l_VT*S_VT)/(b*S_ref)      ==>  S_VT = C_VT*b*S_ref/l_VT
@@ -13,7 +13,7 @@ classdef TestTailL2 < matlab.unittest.TestCase
 %   COEFFICIENTS: Nicolai & Carichner Table 11.6, "General Dynamics F-16"
 %   row, p.289: C_HT=0.3, C_VT=0.094 (EXPLICITLY NOT the conflicting
 %   C_HT=0.68/C_VT=0.041 figure that mis-transcribes the same row in three
-%   other temp_AI digest files -- scribe plan Sec. 5.1/7.1).
+%   other reference-digest files -- scribe plan Sec. 5.1/7.1).
 %
 %   TAIL ARM: carries forward L1's rule unchanged, L_HT=L_VT=0.475*L_fus
 %   [Raymer 7th ed. text] -- TailL2 calls TailL1.compute_tail_arm directly
