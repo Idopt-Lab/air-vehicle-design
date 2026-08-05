@@ -816,7 +816,7 @@ airframeC = lookup(m, Path=char(S + "Airframe"));
 fuelSysC  = lookup(m, Path=char(S + "FuelSystem"));
 
 % Cost MoM -> REQ_026 (Implement, from the Aircraft).
-linkImplement(aircraft, find(origSet, Id="REQ_F16A_026"));
+linkImplement(aircraft, origSet, "REQ_F16A_026");
 % Materials -> REQ_022 (Implement, from the Airframe; Verify link added manually).
 % The link stays on the VARIANT ROLE, not on a candidate. The composite cap
 % binds the airframe whichever candidate wins -- which is why both candidates
@@ -825,9 +825,9 @@ linkImplement(aircraft, find(origSet, Id="REQ_F16A_026"));
 % moment the trade picked the other candidate. (A requirement link attaches to
 % the block, not to a stereotype, so the D-013 restriction on applyStereotype
 % does not apply here.)
-linkImplement(airframeC, find(origSet, Id="REQ_F16A_022"));
+linkImplement(airframeC, origSet, "REQ_F16A_022");
 % Fuel volume -> REQ_P01 (Implement, from the FuelSystem; Verify link added manually).
-linkImplement(fuelSysC, find(physSet, Id="REQ_F16A_P01"));
+linkImplement(fuelSysC, physSet, "REQ_F16A_P01");
 
 save(origSet);
 save(physSet);
@@ -1103,19 +1103,29 @@ end
 end
 
 % =====================================================================
-function linkImplement(srcComp, req)
-%LINKIMPLEMENT Implement-link a component to a requirement.
+function linkImplement(srcComp, reqSet, id)
+%LINKIMPLEMENT Implement-link a component to the requirement with id ID.
 %   Unconditional create: section 0's cleanup deletes the F16A_Physical model
 %   link set before this runs, so re-running rebuilds the Implement links from
 %   scratch with no duplicates -- the same pattern generate_f16a_functional.m
 %   and generate_f16a_logical.m use. An earlier version guarded on
 %   isempty(req.inLinks()), but a manual "Verify" link (test -> requirement) is
 %   an INBOUND link to the requirement too, so once one existed the guard
-%   wrongly skipped the Implement link -- regenerating then dropped
-%   "Implemented by" for REQ_F16A_022 and REQ_F16A_P01.
-if ~isempty(req)
-    slreq.createLink(srcComp, req);
+%   wrongly skipped the Implement link.
+%
+%   AN ID THAT DOES NOT RESOLVE IS AN ERROR. slreq's find returns EMPTY for an
+%   unknown id rather than raising, so guarding on that emptiness would let a
+%   renamed requirement drop its Implement link while the generator still
+%   printed its success banner. Same rule, same reason, as
+%   F16APhysicalTradeStudy's :missingRequirement.
+req = find(reqSet, Id=char(id));
+if isempty(req)
+    error("generate_f16a_physical:missingRequirement", ...
+        "%s is not in %s, so %s cannot be Implement-linked to it. Re-run the " + ...
+        "requirement generators, or correct the id here if it was renamed.", ...
+        id, string(reqSet.Name), string(srcComp.Name));
 end
+slreq.createLink(srcComp, req);
 end
 
 % =====================================================================
