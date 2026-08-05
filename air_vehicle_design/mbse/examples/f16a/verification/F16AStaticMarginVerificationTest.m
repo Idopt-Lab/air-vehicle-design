@@ -3,45 +3,22 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
     %   Checks SM = (x_np - x_cg)/MAC against REQ_F16A_025's criterion,
     %   -6 %MAC <= SM < 0, at takeoff AND at landing weight -- "across the
     %   operational CG range" (D-046). The upper end is STRICT: neutral is not
-    %   negative. Zero sat in the INTERIOR of the old -6 .. +1 %MAC band, so
-    %   that edge is new.
+    %   negative.
     %
-    %   THIS SUITE IS EXPECTED TO BE RED -- 2 pass, 1 fail, the failure being
-    %   the LANDING case. Measured 2026-08-02: SM_TO = -0.26 %MAC (MET),
-    %   SM_land = +0.21 %MAC (VIOLATED). Burning fuel and releasing stores, both
-    %   carried aft, move the CG FORWARD (x_cg 26.1979 -> 26.1451 ft), so landing
-    %   is the most-stable end of the range -- and the most-stable end is where a
-    %   relaxed-stability requirement bites. Do not make it pass: the design does
-    %   not meet the requirement, and a Verify-linked test reporting green while
+    %   THIS SUITE IS EXPECTED TO BE RED -- 2 pass, 1 fail, the LANDING case.
+    %   SM_TO = -0.26 %MAC (MET), SM_land = +0.21 %MAC (VIOLATED): burning fuel
+    %   and releasing stores moves the CG forward, so landing is the most-stable
+    %   end of the range, and that is where a relaxed-stability requirement
+    %   bites. Do not make it pass -- a Verify-linked test reporting green while
     %   its requirement is violated is the dishonesty this example teaches against.
     %
-    %   Three verification states now ship, and the two reds differ. REQ_F16A_022
-    %   is MET (F16AMaterialsVerificationTest, green). REQ_F16A_P01 is PENDING --
-    %   red because its required value is NaN, so it is UNEVALUATED (D-042). This
-    %   one is VIOLATED -- red because it WAS evaluated and the answer is no.
-    %   testAnalysisProducedUsableMargins is what separates the last two and must
-    %   stay GREEN: it demonstrates, rather than asserts, that the landing margin
-    %   is a finite number from an analysis that ran.
+    %   testAnalysisProducedUsableMargins must stay GREEN: it is what separates
+    %   this VIOLATED red from F16AFuelVerificationTest's UNEVALUATED one (D-051).
     %
-    %   The bounds differ in kind. The upper is a DEFINITION -- relaxed static
-    %   stability IS negative static margin, zero being where the sign changes,
-    %   not a chosen figure. The lower is invented, and is labelled so:
     %   The -6 %MAC figure is an illustrative teaching value, not sourced data
-    %   (D-030).
-    %
-    %   That last sentence is CANONICAL (D-048 part 3): it is copied verbatim
-    %   into every artifact that mentions the figure, so that the log, the
-    %   requirement and this test cannot drift into three different hedges. Do
-    %   not reword it, however much better the rewording reads. The copy in the
-    %   requirement artifact is guarded by a test; the copy here and the ones in
-    %   docs/ are guarded by nothing, which is why this file is where it drifted.
-    %
-    %   The one verification that leaves the MBSE model: P holds no neutral
-    %   point, CG or MAC, none being a property of a part, so this delegates
-    %   read-only to sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m, reached by
-    %   PATH rather than project membership (D-047).
-    %
-    %   See also F16AMATERIALSVERIFICATIONTEST, F16AFUELVERIFICATIONTEST.
+    %   (D-030). That sentence is canonical (D-048) -- do not reword it. P holds
+    %   no neutral point, CG or MAC, so this delegates read-only to
+    %   sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m, by PATH (D-047).
 
     properties (Constant)
         % REQ_F16A_025's criterion (D-046), as FRACTIONS of MAC to match run()'s

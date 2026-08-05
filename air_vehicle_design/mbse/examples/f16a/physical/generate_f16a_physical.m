@@ -2,65 +2,38 @@ function generate_f16a_physical()
 %GENERATE_F16A_PHYSICAL Build the F-16A Physical-layer architecture (RFLP "P").
 %   Creates physical/F16A_Physical.slx and .sldd, the stereotype profile
 %   F16A_PhysicalProps.xml, and the F16A_LogicalToPhysical.mldatx realization
-%   allocation set (9 logical roles -> 14 edges). Two profile properties are
-%   typed by the enumerations F16ASourceKind.m and F16ADataProvenance.m, which
-%   must be on the path whenever the profile loads.
+%   set (9 logical roles -> 14 edges). Two profile properties are typed by the
+%   enumerations F16ASourceKind.m and F16ADataProvenance.m, which must be on
+%   the path whenever the profile loads.
 %
-%   Where L says HOW in solution roles, P gives CONCRETE PARTS. Four teaching
-%   ideas:
+%   Where L says HOW in solution roles, P gives CONCRETE PARTS -- 30 components,
+%   three of them VARIANT roles holding the seven candidates that could fill
+%   them. Four teaching ideas:
 %     1. Roll-up analysis  -- a native System Composer parametric analysis sums
 %        part masses up the tree to OEW at the Aircraft root.
 %     2. Measures of Merit -- OEW and unit cost are objectives to MINIMIZE, not
-%        thresholds. OEW comes from the roll-up; cost from a FUNCTION
-%        (F16APhysicalCostModel), which is the contrast being drawn.
-%     3. Every part answers why it exists -- a Rationale stereotype turns "why
-%        is this here?" from a comment into a queryable property (D-006), with
-%        SourceKind drawn from a validated enumeration rather than free text.
-%     4. The decision is made HERE, over concrete candidates. Three roles are
-%        VARIANT COMPONENTS holding the competing candidates that could fill
-%        them; section 7b runs F16APhysicalTradeStudy, which selects one per
-%        role and calls back to set the winning KIND at L. L presents the
-%        options; P decides (D-001).
+%        thresholds. OEW comes from the roll-up, cost from a FUNCTION
+%        (F16APhysicalCostModel); that contrast is the point.
+%     3. Every part answers why it exists -- a Rationale stereotype makes "why
+%        is this here?" a queryable property rather than a comment (D-006).
+%     4. The decision is made HERE, over concrete candidates: section 7b runs
+%        F16APhysicalTradeStudy, which picks one candidate per role and calls
+%        back to set the winning KIND at L (D-001).
 %
-%   Structure (30 components). "|=" marks a VARIANT role -- not a part, but the
-%   question "which of these?" made structural:
-%     F16A_Physical
-%       |- Aircraft
-%          |= Airframe        (2 candidates)
-%          |     |- BlendedCrankedDelta -> Wing Fuselage HorizontalTail
-%          |     |                         VerticalTail Nacelles Strakes
-%          |     |- ConventionalTrapWing  (single lumped block)
-%          |- Propulsion
-%          |     |= Engine    (3 candidates: F100_PW_200 LowThrustSingle_Surrogate
-%          |     |             TwinEngine_Surrogate)
-%          |     |- InletDuct          (common to all engine candidates, D-009)
-%          |= FlightControls  (2 candidates: FlyByWire HydroMechanical)
-%          |- FuelSystem      |- FwdFuselageTank AftFuselageTank WingTank
-%          |- LandingGear  |- Avionics  |- Electrical  |- Hydraulics
-%          |- ECS  |- ArmamentSupport  |- SecondaryStructure
+%   Only the candidate carrying the Brandt decomposition is decomposed (D-003).
+%   Active-path leaf masses are Brandt ground truth (W_TO = 31,377 lb) and sum
+%   to OEW ~= 19,980.7 lb; the fuel tanks carry ZERO dry mass on purpose.
 %
-%   ASYMMETRIC DETAIL IS DELIBERATE (D-003): only the candidate carrying the
-%   Brandt decomposition is decomposed. Detailing ConventionalTrapWing to match
-%   would mean inventing six part masses for an aircraft never built.
+%   BUILD ORDER, and every step needs the one before it: build (3-5) ->
+%   stereotypes and parameters (6-6c) -> realization (7) -> TRADE (7b) ->
+%   requirement links (8) -> roll-ups (9) -> cost (9b). The roll-ups must
+%   follow the trade or they measure a configuration nobody chose, and the cost
+%   must follow the roll-ups because it prices their OEW (D-043).
 %
-%   Leaf masses on the ACTIVE path are Brandt ground truth (lbf, W_TO = 31,377
-%   lb) and sum to OEW ~= 19,980.7 lb. The fuel tanks carry ZERO dry mass --
-%   tankage is integral to the wet structure and fuel is a consumable, a
-%   deliberate "not every part adds to OEW" lesson.
+%   Component tree, part masses and the trade result: docs/05_physical.md.
+%   R2026a variant and path-space traps: docs/08_agent_team.md.
 %
-%   BUILD ORDER, and why: build (3-5) -> stereotypes and parameters (6-6c) ->
-%   realization (7) -> TRADE (7b) -> requirement links (8) -> roll-ups (9).
-%   The trade needs the stereotypes to have data to read and the allocation set
-%   to name the candidates; the roll-ups must run after the trade or they
-%   report a configuration nobody chose.
-%
-%   Idempotent. Requires the L model and the requirement sets to exist first.
-%
-%   Two R2026a traps this file is written around, both in 08_agent_team.md:
-%   a stereotype cannot be applied to a VariantComponent (reach its choices
-%   with getChoices, never .Architecture.Components, which returns ZERO on a
-%   reloaded model); and ARCHITECTURE paths carry the choice level while
-%   INSTANCE paths do not, so the roll-ups read ".../Aircraft/Airframe".
+%   Idempotent. Requires the L model and the requirement sets.
 
 modelName   = "F16A_Physical";
 logiName    = "F16A_Logical";

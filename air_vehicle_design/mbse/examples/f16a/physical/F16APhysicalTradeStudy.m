@@ -2,85 +2,23 @@ function results = F16APhysicalTradeStudy()
 %F16APHYSICALTRADESTUDY Score the F-16A physical candidates and record the decision.
 %   RESULTS = F16APHYSICALTRADESTUDY() finds every component in F16A_Physical
 %   carrying the TradeCandidate stereotype, groups them by the role each says
-%   it realizes, scores the candidates of a role against one another, selects a
-%   winner, and WRITES THE DECISION DOWN in four places.
+%   it realizes, scores each role's candidates, and writes the winner into P
+%   (active choice, Selected, rationales), L (active kind, SolutionOption
+%   .Selected, DecisionRef) and R (an Implement link from the winning KIND to
+%   REQ_F16A_L01..L03).
 %
-%   Returns a DICTIONARY from role name to a ranked table. Values are
-%   cell-held, because a table cannot live in a dictionary's value array, so
-%   read it WITH BRACES: results{"Airframe"} is the table, results("Airframe")
-%   is the 1x1 cell around it. keys() returns roles in INSERTION order (where
-%   containers.Map sorted them); roles come from unique() and so are already
-%   sorted -- keep them that way or the reported order moves.
+%   RESULTS is a dictionary from role to ranked table. A table cannot live in a
+%   dictionary's value array, so read it WITH BRACES: results{"Airframe"}.
 %
-%   THIS IS THE FILE THE LAYER SPLIT EXISTS FOR. L enumerates technology-neutral
-%   KINDS and commits to none; P holds the concrete parameterized CANDIDATES and
-%   is therefore the only layer that can decide (D-001).
+%   Teaching point: this is the file the layer split exists for. L enumerates
+%   technology-neutral kinds; P holds the parameterized candidates and is the
+%   only layer that can decide (D-001). Losers are kept, not deleted (D-002),
+%   and no candidate name appears here -- they are DISCOVERED.
 %
-%   WHAT IT WRITES
-%     1. P, configuration -- setActiveChoice on the role variant, and
-%        TradeCandidate.Selected on the winner.
-%     2. P, rationale -- SourceKind becomes TradeWinner / TradeAlternative, and
-%        each Justification states the score, rank, margin and which criterion
-%        decided it AGAINST THE RUNNER-UP (D-034).
-%     3. L, the cross-layer callback -- the role's active kind, SolutionOption
-%        .Selected, and DecisionRef on every kind of the role.
-%     4. R, traceability -- an Implement link from the winning KIND to
-%        REQ_F16A_L01..L03.
-%
-%   NOTHING IS DELETED. Losing candidates stay in P and losing kinds stay in L --
-%   the set-based-design discipline that keeps the decision auditable.
-%
-%   IT DISCOVERS ITS CANDIDATES; IT DOES NOT KNOW THEM. There is no list of
-%   candidate names in this file. Add a fourth engine to the generator and it
-%   enters the propulsion trade on the next run with no edit here -- the only
-%   way a trade study can be trusted not to have quietly dropped an option. The
-%   one declared mapping is role -> decision requirement (DECISIONREQS): a new
-%   role genuinely needs a new requirement, and inventing one silently would be
-%   worse than stopping.
-%
-%   SCORING: DECLARED VALUE FUNCTIONS, NOT MIN-MAX (D-015). Each criterion maps
-%   a raw number to a value WITHOUT reference to the other candidates:
-%     Benefit  v = B/10          TRL  v = (TRL-1)/8
-%     Mass_lb  v = M_baseline/M  UnitCost_USD  v = C_baseline/C
-%   Min-max was retired because it is degenerate at n = 2 (every criterion
-%   collapses to {0,1}) and set-dependent (adding a candidate rescores the
-%   others). A ratio criterion's baseline is the role's Reference-tagged
-%   candidate, derived from the data; a role without exactly one stops the run.
-%
-%   THE 1.0 CEILING IS NOT UNIFORM. Benefit and TRL are capped by their declared
-%   scales; the ratio criteria are not, so a candidate lighter than its baseline
-%   contributes more than its weight allows. That is WARNED, not capped (the
-%   advantage is real) and not rejected (the candidate is legitimate) -- D-035.
-%
-%   COST FALLS OUT OF A GENERAL RULE (D-005, D-026). Nothing here says "exclude
-%   cost". A criterion no candidate of the role carries a value for is dropped
-%   and the remaining weights renormalized, which turns the declared
-%   0.40/0.20/0.20/0.20 into the applied 0.50/0.25/0.25.
-%   THE TRIGGER FOR COST RE-ENTERING IS THE CANDIDATES CARRYING A COST -- NOT A
-%   COST MODEL EXISTING (D-043). Those are different events, and this file used
-%   to say they were the same. D-043 gives the AIRCRAFT a real DAPCA-IV cost
-%   while TradeCandidate.UnitCost_USD stays NaN permanently, so a cost model
-%   will exist and cost will still not re-enter. The mechanism is untouched:
-%   whichever criterion's values arrive, it re-enters with no change here.
-%
-%   GUARD RAILS. The run errors, naming the candidate, on a TRL outside 1..9, a
-%   Benefit outside 1..10, a non-positive Mass_lb, a role with fewer than two
-%   candidates, a partial criterion column, or a TIE for first place (sort order
-%   is not a decision). THREE OF THEM LIVE IN F16APhysicalTradeGuards.m, not
-%   here -- see that file for why a negative test could not safely be written
-%   while they were local functions.
-%
-%   IDEMPOTENT. Re-running writes the same choices, flags, justifications and
-%   links. A justification is regenerated and the part's standing rationale
-%   preserved behind JUSTSENTINEL, so runs do not stack verdicts. Implement
-%   links are rebuilt, so a re-run picking a different winner cannot leave the
-%   old link pointing at the loser.
-%
-%   Requires the P model, the L model and the decision requirement set to exist
-%   (run generate_f16a_physical.m, which calls this as its section 7b).
-%
-%   See also F16APHYSICALTRADEGUARDS, GENERATE_F16A_PHYSICAL,
-%   GENERATE_F16A_LOGICAL, F16APHYSICALMASSROLLUP.
+%   Scoring uses declared value functions, not min-max (D-015); the guard rails
+%   live in F16APhysicalTradeGuards.m. Re-running is idempotent. Requires the P
+%   and L models and the decision requirement set; generate_f16a_physical.m
+%   calls this as its section 7b.
 
 modelName   = "F16A_Physical";
 profileName = "F16A_PhysicalProps";

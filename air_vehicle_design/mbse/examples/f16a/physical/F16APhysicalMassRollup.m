@@ -1,63 +1,24 @@
 function results = F16APhysicalMassRollup(options)
 %F16APHYSICALMASSROLLUP Roll part masses up to the F-16A empty weight (OEW).
-%   RESULTS = F16APHYSICALMASSROLLUP() instantiates the physical architecture
-%   physical/F16A_Physical.slx and rolls each part's Mass_lb up the tree
-%   (children before parents) to a subtotal at every assembly and a grand
-%   total -- the Operating Empty Weight -- at the aircraft root. It returns a
-%   struct with the key figures and a per-assembly table, and it writes the
-%   computed OEW into the aircraft root's MeasureOfMerit.OEW_lb so the shipped
-%   model already carries the mass Measure of Merit.
+%   RESULTS = F16APHYSICALMASSROLLUP() instantiates physical/F16A_Physical.slx
+%   and rolls each part's Mass_lb up the tree (children before parents) to a
+%   subtotal at every assembly and a grand total -- the Operating Empty
+%   Weight -- at the aircraft root. It writes OEW into the aircraft's
+%   MeasureOfMerit.OEW_lb and saves, so the shipped model carries the MoM.
 %
-%   RESULTS = F16APHYSICALMASSROLLUP(Persist=false) computes and returns
-%   exactly the same numbers but WRITES NOTHING: it skips both the setProperty
-%   of the OEW Measure of Merit and the save_system. Default is true, so the
-%   generator is unaffected.
+%   RESULTS = F16APHYSICALMASSROLLUP(Persist=false) returns the same numbers
+%   but WRITES NOTHING. Tests use it: a test may not re-save the artifact it
+%   is asserting against.
 %
-%   READ-ONLY MODE EXISTS FOR THE TEST SUITE. This function is called by tests
-%   that are asserting on the very model it would otherwise re-save, which
-%   makes a test run a WRITE to the artifact under test: the .slx changes
-%   timestamp (and, if a value ever differed, content) simply because somebody
-%   ran the suite. Reading the model and modifying it are separate jobs, and a
-%   test may only do the first. Persist=false is that separation.
-%   The other two roll-ups (F16APhysicalMaterialsRollup,
-%   F16APhysicalFuelRollup) need no such option -- they already only read.
+%   RESULTS fields: OEW, Airframe, Propulsion, Engine, AirframeLessEngine,
+%   Table (per-assembly subtotals).
 %
-%   RESULTS fields: OEW, Airframe, Propulsion, Engine, AirframeLessEngine, Table.
+%   Teaching point: this is a NATIVE System Composer parametric analysis
+%   (instantiate + iterate, Postorder). The instance contains only the ACTIVE
+%   choice of each variant role, so no "Selected" filtering appears anywhere
+%   below -- deliberate, not an omission (D-012).
 %
-%   This is the Physical-layer teaching capability: a NATIVE System Composer
-%   parametric analysis. It mirrors mbse/examples/ex2 (CostAndWeightRollup-
-%   Analysis.m + model_instance.m), the proven R2026a pattern:
-%     instantiate(arch, PROFILE, name, Function=@fn, Direction="Postorder")
-%     iterate(instance, "Postorder", @fn, Recurse=true)
-%   then read each node's rolled value with getValue. Postorder guarantees a
-%   node's children are summed before the node itself.
-%
-%   OEW is a Measure of Merit to MINIMIZE (there is no target/threshold and
-%   nothing is asserted against a limit). Unit flyaway cost is the OTHER MoM,
-%   but it is NOT rolled up here -- it comes from a cost-model function
-%   (F16APhysicalCostModel); see the Physical-layer doc for that contrast.
-%
-%   THIS IS AN ACTIVE-CONFIGURATION ROLL-UP, AND IT IS ONE FOR FREE.
-%   The physical model has three variant roles (Airframe, Propulsion/Engine,
-%   FlightControls) holding seven candidates between them, and summing all
-%   seven would be meaningless -- an aircraft has one engine fit, not three.
-%   The native path needs no filter to get that right: instantiate/iterate
-%   traverses ONLY the active choice (Stage-0 finding 2, D-012), so the
-%   analysis function below is a plain postorder sum with no "Selected"
-%   handling anywhere in it. Deliberate, not an omission.
-%
-%   The instance also FLATTENS a variant (finding 3): the active choice node is
-%   elided and its children lifted under the variant node, so the INSTANCE path
-%   is ".../Aircraft/Airframe/Wing" while the ARCHITECTURE path is now
-%   ".../Aircraft/Airframe/BlendedCrankedDelta/Wing". Every path in this file
-%   is an instance path and therefore did NOT change when the candidates were
-%   introduced -- rd("...Airframe") and rd("...Propulsion/Engine") still name
-%   the variant node and still return the active configuration's mass. Only the
-%   archMass fallback, which walks the ARCHITECTURE, had to learn about
-%   variants; see its comment.
-%
-%   Requires physical/F16A_Physical.slx to exist (run generate_f16a_physical,
-%   which itself calls this as its final step).
+%   Requires physical/F16A_Physical.slx (run generate_f16a_physical).
 
 arguments
     % Write the OEW Measure of Merit back into the model and save it. True for
@@ -112,13 +73,13 @@ catch ME
     rd = @(p) archMass(lookup(m, Path=char(p)), massProp);
 end
 
-% These four paths are unchanged by the variant restructure, and that is a
-% consequence of the flattening described above rather than an accident:
-% "Airframe" and "Propulsion/Engine" name the VARIANT NODES, whose instance
-% nodes carry the active candidate's rolled-up mass. Reading
-% ".../Airframe/BlendedCrankedDelta" here would be wrong twice over -- it is an
+% Every path in this file is an INSTANCE path. The instance flattens a variant
+% -- the active choice node is elided and its children lifted under the variant
+% node -- so "Airframe" and "Propulsion/Engine" name the variant nodes and
+% carry the active candidate's rolled-up mass. Naming a candidate here
+% (".../Airframe/BlendedCrankedDelta") would be wrong twice over: it is an
 % architecture path, and it would hard-code one candidate into a roll-up whose
-% whole job is to follow whichever one is active.
+% job is to follow whichever one is active.
 OEW        = rd(acPath);
 airframe   = rd(S + "Airframe");
 propulsion = rd(S + "Propulsion");

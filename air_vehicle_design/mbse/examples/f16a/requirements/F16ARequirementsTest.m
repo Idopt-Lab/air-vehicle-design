@@ -1,27 +1,24 @@
 classdef F16ARequirementsTest < matlab.unittest.TestCase
     %F16AREQUIREMENTSTEST Machinery checks on the four generated requirement sets.
-    %   The R layer is the provenance root of this example and, until now, the
-    %   one layer whose output nothing asserted (TODO A10). This suite reads
-    %   the four sets AS THEY SHIP -- slreq.load on the .slreqx, never the
-    %   generator source -- and pins what everything downstream relies on:
+    %   The R layer is this example's provenance root. This suite reads the four
+    %   sets AS THEY SHIP -- slreq.load on the .slreqx, never the generator
+    %   source -- and pins what everything downstream relies on:
     %
     %     * a decision requirement POSES its question and holds no answer:
     %       nothing in f16a_logical_derived.slreqx names a vendor or programme
     %       (D-020) or states a weight or score (D-037, D-040);
     %     * "todo" means student exercise and nothing else -- eleven of them,
     %       asserted as a SET so one exercise losing the keyword cannot be
-    %       masked by another requirement gaining it (D-045, D-046);
+    %       masked by another gaining it (D-045, D-046);
     %     * no requirement carries a "verify" keyword: the Verify LINK is the
     %       record that a requirement has a test, and a generator-written
     %       keyword mirroring a hand-made link cannot be kept in step (D-048);
-    %     * REQ_F16A_025 keeps its -6 %MAC floor and the illustrative-value
-    %       label that cleared the data audit (D-030, D-046), and has lost the
-    %       +1 %MAC cap: the upper bound is now zero and strict.
+    %     * REQ_F16A_025 keeps its -6 %MAC floor and its illustrative-value
+    %       label (D-030, D-046); its upper bound is now zero and strict.
     %
     %   Machinery, not verification: nothing here asks whether the DESIGN meets
-    %   a requirement -- that is what verification/ is for. Requirement sets are
-    %   in-memory global state, so the suite clears them on the way in AND on
-    %   the way out, and puts nothing on the path.
+    %   a requirement. Requirement sets are in-memory global state, so the suite
+    %   clears them on the way in AND out, and puts nothing on the path.
 
     properties (Access = private)
         TopSet      % f16a.slreqx                    -- sizing-derived

@@ -2,46 +2,23 @@ classdef F16APhysicalTradeGuardsTest < matlab.unittest.TestCase
     %F16APHYSICALTRADEGUARDSTEST Make the trade study's guard rails actually FIRE.
     %   The negative tests F16APhysicalArchitectureTest could not write. Every
     %   assertion feeds F16APhysicalTradeGuards a value that must be refused and
-    %   checks that it IS refused, BY IDENTIFIER.
+    %   checks that it IS refused, BY IDENTIFIER -- never by message text, and
+    %   the identifiers keep the F16APhysicalTradeStudy: prefix because an
+    %   identifier names the contract, not the file the code sits in.
     %
-    %   NOTHING HERE OPENS, READS OR WRITES AN ARTIFACT -- no model, no
-    %   requirement set, no file. The candidate "paths" below are plain strings
-    %   the guards use only to name an offender. That is the whole point: this
-    %   suite runs green on a checkout with no models in it, and folding it into
-    %   the architecture suite would attach it to a TestClassSetup that loads two
-    %   models and three requirement sets, so these tests would start failing for
-    %   reasons unrelated to whether a bound still rejects 78.
-    %
-    %   It is also why the guards were extracted at all. While they were local
-    %   functions of F16APhysicalTradeStudy.m, the equivalent negative test had
-    %   to run the whole study -- and it stopped early only while the guard still
-    %   worked. On the day the guard was refactored away, the day the test exists
-    %   to catch, Benefit = 78 would sail through to save_system and put a wrong
-    %   winner into the shipped artifacts. A negative test whose failure mode is
-    %   corrupting the repository is worse than no test.
-    %
-    %   IDENTIFIERS, NEVER MESSAGE TEXT, and they keep the
-    %   F16APhysicalTradeStudy: prefix even though the code moved -- an
-    %   identifier names the CONTRACT, not the file.
+    %   NOTHING HERE OPENS, READS OR WRITES AN ARTIFACT. The candidate "paths"
+    %   below are plain strings the guards use only to name an offender, so this
+    %   suite runs green on a checkout with no models in it. That is also why
+    %   the guards were extracted: while they were local functions of the study,
+    %   a negative test had to run the whole study, and on the day a guard was
+    %   refactored away Benefit = 78 would sail through to save_system and put a
+    %   wrong winner into the repository.
     %
     %   BOUNDS COME FROM THE CODE THAT ENFORCES THEM (TRLScale, BenefitScale,
-    %   CeilingTol, TieTol), so widening a scale cannot leave a test agreeing
-    %   with a bound that no longer exists. The REJECTED values are deliberately
-    %   literal, because each is a specific real mistake: 0 is "nobody set this",
-    %   78 is 7.8 with a slipped decimal point, 4.5 is not a point on an ordinal
-    %   scale. Widening a scale to admit one must turn this suite red.
-    %
-    %   Boundary-INCLUSIVE is not a detail: three real value functions sit
-    %   exactly on 1.0 today (Benefit 10, TRL 9, and the Reference candidate's
-    %   own M/M), so an exclusive bound would fail the shipped model.
-    %
-    %   NOT TESTED HERE: rankRefusingTies on a SINGLE candidate throws
-    %   MATLAB:badsubscript, and pinning that would cement an accident as a
-    %   contract. The study's discovery-walk guards need the model, and their
-    %   input contract is pinned in F16APhysicalArchitectureTest instead.
-    %
-    %   See also F16APHYSICALTRADEGUARDS, F16APHYSICALTRADESTUDY,
-    %   F16APHYSICALARCHITECTURETEST.
+    %   CeilingTol, TieTol). The REJECTED values are deliberately literal,
+    %   because each is a specific real mistake: 0 is "nobody set this", 78 is
+    %   7.8 with a slipped decimal, 4.5 is not a point on an ordinal scale.
+    %   Bounds are INCLUSIVE -- three real value functions sit exactly on 1.0.
 
     properties (Constant)
         % The two candidates every fixture below is written about. STRINGS,

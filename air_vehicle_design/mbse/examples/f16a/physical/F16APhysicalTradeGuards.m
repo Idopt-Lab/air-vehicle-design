@@ -1,12 +1,7 @@
 classdef F16APhysicalTradeGuards
 %F16APHYSICALTRADEGUARDS The trade study's numeric guard rails, on their own.
-%   The three checks F16APhysicalTradeStudy runs over the NUMBERS it scores --
-%   the parameter bounds, the refusal to break a tie, and the D-035 ceiling
-%   warning -- lifted out so each can be made to fire without running it.
-%
-%   EVERY METHOD HERE IS PURE. Values in; an error thrown, a warning raised, or
-%   a clean return. No model handle, no file on disk, no persistent state.
-%   Nothing here can change an artifact, which is the point of it existing.
+%   The three checks F16APhysicalTradeStudy runs over the NUMBERS it scores,
+%   lifted out so each can be made to fire without running the study:
 %
 %     checkParameters(candPaths, raw, crit)
 %         Throws :badTRL, :badMass, :badBenefit, :noSuchCriterion.
@@ -15,47 +10,15 @@ classdef F16APhysicalTradeGuards
 %     warnAboveCeiling(candPaths, V, w, crit, keptIdx, role)
 %         Warns :valueAboveCeiling. Does not cap and does not error.
 %
-%   WHY THIS IS NOT A LOCAL FUNCTION OF THE TRADE STUDY. A guard is only
-%   trustworthy once it has been SEEN TO FIRE, and while these lived inside
-%   F16APhysicalTradeStudy.m they could not be: that function takes no
-%   arguments and hard-codes its model names, so reaching a guard meant running
-%   the whole study against the shipped artifacts -- and that run is safe only
-%   while the guard still works. Feeding it Benefit = 78 to prove the bound
-%   fires would, on the day the bound was refactored away, run to save_system
-%   and put a wrong active choice, a wrong active kind and a wrong Implement
-%   link into the repository. The negative test's failure mode was CORRUPTING
-%   THE REPOSITORY precisely when it was meant to catch something, so no
-%   negative test was written and the guards went unexercised.
+%   EVERY METHOD IS PURE: values in, an error or a warning out -- no model, no
+%   file, no state. While these were local functions of the study, firing one
+%   meant running the whole study against the shipped artifacts, so a negative
+%   test could corrupt the repository exactly when it caught something.
 %
-%   THE BOUNDS, AND THE DECISION BEHIND EACH
-%     TRL 1..9, integer (D-021). int32 cannot hold NaN, so 0 is the deliberate
-%       "unset" sentinel -- worth something only if something rejects it, which
-%       is here. TRL is an ordinal level, so 4.5 is not a point on it.
-%     Benefit 1..10, boxed at BOTH ends (D-033). Its default 0 is the same
-%       sentinel. The UPPER bound earns its keep: B/10 carries the heaviest
-%       weight, and 78 typed for 7.8 contributes 3.90 against a legitimate
-%       per-criterion maximum of 0.50 -- and being FINITE it is invisible to
-%       every isfinite check. D-033 traces that slipped decimal point all the
-%       way to a wrong Implement link on REQ_F16A_L01.
-%     Mass_lb strictly positive -- it is the DENOMINATOR of M_baseline/M, so
-%       zero divides and a negative mass inverts the score. Silently plausible.
-%     The 1.0 ceiling: WARN, do not cap (D-035). Only the unbounded ratio
-%       criteria can reach it. Written over the criteria GENERICALLY, because
-%       UnitCost_USD inherits the identical shape the day a cost model lands.
-%     The tie: a dead heat is a decision the data cannot make.
+%   Bounds and their reasoning: D-021, D-033, D-035. Identifiers keep the
+%   F16APhysicalTradeStudy: prefix -- an identifier names the contract.
 %
-%   IDENTIFIERS ARE UNCHANGED, DELIBERATELY -- everything still carries the
-%   F16APhysicalTradeStudy: prefix. An identifier is what a test asserts on and
-%   what the log quotes; it names the CONTRACT, not the file the code sits in.
-%
-%   WHAT IS NOT HERE. The study's other guards are checks on the SET OF
-%   CANDIDATES THE WALK DISCOVERED rather than on declared numbers, and each is
-%   entangled with a value it computes on the way past (refIdx, keptIdx, the
-%   renormalized weights) -- lifting them means lifting the discovery pipeline,
-%   which is a refactor rather than an extraction. Those needing a model handle
-%   cannot come here at all.
-%
-%   See also F16APHYSICALTRADESTUDY, F16ADATAPROVENANCE, F16ASOURCEKIND.
+%   See also F16APHYSICALTRADESTUDY, F16APHYSICALTRADEGUARDSTEST.
 
     properties (Constant)
 

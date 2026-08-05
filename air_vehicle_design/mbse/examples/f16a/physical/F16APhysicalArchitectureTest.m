@@ -1,41 +1,24 @@
 classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
     %F16APHYSICALARCHITECTURETEST Verify the F-16A Physical-layer model (RFLP "P").
-    %   A MACHINERY test: it asks "is the P model built correctly?", never
-    %   "is this the right design?". The design verdicts live one per
-    %   requirement in verification/.
+    %   A MACHINERY test: it asks "is the P model built correctly?", never "is
+    %   this the right design?". The design verdicts live one per requirement
+    %   in verification/.
     %
     %   Covers structure (30 components), stereotypes, the 16 active-leaf
     %   masses against the Brandt ground truth, roll-up self-consistency, the
     %   Measures of Merit, the L->P realization, the Implement links, the
-    %   Rationale and DataProvenance every part carries, the 7 trade
-    %   candidates' parameter contract, and the four places the trade study
-    %   records its verdict.
+    %   Rationale and DataProvenance every part carries, the 7 candidates'
+    %   parameter contract, and the four places the trade records its verdict.
     %
-    %   What it deliberately does NOT assert:
-    %     * Weight or cost TARGETS -- those are objectives, not thresholds, and
-    %       a budget here would be a design verdict in a machinery test.
-    %     * The VALUE of any illustrative parameter, or any trade SCORE. Ranges
-    %       and orderings are asserted instead; pinning an Estimate turns a
-    %       data revision into a test failure.
-    %     * Variant ROLE wrappers -- a stereotype cannot be applied to one at
-    %       all (D-013), so "every part has a Rationale" means every part that
-    %       can carry one.
-    %     * The guards firing. Those are negative tests and live in
-    %       F16APhysicalTradeGuardsTest, which touches no artifact -- reaching
-    %       a guard from here would mean running the study, and a negative test
-    %       whose failure mode is writing a wrong decision into the repository
-    %       is worse than no test. This file pins their INPUT CONTRACT only.
+    %   It deliberately asserts NO weight or cost target (those are objectives,
+    %   not thresholds), no illustrative parameter VALUE or trade score (ranges
+    %   and orderings instead), and nothing about variant role wrappers, which
+    %   cannot carry a stereotype at all (D-013). Making the guards FIRE is
+    %   F16APhysicalTradeGuardsTest's job; this file pins their input contract.
     %
-    %   THIS FILE NEVER RUNS THE TRADE STUDY, and calls the roll-ups with
-    %   Persist=false: a test that mutated the artifacts it checks would pass
-    %   even on a model the generator never wrote the decision into, and would
-    %   leave the working tree dirty.
-    %
-    %   Two path spaces coexist and both are exercised in
-    %   testMassRollupSelfConsistent: ARCHITECTURE paths carry the choice level
-    %   (.../Airframe/BlendedCrankedDelta/Wing), INSTANCE paths do not
-    %   (.../Airframe/Wing). Every traversal here goes through getChoices --
-    %   .Architecture.Components returns 0 on a loaded model.
+    %   IT NEVER RUNS THE TRADE STUDY and calls the roll-ups with Persist=false:
+    %   a test that mutated the artifact it checks would pass on a model the
+    %   generator never wrote the decision into, and would dirty the tree.
 
     properties
         Model      % F16A_Physical

@@ -1,66 +1,24 @@
 classdef F16ALogicalArchitectureTest < matlab.unittest.TestCase
     %F16ALOGICALARCHITECTURETEST Verify the F-16A Logical-layer model (RFLP "L").
     %   A MACHINERY test: it asks "is the L model built correctly?", never "is
-    %   this the right design?". After the L-options / P-trade restructure the
-    %   Logical layer enumerates technology-neutral solution KINDS and nothing
-    %   else -- no masses, no costs, no TRL, no benefit, no winner -- so this
-    %   suite is written to fail the moment a number or a decision creeps back
-    %   into L.
+    %   this the right design?". L enumerates technology-neutral solution KINDS
+    %   and nothing else -- no masses, costs, TRL, benefit or winner -- so this
+    %   suite fails the moment a number or a decision creeps back into L.
     %
-    %   COVERED HERE
-    %     * Structure -- 9 solution roles at the root, the 4 logical
-    %       interfaces, the 6 wired roles fully connected and the 3
-    %       constraint-driven roles deliberately port-free.
-    %     * Allocation -- the F->L set and its scenario exist; 13 leaf
-    %       functions produce 14 edges (Target is the single 1->2 fan-out); no
-    %       mission phase or composite capability is ever an allocation source;
-    %       sampled endpoints resolve in both models.
-    %     * Requirements -- 020/023/024/025 are Implement-linked from L.
-    %     * Options -- the three variant roles each expose exactly their two
-    %       named kinds with exactly one active; every kind carries the
-    %       SolutionOption stereotype with both properties readable; every kind
-    %       name is free of vendor, program and digit tokens; and neither the
-    %       kinds nor the L profile declares Mass_lb, UnitCost_USD, TRL or
-    %       Benefit.
-    %     * The decision, IF one has been recorded -- L ships undecided and is
-    %       written to later by the physical trade study, so
-    %       testSelectedKindIsConsistentWithItsDecisionRef is written to hold
-    %       in BOTH states: nothing selected and every DecisionRef 'TBD', or
-    %       one kind per role selected, active, and pointing at a well-formed
-    %       REQ_F16A_L0x. What it forbids is the state in between.
+    %   Covered: the 9 roles and 4 interfaces; the F->L allocation (14 edges,
+    %   Target the only 1->2 fan-out, no mission phase ever a source); the four
+    %   requirements homed at L; the three variant roles and their six kinds;
+    %   and the internal consistency of the decision IF one has been written
+    %   back. Group-by-group detail is in docs/04_logical.md.
     %
-    %   NOT COVERED HERE -- and why
-    %     * WHICH kind wins. L presents options, it does not decide. The trade
-    %       runs at P, in physical/F16APhysicalTradeStudy.m (D-001, and
-    %       docs/06_methodology.md for the boundary rule).
-    %     * The REQ_F16A_L01..L03 decision links. Those links are written by
-    %       the physical trade study, so asserting them here would make the L
-    %       suite pass or fail depending on whether P had been run -- exactly
-    %       the layer coupling this restructure removes. They are asserted in
-    %       F16APhysicalArchitectureTest instead (D-010).
-    %     * WHETHER anything is selected. Before the trade runs no kind is;
-    %       afterwards exactly one per role is. Both are legitimate states of
-    %       a correctly built L model, so testEveryKindCarriesSolutionOption
-    %       checks only that the property exists and is readable, and
-    %       testSelectedKindIsConsistentWithItsDecisionRef checks the
-    %       INTERNAL CONSISTENCY of whichever state the model is in rather
-    %       than requiring one of them.
-    %     * Any design target (mass, cost, static margin). Those live in the
-    %       per-requirement verification suites, never in a machinery test.
+    %   NOT covered, on purpose: which kind wins, and the REQ_F16A_L01..L03
+    %   decision links. Both are the physical trade study's output, so asserting
+    %   them here would make this suite pass or fail depending on whether P had
+    %   run -- the layer coupling the L/P split removes. They are asserted in
+    %   F16APhysicalArchitectureTest instead (D-001, D-010).
     %
-    %   R2026a APIs exercised here, each isolated in one helper below so a
-    %   signature fix touches one place:
-    %     * Variants   -- getChoices, getActiveChoice.
-    %     * Allocation -- systemcomposer.allocation.load, getScenario,
-    %                     scenario.Allocations (Source/Destination).
-    %     * Stereotypes-- getStereotypes (returns a cell array of
-    %                     '<profile>.<stereotype>'), hasProperty and
-    %                     getProperty (both take
-    %                     "<profile>.<stereotype>.<property>").
-    %     * Profiles   -- model.Profiles -> Profile.Stereotypes ->
-    %                     Stereotype.Properties(k).Name, so a numeric property
-    %                     re-added to the L PROFILE fails here even before any
-    %                     component applies it.
+    %   Every R2026a API is isolated in one helper below, so a signature fix
+    %   touches one place.
 
     properties
         Model       % F16A_Logical

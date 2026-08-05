@@ -1,72 +1,36 @@
 function generate_f16a_logical()
 %GENERATE_F16A_LOGICAL Build the F-16A Logical-layer architecture (RFLP "L").
-%   Creates logical/F16A_Logical.slx (a System Composer model of solution-
-%   role components), its interface dictionary logical/F16A_Logical.sldd, the
-%   solution-option stereotype profile logical/F16A_LogicalOptions.xml, and
-%   the allocation set logical/F16A_FunctionToLogical.mldatx that ties
-%   each function (RFLP "F") to the logical role that realizes it. It also
-%   Implement-links the logical roles back to the requirements (RFLP "R")
-%   that only a solution role can satisfy.
+%   Creates logical/F16A_Logical.slx, its interface dictionary
+%   F16A_Logical.sldd, the solution-option profile F16A_LogicalOptions.xml and
+%   the allocation set F16A_FunctionToLogical.mldatx, which ties each function
+%   (F) to the role that realizes it. It also Implement-links roles back to the
+%   requirements (R) that only a solution role can satisfy.
 %
-%   Where the Functional layer says WHAT the aircraft must do, the Logical
-%   layer says HOW -- in solution roles -- and, crucially, records that a
-%   role can usually be realized more than one way. Three roles are modelled
-%   as VARIANT COMPONENTS, each holding two competing KINDS.
+%   Where F says WHAT the aircraft must do, L says HOW -- in nine solution
+%   roles -- and records that a role can usually be realized more than one way.
+%   Three of them (Airframe, PropulsionSystem, FlightControlSystem) are VARIANT
+%   COMPONENTS, each holding two competing KINDS.
 %
-%   L PRESENTS THE OPTIONS; L DOES NOT DECIDE.
-%   A logical option is an architectural KIND -- a configuration commitment
-%   that is free of technology, vendor and numbers. "SingleEngine" is a kind;
-%   "F100-PW-200" is a product, and products live at P. So nothing built here
-%   carries a mass, a cost, a TRL or a benefit score, and nothing here picks a
-%   winner. The decision is made one layer down, by
-%   physical/F16APhysicalTradeStudy.m: it scores the concrete parameterized
-%   candidates at P and writes the outcome back into this model -- the active
-%   variant choice, SolutionOption.Selected, SolutionOption.DecisionRef, and an
-%   Implement link from the winning kind to its decision requirement
-%   (REQ_F16A_L01..L03). Until that has run, this model ships UNRESOLVED.
-%   For the boundary rule and its grounding, see docs/06_methodology.md.
+%   L PRESENTS THE OPTIONS; L DOES NOT DECIDE. A logical option is an
+%   architectural KIND, free of technology, vendor and numbers: "SingleEngine"
+%   is a kind, "F100-PW-200" is a product, and products live at P. So nothing
+%   built here carries a mass, cost, TRL or benefit, and nothing here picks a
+%   winner. physical/F16APhysicalTradeStudy.m decides and writes the outcome
+%   back into this model, which therefore ships UNRESOLVED until P has run
+%   (D-001, D-010).
 %
-%   Structure (root architecture = F16ASolutionRoles):
-%     F16ASolutionRoles
-%       |- Airframe               (VARIANT: BlendedCrankedDelta | ConventionalTrapWing)
-%       |- PropulsionSystem       (VARIANT: SingleEngine        | TwinEngine)
-%       |- FuelSystem
-%       |- FlightControlSystem    (VARIANT: FlyByWire           | HydroMechanical)
-%       |- LandingGear            (constraint-driven; no function allocated)
-%       |- AvionicsSuite
-%       |- CommunicationSystem
-%       |- WeaponSystem
-%       |- MissionSystemsBay      (constraint-driven; no function allocated)
+%   13 leaf functions allocate to the roles over 14 edges -- the one 1->2
+%   fan-out being Target -> AvionicsSuite + WeaponSystem. The ten temporal
+%   mission phases are NOT allocated: they are orchestration realized BY these
+%   capabilities.
 %
-%   Allocation (function -> logical role), 13 leaf functions, 14 edges:
-%     GenerateLift -> Airframe; ProduceThrust -> PropulsionSystem;
-%     Maneuver -> FlightControlSystem; ManageFuel -> FuelSystem;
-%     MaintainStructuralIntegrity -> Airframe; Navigate -> AvionicsSuite;
-%     Communicate -> CommunicationSystem; Find/Fix/Track/Assess -> AvionicsSuite;
-%     Target -> AvionicsSuite + WeaponSystem (the one 1->2 fan-out);
-%     Engage -> WeaponSystem. The ten temporal mission phases are NOT
-%     allocated -- they are orchestration realized BY these capabilities.
+%   Roles, allocation matrix and the deferred requirements homed here:
+%   docs/04_logical.md and docs/03_traceability.md. R2026a variant and
+%   stereotype traps this file is written around: docs/08_agent_team.md.
 %
-%   Deferred requirements now homed at L (Implement links, role -> requirement):
-%     020 -> MissionSystemsBay; 023,024 -> LandingGear; 025 -> Airframe.
-%     022 (materials) and 026 (cost) stay deferred to the Physical layer.
-%
-%   Idempotent: re-run to regenerate from scratch. Requires the F model and
-%   the origin requirement set to exist first (run generate_f16a_requirements.m
-%   and generate_f16a_functional.m before this). It does NOT need the decision
-%   requirements REQ_F16A_L01..L03 -- those are linked by the physical trade
-%   study, so L stays independent of whether P has run (D-010).
-%
-%   Two R2026a traps this file is written around (full set in
-%   docs/08_agent_team.md): a variant's choices are reachable ONLY through
-%   getChoices, which returns them ALPHABETICALLY rather than in creation order
-%   -- .Architecture.Components returns ZERO on a reloaded model, so every walk
-%   here special-cases a VariantComponent and every choice is addressed by
-%   name. And a stereotype cannot be applied to a variant component; it goes on
-%   the CHOICES, which is where SolutionOption belongs anyway.
-%   Property values are evaluated as MATLAB expressions, so a string literal
-%   must be quoted ("'TBD'"), and ports connect with the TWO-argument
-%   connect(src, dst).
+%   Idempotent: re-run to regenerate from scratch. Requires the F model and the
+%   origin requirement set (run generate_f16a_requirements.m and
+%   generate_f16a_functional.m first).
 
 modelName   = "F16A_Logical";
 funcName    = "F16A_Functional";
