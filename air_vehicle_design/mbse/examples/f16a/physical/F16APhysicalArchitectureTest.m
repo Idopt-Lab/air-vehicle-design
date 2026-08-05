@@ -2447,25 +2447,15 @@ classdef F16APhysicalArchitectureTest < matlab.unittest.TestCase
         function r = massRollup(~)
             % The mass roll-up, run WITHOUT persisting. The roll-up's normal
             % job includes writing OEW back to the aircraft's MeasureOfMerit
-            % and saving the model; doing that from a test would leave the
-            % working tree dirty after every run and, worse, would mean the
-            % suite had modified the artifact it was checking. Persist=false
-            % skips both.
+            % and saving the model; a test may not modify the artifact it is
+            % checking. Persist=false skips both.
             %
-            % The fallback is deliberate and NOISY. If the option is ever
-            % renamed the suite still produces real assertion results instead
-            % of erroring out of three tests, but the warning says plainly
-            % that the run has just dirtied the model -- so this cannot go
-            % unnoticed the way a silent catch would.
-            try
-                r = F16APhysicalMassRollup(Persist=false);
-            catch ME
-                warning("F16APhysicalArchitectureTest:persistOption", ...
-                    "F16APhysicalMassRollup(Persist=false) failed (%s); falling back " + ...
-                    "to the persisting call, which WILL modify and re-save " + ...
-                    "F16A_Physical.slx. Fix the option name in massRollup.", ME.message);
-                r = F16APhysicalMassRollup();
-            end
+            % There is deliberately NO fallback. If the option is ever renamed
+            % this errors, and erroring is the right outcome: the only other
+            % call available WRITES AND SAVES F16A_Physical.slx, so a
+            % "keep the suite running" catch would re-save the model under
+            % test once per calling test method.
+            r = F16APhysicalMassRollup(Persist=false);
         end
 
         function sel = selectedChoices(testCase, vc)
