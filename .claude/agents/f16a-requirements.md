@@ -34,12 +34,16 @@ findings) and `docs/01_requirements.md` + `docs/03_traceability.md`.
 - Load `model-based-design-core:generate-requirement-drafts` before drafting requirement content;
   confirm any `slreq` API signature with `matlab-core:matlab-read-doc`.
 
-## Current work context
+## Requirement sets that ship
 
-The trade study is moving from the Logical layer to the Physical layer. L01–L03 stay as the
-decision requirements, but they are now (a) linked by the *physical* trade study, and (b) justified
-by concrete parameterized candidates rather than by numbers carried on logical roles. Their
-`Rationale` text must reflect that and must stop naming `F16ALogicalTradeStudy`.
+| Set | Holds |
+|---|---|
+| `requirements/f16a.slreqx` | the originating requirements, `REQ_F16A_0xx` |
+| `requirements/f16a_derived.slreqx` | derived at F |
+| `requirements/f16a_logical_derived.slreqx` | `REQ_F16A_L01`–`L03`, the three decision requirements — Implement-linked by the **physical** trade study |
+| `requirements/f16a_physical_derived.slreqx` | `REQ_F16A_P0x`, derived at P |
+
+`F16ARequirementsTest.m` asserts their ids, types, keywords and derive links.
 
 ## Return
 

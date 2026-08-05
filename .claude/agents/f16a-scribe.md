@@ -23,13 +23,13 @@ your voice matches it.
 `07_decision_log.md` is append-only. One entry per decision:
 
 ```
-### D-007 · Cost stays NaN and is excluded from trade scoring
-**Stage** 4 · **Decided by** orchestrator + f16a-data · **Date** YYYY-MM-DD
-**Decision** ...one or two sentences...
-**Alternatives considered** ...and why they lost...
-**Consequences** ...what this forces elsewhere...
-**Traces to** REQ_F16A_026 · physical/F16APhysicalCostModel.m
+### D-0NN · One line saying what was decided
+One or two sentences of what the decision IS, in the present tense.
+**Why** The reason, and what it forces elsewhere. Not the argument that got there.
 ```
+
+Ids are stable. A superseded entry is not rewritten — it keeps its text and gains a redirect line:
+*Partly superseded by **D-0NN** — one clause on what changed.*
 
 Record the decision even when it was to *not* do something. Invented (`Estimate`) numbers must be
 listed here — that is a hard requirement `f16a-data` audits against.

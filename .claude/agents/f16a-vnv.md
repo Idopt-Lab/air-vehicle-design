@@ -16,11 +16,14 @@ findings).
 
 | File | Kind | Checks |
 |---|---|---|
+| `requirements/F16ARequirementsTest.m` | machinery | the requirement sets themselves: ids, types, keywords, derive links |
 | `functions/F16AFunctionalArchitectureTest.m` | machinery | F model + R→F links |
 | `logical/F16ALogicalArchitectureTest.m` | machinery | roles, interfaces, allocation, kinds |
 | `physical/F16APhysicalArchitectureTest.m` | machinery | decomposition, stereotypes, roll-up self-consistency, realization, links |
-| `verification/F16AMaterialsVerificationTest.m` | requirement | `REQ_F16A_022` composite ≤ 20% — **passes** |
-| `verification/F16AFuelVerificationTest.m` | requirement | `REQ_F16A_P01` fuel volume — **fails on purpose** |
+| `physical/F16APhysicalTradeGuardsTest.m` | machinery | the trade's guard rails, driven negatively (bad input ⇒ named error) |
+| `verification/F16AMaterialsVerificationTest.m` | requirement | `REQ_F16A_022` composite ≤ 20% — **MET** (green) |
+| `verification/F16AFuelVerificationTest.m` | requirement | `REQ_F16A_P01` fuel volume — **UNEVALUATED** (red) |
+| `verification/F16AStaticMarginVerificationTest.m` | requirement | `REQ_F16A_025` relaxed stability — **VIOLATED at landing** (red) |
 
 ## The distinction you must keep sharp
 
@@ -29,8 +32,11 @@ findings).
 - **Verification tests** ask *does the design meet this requirement?* One file per requirement, so
   each requirement's verdict is a single self-contained suite. These are what the manual
   "Verified by" links point at.
-- `F16AFuelVerificationTest` **must keep failing** until the mission-fuel analysis is connected.
-  That red is an honest "verification pending" marker — never make it pass by weakening it.
+- **Three verification states ship, and the two reds are different.** Keep them distinguishable:
+  MET (materials), UNEVALUATED — required side is `NaN`, nothing was compared, permanent by D-042
+  (fuel), and VIOLATED — both sides finite, the design lost, D-051 (static margin). Never make
+  either red pass by weakening it, and never let a `NaN` be reported as a violation: a non-finite
+  input gets its own branch that says UNEVALUATED.
 
 ## Assertion rules
 
