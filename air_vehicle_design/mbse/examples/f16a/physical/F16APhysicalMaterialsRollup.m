@@ -41,10 +41,20 @@ end
 mass = vals(:,1);
 cf   = vals(:,2);
 
+% Same rule as the fuel roll-up: no parts, or a part whose numbers cannot be
+% read, means REQ_F16A_022 has no value to check -- not a value of zero and
+% not a NaN that the verify test would compare against the cap as if it were
+% an answer.
 if isempty(names)
     error("F16APhysicalMaterialsRollup:noMaterialParts", ...
         "No part under the active airframe candidate %s carries a Material " + ...
         "stereotype -- REQ_F16A_022 cannot be evaluated for it.", string(candidate.Name));
+end
+unreadable = ~isfinite(mass) | ~isfinite(cf);
+if any(unreadable)
+    error("F16APhysicalMaterialsRollup:unreadableProperty", ...
+        "Mass_lb or CompositeFraction is not a readable number on: %s. " + ...
+        "REQ_F16A_022 cannot be evaluated.", strjoin(names(unreadable), ", "));
 end
 
 compMass  = mass .* cf;

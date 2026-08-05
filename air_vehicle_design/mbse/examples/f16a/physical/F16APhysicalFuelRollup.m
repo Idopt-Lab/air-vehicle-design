@@ -26,12 +26,19 @@ m = systemcomposer.loadModel(modelName);
 fuelSys = lookup(m, Path="F16A_Physical/Aircraft/FuelSystem");
 [names, cap] = F16AStereotypeLeaves(fuelSys, "FuelTank", capProp);
 
-% A silent 0 is the failure this replaces -- it must not come back as a
-% different silent 0, so an empty walk is an error, not an empty total.
+% A silent 0 is the failure D-038 removed, and it must not come back in
+% either of its two disguises: an empty walk, or an unreadable capacity that
+% sums to NaN. Both mean REQ_F16A_P01's available side has no value, and a
+% NaN would travel into the verify test and be compared as if it were one.
 if isempty(names)
     error("F16APhysicalFuelRollup:noFuelTanks", ...
         "No part under %s carries a FuelTank stereotype -- the available-fuel " + ...
         "side of REQ_F16A_P01 cannot be evaluated.", string(fuelSys.Name));
+end
+if any(~isfinite(cap))
+    error("F16APhysicalFuelRollup:unreadableCapacity", ...
+        "FuelCapacity_lb is not a readable number on: %s. The available-fuel " + ...
+        "side of REQ_F16A_P01 cannot be evaluated.", strjoin(names(~isfinite(cap)), ", "));
 end
 
 total = sum(cap);
