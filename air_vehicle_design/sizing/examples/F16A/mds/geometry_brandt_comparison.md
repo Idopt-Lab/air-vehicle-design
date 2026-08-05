@@ -1,8 +1,8 @@
 # F-16A Block 10/15 — Geometry vs Ground Truth
 
-Generated 2026-07-26. W_TO = 31377 lbf [Brandt Main! mission W_TO_lb].
+Generated 2026-08-05. W_TO = 31377 lbf [Brandt Main! mission W_TO_lb].
 
-**Reference** (the `Reference` and `%Diff` columns): Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.geometry`] — the Brandt-DIRECT ground truth, **not** `F16Baseline.m` (the older T.O.-manual-based figures `fidelity_comparison.m` uses).
+**Reference** (the `Reference` and `%Diff` columns): Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.geometry`] — the Brandt-DIRECT ground truth.
 
 **2nd Source** (the `2nd Source` column): T.O. 1F-16A-1 flight manual / USAF 3-view, via the same file's `.to_1f16a1` block. These are the same physical numbers `f16a_L3.json` carries as inputs — one shared truth recorded as a second source, so a `BY DESIGN` divergence from Brandt is visibly backed by a document rather than looking like error.
 

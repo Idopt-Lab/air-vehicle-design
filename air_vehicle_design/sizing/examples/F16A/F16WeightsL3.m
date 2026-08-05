@@ -177,7 +177,7 @@ classdef F16WeightsL3 < WeightsModelL3
         % ================================================================== %
         %  SYSTEMS INPUTS  (SFC_mission is DERIVED by propulsion DI)
         % ================================================================== %
-        V_t   = 940   % gal total internal fuel volume [derived by Brandt-style arithmetic: Wt!B6 = 6296.30 lbf / 6.7 lb-per-gal ~= 940]. ★ RESTORED as an INPUT by decision 3, deliberately NOT derived: the 6.7 lb/gal density behind it is cited NOWHERE in this repo (grepped 2026-07-25 — no JP-4/JP-5/JP-8 density in metabook_data.md, raymer_data.md, readme_wt.md or F16Baseline.m), so V_t = W_energy/rho would substitute an uncited constant for a Brandt-traceable figure and make provenance WORSE. The arithmetic also gives 939.746, not 940, so the literal is itself rounded. todo §P4-5b, provenance OPEN
+        V_t   = 940   % gal total internal fuel volume [derived by Brandt-style arithmetic: Wt!B6 = 6296.30 lbf / 6.7 lb-per-gal ~= 940]. ★ RESTORED as an INPUT by decision 3, deliberately NOT derived: the 6.7 lb/gal density behind it is cited NOWHERE in this repo (grepped 2026-07-25 — no JP-4/JP-5/JP-8 density in metabook_data.md, raymer_data.md or readme_wt.md), so V_t = W_energy/rho would substitute an uncited constant for a Brandt-traceable figure and make provenance WORSE. The arithmetic also gives 939.746, not 940, so the literal is itself rounded. todo §P4-5b, provenance OPEN
         V_i   = 500   % gal integral (wing) tank volume [estimate, unpinned; F-16 wing integral tanks]
         V_p   = 0     % gal pressurised tank volume [estimate, unpinned]
         N_t   = 3     % --  number of fuel tanks (2 wing + 1 fuselage) [estimate; verify T.O.]

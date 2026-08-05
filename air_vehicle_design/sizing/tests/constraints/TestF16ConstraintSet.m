@@ -13,13 +13,11 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %   (was a hardcoded 0.1). The two Combat rows carry their JSON names
 %   ("Combat Turn 1 (subsonic)" / "Combat Turn 2 (supersonic)").
 %
-%   Per sizing/docs/subplans/06_constraint_analysis.md's own test guidance,
-%   the optimal W/S and T/W are checked against broad physics-bounds ranges,
-%   NOT Brandt's exact W/S=104.59/T/W=0.7576 -- this
-%   framework's textbook equations are not expected to reproduce Brandt's
-%   flight-calibrated design point exactly (see ThrustConstraint.m/
-%   TakeoffConstraint.m/LandingConstraint.m headers for the documented
-%   modeling gaps).
+%   The optimal W/S and T/W are checked against broad physics-bounds ranges,
+%   NOT Brandt's exact W/S=104.59/T/W=0.7576 -- this framework's textbook
+%   equations are not expected to reproduce Brandt's flight-calibrated design
+%   point exactly (see MasterEquationConstraint.m/TakeoffConstraint.m/
+%   LandingConstraint.m headers for the documented modeling gaps).
 %
 %   includeStall DEFAULTS TO FALSE (changed 2026-07-27, see
 %   F16ConstraintSet.m's header): Stall has no Brandt reference row and was
@@ -37,7 +35,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 
         function testBuildDefaultReturnsEightConstraints(tc, fidelityLevel)
             % includeStall now defaults to false (see class header) -- the
-            % default build returns only the 8 Constraints.xlsx-derived
+            % default build returns only the 8 requirements-JSON
             % conditions, no Stall row.
             constraints = F16ConstraintSet.build(fidelityLevel);
             tc.verifyEqual(numel(constraints), 8);
@@ -224,9 +222,10 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             ca = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
             [WS_opt, TW_opt] = ca.optimal_point();
 
-            b = F16Baseline();
-            fprintf('\n    [%s] F-16 optimum: W/S=%.2f, T/W=%.4f  (Brandt reference: W/S=%.2f, T/W=%.4f)\n', ...
-                fidelityLevel, WS_opt, TW_opt, b.constraint.WS_opt, b.constraint.TW_opt);
+            % Brandt's published optimum (Size&Opt sheet / Main!P13), diagnostic
+            % print only -- not asserted.
+            fprintf('\n    [%s] F-16 optimum: W/S=%.2f, T/W=%.4f  (Brandt reference: W/S=104.59, T/W=0.7576)\n', ...
+                fidelityLevel, WS_opt, TW_opt);
 
             % CORRECTED 2026-07-27 (was: bound loosened 70->50 psf to
             % accommodate Stall becoming the binding constraint, reasoned at
@@ -239,8 +238,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % the optimum to W/S~=76-83 here -- still below Brandt/legacy,
             % but that residual gap traces to the already-documented
             % aero/propulsion fidelity gaps (CD0, thrust-lapse) on the real
-            % Constraints.xlsx conditions, not to constraint-set wiring; see
-            % ThrustConstraint.m/TakeoffConstraint.m/LandingConstraint.m
+            % constraint conditions, not to constraint-set wiring; see
+            % MasterEquationConstraint.m/TakeoffConstraint.m/LandingConstraint.m
             % headers.
             tc.verifyGreaterThanOrEqual(WS_opt, 70, sprintf('[%s] Optimal W/S below plausible range.', fidelityLevel));
             tc.verifyLessThanOrEqual(WS_opt, 130, sprintf('[%s] Optimal W/S above plausible range.', fidelityLevel));

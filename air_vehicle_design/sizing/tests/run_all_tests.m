@@ -9,7 +9,6 @@
 
 root = fileparts(mfilename('fullpath'));
 addpath(genpath(fullfile(root, '..', 'src')));
-addpath(genpath(fullfile(root, '..', 'baseline')));
 addpath(genpath(fullfile(root, '..', 'examples')));
 addpath(genpath(root));
 

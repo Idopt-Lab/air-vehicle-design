@@ -23,7 +23,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %       testRoskamMinBoundBelowBrandt (expected_brandt = 19148)
 %   Both asserted 19,148 lbf citing "Brandt F-16A.xls, sheet Wt, B12". That
 %   cell is 19980.700578 (live-read 2026-07-25); 19,148.08 is corrections.xls
-%   Wt!B12, Casey's revised-weight workbook (F16Baseline.m:136). Two distinct
+%   Wt!B12, Casey's revised-weight workbook (docs/weights_parameter_usage.md §4). Two distinct
 %   provenances ~4.3 % apart, so the citation was a wrong-workbook
 %   attribution -- AND, per CLAUDE.md's two-tier rule, an agreement check
 %   against ground truth is not a unit test at all. Both figures now appear as
@@ -41,7 +41,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %   block, NOT by calling the code under test and NOT copied from any .json):
 %
 %   (A) Raymer Table 3.1 jet-fighter row, transcribed from the named repo
-%       extract temp_AI/docs/disciplines/reference_extracts/metabook_data.md:22
+%       extract docs/reference_extracts/metabook_data.md:22
 %       -> A(US) = 2.34, C = -0.13, Kvs(fixed) = 1.00.
 %
 %       We/Wto at W_TO = 31,377 lbf:
@@ -64,7 +64,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %                = 18826.2 + 282.393 + 1.6909 = 19110.284 lbf
 %
 %   (B) Roskam Table 2.15 jet-fighter row, transcribed from
-%       temp_AI/docs/disciplines/reference_extracts/roskam_vol1_data.md:57
+%       docs/reference_extracts/roskam_vol1_data.md:57
 %       -> A = 0.5091, B = 0.9505.  Eq. 2.16 (roskam_vol1_data.md:47):
 %         log10(W_E) = (log10(W_TO) - A) / B
 %         log10(31377) = ln(31377)/ln(10) = 10.35383042 / 2.30258509
@@ -372,10 +372,10 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         %   WeightsL1 cites as *Table 3.1*. Locked decision (user 2026-07-24):
         %   keep Table 3.1 plus the Roskam bound; Table 6.1's coefficients are
         %   NOT present anywhere in this repo, so the user must supply them.
-        %   Neither temp_AI/docs/disciplines/reference_extracts/raymer_data.md
+        %   Neither docs/reference_extracts/raymer_data.md
         %   nor metabook_data.md carries a Table 6.1 empty-weight-fraction
         %   table (grepped 2026-07-25 -- "Table 6.1" appears only in prose:
-        %   WeightsL1.m, todo.md, docs/, temp_Casey/, temp_AI/docs/).
+        %   WeightsL1.m, todo.md, docs/, temp_Casey/).
         %   todo 2026-07-25 Phase 4 Sec. P4-8.
         %
         %   HOW THIS TEST DETECTS IT: WeightsL1.m's own standing-TO-DO block

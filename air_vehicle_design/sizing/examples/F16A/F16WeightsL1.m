@@ -21,7 +21,7 @@ classdef F16WeightsL1 < WeightsModelL1
 %     Brandt OEW      = 19980.70 lbf  [Brandt Wt!B12 = 19980.700578, live-read
 %                                      2026-07-25, formula =SUM(B10:B11)]  -> -4.36 %
 %     corrections.xls = 19148.08 lbf  [Casey's revised-weight workbook,
-%                                      F16Baseline.m:136]                   -> -0.20 %
+%                                      docs/weights_parameter_usage.md §4]   -> -0.20 %
 %     ! CORRECTED 2026-07-25: this header previously read "Brandt actual:
 %     19,148 lbf [Brandt F-16A.xls, B12]" — WRONG CELL, WRONG WORKBOOK.
 %     Wt!B12 is 19980.70; 19,148.08 is corrections.xls. The two are distinct

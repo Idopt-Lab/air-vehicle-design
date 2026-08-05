@@ -1,10 +1,10 @@
 # F-16A Block 10/15 — Weights vs Ground Truth
 
-Generated 2026-07-29. W_TO = 31377 lbf [Brandt Wt!B3 = Main!O15].
+Generated 2026-08-05. W_TO = 31377 lbf [Brandt Wt!B3 = Main!O15].
 
-**Reference** (the `Reference` and `%Diff` columns): Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.weights`] — every `Wt` cell in that block was re-read live over Excel COM. Not `F16Baseline.m`, which is the older ground truth `fidelity_comparison.m` uses.
+**Reference** (the `Reference` and `%Diff` columns): Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.weights`] — every `Wt` cell in that block was re-read live over Excel COM.
 
-**2nd Source** (the `2nd Source` column): `corrections.xls` (Casey's revised-weight workbook, per `F16Baseline.m:136`) where it carries a figure. That is a **second, different source** — *not* the original Brandt `Wt!*` cell. For OEW the two are **19,980.70** (`Brandt Wt!B12`, the Reference) and **19,148.08** (`corrections.xls Wt!B12`), 4.17 % apart.
+**2nd Source** (the `2nd Source` column): `corrections.xls` (Casey's revised-weight workbook, per `docs/weights_parameter_usage.md` §4) where it carries a figure. That is a **second, different source** — *not* the original Brandt `Wt!*` cell. For OEW the two are **19,980.70** (`Brandt Wt!B12`, the Reference) and **19,148.08** (`corrections.xls Wt!B12`), 4.17 % apart.
 
 This is a **comparison report, not a test** — no pass/fail assertions, not part of `run_all_tests`, and **nothing here may ever be used to backfill a unit test's expected value**. Where a quantity has more than one valid implementation, each option gets its own row, and rejected variants are reported too so the decisions stay auditable.
 

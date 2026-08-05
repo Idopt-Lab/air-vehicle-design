@@ -30,7 +30,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %   weights_parameter_usage.md §4, review finding #14):
 %       testOEWWithinBrandtValue   (expected = 19148, +-20 %, cited "Brandt B12")
 %   Brandt Wt!B12 is 19980.700578 (live-read 2026-07-25); 19,148.08 is
-%   corrections.xls Wt!B12 (Casey's revised-weight workbook, F16Baseline.m:136).
+%   corrections.xls Wt!B12 (Casey's revised-weight workbook, docs/weights_parameter_usage.md §4).
 %   Two distinct provenances ~4.3 % apart. Beyond the mis-citation, that test
 %   was anchored 4.2 % LOW, so keeping it would have biased every weight in the
 %   framework light -- and per CLAUDE.md's two-tier rule an agreement check is
@@ -46,7 +46,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %   ======================================================================== %
 %
 %   HAND-COMPUTED EXPECTED VALUES. Coefficients transcribed from
-%   temp_AI/docs/disciplines/reference_extracts/metabook_data.md:
+%   docs/reference_extracts/metabook_data.md:
 %     wing 9 lb/ft^2 :321 | H-tail 4 :322 | V-tail 5.3 :323 | fuselage 4.8 :324
 %     LG (fighter) 0.033*W0 :330 | installed engine 1.3 x bare :333
 %     all-else empty 0.17*W0 :334

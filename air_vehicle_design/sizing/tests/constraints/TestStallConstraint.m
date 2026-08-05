@@ -16,9 +16,8 @@ classdef TestStallConstraint < matlab.unittest.TestCase
 %   (get_CLmax -- already unit-tested elsewhere).
 %
 %   The F-16 Stall condition: Mach 0.217466 at sea level [Brandt F-16A.xls,
-%   "Ps" sheet, cell B10 -- see F16Baseline.m's b.constraints.stall.mach;
-%   see F16ConstraintSet.m's header note on this not yet being a
-%   Constraints.xlsx row].
+%   "Ps" sheet, cell B10; see F16ConstraintSet.m's header note on this not
+%   yet being a Constraints.xlsx row].
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};

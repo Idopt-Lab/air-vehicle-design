@@ -2,16 +2,17 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 %TESTMASTEREQUATIONCONSTRAINT  Unit tests for the MasterEquationConstraint subtree
 %   (Mattingly Master Equation) and its F-16 condition instantiations.
 %
-%   NOTE (T9, 2026-08-04): the single ThrustConstraint class was replaced by
-%   the MasterEquationConstraint subtree -- LevelFlightConstraint (n=1, Ps=0:
-%   Max Mach, Cruise, Max Alt), SustainedTurnConstraint (n>1, Ps=0: Combat
-%   Turn 1 & 2), ExcessPowerConstraint (Ps>0: Excess Power). These tests now
-%   instantiate whichever specialization matches each condition's data; the
-%   SAME hand-computed expected values are reused because the underlying
-%   Master Equation is unchanged. A few generic-algebra checks that need both
-%   n>1 and Ps>0 active at once use MasterEqTestConstraint, a thin concrete
-%   test double over the abstract MasterEquationConstraint (see that file).
-%   Renamed from TestThrustConstraint.m in the T9 refactor (2026-08-04).
+%   The MasterEquationConstraint subtree has three specializations:
+%   LevelFlightConstraint (n=1, Ps=0: Max Mach, Cruise, Max Alt),
+%   SustainedTurnConstraint (n>1, Ps=0: Combat Turn 1 & 2), and
+%   ExcessPowerConstraint (Ps>0: Excess Power). These tests instantiate
+%   whichever specialization matches each condition's data. A few
+%   generic-algebra checks that need both n>1 and Ps>0 active at once use
+%   MasterEqTestConstraint, a thin concrete test double over the abstract
+%   MasterEquationConstraint (see that file).
+%
+%   Brandt reference values are LIVE from brandt_constraint_reference (the
+%   VnV/BrandtF16A model), not a hand-transcribed table.
 %
 %   Master Equation [Mattingly, "Aircraft Engine Design," 2nd ed., AIAA,
 %   2002; see also NPTEL_Fighter_Aircraft_Sizing.ipynb], as
@@ -28,39 +29,6 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 %   simplification above -- computing that would just copy the class's own
 %   algebra back at it) using the same aero/prop discipline outputs
 %   (drag_polar, thrust_lapse -- each already unit-tested elsewhere).
-%
-%   The F-16 Max Mach condition [sizing/docs/subplans/06_constraint_analysis.md]:
-%     36,000 ft, M=1.60, n=1.0, 100% AB, Ps=0, beta=0.8997
-%   uses F16AeroL3 + F16PropL2, matching the classes TestAeroL3 and TestPropL2
-%   already validate at this exact (alt, Mach) point (F16Baseline b.constraints.dash).
-%   Per F16Baseline's own comments, Brandt's alpha/CD0/K1 at this point come
-%   from a different thrust-lapse formula and a flight-calibrated drag polar
-%   respectively -- so, consistent with TestPropL2.testLapseABAtDash (AbsTol
-%   0.10) and TestAeroL3 (positivity-only at supersonic conditions), those are
-%   diagnostic/loose checks here, not exact-match assertions.
-%
-%   NOTE ON temp_Casey (HISTORICAL -- see 2026-07-23 update below): a
-%   since-removed diagnostic test fed Brandt's own CD0/K1/K2/alpha for the
-%   Max Mach condition through the Master Equation directly (bypassing
-%   F16AeroL3/F16PropL2) and found that temp_Casey's src/Utilities/
-%   Constraints.m records MxMach K1 = 0.213727, but F16Baseline's
-%   b.constraints.dash.K1 -- 0.1251 at the time -- reproduced Brandt's
-%   original worksheet numbers (0.213727 overshot Brandt's table by a
-%   growing percentage as W/S increases, up to +1.7% by W/S=83, while
-%   0.1251 matched to a constant ~0.15% offset, i.e. pure atmosphere-model
-%   rounding). Do not port temp_Casey's K1 value for MxMach.
-%
-%   2026-07-23 UPDATE: F16Baseline's b.constraints.dash.K1 has since been
-%   changed, at user direction, from 0.1251 (the Consts-row-23 tabulated
-%   cell value the finding above validated against) to 0.276031 -- the
-%   supersonic-form K1 [Raymer 6th ed. Eq. 12.51 / Brandt's own Aero-tab
-%   k1_super_f, see F16Baseline.m's b.constraints.dash.K1 comment]. The
-%   b.constraints.dash.TW_MxMach table was recomputed to match this new K1
-%   (see that field's comment in F16Baseline.m), so it and K1 are internally
-%   consistent again, but the specific 0.1251-vs-0.213727 comparison above
-%   no longer describes what b.constraints.dash.K1 currently holds --
-%   retained as historical context for how 0.1251 was originally chosen,
-%   not as a statement about the present value.
 
     properties (Constant)
         ALPHA_ABS_TOL = 0.10   % Brandt-vs-Mattingly alpha formula mismatch, matches TestPropL2.testLapseABAtDash
@@ -72,6 +40,19 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         % propulsion fidelity available) -- same pairing fidelity_comparison.m
         % uses elsewhere (its L3 propulsion columns are NaN for the same reason).
         fidelityLevel = {'L1', 'L2', 'L3'};
+    end
+
+    properties
+        ref   % live Brandt constraint reference (brandt_constraint_reference), built once
+    end
+
+    methods (TestClassSetup)
+        function buildBrandtReference(tc)
+            % Build the Brandt discipline chain + constraint analysis once for
+            % the whole class; the diagnostic tests read WS_land / the
+            % design-point trio / WS_opt from it (replaces the retired baseline).
+            tc.ref = brandt_constraint_reference();
+        end
     end
 
     methods (Test)
@@ -291,31 +272,31 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Max Mach condition --------------------------------------
         % 36,000 ft, M=1.60, n=1.0, 100% AB, Ps=0, beta=0.8997
-        % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.dash]
+        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % (via brandt_constraint_reference)]
 
         function testF16MaxMachAlphaNearBrandt(tc)
             % thrust_lapse (AB/max power, per PropulsionBase convention) at
             % the Max Mach condition should be in the neighborhood of
             % Brandt's alpha_AB -- same AbsTol as TestPropL2.testLapseABAtDash,
             % since Brandt's formula and normalization differ from Mattingly
-            % Eq. 2.54 (F16Baseline Sec. 11 comment).
-            b     = F16Baseline();
+            % Eq. 2.54.
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
+            state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
             received = prop.thrust_lapse(state);
-            expected = b.constraints.dash.alpha_AB;   % 0.5770 [Brandt Consts AT23]
+            expected = tc.ref.eng.run(36000, 1.60, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Max Mach, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
                 'Max Mach alpha should be within 0.10 of Brandt AT23.');
         end
 
         function testF16MaxMachDragPolarK2ZeroSupersonic(tc)
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
-            state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
+            state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
             polar = aero.drag_polar(state);
+            aBr   = tc.ref.aero.run(1.60);
             fprintf('\n    Max Mach polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                polar.CD0, polar.K1, polar.K2, b.constraints.dash.CD0, b.constraints.dash.K1, b.constraints.dash.K2);
+                polar.CD0, polar.K1, polar.K2, aBr.CD0, aBr.K1, aBr.K2);
             tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
             tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
             tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, 'K2 must be 0 supersonic.');
@@ -325,7 +306,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Max Mach condition
             % at each fidelity level, alongside Brandt's full 21-point
-            % tabulated row [F16Baseline b.constraints.dash.TW_MxMach].
+            % tabulated row [Brandt Consts sheet, via brandt_constraint_reference].
             % L1/L2 still read LOW vs. Brandt (~40-51%/~47-57% across the
             % sweep) -- CD0 is a flat Cfe*Swet/Sref estimate with no Mach
             % dependence at all, so neither ever picks up the supersonic
@@ -338,36 +319,27 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % (fuselage-only wave drag) undershot even L1's flat estimate.
             % Remaining ~+3% at L3 is a known, smaller residual gap (Brandt's
             % own flight-calibrated polar vs. this framework's textbook
-            % buildup), not a Master-Equation constraint bug -- see the class header
-            % note on how the Master Equation itself was separately confirmed
-            % against Brandt's table to ~0.15%. Which F16Baseline() table this prints
-            % against ("original" Brandt F-16A.xls, or Casey's "corrected"
-            % revised-OEW recalculation) is controlled by the single manual
-            % switch in BrandtVariant.m -- edit that file, not this one, to
-            % flip it.
+            % buildup), not a Master-Equation constraint bug.
             [aero, prop] = TestMasterEquationConstraint.buildDisciplines(fidelityLevel);
 
-            variant = BrandtVariant();
-            b     = F16Baseline(variant);
-            state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
+            state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
             obj   = LevelFlightConstraint("Max Mach", state, aero, prop, 0.8997);
 
             WS_range      = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
-            brandt_MxMach = b.constraints.dash.TW_MxMach;
+            brandt_MxMach = tc.ref.run.TW_max_mach;
             TW            = obj.required_TW(WS_range);
 
             % "required"/"available" diagnostic columns on the SL-static basis
             % (matching constraint_residual's g = required - available axis) at
-            % Brandt's own actual design point (T_SL=b.engine.T_max,
-            % W_TO=b.brandt.TOGW): "required" = required_TW(WS) tracks the curve,
-            % "available" = T_SL/W_TO is the flat design-point T/W (constant
-            % across rows).
-            T_SL = b.engine.T_max;
-            W_TO = b.brandt.TOGW;
+            % Brandt's own actual design point (T_SL=ref.T_SL, W_TO=ref.TOGW):
+            % "required" = required_TW(WS) tracks the curve, "available" =
+            % T_SL/W_TO is the flat design-point T/W (constant across rows).
+            T_SL = tc.ref.T_SL;
+            W_TO = tc.ref.TOGW;
             required_vals  = zeros(size(WS_range));
             available_vals = zeros(size(WS_range));
 
-            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('\n    [%s]\n', fidelityLevel);
             fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
                 'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
@@ -386,24 +358,23 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         function testF16MaxMachRequiredTWPhysicalRange(tc)
             % Sanity check only, at Brandt's own optimal W/S -- not a match
             % to Brandt's TW_opt (~0.7576): our textbook CD0/K1 buildup is
-            % expected to differ from Brandt's flight-calibrated polar (see
-            % subplans/06_constraint_analysis.md, "Tests" section note).
-            b     = F16Baseline();
+            % expected to differ from Brandt's flight-calibrated polar.
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.dash.alt_ft, b.constraints.dash.mach);
+            state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
             obj   = LevelFlightConstraint("Max Mach", state, aero, prop, 0.8997);
 
-            TW = obj.required_TW(b.constraint.WS_opt);
+            TW = obj.required_TW(tc.ref.run.WS_opt);
             fprintf('\n    Max Mach required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
-                b.constraint.WS_opt, TW, b.constraint.TW_opt);
+                tc.ref.run.WS_opt, TW, tc.ref.run.TW_opt);
             tc.verifyGreaterThan(TW, 0.1, 'required_TW implausibly low for a supersonic-dash constraint.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end
 
         % --- F-16 Max Alt (ceiling) condition -------------------------------
         % 50,000 ft, M=0.87, n=1.0, 100% AB, Ps=0, beta=0.8997
-        % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.max_alt]
+        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % (via brandt_constraint_reference)]
         %
         % Like Max Mach (not Cruise), this condition is flown at 100% AB, so
         % prop.thrust_lapse's AB-basis convention applies directly -- no
@@ -415,23 +386,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % thrust_lapse (AB/max power, per PropulsionBase convention) at
             % the Max Alt condition should be in the neighborhood of Brandt's
             % alpha_AB -- same AbsTol as the Max Mach/Cruise alpha checks.
-            b     = F16Baseline();
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
+            state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
             received = prop.thrust_lapse(state);
-            expected = b.constraints.max_alt.alpha_AB;   % 0.17029 [Brandt Consts AT25]
+            expected = tc.ref.eng.run(50000, 0.87, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Max Alt, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
                 'Max Alt alpha should be within 0.10 of Brandt AT25.');
         end
 
         function testF16MaxAltDragPolarSubsonic(tc)
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
-            state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
+            state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
             polar = aero.drag_polar(state);
+            aBr   = tc.ref.aero.run(0.87);
             fprintf('\n    Max Alt polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                polar.CD0, polar.K1, polar.K2, b.constraints.max_alt.CD0, b.constraints.max_alt.K1, b.constraints.max_alt.K2);
+                polar.CD0, polar.K1, polar.K2, aBr.CD0, aBr.K1, aBr.K2);
             tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
             tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
         end
@@ -440,36 +410,29 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Max Alt condition
             % at each fidelity level, alongside Brandt's full 21-point
-            % tabulated row [F16Baseline b.constraints.max_alt.TW_MaxAlt].
+            % tabulated row [Brandt Consts sheet, via brandt_constraint_reference].
             % Diagnostic only, same caveats as testF16CruiseRequiredTWTable
             % (textbook CD0/K1 buildup vs. Brandt's flight-calibrated polar).
-            % Which F16Baseline() table this prints against ("original" or
-            % "corrected" -- see F16Baseline.m section 11b; Max Alt is one of
-            % the rows that shifts materially between the two) is controlled
-            % by the single manual switch in BrandtVariant.m.
             [aero, prop] = TestMasterEquationConstraint.buildDisciplines(fidelityLevel);
 
-            variant = BrandtVariant();
-            b     = F16Baseline(variant);
-            state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
+            state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
             obj   = LevelFlightConstraint("Max Alt", state, aero, prop, 0.8997);
 
             WS_range      = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
-            brandt_maxalt = b.constraints.max_alt.TW_MaxAlt;
+            brandt_maxalt = tc.ref.run.TW_max_alt;
             TW            = obj.required_TW(WS_range);
 
             % "required"/"available" diagnostic columns on the SL-static basis
             % (matching constraint_residual's g = required - available axis) at
-            % Brandt's own actual design point (T_SL=b.engine.T_max,
-            % W_TO=b.brandt.TOGW): "required" = required_TW(WS) tracks the curve,
-            % "available" = T_SL/W_TO is the flat design-point T/W (constant
-            % across rows).
-            T_SL = b.engine.T_max;
-            W_TO = b.brandt.TOGW;
+            % Brandt's own actual design point (T_SL=ref.T_SL, W_TO=ref.TOGW):
+            % "required" = required_TW(WS) tracks the curve, "available" =
+            % T_SL/W_TO is the flat design-point T/W (constant across rows).
+            T_SL = tc.ref.T_SL;
+            W_TO = tc.ref.TOGW;
             required_vals  = zeros(size(WS_range));
             available_vals = zeros(size(WS_range));
 
-            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('\n    [%s]\n', fidelityLevel);
             fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
                 'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
@@ -489,22 +452,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Cruise).
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.max_alt.alt_ft, b.constraints.max_alt.mach);
+            state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
             obj   = LevelFlightConstraint("Max Alt", state, aero, prop, 0.8997);
 
-            TW = obj.required_TW(b.constraint.WS_opt);
+            TW = obj.required_TW(tc.ref.run.WS_opt);
             fprintf('\n    Max Alt required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
-                b.constraint.WS_opt, TW, b.constraint.TW_opt);
+                tc.ref.run.WS_opt, TW, tc.ref.run.TW_opt);
             tc.verifyGreaterThan(TW, 0.01, 'required_TW implausibly low.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end
 
         % --- F-16 Combat Turn 1 (subsonic) condition -------------------------
         % 20,000 ft, M=0.87, n=4.5, 100% AB, Ps=0, beta=0.8997
-        % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.combat_sub]
+        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % (via brandt_constraint_reference)]
         %
         % Like Max Mach and Max Alt (not Cruise), this condition is flown at
         % 100% AB, so prop.thrust_lapse's AB-basis convention applies
@@ -518,23 +481,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % the Combat Turn 1 condition should be in the neighborhood of
             % Brandt's alpha_AB -- same AbsTol as the Max Mach/Max Alt/Cruise
             % alpha checks.
-            b     = F16Baseline();
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
+            state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
             received = prop.thrust_lapse(state);
-            expected = b.constraints.combat_sub.alpha_AB;   % 0.681777 [Brandt Consts AT26]
+            expected = tc.ref.eng.run(20000, 0.87, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Combat Turn 1, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
                 'Combat Turn 1 alpha should be within 0.10 of Brandt AT26.');
         end
 
         function testF16CombatSubDragPolarSubsonic(tc)
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
-            state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
+            state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
             polar = aero.drag_polar(state);
+            aBr   = tc.ref.aero.run(0.87);
             fprintf('\n    Combat Turn 1 polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                polar.CD0, polar.K1, polar.K2, b.constraints.combat_sub.CD0, b.constraints.combat_sub.K1, b.constraints.combat_sub.K2);
+                polar.CD0, polar.K1, polar.K2, aBr.CD0, aBr.K1, aBr.K2);
             tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
             tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
         end
@@ -543,39 +505,32 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Combat Turn 1
             % condition at each fidelity level, alongside Brandt's full
-            % 21-point tabulated row [F16Baseline b.constraints.combat_sub.
-            % TW_CombatSub]. Diagnostic only, same caveats as
+            % 21-point tabulated row [Brandt Consts sheet, via
+            % brandt_constraint_reference]. Diagnostic only, same caveats as
             % testF16MaxAltRequiredTWTable (textbook CD0/K1 buildup vs.
             % Brandt's flight-calibrated polar) -- n=4.5 also means the K1
             % (induced-drag) term dominates far more here than at the n=1.0
             % conditions, so any K1 buildup gap will show up amplified.
-            % Which F16Baseline() table this prints against ("original" or
-            % "corrected" -- see F16Baseline.m section 11b; Combat Turn 1 is
-            % one of the rows that shifts materially between the two) is
-            % controlled by the single manual switch in BrandtVariant.m.
             [aero, prop] = TestMasterEquationConstraint.buildDisciplines(fidelityLevel);
 
-            variant = BrandtVariant();
-            b     = F16Baseline(variant);
-            state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
-            obj   = SustainedTurnConstraint("Combat Turn 1", state, aero, prop, 0.8997, b.constraints.combat_sub.n);
+            state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
+            obj   = SustainedTurnConstraint("Combat Turn 1", state, aero, prop, 0.8997, 4.5);   % n=4.5
 
             WS_range         = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
-            brandt_combatsub = b.constraints.combat_sub.TW_CombatSub;
+            brandt_combatsub = tc.ref.run.TW_combat_turn_sub;
             TW               = obj.required_TW(WS_range);
 
             % "required"/"available" diagnostic columns on the SL-static basis
             % (matching constraint_residual's g = required - available axis) at
-            % Brandt's own actual design point (T_SL=b.engine.T_max,
-            % W_TO=b.brandt.TOGW): "required" = required_TW(WS) tracks the curve,
-            % "available" = T_SL/W_TO is the flat design-point T/W (constant
-            % across rows).
-            T_SL = b.engine.T_max;
-            W_TO = b.brandt.TOGW;
+            % Brandt's own actual design point (T_SL=ref.T_SL, W_TO=ref.TOGW):
+            % "required" = required_TW(WS) tracks the curve, "available" =
+            % T_SL/W_TO is the flat design-point T/W (constant across rows).
+            T_SL = tc.ref.T_SL;
+            W_TO = tc.ref.TOGW;
             required_vals  = zeros(size(WS_range));
             available_vals = zeros(size(WS_range));
 
-            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('\n    [%s]\n', fidelityLevel);
             fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
                 'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
@@ -595,22 +550,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.combat_sub.alt_ft, b.constraints.combat_sub.mach);
-            obj   = SustainedTurnConstraint("Combat Turn 1", state, aero, prop, 0.8997, b.constraints.combat_sub.n);
+            state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
+            obj   = SustainedTurnConstraint("Combat Turn 1", state, aero, prop, 0.8997, 4.5);   % n=4.5
 
-            TW = obj.required_TW(b.constraint.WS_opt);
+            TW = obj.required_TW(tc.ref.run.WS_opt);
             fprintf('\n    Combat Turn 1 required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
-                b.constraint.WS_opt, TW, b.constraint.TW_opt);
+                tc.ref.run.WS_opt, TW, tc.ref.run.TW_opt);
             tc.verifyGreaterThan(TW, 0.01, 'required_TW implausibly low.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end
 
         % --- F-16 Combat Turn 2 (supersonic) condition -----------------------
         % 36,000 ft, M=1.4, n=1.4, 100% AB, Ps=0, beta=0.8997
-        % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.combat_sup]
+        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % (via brandt_constraint_reference)]
         %
         % Like Combat Turn 1, this condition is flown at 100% AB, so
         % prop.thrust_lapse's AB-basis convention applies directly. Like Max
@@ -620,11 +575,10 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % thrust_lapse (AB/max power, per PropulsionBase convention) at
             % the Combat Turn 2 condition should be in the neighborhood of
             % Brandt's alpha_AB -- same AbsTol as the other AB conditions.
-            b     = F16Baseline();
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
+            state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
             received = prop.thrust_lapse(state);
-            expected = b.constraints.combat_sup.alpha_AB;   % 0.556558 [Brandt Consts AT27]
+            expected = tc.ref.eng.run(36000, 1.40, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Combat Turn 2, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
                 'Combat Turn 2 alpha should be within 0.10 of Brandt AT27.');
@@ -632,16 +586,16 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         function testF16CombatSupDragPolarK2ZeroSupersonic(tc)
             % Same K2=0 supersonic assumption as Max Mach (M=1.4 > 1 here
-            % too). Brandt's own K2 for this row is -0.00105, not exactly
-            % zero [F16Baseline combat_sup.K2 comment] -- printed for
-            % reference, not asserted against, per this framework's own
-            % linearized-theory K2=0 supersonic assumption (AeroL1.K2_value).
-            b     = F16Baseline();
+            % too). Brandt's own K2 for this row is not exactly zero --
+            % printed for reference, not asserted against, per this
+            % framework's own linearized-theory K2=0 supersonic assumption
+            % (AeroL1.K2_value).
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
-            state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
+            state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
             polar = aero.drag_polar(state);
+            aBr   = tc.ref.aero.run(1.40);
             fprintf('\n    Combat Turn 2 polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                polar.CD0, polar.K1, polar.K2, b.constraints.combat_sup.CD0, b.constraints.combat_sup.K1, b.constraints.combat_sup.K2);
+                polar.CD0, polar.K1, polar.K2, aBr.CD0, aBr.K1, aBr.K2);
             tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
             tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
             tc.verifyEqual(polar.K2, 0, 'AbsTol', 1e-12, 'K2 must be 0 supersonic.');
@@ -651,8 +605,8 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Combat Turn 2
             % condition at each fidelity level, alongside Brandt's full
-            % 21-point tabulated row [F16Baseline b.constraints.combat_sup.
-            % TW_CombatSup]. Diagnostic only, same caveats as
+            % 21-point tabulated row [Brandt Consts sheet, via
+            % brandt_constraint_reference]. Diagnostic only, same caveats as
             % testF16MaxMachRequiredTWTable: L1/L2 still read far LOW vs.
             % Brandt (~30-54%/~44-63%, no Mach-dependent CD0 at all), while
             % L3 now reads much closer (~8.4-8.9% low across the sweep) since
@@ -660,33 +614,26 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Amax/length instead of a fuselage-only approximation (see
             % F16AeroL3.md) -- textbook CD0/K1 buildup vs.
             % Brandt's flight-calibrated polar accounts for the remainder.
-            % Which F16Baseline() table this prints against ("original" or
-            % "corrected" -- see F16Baseline.m section 11b; Combat Turn 2 is
-            % essentially unchanged between the two) is controlled by the
-            % single manual switch in BrandtVariant.m.
             [aero, prop] = TestMasterEquationConstraint.buildDisciplines(fidelityLevel);
 
-            variant = BrandtVariant();
-            b     = F16Baseline(variant);
-            state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
-            obj   = SustainedTurnConstraint("Combat Turn 2", state, aero, prop, 0.8997, b.constraints.combat_sup.n);
+            state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
+            obj   = SustainedTurnConstraint("Combat Turn 2", state, aero, prop, 0.8997, 1.4);   % n=1.4
 
             WS_range         = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
-            brandt_combatsup = b.constraints.combat_sup.TW_CombatSup;
+            brandt_combatsup = tc.ref.run.TW_combat_turn_sup;
             TW               = obj.required_TW(WS_range);
 
             % "required"/"available" diagnostic columns on the SL-static basis
             % (matching constraint_residual's g = required - available axis) at
-            % Brandt's own actual design point (T_SL=b.engine.T_max,
-            % W_TO=b.brandt.TOGW): "required" = required_TW(WS) tracks the curve,
-            % "available" = T_SL/W_TO is the flat design-point T/W (constant
-            % across rows).
-            T_SL = b.engine.T_max;
-            W_TO = b.brandt.TOGW;
+            % Brandt's own actual design point (T_SL=ref.T_SL, W_TO=ref.TOGW):
+            % "required" = required_TW(WS) tracks the curve, "available" =
+            % T_SL/W_TO is the flat design-point T/W (constant across rows).
+            T_SL = tc.ref.T_SL;
+            W_TO = tc.ref.TOGW;
             required_vals  = zeros(size(WS_range));
             available_vals = zeros(size(WS_range));
 
-            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('\n    [%s]\n', fidelityLevel);
             fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
                 'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
@@ -706,22 +653,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.combat_sup.alt_ft, b.constraints.combat_sup.mach);
-            obj   = SustainedTurnConstraint("Combat Turn 2", state, aero, prop, 0.8997, b.constraints.combat_sup.n);
+            state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
+            obj   = SustainedTurnConstraint("Combat Turn 2", state, aero, prop, 0.8997, 1.4);   % n=1.4
 
-            TW = obj.required_TW(b.constraint.WS_opt);
+            TW = obj.required_TW(tc.ref.run.WS_opt);
             fprintf('\n    Combat Turn 2 required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
-                b.constraint.WS_opt, TW, b.constraint.TW_opt);
+                tc.ref.run.WS_opt, TW, tc.ref.run.TW_opt);
             tc.verifyGreaterThan(TW, 0.1, 'required_TW implausibly low for a supersonic-turn constraint.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end
 
         % --- F-16 Cruise condition ------------------------------------------
         % 36,000 ft, M=0.87, n=1.0, 0% AB (dry/mil power), Ps=0, beta=0.8997
-        % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.cruise]
+        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % (via brandt_constraint_reference)]
         %
         % ALPHA BASIS (updated): Cruise is flown at 0% AB/dry (mil) power, so
         % it needs a mil-power thrust lapse rather than prop.thrust_lapse's
@@ -747,11 +694,10 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % equation actually uses (T_mil/T_SL_AB). Same AbsTol as the
             % Max Mach alpha check; the paired implementation agent's sanity
             % check found this lands ~0.032 absolute off, well inside it.
-            b     = F16Baseline();
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
+            state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
             received = prop.thrust_lapse_mil_on_AB_scale(state);
-            expected = b.constraints.cruise.alpha_mil_T_AB;   % 0.171083 [Brandt Consts AU24]
+            expected = tc.ref.eng.run(36000, 0.87, 0.0).alpha_AB_ref;   % [Brandt Consts, mil/dry -> alpha_mil_T_AB]
             fprintf('\n    alpha (Cruise, mil-on-AB-scale basis): received=%.4f  Brandt alpha_mil_T_AB=%.4f\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
@@ -759,12 +705,12 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         end
 
         function testF16CruiseDragPolarSubsonic(tc)
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
-            state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
+            state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
             polar = aero.drag_polar(state);
+            aBr   = tc.ref.aero.run(0.87);
             fprintf('\n    Cruise polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                polar.CD0, polar.K1, polar.K2, b.constraints.cruise.CD0, b.constraints.cruise.K1, b.constraints.cruise.K2);
+                polar.CD0, polar.K1, polar.K2, aBr.CD0, aBr.K1, aBr.K2);
             tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
             tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
         end
@@ -773,8 +719,8 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Cruise condition at
             % each fidelity level, alongside Brandt's full 21-point tabulated
-            % row [F16Baseline b.constraints.cruise.TW_Cruise]. Constructed
-            % with powerSetting="mil" so alpha is drawn from
+            % row [Brandt Consts sheet, via brandt_constraint_reference].
+            % Constructed with powerSetting="mil" so alpha is drawn from
             % thrust_lapse_mil_on_AB_scale (see this section's header
             % comment). At L2/L3 (F16PropL2's real mil-power model) expect
             % our values to read much closer to Brandt's table now -- most of
@@ -782,34 +728,27 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % CD0/K1 buildup-vs-flight-calibration gap already seen at
             % Max Mach. At L1 (F16PropL1, no mil-power model, silently falls
             % back to the AB-basis lapse) expect values to still read LOW vs.
-            % Brandt, same as before this fix. Which F16Baseline() table this
-            % prints against ("original" or "corrected" -- see F16Baseline.m
-            % section 11b; Cruise is one of the rows that shifts materially
-            % between the two) is controlled by the single manual switch in
-            % BrandtVariant.m.
+            % Brandt, same as before this fix.
             [aero, prop] = TestMasterEquationConstraint.buildDisciplines(fidelityLevel);
 
-            variant = BrandtVariant();
-            b     = F16Baseline(variant);
-            state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
+            state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
             obj   = LevelFlightConstraint("Cruise", state, aero, prop, 0.8997, "mil");
 
             WS_range     = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
-            brandt_cruise = b.constraints.cruise.TW_Cruise;
+            brandt_cruise = tc.ref.run.TW_cruise;
             TW           = obj.required_TW(WS_range);
 
             % "required"/"available" diagnostic columns on the SL-static basis
             % (matching constraint_residual's g = required - available axis) at
-            % Brandt's own actual design point (T_SL=b.engine.T_max,
-            % W_TO=b.brandt.TOGW): "required" = required_TW(WS) tracks the curve,
-            % "available" = T_SL/W_TO is the flat design-point T/W (constant
-            % across rows).
-            T_SL = b.engine.T_max;
-            W_TO = b.brandt.TOGW;
+            % Brandt's own actual design point (T_SL=ref.T_SL, W_TO=ref.TOGW):
+            % "required" = required_TW(WS) tracks the curve, "available" =
+            % T_SL/W_TO is the flat design-point T/W (constant across rows).
+            T_SL = tc.ref.T_SL;
+            W_TO = tc.ref.TOGW;
             required_vals  = zeros(size(WS_range));
             available_vals = zeros(size(WS_range));
 
-            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('\n    [%s]\n', fidelityLevel);
             fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
                 'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
@@ -830,22 +769,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % match to Brandt's TW_opt, though constructed with
             % powerSetting="mil" (see this section's header comment) so it's
             % now much closer than before this fix.
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.cruise.alt_ft, b.constraints.cruise.mach);
+            state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
             obj   = LevelFlightConstraint("Cruise", state, aero, prop, 0.8997, "mil");
 
-            TW = obj.required_TW(b.constraint.WS_opt);
+            TW = obj.required_TW(tc.ref.run.WS_opt);
             fprintf('\n    Cruise required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
-                b.constraint.WS_opt, TW, b.constraint.TW_opt);
+                tc.ref.run.WS_opt, TW, tc.ref.run.TW_opt);
             tc.verifyGreaterThan(TW, 0.01, 'required_TW implausibly low.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end
 
         % --- F-16 Excess Power (Ps) condition --------------------------------
         % 10,000 ft, M=0.87, n=1.0, 100% AB, Ps=500 ft/s, beta=0.8997
-        % [subplans/06_constraint_analysis.md; F16Baseline b.constraints.ps]
+        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % (via brandt_constraint_reference)]
         %
         % Like Max Alt/Combat Turn 1/Combat Turn 2 (not Cruise), this
         % condition is flown at 100% AB, so prop.thrust_lapse's AB-basis
@@ -860,23 +799,22 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % thrust_lapse (AB/max power, per PropulsionBase convention) at
             % the Ps condition should be in the neighborhood of Brandt's
             % alpha_AB -- same AbsTol as the other AB conditions.
-            b     = F16Baseline();
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
+            state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             received = prop.thrust_lapse(state);
-            expected = b.constraints.ps.alpha_AB;   % 0.853550 [Brandt Consts AT28]
+            expected = tc.ref.eng.run(10000, 0.87, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Ps, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
                 'Ps alpha should be within 0.10 of Brandt AT28.');
         end
 
         function testF16PsDragPolarSubsonic(tc)
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
-            state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
+            state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             polar = aero.drag_polar(state);
+            aBr   = tc.ref.aero.run(0.87);
             fprintf('\n    Ps polar: CD0=%.5f  K1=%.5f  K2=%.5f  (Brandt: CD0=%.5f K1=%.5f K2=%.5f)\n', ...
-                polar.CD0, polar.K1, polar.K2, b.constraints.ps.CD0, b.constraints.ps.K1, b.constraints.ps.K2);
+                polar.CD0, polar.K1, polar.K2, aBr.CD0, aBr.K1, aBr.K2);
             tc.verifyGreaterThan(polar.CD0, 0, 'CD0 must be positive.');
             tc.verifyGreaterThanOrEqual(polar.K1, 0, 'K1 must be non-negative.');
         end
@@ -885,37 +823,30 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Prints the full required_TW(W/S) table this framework's own
             % aero+prop discipline objects produce for the Ps condition at
             % each fidelity level, alongside Brandt's full 21-point tabulated
-            % row [F16Baseline b.constraints.ps.TW_Ps]. Diagnostic only, same
-            % caveats as testF16MaxAltRequiredTWTable (textbook CD0/K1 buildup
-            % vs. Brandt's flight-calibrated polar). Which F16Baseline()
-            % table this prints against ("original" or "corrected" -- see
-            % F16Baseline.m section 11b; Ps is essentially unchanged between
-            % the two) is controlled by the single manual switch in
-            % BrandtVariant.m.
+            % row [Brandt Consts sheet, via brandt_constraint_reference].
+            % Diagnostic only, same caveats as testF16MaxAltRequiredTWTable
+            % (textbook CD0/K1 buildup vs. Brandt's flight-calibrated polar).
             [aero, prop] = TestMasterEquationConstraint.buildDisciplines(fidelityLevel);
 
-            variant = BrandtVariant();
-            b     = F16Baseline(variant);
-            state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
+            state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             obj   = ExcessPowerConstraint("Excess Power", state, aero, prop, 0.8997, ...
-                b.constraints.ps.Ps_fps);   % ps.n = 1, fixed by ExcessPowerConstraint
+                500);   % Ps=500 ft/s; n=1 fixed by ExcessPowerConstraint
 
             WS_range   = obj.WS_RANGE_BRANDT;      % Brandt's own 20:7:160 sweep (21 points)
-            brandt_ps  = b.constraints.ps.TW_Ps;
+            brandt_ps  = tc.ref.run.TW_ps500;
             TW         = obj.required_TW(WS_range);
 
             % "required"/"available" diagnostic columns on the SL-static basis
             % (matching constraint_residual's g = required - available axis) at
-            % Brandt's own actual design point (T_SL=b.engine.T_max,
-            % W_TO=b.brandt.TOGW): "required" = required_TW(WS) tracks the curve,
-            % "available" = T_SL/W_TO is the flat design-point T/W (constant
-            % across rows).
-            T_SL = b.engine.T_max;
-            W_TO = b.brandt.TOGW;
+            % Brandt's own actual design point (T_SL=ref.T_SL, W_TO=ref.TOGW):
+            % "required" = required_TW(WS) tracks the curve, "available" =
+            % T_SL/W_TO is the flat design-point T/W (constant across rows).
+            T_SL = tc.ref.T_SL;
+            W_TO = tc.ref.TOGW;
             required_vals  = zeros(size(WS_range));
             available_vals = zeros(size(WS_range));
 
-            fprintf('\n    [%s, %s]\n', fidelityLevel, variant);
+            fprintf('\n    [%s]\n', fidelityLevel);
             fprintf('    %6s  %12s  %12s  %10s  %12s  %12s\n', ...
                 'W/S', 'Our T/W', 'Brandt T/W', 'diff %', 'required', 'available');
             for i = 1:numel(WS_range)
@@ -935,16 +866,15 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
+            state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             obj   = ExcessPowerConstraint("Excess Power", state, aero, prop, 0.8997, ...
-                b.constraints.ps.Ps_fps);   % ps.n = 1, fixed by ExcessPowerConstraint
+                500);   % Ps=500 ft/s; n=1 fixed by ExcessPowerConstraint
 
-            TW = obj.required_TW(b.constraint.WS_opt);
+            TW = obj.required_TW(tc.ref.run.WS_opt);
             fprintf('\n    Ps required_TW at Brandt WS_opt=%.2f: %.4f  (Brandt TW_opt=%.4f, reference only)\n', ...
-                b.constraint.WS_opt, TW, b.constraint.TW_opt);
+                tc.ref.run.WS_opt, TW, tc.ref.run.TW_opt);
             tc.verifyGreaterThan(TW, 0.01, 'required_TW implausibly low.');
             tc.verifyLessThan(TW, 5.0, 'required_TW implausibly high -- check for a gross error.');
         end
@@ -957,20 +887,19 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % condition evaluated at Ps=0 (sustained level flight) -- i.e.
             % that ExcessPowerConstraint is actually using the nonzero Ps input,
             % not silently ignoring it.
-            b     = F16Baseline();
             aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
-            state = AircraftState(b.constraints.ps.alt_ft, b.constraints.ps.mach);
-            WS    = b.constraint.WS_opt;
+            state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
+            WS    = tc.ref.run.WS_opt;
+            Ps    = 500;   % Ps=500 ft/s
 
-            obj_ps0 = LevelFlightConstraint("Ps=0 reference", state, aero, prop, 0.8997);  % ps.n = 1
-            obj_ps  = ExcessPowerConstraint("Excess Power", state, aero, prop, 0.8997, ...
-                b.constraints.ps.Ps_fps);
+            obj_ps0 = LevelFlightConstraint("Ps=0 reference", state, aero, prop, 0.8997);  % n=1
+            obj_ps  = ExcessPowerConstraint("Excess Power", state, aero, prop, 0.8997, Ps);
 
             TW_ps0 = obj_ps0.required_TW(WS);
             TW_ps  = obj_ps.required_TW(WS);
             fprintf('\n    required_TW at WS=%.2f: Ps=0 -> %.4f, Ps=%d ft/s -> %.4f\n', ...
-                WS, TW_ps0, b.constraints.ps.Ps_fps, TW_ps);
+                WS, TW_ps0, Ps, TW_ps);
             tc.verifyGreaterThan(TW_ps, TW_ps0, ...
                 'Nonzero Ps must increase required T/W relative to sustained (Ps=0) flight.');
         end

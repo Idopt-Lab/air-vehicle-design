@@ -25,7 +25,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %       testOEWWithinBroadBounds  (expected = 19148, +-40 %, cited "Brandt B12")
 %       testOEWPrintBreakdown     (verifyTrue(true) diagnostic, hardcoded 19148)
 %   Brandt Wt!B12 is 19980.700578 (live-read 2026-07-25); 19,148.08 is
-%   corrections.xls Wt!B12 (Casey's revised-weight workbook, F16Baseline.m:136).
+%   corrections.xls Wt!B12 (Casey's revised-weight workbook, docs/weights_parameter_usage.md §4).
 %   A +-40 % tolerance on a mis-cited target is not a unit test, and per
 %   CLAUDE.md's two-tier rule an agreement check is not one either. Both figures
 %   and the whole per-group breakdown now live in

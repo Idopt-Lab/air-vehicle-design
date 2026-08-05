@@ -18,16 +18,16 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 %   elsewhere).
 %
 %   testEquationReproducesBrandtLandingPoint plugs Brandt's own landing
-%   inputs (mu=0.50, CLmax_land=1.4288, CD0=0.062, K1/K2 from
-%   b.constraints.landing) into a FixedAeroStub (test-only AerodynamicsBase
-%   returning fixed values) and drives the ACTUAL LandingConstraint.WS_max()
-%   production code path with it -- not a hand-rederived copy of the formula
-%   -- checking it lands within 0.1% of F16Baseline's
-%   b.constraints.landing.WS_land=138.742. This validates the equation as
-%   coded, independent of which aero discipline object supplies CLmax/CD0.
+%   inputs (mu=0.50, CLmax_land=1.4288, CD0=0.062, K1/K2 -- Brandt Consts
+%   row 33) into a FixedAeroStub (test-only AerodynamicsBase returning fixed
+%   values) and drives the ACTUAL LandingConstraint.WS_max() production code
+%   path with it -- not a hand-rederived copy of the formula -- checking it
+%   lands within 0.1% of Brandt's tabulated WS_land=138.742. This validates
+%   the equation as coded, independent of which aero discipline object
+%   supplies CLmax/CD0.
 %
-%   The F-16 Landing field condition [subplans/06_constraint_analysis.md
-%   "Field constraints" table]: sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50,
+%   The F-16 Landing field condition [examples/F16A/mds/f16a_requirements.md
+%   field-condition table]: sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50,
 %   beta=1.0. testF16LandingWSMaxByFidelityLevel (parameterized over L1/L2/L3)
 %   computes each fidelity level's OWN flapped-landing CLmax/CD0
 %   (get_CLmax_L() + clean-CD0-plus-get_Delta_CD0_L(), the same assembly
@@ -44,6 +44,19 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};
+    end
+
+    properties
+        ref   % live Brandt constraint reference (brandt_constraint_reference), built once
+    end
+
+    methods (TestClassSetup)
+        function buildBrandtReference(tc)
+            % Build the Brandt discipline chain + constraint analysis once for
+            % the whole class; the diagnostic tests read WS_land / the
+            % design-point trio / WS_opt from it (replaces baseline/F16Baseline.m).
+            tc.ref = brandt_constraint_reference();
+        end
     end
 
     methods (Test)
@@ -122,21 +135,23 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         function testEquationReproducesBrandtLandingPoint(tc)
             % Plugs Brandt's own landing inputs directly into the same
             % equation LandingConstraint.m implements (mu*CLmax_land +
-            % 0.83*CD0_land form) and checks it lands within 0.1% of
-            % F16Baseline's b.constraints.landing.WS_land=138.742 [Brandt
-            % F-16A.xls Consts sheet, row 33]. This validates the equation
-            % itself against Brandt's worksheet -- separate from
-            % testWSMaxMatchesHandComputedEquation's generic algebra check
-            % and from testF16LandingWSMaxByFidelityLevel's aero-driven
-            % (flapped CLmax/CD0 per fidelity level, not expected to match
-            % exactly) comparison.
-            b = F16Baseline();
-
+            % 0.83*CD0_land form) and checks it lands within 0.1% of Brandt's
+            % own tabulated WS_land=138.742 [Brandt F-16A.xls Consts sheet,
+            % row 33]. This validates the equation itself against Brandt's
+            % worksheet -- separate from testWSMaxMatchesHandComputedEquation's
+            % generic algebra check and from testF16LandingWSMaxByFidelityLevel's
+            % aero-driven (flapped CLmax/CD0 per fidelity level, not expected
+            % to match exactly) comparison.
+            %
+            % Brandt's own landing inputs and the tabulated result are
+            % documented inline as Brandt-cited literals: this is an
+            % equation-reproduction check, so the inputs and target are fixed
+            % by Brandt's Consts row 33, not read live.
             mu    = 0.50;
-            CLmax = b.brandt.CLmax_land;        % 1.4288 [Brandt L10]
-            CD0   = b.constraints.landing.CD0;  % 0.062 [Brandt Consts row 33]
-            K1    = b.constraints.landing.K1;   % 0.11603 [Brandt Consts row 33]
-            K2    = b.constraints.landing.K2;   % -0.0066 [Brandt Consts row 33]
+            CLmax = 1.4288;    % [Brandt Aero!L10]
+            CD0   = 0.062;     % [Brandt Consts row 33]
+            K1    = 0.11603;   % [Brandt Consts row 33]
+            K2    = -0.0066;   % [Brandt Consts row 33]
             S_FR  = 4000;
             k_L   = 1.3;
             beta  = 1.0;
@@ -155,7 +170,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             obj = LandingConstraint("Landing", state, stub, S_FR, mu, beta, k_L);
 
             received = obj.WS_max();
-            expected = b.constraints.landing.WS_land;
+            expected = 138.742;   % [Brandt F-16A.xls Consts row 33, WS_land]
 
             fprintf('\n    Landing WS_max (Brandt inputs): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 1e-3, ...
@@ -284,23 +299,22 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
         function testF16LandingConstraintResidualAtBrandtDesignPoint(tc)
             % Diagnostic only: evaluates constraint_residual at Brandt's own
-            % actual design point (W_TO=b.brandt.TOGW, S_ref=b.geom.S_ref ->
-            % dp.WS=b.constraint.WS_opt=104.59) using this framework's own L1
-            % flapped-landing WS_max() (get_CLmax_L/get_Delta_CD0_L) -- still
-            % built from textbook estimates, not Brandt's flight-calibrated
-            % flapped values (class header, "NOTE ON CLmax/CD0 BASIS"), so it
-            % may still not match Brandt's flapped WS_land=138.742 and the sign
-            % of g here is not asserted -- printed for visibility, not asserted
-            % for closeness. T_SL is a placeholder (unused by a W/S wall).
-            b     = F16Baseline();
+            % actual design point (W_TO=ref.TOGW, S_ref=ref.S_ref) using this
+            % framework's own L1 flapped-landing WS_max() (get_CLmax_L/
+            % get_Delta_CD0_L) -- still built from textbook estimates, not
+            % Brandt's flight-calibrated flapped values (class header, "NOTE ON
+            % CLmax/CD0 BASIS"), so it may still not match Brandt's flapped
+            % WS_land and the sign of g here is not asserted -- printed for
+            % visibility, not asserted for closeness. T_SL is a placeholder
+            % (unused by a W/S wall).
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Landing", state, aero, 4000, 0.5);
 
-            dp = DesignPoint(b.brandt.TOGW, b.engine.T_max, b.geom.S_ref);
+            dp = DesignPoint(tc.ref.TOGW, tc.ref.T_SL, tc.ref.S_ref);
             g  = obj.constraint_residual(dp);
             fprintf('\n    Landing at Brandt''s design point (WS_opt=%.2f): WS_max=%.2f  dp.WS=%.2f  g=%.4f\n', ...
-                b.constraint.WS_opt, obj.WS_max(), dp.WS, g);
+                tc.ref.run.WS_opt, obj.WS_max(), dp.WS, g);
             tc.verifyTrue(isfinite(obj.WS_max()), 'WS_max() must be finite at Brandt''s design point.');
             tc.verifyTrue(isfinite(g), 'constraint_residual must be finite at Brandt''s design point.');
         end
@@ -336,7 +350,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
         % --- F-16 Landing field condition -----------------------------------
         % Sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50, beta=1.0
-        % [subplans/06_constraint_analysis.md "Field constraints" table]
+        % [examples/F16A/mds/f16a_requirements.md field-condition table]
 
         function testF16LandingWSMaxByFidelityLevel(tc, fidelityLevel)
             % Computes the F-16 landing wing-loading limit at each fidelity
@@ -351,11 +365,10 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % the clean drag polar -- this framework has no separate flapped
             % K1/K2 variant, matching Brandt's own Consts sheet, which reuses
             % the same K1=0.11603/K2=-0.0066 for both the takeoff (row 32)
-            % and landing (row 33) rows [F16Baseline b.constraints.landing].
-            % Which F16Baseline() table this prints against ("original" or
-            % "corrected" -- see F16Baseline.m section 11b; Landing's WS_land
-            % is essentially unchanged between the two) is controlled by the
-            % single manual switch in BrandtVariant.m.
+            % and landing (row 33) rows [Brandt Consts sheet]. The reference
+            % W/S it prints against comes from BrandtConstraintAnalysis's live
+            % landing() wall (via brandt_constraint_reference), not a hardcoded
+            % table.
             %
             % Prints, organized by fidelity level: the CD0/K1/K2/CLmax used,
             % the computed W/S, Brandt's reference W/S (138.742), and the
@@ -367,8 +380,6 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % flap-vs-clean bases (see testEquationReproducesBrandtLandingPoint,
             % which confirms the EQUATION itself reproduces Brandt exactly
             % when fed Brandt's own flapped numbers).
-            variant = BrandtVariant();
-            b = F16Baseline(variant);
             [~, CLmax_land, CD0_land, K1, K2] = TestLandingConstraint.landingAeroValues(fidelityLevel);
 
             stub  = FixedAeroStub(CLmax_land, CD0_land, K1, K2);
@@ -376,17 +387,17 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             obj   = LandingConstraint("Landing", state, stub, 4000, 0.50, 1.0, 1.3);
 
             WS_computed = obj.WS_max();
-            WS_expected = b.constraints.landing.WS_land;
+            WS_expected = tc.ref.run.WS_landing_max;   % live Brandt Consts-row-33 wall
             pct_error   = 100 * (WS_computed - WS_expected) / WS_expected;
 
-            fprintf('\n    ==================== Fidelity Level: %s (%s) ====================\n', fidelityLevel, variant);
+            fprintf('\n    ==================== Fidelity Level: %s ====================\n', fidelityLevel);
             fprintf('    Aerodynamics used (flapped landing config):\n');
             fprintf('      CD0    = %.5f\n', CD0_land);
             fprintf('      K1     = %.5f\n', K1);
             fprintf('      K2     = %.5f\n', K2);
             fprintf('      CL_max = %.4f\n', CLmax_land);
             fprintf('    Computed W/S = %.3f lbf/ft^2\n', WS_computed);
-            fprintf('    Expected W/S = %.3f lbf/ft^2  (Brandt, F16Baseline b.constraints.landing.WS_land)\n', WS_expected);
+            fprintf('    Expected W/S = %.3f lbf/ft^2  (Brandt Consts row 33, via brandt_constraint_reference)\n', WS_expected);
             fprintf('    Relative error = %.2f%%\n', pct_error);
 
             tc.verifyGreaterThan(WS_computed, 0, sprintf('[%s] WS_max must be positive.', fidelityLevel));

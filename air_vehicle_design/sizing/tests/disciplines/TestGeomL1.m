@@ -21,6 +21,12 @@ classdef TestGeomL1 < matlab.unittest.TestCase
     properties (Constant)
         TOGW   = 31377    % lbf   — F-16A Brandt TOGW
         W_TO_2 = 20000    % lbf   — lighter weight for sensitivity check
+
+        % Loose Brandt / physical ground-truth references, from
+        % VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json (comparison
+        % targets, not hand-computed oracles).
+        BRANDT_SWET = 1371.0946   % ft^2  [Brandt Geom!B19; geometry.whole_aircraft_S_wet_ft2.raw_buggy_total]
+        TO_LFUS     = 47.5        % ft    [T.O. 1F-16A-1; geometry.to_1f16a1.fuselage_length_ft]
     end
 
     % ------------------------------------------------------------------ %
@@ -32,8 +38,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % S_wet = 10^c * W_TO^d,  c=-0.1289, d=0.7506  [Roskam Table 3.5]
         % Formula gives ≈1762 ft^2; Brandt actual = 1371 ft^2 (~29% scatter).
         % Assert within ±30% of Brandt reference to cover known regression scatter.
-            b        = F16Baseline();
-            expected = b.brandt.S_wet;   % 1371.09 ft^2 [Brandt L3]
+            expected = tc.BRANDT_SWET;   % 1371.09 ft^2 [Brandt Geom!B19; f16a_ground_truth.json]
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             received = g.get_S_wet_statistical(tc.TOGW);
             fprintf('\n    S_wet_statistical: received = %.2f ft^2,  expected (Brandt) = %.2f ft^2\n', ...
@@ -46,8 +51,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % L_fus = a * W_TO^C,  a=0.93, C=0.39  [Raymer 6th ed. Table 6.3]
         % Formula gives ≈53.0 ft; USAF TO 1F-16A-1 = 47.5 ft (~11.6% off).
         % Assert within ±20% of USAF TO reference value.
-            b        = F16Baseline();
-            expected = b.geom.L_fus;   % 47.50 ft [T.O. 1F-16A-1, Fig. 1-2]
+            expected = tc.TO_LFUS;   % 47.50 ft [T.O. 1F-16A-1; f16a_ground_truth.json]
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             received = g.get_L_fus(tc.TOGW);
             fprintf('\n    get_L_fus:         received = %.2f ft,    expected (TO) = %.2f ft\n', ...

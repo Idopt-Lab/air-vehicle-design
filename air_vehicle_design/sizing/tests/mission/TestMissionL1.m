@@ -375,7 +375,7 @@ classdef TestMissionL1 < matlab.unittest.TestCase
             % deliberately different profiles, see subplan's CAP-vs-Brandt
             % section).
             obj  = F16MissionL1(mission_profile_path());
-            W_TO = 31377;   % F16Baseline TOGW [Brandt B38] -- common starting-weight assumption across L1/L2/L3 unit tests (user-directed 2026-07-24)
+            W_TO = 31377;   % Brandt B38 TOGW (31,377 lbf) -- common starting-weight assumption across L1/L2/L3 unit tests (user-directed 2026-07-24)
             W_fuel = obj.compute_fuel(ErroringAeroMock(), ErroringPropMock(), W_TO);
             ratio = W_fuel / W_TO;
             fprintf('\n    F16MissionL1 CAP W_fuel/W_TO = %.4f\n', ratio);
