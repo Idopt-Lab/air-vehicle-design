@@ -31,8 +31,10 @@ profileName = "F16A_PhysicalProps";
 SIZING_POINT_LB = 31377;   % Wt!B3, the same point the other /sizing/ callers use
 
 % --- The sizing cost model, reached by PATH (D-047's pattern) -------------
-costObj = loadBrandtCost();
-inp     = costObj.inp;     % the same JSON the reference is built from
+% pathGuard restores the path when this function returns; hold it, do not
+% discard it.
+[costObj, pathGuard] = loadBrandtCost();   %#ok<ASGLU>
+inp = costObj.inp;                         % the same JSON the reference is built from
 
 % --- Cross-check: is this still the aeroplane those constants price? ------
 % Checked FIRST, because it needs no OEW and it is the precondition the
@@ -100,10 +102,17 @@ miss = struct('total_fuel_lb', 1, 'total_time_min', 1);
 end
 
 % =====================================================================
-function c = loadBrandtCost()
+function [c, guard] = loadBrandtCost()
 %LOADBRANDTCOST An analyzed BrandtCost, reached by path, not project membership.
 %   /sizing/ is three levels above the example root -- the same delegation
 %   D-047 uses for the static-margin verification.
+%
+%   GUARD is an onCleanup that puts the path back. A bare addpath would leave
+%   sizing/ permanently resolvable, which is exactly what D-047's PathFixtures
+%   exist to prevent: the verification suites would then keep passing with
+%   their own fixture deleted, and a savepath after a build would bake a
+%   directory outside the project into pathdef.m for every future session.
+%   The caller must HOLD the guard for as long as it uses the returned object.
 avd = fileparts(fileparts(fileparts(f16aRoot())));
 bDir = fullfile(avd, "sizing", "VnV", "BrandtF16A");
 if ~isfolder(bDir)
@@ -112,6 +121,8 @@ if ~isfolder(bDir)
         "/sizing/ present at build time (D-043) -- restating the DAPCA IV " + ...
         "formulation here instead is not an option.", bDir);
 end
+oldPath = path();
+guard   = onCleanup(@() path(oldPath));
 addpath(bDir);
 geom = BrandtGeometry(); geom.analyze();
 eng  = BrandtEngine();   eng.analyze();

@@ -38,7 +38,10 @@ classdef F16AFuelVerificationTest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function setup(testCase)
-            addpath(f16aRoot(), fullfile(f16aRoot(),"physical"));   % roll-up fns: root now, physical/ after reorg
+            import matlab.unittest.fixtures.PathFixture
+            % A PathFixture, not a bare addpath: the suite leaves the path as
+            % it found it (D-047).
+            testCase.applyFixture(PathFixture({f16aRoot(), fullfile(f16aRoot(),"physical")}));
             testCase.addTeardown(@() bdclose("all"));
         end
     end
