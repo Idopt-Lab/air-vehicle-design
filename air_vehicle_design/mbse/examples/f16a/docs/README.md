@@ -58,18 +58,15 @@ mbse/examples/f16a/
 │   ├─ f16a_functional_derived.slreqx    derived placeholders (D01–D09)
 │   ├─ f16a_logical_derived.slreqx       decision requirements (L01–L03)
 │   ├─ f16a_physical_derived.slreqx      physical requirements (P01: fuel)
-│   ├─ generate_f16a_*requirements.m     one generator per set
-│   └─ F16ARequirementsTest.m
+│   └─ generate_f16a_*requirements.m     one generator per set
 ├─ functions/                            F layer
 │   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx
-│   ├─ generate_f16a_functional.m
-│   └─ F16AFunctionalArchitectureTest.m
+│   └─ generate_f16a_functional.m
 ├─ logical/                              L layer
 │   ├─ F16A_Logical.slx + .sldd + ~mdl.slmx
 │   ├─ F16A_LogicalOptions.xml           stereotype profile (Selected, DecisionRef)
 │   ├─ F16A_FunctionToLogical.mldatx     function → logical allocation
-│   ├─ generate_f16a_logical.m
-│   └─ F16ALogicalArchitectureTest.m
+│   └─ generate_f16a_logical.m
 ├─ physical/                             P layer
 │   ├─ F16A_Physical.slx + .sldd + ~mdl.slmx
 │   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit,
@@ -83,10 +80,15 @@ mbse/examples/f16a/
 │   │                                    be tested WITHOUT running the study
 │   ├─ F16APhysical{Mass,Materials,Fuel}Rollup.m
 │   ├─ F16APhysicalCostModel.m           calls BrandtCost for the flyaway cost (needs /sizing/)
-│   ├─ F16APhysicalMissionFuel.m         mission-fuel hook (NaN by design)
-│   ├─ F16APhysicalArchitectureTest.m    machinery: the P model is built correctly
-│   └─ F16APhysicalTradeGuardsTest.m     negative tests; touches no artifact
-└─ verification/                         requirement-verification tests
+│   └─ F16APhysicalMissionFuel.m         mission-fuel hook (NaN by design)
+├─ tests_for_ai_coding/                  MACHINERY tests — guard rails, not teaching (D-055)
+│   ├─ README.md                         what these are, and why they are not verification/
+│   ├─ F16ATestCase.m                    shared base: the walk, the readers, verifyNoOffenders
+│   ├─ F16A{Requirements,FunctionalArchitecture,LogicalArchitecture}Test.m
+│   ├─ F16APhysicalArchitectureTest.m    the P model is built correctly
+│   ├─ F16APhysicalTradeGuardsTest.m     negative tests; touches no artifact
+│   └─ run_ai_tests.m                    runs all five; every one must be green
+└─ verification/                         requirement-verification tests — the teaching payload
     ├─ F16AMaterialsVerificationTest.m   REQ_F16A_022 — green
     ├─ F16AFuelVerificationTest.m        REQ_F16A_P01 — red by design
     ├─ F16AStaticMarginVerificationTest.m  REQ_F16A_025 — 2 pass, 1 red by design
@@ -128,15 +130,18 @@ systemcomposer.allocation.editor            % the F→L and L→P allocation mat
 F16APhysicalMassRollup                      % print the mass roll-up and OEW
 F16APhysicalTradeStudy                      % re-run the trade; prints the ranked table
 
-runtests("F16ARequirementsTest")               % machinery: the four requirement sets
-runtests("F16AFunctionalArchitectureTest")     % machinery: the F model
-runtests("F16ALogicalArchitectureTest")        % machinery: the L model
-runtests("F16APhysicalArchitectureTest")       % machinery: the P model
-runtests("F16APhysicalTradeGuardsTest")        % negative tests; needs no project, no models
+run_ai_tests                                   % MACHINERY: all five suites, all green
+
 runtests("F16AMaterialsVerificationTest")      % REQ_F16A_022 — green
 runtests("F16AStaticMarginVerificationTest")   % REQ_F16A_025 — 2 pass, 1 RED BY DESIGN
 runtests("F16AFuelVerificationTest")           % REQ_F16A_P01 — RED BY DESIGN
 ```
+
+The two kinds are run separately on purpose. `run_ai_tests` asks *is the model
+built correctly?* and **every one of its cases must pass** — a red there is a
+regression. The three verification suites ask *does the design meet this
+requirement?*, and two of them are red by design. See
+[`../tests_for_ai_coding/README.md`](../tests_for_ai_coding/README.md).
 
 **Two reds are the expected state, and they are different reds.** A third failure is a
 regression. A run that reports "2 tests fail" and stops has missed the point:
@@ -169,7 +174,7 @@ The P layer's tests are split three ways on purpose: `F16APhysicalArchitectureTe
 the only suite touching no artifact, which is exactly why it can safely feed the guards bad data
 and watch them refuse; the three `*VerificationTest` files are **requirement verification**, one
 per requirement. One combined suite would report "2 failures" and hide that they mean different
-things.
+things — which is also why the machinery suites live in their own folder (D-055).
 
 ## Reviewing requirement traceability
 

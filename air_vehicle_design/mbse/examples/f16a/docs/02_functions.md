@@ -107,8 +107,8 @@ across all ports of their kind:
 
 ## Verification
 
-The functional model is checked by `F16AFunctionalArchitectureTest.m` (6 tests, all
-passing):
+The functional model is checked by `tests_for_ai_coding/F16AFunctionalArchitectureTest.m`
+(6 tests, all passing):
 
 - all **26 components** exist at their expected paths;
 - **no unconnected ports** anywhere in the tree;

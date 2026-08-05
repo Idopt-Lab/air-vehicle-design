@@ -27,7 +27,7 @@ Defend these whenever another layer changes:
    to `f16a-mbse-method`.
 2. **13 leaf functions, 14 edges**; `Target` is the only 1→2 fan-out.
 3. **No mission phase is ever allocated.** Phases are a temporal thread realized *by* capabilities.
-4. `F16AFunctionalArchitectureTest` stays green, unchanged, through work in L and P.
+4. `tests_for_ai_coding/F16AFunctionalArchitectureTest` stays green, unchanged, through work in L and P.
 
 ## Mode
 

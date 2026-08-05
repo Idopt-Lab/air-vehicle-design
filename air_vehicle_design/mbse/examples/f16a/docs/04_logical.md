@@ -2,7 +2,7 @@
 
 > Model: `logical/F16A_Logical.slx` · Profile: `F16A_LogicalOptions.xml` · Allocation:
 > `F16A_FunctionToLogical.mldatx` · Generator: `generate_f16a_logical.m` · Test:
-> `F16ALogicalArchitectureTest.m`
+> `tests_for_ai_coding/F16ALogicalArchitectureTest.m`
 > · **The decision that resolves this layer is made one layer down, at P.**
 
 The Functions layer said **what** the aircraft must do. The Logical layer says **how** — in
@@ -255,8 +255,8 @@ choice, or swap the technology underneath entirely: the allocation set is untouc
 
 ## Verification
 
-`F16ALogicalArchitectureTest.m` — **15 tests**, a **machinery** suite: is the L model built
-correctly, never is this the right design.
+`tests_for_ai_coding/F16ALogicalArchitectureTest.m` — **15 tests**, a **machinery** suite: is the
+L model built correctly, never is this the right design.
 
 | Group | What is checked |
 |-------|-----------------|

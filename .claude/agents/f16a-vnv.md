@@ -16,11 +16,12 @@ findings).
 
 | File | Kind | Checks |
 |---|---|---|
-| `requirements/F16ARequirementsTest.m` | machinery | the requirement sets themselves: ids, types, keywords, derive links |
-| `functions/F16AFunctionalArchitectureTest.m` | machinery | F model + R→F links |
-| `logical/F16ALogicalArchitectureTest.m` | machinery | roles, interfaces, allocation, kinds |
-| `physical/F16APhysicalArchitectureTest.m` | machinery | decomposition, stereotypes, roll-up self-consistency, realization, links |
-| `physical/F16APhysicalTradeGuardsTest.m` | machinery | the trade's guard rails, driven negatively (bad input ⇒ named error) |
+| `tests_for_ai_coding/F16ATestCase.m` | base class | the shared walk, stereotype/profile readers, `verifyNoOffenders`, `verifyNotVacuous` (D-055) |
+| `tests_for_ai_coding/F16ARequirementsTest.m` | machinery | the requirement sets themselves: ids, types, keywords, derive links |
+| `tests_for_ai_coding/F16AFunctionalArchitectureTest.m` | machinery | F model + R→F links |
+| `tests_for_ai_coding/F16ALogicalArchitectureTest.m` | machinery | roles, interfaces, allocation, kinds |
+| `tests_for_ai_coding/F16APhysicalArchitectureTest.m` | machinery | decomposition, stereotypes, roll-up self-consistency, realization, links |
+| `tests_for_ai_coding/F16APhysicalTradeGuardsTest.m` | machinery | the trade's guard rails, driven negatively (bad input ⇒ named error). Does **not** inherit `F16ATestCase`: it must run on a checkout with no models |
 | `verification/F16AMaterialsVerificationTest.m` | requirement | `REQ_F16A_022` composite ≤ 20% — **MET** (green) |
 | `verification/F16AFuelVerificationTest.m` | requirement | `REQ_F16A_P01` fuel volume — **UNEVALUATED** (red) |
 | `verification/F16AStaticMarginVerificationTest.m` | requirement | `REQ_F16A_025` relaxed stability — **VIOLATED at landing** (red) |

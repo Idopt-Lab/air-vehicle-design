@@ -43,7 +43,7 @@ findings) and `docs/01_requirements.md` + `docs/03_traceability.md`.
 | `requirements/f16a_logical_derived.slreqx` | `REQ_F16A_L01`–`L03`, the three decision requirements — Implement-linked by the **physical** trade study |
 | `requirements/f16a_physical_derived.slreqx` | `REQ_F16A_P0x`, derived at P |
 
-`F16ARequirementsTest.m` asserts their ids, types, keywords and derive links.
+`tests_for_ai_coding/F16ARequirementsTest.m` asserts their ids, types, keywords and derive links.
 
 ## Return
 

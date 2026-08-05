@@ -1,20 +1,17 @@
-classdef F16ARequirementsTest < matlab.unittest.TestCase
+classdef F16ARequirementsTest < F16ATestCase
     %F16AREQUIREMENTSTEST Machinery checks on the four generated requirement sets.
     %   The R layer is this example's provenance root. This suite reads the four
     %   sets AS THEY SHIP -- slreq.load on the .slreqx, never the generator
     %   source -- and pins what everything downstream relies on:
     %
-    %     * a decision requirement POSES its question and holds no answer:
-    %       nothing in f16a_logical_derived.slreqx names a vendor or programme
-    %       (D-020) or states a weight or score (D-037, D-040);
+    %     * a decision requirement POSES its question and holds no answer: no
+    %       vendor token (D-020, D-040) and no weight or score (D-026, D-037);
     %     * "todo" means student exercise and nothing else -- eleven of them,
-    %       asserted as a SET so one exercise losing the keyword cannot be
-    %       masked by another gaining it (D-045, D-046);
-    %     * no requirement carries a "verify" keyword: the Verify LINK is the
-    %       record that a requirement has a test, and a generator-written
-    %       keyword mirroring a hand-made link cannot be kept in step (D-048);
-    %     * REQ_F16A_025 keeps its -6 %MAC floor and its illustrative-value
-    %       label (D-030, D-046); its upper bound is now zero and strict.
+    %       asserted as a SET so one losing the keyword cannot be masked by
+    %       another gaining it (D-045, D-046);
+    %     * no "verify" keyword anywhere: the Verify LINK is the record (D-048);
+    %     * REQ_F16A_025 keeps its -6 %MAC floor, its strict zero ceiling and
+    %       its illustrative-value label (D-030, D-046, D-048).
     %
     %   Machinery, not verification: nothing here asks whether the DESIGN meets
     %   a requirement. Requirement sets are in-memory global state, so the suite
@@ -28,39 +25,27 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
     end
 
     properties (Constant, Access = private)
-        % D-020's vendor/programme vocabulary, matched as WHOLE TOKENS.
-        % contains(text,"GE") is unsafe here even case-sensitively: these sets
-        % already talk about targets (REQ_F16A_D05-D09) and ranges
-        % (REQ_F16A_025, REQ_F16A_P01), and this example shouts for emphasis
-        % (RELAXED, MINIMIZED, PLACEHOLDER), so one TARGET or RANGE would
-        % silently fail the test.
-        SolutionTokens = ["F100","F110","PW","GE","LWF","Analog"]
-
         % A weight or a score, i.e. a decimal literal -- NOT any digit.
-        % REQ_F16A_025, F16A_Logical.slx and D-026 all legitimately contain
-        % digits.
+        % REQ_F16A_025 and D-026 legitimately contain digits.
         NumericAnswer = "\d+\.\d+"
 
-        % REQ_F16A_025's upper bound: the margin must be strictly BELOW zero.
-        % An alternation, because the bound is a definition and the shipped
-        % requirement may carry it as prose or as algebra -- this suite reads
-        % the artifact, it does not dictate its wording. Every alternative is a
-        % POSITIVE form, none reachable by a sentence that DENIES the criterion:
-        % "shall not be negative" contains "be negative" but not "shall be
-        % negative", which is why the bare word is not one of them. If a reword
-        % states the ceiling in some other positive form, add that form here --
-        % do not fall back on a bare contains().
+        % REQ_F16A_025's upper bound. An alternation because the bound is a
+        % definition and the shipped requirement may carry it as prose or as
+        % algebra. Every alternative is a POSITIVE form, none reachable by a
+        % sentence that DENIES the criterion -- "shall not be negative"
+        % contains "be negative", which is why the bare word is not one of
+        % them. Add new positive forms here; do not fall back on contains().
         NegativeCriterion = "(?i)(SM\s*<\s*0|<\s*0|strictly negative|" + ...
             "(?:shall|must) (?:be|lie|remain) negative|negative static margin)"
 
-        % The eleven standing student exercises: the two balance TBDs (D-046)
-        % and the nine derived capability requirements (D-045).
+        % The eleven standing student exercises: two balance TBDs (D-046) and
+        % the nine derived capability requirements (D-045).
         TodoExercises = sort(["REQ_F16A_023", "REQ_F16A_024", "REQ_F16A_D0" + (1:9)])
     end
 
     methods (TestClassSetup)
         function loadRequirementSets(testCase)
-            reqDir = fileparts(mfilename("fullpath"));   % the sets sit beside this file
+            reqDir = fullfile(f16aRoot(), "requirements");
             slreq.clear();
             testCase.addTeardown(@() slreq.clear());     % registered BEFORE the loads
             testCase.TopSet  = slreq.load(fullfile(reqDir, "f16a.slreqx"));
@@ -73,25 +58,24 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
     methods (Test)
 
         function testDecisionRequirementsNameNoSolution(testCase)
-            % No vendor or programme token anywhere in the decision set --
-            % Summary, Description or Rationale. The root container is scanned
-            % too: it carries the framing shared by L01-L03, so it is just as
-            % capable of leaking the answer (D-037, D-040).
+            % Matched as WHOLE TOKENS. contains(text,"GE") is unsafe even
+            % case-sensitively: these sets talk about tarGEts and ranGEs, and
+            % the example shouts for emphasis (RELAXED, MINIMIZED).
             hits = testCase.scanDecisionSet( ...
-                "(?<![A-Za-z0-9_])" + testCase.SolutionTokens + "(?![A-Za-z0-9_])");
-            testCase.verifyEmpty(hits, ...
+                "(?<![A-Za-z0-9_])" + testCase.VendorTokens + "(?![A-Za-z0-9_])");
+            testCase.verifyNoOffenders(hits, ...
                 "A decision requirement must pose its question without naming a " + ...
-                "solution (D-020, D-040). Named: " + listOf(hits));
+                "solution (D-020, D-040). Named");
         end
 
         function testDecisionRequirementsStateNoNumber(testCase)
-            % ...and no weight and no score. The applied trade weights are
-            % derived at run time (D-026) and this set is generated before the
-            % trade runs, so any number here would be a claim, not a record.
+            % The applied trade weights are derived at run time (D-026) and
+            % this set is generated before the trade runs, so a number here
+            % would be a claim rather than a record.
             hits = testCase.scanDecisionSet(testCase.NumericAnswer);
-            testCase.verifyEmpty(hits, ...
+            testCase.verifyNoOffenders(hits, ...
                 "A decision requirement must restate no weight and no score " + ...
-                "(D-026, D-037). Found: " + listOf(hits));
+                "(D-026, D-037). Found");
         end
 
         function testTodoMarksExactlyTheStudentExercises(testCase)
@@ -100,36 +84,28 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
             testCase.verifyEqual(actual, testCase.TodoExercises, ...
                 "'todo' must mark exactly the eleven student exercises " + ...
                 "(D-045, D-046) -- no more, no fewer.");
-            % Spelled out because the REASON these two are excluded is the
-            % teaching point: 025 has a real, evaluated criterion (D-046) whose
-            % answer happens to be no, and P01's verification is pending BY
-            % DESIGN (D-042). A violated requirement and an unevaluated one are
-            % both red; neither is outstanding work.
-            notExercises = intersect(actual, ["REQ_F16A_025", "REQ_F16A_P01"]);
-            testCase.verifyEmpty(notExercises, ...
+            % 025 has a real evaluated criterion whose answer is no (D-046);
+            % P01's verification is pending BY DESIGN (D-042). Both are red;
+            % neither is outstanding student work.
+            testCase.verifyNoOffenders(intersect(actual, ["REQ_F16A_025","REQ_F16A_P01"]), ...
                 "REQ_F16A_025 (D-046) and REQ_F16A_P01 (D-042) are not student " + ...
-                "exercises and must not carry 'todo': " + listOf(notExercises));
+                "exercises and must not carry 'todo'");
         end
 
         function testNoVerifyKeywordAnywhere(testCase)
             % D-048: the Verify LINK is the record that a requirement has a
             % test. Currently zero across all four sets -- pinned so it stays.
-            ids = testCase.idsWithKeyword("verify");
-            testCase.verifyEmpty(ids, ...
+            testCase.verifyNoOffenders(testCase.idsWithKeyword("verify"), ...
                 "No requirement may carry a 'verify' keyword; the Verify link " + ...
-                "is the record (D-048): " + listOf(ids));
+                "is the record (D-048)");
         end
 
         function testStaticMarginBandAndEstimateLabel(testCase)
-            % REQ_F16A_025 must keep BOTH ends of its band -- now -6 %MAC <= SM
-            % < 0, inclusive floor and STRICT ceiling -- and the label that
-            % cleared the Stage-0 data veto. Nothing else stops a future edit
-            % quietly dropping the provenance and leaving a bare number.
-            % The two ends are not the same kind of thing and are not asserted
-            % the same way: the floor is an invented figure and is checked
-            % literally, the ceiling is a DEFINITION (relaxed static stability
-            % IS negative static margin; zero is where the sign changes) and is
-            % checked by any of the phrasings that carry it.
+            % The two ends of REQ_F16A_025's band are not the same kind of
+            % thing and are not asserted the same way: the floor is an invented
+            % figure, checked literally; the ceiling is a DEFINITION (relaxed
+            % static stability IS negative static margin) and is checked by any
+            % of the phrasings that carry it.
             req = find(testCase.TopSet, Id="REQ_F16A_025");
             testCase.assertNotEmpty(req, "REQ_F16A_025 not found in f16a.slreqx.");
             stated = itemText(req);
@@ -140,27 +116,22 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
                 "NEGATIVE -- the upper bound is zero and strict, so a neutrally " + ...
                 "stable aircraft does not satisfy it.");
             % The withdrawn cap, asserted ABSENT: while +1 %MAC stood, a
-            % positive margin satisfied this requirement, which is what
-            % F16AStaticMarginVerificationTest's landing case now fails on. Both
-            % must not be true at once.
+            % positive margin satisfied this requirement -- which is what
+            % F16AStaticMarginVerificationTest's landing case now fails on.
             testCase.verifyEmpty(regexp(stated, "\+1\s*%MAC", "once"), ...
                 "REQ_F16A_025 must no longer state a +1 %MAC upper bound: a " + ...
-                "conventionally stable aircraft cannot be allowed to satisfy a " + ...
-                "relaxed-stability requirement.");
+                "conventionally stable aircraft cannot satisfy a relaxed-stability " + ...
+                "requirement.");
             testCase.verifySubstring(stated, "D-030", ...
                 "REQ_F16A_025 must cite D-030, the estimate inventory.");
-            % The CANONICAL SENTENCE agreed in D-048, not the bare word
-            % "Estimate" -- and the difference is the point. A substring search
-            % for a provenance tag cannot tell asserting it from DENYING it: a
-            % draft of this requirement that dropped the floor said "nothing
-            % here is an Estimate", and a bare contains() would have gone green
-            % on the sentence saying the label does not apply. Do not weaken
-            % this back to a single word.
+            % D-048's CANONICAL SENTENCE, not the bare word "Estimate", and the
+            % difference is the point: a substring search for a provenance tag
+            % cannot tell asserting it from DENYING it. A draft that dropped the
+            % floor said "nothing here is an Estimate", and contains() would
+            % have gone green on it. Do not weaken this to a single word.
             testCase.verifySubstring(stated, "illustrative teaching value, not sourced data", ...
-                "REQ_F16A_025's -6 %MAC floor must carry D-048's canonical label -- " + ...
-                "'an illustrative teaching value, not sourced data' -- verbatim, not " + ...
-                "presented as sourced data and not in a private rewording " + ...
-                "(house rule 1).");
+                "REQ_F16A_025's -6 %MAC floor must carry D-048's canonical label " + ...
+                "verbatim, not a private rewording (house rule 1).");
         end
 
         function testCostMeasureOfMeritKeywordsIntact(testCase)
@@ -168,15 +139,13 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
             % are the only thing in the R artifact that says so (D-043).
             req = find(testCase.TopSet, Id="REQ_F16A_026");
             testCase.assertNotEmpty(req, "REQ_F16A_026 not found in f16a.slreqx.");
-            expected = ["moe", "objective", "minimize"];
-            missing = setdiff(expected, lower(string(req.Keywords)));
-            testCase.verifyEmpty(missing, ...
-                "REQ_F16A_026 is a Measure of Merit, not a threshold; missing " + ...
-                "keyword(s): " + listOf(missing));
+            missing = setdiff(["moe","objective","minimize"], lower(string(req.Keywords)));
+            testCase.verifyNoOffenders(missing, ...
+                "REQ_F16A_026 is a Measure of Merit, not a threshold; missing keyword(s)");
         end
 
         function testItemCountsPerSet(testCase)
-            % Counted by walking children(), not by find(set,Type="Requirement"),
+            % Counted by walking children(), not find(set,Type="Requirement"),
             % so the count does not inherit that call's view of containers.
             testCase.verifyEqual(numel(itemsOf(testCase.TopSet)), 35, ...
                 "f16a.slreqx: 26 requirements + 9 containers.");
@@ -189,9 +158,8 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
         end
 
         function testRequirementIdsUniqueAcrossSets(testCase)
-            % Every Implement/Verify link, every doc reference and every
-            % trace-ref property in F16A_Physical.slx cites a requirement by
-            % id, so an id must mean one thing across all four sets.
+            % Every link, doc reference and TraceRef property cites a
+            % requirement by id, so an id must mean one thing across all four.
             ids = arrayfun(@(r) string(r.Id), testCase.allItems());
             testCase.verifyEqual(numel(unique(ids)), numel(ids), ...
                 "Requirement ids must be unique across the four sets.");
@@ -200,12 +168,10 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
         function testEveryRequirementIsStatedAndJustified(testCase)
             % Every non-container item says what it wants (Summary,
             % Description) and why (Rationale). Containers are excluded rather
-            % than the assertion weakened: f16a.slreqx's MISSION/PERF/STRUCT
-            % and friends deliberately carry a Summary only.
-            silent = testCase.itemsMissingText();
-            testCase.verifyEmpty(silent, ...
-                "Requirement with an empty Summary, Description or Rationale: " + ...
-                listOf(silent));
+            % than the assertion weakened -- MISSION/PERF/STRUCT and friends
+            % deliberately carry a Summary only.
+            testCase.verifyNoOffenders(testCase.itemsMissingText(), ...
+                "Requirement with an empty Summary, Description or Rationale");
         end
 
     end
@@ -222,8 +188,7 @@ classdef F16ARequirementsTest < matlab.unittest.TestCase
             %SCANDECISIONSET Text in the decision set matching any of PATTERNS.
             %   Covers every item's Summary/Description/Rationale AND the set's
             %   own Description, which introduces the trade in the same words a
-            %   requirement would and can leak the answer just as easily.
-            %   Returns "where -> what" so a failure names the leak.
+            %   requirement would. Returns "where -> what" so a failure names it.
             labels = "f16a_logical_derived (set description)";
             texts  = asText(testCase.LogiSet.Description);
             items  = itemsOf(testCase.LogiSet);
@@ -276,8 +241,8 @@ end
 function items = itemsOf(node)
 %ITEMSOF Every requirement and container at or below NODE.
 %   NODE is an slreq.ReqSet or an slreq.Requirement; children() works on both.
-%   Used instead of find(set,Type="Requirement") so nothing in this suite
-%   depends on how that call classifies a container.
+%   Used instead of find(set,Type="Requirement") so nothing here depends on
+%   how that call classifies a container.
 kids = children(node);
 items = kids;
 for k = 1:numel(kids)
@@ -292,14 +257,8 @@ end
 
 function str = asText(value)
 %ASTEXT VALUE as a string scalar, "" when unset.
-%   string([]) is 0x0, and concatenating it collapses the whole result -- which
-%   would turn a text scan into a silent false pass rather than an error.
+%   string([]) is 0x0, and concatenating it collapses the whole result --
+%   turning a text scan into a silent false pass rather than an error.
 str = "";
 if ~isempty(value); str = string(value); end
-end
-
-function str = listOf(items)
-%LISTOF Join for a diagnostic; "" when empty, so the message always evaluates.
-str = "";
-if ~isempty(items); str = strjoin(string(items), "; "); end
 end

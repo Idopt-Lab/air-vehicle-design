@@ -5,7 +5,7 @@
 > · **Trade study**: `F16APhysicalTradeStudy.m` · Guards: `F16APhysicalTradeGuards.m`
 > · Vocabularies: `F16ASourceKind.m`, `F16ADataProvenance.m`
 > · Roll-ups: `F16APhysical{Mass,Materials,Fuel}Rollup.m`
-> · Tests: `F16APhysicalArchitectureTest.m`, `F16APhysicalTradeGuardsTest.m`, `verification/`
+> · Tests: `tests_for_ai_coding/F16APhysical{Architecture,TradeGuards}Test.m`, `verification/`
 
 The Logical layer said **how** — in solution roles — and laid out competing **kinds** without picking
 one. The Physical layer gives **concrete parts**, and teaches four ideas the earlier layers could not:
@@ -477,8 +477,8 @@ Three kinds of test, in separate files — and the split is itself the teaching 
 
 | Suite | Asks | Touches artifacts? |
 |---|---|---|
-| `F16APhysicalArchitectureTest` | *is the model built correctly?* | yes — 2 models, 3 requirement sets, an allocation set |
-| `F16APhysicalTradeGuardsTest` | *does the scoring code still refuse what it must?* | **no** — pure class, runs on a checkout with no models |
+| `tests_for_ai_coding/F16APhysicalArchitectureTest` | *is the model built correctly?* | yes — 2 models, 3 requirement sets, an allocation set |
+| `tests_for_ai_coding/F16APhysicalTradeGuardsTest` | *does the scoring code still refuse what it must?* | **no** — pure class, runs on a checkout with no models |
 | `verification/*VerificationTest` | *does the design meet this requirement?* | yes — via the roll-ups |
 
 The machinery suite covers structure, stereotypes, the 16 active-leaf masses against Brandt, roll-up

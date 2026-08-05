@@ -592,3 +592,45 @@ restatement. Stale claims that unit cost is `NaN` everywhere (three agent briefs
 where D-052 was meant are corrected. `examples/ex2` regained a readme, which states that its
 requirement coverage is deliberately partial rather than leaving a reader to infer it from empty
 status columns.
+
+### D-055 · The machinery tests move to `tests_for_ai_coding/`, and share a base class
+
+**Decided.** The five **machinery** suites — `F16ARequirementsTest`,
+`F16A{Functional,Logical,Physical}ArchitectureTest`, `F16APhysicalTradeGuardsTest` — leave the layer
+folders for `tests_for_ai_coding/`. The three **requirement-verification** suites stay in
+`verification/`, untouched, along with their hand-made Verify link sets.
+
+**Why.** The two kinds of test were never the same thing, and the example already said so in three
+places without acting on it. Machinery asks *is the model built correctly?* and must be **all
+green**; verification asks *does the design meet this requirement?* and is **two-thirds red by
+design**. Keeping them in one namespace meant a student opening `physical/` met a 2,922-line guard
+rail sitting beside the 1,122-line generator it guards. Each layer folder now reads as
+*artifact + generator*, and the guard rails are somewhere honestly labelled. The folder name is the
+user's: these exist so an agent editing a generator cannot silently break the model.
+
+**Every assertion was preserved.** Measured before and after: 108 machinery cases passing, 0
+failing, and afterwards 124 passing, 0 failing — the growth is `MassLeafRows` becoming 16 named
+parameterized cases instead of one loop, so a leaf-mass drift now names the part. The two
+intentional reds (D-042 fuel UNEVALUATED, D-051 static margin VIOLATED) are still exactly two.
+
+**`F16ATestCase`.** A new abstract base class holds what the L and P suites had each written for
+themselves: the variant-aware architecture walk (`descend`/`descendInto`, duplicated verbatim), the
+stereotype and profile readers, and `VendorTokens` — which P had been reaching into
+`F16ALogicalArchitectureTest` to borrow. It also adds `verifyNoOffenders`, which replaces the
+`verifyEmpty(x, "<paragraph>" + strjoin(x, ", "))` shape that occurred about sixty times, and
+`verifyNotVacuous` for the non-vacuity guards. The R2026a quirk that string and enumeration
+properties read back QUOTED was explained in six separate comment blocks; it is now explained once,
+citing `08_agent_team.md`. `F16APhysicalTradeGuardsTest` deliberately does **not** inherit it — it
+opens no artifact and must keep running on a checkout with no models (D-054).
+
+**What was not done.** `CandidateRows` stays a table rather than a `TestParameter`: the trade checks
+are cross-row (unique baseline per role, duplicate parameters, one winner per role) and need all
+seven at once. `brandtF16ADir` remains duplicated between the P suite and
+`F16AStaticMarginVerificationTest`; deduplicating it would mean editing a `verification/` file,
+which this change deliberately did not touch.
+
+**The registry, again.** As in D-049, `git mv` alone left five dangling entries in
+`resources/project/`. Repaired in a live session: `removeFile` the stale paths, `addPath` the new
+folder — without it `runtests("F16A…")` stops resolving by name after `openProject` — then `addFile`
+the new ones. The project's `test` classification label was defined but unused; the five suites now
+carry it.

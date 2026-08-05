@@ -189,7 +189,7 @@ slreq.editor            % opens the Requirements Editor; the Implemented column
 Or run the automated check:
 
 ```matlab
-runtests("F16AFunctionalArchitectureTest")   % includes the link-count assertions
+run_ai_tests   % the machinery suites; the F one includes the link-count assertions
 ```
 
 To see the L01–L03 decision links you must load the **L model** as well —
