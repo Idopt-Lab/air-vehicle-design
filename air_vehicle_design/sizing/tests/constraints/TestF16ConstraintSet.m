@@ -31,13 +31,35 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
         fidelityLevel = {'L1', 'L2', 'L3'};
     end
 
+    methods (Static, Access = private)
+
+        function constraints = buildLevel(fidelityLevel, includeStall)
+        %BUILDLEVEL  Test-only convenience: F16ConstraintSet.build() now
+        %   takes already-built aero/prop objects (2026-08-03 fix -- it used
+        %   to take this fidelityLevel string itself and build its own
+        %   internal aero/prop copy, duplicating whatever a caller like a
+        %   design_study_*.m had already built). Most tests in this file
+        %   only care about "give me the L-level constraint set," not about
+        %   which aero/prop instance backs it, so this wraps
+        %   buildDisciplines+build back into the one-line call the tests
+        %   had before.
+            arguments
+                fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])}
+                includeStall  (1,1) logical = false
+            end
+            [aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);
+            constraints = F16ConstraintSet.build(aero, prop, includeStall);
+        end
+
+    end
+
     methods (Test)
 
         function testBuildDefaultReturnsEightConstraints(tc, fidelityLevel)
             % includeStall now defaults to false (see class header) -- the
             % default build returns only the 8 requirements-JSON
             % conditions, no Stall row.
-            constraints = F16ConstraintSet.build(fidelityLevel);
+            constraints = TestF16ConstraintSet.buildLevel(fidelityLevel);
             tc.verifyEqual(numel(constraints), 8);
             names = cellfun(@(c) c.name, constraints);
             tc.verifyFalse(any(names == "Stall"));
@@ -49,14 +71,14 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
         function testBuildWithStallReturnsNineConstraints(tc, fidelityLevel)
             % includeStall=true adds the Stall row back as a 9th, sanity-
             % check-only condition -- available, but no longer the default.
-            constraints = F16ConstraintSet.build(fidelityLevel, true);
+            constraints = TestF16ConstraintSet.buildLevel(fidelityLevel, true);
             tc.verifyEqual(numel(constraints), 9);
             names = cellfun(@(c) c.name, constraints);
             tc.verifyTrue(any(names == "Stall"));
         end
 
         function testTakeoffLandingAndStallRowsUseCorrectClasses(tc)
-            constraints = F16ConstraintSet.build("L3", true);
+            constraints = TestF16ConstraintSet.buildLevel("L3", true);
             names = cellfun(@(c) c.name, constraints);
 
             takeoff = constraints{names == "Takeoff"};
@@ -74,7 +96,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % SustainedTurnConstraint; Excess Power (Ps>0) ->
             % ExcessPowerConstraint. All remain MasterEquationConstraint (hence
             % Both_WbyS_TbyW, hence PointPerformanceBase).
-            constraints = F16ConstraintSet.build("L3");
+            constraints = TestF16ConstraintSet.buildLevel("L3");
             names = cellfun(@(c) c.name, constraints);
 
             expectedClass = struct( ...
@@ -102,7 +124,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % Excess Power is the only row with a real PS_ft_s_ value (500) and
             % so the only ExcessPowerConstraint; all other Master-Equation rows
             % have Ps = 0.
-            constraints = F16ConstraintSet.build("L3");
+            constraints = TestF16ConstraintSet.buildLevel("L3");
             names = cellfun(@(c) c.name, constraints);
             excessPower = constraints{names == "Excess Power"};
             tc.verifyEqual(excessPower.Ps, 500);
@@ -116,7 +138,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % 1.3 landing; Brandt Main!U12/U13). Those values equal the src
             % class defaults, so this remains behavior-neutral -- the check is
             % that the wired-through requirement value is correct.
-            constraints = F16ConstraintSet.build("L3");
+            constraints = TestF16ConstraintSet.buildLevel("L3");
             names = cellfun(@(c) c.name, constraints);
             takeoff = constraints{names == "Takeoff"};
             landing = constraints{names == "Landing"};
@@ -134,7 +156,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % term is proportional to 1/alpha, and alpha_AB ~ 0.37 vs
             % alpha_mil_on_AB ~ 0.14 at that condition, the required T/W came
             % out ~2.6x low. power_setting now comes directly from the JSON.
-            constraints = F16ConstraintSet.build("L2");
+            constraints = TestF16ConstraintSet.buildLevel("L2");
             names = cellfun(@(c) c.name, constraints);
             tc.verifyEqual(constraints{names == "Cruise"}.powerSetting, "mil", ...
                 'Cruise has power_setting "mil" in the JSON and must use the mil basis.');
@@ -152,7 +174,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % smaller by exactly alpha_mil/alpha_AB. That ratio is ~0.46 at this
             % condition -- i.e. the old AB-default Cruise curve sat a factor
             % ~2.2 too low, which is the -58% error the scrape doc records.
-            constraints = F16ConstraintSet.build("L2");
+            constraints = TestF16ConstraintSet.buildLevel("L2");
             names  = cellfun(@(c) c.name, constraints);
             cruise = constraints{names == "Cruise"};
             [aero, prop] = deal(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2)), ...
@@ -195,7 +217,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
         function testStallConditionAtSeaLevel(tc)
             % Stall now IS a requirements-JSON row (Only_WbyS, sea level, Mach
             % 0.217466) -- this pins the flight condition read from the JSON.
-            constraints = F16ConstraintSet.build("L3", true);
+            constraints = TestF16ConstraintSet.buildLevel("L3", true);
             names = cellfun(@(c) c.name, constraints);
             stall = constraints{names == "Stall"};
             tc.verifyEqual(stall.state.altitude_ft, 0);
@@ -208,7 +230,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % replacing the Excel-era hardcoded 0.1 state. rho at sea level is
             % Mach-independent, so this does not move the F-16 optimum; it makes
             % the modeled liftoff condition match Brandt.
-            constraints = F16ConstraintSet.build("L3");
+            constraints = TestF16ConstraintSet.buildLevel("L3");
             names = cellfun(@(c) c.name, constraints);
             takeoff = constraints{names == "Takeoff"};
             tc.verifyEqual(takeoff.state.altitude_ft, 0);
@@ -218,7 +240,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
         % --- End-to-end with ConstraintAnalysis ------------------------------
 
         function testOptimalPointWithinPhysicsBounds(tc, fidelityLevel)
-            constraints = F16ConstraintSet.build(fidelityLevel);
+            constraints = TestF16ConstraintSet.buildLevel(fidelityLevel);
             ca = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
             [WS_opt, TW_opt] = ca.optimal_point();
 
@@ -254,7 +276,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
         end
 
         function testPlotDiagramProducesFigure(tc)
-            constraints = F16ConstraintSet.build("L3");
+            constraints = TestF16ConstraintSet.buildLevel("L3");
             ca  = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
             fig = ca.plot_diagram();
             tc.addTeardown(@() close(fig));

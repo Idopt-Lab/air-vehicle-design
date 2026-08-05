@@ -162,4 +162,43 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         %GET_S_EXPOSED_WING  Passthrough accessor for the wing exposed area.
         val = get_S_exposed_wing(obj)
     end
+
+    % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+    % Tail sizing is organizationally part of Geometry (Casey's decision, 2026-08-03):
+    % the standalone tail_sizing discipline (TailSizingBase/TailSizingModelL3/TailL3/
+    % F16TailL3) is retired. Two methods, mirroring the production-vs-stub split
+    % that already existed in the deleted discipline:
+    %     size_tail(obj)                    -- PRIMARY, WORKING (Raymer 7th ed.
+    %                                           Table 6.4 volume-coefficient method,
+    %                                           self-referencing obj's own planform)
+    %     size_tail_stability_control(obj)  -- documented-TODO stub (Raymer Ch. 16
+    %                                           S&C-based sizing -- no citable
+    %                                           equation number found anywhere in
+    %                                           this repo)
+    methods (Abstract)
+        %SIZE_TAIL  Horizontal- and vertical-tail reference areas [ft^2],
+        %   self-referencing obj's own planform. Also self-mutates obj.S_ht/
+        %   obj.S_vt. Returns struct('S_ht', S_ht, 'S_vt', S_vt).
+        result = size_tail(obj)
+
+        %SIZE_TAIL_STABILITY_CONTROL  NOT IMPLEMENTED -- citation gap. Raymer
+        %   Ch. 16 stability-and-control tail-sizing equations (HT via required
+        %   static margin/C_m_alpha; VT via required C_n_beta target +
+        %   crosswind) are not verifiable from any source in this repository.
+        %   Errors rather than fabricating S_ht/S_vt.
+        result = size_tail_stability_control(obj)
+    end
+    % ==================================================================================================================================== %
+
+    % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
+    % Control-surface sizing is organizationally part of Geometry (Casey's decision,
+    % 2026-08-03): the standalone ControlSurfaceSizer handle class is retired.
+    methods (Abstract)
+        %SIZE_CONTROL_SURFACES  Aileron/elevator/rudder areas [ft^2] from
+        %   obj's own S_ref/S_ht/S_vt and chord/span fraction properties.
+        %   Also self-mutates obj.S_ail/obj.S_elev/obj.S_rud. Returns
+        %   struct('S_ail', S_ail, 'S_elev', S_elev, 'S_rud', S_rud).
+        result = size_control_surfaces(obj)
+    end
+    % ==================================================================================================================================== %
 end

@@ -246,18 +246,58 @@ classdef F16GeomL3 < GeometryModelL3
 
         % -- Injected collaborator (NOT numeric spec data) ------------------- %
         prop                       % (1,1) PropulsionBase -- injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb (Phase 2/3a). At the L3 rung this is an F16PropL2: no L3 propulsion tier exists (locked decision 2026-07-25).
+    end
 
-        % -- Control-surface areas (sizing-loop OUTPUTS, not JSON inputs) ---- %
-        % NaN until SizingLoopL2 sets them (src/sizing/SizingLoopL2.m,
-        % src/sizing/ControlSurfaceSizer.m -- docs/subplans/08_sizing.md).
-        % Plain (not Dependent), same rationale as F16GeomL2's identically-
-        % named properties (see that class's header): ControlSurfaceSizer
-        % computes them externally each iteration, so there is no closed-form
-        % get.S_ail/etc. Distinct from S_r/S_csw/S_cs above, which are
-        % separate fixed WEIGHTS-equation inputs (T.O./estimate figures), not
+    % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+    % PRIMARY, production tail-volume coefficients [Raymer 7th ed. Table 6.4 +
+    % text corrections] -- mirrors F16GeomL2's identical properties (same
+    % numbers, same citation; the deleted F16TailL1 was shared, unmodified,
+    % across both the L2 and L3 design studies -- see SizingLoopL2.m's header
+    % for why only an L1-shaped tail object was ever wired into production).
+    %
+    % NO Nicolai & Carichner secondary/alternate coefficients here (contrast
+    % F16GeomL2's C_HT_nicolai/C_VT_nicolai): the Nicolai coefficient path was
+    % only ever framed as an L2-specific alternate in the source material
+    % (TailSizing_scribe_plan.md Secs. 5/8 describe it purely as "L2 --
+    % historical sizing estimates"; L3 was always documented as the
+    % stability-and-control tier, not a second home for the L2 alternate), so
+    % there is no equivalent to port at L3. Judgment call, flagged for the
+    % coordinator: if a future need arises to compare the Nicolai coefficient
+    % path against L3's physical geometry too, add C_HT_nicolai/C_VT_nicolai/
+    % size_tail_nicolai here mirroring F16GeomL2's exactly.
+    properties
+        c_HT (1,1) double   % net horizontal-tail volume coefficient [Raymer 7th ed. Table 6.4 + text corrections] = 0.315
+        c_VT (1,1) double   % net vertical-tail volume coefficient   [Raymer 7th ed. Table 6.4 + text corrections] = 0.063
+    end
+    % ==================================================================================================================================== %
+
+    % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
+    % F-16 chord/span fraction defaults, matching the deleted
+    % design_study_03_L3.m's hardcoded ControlSurfaceSizer(0.20, 0.40, 0, 0,
+    % 0.30, 0.90) call exactly -- identical to F16GeomL2's (same airframe,
+    % same Raymer Fig. 6.3/Table 6.5 sourcing).
+    properties
+        c_ail_frac  (1,1) double = 0.20   % aileron chord/wing chord   [Raymer 6th ed. Fig. 6.3]
+        b_ail_frac  (1,1) double = 0.40   % aileron span/wing span     [Raymer 6th ed. Fig. 6.3]
+        c_elev_frac (1,1) double = 0      % elevator Ce/C (tail chord) [Raymer 6th ed. Table 6.5 -- F-16 all-moving stabilator, no separate elevator]
+        b_elev_frac (1,1) double = 0      % elevator span/tail span    [same rationale as c_elev_frac]
+        c_rud_frac  (1,1) double = 0.30   % rudder Cr/C (tail chord)   [Raymer 6th ed. Table 6.5]
+        b_rud_frac  (1,1) double = 0.90   % rudder span/tail span      [Raymer 6th ed. p.161]
+    end
+    % ==================================================================================================================================== %
+
+    % ======================================================================= %
+    % Sizing-loop OUTPUTS (not JSON inputs, not spec data).
+    % ======================================================================= %
+    properties
+        % -- Control-surface areas ------------------------------------------ %
+        % NaN until size_control_surfaces() sets them (self-mutating). Plain
+        % (not Dependent), same rationale as F16GeomL2's identically-named
+        % properties. Distinct from S_r/S_csw/S_cs above, which are separate
+        % fixed WEIGHTS-equation inputs (T.O./estimate figures), not
         % sizing-loop outputs -- no naming collision, but don't conflate them.
         S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3]
-        S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator; see F16 ControlSurfaceSizer wiring)
+        S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator)
         S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]
     end
 
@@ -418,6 +458,11 @@ classdef F16GeomL3 < GeometryModelL3
             % ---- configuration ----------------------------------------- %
             obj.L_t  = G.tail_arm_ft;                        % [estimate]
             obj.S_cs = G.total_control_surface_area_ft2;     % [estimate]
+
+            % ---- tail sizing (absorbed 2026-08-03) --------------------- %
+            %      PRIMARY, production Raymer coefficients -- mirrors
+            %      F16GeomL2's identical wiring.
+            [obj.c_HT, obj.c_VT] = GeomL1.compute_tail_volume_coeffs('jet_fighter', true, true);
         end
 
         % ================================================================ %
@@ -463,6 +508,48 @@ classdef F16GeomL3 < GeometryModelL3
         function val = get_S_exposed_wing(obj)
             val = GeomL3.get_S_exposed_wing(obj);
         end
+
+        % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+
+        function result = size_tail(obj)
+        %SIZE_TAIL  Horizontal- and vertical-tail reference areas [ft^2].
+        %   [Raymer 7th ed. Table 6.4 + text]  PRIMARY, production path (the
+        %   L3 design study uses the SAME Raymer-generic math as L2, not the
+        %   stability-and-control stub below). Single delegation into GeomL3,
+        %   which cross-calls GeomL1.size_tail -- no formula duplicated here.
+        %   Self-mutates obj.S_ht/obj.S_vt (replaces what SizingLoopL2 used to
+        %   do externally). Also returns the result.
+            result   = GeomL3.size_tail(obj);
+            obj.S_ht = result.S_ht;
+            obj.S_vt = result.S_vt;
+        end
+
+        function result = size_tail_stability_control(obj)
+        %SIZE_TAIL_STABILITY_CONTROL  NOT IMPLEMENTED -- citation gap. Single
+        %   delegation into GeomL3, which errors with
+        %   'GeomL3:tailStabilityControlCitationNotAvailable' -- see that
+        %   method's header for the full citation-gap record.
+            result = GeomL3.size_tail_stability_control(obj);
+        end
+
+        % ==================================================================================================================================== %
+
+        % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
+
+        function result = size_control_surfaces(obj)
+        %SIZE_CONTROL_SURFACES  Aileron/elevator/rudder areas [ft^2].
+        %   [Raymer 6th ed. Fig. 6.3 (aileron) / Table 6.5 (elevator, rudder)]
+        %   Single delegation into GeomL3, which cross-calls
+        %   GeomL2.compute_control_surface_areas -- no formula duplicated
+        %   here. Self-mutates obj.S_ail/obj.S_elev/obj.S_rud. Also returns
+        %   the result.
+            result     = GeomL3.size_control_surfaces(obj);
+            obj.S_ail  = result.S_ail;
+            obj.S_elev = result.S_elev;
+            obj.S_rud  = result.S_rud;
+        end
+
+        % ==================================================================================================================================== %
 
         % ================================================================ %
         % DERIVED-property getters -- recompute live from the inputs on every

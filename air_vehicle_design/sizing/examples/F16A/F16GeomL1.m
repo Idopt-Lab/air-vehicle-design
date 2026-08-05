@@ -42,6 +42,15 @@ classdef F16GeomL1 < GeometryModelL1
         % TODO (7/8/2026): Try finding another way of estimating S_ref, or show a workflow for students to use at L1.
     end
 
+    % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+    % Net, corrected Raymer tail-volume coefficients -- mirrors the deleted
+    % F16TailL1's constructor exactly (same numbers, same citation).
+    properties
+        c_HT (1,1) double   % net horizontal-tail volume coefficient [Raymer 7th ed. Table 6.4 + text corrections] = 0.315
+        c_VT (1,1) double   % net vertical-tail volume coefficient   [Raymer 7th ed. Table 6.4 + text corrections] = 0.063
+    end
+    % ==================================================================================================================================== %
+
     % ======================================================================= %
     % DERIVED — recomputed live from the inputs on every read (no cache, never
     % stale), per the F16GeomL2 reference pattern (see CLAUDE.md).
@@ -89,6 +98,10 @@ classdef F16GeomL1 < GeometryModelL1
             R = jsondecode(fileread(req_path));
             obj.M_max             = R.design_mach;
             obj.S_ref             = 300;
+
+            % TAIL SIZING: F-16 category/correction flags baked in, exactly as
+            % the deleted F16TailL1's constructor did.
+            [obj.c_HT, obj.c_VT] = GeomL1.compute_tail_volume_coeffs('jet_fighter', true, true);
         end
 
         function val = get_S_ref(obj)
@@ -110,6 +123,20 @@ classdef F16GeomL1 < GeometryModelL1
         function val = get_AR_eq(obj)
             val = GeomL1.get_AR_eq(obj);
         end
+
+        % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+        function result = size_tail(obj, S_ref, b, cbar, L_fus)
+        %SIZE_TAIL  Horizontal- and vertical-tail reference areas [ft^2].
+        %   [Raymer 7th ed. Table 6.4 + text]  Single delegation line into
+        %   GeomL1 -- no equations are duplicated here.
+        %
+        %   S_ref  -- wing reference area, ft^2
+        %   b      -- wing span, ft
+        %   cbar   -- wing mean aerodynamic chord, ft
+        %   L_fus  -- fuselage length, ft
+            result = GeomL1.size_tail(obj, S_ref, b, cbar, L_fus);
+        end
+        % ==================================================================================================================================== %
 
         % ================================================================== %
         % DERIVED-property getters — live from obj.W_TO on every read.

@@ -29,7 +29,8 @@ colors = lines(numel(levels));
 WS_range = PointPerformanceBase.WS_RANGE_BRANDT;
 cas      = cell(1, numel(levels));
 for i = 1:numel(levels)
-    constraints = F16ConstraintSet.build(levels(i));
+    [aero, prop] = F16ConstraintSet.buildDisciplines(levels(i));
+    constraints = F16ConstraintSet.build(aero, prop);
     cas{i} = ConstraintAnalysis(constraints, WS_range);
 end
 

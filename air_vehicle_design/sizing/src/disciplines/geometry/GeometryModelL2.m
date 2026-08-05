@@ -136,4 +136,31 @@ classdef (Abstract) GeometryModelL2 < GeometryBase
         %   Moved from the former GeometryModelL3.
         val = get_S_exposed_wing(obj)
     end
+
+    % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
+    % Tail sizing is organizationally part of Geometry (Casey's decision, 2026-08-03):
+    % the standalone tail_sizing discipline (TailSizingBase/TailSizingModelL2/TailL2/
+    % F16TailL2) is retired. Zero-arg: a concrete L2 class has its own S_ref/
+    % b_wing/cbar_wing/L_fus to read live, so no scalars need passing in
+    % (mirrors the old TailSizingModelL2's size(obj) convention).
+    methods (Abstract)
+        %SIZE_TAIL  Horizontal- and vertical-tail reference areas [ft^2],
+        %   self-referencing obj's own planform. Also self-mutates obj.S_ht/
+        %   obj.S_vt (see F16GeomL2.size_tail for the rationale). Returns
+        %   struct('S_ht', S_ht, 'S_vt', S_vt).
+        result = size_tail(obj)
+    end
+    % ==================================================================================================================================== %
+
+    % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
+    % Control-surface sizing is organizationally part of Geometry (Casey's decision,
+    % 2026-08-03): the standalone ControlSurfaceSizer handle class is retired.
+    methods (Abstract)
+        %SIZE_CONTROL_SURFACES  Aileron/elevator/rudder areas [ft^2] from
+        %   obj's own S_ref/S_ht/S_vt and chord/span fraction properties.
+        %   Also self-mutates obj.S_ail/obj.S_elev/obj.S_rud. Returns
+        %   struct('S_ail', S_ail, 'S_elev', S_elev, 'S_rud', S_rud).
+        result = size_control_surfaces(obj)
+    end
+    % ==================================================================================================================================== %
 end

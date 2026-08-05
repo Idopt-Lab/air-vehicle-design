@@ -1,5 +1,13 @@
 # Tail Sizing — scribe planning doc (pre-implementation)
 
+**RETIRED 2026-08-03:** the standalone `tail_sizing` discipline this doc planned is deleted — tail
+sizing is organizationally part of the Geometry discipline now (Casey's decision), with the same
+equations/citations/coefficients ported into `src/disciplines/geometry/GeomL1.m`/`GeomL2.m`/`GeomL3.m`
+and `examples/F16A/F16GeomL1.m`/`F16GeomL2.m`/`F16GeomL3.m`'s "TAIL SIZING" marked sections. This file
+is kept solely as the historical discrepancy-resolution record (several `.m`/test comments in the
+Geometry files above cite it by name); every other file in the former `src/disciplines/tail_sizing/`
+directory is deleted.
+
 **Status:** planning only, FINALIZED 2026-07-28 (coordinator/user sign-off on all open items — see
 §8). No `.m` implementation files exist yet for the three-tier discipline; this doc lays out
 equations/citations/inputs/outputs per tier, with the decisions below now locked, so it can be split

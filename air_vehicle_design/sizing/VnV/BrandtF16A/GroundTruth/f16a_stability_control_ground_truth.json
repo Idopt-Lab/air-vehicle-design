@@ -1,0 +1,83 @@
+{
+  "_comment": "F-16A Block 10/15 Stability & Control-discipline ground-truth / comparison values, companion to VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json (the consolidated cross-discipline file) and f16a_subsystems_ground_truth.json (same separate-file precedent, Casey-confirmed 2026-08-03). Each block holds a Brandt-workbook OUTPUT or comparison reference the future F16SandCL2/L3 framework code will be checked AGAINST -- these are NOT toolbox inputs (inputs live in examples/F16A/jsons/f16a_L{2,3}.json .stability_control; there is no f16a_L1.json .stability_control block, since docs/subplans/10_stability_control.md's fidelity table resolves all nine in-scope equations to L2/L3). NEVER backfill a unit-test 'expected' value from anything in this file; the future sandc_brandt_comparison.{m,json,md} report (docs/subplans/10_stability_control.md 'Files planned', not yet built) is informational only, matching the standing rule already stated at the top of f16a_ground_truth.json and f16a_subsystems_ground_truth.json.",
+  "_note_file_structure": "Created as its own file, mirroring f16a_subsystems_ground_truth.json's precedent (Casey-confirmed 2026-08-03 to keep Subsystems as a standalone file rather than folding it into the consolidated f16a_ground_truth.json) -- io pass judgment call, same rationale: this file's content does not map onto f16a_ground_truth.json's existing per-discipline block shape (geometry/aerodynamics/propulsion/weights/tail_sizing), and several sub-blocks below are deliberate 'OUT OF SCOPE' or 'PARTIAL' markers with no populated figure, matching the pattern f16a_subsystems_ground_truth.json already established for fuel_volume/avionics_volume.",
+  "_source": "docs/subplans/10_stability_control.md 'Ground Truth' section (Casey-approved 2026-08-03), specifically its 'Live-workbook read (2026-08-03, coordinator session)' subsection -- VnV/BrandtF16A/GroundTruth/Brandt-F16-A.xls, sheet 'S&C (2)' (118 rows x 23 cols, opened read-only via MATLAB readcell in that session; this io pass has no MATLAB/Excel-COM tool and did not re-open the file). VnV/BrandtF16A/readme_bsc.md / BrandtBalanceStabControl.m (this framework's own PRE-EXISTING, independent forward-analysis S&C ground-truth model -- cross-referenced below for corroboration, not superseded by the sheet reads). VnV/BrandtF16A/todo.md, 2026-08-03 entry 'Stability & Control deep-dive, Phase A' (both gaps logged there are RESOLVED by the same live-xls read this file draws from).",
+
+  "stability_control": {
+
+    "_scope_note": "Longitudinal static stability ONLY, steady level flight (docs/subplans/10_stability_control.md 'Objective, scoped precisely by Casey'). The 'S&C (2)' sheet (118 rows x 23 cols) also carries lateral-directional derivatives (CNB/ClB/CYB, rows 39-70) and short-period dynamic-response terms (Cmq/Cmadot/Zal/Mal, root-locus, rows 79-118) -- BOTH ARE EXPLICITLY OUT OF SCOPE for this subplan ('Explicitly out of scope' list: 'Lateral-directional static stability and control,' 'Handling qualities,' plus the Objective's own 'No dynamic/nonsteady stability analysis') and are DELIBERATELY NOT reproduced in this file, even though they live on the same sheet -- see the lateral_directional / short_period_dynamics blocks below, which exist only as non-inclusion markers.",
+
+    "neutral_point": {
+      "xbar_np_frac_MAC": 2.3116,
+      "x_np_ft": 26.1677,
+      "_source": "Brandt-F16-A.xls, sheet 'S&C (2)', row 33 (xbarnp / xnp). In-sheet citation: Roskam Eqn 3.38 -- NOT Raymer Ch. 16 Eq. 16.9 (docs/subplans/10_stability_control.md 'Major new lead'; that specific Roskam title, Airplane Flight Dynamics and Automatic Flight Controls Part I, is not in this repo and Casey confirmed he does not have a copy -- DECIDED 2026-08-03, dropped as a citation path for the framework's own toolbox equation; kept here only as the Brandt comparison VALUE, independent of which equation number the future SandCL2/L3 toolbox implements). Matches readme_bsc.md's pre-existing validation target (x_np ~ 26.168 ft) and BrandtBalanceStabControl.xnp_ft essentially exactly -- confirms readme_bsc.md/BrandtBalanceStabControl.m already consume this exact sheet."
+    },
+
+    "cg_takeoff": {
+      "xbar_cg_frac_MAC": 2.3138,
+      "x_cg_TO_ft": 26.1925,
+      "SM": -0.0021882,
+      "_source": "Brandt-F16-A.xls, sheet 'S&C (2)', row 36 (xbarcgTakeoff / xcgTakeoff) and row 37 (SM, the takeoff-loading static margin -- paired with row 36 since row 35's SMLndg is the separately-labeled landing case). Matches readme_bsc.md's pre-existing validation target (x_cg_TO ~ 26.193 ft) and BrandtBalanceStabControl.xcg_TO_ft/SM_TO essentially exactly. SM slightly NEGATIVE here means Brandt's own takeoff-loading CG sits very slightly AFT of the neutral point (near-neutral stability, per readme_bsc.md's own '~-0.002' framing) -- a genuine Brandt output for this loading case, not a sign error to correct."
+    },
+
+    "cg_landing": {
+      "xbar_cg_frac_MAC": 2.3089,
+      "x_cg_land_ft": 26.1369,
+      "SM_land": 0.002723,
+      "_source": "Brandt-F16-A.xls, sheet 'S&C (2)', row 34 (xbarcg_Lndg / xcg_Lndg) and row 35 (SMLndg). Matches readme_bsc.md's pre-existing validation target (x_cg_land ~ 26.137 ft) and BrandtBalanceStabControl.xcg_land_ft/SM_land essentially exactly."
+    },
+
+    "CLa_aircraft": {
+      "value_per_rad": 4.445,
+      "value_per_deg": 0.07758,
+      "_source": "Brandt-F16-A.xls, sheet 'S&C (2)', row 32 (CLa). In-sheet citation: Roskam Eqn 3.24 -- NOT Raymer Ch. 16 (this framework's own Eqs. 16.13/16.14 link to the Aero toolbox's AeroL2.CL_alpha instead, per docs/subplans/10_stability_control.md's DI-reuse decision note, rather than re-deriving a lift-curve slope). This Brandt figure is a comparison target for the AIRCRAFT-level CL_alpha the future SandCL2/L3 buildup will produce, not itself the source of a toolbox formula."
+    },
+
+    "CLa_per_surface": {
+      "CLaW_per_rad":  3.2684,
+      "CLaHS_per_rad": 3.2684,
+      "CLaVS_per_rad": 3.4254,
+      "_source": "Brandt-F16-A.xls, sheet 'S&C (2)', row 24 (CLaW / CLaHS / CLaVS). No equation number printed in-sheet for this specific row (docs/subplans/10_stability_control.md 'Ground Truth' table lists no citation for row 24). Comparison target for the wing/HT/VT lift-curve slopes the injected F16AeroL2/L3 object will produce (AeroL2.CL_alpha, called once for the wing and once more with the HT's own AR/sweep/S_exposed substituted, per docs/subplans/10_stability_control.md's Eq. 16.13/16.14 decision note) -- NOT a toolbox input."
+    },
+
+    "aero_center": {
+      "xacW_ft": 25.589,
+      "xacHS_ft": 40.6819,
+      "xacVS_ft": 40.1018,
+      "xcgW_ft": 28.419,
+      "xcgHS_ft": 42.3799,
+      "xcgVS_ft": 41.6894,
+      "_status": "COMPLETE (2026-08-03, coordinator follow-up)",
+      "_note": "Brandt-F16-A.xls, sheet 'S&C (2)', row 16 (xacW/xacHS/xacVS) and row 20 (xcgW/xcgHS/xcgVS). The io pass's draft of this file had only xacW/xcgW, transcribed from the subset docs/subplans/10_stability_control.md's 'Ground Truth' table happened to quote; the coordinator session that produced that table had already live-read the full row via MATLAB readcell and is filling in xacHS/xacVS/xcgHS/xcgVS here from that same read -- not a new re-read, no invented numbers."
+    },
+
+    "wing_zero_lift_slope": {
+      "a_rad": 0.1715,
+      "a_deg": 9.8264,
+      "aHS_rad": 0.20151,
+      "aHS_deg": 11.5454,
+      "_status": "COMPLETE (2026-08-03, coordinator follow-up)",
+      "_note": "Brandt-F16-A.xls, sheet 'S&C (2)', row 62 ('a', wing zero-lift-AoA-related slope, in-sheet citation Roskam Eqn 3.17) and row 64 ('aHS', in-sheet citation Roskam Eqn 3.19) -- same Roskam Flight Dynamics title as row 33/32's citations, confirmed NOT in this repo (docs/subplans/10_stability_control.md 'Major new lead'; Casey does not have a copy, dropped as a toolbox-formula citation path 2026-08-03). Filled in from the same live MATLAB readcell already cited in the subplan's 'Ground Truth' section, not a new re-read."
+    },
+
+    "surface_geometry_note": {
+      "_status": "NOT REPRODUCED HERE -- see f16a_geometry.json instead",
+      "_note": "Brandt-F16-A.xls, sheet 'S&C (2)', rows 4-14 hold per-surface wing/HT/VT geometry (b, cr, ct, x, Lle, S, AR, MAC). This duplicates data already cited in VnV/BrandtF16A/GroundTruth/f16a_geometry.json's wing/horizontal_tail/vertical_tail blocks (same underlying Brandt Main-tab source) -- deliberately not re-transcribed here, to avoid a second, possibly-drifting copy of the same numbers. See f16a_geometry.json for that geometry ground truth."
+    },
+
+    "lateral_directional": {
+      "status": "OUT OF SCOPE",
+      "_note": "Brandt-F16-A.xls, sheet 'S&C (2)', rows 39-70 (CNB, ClB, CYB, and related lateral-directional stability/control derivatives). Explicitly excluded per docs/subplans/10_stability_control.md's 'Explicitly out of scope' list ('Lateral-directional static stability and control'). Recorded here ONLY as a deliberate non-inclusion marker, matching this repo's convention of flagging out-of-scope sheet content rather than silently omitting it (cf. f16a_subsystems_ground_truth.json's fuel_volume/avionics_volume 'NOT MODELED' blocks) -- do NOT populate this block without a new subplan scoping lateral-directional S&C."
+    },
+
+    "short_period_dynamics": {
+      "status": "OUT OF SCOPE",
+      "_note": "Brandt-F16-A.xls, sheet 'S&C (2)', rows 79-118 (Cmq, Cmadot, Zal, Mal, and root-locus / dynamic-response terms). Explicitly excluded per docs/subplans/10_stability_control.md's Objective ('Determine whether a design exhibits longitudinal static stability ... No dynamic/nonsteady stability analysis') and its 'Explicitly out of scope' list. Recorded here ONLY as a deliberate non-inclusion marker -- do NOT populate this block without a new subplan scoping dynamic/nonsteady stability."
+    },
+
+    "component_x_stations_table_note": {
+      "status": "SEE examples/F16A/jsons/f16a_L2.json AND f16a_L3.json .stability_control.component_x_stations",
+      "_note": "DECIDED (Casey, 2026-08-03): the per-group weight/x-station table (wing/horizontal_tail/vertical_tail/fuselage/landing_gear/installed_engine/subsystems_lump/strake/payload/fuel) is built from THIS FRAMEWORK's own WeightsL2/WeightsL3 groups, not read directly from temp_Casey's legacy sheet -- superseding this file's original plan to cite the legacy sheet as the table's source (docs/subplans/10_stability_control.md 'Component-x-location buildup'). It remains an INPUT table, not a ground-truth comparison value, so it is NOT duplicated in this ground-truth file -- see the unified input JSON instead. Per-group cg_x_ft values are an ENGINEERING ESTIMATE derived by re-aggregating temp_Casey/inputs/F-16A Block 50.xlsx's 'Stability&Control' sheet's 22 fine-grained legacy rows into this framework's 10 coarser weight groups (see the input JSON's own _cg_x_ft_estimate_method note for the full method and per-group arithmetic) -- the legacy sheet is used as estimate-anchoring DATA, not as the table's structural source. front_edge_x_ft (a separate, redundant field per Casey's instruction) IS a real Geometry citation where available (4 of 10 groups at L3; none at L2, since F16GeomL2 has no x-stations at all). BrandtBalanceStabControl.m's own xcg_wing_ft/xcg_engine_ft/xcg_fuel1_ft/etc. properties are a THIRD, independently-formula-derived set of component stations (not a transcription of either sheet, and not this framework's new group table either) -- do not conflate any of the three; a future cross-check between all three remains open (VnV/BrandtF16A/todo.md 2026-08-03 Gap 2)."
+    }
+  }
+}

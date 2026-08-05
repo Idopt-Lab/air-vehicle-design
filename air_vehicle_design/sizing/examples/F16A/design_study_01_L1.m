@@ -3,8 +3,9 @@ function [result, objs] = design_study_01_L1(W_TO_guess)
 %
 %   result = design_study_01_L1(W_TO_guess) builds fresh F16AeroL1/F16PropL1/
 %   F16WeightsL1/F16GeomL1/F16MissionL1 discipline objects plus the F-16's
-%   L1 constraint set (F16ConstraintSet.build("L1")), wires them into
-%   SizingLoopL1, and runs it to convergence.
+%   L1 constraint set (F16ConstraintSet.build(aero, prop), sharing this
+%   study's own aero/prop objects rather than a separate internal copy),
+%   wires them into SizingLoopL1, and runs it to convergence.
 %
 %   [result, objs] = design_study_01_L1(...) additionally returns the
 %   handle objects (objs.aero/prop/wts/geom/miss/con) in their final,
@@ -36,7 +37,7 @@ wts  = F16WeightsL1(f16a_spec_path(1));
 geom = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
 miss = F16MissionL1(mission_profile_path());
 
-constraints = F16ConstraintSet.build("L1"); % TODO (7/31/2026): Why does the constraint set take a fidelity level as an argument?
+constraints = F16ConstraintSet.build(aero, prop);
 con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 
 loop = SizingLoopL1(aero, prop, wts, geom, miss, con);
