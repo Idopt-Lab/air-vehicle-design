@@ -307,8 +307,8 @@ is. Overclaiming provenance is precisely what the tag exists to prevent.
 
 Every value-bearing stereotype declares the property: `TradeCandidate`, `Material`, `FuelTank`,
 `PhysicalItem`. Only `Rationale` and `MeasureOfMerit` are exempt with a stated reason — the first
-holds prose, the second a **computed** OEW and a `NaN` cost, where a provenance tag would be its own
-kind of overclaiming.
+holds prose, the second nothing but computed figures — the rolled-up OEW and the DAPCA IV cost — so
+a tag would only repeat what the stereotype already says.
 
 `PhysicalItem` was itself exempt until D-036, on the argument that it held Brandt ground truth and
 the invented masses were tagged on `TradeCandidate` where they are *scored*. That was half true and
@@ -466,7 +466,7 @@ physics of building an airplane, not of a role above them.
 
 | Requirement | Kind | How P handles it |
 |-------------|------|------------------|
-| `REQ_F16A_026` — unit flyaway cost | Measure of Merit | Reclassified from a "≤ $68.4M" threshold to *minimize*; Implement-linked from `Aircraft`; value `NaN` pending |
+| `REQ_F16A_026` — unit flyaway cost | Measure of Merit | Reclassified from a "≤ $68.4M" threshold to *minimize*; Implement-linked from `Aircraft`; value **$68.47M** from the DAPCA IV cost model (D-043) |
 | `REQ_F16A_022` — composite ≤ 20% | Constraint | Implement-linked from the `Airframe` variant role; **verified by** the materials roll-up |
 | `REQ_F16A_P01` — fuel sufficiency | Constraint | Implement-linked from `FuelSystem`; **verified by** the fuel roll-up — *pending, by design* |
 | `REQ_F16A_L01`–`L03` — the three decisions | Decision posed at R, answered here | **Implement-linked from the winning logical _kinds_** — what implements "which kind shall realize this role?" is the selected option, not a part (D-010) |
@@ -513,7 +513,7 @@ The RFLP loop is closed **and resolved**: R → F → L → P, traceably connect
 requirements *verified by* tests and the three open logical questions answered by a trade study whose
 arithmetic, inputs and audit trail are all in the model.
 
-Open work is in [`../TODO.md`](../TODO.md) — the cost model is the substantial item. **Wiring
+Open work is in [`../TODO.md`](../TODO.md). **Wiring
 `F16APhysicalMissionFuel` to `/sizing/` is not on that list and will not appear on a later one**: the
 pending fuel verification is a **deliverable, not a gap** (D-042).
 

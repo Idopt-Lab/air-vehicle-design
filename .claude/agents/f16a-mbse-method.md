@@ -49,7 +49,8 @@ decision goes to `f16a-scribe` for the decision log with its literature basis.
 
 This example's trade is a scripted weighted-score sweep plus a decision, with an optimizer left as a
 hook — it is **not** MDAO in the full sense, and the doc must say so. Candidate numbers are
-illustrative and provenance-tagged. Cost is a pending Measure of Merit (`NaN`), not a model. Call
+illustrative and provenance-tagged. Cost is a parametric regression (DAPCA IV) over one weight, not
+a costing exercise, and it prices the reference aircraft only. Call
 out any framing that overreaches, including in the plan you were handed.
 
 ## Return

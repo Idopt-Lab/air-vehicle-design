@@ -276,12 +276,11 @@ mom = profile.addStereotype("MeasureOfMerit", AppliesTo="Component");
 mom.addProperty("OEW_lb",       Type="double", DefaultValue="0");   % <- mass roll-up
 % UNITCOST_USD DEFAULTS TO NaN, NOT 0 (D-032) -- the same fail-safe rule D-021
 % applied to TradeCandidate, closed here on the aircraft-level Measure of Merit.
-% Nothing reads this default today: section 8 writes the cost-model result
-% explicitly, and that result is NaN by D-005. It matters for the path that does
-% not exist yet -- anything that applies MeasureOfMerit without writing the
-% property would otherwise ship $0 as the aircraft's flyaway cost, and $0 is not
-% a neutral placeholder but an unbeatably good one. A default that silently
-% produces a plausible number is worse than one that stops the run.
+% Section 9b overwrites it with the cost model's result, so the default is only
+% ever seen by a component that applies MeasureOfMerit without being priced --
+% which would otherwise ship $0 as a flyaway cost. $0 is not a neutral
+% placeholder but an unbeatably good one; a default that silently produces a
+% plausible number is worse than one that stops the run.
 mom.addProperty("UnitCost_USD", Type="double", DefaultValue="NaN"); % <- cost-model function
 % String defaults are evaluated as MATLAB expressions, so quote the literal.
 mom.addProperty("Goal",         Type="string", DefaultValue="'Minimize'");

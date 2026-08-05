@@ -33,8 +33,10 @@ stereotype — including the parts that realize no logical role (`Electrical`, `
   number, you have broken something — stop and report.
 - Airframe composite fraction ≈ 0.19, inside the 20% cap of `REQ_F16A_022`.
 - Available internal fuel ≈ 6300 lb; fuel tanks carry **zero** dry mass on purpose.
-- OEW and unit cost are **Measures of Merit to minimize**, never pass/fail thresholds. Unit cost is
-  a deliberate `NaN` — do not invent a cost model, and keep cost out of trade scoring.
+- OEW and unit cost are **Measures of Merit to minimize**, never pass/fail thresholds. Unit cost
+  ≈ **$68.47M**, from `F16APhysicalCostModel` (DAPCA IV via `BrandtCost`, D-043) — it must run after
+  the mass roll-up, since it prices this model's OEW. Candidate `UnitCost_USD` stays `NaN`, so cost
+  is still out of trade scoring.
 - Mass roll-up is the native `instantiate`/`iterate` postorder analysis (the `ex2` pattern).
 
 ## Variant/candidate mechanics (measured, R2026a)

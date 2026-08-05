@@ -35,8 +35,10 @@ dressed as `Reference`), is a **veto**.
 - Airframe subtotal 6,722.88 lb; Propulsion 5,458.83 lb; airframe-less-engine ≈ 15,250.5 lb
   (OEW − engine, the standard airframe-unit-weight convention — *not* the structural-group sum).
 - Airframe composite fraction ≈ 0.19 (cap 0.20); available internal fuel ≈ 6300 lb.
-- **Unit cost is `NaN` everywhere** and excluded from trade scoring. A cost number appearing
-  anywhere without a real cost model is a veto.
+- **Unit flyaway cost ≈ $68.47M** on the aircraft's `MeasureOfMerit`, a `Simulation` produced by
+  `F16APhysicalCostModel` calling `sizing/…/BrandtCost` (DAPCA IV) over this model's own OEW (D-043).
+  `TradeCandidate.UnitCost_USD` stays `NaN` on all seven candidates — DAPCA prices an airframe, not a
+  part — so cost is still out of trade scoring. A cost number from anywhere else is a veto.
 - Fuel tanks have **zero** dry mass by design.
 
 ## How to audit
