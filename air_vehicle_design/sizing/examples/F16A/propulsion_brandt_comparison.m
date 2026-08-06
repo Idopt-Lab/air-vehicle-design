@@ -107,7 +107,7 @@ T = table();
 %
 % No PropL3 / PropulsionModelL3 / F16PropL3 exists, and none is planned (user
 % decision 2026-07-25). The L3 rung of the framework pairs F16AeroL3 with
-% F16PropL2 -- see F16ConstraintSet.buildDisciplines. So every propulsion
+% F16PropL2 -- see any design_study_*.m for the per-level construction. So every propulsion
 % number quoted anywhere for "L3" is COMPUTED BY F16PropL2 and is identical to
 % the L2 rows below; duplicating them under an "L3" label would imply a
 % higher-fidelity model that does not exist. Geometry and aerodynamics DO

@@ -18,8 +18,8 @@
 %   across all three levels) before plotting.
 %
 %   Excludes Stall (F16ConstraintSet's 9th, sanity-check-only condition --
-%   not one of Constraints.xlsx's 8 rows, no Brandt reference row exists for
-%   it) by default -- see F16ConstraintSet.m's header: at L2/L3 its
+%   not one of the 8 requirements-JSON conditions, no Brandt reference row
+%   exists for it) by default -- see F16ConstraintSet.m's header: at L2/L3 its
 %   geometry-based clean-CLmax wall was found to silently dominate the
 %   design point rather than merely act as a sanity check.
 
@@ -27,10 +27,26 @@ levels = ["L1", "L2", "L3"];
 colors = lines(numel(levels));
 
 WS_range = PointPerformanceBase.WS_RANGE_BRANDT;
-cas      = cell(1, numel(levels));
+
+% Caller owns discipline construction (dependency injection): build each
+% fidelity level's aero/prop pair explicitly. L2/L3 inject the propulsion
+% object into geometry, because the nacelle -- hence duct wetted area and
+% CD0 -- is sized from engine thrust; L3 uses F16PropL2 (no L3 prop tier).
+aeros = cell(1, numel(levels));
+props = cell(1, numel(levels));
+
+props{1} = F16PropL1(f16a_spec_path(1));
+aeros{1} = F16AeroL1(f16a_spec_path(1));
+
+props{2} = F16PropL2(f16a_spec_path(2));
+aeros{2} = F16AeroL2(F16GeomL2(f16a_spec_path(2), props{2}), f16a_spec_path(2));
+
+props{3} = F16PropL2(f16a_spec_path(2));
+aeros{3} = F16AeroL3(F16GeomL3(f16a_spec_path(3), props{3}), f16a_spec_path(3));
+
+cas = cell(1, numel(levels));
 for i = 1:numel(levels)
-    [aero, prop] = F16ConstraintSet.buildDisciplines(levels(i));
-    constraints = F16ConstraintSet.build(aero, prop);
+    constraints = F16ConstraintSet.build(aeros{i}, props{i});
     cas{i} = ConstraintAnalysis(constraints, WS_range);
 end
 

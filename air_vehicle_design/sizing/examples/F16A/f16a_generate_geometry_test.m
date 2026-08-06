@@ -101,7 +101,8 @@ tail_configuration = "conventional";             % [T.O. 1F-16A-1 / USAF 3-view 
 % lighter-weight, aircraft-agnostic stand-in anywhere in this codebase, so
 % "load and run a set of constraints for an arbitrary design" means
 % building the real F16AeroL1/F16PropL1 pair.
-[aero_L1, prop_L1] = F16ConstraintSet.buildDisciplines("L1");
+aero_L1 = F16AeroL1(f16a_spec_path(1));                          % caller builds the L1 disciplines explicitly
+prop_L1 = F16PropL1(f16a_spec_path(1));
 prop_L1.engine_type = engine_type;                               % Stage-0 categorical input, now wired through
 constraints_L1         = F16ConstraintSet.build(aero_L1, prop_L1);   % the F-16's own 8 conditions -- "arbitrary design" still means SOME design's real numbers
 ca_L1                    = ConstraintAnalysis(constraints_L1, PointPerformanceBase.WS_RANGE_BRANDT);

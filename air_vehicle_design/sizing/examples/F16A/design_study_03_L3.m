@@ -30,9 +30,8 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %   stub (geom.size_tail_stability_control()) is NOT called here.
 %
 %   PROPULSION AT L3: there is deliberately no L3 propulsion tier (no
-%   PropL3/PropulsionModelL3/F16PropL3 -- user decision 2026-07-25, see
-%   F16ConstraintSet.buildDisciplines's header). This study pairs
-%   F16AeroL3 with F16PropL2 directly, then hands that same pair to
+%   PropL3/PropulsionModelL3/F16PropL3 -- user decision 2026-07-25). This
+%   study pairs F16AeroL3 with F16PropL2 directly, then hands that same pair to
 %   F16ConstraintSet.build(aero, prop) -- any T_SL/thrust number this study
 %   reports is COMPUTED BY F16PropL2, not a separate L3 propulsion model.
 %

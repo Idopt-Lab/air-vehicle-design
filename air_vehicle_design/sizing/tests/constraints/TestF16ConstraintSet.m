@@ -34,20 +34,32 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
     methods (Static, Access = private)
 
         function constraints = buildLevel(fidelityLevel, includeStall)
-        %BUILDLEVEL  Test-only convenience: F16ConstraintSet.build() now
-        %   takes already-built aero/prop objects (2026-08-03 fix -- it used
+        %BUILDLEVEL  Test-only convenience: F16ConstraintSet.build() takes
+        %   already-built aero/prop objects (2026-08-03 DI change -- it used
         %   to take this fidelityLevel string itself and build its own
         %   internal aero/prop copy, duplicating whatever a caller like a
         %   design_study_*.m had already built). Most tests in this file
         %   only care about "give me the L-level constraint set," not about
-        %   which aero/prop instance backs it, so this wraps
-        %   buildDisciplines+build back into the one-line call the tests
-        %   had before.
+        %   which aero/prop instance backs it, so this constructs the pair
+        %   for the level and passes it to build in one call. L2/L3 inject
+        %   prop into geometry (nacelle -> duct wetted area -> CD0); L3 uses
+        %   F16PropL2 (no L3 propulsion tier), the same pairing the design
+        %   studies use.
             arguments
                 fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])}
                 includeStall  (1,1) logical = false
             end
-            [aero, prop] = F16ConstraintSet.buildDisciplines(fidelityLevel);
+            switch fidelityLevel
+                case "L1"
+                    prop = F16PropL1(f16a_spec_path(1));
+                    aero = F16AeroL1(f16a_spec_path(1));
+                case "L2"
+                    prop = F16PropL2(f16a_spec_path(2));
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2));
+                case "L3"
+                    prop = F16PropL2(f16a_spec_path(2));
+                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
+            end
             constraints = F16ConstraintSet.build(aero, prop, includeStall);
         end
 
