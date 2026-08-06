@@ -26,20 +26,4 @@ classdef (Abstract) GeometryModelL1 < GeometryBase
 
         % It doesnt need to have get_s_ref because it's a sub-abstract class, not a concrete implementation.
     end
-
-    % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
-    % Tail sizing is organizationally part of Geometry (Casey's decision, 2026-08-03):
-    % the standalone tail_sizing discipline (TailSizingBase/TailSizingModelL1/TailL1/
-    % F16TailL1) is retired and its L1 volume-coefficient method absorbed here.
-    % Mirrors TailSizingBase's old contract exactly -- raw scalars, because
-    % GeometryModelL1 has no planform of its own (only a W_TO-based S_wet
-    % regression), so the caller supplies S_ref/b/cbar/L_fus directly.
-    methods (Abstract)
-        %SIZE_TAIL  Horizontal- and vertical-tail reference areas [ft^2].
-        %   [Raymer 7th ed. Table 6.4 + text]  Returns struct('S_ht', S_ht,
-        %   'S_vt', S_vt) -- lowercase field names, matching GeometryBase-
-        %   derived classes' own S_ht/S_vt property casing.
-        result = size_tail(obj, S_ref, b, cbar, L_fus)
-    end
-    % ==================================================================================================================================== %
 end

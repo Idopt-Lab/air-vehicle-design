@@ -172,52 +172,26 @@ classdef F16GeomL2 < GeometryModelL2
         prop                       % (1,1) PropulsionBase — injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb, which sizes the nacelle diameter (Phase 2/3a, 2026-07-25). Concrete-only: not in the GeometryModelL2 abstract contract (it is engine, not airframe, data; a different concrete class may size its duct differently).
     end
 
-    % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
-    % PRIMARY, production tail-volume coefficients [Raymer 7th ed. Table 6.4 +
-    % text corrections] -- mirrors the deleted F16TailL1's constructor exactly
-    % (0.315/0.063). This is the path SizingLoopL2 actually calls via
-    % size_tail(obj) below.
-    %
-    % SECONDARY/alternate Nicolai & Carichner coefficients -- mirrors the
-    % deleted F16TailL2's constructor exactly (0.3/0.094). NEVER wired into
-    % the production sizing loop (see size_tail_nicolai below); preserved only
-    % for its citation and test/comparison-report coverage.
-    properties
-        c_HT (1,1) double   % net horizontal-tail volume coefficient [Raymer 7th ed. Table 6.4 + text corrections] = 0.315
-        c_VT (1,1) double   % net vertical-tail volume coefficient   [Raymer 7th ed. Table 6.4 + text corrections] = 0.063
-
-        C_HT_nicolai (1,1) double = 0.3    % horizontal-tail volume coefficient [Nicolai & Carichner Table 11.6, "General Dynamics F-16" row, p.289] -- SECONDARY, not production
-        C_VT_nicolai (1,1) double = 0.094  % vertical-tail volume coefficient   [Nicolai & Carichner Table 11.6, "General Dynamics F-16" row, p.289] -- SECONDARY, not production
-    end
-    % ==================================================================================================================================== %
-
-    % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
-    % F-16 chord/span fraction defaults, matching the deleted
-    % design_study_02_L2.m's hardcoded ControlSurfaceSizer(0.20, 0.40, 0, 0,
-    % 0.30, 0.90) call exactly. Per-property citations preserved verbatim from
-    % ControlSurfaceSizer.m's header.
-    properties
-        c_ail_frac  (1,1) double = 0.20   % aileron chord/wing chord   [Raymer 6th ed. Fig. 6.3 -- a representative point from the historical-guidelines band: midpoint of the text's stated typical 15-25% range]
-        b_ail_frac  (1,1) double = 0.40   % aileron span/wing span     [Raymer 6th ed. Fig. 6.3 -- the band's typical/lower value at that chord, consistent with a fighter's relatively compact aileron]
-        c_elev_frac (1,1) double = 0      % elevator Ce/C (tail chord) [Raymer 6th ed. Table 6.5, Fighter/attack row (0.30) footnoted "Supersonic usually all-moving tail without separate elevator" -- the F-16's HT is an all-moving stabilator, so 0 is the physically-correct choice, not a placeholder]
-        b_elev_frac (1,1) double = 0      % elevator span/tail span    [same rationale as c_elev_frac]
-        c_rud_frac  (1,1) double = 0.30   % rudder Cr/C (tail chord)   [Raymer 6th ed. Table 6.5, Fighter/attack row]
-        b_rud_frac  (1,1) double = 0.90   % rudder span/tail span      [Raymer 6th ed. p.161, "extend to the tip of the tail or to about 90% of the tail span"]
-    end
-    % ==================================================================================================================================== %
-
     % ======================================================================= %
     % Sizing-loop OUTPUTS (not JSON inputs, not spec data).
     % ======================================================================= %
     properties
+        % ── Tail reference areas ─────────────────────────────────────────── %
+        % NaN until an external tail-sizing object (F16TailL2, injected into
+        % SizingLoopL2, NOT owned by this geometry class -- see
+        % src/base/TailSizingBase.m / examples/F16A/F16TailL2.m) writes
+        % S_ht/S_vt back in. S_ht/S_vt are also real spec-data INPUTS in
+        % other contexts (see the input properties block above -- Brandt
+        % Main!C18/H18); this is the same pair of properties, either set
+        % from JSON or overwritten by the sizing loop's tail object.
+
         % ── Control-surface areas ──────────────────────────────────────── %
-        % NaN until size_control_surfaces() sets them (self-mutating, see
-        % below). Plain (not Dependent) because there is no closed-form
-        % get.S_ail/etc. in terms of this object's OWN inputs alone -- the
-        % values are set once per call by size_control_surfaces(), not
-        % recomputed automatically on every read.
+        % NaN until an external control-surface-sizing object
+        % (ControlSurfaceSizer, injected into SizingLoopL2) writes them in.
+        % Plain (not Dependent) because there is no closed-form get.S_ail/
+        % etc. in terms of this object's OWN inputs alone.
         S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3]
-        S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator; see this class's control-surface fraction defaults above)
+        S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator)
         S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]
     end
 
@@ -330,14 +304,6 @@ classdef F16GeomL2 < GeometryModelL2
             %      Engine thrust deliberately NOT read here: T_AB_SLS_lb is
             %      Dependent on the injected prop.T_SL.
             obj.L_duct = J.engine.duct_length_ft;
-
-            % ---- tail sizing (absorbed 2026-08-03) ----------------------- %
-            %      PRIMARY, production Raymer coefficients -- mirrors the
-            %      deleted F16TailL1's constructor exactly. C_HT_nicolai/
-            %      C_VT_nicolai default in the properties block above (not set
-            %      here) -- they are hardcoded F-16 spec facts, not JSON inputs,
-            %      same category as the deleted F16TailL2's wiring.
-            [obj.c_HT, obj.c_VT] = GeomL1.compute_tail_volume_coeffs('jet_fighter', true, true);
         end
 
         % ================================================================== %
@@ -377,56 +343,6 @@ classdef F16GeomL2 < GeometryModelL2
         function val = get_S_wet_duct(obj)
             val = GeomL2.get_S_wet_duct(obj);
         end
-
-        % ============================ TAIL SIZING (absorbed from the former tail_sizing discipline, 2026-08-03) ============================ %
-
-        function result = size_tail(obj)
-        %SIZE_TAIL  Horizontal- and vertical-tail reference areas [ft^2].
-        %   [Raymer 7th ed. Table 6.4 + text]  PRIMARY, production path
-        %   (this is what SizingLoopL2 actually calls). Self-references
-        %   obj's own S_ref/b_wing/cbar_wing/L_fus, cross-calls
-        %   GeomL1.size_tail (reuse, not duplication), THEN self-mutates
-        %   obj.S_ht/obj.S_vt -- this REPLACES what SizingLoopL2 used to do
-        %   externally by assigning geom.S_ht = tail_result.S_ht after
-        %   calling a separate injected tail object. Also returns the result.
-            result   = GeomL1.size_tail(obj, obj.S_ref, obj.b_wing, obj.cbar_wing, obj.L_fus);
-            obj.S_ht = result.S_ht;
-            obj.S_vt = result.S_vt;
-        end
-
-        function result = size_tail_nicolai(obj)
-        %SIZE_TAIL_NICOLAI  Horizontal- and vertical-tail reference areas
-        %   [ft^2], Nicolai & Carichner F-16-specific coefficient method.
-        %   [Nicolai & Carichner Table 11.6 F-16 row]  SECONDARY/alternate --
-        %   never wired into the production sizing loop. Deliberately does
-        %   NOT self-mutate obj.S_ht/obj.S_vt: this is a pure, non-mutating
-        %   query/comparison method (used by tail_sizing_brandt_comparison.m
-        %   and its own unit tests), and must not silently clobber the
-        %   primary size_tail path's output.
-            result = GeomL2.size_tail_nicolai(obj);
-        end
-
-        % ==================================================================================================================================== %
-
-        % ======================= CONTROL SURFACE SIZING (absorbed from the former src/sizing/ControlSurfaceSizer.m, 2026-08-03) ============= %
-
-        function result = size_control_surfaces(obj)
-        %SIZE_CONTROL_SURFACES  Aileron/elevator/rudder areas [ft^2].
-        %   [Raymer 6th ed. Fig. 6.3 (aileron) / Table 6.5 (elevator, rudder)]
-        %   Self-references obj's own chord/span fraction properties and
-        %   S_ref/S_ht/S_vt, cross-calls GeomL2.compute_control_surface_areas
-        %   (reuse, not duplication), THEN self-mutates obj.S_ail/obj.S_elev/
-        %   obj.S_rud -- replaces what SizingLoopL2/ControlSurfaceSizer did
-        %   externally before. Also returns the result.
-            result    = GeomL2.compute_control_surface_areas( ...
-                obj.c_ail_frac, obj.b_ail_frac, obj.c_elev_frac, obj.b_elev_frac, ...
-                obj.c_rud_frac, obj.b_rud_frac, obj.S_ref, obj.S_ht, obj.S_vt);
-            obj.S_ail  = result.S_ail;
-            obj.S_elev = result.S_elev;
-            obj.S_rud  = result.S_rud;
-        end
-
-        % ==================================================================================================================================== %
 
         function val = get_S_exposed_wing(obj)
             val = GeomL2.get_S_exposed_wing(obj);

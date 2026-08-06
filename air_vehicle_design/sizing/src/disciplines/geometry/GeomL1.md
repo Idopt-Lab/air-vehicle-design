@@ -13,7 +13,7 @@ There is no planform.
 
 | Layer | Members |
 |---|---|
-| High-level — take the concrete object | `get_S_wet_statistical`, `get_L_fus`, `get_AR_eq`, `get_control_surface_fraction`, `size_tail` |
+| High-level — take the concrete object | `get_S_wet_statistical`, `get_L_fus`, `get_AR_eq`, `get_control_surface_fraction` |
 | Low-level — scalars and strings only | `compute_*` |
 | Constants | `lookup_*`, one per `compute_*` |
 
@@ -25,19 +25,18 @@ There is no planform.
 | `get_L_fus(obj, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
 | `get_AR_eq(obj)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
 | `get_control_surface_fraction(obj, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
-| `size_tail(obj, S_ref, b, cbar, L_fus)` | `struct('S_ht','S_vt')` [ft²] | Raymer 7th ed. Table 6.4 + text |
 
-**TAIL SIZING — RESTORED 2026-08-03** (RETIRED 2026-07-28, un-retired now): `size_tail`,
-`compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`, `compute_S_HT`,
-`compute_S_VT`. These briefly lived in a standalone `tail_sizing` discipline
-(`src/disciplines/tail_sizing/TailL1.m`, 2026-07-28 through 2026-08-03) under the view that "tail
-sizing is not geometry's job" — Casey's decision on 2026-08-03 reversed that: tail sizing (and
-control-surface sizing) are organizationally part of Geometry, so that standalone discipline is
-deleted and these methods are back here, ported verbatim (same bodies/citations, only the top-level
-`size` renamed `size_tail`). See `src/disciplines/tail_sizing/TailSizing_scribe_plan.md` (kept solely
-as the historical discrepancy-resolution record — every other file in that directory is deleted) for
-the full migration/discrepancy-resolution record (two competing L1 tail-sizing implementations
-existed in this repo before 2026-07-28 — the one that survived is what's implemented here).
+**TAIL SIZING — RE-RETIRED 2026-08-05** (RESTORED 2026-08-03, RETIRED 2026-07-28 before that):
+`size_tail`, `compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`,
+`compute_S_HT`, `compute_S_VT` briefly lived on this toolbox (2026-08-03 through 2026-08-05) under
+Casey's 2026-08-03 decision that tail sizing was organizationally part of Geometry. That decision is
+reversed again: tail sizing (and control-surface sizing) are back to being their own standalone
+objects, so these methods are gone from `GeomL1` a second time and live again in
+`src/disciplines/tail_sizing/TailL1.m` (restored verbatim from git history, same bodies/citations as
+before the 2026-08-03 absorption — nothing about the equations changed across either move). See
+`src/disciplines/tail_sizing/TailSizing_scribe_plan.md` for the historical discrepancy-resolution
+record (two competing L1 tail-sizing implementations existed in this repo before 2026-07-28 — the one
+that survived is what's implemented in `TailL1.m` today).
 
 ## 3. Equations
 
