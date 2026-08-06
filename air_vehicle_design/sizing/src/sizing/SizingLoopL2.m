@@ -7,18 +7,21 @@ classdef SizingLoopL2 < handle
 %   see SizingLoopL1.m's header for the architecture rationale (same
 %   applies here).
 %
-%   TAIL/CONTROL-SURFACE SIZING (updated 2026-08-03): Casey's decision that
-%   tail sizing and control-surface sizing are organizationally part of the
-%   Geometry discipline, not separate disciplines/objects. The former
+%   TAIL/CONTROL-SURFACE SIZING (2026-08-03 absorption into Geometry
+%   REVERTED, 2026-08-05): tail sizing and control-surface sizing are
+%   separate, dependency-injected objects again, NOT methods on geom. The
 %   standalone tail_sizing discipline (TailSizingBase/TailL1/L2/L3/
-%   F16TailL1/L2/L3) and src/sizing/ControlSurfaceSizer.m are RETIRED.
-%   Geometry now sizes its own tail and control surfaces via
-%   geom.size_tail() and geom.size_control_surfaces() -- both zero-arg,
-%   self-referencing methods declared on GeometryModelL2/L3's abstract
-%   contract (src/disciplines/geometry/GeometryModelL2.m,
-%   GeometryModelL3.m) and implemented by F16GeomL2/F16GeomL3 -- called
-%   each iteration by this loop below. This constructor no longer takes
-%   separate tail/ctrl arguments at all.
+%   F16TailL1/L2/L3) and src/sizing/ControlSurfaceSizer.m are restored, and
+%   this constructor once again takes tail (1,1) TailSizingBase and
+%   ctrl (1,1) ControlSurfaceSizer as required arguments. Each iteration
+%   this loop calls tail.size(S_ref, b, cbar, L_fus) -- TailSizingBase's
+%   WIDEST abstract signature (see TailSizingBase.m's header), read live off
+%   obj.geom -- and ctrl.size(obj.geom) (reads geom.S_ref/S_ht/S_vt), then
+%   writes the results back into obj.geom's plain S_ht/S_vt/S_ail/S_elev/
+%   S_rud properties. Production wires in F16TailL1() (shared, unmodified,
+%   across BOTH design_study_02_L2.m and design_study_03_L3.m) -- NOT
+%   F16TailL2 (Nicolai-coefficient alternate) or F16TailL3 (stability-and-
+%   control stub), neither of which is ever wired into this loop.
 %
 %   KEY DIFFERENCE FROM L1: S_ref is FIXED here, never touched by this
 %   loop -- it is a genuine input to L2/L3 geometry (read from JSON), not
@@ -48,17 +51,18 @@ classdef SizingLoopL2 < handle
 %   FIXED S_ref and the wing geometry (which also never changes during
 %   this loop, since only S_ref and geometry derived from it are touched
 %   by SizingLoopL1, not L2/L3):
-%     tail_result = geom.size_tail();
-%     cs_result   = geom.size_control_surfaces();
-%   Both self-mutate geom's own S_ht/S_vt/S_ail/S_elev/S_rud properties
-%   internally, so no explicit geom.S_ht = tail_result.S_ht-style
-%   assignment is needed here any more. These do not depend on W_TO/T_SL
-%   either, so they are technically loop-invariant too (see GeomL1.size_tail
-%   / GeomL2.compute_control_surface_areas -- both are pure functions of
-%   geom's fixed inputs) -- recomputed every iteration anyway to mirror
-%   subplan 08's documented call sequence and because they are cheap; a
-%   future geom-dependent tail/control-surface method would need this
-%   recompute for correctness.
+%     tail_result   = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+%     obj.geom.S_ht = tail_result.S_ht;
+%     obj.geom.S_vt = tail_result.S_vt;
+%     cs_result     = obj.ctrl.size(obj.geom);
+%     obj.geom.S_ail  = cs_result.S_ail;
+%     obj.geom.S_elev = cs_result.S_elev;
+%     obj.geom.S_rud  = cs_result.S_rud;
+%   Neither tail nor ctrl depend on W_TO/T_SL, so they are technically
+%   loop-invariant too (both are pure functions of geom's fixed inputs) --
+%   recomputed every iteration anyway to mirror subplan 08's documented
+%   call sequence and because they are cheap; a future geom-dependent
+%   tail/control-surface method would need this recompute for correctness.
 %
 %   Closure: Raymer's TOGW iteration ("Eq. 3.4" per the user; reproduced
 %   as Algorithm 1 / Eqs. 2.1-2.2 in temp_AI/docs/disciplines/
@@ -97,11 +101,13 @@ classdef SizingLoopL2 < handle
         geom
         miss
         con
+        tail
+        ctrl
     end
 
     methods
 
-        function obj = SizingLoopL2(aero, prop, wts, geom, miss, con)
+        function obj = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl)
             arguments
                 aero (1,1) AerodynamicsBase
                 prop (1,1) PropulsionBase
@@ -109,6 +115,8 @@ classdef SizingLoopL2 < handle
                 geom (1,1) GeometryBase
                 miss (1,1) MissionBase
                 con  (1,1) ConstraintAnalysis
+                tail (1,1) TailSizingBase
+                ctrl (1,1) ControlSurfaceSizer
             end
             obj.aero = aero;
             obj.prop = prop;
@@ -116,6 +124,8 @@ classdef SizingLoopL2 < handle
             obj.geom = geom;
             obj.miss = miss;
             obj.con  = con;
+            obj.tail = tail;
+            obj.ctrl = ctrl;
         end
 
         function result = run(obj, W_TO_guess, T_SL_guess, opts)
@@ -147,6 +157,8 @@ classdef SizingLoopL2 < handle
                 'S_vt', {}, 'S_ail', {}, 'S_elev', {}, 'S_rud', {}, 'W_fuel', {}, 'W_OEW', {});
 
             for iter = 1:opts.max_iter
+                 % TODO (8/5/2026): Switch to the metabook's method; change
+                 % W/S and S_ref with each iteration.
                 % Recomputed every iteration -- see header note above.
                 [~, TW_opt] = obj.con.optimal_point();
                 T_SL_new = TW_opt * W_TO;
@@ -156,19 +168,25 @@ classdef SizingLoopL2 < handle
 
                 % TAIL/CONTROL-SURFACE -> WEIGHT COUPLING (documented
                 % 2026-08-03, was a TODO asking to make this clearer): the
-                % two calls below mutate obj.geom's own S_ht/S_vt/S_ail/
-                % S_elev/S_rud in place. There is no explicit argument
-                % passing those areas into obj.wts below -- the coupling is
-                % implicit, through obj.wts's OWN Dependent S_ht/S_vt
-                % getters, which read obj.geom.S_exposed_ht/S_exposed_vt
-                % live (see F16WeightsL2.m's get.S_ht/get.S_vt). So
-                % obj.wts.OEW(W_TO), a few lines down, already reflects
-                % THIS iteration's tail/control-surface sizing with no
-                % extra wiring here; skipping size_tail()/
-                % size_control_surfaces() would silently freeze OEW's
-                % tail/VT weight terms at whatever geom last held.
-                tail_result = obj.geom.size_tail();
-                cs_result   = obj.geom.size_control_surfaces();
+                % assignments below write obj.tail's/obj.ctrl's results into
+                % obj.geom's own S_ht/S_vt/S_ail/S_elev/S_rud in place. There
+                % is no explicit argument passing those areas into obj.wts
+                % below -- the coupling is implicit, through obj.wts's OWN
+                % Dependent S_ht/S_vt getters, which read
+                % obj.geom.S_exposed_ht/S_exposed_vt live (see
+                % F16WeightsL2.m's get.S_ht/get.S_vt). So obj.wts.OEW(W_TO),
+                % a few lines down, already reflects THIS iteration's tail/
+                % control-surface sizing with no extra wiring here; skipping
+                % the block below would silently freeze OEW's tail/VT
+                % weight terms at whatever geom last held.
+                tail_result   = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+                obj.geom.S_ht = tail_result.S_ht;
+                obj.geom.S_vt = tail_result.S_vt;
+
+                cs_result       = obj.ctrl.size(obj.geom);
+                obj.geom.S_ail  = cs_result.S_ail;
+                obj.geom.S_elev = cs_result.S_elev;
+                obj.geom.S_rud  = cs_result.S_rud;
 
                 W_fuel = obj.miss.compute_fuel(obj.aero, obj.prop, W_TO);
                 W_OEW  = obj.wts.OEW(W_TO);
@@ -218,8 +236,13 @@ classdef SizingLoopL2 < handle
             [~, TW_opt] = obj.con.optimal_point();
             T_SL = TW_opt * W_TO;
             obj.prop.T_SL = T_SL;
-            tail_result = obj.geom.size_tail(); %#ok<NASGU>
-            cs_result   = obj.geom.size_control_surfaces(); %#ok<NASGU>
+            tail_result     = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+            obj.geom.S_ht   = tail_result.S_ht;
+            obj.geom.S_vt   = tail_result.S_vt;
+            cs_result       = obj.ctrl.size(obj.geom);
+            obj.geom.S_ail  = cs_result.S_ail;
+            obj.geom.S_elev = cs_result.S_elev;
+            obj.geom.S_rud  = cs_result.S_rud;
             obj.wts.W_TO = W_TO;
 
             result = struct('W_TO', W_TO, 'S_ref', obj.geom.S_ref, 'T_SL', T_SL, ...
