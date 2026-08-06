@@ -30,4 +30,19 @@ classdef LevelFlightConstraint < MasterEquationConstraint
 
     end
 
+    methods (Static)
+
+        function obj = fromCondition(cond, aero, prop)
+        %FROMCONDITION  Build from a requirements-JSON condition struct + the
+        %   injected aero/prop (n=1, Ps=0; power setting validated from the
+        %   condition). Uniform factory dispatched by ConstraintType; see
+        %   ConstraintAnalysis.from_requirements.
+            state = AircraftState(cond.altitude_ft, cond.mach);
+            powerSetting = MasterEquationConstraint.requirePowerSetting(cond);
+            obj = LevelFlightConstraint(string(cond.name), state, aero, prop, ...
+                cond.beta, powerSetting);
+        end
+
+    end
+
 end

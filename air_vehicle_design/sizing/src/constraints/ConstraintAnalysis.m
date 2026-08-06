@@ -17,6 +17,12 @@ classdef ConstraintAnalysis
 %                    The physics lives in the constraint objects, not here.
 %     WS_range    -- 1xM double, wing loading W_TO/S sweep, lbf/ft^2.
 %
+%   obj = ConstraintAnalysis.from_requirements(aero, prop, json_path, classMap,
+%   WS_range) is a convenience factory that reads the conditions from a
+%   requirements JSON and builds each via a name->ConstraintType map (see that
+%   method and ConstraintType); the two-arg constructor above stays the entry
+%   point for a hand-built or pre-trimmed constraint list.
+%
 %   DESIGN POINT [Raymer, "Aircraft Design: A Conceptual Approach," 6th ed.,
 %   AIAA, 2018, ch. 5 -- constraint-diagram methodology: the feasible region
 %   is bounded below by the upper envelope of all T/W-vs-W/S constraint curves
@@ -166,6 +172,78 @@ classdef ConstraintAnalysis
         %REPORT  Print the optimum W/S and T/W to the console.
             [WS_opt, TW_opt] = obj.optimal_point();
             fprintf('Optimum design point: W/S = %.2f lbf/ft^2, T/W = %.4f\n', WS_opt, TW_opt);
+        end
+
+    end
+
+    methods (Static)
+
+        function obj = from_requirements(aero, prop, json_path, classMap, WS_range)
+        %FROM_REQUIREMENTS  Build a ConstraintAnalysis directly from a
+        %   requirements JSON plus a condition-name -> ConstraintType map,
+        %   wiring the injected aero/prop into every constraint.
+        %
+        %   aero, prop -- the discipline objects injected into each constraint
+        %                 (dependency injection; typically handle objects a
+        %                 sizing loop mutates in place, so each constraint's
+        %                 next read tracks the current design -- see the class
+        %                 header "RECOMPUTE-ON-READ").
+        %   json_path  -- requirements JSON path (e.g. f16a_requirements_path()).
+        %   classMap   -- dictionary(string -> ConstraintType). Each JSON
+        %                 condition whose name is a key is built via that
+        %                 ConstraintType; a condition ABSENT from the map is
+        %                 intentionally excluded (this is how e.g. a Stall wall
+        %                 is left out -- there is no includeStall flag). Keying
+        %                 on the ConstraintType enum means only IMPLEMENTED
+        %                 constraint classes can be selected.
+        %   WS_range   -- wing-loading sweep handed to the aggregator.
+            arguments
+                aero (1,1) AerodynamicsBase
+                prop (1,1) PropulsionBase
+                json_path (1,1) string {mustBeNonzeroLengthText}
+                classMap  (1,1) dictionary
+                WS_range  (1,:) double {mustBePositive}
+            end
+            constraints = ConstraintAnalysis.build_constraints(aero, prop, json_path, classMap);
+            obj = ConstraintAnalysis(constraints, WS_range);
+        end
+
+        function constraints = build_constraints(aero, prop, json_path, classMap)
+        %BUILD_CONSTRAINTS  Read the requirements JSON and return the 1xN cell
+        %   array of constraint objects the map selects, WITHOUT aggregating.
+        %   Same selection rules as from_requirements (a condition absent from
+        %   the map is excluded); exposed for callers that want to inspect or
+        %   trim the list before handing it to the plain
+        %   ConstraintAnalysis(constraints, WS_range) constructor. A map key
+        %   that names no JSON condition errors -- a typo guard, since a
+        %   mistyped key would otherwise silently select nothing.
+            arguments
+                aero (1,1) AerodynamicsBase
+                prop (1,1) PropulsionBase
+                json_path (1,1) string {mustBeNonzeroLengthText}
+                classMap  (1,1) dictionary
+            end
+            cond      = ConstraintSetImporter.read_conditions(json_path);
+            condNames = arrayfun(@(c) string(c.name), cond);
+
+            mapKeys = keys(classMap);
+            unknown = mapKeys(~ismember(mapKeys, condNames));
+            if ~isempty(unknown)
+                error('ConstraintAnalysis:mapKeyNotInRequirements', ...
+                    ['classMap names condition(s) not present in the ', ...
+                     'requirements JSON "%s": %s. Every map key must match a ', ...
+                     'condition name in the JSON.'], ...
+                    json_path, strjoin(unknown, ', '));
+            end
+
+            constraints = cell(1, 0);
+            for i = 1:numel(cond)
+                nm = string(cond(i).name);
+                if isKey(classMap, nm)
+                    ct = classMap(nm);
+                    constraints{end+1} = ct.build(cond(i), aero, prop); %#ok<AGROW>
+                end
+            end
         end
 
     end

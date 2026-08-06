@@ -201,4 +201,19 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 
     end
 
+    methods (Static)
+
+        function obj = fromCondition(cond, aero, prop)
+        %FROMCONDITION  Build from a requirements-JSON condition struct + the
+        %   injected aero/prop. Takeoff is modeled at the JSON liftoff Mach
+        %   (mach_liftoff); rho at sea level is Mach-independent, so this only
+        %   matches the modeled liftoff condition to Brandt. Uniform factory
+        %   dispatched by ConstraintType; see ConstraintAnalysis.from_requirements.
+            state = AircraftState(cond.altitude_ft, cond.mach_liftoff);
+            obj = TakeoffConstraint(string(cond.name), state, aero, prop, ...
+                cond.distance_ft, cond.mu, cond.beta, cond.k_factor);
+        end
+
+    end
+
 end

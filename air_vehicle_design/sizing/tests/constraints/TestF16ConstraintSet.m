@@ -34,14 +34,13 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
     methods (Static, Access = private)
 
         function constraints = buildLevel(fidelityLevel, includeStall)
-        %BUILDLEVEL  Test-only convenience: F16ConstraintSet.build() takes
-        %   already-built aero/prop objects (2026-08-03 DI change -- it used
-        %   to take this fidelityLevel string itself and build its own
-        %   internal aero/prop copy, duplicating whatever a caller like a
-        %   design_study_*.m had already built). Most tests in this file
-        %   only care about "give me the L-level constraint set," not about
-        %   which aero/prop instance backs it, so this constructs the pair
-        %   for the level and passes it to build in one call. L2/L3 inject
+        %BUILDLEVEL  Test-only convenience: construct the L-level aero/prop
+        %   pair and return the F-16 constraint cell array via the generic
+        %   ConstraintAnalysis.build_constraints (requirements JSON + the F-16
+        %   name->ConstraintType map). Most tests here only care about "give me
+        %   the L-level constraint set," not which aero/prop instance backs it.
+        %   includeStall now selects which map: the default map omits Stall (8
+        %   conditions); constraint_map_with_stall adds it (9). L2/L3 inject
         %   prop into geometry (nacelle -> duct wetted area -> CD0); L3 uses
         %   F16PropL2 (no L3 propulsion tier), the same pairing the design
         %   studies use.
@@ -60,7 +59,13 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
                     prop = F16PropL2(f16a_spec_path(2));
                     aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
             end
-            constraints = F16ConstraintSet.build(aero, prop, includeStall);
+            if includeStall
+                map = F16ConstraintSet.constraint_map_with_stall();
+            else
+                map = F16ConstraintSet.constraint_map();
+            end
+            constraints = ConstraintAnalysis.build_constraints(aero, prop, ...
+                f16a_requirements_path(), map);
         end
 
     end
@@ -267,8 +272,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             % that reasoning was wrong, per user report: Stall's wall used
             % AeroL2/L3's low geometry-based clean CLmax (~0.91, no Brandt
             % validation) and pulled the optimum to W/S~=62, vs. Brandt's
-            % own 104.59 and Casey's legacy-code ~125). F16ConstraintSet.build
-            % now excludes Stall by default (see its header), which restores
+            % own 104.59 and Casey's legacy-code ~125). The default F-16 map
+            % (F16ConstraintSet.constraint_map) excludes Stall, which restores
             % the optimum to W/S~=76-83 here -- still below Brandt/legacy,
             % but that residual gap traces to the already-documented
             % aero/propulsion fidelity gaps (CD0, thrust-lapse) on the real

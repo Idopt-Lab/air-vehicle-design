@@ -169,4 +169,40 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 
     end
 
+    methods (Static)
+
+        function powerSetting = requirePowerSetting(cond)
+        %REQUIREPOWERSETTING  Read + validate a thrust condition's
+        %   power_setting field ("AB"/"mil"). Used by the Master-Equation
+        %   subclasses' fromCondition factories. "mil" draws the thrust lapse
+        %   from prop.thrust_lapse_mil_on_AB_scale (a dry/military-power
+        %   condition), "AB" from prop.thrust_lapse -- see get_alpha and
+        %   examples/F16A/mds/cruise_and_combatturn2_error_scrape.md Sec. 2.
+        %
+        %   Errors rather than defaulting on a missing or out-of-set value: an
+        %   unstated power setting silently defaulting to "AB" is exactly the
+        %   bug this validator prevents, and only the two discrete bases are
+        %   modeled (there is no partial-AB thrust model).
+            arguments
+                cond (1,1) struct
+            end
+            name = string(cond.name);
+            if ~isfield(cond, 'power_setting') || isempty(cond.power_setting)
+                error('MasterEquationConstraint:missingPowerSetting', ...
+                    ['Constraint "%s" has no power_setting. A Master-Equation ', ...
+                     'constraint needs an explicit power setting ("mil" or "AB"); ', ...
+                     'add the power_setting field to this condition in the ', ...
+                     'requirements JSON.'], name);
+            end
+            powerSetting = string(cond.power_setting);
+            if ~ismember(powerSetting, ["AB", "mil"])
+                error('MasterEquationConstraint:invalidPowerSetting', ...
+                    ['Constraint "%s" specifies power_setting = "%s". Only "mil" ', ...
+                     'and "AB" are modeled -- PropulsionBase exposes no ', ...
+                     'partial-afterburner thrust lapse.'], name, powerSetting);
+            end
+        end
+
+    end
+
 end

@@ -21,7 +21,7 @@ classdef SizingLoopL1 < handle
 %   is also therefore safe even if a caller built con's constraints from a
 %   SEPARATE aero/prop pair rather than sharing handles with this loop's
 %   aero/prop (design_study_01_L1.m in fact shares them, via
-%   F16ConstraintSet.build(aero, prop) -- see that class's header) -- con's
+%   ConstraintAnalysis.from_requirements -- see that method) -- con's
 %   frozen snapshot stays valid regardless. If a future L1 aero model
 %   becomes geometry-coupled, or the constraint envelope is ever made to
 %   depend on W_TO, this must be revisited.

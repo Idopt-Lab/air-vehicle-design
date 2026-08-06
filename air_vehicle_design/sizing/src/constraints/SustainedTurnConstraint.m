@@ -31,4 +31,19 @@ classdef SustainedTurnConstraint < MasterEquationConstraint
 
     end
 
+    methods (Static)
+
+        function obj = fromCondition(cond, aero, prop)
+        %FROMCONDITION  Build from a requirements-JSON condition struct + the
+        %   injected aero/prop (Ps=0; load factor n and power setting read from
+        %   the condition). Uniform factory dispatched by ConstraintType; see
+        %   ConstraintAnalysis.from_requirements.
+            state = AircraftState(cond.altitude_ft, cond.mach);
+            powerSetting = MasterEquationConstraint.requirePowerSetting(cond);
+            obj = SustainedTurnConstraint(string(cond.name), state, aero, prop, ...
+                cond.beta, cond.n, powerSetting);
+        end
+
+    end
+
 end

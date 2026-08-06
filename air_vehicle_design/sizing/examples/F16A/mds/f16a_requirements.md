@@ -42,7 +42,9 @@ The `constraints` block holds the 9 F-16A conditions (Stall last), each an objec
 `constraints.conditions`. Each object holds requirement / condition data ONLY. The block stays
 inside this file (not a sibling `f16a_constraints.json`); it is small today (9 conditions, ~6
 fields each). It is read by `ConstraintSetImporter.read_conditions` and wired into concrete
-constraint objects by `F16ConstraintSet.build`.
+constraint objects by `ConstraintAnalysis.from_requirements`, which picks each condition's
+constraint class from a caller-supplied condition-name → `ConstraintType` map (the F-16's map is
+`F16ConstraintSet.constraint_map`).
 
 ### 2.1 Common fields (every condition)
 
@@ -54,15 +56,18 @@ constraint objects by `F16ConstraintSet.build`.
 | `mach` | number | Flight Mach number | — (Takeoff carries `mach_liftoff` instead; Landing carries none) |
 | `beta` | number | W/W_TO at which the condition must be met | **SPECIFIED REQUIREMENT INPUT**, not a mission-analysis output (user directive 2026-08-04). Operational rows = 0.89966696; field/stall rows = 1.0 |
 
-**`category` → concrete class (post-T9 hierarchy).** `category` names the axis; the concrete
-class is picked by `F16ConstraintSet` from `category` + `n` + `Ps`:
-- `Both_WbyS_TbyW` → the `MasterEquationConstraint` subtree — `LevelFlightConstraint` (n = 1,
-  Ps = 0), `SustainedTurnConstraint` (n > 1), `ExcessPowerConstraint` (Ps > 0) — or, for the
-  Takeoff row, `TakeoffConstraint` (a direct `Both_WbyS_TbyW` sibling, ground-roll equation).
-- `Only_WbyS` → `LandingConstraint` / `StallConstraint`.
+**condition name → concrete class.** The concrete class is chosen EXPLICITLY per condition by the
+`F16ConstraintSet.constraint_map` (a `string` → `ConstraintType` map), not inferred from the data;
+`category` only names the constraint-diagram axis the condition bounds. The F-16's map:
+- `Both_WbyS_TbyW` rows → the `MasterEquationConstraint` subtree — Max Mach/Cruise/Max Alt →
+  `LevelFlightConstraint` (n = 1, Ps = 0); Combat Turn 1/2 → `SustainedTurnConstraint` (n > 1);
+  Excess Power → `ExcessPowerConstraint` (Ps > 0) — plus Takeoff → `TakeoffConstraint` (a direct
+  `Both_WbyS_TbyW` sibling, ground-roll equation).
+- `Only_WbyS` rows → Landing → `LandingConstraint`; Stall → `StallConstraint` (Stall is omitted
+  from the default map, so it is not built unless `F16ConstraintSet.constraint_map_with_stall` is used).
 - `Only_TbyW` → none used by the F-16 set today.
 
-[src: `F16ConstraintSet.m`, `src/constraints/MasterEquationConstraint.m`,
+[src: `F16ConstraintSet.m`, `src/constraints/ConstraintType.m`, `src/constraints/ConstraintAnalysis.m`, `src/constraints/MasterEquationConstraint.m`,
 `LevelFlightConstraint.m`, `SustainedTurnConstraint.m`, `ExcessPowerConstraint.m`,
 `TakeoffConstraint.m`, `LandingConstraint.m`, `StallConstraint.m`]
 
@@ -72,7 +77,7 @@ class is picked by `F16ConstraintSet` from `category` + `n` + `Ps`:
 |-------|------|---------|-------|
 | `n` | number | Load factor | selects `LevelFlight` (1) vs `SustainedTurn` (>1) |
 | `Ps_fps` | number | Specific excess power required | ft/s; > 0 selects `ExcessPowerConstraint` |
-| `power_setting` | string | Engine power state | `"AB"` or `"mil"`, stored directly in the JSON and validated by `F16ConstraintSet.requirePowerSetting` (no AB%→setting mapping) |
+| `power_setting` | string | Engine power state | `"AB"` or `"mil"`, stored directly in the JSON and validated by `MasterEquationConstraint.requirePowerSetting` (no AB%→setting mapping) |
 
 `power_setting` selects the thrust-lapse basis (`"mil"` →
 `PropulsionBase.thrust_lapse_mil_on_AB_scale`, `"AB"` → `PropulsionBase.thrust_lapse`). It

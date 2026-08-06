@@ -151,4 +151,19 @@ classdef LandingConstraint < Only_WbyS
 
     end
 
+    methods (Static)
+
+        function obj = fromCondition(cond, aero, ~)
+        %FROMCONDITION  Build from a requirements-JSON condition struct + the
+        %   injected aero. Landing reads no Mach -- a nominal low-Mach
+        %   sea-level state supplies rho only; prop is accepted for a uniform
+        %   factory signature but unused. Uniform factory dispatched by
+        %   ConstraintType; see ConstraintAnalysis.from_requirements.
+            state = AircraftState(cond.altitude_ft, 0.1);
+            obj = LandingConstraint(string(cond.name), state, aero, ...
+                cond.distance_ft, cond.mu, cond.beta, cond.k_factor);
+        end
+
+    end
+
 end

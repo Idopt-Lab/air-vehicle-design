@@ -104,8 +104,8 @@ tail_configuration = "conventional";             % [T.O. 1F-16A-1 / USAF 3-view 
 aero_L1 = F16AeroL1(f16a_spec_path(1));                          % caller builds the L1 disciplines explicitly
 prop_L1 = F16PropL1(f16a_spec_path(1));
 prop_L1.engine_type = engine_type;                               % Stage-0 categorical input, now wired through
-constraints_L1         = F16ConstraintSet.build(aero_L1, prop_L1);   % the F-16's own 8 conditions -- "arbitrary design" still means SOME design's real numbers
-ca_L1                    = ConstraintAnalysis(constraints_L1, PointPerformanceBase.WS_RANGE_BRANDT);
+ca_L1 = ConstraintAnalysis.from_requirements(aero_L1, prop_L1, f16a_requirements_path(), ...
+    F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);   % the F-16's own 8 conditions -- "arbitrary design" still means SOME design's real numbers
 [WS_opt_L1, TW_opt_L1]     = ca_L1.optimal_point();                   % [Raymer ch. 5 constraint-diagram methodology]
 
 S_ref = W_TO / WS_opt_L1;   % ft^2 -- BOOTSTRAPPED from Stage 0's W_TO, not hand-typed

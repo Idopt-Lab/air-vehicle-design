@@ -44,10 +44,11 @@ aeros{2} = F16AeroL2(F16GeomL2(f16a_spec_path(2), props{2}), f16a_spec_path(2));
 props{3} = F16PropL2(f16a_spec_path(2));
 aeros{3} = F16AeroL3(F16GeomL3(f16a_spec_path(3), props{3}), f16a_spec_path(3));
 
+map = F16ConstraintSet.constraint_map();
 cas = cell(1, numel(levels));
 for i = 1:numel(levels)
-    constraints = F16ConstraintSet.build(aeros{i}, props{i});
-    cas{i} = ConstraintAnalysis(constraints, WS_range);
+    cas{i} = ConstraintAnalysis.from_requirements(aeros{i}, props{i}, ...
+        f16a_requirements_path(), map, WS_range);
 end
 
 y_max = 0;

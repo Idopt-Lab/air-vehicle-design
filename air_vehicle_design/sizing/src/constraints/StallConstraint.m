@@ -60,4 +60,17 @@ classdef StallConstraint < Only_WbyS
 
     end
 
+    methods (Static)
+
+        function obj = fromCondition(cond, aero, ~)
+        %FROMCONDITION  Build from a requirements-JSON condition struct + the
+        %   injected aero (Stall is unpowered, so prop is accepted for a uniform
+        %   factory signature but unused). Uniform factory dispatched by
+        %   ConstraintType; see ConstraintAnalysis.from_requirements.
+            state = AircraftState(cond.altitude_ft, cond.mach);
+            obj = StallConstraint(string(cond.name), state, aero);
+        end
+
+    end
+
 end
