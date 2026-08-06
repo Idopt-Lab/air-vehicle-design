@@ -85,13 +85,21 @@ classdef F16WeightsL2 < WeightsModelL2
 %       json_path — f16a_spec_path(2): top-level aircraft_category + .weights.
 %       req_path  — f16a_requirements_path(): design_mach (a REQUIREMENT, not
 %                   spec data, hence the separate fidelity-independent file).
-%       geom      — (1,1) GeometryModelL2. The type guard is deliberately at the
-%                   L2 ENFORCER, not GeometryBase: GeometryModelL2 abstractly
-%                   declares all four members this class reads (S_exposed_wing,
-%                   S_exposed_ht, S_exposed_vt, get_S_wet_fuselage), so a wrong
-%                   tier fails at CONSTRUCTION rather than resolving property
-%                   names to different physical quantities mid-run — the
-%                   finding-#10 lesson from the Phase-2d aero pass.
+%       geom      — (1,1) {mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])}.
+%                   Loosened 2026-08-05 to accept EITHER geometry tier, mirroring
+%                   the precedent already set by F16AeroL2.m/F16AeroL3.m: both
+%                   GeometryModelL2 and GeometryModelL3 abstractly declare all
+%                   four members this class reads (S_exposed_wing, S_exposed_ht,
+%                   S_exposed_vt, get_S_wet_fuselage) IDENTICALLY, so accepting
+%                   either tier is mechanically safe — a wrong tier still fails
+%                   at CONSTRUCTION if it satisfies neither contract, it simply
+%                   no longer fails when the tier is L3 instead of L2. (Earlier
+%                   revisions of this file pinned geom to exactly GeometryModelL2
+%                   as a deliberate choice; that choice is deliberately reversed
+%                   here to enable mixed-fidelity sizing runs — the finding-#10
+%                   lesson about a wrong tier resolving to different physical
+%                   quantities mid-run still holds and is why the guard stays a
+%                   `mustBeA` allow-list rather than being removed outright.)
 %       prop      — (1,1) PropulsionBase; supplies T_SL and bypass_ratio.
 %     No silent default anywhere: a defaulted injection would silently re-freeze
 %     engine or geometry data, which is the defect class Phase 4 removes.
@@ -150,7 +158,7 @@ classdef F16WeightsL2 < WeightsModelL2
         k_strake  % lbf/ft^2  strake structural surface density [Brandt Wt!H7]
 
         % ----- Injected collaborators (NOT numeric spec data) -----
-        geom   % (1,1) GeometryModelL2 — supplies the four EXPOSED/WETTED areas below by DI, replacing four hardcoded literals (review finding #11's L2 half)
+        geom   % (1,1) GeometryModelL2 OR GeometryModelL3 (loosened 2026-08-05) — supplies the four EXPOSED/WETTED areas below by DI, replacing four hardcoded literals (review finding #11's L2 half)
         prop   % (1,1) PropulsionBase  — supplies T_SL and bypass_ratio for Raymer Eq. 10.10, replacing a hardcoded W_en = 3030 [estimate]
     end
 
@@ -191,14 +199,16 @@ classdef F16WeightsL2 < WeightsModelL2
         %   live by its Dependent getter — nothing is computed and frozen here
         %   (that was review finding #5).
         %
-        %   geom must be a GeometryModelL2 subclass: only S_exposed_wing,
-        %   S_exposed_ht, S_exposed_vt and get_S_wet_fuselage() are read.
+        %   geom must be a GeometryModelL2 OR GeometryModelL3 subclass (loosened
+        %   2026-08-05, see the class header): only S_exposed_wing,
+        %   S_exposed_ht, S_exposed_vt and get_S_wet_fuselage() are read, and
+        %   both tiers declare these identically.
         %   prop must be a PropulsionBase subclass: only T_SL and bypass_ratio
         %   are read, both for Raymer Eq. 10.10.
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
                 req_path        {mustBeTextScalar, mustBeNonzeroLengthText}
-                geom      (1,1) GeometryModelL2
+                geom      (1,1) {mustBeA(geom, ["GeometryModelL2", "GeometryModelL3"])}
                 prop      (1,1) PropulsionBase
             end
             J = jsondecode(fileread(json_path));

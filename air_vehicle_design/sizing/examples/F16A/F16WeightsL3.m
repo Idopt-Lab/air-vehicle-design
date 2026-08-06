@@ -80,9 +80,22 @@ classdef F16WeightsL3 < WeightsModelL3
 %                   Weights BUILDS the AircraftState itself from the two cruise
 %                   numbers; an AircraftState is deliberately NOT injected (the
 %                   earlier "inject a state" idea was reversed by the user).
-%       geom      — (1,1) GeometryModelL3, i.e. F16GeomL3 — the FULL L3 geometry
-%                   tier, NOT F16GeomL2. Guarded at the L3 enforcer so a wrong
-%                   tier fails at CONSTRUCTION (the finding-#10 lesson).
+%       geom      — (1,1) {mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])}.
+%                   Loosened 2026-08-05 to accept EITHER geometry tier, mirroring
+%                   the precedent already set by F16AeroL2.m/F16AeroL3.m and this
+%                   file's L2 sibling (F16WeightsL2.m): both GeometryModelL2 and
+%                   GeometryModelL3 abstractly declare all 21 members this class
+%                   reads by DI IDENTICALLY (see "THE THREE GEOMETRY-DI NAME
+%                   TRAPS" below), so accepting either tier is mechanically safe
+%                   — a wrong tier still fails at CONSTRUCTION if it satisfies
+%                   neither contract. (Earlier revisions of this file pinned
+%                   geom to exactly GeometryModelL3, i.e. F16GeomL3, as a
+%                   deliberate choice — "passing the L2 tier must fail HERE";
+%                   that choice is deliberately reversed here to enable
+%                   mixed-fidelity sizing runs. The finding-#10 lesson about a
+%                   wrong tier resolving to different physical quantities
+%                   mid-run still holds and is why the guard stays a `mustBeA`
+%                   allow-list rather than being removed outright.)
 %       prop      — (1,1) PropulsionBase. ★ At the L3 rung this is an F16PropL2:
 %                   there is NO L3 propulsion tier (locked decision 2026-07-25),
 %                   and anything reporting an "L3 propulsion" number must say so.
@@ -213,7 +226,7 @@ classdef F16WeightsL3 < WeightsModelL3
         % ================================================================== %
         %  INJECTED COLLABORATORS (NOT numeric spec data)
         % ================================================================== %
-        geom   % (1,1) GeometryModelL3 — F16GeomL3, the FULL L3 geometry tier. Supplies the 21 Dependent geometry quantities below, replacing 21 frozen literals (review finding #11)
+        geom   % (1,1) GeometryModelL2 OR GeometryModelL3 (loosened 2026-08-05) — F16GeomL3 (or F16GeomL2, for mixed-fidelity runs), supplying the 21 Dependent geometry quantities below by DI, replacing 21 frozen literals (review finding #11)
         prop   % (1,1) PropulsionBase — F16PropL2 at the L3 rung (no L3 propulsion tier exists). Supplies T_max, Eq. 10.10's T and BPR, and get_TSFC for SFC_mission
     end
 
@@ -278,16 +291,19 @@ classdef F16WeightsL3 < WeightsModelL3
         %   was a comment (review finding #11), which left the .weights block of
         %   f16a_L3.json read by nothing.
         %
-        %   geom must be a GeometryModelL3 subclass (F16GeomL3) — passing the L2
-        %   tier must fail HERE, not resolve to different physical quantities
-        %   mid-run.
+        %   geom must be a GeometryModelL2 OR GeometryModelL3 subclass (loosened
+        %   2026-08-05, see the class header): only the 21 members enumerated in
+        %   "THE THREE GEOMETRY-DI NAME TRAPS" above are read, and both tiers
+        %   declare these identically. A tier satisfying neither contract still
+        %   fails HERE, at construction, rather than resolving to different
+        %   physical quantities mid-run.
         %   prop must be a PropulsionBase subclass; T_SL, bypass_ratio and
         %   get_TSFC(state) are read. At the L3 rung pass an F16PropL2: there is
         %   no L3 propulsion tier (locked decision 2026-07-25).
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
                 req_path        {mustBeTextScalar, mustBeNonzeroLengthText}
-                geom      (1,1) GeometryModelL3
+                geom      (1,1) {mustBeA(geom, ["GeometryModelL2", "GeometryModelL3"])}
                 prop      (1,1) PropulsionBase
             end
             J = jsondecode(fileread(json_path));

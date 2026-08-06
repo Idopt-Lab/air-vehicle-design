@@ -293,20 +293,40 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         end
 
         function testWrongGeomTierErrorsAtConstruction(tc)
-        %TESTWRONGGEOMTIERERRORSATCONSTRUCTION  L3 wants GeometryModelL3.
-        %   The finding-#10 lesson: a too-loose type guard lets the wrong tier
-        %   construct fine and then resolve property names to DIFFERENT physical
-        %   quantities mid-run with no error. Passing the L2 geometry tier must
-        %   fail HERE.
+        %TESTWRONGGEOMTIERERRORSATCONSTRUCTION  Updated for the mixed-fidelity
+        %   cross-tier loosening (2026-08): geom is now typed
+        %   {mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])}, mirroring
+        %   F16AeroL2's precedent. L1 (bare GeometryBase) still fails HERE, at
+        %   construction. L2 now PASSES construction (mustBeA accepts it), but
+        %   this class's Dependent getters (get.F_w/get.B_h/get.H_t/get.H_v/
+        %   get.L_t/get.S_r/get.AR_vt/get.lambda_vt, around line 469-524) read
+        %   nine properties (F_w, B_h, H_t, H_v, L_t, S_r, AR_exposed_vt,
+        %   lambda_exposed_vt) that GeometryModelL3 declares but
+        %   GeometryModelL2 does not -- a genuine, pre-existing latent gap
+        %   this loosening exposes rather than introduces. So Weights=L3 +
+        %   Geometry=L2 must fail at RUNTIME (the first geometry-dependent
+        %   read, inside OEW), not at construction. See
+        %   examples/F16A/mixed_fidelity_tests/COMPATIBILITY_NOTES.md.
             prop = TestWeightsL3.makeProp();
             g2   = F16GeomL2(f16a_spec_path(2), prop);
             g1   = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            tc.verifyError(@() F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g2, prop), ...
-                'MATLAB:validation:UnableToConvert', ...
-                'An L2 geometry object must be rejected at construction (L3 wants GeometryModelL3).');
             tc.verifyError(@() F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g1, prop), ...
-                'MATLAB:validation:UnableToConvert', ...
+                'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must be rejected at construction.');
+
+            w2 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g2, prop);
+            tc.verifyClass(w2, 'F16WeightsL3', ...
+                'An L2 geometry object must now be ACCEPTED at construction (mustBeA loosened).');
+            threwAtRuntime = false;
+            try
+                w2.OEW(30000);
+            catch %#ok<CTCH>
+                threwAtRuntime = true;
+            end
+            tc.verifyTrue(threwAtRuntime, ...
+                ['Weights=L3 with Geometry=L2 must fail the first time a geometry-dependent ', ...
+                 'quantity (e.g. F_w/B_h/H_t/H_v/L_t/S_r/AR_exposed_vt/lambda_exposed_vt) is ', ...
+                 'actually read, since GeometryModelL2 does not declare these nine properties.']);
         end
 
         function testJSONInputsAreActuallyRead(tc)

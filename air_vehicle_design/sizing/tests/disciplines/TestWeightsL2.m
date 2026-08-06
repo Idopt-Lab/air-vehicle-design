@@ -150,21 +150,24 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         end
 
         function testWrongGeomTierErrorsAtConstruction(tc)
-        %TESTWRONGGEOMTIERERRORSATCONSTRUCTION  The finding-#10 lesson.
-        %   The geom argument is typed (1,1) GeometryModelL2, not the looser
-        %   GeometryBase. Phase 2d showed that a too-loose guard lets a wrong
-        %   tier construct fine and then resolve property names to DIFFERENT
-        %   physical quantities mid-run, with no error. An L1 or an L3 geometry
-        %   object must therefore fail HERE, at construction.
+        %TESTWRONGGEOMTIERERRORSATCONSTRUCTION  Updated for the mixed-fidelity
+        %   cross-tier loosening (2026-08): geom is now typed
+        %   {mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])}, mirroring
+        %   F16AeroL2's own precedent, because both tiers declare the four
+        %   properties this class actually reads (S_exposed_wing/ht/vt,
+        %   get_S_wet_fuselage()) identically -- see F16WeightsL2.m's updated
+        %   constructor doc. L3 geometry is therefore now ACCEPTED, not
+        %   rejected; only L1 (bare GeometryBase, no planform properties at
+        %   all) still fails HERE, at construction.
             prop = TestWeightsL2.makeProp();
             g1   = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g3   = F16GeomL3(f16a_spec_path(3), prop);
             tc.verifyError(@() F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g1, prop), ...
-                'MATLAB:validation:UnableToConvert', ...
-                'An L1 geometry object must be rejected at construction.');
-            tc.verifyError(@() F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g3, prop), ...
-                'MATLAB:validation:UnableToConvert', ...
-                'An L3 geometry object must be rejected at construction (L2 wants GeometryModelL2).');
+                'MATLAB:validators:mustBeA', ...
+                'An L1 geometry object must still be rejected at construction.');
+            w3 = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g3, prop);
+            tc.verifyClass(w3, 'F16WeightsL2', ...
+                'An L3 geometry object must now be ACCEPTED at construction (loosened to match F16AeroL2''s precedent).');
         end
 
         function testJetFighterCategorySetCorrectly(tc)
