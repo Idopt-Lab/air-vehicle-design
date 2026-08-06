@@ -311,44 +311,48 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 
 ## Resolved Decisions
 
-**Tail sizing and control-surface sizing (absorbed into Geometry, 2026-08-03 — supersedes the
-2026-07-28 entry below):** Casey's decision: tail sizing and control-surface sizing are
-organizationally part of the Geometry discipline, not separate disciplines/objects. The standalone
-`tail_sizing` discipline (`TailSizingBase`/`TailSizingModelL{1,2,3}`/`TailL{1,2,3}`/`F16TailL{1,2,3}`)
-and `src/sizing/ControlSurfaceSizer.m` are **deleted**. Every equation/citation/coefficient carried
-over unchanged, just relocated, under clearly marked `TAIL SIZING` / `CONTROL SURFACE SIZING` banner
-comments (`grep` for either banner across `src/disciplines/geometry/` and `examples/F16A/` to find
-every absorbed section):
-- `src/disciplines/geometry/GeometryModelL1/L2/L3.m` — abstract `size_tail`
-  (L1: `(obj, S_ref, b, cbar, L_fus)`; L2/L3: `(obj)`, self-referencing) and, at L2/L3,
-  `size_control_surfaces(obj)`.
-- `src/disciplines/geometry/GeomL1.m` — the Raymer 7th ed. Table 6.4 volume-coefficient toolbox
-  (`size_tail`, `compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`,
-  `compute_S_HT`, `compute_S_VT`) ported verbatim from the deleted `TailL1.m`. F-16 net
-  `c_HT=0.315`, `c_VT=0.063` (jet-fighter row 0.40/0.07 with RSS ×(1−10%) and all-moving-tail
-  ×(1−12.5%) corrections). Tail arm `L_HT=L_VT=0.475*L_fus`. This is the PRIMARY, production path —
-  `examples/F16A/F16GeomL1/L2/L3.m` all call it (L2/L3 self-referencing their own live planform,
-  cross-calling `GeomL1.size_tail`, then self-mutating their own `S_ht`/`S_vt`).
-- `src/disciplines/geometry/GeomL2.m` — `size_tail_nicolai(obj)` (Nicolai & Carichner Table 11.6
-  F-16-specific coefficients `C_HT=0.3`, `C_VT=0.094`), ported verbatim from the deleted `TailL2.m`.
-  SECONDARY/alternate — never wired into the production sizing loop (never was, even before this
-  absorption), preserved for its citation and the informational Brandt-comparison report only; does
-  NOT self-mutate `S_ht`/`S_vt`. Also `compute_control_surface_areas` + `size_control_surfaces(obj)`
-  [Raymer 6th ed. Fig. 6.3 aileron / Table 6.5 elevator+rudder], ported verbatim from the deleted
-  `ControlSurfaceSizer.m`.
-- `src/disciplines/geometry/GeomL3.m` — `size_tail(obj)` (same PRIMARY Raymer path as L2, no Nicolai
-  secondary at L3 — that path was only ever framed as an L2-specific alternate) plus
-  `size_tail_stability_control(obj)`, the still-erroring Raymer Ch. 16 documented-TODO stub ported
-  from the deleted `TailL3.m` (error ID renamed `GeomL3:tailStabilityControlCitationNotAvailable`).
-  Also `size_control_surfaces(obj)`, reusing `GeomL2.compute_control_surface_areas` (no L3-specific
-  variant exists).
-- `SizingLoopL2.m`'s constructor no longer takes `tail`/`ctrl` arguments at all — `run()` calls
-  `obj.geom.size_tail()` / `obj.geom.size_control_surfaces()` directly, both self-mutating.
+**Tail sizing and control-surface sizing (RE-EXTRACTED from Geometry, 2026-08-05 — reverses the
+2026-08-03 entry below):** Casey's decision reversed: tail sizing and control-surface sizing are
+organizationally their OWN standalone objects again, not part of the Geometry discipline. The
+standalone `tail_sizing` discipline (`TailSizingBase`/`TailSizingModelL{1,2,3}`/`TailL{1,2,3}`/
+`F16TailL{1,2,3}`) and `src/sizing/ControlSurfaceSizer.m` are **restored** (verbatim from git history
+at the pre-2026-08-03 commit — no equation/citation changed across either move), and every
+`TAIL SIZING`/`CONTROL SURFACE SIZING` banner-comment block the 2026-08-03 absorption added to
+Geometry is removed again:
+- `src/disciplines/geometry/GeometryModelL2/L3.m` — the abstract `size_tail(obj)`/
+  `size_control_surfaces(obj)` declarations are gone. (`GeometryModelL1` never had a `size_tail`
+  contract to begin with as of the separate 2026-08-05 decision that tail sizing starts at L2, not L1
+  — see `F16GeomL1.m`'s header.)
+- `src/disciplines/geometry/GeomL1/L2/L3.m` — the volume-coefficient/Nicolai/control-surface-area
+  toolboxes are gone; those equations live again in `src/disciplines/tail_sizing/TailL1/L2/L3.m` and
+  `src/sizing/ControlSurfaceSizer.m`.
+- `examples/F16A/F16GeomL2/L3.m` — the `c_HT`/`c_VT`/Nicolai-coefficient/control-surface-fraction
+  properties and the delegating `size_tail()`/`size_control_surfaces()` methods are gone. `S_ht`/
+  `S_vt`/`S_ail`/`S_elev`/`S_rud` remain plain properties on the geometry object, now written by an
+  external tail/control-surface object instead of computed in place.
+- `SizingLoopL2.m`'s constructor takes `tail (1,1) TailSizingBase` and
+  `ctrl (1,1) ControlSurfaceSizer` as dependency-injected arguments again; `run()` calls
+  `obj.tail.size(...)`/`obj.ctrl.size(obj.geom)` and writes the results into `obj.geom.S_ht`/`S_vt`/
+  `S_ail`/`S_elev`/`S_rud`, instead of calling `obj.geom.size_tail()`/`size_control_surfaces()`
+  directly. Call sites updated: `FixedGeomStub.m`, `TestSizingLoopL2.m`, `design_study_02_L2.m`,
+  `design_study_03_L3.m`, `mixed_fidelity_tests/build_fidelity_combo.m`.
 
-Full rationale, citations, and discrepancy record for the ORIGINAL (now-superseded) three-tier
-tail_sizing discipline: `src/disciplines/tail_sizing/TailSizing_scribe_plan.md` (kept solely as the
-historical record — every other file in that directory is deleted), `VnV/BrandtF16A/todo.md`
+Full rationale, citations, and discrepancy record: `src/disciplines/tail_sizing/TailSizing_scribe_plan.md`
+(the historical record kept through both the 2026-08-03 absorption and this reversal), `VnV/BrandtF16A/todo.md`
 (2026-07-28 entries).
+
+<details><summary>Historical entry, absorbed into Geometry 2026-08-03, reversed 2026-08-05 (kept for context)</summary>
+
+**Tail sizing and control-surface sizing (absorbed into Geometry, 2026-08-03):** Casey's decision:
+tail sizing and control-surface sizing are organizationally part of the Geometry discipline, not
+separate disciplines/objects. The standalone `tail_sizing` discipline and
+`src/sizing/ControlSurfaceSizer.m` were deleted; every equation/citation/coefficient was carried over
+unchanged, just relocated, under `TAIL SIZING`/`CONTROL SURFACE SIZING` banner comments in
+`GeometryModelL1/L2/L3.m`, `GeomL1/L2/L3.m`, and `examples/F16A/F16GeomL1/L2/L3.m`, with
+`SizingLoopL2.m`'s constructor no longer taking `tail`/`ctrl` arguments and `run()` calling
+`obj.geom.size_tail()`/`obj.geom.size_control_surfaces()` directly.
+
+</details>
 
 <details><summary>Historical entry, superseded 2026-08-03 (kept for context)</summary>
 

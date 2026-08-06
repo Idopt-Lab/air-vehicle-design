@@ -33,20 +33,25 @@ function T = f16a_generate_geometry_test()
 %              S_ref from W_TO -- this is the actual "another way of
 %              estimating S_ref ... or show a workflow for students to use
 %              at L1" F16GeomL1.m's own header has flagged as a TODO since
-%              2026-07-08; this script is that workflow. F16GeomL1 then
-%              gives wing AR, fuselage length, whole-aircraft S_wet, and
-%              (via GeometryBase + F16GeomL1.size_tail) both tail areas.
+%              2026-07-08; this script is that workflow. F16GeomL1 gives
+%              wing AR, span, fuselage length, and whole-aircraft S_wet
+%              only -- L1 has no tail sizing at all (that first appears
+%              at L2).
 %     STAGE 2  L2 OUTPUTS: an F16GeomL2 object, constructed from its own
-%              JSON defaults, then has S_ref/AR_wing/S_ht/S_vt/L_fus/
-%              LE_sweep_wing OVERWRITTEN with Stage 1's cascaded values --
-%              every wetted area read back out is genuinely "L1 cascaded
+%              JSON defaults, then has S_ref/AR_wing/L_fus/LE_sweep_wing
+%              OVERWRITTEN with Stage 1's cascaded values (S_ht/S_vt stay
+%              at g2's own JSON default -- tail sizing first appears at
+%              this tier, no L1 cascade exists for either) -- every
+%              wetted area read back out is genuinely "L1 cascaded
 %              through the real L2 class," not a hand re-implementation
 %              of its formulas.
 %     STAGE 3  L3 OUTPUTS: an F16GeomL3 object, same override treatment,
 %              PLUS the two T.O.-physical inputs that make L3 L3 (L_fus,
-%              B_h) -- calling its own self-mutating size_tail() to re-
-%              size the tail with the shorter T.O. arm, exactly as the
-%              production sizing loop does.
+%              B_h) -- feeding a standalone F16TailL1().size(...) call to
+%              RE-size L2's tail areas with the shorter T.O. arm, exactly
+%              as the production sizing loop does (tail sizing is a
+%              dependency-injected object again, not a geometry method --
+%              see CLAUDE.md's 2026-08-05 tail-sizing extraction).
 %
 %   ─── AN HONEST GAP, SURFACED RATHER THAN PAPERED OVER ───────────────────
 %   lambda_wing remains the one irreducible hand-typed given: no taper
@@ -77,7 +82,7 @@ function T = f16a_generate_geometry_test()
 aircraft_category   = "jet_fighter";
 M_max                = 2.0;       % design Mach   [feeds Raymer Tbl 4.1 AR_eq]
 W_TO                  = 45000.0;  % lbf, guessed
-has_rss               = true;     % relaxed static stability -- true for the F-16 (informational: g1/g2/g3's own constructors already bake this in via GeomL1.compute_tail_volume_coeffs)
+has_rss               = true;     % relaxed static stability -- true for the F-16 (informational: F16TailL1's constructor already bakes this in via TailL1.compute_tail_volume_coeffs; g1 has no tail sizing)
 has_all_moving_tail   = true;     % all-moving stabilator -- true for the F-16 (ditto)
 
 % engine_type -- now wired into prop_L1 below (Stage 1), a real consumer:
@@ -122,9 +127,10 @@ b_wing     = GeometryBase.compute_span(AR_wing_L1, S_ref);
 % Compute taper ratio -- still a hand-typed given (see header): no GeomL1
 % regression, and no Tier-3 class property either, produces taper. Whether
 % it is even NEEDED at L1 is a real judgment call, not a fact this
-% framework settles -- taper only enters here because size_tail's moment-
-% arm math needs cbar_wing, and GeometryBase.compute_mac cannot get cbar
-% without one. A team that picks a rough lambda early (as Casey's own team
+% framework settles -- taper is needed here because it cascades into
+% g2.lambda_wing/g3.lambda_wing below, and because GeometryBase.compute_mac
+% (feeding the Wing MAC cbar row reported below) cannot get cbar without
+% one. A team that picks a rough lambda early (as Casey's own team
 % did) and refines it once real data narrows it down is following the same
 % "guess now, refine later" logic Stage 0 already uses for W_TO.
 lambda_wing = 0.2275;   % [Brandt Main!B20 -- wing taper ratio]
@@ -135,10 +141,6 @@ cbar_wing  = GeometryBase.compute_mac(c_root_w, lambda_wing);
 
 L_fus_L1       = g1.L_fuselage;   % Dependent -- live now that g1.W_TO is set   [Raymer Tbl 6.3]
 S_wet_L1_total = g1.S_wet;        % Dependent, ditto                            [Roskam Tbl 3.5]
-
-S_tail_L1 = g1.size_tail(S_ref, b_wing, cbar_wing, L_fus_L1);   % g1.c_HT/c_VT already set by its own constructor (0.315/0.063)
-S_ht_L1   = S_tail_L1.S_ht;
-S_vt_L1   = S_tail_L1.S_vt;
 
 % ════════════════════════════════════════════════════════════════════════ %
 %  STAGE 2 — L2 OUTPUTS (F16GeomL2, its own JSON defaults overridden with
@@ -171,11 +173,10 @@ g2.S_ref         = S_ref;                    % cascaded, Stage 1
 g2.AR_wing       = AR_wing_L1;                % cascaded, Stage 1
 g2.lambda_wing   = lambda_wing;               % given, Stage 1
 g2.LE_sweep_wing = sweep_LE_wing_graphical;   % Raymer Fig. 4.20, NEW at this stage
-g2.S_ht          = S_ht_L1;                   % cascaded, Stage 1
-g2.S_vt          = S_vt_L1;                   % cascaded, Stage 1
 g2.L_fus         = L_fus_L1;                  % cascaded, Stage 1
 % Everything else on g2 stays at its own JSON default -- genuinely NEW
-% L2-only shape data no L1 method produces at all: AR_ht/lambda_ht/
+% L2-only shape data no L1 method produces at all: S_ht/S_vt [tail sizing
+% first appears at THIS tier -- L1 has no size_tail at all], AR_ht/lambda_ht/
 % tc_r_ht/tc_t_ht [Brandt Main! col C / T.O. Sec. I biconvex], AR_vt/
 % lambda_vt/tc_r_vt/tc_t_vt [Brandt Main! col H / T.O. Sec. I], tc_wing
 % [Brandt Main!B22], W_max_fuselage/H_max_fuselage [Brandt Main!C32/D32],
@@ -210,7 +211,16 @@ b_ht_L3  = 18.5;   % ft  [T.O./USAF 3-view span, taken as PRIMARY -- g3.AR_ht is
 
 g3.L_fus = L_fus_L3;
 g3.B_h   = b_ht_L3;
-S_tail_L3 = g3.size_tail();   % self-mutates g3.S_ht/g3.S_vt using g3's OWN (now-overridden) S_ref/b_wing/cbar_wing/L_fus
+
+% TAIL SIZING (2026-08-03 absorption into Geometry REVERTED, 2026-08-05):
+% g3.size_tail() no longer exists -- tail sizing is a standalone,
+% dependency-injected object again, same F16TailL1() production convention
+% as SizingLoopL2/design_study_02_L2/03_L3. size() is a 4-scalar call, not
+% self-mutating, so g3.S_ht/S_vt are written back explicitly here.
+tail      = F16TailL1();
+S_tail_L3 = tail.size(g3.S_ref, g3.b_wing, g3.cbar_wing, g3.L_fus);
+g3.S_ht   = S_tail_L3.S_ht;
+g3.S_vt   = S_tail_L3.S_vt;
 S_ht_L3   = S_tail_L3.S_ht;
 S_vt_L3   = S_tail_L3.S_vt;
 
@@ -241,18 +251,14 @@ T = [T; ComparisonReport.row('L_fus, L1 statistical regression [ft]', 'L1', L_fu
     'Brandt Main!B32', '%.2f', 'g1.L_fuselage -- Raymer Tbl 6.3 jet-fighter regression on W_TO alone.')];
 T = [T; ComparisonReport.row('Total S_wet, L1 regression [ft^2]', 'L1', S_wet_L1_total, NaN, '-', '%.1f', ...
     'g1.S_wet -- whole-aircraft one-shot regression, no per-component breakdown at this tier.')];
-T = [T; ComparisonReport.row('S_ht, L1 volume-coeff method [ft^2]', 'L1', S_ht_L1, 108.0, ...
-    'Brandt Main!C18', '%.2f', 'g1.size_tail, fed the cascaded b_wing/cbar_wing/L_fus above, not Brandt''s real span/length.')];
-T = [T; ComparisonReport.row('S_vt, L1 volume-coeff method [ft^2]', 'L1', S_vt_L1, 60.0, ...
-    'Brandt Main!H18', '%.2f', 'g1.size_tail -- same cascaded-input note as S_ht above.')];
 
 T = [T; ComparisonReport.section('STAGE 1 -> 2 — F16GeomL2, Stage-1 outputs overwriting its JSON defaults')];
 T = [T; ComparisonReport.row('S_wet wing [ft^2]', 'L1->L2', S_wet_wing_L2, 392.02, 'Brandt Geom!B14', '%.2f', ...
     'g2.S_wet_wing (Dependent), read after S_ref/AR_wing/lambda_wing/LE_sweep_wing were overwritten with cascaded/Fig.4.20 values.')];
-T = [T; ComparisonReport.row('S_wet HT [ft^2]', 'L1->L2', S_wet_ht_L2, 99.5848, 'Brandt Geom!B16', '%.2f', ...
-    'g2.S_wet_ht, fed g2.S_ht=S_ht_L1 (39-ish ft^2, not Brandt''s 108) -- large gap is compounded L1 regression uncertainty, not a formula error.')];
-T = [T; ComparisonReport.row('S_wet VT [ft^2]', 'L1->L2', S_wet_vt_L2, 81.6894, 'Brandt Geom!B17', '%.2f', ...
-    'g2.S_wet_vt, fed g2.S_vt=S_vt_L1 -- same compounding-uncertainty note as S_wet HT above.')];
+T = [T; ComparisonReport.row('S_wet HT [ft^2]', 'L2', S_wet_ht_L2, 99.5848, 'Brandt Geom!B16', '%.2f', ...
+    'g2.S_wet_ht, fed g2''s own JSON-default S_ht -- no L1 cascade exists (L1 has no tail sizing).')];
+T = [T; ComparisonReport.row('S_wet VT [ft^2]', 'L2', S_wet_vt_L2, 81.6894, 'Brandt Geom!B17', '%.2f', ...
+    'g2.S_wet_vt, fed g2''s own JSON-default S_vt -- same note as S_wet HT above.')];
 T = [T; ComparisonReport.row('S_wet fuselage [ft^2]', 'L1->L2', S_wet_fus_L2, 730.422, 'Brandt Geom!B3', '%.2f', ...
     'g2.get_S_wet_fuselage(), fed g2.L_fus=L_fus_L1 (52.7-ish ft, not Brandt''s real 46.5 ft).')];
 T = [T; ComparisonReport.row('S_wet duct [ft^2]', 'L2', S_wet_duct, NaN, '-', '%.2f', ...
@@ -268,11 +274,11 @@ T = [T; ComparisonReport.row('Total S_wet, L2 (component sum) [ft^2]', 'L1->L2',
 
 T = [T; ComparisonReport.section('STAGE 2 -> 3 — F16GeomL3: only L_fus and HT span (B_h) change; wing/VT-shape/duct inherited')];
 T = [T; ComparisonReport.row('S_ht, re-sized with L_fus_L3 [ft^2]', 'L2->L3', S_ht_L3, 108.0, ...
-    'Brandt Main!C18', '%.2f', 'g3.size_tail() self-mutating call, T.O. L_fus_L3=47.5 shortens the tail arm vs Stage 1''s ~52.7.')];
+    'Brandt Main!C18', '%.2f', 'F16TailL1().size(...) call fed g3''s own overridden geometry, T.O. L_fus_L3=47.5 shortens the tail arm vs Stage 1''s ~52.7.')];
 T = [T; ComparisonReport.row('S_wet HT via T.O. span=18.5 primary [ft^2]', 'L2->L3', S_wet_ht_L3, 99.5848, ...
     'Brandt Geom!B16', '%.2f', 'g3.S_wet_ht -- g3.AR_ht is Dependent = B_h^2/S_ht_L3 instead of a given 3.0.', NaN, 'BY DESIGN')];
 T = [T; ComparisonReport.row('S_vt, re-sized with L_fus_L3 [ft^2]', 'L2->L3', S_vt_L3, 60.0, ...
-    'Brandt Main!H18', '%.2f', 'Same g3.size_tail() self-mutating call as S_ht above -- shorter T.O. tail arm.')];
+    'Brandt Main!H18', '%.2f', 'Same F16TailL1().size(...) call as S_ht above -- shorter T.O. tail arm.')];
 T = [T; ComparisonReport.row('S_wet VT [ft^2]', 'L2->L3', S_wet_vt_L3, 81.6894, 'Brandt Geom!B17', '%.2f', ...
     'g3.S_wet_vt -- same AR_vt/lambda_vt as g2 (both at their own JSON default); only the cascaded S_vt_L3 (shorter tail arm) changed.')];
 T = [T; ComparisonReport.row('S_wet fuselage [ft^2]', 'L2->L3', S_wet_fus_L3, 676.3289, 'Brandt Geom!D23', '%.2f', ...
@@ -298,10 +304,11 @@ meta.preamble = { ...
     sprintf(['Stage 0 also records tail_configuration=%s for tabulation -- still no consumer anywhere in ' ...
      'this repo. engine_type=%s IS now wired into prop_L1/prop_L2.engine_type (the TSFC/lapse table key), ' ...
      'unlike the prior toolbox-only revision of this file.'], tail_configuration, engine_type), ...
-    sprintf(['Stage 0''s has_rss=%d and has_all_moving_tail=%d are informational: g1/g2/g3''s own ' ...
-     'constructors already hardcode the identical F-16 facts via GeomL1.compute_tail_volume_coeffs, so ' ...
-     'these two flags are not separately threaded through -- listed here for the record, not silently ' ...
-     'dropped.'], has_rss, has_all_moving_tail) };
+    sprintf(['Stage 0''s has_rss=%d and has_all_moving_tail=%d are informational: F16TailL1''s own ' ...
+     'constructor already hardcodes the identical F-16 facts via TailL1.compute_tail_volume_coeffs ' ...
+     '(g1 has no tail sizing at all -- that first appears at L2, via the standalone tail object, not ' ...
+     'a geometry method), so these two flags are not separately threaded through -- listed here for ' ...
+     'the record, not silently dropped.'], has_rss, has_all_moving_tail) };
 
 ComparisonReport.show(T, meta);
 

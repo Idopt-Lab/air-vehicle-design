@@ -24,10 +24,11 @@
 
 %% Run the L2 design study
 % design_study_02_L2 builds fresh F16AeroL2/F16PropL2/F16WeightsL2/
-% F16GeomL2/F16MissionL2 objects (tail/control-surface sizing are now
-% methods on F16GeomL2 itself -- see that class's TAIL SIZING/CONTROL
-% SURFACE SIZING sections, 2026-08-03), wires them into SizingLoopL2, and
-% runs it to convergence. The second
+% F16GeomL2/F16MissionL2 objects, plus the separate, dependency-injected
+% F16TailL1/ControlSurfaceSizer tail- and control-surface-sizing objects
+% (2026-08-03 absorption into Geometry REVERTED, 2026-08-05 -- tail sizing
+% is not a method on F16GeomL2 any more), wires them all into SizingLoopL2,
+% and runs it to convergence. The second
 % output (objs) exposes those same objects, already mutated to their
 % converged state, for the reporting below.
 

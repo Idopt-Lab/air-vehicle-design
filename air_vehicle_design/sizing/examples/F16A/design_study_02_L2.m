@@ -8,7 +8,8 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %   separate internal copy), then runs SizingLoopL2 to convergence. Unlike
 %   L1, S_ref is a fixed JSON input here, never solved for -- only T_SL
 %   updates each iteration, alongside re-sizing the tail and control
-%   surfaces (both now owned by geom itself -- see below).
+%   surfaces via the separate, dependency-injected tail/ctrl objects built
+%   below (see TAIL SIZING further down this header).
 %
 %   [result, objs] = design_study_02_L2(...) additionally returns the
 %   handle objects (objs.aero/prop/wts/geom/miss/con) in their
@@ -18,17 +19,18 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %   additive: existing single-output callers (tests/sizing/
 %   TestF16SizingStudies.m) are unaffected.
 %
-%   TAIL SIZING (updated 2026-08-03): tail sizing and control-surface
-%   sizing are organizationally part of Geometry, not separate objects
-%   (Casey's decision) -- the former F16TailL1/F16TailL2/F16TailL3 and
-%   ControlSurfaceSizer are RETIRED. geom.c_HT/geom.c_VT (Raymer 7th ed.
-%   Table 6.4 volume-coefficient method, 0.315/0.063, tail arm 0.475*L_fus)
-%   are set in F16GeomL2's own constructor, and SizingLoopL2's run() body
-%   now calls geom.size_tail() -- a zero-arg, self-mutating method on the
-%   geometry object itself. geom.C_HT_nicolai/geom.C_VT_nicolai (Nicolai &
-%   Carichner F-16-specific coefficients) and geom.size_tail_nicolai() are
-%   preserved as a SECONDARY, non-mutating alternate -- not wired into this
-%   study.
+%   TAIL SIZING (2026-08-03 absorption into Geometry REVERTED, 2026-08-05):
+%   tail sizing and control-surface sizing are separate, dependency-injected
+%   objects again -- F16TailL1() (Raymer 7th ed. Table 6.4 volume-
+%   coefficient method, 0.315/0.063, tail arm 0.475*L_fus; hardcoded, no
+%   arguments) and ControlSurfaceSizer(...). SizingLoopL2's run() body calls
+%   tail.size(S_ref, b_wing, cbar_wing, L_fus) every iteration (reading
+%   those four scalars live off geom) and writes the result into
+%   geom.S_ht/S_vt. F16TailL1 is the SAME object shared, unmodified, across
+%   both this study and design_study_03_L3.m -- see SizingLoopL2.m's header
+%   for why only an L1-shaped tail object is ever wired into production.
+%   F16TailL2 (Nicolai & Carichner F-16-specific coefficients) is NOT used
+%   here -- it was only ever a SECONDARY, non-mutating comparison alternate.
 %
 %   result = design_study_02_L2() uses default initial guesses of 30,000
 %   lbf / 20,000 lbf -- both deliberately off Brandt's 31,377 lb / 23,770
@@ -37,11 +39,7 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %
 %   CONTROL-SURFACE FRACTIONS (user-selected 2026-07-27, since Raymer's own
 %   source data is a chart/footnoted table, not a single per-category
-%   number -- see F16GeomL2.m's CONTROL SURFACE SIZING property block for
-%   the full per-fraction citations). Now geom.c_ail_frac/b_ail_frac/
-%   c_elev_frac/b_elev_frac/c_rud_frac/b_rud_frac, set as F16GeomL2 default
-%   property values rather than passed into a separate ControlSurfaceSizer
-%   constructor:
+%   number). Passed into the injected ControlSurfaceSizer's constructor:
 %     Aileron:  c_ail_frac=0.20, b_ail_frac=0.40 -- a representative point
 %       from Fig. 6.3's historical-guidelines band (chord fraction: midpoint
 %       of the text's stated typical 15-25% range; span fraction: the
@@ -67,11 +65,13 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
     aero = F16AeroL2(geom, f16a_spec_path(2));
     wts  = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), geom, prop);
     miss = F16MissionL2(mission_profile_path());
+    tail = F16TailL1();
+    ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
 
     constraints = F16ConstraintSet.build(aero, prop);
     con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 
-    loop = SizingLoopL2(aero, prop, wts, geom, miss, con);
+    loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);
 
     objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...

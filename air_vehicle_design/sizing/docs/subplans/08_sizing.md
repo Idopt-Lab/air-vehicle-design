@@ -3,11 +3,14 @@
 **Status:** Placeholder — not started. Already known stale against the as-built code (see
 `docs/PLAN.md`'s "Resolved Decisions") even before this note: this doc's tail-sizing/control-surface
 file paths and coefficients below (`TailSizingLevel1.m`, `ControlSurfaceSizer.m`, `c_HT=0.40`) describe
-a design that was superseded twice — first 2026-07-28 (three-tier `tail_sizing` discipline, corrected
-Raymer 7th ed. coefficients 0.315/0.063), then 2026-08-03 (that discipline absorbed into Geometry,
-`ControlSurfaceSizer.m` deleted — see `docs/PLAN.md`'s current "Tail sizing and control-surface sizing"
-entry for the real, as-built file paths). Not rewritten here since this whole doc is a pre-implementation
-placeholder, not living documentation.
+a design that was superseded three times — first 2026-07-28 (three-tier `tail_sizing` discipline,
+corrected Raymer 7th ed. coefficients 0.315/0.063), then 2026-08-03 (that discipline absorbed into
+Geometry, `ControlSurfaceSizer.m` deleted), then 2026-08-05 (the absorption reversed — `tail_sizing`
+and `ControlSurfaceSizer.m` restored as standalone objects again, `SizingLoopL2` back to
+dependency-injecting `tail`/`ctrl` — see `docs/PLAN.md`'s current "Tail sizing and control-surface
+sizing" entry for the real, as-built file paths, which now again match this doc's `tail.size(...)` /
+DI shape below more closely than the intervening absorbed-into-geometry state did). Not rewritten here
+since this whole doc is a pre-implementation placeholder, not living documentation.
 **Depends on:** Steps 0–7 (all prior steps complete and tested)
 **Blocks:** Nothing — final integration step
 

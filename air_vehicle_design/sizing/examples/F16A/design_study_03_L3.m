@@ -19,15 +19,13 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %   converged. Optional and additive: existing single-output callers
 %   (tests/sizing/TestF16SizingStudies.m) are unaffected.
 %
-%   TAIL SIZING (updated 2026-08-03): tail sizing and control-surface
-%   sizing are organizationally part of Geometry, not separate objects
-%   (Casey's decision) -- the former F16TailL1/F16TailL2/F16TailL3 and
-%   ControlSurfaceSizer are RETIRED. geom.size_tail() -- a zero-arg,
-%   self-mutating method on F16GeomL3 itself -- delegates to the SAME
-%   Raymer 7th ed. Table 6.4 volume-coefficient math as design_study_02_L2
-%   (this supersedes the now-retired F16TailL1, which used to be shared,
-%   unmodified, across both design studies). L3's stability-and-control
-%   stub (geom.size_tail_stability_control()) is NOT called here.
+%   TAIL SIZING (2026-08-03 absorption into Geometry REVERTED, 2026-08-05):
+%   tail sizing and control-surface sizing are separate, dependency-injected
+%   objects again -- F16TailL1() and ControlSurfaceSizer(...), the SAME
+%   objects (shared, unmodified) as design_study_02_L2.m, wired into
+%   SizingLoopL2 exactly as there. F16TailL3 -- the stability-and-control
+%   stub that errors on size() with a citation-gap message -- is NOT used
+%   here; it is never wired into any working design study.
 %
 %   PROPULSION AT L3: there is deliberately no L3 propulsion tier (no
 %   PropL3/PropulsionModelL3/F16PropL3 -- user decision 2026-07-25, see
@@ -43,8 +41,8 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %
 %   CONTROL-SURFACE FRACTIONS: identical to design_study_02_L2.m's (same
 %   airframe, same Raymer Fig. 6.3/Table 6.5 sourcing) -- see that file's
-%   header for the full rationale. Not re-derived per fidelity level: they
-%   are F16GeomL3's own default property values, identical to F16GeomL2's.
+%   header for the full rationale. Not re-derived per fidelity level: the
+%   SAME ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) call is used here.
     arguments
         W_TO_guess (1,1) double {mustBePositive} = 30000
         T_SL_guess (1,1) double {mustBePositive} = 20000
@@ -55,11 +53,13 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
     aero = F16AeroL3(geom, f16a_spec_path(3));
     wts  = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
     miss = F16MissionL3(mission_profile_path());
+    tail = F16TailL1();
+    ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
 
     constraints = F16ConstraintSet.build(aero, prop);
     con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
 
-    loop = SizingLoopL2(aero, prop, wts, geom, miss, con);
+    loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);
 
     objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
