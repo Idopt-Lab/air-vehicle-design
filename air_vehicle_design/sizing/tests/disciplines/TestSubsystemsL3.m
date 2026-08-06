@@ -18,6 +18,16 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
 %   (c) that every reused equation still agrees with SubsystemsL2/L1, plus
 %   the same optimization-ready property-design guards as TestSubsystemsL2.
 
+    methods (TestClassSetup)
+
+        function announceFidelityLevel(~)
+            fprintf('\n============================================================\n');
+            fprintf(' FIDELITY LEVEL 3 -- Subsystems\n');
+            fprintf('============================================================\n');
+        end
+
+    end
+
     methods (Test)
 
         % ================================================================== %
@@ -40,8 +50,12 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         %          = avg(0,0.6)*5 + avg(0.6,0.2)*5 = 1.5 + 2 = 3.5 ft^2
             frames = [0.5, 0.5, 0.3; 1.0, 0.2, 0.1];
             [A_top, A_side] = SubsystemsL3.compute_frame_integrated_projected_areas(frames, 10, 4, 2);
-            tc.verifyEqual(A_top,  12.0, 'AbsTol', 1e-9);
-            tc.verifyEqual(A_side, 3.5,  'AbsTol', 1e-9);
+            expected_A_top  = 12.0;
+            expected_A_side = 3.5;
+            fprintf('  [L3] testComputeFrameIntegratedProjectedAreasHandComputed: A_top expected=%.6g, received=%.6g\n', expected_A_top, A_top);
+            tc.verifyEqual(A_top,  expected_A_top, 'AbsTol', 1e-9);
+            fprintf('  [L3] testComputeFrameIntegratedProjectedAreasHandComputed: A_side expected=%.6g, received=%.6g\n', expected_A_side, A_side);
+            tc.verifyEqual(A_side, expected_A_side,  'AbsTol', 1e-9);
         end
 
         function testFuselageRawVolumeUsesFrameIntegratedAreasNotEllipse(tc)
@@ -56,9 +70,11 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
                                'W_max_fuselage', 4, 'H_max_fuselage', 2);
             expected = 3.57;
             received = SubsystemsL3.fuselage_raw_volume(obj);
+            fprintf('  [L3] testFuselageRawVolumeUsesFrameIntegratedAreasNotEllipse: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
             ellipse_equivalent = 4.25*pi^2;   % what L2's envelope-ellipse formula gives for the same L/W/H
+            fprintf('  [L3] testFuselageRawVolumeUsesFrameIntegratedAreasNotEllipse: received=%.6g must differ from ellipse_equivalent=%.6g\n', received, ellipse_equivalent);
             tc.verifyNotEqual(received, ellipse_equivalent, ...
                 'L3 fuselage_raw_volume must use frame-integrated areas, not silently fall back to the L2 ellipse.');
         end
@@ -68,7 +84,10 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
             obj.geom = struct('frames_normalized', frames, 'L_fuselage', 10, ...
                                'W_max_fuselage', 4, 'H_max_fuselage', 2);
             obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-            tc.verifyEqual(SubsystemsL3.fuselage_usable_fuel_volume(obj), 3.57*0.80, 'AbsTol', 1e-9);
+            received = SubsystemsL3.fuselage_usable_fuel_volume(obj);
+            expected = 3.57*0.80;
+            fprintf('  [L3] testFuselageUsableFuelVolumeAppliesPackagingFactorAtL3: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         % ================================================================== %
@@ -78,32 +97,58 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
 
         function testWingFuelVolumeAgreesWithL2(tc)
             obj.geom = struct('S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            tc.verifyEqual(SubsystemsL3.wing_fuel_volume(obj), 11.34, 'AbsTol', 1e-9);
-            tc.verifyEqual(SubsystemsL3.wing_fuel_volume(obj), SubsystemsL2.wing_fuel_volume(obj), 'AbsTol', 1e-9);
+            received = SubsystemsL3.wing_fuel_volume(obj);
+            expected = 11.34;
+            fprintf('  [L3] testWingFuelVolumeAgreesWithL2: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+
+            received_l3 = SubsystemsL3.wing_fuel_volume(obj);
+            received_l2 = SubsystemsL2.wing_fuel_volume(obj);
+            fprintf('  [L3] testWingFuelVolumeAgreesWithL2: L3 received=%.6g, L2 received=%.6g\n', received_l3, received_l2);
+            tc.verifyEqual(received_l3, received_l2, 'AbsTol', 1e-9);
         end
 
         function testAvionicsDensityAgreesWithL2FlatNicolai45(tc)
             obj = struct();
-            tc.verifyEqual(SubsystemsL3.avionics_density(obj), 45.0, 'AbsTol', 1e-9);
+            received = SubsystemsL3.avionics_density(obj);
+            expected = 45.0;
+            fprintf('  [L3] testAvionicsDensityAgreesWithL2FlatNicolai45: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         function testAvionicsWeightAndVolumeAgreeWithL2(tc)
             obj.avionics_table_row = 'Fighters';
             obj.fuel_weight_source = struct('W_TO', 20000, 'OEW', @(~) 12000);
-            tc.verifyEqual(SubsystemsL3.avionics_weight(obj), 660, 'AbsTol', 1e-9);
-            tc.verifyEqual(SubsystemsL3.avionics_volume(obj), 660/45, 'AbsTol', 1e-9);
+            received_weight = SubsystemsL3.avionics_weight(obj);
+            expected_weight = 660;
+            fprintf('  [L3] testAvionicsWeightAndVolumeAgreeWithL2: weight expected=%.6g, received=%.6g\n', expected_weight, received_weight);
+            tc.verifyEqual(received_weight, expected_weight, 'AbsTol', 1e-9);
+
+            received_volume = SubsystemsL3.avionics_volume(obj);
+            expected_volume = 660/45;
+            fprintf('  [L3] testAvionicsWeightAndVolumeAgreeWithL2: volume expected=%.6g, received=%.6g\n', expected_volume, received_volume);
+            tc.verifyEqual(received_volume, expected_volume, 'AbsTol', 1e-9);
         end
 
         function testFuelDensityReusesL1Table(tc)
             obj = struct('fuel_type', 'JP-8');
-            tc.verifyEqual(SubsystemsL3.fuel_density(obj), 50.0, 'AbsTol', 1e-9);
+            received = SubsystemsL3.fuel_density(obj);
+            expected = 50.0;
+            fprintf('  [L3] testFuelDensityReusesL1Table: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         function testFuelVolumeFromWeightReusesL2(tc)
             obj = struct('fuel_type', 'JP-8');
-            tc.verifyEqual(SubsystemsL3.fuel_volume_from_weight(obj, 400), 8.0, 'AbsTol', 1e-9);
-            tc.verifyEqual(SubsystemsL3.fuel_volume_from_weight(obj, 400), ...
-                SubsystemsL2.fuel_volume_from_weight(obj, 400), 'AbsTol', 1e-9);
+            received = SubsystemsL3.fuel_volume_from_weight(obj, 400);
+            expected = 8.0;
+            fprintf('  [L3] testFuelVolumeFromWeightReusesL2: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+
+            received_l3 = SubsystemsL3.fuel_volume_from_weight(obj, 400);
+            received_l2 = SubsystemsL2.fuel_volume_from_weight(obj, 400);
+            fprintf('  [L3] testFuelVolumeFromWeightReusesL2: L3 received=%.6g, L2 received=%.6g\n', received_l3, received_l2);
+            tc.verifyEqual(received_l3, received_l2, 'AbsTol', 1e-9);
         end
 
         function testFuelVolumeUsesL3sOwnFuselageTermNotL2s(tc)
@@ -119,14 +164,28 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
 
             fus_term  = SubsystemsL3.fuselage_usable_fuel_volume(obj);   % 2.856
             wing_term = SubsystemsL3.wing_fuel_volume(obj);              % 11.34
-            tc.verifyEqual(SubsystemsL3.fuel_volume(obj), fus_term + wing_term, 'AbsTol', 1e-9);
+            received  = SubsystemsL3.fuel_volume(obj);
+            expected  = fus_term + wing_term;
+            fprintf('  [L3] testFuelVolumeUsesL3sOwnFuselageTermNotL2s: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         function testBatteryVolumeReusesL2ErrorIdentically(tc)
         % NOT a new TODO test (see file header) -- structural check that L3
         % genuinely reuses L2's implementation rather than duplicating it.
+            expectedErrId = 'SubsystemsL2:batteryVolumetricDensityNotAvailable';
+            try
+                SubsystemsL3.battery_volume(struct(), 10);
+                actualErrId  = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId  = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3] testBatteryVolumeReusesL2ErrorIdentically: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
             tc.verifyError(@() SubsystemsL3.battery_volume(struct(), 10), ...
-                'SubsystemsL2:batteryVolumetricDensityNotAvailable');
+                expectedErrId);
         end
 
         % ================================================================== %
@@ -146,9 +205,13 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
             wing_term = SubsystemsL3.wing_fuel_volume(obj);              % 11.34
             av_term   = SubsystemsL3.avionics_volume(obj);               % 14.6666666667
 
+            fprintf('  [L3] testInternalVolumeSumsAllThreeTermsIncludingAvionics: av_term=%.6g must be > 0\n', av_term);
             tc.verifyGreaterThan(av_term, 0);
             received = SubsystemsL3.internal_volume(obj);
-            tc.verifyEqual(received, fus_term + wing_term + av_term, 'AbsTol', 1e-9);
+            expected = fus_term + wing_term + av_term;
+            fprintf('  [L3] testInternalVolumeSumsAllThreeTermsIncludingAvionics: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+            fprintf('  [L3] testInternalVolumeSumsAllThreeTermsIncludingAvionics: received=%.6g must be > fus_term+wing_term=%.6g\n', received, fus_term + wing_term);
             tc.verifyGreaterThan(received, fus_term + wing_term, ...
                 'internal_volume must include a nonzero avionics contribution.');
         end
@@ -166,10 +229,17 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
             wing_term = SubsystemsL3.wing_fuel_volume(obj);              % 11.34, sum = 14.196
 
             result = SubsystemsL3.fuel_volume_check(obj);
-            tc.verifyEqual(result.available_vol_ft3, fus_term + wing_term, 'AbsTol', 1e-9);
+            expected_available = fus_term + wing_term;
+            fprintf('  [L3] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: available expected=%.6g, received=%.6g\n', expected_available, result.available_vol_ft3);
+            tc.verifyEqual(result.available_vol_ft3, expected_available, 'AbsTol', 1e-9);
+            fprintf('  [L3] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: received available=%.6g must differ from fus_term alone=%.6g\n', result.available_vol_ft3, fus_term);
             tc.verifyNotEqual(result.available_vol_ft3, fus_term);
+            fprintf('  [L3] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: received available=%.6g must differ from wing_term alone=%.6g\n', result.available_vol_ft3, wing_term);
             tc.verifyNotEqual(result.available_vol_ft3, wing_term);
-            tc.verifyEqual(result.required_vol_ft3, 20.0, 'AbsTol', 1e-9);   % 1000/50
+            expected_required = 20.0;   % 1000/50
+            fprintf('  [L3] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: required expected=%.6g, received=%.6g\n', expected_required, result.required_vol_ft3);
+            tc.verifyEqual(result.required_vol_ft3, expected_required, 'AbsTol', 1e-9);
+            fprintf('  [L3] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: sufficient received=%s, expected=false\n', mat2str(result.sufficient));
             tc.verifyFalse(result.sufficient, 'required (20 ft^3) exceeds available (~14.2 ft^3).');
         end
 
@@ -181,7 +251,18 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
             obj.packaging_factor_category = 'Integral tank — shallow fuselage';
             obj.fuel_type                 = 'JP-8';
             obj.fuel_weight_source        = struct('W_energy', NaN);
-            tc.verifyError(@() SubsystemsL3.fuel_volume_check(obj), 'SubsystemsL3:fuelWeightNotSet');
+            expectedErrId = 'SubsystemsL3:fuelWeightNotSet';
+            try
+                SubsystemsL3.fuel_volume_check(obj);
+                actualErrId  = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId  = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3] testFuelVolumeCheckErrorsWhenWEnergyNaN: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() SubsystemsL3.fuel_volume_check(obj), expectedErrId);
         end
 
         % ================================================================== %
@@ -191,16 +272,56 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         function testF16SubsystemsL3ReadsJSON(tc)
             [g3, w3] = TestSubsystemsL3.makeGeomAndWeights();
             s3 = F16SubsystemsL3(f16a_spec_path(3), g3, w3);
-            tc.verifyEqual(s3.fuel_type, 'JP-8');
-            tc.verifyEqual(s3.packaging_factor_category, 'Integral tank — shallow fuselage');
-            tc.verifyEqual(s3.avionics_table_row, 'Fighters');
+            expected_fuel_type = 'JP-8';
+            fprintf('  [L3] testF16SubsystemsL3ReadsJSON: fuel_type expected=%s, received=%s\n', expected_fuel_type, s3.fuel_type);
+            tc.verifyEqual(s3.fuel_type, expected_fuel_type);
+            expected_pkg_category = 'Integral tank — shallow fuselage';
+            fprintf('  [L3] testF16SubsystemsL3ReadsJSON: packaging_factor_category expected=%s, received=%s\n', expected_pkg_category, s3.packaging_factor_category);
+            tc.verifyEqual(s3.packaging_factor_category, expected_pkg_category);
+            expected_avionics_row = 'Fighters';
+            fprintf('  [L3] testF16SubsystemsL3ReadsJSON: avionics_table_row expected=%s, received=%s\n', expected_avionics_row, s3.avionics_table_row);
+            tc.verifyEqual(s3.avionics_table_row, expected_avionics_row);
         end
 
         function testF16SubsystemsL3ConstructorRequiresAllThreeArgs(tc)
-            tc.verifyError(@() F16SubsystemsL3(), 'MATLAB:minrhs');
-            tc.verifyError(@() F16SubsystemsL3(f16a_spec_path(3)), 'MATLAB:minrhs');
+            expectedErrId = 'MATLAB:minrhs';
+
+            try
+                F16SubsystemsL3();
+                actualErrId  = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId  = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3] testF16SubsystemsL3ConstructorRequiresAllThreeArgs (zero args): expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SubsystemsL3(), expectedErrId);
+
+            try
+                F16SubsystemsL3(f16a_spec_path(3));
+                actualErrId  = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId  = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3] testF16SubsystemsL3ConstructorRequiresAllThreeArgs (one arg): expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SubsystemsL3(f16a_spec_path(3)), expectedErrId);
+
             [g3, ~] = TestSubsystemsL3.makeGeomAndWeights();
-            tc.verifyError(@() F16SubsystemsL3(f16a_spec_path(3), g3), 'MATLAB:minrhs');
+            try
+                F16SubsystemsL3(f16a_spec_path(3), g3);
+                actualErrId  = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId  = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3] testF16SubsystemsL3ConstructorRequiresAllThreeArgs (two args): expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SubsystemsL3(f16a_spec_path(3), g3), expectedErrId);
         end
 
         function testF16SubsystemsL3WrongGeomTierErrorsAtConstruction(tc)
@@ -209,8 +330,20 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
             [~, w3] = TestSubsystemsL3.makeGeomAndWeights();
             prop = F16PropL2(f16a_spec_path(2));
             g2 = F16GeomL2(f16a_spec_path(2), prop);
+
+            expectedErrId = 'MATLAB:validation:UnableToConvert';
+            try
+                F16SubsystemsL3(f16a_spec_path(3), g2, w3);
+                actualErrId  = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId  = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3] testF16SubsystemsL3WrongGeomTierErrorsAtConstruction: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
             tc.verifyError(@() F16SubsystemsL3(f16a_spec_path(3), g2, w3), ...
-                'MATLAB:validation:UnableToConvert');
+                expectedErrId);
         end
 
         function testF16SubsystemsL3DerivedPropertiesLiveRecompute(tc)
@@ -219,13 +352,31 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
             v0 = s3.fuselage_usable_fuel_volume;
 
             g3.W_max_fuselage = g3.W_max_fuselage + 1;   % optimizer-style mutation
-            tc.verifyNotEqual(s3.fuselage_usable_fuel_volume, v0, ...
+            v1 = s3.fuselage_usable_fuel_volume;
+            fprintf('  [L3] testF16SubsystemsL3DerivedPropertiesLiveRecompute: before-mutation value=%.6g, after-mutation received=%.6g (must differ)\n', v0, v1);
+            tc.verifyNotEqual(v1, v0, ...
                 'fuselage_usable_fuel_volume must recompute live after geom.W_max_fuselage mutates.');
         end
 
         function testF16SubsystemsL3DerivedPropertiesAreReadOnly(tc)
             [g3, w3] = TestSubsystemsL3.makeGeomAndWeights();
             s3 = F16SubsystemsL3(f16a_spec_path(3), g3, w3);
+
+            expectedErrId = 'MATLAB:class:noSetMethod';
+            propsToCheck = {'fuselage_raw_volume', 'wing_fuel_volume', 'fuel_volume'};
+            for i = 1:numel(propsToCheck)
+                try
+                    setfield(s3, propsToCheck{i}, 999); %#ok<STFLD,SFLD>
+                    actualErrId  = '(none thrown)';
+                    actualErrMsg = '(none thrown)';
+                catch ME
+                    actualErrId  = ME.identifier;
+                    actualErrMsg = ME.message;
+                end
+                fprintf(['  [L3] testF16SubsystemsL3DerivedPropertiesAreReadOnly (%s): expected_error=%s, ' ...
+                    'received_error=%s (%s)\n'], propsToCheck{i}, expectedErrId, actualErrId, actualErrMsg);
+            end
+
             tc.verifyError(@() setfield(s3, 'fuselage_raw_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(s3, 'wing_fuel_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(s3, 'fuel_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
@@ -234,15 +385,25 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         function testF16SubsystemsL3FuelVolumePropertyAndInternalVolumeConsolidation(tc)
             [g3, w3] = TestSubsystemsL3.makeGeomAndWeights();
             s3 = F16SubsystemsL3(f16a_spec_path(3), g3, w3);
-            tc.verifyEqual(s3.fuel_volume, s3.fuselage_usable_fuel_volume + s3.wing_fuel_volume, 'AbsTol', 1e-9);
-            tc.verifyEqual(s3.internal_volume, s3.fuel_volume + s3.avionics_volume, 'AbsTol', 1e-9);
+            received_fuel_volume = s3.fuel_volume;
+            expected_fuel_volume = s3.fuselage_usable_fuel_volume + s3.wing_fuel_volume;
+            fprintf('  [L3] testF16SubsystemsL3FuelVolumePropertyAndInternalVolumeConsolidation: fuel_volume expected=%.6g, received=%.6g\n', expected_fuel_volume, received_fuel_volume);
+            tc.verifyEqual(received_fuel_volume, expected_fuel_volume, 'AbsTol', 1e-9);
+
+            received_internal_volume = s3.internal_volume;
+            expected_internal_volume = s3.fuel_volume + s3.avionics_volume;
+            fprintf('  [L3] testF16SubsystemsL3FuelVolumePropertyAndInternalVolumeConsolidation: internal_volume expected=%.6g, received=%.6g\n', expected_internal_volume, received_internal_volume);
+            tc.verifyEqual(received_internal_volume, expected_internal_volume, 'AbsTol', 1e-9);
         end
 
         function testF16SubsystemsL3InternalVolumeIncludesAvionics(tc)
             [g3, w3] = TestSubsystemsL3.makeGeomAndWeights();
             s3 = F16SubsystemsL3(f16a_spec_path(3), g3, w3);
+            fprintf('  [L3] testF16SubsystemsL3InternalVolumeIncludesAvionics: avionics_volume received=%.6g must be > 0\n', s3.avionics_volume);
             tc.verifyGreaterThan(s3.avionics_volume, 0);
-            tc.verifyGreaterThan(s3.internal_volume, s3.fuselage_usable_fuel_volume + s3.wing_fuel_volume);
+            baseline_sum = s3.fuselage_usable_fuel_volume + s3.wing_fuel_volume;
+            fprintf('  [L3] testF16SubsystemsL3InternalVolumeIncludesAvionics: internal_volume received=%.6g must be > fus+wing=%.6g\n', s3.internal_volume, baseline_sum);
+            tc.verifyGreaterThan(s3.internal_volume, baseline_sum);
         end
 
         function testF16SubsystemsL3FuselageRawVolumeDiffersFromL2Equivalent(tc)
@@ -256,6 +417,7 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
                 g3.L_fuselage, g3.W_max_fuselage, g3.H_max_fuselage);
             ellipse_equivalent = SubsystemsL2.compute_raymer_fuselage_volume( ...
                 A_top_ellipse, A_side_ellipse, g3.L_fuselage);
+            fprintf('  [L3] testF16SubsystemsL3FuselageRawVolumeDiffersFromL2Equivalent: received=%.6g must differ from ellipse_equivalent=%.6g\n', s3.fuselage_raw_volume, ellipse_equivalent);
             tc.verifyNotEqual(s3.fuselage_raw_volume, ellipse_equivalent, ...
                 'L3''s frame-integrated fuselage volume must differ from the L2 ellipse approximation for the real F-16 station data.');
         end
@@ -263,9 +425,13 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         function testF16SubsystemsL3IsaChecks(tc)
             [g3, w3] = TestSubsystemsL3.makeGeomAndWeights();
             s3 = F16SubsystemsL3(f16a_spec_path(3), g3, w3);
+            fprintf('  [L3] testF16SubsystemsL3IsaChecks: isa(s3,''SubsystemsBase'') expected=true, received=%s\n', mat2str(isa(s3, 'SubsystemsBase')));
             tc.verifyTrue(isa(s3, 'SubsystemsBase'));
+            fprintf('  [L3] testF16SubsystemsL3IsaChecks: isa(s3,''SubsystemsModelL3'') expected=true, received=%s\n', mat2str(isa(s3, 'SubsystemsModelL3')));
             tc.verifyTrue(isa(s3, 'SubsystemsModelL3'));
+            fprintf('  [L3] testF16SubsystemsL3IsaChecks: isa(s3,''SubsystemsModelL2'') expected=false, received=%s\n', mat2str(isa(s3, 'SubsystemsModelL2')));
             tc.verifyFalse(isa(s3, 'SubsystemsModelL2'));
+            fprintf('  [L3] testF16SubsystemsL3IsaChecks: isa(s3,''handle'') expected=true, received=%s\n', mat2str(isa(s3, 'handle')));
             tc.verifyTrue(isa(s3, 'handle'));
         end
 

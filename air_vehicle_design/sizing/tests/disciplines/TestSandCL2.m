@@ -20,6 +20,16 @@ classdef TestSandCL2 < matlab.unittest.TestCase
 %   time, so a bug in either the mapping or the toolbox static would still be
 %   caught).
 
+    methods (TestClassSetup)
+
+        function printFidelityBanner(tc) %#ok<INUSD>
+            fprintf('\n========================================================\n');
+            fprintf(' FIDELITY LEVEL 2 -- Stability & Control\n');
+            fprintf('========================================================\n');
+        end
+
+    end
+
     methods (Test)
 
         % ================================================================== %
@@ -35,6 +45,7 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         %         = (50 + 200 + 450) / 60 = 700/60 = 11.666666...7
             received = SandCL2.weighted_cg([10, 20, 30], [5, 10, 15]);
             expected = 700/60;
+            fprintf('  [L2-S&C] testWeightedCgHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
                 'weighted_cg must equal the hand-computed Sum(w_i*x_i)/Sum(w_i).');
         end
@@ -42,8 +53,19 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         function testWeightedCgSizeMismatchErrors(tc)
         % Guard condition: mismatched vector lengths must error, not silently
         % broadcast or truncate.
+            expectedErrId = 'SandCL2:sizeMismatch';
+            try
+                SandCL2.weighted_cg([1, 2, 3], [1, 2]);
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testWeightedCgSizeMismatchErrors: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
             tc.verifyError(@() SandCL2.weighted_cg([1, 2, 3], [1, 2]), ...
-                'SandCL2:sizeMismatch');
+                expectedErrId);
         end
 
         function testWeightedCgPropagatesNaNGracefully(tc)
@@ -53,6 +75,7 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         % error. weights_vec = [10, NaN], x_vec = [5, 10] -> NaN, not an
         % error thrown by a mustBeNonnegative-style validator.
             received = SandCL2.weighted_cg([10, NaN], [5, 10]);
+            fprintf('  [L2-S&C] testWeightedCgPropagatesNaNGracefully: expected=NaN, received=%s\n', mat2str(received));
             tc.verifyTrue(isnan(received), ...
                 'A NaN component weight must propagate to a NaN x_cg, not error.');
         end
@@ -86,8 +109,10 @@ classdef TestSandCL2 < matlab.unittest.TestCase
                  w2.W_landing_gear, w2.W_installed_engine, w2.W_all_else_empty, ...
                  w2.W_strake, w2.W_payload_fixed + w2.W_payload_expendable, w2.W_energy];
             expected = sum(w .* x) / sum(w);
+            received = s2.x_cg;
 
-            tc.verifyEqual(s2.x_cg, expected, 'RelTol', 1e-9, ...
+            fprintf('  [L2-S&C] testF16SandCL2XCgMatchesIndependentRecompute: expected=%.6g, received=%.6g\n', expected, received);
+            tc.verifyEqual(received, expected, 'RelTol', 1e-9, ...
                 'F16SandCL2.x_cg must equal the independently-recomputed weighted average of the live group weights and JSON cg_x_ft stations.');
         end
 
@@ -102,7 +127,9 @@ classdef TestSandCL2 < matlab.unittest.TestCase
             % w2.W_energy left at its NaN default.
 
             s2 = F16SandCL2(f16a_spec_path(2), w2);
-            tc.verifyTrue(isnan(s2.x_cg), ...
+            received = s2.x_cg;
+            fprintf('  [L2-S&C] testF16SandCL2XCgPropagatesNaNWhenFuelUnset: expected=NaN, received=%s\n', mat2str(received));
+            tc.verifyTrue(isnan(received), ...
                 'x_cg must propagate NaN gracefully when W_energy (fuel) is unset, not error.');
         end
 
@@ -115,7 +142,18 @@ classdef TestSandCL2 < matlab.unittest.TestCase
             [w2, ~, ~] = TestSandCL2.makeWeights();
             % w2.W_TO left at its NaN default -- deliberately not set.
             s2 = F16SandCL2(f16a_spec_path(2), w2);
-            tc.verifyError(@() s2.x_cg, 'F16WeightsL2:WTONotSet');
+            expectedErrId = 'F16WeightsL2:WTONotSet';
+            try
+                s2.x_cg; %#ok<NOPRT>
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testF16SandCL2XCgErrorsBeforeWTOSet: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() s2.x_cg, expectedErrId);
         end
 
         % ================================================================== %
@@ -126,12 +164,34 @@ classdef TestSandCL2 < matlab.unittest.TestCase
 
         function testConstructorRejectsEmptyJsonPath(tc)
             [w2, ~, ~] = TestSandCL2.makeWeights();
-            tc.verifyError(@() F16SandCL2('', w2), 'MATLAB:validators:mustBeNonzeroLengthText');
+            expectedErrId = 'MATLAB:validators:mustBeNonzeroLengthText';
+            try
+                F16SandCL2('', w2);
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testConstructorRejectsEmptyJsonPath: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SandCL2('', w2), expectedErrId);
         end
 
         function testConstructorRejectsNonTextJsonPath(tc)
             [w2, ~, ~] = TestSandCL2.makeWeights();
-            tc.verifyError(@() F16SandCL2(123, w2), 'MATLAB:validators:mustBeTextScalar');
+            expectedErrId = 'MATLAB:validators:mustBeTextScalar';
+            try
+                F16SandCL2(123, w2);
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testConstructorRejectsNonTextJsonPath: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SandCL2(123, w2), expectedErrId);
         end
 
         function testConstructorRejectsWrongTypeWeights(tc)
@@ -139,8 +199,19 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         % CONSTRUCTION (arguments-block type coercion), matching
         % TestSubsystemsL3.testF16SubsystemsL3WrongGeomTierErrorsAtConstruction's
         % precedent.
+            expectedErrId = 'MATLAB:validation:UnableToConvert';
+            try
+                F16SandCL2(f16a_spec_path(2), 42);
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testConstructorRejectsWrongTypeWeights: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
             tc.verifyError(@() F16SandCL2(f16a_spec_path(2), 42), ...
-                'MATLAB:validation:UnableToConvert');
+                expectedErrId);
         end
 
         function testConstructorRejectsNonexistentJsonPath(tc)
@@ -152,17 +223,46 @@ classdef TestSandCL2 < matlab.unittest.TestCase
             [w2, ~, ~] = TestSandCL2.makeWeights();
             bogus = fullfile(tempdir, 'TestSandCL2_nonexistent_9f3c1a.json');
             threw = false;
+            actualErrId = '(none thrown)';
+            actualErrMsg = '(none thrown)';
             try
                 F16SandCL2(bogus, w2);
-            catch %#ok<CTCH>
+            catch ME
                 threw = true;
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
             end
+            fprintf('  [L2-S&C] testConstructorRejectsNonexistentJsonPath: expected_error=%s, received_error=%s (%s)\n', ...
+                '(any)', actualErrId, actualErrMsg);
+            fprintf('  [L2-S&C] testConstructorRejectsNonexistentJsonPath: expected=true, received=%s\n', mat2str(threw));
             tc.verifyTrue(threw, 'Constructing with a nonexistent JSON path must throw.');
         end
 
         function testConstructorRequiresBothArgs(tc)
-            tc.verifyError(@() F16SandCL2(), 'MATLAB:minrhs');
-            tc.verifyError(@() F16SandCL2(f16a_spec_path(2)), 'MATLAB:minrhs');
+            expectedErrId = 'MATLAB:minrhs';
+            try
+                F16SandCL2();
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testConstructorRequiresBothArgs: expected_error=%s, received_error=%s (%s) (no args)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SandCL2(), expectedErrId);
+
+            try
+                F16SandCL2(f16a_spec_path(2));
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testConstructorRequiresBothArgs: expected_error=%s, received_error=%s (%s) (one arg)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() F16SandCL2(f16a_spec_path(2)), expectedErrId);
         end
 
         % ================================================================== %
@@ -173,15 +273,35 @@ classdef TestSandCL2 < matlab.unittest.TestCase
             [w2, ~, ~] = TestSandCL2.makeWeights();
             w2.W_TO = 31377;
             s2 = F16SandCL2(f16a_spec_path(2), w2);
-            tc.verifyError(@() setfield(s2, 'x_cg', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            expectedErrId = 'MATLAB:class:noSetMethod';
+            try
+                setfield(s2, 'x_cg', 999); %#ok<STFLD>
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L2-S&C] testXCgIsReadOnly: expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            tc.verifyError(@() setfield(s2, 'x_cg', 999), expectedErrId); %#ok<SFLD>
         end
 
         function testIsaChecks(tc)
             [w2, ~, ~] = TestSandCL2.makeWeights();
             s2 = F16SandCL2(f16a_spec_path(2), w2);
-            tc.verifyTrue(isa(s2, 'StabControlBase'));
-            tc.verifyTrue(isa(s2, 'SandCModelL2'));
-            tc.verifyTrue(isa(s2, 'handle'));
+
+            isStabControlBase = isa(s2, 'StabControlBase');
+            fprintf('  [L2-S&C] testIsaChecks: expected=true, received=%s (isa StabControlBase)\n', mat2str(isStabControlBase));
+            tc.verifyTrue(isStabControlBase);
+
+            isSandCModelL2 = isa(s2, 'SandCModelL2');
+            fprintf('  [L2-S&C] testIsaChecks: expected=true, received=%s (isa SandCModelL2)\n', mat2str(isSandCModelL2));
+            tc.verifyTrue(isSandCModelL2);
+
+            isHandle = isa(s2, 'handle');
+            fprintf('  [L2-S&C] testIsaChecks: expected=true, received=%s (isa handle)\n', mat2str(isHandle));
+            tc.verifyTrue(isHandle);
         end
 
     end
