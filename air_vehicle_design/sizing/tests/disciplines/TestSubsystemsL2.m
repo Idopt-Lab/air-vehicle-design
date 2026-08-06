@@ -489,7 +489,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   this repo to convert a required battery energy into a volume --
         %   only GRAVIMETRIC specific energy is cited [Nicolai & Carichner,
         %   Table 14.2, p.363, batteries 0.27 kWh/lb]. Re-confirmed still
-        %   open (Casey, 2026-08-03) after re-scanning all 31 temp_AI
+        %   open (Casey, 2026-08-03) after re-scanning all the
         %   reference-extract files.
         %
         %   HOW THIS TEST DOCUMENTS IT: SubsystemsL2.battery_volume (and

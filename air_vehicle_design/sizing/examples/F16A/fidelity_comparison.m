@@ -14,9 +14,38 @@ function T_all = fidelity_comparison()
 %     [TO]      T.O. 1F-16A-1, Flight Manual, USAF/EPAF F-16A/B Blocks 10/15
 %     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., AIAA, 2018
 %     [Roskam]  J. Roskam, Airplane Design Part I, DARcorp., 1985
+%
+%   BRANDT/T.O. REFERENCE VALUES now come from VnV/BrandtF16A (the retired
+%   baseline/F16Baseline.m is no longer read): the consolidated ground-truth
+%   JSON (f16a_ground_truth.json, loaded as GT) supplies the weights/geometry/
+%   aero/propulsion reference figures, f16a_geometry.json (J_geo) supplies W_TO
+%   and SLS thrust, and the live Brandt discipline chain (BrandtGeometry ->
+%   BrandtAerodynamics -> BrandtEngine) supplies the per-condition thrust-lapse
+%   and CLmax references. A handful of Brandt-Consts-sheet drag-polar
+%   coefficients and the two 5-point Brandt polar tables have no VnV table home
+%   and are kept as cited literals transcribed verbatim from the workbook
+%   (marked "cited literal" at each use).
 
-b    = F16Baseline();
-W_TO = b.brandt.TOGW;   % 31,377 lbf  [Brandt B38]
+% ── Brandt / T.O. ground-truth sources (replaces F16Baseline) ──────────── %
+script_dir_gt = fileparts(mfilename('fullpath'));
+sizing_root   = fileparts(fileparts(script_dir_gt));
+gt_path       = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
+geo_path      = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_geometry.json');
+GT            = jsondecode(fileread(gt_path));    % consolidated cross-discipline ground truth
+J_geo         = jsondecode(fileread(geo_path));   % Brandt geometry JSON (W_TO, SLS thrust)
+
+% Live Brandt discipline chain for per-condition thrust-lapse and CLmax refs
+% (self-contained path-add, mirrors tests/constraints/brandt_constraint_reference.m).
+if isempty(which('BrandtEngine'))
+    vnv = fullfile(sizing_root, 'VnV', 'BrandtF16A');
+    addpath(vnv);
+    addpath(fullfile(vnv, 'GroundTruth'));
+end
+brandt_geom = BrandtGeometry();            brandt_geom.analyze();
+brandt_aero = BrandtAerodynamics(brandt_geom); brandt_aero.analyze();
+brandt_eng  = BrandtEngine();              brandt_eng.analyze();
+
+W_TO = J_geo.mission.W_TO_lb;   % 31,377 lbf  [Brandt Main! mission W_TO_lb]
 
 % Flight conditions used throughout
 st_SL_001 = AircraftState(0,     0.01);  % SL M~0  (TSFC SLS reference)
@@ -76,9 +105,8 @@ we_roskam_L1 = w1.compute_We_roskam(W_TO);
 
 % Component-category breakdown (L2/L3 only -- L1 is a single Roskam
 % statistical OEW estimate with no component buildup, so L1=NaN throughout).
-% No Brandt component-level weight reference exists in F16Baseline (only
-% Brandt's total OEW is extracted) -- Reference/err columns are N/A by design,
-% same pattern as e.g. the [PROPULSION] "TSFC_mil, 36kft" row above.
+% Brandt component-level weight references come from f16a_ground_truth.json
+% (.weights.structural_components / .engine_and_systems, Brandt Wt tab).
 t2_tail = w2.weight_tail(W_TO);
 t3_tail = w3.weight_tail(W_TO);
 lg3     = w3.weight_landing_gear(W_TO);   % now takes W_TO -- see the section note
@@ -93,30 +121,31 @@ w_lg    = [NaN, w2.weight_landing_gear(W_TO), lg3.main + lg3.nose ];
 w_eng   = [NaN, w2.W_installed_engine,    eng3.total              ];
 w_else  = [NaN, w2.W_all_else_empty,      sys3.total              ];
 
-% Brandt component references [F16Baseline b.brandt.W_*]. Wing/HT(Pitch
-% Cntrl)/VT(Vert)/Fuselage/Nacelles/Strakes now come from Brandt's
-% "Structural Weight Models, average psf" table (a separate psf-coefficient
-% x area model calculation) rather than the Wt!B16-B21 Group Weight
-% Statement cells; Gear/Engine/Inlet Duct/Controls/Electrical/Hydraulics/
-% ECS/Other/Avionics/Armament are still Wt!B22-B31. "Engine(s) installed"
+% Brandt component references [f16a_ground_truth.json .weights.*]. Wing/HT(Pitch
+% Cntrl)/VT(Vert)/Fuselage/Nacelles/Strakes come from Brandt's "Structural
+% Weight Models, average psf" table (.structural_components, a psf-coefficient
+% x area model) rather than the Wt!B16-B21 Group Weight Statement cells;
+% Gear/Engine/Inlet Duct/Controls/Electrical/Hydraulics/ECS/Other/Avionics/
+% Armament are the Wt!B22-B31 items (.engine_and_systems). "Engine(s) installed"
 % groups Brandt's Engine+Nacelles+Inlet Duct, the closest match to this
 % framework's weight_engine_section (bare engine + mounts/section/
 % induction/tailpipe/cooling/oil/starter). "All else empty" groups
 % everything else Brandt counts in OEW that isn't wing/tail/fuselage/
 % gear/engine (Strakes, Controls, Electrical, Hydraulics, ECS, Other,
-% Avionics, Armament) -- because Strakes/Nacelles now come from the
-% Structural Weight Models table, these 7 reference sums no longer
-% reproduce b.brandt.OEW (19,148 lbf) exactly the way the original
-% all-Wt!B16-B31 figures did.
-ref_wing = b.brandt.W_wing;
-ref_ht   = b.brandt.W_pitch_cntrl;
-ref_vt   = b.brandt.W_vert;
-ref_fus  = b.brandt.W_fuselage;
-ref_lg   = b.brandt.W_gear;
-ref_eng  = b.brandt.W_engine + b.brandt.W_nacelles + b.brandt.W_inlet_duct;
-ref_else = b.brandt.W_strakes + b.brandt.W_controls + b.brandt.W_electrical + ...
-           b.brandt.W_hydraulics + b.brandt.W_ecs + b.brandt.W_other + ...
-           b.brandt.W_avionics + b.brandt.W_armament;
+% Avionics, Armament) -- because Strakes/Nacelles come from the Structural
+% Weight Models table, these 7 reference sums do not reproduce Brandt's OEW
+% (Wt!B12) exactly the way the raw all-Wt!B16-B31 figures would.
+wsc  = GT.weights.structural_components;
+wes  = GT.weights.engine_and_systems;
+ref_wing = wsc.wing.value;
+ref_ht   = wsc.pitch_control_HT.value;
+ref_vt   = wsc.vertical_tail.value;
+ref_fus  = wsc.fuselage.value;
+ref_lg   = wes.landing_gear.value;
+ref_eng  = wes.engine.value + wsc.nacelles.value + wes.inlet_duct.value;
+ref_else = wsc.strakes.value + wes.flight_controls.value + wes.electrical.value + ...
+           wes.hydraulics.value + wes.ecs_ac_antiice.value + wes.other_structure.value + ...
+           wes.avionics.value + wes.armament_support.value;
 
 % ── Geometry ──────────────────────────────────────────────────────────── %
 % Geometry has all three fidelity tiers again as of 2026-07-24/25: the
@@ -191,18 +220,33 @@ clmax_L_total  = [a1.get_CLmax_L(),  a2.get_CLmax_L(),  a3.get_CLmax_L()];
 % (Brandt L8/L9/L10), not a separately-tabulated Brandt "delta".
 d_clmax_TO = [a1.get_Delta_CLmax_TO(), a2.get_Delta_CLmax_TO(), a3.get_Delta_CLmax_TO()];
 d_clmax_L  = [a1.get_Delta_CLmax_L(),  a2.get_Delta_CLmax_L(),  a3.get_Delta_CLmax_L()];
-ref_dclmax_TO = b.brandt.CLmax_TO   - b.brandt.CLmax_clean;
-ref_dclmax_L  = b.brandt.CLmax_land - b.brandt.CLmax_clean;
+% Brandt clean/TO/landing CLmax targets, live from BrandtAerodynamics (Aero!H25/
+% H27/H29) -- the deltas are derived here rather than separately tabulated.
+ref_clmax_clean = brandt_aero.CLmax_clean;    % Aero!H25
+ref_clmax_TO    = brandt_aero.CLmax_takeoff;  % Aero!H27
+ref_clmax_L     = brandt_aero.CLmax_landing;  % Aero!H29
+ref_dclmax_TO = ref_clmax_TO - ref_clmax_clean;
+ref_dclmax_L  = ref_clmax_L  - ref_clmax_clean;
 
 % Delta_CDi has no L1 analog (no induced-drag flap model at that fidelity)
 % and no direct Brandt reference at any level.
 d_cdi_TO = [NaN, a2.get_Delta_CDi_TO(), a3.get_Delta_CDi_TO()];
 d_cdi_L  = [NaN, a2.get_Delta_CDi_L(),  a3.get_Delta_CDi_L()];
 
-% Brandt's 5 tabulated Mach breakpoints (b.brandt.polar_model), sea level --
+% Brandt's 5 tabulated Mach breakpoints (Brandt MODEL polar), sea level --
 % same points/method as TestAeroL1/L2/L3's testCD0AtBrandtMachPoints and
-% testK1AtBrandtMachPoints.
-brandtM  = b.brandt.polar_model(:,1);
+% testK1AtBrandtMachPoints. CITED LITERAL (no VnV table home): transcribed
+% verbatim from the Brandt "Aero" sheet A6:E10, columns [Mach CDmin CD0 K1 K2].
+% f16a_ground_truth.json carries only the ACTUAL polar (Aero!M6:Q10), not this
+% MODEL polar, so it stays a cited literal here.
+brandt_polar_model = [
+    0.1000,  0.01691,  0.01700,  0.1160,  -0.0066;
+    0.8727,  0.01691,  0.01700,  0.1160,  -0.0066;
+    1.0547,  0.04558,  0.04568,  0.1277,  -0.0047;
+    1.5000,  0.04128,  0.03994,  0.2516,   0.0000;
+    2.0000,  0.04128,  0.03732,  0.3670,   0.0000;
+];   % [Brandt Aero A6:E10]
+brandtM  = brandt_polar_model(:,1);
 nBrandt  = numel(brandtM);
 cd0_sweep = zeros(nBrandt, 3);
 k1_sweep  = zeros(nBrandt, 3);
@@ -216,11 +260,26 @@ end
 % Aero at the six constraint-analysis (alt, Mach) conditions Brandt
 % tabulates on the "Consts" sheet -- same points/method as
 % TestAeroL1/L2/L3's testDragPolarAtConstraintConditions. Brandt's own
-% CD0/K1/K2 at each condition (b.constraints.*.CD0/K1/K2, from the Consts
+% CD0/K1/K2 at each condition (brandt_con.*, cited literals from the Consts
 % sheet) are used as Reference below.
 constraintNames  = {'cruise', 'combat_sub', 'dash', 'max_alt', 'combat_sup', 'ps'};
 constraintStates = {st_36_087, st_20_087, st_36_160, st_50_087, st_36_140, st_10_087};
 nCon = numel(constraintNames);
+
+% Brandt's own drag-polar coefficients at each of the six constraint conditions.
+% CITED LITERALS (no VnV table home): the per-condition CD0/K1/K2 come from the
+% Brandt "Consts" sheet (rows 23-28), which f16a_ground_truth.json does not
+% tabulate as a per-condition polar. dash.K1 (0.276031, M=1.6) and combat_sup.K1
+% (0.226103, M=1.4) are the supersonic-form K1 corrections (Raymer 6th ed.
+% Eq. 12.51), superseding the Consts-row tabulated cells 0.1251/0.12563
+% (2026-07-23 user direction). alt_ft/mach match constraintStates above.
+%   fields: [alt_ft, mach, CD0, K1, K2]   [Brandt Consts rows 23-28]
+brandt_con.cruise     = struct('alt_ft',36000,'mach',0.87,'CD0',0.01700,'K1',0.11603,'K2',-0.0066);
+brandt_con.combat_sub = struct('alt_ft',20000,'mach',0.87,'CD0',0.01700,'K1',0.11603,'K2',-0.0066);
+brandt_con.dash       = struct('alt_ft',36000,'mach',1.60,'CD0',0.03933,'K1',0.276031,'K2',0);
+brandt_con.max_alt    = struct('alt_ft',50000,'mach',0.87,'CD0',0.01700,'K1',0.11603,'K2',-0.0066);
+brandt_con.combat_sup = struct('alt_ft',36000,'mach',1.40,'CD0',0.04063,'K1',0.226103,'K2',0);
+brandt_con.ps         = struct('alt_ft',10000,'mach',0.87,'CD0',0.01700,'K1',0.11603,'K2',-0.0066);
 cd0_con = zeros(nCon, 3);
 k1_con  = zeros(nCon, 3);
 k2_con  = zeros(nCon, 3);
@@ -254,12 +313,22 @@ alpha_mil_ps  = [NaN,                          p2.compute_thrust_lapse_mil(st_10
 tsfc_SLS = [p1.get_TSFC(st_SL_001), p2.get_TSFC(st_SL_001), NaN];
 tsfc_crs = [p1.get_TSFC(st_36_087), p2.get_TSFC(st_36_087), NaN];
 
+% Brandt thrust-lapse references at each constraint condition, LIVE from
+% BrandtEngine (replaces b.constraints.*.alpha_AB / .alpha_mil_T_AB). The Brandt
+% engine normalises to the T_SL_AB axis: eng.run(alt,mach,AB_p).alpha_AB_ref
+% with AB_p=1.0 gives the full-AB lapse (Consts col AT, = b.*.alpha_AB) and
+% AB_p=0.0 gives the mil/dry lapse on the same T_SL_AB axis (Consts col AU,
+% = b.*.alpha_mil_T_AB).
+ref_alpha_AB  = @(alt,M) brandt_alpha_ref(brandt_eng, alt, M, 1.0);
+ref_alpha_mil = @(alt,M) brandt_alpha_ref(brandt_eng, alt, M, 0.0);
+
 % ════════════════════════════════════════════════════════════════════════ %
 %  BUILD SECTION TABLES
 % ════════════════════════════════════════════════════════════════════════ %
 
-T_wts = trow('OEW [lbf]',    b.brandt.OEW,      'Brandt B12',     oew,    '%.0f' );
-T_wts = [T_wts; trow('We/W_TO [-]', b.brandt.OEW/W_TO, 'Brandt B12/B38', wefrac, '%.4f')];
+ref_oew = GT.weights.summary.OEW.value;   % 19,980.70 lbf  [Brandt Wt!B12]
+T_wts = trow('OEW [lbf]',    ref_oew,           'Brandt Wt!B12',  oew,    '%.0f' );
+T_wts = [T_wts; trow('We/W_TO [-]', ref_oew/W_TO, 'Brandt Wt!B12/W_TO', wefrac, '%.4f')];
 T_wts = [T_wts; trow('  Main wings [lbf]',        ref_wing, 'Brandt Structural Wt Models (psf)',            w_wing, '%.0f')];
 T_wts = [T_wts; trow('  Horizontal tail [lbf]',   ref_ht,   'Brandt Structural Wt Models (psf), Pitch Cntrl', w_ht,   '%.0f')];
 T_wts = [T_wts; trow('  Vertical tail [lbf]',     ref_vt,   'Brandt Structural Wt Models (psf), Vert Surf',   w_vt,   '%.0f')];
@@ -268,15 +337,25 @@ T_wts = [T_wts; trow('  Landing gear [lbf]',      ref_lg,   'Brandt Wt!B23',    
 T_wts = [T_wts; trow('  Engine(s) installed [lbf]', ref_eng, 'Brandt Structural Wt Models Nacelle(s) + Wt!B22+B24 (Engine+Duct)', w_eng,  '%.0f')];
 T_wts = [T_wts; trow('  All else empty [lbf]',    ref_else, 'Brandt Structural Wt Models Strakes + Wt!B25:B31 (Ctrl+Elec+Hyd+ECS+Other+Avionics+Armament)', w_else, '%.0f')];
 
-T_geom = trow('S_wet total [ft2]',  b.brandt.S_wet, 'Brandt Main!L3', swet,    '%.1f');
-T_geom = [T_geom; trow('L_fus [ft]',         b.geom.L_fus,   'TO Fig. 1-2',    lfus,    '%.2f')];
-T_geom = [T_geom; trow('  Wing S_wet [ft2]', b.brandt.S_wet_wing,    'Brandt Geom!B14',      sw_wing, '%.1f')];
-T_geom = [T_geom; trow('  HT   S_wet [ft2]', b.brandt.S_wet_HT,      'Brandt Geom!B16',      sw_ht,   '%.1f')];
-T_geom = [T_geom; trow('  VT   S_wet [ft2]', b.brandt.S_wet_VT,      'Brandt Geom!B17',      sw_vt,   '%.1f')];
-T_geom = [T_geom; trow('  Fus  S_wet [ft2]', b.brandt.S_wet_fus_alt, 'Brandt Geom!D23',      sw_fus,  '%.1f')];
-T_geom = [T_geom; trow('  Duct S_wet [ft2]', b.brandt.S_wet_duct,    'Brandt Geom!B4 (nacelle)', sw_duct, '%.1f')];
+geo_gt = GT.geometry;
+ref_L_fus   = geo_gt.to_1f16a1.fuselage_length_ft.value;              % 47.5 ft [TO 1F-16A-1]
+ref_S_wet   = geo_gt.whole_aircraft_S_wet_ft2.raw_buggy_total;        % 1371.09 [Brandt Geom!B19]
+ref_sw_wing = geo_gt.lifting_surface_S_wet_ft2.wing.value;            % Brandt Geom!B14
+ref_sw_ht   = geo_gt.lifting_surface_S_wet_ft2.pitch_control_HT.value;% Brandt Geom!B16
+ref_sw_vt   = geo_gt.lifting_surface_S_wet_ft2.vertical_tail.value;   % Brandt Geom!B17
+ref_sw_fus  = geo_gt.fuselage_S_wet.high_fi_ft2;                      % Brandt Geom!D23
+ref_sw_duct = geo_gt.nacelle.S_wet_ft2;                               % Brandt Geom!B4 (nacelle)
+ref_AR      = geo_gt.inputs_on_Main_tab.wing.AR;                      % 3.0 [Brandt Main!B19]
 
-e_osw_ref = 1 / (pi * b.geom.AR * b.brandt.polar_model(1,4));   % Brandt K1 → derived e_osw
+T_geom = trow('S_wet total [ft2]',  ref_S_wet, 'Brandt Geom!B19', swet,    '%.1f');
+T_geom = [T_geom; trow('L_fus [ft]',         ref_L_fus,   'TO Fig. 1-2',    lfus,    '%.2f')];
+T_geom = [T_geom; trow('  Wing S_wet [ft2]', ref_sw_wing, 'Brandt Geom!B14',      sw_wing, '%.1f')];
+T_geom = [T_geom; trow('  HT   S_wet [ft2]', ref_sw_ht,   'Brandt Geom!B16',      sw_ht,   '%.1f')];
+T_geom = [T_geom; trow('  VT   S_wet [ft2]', ref_sw_vt,   'Brandt Geom!B17',      sw_vt,   '%.1f')];
+T_geom = [T_geom; trow('  Fus  S_wet [ft2]', ref_sw_fus,  'Brandt Geom!D23',      sw_fus,  '%.1f')];
+T_geom = [T_geom; trow('  Duct S_wet [ft2]', ref_sw_duct, 'Brandt Geom!B4 (nacelle)', sw_duct, '%.1f')];
+
+e_osw_ref = 1 / (pi * ref_AR * brandt_polar_model(1,4));   % Brandt K1 → derived e_osw
 
 % CD0 and K1 across all 5 of Brandt's tabulated Mach breakpoints, sea level
 % -- mirrors TestAeroL1/L2/L3's testCD0AtBrandtMachPoints/testK1AtBrandtMachPoints.
@@ -287,19 +366,22 @@ e_osw_ref = 1 / (pi * b.geom.AR * b.brandt.polar_model(1,4));   % Brandt K1 → 
 % [F16AeroL3.compute_CD0_wave, Raymer Eqs. 12.44-12.45, corrected 2026-07-23
 % to use whole-aircraft Amax/l per F16AeroL3.md] that closes
 % most of rows 4-5's gap but does not fully eliminate rows 3-5's divergence).
+% CL_alpha_wing, live from BrandtAerodynamics (Aero!A15, per deg) -> per rad.
+ref_cl_alpha_wing = brandt_aero.CL_alpha_wing * 57.3;   % /rad  [Brandt Aero!A15]
+
 T_asub = table();
 for iM = 1:nBrandt
     label = sprintf('CD0, M=%.4f [-]', brandtM(iM));
-    T_asub = [T_asub; trow(label, b.brandt.polar_model(iM,3), 'Brandt model', cd0_sweep(iM,:), '%.4f')]; %#ok<AGROW>
+    T_asub = [T_asub; trow(label, brandt_polar_model(iM,3), 'Brandt model', cd0_sweep(iM,:), '%.4f')]; %#ok<AGROW>
 end
 for iM = 1:nBrandt
     label = sprintf('K1,  M=%.4f [-]', brandtM(iM));
-    T_asub = [T_asub; trow(label, b.brandt.polar_model(iM,4), 'Brandt model', k1_sweep(iM,:), '%.4f')]; %#ok<AGROW>
+    T_asub = [T_asub; trow(label, brandt_polar_model(iM,4), 'Brandt model', k1_sweep(iM,:), '%.4f')]; %#ok<AGROW>
 end
 T_asub = [T_asub; trow('e_osw [-]',              e_osw_ref,                 'Brandt K1->e_osw', e_osw,       '%.4f')];
-T_asub = [T_asub; trow('CLmax clean [-]',         b.brandt.CLmax_clean,      'Brandt L8',       clmax,       '%.4f')];
-T_asub = [T_asub; trow('CL_alpha, M=0   [/rad]',  b.brandt.CL_alpha_wing,    'Brandt Aero!A15', cl_alpha_M0, '%.4f')];
-T_asub = [T_asub; trow('CL_alpha, M=0.6 [/rad]',  b.brandt.CL_alpha_wing,    'Brandt Aero!A15', cl_alpha_M06,'%.4f')];
+T_asub = [T_asub; trow('CLmax clean [-]',         ref_clmax_clean,          'Brandt Aero!H25', clmax,       '%.4f')];
+T_asub = [T_asub; trow('CL_alpha, M=0   [/rad]',  ref_cl_alpha_wing,        'Brandt Aero!A15', cl_alpha_M0, '%.4f')];
+T_asub = [T_asub; trow('CL_alpha, M=0.6 [/rad]',  ref_cl_alpha_wing,        'Brandt Aero!A15', cl_alpha_M06,'%.4f')];
 
 % High-lift-device deltas: L1 tabulated (Roskam Pt.I Tables 3.1/3.6); L2
 % flap-geometry-driven (Raymer Eq.12.21/12.61/12.62); L3 adds the LE slat
@@ -312,48 +394,58 @@ T_ahld = [T_ahld; trow('Delta_e_osw, L  [-]', NaN, 'Roskam Table 3.6', d_eosw_L_
 
 T_ahld = [T_ahld; trow('Delta_CD0, TO [-]',   NaN, '(no Brandt ref)',      d_cd0_TO,     '%.4f')];
 T_ahld = [T_ahld; trow('Delta_CD0, L  [-]',   NaN, '(no Brandt ref)',      d_cd0_L,      '%.4f')];
-T_ahld = [T_ahld; trow('CD0, TO total [-]',   b.constraints.takeoff.CD0, 'Brandt Consts row 32', cd0_TO_total, '%.4f')];
-T_ahld = [T_ahld; trow('CD0, L  total [-]',   b.constraints.landing.CD0, 'Brandt Consts row 33', cd0_L_total,  '%.4f')];
+% CD0,TO total ref from f16a_ground_truth.json (Brandt Miss!CD0_TO = 0.0520,
+% Consts row 32). CD0,L total ref is a CITED LITERAL (0.062, Brandt Consts row
+% 33 landing flap/gear config) -- no VnV table home for the landing figure.
+ref_cd0_TO = GT.aerodynamics.CD0_takeoff.brandt.value;   % 0.0520 [Brandt Consts row 32]
+ref_cd0_L  = 0.062;                                      % cited literal [Brandt Consts row 33]
+T_ahld = [T_ahld; trow('CD0, TO total [-]',   ref_cd0_TO, 'Brandt Consts row 32', cd0_TO_total, '%.4f')];
+T_ahld = [T_ahld; trow('CD0, L  total [-]',   ref_cd0_L,  'Brandt Consts row 33', cd0_L_total,  '%.4f')];
 
-T_ahld = [T_ahld; trow('Delta_CLmax, TO [-]', ref_dclmax_TO,       'Brandt L9-L8',  d_clmax_TO,     '%.4f')];
-T_ahld = [T_ahld; trow('Delta_CLmax, L  [-]', ref_dclmax_L,        'Brandt L10-L8', d_clmax_L,      '%.4f')];
-T_ahld = [T_ahld; trow('CLmax, TO total [-]', b.brandt.CLmax_TO,   'Brandt L9',     clmax_TO_total, '%.4f')];
-T_ahld = [T_ahld; trow('CLmax, L  total [-]', b.brandt.CLmax_land, 'Brandt L10',    clmax_L_total,  '%.4f')];
+T_ahld = [T_ahld; trow('Delta_CLmax, TO [-]', ref_dclmax_TO,   'Brandt Aero!H27-H25', d_clmax_TO,     '%.4f')];
+T_ahld = [T_ahld; trow('Delta_CLmax, L  [-]', ref_dclmax_L,    'Brandt Aero!H29-H25', d_clmax_L,      '%.4f')];
+T_ahld = [T_ahld; trow('CLmax, TO total [-]', ref_clmax_TO,    'Brandt Aero!H27',     clmax_TO_total, '%.4f')];
+T_ahld = [T_ahld; trow('CLmax, L  total [-]', ref_clmax_L,     'Brandt Aero!H29',     clmax_L_total,  '%.4f')];
 
 T_ahld = [T_ahld; trow('Delta_CDi, TO [-]',   NaN, '(no Brandt ref)', d_cdi_TO, '%.4f')];
 T_ahld = [T_ahld; trow('Delta_CDi, L  [-]',   NaN, '(no Brandt ref)', d_cdi_L,  '%.4f')];
 
 % "Brandt actual" (flight-measured) polar at M=1.60, 36 kft -- a different
-% table/condition than the polar_model sweep above, kept separately.
-T_asup = trow('CD0, M=1.60 [-]',  b.brandt.polar_actual(4,3), 'Brandt actual', cd0_sup, '%.4f');
-T_asup = [T_asup; trow('K1,  M=1.60 [-]',  b.brandt.polar_actual(4,4), 'Brandt actual', k1_sup,  '%.4f')];
+% table/condition than the polar_model sweep above, kept separately. The M=1.60
+% row is in f16a_ground_truth.json (Aero!M6:Q10), read live here.
+apolar   = GT.aerodynamics.brandt_actual_polar_vs_mach.rows;   % Brandt Aero!M6:Q10
+m160     = arrayfun(@(r) abs(r.mach - 1.60) < 1e-6, apolar);
+row_160  = apolar(m160);
+T_asup = trow('CD0, M=1.60 [-]',  row_160.CDo, 'Brandt actual', cd0_sup, '%.4f');
+T_asup = [T_asup; trow('K1,  M=1.60 [-]',  row_160.k1, 'Brandt actual', k1_sup,  '%.4f')];
 
 % Aero at Brandt's six constraint-analysis conditions -- mirrors
 % TestAeroL1/L2/L3's testDragPolarAtConstraintConditions. Reference is
 % Brandt's own CD0/K1/K2 at each condition [Brandt Consts sheet].
 T_acon = table();
 for iC = 1:nCon
-    c     = b.constraints.(constraintNames{iC});
+    c     = brandt_con.(constraintNames{iC});
     label = sprintf('%-11s alt=%6.0f M=%.2f', constraintNames{iC}, c.alt_ft, c.mach);
     T_acon = [T_acon; trow(['CD0, ' label ' [-]'], c.CD0, 'Brandt Consts', cd0_con(iC,:), '%.4f')]; %#ok<AGROW>
     T_acon = [T_acon; trow(['K1,  ' label ' [-]'], c.K1,  'Brandt Consts', k1_con(iC,:),  '%.4f')]; %#ok<AGROW>
     T_acon = [T_acon; trow(['K2,  ' label ' [-]'], c.K2,  'Brandt Consts', k2_con(iC,:),  '%.4f')]; %#ok<AGROW>
 end
 
-T_prop = trow('alpha_AB,  cruise   36k M=0.87 [-]', b.constraints.cruise.alpha_AB,            'Brandt AT24',       alpha_AB_crs,  '%.4f');
-T_prop = [T_prop; trow('alpha_mil, cruise   36k M=0.87 [-]', b.constraints.cruise.alpha_mil_T_AB,    'Brandt AS24->T_AB', alpha_mil_crs, '%.4f')];
-T_prop = [T_prop; trow('alpha_AB,  comb_sub 20k M=0.87 [-]', b.constraints.combat_sub.alpha_AB,      'Brandt AT26',       alpha_AB_sub,  '%.4f')];
-T_prop = [T_prop; trow('alpha_mil, comb_sub 20k M=0.87 [-]', b.constraints.combat_sub.alpha_mil_T_AB,'Brandt AS26->T_AB', alpha_mil_sub, '%.4f')];
-T_prop = [T_prop; trow('alpha_AB,  dash     36k M=1.60 [-]', b.constraints.dash.alpha_AB,            'Brandt AT23',       alpha_AB_dash, '%.4f')];
-T_prop = [T_prop; trow('alpha_mil, dash     36k M=1.60 [-]', b.constraints.dash.alpha_mil_T_AB,      'Brandt AS23->T_AB', alpha_mil_dash,'%.4f')];
-T_prop = [T_prop; trow('alpha_AB,  max_alt  50k M=0.87 [-]', b.constraints.max_alt.alpha_AB,         'Brandt AT25',       alpha_AB_malt, '%.4f')];
-T_prop = [T_prop; trow('alpha_mil, max_alt  50k M=0.87 [-]', b.constraints.max_alt.alpha_mil_T_AB,   'Brandt AS25->T_AB', alpha_mil_malt,'%.4f')];
-T_prop = [T_prop; trow('alpha_AB,  comb_sup 36k M=1.40 [-]', b.constraints.combat_sup.alpha_AB,      'Brandt AT27',       alpha_AB_sup,  '%.4f')];
-T_prop = [T_prop; trow('alpha_mil, comb_sup 36k M=1.40 [-]', b.constraints.combat_sup.alpha_mil_T_AB,'Brandt AS27->T_AB', alpha_mil_sup, '%.4f')];
-T_prop = [T_prop; trow('alpha_AB,  Ps       10k M=0.87 [-]', b.constraints.ps.alpha_AB,              'Brandt AT28',       alpha_AB_ps,   '%.4f')];
-T_prop = [T_prop; trow('alpha_mil, Ps       10k M=0.87 [-]', b.constraints.ps.alpha_mil_T_AB,        'Brandt AS28->T_AB', alpha_mil_ps,  '%.4f')];
-T_prop = [T_prop; trow('TSFC_mil, SL M~0 [1/hr]',            b.engine.TSFC_mil,                      'Brandt C30 (SLS)', tsfc_SLS, '%.3f')];
-T_prop = [T_prop; trow('TSFC_mil, 36kft M=0.87 [1/hr]',      NaN,                                    '(no alt ref)',     tsfc_crs, '%.3f')];
+ref_tsfc_mil = GT.propulsion.TSFC_mil_installed_per_hr.value;   % 0.70 [Brandt Engn(s)/Main!C30]
+T_prop = trow('alpha_AB,  cruise   36k M=0.87 [-]', ref_alpha_AB(36000,0.87),  'Brandt AT24',       alpha_AB_crs,  '%.4f');
+T_prop = [T_prop; trow('alpha_mil, cruise   36k M=0.87 [-]', ref_alpha_mil(36000,0.87), 'Brandt AS24->T_AB', alpha_mil_crs, '%.4f')];
+T_prop = [T_prop; trow('alpha_AB,  comb_sub 20k M=0.87 [-]', ref_alpha_AB(20000,0.87),  'Brandt AT26',       alpha_AB_sub,  '%.4f')];
+T_prop = [T_prop; trow('alpha_mil, comb_sub 20k M=0.87 [-]', ref_alpha_mil(20000,0.87), 'Brandt AS26->T_AB', alpha_mil_sub, '%.4f')];
+T_prop = [T_prop; trow('alpha_AB,  dash     36k M=1.60 [-]', ref_alpha_AB(36000,1.60),  'Brandt AT23',       alpha_AB_dash, '%.4f')];
+T_prop = [T_prop; trow('alpha_mil, dash     36k M=1.60 [-]', ref_alpha_mil(36000,1.60), 'Brandt AS23->T_AB', alpha_mil_dash,'%.4f')];
+T_prop = [T_prop; trow('alpha_AB,  max_alt  50k M=0.87 [-]', ref_alpha_AB(50000,0.87),  'Brandt AT25',       alpha_AB_malt, '%.4f')];
+T_prop = [T_prop; trow('alpha_mil, max_alt  50k M=0.87 [-]', ref_alpha_mil(50000,0.87), 'Brandt AS25->T_AB', alpha_mil_malt,'%.4f')];
+T_prop = [T_prop; trow('alpha_AB,  comb_sup 36k M=1.40 [-]', ref_alpha_AB(36000,1.40),  'Brandt AT27',       alpha_AB_sup,  '%.4f')];
+T_prop = [T_prop; trow('alpha_mil, comb_sup 36k M=1.40 [-]', ref_alpha_mil(36000,1.40), 'Brandt AS27->T_AB', alpha_mil_sup, '%.4f')];
+T_prop = [T_prop; trow('alpha_AB,  Ps       10k M=0.87 [-]', ref_alpha_AB(10000,0.87),  'Brandt AT28',       alpha_AB_ps,   '%.4f')];
+T_prop = [T_prop; trow('alpha_mil, Ps       10k M=0.87 [-]', ref_alpha_mil(10000,0.87), 'Brandt AS28->T_AB', alpha_mil_ps,  '%.4f')];
+T_prop = [T_prop; trow('TSFC_mil, SL M~0 [1/hr]',            ref_tsfc_mil,              'Brandt C30 (SLS)', tsfc_SLS, '%.3f')];
+T_prop = [T_prop; trow('TSFC_mil, 36kft M=0.87 [1/hr]',      NaN,                       '(no alt ref)',     tsfc_crs, '%.3f')];
 
 % ── Unified single table ──────────────────────────────────────────────── %
 T_all = [srow('[WEIGHTS]');                    T_wts;
@@ -380,12 +472,12 @@ disp(T_all);
 
 fprintf('  NOTES\n');
 fprintf('  [WEIGHTS]    Roskam L1 lower bound: We_min=%.0f lbf  (%+.1f%% vs OEW)  [Roskam Eq.2.16 + Table 2.15]\n', ...
-    we_roskam_L1, 100*(we_roskam_L1-b.brandt.OEW)/b.brandt.OEW);
+    we_roskam_L1, 100*(we_roskam_L1-ref_oew)/ref_oew);
 fprintf('  [WEIGHTS]    L2 W_engine/W_all_else_empty are AE481 metabook Sec.7 fractions (1.3x bare engine,\n');
 fprintf('               0.17xW_TO) -- independent of the L3 Raymer Eqs 15.7-15.24 buildup; not Brandt-calibrated.\n');
 fprintf('  [WEIGHTS]    Component rows (wing/HT/VT/fuselage/gear/engine/all-else) are L2 vs L3 only --\n');
 fprintf('               L1 is a single Roskam statistical OEW estimate with no component buildup.\n');
-fprintf('               References are Brandt''s [F16Baseline b.brandt.W_*]: wing/HT/VT/fuselage/nacelles/\n');
+fprintf('               References are Brandt''s [f16a_ground_truth.json .weights.*]: wing/HT/VT/fuselage/nacelles/\n');
 fprintf('               strakes from the "Structural Weight Models, average psf" table; gear/engine/duct/\n');
 fprintf('               controls/electrical/hydraulics/ECS/other/avionics/armament from the Wt-sheet Group\n');
 fprintf('               Weight Statement. "Engine installed" = Brandt Engine+Nacelles+Inlet Duct (closest\n');
@@ -400,7 +492,7 @@ fprintf('  [GEOMETRY]   HT/VT %%err is large because this framework''s S_exposed
 fprintf('               T.O. reference planform area, not Brandt''s fuselage-excluded exposed area.\n');
 fprintf('  [GEOMETRY]   Duct %%err is large because it is a different physical quantity than Brandt''s\n');
 fprintf('               nacelle reference (inlet-to-exit frustum vs full-cylinder nacelle).\n');
-fprintf('  [AERO sub]   CD0=Cf*Swet/Sref; Brandt model is flat for M<=%.4f (no transonic rise at L1/L2).\n', b.brandt.Mcrit);
+fprintf('  [AERO sub]   CD0=Cf*Swet/Sref; Brandt model is flat for M<=%.4f (no transonic rise at L1/L2).\n', brandt_aero.Mcrit);
 fprintf('  [AERO sub]   L3 CD0 now includes CD0_misc = (Dq_gun_port+Dq_hook_USAF)/Sref [Raymer Table 12.7].\n');
 fprintf('  [AERO sub]   Mach rows 1-2 (M<=Mcrit) are the trustworthy Brandt comparison; rows 3-5\n');
 fprintf('               (transonic/supersonic) diverge by design -- L1/L2 have no drag-rise model,\n');
@@ -437,7 +529,7 @@ fprintf('               Raymer''s text gives no separately-cited LE-device formu
 fprintf('               this is an extrapolation of the TE form, not an independently-sourced one. L3''s\n');
 fprintf('               gear CD0 uses the existing Dq_wheels/Dq_strut_* component buildup (Raymer Table\n');
 fprintf('               12.6) instead of the table lookup. F-16 flap/slat panel geometry (chord ratio, span,\n');
-fprintf('               deflection) is not in Brandt/F16Baseline -- flagged TODO estimates in F16AeroL2/L3.\n');
+fprintf('               deflection) is not in the Brandt/VnV ground truth -- flagged TODO estimates in F16AeroL2/L3.\n');
 fprintf('               Flap deflection angles (delta_flap_TO/L_deg) were tuned down from Raymer''s stated\n');
 fprintf('               "typical" transport-flap ranges (20-40/60-70 deg) to 15/20 deg, since the F-16''s\n');
 fprintf('               flaperon is a small-authority camber device, not a dedicated Fowler/slotted flap --\n');
@@ -467,7 +559,7 @@ fprintf('               closed-form CL_alpha/alpha_L0 estimate. L1 K2=0 by desig
 fprintf('               data at that fidelity, so CL_minD=0 -- symmetric-polar approximation).\n');
 fprintf('  [AERO sup]   CD0/K1 M=1.60 ref: Brandt actual (flight-measured polar, 36 kft) -- distinct\n');
 fprintf('               from the polar_model sweep in [AERO — BRANDT MACH SWEEP].\n');
-fprintf('  [PROPULSION] alpha_AB and alpha_mil normalised by T_SL_AB = %.0f lbf  [Brandt D29]\n', b.engine.T_max);
+fprintf('  [PROPULSION] alpha_AB and alpha_mil normalised by T_SL_AB = %.0f lbf  [Brandt D29]\n', J_geo.engine.T_AB_SLS_lb);
 fprintf('  [PROPULSION] L1 alpha: sigma^0.6 density-ratio lapse only — no Mach correction, no mil/AB split.\n');
 fprintf('  [PROPULSION] L2 alpha: Mattingly Eq. 2.54 (TR=1.0) has no Mach term in either theta0 branch,\n');
 fprintf('               vs Brandt''s -C_M*M^e_M penalty (dry C_M=0.3, AB C_M=0.1) in both branches.\n');
@@ -505,6 +597,15 @@ fprintf('  JSON   → %s\n\n', out_json);
 end
 
 % ─── local helpers ───────────────────────────────────────────────────── %
+
+function a = brandt_alpha_ref(eng, alt_ft, mach, AB_p)
+%BRANDT_ALPHA_REF  Brandt thrust lapse on the T_SL_AB axis at one condition.
+%   AB_p = 1.0 -> full-AB lapse (Consts col AT); AB_p = 0.0 -> mil/dry lapse on
+%   the same T_SL_AB axis (Consts col AU). Wraps BrandtEngine.run so the struct
+%   field access is unambiguous (no chained indexing on a call result).
+    r = eng.run(alt_ft, mach, AB_p);
+    a = r.alpha_AB_ref;
+end
 
 function T = trow(name, ref, src, vals, numfmt)
 %TROW  One-row MATLAB table for the fidelity comparison grid.

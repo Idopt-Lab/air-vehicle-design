@@ -9,7 +9,6 @@
 
 root = fileparts(mfilename('fullpath'));
 addpath(genpath(fullfile(root, '..', 'src')));
-addpath(genpath(fullfile(root, '..', 'baseline')));
 addpath(genpath(fullfile(root, '..', 'examples')));
 % VnV/BrandtF16A/Brandt*.m classes are wrapped by the mixed_fidelity_tests
 % adapters (BrandtGeomAdapter etc.) -- without this, any test constructing

@@ -3,9 +3,10 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %
 %   result = design_study_02_L2(W_TO_guess, T_SL_guess) builds fresh
 %   F16AeroL2/F16PropL2/F16WeightsL2/F16GeomL2/F16MissionL2 discipline
-%   objects and the F-16's L2 constraint set (F16ConstraintSet.build(aero,
-%   prop), sharing this study's own aero/prop objects rather than a
-%   separate internal copy), then runs SizingLoopL2 to convergence. Unlike
+%   objects and the F-16's L2 constraint set (ConstraintAnalysis.from_requirements
+%   with the F-16 map F16ConstraintSet.constraint_map(), sharing this study's
+%   own aero/prop objects rather than a separate internal copy), then runs
+%   SizingLoopL2 to convergence. Unlike
 %   L1, S_ref is a fixed JSON input here, never solved for -- only T_SL
 %   updates each iteration, alongside re-sizing the tail and control
 %   surfaces via the separate, dependency-injected tail/ctrl objects built
@@ -68,8 +69,8 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
     tail = F16TailL1();
     ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
 
-    constraints = F16ConstraintSet.build(aero, prop);
-    con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
+    con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
+        F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
 
     loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);

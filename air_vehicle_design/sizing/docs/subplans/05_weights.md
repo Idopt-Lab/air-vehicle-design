@@ -30,7 +30,7 @@ Single abstract output contract at every level: `OEW(W_TO) → scalar [lbf]`.
 
 Brandt's OEW is a **validation target only**, never a calibration input:
 `Wt!B12` = **19980.700578** lbf (`=SUM(B10:B11)`, live-read 2026-07-25). The separate figure
-**19148.08** is `corrections.xls Wt!B12` (Casey's revised-weight workbook, `F16Baseline.m:136`) — a
+**19148.08** is `corrections.xls Wt!B12` (Casey's revised-weight workbook, `docs/weights_parameter_usage.md §4`) — a
 **different workbook**, ~4.3 % apart. Never conflate them; the pre-Phase-4 unit tests did, which is
 review finding #14.
 
@@ -289,7 +289,7 @@ Alt | Divergence | Source | Notes`.
   here the second source is a **workbook** (`corrections.xls Wt!B12` = 19148.08, Casey's
   revised-weight workbook) rather than the T.O. Same column position, different content and label.
 - Expected values come from `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json .weights`, never from
-  `F16Baseline.m` and never from a `TestWeights*.m` hardcoded expected. **Nothing in this report may
+  a `TestWeights*.m` hardcoded expected. **Nothing in this report may
   ever backfill a unit test's expected value.**
 - Run it via `matlab -batch`, not the MATLAB MCP tool: the wide-table `disp` hang is on record.
 

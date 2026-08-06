@@ -78,7 +78,7 @@ classdef WeightsL1
         %LOOKUP_COEFFS  Return (Kvs, A, C) constants for Raymer Table 3.1.
         %   aircraft_category — char/string (e.g. 'jet_fighter').
         %   Every row below is transcribed from the named repo extract
-        %   temp_AI/docs/disciplines/reference_extracts/metabook_data.md, which
+        %   docs/reference_extracts/metabook_data.md, which
         %   is the AE481 metabook's copy of Raymer Table 3.1 (a SECONDARY
         %   source citing Raymer, not Raymer itself).
         %   [! verify all rows against the printed Raymer 6th ed. Table 3.1
@@ -109,7 +109,7 @@ classdef WeightsL1
         %LOOKUP_ROSKAM_COEFFS  Return (A, B) constants for Roskam Table 2.15.
         %   [Roskam Part I Table 2.15, book p.47 / PDF p.59]
         %   All five rows transcribed from the named repo extract
-        %   temp_AI/docs/disciplines/reference_extracts/roskam_vol1_data.md:57-61.
+        %   docs/reference_extracts/roskam_vol1_data.md:57-61.
         %   The extract's caveat (:63): the full 12-category table is image-only
         %   and these rows were OCR-recovered — traceable, not book-verified.
             switch lower(aircraft_category)

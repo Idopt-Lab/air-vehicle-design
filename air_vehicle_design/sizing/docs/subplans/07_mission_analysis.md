@@ -216,8 +216,8 @@ and do not make the generic segment-dispatch loop match Brandt segment-for-segme
    `Egress` are the only Brandt segments genuinely absent from CAP's simplified 10, not a
    14-vs-10 mismatch across the board.
 3. Expect the CAP-profile fuel total and Brandt's Miss-tab fuel total (6000.43 lb) to **disagree**
-   — this is already documented precedent from `temp_AI/docs/disciplines/05_mission_analysis.md`
-   §7 ("F-16 Mission Profile Discrepancy": Brandt's 14-segment profile vs. a simplified profile
+   — this is already documented precedent (the "F-16 Mission Profile Discrepancy" covered by this
+   subplan: Brandt's 14-segment profile vs. a simplified profile
    gives 10–25% lower fuel estimates, "not an error — a deliberate simplification"). The
    `mission_brandt_comparison.m` report should state this plainly rather than try to force
    agreement.
@@ -249,7 +249,7 @@ and do not make the generic segment-dispatch loop match Brandt segment-for-segme
   §2.6.3, explicitly states "No reserves." for that mission); (b) the legacy code
   (`F16MissionAnalysisLevel1/2.get_mission_fuel`) actually implements
   `fuel_fraction = total_fuel_used * 1.06 / W_TO` — a **6%** factor, not 5%. Use `RFF = 0.06`,
-  cited as "generic 6% reserve+trapped-fuel allowance, `temp_AI` metabook extract Eq. 2.17 (after
+  cited as "generic 6% reserve+trapped-fuel allowance, `docs/reference_extracts/metabook_data.md` Eq. 2.17 (after
   Raymer-style practice) — not from Roskam Part I directly, whose own method treats reserves as
   mission-specific (§2.4)."
 - `W_drop` from payload release (Combat segment, 4,400 lbf) reduces weight at the end of that
@@ -343,7 +343,7 @@ faith from the legacy code or the prior draft.
      condition (not a free-to-optimize best-range CL). **Combat gets its L/D supplied directly**
      (Table 2.2-style tabulated value at L1, or the aero object's maneuvering-condition L/D at
      L2/L3), with no 0.866 correction.
-   - Separately, `temp_AI/docs/disciplines/reference_extracts/metabook_data.md` cites a
+   - Separately, `docs/reference_extracts/metabook_data.md` cites a
      **different** correction factor for the same kind of best-range adjustment: "For cruise: L/D
      = 0.943 * (L/D)max for maximum range (Nicolai & Carichner)." This 0.943 vs. the legacy code's
      0.866 (`=√3/2`, the standard jet-aircraft best-range result) are two different numbers from
@@ -457,9 +457,9 @@ faith from the legacy code or the prior draft.
 Cruise/Dash/Combat/Loiter: same equation *forms* as L1 (Roskam Eq. 2.10/2.12), but `CD0`/`K1`/`K2`
 come from `aero.drag_polar(state)`, `L/D` is computed from the resulting drag polar at the segment's
 mid-weight `CL`, and TSFC comes from `prop.get_TSFC(state)` (mil) or `prop.compute_TSFC_AB(state)`
-(AB — Dash/Combat) instead of Table 2.2 lookups. This matches the existing
-`temp_AI/docs/disciplines/05_mission_analysis.md` §3 description of the intended L2 behavior,
-confirmed consistent with the corrected L1 citations above (same Roskam equations, real inputs).
+(AB — Dash/Combat) instead of Table 2.2 lookups. This matches the intended L2 behavior described
+elsewhere in this subplan, confirmed consistent with the corrected L1 citations above (same Roskam
+equations, real inputs).
 
 Climb (user-directed 2026-07-24 — supersedes the original "unchanged fixed-fraction" description
 below): **discretized, N=20 sub-intervals**, energy-height integration (`dh_e/dt = (T-D)V/W`,
@@ -487,7 +487,7 @@ generic mission profile needs an afterburner climb.
 
 ### Mattingly-form alternative (available, not required) for L2/L3's per-segment weight fractions
 
-`temp_AI/docs/disciplines/reference_extracts/mattingly_data.md` (extracted directly from
+`docs/reference_extracts/mattingly_data.md` (extracted directly from
 *Aircraft Engine Design*, 2nd ed., already in `Documents/Readings/`) gives named "Case" formulas
 matching each CAP segment type precisely, using the same `alpha`/`theta`/`delta` formalism already
 used elsewhere in this framework (`PropulsionBase`, `ConstraintAnalysis`'s Master Equation):

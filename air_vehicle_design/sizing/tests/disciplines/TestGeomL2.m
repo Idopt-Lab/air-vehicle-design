@@ -74,6 +74,12 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         BRANDT_EXP_WING     = 196.2261   % ft^2  [Brandt Geom!7]   lifting_surface_exposed_areas.wing.exposed_S_ft2
         BRANDT_EXP_VT       = 40.8897    % ft^2  [Brandt Geom!10]  lifting_surface_exposed_areas.vertical_tail.exposed_S_ft2
         BRANDT_NACELLE_SWET = 41.515     % ft^2  [Brandt Geom!B4]  nacelle.S_wet_ft2
+
+        % Component wetted-area ground truth, from f16a_ground_truth.json
+        % lifting_surface_S_wet_ft2 (loose comparison targets).
+        BRANDT_SWET_WING    = 392.0204   % ft^2  [Brandt Geom!B14] lifting_surface_S_wet_ft2.wing
+        BRANDT_SWET_HT      = 99.5848    % ft^2  [Brandt Geom!B16] lifting_surface_S_wet_ft2.pitch_control_HT
+        BRANDT_SWET_VT      = 81.6894    % ft^2  [Brandt Geom!B17] lifting_surface_S_wet_ft2.vertical_tail
     end
 
     % ------------------------------------------------------------------ %
@@ -83,9 +89,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Roskam Eq. 12.3 equivalent-diameter fuselage (~730 ft^2) vs
         % Brandt's "More Accurate Fuselage Swet"  [Geom!D23] = 676.33 ft^2.
         % Difference is the equivalent-diameter approximation (~8%).
-            b        = F16Baseline();
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            expected = b.brandt.S_wet_fus_alt;
+            expected = tc.BRANDT_FUS_HIGHFI;   % [Brandt Geom!D23; f16a_ground_truth.json]
             received = g.get_S_wet_fuselage();
             fprintf('\n    fuselage S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
@@ -95,8 +100,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 
         % --- F-16A component values vs Brandt Geom-sheet truth ------------
         %
-        %   [Brandt] Geom sheet component wetted areas (extract_brandt.m,
-        %   data.geom_wet), transcribed into F16Baseline.m as b.brandt.S_wet_*.
+        %   [Brandt] Geom sheet component wetted areas, from
+        %   f16a_ground_truth.json lifting_surface_S_wet_ft2 (Geom!B14/B16/B17).
         %   Wing matches tightly (both use ~the same exposed planform area).
         %   HT/VT diverge because this framework's S_exposed_HT/VT inputs
         %   are close to but not identical to Brandt's own exposed-planform
@@ -111,9 +116,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Roskam Eq. 12.1 (compute_roskam_planform), S_exposed_wing≈196.23,
         % tc_r=tc_t=0.04, lambda=0.2275 -> ≈396.38 ft^2.
         % Brandt:  392.020 ft^2  [Geom!B14] -- tight agreement (~1.1%).
-            b        = F16Baseline();
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            expected = b.brandt.S_wet_wing;
+            expected = tc.BRANDT_SWET_WING;   % [Brandt Geom!B14; f16a_ground_truth.json]
             received = g.get_S_wet_wing();
             fprintf('\n    wing S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
@@ -125,9 +129,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Roskam Eq. 12.1 (compute_roskam_planform), S_exposed_ht≈49.85,
         % tc_r=0.060, tc_t=0.035, lambda=0.390 -> ≈101.39 ft^2.
         % Brandt:  99.585 ft^2  [Geom!B16] -- loose tolerance; see header note.
-            b        = F16Baseline();
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            expected = b.brandt.S_wet_HT;
+            expected = tc.BRANDT_SWET_HT;   % [Brandt Geom!B16; f16a_ground_truth.json]
             received = g.get_S_wet_HT();
             fprintf('\n    HT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
@@ -139,9 +142,8 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Roskam Eq. 12.1 (compute_roskam_planform), S_exposed_vt≈40.89,
         % tc_r=0.053, tc_t=0.030, lambda=0.437 -> ≈83.14 ft^2.
         % Brandt:  81.689 ft^2  [Geom!B17] -- loose tolerance; see header note.
-            b        = F16Baseline();
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            expected = b.brandt.S_wet_VT;
+            expected = tc.BRANDT_SWET_VT;   % [Brandt Geom!B17; f16a_ground_truth.json]
             received = g.get_S_wet_VT();
             fprintf('\n    VT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);

@@ -18,16 +18,16 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 %   elsewhere).
 %
 %   testEquationReproducesBrandtLandingPoint plugs Brandt's own landing
-%   inputs (mu=0.50, CLmax_land=1.4288, CD0=0.062, K1/K2 from
-%   b.constraints.landing) into a FixedAeroStub (test-only AerodynamicsBase
-%   returning fixed values) and drives the ACTUAL LandingConstraint.WS_max()
-%   production code path with it -- not a hand-rederived copy of the formula
-%   -- checking it lands within 0.1% of F16Baseline's
-%   b.constraints.landing.WS_land=138.742. This validates the equation as
-%   coded, independent of which aero discipline object supplies CLmax/CD0.
+%   inputs (mu=0.50, CLmax_land=1.4288, CD0=0.062, K1/K2 -- Brandt Consts
+%   row 33) into a FixedAeroStub (test-only AerodynamicsBase returning fixed
+%   values) and drives the ACTUAL LandingConstraint.WS_max() production code
+%   path with it -- not a hand-rederived copy of the formula -- checking it
+%   lands within 0.1% of Brandt's tabulated WS_land=138.742. This validates
+%   the equation as coded, independent of which aero discipline object
+%   supplies CLmax/CD0.
 %
-%   The F-16 Landing field condition [subplans/06_constraint_analysis.md
-%   "Field constraints" table]: sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50,
+%   The F-16 Landing field condition [examples/F16A/mds/f16a_requirements.md
+%   field-condition table]: sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50,
 %   beta=1.0. testF16LandingWSMaxByFidelityLevel (parameterized over L1/L2/L3)
 %   computes each fidelity level's OWN flapped-landing CLmax/CD0
 %   (get_CLmax_L() + clean-CD0-plus-get_Delta_CD0_L(), the same assembly
@@ -44,6 +44,19 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};
+    end
+
+    properties
+        ref   % live Brandt constraint reference (brandt_constraint_reference), built once
+    end
+
+    methods (TestClassSetup)
+        function buildBrandtReference(tc)
+            % Build the Brandt discipline chain + constraint analysis once for
+            % the whole class; the diagnostic tests read WS_land / the
+            % design-point trio / WS_opt from it (replaces baseline/F16Baseline.m).
+            tc.ref = brandt_constraint_reference();
+        end
     end
 
     methods (Test)
@@ -122,21 +135,23 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         function testEquationReproducesBrandtLandingPoint(tc)
             % Plugs Brandt's own landing inputs directly into the same
             % equation LandingConstraint.m implements (mu*CLmax_land +
-            % 0.83*CD0_land form) and checks it lands within 0.1% of
-            % F16Baseline's b.constraints.landing.WS_land=138.742 [Brandt
-            % F-16A.xls Consts sheet, row 33]. This validates the equation
-            % itself against Brandt's worksheet -- separate from
-            % testWSMaxMatchesHandComputedEquation's generic algebra check
-            % and from testF16LandingWSMaxByFidelityLevel's aero-driven
-            % (flapped CLmax/CD0 per fidelity level, not expected to match
-            % exactly) comparison.
-            b = F16Baseline();
-
+            % 0.83*CD0_land form) and checks it lands within 0.1% of Brandt's
+            % own tabulated WS_land=138.742 [Brandt F-16A.xls Consts sheet,
+            % row 33]. This validates the equation itself against Brandt's
+            % worksheet -- separate from testWSMaxMatchesHandComputedEquation's
+            % generic algebra check and from testF16LandingWSMaxByFidelityLevel's
+            % aero-driven (flapped CLmax/CD0 per fidelity level, not expected
+            % to match exactly) comparison.
+            %
+            % Brandt's own landing inputs and the tabulated result are
+            % documented inline as Brandt-cited literals: this is an
+            % equation-reproduction check, so the inputs and target are fixed
+            % by Brandt's Consts row 33, not read live.
             mu    = 0.50;
-            CLmax = b.brandt.CLmax_land;        % 1.4288 [Brandt L10]
-            CD0   = b.constraints.landing.CD0;  % 0.062 [Brandt Consts row 33]
-            K1    = b.constraints.landing.K1;   % 0.11603 [Brandt Consts row 33]
-            K2    = b.constraints.landing.K2;   % -0.0066 [Brandt Consts row 33]
+            CLmax = 1.4288;    % [Brandt Aero!L10]
+            CD0   = 0.062;     % [Brandt Consts row 33]
+            K1    = 0.11603;   % [Brandt Consts row 33]
+            K2    = -0.0066;   % [Brandt Consts row 33]
             S_FR  = 4000;
             k_L   = 1.3;
             beta  = 1.0;
@@ -155,7 +170,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             obj = LandingConstraint("Landing", state, stub, S_FR, mu, beta, k_L);
 
             received = obj.WS_max();
-            expected = b.constraints.landing.WS_land;
+            expected = 138.742;   % [Brandt F-16A.xls Consts row 33, WS_land]
 
             fprintf('\n    Landing WS_max (Brandt inputs): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 1e-3, ...
@@ -202,157 +217,140 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
                 'A larger touchdown-speed margin k_L must lower WS_max.');
         end
 
-        % --- Available/margin ------------------------------------------------
+        % --- Feasibility residual --------------------------------------------
 
-        function testWSMarginMatchesHandComputedFormula(tc)
+        function testConstraintResidualFeasibleAndInfeasible(tc)
             % Arbitrary field length/friction/design point (not F-16-specific
             % data). WS_max() itself is already independently verified above,
-            % so this only needs to confirm WS_margin combines it with the
-            % actual W_TO/S_ref correctly: margin = WS_required - WS_available,
-            % WS_required = WS_max(), WS_available = W_TO/S_ref. Requests
-            % WS_margin's 2nd/3rd (available/required) outputs directly so
-            % both underlying constraint values are independently verified,
-            % not just their combined margin.
+            % so this only needs to confirm constraint_residual combines it
+            % with the design point's wing loading correctly: g = dp.WS -
+            % WS_max(), g <= 0 feasible (design at/below the landing W/S wall),
+            % g > 0 infeasible. dp.TW is unused. Feeds one FEASIBLE and one
+            % INFEASIBLE DesignPoint straddling WS_max and asserts both the
+            % sign and the hand-computed value.
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 3500, 0.45, 0.98, 1.25);
 
-            W_TO  = 32000;
-            S_ref = 320;
+            WS_limit = obj.WS_max();
+            S_ref    = 320;
 
-            expected_required  = obj.WS_max();
-            expected_available = W_TO / S_ref;
-            expected_margin    = expected_required - expected_available;
+            % Feasible: WS below the wall -> g < 0.
+            dp_feas   = DesignPoint(0.5 * WS_limit * S_ref, 20000, S_ref);
+            g_feas    = obj.constraint_residual(dp_feas);
+            expected_g_feas = dp_feas.WS - WS_limit;
 
-            [received_margin, received_available, received_required] = obj.WS_margin(W_TO, S_ref);
+            % Infeasible: WS above the wall -> g > 0.
+            dp_infeas = DesignPoint(1.5 * WS_limit * S_ref, 20000, S_ref);
+            g_infeas  = obj.constraint_residual(dp_infeas);
+            expected_g_infeas = dp_infeas.WS - WS_limit;
 
-            fprintf(['\n    WS_margin: required=%.4f  available=%.4f  margin=%.4f  ' ...
-                '(hand-computed: required=%.4f  available=%.4f  margin=%.4f)\n'], ...
-                received_required, received_available, received_margin, ...
-                expected_required, expected_available, expected_margin);
-            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
-                'WS_margin''s required output must equal WS_max().');
-            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
-                'WS_margin''s available output must equal W_TO/S_ref.');
-            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
-                'WS_margin must equal required minus available.');
+            fprintf('\n    constraint_residual: feasible g=%.4f  infeasible g=%.4f  (WS_max=%.4f)\n', ...
+                g_feas, g_infeas, WS_limit);
+
+            tc.verifyEqual(g_feas, expected_g_feas, 'RelTol', 1e-10, ...
+                'constraint_residual must equal dp.WS - WS_max().');
+            tc.verifyLessThan(g_feas, 0, ...
+                'A design below the landing W/S wall must be feasible (g < 0).');
+            tc.verifyEqual(g_infeas, expected_g_infeas, 'RelTol', 1e-10, ...
+                'constraint_residual must equal dp.WS - WS_max().');
+            tc.verifyGreaterThan(g_infeas, 0, ...
+                'A design above the landing W/S wall must be infeasible (g > 0).');
         end
 
-        function testWSMarginDecreasesWithHigherActualWS(tc)
+        function testConstraintResidualIncreasesWithHigherActualWS(tc)
             % A heavier design (or smaller wing) for the same W_TO -- higher
-            % actual W_TO/S_ref -- must shrink the margin: less "wiggle room"
-            % before hitting the landing wall. Prints/verifies the required
-            % and available values behind each margin: required must be
-            % identical between the two calls (same condition), only
-            % available should move.
+            % actual dp.WS -- must RAISE the residual g = dp.WS - WS_max()
+            % (toward/into infeasibility): less "wiggle room" before hitting
+            % the landing wall. WS_max() is identical between the two calls
+            % (same condition), only dp.WS moves.
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
 
             W_TO = 30000;
-            [margin_light_loading, available_light, required_light] = obj.WS_margin(W_TO, 350);   % lower actual W/S
-            [margin_heavy_loading, available_heavy, required_heavy] = obj.WS_margin(W_TO, 250);   % higher actual W/S
+            g_light = obj.constraint_residual(DesignPoint(W_TO, 20000, 350));   % lower actual W/S
+            g_heavy = obj.constraint_residual(DesignPoint(W_TO, 20000, 250));   % higher actual W/S
 
-            fprintf('\n    Light loading (S_ref=350): required=%.4f  available=%.4f  margin=%.4f\n', ...
-                required_light, available_light, margin_light_loading);
-            fprintf('    Heavy loading (S_ref=250): required=%.4f  available=%.4f  margin=%.4f\n', ...
-                required_heavy, available_heavy, margin_heavy_loading);
-
-            tc.verifyEqual(required_light, required_heavy, 'AbsTol', 1e-12, ...
-                'required must be unchanged between the two calls -- only S_ref differs.');
-            tc.verifyGreaterThan(available_heavy, available_light, ...
-                'A smaller S_ref (same W_TO) must increase the available output.');
-            tc.verifyGreaterThan(margin_light_loading, margin_heavy_loading, ...
-                'A higher actual wing loading must shrink WS_margin.');
+            fprintf('\n    Light loading (S_ref=350): g=%.4f    Heavy loading (S_ref=250): g=%.4f\n', ...
+                g_light, g_heavy);
+            tc.verifyGreaterThan(g_heavy, g_light, ...
+                'A higher actual wing loading must raise the residual (toward infeasibility).');
         end
 
-        function testWSMarginSignAtLimit(tc)
-            % When the actual W_TO/S_ref exactly equals WS_max(), margin must
-            % be ~0 -- the definitional boundary between feasible (>=0) and
-            % infeasible (<0). Prints/verifies required and available
-            % explicitly equal one another here.
+        function testConstraintResidualZeroAtLimit(tc)
+            % When dp.WS exactly equals WS_max(), the residual must be ~0 --
+            % the definitional boundary between feasible (g <= 0) and
+            % infeasible (g > 0).
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
 
             W_TO  = 30000;
-            S_ref = W_TO / obj.WS_max();   % actual W/S == the landing limit, exactly
+            S_ref = W_TO / obj.WS_max();   % dp.WS == the landing limit, exactly
+            dp    = DesignPoint(W_TO, 20000, S_ref);
 
-            [margin, available, required] = obj.WS_margin(W_TO, S_ref);
-            fprintf('\n    At boundary: required=%.4f  available=%.4f  margin=%.4f\n', ...
-                required, available, margin);
-            tc.verifyEqual(available, required, 'RelTol', 1e-8, ...
-                'available must equal required exactly at this constructed boundary.');
-            tc.verifyEqual(margin, 0, 'AbsTol', 1e-8, ...
-                'WS_margin must be ~0 when actual W_TO/S_ref exactly equals WS_max().');
+            g = obj.constraint_residual(dp);
+            fprintf('\n    At boundary: dp.WS=%.4f  WS_max=%.4f  g=%.4f\n', ...
+                dp.WS, obj.WS_max(), g);
+            tc.verifyEqual(g, 0, 'AbsTol', 1e-8, ...
+                'constraint_residual must be ~0 when dp.WS exactly equals WS_max().');
         end
 
-        function testF16LandingWSMarginAtBrandtDesignPoint(tc)
-            % Diagnostic only: evaluates WS_margin at Brandt's own actual
-            % design point (W_TO=b.brandt.TOGW, S_ref=b.geom.S_ref ->
-            % WS_actual=b.constraint.WS_opt=104.59) using this framework's
-            % own L1 flapped-landing WS_max() (get_CLmax_L/get_Delta_CD0_L)
-            % -- still built from textbook estimates, not Brandt's flight-
-            % calibrated flapped values (class header, "NOTE ON CLmax/CD0
-            % BASIS"), so it may still not exactly match Brandt's flapped
-            % WS_land=138.742 and the sign of the margin here is not asserted
-            % -- printed for visibility, not asserted for closeness.
-            b     = F16Baseline();
+        function testF16LandingConstraintResidualAtBrandtDesignPoint(tc)
+            % Diagnostic only: evaluates constraint_residual at Brandt's own
+            % actual design point (W_TO=ref.TOGW, S_ref=ref.S_ref) using this
+            % framework's own L1 flapped-landing WS_max() (get_CLmax_L/
+            % get_Delta_CD0_L) -- still built from textbook estimates, not
+            % Brandt's flight-calibrated flapped values (class header, "NOTE ON
+            % CLmax/CD0 BASIS"), so it may still not match Brandt's flapped
+            % WS_land and the sign of g here is not asserted -- printed for
+            % visibility, not asserted for closeness. T_SL is a placeholder
+            % (unused by a W/S wall).
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Landing", state, aero, 4000, 0.5);
 
-            [margin, available, required] = obj.WS_margin(b.brandt.TOGW, b.geom.S_ref);
-            fprintf('\n    Landing at Brandt''s design point (WS_opt=%.2f): required=%.2f  available=%.2f  margin=%.4f\n', ...
-                b.constraint.WS_opt, required, available, margin);
-            tc.verifyTrue(isfinite(required), 'WS_margin''s required output must be finite at Brandt''s design point.');
-            tc.verifyTrue(isfinite(available), 'WS_margin''s available output must be finite at Brandt''s design point.');
-            tc.verifyTrue(isfinite(margin), 'WS_margin must be finite at Brandt''s design point.');
+            dp = DesignPoint(tc.ref.TOGW, tc.ref.T_SL, tc.ref.S_ref);
+            g  = obj.constraint_residual(dp);
+            fprintf('\n    Landing at Brandt''s design point (WS_opt=%.2f): WS_max=%.2f  dp.WS=%.2f  g=%.4f\n', ...
+                tc.ref.run.WS_opt, obj.WS_max(), dp.WS, g);
+            tc.verifyTrue(isfinite(obj.WS_max()), 'WS_max() must be finite at Brandt''s design point.');
+            tc.verifyTrue(isfinite(g), 'constraint_residual must be finite at Brandt''s design point.');
         end
 
-        % --- Vertical-wall required_TW encoding -----------------------------
+        % --- W/S wall via WS_max (no required_TW) ----------------------------
+        %
+        % T9 removed the old 0/Inf "wall curve" required_TW encoding from
+        % Only_WbyS: a landing wall now bounds W/S through WS_max() alone, and
+        % has NO required_TW at all (ConstraintAnalysis restricts the optimum
+        % search to W/S <= WS_max rather than folding a fake curve into the
+        % max-envelope). These tests replace the deleted required_TW-encoding
+        % tests.
 
-        function testRequiredTWZeroAtOrBelowLimit(tc)
+        function testHasNoRequiredTWMethod(tc)
+            % An Only_WbyS wall exposes no required_TW -- it imposes no thrust
+            % demand. The method must be gone (removed in T9).
+            aero  = F16AeroL1(f16a_spec_path(1));
+            state = AircraftState(0, 0.1);
+            obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
+            tc.verifyFalse(ismethod(obj, 'required_TW'), ...
+                'Only_WbyS conditions must not expose a required_TW (T9).');
+        end
+
+        function testWSMaxIsFiniteAndPositive(tc)
+            % The wall is a finite, positive W/S upper bound.
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
             WS_limit = obj.WS_max();
-
-            tc.verifyEqual(obj.required_TW(WS_limit), 0);
-            tc.verifyEqual(obj.required_TW(WS_limit * 0.5), 0);
-        end
-
-        function testRequiredTWInfAboveLimit(tc)
-            aero  = F16AeroL1(f16a_spec_path(1));
-            state = AircraftState(0, 0.1);
-            obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
-            WS_limit = obj.WS_max();
-
-            tc.verifyEqual(obj.required_TW(WS_limit * 1.01), Inf);
-            tc.verifyEqual(obj.required_TW(WS_limit * 5), Inf);
-        end
-
-        function testRequiredTWVectorizedOverWS(tc)
-            % Constraint diagrams sweep W/S -- required_TW must vectorize
-            % cleanly, staying finite below the limit and Inf above it.
-            aero  = F16AeroL1(f16a_spec_path(1));
-            state = AircraftState(0, 0.1);
-            obj   = LandingConstraint("Toy", state, aero, 4000, 0.5);
-            WS_limit = obj.WS_max();
-
-            WS_range = linspace(WS_limit * 0.2, WS_limit * 1.8, 21);
-            TW = obj.required_TW(WS_range);
-
-            tc.verifyEqual(numel(TW), numel(WS_range));
-            tc.verifyTrue(all(TW(WS_range <= WS_limit) == 0), ...
-                'required_TW must be 0 at or below the landing WS limit.');
-            tc.verifyTrue(all(isinf(TW(WS_range > WS_limit))), ...
-                'required_TW must be Inf above the landing WS limit.');
+            tc.verifyTrue(isfinite(WS_limit) && WS_limit > 0, ...
+                'The landing W/S wall must be finite and positive.');
         end
 
         % --- F-16 Landing field condition -----------------------------------
         % Sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50, beta=1.0
-        % [subplans/06_constraint_analysis.md "Field constraints" table]
+        % [examples/F16A/mds/f16a_requirements.md field-condition table]
 
         function testF16LandingWSMaxByFidelityLevel(tc, fidelityLevel)
             % Computes the F-16 landing wing-loading limit at each fidelity
@@ -367,11 +365,10 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % the clean drag polar -- this framework has no separate flapped
             % K1/K2 variant, matching Brandt's own Consts sheet, which reuses
             % the same K1=0.11603/K2=-0.0066 for both the takeoff (row 32)
-            % and landing (row 33) rows [F16Baseline b.constraints.landing].
-            % Which F16Baseline() table this prints against ("original" or
-            % "corrected" -- see F16Baseline.m section 11b; Landing's WS_land
-            % is essentially unchanged between the two) is controlled by the
-            % single manual switch in BrandtVariant.m.
+            % and landing (row 33) rows [Brandt Consts sheet]. The reference
+            % W/S it prints against comes from BrandtConstraintAnalysis's live
+            % landing() wall (via brandt_constraint_reference), not a hardcoded
+            % table.
             %
             % Prints, organized by fidelity level: the CD0/K1/K2/CLmax used,
             % the computed W/S, Brandt's reference W/S (138.742), and the
@@ -383,8 +380,6 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             % flap-vs-clean bases (see testEquationReproducesBrandtLandingPoint,
             % which confirms the EQUATION itself reproduces Brandt exactly
             % when fed Brandt's own flapped numbers).
-            variant = BrandtVariant();
-            b = F16Baseline(variant);
             [~, CLmax_land, CD0_land, K1, K2] = TestLandingConstraint.landingAeroValues(fidelityLevel);
 
             stub  = FixedAeroStub(CLmax_land, CD0_land, K1, K2);
@@ -392,17 +387,17 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             obj   = LandingConstraint("Landing", state, stub, 4000, 0.50, 1.0, 1.3);
 
             WS_computed = obj.WS_max();
-            WS_expected = b.constraints.landing.WS_land;
+            WS_expected = tc.ref.run.WS_landing_max;   % live Brandt Consts-row-33 wall
             pct_error   = 100 * (WS_computed - WS_expected) / WS_expected;
 
-            fprintf('\n    ==================== Fidelity Level: %s (%s) ====================\n', fidelityLevel, variant);
+            fprintf('\n    ==================== Fidelity Level: %s ====================\n', fidelityLevel);
             fprintf('    Aerodynamics used (flapped landing config):\n');
             fprintf('      CD0    = %.5f\n', CD0_land);
             fprintf('      K1     = %.5f\n', K1);
             fprintf('      K2     = %.5f\n', K2);
             fprintf('      CL_max = %.4f\n', CLmax_land);
             fprintf('    Computed W/S = %.3f lbf/ft^2\n', WS_computed);
-            fprintf('    Expected W/S = %.3f lbf/ft^2  (Brandt, F16Baseline b.constraints.landing.WS_land)\n', WS_expected);
+            fprintf('    Expected W/S = %.3f lbf/ft^2  (Brandt Consts row 33, via brandt_constraint_reference)\n', WS_expected);
             fprintf('    Relative error = %.2f%%\n', pct_error);
 
             tc.verifyGreaterThan(WS_computed, 0, sprintf('[%s] WS_max must be positive.', fidelityLevel));

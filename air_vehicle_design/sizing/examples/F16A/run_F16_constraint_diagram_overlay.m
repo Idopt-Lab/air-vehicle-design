@@ -1,9 +1,9 @@
 %% run_F16_constraint_diagram_overlay
-%   Plot Deliverable #2 (docs/subplans/06_constraint_analysis.md): builds the
-%   F-16's constraint set at L1, L2, and L3 fidelity (F16ConstraintSet,
-%   reading Constraints.xlsx) and overlays all three constraint envelopes --
-%   plus each fidelity's optimum design point -- on one figure, to show
-%   fidelity sensitivity of the design point.
+%   Fidelity-sensitivity overlay: builds the F-16's constraint set at L1, L2,
+%   and L3 fidelity (F16ConstraintSet, reading f16a_requirements.json) and
+%   overlays all three constraint envelopes -- plus each fidelity's optimum
+%   design point -- on one figure, to show fidelity sensitivity of the design
+%   point.
 %
 %   Plots the envelope curve per level (TW_envelope(WS) = max_i
 %   required_TW_i(WS), see ConstraintAnalysis.m's header), not all 8
@@ -18,8 +18,8 @@
 %   across all three levels) before plotting.
 %
 %   Excludes Stall (F16ConstraintSet's 9th, sanity-check-only condition --
-%   not one of Constraints.xlsx's 8 rows, no Brandt reference row exists for
-%   it) by default -- see F16ConstraintSet.m's header: at L2/L3 its
+%   not one of the 8 requirements-JSON conditions, no Brandt reference row
+%   exists for it) by default -- see F16ConstraintSet.m's header: at L2/L3 its
 %   geometry-based clean-CLmax wall was found to silently dominate the
 %   design point rather than merely act as a sanity check.
 
@@ -27,11 +27,28 @@ levels = ["L1", "L2", "L3"];
 colors = lines(numel(levels));
 
 WS_range = PointPerformanceBase.WS_RANGE_BRANDT;
-cas      = cell(1, numel(levels));
+
+% Caller owns discipline construction (dependency injection): build each
+% fidelity level's aero/prop pair explicitly. L2/L3 inject the propulsion
+% object into geometry, because the nacelle -- hence duct wetted area and
+% CD0 -- is sized from engine thrust; L3 uses F16PropL2 (no L3 prop tier).
+aeros = cell(1, numel(levels));
+props = cell(1, numel(levels));
+
+props{1} = F16PropL1(f16a_spec_path(1));
+aeros{1} = F16AeroL1(f16a_spec_path(1));
+
+props{2} = F16PropL2(f16a_spec_path(2));
+aeros{2} = F16AeroL2(F16GeomL2(f16a_spec_path(2), props{2}), f16a_spec_path(2));
+
+props{3} = F16PropL2(f16a_spec_path(2));
+aeros{3} = F16AeroL3(F16GeomL3(f16a_spec_path(3), props{3}), f16a_spec_path(3));
+
+map = F16ConstraintSet.constraint_map();
+cas = cell(1, numel(levels));
 for i = 1:numel(levels)
-    [aero, prop] = F16ConstraintSet.buildDisciplines(levels(i));
-    constraints = F16ConstraintSet.build(aero, prop);
-    cas{i} = ConstraintAnalysis(constraints, WS_range);
+    cas{i} = ConstraintAnalysis.from_requirements(aeros{i}, props{i}, ...
+        f16a_requirements_path(), map, WS_range);
 end
 
 y_max = 0;

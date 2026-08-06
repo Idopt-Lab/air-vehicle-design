@@ -61,7 +61,7 @@ classdef F16PropL2 < PropulsionModelL2
         %   Added 2026-07-25: the JSON key was written in Phase 3 without a
         %   property to read it, so it sat unread until Phase 4 needed it.
         %   Cited 2026-07-30: [Nicolai & Carichner Table 14.3, F100-PW-100],
-        %   temp_AI/docs/disciplines/reference_extracts/14_propulsion_fundamentals.md:581
+        %   docs/reference_extracts/14_propulsion_fundamentals.md:581
         %   -- the direct predecessor of the F100-PW-200 this model otherwise
         %   uses, same cross-check basis already used for T_SL_wet.
         bypass_ratio = 0.71

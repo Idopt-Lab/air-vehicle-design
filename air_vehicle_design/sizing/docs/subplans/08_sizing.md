@@ -52,12 +52,7 @@ The sizing loops are fully generic. F-16-specific work is in the design study sc
 
 ## Pre-Implementation: XDSM Diagrams
 
-**Before writing any MATLAB:** run the XDSM Python scripts in `temp_AI/xdsm/`:
-```
-python temp_AI/xdsm/sizing_L1_xdsm.py
-python temp_AI/xdsm/sizing_L2_xdsm.py
-```
-Review diagrams with professor before implementing. The data flow in the XDSM must match the call sequence below.
+**Before writing any MATLAB:** review the sizing L1/L2 XDSM data-flow diagrams with the professor before implementing. The XDSM diagram scripts are no longer in the repo, but the data flow they capture must match the call sequence below.
 
 ---
 
@@ -73,7 +68,7 @@ Review diagrams with professor before implementing. The data flow in the XDSM mu
 
 ## SizingLoopL1 — Call Sequence (per iteration)
 
-From `temp_AI/docs/00_framework_overview.md` Section 5:
+Per the framework design intent (now captured in the repo's `CLAUDE.md` and `docs/PLAN.md`):
 ```matlab
 opt        = con.optimal_point(aero, prop)   % → {W_S, T_W}
 S_ref      = W_TO / opt.W_S
@@ -90,7 +85,7 @@ W_TO       = 0.5*W_TO + 0.5*W_TO_new        % under-relaxation
 
 ## SizingLoopL2 — Call Sequence (per iteration)
 
-From `temp_AI/docs/00_framework_overview.md` Section 5 + resolved decisions:
+Per the framework design intent (now captured in `CLAUDE.md` and `docs/PLAN.md`) + resolved decisions:
 ```matlab
 opt       = con.optimal_point(aero, prop)    % → {T_W} (S_ref fixed)
 T_SL_new  = opt.T_W * W_TO

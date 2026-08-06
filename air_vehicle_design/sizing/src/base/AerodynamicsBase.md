@@ -51,7 +51,7 @@ CD = CD0 + K1·CL² + K2·CL
 
 `K1` is the quadratic / induced factor, `K2` the linear / camber-offset term. This matches Mattingly
 Eq. 2.9, Brandt `Aero!G17`, the constraint classes and every `AeroLN` toolbox. The K1/K2-swapped
-"Convention B" that appears in the stale `temp_AI/docs` is **not** followed here.
+"Convention B" that appeared in the stale AI design docs (no longer in-repo) is **not** followed here.
 
 Author-specific K decompositions (Mattingly `K'`/`K''`, Brandt's single `e0`, Raymer's single `K`)
 stay inside the level toolboxes. The base sees only the assembled `{CD0, K1, K2}`.

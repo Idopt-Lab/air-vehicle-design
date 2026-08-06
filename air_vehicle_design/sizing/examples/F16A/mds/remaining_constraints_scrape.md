@@ -3,8 +3,8 @@
 **Status: documentation only, no `.m` files edited.** Follow-up to
 `cruise_and_combatturn2_error_scrape.md` (Cruise + Combat Turn 2, which
 already got a fix — see that doc's RESOLUTION section), covering everything
-else: Max Mach, Max Alt, Combat Turn 1 (subsonic), Ps in
-`ThrustConstraint`/`TestThrustConstraint.m`, plus `TakeoffConstraint`,
+else: Max Mach, Max Alt, Combat Turn 1 (subsonic), Ps in the
+`MasterEquationConstraint` subtree / `TestMasterEquationConstraint.m`, plus `TakeoffConstraint`,
 `LandingConstraint`, `StallConstraint`. Live-verified via `matlab -batch`
 against the current (post-Cruise-fix) working tree.
 
@@ -116,12 +116,11 @@ about ±10% of Brandt (L1: −0.5% to +2.9%; L2: −1.5% to −4.2%; L3: −3.0%
   rather than a scaling/basis error.
   **RESOLVED (2026-07-24):** the `0.7·CD0_TO/(β·CLmax_TO) + μ` correction term is now
   implemented (`TakeoffConstraint.m`'s Master Equation C term, wired from
-  `Constraints.xlsx`'s `SurfaceFrictionCoefficient_mu_` column via `F16ConstraintSet.m`),
+  the `mu` field in `f16a_requirements.json` via `F16ConstraintSet.m`),
   closing the gap this section described — verified to reproduce Brandt's
   `TW_Takeoff` to <0.5% at W/S=90 when fed Brandt's own inputs
   (`TestTakeoffConstraint.m`'s `testEquationReproducesBrandtTakeoffPoint`). See
-  `docs/subplans/06_constraint_analysis.md`'s 2026-07-24 update for the corrected
-  equation.
+  `TakeoffConstraint.m`'s header for the equation and citation.
 - **Landing**: `TestLandingConstraint.m`'s `testEquationReproducesBrandtLandingPoint`
   already proves `LandingConstraint`'s own equation matches Brandt to <0.1%
   when fed Brandt's own flapped `CLmax`/`CD0`. The remaining per-fidelity gap
@@ -147,7 +146,7 @@ simplification, not an undiagnosed architecture bug.
    conditions, printing `F16PropL1.thrust_lapse` vs. Brandt's `alpha_AB` with
    diff% for each. Deliberately diagnostic-only (asserts only
    positivity/≤1.0 bounds, not closeness) — same pattern as
-   `ThrustConstraint`'s `testF16*RequiredTWTable` methods, since the true gap
+   the `MasterEquationConstraint` tests' `testF16*RequiredTWTable` methods, since the true gap
    ranges from near-perfect (Combat Turn 1, +0.5%) to +89.8% (Max Alt), so no
    single tolerance would be both meaningful and passing. The underlying
    `PropL1` model itself was intentionally NOT changed (density-only,
@@ -168,8 +167,8 @@ simplification, not an undiagnosed architecture bug.
    fuller miscellaneous-drag catalog with no cited F-16 source to support
    it; (b) the buildup is (correctly, per Eq. 12.27) Reynolds-sensitive and
    predicts a *lower* CD0 at Combat Turn 1's higher-Re 20,000 ft point
-   (0.01434) than at Cruise's 36,000 ft (0.01536) — but Brandt's own
-   `F16Baseline.m` uses the identical CD0=0.01700 at both conditions, so
+   (0.01434) than at Cruise's 36,000 ft (0.01536) — but Brandt's Consts
+   sheet uses the identical CD0=0.01700 at both conditions, so
    part of the apparent gap is this class correctly modeling an effect
    Brandt's simpler tabulated value doesn't vary with altitude. No `.m`
    logic was changed — fabricating additional Table 12.7 items or

@@ -32,8 +32,8 @@ classdef AeroL1
 %   AeroL2's transonic band (0.95 <= M < 1.05) -- a real behavior change from
 %   the old smooth Mattingly curve, and from L1's own CD0(M), which stays a
 %   smooth curve interpolation with no gap. None of the F-16's actual
-%   Constraints.xlsx conditions fall in that band (all are M<=0.87 or
-%   M>=1.05), so this does not affect F16ConstraintSet.build("L1").
+%   requirements-JSON conditions fall in that band (all are M<=0.87 or
+%   M>=1.05), so this does not affect the F-16's L1 constraint set.
 %
 %   TODO: Mattingly Fig. 2.10 is not in this repo. The CD0 curve block in
 %   f16a_L1.json is seeded from 5 AAF worked-example points and marked

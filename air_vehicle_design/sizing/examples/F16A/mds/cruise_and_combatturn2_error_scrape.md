@@ -115,7 +115,7 @@ gap below traces to the **inputs** the constraint receives from `aero` and
 | Combat Turn 2 | **Brandt** | **0.04063** | 0.22610 | 0 | — |
 
 K1 matches Brandt exactly at Combat Turn 2 (both use the corrected
-supersonic-form K1, `Raymer 6th ed. Eq. 12.51`, see `F16Baseline.m`'s
+supersonic-form K1, `Raymer 6th ed. Eq. 12.51`, see Brandt's Consts sheet
 2026-07-23 correction) — K1 is not a contributor to either gap below.
 
 ### 1b. Thrust lapse (alpha, AB basis — see §2 for why this matters at Cruise)
@@ -284,7 +284,7 @@ here since it is dwarfed by §2 at this condition.
 ## 6. VnV/BrandtF16A discrepancy check
 
 Checked every Brandt-sourced value used above (`alpha_AB`, `alpha_mil_T_AB`,
-`CD0`, `K1`, `K2`, `TW_Cruise`, `TW_CombatSup`) against `F16Baseline.m`'s own
+`CD0`, `K1`, `K2`, `TW_Cruise`, `TW_CombatSup`) against Brandt's Consts sheet's own
 citations and the 2026-07-23 K1/K2 corrections already recorded there.
 **No new internal Brandt discrepancy found — no `VnV/BrandtF16A/todo.md`
 entry warranted.** Everything identified above is framework-vs-Brandt

@@ -1,10 +1,10 @@
 {
-  "generated": "2026-07-29",
+  "generated": "2026-08-05",
   "aircraft": "F-16A Block 10/15",
   "title": "F-16A Block 10/15 — Weights vs Ground Truth",
   "condition": "W_TO = 31377 lbf [Brandt Wt!B3 = Main!O15].",
-  "referenceDesc": "Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.weights`] — every `Wt` cell in that block was re-read live over Excel COM. Not `F16Baseline.m`, which is the older ground truth `fidelity_comparison.m` uses.",
-  "secondDesc": "`corrections.xls` (Casey's revised-weight workbook, per `F16Baseline.m:136`) where it carries a figure. That is a **second, different source** — *not* the original Brandt `Wt!*` cell. For OEW the two are **19,980.70** (`Brandt Wt!B12`, the Reference) and **19,148.08** (`corrections.xls Wt!B12`), 4.17 % apart.",
+  "referenceDesc": "Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.weights`] — every `Wt` cell in that block was re-read live over Excel COM.",
+  "secondDesc": "`corrections.xls` (Casey's revised-weight workbook, per `docs/weights_parameter_usage.md` §4) where it carries a figure. That is a **second, different source** — *not* the original Brandt `Wt!*` cell. For OEW the two are **19,980.70** (`Brandt Wt!B12`, the Reference) and **19,148.08** (`corrections.xls Wt!B12`), 4.17 % apart.",
   "rows": [
     {
       "parameter": "[1. OPERATING EMPTY WEIGHT -- THE HEADLINE. Expected = Brandt Wt!B12 = 19,980.70; Alt = corrections.xls 19,148.08]",

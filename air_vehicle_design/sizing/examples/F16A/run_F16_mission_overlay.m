@@ -15,7 +15,7 @@
 
 levels = ["L1", "L2", "L3"];
 colors = lines(numel(levels));
-W_TO   = 31377;   % Brandt B38 / F16Baseline TOGW
+W_TO   = 31377;   % Brandt B38 TOGW (31,377 lbf)
 
 m1 = F16MissionL1(mission_profile_path());
 m2 = F16MissionL2(mission_profile_path());

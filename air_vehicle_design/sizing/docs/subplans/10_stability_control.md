@@ -102,16 +102,16 @@ Only the longitudinal-stability section of Ch. 16 and its explicit equation depe
 
 The paragraph below is preserved from the original spec for history; **its "still pending" claim about
 the Nicolai extracts is now stale and incorrect.** Both extracts are complete and substantial:
-`temp_AI/docs/disciplines/reference_extracts/Nicolat_Aircraft_Design_Vol_I/21_static_stability_and_control.md`
+`docs/reference_extracts/21_static_stability_and_control.md`
 (Ch. 21, "Static Stability and Control," Eqs. 21.1–21.26, ~55 KB) and
-`.../23_control_surface_sizing.md` (Ch. 23, "Control Surface Sizing Criteria," Eqs. 23.1–23.3 plus
+`docs/reference_extracts/23_control_surface_sizing.md` (Ch. 23, "Control Surface Sizing Criteria," Eqs. 23.1–23.3 plus
 Tables 23.1–23.3, ~25 KB) both carry an "extraction complete" marker and were read in full for this pass.
 
 *Original paragraph, preserved:* "PLAN.md's tail-sizing L3 item was deferred specifically because 'no
 verifiable Raymer Ch. 16 equation numbers exist anywhere in this repo's reference material today,' and
 the Nicolai Ch. 21 ('Static Stability and Control')/Ch. 23 ('Control Surface Sizing Criteria') reference
 extracts that could have substituted are both still listed 'pending' in
-`temp_AI/docs/disciplines/reference_extracts/`. Casey has now supplied the Ch. 16 equation numbers
+`docs/reference_extracts/`. Casey has now supplied the Ch. 16 equation numbers
 directly (table above), which removes most of that citation risk..."
 
 **What this pass actually found:** supplying the equation *numbers* directly does not, by itself, close
@@ -120,8 +120,8 @@ numbers' formulas/coefficients against. Grepping the whole repo for any Raymer-C
 (`Raymer.*16\.\d` / `16\.\d.*Raymer`) turns up exactly three hits, all in
 `temp_Casey/src/Disciplines/StabAndCont/SandCLevel3.m` (read-only reference; lines 195, 457, 510):
 `"Raymer, 6th ed, fig 16.3"`, `"Raymer 6th ed, eq 16.25"`, `"Raymer 6th ed fig 16.16"` — **none of which
-are among the nine items in Casey's table above.** `temp_AI/docs/disciplines/reference_extracts/
-raymer_data.md` (re-read this pass, confirmed) covers only Ch. 10 (propulsion sizing), Ch. 12
+are among the nine items in Casey's table above.** `docs/reference_extracts/raymer_data.md` (re-read this
+pass, confirmed) covers only Ch. 10 (propulsion sizing), Ch. 12
 (aerodynamics), and Ch. 15 (weights) — it jumps from §12.6 straight to Ch. 15, no Ch. 16 content at all.
 So: Casey's nine equation *numbers* are trustworthy as numbers (supplied directly, presumably from the
 physical book), but none of their *formulas or coefficients* can be independently verified against
@@ -375,8 +375,8 @@ legacy-code discrepancy.
 #### Δα_L0 (Eq. 16.15) Ch. 12 dependency — resolved: elevator-specific form chosen (Casey, 2026-08-03)
 
 The subplan's original table flags this as needing scribe resolution: *"16.15, and possibly a second
-Ch. 12 equation near the ΔCL_max tabulations."* Checked `temp_AI/docs/disciplines/reference_extracts/
-raymer_data.md` (the only in-repo Raymer extract) directly: its §12.4 "Lift" section runs Eqs. 12.6–12.17
+Ch. 12 equation near the ΔCL_max tabulations."* Checked `docs/reference_extracts/raymer_data.md`
+(the only in-repo Raymer extract) directly: its §12.4 "Lift" section runs Eqs. 12.6–12.17
 (lift-curve slope, `CL_max`, `α_CLmax`), and separately lists, **without any equation number**: *"Table
 12.1"* (leading-edge sharpness parameter `Δy` — unrelated to `Δα_L0`) and *"Flap types (Fig 12.18) & LE
 devices (Fig 12.19) discussed for `ΔCL_max_TO/L`"* — **figures only, no formula transcribed, no equation
@@ -434,7 +434,7 @@ has a sheet named `S&C (2)`**, exactly the sheet this subplan speculated about. 
 stability rows (`CLa`, `xbarnp`/`xnp`, `SM`) cite **Roskam Eqn 3.24** (`CLa`), **Roskam Eqn 3.38**
 (neutral point), and give `a`/`a0L`/`aHS` via **Roskam Eqn 3.17/3.19** — i.e. Brandt's own ground-truth
 values for this exact deliverable were built from **Roskam**, not Raymer Ch. 16. This is a second,
-already-in-repo-extractable citation path (`temp_AI/docs/disciplines/reference_extracts/
+already-in-repo-extractable citation path (`docs/reference_extracts/
 roskam_vol1_data.md`/`roskam_vol2_data.md`/`roskam_vol3_data.md` all exist) that a future scribe/io pass
 should check for Eqns 3.17/3.19/3.24/3.38 BEFORE assuming Eq. 16.9's Casey-pending transcription is the
 only path to a citable neutral-point formula — it may turn out Roskam's Eq. 3.38 is the cleaner,
@@ -514,7 +514,7 @@ built from **Roskam Eqns 3.17, 3.19, 3.24, 3.38** — not Raymer Ch. 16. See the
 in "Equations & Citations" above for what this means for the still-open Eq. 16.9 gap.
 
 **Follow-up check (2026-08-03, per Casey's "check in addition to the Ch. 16 read"): this specific Roskam
-book is NOT in this repo.** Searched every file under `temp_AI/docs/disciplines/reference_extracts/`
+book is NOT in this repo.** Searched every file under `docs/reference_extracts/`
 (the three `roskam_vol{1,2,3}_data.md` files plus every other extract) for "3.17", "3.19", "3.24", "3.38"
 — no genuine match anywhere (a few numeric coincidences in unrelated Mattingly/Nicolai section numbers,
 nothing about lift-curve slope or neutral point). The reason: **`roskam_vol1/2/3_data.md` extract a

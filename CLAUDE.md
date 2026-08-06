@@ -24,13 +24,13 @@ Non-negotiable rules from PLAN.md:
 5. **After finishing a step (baseline/state → geometry → aerodynamics → propulsion → weights → constraints → mission → sizing), STOP and wait for review** — do not chain multiple steps together autonomously, even if the next step seems obvious.
 6. Claude's responses and writing are to adhere to ASD-STE100 Simplified Technical English, located in \sizing\docs\ASD-STE100_ISSUE9.pdf.
 
-Two folders are tracked in git but must stay untouched:
-- `temp_Casey/` — Casey's original (buggy) sizing implementation. Reference only; several documented bugs (e.g. calls to non-existent methods) mean its code must never be copied, only used to cross-check equations.
-- `temp_AI/` — AI-authored design material: `ai-workflows/` (original framing prompts), `docs/` (architecture + per-discipline + V&V specs, including `docs/00_framework_overview.md`), `xdsm/` (pyxdsm diagram scripts).
+`temp_Casey/` is tracked in git but must stay untouched — Casey's original (buggy) sizing implementation. Reference only; several documented bugs (e.g. calls to non-existent methods) mean its code must never be copied, only used to cross-check equations.
+
+`temp_AI/` was REMOVED (2026-08-04). Its curated reference-data extracts (Raymer / Mattingly / Roskam / Nicolai / Metabook `*_data.md`, plus `usaf_f16_data.md` and the cited Nicolai chapter extracts `08_fuselage_sizing.md` / `11_tail_sizing.md` / `14_propulsion_fundamentals.md`) were moved to `sizing/docs/reference_extracts/`; the AI-framing material (`ai-workflows/`, `00_framework_overview.md`, the per-discipline design docs, `xdsm/`, the V&V specs, and the uncited chapter/`f35`/`fast` extracts) was deleted. Cite equations from `docs/reference_extracts/` now, never `temp_AI`.
 
 `sizing/docs/PLAN.md`'s step-status table is known to go stale — it can read "Not started" for steps that are actually implemented, tested, and committed. Check `git log` and the actual `src/`/`examples/`/`tests/` trees, not the table, to determine real progress.
 
-When committing a large batch of new files spanning multiple disciplines, split commits by discipline (baseline, geometry, propulsion, aerodynamics, weights each separately; `fidelity_comparison` and `run_all_tests` each their own commit too), and never commit `.asv`, `__MACOSX`, `temp_AI`, `temp_Casey`, or `docs`.
+When committing a large batch of new files spanning multiple disciplines, split commits by discipline (geometry, propulsion, aerodynamics, weights each separately; `fidelity_comparison` and `run_all_tests` each their own commit too), and never commit `.asv`, `__MACOSX`, `temp_Casey`, or scratch working docs — but DO commit `docs/reference_extracts/` (the moved reference-data extracts that code cites).
 
 ### Discipline deep-dive process — use the project's custom subagents
 
@@ -51,14 +51,13 @@ From MATLAB, with the working directory anywhere in the repo:
 
 ```matlab
 cd('air_vehicle_design/sizing/tests')
-run_all_tests   % adds src/, baseline/, examples/ to path, runs the whole suite, errors on any failure
+run_all_tests   % adds src/, examples/ to path, runs the whole suite, errors on any failure
 ```
 
 To run a single test file or a single test method during development:
 
 ```matlab
 addpath(genpath('air_vehicle_design/sizing/src'))
-addpath(genpath('air_vehicle_design/sizing/baseline'))
 addpath(genpath('air_vehicle_design/sizing/examples'))
 runtests('air_vehicle_design/sizing/tests/disciplines/TestAeroL1.m')
 runtests('air_vehicle_design/sizing/tests/disciplines/TestAeroL1.m', 'testCD0Formula')
@@ -72,7 +71,7 @@ Target MATLAB version is R2022b+ — use `arguments` blocks and `mustBe*` valida
 
 ### Core
 - `src/core/AircraftState.m` — immutable **value** class (not `handle`) representing ISA atmosphere at a given altitude/Mach. Built via MATLAB's `atmosisa`, converted to English units (lbf, ft, slug, ft/s, deg R). Carries `theta`/`delta`/`theta_0`/`delta_0` per Mattingly Eq. 2.52. Passed into most discipline methods as the flight-condition argument.
-- `baseline/F16Baseline.m` — a struct of cited Brandt/Raymer/Mattingly/T.O. values (geometry, weights, engine, sizing targets). **Deprecated**, kept only because the weights and constraint tests still compare against `F16Baseline()` fields; geometry and aerodynamics now validate against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`. Tests use `RelTol` tolerances (looser at L1, tighter at L3), not exact equality — exact agreement with Brandt is explicitly not the goal.
+- **`baseline/` was REMOVED (2026-08-04).** `F16Baseline.m`/`BrandtVariant.m`/`extract_brandt.m` are gone; every test and report now validates against `VnV/BrandtF16A` — either the ground-truth JSON (`GroundTruth/f16a_ground_truth.json`, `f16a_geometry.json`) or the live Brandt discipline classes (`BrandtConstraintAnalysis`/`BrandtAerodynamics`/`BrandtEngine`, wrapped for the constraint tests by `tests/constraints/brandt_constraint_reference.m`). Tests use `RelTol`/`AbsTol` tolerances (looser at L1, tighter at L3), not exact equality — exact agreement with Brandt is explicitly not the goal.
 
   Discipline inputs come from the unified per-level JSON `examples/F16A/f16a_L{1,2,3}.json` — one file per fidelity level, with `.geometry`/`.aerodynamics`/`.propulsion`/`.weights` blocks read by the matching `F16Geom*`/`F16Aero*`/`F16Prop*`/`F16Weights*` classes (resolved via `f16a_spec_path(level)`; constructors require the path — no silent default). **All four disciplines now read this unified JSON** — the older per-discipline input style is gone.
 
@@ -138,6 +137,6 @@ Do **not** compute a derived quantity once in the constructor and freeze it into
 
 ### Tests
 
-`tests/` mirrors `src/`'s layout (`tests/core/`, `tests/disciplines/`, `tests/constraints/`). Test classes subclass `matlab.unittest.TestCase`; each documents the hand-computed expected value inline in a comment block above the `properties (Constant)` block, then asserts `verifyEqual(received, expected, 'RelTol', tol, message)` against either the hand-computed formula result or an `F16Baseline()` field. Generic-class tests and F-16-specific tests are not yet split into separate `tests/disciplines/` vs `tests/examples/F16A/` folders as PLAN.md's target layout describes — currently they live together in `tests/disciplines/`.
+`tests/` mirrors `src/`'s layout (`tests/core/`, `tests/disciplines/`, `tests/constraints/`). Test classes subclass `matlab.unittest.TestCase`; each documents the hand-computed expected value inline in a comment block above the `properties (Constant)` block, then asserts `verifyEqual(received, expected, 'RelTol', tol, message)` against either the hand-computed formula result or a `VnV/BrandtF16A` ground-truth value. Generic-class tests and F-16-specific tests are not yet split into separate `tests/disciplines/` vs `tests/examples/F16A/` folders as PLAN.md's target layout describes — currently they live together in `tests/disciplines/`.
 
 `.asv` files (MATLAB autosave) appear throughout `src/` — they're gitignored; ignore them when reading the tree.

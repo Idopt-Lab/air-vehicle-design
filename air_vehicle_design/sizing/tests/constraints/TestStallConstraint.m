@@ -16,9 +16,8 @@ classdef TestStallConstraint < matlab.unittest.TestCase
 %   (get_CLmax -- already unit-tested elsewhere).
 %
 %   The F-16 Stall condition: Mach 0.217466 at sea level [Brandt F-16A.xls,
-%   "Ps" sheet, cell B10 -- see F16Baseline.m's b.constraints.stall.mach;
-%   see F16ConstraintSet.m's header note on this not yet being a
-%   Constraints.xlsx row].
+%   "Ps" sheet, cell B10; see F16ConstraintSet.m's header note on this not
+%   yet being a Constraints.xlsx row].
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};
@@ -87,81 +86,92 @@ classdef TestStallConstraint < matlab.unittest.TestCase
                 'A higher stall-speed requirement must permit a higher WS_max.');
         end
 
-        % --- Available/margin ------------------------------------------------
+        % --- Feasibility residual --------------------------------------------
 
-        function testWSMarginMatchesHandComputedFormula(tc)
+        function testConstraintResidualFeasibleAndInfeasible(tc)
             % Arbitrary flight condition (not F-16-specific data). Confirms
-            % Only_WbyS.WS_margin (shared with LandingConstraint, see
-            % TestLandingConstraint.m for the fuller battery of margin tests)
-            % works correctly through StallConstraint's own WS_max():
-            % margin = WS_required - WS_available, WS_required = WS_max(),
-            % WS_available = W_TO/S_ref. Requests WS_margin's 2nd/3rd
-            % (available/required) outputs directly so both underlying
-            % constraint values are independently verified, not just their
-            % combined margin.
+            % Only_WbyS.constraint_residual (shared with LandingConstraint, see
+            % TestLandingConstraint.m for the fuller battery) works through
+            % StallConstraint's own WS_max(): g = dp.WS - WS_max(), g <= 0
+            % feasible (design at/below the stall W/S wall), g > 0 infeasible.
+            % dp.TW is unused for a W/S-wall condition. Hand-computes g at one
+            % FEASIBLE and one INFEASIBLE DesignPoint (a light and a heavy wing
+            % loading straddling WS_max).
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.3);
             obj   = StallConstraint("Toy", state, aero);
 
-            W_TO  = 30000;
-            S_ref = 300;
+            WS_limit = obj.WS_max();
+            S_ref    = 300;
 
-            expected_required  = obj.WS_max();
-            expected_available = W_TO / S_ref;
-            expected_margin    = expected_required - expected_available;
+            % Feasible: WS = 0.5*WS_limit (below the wall) -> g < 0.
+            W_TO_feas  = 0.5 * WS_limit * S_ref;
+            dp_feas    = DesignPoint(W_TO_feas, 20000, S_ref);
+            g_feas     = obj.constraint_residual(dp_feas);
+            expected_g_feas = dp_feas.WS - WS_limit;
 
-            [received_margin, received_available, received_required] = obj.WS_margin(W_TO, S_ref);
+            % Infeasible: WS = 1.5*WS_limit (above the wall) -> g > 0.
+            W_TO_infeas = 1.5 * WS_limit * S_ref;
+            dp_infeas   = DesignPoint(W_TO_infeas, 20000, S_ref);
+            g_infeas    = obj.constraint_residual(dp_infeas);
+            expected_g_infeas = dp_infeas.WS - WS_limit;
 
-            fprintf(['\n    WS_margin: required=%.4f  available=%.4f  margin=%.4f  ' ...
-                '(hand-computed: required=%.4f  available=%.4f  margin=%.4f)\n'], ...
-                received_required, received_available, received_margin, ...
-                expected_required, expected_available, expected_margin);
-            tc.verifyEqual(received_required, expected_required, 'RelTol', 1e-10, ...
-                'WS_margin''s required output must equal WS_max().');
-            tc.verifyEqual(received_available, expected_available, 'RelTol', 1e-10, ...
-                'WS_margin''s available output must equal W_TO/S_ref.');
-            tc.verifyEqual(received_margin, expected_margin, 'RelTol', 1e-10, ...
-                'WS_margin must equal required minus available.');
+            fprintf('\n    constraint_residual: feasible g=%.4f  infeasible g=%.4f  (WS_max=%.4f)\n', ...
+                g_feas, g_infeas, WS_limit);
+
+            tc.verifyEqual(g_feas, expected_g_feas, 'RelTol', 1e-10, ...
+                'constraint_residual must equal dp.WS - WS_max().');
+            tc.verifyLessThan(g_feas, 0, ...
+                'A design below the stall W/S wall must be feasible (g < 0).');
+            tc.verifyEqual(g_infeas, expected_g_infeas, 'RelTol', 1e-10, ...
+                'constraint_residual must equal dp.WS - WS_max().');
+            tc.verifyGreaterThan(g_infeas, 0, ...
+                'A design above the stall W/S wall must be infeasible (g > 0).');
         end
 
-        % --- Vertical-wall required_TW encoding -----------------------------
+        function testConstraintResidualZeroAtWall(tc)
+            % A design sitting exactly on the wall (dp.WS == WS_max) is the
+            % feasibility boundary: g == 0.
+            aero  = F16AeroL1(f16a_spec_path(1));
+            state = AircraftState(0, 0.3);
+            obj   = StallConstraint("Toy", state, aero);
 
-        function testRequiredTWZeroAtOrBelowLimit(tc)
+            WS_limit = obj.WS_max();
+            S_ref    = 300;
+            W_TO     = WS_limit * S_ref;   % dp.WS == WS_max exactly
+            dp       = DesignPoint(W_TO, 20000, S_ref);
+
+            tc.verifyEqual(obj.constraint_residual(dp), 0, 'AbsTol', 1e-9, ...
+                'constraint_residual must be ~0 when dp.WS exactly equals WS_max().');
+        end
+
+        % --- W/S wall via WS_max (no required_TW) ----------------------------
+        %
+        % T9 removed the old 0/Inf "wall curve" required_TW encoding from
+        % Only_WbyS: a stall wall now bounds W/S through WS_max() alone, and
+        % has NO required_TW at all (ConstraintAnalysis restricts the optimum
+        % search to W/S <= WS_max rather than folding a fake curve into the
+        % max-envelope). These tests replace the deleted required_TW-encoding
+        % tests.
+
+        function testHasNoRequiredTWMethod(tc)
+            % An Only_WbyS wall exposes no required_TW -- it imposes no thrust
+            % demand. The method must be gone (removed in T9).
+            aero  = F16AeroL1(f16a_spec_path(1));
+            state = AircraftState(0, 0.217466);
+            obj   = StallConstraint("Toy", state, aero);
+            tc.verifyFalse(ismethod(obj, 'required_TW'), ...
+                'Only_WbyS conditions must not expose a required_TW (T9).');
+        end
+
+        function testWSMaxIsFiniteAndPositive(tc)
+            % The wall is a finite, positive W/S upper bound.
             aero  = F16AeroL1(f16a_spec_path(1));
             state = AircraftState(0, 0.217466);
             obj   = StallConstraint("Toy", state, aero);
             WS_limit = obj.WS_max();
-
-            tc.verifyEqual(obj.required_TW(WS_limit), 0);
-            tc.verifyEqual(obj.required_TW(WS_limit * 0.5), 0);
-        end
-
-        function testRequiredTWInfAboveLimit(tc)
-            aero  = F16AeroL1(f16a_spec_path(1));
-            state = AircraftState(0, 0.217466);
-            obj   = StallConstraint("Toy", state, aero);
-            WS_limit = obj.WS_max();
-
-            tc.verifyEqual(obj.required_TW(WS_limit * 1.01), Inf);
-            tc.verifyEqual(obj.required_TW(WS_limit * 5), Inf);
-        end
-
-        function testRequiredTWVectorizedOverWS(tc)
-            % Constraint diagrams sweep W/S -- required_TW must vectorize
-            % cleanly, staying finite below the limit and Inf above it.
-            aero  = F16AeroL1(f16a_spec_path(1));
-            state = AircraftState(0, 0.217466);
-            obj   = StallConstraint("Toy", state, aero);
-            WS_limit = obj.WS_max();
-
-            WS_range = linspace(WS_limit * 0.2, WS_limit * 1.8, 21);
-            TW = obj.required_TW(WS_range);
-
-            tc.verifyEqual(numel(TW), numel(WS_range));
-            tc.verifyTrue(all(TW(WS_range <= WS_limit) == 0), ...
-                'required_TW must be 0 at or below the stall WS limit.');
-            tc.verifyTrue(all(isinf(TW(WS_range > WS_limit))), ...
-                'required_TW must be Inf above the stall WS limit.');
+            tc.verifyTrue(isfinite(WS_limit) && WS_limit > 0, ...
+                'The stall W/S wall must be finite and positive.');
         end
 
         % --- F-16 Stall condition --------------------------------------------

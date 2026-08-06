@@ -2,7 +2,7 @@
 
 Generated 2026-07-24. W_TO = 31377 lbf.
 
-**CAP (10 segments) and Brandt's Miss tab (14 segments) are DIFFERENT mission profiles by design** (docs/subplans/07_mission_analysis.md). Large disagreement on total fuel is documented, expected precedent (temp_AI/docs/disciplines/05_mission_analysis.md Sec.7) -- this table is **informational only**, never a pass/fail comparison.
+**CAP (10 segments) and Brandt's Miss tab (14 segments) are DIFFERENT mission profiles by design** (docs/subplans/07_mission_analysis.md). Large disagreement on total fuel is documented, expected precedent (docs/subplans/07_mission_analysis.md) -- this table is **informational only**, never a pass/fail comparison.
 
 | Parameter | Fidelity | Computed | Brandt | %Diff | Source | Notes |
 |---|---|---|---|---|---|---|
@@ -54,4 +54,4 @@ Generated 2026-07-24. W_TO = 31377 lbf.
 | W/W_TO after Cruise2 | TBD | N/A (different profile) | 0.6841 | N/A (different profile) | Miss!M12; test_BrandtMission.testWfracCruise2 | 2% tol |
 | W/W_TO after Loiter (= Miss!O12, final) | TBD | N/A (different profile) | 0.6685 | N/A (different profile) | Miss!N12 = Miss!O12; test_BrandtMission.testWfracLoiter / testFinalWeightFraction | 1% tol |
 | **[CAP vs. BRANDT -- INFORMATIONAL DISCLAIMER, NOT A COMPARISON ROW]** | | | | | | |
-| F16MissionL1/L2/L3 CAP-profile total fuel vs. Brandt Miss-tab total (6000.43 lb) | N/A | N/A | 6000.43 | EXPECTED LARGE (10-25% per precedent) | temp_AI/docs/disciplines/05_mission_analysis.md Sec.7 ('F-16 Mission Profile Discrepancy') | Do NOT treat disagreement here as a bug. CAP (examples/F16A/mission_profile.json) and Brandt's Miss tab are two different mission profiles by design (subplan 07's 'CAP mission profile vs. Brandt's 14-segment Miss-tab profile' section) -- CAP omits Accel and Egress as distinct legs, and its Dash/Combat conditions differ from Brandt's (Dash M=1.60 vs Brandt's M=0.87; Combat M=0.80 vs Brandt's M=0.87). This row exists purely to pre-warn a future reader of mission_brandt_comparison.m's output, per the parent task's explicit instruction. |
+| F16MissionL1/L2/L3 CAP-profile total fuel vs. Brandt Miss-tab total (6000.43 lb) | N/A | N/A | 6000.43 | EXPECTED LARGE (10-25% per precedent) | docs/subplans/07_mission_analysis.md ('F-16 Mission Profile Discrepancy') | Do NOT treat disagreement here as a bug. CAP (examples/F16A/mission_profile.json) and Brandt's Miss tab are two different mission profiles by design (subplan 07's 'CAP mission profile vs. Brandt's 14-segment Miss-tab profile' section) -- CAP omits Accel and Egress as distinct legs, and its Dash/Combat conditions differ from Brandt's (Dash M=1.60 vs Brandt's M=0.87; Combat M=0.80 vs Brandt's M=0.87). This row exists purely to pre-warn a future reader of mission_brandt_comparison.m's output, per the parent task's explicit instruction. |

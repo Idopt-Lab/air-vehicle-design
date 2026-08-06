@@ -14,8 +14,8 @@ function data = mission_brandt_comparison()
 %   14-segment Miss-tab profile" section. CAP omits Accel/Egress as distinct
 %   legs, and its Dash (M=1.60)/Combat (M=0.80, 25 kft) conditions differ
 %   from Brandt's own Dash/Combat (M=0.87 both). A 10-25% difference in
-%   total fuel is DOCUMENTED, EXPECTED PRECEDENT (temp_AI/docs/disciplines/
-%   05_mission_analysis.md Sec.7), not a bug to chase down. This script
+%   total fuel is DOCUMENTED, EXPECTED PRECEDENT
+%   (docs/subplans/07_mission_analysis.md), not a bug to chase down. This script
 %   prints that caveat and NEVER asserts closeness -- it exists purely to
 %   put both numbers side by side for a human reader.
 %
@@ -187,7 +187,7 @@ function write_markdown(data, out_path, W_TO, now_str)
     fprintf(fid, 'Generated %s. W_TO = %.0f lbf.\n\n', now_str, W_TO);
     fprintf(fid, ['**CAP (10 segments) and Brandt''s Miss tab (14 segments) are DIFFERENT mission profiles ' ...
         'by design** (docs/subplans/07_mission_analysis.md). Large disagreement on total fuel is documented, ' ...
-        'expected precedent (temp_AI/docs/disciplines/05_mission_analysis.md Sec.7) -- this table is ' ...
+        'expected precedent (docs/subplans/07_mission_analysis.md) -- this table is ' ...
         '**informational only**, never a pass/fail comparison.\n\n']);
     fprintf(fid, '| Parameter | Fidelity | Computed | Brandt | %%Diff | Source | Notes |\n');
     fprintf(fid, '|---|---|---|---|---|---|---|\n');
