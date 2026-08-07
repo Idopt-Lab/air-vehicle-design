@@ -15,14 +15,15 @@ function T = constraints_brandt_comparison()
 %   independently of BrandtConstraintAnalysis, which implements the same
 %   equations against the Brandt-F16-A.xls Consts tab. Both sides run on
 %   IDENTICAL aerodynamics and propulsion -- Brandt's own BrandtAerodynamics /
-%   BrandtEngine, injected into src through BrandtAeroAdapter / BrandtPropAdapter
+%   BrandtEngine, injected into src through BrandtConstraintAeroAdapter /
+%   BrandtConstraintPropAdapter
 %   -- so any difference in the constraint curves or the optimum comes from the
 %   src constraint-ASSEMBLY logic alone, not from a difference in CD0, K1 or
 %   thrust lapse. This report checks the src ASSEMBLY, not the drag or thrust
 %   model.
 %
 %   ─── THE TWO ACCOUNTED-FOR MODELING CHOICES ─────────────────────────────
-%   1. K2 = 0. BrandtAeroAdapter.drag_polar returns K2 = 0, because Brandt's
+%   1. K2 = 0. BrandtConstraintAeroAdapter.drag_polar returns K2 = 0, because Brandt's
 %      Consts tab uses the symmetric parabolic polar (CD0 + K1*CL^2, no linear
 %      camber term). That makes the src Master Equation's C term
 %      (K2*n*beta/alpha) drop out, so the src equation reduces to Brandt's exact
@@ -55,7 +56,8 @@ function T = constraints_brandt_comparison()
 %       aero = BrandtAerodynamics(geom);    aero.analyze();
 %       eng  = BrandtEngine();              eng.analyze();
 %   BrandtConstraintAnalysis(aero, eng) is the REFERENCE. The src side wraps the
-%   SAME aero/eng in BrandtAeroAdapter / BrandtPropAdapter and assembles the src
+%   SAME aero/eng in BrandtConstraintAeroAdapter / BrandtConstraintPropAdapter
+%   and assembles the src
 %   constraint set through buildSrcConstraints below. Ground truth is never a
 %   src input -- it is only the comparison target.
 %
@@ -113,8 +115,8 @@ brandtCA.analyze();
 br = brandtCA.run(WS_GRID);
 
 % ── src side: adapters wrap Brandt's aero/prop; build the src set ────────── %
-aero_adapter = BrandtAeroAdapter(brandtAero);
-prop_adapter = BrandtPropAdapter(brandtEng);
+aero_adapter = BrandtConstraintAeroAdapter(brandtAero);
+prop_adapter = BrandtConstraintPropAdapter(brandtEng);
 constraints  = buildSrcConstraints(aero_adapter, prop_adapter);
 src_ca       = ConstraintAnalysis(constraints, WS_GRID);
 
@@ -196,7 +198,7 @@ meta = struct( ...
 meta.preamble = { ...
     ['**This is an ASSEMBLY check, not a drag/thrust check.** Both sides read Brandt''s own ' ...
      '`BrandtAerodynamics`/`BrandtEngine`, injected into the src constraint classes through ' ...
-     '`BrandtAeroAdapter`/`BrandtPropAdapter`. Any residual %Diff comes from the src ' ...
+     '`BrandtConstraintAeroAdapter`/`BrandtConstraintPropAdapter`. Any residual %Diff comes from the src ' ...
      'constraint-assembly logic (the Master-Equation build and the ground-roll relations), ' ...
      'NOT from CD0, K1 or thrust lapse.'], ...
     ['**Two accounted-for modeling choices make the two sides algebraically identical.** ' ...

@@ -1,6 +1,15 @@
-classdef BrandtAeroAdapter < AerodynamicsBase
-%BRANDTAEROADAPTER  Makes a BrandtAerodynamics object satisfy the src
-%   AerodynamicsBase interface, for the src-vs-Brandt reproduction test.
+classdef BrandtConstraintAeroAdapter < AerodynamicsBase
+%BRANDTCONSTRAINTAEROADAPTER  Makes a BrandtAerodynamics object satisfy the
+%   src AerodynamicsBase interface, for the src-vs-Brandt reproduction test.
+%
+%   RENAMED 2026-08-07 (from BrandtAeroAdapter): this class collided with
+%   the unrelated, differently-shaped examples/F16A/mixed_fidelity_tests/
+%   adapters/BrandtAeroAdapter.m (no-arg constructor, exposes "Brandt" as a
+%   selectable fidelity LEVEL). run_all_tests.m puts both this file's
+%   directory (VnV/BrandtF16A, via genpath) and that one's on the MATLAB
+%   path every run; with the same class name, whichever came first on the
+%   path silently shadowed the other, breaking the all-Brandt mixed-fidelity
+%   combo (constructed with zero args, which only that OTHER class accepts).
 %
 %   PURPOSE. The src constraint classes (MasterEquationConstraint subtree,
 %   TakeoffConstraint, LandingConstraint) take an injected AerodynamicsBase
@@ -32,8 +41,9 @@ classdef BrandtAeroAdapter < AerodynamicsBase
 %   adds them (Consts!AM32/AM33). The six thrust rows need no increment
 %   (Brandt CDx = 0 there), consistent with the requirements JSON.
 %
-%   Reference only -- lives under VnV, is NOT part of the shipped src tree,
-%   and is not on the run_all_tests path by default (the test adds it).
+%   Reference only -- lives under VnV, is NOT part of the shipped src tree.
+%   It IS unconditionally on the run_all_tests path (run_all_tests.m
+%   addpath(genpath(.../VnV))), not merely added by one test.
 
     properties
         brandtAero   % BrandtAerodynamics handle (analyze() already called)
@@ -41,8 +51,8 @@ classdef BrandtAeroAdapter < AerodynamicsBase
 
     methods
 
-        function obj = BrandtAeroAdapter(brandtAero)
-        %BRANDTAEROADAPTER  Wrap an analyzed BrandtAerodynamics handle.
+        function obj = BrandtConstraintAeroAdapter(brandtAero)
+        %BRANDTCONSTRAINTAEROADAPTER  Wrap an analyzed BrandtAerodynamics handle.
         %   brandtAero -- a BrandtAerodynamics that has had analyze() called.
             arguments
                 brandtAero (1,1) BrandtAerodynamics

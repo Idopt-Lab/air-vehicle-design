@@ -1,6 +1,15 @@
-classdef BrandtPropAdapter < PropulsionBase
-%BRANDTPROPADAPTER  Makes a BrandtEngine object satisfy the src
+classdef BrandtConstraintPropAdapter < PropulsionBase
+%BRANDTCONSTRAINTPROPADAPTER  Makes a BrandtEngine object satisfy the src
 %   PropulsionBase interface, for the src-vs-Brandt reproduction test.
+%
+%   RENAMED 2026-08-07 (from BrandtPropAdapter): this class collided with
+%   the unrelated, differently-shaped examples/F16A/mixed_fidelity_tests/
+%   adapters/BrandtPropAdapter.m (no-arg constructor, exposes "Brandt" as a
+%   selectable fidelity LEVEL). run_all_tests.m puts both this file's
+%   directory (VnV/BrandtF16A, via genpath) and that one's on the MATLAB
+%   path every run; with the same class name, whichever came first on the
+%   path silently shadowed the other, breaking the all-Brandt mixed-fidelity
+%   combo (constructed with zero args, which only that OTHER class accepts).
 %
 %   PURPOSE. The src constraint classes take an injected PropulsionBase
 %   object and call thrust_lapse(state) (AB rows) or
@@ -25,8 +34,9 @@ classdef BrandtPropAdapter < PropulsionBase
 %   interface demands the property, so it carries the physically correct
 %   value.
 %
-%   Reference only -- lives under VnV, is NOT part of the shipped src tree,
-%   and is not on the run_all_tests path by default (the test adds it).
+%   Reference only -- lives under VnV, is NOT part of the shipped src tree.
+%   It IS unconditionally on the run_all_tests path (run_all_tests.m
+%   addpath(genpath(.../VnV))), not merely added by one test.
 
     properties
         brandtEng   % BrandtEngine handle (analyze() already called)
@@ -38,8 +48,8 @@ classdef BrandtPropAdapter < PropulsionBase
 
     methods
 
-        function obj = BrandtPropAdapter(brandtEng)
-        %BRANDTPROPADAPTER  Wrap an analyzed BrandtEngine handle.
+        function obj = BrandtConstraintPropAdapter(brandtEng)
+        %BRANDTCONSTRAINTPROPADAPTER  Wrap an analyzed BrandtEngine handle.
         %   brandtEng -- a BrandtEngine that has had analyze() called.
             arguments
                 brandtEng (1,1) BrandtEngine

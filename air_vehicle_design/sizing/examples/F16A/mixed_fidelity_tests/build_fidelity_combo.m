@@ -10,8 +10,8 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 %   propLv                               -- one of "L1"/"L2"/"Brandt" (no L3
 %                                            propulsion tier exists anywhere
 %                                            in this framework -- see
-%                                            F16ConstraintSet.buildDisciplines's
-%                                            header).
+%                                            CLAUDE.md's propulsion-tier
+%                                            note).
 %   loopLv                               -- one of "L1"/"L2" (there is no
 %                                            "Brandt loop": Brandt's
 %                                            spreadsheet has no injectable
@@ -46,9 +46,10 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 %   stack trace out of this function. See COMPATIBILITY_NOTES.md for the
 %   recurring failure patterns this surfaces.
 %
-%   On success for all five disciplines, builds
-%   F16ConstraintSet.build(aero, prop) + ConstraintAnalysis (same call shape
-%   as every design_study_*.m), picks SizingLoopL1 or SizingLoopL2 per
+%   On success for all five disciplines, builds ConstraintAnalysis via
+%   ConstraintAnalysis.from_requirements(aero, prop, ..., F16ConstraintSet.
+%   constraint_map(), ...) (same call shape as every design_study_*.m),
+%   picks SizingLoopL1 or SizingLoopL2 per
 %   loopLv (L3 disciplines reuse SizingLoopL2, per design_study_03_L3.m --
 %   sizing has no per-fidelity-level equation set of its own), runs it
 %   (also inside its own try/catch -> status.stage = "loop" on failure OR
@@ -150,8 +151,8 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
     % ---- Constraint set + analysis (same call shape as every
     %      design_study_*.m) -------------------------------------------- %
     try
-        constraints = F16ConstraintSet.build(aero, prop);
-        con = ConstraintAnalysis(constraints, PointPerformanceBase.WS_RANGE_BRANDT);
+        con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
+            F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
     catch ME
         status = struct('ok', false, 'stage', 'constraints', 'message', ME.message);
         return

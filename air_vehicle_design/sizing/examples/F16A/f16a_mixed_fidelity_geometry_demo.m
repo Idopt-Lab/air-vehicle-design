@@ -47,9 +47,11 @@ function T = f16a_mixed_fidelity_geometry_demo()
 %              of its formulas.
 %     STAGE 3  L3 OUTPUTS: an F16GeomL3 object, same override treatment,
 %              PLUS the two T.O.-physical inputs that make L3 L3 (L_fus,
-%              B_h) -- calling its own self-mutating size_tail() to
+%              B_h) -- feeding a standalone F16TailL1().size(...) call to
 %              RE-size L2's tail areas with the shorter T.O. arm, exactly
-%              as the production sizing loop does.
+%              as the production sizing loop does (tail sizing is a
+%              dependency-injected object again, not a geometry method --
+%              see CLAUDE.md's 2026-08-05 tail-sizing extraction).
 %
 %   ─── AN HONEST GAP, SURFACED RATHER THAN PAPERED OVER ───────────────────
 %   lambda_wing remains the one irreducible hand-typed given: no taper
@@ -80,7 +82,7 @@ function T = f16a_mixed_fidelity_geometry_demo()
 aircraft_category   = "jet_fighter";
 M_max                = 2.0;       % design Mach   [feeds Raymer Tbl 4.1 AR_eq]
 W_TO                  = 45000.0;  % lbf, guessed
-has_rss               = true;     % relaxed static stability -- true for the F-16 (informational: g2/g3's own constructors already bake this in via GeomL1.compute_tail_volume_coeffs; g1 has no tail sizing)
+has_rss               = true;     % relaxed static stability -- true for the F-16 (informational: F16TailL1's constructor already bakes this in via TailL1.compute_tail_volume_coeffs; g1 has no tail sizing)
 has_all_moving_tail   = true;     % all-moving stabilator -- true for the F-16 (ditto)
 
 % engine_type -- now wired into prop_L1 below (Stage 1), a real consumer:
@@ -104,10 +106,11 @@ tail_configuration = "conventional";             % [T.O. 1F-16A-1 / USAF 3-view 
 % lighter-weight, aircraft-agnostic stand-in anywhere in this codebase, so
 % "load and run a set of constraints for an arbitrary design" means
 % building the real F16AeroL1/F16PropL1 pair.
-[aero_L1, prop_L1] = F16ConstraintSet.buildDisciplines("L1");
+aero_L1 = F16AeroL1(f16a_spec_path(1));                          % caller builds the L1 disciplines explicitly
+prop_L1 = F16PropL1(f16a_spec_path(1));
 prop_L1.engine_type = engine_type;                               % Stage-0 categorical input, now wired through
-constraints_L1         = F16ConstraintSet.build(aero_L1, prop_L1);   % the F-16's own 8 conditions -- "arbitrary design" still means SOME design's real numbers
-ca_L1                    = ConstraintAnalysis(constraints_L1, PointPerformanceBase.WS_RANGE_BRANDT);
+ca_L1 = ConstraintAnalysis.from_requirements(aero_L1, prop_L1, f16a_requirements_path(), ...
+    F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);   % the F-16's own 8 conditions -- "arbitrary design" still means SOME design's real numbers
 [WS_opt_L1, TW_opt_L1]     = ca_L1.optimal_point();                   % [Raymer ch. 5 constraint-diagram methodology]
 
 S_ref = W_TO / WS_opt_L1;   % ft^2 -- BOOTSTRAPPED from Stage 0's W_TO, not hand-typed
@@ -209,7 +212,16 @@ b_ht_L3  = 18.5;   % ft  [T.O./USAF 3-view span, taken as PRIMARY -- g3.AR_ht is
 
 g3.L_fus = L_fus_L3;
 g3.B_h   = b_ht_L3;
-S_tail_L3 = g3.size_tail();   % self-mutates g3.S_ht/g3.S_vt using g3's OWN (now-overridden) S_ref/b_wing/cbar_wing/L_fus
+
+% TAIL SIZING (2026-08-03 absorption into Geometry REVERTED, 2026-08-05):
+% g3.size_tail() no longer exists -- tail sizing is a standalone,
+% dependency-injected object again, same F16TailL1() production convention
+% as SizingLoopL2/design_study_02_L2/03_L3. size() is a 4-scalar call, not
+% self-mutating, so g3.S_ht/S_vt are written back explicitly here.
+tail      = F16TailL1();
+S_tail_L3 = tail.size(g3.S_ref, g3.b_wing, g3.cbar_wing, g3.L_fus);
+g3.S_ht   = S_tail_L3.S_ht;
+g3.S_vt   = S_tail_L3.S_vt;
 S_ht_L3   = S_tail_L3.S_ht;
 S_vt_L3   = S_tail_L3.S_vt;
 
@@ -263,11 +275,11 @@ T = [T; ComparisonReport.row('Total S_wet, L2 (component sum) [ft^2]', 'L1->L2',
 
 T = [T; ComparisonReport.section('STAGE 2 -> 3 — F16GeomL3: only L_fus and HT span (B_h) change; wing/VT-shape/duct inherited')];
 T = [T; ComparisonReport.row('S_ht, re-sized with L_fus_L3 [ft^2]', 'L2->L3', S_ht_L3, 108.0, ...
-    'Brandt Main!C18', '%.2f', 'g3.size_tail() self-mutating call, T.O. L_fus_L3=47.5 shortens the tail arm vs Stage 1''s ~52.7.')];
+    'Brandt Main!C18', '%.2f', 'F16TailL1().size(...) call fed g3''s own overridden geometry, T.O. L_fus_L3=47.5 shortens the tail arm vs Stage 1''s ~52.7.')];
 T = [T; ComparisonReport.row('S_wet HT via T.O. span=18.5 primary [ft^2]', 'L2->L3', S_wet_ht_L3, 99.5848, ...
     'Brandt Geom!B16', '%.2f', 'g3.S_wet_ht -- g3.AR_ht is Dependent = B_h^2/S_ht_L3 instead of a given 3.0.', NaN, 'BY DESIGN')];
 T = [T; ComparisonReport.row('S_vt, re-sized with L_fus_L3 [ft^2]', 'L2->L3', S_vt_L3, 60.0, ...
-    'Brandt Main!H18', '%.2f', 'Same g3.size_tail() self-mutating call as S_ht above -- shorter T.O. tail arm.')];
+    'Brandt Main!H18', '%.2f', 'Same F16TailL1().size(...) call as S_ht above -- shorter T.O. tail arm.')];
 T = [T; ComparisonReport.row('S_wet VT [ft^2]', 'L2->L3', S_wet_vt_L3, 81.6894, 'Brandt Geom!B17', '%.2f', ...
     'g3.S_wet_vt -- same AR_vt/lambda_vt as g2 (both at their own JSON default); only the cascaded S_vt_L3 (shorter tail arm) changed.')];
 T = [T; ComparisonReport.row('S_wet fuselage [ft^2]', 'L2->L3', S_wet_fus_L3, 676.3289, 'Brandt Geom!D23', '%.2f', ...
@@ -293,11 +305,11 @@ meta.preamble = { ...
     sprintf(['Stage 0 also records tail_configuration=%s for tabulation -- still no consumer anywhere in ' ...
      'this repo. engine_type=%s IS now wired into prop_L1/prop_L2.engine_type (the TSFC/lapse table key), ' ...
      'unlike the prior toolbox-only revision of this file.'], tail_configuration, engine_type), ...
-    sprintf(['Stage 0''s has_rss=%d and has_all_moving_tail=%d are informational: g2/g3''s own ' ...
-     'constructors already hardcode the identical F-16 facts via GeomL1.compute_tail_volume_coeffs ' ...
-     '(g1 has no tail sizing at all -- that first appears at L2), so ' ...
-     'these two flags are not separately threaded through -- listed here for the record, not silently ' ...
-     'dropped.'], has_rss, has_all_moving_tail) };
+    sprintf(['Stage 0''s has_rss=%d and has_all_moving_tail=%d are informational: F16TailL1''s own ' ...
+     'constructor already hardcodes the identical F-16 facts via TailL1.compute_tail_volume_coeffs ' ...
+     '(g1 has no tail sizing at all -- that first appears at L2, via the standalone tail object, not ' ...
+     'a geometry method), so these two flags are not separately threaded through -- listed here for ' ...
+     'the record, not silently dropped.'], has_rss, has_all_moving_tail) };
 
 ComparisonReport.show(T, meta);
 
