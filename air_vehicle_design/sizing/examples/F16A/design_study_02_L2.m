@@ -2,8 +2,9 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %DESIGN_STUDY_02_L2  F-16A Level-2 sizing study.
 %
 %   result = design_study_02_L2(W_TO_guess, T_SL_guess) builds fresh
-%   F16AeroL2/F16PropL2/F16WeightsL2/F16GeomL2/F16MissionL2 discipline
-%   objects and the F-16's L2 constraint set (ConstraintAnalysis.from_requirements
+%   F16AeroL2/F16PropL2/F16WeightsL2/F16GeomL2 discipline objects, the L2
+%   mission analysis (MissionAnalysisL2.from_requirements over the CAP profile),
+%   and the F-16's L2 constraint set (ConstraintAnalysis.from_requirements
 %   with the F-16 map F16ConstraintSet.constraint_map(), sharing this study's
 %   own aero/prop objects rather than a separate internal copy), then runs
 %   SizingLoopL2 to convergence. Unlike
@@ -65,7 +66,7 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
     geom = F16GeomL2(f16a_spec_path(2), prop);
     aero = F16AeroL2(geom, f16a_spec_path(2));
     wts  = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), geom, prop);
-    miss = F16MissionL2(mission_profile_path());
+    miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
     tail = F16TailL1();
     ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
 

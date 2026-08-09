@@ -133,10 +133,12 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 
     % ---- Mission --------------------------------------------------------%
     try
+        % L1/L2 = new core mission (aircraft-agnostic, injects aero/prop/geom).
+        % L3 mission maps to MissionAnalysisL2 (there is no L3 mission tier).
         switch missionLv
-            case "L1",     miss = F16MissionL1(mission_profile_path());
-            case "L2",     miss = F16MissionL2(mission_profile_path());
-            case "L3",     miss = F16MissionL3(mission_profile_path());
+            case "L1",     miss = MissionAnalysisL1.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
+            case "L2",     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
+            case "L3",     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
             case "Brandt", miss = BrandtMissionAdapter();
             otherwise
                 error('build_fidelity_combo:unknownMissionLevel', ...

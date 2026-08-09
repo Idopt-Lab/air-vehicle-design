@@ -1,8 +1,8 @@
-classdef BrandtMissionAdapter < MissionBase
+classdef BrandtMissionAdapter < MissionAnalysisBase
 %BRANDTMISSIONADAPTER  Adapter exposing Brandt's own F-16A 14-segment
 %   mission analysis (VnV/BrandtF16A/BrandtMission.m) through the generic
-%   MissionBase contract, so "Brandt" can be selected as a fidelity LEVEL in
-%   the mixed-fidelity sizing harness alongside F16MissionL1/L2/L3.
+%   MissionAnalysisBase contract, so "Brandt" can be selected as a fidelity
+%   LEVEL in the mixed-fidelity sizing harness alongside MissionAnalysisL1/L2.
 %
 %   SELF-CONTAINED, BY DESIGN (see BrandtGeomAdapter's header for the
 %   rationale, which applies identically here): the constructor builds ALL
@@ -50,6 +50,11 @@ classdef BrandtMissionAdapter < MissionBase
             eng.analyze();
             aero = BrandtAerodynamics(geom);
             aero.analyze();
+            % Satisfy the MissionAnalysisBase constructor with the Brandt
+            % discipline adapters + an empty segment list; none are read once
+            % compute_fuel is overridden below (BrandtMission is self-contained).
+            obj@MissionAnalysisBase(BrandtAeroAdapter(aero), BrandtPropAdapter(eng), ...
+                BrandtGeomAdapter(geom), {}, struct());
             obj.brandt = BrandtMission(aero, eng, geom);
         end
 

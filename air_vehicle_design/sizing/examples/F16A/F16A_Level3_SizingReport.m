@@ -145,79 +145,37 @@ bar(detailLabels, detailValues);
 grid on; ylabel('Weight [lbf]'); xtickangle(45);
 title('F-16A Level 3 Detailed Engine-Section / Systems Subcomponent Weight Breakdown');
 
-%% Real aerodynamic-coefficient breakdown at each mission segment
-% F16MissionL3's mission-fuel closure genuinely calls F16AeroL3.drag_polar
-% (component-buildup CD0 + supersonic wave drag, Eq. 12.41) and F16PropL2
-% per segment, sub-integrated at N=40 (Cruise/Dash/Combat/Loiter) or N=40
-% energy-height steps (Climb) -- see MissionL3's header. This section calls
-% MissionL3.get_mission_fuel directly (the same static F16MissionL3.
-% compute_fuel delegates to) to recover its second output (breakdown,
-% including the per-segment starting weight W_after_lbf), which
-% F16MissionL3.compute_fuel itself discards -- then re-evaluates
-% F16AeroL3.drag_polar/compute_CL/compute_CD ONCE per segment at that
-% segment's tabulated end condition and starting weight, as a
-% single-point representative snapshot (NOT the same N=40-subdivided
-% integral MissionL3 computes internally -- this is a coarser report-only
-% evaluation of the same underlying drag_polar/compute_CL/compute_CD
-% methods). Ground-roll/fixed-fraction segments (startup/taxi/takeoff/
-% landing) are not evaluated -- there is no steady-level-flight condition
-% to define CL/CD for them.
+%% Mission fuel + key drivers by segment
+% MissionAnalysisL2 (the mission fidelity paired with the L3 discipline stack --
+% there is no L3 mission tier) calls the injected F16AeroL3/F16PropL2 per leg,
+% so the per-segment fuel and the L/D and TSFC that drove it come straight from
+% the mission breakdown (total_fuel). Fixed-fraction ground/landing legs have
+% no L/D and show blank.
 
-[~, breakdown] = MissionL3.get_mission_fuel(objs.miss.missiondata, W_TO_final, objs.aero, objs.prop);
+[~, breakdown] = objs.miss.total_fuel(W_TO_final);
 
-missiondata = objs.miss.missiondata;
-names   = missiondata.segment_names;
-alt_ft  = missiondata.alt_ft;
-mach    = missiondata.mach_end;
-n       = numel(names);
-
-W_start = zeros(1, n);
-W_start(1) = W_TO_final;
-if n > 1
-    W_start(2:end) = breakdown.W_after_lbf(1:end-1);
-end
-
-aero_segments = ["climb", "cruise", "dash", "combat", "loiter"];
-
-CD0 = nan(1, n); K1 = nan(1, n); K2 = nan(1, n);
-CL  = nan(1, n); CD = nan(1, n); LD = nan(1, n);
-
+seg_names = breakdown.names;
+n = numel(seg_names);
+LD = nan(1, n); TSFC = nan(1, n);
 for i = 1:n
-    seg = MissionL1.normalize_segment_name(names(i));
-    if ~ismember(seg, aero_segments)
-        continue
-    end
-    state = AircraftState(alt_ft(i), mach(i));
-    polar = objs.aero.drag_polar(state);
-    CD0(i) = polar.CD0;
-    K1(i)  = polar.K1;
-    K2(i)  = polar.K2;
-    CL(i)  = objs.aero.compute_CL(W_start(i), state.q, objs.geom.S_ref);
-    CD(i)  = objs.aero.compute_CD(polar.CD0, polar.K1, polar.K2, CL(i));
-    LD(i)  = CL(i) / CD(i);
+    d = breakdown.debug{i};
+    if isfield(d, 'LD'),          LD(i)   = d.LD; end
+    if isfield(d, 'TSFC_per_hr'), TSFC(i) = d.TSFC_per_hr; end
 end
 
-aeroTable = table(names(:), alt_ft(:), mach(:), W_start(:), CD0(:), K1(:), K2(:), CL(:), CD(:), LD(:), ...
-    'VariableNames', {'Segment', 'Altitude_ft', 'Mach', 'W_start_lbf', 'CD0', 'K1', 'K2', 'CL', 'CD', 'L_D'});
-disp('Level 3 aerodynamic-coefficient breakdown by mission segment:');
-disp(aeroTable);
-
-figure('Name', 'L3 Aerodynamic Coefficient Breakdown');
-tiledlayout(3, 1);
-nexttile;
-bar(categorical(names, names, 'Ordinal', true), CD0);
-grid on; ylabel('CD_0'); title('F-16A Level 3 CD_0 by Mission Segment (component buildup + wave drag)');
-nexttile;
-bar(categorical(names, names, 'Ordinal', true), CL);
-grid on; ylabel('C_L'); title('F-16A Level 3 C_L by Mission Segment');
-nexttile;
-bar(categorical(names, names, 'Ordinal', true), LD);
-grid on; ylabel('L/D'); title('F-16A Level 3 L/D by Mission Segment');
+segTable = table(seg_names(:), breakdown.fuel_lbf(:), breakdown.W_after(:), LD(:), TSFC(:), ...
+    'VariableNames', {'Segment', 'FuelUsed_lbf', 'W_after_lbf', 'L_D', 'TSFC_per_hr'});
+disp('Level 3 mission fuel + drivers by segment:');
+disp(segTable);
 
 figure('Name', 'L3 Mission Fuel by Segment');
-bar(categorical(names, names, 'Ordinal', true), breakdown.fuel_used_lbf);
-grid on; ylabel('Fuel Used [lbf]');
-title('F-16A Level 3 Mission Fuel by Segment');
+tiledlayout(2, 1);
+nexttile;
+bar(categorical(seg_names(:), seg_names(:), 'Ordinal', true), breakdown.fuel_lbf(:));
+grid on; ylabel('Fuel Used [lbf]'); title('F-16A Level 3 Mission Fuel by Segment');
+nexttile;
+bar(categorical(seg_names(:), seg_names(:), 'Ordinal', true), LD(:));
+grid on; ylabel('L/D'); title('F-16A Level 3 L/D by Mission Segment (component buildup + wave drag)');
 
 %% Internal fuel-volume check
 % F16WeightsL3 carries fuel-tank-volume INPUTS (V_t = total internal fuel

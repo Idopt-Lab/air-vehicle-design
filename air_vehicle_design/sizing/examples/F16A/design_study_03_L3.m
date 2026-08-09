@@ -2,8 +2,10 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %DESIGN_STUDY_03_L3  F-16A Level-3 sizing study.
 %
 %   result = design_study_03_L3(W_TO_guess, T_SL_guess) builds fresh
-%   F16AeroL3/F16WeightsL3/F16GeomL3/F16MissionL3 discipline objects and the
-%   F-16's L3 constraint set (ConstraintAnalysis.from_requirements with the
+%   F16AeroL3/F16WeightsL3/F16GeomL3 discipline objects, the L2 mission
+%   analysis over the L3 discipline stack (MissionAnalysisL2.from_requirements;
+%   there is no L3 mission tier), and the F-16's L3 constraint set
+%   (ConstraintAnalysis.from_requirements with the
 %   F-16 map F16ConstraintSet.constraint_map(), sharing this study's own
 %   aero/prop objects rather than a separate internal copy), and runs
 %   SizingLoopL2 -- reused unmodified, per
@@ -52,7 +54,8 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
     geom = F16GeomL3(f16a_spec_path(3), prop);
     aero = F16AeroL3(geom, f16a_spec_path(3));
     wts  = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
-    miss = F16MissionL3(mission_profile_path());
+    % L2 mission fidelity with the L3 discipline stack (there is no L3 mission tier).
+    miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
     tail = F16TailL1();
     ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
 

@@ -113,7 +113,7 @@ classdef SizingLoopL2 < handle
                 prop (1,1) PropulsionBase
                 wts  (1,1) WeightsBase
                 geom (1,1) GeometryBase
-                miss (1,1) MissionBase
+                miss (1,1) MissionAnalysisBase
                 con  (1,1) ConstraintAnalysis
                 tail (1,1) TailSizingBase
                 ctrl (1,1) ControlSurfaceSizer
