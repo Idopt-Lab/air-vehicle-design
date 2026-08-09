@@ -21,14 +21,11 @@ function results = mission_comparison_report()
 %   Ground truth: Brandt Miss-tab total = 6000.43 lb (14-seg mission).
 %
 %   EXPECTED Brandt-stack divergence (INFORMATIONAL, by design -- not a bug):
-%   L2 x Brandt x brandt_14seg totals ~6532 lb (+8.9%), matching BrandtMission.m
-%   to ~0-4% on takeoff/cruise/dash/combat/cruise2/loiter but +20% on Accel and
-%   +62% on Climb. This L2 form is a generalized-physical version of Brandt's
-%   method: it handles accel with the drag+energy master equation (not Brandt's
-%   thrust-based Miss!C13 form) and uses the standard dynamic pressure (not
-%   Brandt's q_43 averaged-speed override). Porting both would reproduce
-%   BrandtMission.m closely on those two legs; declined by user (2026-08-09) in
-%   favor of the cleaner general form. See ClimbSegment.m header.
+%   the L2 x Brandt x brandt_14seg total runs ~6532 lb (+8.9% vs the 6000.43 lb
+%   ground truth). The L2 form generalizes Brandt's method -- it handles accel
+%   with the drag+energy master equation and uses the standard dynamic pressure,
+%   not Brandt's Miss!C13 thrust-accel form or its q_43 override -- so accel and
+%   climb run high while the other legs track to within a few percent.
 
     W_TO = 31377.0;
     req  = f16a_requirements_path();

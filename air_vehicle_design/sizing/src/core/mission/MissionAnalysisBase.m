@@ -13,12 +13,9 @@ classdef (Abstract) MissionAnalysisBase < handle
 %   factory. Everything else -- the weight-threading loop, the reserve markup,
 %   the run context, and the profile assembly -- lives here and is shared.
 %
-%   RECOMPUTE-ON-READ. Stores only inputs (injected handles, the segment list,
-%   the mission-requirement scalars); it caches no fuel. total_fuel(W_TO)
-%   re-runs the whole segment loop live off the current state of the injected
-%   discipline objects, so a sizing loop that mutates aero/prop/geom in place
-%   sees fresh numbers on the next call -- matching the project's inputs-vs-
-%   Dependent philosophy (CLAUDE.md).
+%   total_fuel(W_TO) re-runs the whole segment loop live off the injected
+%   discipline objects; nothing is cached, so a sizing loop that mutates
+%   aero/prop/geom in place sees fresh numbers on the next call.
 
     properties (SetAccess = protected)
         aero    % (1,1) AerodynamicsBase -- injected

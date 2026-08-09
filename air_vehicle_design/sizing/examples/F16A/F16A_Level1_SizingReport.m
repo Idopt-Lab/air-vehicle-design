@@ -7,9 +7,9 @@
 %   regression, with zero Dependent/derived properties by design)
 % * Mission fuel burned by segment
 % * A supplemental aerodynamic-coefficient sweep at each mission segment's
-%   tabulated Mach/altitude (diagnostic only -- F16MissionL1 does NOT call
-%   the aero object internally, per its own header, so this is NOT the
-%   same drag polar the sizing loop's mission-fuel closure actually used)
+%   Mach/altitude (diagnostic -- MissionAnalysisL1 uses the injected aero drag
+%   polar on its Breguet cruise/dash/loiter/combat legs; the fixed-fraction
+%   startup/taxi/takeoff/climb/landing legs use Roskam fractions instead)
 % * A note on why no internal fuel-volume check is available at this
 %   fidelity level
 %
@@ -27,7 +27,8 @@
 
 %% Run the L1 design study
 % design_study_01_L1 builds fresh F16AeroL1/F16PropL1/F16WeightsL1/
-% F16GeomL1/F16MissionL1 objects, wires them into SizingLoopL1, and runs it
+% F16GeomL1 objects plus the L1 mission analysis (MissionAnalysisL1), wires
+% them into SizingLoopL1, and runs it
 % to convergence. The second output (objs) exposes those same objects,
 % already mutated to their converged state, for the reporting below.
 

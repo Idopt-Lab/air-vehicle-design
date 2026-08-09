@@ -1,7 +1,8 @@
 %% F-16A Level 3 Sizing Report
 % Runs the L3 (W_TO, T_SL) sizing study (|design_study_03_L3|, which reuses
-% SizingLoopL2 wired to F16AeroL3/F16GeomL3/F16WeightsL3/F16MissionL3 --
-% see that driver's header for why no separate SizingLoopL3 exists) and
+% SizingLoopL2 wired to F16AeroL3/F16GeomL3/F16WeightsL3 plus the L2 mission
+% analysis MissionAnalysisL2 (no L3 mission tier) -- see that driver's header
+% for why no separate SizingLoopL3 exists) and
 % reports:
 %
 % * Sizing convergence (W_TO, OEW, fuel weight per iteration)
@@ -25,9 +26,10 @@
 % clear; clc; close all;
 
 %% Run the L3 design study
-% design_study_03_L3 builds fresh F16AeroL3/F16GeomL3/F16WeightsL3/
-% F16MissionL3 objects (F16PropL2 stands in for propulsion -- there is no
-% L3 propulsion tier, see that driver's header), wires them into
+% design_study_03_L3 builds fresh F16AeroL3/F16GeomL3/F16WeightsL3 objects
+% plus the L2 mission analysis MissionAnalysisL2 (no L3 mission tier; F16PropL2
+% stands in for propulsion -- no L3 propulsion tier, see that driver's header),
+% wires them into
 % SizingLoopL2, and runs it to convergence. The second output (objs)
 % exposes those same objects, already mutated to their converged state.
 

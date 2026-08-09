@@ -64,7 +64,7 @@ classdef BrandtMissionAdapter < MissionAnalysisBase
         %
         %   *** aero AND prop ARE DELIBERATELY IGNORED. ***
         %   This is unusual for a method with those parameters -- they exist
-        %   only to satisfy MissionBase's shared Tier-1 signature
+        %   only to satisfy MissionAnalysisBase's shared Tier-1 signature
         %   (compute_fuel(obj, aero, prop, W_TO), same shape every fidelity
         %   level uses). BrandtMission's fuel burn is computed entirely over
         %   its OWN private aero/engine/geometry triplet, built once in this

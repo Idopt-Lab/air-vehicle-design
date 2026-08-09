@@ -6,8 +6,8 @@
 %   W_wings/W_tail/W_fuselage/W_landing_gear/W_installed_engine/
 %   W_all_else_empty properties -- Raymer Table 15.2 unit-weight buildup)
 % * Real aerodynamic-coefficient breakdown at each mission segment (L2's
-%   mission fuel closure genuinely calls F16AeroL2.drag_polar per segment,
-%   unlike L1 -- see F16MissionL2's header)
+%   mission fuel closure calls the injected aero's drag_polar per segment --
+%   MissionAnalysisL2)
 % * A note on why no internal fuel-volume check is available at this
 %   fidelity level (only F16WeightsL3 carries V_t/V_i/V_p)
 %
@@ -24,7 +24,8 @@
 
 %% Run the L2 design study
 % design_study_02_L2 builds fresh F16AeroL2/F16PropL2/F16WeightsL2/
-% F16GeomL2/F16MissionL2 objects, plus the separate, dependency-injected
+% F16GeomL2 objects plus the L2 mission analysis (MissionAnalysisL2), plus
+% the separate, dependency-injected
 % F16TailL1/ControlSurfaceSizer tail- and control-surface-sizing objects
 % (2026-08-03 absorption into Geometry REVERTED, 2026-08-05 -- tail sizing
 % is not a method on F16GeomL2 any more), wires them all into SizingLoopL2,

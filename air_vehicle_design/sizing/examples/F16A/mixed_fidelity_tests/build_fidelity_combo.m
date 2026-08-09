@@ -35,8 +35,8 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 %   -> miss -> constraints/loop -- exactly mirroring design_study_01_L1.m /
 %   design_study_02_L2.m / design_study_03_L3.m and
 %   F16ConstraintSet.buildDisciplines, reusing their exact construction
-%   calls and the f16a_spec_path(level)/f16a_requirements_path()/
-%   mission_profile_path() helpers verbatim. EACH discipline's construction
+%   calls and the f16a_spec_path(level)/f16a_requirements_path() helpers
+%   verbatim. EACH discipline's construction
 %   is wrapped in its OWN try/catch: on failure this function returns
 %   IMMEDIATELY with status.ok=false, status.stage set to the discipline
 %   that failed, and status.message = the caught exception's message, and

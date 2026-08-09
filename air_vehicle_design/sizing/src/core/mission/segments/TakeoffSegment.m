@@ -11,12 +11,10 @@ classdef TakeoffSegment < MissionSegment
 %   cT_roll is the TSFC at the segment's power setting, cT_dry the mil TSFC;
 %   T/W = prop.T_SL/W_TO; n_eng = geom.n_engines (via ctx).
 %
-%   DOUBLE-COUNT GUARD. The warm-up + fixed-start terms represent the ground
-%   phase. When the profile has explicit Startup/Taxi segments (CAP), those
-%   carry the ground fuel via their Roskam fractions, so this segment's
-%   include_warmup_start is set false by MissionAnalysisL2.from_requirements and
-%   only the ground-roll term remains. Brandt-14 has no Startup/Taxi, so its
-%   takeoff keeps all three terms.
+%   include_warmup_start toggles terms 2+3 (the ground phase). It is set false
+%   by MissionAnalysisL2.from_requirements when the profile has explicit
+%   Startup/Taxi legs (which already carry the ground fuel via their Roskam
+%   fractions), leaving only the ground-roll term. See that method for the guard.
 
     properties
         include_warmup_start (1,1) logical = true

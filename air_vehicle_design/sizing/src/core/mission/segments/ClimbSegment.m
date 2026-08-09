@@ -12,19 +12,11 @@ classdef ClimbSegment < MasterEquationSegment
 %   Ps-based climbs also average TSFC between start and end (average_tsfc = true,
 %   Miss-tab D33/L33). A same-condition leg (Climb2: dh = dV = 0) yields t = 0.
 %
-%   Uses the standard dynamic pressure q = 0.5*rho*V^2 (via AircraftState), not
-%   Brandt's Miss-tab "Row 43" averaged-speed q override, and handles ACCEL with
-%   this same drag+energy master equation rather than Brandt's separate
-%   thrust-based accel form (fuel = alpha*T_SL*cT*t, Miss!C13). Both are
-%   deliberate generalizations (user decision 2026-08-09: keep the physically-
-%   clean, general L2 form over reproducing those Brandt-Excel idiosyncrasies).
-%
-%   CONSEQUENCE for the Brandt-stack comparison (INFORMATIONAL, not a bug): with
-%   the Brandt discipline stack, L2 reproduces BrandtMission.m to ~0-4% on
-%   takeoff/cruise/dash/combat/cruise2/loiter, but ACCEL runs ~+20% and CLIMB
-%   ~+62% high (total ~+8.9%, 6532 vs 6000.4 lb) precisely because of the two
-%   generalizations above -- porting q_43 + the thrust-accel form would close
-%   that gap but was explicitly declined. See mission_comparison_report.m.
+%   Uses the standard dynamic pressure q = 0.5*rho*V^2 and handles ACCEL with
+%   this same drag+energy master equation, not Brandt's Miss-tab q_43 override
+%   or its separate thrust-based accel form (fuel = alpha*T_SL*cT*t, Miss!C13).
+%   These generalizations make the L2 Brandt-stack total run ~+8.9% high vs
+%   BrandtMission.m; see mission_comparison_report.m for the per-leg breakdown.
 
     methods
         function obj = ClimbSegment()

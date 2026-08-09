@@ -19,10 +19,6 @@ classdef MissionProfileReader
 %   atmosphere columns -- AircraftState derives density/speed/dynamic pressure
 %   from altitude+Mach with its own citations (Mattingly Eq. 2.52). This class
 %   only decodes the raw per-segment requirement fields.
-%
-%   Named MissionProfileReader (not ...Importer) on purpose: it must coexist on
-%   the MATLAB path with the legacy src/disciplines/mission/MissionProfileImporter
-%   until that discipline is removed, and MATLAB has a flat class namespace.
 
     methods (Static)
 

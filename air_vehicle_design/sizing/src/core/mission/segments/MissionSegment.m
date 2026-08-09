@@ -1,34 +1,22 @@
 classdef (Abstract) MissionSegment < handle
 %MISSIONSEGMENT  Abstract base for one leg of a mission profile.
 %
-%   Mission analogue of PointPerformanceBase (constraint analysis): one object
-%   per mission segment, each responsible for its own fuel burn and carrying the
-%   weight before/after the leg. Inspired by NPTEL_Fighter_Aircraft_Sizing's
-%   segment decomposition and VnV/BrandtF16A/BrandtMission.m's per-segment loop.
+%   Mission analogue of PointPerformanceBase: one object per segment, each
+%   responsible for its own fuel burn and carrying the weight before/after.
 %
 %   CONTRACT. Every concrete segment implements
 %       fuel = fuel_burn(obj, ctx)      % fuel burned in this leg [lbf]
-%   and the base provides the template method
-%       fuel = step(obj, W_before, ctx) % set W_before, call fuel_burn,
-%                                        % set W_after = W_before - fuel - drop_lb
-%   The aggregator (MissionAnalysisBase.total_fuel) calls step() once per
-%   segment, threading W_before -> W_after. Centralizing the payload-drop
-%   bookkeeping in step() -- W_after subtracts BOTH fuel AND drop_lb, but the
-%   returned/accumulated fuel excludes the drop -- removes the drop/fuel
-%   double-count that is easy to get wrong per-segment.
+%   The base template step() sets W_before, calls fuel_burn, and sets
+%   W_after = W_before - fuel - drop_lb. The returned/accumulated fuel EXCLUDES
+%   the payload drop; step() subtracts both, so the drop is never counted as
+%   fuel. MissionAnalysisBase.total_fuel calls step() once per segment.
 %
-%   ctx is the run context struct the aggregator builds once per total_fuel call:
-%     .aero .prop .geom              injected discipline objects (handles)
-%     .W_TO                          fixed takeoff gross weight this run [lbf]
-%     .aircraft_category             read from .aero (spec data)
-%     .n_engines                     read from .geom (spec data)
-%     .warmup_fuel_per_engine_lb .mu_rolling .mu_braking
-%     .liftoff_factor .approach_factor            mission-requirement scalars
+%   ctx is the run context MissionAnalysisBase.build_context assembles (aero/
+%   prop/geom handles, W_TO, aircraft_category, n_engines, and the mission-
+%   requirement scalars).
 %
-%   Flight condition: alt_end_ft/mach_end are the END-of-segment waypoint;
-%   alt_start_ft/mach_start are the previous segment's end (threaded by the
-%   aggregator's assembly). end_state()/start_state() build the AircraftState.
-%   FixedFractionSegment ignores the flight condition entirely.
+%   Flight condition: alt_end_ft/mach_end are the END waypoint; alt_start_ft/
+%   mach_start are the previous segment's end. FixedFractionSegment ignores it.
 
     properties
         name          (1,1) string = ""     % segment label, e.g. "Cruise"
@@ -68,6 +56,14 @@ classdef (Abstract) MissionSegment < handle
         %   subtracts both fuel and drop_lb (the physical weight leaving).
             obj.W_before = W_before;
             fuel = obj.fuel_burn(ctx);
+            if ~isfinite(fuel) || fuel < 0
+                error('MissionSegment:invalidFuel', ...
+                    ['Segment "%s" (type "%s") produced invalid fuel %g lbf. ', ...
+                     'Likely a Mach in the transonic drag-rise band (NaN drag ', ...
+                     'polar), a Mach-0 condition (zero airspeed), or a missing ', ...
+                     'distance_nm/time_min in the profile.'], ...
+                    obj.name, obj.segment_type, fuel);
+            end
             obj.W_after = W_before - fuel - obj.drop_lb;
         end
 

@@ -1,12 +1,18 @@
 # Subplan 07 — Mission Analysis
 
-**Status:** Documentation rewritten 2026-07-24 (scribe pass) to match the 3-tier + static-toolbox
-architecture established during the Geometry/Aerodynamics/Propulsion/Weights deep-dives. Equations
-re-verified against real source material (Roskam *Airplane Design Part I* read directly from the
-PDF — see citations below — plus Mattingly and the repo's existing reference extracts). **Not yet
-implemented** — no `.m`/JSON files exist for this discipline. Next steps are the `io` role (JSON +
-Brandt-comparison-JSON authoring) and then the implementation loop, both gated on user sign-off of
-this document (including the "Known Issues" and "CAP-vs-Brandt" sections below).
+> **⚠ SUPERSEDED — this subplan does NOT match the shipped code (2026-08).**
+> Mission analysis was implemented as a cross-discipline **aggregator** under
+> `src/core/mission/`, NOT as the three-tier
+> `MissionBase`/`MissionModelL{1,2,3}`/`F16MissionL{1,2,3}` discipline this
+> document describes. Shipped design: `MissionAnalysisBase` (handle aggregator,
+> dependency-injected with aero/prop/geom) ← `MissionAnalysisL1` (Roskam Table
+> 2.1 fixed fractions + Breguet) and `MissionAnalysisL2` (Brandt Miss-tab master
+> equation), plus per-leg `segments/*.m`, the `MissionEquations` static toolbox,
+> and `MissionProfileReader`. There is **no L3 mission tier** and **no N=20/N=40
+> discretization**. Mission profiles live in
+> `examples/F16A/jsons/f16a_requirements.json` (`.missions` block). The code in
+> `src/core/mission/` is authoritative; the text below is retained only as
+> historical rationale — do NOT use it as an implementation spec.
 **Depends on:** Steps 1–5 (all disciplines — Mission calls `aero`/`prop` at L2/L3), Step 6
 (constraint analysis is independent of Mission; not a hard dependency, but both feed Step 8)
 **Blocks:** Step 8 (sizing)
