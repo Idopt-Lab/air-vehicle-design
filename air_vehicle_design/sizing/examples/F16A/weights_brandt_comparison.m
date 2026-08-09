@@ -39,10 +39,11 @@ function T_all = weights_brandt_comparison()
 %       w2   = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g2, prop);
 %       w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
 %
-%   Match the geometry tier to the weights tier — L2 takes g2, L3 takes g3 —
-%   and note the guards enforce it: F16WeightsL2 requires a GeometryModelL2 and
-%   F16WeightsL3 a GeometryModelL3, so a mismatch fails at construction rather
-%   than producing a plausible wrong number.
+%   Match the geometry tier to the weights tier — L2 takes g2, L3 takes g3.
+%   The constructors accept EITHER GeometryModelL2 or GeometryModelL3 (for
+%   mixed-fidelity use, added 2026-08-06), so a mismatched tier is NOT rejected
+%   at construction: it builds, then fails later at the first tier-specific
+%   property read. Always pass the matching tier here.
 %
 %   What crosses each injection:
 %     from geometry   exposed areas, tail planform, fuselage envelope,

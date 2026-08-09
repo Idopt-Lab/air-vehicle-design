@@ -10,8 +10,8 @@ classdef F16GeomL1 < GeometryModelL1
 %   F16AeroL1).  L1 is a pure statistical/regression fidelity level: only
 %   classification strings/scalars are JSON inputs (aircraft category, design
 %   M_max) — no numeric F-16 planform dimensions exist at this tier (those
-%   first appear at L2). L1 has no tail sizing — tail sizing first appears at
-%   L2 (see F16GeomL2.size_tail).
+%   first appear at L2). L1 has no tail sizing — tail sizing is a separate
+%   discipline (see src/disciplines/tail_sizing/, e.g. F16TailL1 / F16TailL2).
 %
 %   SOURCES:
 %     S_ref: T.O. 1F-16A-1, Flight Manual, Fig. 1-2 (300 ft^2) — NOT a JSON

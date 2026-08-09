@@ -59,8 +59,8 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
     properties (Abstract)
         %AVIONICS_WEIGHT  fraction * W_empty [lbf], W_empty = obj's own
         %   fuel_weight_source.OEW(fuel_weight_source.W_TO) -- self-
-        %   referencing, zero extra args (mirrors GeomL2.size_tail's
-        %   "zero-arg: reads its own injected collaborator live" convention).
+        %   referencing, zero extra args: reads its own injected collaborator
+        %   live.
         avionics_weight
 
         %AVIONICS_VOLUME  avionics_weight / avionics_density [ft^3]. MUST be
