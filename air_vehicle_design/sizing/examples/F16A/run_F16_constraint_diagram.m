@@ -3,13 +3,10 @@
 %   f16a_requirements.json), aggregates them (ConstraintAnalysis), and
 %   produces the constraint diagram + optimum design point.
 %
-%   Stall (F16ConstraintSet's 9th, sanity-check-only condition) is excluded
-%   by default -- see F16ConstraintSet.m's header: it has no Brandt
-%   reference row, and at L2/L3 its geometry-based clean-CLmax wall was
-%   found to silently dominate the design point (W/S~=62 instead of the
-%   ~83-104 range the real requirements-JSON conditions + Brandt give).
-%   To add Stall back as an overlay, pass F16ConstraintSet.constraint_map_with_stall()
-%   instead of constraint_map() to ConstraintAnalysis.from_requirements below.
+%   Stall is not among the 8 conditions -- see F16ConstraintSet.m's header: its
+%   L2/L3 geometry-based clean-CLmax wall would spuriously dominate the design
+%   point (W/S ~ 62 vs the ~83-104 range the real conditions + Brandt give).
+%   The clean-CLmax fix belongs in aerodynamics (ToDo_Darshan.md §3).
 %
 %   This script builds the L3 discipline objects explicitly and injects them
 %   into ConstraintAnalysis.from_requirements. To analyze a different fidelity

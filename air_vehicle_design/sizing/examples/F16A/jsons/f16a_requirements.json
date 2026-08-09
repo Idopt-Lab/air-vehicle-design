@@ -13,10 +13,11 @@
   "_TODO_design_mach": "Design max Mach is carried as two numbers -- Brandt 2.0 (used here) and the T.O. 1F-16A-1 limit 2.05. Confirm which is the design requirement, then remove this key. Sensitivity is minor (L3 OEW shifts ~0.1%). todo 2026-07-25 Phase 4 §P4-13.",
 
   "constraints": {
-    "_comment": "The 9 F-16A constraint conditions (Stall last). Each object holds REQUIREMENT / CONDITION data ONLY -- the flight condition and the field-performance requirement. NO discipline-owned quantity is present: CLmax/CD0/K1/K2/CDx come from the injected aero object, thrust-lapse alpha and TSFC from the injected prop object, and takeoff/landing gear+flap drag from aero's get_Delta_CD0_TO()/get_Delta_CD0_L(). See examples/F16A/mds/f16a_requirements.md for the schema + full per-field citations.",
+    "_comment": "The 8 F-16A constraint conditions. Each object holds REQUIREMENT / CONDITION data ONLY -- the flight condition and the field-performance requirement. NO discipline-owned quantity is present: CLmax/CD0/K1/K2/CDx come from the injected aero object, thrust-lapse alpha and TSFC from the injected prop object, and takeoff/landing gear+flap drag from aero's get_Delta_CD0_TO()/get_Delta_CD0_L(). See examples/F16A/mds/f16a_requirements.md for the schema + full per-field citations.",
     "_cite": "Consts! = VnV/BrandtF16A/GroundTruth/Brandt-F16-A.xls 'Consts' tab; Main! = its 'Main' tab; Ps! = its 'Ps' tab; f16a_geometry.json = VnV/BrandtF16A/GroundTruth/f16a_geometry.json .constraints block; cell-map = VnV/BrandtF16A/GroundTruth/cell-map.md.",
     "_note_beta": "beta = W/W_TO at which the condition must be met -- a SPECIFIED REQUIREMENT INPUT (user directive 2026-08-04), NOT a mission-analysis output. Operational (thrust) rows = 0.89966696 [Brandt Consts!B23; f16a_geometry.json .constraints.beta_perf]. Field/stall rows (at TOGW) = 1.0.",
     "_note_power_setting": "power_setting is derived from the Brandt AB% column: 0 % -> \"mil\", 100 % -> \"AB\". Takeoff always evaluates at full AB and carries no power_setting key; Landing is power-off and carries none.",
+    "_note_stall": "Stall is intentionally NOT an F-16 diagram constraint: at L2/L3 the aero object's geometry-based clean CLmax (~0.91) puts the stall wall at W/S ~ 62 psf and spuriously binds the optimum. The fix belongs in aerodynamics (clean-CLmax root cause, ToDo_Darshan.md #3); re-add a Stall condition here once that lands. StallConstraint.m still exists and is unit-tested standalone. Stall-speed value for reference: Mach 0.217466 at sea level [Brandt Ps!B10].",
     "conditions": [
       {
         "name": "Max Mach",
@@ -107,15 +108,6 @@
         "k_factor": 1.3,
         "_src": "distance_ft 4000 (ground roll) <- f16a_geometry.json .constraints.landing.S_land_ft; cell-map Consts!E33. mu 0.50 (braking) <- Brandt Main!V13; f16a_geometry.json .mission.mu_braking. k_factor 1.3 (k_L approach factor) <- Brandt Main!U13; f16a_geometry.json .mission.approach_factor.",
         "_comment": "Field condition, power-off approach: no mach/power_setting/n/Ps_fps. Gear+flap drag delta comes from aero.get_Delta_CD0_L(), not from here."
-      },
-      {
-        "name": "Stall",
-        "category": "Only_WbyS",
-        "altitude_ft": 0,
-        "mach": 0.217466,
-        "beta": 1.0,
-        "_src": "mach 0.217466 (sea-level stall-speed requirement) <- Brandt Ps!B10; corroborated in-repo by StallConstraint.m (same value). Not a Brandt Consts-sheet row and not carried in f16a_geometry.json.",
-        "_comment": "Stall bounds W/S only. No thrust or field-roll fields. CLmax comes from the injected aero object, not from here."
       }
     ]
   },

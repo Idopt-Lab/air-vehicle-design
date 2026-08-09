@@ -3,9 +3,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %   the F-16's constraint conditions from the requirements JSON
 %   examples/F16A/jsons/f16a_requirements.json into concrete
 %   MasterEquationConstraint specializations (LevelFlight/SustainedTurn/
-%   ExcessPower), TakeoffConstraint/LandingConstraint objects, and an
-%   OPTIONAL Stall condition (StallConstraint) -- see F16ConstraintSet.m's
-%   header) and its end-to-end use with ConstraintAnalysis.
+%   ExcessPower) and TakeoffConstraint/LandingConstraint objects, and its
+%   end-to-end use with ConstraintAnalysis.
 %
 %   Updated 2026-08-04 (subplan 06-refactor T3): the build path now reads the
 %   requirements JSON, not Constraints.xlsx. power_setting is sourced directly
@@ -19,13 +18,11 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %   point exactly (see MasterEquationConstraint.m/TakeoffConstraint.m/
 %   LandingConstraint.m headers for the documented modeling gaps).
 %
-%   includeStall DEFAULTS TO FALSE (changed 2026-07-27, see
-%   F16ConstraintSet.m's header): Stall has no Brandt reference row and was
-%   found to silently dominate optimal_point() at L2/L3 via its low
-%   geometry-based clean CLmax, pulling the reported design point to
-%   W/S~=62 vs. Brandt's 104.59 / Casey's legacy ~125 (user-reported
-%   2026-07-27). Tests that need the 9-constraint (Stall-included) build
-%   now pass includeStall=true explicitly.
+%   STALL IS NOT AN F-16 DIAGRAM CONSTRAINT (see F16ConstraintSet.m's header):
+%   the requirements JSON lists 8 conditions, no Stall. Its L2/L3 geometry-based
+%   clean CLmax would spuriously bind the optimum; the fix belongs in
+%   aerodynamics (ToDo_Darshan.md §3). StallConstraint is unit-tested standalone
+%   in TestStallConstraint.
 
     properties (TestParameter)
         fidelityLevel = {'L1', 'L2', 'L3'};
@@ -33,20 +30,16 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 
     methods (Static, Access = private)
 
-        function constraints = buildLevel(fidelityLevel, includeStall)
+        function constraints = buildLevel(fidelityLevel)
         %BUILDLEVEL  Test-only convenience: construct the L-level aero/prop
         %   pair and return the F-16 constraint cell array via the generic
         %   ConstraintAnalysis.build_constraints (requirements JSON + the F-16
-        %   name->ConstraintType map). Most tests here only care about "give me
-        %   the L-level constraint set," not which aero/prop instance backs it.
-        %   includeStall now selects which map: the default map omits Stall (8
-        %   conditions); constraint_map_with_stall adds it (9). L2/L3 inject
+        %   name->ConstraintType map, the 8 diagram conditions). L2/L3 inject
         %   prop into geometry (nacelle -> duct wetted area -> CD0); L3 uses
         %   F16PropL2 (no L3 propulsion tier), the same pairing the design
         %   studies use.
             arguments
                 fidelityLevel (1,1) string {mustBeMember(fidelityLevel, ["L1", "L2", "L3"])}
-                includeStall  (1,1) logical = false
             end
             switch fidelityLevel
                 case "L1"
@@ -59,13 +52,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
                     prop = F16PropL2(f16a_spec_path(2));
                     aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
             end
-            if includeStall
-                map = F16ConstraintSet.constraint_map_with_stall();
-            else
-                map = F16ConstraintSet.constraint_map();
-            end
             constraints = ConstraintAnalysis.build_constraints(aero, prop, ...
-                f16a_requirements_path(), map);
+                f16a_requirements_path(), F16ConstraintSet.constraint_map());
         end
 
     end
@@ -73,9 +61,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
     methods (Test)
 
         function testBuildDefaultReturnsEightConstraints(tc, fidelityLevel)
-            % includeStall now defaults to false (see class header) -- the
-            % default build returns only the 8 requirements-JSON
-            % conditions, no Stall row.
+            % The build returns the 8 requirements-JSON conditions, no Stall
+            % row (Stall is not an F-16 diagram condition -- see class header).
             constraints = TestF16ConstraintSet.buildLevel(fidelityLevel);
             tc.verifyEqual(numel(constraints), 8);
             names = cellfun(@(c) c.name, constraints);
@@ -85,25 +72,14 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             end
         end
 
-        function testBuildWithStallReturnsNineConstraints(tc, fidelityLevel)
-            % includeStall=true adds the Stall row back as a 9th, sanity-
-            % check-only condition -- available, but no longer the default.
-            constraints = TestF16ConstraintSet.buildLevel(fidelityLevel, true);
-            tc.verifyEqual(numel(constraints), 9);
-            names = cellfun(@(c) c.name, constraints);
-            tc.verifyTrue(any(names == "Stall"));
-        end
-
-        function testTakeoffLandingAndStallRowsUseCorrectClasses(tc)
-            constraints = TestF16ConstraintSet.buildLevel("L3", true);
+        function testTakeoffLandingRowsUseCorrectClasses(tc)
+            constraints = TestF16ConstraintSet.buildLevel("L3");
             names = cellfun(@(c) c.name, constraints);
 
             takeoff = constraints{names == "Takeoff"};
             landing = constraints{names == "Landing"};
-            stall   = constraints{names == "Stall"};
             tc.verifyTrue(isa(takeoff, 'TakeoffConstraint'));
             tc.verifyTrue(isa(landing, 'LandingConstraint'));
-            tc.verifyTrue(isa(stall, 'StallConstraint'));
         end
 
         function testThrustTypeRowsUseMasterEquationSpecializations(tc)
@@ -229,16 +205,6 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
                 F16AeroL1(f16a_spec_path(1)), F16PropL1(f16a_spec_path(1)), ...
                 0.9, "partial"), 'MATLAB:validators:mustBeMember', ...
                 'A Master-Equation constraint must reject a power setting outside {AB, mil}.');
-        end
-
-        function testStallConditionAtSeaLevel(tc)
-            % Stall now IS a requirements-JSON row (Only_WbyS, sea level, Mach
-            % 0.217466) -- this pins the flight condition read from the JSON.
-            constraints = TestF16ConstraintSet.buildLevel("L3", true);
-            names = cellfun(@(c) c.name, constraints);
-            stall = constraints{names == "Stall"};
-            tc.verifyEqual(stall.state.altitude_ft, 0);
-            tc.verifyEqual(stall.state.mach, 0.217466);
         end
 
         function testTakeoffStateUsesLiftoffMach(tc)
