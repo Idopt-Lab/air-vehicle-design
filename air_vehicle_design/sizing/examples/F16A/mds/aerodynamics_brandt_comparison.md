@@ -1,6 +1,6 @@
 # F-16A Block 10/15 — Aerodynamics vs Ground Truth
 
-Generated 2026-07-26. Flight condition: 36000 ft, subsonic M = 0.6 / supersonic M = 1.6.
+Generated 2026-08-08. Flight condition: 36000 ft, subsonic M = 0.6 / supersonic M = 1.6.
 
 **Reference** (the `Reference` and `%Diff` columns): Brandt F-16A.xls workbook outputs and his tabulated actual polar, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.aerodynamics`].
 
@@ -23,16 +23,16 @@ This is a **comparison report, not a test** — no pass/fail assertions, not par
 | CD0 subsonic (L1 Mattingly type-curve) | L1 | 0.01600 | 0.01691 | -5.38% | 0.01670 [pub] |  | Brandt Aero!G3 (skin-friction CDmin) | L1 CD0(M) from Mattingly Fig.2.10 (placeholder). Brandt skin-friction basis 0.01691; his MISSION CD0=0.0270 folds in form/interference/wave (a different basis). |
 | CD0 subsonic (L2 Cfe*Swet/Sref) | L2 | 0.01711 | 0.01691 | +1.20% | 0.01670 [pub] |  | Brandt Aero!G3 (skin-friction CDmin) | Raymer Eq.12.23 with Cfe=0.0035 (AF fighter). Closest to Brandt skin-friction 0.01691; below his mission 0.0270 (no form/wave drag at L2) -- not a bug. |
 | CD0 subsonic (L3 component buildup) | L3 | 0.01705 | 0.01691 | +0.84% | 0.01670 [pub] |  | Brandt Aero!G3 (skin-friction CDmin) | Raymer Eq.12.24 per-component sum. Same skin-friction basis as Brandt Aero!G3; below mission 0.0270 (no excrescence calibration) -- not a bug. |
-| K1 subsonic (L1) | L1 | 0.1800 | 0.1160 | +55.17% | 0.1167 [pub] |  | Brandt Miss!k1 | L1 K1(M) from Mattingly Fig.2.11 (placeholder, ~0.18); higher than the geometry-based L2/L3 K1. |
+| K1 subsonic (L1) | L1 | 0.1168 | 0.1160 | +0.67% | 0.1167 [pub] |  | Brandt Miss!k1 | L1 K1(M) from Mattingly Fig.2.11 (placeholder, ~0.18); higher than the geometry-based L2/L3 K1. |
 | K1 subsonic (L2/L3, 1/(pi*AR*e)) | L2 | 0.1168 | 0.1160 | +0.67% | 0.1167 [pub] |  | Brandt Miss!k1 | Raymer Eq.12.50 with official Oswald e (Eq.12.49). L2 and L3 share this K1; excellent agreement with Brandt 0.1160. |
 | K2 subsonic (L1, uncambered) | L1 | 0.00000 | -0.00630 | -100.00% | -0.00900 [pub] |  | Brandt Aero!G17 | L1 treats the fighter as uncambered -> K2=0 (Mattingly Sec.2.3.1). Brandt uses a small negative camber term -0.0063. |
-| K2 subsonic (L2, -2*K1*CL_minD) | L2 | -0.00601 | -0.00630 | -4.66% | -0.00900 [pub] |  | Brandt Aero!G17 | Raymer Eq.12.6 CL_alpha + Brandt Sec.4.3. Cambered 64A204 (alpha_L0=-1.01) -> negative K2, close to Brandt. |
-| K2 subsonic (L3, -2*K1*CL_minD) | L3 | -0.00601 | -0.00630 | -4.66% | -0.00900 [pub] |  | Brandt Aero!G17 | Same form as L2; L3 CL_alpha omits the 2-D-slope eta term (default 0.95), giving a slightly larger magnitude. |
+| K2 subsonic (L2, -2*K1*CL_minD) | L2 | -0.00791 | -0.00630 | +25.55% | -0.00900 [pub] |  | Brandt Aero!G17 | Raymer Eq.12.6 CL_alpha + Brandt Sec.4.3. Cambered 64A204 (alpha_L0=-1.01) -> negative K2, close to Brandt. |
+| K2 subsonic (L3, -2*K1*CL_minD) | L3 | -0.00791 | -0.00630 | +25.55% | -0.00900 [pub] |  | Brandt Aero!G17 | Same form as L2; L3 CL_alpha omits the 2-D-slope eta term (default 0.95), giving a slightly larger magnitude. |
 | **[SUPERSONIC CLEAN DRAG POLAR -- M=1.6, 36 kft]** | | | | | | | | |
 | CD0 supersonic (L1) | L1 | 0.02800 | 0.04610 | -39.26% | 0.04250 [pub] |  | Brandt Aero!O9 (actual polar, M=1.6) | L1 Mattingly supersonic CD0 plateau (~0.028, placeholder). Internet band ~0.0425 is at M~1.05. |
-| CD0 supersonic (L2, skin friction only) | L2 | 0.00787 | 0.04610 | -82.92% | 0.04250 [pub] |  | Brandt Aero!O9 (actual polar, M=1.6) | EXPECTED LOW, NOT A BUG: L2 supersonic CD0 is Cf(Re,M)*Swet/Sref with NO wave drag (that is added only at L3). Grossly under Brandt 0.0461. |
+| CD0 supersonic (L2, skin friction only) | L2 | 0.04460 | 0.04610 | -3.25% | 0.04250 [pub] |  | Brandt Aero!O9 (actual polar, M=1.6) | EXPECTED LOW, NOT A BUG: L2 supersonic CD0 is Cf(Re,M)*Swet/Sref with NO wave drag (that is added only at L3). Grossly under Brandt 0.0461. |
 | CD0 supersonic (L3, buildup + wave drag) | L3 | 0.03882 | 0.04610 | -15.80% | 0.04250 [pub] |  | Brandt Aero!O9 (actual polar, M=1.6) | L3 adds the Raymer Eq.12.41 fuselage wave-drag term (M>=1.2); much closer to Brandt 0.0461. Residual gap = no wing/canopy/boat-tail wave drag -- not a bug. |
-| K1 supersonic (L1) | L1 | 0.2880 | 0.3400 | -15.29% | N/A |  | Brandt Aero!P9 (actual polar, M=1.6) | L1 Mattingly Fig.2.11 supersonic K1 (~0.29, placeholder). |
+| K1 supersonic (L1) | L1 | 0.2760 | 0.3400 | -18.81% | N/A |  | Brandt Aero!P9 (actual polar, M=1.6) | L1 Mattingly Fig.2.11 supersonic K1 (~0.29, placeholder). |
 | K1 supersonic (L2/L3, Eq.12.51) | L2 | 0.2760 | 0.3400 | -18.81% | N/A |  | Brandt Aero!P9 (actual polar, M=1.6) | Raymer Eq.12.51 linearized supersonic K1 (shared L2/L3). Under Brandt 0.340 -- linear theory under-predicts real supersonic induced drag; expected. |
 | **[CD0 vs MACH SWEEP -- L2 & L3, 36 kft (subsonic 0.6/0.8/0.9, supersonic 1.2/1.5/2.0)]** | | | | | | | | |
 | CD0 @ M=0.6 (L2) | L2 | 0.01711 | 0.02050 | -16.53% | N/A |  | Brandt actual polar (M~0.875) | L2 skin-friction CD0 (flat/slightly falling with M); Brandt = nearest tabulated actual-polar CDo. |
@@ -41,11 +41,11 @@ This is a **comparison report, not a test** — no pass/fail assertions, not par
 | CD0 @ M=0.8 (L3) | L3 | 0.01639 | 0.02050 | -20.04% | N/A |  | Brandt actual polar (M~0.875) | L3 buildup CD0 falls slightly with M (compressible Cf); Brandt = nearest tabulated actual-polar CDo. |
 | CD0 @ M=0.9 (L2) | L2 | 0.01711 | 0.02050 | -16.53% | N/A |  | Brandt actual polar (M~0.875) | L2 skin-friction CD0 (flat/slightly falling with M); Brandt = nearest tabulated actual-polar CDo. |
 | CD0 @ M=0.9 (L3) | L3 | 0.01607 | 0.02050 | -21.59% | N/A |  | Brandt actual polar (M~0.875) | L3 buildup CD0 falls slightly with M (compressible Cf); Brandt = nearest tabulated actual-polar CDo. |
-| CD0 @ M=1.2 (L2) | L2 | 0.00889 | 0.04440 | -79.98% | N/A |  | Brandt actual polar (M~1.05) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
+| CD0 @ M=1.2 (L2) | L2 | 0.04839 | 0.04440 | +8.98% | N/A |  | Brandt actual polar (M~1.05) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
 | CD0 @ M=1.2 (L3) | L3 | 0.04300 | 0.04440 | -3.16% | N/A |  | Brandt actual polar (M~1.05) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
-| CD0 @ M=1.5 (L2) | L2 | 0.00812 | 0.04610 | -82.39% | N/A |  | Brandt actual polar (M~1.6) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
+| CD0 @ M=1.5 (L2) | L2 | 0.04536 | 0.04610 | -1.62% | N/A |  | Brandt actual polar (M~1.6) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
 | CD0 @ M=1.5 (L3) | L3 | 0.03957 | 0.04610 | -14.17% | N/A |  | Brandt actual polar (M~1.6) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
-| CD0 @ M=2.0 (L2) | L2 | 0.00697 | 0.04580 | -84.78% | N/A |  | Brandt actual polar (M~2) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
+| CD0 @ M=2.0 (L2) | L2 | 0.04212 | 0.04580 | -8.03% | N/A |  | Brandt actual polar (M~2) | L2 has NO wave drag -> far below Brandt supersonic CDo (not a bug); Brandt = nearest actual-polar CDo. |
 | CD0 @ M=2.0 (L3) | L3 | 0.03621 | 0.04580 | -20.93% | N/A |  | Brandt actual polar (M~2) | L3 includes Eq.12.41 wave drag (M>=1.2); tracks the Brandt supersonic drag-rise trend; Brandt = nearest actual-polar CDo. |
 | **[OSWALD SPAN EFFICIENCY -- two implementation options]** | | | | | | | | |
 | e, official Raymer Eq.12.48/12.49 (L2) | L2 | 0.9086 | 0.9144 | -0.63% | 0.9070 [pub] |  | Brandt Aero!G12 (e0) | OFFICIAL drag_polar value (Eq.12.49, Lambda_LE=40). ~0.6% under Brandt e0 (Brandt uses a different formula). |
