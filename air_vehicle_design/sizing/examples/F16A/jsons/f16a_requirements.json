@@ -1,5 +1,5 @@
 {
-  "_comment": "F-16A Block 10/15 top-level design REQUIREMENTS -- what the aircraft must DO. ★ SCOPE GUARD: this file holds REQUIREMENTS ONLY, never SPEC DATA (what the aircraft IS -- reference areas, AR, taper, sweep, t/c, fuselage envelope, thrust, engine model: those stay in examples/F16A/f16a_L{1,2,3}.json). Hold that boundary: the file is fidelity-independent and will grow with constraint + mission analysis, so it becomes the most cross-cut input in the repo, and one spec value migrating in would spread everywhere. NOT per-fidelity -- requirements do not vary with fidelity level, hence one file and no _L{1,2,3} suffix. The CONSTRAINT CONDITIONS now live here too, in the .constraints block below -- each is a REQUIREMENT (what the aircraft must DO: sustain 4.5 g, cruise at M 0.87, take off in 4000 ft), never discipline/spec data. That block holds condition + field-requirement data ONLY: NO discipline-owned quantity (no CLmax, CD0, K1, K2, CDx, thrust lapse alpha, or TSFC -- those come from the injected aero/prop objects at run time). CONSUMERS: design_mach -> F16WeightsL2 + F16WeightsL3 (Raymer Eq. 10.10 M^0.25 for W_en; Eq. 15.3 M^0.341 VT; Eq. 15.17 M^0.003 flight controls) and F16GeomL1 (Raymer 7th Tbl 4.1 AR_eq, GeomL1.m:121-129) -- ★ F16GeomL1 READS design_mach FROM HERE as of Phase 4 -- f16a_L1.json .geometry.M_max was deleted as the third copy of this quantity, and F16GeomL1(json_path, req_path) now takes both paths (todo 2026-07-25 Phase 4 §P4-14, resolved); cruise.altitude_ft + cruise.mach -> F16WeightsL3 only, which BUILDS the AircraftState itself for SFC_mission = prop.get_TSFC(cruise) -- no AircraftState is injected. Revives PLAN.md's Step-0 requirements.json, which docs/PLAN.md:178 records as planned-but-never-built. Minimal first version: only what Phase-4 weights needs. Full spec: docs/weights_parameter_usage.md §2.",
+  "_comment": "F-16A Block 10/15 top-level design REQUIREMENTS -- what the aircraft must DO. ★ SCOPE GUARD: this file holds REQUIREMENTS ONLY, never SPEC DATA (what the aircraft IS -- reference areas, AR, taper, sweep, t/c, fuselage envelope, thrust, engine model: those stay in examples/F16A/f16a_L{1,2,3}.json). Hold that boundary: the file is fidelity-independent and will grow with constraint + mission analysis, so it becomes the most cross-cut input in the repo, and one spec value migrating in would spread everywhere. NOT per-fidelity -- requirements do not vary with fidelity level, hence one file and no _L{1,2,3} suffix. The CONSTRAINT CONDITIONS now live here too, in the .constraints block below -- each is a REQUIREMENT (what the aircraft must DO: sustain 4.5 g, cruise at M 0.87, take off in 4000 ft), never discipline/spec data. That block holds condition + field-requirement data ONLY: NO discipline-owned quantity (no CLmax, CD0, K1, K2, CDx, thrust lapse alpha, or TSFC -- those come from the injected aero/prop objects at run time). The MISSION PROFILES now live here too, in the .missions block below (the CAP and Brandt-14 segment sequences) -- also REQUIREMENT data only, with the same guard: no discipline-owned quantity and no SPEC data (aircraft_category comes from the injected aero object, n_engines from the injected geometry object -- both stay in f16a_L{1,2,3}.json). CONSUMERS: design_mach -> F16WeightsL2 + F16WeightsL3 (Raymer Eq. 10.10 M^0.25 for W_en; Eq. 15.3 M^0.341 VT; Eq. 15.17 M^0.003 flight controls) and F16GeomL1 (Raymer 7th Tbl 4.1 AR_eq, GeomL1.m:121-129) -- ★ F16GeomL1 READS design_mach FROM HERE as of Phase 4 -- f16a_L1.json .geometry.M_max was deleted as the third copy of this quantity, and F16GeomL1(json_path, req_path) now takes both paths (todo 2026-07-25 Phase 4 §P4-14, resolved); cruise.altitude_ft + cruise.mach -> F16WeightsL3 only, which BUILDS the AircraftState itself for SFC_mission = prop.get_TSFC(cruise) -- no AircraftState is injected. Revives PLAN.md's Step-0 requirements.json, which docs/PLAN.md:178 records as planned-but-never-built. Minimal first version: only what Phase-4 weights needs. Full spec: docs/weights_parameter_usage.md §2.",
   "_cite": "Main!/Consts! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; todo = VnV/BrandtF16A/todo.md.",
 
   "cruise": {
@@ -118,5 +118,60 @@
         "_comment": "Stall bounds W/S only. No thrust or field-roll fields. CLmax comes from the injected aero object, not from here."
       }
     ]
+  },
+
+  "missions": {
+    "_comment": "Mission PROFILES: the ordered segment sequence each mission flies -- a REQUIREMENT (what the aircraft must DO), fidelity-independent. Each segment block carries the MINIMUM per-segment inputs only: type, end flight condition (alt_ft/mach_end = END-of-segment waypoint; the segment START is the previous segment's end), and whichever of distance_nm / time_min / drop_lb / percent_ab / cd0_increment applies. NO discipline-owned data (CLmax, CD0, K1/K2, thrust, TSFC come from the injected aero/prop objects) and NO spec data (aircraft_category from the injected aero object; n_engines from the injected geometry object).",
+    "_cite": "cap = temp_Casey/inputs/Mission_Profile.xlsx CAP sheet (via the retired examples/F16A/jsons/mission_profile.json); brandt_14seg = VnV/BrandtF16A/GroundTruth/f16a_geometry.json .mission (Brandt-F16-A.xls Miss tab).",
+    "_note_percent_ab": "percent_ab: afterburner setting 0-100 (0 = mil/dry, 100 = full AB, 50 = partial). Omitted => 0 (dry). Selects/blends the prop TSFC: cT = cT_dry + (percent_ab/100)*(cT_AB - cT_dry).",
+    "_note_cd0_increment": "cd0_increment: en-route external-stores parasite-drag increment added to the clean CD0 in the L2 drag-fuel term. Omitted => 0. Deliberately NOT set on takeoff/landing -- their gear+flap drag comes from aero.get_Delta_CD0_TO()/get_Delta_CD0_L() instead, so putting it here too would double-count. Brandt CDx values: 0.035 takeoff, 0.010 on Accel..Combat, 0 afterward.",
+
+    "cap": {
+      "_description": "Combat Air Patrol -- 10 segments (Casey's CAP sheet). Accel/Egress are genuinely absent vs Brandt's 14; Patrol/Patrol2/Patrol3/Climb2 are 0-duration bookkeeping waypoints CAP omits.",
+      "warmup_fuel_per_engine_lb": 1000.0,
+      "reserve_fuel_fraction": 0.06,
+      "mu_rolling": 0.03,
+      "mu_braking": 0.5,
+      "liftoff_factor": 1.2,
+      "approach_factor": 1.3,
+      "segments": [
+        {"type": "startup", "name": "Startup"},
+        {"type": "taxi",    "name": "Taxi"},
+        {"type": "takeoff", "name": "Takeoff", "alt_ft": 0,     "mach_end": 0.282},
+        {"type": "climb",   "name": "Climb",   "alt_ft": 40000, "mach_end": 0.87},
+        {"type": "cruise",  "name": "Cruise",  "alt_ft": 40000, "mach_end": 0.87, "distance_nm": 189.879},
+        {"type": "dash",    "name": "Dash",    "alt_ft": 40000, "mach_end": 1.60, "distance_nm": 49.968, "percent_ab": 100},
+        {"type": "combat",  "name": "Combat",  "alt_ft": 25000, "mach_end": 0.80, "time_min": 2.0, "drop_lb": 4400, "percent_ab": 100},
+        {"type": "cruise",  "name": "Cruise2", "alt_ft": 40000, "mach_end": 0.87, "distance_nm": 239.847},
+        {"type": "loiter",  "name": "Loiter",  "alt_ft": 10000, "mach_end": 0.31, "time_min": 20.0},
+        {"type": "landing", "name": "Landing", "alt_ft": 0,     "mach_end": 0.30}
+      ]
+    },
+
+    "brandt_14seg": {
+      "_description": "Brandt F-16A Miss-tab mission -- 14 segments. Patrol/Patrol2/Patrol3 are 0-min waypoints; Climb2 is a same-condition (Delta-h=0) leg that computes ~0 fuel. Validation target: Miss!O9 = 6000.43 lb total burn at W_TO = 31377 lb.",
+      "warmup_fuel_per_engine_lb": 1000.0,
+      "reserve_fuel_fraction": 0.06,
+      "mu_rolling": 0.03,
+      "mu_braking": 0.5,
+      "liftoff_factor": 1.2,
+      "approach_factor": 1.3,
+      "segments": [
+        {"type": "takeoff", "name": "Takeoff", "alt_ft": 0,     "mach_end": 0.282, "percent_ab": 100},
+        {"type": "accel",   "name": "Accel",   "alt_ft": 10000, "mach_end": 0.87,  "cd0_increment": 0.010},
+        {"type": "climb",   "name": "Climb",   "alt_ft": 40000, "mach_end": 0.87,  "cd0_increment": 0.010},
+        {"type": "cruise",  "name": "Cruise",  "alt_ft": 40000, "mach_end": 0.87,  "distance_nm": 190.8, "cd0_increment": 0.010},
+        {"type": "patrol",  "name": "Patrol",  "alt_ft": 40000, "mach_end": 0.87,  "time_min": 0.0, "cd0_increment": 0.010},
+        {"type": "dash",    "name": "Dash",    "alt_ft": 40000, "mach_end": 0.87,  "distance_nm": 50.0, "percent_ab": 50, "cd0_increment": 0.010},
+        {"type": "patrol",  "name": "Patrol2", "alt_ft": 40000, "mach_end": 0.87,  "time_min": 0.0, "cd0_increment": 0.010},
+        {"type": "combat",  "name": "Combat",  "alt_ft": 25000, "mach_end": 0.87,  "time_min": 2.0, "drop_lb": 4400, "percent_ab": 50, "cd0_increment": 0.010},
+        {"type": "egress",  "name": "Egress",  "alt_ft": 40000, "mach_end": 0.87,  "distance_nm": 50.0},
+        {"type": "patrol",  "name": "Patrol3", "alt_ft": 40000, "mach_end": 0.87,  "time_min": 0.0},
+        {"type": "climb",   "name": "Climb2",  "alt_ft": 40000, "mach_end": 0.87},
+        {"type": "cruise",  "name": "Cruise2", "alt_ft": 40000, "mach_end": 0.87,  "distance_nm": 250.0},
+        {"type": "loiter",  "name": "Loiter",  "alt_ft": 10000, "mach_end": 0.30,  "time_min": 20.0},
+        {"type": "landing", "name": "Landing", "alt_ft": 0,     "mach_end": 0.0}
+      ]
+    }
   }
 }

@@ -167,6 +167,7 @@ classdef F16GeomL2 < GeometryModelL2
 
         % ── Inlet + engine duct (F100-PW-200) ────────────────────────────── %
         L_duct         = 14.0      % ft    [Brandt engine.duct_length_ft] — a genuine AIRFRAME input, unlike the engine thrust below
+        n_engines      = 1         % double  engine count [Brandt Main!B28; f16a_L2.json .geometry.engine.n_engines]. Exposed for mission DI (geom.n_engines); NOT used by any L2 geometry quantity (L2 Amax uses the envelope ellipse, not L3's n_engines flow-through deduction). Matches F16GeomL3.n_engines.
 
         % ── Injected collaborator (NOT numeric spec data) ─────────────────── %
         prop                       % (1,1) PropulsionBase — injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb, which sizes the nacelle diameter (Phase 2/3a, 2026-07-25). Concrete-only: not in the GeometryModelL2 abstract contract (it is engine, not airframe, data; a different concrete class may size its duct differently).
@@ -304,6 +305,11 @@ classdef F16GeomL2 < GeometryModelL2
             %      Engine thrust deliberately NOT read here: T_AB_SLS_lb is
             %      Dependent on the injected prop.T_SL.
             obj.L_duct = J.engine.duct_length_ft;
+            % n_engines: read from spec when present; single-engine default
+            % otherwise. Exposed for mission DI, not used by L2 geometry.
+            if isfield(J.engine, 'n_engines')
+                obj.n_engines = J.engine.n_engines;
+            end
         end
 
         % ================================================================== %

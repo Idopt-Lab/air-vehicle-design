@@ -39,6 +39,8 @@ classdef F16AeroL3 < AeroModelL3
     properties
         geom              % injected geometry object (all geometry read live from it)
 
+        aircraft_category % string; canonical top-level class flag, read from the unified JSON's top-level aircraft_category key (same as F16AeroL1/L2 expose). Not used by any L3 aero equation -- exposed so mission analysis can read aero.aircraft_category by DI at every fidelity for the Roskam Table 2.1/2.2 row.
+
         % Airfoil (NACA 64A204).
         alpha_L0          % deg; zero-lift AOA (drives CL_minD -> K2)
         cl_max_2D         % 2-D section cl_max (feeds clean CLmax, Eq. 12.15)
@@ -163,7 +165,9 @@ classdef F16AeroL3 < AeroModelL3
             end
             obj.geom = geom;
 
-            J = jsondecode(fileread(json_path)).aerodynamics;
+            Jfull = jsondecode(fileread(json_path));
+            obj.aircraft_category = string(Jfull.aircraft_category);
+            J = Jfull.aerodynamics;
             obj.alpha_L0    = J.airfoil.alpha_L0_deg;   % [NACA 64A204]
             obj.cl_max_2D   = J.airfoil.cl_max_2D;      % 1.20 (locked, matches L2)
             obj.cl_alpha_2D = J.airfoil.cl_alpha_per_deg * 180/pi;   % deg -> rad, same conversion as F16AeroL2

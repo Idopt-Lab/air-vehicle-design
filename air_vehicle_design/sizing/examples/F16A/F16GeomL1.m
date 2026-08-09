@@ -32,6 +32,7 @@ classdef F16GeomL1 < GeometryModelL1
         aircraft_category = "jet_fighter"    % string; drives GeomL1 table lookups
         S_ref             = 300              % double; ft^2  [T.O. 1F-16A-1, Fig. 1-2]
         M_max             = 2.0              % double; design max Mach — drives get_AR_eq (Raymer 7th ed. Table 4.1)
+        n_engines         = 1               % double; engine count [Brandt Main!B28; f16a_L1.json .geometry.engine.n_engines]. Not used by any L1 geometry regression — exposed only so mission analysis can read geom.n_engines by DI at every fidelity (mission takeoff warmup term). Matches F16GeomL3.n_engines.
 
         %W_TO  Takeoff gross weight, lbf. A genuine INPUT at this fidelity
         %   level: both L1 regressions (S_wet, L_fuselage) are functions of TOGW,
@@ -90,6 +91,13 @@ classdef F16GeomL1 < GeometryModelL1
             R = jsondecode(fileread(req_path));
             obj.M_max             = R.design_mach;
             obj.S_ref             = 300;
+            % n_engines: read from the spec when present (f16a_L1.json
+            % .geometry.engine.n_engines); left at the single-engine default
+            % otherwise. Exposed for mission DI, not used by L1 geometry.
+            if isfield(J, 'geometry') && isfield(J.geometry, 'engine') ...
+                    && isfield(J.geometry.engine, 'n_engines')
+                obj.n_engines = J.geometry.engine.n_engines;
+            end
         end
 
         function val = get_S_ref(obj)
