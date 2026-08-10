@@ -842,7 +842,7 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         %   plausible sizing-loop STATE values, mirroring
         %   TestSubsystemsL3.makeGeomAndWeights) + F16AeroL3 + F16PropL2 (no
         %   L3 propulsion tier exists repo-wide) + ControlSurfaceSizer, the
-        %   SAME ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) call
+        %   SAME f16a_control_surfaces() factory
         %   design_study_02_L2.m/design_study_03_L3.m use -- c_elev_frac=0
         %   [Raymer 6th ed. Table 6.5, F-16 all-moving stabilator] is the
         %   ONLY entry F16SandCL3.Delta_alpha_L0 reads off this object.
@@ -851,8 +851,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
             w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO     = 31377;    % Brandt F-16A TOGW [readme_wt.md]
             w3.W_energy = 6294;     % legacy Fuel1+2+3 = 2098*3, same anchor as TestSandCL2
-            a3   = F16AeroL3(g3, f16a_spec_path(3));
-            ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
+            a3   = F16AeroL3(g3, f16a_spec_path(3), f16a_control_surfaces());
+            ctrl = f16a_control_surfaces();
         end
 
     end

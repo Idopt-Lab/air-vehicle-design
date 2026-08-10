@@ -20,7 +20,7 @@
 % nacelle diameter sizes the duct wetted area and hence CD0.
 prop = F16PropL2(f16a_spec_path(2));
 geom = F16GeomL3(f16a_spec_path(3), prop);
-aero = F16AeroL3(geom, f16a_spec_path(3));
+aero = F16AeroL3(geom, f16a_spec_path(3), f16a_control_surfaces());
 
 ca = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
     F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);

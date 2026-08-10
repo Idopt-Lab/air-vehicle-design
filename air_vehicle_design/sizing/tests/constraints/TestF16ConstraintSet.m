@@ -47,10 +47,10 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
                     aero = F16AeroL1(f16a_spec_path(1));
                 case "L2"
                     prop = F16PropL2(f16a_spec_path(2));
-                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2));
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), prop), f16a_spec_path(2), f16a_control_surfaces());
                 case "L3"
                     prop = F16PropL2(f16a_spec_path(2));
-                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
+                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3), f16a_control_surfaces());
             end
             constraints = ConstraintAnalysis.build_constraints(aero, prop, ...
                 f16a_requirements_path(), F16ConstraintSet.constraint_map());
@@ -170,7 +170,7 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             constraints = TestF16ConstraintSet.buildLevel("L2");
             names  = cellfun(@(c) c.name, constraints);
             cruise = constraints{names == "Cruise"};
-            [aero, prop] = deal(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2)), ...
+            [aero, prop] = deal(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2), f16a_control_surfaces()), ...
                                 F16PropL2(f16a_spec_path(2)));
             % Cruise is a LevelFlightConstraint (n=1, Ps=0). Rebuild it on the
             % AB basis to compare the two alpha bases at the same condition.

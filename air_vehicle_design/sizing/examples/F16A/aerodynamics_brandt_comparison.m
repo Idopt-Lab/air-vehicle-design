@@ -33,8 +33,8 @@ function T_all = aerodynamics_brandt_comparison()
 %       prop = F16PropL2(f16a_spec_path(2));
 %       g2   = F16GeomL2(f16a_spec_path(2), prop);
 %       g3   = F16GeomL3(f16a_spec_path(3), prop);
-%       a2   = F16AeroL2(g2, f16a_spec_path(2));
-%       a3   = F16AeroL3(g3, f16a_spec_path(3));      % NOTE: g3, not g2
+%       a2   = F16AeroL2(g2, f16a_spec_path(2), f16a_control_surfaces());
+%       a3   = F16AeroL3(g3, f16a_spec_path(3), f16a_control_surfaces());      % NOTE: g3, not g2
 %
 %   Match the tiers. `F16AeroL3(g2, ...)` constructs happily — both geometry
 %   tiers satisfy the aero contract — and then silently computes the entire L3
@@ -101,8 +101,8 @@ a1   = F16AeroL1(f16a_spec_path(1));
 prop = F16PropL2(f16a_spec_path(2));
 g2   = F16GeomL2(f16a_spec_path(2), prop);
 g3   = F16GeomL3(f16a_spec_path(3), prop);
-a2 = F16AeroL2(g2, f16a_spec_path(2));
-a3 = F16AeroL3(g3, f16a_spec_path(3));
+a2 = F16AeroL2(g2, f16a_spec_path(2), f16a_control_surfaces());
+a3 = F16AeroL3(g3, f16a_spec_path(3), f16a_control_surfaces());
 
 st_sub = AircraftState(ALT, M_SUB);
 st_sup = AircraftState(ALT, M_SUP);

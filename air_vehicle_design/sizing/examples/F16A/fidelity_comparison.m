@@ -182,8 +182,8 @@ sw_duct = [NaN,                g2.get_S_wet_duct(),     g3.get_S_wet_duct()];
 % L_fus 47.5 vs 46.5) and its Amax is the area-ruled buildup rather than L2's
 % fuselage-envelope ellipse.
 a1 = F16AeroL1(f16a_spec_path(1));
-a2 = F16AeroL2(g2, f16a_spec_path(2));
-a3 = F16AeroL3(g3, f16a_spec_path(3));
+a2 = F16AeroL2(g2, f16a_spec_path(2), f16a_control_surfaces());
+a3 = F16AeroL3(g3, f16a_spec_path(3), f16a_control_surfaces());
 
 pu1 = a1.drag_polar(st_36_160); pu2 = a2.drag_polar(st_36_160); pu3 = a3.drag_polar(st_36_160);
 

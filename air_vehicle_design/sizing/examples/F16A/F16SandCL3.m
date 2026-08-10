@@ -63,7 +63,7 @@ classdef F16SandCL3 < SandCModelL3
 %     ctrl    -- (1,1) ControlSurfaceSizer. Supplies c_elev_frac=0 [Raymer
 %                6th ed. Table 6.5, F-16 all-moving stabilator, no separate
 %                elevator] -- the ONE input Delta_alpha_L0 needs. SAME
-%                ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) object
+%                f16a_control_surfaces() object
 %                design_study_02_L2.m/design_study_03_L3.m already inject
 %                into SizingLoopL2; not yet wired into a Level-3 sizing loop
 %                itself (no SizingLoopL3 exists), so this constructor takes

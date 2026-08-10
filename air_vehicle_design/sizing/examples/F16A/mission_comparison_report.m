@@ -101,11 +101,11 @@ function S = make_stack(name)
         case "disc-L2"
             p = F16PropL2(f16a_spec_path(2));
             g = F16GeomL2(f16a_spec_path(2), p);
-            a = F16AeroL2(g, f16a_spec_path(2));
+            a = F16AeroL2(g, f16a_spec_path(2), f16a_control_surfaces());
         case "disc-L3"
             p = F16PropL2(f16a_spec_path(2));               % no L3 propulsion tier
             g = F16GeomL3(f16a_spec_path(3), p);
-            a = F16AeroL3(g, f16a_spec_path(3));
+            a = F16AeroL3(g, f16a_spec_path(3), f16a_control_surfaces());
         case "Brandt"
             bg = BrandtGeometry();     bg.analyze();
             ba = BrandtAerodynamics(bg); ba.analyze();

@@ -104,8 +104,8 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
     try
         switch aeroLv
             case "L1",     aero = F16AeroL1(f16a_spec_path(1));
-            case "L2",     aero = F16AeroL2(geom, f16a_spec_path(2));
-            case "L3",     aero = F16AeroL3(geom, f16a_spec_path(3));
+            case "L2",     aero = F16AeroL2(geom, f16a_spec_path(2), f16a_control_surfaces());
+            case "L3",     aero = F16AeroL3(geom, f16a_spec_path(3), f16a_control_surfaces());
             case "Brandt"
                 bgeom = BrandtGeometry(); bgeom.analyze();
                 baero = BrandtAerodynamics(bgeom); baero.analyze();
@@ -175,7 +175,7 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
                 result = loop.run(W_TO_guess);
             case "L2"
                 tail = F16TailL1();
-                ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
+                ctrl = f16a_control_surfaces();
                 loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
                 result = loop.run(W_TO_guess, T_SL_guess);
             otherwise

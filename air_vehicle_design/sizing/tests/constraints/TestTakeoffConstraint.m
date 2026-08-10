@@ -270,7 +270,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
             % against (see class header note). Confirms the F-16 discipline
             % objects produce a plausible, finite, positive required T/W at
             % a representative W/S.
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3), f16a_control_surfaces());
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Takeoff", state, aero, prop, 4000, 0.03, 1.0, 1.2);
@@ -327,10 +327,10 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
                     aero = F16AeroL1(f16a_spec_path(1));
                     prop = F16PropL1(f16a_spec_path(1));
                 case 'L2'
-                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
+                    aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2), f16a_control_surfaces());
                     prop = F16PropL2(f16a_spec_path(2));
                 case 'L3'
-                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3), f16a_control_surfaces());
                     prop = F16PropL2(f16a_spec_path(2));
                 otherwise
                     error('TestTakeoffConstraint:buildDisciplines:UnknownFidelity', ...

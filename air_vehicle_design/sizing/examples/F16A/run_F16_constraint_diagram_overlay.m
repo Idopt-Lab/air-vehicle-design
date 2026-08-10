@@ -37,10 +37,10 @@ props{1} = F16PropL1(f16a_spec_path(1));
 aeros{1} = F16AeroL1(f16a_spec_path(1));
 
 props{2} = F16PropL2(f16a_spec_path(2));
-aeros{2} = F16AeroL2(F16GeomL2(f16a_spec_path(2), props{2}), f16a_spec_path(2));
+aeros{2} = F16AeroL2(F16GeomL2(f16a_spec_path(2), props{2}), f16a_spec_path(2), f16a_control_surfaces());
 
 props{3} = F16PropL2(f16a_spec_path(2));
-aeros{3} = F16AeroL3(F16GeomL3(f16a_spec_path(3), props{3}), f16a_spec_path(3));
+aeros{3} = F16AeroL3(F16GeomL3(f16a_spec_path(3), props{3}), f16a_spec_path(3), f16a_control_surfaces());
 
 map = F16ConstraintSet.constraint_map();
 cas = cell(1, numel(levels));
