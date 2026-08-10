@@ -41,10 +41,21 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %   lbf targets, so a passing convergence check demonstrates the loop
 %   actually converges rather than starting at the answer.
 %
-%   CONTROL-SURFACE FRACTIONS: identical to design_study_02_L2.m's (same
-%   airframe, same Raymer Fig. 6.3/Table 6.5 sourcing) -- see that file's
-%   header for the full rationale. Not re-derived per fidelity level: the
-%   SAME ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) call is used here.
+%   CONTROL-SURFACE FRACTIONS: identical to design_study_02_L2.m's, because
+%   both now call the SAME f16a_control_surfaces() factory (added 2026-08-10,
+%   replacing a hand-typed ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) in
+%   each study). Not re-derived per fidelity level -- same airframe, same
+%   Raymer Fig. 6.3 / Table 6.5 sourcing. See f16a_control_surfaces.m for every
+%   fraction's provenance and its measured accuracy.
+%
+%   WEIGHTS COUPLING IS LIVE AT L3, unlike L2 (2026-08-10). F16GeomL3's
+%   S_csw / S_r / S_cs -- the three control-surface areas Raymer Eqs. 15.1,
+%   15.3 and 15.17 consume -- are Dependent on the areas the loop writes each
+%   iteration, so a wing/tail rescale now reaches OEW here. They used to be
+%   frozen inputs (68.03 / 11.65 / 190), which meant the L3 weights kept a
+%   300 ft^2-wing control-surface area while this loop converged S_ref to
+%   roughly 180. F16GeomL2 has no such properties and F16WeightsL2 consumes
+%   none, so at L2 the control-surface areas remain report-only.
     arguments
         W_TO_guess (1,1) double {mustBePositive} = 30000
         T_SL_guess (1,1) double {mustBePositive} = 20000
@@ -52,12 +63,15 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 
     prop = F16PropL2(f16a_spec_path(2));
     geom = F16GeomL3(f16a_spec_path(3), prop);
-    aero = F16AeroL3(geom, f16a_spec_path(3));
+    % ctrl BEFORE aero: F16AeroL3 takes it by DI now (the flaperon's and LE
+    % flap's chord/span fractions live on it, so one description of each device
+    % drives both the high-lift deltas and the sized areas).
+    ctrl = f16a_control_surfaces();
+    aero = F16AeroL3(geom, f16a_spec_path(3), ctrl);
     wts  = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
     % L2 mission fidelity with the L3 discipline stack (there is no L3 mission tier).
     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
     tail = F16TailL1();
-    ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
 
     con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
         F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);

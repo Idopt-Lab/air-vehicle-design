@@ -16,9 +16,10 @@ classdef SizingLoopL2 < handle
 %   ctrl (1,1) ControlSurfaceSizer as required arguments. Each iteration
 %   this loop calls tail.size(S_ref, b, cbar, L_fus) -- TailSizingBase's
 %   WIDEST abstract signature (see TailSizingBase.m's header), read live off
-%   obj.geom -- and ctrl.size(obj.geom) (reads geom.S_ref/S_ht/S_vt), then
-%   writes the results back into obj.geom's plain S_ht/S_vt/S_ail/S_elev/
-%   S_rud properties. Production wires in F16TailL1() (shared, unmodified,
+%   obj.geom -- and ctrl.size(obj.geom) (reads geom.S_ref/S_ht/S_vt and, for
+%   the wing flaps, geom.lambda_wing), then writes the results back into
+%   obj.geom's plain S_ht/S_vt/S_ail/S_elev/S_rud/S_flaperon/S_lef/S_stab
+%   properties. Production wires in F16TailL1() (shared, unmodified,
 %   across BOTH design_study_02_L2.m and design_study_03_L3.m) -- NOT
 %   F16TailL2 (Nicolai-coefficient alternate) or F16TailL3 (stability-and-
 %   control stub), neither of which is ever wired into this loop.
@@ -70,12 +71,54 @@ classdef SizingLoopL2 < handle
 %     obj.geom.S_ht = tail_result.S_ht;
 %     obj.geom.S_vt = tail_result.S_vt;
 %     cs_result     = obj.ctrl.size(obj.geom);
-%     obj.geom.S_ail  = cs_result.S_ail;
-%     obj.geom.S_elev = cs_result.S_elev;
-%     obj.geom.S_rud  = cs_result.S_rud;
+%     obj.geom.S_ail/S_elev/S_rud/S_flaperon/S_lef/S_stab = cs_result....
 %   Both are pure functions of geom, and geom.S_ref now changes every
 %   iteration, so this recompute is REQUIRED for correctness -- it is no
-%   longer the cheap-but-redundant call it was before 2026-08-10.
+%   longer the cheap-but-redundant call it was before 2026-08-10. ORDERING
+%   MATTERS: the tail block runs FIRST, because S_elev/S_stab/S_rud are sized
+%   off S_ht/S_vt; swapping the two blocks would size them against last
+%   iteration's tail.
+%
+%   SIX CONTROL SURFACES, not three (widened 2026-08-10). ControlSurfaceSizer
+%   now also returns S_flaperon, S_lef and S_stab, and this loop writes all
+%   six. Why each was missing before:
+%     - S_flaperon / S_lef: the F-16 has NO separate ailerons -- its
+%       trailing-edge surface is a flaperon (aileron + flap in one) and it
+%       carries leading-edge flaps [f16a_ground_truth.json: "the F-16 has no
+%       conventional trailing-edge flaps (flaperons + LE flaps only)"]. The
+%       loop sized an aileron that does not exist and never sized either real
+%       wing surface.
+%     - S_stab: the horizontal tail is all-moving, so S_elev is legitimately
+%       0 -- but the pitch control area is then the WHOLE S_ht, and nothing
+%       carried it [Raymer 6th ed. Table 6.5 footnote].
+%   For the F-16, S_ail and S_elev both come back 0 and are kept only because
+%   ControlSurfaceSizer stays generic (F16SandCL3 also reads c_elev_frac off
+%   it). Exactly one of (S_ail, S_flaperon) and one of (S_elev, S_stab) is
+%   nonzero for any airframe; that sizer's constructor enforces it.
+%
+%   THE CONTROL-SURFACE AREAS ARE NO LONGER A DEAD END (2026-08-10). Until
+%   this change, nothing in the framework READ S_ail/S_elev/S_rud -- they
+%   reached only this loop's history struct and the two report scripts, so
+%   control-surface sizing had zero feedback into convergence. Meanwhile
+%   THREE FROZEN control-surface areas on F16GeomL3 did feed the weights and
+%   were never updated: S_csw = 68.03 (Raymer Eq. 15.1 wing weight), S_r =
+%   11.65 (Eq. 15.3 vertical tail), S_cs = 190 (Eq. 15.17 flight controls).
+%   That inversion is fixed: those three are now Dependent on the six areas
+%   this loop writes (S_csw = S_flaperon + S_lef; S_r = S_rud; S_cs = S_csw +
+%   S_stab + S_rud), so a wing/tail rescale reaches OEW. The coupling is
+%   implicit, through geom's own getters -- same mechanism as the tail's, see
+%   the block comment at the assignment site.
+%
+%   GROUND TRUTH vs. ESTIMATE -- do not conflate. Everything this loop
+%   computes is a Raymer/Roskam ESTIMATE. The real F-16's measured areas
+%   (T.O. 1F-16A-1 Fig. 1-2: flaperon 31.32, LEF 36.71, rudder 11.65 ft^2)
+%   SEED F16GeomL3's properties so a non-loop construction reproduces ground
+%   truth exactly, and serve as comparison targets afterwards -- they are
+%   never fitted backwards into the sizer's fractions. The rudder is the
+%   sharpest case: Raymer's 0.30 x 0.90 x S_vt gives 16.2 ft^2 at the JSON
+%   baseline against the measured 11.65, +39%, logged in
+%   VnV/BrandtF16A/todo.md and reported by
+%   examples/F16A/tail_sizing_brandt_comparison.m rather than calibrated away.
 %
 %   Closure: Raymer's TOGW iteration ("Eq. 3.4" per the user; reproduced
 %   as Algorithm 1 / Eqs. 2.1-2.2 in
@@ -97,15 +140,34 @@ classdef SizingLoopL2 < handle
 %   absolute numbers each time the feedback set grew. With TW_opt tracking
 %   the T_SL feedback but S_ref still frozen (2026-08-03 to 2026-08-10):
 %   L2 W_TO=20,994.33 lbf, T_SL=14,211.13 lbf, 15 iter; L3 W_TO=22,884.83
-%   lbf, T_SL=15,168.55 lbf, 15 iter. With S_ref solved as well
-%   (2026-08-10, CURRENT): L2 W_TO=23,075.65 lbf, S_ref=174.82 ft^2,
-%   T_SL=20,086.32 lbf, 19 iter; L3 W_TO=23,972.46 lbf, S_ref=181.61 ft^2,
-%   T_SL=17,220.66 lbf, 12 iter. WS_opt lands on 132 psf at BOTH levels --
-%   an INTERIOR point of PointPerformanceBase.WS_RANGE_BRANDT (20:7:160),
-%   not a sweep edge, so the solved S_ref is a real envelope optimum rather
-%   than a sweep-limit artifact. The multiplicative-vs-additive comparison
-%   itself was never re-run against the live envelope, so treat the
-%   side-by-side numbers above as historical, not current.
+%   lbf, T_SL=15,168.55 lbf, 15 iter. With S_ref solved as well (2026-08-10,
+%   first pass): L2 W_TO=23,075.65 lbf, S_ref=174.82 ft^2, T_SL=20,086.32
+%   lbf, 19 iter; L3 W_TO=23,972.46 lbf, S_ref=181.61 ft^2, T_SL=17,220.66
+%   lbf, 12 iter, with WS_opt = 132 psf at both levels.
+%
+%   CURRENT (2026-08-10, after the flaperon/LEF/stabilator work below):
+%     L2  W_TO=23,120.65 lbf, S_ref=222.31 ft^2, T_SL=20,253.01 lbf, 17 iter
+%     L3  W_TO=23,338.62 lbf, S_ref=210.26 ft^2, T_SL=17,245.01 lbf, 12 iter
+%   WS_opt moved 132 -> 104 psf (L2) and 132 -> 111 psf (L3). Both remain
+%   INTERIOR points of PointPerformanceBase.WS_RANGE_BRANDT (20:7:160) -- and
+%   exact grid points of it (20+7k, k=12 and k=13) -- so the solved S_ref is
+%   still a real envelope optimum, not a sweep-limit artifact.
+%
+%   WHY THE ENVELOPE MOVED, since it is a large shift and not obviously
+%   related to sizing control surfaces: making ControlSurfaceSizer the single
+%   source of the flaperon's chord/span fractions replaced the aero classes'
+%   own eta_flap_in/out = 0.10/0.90 with 0.35/0.75 (see
+%   f16a_control_surfaces.m -- 0.10/0.90 implied a 60 ft^2 flaperon against a
+%   measured 31.32, and was flagged in-code as unverified). A narrower flap
+%   band lowers Roskam Eq. 7.10's flapped-area ratio, which lowers
+%   Delta_CLmax_flap and Delta_CD0_flap, which tightens the takeoff and
+%   landing constraints, which moves WS_opt -- and S_ref = W_TO/WS_opt with
+%   it. The chain is real physics, not a regression; it is simply the first
+%   time the flaperon's geometry and its aerodynamic effect came from one
+%   number instead of two disagreeing ones.
+%
+%   The multiplicative-vs-additive comparison was never re-run against the
+%   live envelope, so treat those side-by-side numbers as historical.
 %
 %   CORRECTIONS TO subplan 08's PSEUDOCODE -- same three as SizingLoopL1.m
 %   (con.optimal_point() no-arg/two-output; prop.T_SL not prop.T0;
@@ -174,7 +236,8 @@ classdef SizingLoopL2 < handle
             T_SL = T_SL_guess;
             converged = false;
             history = struct('iter', {}, 'W_TO', {}, 'S_ref', {}, 'T_SL', {}, 'S_ht', {}, ...
-                'S_vt', {}, 'S_ail', {}, 'S_elev', {}, 'S_rud', {}, 'W_fuel', {}, 'W_OEW', {});
+                'S_vt', {}, 'S_ail', {}, 'S_elev', {}, 'S_rud', {}, ...
+                'S_flaperon', {}, 'S_lef', {}, 'S_stab', {}, 'W_fuel', {}, 'W_OEW', {});
 
             for iter = 1:opts.max_iter
                 % Recomputed every iteration -- see header note above. Both
@@ -207,10 +270,16 @@ classdef SizingLoopL2 < handle
                 obj.geom.S_ht = tail_result.S_ht;
                 obj.geom.S_vt = tail_result.S_vt;
 
-                cs_result       = obj.ctrl.size(obj.geom);
-                obj.geom.S_ail  = cs_result.S_ail;
-                obj.geom.S_elev = cs_result.S_elev;
-                obj.geom.S_rud  = cs_result.S_rud;
+                % Control surfaces AFTER the tail, never before: S_elev/S_stab/
+                % S_rud are all sized off S_ht/S_vt, so reversing these two
+                % blocks would size them against LAST iteration's tail.
+                cs_result           = obj.ctrl.size(obj.geom);
+                obj.geom.S_ail      = cs_result.S_ail;
+                obj.geom.S_elev     = cs_result.S_elev;
+                obj.geom.S_rud      = cs_result.S_rud;
+                obj.geom.S_flaperon = cs_result.S_flaperon;
+                obj.geom.S_lef      = cs_result.S_lef;
+                obj.geom.S_stab     = cs_result.S_stab;
 
                 W_fuel = obj.miss.compute_fuel(obj.aero, obj.prop, W_TO);
                 W_OEW  = obj.wts.OEW(W_TO);
@@ -235,6 +304,8 @@ classdef SizingLoopL2 < handle
                 history(end+1) = struct('iter', iter, 'W_TO', W_TO, 'S_ref', S_ref, 'T_SL', T_SL, ...
                     'S_ht', tail_result.S_ht, 'S_vt', tail_result.S_vt, ...
                     'S_ail', cs_result.S_ail, 'S_elev', cs_result.S_elev, 'S_rud', cs_result.S_rud, ...
+                    'S_flaperon', cs_result.S_flaperon, 'S_lef', cs_result.S_lef, ...
+                    'S_stab', cs_result.S_stab, ...
                     'W_fuel', W_fuel, 'W_OEW', W_OEW); %#ok<AGROW>
 
                 if abs(diff_W) < opts.tol && abs(diff_T) < opts.tol
@@ -262,13 +333,16 @@ classdef SizingLoopL2 < handle
             obj.geom.S_ref = S_ref;
             T_SL = TW_opt * W_TO;
             obj.prop.T_SL = T_SL;
-            tail_result     = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
-            obj.geom.S_ht   = tail_result.S_ht;
-            obj.geom.S_vt   = tail_result.S_vt;
-            cs_result       = obj.ctrl.size(obj.geom);
-            obj.geom.S_ail  = cs_result.S_ail;
-            obj.geom.S_elev = cs_result.S_elev;
-            obj.geom.S_rud  = cs_result.S_rud;
+            tail_result         = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+            obj.geom.S_ht       = tail_result.S_ht;
+            obj.geom.S_vt       = tail_result.S_vt;
+            cs_result           = obj.ctrl.size(obj.geom);
+            obj.geom.S_ail      = cs_result.S_ail;
+            obj.geom.S_elev     = cs_result.S_elev;
+            obj.geom.S_rud      = cs_result.S_rud;
+            obj.geom.S_flaperon = cs_result.S_flaperon;
+            obj.geom.S_lef      = cs_result.S_lef;
+            obj.geom.S_stab     = cs_result.S_stab;
             obj.wts.W_TO = W_TO;
 
             result = struct('W_TO', W_TO, 'S_ref', S_ref, 'T_SL', T_SL, ...
