@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-08",
+  "generated": "2026-08-10",
   "aircraft": "F-16A Block 10/15",
   "title": "F-16A Block 10/15 — Aerodynamics vs Ground Truth",
   "condition": "Flight condition: 36000 ft, subsonic M = 0.6 / supersonic M = 1.6.",
@@ -458,26 +458,26 @@
       "notes": "L1 clean + Roskam Table 3.1 fighter TO-delta (category mean)."
     },
     {
-      "parameter": "CLmax takeoff (L2 flap)",
+      "parameter": "CLmax takeoff (L2 flap+slat)",
       "fidelity": "L2",
-      "computed": "1.2431",
+      "computed": "1.0929",
       "reference": "1.2760",
-      "pctDiff": "-2.58%",
+      "pctDiff": "-14.35%",
       "secondSource": "1.3500 [pub]",
       "divergence": "",
       "cite": "Brandt Aero!H27",
-      "notes": "Clean + TE-flap delta (Eq.12.21). Internet 1.35 is a rough band center (F-16 has no conventional TE flaps)."
+      "notes": "Clean + TE-flap + LE-flap deltas (Eq.12.21). LEF ADDED 2026-08-10 -- L2 previously modeled the flap only; see VnV/BrandtF16A/todo.md. Internet 1.35 is a rough band center (F-16 has no conventional TE flaps)."
     },
     {
       "parameter": "CLmax takeoff (L3 flap+slat)",
       "fidelity": "L3",
-      "computed": "1.2677",
+      "computed": "1.0929",
       "reference": "1.2760",
-      "pctDiff": "-0.65%",
+      "pctDiff": "-14.35%",
       "secondSource": "1.3500 [pub]",
       "divergence": "",
       "cite": "Brandt Aero!H27",
-      "notes": "Clean + TE-flap + LE-slat deltas; closest of the three levels to Brandt 1.276."
+      "notes": "Clean + TE-flap + LE-slat deltas -- same fractions/deflections as L2 now (f16a_control_surfaces()); L2/L3 agree exactly here."
     },
     {
       "parameter": "CLmax landing (L1)",
@@ -491,26 +491,26 @@
       "notes": "L1 clean + Roskam Table 3.1 fighter landing-delta -- generic large-flap category mean overshoots the F-16."
     },
     {
-      "parameter": "CLmax landing (L2 flap)",
+      "parameter": "CLmax landing (L2 flap+slat)",
       "fidelity": "L2",
-      "computed": "1.3528",
+      "computed": "1.1525",
       "reference": "1.4260",
-      "pctDiff": "-5.13%",
+      "pctDiff": "-19.18%",
       "secondSource": "1.3500 [pub]",
       "divergence": "",
       "cite": "Brandt Aero!H29",
-      "notes": "Clean + TE-flap delta only (no slat at L2)."
+      "notes": "Clean + TE-flap + LE-flap deltas. LEF ADDED 2026-08-10, closing a real fidelity gap (L2 previously omitted it entirely, which left SizingLoopL2's landing wall ~5.3 psf too tight vs. L3 -- VnV/BrandtF16A/todo.md)."
     },
     {
       "parameter": "CLmax landing (L3 flap+slat)",
       "fidelity": "L3",
-      "computed": "1.3856",
+      "computed": "1.1525",
       "reference": "1.4260",
-      "pctDiff": "-2.83%",
+      "pctDiff": "-19.18%",
       "secondSource": "1.3500 [pub]",
       "divergence": "",
       "cite": "Brandt Aero!H29",
-      "notes": "Clean + TE-flap + LE-slat deltas; closest to Brandt 1.426."
+      "notes": "Clean + TE-flap + LE-slat deltas -- same fractions/deflections as L2 now; L2/L3 agree exactly here."
     },
     {
       "parameter": "[LIFT-CURVE SLOPE CL_alpha -- Raymer Eq.12.6, M=0]",

@@ -1,6 +1,6 @@
 # F-16A Block 10/15 — Aerodynamics vs Ground Truth
 
-Generated 2026-08-08. Flight condition: 36000 ft, subsonic M = 0.6 / supersonic M = 1.6.
+Generated 2026-08-10. Flight condition: 36000 ft, subsonic M = 0.6 / supersonic M = 1.6.
 
 **Reference** (the `Reference` and `%Diff` columns): Brandt F-16A.xls workbook outputs and his tabulated actual polar, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.aerodynamics`].
 
@@ -57,11 +57,11 @@ This is a **comparison report, not a test** — no pass/fail assertions, not par
 | CLmax clean (L2 Eq.12.15) | L2 | 0.9141 | 0.9840 | -7.11% | 1.6000 [pub] |  | Brandt Aero!H25 | 0.9*cl_max_2D*cos(Lambda_c/4). Near Brandt 0.984; far below internet ~1.6 (no vortex lift) -- expected underprediction, not a bug. |
 | CLmax clean (L3 Eq.12.15) | L3 | 0.9141 | 0.9840 | -7.11% | 1.6000 [pub] |  | Brandt Aero!H25 | Same Eq.12.15 basis as L2; same LEX vortex-lift limitation. |
 | CLmax takeoff (L1) | L1 | 1.7000 | 1.2760 | +33.23% | 1.3500 [pub] |  | Brandt Aero!H27 | L1 clean + Roskam Table 3.1 fighter TO-delta (category mean). |
-| CLmax takeoff (L2 flap) | L2 | 1.2431 | 1.2760 | -2.58% | 1.3500 [pub] |  | Brandt Aero!H27 | Clean + TE-flap delta (Eq.12.21). Internet 1.35 is a rough band center (F-16 has no conventional TE flaps). |
-| CLmax takeoff (L3 flap+slat) | L3 | 1.2677 | 1.2760 | -0.65% | 1.3500 [pub] |  | Brandt Aero!H27 | Clean + TE-flap + LE-slat deltas; closest of the three levels to Brandt 1.276. |
+| CLmax takeoff (L2 flap+slat) | L2 | 1.0929 | 1.2760 | -14.35% | 1.3500 [pub] |  | Brandt Aero!H27 | Clean + TE-flap + LE-flap deltas (Eq.12.21). LEF ADDED 2026-08-10 -- L2 previously modeled the flap only; see VnV/BrandtF16A/todo.md. Internet 1.35 is a rough band center (F-16 has no conventional TE flaps). |
+| CLmax takeoff (L3 flap+slat) | L3 | 1.0929 | 1.2760 | -14.35% | 1.3500 [pub] |  | Brandt Aero!H27 | Clean + TE-flap + LE-slat deltas -- same fractions/deflections as L2 now (f16a_control_surfaces()); L2/L3 agree exactly here. |
 | CLmax landing (L1) | L1 | 2.1000 | 1.4260 | +47.27% | 1.3500 [pub] |  | Brandt Aero!H29 | L1 clean + Roskam Table 3.1 fighter landing-delta -- generic large-flap category mean overshoots the F-16. |
-| CLmax landing (L2 flap) | L2 | 1.3528 | 1.4260 | -5.13% | 1.3500 [pub] |  | Brandt Aero!H29 | Clean + TE-flap delta only (no slat at L2). |
-| CLmax landing (L3 flap+slat) | L3 | 1.3856 | 1.4260 | -2.83% | 1.3500 [pub] |  | Brandt Aero!H29 | Clean + TE-flap + LE-slat deltas; closest to Brandt 1.426. |
+| CLmax landing (L2 flap+slat) | L2 | 1.1525 | 1.4260 | -19.18% | 1.3500 [pub] |  | Brandt Aero!H29 | Clean + TE-flap + LE-flap deltas. LEF ADDED 2026-08-10, closing a real fidelity gap (L2 previously omitted it entirely, which left SizingLoopL2's landing wall ~5.3 psf too tight vs. L3 -- VnV/BrandtF16A/todo.md). |
+| CLmax landing (L3 flap+slat) | L3 | 1.1525 | 1.4260 | -19.18% | 1.3500 [pub] |  | Brandt Aero!H29 | Clean + TE-flap + LE-slat deltas -- same fractions/deflections as L2 now; L2/L3 agree exactly here. |
 | **[LIFT-CURVE SLOPE CL_alpha -- Raymer Eq.12.6, M=0]** | | | | | | | | |
 | CL_alpha, M=0 [1/rad] | L1 | N/A | 3.1117 |  -  | N/A |  | Brandt Aero!A15 | L1 is geometry-free (Mattingly type-curve), so no finite-wing lift slope exists at this tier -- not an omission. |
 | CL_alpha, M=0 [1/rad] | L2 | 3.0365 | 3.1117 | -2.42% | N/A |  | Brandt Aero!A15 | Raymer Eq.12.6 with the injected quarter-chord sweep (~32.2 deg) and the real NACA 64A204 2-D slope. |

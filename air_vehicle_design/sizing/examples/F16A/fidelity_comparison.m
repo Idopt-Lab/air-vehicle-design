@@ -383,12 +383,15 @@ T_asub = [T_asub; trow('CLmax clean [-]',         ref_clmax_clean,          'Bra
 T_asub = [T_asub; trow('CL_alpha, M=0   [/rad]',  ref_cl_alpha_wing,        'Brandt Aero!A15', cl_alpha_M0, '%.4f')];
 T_asub = [T_asub; trow('CL_alpha, M=0.6 [/rad]',  ref_cl_alpha_wing,        'Brandt Aero!A15', cl_alpha_M06,'%.4f')];
 
-% High-lift-device deltas: L1 tabulated (Roskam Pt.I Tables 3.1/3.6); L2
-% flap-geometry-driven (Raymer Eq.12.21/12.61/12.62); L3 adds the LE slat
-% (Table 12.2 + Eq.12.21/12.61/12.62 forms) and a component-buildup gear
-% term. Grouped by quantity (e_osw / CD0 / CLmax / CDi), each group's raw
-% Delta_ row(s) followed by the clean+delta "total" row Brandt can be
-% checked against.
+% High-lift-device deltas: L1 tabulated (Roskam Pt.I Tables 3.1/3.6); L2 and
+% L3 BOTH flap-AND-slat-geometry-driven (Raymer Eq.12.21/12.61/12.62 forms;
+% the LEF was ADDED to L2 2026-08-10, closing a real fidelity gap -- see
+% VnV/BrandtF16A/todo.md -- so L2 and L3 now agree on CLmax_TO/CLmax_L
+% exactly, using the same ctrl-injected fractions/deflections). L3 alone
+% additionally adds a component-buildup gear term (L2 uses Roskam Table 3.6's
+% tabulated total instead). Grouped by quantity (e_osw / CD0 / CLmax / CDi),
+% each group's raw Delta_ row(s) followed by the clean+delta "total" row
+% Brandt can be checked against.
 T_ahld = trow('Delta_e_osw, TO [-]', NaN, 'Roskam Table 3.6', d_eosw_TO_hld, '%.4f');
 T_ahld = [T_ahld; trow('Delta_e_osw, L  [-]', NaN, 'Roskam Table 3.6', d_eosw_L_hld,  '%.4f')];
 
@@ -516,20 +519,24 @@ fprintf('               differences, so the clean base must be Table 3.1 too. Ae
 fprintf('  [AERO sup]   K2=0 for M>=1 (linearized supersonic theory) — enforced at all fidelity levels.\n');
 fprintf('  [AERO hld]   L1: pure tabulation, Roskam Airplane Design Pt.I, Table 3.1 (CLmax by category,\n');
 fprintf('               "fighter" row) and Table 3.6 (Delta_CD0/e by flap config, flaps+gear).\n');
-fprintf('               L2: flap only, from real geometry -- Delta_CLmax via Raymer Table 12.2 + Eq.12.21\n');
-fprintf('               (0.9x factor confirmed correct against the 6th ed. text); Delta_CD0 via Eq.12.61;\n');
-fprintf('               Delta_CDi via Eq.12.62; gear CD0 still tabulated (Roskam Table 3.6, no closed-form\n');
-fprintf('               gear model exists before L3); Delta_e_osw tabulated at every level (Raymer has no\n');
-fprintf('               flapped-wing Oswald-efficiency formula). L3: adds the LE slat the same way for\n');
-fprintf('               Delta_CLmax (Table 12.2 + Eq.12.21); Delta_CD0/CDi_slat reuse the SAME Eq.12.61/\n');
-fprintf('               12.62 functional forms with the LE device''s own geometry/deflection substituted in\n');
-fprintf('               (F_flap->F_slat, delta_flap->delta_slat, flap Cf/C->slat c''/c; k_f->k_slat using the\n');
-fprintf('               full-span value since the LEF spans eta=[0,0.98] vs the flaperon''s partial span) --\n');
-fprintf('               Raymer''s text gives no separately-cited LE-device formula for either equation, so\n');
-fprintf('               this is an extrapolation of the TE form, not an independently-sourced one. L3''s\n');
-fprintf('               gear CD0 uses the existing Dq_wheels/Dq_strut_* component buildup (Raymer Table\n');
-fprintf('               12.6) instead of the table lookup. F-16 flap/slat panel geometry (chord ratio, span,\n');
-fprintf('               deflection) is not in the Brandt/VnV ground truth -- flagged TODO estimates in F16AeroL2/L3.\n');
+fprintf('               L2 AND L3 (LEF added to L2 2026-08-10, closing a real fidelity gap -- see\n');
+fprintf('               VnV/BrandtF16A/todo.md; both now share IDENTICAL flaperon/LEF formulas, fractions\n');
+fprintf('               and deflections via the injected ControlSurfaceSizer, f16a_control_surfaces()):\n');
+fprintf('               flaperon (TE) -- Delta_CLmax via Raymer Table 12.2 + Eq.12.21 (0.9x factor confirmed\n');
+fprintf('               correct against the 6th ed. text); Delta_CD0 via Eq.12.61; Delta_CDi via Eq.12.62.\n');
+fprintf('               LEF (LE) -- Delta_CD0/CDi/CLmax_slat reuse the SAME Eq.12.61/12.62/Table-12.2 forms\n');
+fprintf('               with the LE device''s own geometry/deflection substituted in (F_flap->F_slat,\n');
+fprintf('               delta_flap->delta_slat, flap Cf/C->slat c''/c; k_f->k_slat using the full-span value\n');
+fprintf('               since the LEF spans eta=[0,0.98] vs the flaperon''s partial span) -- Raymer''s text\n');
+fprintf('               gives no separately-cited LE-device formula for either equation, so this is an\n');
+fprintf('               extrapolation of the TE form, not an independently-sourced one. The two devices''\n');
+fprintf('               deltas are always summed independently (never combining one device''s Delta_CLmax\n');
+fprintf('               into the other''s Delta_CDi), since k_f_flap != k_slat.\n');
+fprintf('               Gear CD0: L1/L2 still use Roskam Table 3.6''s tabulated total (no closed-form gear\n');
+fprintf('               model exists at those tiers); L3 alone uses the Dq_wheels/Dq_strut_* component\n');
+fprintf('               buildup (Raymer Table 12.6). Delta_e_osw tabulated at every level (Raymer has no\n');
+fprintf('               flapped-wing Oswald-efficiency formula). F-16 flap/slat panel geometry (chord ratio,\n');
+fprintf('               span, deflection) is not in the Brandt/VnV ground truth -- flagged TODO estimates.\n');
 fprintf('               Flap deflection angles (delta_flap_TO/L_deg) were tuned down from Raymer''s stated\n');
 fprintf('               "typical" transport-flap ranges (20-40/60-70 deg) to 15/20 deg, since the F-16''s\n');
 fprintf('               flaperon is a small-authority camber device, not a dedicated Fowler/slotted flap --\n');
@@ -538,13 +545,17 @@ fprintf('               Slat deflection (delta_slat_TO/L_deg) uses the SAME valu
 fprintf('               the flaperon): the F-16 LEF is scheduled automatically by AOA/Mach via the flight\n');
 fprintf('               control computer, not a discrete pilot detent, so both low-speed regimes are modeled\n');
 fprintf('               alike. Magnitude (17 deg) is a flagged estimate near the LEF''s publicly documented\n');
-fprintf('               ~20-25 deg max, chosen because it brings L3''s CD0,TO/L totals to -5%%/+3%% of Brandt\n');
-fprintf('               (vs. -34%%/-21%% with slat CD0=0, i.e. only the gear-buildup undershoot noted below\n');
-fprintf('               remained uncorrected) -- adding the slat CD0/CDi term was the fix for that gap, not\n');
-fprintf('               a change to the gear buildup itself, which still sums only wheels+struts and remains\n');
-fprintf('               a smaller, separate known undershoot vs. Roskam''s/L1-L2''s whole-aircraft-empirical\n');
-fprintf('               gear estimate (which implicitly bundles fairings, doors, wells, interference that a\n');
-fprintf('               2-item buildup does not model).\n');
+fprintf('               ~20-25 deg max, chosen (for L3) because it brings L3''s CD0,TO/L totals to -5%%/+3%%\n');
+fprintf('               of Brandt (vs. -34%%/-21%% with slat CD0=0, i.e. only the gear-buildup undershoot\n');
+fprintf('               noted below remained uncorrected) -- adding the slat CD0/CDi term was the fix for\n');
+fprintf('               that gap, not a change to the gear buildup itself, which still sums only wheels+\n');
+fprintf('               struts and remains a smaller, separate known undershoot vs. Roskam''s/L1-L2''s\n');
+fprintf('               whole-aircraft-empirical gear estimate (which implicitly bundles fairings, doors,\n');
+fprintf('               wells, interference that a 2-item buildup does not model). PORTED TO L2 2026-08-10\n');
+fprintf('               with the SAME 17 deg value and citation status (no L2-specific evidence exists for\n');
+fprintf('               a different number) -- L2''s own CD0,TO/L %% error vs. Brandt was not independently\n');
+fprintf('               re-derived, since L2 uses a different overall gear/CD0 model (Roskam tabulated, not\n');
+fprintf('               L3''s Reynolds buildup) and the -5%%/+3%% figures above are L3-specific.\n');
 fprintf('  [AERO con]   Reference is Brandt''s own CD0/K1/K2 at each condition [Brandt Consts sheet].\n');
 fprintf('               cruise/combat_sub/max_alt/ps (M~0.87) match polar_model row 2 to rounding;\n');
 fprintf('               dash (M=1.6) and combat_sup (M=1.4) diverge from polar_model''s M=1.5/2.0 rows --\n');
