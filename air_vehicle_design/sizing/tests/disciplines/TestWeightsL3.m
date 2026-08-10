@@ -63,7 +63,8 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %       F_w = 7.0, B_h = 18.5, S_vt = 40.889669 (EXPOSED), AR_vt = 1.294,
 %       lambda_vt = 0.437, Lambda_LE_vt = 47.5 deg, H_t = 0, H_v = 1,
 %       L_t = 22.0, S_r = 11.65, L_fus = 47.5, D_fus = 5.0 (structural
-%       DEPTH), W_fus = 7.0, S_cs = 190
+%       DEPTH), W_fus = 7.0, S_cs = 187.68 (a DEPENDENT buildup since
+%       2026-08-10, S_csw + S_stab + S_rud; was a frozen 190 estimate)
 %     propulsion by DI: T_max = 23770, BPR = 0.71
 %     requirements: design_mach = 2.0, cruise 36000 ft / M 0.87
 %     .weights: N_l = 2.67, L_m = 5.5 ft, L_n = 3.5 ft, N_nw = 1, S_fw = 0,
@@ -207,11 +208,20 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %     7.45*24.965377 = 185.992058 ; *0.9602907 = 178.60645 ; *1.0752026
 %       = 192.03618 ; *2.2046362 = 423.366 lbf
 %   Eq. 15.17 FLIGHT CONTROLS = 36.28*M^0.003*S_cs^0.489*N_s^0.484*N_c^0.127
-%     2.0^0.003 = exp(0.00207944) = 1.0020816
-%     190^0.489 = exp(0.489*5.24702407) = exp(2.56579477) = 13.011039
-%     4^0.484   = exp(0.484*1.38629436) = exp(0.67096647) = 1.9561271
-%     36.28*1.0020816 = 36.355321 ; *13.011039 = 473.020 ; *1.9561271
-%       = 925.283 lbf
+%     ** S_cs CHANGED 2026-08-10: 190 -> 187.68. It was a frozen "unpinned
+%     estimate" input annotated "flaperon + HT + rudder + LEF"; F16GeomL3.S_cs
+%     is now the Dependent buildup of exactly those four terms,
+%     S_csw + S_stab + S_rud = 68.03 + 108 + 11.65 = 187.68, so the estimate is
+%     superseded by the sum. This is the ONLY Sec. 15.3.1 equation the change
+%     touches: Eq. 15.1's S_csw (68.03) and Eq. 15.3's S_r (11.65) still
+%     reproduce their old values exactly, because F16GeomL3 seeds their
+%     components from the same T.O. 1F-16A-1 Fig. 1-2 measured areas. **
+%     2.0^0.003   = exp(0.00207944) = 1.0020816
+%     187.68^0.489 = exp(0.489*5.2347389) = exp(2.5597849) = 12.93321
+%       (was 190^0.489 = exp(2.56579477) = 13.011039, -0.60 %)
+%     4^0.484     = exp(0.484*1.38629436) = exp(0.67096647) = 1.9561271
+%     36.28*1.0020816 = 36.355321 ; *12.93321 = 470.191 ; *1.9561271
+%       = 919.748 lbf   (was 925.283; -0.60 %, i.e. 0.489*the -1.22 % on S_cs)
 %   Eq. 15.18 INSTRUMENTS = 8.0 + 36.37*N_en^0.676*N_t^0.237
 %                             + 26.4*(1+N_ci)^1.356
 %     3^0.237 = exp(0.26037112) = 1.2974115 ; 36.37*1.2974115 = 47.186856
@@ -232,14 +242,15 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %     1.7^0.735 = exp(0.735*0.53062825) = exp(0.39001176) = 1.4769981
 %     201.6*1.4769981 = 297.7628 lbf
 %   Eq. 15.24 HANDLING = 3.2e-4*W_dg = 3.2e-4*31377 = 10.04064 lbf exactly
-%     -> SYSTEMS GROUP TOTAL = 423.366 + 925.283 + 228.16737 + 108.39429
-%          + 422.007 + 1945.418 + 217.6 + 297.7628 + 10.04064 = 4578.039 lbf
+%     -> SYSTEMS GROUP TOTAL = 423.366 + 919.748 + 228.16737 + 108.39429
+%          + 422.007 + 1945.418 + 217.6 + 297.7628 + 10.04064 = 4572.504 lbf
+%          (was 4578.039; the -5.535 lbf is entirely Eq. 15.17's S_cs change)
 %
 %   OEW(31377) = wing + HT + VT + fuselage + LG.main + LG.nose
 %                + engine group + systems group + strake
 %              = 2396.944 + 200.5104 + 313.0505 + 3674.18 + 989.843
-%                + 170.9044 + 3381.6847 + 4578.039 + 90.00
-%              = 15795.156 lbf
+%                + 170.9044 + 3381.6847 + 4572.504 + 90.00
+%              = 15789.621 lbf   (was 15795.156; same -5.535 lbf, -0.035 %)
 %
 %   Strake (ADDED 2026-07-29): k_strake * S_strake = 4.5 * 20 = 90.00 lbf
 %   exact [Brandt Main!D18 / Wt!H7]. See F16WeightsL3.m's S_strake/k_strake
@@ -501,7 +512,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             w = TestWeightsL3.makeW3();
             W = w.weight_systems(31377);
             tc.verifyEqual(W.fuel_sys,    423.366,   'RelTol', 1e-3, 'Eq. 15.16 fuel system.');
-            tc.verifyEqual(W.flight_ctrl, 925.283,   'RelTol', 1e-3, 'Eq. 15.17 flight controls.');
+            tc.verifyEqual(W.flight_ctrl, 919.748,   'RelTol', 1e-3, 'Eq. 15.17 flight controls (S_cs = 187.68 buildup, was a frozen 190 estimate).');
             tc.verifyEqual(W.instruments, 228.16737, 'RelTol', 1e-3, 'Eq. 15.18 instruments.');
             tc.verifyEqual(W.hydraulics,  108.39429, 'RelTol', 1e-3, 'Eq. 15.19 hydraulics.');
             tc.verifyEqual(W.electrical,  422.007,   'RelTol', 1e-3, 'Eq. 15.20 electrical.');
@@ -516,8 +527,8 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testSystemsGroupTotalHandComputed(tc)
             w = TestWeightsL3.makeW3();
             W = w.weight_systems(31377);
-            tc.verifyEqual(W.total, 4578.039, 'RelTol', 1e-3, ...
-                'Systems group total must be 4578.039 lbf (Eqs. 15.16-15.24).');
+            tc.verifyEqual(W.total, 4572.504, 'RelTol', 1e-3, ...
+                'Systems group total must be 4572.504 lbf (Eqs. 15.16-15.24).');
         end
 
         function testSystemsGroupContainsNoLandingGearTerm(tc)
@@ -676,8 +687,8 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testOEWHandComputed(tc)
         %TESTOEWHANDCOMPUTED  Header total -- replaces the removed +-40 % gate.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.OEW(31377), 15795.156, 'RelTol', 1e-3, ...
-                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15795.156 lbf.');
+            tc.verifyEqual(w.OEW(31377), 15789.621, 'RelTol', 1e-3, ...
+                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15789.621 lbf.');
         end
 
         function testStrakeWeightHandComputed(tc)
@@ -725,7 +736,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %TESTOEWWORKSWITHWTOUNSET  OEW is a pure function of its argument.
             w = TestWeightsL3.makeW3();
             tc.verifyTrue(isnan(w.W_TO), 'obj.W_TO must be NaN until set.');
-            tc.verifyEqual(w.OEW(31377), 15795.156, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.OEW(31377), 15789.621, 'RelTol', 1e-3, ...
                 'OEW must be computable with obj.W_TO unset.');
         end
 

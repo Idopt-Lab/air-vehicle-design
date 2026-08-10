@@ -14,12 +14,20 @@ classdef F16WeightsL3 < WeightsModelL3
 %         + engine-group.total + systems-group.total + W_strake
 %
 %   VALUES at W_TO = 31,377 lbf (computed live 2026-07-25; strake term added
-%   2026-07-29):
+%   2026-07-29; systems group and OEW updated 2026-08-10):
 %     wing 2396.77 | HT 200.54 | VT 313.06 | fuselage 3674.20
 %     LG 1160.93 (main 989.98 + nose 170.95) | engine group 3381.70
-%     systems group 4578.13 (fuel system 423.465) | strake 90.00
-%     OEW = 15795.33 lbf  (-20.95 % vs Brandt Wt!B12 = 19980.700578;
-%                          -17.51 % vs corrections.xls 19148.08)
+%     systems group 4572.60 (fuel system 423.465) | strake 90.00
+%     OEW = 15789.80 lbf  (-20.97 % vs Brandt Wt!B12 = 19980.700578;
+%                          -17.54 % vs corrections.xls 19148.08)
+%     The -5.53 lbf on the systems group (and hence on OEW) since 2026-08-10 is
+%     Eq. 15.17 alone: geom.S_cs stopped being a frozen 190 ft^2 "unpinned
+%     estimate" and became the Dependent buildup S_csw + S_stab + S_rud =
+%     187.68 ft^2 at the JSON baseline, so a sizing-loop rescale of the wing and
+%     tail now reaches the flight-controls weight. Eq. 15.1's S_csw and
+%     Eq. 15.3's S_r are unchanged at the baseline (68.03 and 11.65), because
+%     F16GeomL3 seeds their components from the same T.O. measured areas -- so
+%     the wing and vertical-tail weights above did not move.
 %     OEW(45000) = 16959.63 | OEW(60000) = 18020.71 — the near-zero change at
 %     45,000 vs the pre-Phase-4 code is a COINCIDENCE of four offsetting deltas,
 %     not evidence that nothing changed (F16WeightsL3.md §4).
@@ -274,7 +282,7 @@ classdef F16WeightsL3 < WeightsModelL3
         W_tail             % struct(HT, VT) lbf [Eqs. 15.2-15.3] = 200.54 / 313.06
         W_fuselage         % lbf  [Eq. 15.4]         = 3674.20
         W_installed_engine % lbf  engine group total = 3381.70 (dry engine + Eqs. 15.7-15.15)
-        W_subsystems       % lbf  systems group total = 4578.13 (Eqs. 15.16-15.24). ! Does NOT include the landing gear — see WeightsModelL3
+        W_subsystems       % lbf  systems group total = 4572.60 (Eqs. 15.16-15.24). ! Does NOT include the landing gear — see WeightsModelL3
         W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00, added 2026-07-29 (see S_strake/k_strake property comment)
     end
 
