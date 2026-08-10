@@ -145,26 +145,44 @@ classdef SizingLoopL2 < handle
 %   lbf, 19 iter; L3 W_TO=23,972.46 lbf, S_ref=181.61 ft^2, T_SL=17,220.66
 %   lbf, 12 iter, with WS_opt = 132 psf at both levels.
 %
-%   CURRENT (2026-08-10, after the flaperon/LEF/stabilator work below):
+%   AFTER THE FLAPERON/LEF/STABILATOR WORK (2026-08-10, first pass):
 %     L2  W_TO=23,120.65 lbf, S_ref=222.31 ft^2, T_SL=20,253.01 lbf, 17 iter
 %     L3  W_TO=23,338.62 lbf, S_ref=210.26 ft^2, T_SL=17,245.01 lbf, 12 iter
-%   WS_opt moved 132 -> 104 psf (L2) and 132 -> 111 psf (L3). Both remain
-%   INTERIOR points of PointPerformanceBase.WS_RANGE_BRANDT (20:7:160) -- and
-%   exact grid points of it (20+7k, k=12 and k=13) -- so the solved S_ref is
-%   still a real envelope optimum, not a sweep-limit artifact.
+%   WS_opt moved 132 -> 104 psf (L2) and 132 -> 111 psf (L3), diverging for
+%   the first time (previously coincidentally equal, see below).
 %
-%   WHY THE ENVELOPE MOVED, since it is a large shift and not obviously
-%   related to sizing control surfaces: making ControlSurfaceSizer the single
-%   source of the flaperon's chord/span fractions replaced the aero classes'
-%   own eta_flap_in/out = 0.10/0.90 with 0.35/0.75 (see
+%   WHY THE ENVELOPE MOVED at that point, since it is a large shift and not
+%   obviously related to sizing control surfaces: making ControlSurfaceSizer
+%   the single source of the flaperon's chord/span fractions replaced the
+%   aero classes' own eta_flap_in/out = 0.10/0.90 with 0.35/0.75 (see
 %   f16a_control_surfaces.m -- 0.10/0.90 implied a 60 ft^2 flaperon against a
 %   measured 31.32, and was flagged in-code as unverified). A narrower flap
 %   band lowers Roskam Eq. 7.10's flapped-area ratio, which lowers
 %   Delta_CLmax_flap and Delta_CD0_flap, which tightens the takeoff and
 %   landing constraints, which moves WS_opt -- and S_ref = W_TO/WS_opt with
-%   it. The chain is real physics, not a regression; it is simply the first
-%   time the flaperon's geometry and its aerodynamic effect came from one
-%   number instead of two disagreeing ones.
+%   it. The chain is real physics, not a regression.
+%
+%   CURRENT (2026-08-10, LATER SAME DAY -- L2/L3 leading-edge-flap parity):
+%     L2  W_TO=23,037.50 lbf, S_ref=207.55 ft^2, T_SL=20,174.15 lbf, 17 iter
+%     L3  unchanged (210.26 was already this run's value; L3 was not touched)
+%   WS_opt moved BACK to 111 psf at L2, matching L3 (and L1) again. Root
+%   cause of the divergence just above: F16AeroL2 modeled ONLY the trailing-
+%   edge flaperon's CLmax contribution, never the leading-edge flap's --
+%   LandingConstraint.WS_max() reads CLmax_L straight off the injected aero
+%   object, so L2's landing wall was permanently ~5.3 psf tighter than L3's
+%   for a reason unrelated to either level's intended fidelity difference.
+%   The PRE-flaperon-fix agreement (both at 132) was coincidental grid
+%   quantization -- the two walls were never actually equal (133.02 vs
+%   138.57 psf), they just floored to the same 7-psf grid point; the
+%   coincidence broke once the flaperon fix shifted the whole baseline down
+%   ~24 psf and the same ~5.3 psf gap crossed a grid line. Closing the LEF
+%   gap in F16AeroL2 (same equations/citations/values as F16AeroL3, ported
+%   verbatim) makes L2.CLmax_L equal L3.CLmax_L exactly and restores the
+%   agreement on real physical grounds instead of coincidence. Both remain
+%   INTERIOR points of PointPerformanceBase.WS_RANGE_BRANDT (20:7:160) and
+%   exact grid points of it, so the solved S_ref is a real envelope optimum,
+%   not a sweep-limit artifact. Full account: VnV/BrandtF16A/todo.md
+%   2026-08-10 "CLOSED: F16AeroL2 had no leading-edge-device model at all".
 %
 %   The multiplicative-vs-additive comparison was never re-run against the
 %   live envelope, so treat those side-by-side numbers as historical.
@@ -243,15 +261,13 @@ classdef SizingLoopL2 < handle
                 % Recomputed every iteration -- see header note above. Both
                 % ratios are now used: S_ref comes from WS_opt (done
                 % 2026-08-10, closing the former TODO here), T_SL from TW_opt.
-                [WS_opt, TW_opt] = obj.con.optimal_point();
+                [WS_opt, TW_opt] = obj.con.optimal_point(); % TODO (8/10/2026): Is this ACTUALLY recomputing the optimum point, or is it just checking if the  point is phyusically feasible? It doesn't seem like it's actually recomputing it!
 
                 S_ref = W_TO / WS_opt;
                 obj.geom.S_ref = S_ref;
 
                 T_SL_new = TW_opt * W_TO;
-                obj.prop.T_SL = T_SL_new; % TODO (8/3/2026): These should be moved towards the end, since they interfere with using the "guess" values.
-                % TODO (8/3/2026): Sanity check; OEW should be affected by
-                % engine weight, which is also estimated from T_SL.
+                obj.prop.T_SL = T_SL_new;
 
                 % TAIL/CONTROL-SURFACE -> WEIGHT COUPLING (documented
                 % 2026-08-03, was a TODO asking to make this clearer): the

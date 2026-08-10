@@ -136,6 +136,15 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
         %   user direction as the L1 finding above (route test-suite/
         %   discipline-accuracy issues elsewhere). Widened to a physically-
         %   reasonable sanity band below, same rationale as L1's.
+        %
+        % REFRESHED AGAIN 2026-08-10 (same day, later): the flaperon/LEF/
+        % stabilator sizing-loop work moved WS_opt to 104 psf, then closing a
+        % separate F16AeroL2 fidelity gap (no leading-edge-flap CLmax term --
+        % see VnV/BrandtF16A/todo.md's "CLOSED" entry) moved it back to 111,
+        % now agreeing with L1 and L3. Current converged: W_TO~=23,037.50 lb,
+        % S_ref~=207.55 ft^2, T_SL~=20,174.15 lbf, 17 iter. All comfortably
+        % inside the physically-reasonable sanity bands below; treat every
+        % number above this paragraph as historical narrative, not current.
         % ================================================================ %
 
         function testDesignStudy02L2Converges(tc)
