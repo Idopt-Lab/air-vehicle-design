@@ -34,14 +34,23 @@ implementable today (primary-source-corrected 2026-08-04):
 
 | Argument | Type | Supplies |
 |---|---|---|
-| `geom` | `(1,1) F16GeomL3` (CONCRETE) | `x_apex_wing`, `x_le_ht`, `LE_sweep_wing`/`ht`, `b_wing`/`b_ht`, `lambda_wing`/`ht`, `cbar_wing`, `c_root_ht`, `S_ref`, `S_ht`, `AR_ht`, `QC_sweep_ht`, `W_max_fuselage`, `L_fus`, `c_elev_frac` |
+| `geom` | `(1,1) F16GeomL3` (CONCRETE) | `x_apex_wing`, `x_le_ht`, `LE_sweep_wing`/`ht`, `b_wing`/`b_ht`, `lambda_wing`/`ht`, `cbar_wing`, `c_root_ht`, `S_ref`, `S_ht`, `AR_ht`, `QC_sweep_ht`, `W_max_fuselage`, `L_fus` |
 | `weights` | `(1,1) F16WeightsL3` (CONCRETE) | every component group's WEIGHT (live), plus `weights.cruise_mach` as the ANALYSIS MACH (see §3) |
 | `aero` | `(1,1) F16AeroL3` (CONCRETE) | `get_CL_alpha(M)` for the wing lift-curve slope, directly |
 | `prop` | `(1,1) F16PropL2` (no L3 propulsion tier exists repo-wide) | stored for completeness/future thrust-term use; not read by any quantity implemented this pass |
+| `ctrl` | `(1,1) ControlSurfaceSizer` | `c_elev_frac=0` [Raymer 6th ed. Table 6.5, F-16 all-moving stabilator] — the one input `Delta_alpha_L0` needs |
 
-All four typed CONCRETELY, same rationale as `F16SandCL2`'s `weights` argument (§3 of that file's
+All five typed CONCRETELY, same rationale as `F16SandCL2`'s `weights` argument (§3 of that file's
 doc) — several members read (`x_apex_wing`, `x_le_ht`, `W_strake`, `weight_landing_gear`,
 `W_subsystems`, `cruise_mach`) are not on any abstract `GeometryModelL3`/`WeightsBase` contract.
+
+**2026-08-10 fix:** `geom` does NOT supply `c_elev_frac`. The 2026-08-06 tail/control-surface
+re-extraction (commit `06c1db9`) moved that property off `F16GeomL3` onto the standalone
+`ControlSurfaceSizer` collaborator, but this class (written against the pre-re-extraction state)
+kept reading `obj.geom.c_elev_frac` — a property that no longer existed, so `Delta_alpha_L0` errored
+at runtime. Fixed by adding `ctrl` as a sixth required constructor argument and reading
+`obj.ctrl.c_elev_frac` instead — the SAME `ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90)` object
+`design_study_02_L2.m`/`design_study_03_L3.m` already inject into `SizingLoopL2`.
 
 ## 3. Judgment call: the analysis Mach is `weights.cruise_mach`, not a new requirements-file read
 

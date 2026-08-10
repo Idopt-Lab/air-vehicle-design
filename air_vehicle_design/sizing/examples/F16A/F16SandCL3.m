@@ -19,7 +19,8 @@ classdef F16SandCL3 < SandCModelL3
 %                  Raymer's own "power-off" sanction (p.593).
 %     SM        -- [Raymer Eq. 16.11], bare (x_np-x_cg)/cbar_wing, no /100.
 %     Delta_alpha_L0(delta_e_deg) -- [Raymer Eqs. 16.15/16.16/16.18], real,
-%                  evaluates to 0 for the F-16 (all-moving stabilator).
+%                  evaluates to 0 for the F-16 (all-moving stabilator,
+%                  obj.ctrl.c_elev_frac=0).
 %     CL_w(alpha_deg), CL_h(alpha_deg, i_h_deg) -- CLOSED 2026-08-04. i_w=0deg
 %                  [T.O. 1F-16A-1]; alpha_0L=-1.33deg [NACA 64A204, Aero];
 %                  i_h is a required CALLER argument (all-moving stabilator,
@@ -46,14 +47,27 @@ classdef F16SandCL3 < SandCModelL3
 %     geom    -- (1,1) F16GeomL3 (CONCRETE). Supplies x_apex_wing, x_le_ht,
 %                LE_sweep_wing/ht, b_wing/b_ht, lambda_wing/ht, cbar_wing,
 %                c_root_ht, S_ref, S_ht, AR_ht, QC_sweep_ht, W_max_fuselage,
-%                L_fus, c_elev_frac -- none of these are on the
-%                GeometryModelL3 abstract contract (they are F16GeomL3's own
-%                x-station/physical-construction inputs -- x_apex_wing,
-%                x_le_ht in particular exist ONLY on F16GeomL3, per
-%                SandCModelL2's own header), so a GeometryModelL3 type guard
-%                would not actually cover what this class reads. Typed
-%                concretely, matching the launch instruction's own
-%                "Inject F16GeomL3" (concrete) wording.
+%                L_fus -- none of these are on the GeometryModelL3 abstract
+%                contract (they are F16GeomL3's own x-station/physical-
+%                construction inputs -- x_apex_wing, x_le_ht in particular
+%                exist ONLY on F16GeomL3, per SandCModelL2's own header), so
+%                a GeometryModelL3 type guard would not actually cover what
+%                this class reads. Typed concretely, matching the launch
+%                instruction's own "Inject F16GeomL3" (concrete) wording.
+%                NOTE (2026-08-10): geom does NOT supply c_elev_frac -- the
+%                2026-08-06 tail/control-surface re-extraction (commit
+%                06c1db9) moved that property off F16GeomL3 back onto the
+%                standalone ControlSurfaceSizer collaborator (see ctrl,
+%                below); this class's constructor now injects ctrl instead
+%                of reading a since-removed obj.geom.c_elev_frac.
+%     ctrl    -- (1,1) ControlSurfaceSizer. Supplies c_elev_frac=0 [Raymer
+%                6th ed. Table 6.5, F-16 all-moving stabilator, no separate
+%                elevator] -- the ONE input Delta_alpha_L0 needs. SAME
+%                ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) object
+%                design_study_02_L2.m/design_study_03_L3.m already inject
+%                into SizingLoopL2; not yet wired into a Level-3 sizing loop
+%                itself (no SizingLoopL3 exists), so this constructor takes
+%                it directly rather than via a loop.
 %     weights -- (1,1) F16WeightsL3 (CONCRETE, same rationale as F16SandCL2's
 %                weights argument -- W_strake/weight_landing_gear/W_subsystems
 %                are F16WeightsL3-specific, not on any abstract contract).
@@ -164,6 +178,7 @@ classdef F16SandCL3 < SandCModelL3
         weights   % (1,1) F16WeightsL3 -- supplies every component group's WEIGHT live, by DI, AND the analysis Mach (weights.cruise_mach)
         aero      % (1,1) F16AeroL3 -- supplies the wing lift-curve slope directly (get_CL_alpha)
         prop      % (1,1) F16PropL2 -- stored for completeness/future thrust-term use; not read by any quantity implemented this pass
+        ctrl      % (1,1) ControlSurfaceSizer -- supplies c_elev_frac (Delta_alpha_L0's one input; see class header)
     end
 
     % ======================================================================= %
@@ -185,25 +200,27 @@ classdef F16SandCL3 < SandCModelL3
 
     methods
 
-        function obj = F16SandCL3(json_path, geom, weights, aero, prop)
+        function obj = F16SandCL3(json_path, geom, weights, aero, prop, ctrl)
         %F16SANDCL3  Construct from a required unified L3 input JSON path
-        %   (f16a_spec_path(3); reads its .stability_control block) plus four
-        %   required injected collaborators (geom, weights, aero, prop). NO
-        %   silent default on any argument -- a defaulted injection would
-        %   silently re-freeze geometry/weights/aero/engine data, the defect
-        %   class this framework's DI convention removes elsewhere
-        %   (F16GeomL2.m / F16WeightsL2.m / F16WeightsL3.m).
+        %   (f16a_spec_path(3); reads its .stability_control block) plus five
+        %   required injected collaborators (geom, weights, aero, prop,
+        %   ctrl). NO silent default on any argument -- a defaulted injection
+        %   would silently re-freeze geometry/weights/aero/engine/control-
+        %   surface data, the defect class this framework's DI convention
+        %   removes elsewhere (F16GeomL2.m / F16WeightsL2.m / F16WeightsL3.m).
             arguments
                 json_path      {mustBeTextScalar, mustBeNonzeroLengthText}
                 geom     (1,1) F16GeomL3
                 weights  (1,1) F16WeightsL3
                 aero     (1,1) F16AeroL3
                 prop     (1,1) F16PropL2
+                ctrl     (1,1) ControlSurfaceSizer
             end
             obj.geom    = geom;
             obj.weights = weights;
             obj.aero    = aero;
             obj.prop    = prop;
+            obj.ctrl    = ctrl;
 
             S = jsondecode(fileread(json_path)).stability_control;
 
@@ -307,10 +324,10 @@ classdef F16SandCL3 < SandCModelL3
 
         function val = Delta_alpha_L0(obj, delta_e_deg)
         %DELTA_ALPHA_L0  [Raymer 6th ed. Eqs. 16.15/16.16/16.18]. Real,
-        %   complete -- evaluates to 0 for the F-16 (obj.geom.c_elev_frac=0,
+        %   complete -- evaluates to 0 for the F-16 (obj.ctrl.c_elev_frac=0,
         %   all-moving stabilator, no separate elevator), not a special case
         %   hardcoded here.
-            val = SandCL3.delta_alpha_L0_elevator(obj.geom.c_elev_frac, delta_e_deg);
+            val = SandCL3.delta_alpha_L0_elevator(obj.ctrl.c_elev_frac, delta_e_deg);
         end
 
         function val = Cm_alpha_via_neutral_point(obj)
@@ -338,7 +355,7 @@ classdef F16SandCL3 < SandCModelL3
         %   reframed rather than resolved by a spec lookup). `i_h` is now a
         %   REQUIRED CALLER-SUPPLIED trim-condition argument, not a spec
         %   constant -- the F-16 tail is an ALL-MOVING STABILATOR
-        %   (obj.geom.c_elev_frac=0, Raymer Table 6.5), so tail incidence IS
+        %   (obj.ctrl.c_elev_frac=0, Raymer Table 6.5), so tail incidence IS
         %   the pilot/trim control variable, not a fixed installation angle
         %   like i_w. There is nothing to cite for a fixed i_h because it is
         %   not a constant.

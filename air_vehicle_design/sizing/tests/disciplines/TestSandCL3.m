@@ -49,8 +49,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % per that file's own note), then computes the weighted average by
         % hand here, NOT via SandCL2.weighted_cg or F16SandCL3's own private
         % group_weight switch.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects(); %#ok<ASGLU>
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
 
             x = [27.28, 41.0, 40.0, 26.0, 26.0, 31.45, 21.11, 17.0, 24.63, 26.0];
             lg = w3.weight_landing_gear(w3.W_TO);
@@ -411,8 +411,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % comfortably bracket the ~0.68 ft Mach-shift addition on a ~26 ft
         % baseline (~2.7%) while still catching a genuinely wrong wing
         % apex/sweep/MAC wiring bug (which would produce a much larger gap).
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received = s3.x_acw;
             expected = 25.589;
             fprintf('  [L3-S&C] testF16SandCL3XAcwFiniteAndNearBrandtWithinAFewPercent: expected=%.6g, received=%.6g\n', expected, received);
@@ -424,8 +424,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         end
 
         function testF16SandCL3XAchAftOfHtLeadingEdge(tc)
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received = s3.x_ach;
             fprintf('  [L3-S&C] testF16SandCL3XAchAftOfHtLeadingEdge: received=%.6g, expecting isfinite=true\n', received);
             tc.verifyTrue(isfinite(received));
@@ -437,8 +437,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         function testF16SandCL3CmAlphaFusIsPositiveAndFinite(tc)
         % Every factor in Eq. 16.25 (K_fus, W_f^2, L_f, c, S_w) is positive
         % for a real airframe, so Cm_alpha_fus must be strictly positive.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received = s3.Cm_alpha_fus;
             fprintf('  [L3-S&C] testF16SandCL3CmAlphaFusIsPositiveAndFinite: received=%.6g, expecting isfinite=true\n', received);
             tc.verifyTrue(isfinite(received));
@@ -447,8 +447,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         end
 
         function testF16SandCL3XNpFiniteAndWithinFuselage(tc)
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received = s3.x_np;
             fprintf('  [L3-S&C] testF16SandCL3XNpFiniteAndWithinFuselage: received=%.6g, expecting isfinite=true\n', received);
             tc.verifyTrue(isfinite(received));
@@ -466,8 +466,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % specific computed number (which is separately, informationally,
         % reported and discussed in sandc_brandt_comparison.md per CLAUDE.md
         % -- never backfilled into this unit test).
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received = s3.SM;
             fprintf('  [L3-S&C] testF16SandCL3SMFiniteAndPhysicallyBounded: received=%.6g, expecting isfinite=true\n', received);
             tc.verifyTrue(isfinite(received));
@@ -484,8 +484,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % SandCL3.Cm_alpha or SandCL3.neutral_point/Cm_alpha_from_neutral_point
         % had a wiring bug, these two independently-implemented formulas
         % would very likely disagree.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received = s3.Cm_alpha;
             expected = s3.Cm_alpha_via_neutral_point();
             fprintf('  [L3-S&C] testF16SandCL3CmAlphaMatchesEq1610CrossCheck: expected=%.6g, received=%.6g\n', expected, received);
@@ -497,8 +497,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % Documented behavior: c_elev_frac=0 (F-16 all-moving stabilator, no
         % separate elevator) makes Eqs. 16.16/16.18 evaluate to exactly 0,
         % for ANY delta_e -- a real answer for THIS airframe, not a gap.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received1 = s3.Delta_alpha_L0(5);
             fprintf('  [L3-S&C] testF16SandCL3DeltaAlphaL0IsExactlyZeroForAllMovingStabilator: expected=0, received=%.6g\n', received1);
             tc.verifyEqual(received1, 0, 'AbsTol', 1e-12);
@@ -511,7 +511,13 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % Constructor / DI / optimization-ready property design.
         % ================================================================== %
 
-        function testConstructorRequiresAllFiveArgs(tc)
+        function testConstructorRequiresAllSixArgs(tc)
+        % geom/weights/aero/prop/ctrl are all REQUIRED injected collaborators
+        % -- no silent default on any of them (same DI convention as
+        % F16WeightsL3's four required arguments). ctrl (ControlSurfaceSizer)
+        % is the newest of the five: F16SandCL3.Delta_alpha_L0 reads
+        % obj.ctrl.c_elev_frac, so a caller who omits it must get
+        % MATLAB:minrhs, not a silently-frozen c_elev_frac.
             expectedErrId = 'MATLAB:minrhs';
             try
                 F16SandCL3();
@@ -521,9 +527,9 @@ classdef TestSandCL3 < matlab.unittest.TestCase
                 actualErrId = ME.identifier;
                 actualErrMsg = ME.message;
             end
-            fprintf('  [L3-S&C] testConstructorRequiresAllFiveArgs (no args): expected_error=%s, received_error=%s (%s)\n', ...
+            fprintf('  [L3-S&C] testConstructorRequiresAllSixArgs (no args): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            fprintf('  [L3-S&C] testConstructorRequiresAllFiveArgs: expecting error %s\n', 'MATLAB:minrhs');
+            fprintf('  [L3-S&C] testConstructorRequiresAllSixArgs: expecting error %s\n', 'MATLAB:minrhs');
             tc.verifyError(@() F16SandCL3(), expectedErrId);
 
             try
@@ -534,18 +540,33 @@ classdef TestSandCL3 < matlab.unittest.TestCase
                 actualErrId = ME.identifier;
                 actualErrMsg = ME.message;
             end
-            fprintf('  [L3-S&C] testConstructorRequiresAllFiveArgs (one arg): expected_error=%s, received_error=%s (%s)\n', ...
+            fprintf('  [L3-S&C] testConstructorRequiresAllSixArgs (one arg): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            fprintf('  [L3-S&C] testConstructorRequiresAllFiveArgs: expecting error %s\n', 'MATLAB:minrhs');
+            fprintf('  [L3-S&C] testConstructorRequiresAllSixArgs: expecting error %s\n', 'MATLAB:minrhs');
             tc.verifyError(@() F16SandCL3(f16a_spec_path(3)), expectedErrId);
+
+            [g3, w3, a3, prop, ~] = TestSandCL3.makeF16Objects();
+            try
+                F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+                actualErrId = '(none thrown)';
+                actualErrMsg = '(none thrown)';
+            catch ME
+                actualErrId = ME.identifier;
+                actualErrMsg = ME.message;
+            end
+            fprintf('  [L3-S&C] testConstructorRequiresAllSixArgs (five args, ctrl omitted): expected_error=%s, received_error=%s (%s)\n', ...
+                expectedErrId, actualErrId, actualErrMsg);
+            fprintf('  [L3-S&C] testConstructorRequiresAllSixArgs: expecting error %s\n', 'MATLAB:minrhs');
+            tc.verifyError(@() F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop), expectedErrId, ...
+                'ctrl (ControlSurfaceSizer) must be a required argument, not silently defaulted.');
         end
 
         function testConstructorRejectsWrongGeomTier(tc)
-            [~, w3, a3, prop] = TestSandCL3.makeF16Objects();
+            [~, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
             g2 = F16GeomL2(f16a_spec_path(2), prop);
             expectedErrId = 'MATLAB:validation:UnableToConvert';
             try
-                F16SandCL3(f16a_spec_path(3), g2, w3, a3, prop);
+                F16SandCL3(f16a_spec_path(3), g2, w3, a3, prop, ctrl);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -555,14 +576,14 @@ classdef TestSandCL3 < matlab.unittest.TestCase
             fprintf('  [L3-S&C] testConstructorRejectsWrongGeomTier: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
             fprintf('  [L3-S&C] testConstructorRejectsWrongGeomTier: expecting error %s\n', 'MATLAB:validation:UnableToConvert');
-            tc.verifyError(@() F16SandCL3(f16a_spec_path(3), g2, w3, a3, prop), ...
+            tc.verifyError(@() F16SandCL3(f16a_spec_path(3), g2, w3, a3, prop, ctrl), ...
                 expectedErrId);
         end
 
         function testDerivedPropertiesAreReadOnly(tc)
         % Mirrors TestGeomL2's testDerivedPropertiesAreReadOnly template.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
 
             expectedErrId = 'MATLAB:class:noSetMethod';
             try
@@ -648,8 +669,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % Mirrors TestGeomL2's testWettedAreasLiveOnRead template -- mutate
         % an input IN PLACE and confirm the derived value tracks it with no
         % reconstruction of the object.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             v0 = s3.x_acw;
             g3.x_apex_wing = g3.x_apex_wing + 5;   % optimizer-style mutation
             received = s3.x_acw;
@@ -660,8 +681,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         end
 
         function testDerivedPropertiesLiveRecomputeXCg(tc)
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             v0 = s3.x_cg;
             w3.W_TO = w3.W_TO + 5000;   % optimizer-style mutation of the sizing-loop STATE
             received = s3.x_cg;
@@ -671,8 +692,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         end
 
         function testIsaChecks(tc)
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             r1 = isa(s3, 'StabControlBase');
             fprintf('  [L3-S&C] testIsaChecks: expected=true, received=%s for isa(s3, ''StabControlBase'')\n', mat2str(r1));
             tc.verifyTrue(r1);
@@ -695,8 +716,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         %   F16AeroL3.alpha_L0]. Expected value independently recomputed from
         %   the real CL_alpha_wing/alpha_L0 the object itself reports, never
         %   by calling CL_w a second time.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             fprintf('  [L3-S&C] testCLwUsesCitedWingIncidenceAndZeroLiftAoA: expected=0, received=%.6g for i_w_deg\n', s3.i_w_deg);
             tc.verifyEqual(s3.i_w_deg, 0, 'i_w must be 0deg per T.O. 1F-16A-1.');
             expected = s3.CL_alpha_wing * deg2rad(5 + s3.i_w_deg - a3.alpha_L0);
@@ -713,8 +734,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         %   trim-condition incidence. epsilon/alpha_0Lh are both 0 (downwash
         %   out of scope; symmetric biconvex tail section). Expected value
         %   independently recomputed from the real CL_alpha_tail.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             expected = s3.CL_alpha_tail * deg2rad(5 + (-2) - 0 - 0);
             received = s3.CL_h(5, -2);
             fprintf('  [L3-S&C] testCLhTakesIncidenceAsRequiredCallerArgument: expected=%.6g, received=%.6g\n', expected, received);
@@ -754,8 +775,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         %   error -- SandCL3.Cm_acw_wing itself is real and complete
         %   (testCmAcwWingHandComputed proves that); only this one numeric
         %   input is currently missing.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             received1 = s3.Cm0_airfoil_wing;
             fprintf('  [L3-S&C] testF16SandCL3CmAcwIsNaNByDefault: expected=NaN, received=%.6g for Cm0_airfoil_wing\n', received1);
             tc.verifyTrue(isnan(received1), ...
@@ -767,8 +788,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         end
 
         function testF16SandCL3CmCgTrimReturnsNaNUntilCm0AirfoilWingSupplied(tc)
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             val = s3.Cm_cg_trim(5, -2);
             fprintf('  [L3-S&C] testF16SandCL3CmCgTrimReturnsNaNUntilCm0AirfoilWingSupplied: expected=NaN, received=%.6g\n', val);
             tc.verifyTrue(isnan(val), ...
@@ -796,8 +817,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         %   value, NOT a citation for the real F-16 airfoil), the full
         %   Eq. 16.5/16.7 pipeline must produce a real, finite, physically
         %   bounded trim-moment coefficient.
-            [g3, w3, a3, prop] = TestSandCL3.makeF16Objects();
-            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+            [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
+            s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);
             s3.Cm0_airfoil_wing = -0.01;   % synthetic test value, not a citation
             val = s3.Cm_cg_trim(5, -2);
             fprintf('  [L3-S&C] testF16SandCL3CmCgTrimIsFiniteOnceCm0AirfoilWingIsSupplied: received=%.6g, expecting isfinite=true\n', val);
@@ -816,17 +837,22 @@ classdef TestSandCL3 < matlab.unittest.TestCase
 
     methods (Static, Access = private)
 
-        function [g3, w3, a3, prop] = makeF16Objects()
+        function [g3, w3, a3, prop, ctrl] = makeF16Objects()
         %MAKEF16OBJECTS  Real F16GeomL3 + F16WeightsL3 (W_TO/W_energy set to
         %   plausible sizing-loop STATE values, mirroring
         %   TestSubsystemsL3.makeGeomAndWeights) + F16AeroL3 + F16PropL2 (no
-        %   L3 propulsion tier exists repo-wide).
+        %   L3 propulsion tier exists repo-wide) + ControlSurfaceSizer, the
+        %   SAME ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90) call
+        %   design_study_02_L2.m/design_study_03_L3.m use -- c_elev_frac=0
+        %   [Raymer 6th ed. Table 6.5, F-16 all-moving stabilator] is the
+        %   ONLY entry F16SandCL3.Delta_alpha_L0 reads off this object.
             prop = F16PropL2(f16a_spec_path(2));
             g3   = F16GeomL3(f16a_spec_path(3), prop);
             w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO     = 31377;    % Brandt F-16A TOGW [readme_wt.md]
             w3.W_energy = 6294;     % legacy Fuel1+2+3 = 2098*3, same anchor as TestSandCL2
             a3   = F16AeroL3(g3, f16a_spec_path(3));
+            ctrl = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);
         end
 
     end

@@ -100,7 +100,8 @@ w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
 w3.W_TO     = W_TO_brandt;
 w3.W_energy = W_fuel_brandt;
 a3 = F16AeroL3(g3, f16a_spec_path(3));
-s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop);
+ctrl3 = ControlSurfaceSizer(0.20, 0.40, 0, 0, 0.30, 0.90);   % same call design_study_02_L2.m/03_L3.m use
+s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl3);
 
 % ════════════════════════════════════════════════════════════════════════ %
 %  BUILD TABLE
