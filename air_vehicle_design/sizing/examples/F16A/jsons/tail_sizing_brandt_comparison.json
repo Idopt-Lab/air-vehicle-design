@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-28",
+  "generated": "2026-08-10",
   "aircraft": "F-16A Block 10/15",
   "title": "F-16A Block 10/15 — Tail Sizing vs Ground Truth",
   "condition": "Wing geometry from F16GeomL2 (S_ref=300 ft^2, AR_wing=3.0, lambda_wing=0.2275, L_fus=46.5 ft).",
@@ -71,6 +71,83 @@
       "divergence": "",
       "cite": "Brandt Main!H18",
       "notes": "Nicolai & Carichner Table 11.6, \"General Dynamics F-16\" row (C_VT=0.094, an F-16-SPECIFIC measured coefficient)."
+    },
+    {
+      "parameter": "[WING CONTROL SURFACES — Roskam Part II Eq. 7.10]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "S_flaperon, TE flaperon [ft^2]",
+      "fidelity": "L1",
+      "computed": "28.1120",
+      "reference": "31.3200",
+      "pctDiff": "-10.24%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "T.O. 1F-16A-1 Fig. 1-2",
+      "notes": "The F-16 has NO separate ailerons: one trailing-edge flaperon serves as both aileron and flap. c/c=0.25 [Raymer 6th ed. p.162, \"ailerons and flaps are typically 15-25% of wing chord\"], span band eta=0.35-0.75 (0.40 extent from Raymer Fig. 6.3's historical-guidelines band, placed outboard of the strake). Reads LOW: Fig. 6.3 gives only the span EXTENT, so the station placement is a judgement call, and this airframe's flaperon is chord-deeper or wider than the band's typical fighter."
+    },
+    {
+      "parameter": "S_lef, leading-edge flap [ft^2]",
+      "fidelity": "L1",
+      "computed": "44.6551",
+      "reference": "36.7100",
+      "pctDiff": "+21.64%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "T.O. 1F-16A-1 Fig. 1-2",
+      "notes": "c/c=0.15, eta=0.00-0.98, carried over unchanged from F16AeroL3's existing LE-device estimate. Reads HIGH, and eta_in=0 is the main reason: the real LEF starts OUTBOARD of the strake, not at the centreline. Deliberately not adjusted to close the gap -- that would be fitting an estimate to ground truth. Logged in VnV/BrandtF16A/todo.md."
+    },
+    {
+      "parameter": "S_csw = S_flaperon + S_lef [ft^2]",
+      "fidelity": "L1",
+      "computed": "72.7671",
+      "reference": "68.0300",
+      "pctDiff": "+6.96%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "T.O. 1F-16A-1 Fig. 1-2 (31.32 + 36.71)",
+      "notes": "The quantity Raymer Eq. 15.1's wing-weight term actually consumes, via the Dependent F16GeomL3.S_csw. Agrees far better than either component, because the flaperon reads low and the LEF reads high and the two errors partly cancel -- worth knowing before trusting the sum as evidence that both parts are right."
+    },
+    {
+      "parameter": "[TAIL CONTROL SURFACES — Raymer 6th ed. Table 6.5 / p.161]",
+      "fidelity": "---",
+      "computed": "---",
+      "reference": "---",
+      "pctDiff": "---",
+      "secondSource": "---",
+      "divergence": "---",
+      "cite": "---",
+      "notes": "---"
+    },
+    {
+      "parameter": "S_stab, all-moving stabilator [ft^2]",
+      "fidelity": "L1",
+      "computed": "108.0000",
+      "reference": "108.0000",
+      "pctDiff": "+0.00%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "Brandt Main!C18 = S_ht",
+      "notes": "On an all-moving tail the pitch control surface IS the whole horizontal tail [Raymer Table 6.5's footnote to the Fighter/attack row: \"Supersonic usually all-moving tail without separate elevator\"], so S_stab = S_ht identically and the 0.00% agreement here is DEFINITIONAL, not a validation. The real content of this row is that S_elev = 0 -- and that the tail's own area is now carried somewhere, which before 2026-08-10 it was not."
+    },
+    {
+      "parameter": "S_rud, rudder [ft^2]",
+      "fidelity": "L1",
+      "computed": "16.2000",
+      "reference": "11.6500",
+      "pctDiff": "+39.06%",
+      "secondSource": "N/A",
+      "divergence": "",
+      "cite": "T.O. 1F-16A-1 Fig. 1-2",
+      "notes": "★ THE FRAMEWORK'S LARGEST CONTROL-SURFACE ERROR, and the one that matters most: geom.S_r aliases this area into Raymer Eq. 15.3's (1 + S_r/S_vt)^0.348 vertical-tail weight term. c/c=0.30 [Table 6.5, Fighter/attack, Cr/C] x 0.90 span [p.161, \"extend to the tip of the tail or to about 90% of the tail span\"]. Deliberately NOT calibrated to 11.65: Raymer's printed fractions are what a conceptual design has available, and the gap IS the finding. Note GeomL1.lookup_control_surface_fraction returns 0.33 for the same row out of Raymer's 7th ed., so two editions disagree as well. Logged in todo.md."
     }
   ]
 }

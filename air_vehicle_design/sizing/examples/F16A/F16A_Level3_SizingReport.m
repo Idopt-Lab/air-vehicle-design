@@ -65,8 +65,22 @@ fprintf('  S_ref:      initial = %.2f ft^2  ->  final = %.2f ft^2\n', ...
     result.history(1).S_ref, result.S_ref);
 
 last = result.history(end);
-fprintf('  S_ht=%.3f ft^2  S_vt=%.3f ft^2  S_ail=%.3f ft^2  S_elev=%.3f ft^2  S_rud=%.3f ft^2\n', ...
-    last.S_ht, last.S_vt, last.S_ail, last.S_elev, last.S_rud);
+% Tail plus all SIX control-surface areas, every one re-sized each iteration
+% from the CURRENT wing and tail. The F-16's four REAL surfaces are the
+% flaperon, the leading-edge flap, the all-moving stabilator and the rudder.
+% S_ail and S_elev print 0 because this airframe has neither a separate
+% aileron (the flaperon serves that role) nor a separate elevator (all-moving
+% stabilator) -- see f16a_control_surfaces.m.
+fprintf('  S_ht=%.3f ft^2  S_vt=%.3f ft^2\n', last.S_ht, last.S_vt);
+fprintf('  S_flaperon=%.3f ft^2  S_lef=%.3f ft^2  S_stab=%.3f ft^2  S_rud=%.3f ft^2\n', ...
+    last.S_flaperon, last.S_lef, last.S_stab, last.S_rud);
+fprintf('  S_ail=%.3f ft^2  S_elev=%.3f ft^2  (both 0: no separate aileron or elevator)\n', ...
+    last.S_ail, last.S_elev);
+% L3 ONLY: the three buildups the weight equations actually consume. Dependent
+% since 2026-08-10, so they track the resized surfaces above instead of sitting
+% frozen at the T.O. figures the JSON seeds them with.
+fprintf('  Weights-facing buildups: S_csw=%.3f  S_r=%.3f  S_cs=%.3f ft^2\n', ...
+    objs.geom.S_csw, objs.geom.S_r, objs.geom.S_cs);
 
 %% Sizing convergence plots (W_TO, OEW, fuel weight, T_SL, S_ref per iteration)
 % Straight from SizingLoopL2.run's own returned history. T_SL and S_ref both

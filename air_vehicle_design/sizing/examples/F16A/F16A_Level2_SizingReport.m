@@ -66,8 +66,17 @@ fprintf('  T_SL:       initial = %.1f lbf (T_SL_guess)  ->  final = %.1f lbf\n',
     result.history(1).T_SL, result.T_SL);
 
 last = result.history(end);
-fprintf('  S_ht=%.3f ft^2  S_vt=%.3f ft^2  S_ail=%.3f ft^2  S_elev=%.3f ft^2  S_rud=%.3f ft^2\n', ...
-    last.S_ht, last.S_vt, last.S_ail, last.S_elev, last.S_rud);
+% Tail plus all SIX control-surface areas, every one re-sized each iteration
+% from the CURRENT wing and tail. The F-16's four REAL surfaces are the
+% flaperon, the leading-edge flap, the all-moving stabilator and the rudder.
+% S_ail and S_elev print 0 because this airframe has neither a separate
+% aileron (the flaperon serves that role) nor a separate elevator (all-moving
+% stabilator) -- see f16a_control_surfaces.m.
+fprintf('  S_ht=%.3f ft^2  S_vt=%.3f ft^2\n', last.S_ht, last.S_vt);
+fprintf('  S_flaperon=%.3f ft^2  S_lef=%.3f ft^2  S_stab=%.3f ft^2  S_rud=%.3f ft^2\n', ...
+    last.S_flaperon, last.S_lef, last.S_stab, last.S_rud);
+fprintf('  S_ail=%.3f ft^2  S_elev=%.3f ft^2  (both 0: no separate aileron or elevator)\n', ...
+    last.S_ail, last.S_elev);
 
 %% Sizing convergence plots (W_TO, OEW, fuel weight, T_SL, S_ref per iteration)
 % Straight from SizingLoopL2.run's own returned history. T_SL and S_ref both
