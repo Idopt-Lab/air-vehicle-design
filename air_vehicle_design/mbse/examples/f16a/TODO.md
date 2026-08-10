@@ -21,7 +21,7 @@ Argued in the log, none of them defects — they extend the example rather than 
 - **Test-local `containers.Map` → `dictionary`** in `tests_for_ai_coding/`
   (`F16APhysicalArchitectureTest`, `F16ALogicalArchitectureTest`). The maps never leave their class,
   so the migration buys nothing a caller can see. `F16APhysicalTradeStudy`'s was migrated because
-  its map is a return value.
+  its map is a return value, and is still a `dictionary` now that the file is only a runner.
 
 ## Deliberately not defects
 
@@ -34,15 +34,21 @@ Argued in the log, none of them defects — they extend the example rather than 
 - **Eleven requirements are deliberately blank** — `REQ_F16A_023`/`024` and `REQ_F16A_D01`–`D09` keep
   their `todo` keyword and their placeholder text. The blanks are the assignment (D-045, D-046); the
   gear-angle brief is in [`docs/01_requirements.md`](docs/01_requirements.md).
-- **`'TBD'` stereotype defaults** on `DecisionRef`, `Justification`, `TraceRef`, `RealizesRole`,
-  `RealizesKind` are sentinels. `assertRationaleComplete` aborts the build on a surviving `'TBD'`
-  rationale, and an L model shipping `DecisionRef='TBD'` is the correct unresolved state (D-019).
-- **`TradeCandidate.UnitCost_USD` is `NaN` on all seven candidates**, permanently — even though the
-  **aircraft** now carries a real DAPCA IV cost (D-043). DAPCA prices an airframe, not a part. A `0`
-  default would be an unbeatably good score under a ratio value function (D-021, D-032).
-- **`T_SL_lb` is a declared property, not a criterion and not a screen** (D-053). Nothing scores on
-  it, nothing is disqualified by it, and **no T/W ratio is computed anywhere** — in the model, a test
-  or the docs. Two of the three engines are declared hypotheticals whose thrusts are invented.
+- **`'TBD'` stereotype defaults** on `DecisionRef`, `Justification`, `TraceRef` and `RealizesKind`
+  are sentinels. `assertRationaleComplete` aborts the build on a surviving `'TBD'` rationale, and an
+  L model shipping `DecisionRef='TBD'` is the correct unresolved state (D-019).
+- **No candidate carries a cost at all** — only the **aircraft** does, a real DAPCA IV figure
+  (D-043). DAPCA prices an airframe, not a part; the candidates' column was `NaN` permanently, so
+  D-056 stopped declaring it. `MeasureOfMerit.UnitCost_USD` still defaults to `NaN`, never `0`, which
+  would be an unbeatably good score under a ratio value function (D-021, D-032).
+- **`Thrust_SL_lb` is the engine trade's own criterion** (D-056, superseding that half of D-053).
+  Scored as `v = T/T_baseline`, weight 0.30 — but **no T/W ratio is computed anywhere**, in the
+  model, a test or the docs. Two of the three engines are declared hypotheticals whose thrusts are
+  invented, and only the engine stereotype declares a thrust.
+- **The engine ceiling warning fires on every run**, and is meant to. `TwinEngine_Surrogate` scores
+  `v(Thrust_SL_lb) = 1.346`, above the 1.0 the bounded criteria cap at. D-035 decided to warn rather
+  than cap or error; D-056 gave that decision a live case, and a test asserts it stays live. Do not
+  silence it — the deferred fix is **C2**.
 
 ## Standing rule
 
@@ -63,7 +69,7 @@ propagated to the project.
 --The implement link should exist between a requirement and this Logical layer, even if the specific option (variant) isn't decided yet. The selection happens at the Physical layer
 
 
-### 2
+### 2 ongoing; started 9 Aug 2026
 The F16APhysicalTradeStudy.m is too complex for anyone to understand. 
 I want you to break it into 3 separate files, one for each of the trade studies. Write extremely simple code and walk through
 - How they will open a model
@@ -87,13 +93,6 @@ I want to see all the views:
 R-> F mapping
 F-> L matrix
 Morphological matrix
-
-### 5 — DONE (D-055)
-You have a bunch of tests that are good for debugging and when you are making changes. But those tests are written in a manner that is hard to read and is not useful as part of the teaching. So, I want you to move them all to a new folder named "tests_for_ai_coding". In addition to moving them, try and simplify.
-
-> The five **machinery** suites moved to `tests_for_ai_coding/` and now share `F16ATestCase`.
-> `verification/` was left alone — those three are the teaching payload. Every assertion survived:
-> 108 machinery cases green before, 124 green after (16 leaf masses became named cases). See D-055.
 
 ### 6
 The roll-up analysis are too complex for anyone to understand. This is a teaching repo. Walk them through how its happening. The code should be extremeley simple.

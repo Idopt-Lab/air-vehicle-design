@@ -159,15 +159,15 @@ fanning out to four (D-024). Details in [`05_physical.md`](05_physical.md).
 
 Three requirements pose the *decisions* the design had to make. They are **not** implemented by a
 function or by a part — what implements *"which of these kinds shall realize this role?"* is the
-**selected option**, the kind that answers it. So their Implement links are created by
-`physical/F16APhysicalTradeStudy.m`, from the **winning logical kind** in `F16A_Logical.slx`, once
-the trade over the physical candidates has run (D-001, D-010):
+**selected option**, the kind that answers it. So each Implement link is created by the physical
+trade study that decides that role, from the **winning logical kind** in `F16A_Logical.slx`, once the
+trade over the physical candidates has run (D-001, D-010, D-056):
 
-| Decision req | Role decided | Implement-linked from the winning kind |
-|---|---|---|
-| REQ_F16A_L01 | PropulsionSystem | `SingleEngine` |
-| REQ_F16A_L02 | FlightControlSystem | `FlyByWire` |
-| REQ_F16A_L03 | Airframe | `BlendedCrankedDelta` |
+| Decision req | Role decided | Decided by | Implement-linked from the winning kind |
+|---|---|---|---|
+| REQ_F16A_L01 | PropulsionSystem | `physical/F16AEngineTradeStudy.m` | `SingleEngine` |
+| REQ_F16A_L02 | FlightControlSystem | `physical/F16AFlightControlsTradeStudy.m` | `FlyByWire` |
+| REQ_F16A_L03 | Airframe | `physical/F16AAirframeTradeStudy.m` | `BlendedCrankedDelta` |
 
 Between the L build and the physical trade these three show as **un-implemented** in the Requirements
 Editor. That is the expected state, not a gap: the requirement is where the decision is **posed and

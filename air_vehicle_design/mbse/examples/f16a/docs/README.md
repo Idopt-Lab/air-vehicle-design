@@ -70,14 +70,17 @@ mbse/examples/f16a/
 ├─ physical/                             P layer
 │   ├─ F16A_Physical.slx + .sldd + ~mdl.slmx
 │   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit,
-│   │                                    Material, FuelTank, Rationale, TradeCandidate)
+│   │                                    Material, FuelTank, Rationale, and one candidate
+│   │                                    stereotype per trade — Engine, Airframe, FlightControl)
 │   ├─ F16ASourceKind.m                  enum: why a part exists
 │   ├─ F16ADataProvenance.m              enum: where a number came from
 │   ├─ F16A_LogicalToPhysical.mldatx     logical → physical realization (14 edges)
-│   ├─ generate_f16a_physical.m          builds P, RUNS THE TRADE, then the roll-ups
-│   ├─ F16APhysicalTradeStudy.m          scores candidates, picks winners, writes back to L
-│   ├─ F16APhysicalTradeGuards.m         the trade's guard rails as a pure class, so they can
-│   │                                    be tested WITHOUT running the study
+│   ├─ generate_f16a_physical.m          builds P, RUNS THE TRADES, then the roll-ups
+│   ├─ F16AEngineTradeStudy.m            thrust / mass / TRL      → REQ_F16A_L01
+│   ├─ F16AAirframeTradeStudy.m          aero / mass / TRL        → REQ_F16A_L03
+│   ├─ F16AFlightControlsTradeStudy.m    handling / mass / TRL    → REQ_F16A_L02
+│   │                                    each standalone: open, read, score, decide, write back
+│   ├─ F16APhysicalTradeStudy.m          15-line runner: calls all three
 │   ├─ F16APhysical{Mass,Materials,Fuel}Rollup.m
 │   ├─ F16APhysicalCostModel.m           calls BrandtCost for the flyaway cost (needs /sizing/)
 │   └─ F16APhysicalMissionFuel.m         mission-fuel hook (NaN by design)
@@ -86,8 +89,7 @@ mbse/examples/f16a/
 │   ├─ F16ATestCase.m                    shared base: the walk, the readers, verifyNoOffenders
 │   ├─ F16A{Requirements,FunctionalArchitecture,LogicalArchitecture}Test.m
 │   ├─ F16APhysicalArchitectureTest.m    the P model is built correctly
-│   ├─ F16APhysicalTradeGuardsTest.m     negative tests; touches no artifact
-│   └─ run_ai_tests.m                    runs all five; every one must be green
+│   └─ run_ai_tests.m                    runs all four; every one must be green
 └─ verification/                         requirement-verification tests — the teaching payload
     ├─ F16AMaterialsVerificationTest.m   REQ_F16A_022 — green
     ├─ F16AFuelVerificationTest.m        REQ_F16A_P01 — red by design
@@ -117,8 +119,8 @@ generate_f16a_functional                    % -> F16A_Functional.slx + links
 generate_f16a_logical_derived_requirements  % -> f16a_logical_derived.slreqx (L01–L03)
 generate_f16a_logical                       % -> F16A_Logical.slx (ships UNRESOLVED)
 generate_f16a_physical_derived_requirements % -> f16a_physical_derived.slreqx (P01)
-generate_f16a_physical                      % -> F16A_Physical.slx, RUNS THE TRADE STUDY
-                                            %    (which resolves L and links L01–L03),
+generate_f16a_physical                      % -> F16A_Physical.slx, RUNS THE THREE TRADE
+                                            %    STUDIES (which resolve L and link L01–L03),
                                             %    then the roll-ups and the Implement links
 ```
 
@@ -128,9 +130,10 @@ Open the models and run the tests:
 systemcomposer.openModel("F16A_Physical")   % or F16A_Functional / F16A_Logical
 systemcomposer.allocation.editor            % the F→L and L→P allocation matrices
 F16APhysicalMassRollup                      % print the mass roll-up and OEW
-F16APhysicalTradeStudy                      % re-run the trade; prints the ranked table
+F16AEngineTradeStudy                        % re-run ONE trade; six printed steps, start here
+F16APhysicalTradeStudy                      % re-run all three
 
-run_ai_tests                                   % MACHINERY: all five suites, all green
+run_ai_tests                                   % MACHINERY: all four suites, all green
 
 runtests("F16AMaterialsVerificationTest")      % REQ_F16A_022 — green
 runtests("F16AStaticMarginVerificationTest")   % REQ_F16A_025 — 2 pass, 1 RED BY DESIGN
@@ -169,12 +172,12 @@ nothing else here shows it. Three consequences worth holding on to:
   neutral point is a simplified approximation, and the CG crosses it as fuel burns off. Read
   [`01_requirements.md`](01_requirements.md) before quoting it as a fact about the aeroplane.
 
-The P layer's tests are split three ways on purpose: `F16APhysicalArchitectureTest` is
-**machinery**; `F16APhysicalTradeGuardsTest` is **negative tests for the scoring code**, and is
-the only suite touching no artifact, which is exactly why it can safely feed the guards bad data
-and watch them refuse; the three `*VerificationTest` files are **requirement verification**, one
-per requirement. One combined suite would report "2 failures" and hide that they mean different
-things — which is also why the machinery suites live in their own folder (D-055).
+The P layer's tests are split two ways on purpose: `F16APhysicalArchitectureTest` is
+**machinery**, and the three `*VerificationTest` files are **requirement verification**, one per
+requirement. One combined suite would report "2 failures" and hide that they mean different
+things — which is also why the machinery suites live in their own folder (D-055). There used to be
+a third, `F16APhysicalTradeGuardsTest`, feeding a shared guard class bad data and watching it
+refuse; D-056 moved the guards inline into the three trade scripts and retired it.
 
 ## Reviewing requirement traceability
 

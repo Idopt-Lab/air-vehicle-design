@@ -37,8 +37,14 @@ dressed as `Reference`), is a **veto**.
 - Airframe composite fraction ≈ 0.19 (cap 0.20); available internal fuel ≈ 6300 lb.
 - **Unit flyaway cost ≈ $68.47M** on the aircraft's `MeasureOfMerit`, a `Simulation` produced by
   `F16APhysicalCostModel` calling `sizing/…/BrandtCost` (DAPCA IV) over this model's own OEW (D-043).
-  `TradeCandidate.UnitCost_USD` stays `NaN` on all seven candidates — DAPCA prices an airframe, not a
-  part — so cost is still out of trade scoring. A cost number from anywhere else is a veto.
+  **No candidate carries a cost at all** — DAPCA prices an airframe, not a part, so the column was
+  `NaN` permanently and D-056 stopped declaring it. A cost number on a candidate, or a cost from
+  anywhere but this chain, is a veto.
+- The three trade winners and their scores: `F100_PW_200` 0.95625, `BlendedCrankedDelta` 0.91250,
+  `FlyByWire` 0.85625. Each trade scores its own criteria (D-056): the engine on
+  `Thrust_SL_lb`/`Mass_lb`/`TRL`, the airframe on `AeroBenefit`/`Mass_lb`/`TRL`, the flight controls
+  on `HandlingBenefit`/`Mass_lb`/`TRL`. The F100's 23,770 lbf is `Reference`
+  (`f16a_geometry.json`); the other two engines' thrusts are declared `Estimate` (D-053, D-030).
 - Fuel tanks have **zero** dry mass by design.
 
 ## How to audit

@@ -2,10 +2,11 @@
 
 > Model: `physical/F16A_Physical.slx` · Profile: `F16A_PhysicalProps.xml` · Allocation:
 > `F16A_LogicalToPhysical.mldatx` · Generator: `generate_f16a_physical.m`
-> · **Trade study**: `F16APhysicalTradeStudy.m` · Guards: `F16APhysicalTradeGuards.m`
+> · **Trade studies**: `F16A{Engine,Airframe,FlightControls}TradeStudy.m`, run together by
+> `F16APhysicalTradeStudy.m`
 > · Vocabularies: `F16ASourceKind.m`, `F16ADataProvenance.m`
 > · Roll-ups: `F16APhysical{Mass,Materials,Fuel}Rollup.m`
-> · Tests: `tests_for_ai_coding/F16APhysical{Architecture,TradeGuards}Test.m`, `verification/`
+> · Tests: `tests_for_ai_coding/F16APhysicalArchitectureTest.m`, `verification/`
 
 The Logical layer said **how** — in solution roles — and laid out competing **kinds** without picking
 one. The Physical layer gives **concrete parts**, and teaches four ideas the earlier layers could not:
@@ -26,7 +27,7 @@ one. The Physical layer gives **concrete parts**, and teaches four ideas the ear
 | | Logical option (**kind**) | Physical candidate |
 |---|---|---|
 | Answers | *What shape of solution?* | *Built out of what, exactly?* |
-| Carries | a name, `SolutionOption { Selected, DecisionRef }` | `TradeCandidate { RealizesRole, RealizesKind, Mass_lb, Benefit, TRL, UnitCost_USD, DataProvenance, Selected }` + the `Rationale` every part carries |
+| Carries | a name, `SolutionOption { Selected, DecisionRef }` | one of three stereotypes — `EngineCandidate`, `AirframeCandidate`, `FlightControlCandidate` — each `{ RealizesKind, Mass_lb, TRL, DataProvenance, Selected }` plus **its own criterion** (D-056), + the `Rationale` every part carries |
 | Owns the decision? | **No** — it holds the *active* kind, written back from P | **Yes** — the trade runs here |
 
 A logical role has no mass; only a *part* has a mass, and a part exists only at P. Scoring the kinds
@@ -131,76 +132,101 @@ that agreement is the point of a validated example, not a coincidence.
 One convention, so it is not misread: **airframe-less-engine = OEW − Engine ≈ 15,250.5 lb** is the
 standard "airframe unit weight", **not** the sum of the six structural parts (6,722.88).
 
-## The trade study — where the decision is made
+## The three trade studies — where the decision is made
 
-The generator runs it as **section 7b**, between the realization allocation and the roll-ups.
+The generator runs them as **section 7b**, between the realization allocation and the roll-ups.
 
-**It discovers its candidates; it does not know them.** There is no list of candidate names in the
-trade study — it walks the model, collects every component carrying `TradeCandidate`, and groups by
-`RealizesRole`. Add a fourth engine to the generator and it enters the propulsion trade on the next
-run with no edit to the scoring file, which is the only way a trade study can be trusted not to have
-quietly dropped an option. The one declared mapping is **role → decision requirement**: a new role
-genuinely needs a new requirement, and inventing one silently would be worse than stopping.
+**One trade, one file, one stereotype** (D-056). `F16AEngineTradeStudy.m`,
+`F16AAirframeTradeStudy.m` and `F16AFlightControlsTradeStudy.m` each read top to bottom as six
+printed steps — open the models, read the candidates, score them, pick the winner, tell the model,
+save — and each prints every number it reads and every number it computes, so the ranked table can be
+recomputed by hand from the output. `F16APhysicalTradeStudy.m` is a fifteen-line runner that calls all
+three. Nothing is shared between them: a reader following the engine trade never has to open another
+file to find out what a step does.
 
-### What it scores
+**A trade asks for the numbers its own decision turns on.** That is the reason there are three
+stereotypes rather than one. An engine is asked for thrust; a wing is not asked for thrust and then
+tagged `NaN`. Each stereotype declares exactly the six properties its trade uses, and
+`testCandidateStereotypesDeclared` pins the set **both ways** — everything it must declare, and
+nothing beyond it — so re-adding a shared "Benefit" column to `EngineCandidate` turns the suite red.
 
-Each criterion carries a **declared value function** mapping a raw number to a value *without
-reference to the other candidates* (D-015):
+**No candidate can be silently dropped from its own trade.** Each script reads *every* choice of its
+one variant through `getChoices` and **errors if any choice does not carry the stereotype**. Add a
+fourth engine to the generator and it is scored on the next run; forget to parameterize it and the
+run stops and names it. That guarantee is what the old model-wide discovery walk existed for, kept
+without the walk.
 
-| Criterion | Value function | Declared weight | Applied weight |
-|-----------|----------------|----------------:|---------------:|
-| `Benefit` | `v = B / 10` (scale 1–10; 0 means "not set") | 0.40 | **0.50** |
-| `TRL` | `v = (TRL − 1) / 8` (scale 1–9) | 0.20 | **0.25** |
-| `Mass_lb` | `v = M_baseline / M` | 0.20 | **0.25** |
-| `UnitCost_USD` | `v = C_baseline / C` | 0.20 | **dropped** |
+### What each one scores
+
+Every criterion carries a **declared value function** mapping a raw number to a value *without
+reference to the other candidates* (D-015). The weights are declared directly and sum to 1; each
+script checks that they do before it scores anything.
+
+| Trade | Criterion | Value function | Weight |
+|---|---|---|---:|
+| **Engine** | `Thrust_SL_lb` | `v = T / T_baseline` | 0.30 |
+| | `Mass_lb` | `v = M_baseline / M` | 0.35 |
+| | `TRL` | `v = (TRL − 1) / 8` (scale 1–9) | 0.35 |
+| **Airframe** | `AeroBenefit` | `v = B / 10` (scale 1–10; 0 means "not set") | 0.50 |
+| | `Mass_lb` | `v = M_baseline / M` | 0.25 |
+| | `TRL` | `v = (TRL − 1) / 8` | 0.25 |
+| **Flight controls** | `HandlingBenefit` | `v = B / 10` (scale 1–10) | 0.50 |
+| | `Mass_lb` | `v = M_baseline / M` | 0.25 |
+| | `TRL` | `v = (TRL − 1) / 8` | 0.25 |
 
 A ratio criterion's baseline is the value carried by the role's `DataProvenance = Reference`
 candidate — derived from the data, never hard-coded — so **the Brandt candidate scores exactly 1.0 on
-mass in every role, by construction**, and `v > 1` reads "lighter than the as-built F-16A".
+mass in every trade, by construction**, and `v > 1` reads "better than the as-built F-16A".
 
-**Cost falls out of a general rule, not a special case.** Nothing in the code says "exclude cost".
-The rule is: *a criterion no candidate of the role carries a value for is dropped, and the remaining
-weights are renormalized* (D-026). So the applied weights above are **derived at run time**, not
-typed in.
+`AeroBenefit` and `HandlingBenefit` are the same 1–10 judgement scale asking **different questions**:
+vortex lift and transonic area ruling in one, relaxed-stability handling and control authority in the
+other. One shared `Benefit` column pretended a wing and a flight control system were good in the same
+way. They are not, and the model no longer says they are.
 
-State the re-entry trigger precisely, because the obvious phrasing is wrong. It is **not** "the day a
-cost model lands" — it is **the day the candidates carry a cost**. `F16APhysicalCostModel` is destined
-to compute a *whole-aircraft* figure for the `Aircraft`'s MoM, while the trade reads
-`TradeCandidate.UnitCost_USD`, which stays `NaN` on all seven. A cost model will exist and cost will
-still not re-enter (D-043).
+**No candidate carries a cost.** It was `NaN` on all seven permanently (D-043), so a column that
+could never be scored is not a criterion, and D-056 stopped declaring it. `F16APhysicalCostModel`
+computes a *whole-aircraft* figure for the `Aircraft`'s Measure of Merit; that is where cost lives.
 
 ### The results
 
-| Role | Candidate | Kind | Benefit† | TRL† | Mass (lb) | `T_SL_lb`‡ | Provenance (mass) | Score | |
-|------|-----------|------|--------:|-----:|----------:|-----------:|---|--------:|:--:|
-| PropulsionSystem | **F100_PW_200** | SingleEngine | 8.2 | 8 | 4730.23 | 23,770 | Reference | **0.87875** | ✔ |
-| | LowThrustSingle_Surrogate | SingleEngine | 8.6 | 4 | 5100 | 18,500 | Estimate | ≈0.756 | |
-| | TwinEngine_Surrogate | TwinEngine | 7.8 | 6 | 6400 | 32,000 | Estimate | ≈0.731 | |
-| Airframe | **BlendedCrankedDelta** | BlendedCrankedDelta | 9.5 | 7 | 6722.88 | — | Reference | **0.91250** | ✔ |
-| | ConventionalTrapWing | ConventionalTrapWing | 6.5 | 8 | 7300 | — | Estimate | ≈0.774 | |
-| FlightControlSystem | **FlyByWire** | FlyByWire | 9.0 | 6 | 472.44 | — | Reference | **0.85625** | ✔ |
-| | HydroMechanical | HydroMechanical | 6.0 | 9 | 700 | — | Estimate | ≈0.719 | |
+**Engine** — *which engine should the F-16A fly with?* → `REQ_F16A_L01`
 
-† **`Benefit` and `TRL` are engineering judgement on a declared scale, not measurements** — on the
-`Reference` candidates too. They are inventoried as invented values in **D-030**, and between them
-they supply **0.75 of every score**.
+| Candidate | Kind | `Thrust_SL_lb` | Mass (lb) | TRL† | v(T) | v(M) | v(TRL) | Score | |
+|---|---|---:|---:|---:|---:|---:|---:|---:|:--:|
+| **F100_PW_200** | SingleEngine | 23,770 | 4730.23 | 8 | 1.00000 | 1.00000 | 0.87500 | **0.95625** | ✔ |
+| TwinEngine_Surrogate | TwinEngine | 32,000 | 6400 | 6 | 1.34623 | 0.73910 | 0.62500 | 0.88130 | |
+| LowThrustSingle_Surrogate | SingleEngine | 18,500 | 5100 | 4 | 0.77829 | 0.92750 | 0.37500 | 0.68936 | |
 
-‡ `T_SL_lb` is **not scored**. It is `NaN` on the four candidates that are not engines, and the
-column contributes nothing to the numbers to its right.
+**Airframe** — *what shape of airframe?* → `REQ_F16A_L03`
+
+| Candidate | Kind | `AeroBenefit`† | Mass (lb) | TRL† | v(B) | v(M) | v(TRL) | Score | |
+|---|---|---:|---:|---:|---:|---:|---:|---:|:--:|
+| **BlendedCrankedDelta** | BlendedCrankedDelta | 9.5 | 6722.88 | 7 | 0.95000 | 1.00000 | 0.75000 | **0.91250** | ✔ |
+| ConventionalTrapWing | ConventionalTrapWing | 6.5 | 7300 | 8 | 0.65000 | 0.92094 | 0.87500 | 0.77399 | |
+
+**Flight controls** — *wires or rods?* → `REQ_F16A_L02`
+
+| Candidate | Kind | `HandlingBenefit`† | Mass (lb) | TRL† | v(B) | v(M) | v(TRL) | Score | |
+|---|---|---:|---:|---:|---:|---:|---:|---:|:--:|
+| **FlyByWire** | FlyByWire | 9.0 | 472.44 | 6 | 0.90000 | 1.00000 | 0.62500 | **0.85625** | ✔ |
+| HydroMechanical | HydroMechanical | 6.0 | 700 | 9 | 0.60000 | 0.67491 | 1.00000 | 0.71873 | |
+
+† **The benefit columns and `TRL` are engineering judgement on a declared scale, not measurements** —
+on the `Reference` candidates too. They are inventoried as invented values in **D-030**.
 
 **Only one of these engines is real** (D-053). `F100_PW_200` is the engine the F-16A flew with, and
 its mass and thrust come from the Brandt reference in `/sizing/`. `LowThrustSingle_Surrogate` and
 `TwinEngine_Surrogate` are **declared hypotheticals**: their numbers are invented teaching values,
 chosen so the real engine wins, and their names say so rather than borrowing a real designation to
-front invented data. Each candidate also carries `T_SL_lb`, its sea-level static thrust — 23,770 lb
-for the F100 against 18,500 and 32,000 for the two surrogates — which is a **declared property, not
-a criterion**: nothing scores on it, nothing is screened out by it, and no thrust-to-weight ratio is
-computed anywhere in this repo. The figures sit side by side and the narratives say what they mean.
+front invented data.
 
-**The teaching point is the engine.** `F100_PW_200` wins **despite trailing
-`LowThrustSingle_Surrogate` on Benefit** (8.2 against 8.6). Its margin comes from maturity: measured
-against that runner-up, `TRL` is the decisive criterion, worth +0.125 (D-034). The airframe and
-flight-control trades are both decided by `Benefit` instead — three roles, two different stories.
+**The teaching point is the engine.** `F100_PW_200` wins while `TwinEngine_Surrogate`
+**out-thrusts it by 35%** — the twin actually scores *higher* on the criterion carrying the trade's
+headline number, and still loses. Its margin of +0.07495 decomposes to `Thrust_SL_lb` −0.10387,
+`Mass_lb` +0.09132, `TRL` +0.08750: maturity and installed mass together outweigh a large thrust
+advantage. Measured against that runner-up, `Mass_lb` is the decisive criterion (D-034). The airframe
+and flight-control trades are both decided by their benefit instead — three trades, two different
+stories, and a weighted trade that is visibly not a contest of the biggest number.
 
 "Decided by" is **rival-relative**, and both the printed output and the stored justification say so:
 the same F100 that beats the low-thrust surrogate on TRL beats `TwinEngine_Surrogate` on `Mass_lb`. Same victory,
@@ -211,7 +237,7 @@ removed, would change the winner — is a genuine sensitivity calculation, defer
 
 | # | Layer | What is written |
 |---|-------|-----------------|
-| 1 | **P**, configuration | `setActiveChoice` on the role variant; `TradeCandidate.Selected` on the winner |
+| 1 | **P**, configuration | `setActiveChoice` on the role variant; the candidate stereotype's `Selected` on the winner |
 | 2 | **P**, rationale | `SourceKind` → `TradeWinner` / `TradeAlternative`, and every `Justification` rewritten to state the result that candidate actually got |
 | 3 | **L**, cross-layer callback | the role's active **kind**; `SolutionOption.Selected`; `DecisionRef` on **every** kind of the role, so a reader who clicks the *rejected* kind reaches the decision requirement instead of a `'TBD'` (D-027, D-049) |
 | 4 | **R**, traceability | an **Implement link** from the winning kind to `REQ_F16A_L01`/`L02`/`L03` |
@@ -238,21 +264,28 @@ claiming to implement the decision (D-028).
 
 ### The guard rails
 
-An out-of-range parameter must **stop the trade**, not be scored. The run errors, naming the
-candidate, on: a `TRL` outside 1–9 (0 is the deliberate "unset" sentinel); a non-positive `Mass_lb`
-(it is a denominator); a `Benefit` outside 1–10, bounded at **both** ends because `B/10` carries the
-heaviest weight and `78` typed for `7.8` is finite, so no `isfinite` check catches it (D-033); a role
-with fewer than two candidates; a role without exactly one `Reference` baseline; a partial criterion
-column; and a **tie** for first, which is a decision the data cannot make.
+An out-of-range parameter must **stop the trade**, not be scored. Each script errors, naming the
+candidate, on: a `TRL` outside the integer 1–9 (0 is the deliberate "unset" sentinel); a non-positive
+`Mass_lb` (it is a denominator); a benefit outside 1–10, bounded at **both** ends because `B/10`
+carries half the score and `65` typed for `6.5` is finite, so no `isfinite` check catches it (D-033);
+a non-positive `Thrust_SL_lb` in the engine trade; a variant choice carrying no candidate stereotype;
+a variant with fewer than two candidates; a variant without exactly one `Reference` baseline; weights
+that do not sum to 1; and a **tie** for first, which is a decision the data cannot make.
 
 It **warns** rather than erroring when a value function exceeds 1.0. Only the unbounded ratio
 criteria reach it, and there the honest response is neither to cap (discarding a real advantage) nor
 to reject a legitimate candidate, but to say out loud that the declared weights have stopped
-describing relative influence (D-035).
+describing relative influence (D-035). **Since D-056 that warning actually fires**:
+`TwinEngine_Surrogate` scores `v(Thrust_SL_lb) = 1.346`, so every run prints it. D-035's limit went
+from a dormant check to something the example demonstrates, and
+`testRatioBaselineIsUniqueAndNothingBeatsIt` asserts it stays demonstrated.
 
-**Three of those guards live in their own class** — `F16APhysicalTradeGuards.m`, pure static methods
-plus the constants defining the scales. The extraction was done for one reason: **so the guards could
-be tested without running the study**. See [Verification](#verification).
+**The guards are inline `if`/`error` in each script**, not a shared class. They were a separate class
+until D-056, extracted so they could be made to fire without running the study; with three trades
+scoring three different criteria there was no longer one contract for one class to hold, and a reader
+following the engine trade should not have to open a second file to see what a check does. What the
+retired suite proved about the *code* is now covered by the data assertions in
+[Verification](#verification).
 
 **The roll-ups run after the trade.** Build order is build → parameters → realization → **trade** →
 requirement links → roll-ups, and that ordering is the point of the whole structure. The roll-ups
@@ -300,18 +333,19 @@ P is the only layer carrying numbers, so it is the layer that must say where eac
 | `Simulation` | the output of an analysis or roll-up in this repo |
 | `Estimate` | an **illustrative teaching value** — not F-16 data, must never be cited as such, and must appear in D-030 |
 
-**Read the tag narrowly: it qualifies the `Mass_lb`, and nothing else (D-025).** `Benefit` and `TRL`
-are engineering judgement on a declared scale for *every* candidate, including the `Reference` ones —
-`DataProvenance = Reference` on `F100_PW_200` says its *mass* is sourced, not that its Benefit of 8.2
-is. Overclaiming provenance is precisely what the tag exists to prevent.
+**Read the tag narrowly: it qualifies the `Mass_lb`, and nothing else (D-025).** The benefit columns
+and `TRL` are engineering judgement on a declared scale for *every* candidate, including the
+`Reference` ones — `DataProvenance = Reference` on `F100_PW_200` says its *mass* is sourced (and, as
+it happens, its thrust), not that a judgement about it is. Overclaiming provenance is precisely what
+the tag exists to prevent.
 
-Every value-bearing stereotype declares the property: `TradeCandidate`, `Material`, `FuelTank`,
-`PhysicalItem`. Only `Rationale` and `MeasureOfMerit` are exempt with a stated reason — the first
+Every value-bearing stereotype declares the property: the three candidate stereotypes, `Material`,
+`FuelTank`, `PhysicalItem`. Only `Rationale` and `MeasureOfMerit` are exempt with a stated reason — the first
 holds prose, the second nothing but computed figures — the rolled-up OEW and the DAPCA IV cost — so
 a tag would only repeat what the stereotype already says.
 
 `PhysicalItem` was itself exempt until D-052, on the argument that it held Brandt ground truth and
-the invented masses were tagged on `TradeCandidate` where they are *scored*. That was half true and
+the invented masses were tagged on the candidate where they are *scored*. That was half true and
 the wrong half mattered: 14 of the 16 masses summing to OEW carried no provenance at all, and the six
 airframe structural leaves carried `Material.DataProvenance = Estimate` — which describes their
 composite fraction — sitting beside a mass that is Brandt data. A reader inspecting `Fuselage` saw a
@@ -322,7 +356,7 @@ its own source, so two tags on one part stop competing to describe it:
 |---|---|---|
 | `Fuselage` | `Reference` — Brandt | `Material` = `Estimate` (its composite fraction) |
 | `WingTank` | `Reference` — a definitional zero | `FuelTank` = `Estimate` (its capacity) |
-| `LowThrustSingle_Surrogate` | `Estimate` — invented, in D-030 | `TradeCandidate` = `Estimate` (as scored) |
+| `LowThrustSingle_Surrogate` | `Estimate` — invented, in D-030 | `EngineCandidate` = `Estimate` (as scored) |
 | `Airframe` | `Simulation` — the default | none; it carries no mass of its own |
 
 The default is `Simulation`, not `Estimate`: `PhysicalItem` is applied to every component, so the
@@ -473,45 +507,45 @@ physics of building an airplane, not of a role above them.
 
 ## Verification
 
-Three kinds of test, in separate files — and the split is itself the teaching material:
+Two kinds of test, in separate places — and the split is itself the teaching material:
 
 | Suite | Asks | Touches artifacts? |
 |---|---|---|
 | `tests_for_ai_coding/F16APhysicalArchitectureTest` | *is the model built correctly?* | yes — 2 models, 3 requirement sets, an allocation set |
-| `tests_for_ai_coding/F16APhysicalTradeGuardsTest` | *does the scoring code still refuse what it must?* | **no** — pure class, runs on a checkout with no models |
 | `verification/*VerificationTest` | *does the design meet this requirement?* | yes — via the roll-ups |
 
 The machinery suite covers structure, stereotypes, the 16 active-leaf masses against Brandt, roll-up
 self-consistency, the MoMs, realization, `Rationale` with every `TraceRef` resolved for real, the
 candidates' parameter contract, the four places the decision is recorded, and provenance
 completeness. Its own help block lists what it deliberately does **not** assert; the short version is
-that it never runs the trade study (a test that mutated the artifacts it checks would pass even on a
-model the decision was never written into), never asserts a weight or cost target, and never pins an
-`Estimate` or a score.
+that it never runs the trade studies (a test that mutated the artifacts it checks would pass even on
+a model the decision was never written into), never asserts a weight or cost target, and never pins
+an `Estimate` or a score.
 
-**Why the guards were extracted is the lesson, not the file count.** To prove "Benefit = 78 is
-rejected" you had to run the whole study — which writes two models, a requirement set and a link set.
-That test would stop early and pass **only while the guard still worked**. On the day somebody
-deleted the bound — the exact day the test exists to catch — the run would sail past it, pick the
-wrong winner, and `save_system` a wrong active choice, a wrong active kind in L and a wrong Implement
-link into the shipped artifacts. **A negative test whose failure mode is corrupting the thing it
-protects is worse than no test.** Lifting the guards into a pure class made the same assertion two
-lines long and incapable of writing anything.
+**Three assertions carry what the retired guards suite used to.** They read the *criteria clause each
+trade writes into every rationale*, so they check the studies that actually ran rather than a table
+in the test file:
 
-**The division of labour is the thing to take away.** The architecture suite catches the **data**
-defect — somebody types `78` into the model — by asserting the shipped parameters lie on their
-declared scales. The guards suite catches the **code** defect — somebody deletes the bound. Neither
-can catch the other's failure, which is exactly why both exist. Bounds are read from
-`F16APhysicalTradeGuards.BenefitScale` / `.TRLScale` rather than restated, so widening a scale cannot
-leave a test agreeing with a bound that no longer exists; the *rejected* values are deliberately
-literal, so widening a scale to admit one turns the suite red instead of quietly redefining what it
-checks.
+- `testEachTradeScoresOnlyItsOwnCriteria` — every trade scores its own criterion and none of the
+  other two's. Thrust creeping into the airframe trade, or a benefit back into the engine trade,
+  fails here.
+- `testCandidateStereotypesDeclared` — each stereotype declares exactly its own property set, both
+  directions, so the split cannot erode by addition.
+- `testRatioBaselineIsUniqueAndNothingBeatsIt` — one `Reference` baseline per trade, no mass above
+  the ceiling, and D-035's thrust breach still present.
+
+**The division of labour is still the thing to take away**, it just moved. The suite catches the
+**data** defect — somebody types `65` for `6.5` — by asserting the shipped parameters lie on their
+declared scales, with the *rejected* values written out literally so widening a scale to admit one
+turns the suite red instead of quietly redefining what it checks. The **code** defect — somebody
+deletes a bound — is now caught by the trade scripts themselves refusing to run, which is the trade
+D-056 made: a guard a reader can see beats a guard a reader has to go and find.
 
 ## Next
 
 The RFLP loop is closed **and resolved**: R → F → L → P, traceably connected, with the first
-requirements *verified by* tests and the three open logical questions answered by a trade study whose
-arithmetic, inputs and audit trail are all in the model.
+requirements *verified by* tests and the three open logical questions each answered by its own trade
+study, whose arithmetic, inputs and audit trail are all in the model.
 
 Open work is in [`../TODO.md`](../TODO.md). **Wiring
 `F16APhysicalMissionFuel` to `/sizing/` is not on that list and will not appear on a later one**: the

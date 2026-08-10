@@ -28,9 +28,13 @@ commitment, so do not call L "solution-free" — strict solution-independence is
 If a piece of information can only be known once you have committed to a specific technology or
 supplier, it belongs at P. When in doubt, ask `f16a-mbse-method` — that agent is the referee.
 
-The active kind of each variant role is written **by the physical trade study**, not by you. Your
-generator leaves the roles unresolved; the model as shipped shows a resolved kind only because P has
-run.
+The active kind of each variant role is written **by the physical trade study that decides that
+role** — one per role since D-056 — not by you. Your generator leaves the roles unresolved; the
+model as shipped shows a resolved kind only because P has run.
+
+The L suite sweeps for trade numerics and trade stereotypes that must never appear at L. That list
+includes the **retired** `TradeCandidate` name alongside the three current ones: a name that stops
+being guarded silently exempts whatever takes it next. Add to it, never replace.
 
 ## Layer facts to preserve
 

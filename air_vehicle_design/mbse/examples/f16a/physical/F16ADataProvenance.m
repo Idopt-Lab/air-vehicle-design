@@ -1,8 +1,9 @@
 classdef F16ADataProvenance
 %F16ADATAPROVENANCE Where a number came from -- the provenance vocabulary.
 %   The controlled vocabulary for the DataProvenance property, which every
-%   value-bearing P stereotype declares: TradeCandidate (D-007), FuelTank
-%   (D-023), Material (D-031) and PhysicalItem (D-052). P is the only layer
+%   value-bearing P stereotype declares: the three candidate stereotypes
+%   (D-007, D-056), FuelTank (D-023), Material (D-031) and PhysicalItem
+%   (D-052). P is the only layer
 %   that carries numbers, so it is the layer that must say where each came
 %   from. An Estimate is permitted, but every Estimate must also be listed in
 %   docs/07_decision_log.md -- an unexplained guess and a sourced figure must

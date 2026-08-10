@@ -1,13 +1,13 @@
 function results = run_ai_tests()
 %RUN_AI_TESTS Run every machinery suite in this folder.
-%   RESULTS = RUN_AI_TESTS() runs the five suites that check the F-16A model is
+%   RESULTS = RUN_AI_TESTS() runs the four suites that check the F-16A model is
 %   built correctly, and prints a one-line summary per suite.
 %
 %   ALL OF THESE MUST BE GREEN. The two tests that fail by design are the
 %   requirement-verification tests in verification/, which this does not run --
 %   see docs/README.md, "Three requirements, three verification states".
 %
-%   The folder is scanned rather than listed, so a sixth suite is picked up
+%   The folder is scanned rather than listed, so a fifth suite is picked up
 %   the day it is added.
 
 here  = fileparts(mfilename("fullpath"));

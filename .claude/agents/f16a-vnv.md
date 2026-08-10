@@ -20,8 +20,7 @@ findings).
 | `tests_for_ai_coding/F16ARequirementsTest.m` | machinery | the requirement sets themselves: ids, types, keywords, derive links |
 | `tests_for_ai_coding/F16AFunctionalArchitectureTest.m` | machinery | F model + R→F links |
 | `tests_for_ai_coding/F16ALogicalArchitectureTest.m` | machinery | roles, interfaces, allocation, kinds |
-| `tests_for_ai_coding/F16APhysicalArchitectureTest.m` | machinery | decomposition, stereotypes, roll-up self-consistency, realization, links |
-| `tests_for_ai_coding/F16APhysicalTradeGuardsTest.m` | machinery | the trade's guard rails, driven negatively (bad input ⇒ named error). Does **not** inherit `F16ATestCase`: it must run on a checkout with no models |
+| `tests_for_ai_coding/F16APhysicalArchitectureTest.m` | machinery | decomposition, the three candidate stereotypes and their per-trade property sets, roll-up self-consistency, realization, links |
 | `verification/F16AMaterialsVerificationTest.m` | requirement | `REQ_F16A_022` composite ≤ 20% — **MET** (green) |
 | `verification/F16AFuelVerificationTest.m` | requirement | `REQ_F16A_P01` fuel volume — **UNEVALUATED** (red) |
 | `verification/F16AStaticMarginVerificationTest.m` | requirement | `REQ_F16A_025` relaxed stability — **VIOLATED at landing** (red) |
@@ -50,6 +49,12 @@ findings).
   dropped a part.
 - Test both path spaces where relevant: architecture paths include the variant choice level,
   instance paths do not.
+- **The trade guards are inline in the three trade scripts since D-056**, so a guard cannot be made
+  to fire without running a trade — and running one writes two models, a requirement set and a link
+  set, which a test must never do. Assert the shipped *data* instead: each stereotype's property set
+  pinned both ways, every parameter on its declared scale, one `Reference` baseline per trade, and
+  the criteria clause each trade writes into its candidates' rationale. `F16APhysicalTradeGuardsTest`
+  was retired with the guard class it drove.
 
 Load `matlab-core:matlab-testing` before writing tests and
 `verification-validation-and-test:checking-model-compliance` when checking model quality; run with

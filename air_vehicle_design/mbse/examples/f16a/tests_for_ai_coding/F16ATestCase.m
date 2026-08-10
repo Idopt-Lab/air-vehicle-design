@@ -13,9 +13,6 @@ classdef (Abstract) F16ATestCase < matlab.unittest.TestCase
     %   A subclass sets Model and Profile in its TestClassSetup. A suite that
     %   reads no model (F16ARequirementsTest) leaves both empty and uses the
     %   reporting helpers only.
-    %
-    %   F16APhysicalTradeGuardsTest deliberately does NOT inherit this: it
-    %   opens no artifact and must keep running on a checkout with no models.
 
     properties
         Model     % System Composer model under test; empty if the suite reads none

@@ -21,7 +21,7 @@ makes.
 | | Logical option | Physical candidate |
 |---|---|---|
 | what it is | architectural **kind** / topology | concrete **parameterized** realization |
-| examples | `SingleEngine` vs `TwinEngine` | `F100-PW-200`, with mass/TRL/provenance |
+| examples | `SingleEngine` vs `TwinEngine` | `F100-PW-200`, with mass/thrust/TRL/provenance |
 | carries | no numbers, no vendor, no decision | data + technology commitment + provenance |
 | grounded in | **technology neutrality** of the logical architecture (ARCADIA, OOSEM) | synthesize-and-trade candidate architectures; set-based design |
 
@@ -47,11 +47,23 @@ decision goes to `f16a-scribe` for the decision log with its literature basis.
 
 ## Honesty about scope
 
-This example's trade is a scripted weighted-score sweep plus a decision, with an optimizer left as a
-hook — it is **not** MDAO in the full sense, and the doc must say so. Candidate numbers are
-illustrative and provenance-tagged. Cost is a parametric regression (DAPCA IV) over one weight, not
-a costing exercise, and it prices the reference aircraft only. Call
-out any framing that overreaches, including in the plan you were handed.
+This example's trades are three scripted weighted-score sweeps plus a decision each, with an
+optimizer left as a hook — **not** MDAO in the full sense, and the doc must say so. Candidate
+numbers are illustrative and provenance-tagged. Cost is a parametric regression (DAPCA IV) over one
+weight, not a costing exercise, and it prices the reference aircraft only. Call out any framing that
+overreaches, including in the plan you were handed.
+
+Two claims about the trades need watching in particular, because both are now weaker than the
+obvious phrasing suggests:
+
+- **The three trades are independent** (D-016, deferred as C3). They are three pairwise sweeps, not
+  a search of the 2×2×3 morphological box, and the choices genuinely interact — relaxed static
+  stability pays off only *with* fly-by-wire. Since D-056 they no longer even share a criteria set,
+  which makes "three trades" more honest but no more like a coupled study.
+- **Weights are scaling constants, not importance rankings**, and each trade now declares its own
+  over its own criteria — so nothing outside the author's judgement fixes them. The engine trade's
+  thrust ratio is unbounded above and one candidate exceeds 1.0, so its declared weights demonstrably
+  do not describe relative influence (D-035, C2). Do not let a doc claim otherwise.
 
 ## Return
 

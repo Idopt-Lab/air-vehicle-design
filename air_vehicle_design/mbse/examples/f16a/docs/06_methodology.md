@@ -4,7 +4,7 @@
 > [`05_physical.md`](05_physical.md); read those first.
 
 An earlier version of this example treated L and P as **estimate → actual**: the Logical layer held
-variant choices carrying baked-in `Mass_lb`/`UnitCost_USD`/`TRL`/`Benefit`, a Logical-layer script
+variant choices carrying baked-in mass, cost, TRL and benefit figures, a Logical-layer script
 scored them and picked a winner, and P instantiated the winner. That is backwards. A logical role
 has no mass — only a *part* has a mass. Numbers had to be invented at L to make the trade run, and
 P then inherited a decision it had the data to second-guess. The example now uses a **two-tier
@@ -20,7 +20,7 @@ options/decision split**: L enumerates the *kinds*, P parameterizes the *candida
 |---|---|---|
 | Answers | *What shape of solution?* | *Built out of what, exactly?* |
 | Examples | `SingleEngine` / `TwinEngine`; `FlyByWire` / `HydroMechanical`; `BlendedCrankedDelta` / `ConventionalTrapWing` | `F100_PW_200`, `LowThrustSingle_Surrogate`, `TwinEngine_Surrogate`, … |
-| Carries | a name and a rationale (`SolutionOption { Selected, DecisionRef }`) | `TradeCandidate { RealizesRole, RealizesKind, Mass_lb, Benefit, TRL, UnitCost_USD, DataProvenance, Selected }`, plus the `Rationale` every physical part carries |
+| Carries | a name and a rationale (`SolutionOption { Selected, DecisionRef }`) | one candidate stereotype per trade (D-056) — `{ RealizesKind, Mass_lb, TRL, DataProvenance, Selected }` plus the criterion that trade owns: `Thrust_SL_lb`, `AeroBenefit` or `HandlingBenefit` — plus the `Rationale` every physical part carries |
 | Owns the decision? | **No** — it holds the *active* kind, written back from P | **Yes** — the trade runs here |
 | Survives a technology generation? | Yes | No |
 
@@ -34,9 +34,9 @@ graph LR
     K2["TwinEngine"]
   end
   subgraph P["P — candidates: parameterized, provenance-tagged"]
-    C1["F100_PW_200<br/>4730.23 lb · TRL 8 · Benefit 8.2 · Reference"]
-    C2["LowThrustSingle_Surrogate<br/>5100 lb · TRL 4 · Benefit 8.6 · Estimate"]
-    C3["TwinEngine_Surrogate<br/>6400 lb · TRL 6 · Benefit 7.8 · Estimate"]
+    C1["F100_PW_200<br/>4730.23 lb · TRL 8 · 23,770 lbf · Reference"]
+    C2["LowThrustSingle_Surrogate<br/>5100 lb · TRL 4 · 18,500 lbf · Estimate"]
+    C3["TwinEngine_Surrogate<br/>6400 lb · TRL 6 · 32,000 lbf · Estimate"]
   end
   K1 -- "realized by" --> C1
   K1 -- "realized by" --> C2
@@ -151,17 +151,15 @@ Read this section before repeating any of the above in a report.
   instructive**, not figures for any aircraft that was built. Do not cite them as F-16 data. And
   read the tag narrowly: it qualifies the candidate's **`Mass_lb`** and nothing else (D-025). Every
   invented number in this example, with the reasoning behind each, is inventoried in **D-030**.
-- **Cost is `NaN`, and it is dropped by a *general* rule rather than a special case.** Nothing in
-  the trade study says "exclude cost". The rule is: **a criterion no candidate of the role carries a
-  value for is dropped, and the remaining weights are renormalized** (D-026). So the applied weights
-  are *derived at run time* — declared `0.40 / 0.20 / 0.20 / 0.20`, renormalizing to
-  `0.50 / 0.25 / 0.25` — and the day the candidates carry a cost, cost re-enters with no change to
-  the scoring code. Say *the candidates*, not *a cost model*: D-043 settles that
-  `F16APhysicalCostModel` computes a **whole-aircraft** figure while `TradeCandidate.UnitCost_USD`
-  stays `NaN`, so a cost model will exist and this column will still be dropped. The generality is
-  why it is written as a rule; it is not a prediction that this criterion returns.
-  A criterion with values on *some* candidates is neither dropped nor scored — it stops the run,
-  because a partial column scores the candidates that have data against the ones that do not.
+- **Cost is not a criterion of any of the three trades, and no candidate declares it.** It used to be
+  declared and permanently `NaN`, dropped at run time by a general rule — *a criterion no candidate
+  of the role carries a value for is dropped, and the remaining weights renormalized* (D-026). D-043
+  had already settled that the day never comes: `F16APhysicalCostModel` computes a **whole-aircraft**
+  figure for the `Aircraft`'s Measure of Merit, and the candidates' column would stay `NaN` however
+  many cost models existed. D-056 drew the conclusion — a column that can never be scored is not a
+  criterion — and stopped declaring it. Each trade now declares weights that sum to 1 and checks that
+  they do. What that costs is the drop-and-renormalize demonstration; what it buys is that no
+  stereotype carries a property its trade cannot use.
 - **It is set-based in structure only.** True SBD converges by intersecting feasible regions across
   disciplines; we keep the options in the model and defer the decision, then resolve it with a
   single weighted score. The *discipline* is borrowed; the *mechanism* is classical concept
@@ -198,37 +196,43 @@ and the note would be dishonest if it stopped at the fix.
   ([[Parnell & Trainor 2009]][parnell]), and Keeney catalogues it among twelve recurring mistakes in
   value tradeoffs ([[Keeney 2002]][keeney2002]). Ours were chosen by the author of this example and
   never swing-weighted against the criterion ranges: an input, not a result, with no sensitivity
-  study behind them. That bites hardest on the airframe and flight-control trades, both decided by
-  `Benefit`, the criterion carrying the largest share.
+  study behind them. That bites hardest on the airframe and flight-control trades, each decided by
+  its benefit, the criterion carrying half the score. Since D-056 the three trades declare
+  *different* weights over *different* criteria, which makes the arbitrariness more visible rather
+  than less: nothing outside the author's judgement says the engine trade should weight thrust 0.30.
 - **Each value function is linear, and that is a third assumption.** `B/10` and `(TRL−1)/8` are
   straight lines, so the model asserts that TRL 3 → 4 is worth exactly as much as TRL 8 → 9. For
   technology readiness that is almost certainly wrong — the maturity risk that matters is
   concentrated at the low end of the scale. Nothing here establishes that these declared scales are
   linear *in value*; they were chosen because they are legible, and a declared-but-wrong shape is
   still a declared shape.
-- **`M_baseline/M` is a ratio scale anchored on the as-built aircraft, and it is unbounded.** The
-  baseline is the role's `Reference` candidate, so **the Brandt candidate scores exactly 1.0 on mass
-  in every role, by construction** — a property of how the scale was built, not a finding about the
-  F-16. Note the asymmetry: `B/10` and `(TRL−1)/8` are bounded on [0, 1], but `M_baseline/M` has no
-  upper bound, so a candidate at half the baseline mass would score 2.0 and could win on that
-  criterion alone. None is lighter than its baseline today, and nothing in the code prevents it. The
-  three criteria are summed as if commensurable when their ranges are not — the weight-versus-range
-  problem in its most concrete form: **a criterion whose range is open-ended cannot have a
-  defensible scaling constant at all.**
-- **`Benefit` and `TRL` are judgement on a declared scale, not measurements.** Our 1–10 and 1–9
-  rankings — 0 is the "unset" sentinel in both, deliberately off the scale (D-033, D-021) — and they
-  are judgement on the `Reference` candidates too: `DataProvenance = Reference` on `F100_PW_200`
-  says its *mass* is sourced, not that its Benefit of 8.2 is (D-025). Add the weights up and the
-  accounting is uncomfortable: **0.75 of every score is declared opinion**, and of the remaining
-  0.25 only the three `Reference` masses are sourced. These two criteria are *unauditable in
-  principle* — they trace to nothing, which is exactly why they have to be recorded. Transparency is
-  not the same as evidence.
-- **The answer was known before the trade was run.** The F-16A exists; the production configuration
-  wins all three roles. The `Estimate` masses and the Benefit and TRL judgements were chosen to
-  make that outcome legible and to make the engine trade instructive — the F100 wins on maturity
-  and installed mass *despite* trailing the low-thrust surrogate on Benefit, which is the lesson the numbers were
-  picked to teach. This is a **retrodictive** exercise. It demonstrates the machinery, the
-  arithmetic and the audit trail; it is not evidence about aeroplanes.
+- **The ratio criteria are anchored on the as-built aircraft, and they are unbounded.** The baseline
+  is the role's `Reference` candidate, so **the Brandt candidate scores exactly 1.0 on mass in every
+  trade, by construction** — a property of how the scale was built, not a finding about the F-16.
+  Note the asymmetry: `B/10` and `(TRL−1)/8` are bounded on [0, 1], but `M_baseline/M` and
+  `T/T_baseline` have no upper bound. **This is no longer hypothetical.** Since D-056 the engine
+  trade scores thrust as a ratio, and `TwinEngine_Surrogate` at 32,000 lbf against the F100's 23,770
+  scores `v = 1.346` — so a criterion weighted 0.30 contributes as though it were weighted 0.40, and
+  every run prints a warning saying so (D-035). The criteria are summed as if commensurable when
+  their ranges are not: the weight-versus-range problem in its most concrete form, and now with a
+  live case rather than a caveat. **A criterion whose range is open-ended cannot have a defensible
+  scaling constant at all.**
+- **The benefit criteria and `TRL` are judgement on a declared scale, not measurements.** Our 1–10
+  and 1–9 rankings — 0 is the "unset" sentinel in both, deliberately off the scale (D-033, D-021) —
+  and they are judgement on the `Reference` candidates too: `DataProvenance = Reference` on
+  `F100_PW_200` says its *mass* is sourced, not that a rating of it is (D-025). The accounting is
+  uncomfortable and differs by trade: **0.75 of the airframe and flight-control scores is declared
+  opinion**, against 0.35 of the engine score, whose other two criteria are both `Reference` figures
+  on the winner. That the engine trade is the best-sourced of the three is a consequence of D-056,
+  not a coincidence: it was given the criteria the reference actually carries. The judgement
+  criteria remain *unauditable in principle* — they trace to nothing, which is exactly why they have
+  to be recorded. Transparency is not the same as evidence.
+- **The answer was known before the trades were run.** The F-16A exists; the production
+  configuration wins all three. The `Estimate` masses, the invented surrogate thrusts and the benefit
+  and TRL judgements were chosen to make that outcome legible and to make the engine trade
+  instructive — the F100 wins on maturity and installed mass *while the twin out-thrusts it by 35%*,
+  which is the lesson the numbers were picked to teach. This is a **retrodictive** exercise. It
+  demonstrates the machinery, the arithmetic and the audit trail; it is not evidence about aeroplanes.
 
 ## Further reading
 

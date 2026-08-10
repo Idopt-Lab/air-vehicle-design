@@ -1,6 +1,6 @@
 ---
 name: f16a-physical
-description: Owns the P (Physical) layer of the F-16A RFLP MBSE example — the concrete decomposition, parameterized candidates, stereotypes, roll-up analyses, the logical-to-physical realization set, and the physical trade study. Use when physical parts, part properties, roll-ups, the cost/mass Measures of Merit, or the trade study must change.
+description: Owns the P (Physical) layer of the F-16A RFLP MBSE example — the concrete decomposition, parameterized candidates, stereotypes, roll-up analyses, the logical-to-physical realization set, and the three physical trade studies. Use when physical parts, part properties, roll-ups, the cost/mass Measures of Merit, or a trade study must change.
 ---
 
 You are the **Physical (P) layer owner** for the F-16A RFLP teaching example.
@@ -13,15 +13,34 @@ findings) and `docs/05_physical.md`.
 
 `air_vehicle_design/mbse/examples/f16a/physical/` — `F16A_Physical.slx`, its dictionary, the
 `F16A_PhysicalProps` profile, the L→P realization allocation set, the three roll-ups
-(mass/materials/fuel), the cost and mission-fuel hooks, the trade study, and
-`generate_f16a_physical.m`.
+(mass/materials/fuel), the cost and mission-fuel hooks, the three trade studies plus their runner,
+and `generate_f16a_physical.m`.
 
 ## The one rule that defines your layer
 
 **P is where technology is committed and where the decision is made.** A physical candidate is a
 concrete *parameterized* realization: it carries data, and every datum carries a `DataProvenance`
-tag. The trade study runs here, over candidates, and calls back into L to set the winning *kind*.
+tag. The trades run here, over candidates, and call back into L to set the winning *kind*.
 L presents options; P decides.
+
+## One trade, one file, one stereotype (D-056)
+
+`F16A{Engine,Airframe,FlightControls}TradeStudy.m` are **standalone by design** and
+`F16APhysicalTradeStudy.m` only runs all three. Two rules follow, and both are load-bearing:
+
+- **Do not factor the duplication out.** Roughly forty lines of readers, quoting helpers and
+  write-back mechanics are repeated three times on purpose. A student following the engine trade
+  must never have to open a second file to see what a step does; correct-but-impenetrable code is a
+  defect in a teaching example. The same goes for the inline `if`/`error` guards — they replaced a
+  shared guard class and are not going back into one.
+- **A trade asks only for the numbers its own decision turns on.** Each stereotype declares exactly
+  its six properties, and `testCandidateStereotypesDeclared` pins the set *both ways*. Adding a
+  property "for symmetry" fails the suite, and should.
+
+Each script must stay readable as six printed steps — open, read, score, decide, write back, save —
+and must print every number it reads and computes, so the ranked table can be recomputed by hand.
+Re-running any of them must stay idempotent (the `" || "` rationale sentinel, links rebuilt not
+appended).
 
 Corollary: **every physical part must be able to answer "why do I exist?"** via its `Rationale`
 stereotype — including the parts that realize no logical role (`Electrical`, `Hydraulics`, `ECS`,
@@ -35,9 +54,14 @@ stereotype — including the parts that realize no logical role (`Electrical`, `
 - Available internal fuel ≈ 6300 lb; fuel tanks carry **zero** dry mass on purpose.
 - OEW and unit cost are **Measures of Merit to minimize**, never pass/fail thresholds. Unit cost
   ≈ **$68.47M**, from `F16APhysicalCostModel` (DAPCA IV via `BrandtCost`, D-043) — it must run after
-  the mass roll-up, since it prices this model's OEW. Candidate `UnitCost_USD` stays `NaN`, so cost
-  is still out of trade scoring.
+  the mass roll-up, since it prices this model's OEW. No candidate declares a cost at all (D-056),
+  so cost is out of trade scoring permanently.
 - Mass roll-up is the native `instantiate`/`iterate` postorder analysis (the `ex2` pattern).
+- The trades select `F100_PW_200` (0.95625), `BlendedCrankedDelta` (0.91250) and `FlyByWire`
+  (0.85625) — the production configuration. A change that moves a winner has broken the example.
+- **The engine run warns on every execution and is meant to**: `TwinEngine_Surrogate` scores
+  `v(Thrust_SL_lb) = 1.346`, above the ceiling the bounded criteria cap at. D-035 decided to warn
+  rather than cap or error; a test asserts the breach stays present. Do not silence it.
 
 ## Variant/candidate mechanics (measured, R2026a)
 

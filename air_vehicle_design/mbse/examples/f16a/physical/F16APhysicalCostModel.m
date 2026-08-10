@@ -39,7 +39,7 @@ inp = costObj.inp;                         % the same JSON the reference is buil
 % --- Cross-check: is this still the aeroplane those constants price? ------
 % Checked FIRST, because it needs no OEW and it is the precondition the
 % generator wants answered before it saves anything. Post-D-053 the winning
-% engine carries its own T_SL_lb, so the architecture can be asked whether it
+% engine carries its own Thrust_SL_lb, so the architecture can be asked whether it
 % still matches the reference. The DAPCA constants describe the REFERENCE
 % aircraft; if the trade ever selects a different engine they stop applying,
 % and that fails loudly instead of quietly pricing the wrong aeroplane.
@@ -133,17 +133,19 @@ end
 % =====================================================================
 function [T, name] = activeEngineThrust(m, profileName)
 %ACTIVEENGINETHRUST Installed thrust of the engine the trade selected.
-%   Reads T_SL_lb off the ACTIVE choice of the Engine variant -- getActiveChoice,
-%   never getChoices, for the reason every walk in physical/ uses it.
+%   Reads Thrust_SL_lb off the ACTIVE choice of the Engine variant --
+%   getActiveChoice, never getChoices, for the reason every walk in physical/
+%   uses it. The property lives on EngineCandidate, the engine trade's own
+%   stereotype (D-056); no other candidate in the model declares a thrust.
 eng = lookup(m, Path='F16A_Physical/Aircraft/Propulsion/Engine');
 if isa(eng, "systemcomposer.arch.VariantComponent")
     eng = getActiveChoice(eng);
 end
 name = string(eng.Name);
-T = str2double(string(getProperty(eng, char(profileName + ".TradeCandidate.T_SL_lb"))));
+T = str2double(string(getProperty(eng, char(profileName + ".EngineCandidate.Thrust_SL_lb"))));
 if ~isfinite(T) || T <= 0
     error("F16APhysicalCostModel:noThrust", ...
-        "The active engine %s carries T_SL_lb = %s. The cost model prices an " + ...
+        "The active engine %s carries Thrust_SL_lb = %s. The cost model prices an " + ...
         "engine it can measure.", name, string(num2str(T)));
 end
 end

@@ -140,16 +140,17 @@ set-based discipline described in [`06_methodology.md`](06_methodology.md).
 `F16A_LogicalOptions.xml` declares exactly one stereotype, `SolutionOption`, applied to the six
 **choices** — never to the variant role, which is not an option and has nothing to select.
 
-| Property | Profile default (what L leaves) | After the physical trade study |
+| Property | Profile default (what L leaves) | After the physical trade studies |
 |----------|---------------------|-----------|
 | `Selected` | `false` on all six kinds | `true` on one kind per role |
 | `DecisionRef` | `'TBD'` on all six | the decision requirement id, on **every** kind of the role — winner *and* loser (D-027) |
 
 That is the whole stereotype: **whether** a kind was selected, and **where** the decision is written
-down. There is no `Mass_lb`, `UnitCost_USD`, `TRL` or `Benefit` anywhere at L — not on a kind and not
-declared in the profile. `testKindsCarryNoTradeNumerics` enforces both halves, and the profile half
-is load-bearing: it fails if somebody re-adds `Mass_lb` to the L profile *even before any component
-applies it*.
+down. There is no `Mass_lb`, `TRL`, thrust or benefit anywhere at L — not on a kind and not declared
+in the profile. `testKindsCarryNoTradeNumerics` enforces both halves, and the profile half is
+load-bearing: it fails if somebody re-adds `Mass_lb` to the L profile *even before any component
+applies it*. It sweeps for the retired `TradeCandidate` name as well as the three current candidate
+stereotypes, because a name that stops being guarded silently exempts whatever takes it next.
 
 **The active choice the generator sets is a placeholder, not a decision.** A variant needs exactly
 one active choice to be valid, so the generator sets one — literally the first name in the list. The
@@ -159,9 +160,10 @@ one of its own; it deliberately does not assert *which*.
 
 ### How the decision comes back
 
-`F16APhysicalTradeStudy` parameterizes the concrete candidates behind each kind, scores them, and
-writes the outcome **back into this model** — a deliberate, documented cross-layer write, the one
-exception to layer independence, touching only this model's own link set and stereotype values:
+Each of the three physical trade studies — `F16A{Engine,Airframe,FlightControls}TradeStudy` — scores
+the concrete candidates behind its role's kinds and writes the outcome **back into this model**: a
+deliberate, documented cross-layer write, the one exception to layer independence, touching only this
+model's own link set and stereotype values:
 
 1. sets the **active variant choice** to the winning kind;
 2. sets `Selected` true on that kind, false on its sibling;
@@ -238,7 +240,7 @@ candidates and the same rows win. A reader who takes "that is what really happen
 reason has put back the premise the requirement rewrite removed.
 
 **The converse trap is the more tempting one.** That independence does *not* make the result evidence
-about aeroplanes. The `Estimate` masses and the `Benefit`/`TRL` judgements were chosen by someone who
+about aeroplanes. The `Estimate` masses and the benefit and `TRL` judgements were chosen by someone who
 knew the answer, so the exercise is **retrodictive**: it demonstrates the machinery, the arithmetic
 and the audit trail, and establishes nothing about the F-16A.
 [`06_methodology.md`](06_methodology.md) gives the full accounting, including the uncomfortable one —

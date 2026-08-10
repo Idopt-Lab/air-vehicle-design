@@ -35,7 +35,8 @@ were compared.
 ### D-005 · Cost stays NaN and is excluded from scoring
 `UnitCost_USD` is `NaN` on candidates and on the aircraft MoM, and drops out of the weighted score.
 **Why** Inventing cost figures teaches the wrong lesson; a visible `NaN` is an honest "pending".
-*Partly superseded by **D-043** — the aircraft MoM gets a real cost; the candidates never do.*
+*Partly superseded by **D-043** — the aircraft MoM gets a real cost; the candidates never do — and
+then by **D-056**, which stopped declaring the property on a candidate at all.*
 
 ### D-006 · Every physical part carries a queryable Rationale
 `Rationale { SourceKind, Justification, TraceRef }` on every component that can carry a stereotype.
@@ -84,15 +85,29 @@ See [`08_agent_team.md`](08_agent_team.md).
 **Why** Min–max is degenerate at n = 2 (every criterion normalizes to {0,1}, so a score is just the sum
 of the weights won) and set-dependent — adding a candidate silently rescores the others.
 
-| Criterion | Value function | Declared scale |
-|---|---|---|
-| `Benefit` | `v = B / 10` | 1–10 (0 = unset, D-033) |
-| `TRL` | `v = (TRL − 1) / 8` | 1–9 |
-| `Mass_lb` | `v = M_baseline / M` | ratio to the role's Brandt baseline |
-| `UnitCost_USD` | — | `NaN`, dropped (D-005, D-026) |
+Since D-056 each trade declares its own criteria and its own weights, summing to 1 with nothing
+dropped at run time:
 
-Baselines are `Reference` Brandt figures: Propulsion 4730.23 lb, Airframe 6722.88 lb, FlightControls
-472.44 lb. Applied weights `0.50 / 0.25 / 0.25`, derived at run time by D-026.
+| Trade | Criterion | Value function | Declared scale | Weight |
+|---|---|---|---|---:|
+| Engine | `Thrust_SL_lb` | `v = T / T_baseline` | ratio to the role's Brandt baseline | 0.30 |
+| | `Mass_lb` | `v = M_baseline / M` | ratio to the role's Brandt baseline | 0.35 |
+| | `TRL` | `v = (TRL − 1) / 8` | 1–9 (0 = unset, D-021) | 0.35 |
+| Airframe | `AeroBenefit` | `v = B / 10` | 1–10 (0 = unset, D-033) | 0.50 |
+| | `Mass_lb` | `v = M_baseline / M` | ratio to the role's Brandt baseline | 0.25 |
+| | `TRL` | `v = (TRL − 1) / 8` | 1–9 | 0.25 |
+| Flight controls | `HandlingBenefit` | `v = B / 10` | 1–10 | 0.50 |
+| | `Mass_lb` | `v = M_baseline / M` | ratio to the role's Brandt baseline | 0.25 |
+| | `TRL` | `v = (TRL − 1) / 8` | 1–9 | 0.25 |
+
+Mass baselines are `Reference` Brandt figures: Propulsion 4730.23 lb, Airframe 6722.88 lb,
+FlightControls 472.44 lb. The engine's thrust baseline is the F100's 23,770 lbf. Winners:
+`F100_PW_200` 0.95625, `BlendedCrankedDelta` 0.91250, `FlyByWire` 0.85625.
+
+**Superseded reading:** until D-056 all three roles shared one criteria set — `Benefit` 0.40, `TRL`
+0.20, `Mass_lb` 0.20, `UnitCost_USD` 0.20 — with cost dropped for want of values and the rest
+renormalized at run time to `0.50 / 0.25 / 0.25` by D-026. The airframe and flight-control scores are
+unchanged by the rewrite, because their declared weights now equal what the renormalization produced.
 
 ### D-016 · Variation points are decided independently (acknowledged simplification)
 Three binary kinds form a 2×2×2 box; the example evaluates three independent pairs, not 8 combinations.
@@ -137,11 +152,16 @@ A role is realized by the candidates that could fill it, not by the variant wrap
 teaching moment moves from `Airframe` to `PropulsionSystem` (3 engine candidates + the shared inlet).
 
 ### D-025 · `DataProvenance` qualifies the mass, not the judgement
-A candidate carries one tag and it qualifies its **`Mass_lb`**. `Benefit` and `TRL` are judgement on a
-declared scale even on a `Reference` candidate. **Why** Otherwise `Reference` on `F100_PW_200` would
-imply its Benefit of 8.2 came from Brandt. Overclaiming provenance is what D-007 exists to prevent.
+A candidate carries one tag and it qualifies its **`Mass_lb`**. The benefit criteria and `TRL` are
+judgement on a declared scale even on a `Reference` candidate. **Why** Otherwise `Reference` on
+`BlendedCrankedDelta` would imply its `AeroBenefit` of 9.5 came from Brandt. Overclaiming provenance
+is what D-007 exists to prevent. *(The F100's tag is the one case where more than the mass is
+sourced — its `Thrust_SL_lb` is `Reference` too — which is a fact about that candidate, not a
+loosening of the rule.)*
 
 ### D-026 · Dropping a criterion is a general rule, not a cost special case
+*Superseded by D-056: no criterion is empty any more, so nothing is dropped and each trade declares
+weights that already sum to 1. The rule below described the behaviour until then.*
 The trade drops **any** criterion no candidate of a role carries a value for, and renormalizes.
 `0.40/0.20/0.20/0.20` → `0.50/0.25/0.25`. Cost falls out of that rule; it is not named as a special
 case. **The trigger for cost re-entering is that the candidates carry a cost — not that a cost model
@@ -175,12 +195,13 @@ is what D-007 and house rule 1 point at; a new invented number is added here.
 | 700 lb | `HydroMechanical` | `Mass_lb` | Estimate | A conventional control system for this class, assumed heavier than the fly-by-wire group |
 | 0.12 | `ConventionalTrapWing` | `CompositeFraction` | Estimate | Aluminium-dominant conventional airframe |
 | 0.15 / 0.10 / 0.55 / 0.70 / 0.05 / 0.50 | Wing / Fuselage / HorizTail / VertTail / Nacelles / Strakes | `CompositeFraction` | Estimate | Grounded in real F-16 composite usage — **and tuned so the mass-weighted fraction lands just inside `REQ_F16A_022`'s 20% cap.** Numbers chosen to make a requirement pass must not look sourced |
-| 9.5 / 6.5 · 9.0 / 6.0 · 8.2 / 8.6 / 7.8 | the 7 candidates | `Benefit` | judgement (D-025) | Declared 1–10 scale. The relative ordering carries the teaching; the absolute values carry nothing |
-| 7 / 8 · 6 / 9 · 8 / 4 / 6 | the 7 candidates | `TRL` | judgement (D-025) | Declared 1–9 scale. F110's 4 encodes "not available in the F-16A timeframe" — the fact that decides the engine trade |
+| 9.5 / 6.5 | the 2 airframes | `AeroBenefit` | judgement (D-025) | Declared 1–10 scale. The relative ordering carries the teaching; the absolute values carry nothing |
+| 9.0 / 6.0 | the 2 control systems | `HandlingBenefit` | judgement (D-025) | As above, asking a different question — handling qualities and control authority, not aerodynamics |
+| 7 / 8 · 6 / 9 · 8 / 4 / 6 | the 7 candidates | `TRL` | judgement (D-025) | Declared 1–9 scale. The low-thrust surrogate's 4 encodes an immaturity chosen so the mature candidate wins |
 | 3 × 2100 lb | the fuel tanks | `FuelCapacity_lb` | Estimate | D-023: Brandt's figure is 6296.30 lb (`Wt!B6`) |
 | −6 %MAC | `REQ_F16A_025` | requirement floor — no stereotype, so no `DataProvenance` slot; tagged here instead | Estimate | Commonly repeated for the F-16's subsonic relaxed static stability, but **no source is cited** and `/sizing/` has no static-margin criterion. The band's upper end is a strict zero, which is a *definition* and is not inventoried (D-051) |
-| 18,500 lb | `LowThrustSingle_Surrogate` | `T_SL_lb` | Estimate | D-053. A hypothetical engine, not a real product. Chosen to sit visibly **below** what a 31,377 lb aeroplane needs, so the candidate reads as short on thrust without any ratio being computed |
-| 32,000 lb | `TwinEngine_Surrogate` | `T_SL_lb` | Estimate | D-053. Two hypothetical engines. Chosen to sit visibly **above** what is needed, so the twin's penalty is surplus capability carried at the heaviest installed mass of the three |
+| 18,500 lb | `LowThrustSingle_Surrogate` | `Thrust_SL_lb` | Estimate | D-053. A hypothetical engine, not a real product. Chosen to sit visibly **below** what a 31,377 lb aeroplane needs. Since D-056 it is also **scored**: `v = 0.778` |
+| 32,000 lb | `TwinEngine_Surrogate` | `Thrust_SL_lb` | Estimate | D-053. Two hypothetical engines. Chosen to sit visibly **above** what is needed, so the twin's penalty is surplus capability carried at the heaviest installed mass of the three. Since D-056 it is **scored** and is the one value in the model that breaches D-035's ceiling: `v = 1.346` |
 
 The two rows above supersede the reading of **every `F110_GE_100` row here**: that component is now
 `LowThrustSingle_Surrogate` (D-053) and no longer claims to be a real engine at all. Both figures are
@@ -193,22 +214,31 @@ statement about a real product:
   General Electric's programme — to *an immaturity chosen so the mature candidate wins the trade*.
   The trade outcome is unchanged; only what the number is a claim **about** has changed.
 
-`F100_PW_200`'s own `T_SL_lb` of 23,770 lb is **not** inventoried — it is `Reference`, from
+`F100_PW_200`'s own `Thrust_SL_lb` of 23,770 lb is **not** inventoried — it is `Reference`, from
 `f16a_geometry.json` `engine.T_AB_SLS_lb`.
 
-`Benefit` and `TRL` supply **0.75 of every trade score** and are unauditable in principle — they trace
-to nothing. That is exactly why they must be *recorded*, since they can never be *checked*.
+**D-056 removed three rows from this census**: the engine `Benefit` values 8.2 / 8.6 / 7.8. The
+engine trade scores thrust instead, so the engines carry no benefit rating at all and three invented
+numbers left the model.
+
+The judgement criteria are unauditable in principle — they trace to nothing — which is exactly why
+they must be *recorded*, since they can never be *checked*. Since D-056 the exposure differs by
+trade: **0.75 of the airframe and flight-control scores is judgement**, against **0.35 of the engine
+score**, whose other two criteria are `Reference` figures on the winner.
 
 ### D-031 · `Material` carries provenance too
 All seven composite fractions were invented numbers with no tag. `Material` gained `DataProvenance`.
 **Why** The provenance vocabulary is worth nothing if applied only where someone remembered.
 
 ### D-032 · The aircraft cost MoM defaults to NaN as well
-`MeasureOfMerit.UnitCost_USD` defaulted to `0` — the latent hole D-021 closed on `TradeCandidate`.
-A future path applying the stereotype without writing the property would ship `$0` as flyaway cost.
+`MeasureOfMerit.UnitCost_USD` defaulted to `0` — the latent hole D-021 closed on the candidate
+stereotype. A future path applying the stereotype without writing the property would ship `$0` as
+flyaway cost. It is now the **only** cost property in the P profile (D-056).
 
-### D-033 · `Benefit` is bounded at both ends, and its scale is 1–10
-Guards enforce `1 ≤ Benefit ≤ 10`; `0` is the "not set" sentinel, outside the scale, exactly as TRL's is.
+### D-033 · A benefit criterion is bounded at both ends, and its scale is 1–10
+The airframe and flight-control trades enforce `1 ≤ B ≤ 10` on `AeroBenefit` and `HandlingBenefit`;
+`0` is the "not set" sentinel, outside the scale, exactly as TRL's is. Before D-056 there was one
+shared `Benefit` and the rule applied to all seven candidates.
 **Why** `7.8` mistyped as `78` gives `v = 7.8` against a legitimate maximum of 1.0 — finite, so it slips
 past `isfinite`, and `TwinEngine_Surrogate` wins, flipping the L active kind and Implement-linking
 `REQ_F16A_L01` from the wrong kind. A dropped decimal point could propagate a wrong decision into
@@ -343,14 +373,15 @@ is the state a real programme lives in, and nothing else here shows it. Wiring i
 ### D-043 · Cost is a whole-aircraft Measure of Merit only; it never enters the trade
 `F16APhysicalCostModel` gets a real DAPCA-IV implementation following
 `sizing/VnV/BrandtF16A/BrandtCost.m` and populates `MeasureOfMerit.UnitCost_USD` on `Aircraft`.
-`TradeCandidate.UnitCost_USD` stays `NaN` on all seven candidates, permanently.
+The candidates' `UnitCost_USD` stays `NaN` on all seven, permanently — *and D-056 drew the
+conclusion, removing the property from the candidate stereotypes altogether.*
 **Rejected** Per-candidate cost deltas — DAPCA IV has a defensible answer for "what does this aeroplane
 cost" and none for "what does this wing candidate cost".
 **Tag it `Simulation`, not `Reference`** — it is computed from *this* model's rolled-up OEW.
 `BrandtCost`'s ≈ $68.4M (quoted in `REQ_F16A_026`) is the cross-check, not the value.
 **Ordering** The generator computes cost in section 8 but the roll-ups run in section 9, so OEW does
-not exist yet — move the cost write after section 9. Applied trade weights stay `0.50/0.25/0.25`
-permanently.
+not exist yet — move the cost write after section 9. Applied trade weights stayed `0.50/0.25/0.25`
+until D-056 declared them per trade.
 
 **As built.** $68.4705M against `BrandtCost`'s ≈ $68.4M. The cross-check is sharper than a band: the
 residual is almost entirely the **3.12 lb OEW gap D-036 measured**, propagated through the
@@ -382,7 +413,7 @@ invariance check cannot pass vacuously. **When mission fuel is eventually comput
 placeholder is replaced and the O&M figures become real; the flyaway will not move.**
 
 **Cost is read from the model, cross-checked against the reference.** `Tmax` comes from the winning
-engine's `T_SL_lb` (D-053) rather than a second copy of the JSON figure, and the two are asserted
+engine's `Thrust_SL_lb` (D-053, D-056) rather than a second copy of the JSON figure, and the two are asserted
 equal: the DAPCA constants price the *reference* aircraft, so if the trade ever selected a different
 engine they would stop applying. That fails loudly instead of quietly pricing the wrong aeroplane —
 a limitation made visible rather than papered over.
@@ -524,10 +555,14 @@ about the real engines. Hedging the prose would have left a real manufacturer's 
 invented numbers, which is the same defect one layer down. A candidate whose figures are invented
 should not wear a name somebody can look up.
 
-**`T_SL_lb` is a declared property, not a criterion and not a screen.** The criteria stay `Benefit`,
-`TRL`, `Mass_lb`, `UnitCost_USD`; nothing is disqualified for a thrust shortfall and every score is
-unchanged — F100 0.87875, surrogate 0.75562, twin 0.73102, exactly as before. It is `NaN` on the four
-non-engine candidates, for D-021's reason: 0 is a number a reader could take seriously.
+**`T_SL_lb` was a declared property, not a criterion and not a screen — superseded by D-056.** As
+decided here, the criteria stayed `Benefit`, `TRL`, `Mass_lb`, `UnitCost_USD`; nothing was
+disqualified for a thrust shortfall, every score was unchanged, and the property was `NaN` on the
+four non-engine candidates for D-021's reason. D-056 gave the engine trade its own stereotype and its
+own criteria, and thrust — renamed `Thrust_SL_lb` — became one of them, scored as `v = T/T_baseline`
+with weight 0.30. The thrusts and their provenance are unchanged, no T/W ratio is computed anywhere,
+and the F100 still wins; only "nothing scores on it" is retired. It is no longer `NaN` on a
+non-engine either, because a non-engine stereotype does not declare it.
 
 **No T/W ratio is computed anywhere** — not in the model, not in a test, not in the docs, and no
 thrust requirement was added at R. Adding one would mean editing a requirement generator, re-minting
@@ -633,4 +668,61 @@ which this change deliberately did not touch.
 `resources/project/`. Repaired in a live session: `removeFile` the stale paths, `addPath` the new
 folder — without it `runtests("F16A…")` stops resolving by name after `openProject` — then `addFile`
 the new ones. The project's `test` classification label was defined but unused; the five suites now
-carry it.
+carry it. *`F16APhysicalTradeGuardsTest` was retired by D-056; four suites remain.*
+
+### D-056 · One trade, one file, one stereotype
+
+**Decided.** `F16APhysicalTradeStudy.m` — 774 lines deciding three unrelated questions at once —
+splits into `F16AEngineTradeStudy.m`, `F16AAirframeTradeStudy.m` and
+`F16AFlightControlsTradeStudy.m`, each standalone and each printing its six steps as it runs. The old
+name survives as a fifteen-line runner. `TradeCandidate` splits into `EngineCandidate`,
+`AirframeCandidate` and `FlightControlCandidate`. `F16APhysicalTradeGuards.m` and its test suite are
+retired; each trade checks its own parameters inline.
+
+**Why the file split.** Correct-but-impenetrable code is a defect in a teaching example. A student
+asked to follow "how does a trade study read a model, decide, and write the decision back?" met a
+recursive stereotype walk, a criteria struct of function handles, a rival-relative decisiveness
+calculation and a sentinel-based idempotent string rewrite — all correct, none of it legible in one
+pass, and none of it separable from the other two trades sharing the file. Each script now names its
+own variant path, role and requirement in four lines at the top and runs straight down. The
+duplication between the three (roughly forty lines of readers and quoting helpers) is the price, paid
+deliberately: a reader following the engine trade should never have to open another file.
+
+**Why three stereotypes.** One `TradeCandidate` asked an engine and a wing for the same numbers, and
+the model showed what that costs — `T_SL_lb` sat on all seven candidates and was `NaN` on four, and
+`UnitCost_USD` sat on all seven and was `NaN` on all of them, permanently (D-043). Two columns that
+existed to be blank. A trade should ask for the numbers its own decision turns on: the engine trade
+asks for thrust, the airframe trade for aerodynamic merit, the flight-control trade for handling
+qualities. `testCandidateStereotypesDeclared` pins each property set **both ways**, so re-adding a
+shared column fails rather than passing by omission.
+
+**No number was invented, and three left.** `Thrust_SL_lb` is D-053's `T_SL_lb` renamed and now
+scored; `AeroBenefit` and `HandlingBenefit` are the old `Benefit` under names that say what they
+judge. The three engine `Benefit` values (8.2 / 8.6 / 7.8) are **deleted** — D-030's census lost
+three rows, and the engine trade is now scored on two `Reference` figures plus a TRL judgement, the
+best-sourced of the three.
+
+**What moved and what did not.** Airframe 0.91250 and FlyByWire 0.85625 are unchanged to the last
+digit: their declared weights (0.50 / 0.25 / 0.25) equal what D-026's renormalization used to
+produce. The engine trade is rescored on thrust 0.30 / mass 0.35 / TRL 0.35, and `F100_PW_200` wins
+at 0.95625 against `TwinEngine_Surrogate` at 0.88130 — a *better* teaching story than the one it
+replaces, because the twin out-thrusts the F100 by 35% and still loses on maturity and installed
+mass. Winners, OEW 19,980.73 lb, composite 0.1928, fuel 6,300 lb and unit cost $68.47M are all
+unchanged.
+
+**D-035 stopped being theoretical.** The thrust ratio has no ceiling, so
+`TwinEngine_Surrogate` scores `v = 1.346` and every run now prints the "value above ceiling" warning
+that had never fired. Nothing is capped and nothing is rejected — that was D-035's decision and it
+stands — but the limit is now demonstrated rather than described, and
+`testRatioBaselineIsUniqueAndNothingBeatsIt` asserts the breach is still there.
+
+**What was given up.** The model-wide discovery walk, and with it the claim that the trade "discovers
+its candidates and does not know them". The guarantee survives in a simpler form: each script reads
+*every* choice of its one variant through `getChoices` and errors if any choice lacks the stereotype,
+so an option still cannot be silently dropped. Also given up: D-026's drop-and-renormalize
+demonstration, which had nothing left to demonstrate once the only permanently-empty column stopped
+being declared; and the guards-as-a-pure-class lesson from D-054, which assumed one contract for one
+class. Three trades scoring three different criteria do not have one.
+
+**The registry, again** (D-039, D-049, D-055). Two `removeFile`, three `addFile`,
+`runChecks(currentProject)` back to 12/12.

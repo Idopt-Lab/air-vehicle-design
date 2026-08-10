@@ -17,8 +17,9 @@ function generate_f16a_physical()
 %     3. Every part answers why it exists -- a Rationale stereotype makes "why
 %        is this here?" a queryable property rather than a comment (D-006).
 %     4. The decision is made HERE, over concrete candidates: section 7b runs
-%        F16APhysicalTradeStudy, which picks one candidate per role and calls
-%        back to set the winning KIND at L (D-001).
+%        the three trade studies -- one file and one stereotype each (D-056) --
+%        which pick one candidate per role and call back to set the winning
+%        KIND at L (D-001).
 %
 %   Only the candidate carrying the Brandt decomposition is decomposed (D-003).
 %   Active-path leaf masses are Brandt ground truth (W_TO = 31,377 lb) and sum
@@ -248,7 +249,8 @@ pit.addProperty("DataProvenance", Type="F16ADataProvenance", ...
 mom = profile.addStereotype("MeasureOfMerit", AppliesTo="Component");
 mom.addProperty("OEW_lb",       Type="double", DefaultValue="0");   % <- mass roll-up
 % UNITCOST_USD DEFAULTS TO NaN, NOT 0 (D-032) -- the same fail-safe rule D-021
-% applied to TradeCandidate, closed here on the aircraft-level Measure of Merit.
+% applied to the candidate stereotypes, closed here on the aircraft-level
+% Measure of Merit.
 % Section 9b overwrites it with the cost model's result, so the default is only
 % ever seen by a component that applies MeasureOfMerit without being priced --
 % which would otherwise ship $0 as a flyaway cost. $0 is not a neutral
@@ -286,53 +288,64 @@ rat.addProperty("SourceKind",    Type="F16ASourceKind", ...
     DefaultValue="F16ASourceKind.RealizesFunction");
 rat.addProperty("Justification", Type="string", DefaultValue="'TBD'");
 rat.addProperty("TraceRef",      Type="string", DefaultValue="'TBD'");
-% TradeCandidate: the parameterized data a physical candidate carries into the
-% trade study -- which role and kind it realizes, the numbers it is scored on,
-% where each number came from, and whether it won. Applied to the seven
-% candidates in section 6c.
+% ONE CANDIDATE STEREOTYPE PER TRADE (D-056). A trade asks for the numbers its
+% own decision turns on, so the engine trade asks for thrust and the airframe
+% trade is not asked for thrust at all. The three share the bookkeeping the
+% write-back needs -- the kind realized, mass, TRL, provenance, whether it won --
+% and differ in the one criterion that is theirs. Applied in section 6c.
 %
-% UNSET PARAMETERS MUST FAIL SAFE, NOT FAIL CHEAP (D-021). Three defaults here
-% look wrong on purpose:
-%   * UnitCost_USD defaults to NaN, not 0. Cost stays NaN on every CANDIDATE
-%     (D-043 gave only the aircraft a real one), and
-%     under a ratio value function a silent $0 is not neutral -- it is either a
-%     divide-by-zero or an infinitely good score. (DefaultValue="NaN" is
-%     accepted on a double property; probe-confirmed.)
-%   * TRL defaults to 0, which is OUTSIDE the valid 1..9 scale. int32 cannot
-%     hold NaN, so the next best thing is a value that cannot be mistaken for
-%     data: the trade study ERRORS on a candidate still carrying TRL 0 rather
-%     than scoring it. The previous default of 5 was an invented number that
-%     would have scored as a plausible mid-maturity candidate.
-%   * Benefit defaults to 0, which is likewise OUTSIDE its usable 1..10 scale
-%     and means "not set" (D-033). The trade study boxes Benefit at BOTH ends,
-%     as it does TRL: v = B/10 carries the heaviest weight in the score, so an
-%     out-of-range benefit is the one parameter a slipped decimal point can win
-%     a trade with, and it is finite so no isfinite check would catch it.
-tc = profile.addStereotype("TradeCandidate", AppliesTo="Component");
-tc.addProperty("RealizesRole",   Type="string",  DefaultValue="'TBD'");
-tc.addProperty("RealizesKind",   Type="string",  DefaultValue="'TBD'");
-tc.addProperty("Mass_lb",        Type="double",  DefaultValue="0");
-tc.addProperty("Benefit",        Type="double",  DefaultValue="0");     % <- outside 1..10 on purpose
-tc.addProperty("TRL",            Type="int32",   DefaultValue="0");     % <- outside 1..9 on purpose
-tc.addProperty("UnitCost_USD",   Type="double",  DefaultValue="NaN");   % <- D-005: cost is pending
-% T_SL_lb: sea-level static thrust, installed TOTAL for the candidate (a twin
-% carries both engines' thrust). It exists so the engine narratives can point at
-% a property instead of at nothing -- before it, two of them asserted things
-% about thrust that the model had no way to state.
+% There is no RealizesRole: the stereotype names the role. There is no
+% UnitCost_USD either -- it was NaN on all seven candidates permanently (D-043),
+% so it was a column that could never be scored (D-056).
 %
-% IT IS NOT A TRADE CRITERION AND NOT A SCREEN. The criteria stay Benefit, TRL,
-% Mass_lb and UnitCost_USD; nothing is disqualified for a thrust shortfall, and
-% the trade's arithmetic and outcome are unchanged by its presence. No T/W ratio
-% is computed anywhere in this repo -- the thrusts sit beside each other and the
-% Justification says what they mean, leaving the reader to do the division.
-%
-% NaN, not 0, for the same D-021 reason as cost: only the three engines carry a
-% thrust, and 0 on the airframe and flight-control candidates would be a number
-% somebody could take seriously rather than the "not applicable" it means.
-tc.addProperty("T_SL_lb",        Type="double",  DefaultValue="NaN");
-tc.addProperty("DataProvenance", Type="F16ADataProvenance", ...
+% UNSET PARAMETERS MUST FAIL SAFE, NOT FAIL CHEAP (D-021). Two defaults look
+% wrong on purpose, on all three stereotypes:
+%   * TRL defaults to 0, OUTSIDE the valid 1..9 scale. int32 cannot hold NaN, so
+%     the next best thing is a value that cannot be mistaken for data: the trade
+%     ERRORS on a candidate still carrying TRL 0 rather than scoring it.
+%   * The benefit properties default to 0, likewise OUTSIDE their 1..10 scale
+%     (D-033). v = B/10 carries the heaviest weight in the two trades that use
+%     one, so a slipped decimal point is the one parameter that can win a trade
+%     on its own -- and 78 typed for 7.8 is finite, so no isfinite check sees it.
+eng = profile.addStereotype("EngineCandidate", AppliesTo="Component");
+eng.addProperty("RealizesKind",  Type="string", DefaultValue="'TBD'");
+eng.addProperty("Mass_lb",       Type="double", DefaultValue="0");
+% Sea-level static thrust, installed TOTAL for the candidate (a twin carries both
+% engines'). This is the engine trade's OWN criterion, v = T/T_baseline -- and it
+% is the only value function in the three trades with no ceiling, so a candidate
+% out-thrusting the baseline scores above 1.0 and is warned about (D-035, D-056).
+% NaN, not 0, for the D-021 reason: an unset thrust must not read as an engine
+% that produces none.
+eng.addProperty("Thrust_SL_lb",  Type="double", DefaultValue="NaN");
+eng.addProperty("TRL",           Type="int32",  DefaultValue="0");    % <- outside 1..9 on purpose
+eng.addProperty("DataProvenance", Type="F16ADataProvenance", ...
     DefaultValue="F16ADataProvenance.Estimate");
-tc.addProperty("Selected",       Type="boolean", DefaultValue="false");
+eng.addProperty("Selected",      Type="boolean", DefaultValue="false");
+
+% AeroBenefit: aerodynamic and mission merit on a declared 1..10 scale. It is
+% engineering JUDGEMENT, on the Reference candidate too (D-025), which is why it
+% is a separate property from the mass it sits beside rather than a derived one.
+afc = profile.addStereotype("AirframeCandidate", AppliesTo="Component");
+afc.addProperty("RealizesKind",  Type="string", DefaultValue="'TBD'");
+afc.addProperty("Mass_lb",       Type="double", DefaultValue="0");
+afc.addProperty("AeroBenefit",   Type="double", DefaultValue="0");    % <- outside 1..10 on purpose
+afc.addProperty("TRL",           Type="int32",  DefaultValue="0");    % <- outside 1..9 on purpose
+afc.addProperty("DataProvenance", Type="F16ADataProvenance", ...
+    DefaultValue="F16ADataProvenance.Estimate");
+afc.addProperty("Selected",      Type="boolean", DefaultValue="false");
+
+% HandlingBenefit: handling qualities and control authority, same 1..10
+% judgement scale, different question. Naming it apart from AeroBenefit is the
+% point of the split -- a flight control system and a wing are not good in the
+% same way, and one shared "Benefit" column pretended they were.
+fcc = profile.addStereotype("FlightControlCandidate", AppliesTo="Component");
+fcc.addProperty("RealizesKind",    Type="string", DefaultValue="'TBD'");
+fcc.addProperty("Mass_lb",         Type="double", DefaultValue="0");
+fcc.addProperty("HandlingBenefit", Type="double", DefaultValue="0");  % <- outside 1..10 on purpose
+fcc.addProperty("TRL",             Type="int32",  DefaultValue="0");  % <- outside 1..9 on purpose
+fcc.addProperty("DataProvenance",  Type="F16ADataProvenance", ...
+    DefaultValue="F16ADataProvenance.Estimate");
+fcc.addProperty("Selected",        Type="boolean", DefaultValue="false");
 profile.save();
 relocate(profileName + ".xml", profFile, thisDir);
 
@@ -360,7 +373,7 @@ applyStereotypeToTree(ac, profileName + ".Rationale");
 % INTERIOR NODES ARE NOT LISTED. BlendedCrankedDelta is an interior node: its
 % PhysicalItem.Mass_lb stays at the default 0 and the roll-up writes its
 % subtotal (6722.88), exactly as Airframe did before this restructure. Do not
-% confuse that with its TradeCandidate.Mass_lb in section 6c, which is also
+% confuse that with its AirframeCandidate.Mass_lb in section 6c, which is also
 % 6722.88 but means something different -- that is the TRADED figure, the
 % number the candidate is scored on, and it is a property of the candidate as
 % an option rather than a rolled-up sum of parts. They agree here because the
@@ -618,11 +631,15 @@ end
 assertRationaleComplete(m.Architecture, profileName);
 
 % ---------------------------------------------------------------------
-% 6c) TradeCandidate: the parameters the trade study scores (D-002, D-007).
+% 6c) The candidate parameters each trade scores (D-002, D-007, D-056).
 %
 %   A logical option is a name; a physical candidate is a name PLUS numbers
 %   somebody could quote, measure or dispute -- each arriving with a provenance
 %   tag, so a sourced figure and a teaching guess cannot look alike.
+%
+%   THREE TABLES, NOT ONE, because there are three trades and they do not ask
+%   the same questions. Each table carries only its own trade's columns; there
+%   is no NaN standing in for "this criterion does not apply to me".
 %
 %   Three candidates are Reference (Brandt masses: Propulsion 4730.23, Airframe
 %   6722.88, FlightControls 472.44 lb). The other four are Estimate --
@@ -630,8 +647,8 @@ assertRationaleComplete(m.Architecture, profileName);
 %   restate the figures anywhere: a second list can disagree with the first.
 %
 %   READ THE TAG NARROWLY. One DataProvenance per candidate, and it qualifies
-%   the MASS. Benefit and TRL are engineering JUDGEMENT on a declared scale for
-%   every candidate including the Reference ones (D-025).
+%   the MASS. TRL and the two benefit columns are engineering JUDGEMENT on a
+%   declared scale for every candidate including the Reference ones (D-025).
 %
 %   MASS_LB HERE IS NOT PHYSICALITEM.MASS_LB. This is the TRADED figure, a
 %   property of the candidate as an OPTION; PhysicalItem.Mass_lb is what the
@@ -639,47 +656,73 @@ assertRationaleComplete(m.Architecture, profileName);
 %   leaf candidates. For BlendedCrankedDelta they differ in kind: 6722.88 as an
 %   option, 0 as an interior node whose subtotal the roll-up writes.
 %
-%   Note the NaN spelling: string(num2str(NaN)), never string(NaN) -- the
-%   latter is <missing> and setProperty rejects it.
-%
 %   SELECTED IS FALSE ON ALL SEVEN HERE, because nothing has been scored yet.
 %   Section 7b sets it from the score. Do not pre-select a winner to save a
 %   step -- the value of this file is that the model is defensible at every
 %   line of it, and a candidate selected before the trade is a decision with no
 %   arithmetic behind it.
-%
-%   T_SL_lb is NaN on the four non-engine candidates, which have no thrust; only
-%   F100_PW_200's is Reference (f16a_geometry.json engine.T_AB_SLS_lb = 23770,
-%   n_engines = 1). The other two engines are HYPOTHETICAL and their thrusts are
-%   invented -- see the Justification texts and D-053.
-%
-%   {path, RealizesRole, RealizesKind, Mass_lb, TRL, Benefit, DataProvenance, T_SL_lb}
 % ---------------------------------------------------------------------
-candRows = {
-    S+"Propulsion/Engine/F100_PW_200",                "PropulsionSystem", "SingleEngine",          4730.23, 8, 8.2, "F16ADataProvenance.Reference", 23770;
-    S+"Propulsion/Engine/LowThrustSingle_Surrogate",  "PropulsionSystem", "SingleEngine",          5100.00, 4, 8.6, "F16ADataProvenance.Estimate",  18500;
-    S+"Propulsion/Engine/TwinEngine_Surrogate",       "PropulsionSystem", "TwinEngine",            6400.00, 6, 7.8, "F16ADataProvenance.Estimate",  32000;
-    S+"Airframe/BlendedCrankedDelta",                 "Airframe",         "BlendedCrankedDelta",   6722.88, 7, 9.5, "F16ADataProvenance.Reference", NaN;
-    S+"Airframe/ConventionalTrapWing",                "Airframe",         "ConventionalTrapWing",  7300.00, 8, 6.5, "F16ADataProvenance.Estimate",  NaN;
-    S+"FlightControls/FlyByWire",                     "FlightControlSystem", "FlyByWire",           472.44, 6, 9.0, "F16ADataProvenance.Reference", NaN;
-    S+"FlightControls/HydroMechanical",               "FlightControlSystem", "HydroMechanical",     700.00, 9, 6.0, "F16ADataProvenance.Estimate",  NaN;
+
+% Engines. Only F100_PW_200's thrust is Reference (f16a_geometry.json
+% engine.T_AB_SLS_lb = 23770, n_engines = 1); the other two are declared
+% hypotheticals whose thrusts are invented (D-053, D-030). The engine trade
+% scores thrust, mass and TRL -- there is no benefit column here, because the
+% two figures that matter for an engine are ones the reference actually carries.
+%   {path, RealizesKind, Mass_lb, TRL, Thrust_SL_lb, DataProvenance}
+engineRows = {
+    S+"Propulsion/Engine/F100_PW_200",               "SingleEngine", 4730.23, 8, 23770, "F16ADataProvenance.Reference";
+    S+"Propulsion/Engine/LowThrustSingle_Surrogate", "SingleEngine", 5100.00, 4, 18500, "F16ADataProvenance.Estimate";
+    S+"Propulsion/Engine/TwinEngine_Surrogate",      "TwinEngine",   6400.00, 6, 32000, "F16ADataProvenance.Estimate";
 };
-for i = 1:size(candRows,1)
-    c = lookup(m, Path=char(candRows{i,1}));
-    applyStereotype(c, profileName + ".TradeCandidate");
-    setProperty(c, profileName + ".TradeCandidate.RealizesRole",   quoteLit(candRows{i,2}));
-    setProperty(c, profileName + ".TradeCandidate.RealizesKind",   quoteLit(candRows{i,3}));
-    setProperty(c, profileName + ".TradeCandidate.Mass_lb",        string(candRows{i,4}));
-    setProperty(c, profileName + ".TradeCandidate.TRL",            string(candRows{i,5}));
-    setProperty(c, profileName + ".TradeCandidate.Benefit",        string(candRows{i,6}));
-    setProperty(c, profileName + ".TradeCandidate.DataProvenance", candRows{i,7});
-    % num2str, not string(): string(NaN) is <missing> and setProperty rejects it.
-    setProperty(c, profileName + ".TradeCandidate.T_SL_lb",        string(num2str(candRows{i,8})));
-    % Cost: NaN via num2str -- string(NaN) is <missing> and setProperty rejects it.
-    setProperty(c, profileName + ".TradeCandidate.UnitCost_USD",   string(num2str(NaN)));
-    % Nothing has won yet; the trade study writes the winners.
-    setProperty(c, profileName + ".TradeCandidate.Selected",       "false");
+for i = 1:size(engineRows,1)
+    c = lookup(m, Path=char(engineRows{i,1}));
+    applyStereotype(c, profileName + ".EngineCandidate");
+    setProperty(c, profileName + ".EngineCandidate.RealizesKind",   quoteLit(engineRows{i,2}));
+    setProperty(c, profileName + ".EngineCandidate.Mass_lb",        string(engineRows{i,3}));
+    setProperty(c, profileName + ".EngineCandidate.TRL",            string(engineRows{i,4}));
+    setProperty(c, profileName + ".EngineCandidate.Thrust_SL_lb",   string(engineRows{i,5}));
+    setProperty(c, profileName + ".EngineCandidate.DataProvenance", engineRows{i,6});
+    setProperty(c, profileName + ".EngineCandidate.Selected",       "false");
 end
+
+% Airframes. AeroBenefit is a 1..10 judgement of aerodynamic and mission merit;
+% the blended cranked delta earns 9.5 for the vortex lift and transonic area
+% ruling the F-16 was built around, the trapezoidal wing 6.5 (D-030).
+%   {path, RealizesKind, Mass_lb, TRL, AeroBenefit, DataProvenance}
+airframeRows = {
+    S+"Airframe/BlendedCrankedDelta",  "BlendedCrankedDelta",  6722.88, 7, 9.5, "F16ADataProvenance.Reference";
+    S+"Airframe/ConventionalTrapWing", "ConventionalTrapWing", 7300.00, 8, 6.5, "F16ADataProvenance.Estimate";
+};
+for i = 1:size(airframeRows,1)
+    c = lookup(m, Path=char(airframeRows{i,1}));
+    applyStereotype(c, profileName + ".AirframeCandidate");
+    setProperty(c, profileName + ".AirframeCandidate.RealizesKind",   quoteLit(airframeRows{i,2}));
+    setProperty(c, profileName + ".AirframeCandidate.Mass_lb",        string(airframeRows{i,3}));
+    setProperty(c, profileName + ".AirframeCandidate.TRL",            string(airframeRows{i,4}));
+    setProperty(c, profileName + ".AirframeCandidate.AeroBenefit",    string(airframeRows{i,5}));
+    setProperty(c, profileName + ".AirframeCandidate.DataProvenance", airframeRows{i,6});
+    setProperty(c, profileName + ".AirframeCandidate.Selected",       "false");
+end
+
+% Flight controls. HandlingBenefit is the same 1..10 judgement scale asking a
+% different question: relaxed-static-stability handling and control authority,
+% which is where fly-by-wire earns 9.0 against the hydromechanical 6.0 (D-030).
+%   {path, RealizesKind, Mass_lb, TRL, HandlingBenefit, DataProvenance}
+fcsRows = {
+    S+"FlightControls/FlyByWire",       "FlyByWire",       472.44, 6, 9.0, "F16ADataProvenance.Reference";
+    S+"FlightControls/HydroMechanical", "HydroMechanical", 700.00, 9, 6.0, "F16ADataProvenance.Estimate";
+};
+for i = 1:size(fcsRows,1)
+    c = lookup(m, Path=char(fcsRows{i,1}));
+    applyStereotype(c, profileName + ".FlightControlCandidate");
+    setProperty(c, profileName + ".FlightControlCandidate.RealizesKind",    quoteLit(fcsRows{i,2}));
+    setProperty(c, profileName + ".FlightControlCandidate.Mass_lb",         string(fcsRows{i,3}));
+    setProperty(c, profileName + ".FlightControlCandidate.TRL",             string(fcsRows{i,4}));
+    setProperty(c, profileName + ".FlightControlCandidate.HandlingBenefit", string(fcsRows{i,5}));
+    setProperty(c, profileName + ".FlightControlCandidate.DataProvenance",  fcsRows{i,6});
+    setProperty(c, profileName + ".FlightControlCandidate.Selected",        "false");
+end
+nCand = size(engineRows,1) + size(airframeRows,1) + size(fcsRows,1);
 
 % Declare the two Measures of Merit on the Aircraft (Goal defaults to
 % "Minimize"; values filled later: OEW by the roll-up, UnitCost_USD by the
@@ -734,16 +777,17 @@ relocate(allocName + ".mldatx", allocFile, thisDir);
 % ---------------------------------------------------------------------
 % 7b) THE DECISION. Everything above builds the question; this makes the call.
 %
-%    F16APhysicalTradeStudy DISCOVERS the candidates section 6c parameterized
-%    (there is no candidate list in it), scores each role with D-015's declared
-%    value functions, and records the outcome in four places: the active
-%    variant choice and TradeCandidate.Selected at P, every candidate's
-%    Rationale at P, the active KIND plus SolutionOption.Selected/DecisionRef
-%    back at L, and an Implement link from each winning kind to REQ_F16A_L01..L03.
+%    F16APhysicalTradeStudy runs the THREE trade studies -- one file each, one
+%    stereotype each (D-056) -- over the candidates section 6c parameterized.
+%    Each scores its role with D-015's declared value functions and records the
+%    outcome in four places: the active variant choice and the candidate
+%    stereotype's Selected at P, every candidate's Rationale at P, the active
+%    KIND plus SolutionOption.Selected/DecisionRef back at L, and an Implement
+%    link from each winning kind to REQ_F16A_L01..L03.
 %
 %    WHY IT RUNS HERE:
-%      * AFTER 6c -- the trade reads TradeCandidate; no parameters, nothing to
-%        score.
+%      * AFTER 6c -- each trade reads its own candidate stereotype; no
+%        parameters, nothing to score.
 %      * AFTER 7 -- the allocation edges name the candidates. Allocate to
 %        concrete elements, then evaluate, is OOSEM's order (06_methodology.md).
 %      * BEFORE 9, and this is the one that matters. The roll-ups measure the
@@ -851,7 +895,8 @@ fuel    = F16APhysicalFuelRollup();
 %     than inventing a rate. Its mission argument is a placeholder -- run() wants
 %     one only for the O&M terms, which are discarded (D-042).
 %
-%     TradeCandidate.UnitCost_USD stays NaN on all seven, permanently (D-043).
+%     No candidate carries a cost at all: it was NaN on all seven permanently
+%     (D-043), so D-056 stopped declaring the property.
 % ---------------------------------------------------------------------
 unitCost = F16APhysicalCostModel(m);
 % num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
@@ -889,11 +934,11 @@ for i = 1:numel(tradedRoles)
     picks(i) = tradedRoles(i) + " -> " + T.Candidate(T.Rank == 1) + ...
         " (" + T.Kind(T.Rank == 1) + ", score " + sprintf("%.5f", T.Score(T.Rank == 1)) + ")";
 end
-fprintf("%d TradeCandidates parameterized across %d variation points and TRADED " + ...
+fprintf("%d candidates parameterized across %d variation points and TRADED " + ...
     "(section 7b): %s.\nThe active choice is now the trade's OUTPUT, not a " + ...
     "placeholder, and the roll-ups above measure it. The alternatives stay in the " + ...
     "model as the options that were rejected (D-002).\n", ...
-    size(candRows,1), numel(tradedRoles), strjoin(picks, "; "));
+    nCand, numel(tradedRoles), strjoin(picks, "; "));
 
 end
 
@@ -994,8 +1039,8 @@ function vc = addVariantRole(parentArch, roleName, choiceNames, activeName, port
 %   A variant needs one active choice to be a valid model, so one is set here.
 %   Between this line and section 7b it is a PLACEHOLDER, NOT A DECISION -- the
 %   same convention generate_f16a_logical.m uses for the kinds. What makes it a
-%   decision is TradeCandidate.Selected, the winner's Justification and the
-%   Implement link (D-040); the active flag merely follows.
+%   decision is the candidate stereotype's Selected, the winner's Justification
+%   and the Implement link (D-040); the active flag merely follows.
 %
 %   Kept API-compatible with the L generator's helper of the same name.
 %   R2026a specifics learned the hard way (same as L):

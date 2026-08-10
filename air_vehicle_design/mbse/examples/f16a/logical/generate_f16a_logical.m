@@ -183,11 +183,11 @@ try set_param(modelName, "SimulationCommand", "update"); catch, end %#ok<CTCH>
 
 % ---------------------------------------------------------------------
 % 6) Solution-option stereotype profile, applied to every kind.
-%    Deliberately minimal: a kind carries NO Mass_lb, NO UnitCost_USD, NO
-%    TRL and NO Benefit -- those are properties of a part, and a part exists
+%    Deliberately minimal: a kind carries NO mass, NO cost, NO TRL, NO thrust
+%    and NO benefit rating -- those are properties of a part, and a part exists
 %    only at P (docs/06_methodology.md). All this stereotype records is
 %    WHETHER a kind was selected and WHERE the decision is written down;
-%    both are left open here and filled in by F16APhysicalTradeStudy.
+%    both are left open here and filled in by the physical trade studies.
 %    Generated programmatically (no fragile hand-written XML), consistent
 %    with the repo's idempotent-generator philosophy.
 % ---------------------------------------------------------------------

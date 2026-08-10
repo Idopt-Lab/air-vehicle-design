@@ -13,8 +13,8 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
     %   It asserts NO weight or cost target (those are objectives, not
     %   thresholds), no illustrative parameter VALUE or trade score (ranges and
     %   orderings instead), and nothing about variant role wrappers, which
-    %   cannot carry a stereotype at all (D-013). Making the guards FIRE is
-    %   F16APhysicalTradeGuardsTest's job; this file pins their input contract.
+    %   cannot carry a stereotype at all (D-013). Since D-056 each trade script
+    %   carries its own guards inline, so this file pins the DATA they act on.
     %
     %   IT NEVER RUNS THE TRADE STUDY and calls the roll-ups with Persist=false:
     %   a test that mutated the artifact it checks would pass on a model the
@@ -83,9 +83,23 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             "TradeAlternative","TradeWinner"];
         DataProvenanceClass   = "F16ADataProvenance";
         DataProvenanceMembers = ["Datasheet","Estimate","Reference","Simulation"];
-        CandidateStereotype = "TradeCandidate";
-        CandidateProperties = ["Benefit","DataProvenance","Mass_lb", ...
-            "RealizesKind","RealizesRole","Selected","TRL","UnitCost_USD"];
+        % ONE CANDIDATE STEREOTYPE PER TRADE (D-056): {logical role, stereotype,
+        % the criterion that is that trade's OWN, every property it must
+        % declare}. There is no RealizesRole -- the stereotype names the role,
+        % which is what the Role column of candidateTable now reads. Fixing the
+        % property names here means a later generator cannot quietly invent a
+        % different parameter set for one of the three.
+        CandidateStereotypes = { ...
+            "Airframe",            "AirframeCandidate",      "AeroBenefit", ...
+                ["AeroBenefit","DataProvenance","Mass_lb","RealizesKind","Selected","TRL"]; ...
+            "PropulsionSystem",    "EngineCandidate",        "Thrust_SL_lb", ...
+                ["DataProvenance","Mass_lb","RealizesKind","Selected","Thrust_SL_lb","TRL"]; ...
+            "FlightControlSystem", "FlightControlCandidate", "HandlingBenefit", ...
+                ["DataProvenance","HandlingBenefit","Mass_lb","RealizesKind","Selected","TRL"]};
+        % The two trades whose own criterion is a 1..10 judgement. The engine
+        % trade scores installed thrust instead, so the benefit sweeps below
+        % must not be applied to it.
+        BenefitScoredRoles = ["Airframe","FlightControlSystem"];
 
         % {variant path under Aircraft, logical role realized, #candidates}.
         % The variant components carry NO stereotype (D-013); what they own is
@@ -95,7 +109,7 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             "Propulsion/Engine", "PropulsionSystem",    3; ...
             "FlightControls",    "FlightControlSystem", 2};
         % {candidate path, logical role, logical kind, expected DataProvenance}.
-        % No Mass/TRL/Benefit column: those are Estimates, so this file asserts
+        % No mass, TRL or merit column: those are Estimates, so this file asserts
         % their range and ordering, never their values. Role and kind ARE exact
         % -- they are structural claims that must resolve in the L model.
         CandidateRows = { ...
@@ -107,8 +121,9 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             "FlightControls/FlyByWire",                    "FlightControlSystem", "FlyByWire",            "Reference"; ...
             "FlightControls/HydroMechanical",              "FlightControlSystem", "HydroMechanical",      "Estimate"};
         % {engine path, sea-level static thrust, provenance}. Only one is a real
-        % engine (D-053); the other two are declared hypotheticals. T_SL_lb is a
-        % DECLARED PROPERTY, not a criterion and not a screen.
+        % engine (D-053); the other two are declared hypotheticals. Since D-056
+        % Thrust_SL_lb is the engine trade's OWN criterion, and no other
+        % candidate stereotype declares it.
         EngineThrustRows = { ...
             "Propulsion/Engine/F100_PW_200",               23770, "Reference"; ...
             "Propulsion/Engine/LowThrustSingle_Surrogate", 18500, "Estimate";  ...
@@ -121,10 +136,11 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         % is the defect this pair exists to keep out.
         SurrogateEngines = ["Propulsion/Engine/LowThrustSingle_Surrogate", ...
             "Propulsion/Engine/TwinEngine_Surrogate"];
-        % Scales taken FROM the guard that enforces them, never restated, so
-        % the test and the guard cannot drift apart.
-        TRLScale     = F16APhysicalTradeGuards.TRLScale;
-        BenefitScale = F16APhysicalTradeGuards.BenefitScale;
+        % The scales the three trade scripts check inline. Stated here as
+        % literals since D-056 retired the shared guard class: a test that
+        % imports the bound it is checking proves nothing about the bound.
+        TRLScale     = [1 9];
+        BenefitScale = [1 10];
         % Negative controls for both scales, judged by the SAME predicates the
         % candidate sweeps use -- so a scale quietly widened fails here.
         RejectedBenefits = [0, 78, 10.5, -1, NaN, Inf];
@@ -135,8 +151,9 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         % per role -- with none there is no scale, with two no answer.
         BaselineProvenance = "Reference";
         % How far above 1.0 a value function must land to count as exceeding
-        % the ceiling its declared scale implies (D-035). From the guard.
-        ValueCeilingTol = F16APhysicalTradeGuards.CeilingTol;
+        % the ceiling its declared scale implies (D-035). Same literal the three
+        % trade scripts use.
+        ValueCeilingTol = 1e-9;
         % Both accepted so this survives Stage 4, when the trade promotes three
         % of the seven from TradeAlternative to TradeWinner.
         CandidateSourceKinds = ["TradeAlternative","TradeWinner"];
@@ -179,7 +196,8 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         ProvenanceExemptStereotypes = ["MeasureOfMerit","Rationale"];
         % Non-vacuity floor, asserted as a SUBSET of the computed required set
         % -- an equality would make the computed set decorative.
-        KnownValueBearingStereotypes = ["FuelTank","Material","PhysicalItem","TradeCandidate"];
+        KnownValueBearingStereotypes = ["AirframeCandidate","EngineCandidate", ...
+            "FlightControlCandidate","FuelTank","Material","PhysicalItem"];
         EstimateProvenance = "Estimate";
         % D-030's inventory as a CENSUS the model must match: {stereotype,
         % invented property, how many components carry it}. The count is pinned,
@@ -190,10 +208,11 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         % D-021 / D-032: a cost property must DECLARE NaN, not a number that
         % looks like data. Checked in the PROFILE, because the generator
         % overwrites the default every run and hides the hole from a value check.
+        % Only the aircraft's Measure of Merit is left: D-056 stopped declaring
+        % a cost on the candidates, which is the stronger form of the same rule.
         CostDefault    = "NaN";
-        CostProperties = { ...
-            "MeasureOfMerit", "UnitCost_USD"; ...
-            "TradeCandidate", "UnitCost_USD"};
+        CostProperties = {"MeasureOfMerit", "UnitCost_USD"};
+        CostPropertyName = "UnitCost_USD";
         % BrandtCost's own unit flyaway figure, as quoted in REQ_F16A_026 -- the
         % CROSS-CHECK, not the source. The 0.5% band: the two evaluate the same
         % DAPCA IV formulation on different empty weights (19,980.73 vs
@@ -385,40 +404,46 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         end
 
         function testEngineThrustIsDeclaredAndOnlyOneIsReal(testCase)
-            % D-053. Each engine states a thrust; the four non-engine candidates
-            % carry NaN -- not 0, which would be a number a reader could take
-            % seriously (D-021's rule, applied to thrust).
+            % D-053. Each engine states a thrust, and since D-056 that thrust is
+            % the engine trade's own criterion. The four non-engine candidates
+            % do not carry NaN thrust any more -- their stereotypes do not
+            % declare thrust at all, which is the stronger form of the same
+            % claim: a wing is not an engine with an unknown thrust.
             wrong = strings(1,0);
             for i = 1:size(testCase.EngineThrustRows,1)
                 rel = string(testCase.EngineThrustRows{i,1});
                 exp = testCase.EngineThrustRows{i,2};
                 t   = testCase.propNum(testCase.componentAt(testCase.AC + rel), ...
-                    testCase.Profile + ".TradeCandidate.T_SL_lb");
+                    testCase.Profile + ".EngineCandidate.Thrust_SL_lb");
                 if abs(t - exp) > 1e-6
                     wrong(end+1) = rel + " states " + t + ", expected " + exp; %#ok<AGROW>
                 end
             end
-            testCase.verifyNoOffenders(wrong, "T_SL_lb mismatch");
+            testCase.verifyNoOffenders(wrong, "Thrust_SL_lb mismatch");
             wrong = strings(1,0);
-            for rel = testCase.NonEngineCandidates
-                t = testCase.propNum(testCase.componentAt(testCase.AC + rel), ...
-                    testCase.Profile + ".TradeCandidate.T_SL_lb");
-                if ~isnan(t)
-                    wrong(end+1) = rel + " -> " + string(num2str(t)); %#ok<AGROW>
+            for i = 1:size(testCase.CandidateStereotypes,1)
+                stereo = string(testCase.CandidateStereotypes{i,2});
+                if stereo == "EngineCandidate"; continue; end
+                if ismember("Thrust_SL_lb", testCase.declaredPropertyNames(stereo))
+                    wrong(end+1) = stereo; %#ok<AGROW>
                 end
             end
-            testCase.verifyNoOffenders(wrong, "A non-engine must carry NaN thrust");
+            testCase.verifyNoOffenders(wrong, ...
+                "A non-engine candidate stereotype declares Thrust_SL_lb; only the engine " + ...
+                "trade has a thrust to score (D-056); offending stereotype");
         end
 
-        function testThrustDidNotBecomeATradeCriterion(testCase)
-            % T_SL_lb is a declared property, deliberately not a criterion and
-            % not a feasibility screen (D-053). Adding it would silently
-            % re-decide the propulsion trade -- the twin carries the MOST thrust
-            % and currently loses. Read from the criteria line the trade study
-            % WRITES into each rationale, so this checks the study that ran.
-            scored = strings(1,0);
-            for i = 1:size(testCase.EngineThrustRows,1)
-                rel  = string(testCase.EngineThrustRows{i,1});
+        function testEachTradeScoresOnlyItsOwnCriteria(testCase)
+            % The split made executable, read from the criteria line each trade
+            % script WRITES into every candidate's rationale -- so this checks
+            % the studies that actually ran, not the tables in this file.
+            % Thrust is the ENGINE trade's criterion (D-056) and must appear in
+            % no other; a benefit is the other two trades' and must not have
+            % crept back into the engine trade, where it would re-decide it.
+            wrong = strings(1,0);
+            for i = 1:size(testCase.CandidateRows,1)
+                rel  = string(testCase.CandidateRows{i,1});
+                role = string(testCase.CandidateRows{i,2});
                 crit = testCase.criteriaClauseOf(rel);
                 % strlength, not verifyNotEmpty: criteriaClauseOf returns the
                 % string SCALAR "" on no match, and isempty("") is false -- so
@@ -426,13 +451,21 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 testCase.assertGreaterThan(strlength(crit), 0, ...
                     rel + "'s rationale carries no 'Criteria (D-015):' clause, so this " + ...
                     "test would pass vacuously.");
-                if contains(crit, "T_SL")
-                    scored(end+1) = rel + " -> " + crit; %#ok<AGROW>
+                mine  = string(testCase.CandidateStereotypes{ ...
+                    strcmp(string(testCase.CandidateStereotypes(:,1)), role), 3});
+                theirs = setdiff(string(testCase.CandidateStereotypes(:,3)), mine);
+                if ~contains(crit, mine)
+                    wrong(end+1) = rel + " does not score on " + mine + " -> " + crit; %#ok<AGROW>
+                end
+                for other = reshape(theirs, 1, [])
+                    if contains(crit, other)
+                        wrong(end+1) = rel + " scores on " + other + " -> " + crit; %#ok<AGROW>
+                    end
                 end
             end
-            testCase.verifyNoOffenders(scored, ...
-                "T_SL_lb has entered the trade's criteria -- it is a declared property " + ...
-                "only, and the trade outcome must not move because it was added");
+            testCase.verifyNoOffenders(wrong, ...
+                "A trade scores a criterion belonging to a different trade, or has lost " + ...
+                "its own. Each trade asks for the numbers its decision turns on (D-056)");
         end
 
         function testSurrogateEnginesClaimNoRealHardware(testCase)
@@ -786,13 +819,15 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             % strings (D-011): with a string property "SuportingInfrastructure"
             % is a valid value and every downstream query quietly misses that
             % part. Checked in the PROFILE, so it holds even before Stage 3
-            % applies TradeCandidate to anything.
+            % applies a candidate stereotype to anything.
             testCase.verifyNotVacuous(testCase.profilesOf(), ...
                 "no profile resolved for the P model (expected " + testCase.Profile + ")");
             wrongType = strings(1,0);
             typed = { ...
                 testCase.RationaleStereotype, "SourceKind",      testCase.SourceKindClass; ...
-                testCase.CandidateStereotype, "DataProvenance",  testCase.DataProvenanceClass; ...
+                "EngineCandidate",            "DataProvenance",  testCase.DataProvenanceClass; ...
+                "AirframeCandidate",          "DataProvenance",  testCase.DataProvenanceClass; ...
+                "FlightControlCandidate",     "DataProvenance",  testCase.DataProvenanceClass; ...
                 "FuelTank",                   "DataProvenance",  testCase.DataProvenanceClass};
             for i = 1:size(typed,1)
                 actual = testCase.declaredPropertyType(string(typed{i,1}), string(typed{i,2}));
@@ -813,26 +848,37 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 "the four agreed members (D-007).");
         end
 
-        function testTradeCandidateStereotypeDeclared(testCase)
+        function testCandidateStereotypesDeclared(testCase)
             % Stage 2 DECLARES the trade vocabulary; Stage 3 populates it.
-            % Fixing the eight property names now means the Stage-3 generator
-            % cannot quietly invent a different parameter set. Deliberately NOT
-            % asserted: that anything CARRIES the stereotype.
+            % THREE stereotypes, one per trade (D-056), and each is pinned to
+            % its own property set BOTH ways: everything it must declare, and
+            % nothing beyond it. The second half is what keeps the split real --
+            % re-adding Benefit to EngineCandidate would otherwise pass. The old
+            % single-stereotype version could not express that at all.
+            % Deliberately NOT asserted: that anything CARRIES a stereotype.
             declared = testCase.profileStereotypeNames();
-            testCase.verifyTrue(ismember(testCase.CandidateStereotype, declared), ...
-                "The P profile must declare " + testCase.CandidateStereotype + ...
-                ", but declares: " + strjoin(declared, ", ") + ".");
-            testCase.verifyNoOffenders( ...
-                setdiff(testCase.CandidateProperties, ...
-                    testCase.declaredPropertyNames(testCase.CandidateStereotype)), ...
-                testCase.CandidateStereotype + " must declare all eight trade properties; missing");
+            for i = 1:size(testCase.CandidateStereotypes,1)
+                stereo   = string(testCase.CandidateStereotypes{i,2});
+                expected = testCase.CandidateStereotypes{i,4};
+                testCase.verifyTrue(ismember(stereo, declared), ...
+                    "The P profile must declare " + stereo + ", but declares: " + ...
+                    strjoin(declared, ", ") + ".");
+                found = testCase.declaredPropertyNames(stereo);
+                testCase.verifyNoOffenders(setdiff(expected, found), ...
+                    stereo + " must declare all " + numel(expected) + ...
+                    " of its trade properties; missing");
+                testCase.verifyNoOffenders(setdiff(found, expected), ...
+                    stereo + " declares a property its trade does not use. A trade asks " + ...
+                    "for the numbers its own decision turns on, which is the whole point " + ...
+                    "of the split (D-056); unexpected");
+            end
         end
 
         % ---------------- Stage 3: candidates and the active set ---------
 
         function testCandidatesCarryTradeParameters(testCase)
             % Each candidate is fully constituted BEFORE anything scores it:
-            % TradeCandidate applied, a role and kind that EXIST in the L model
+            % its own trade's stereotype applied, a kind that EXISTS in the L model
             % (a typo would silently drop it out of its role's trade), positive
             % mass and benefit, TRL in scale, the honest NaN cost, a provenance
             % tag. Ranges only -- values are Estimates, and the three Brandt
@@ -841,23 +887,30 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             testCase.verifyEqual(height(T), size(testCase.CandidateRows,1), ...
                 "The candidate table must cover all seven candidates.");
             testCase.verifyNoOffenders(T.Path(~T.Found), "Candidate not found in the model");
-            testCase.verifyNoOffenders(T.Path(~T.HasStereotype), "TradeCandidate not applied to");
+            testCase.verifyNoOffenders(T.Path(~T.HasStereotype), ...
+                "No candidate stereotype applied to (one per trade, D-056)");
             testCase.verifyNoOffenders(testCase.mismatches(T, "Role", "ExpectedRole"), ...
-                "RealizesRole mismatch (found -> expected)");
+                "The candidate carries the stereotype of a DIFFERENT trade, so it would " + ...
+                "be scored in the wrong one (role implied by stereotype -> expected)");
             testCase.verifyNoOffenders(T.Path(~T.RoleResolves) + " -> '" + T.Role(~T.RoleResolves) + "'", ...
-                "RealizesRole does not name a role that exists in the L model");
+                "The stereotype implies a role that does not exist in the L model");
             testCase.verifyNoOffenders(testCase.mismatches(T, "Kind", "ExpectedKind"), ...
                 "RealizesKind mismatch (found -> expected)");
             testCase.verifyNoOffenders(T.Path(~T.KindResolves) + " -> '" + T.Kind(~T.KindResolves) + "'", ...
                 "RealizesKind does not name a kind that exists under its role in the L model");
             testCase.verifyNoOffenders(T.Path(~(T.Mass_lb > 0)), ...
-                "TradeCandidate.Mass_lb must be positive on");
-            % Benefit is boxed at BOTH ends, matching the guard (D-033). "> 0"
-            % was weaker than the code it checks -- it admits 78, which is 7.8
-            % with a slipped decimal and enough to pick the wrong winner.
-            bad = ~arrayfun(@(b) testCase.onBenefitScale(b), T.Benefit);
-            testCase.verifyNoOffenders(T.Path(bad) + " -> " + T.Benefit(bad), ...
-                "TradeCandidate.Benefit outside the declared " + testCase.BenefitScale(1) + ...
+                "Mass_lb must be positive on");
+            % A benefit is boxed at BOTH ends (D-033). "> 0" would be weaker
+            % than the code it checks -- it admits 78, which is 7.8 with a
+            % slipped decimal and enough to pick the wrong winner. Applied only
+            % to the two trades that HAVE a benefit; the engine trade's own
+            % criterion is thrust, checked by its own test below.
+            isBen = ismember(T.ExpectedRole, testCase.BenefitScoredRoles);
+            testCase.verifyNotVacuous(T.Path(isBen), ...
+                "no candidate is scored on a 1..10 benefit, so the scale sweep is empty");
+            bad = isBen & ~arrayfun(@(b) testCase.onBenefitScale(b), T.Merit);
+            testCase.verifyNoOffenders(T.Path(bad) + " (" + T.MeritName(bad) + ") -> " + T.Merit(bad), ...
+                "A benefit criterion is outside the declared " + testCase.BenefitScale(1) + ...
                 ".." + testCase.BenefitScale(2) + " scale (D-033); an out-of-range value " + ...
                 "is FINITE and so invisible to every other check");
             % Range AND integrality, because the guard checks both and a test
@@ -882,11 +935,13 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 strjoin(testCase.CandidateSourceKinds, "/"));
         end
 
-        function testCostIsNaNOnCandidatesOnly(testCase)
-            % THE DISTINCTION D-043 DREW. The AIRCRAFT carries a real DAPCA IV
-            % flyaway cost; the seven CANDIDATES carry NaN and always will. Cost
-            % is priced for an airframe, not a part, and a per-candidate 0 would
-            % be an unbeatably good score under a ratio value function.
+        function testCostIsOnTheAircraftOnly(testCase)
+            % THE DISTINCTION D-043 DREW, closed by D-056. The AIRCRAFT carries a
+            % real DAPCA IV flyaway cost; no CANDIDATE carries one, and now none
+            % can -- the three candidate stereotypes do not declare the property
+            % at all. Cost is priced for an airframe, not a part, and a
+            % per-candidate 0 would be an unbeatably good score under a ratio
+            % value function.
             %
             % The DECLARED DEFAULT is checked first, because reading the value
             % alone is what let the last hole hide: MeasureOfMerit.UnitCost_USD
@@ -896,11 +951,17 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 "A cost property must DECLARE " + testCase.CostDefault + " as its " + ...
                 "default, not a number that reads as data (D-021, D-032); a value " + ...
                 "assertion cannot see this (stereotype.property -> declared default)");
-            T = testCase.candidateTable();
-            priced = ~isnan(T.UnitCost_USD);
-            testCase.verifyNoOffenders(T.Path(priced) + " -> " + T.UnitCost_USD(priced), ...
-                "A candidate carries a cost; DAPCA IV prices an AIRFRAME, not a part " + ...
-                "(D-043)");
+            declaresCost = strings(1,0);
+            for i = 1:size(testCase.CandidateStereotypes,1)
+                stereo = string(testCase.CandidateStereotypes{i,2});
+                if ismember(testCase.CostPropertyName, testCase.declaredPropertyNames(stereo))
+                    declaresCost(end+1) = stereo; %#ok<AGROW>
+                end
+            end
+            testCase.verifyNoOffenders(declaresCost, ...
+                "A candidate stereotype declares " + testCase.CostPropertyName + ". It " + ...
+                "could only ever be NaN (D-043), and a column that can never be scored " + ...
+                "is not a criterion -- D-056 stopped declaring it");
             % ... and the other half: the aircraft's is real. Asserted here as
             % well as in testCostMeasureOfMerit so "cost is NaN" can never
             % quietly become true everywhere again.
@@ -968,28 +1029,28 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             off = abs(T.Mass_lb - T.ModelledMass_lb) > 0.01;
             testCase.verifyNoOffenders( ...
                 T.Path(off) + " " + T.Mass_lb(off) + " -> " + T.ModelledMass_lb(off), ...
-                "TradeCandidate.Mass_lb disagrees with the mass the model actually " + ...
-                "carries (scored -> modelled)");
+                "The candidate's traded Mass_lb disagrees with the mass the model " + ...
+                "actually carries (scored -> modelled)");
         end
 
         function testCandidateOrderingMatchesTheIntendedLesson(testCase)
             % Relationships, not values. Two orderings carry D-015's teaching:
             % in every role the production candidate is the lightest, and the
-            % winning engine does NOT have the best Benefit. If a data revision
+            % winning engine does NOT have the most thrust. If a data revision
             % makes the winner best at everything, the example stops teaching a
             % trade-off.
             testCase.verifyNoOffenders(testCase.rolesWhereBrandtCandidateIsNotLightest(), ...
                 "The production candidate is not the lightest in this role; D-015 scores " + ...
                 "mass as a ratio to the Brandt baseline, so this changes which candidate " + ...
                 "the trade should pick");
-            best = testCase.highestBenefitPaths("PropulsionSystem");
+            best = testCase.highestMeritPaths("PropulsionSystem");
             testCase.verifyNotVacuous(best, ...
-                "no propulsion candidate has a readable Benefit");
+                "no propulsion candidate has a readable Thrust_SL_lb");
             testCase.verifyFalse( ...
                 ismember("Propulsion/Engine/" + testCase.BrandtEngine, best), ...
-                "The production engine now has the highest Benefit of its role. The " + ...
-                "engine trade is supposed to be won on maturity and installed mass " + ...
-                "DESPITE a mid-pack benefit (D-015).");
+                "The production engine now has the most thrust of its role. The engine " + ...
+                "trade is supposed to be won on maturity and installed mass DESPITE a " + ...
+                "thrust deficit against the twin (D-015, D-056).");
         end
 
         function testMaterialsRollupFollowsActiveAirframe(testCase)
@@ -1090,9 +1151,9 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 "A role must have exactly one selected candidate -- the trade picks one " + ...
                 "winner, and a re-run must clear the previous");
             testCase.verifyNoOffenders(d.Disagree, ...
-                "The trade's verdict (TradeCandidate.Selected) and the model's " + ...
-                "configuration (the active variant choice) disagree, so the decision was " + ...
-                "only half written");
+                "The trade's verdict (the candidate stereotype's Selected) and the " + ...
+                "model's configuration (the active variant choice) disagree, so the " + ...
+                "decision was only half written");
         end
 
         function testWinnersCarryTradeWinnerRationale(testCase)
@@ -1153,22 +1214,22 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 strjoin(sort(testCase.ExpectedWinners), ", ") + "}.");
         end
 
-        function testEngineTradeIsNotWonOnBenefit(testCase)
-            % D-015's lesson made executable: a weighted trade is not a beauty
-            % contest. The F100 wins with a MID-PACK benefit because it is the
-            % most mature and the lightest installed -- the only real trade-off
-            % this example demonstrates. Asserted in BOTH directions, because a
-            % data revision nudging the F100's benefit to the top would leave
-            % every other test green and quietly turn this into "the best
-            % candidate at everything wins".
+        function testEngineTradeIsNotWonOnThrust(testCase)
+            % D-015's lesson made executable: a weighted trade is not a contest
+            % of the headline number. The F100 wins while the twin out-thrusts
+            % it by 35%, because it is the most mature and the lightest
+            % installed -- the trade-off this example exists to demonstrate.
+            % Asserted in BOTH directions, because a data revision nudging the
+            % F100's thrust to the top would leave every other test green and
+            % quietly turn this into "the best candidate at everything wins".
             role   = "PropulsionSystem";
             winner = testCase.selectedPathInRole(role);
             testCase.verifyNumElements(winner, 1, ...
                 "Expected exactly one selected propulsion candidate; found " + ...
                 numel(winner) + ". Nothing below can be judged without one.");
-            testCase.verifyFalse(any(ismember(winner, testCase.highestBenefitPaths(role))), ...
-                "The winning engine now has the highest Benefit of its role, so there is " + ...
-                "no trade-off left to teach (D-015).");
+            testCase.verifyFalse(any(ismember(winner, testCase.highestMeritPaths(role))), ...
+                "The winning engine now has the most thrust of its role, so there is " + ...
+                "no trade-off left to teach (D-015, D-056).");
             testCase.verifyEqual(testCase.highestTRLPaths(role), winner, ...
                 "The winning engine must be the uniquely most mature candidate of its " + ...
                 "role -- TRL is one of the two criteria it wins on (D-015). Highest TRL: {" + ...
@@ -1182,7 +1243,7 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         function testOEWReflectsTheSelectedConfiguration(testCase)
             % The decision and the measurement tied together. Unlike
             % testOEWCountsOnlyTheActiveConfiguration, which walks the active
-            % CHOICE, this walk descends by TradeCandidate.Selected -- so the
+            % CHOICE, this walk descends by the candidate's Selected -- so the
             % number comes from the verdict rather than the configuration. They
             % agree only because the decision was written consistently, which is
             % the property worth measuring.
@@ -1275,9 +1336,9 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         % These three pin the guards' INPUT CONTRACT against the shipped model
         % -- the DATA half (somebody types 78, or adds a second Reference
         % candidate), which needs a loaded model, which is why it lives here.
-        % NONE OF THE GUARDS IS MADE TO FIRE. The CODE half is
-        % F16APhysicalTradeGuardsTest. The bounds are IMPORTED from the guard,
-        % so the two halves cannot check different numbers.
+        % NONE OF THE GUARDS IS MADE TO FIRE: since D-056 each trade script
+        % checks its own parameters inline, and making an inline check fire
+        % would mean running the trade, which this suite must not do.
 
         function testTradeParameterScalesRejectWhatTheyExistToReject(testCase)
             % The negative control for the range sweeps in
@@ -1315,11 +1376,18 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             % exactly as the trade study discovers it, so a retagged candidate
             % is caught.
             %
-            % SECOND, D-035's ceiling. A FAILURE OF THIS HALF IS NOT A BUG --
-            % D-035 chose to warn rather than cap or error, so this is a
-            % tripwire saying the known limit has gone from theoretical to
-            % armed. The honest response is the deferred bounded-value-function
-            % fix, not deleting the offending candidate.
+            % SECOND, D-035's ceiling, on the MASS ratio. A failure of this half
+            % is not a bug -- D-035 chose to warn rather than cap or error, so
+            % it is a tripwire saying the known limit has spread to a second
+            % criterion. The honest response is the deferred bounded-value-
+            % function fix, not deleting the offending candidate.
+            %
+            % THIRD, the same ceiling on the THRUST ratio, asserted the other
+            % way round: it must be BREACHED. Since D-056 the twin out-thrusts
+            % the baseline and scores v > 1, which is what turned D-035 from a
+            % dormant check into something the example actually demonstrates.
+            % If this ever goes quiet, the run stops warning and the lesson is
+            % gone with it.
             d = testCase.baselineDefects();
             testCase.verifyNotVacuous(d.Checked, ...
                 "no candidate was scored against a baseline");
@@ -1333,6 +1401,11 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 "longer describe relative influence (D-035). This is a KNOWN LIMIT, not a " + ...
                 "defect in the candidate: nothing is capped, the advantage is real, and " + ...
                 "D-035's deferred bounded-value-function fix now has a live case");
+            testCase.verifyNotVacuous(d.ThrustAboveCeiling, ...
+                "no engine out-thrusts the baseline, so T/T_baseline never exceeds 1.0 and " + ...
+                "D-035's ceiling warning cannot fire. The live demonstration of an " + ...
+                "unbounded ratio criterion is gone, and with it the reason the engine " + ...
+                "trade teaches anything (D-035, D-056)");
         end
 
         function testNoRoleHasTwoIdenticallyParameterizedCandidates(testCase)
@@ -1630,18 +1703,27 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             % Every trade parameter of every candidate, read once, in one place.
             % Each test then asks a single question of this table instead of
             % re-walking the model.
+            %
+            % ROLE IS DERIVED FROM THE STEREOTYPE THE CANDIDATE CARRIES, not
+            % from a property (D-056 retired RealizesRole). So a candidate given
+            % the wrong stereotype reports the wrong role and the Role vs
+            % ExpectedRole sweep catches it -- the same failure the old property
+            % mismatch caught, one layer earlier.
+            %
+            % MERIT is whatever criterion is that trade's own: AeroBenefit,
+            % HandlingBenefit or Thrust_SL_lb. MeritName says which, so a
+            % failure message names the property that was actually read.
             rows = testCase.CandidateRows;
             n = size(rows,1);
             Path = strings(n,1); ExpectedRole = strings(n,1);
             ExpectedKind = strings(n,1); ExpectedProvenance = strings(n,1);
             Found = false(n,1); HasStereotype = false(n,1);
-            Role = strings(n,1); Kind = strings(n,1);
+            Stereotype = strings(n,1); Role = strings(n,1); Kind = strings(n,1);
             RoleResolves = false(n,1); KindResolves = false(n,1);
-            Mass_lb = nan(n,1); Benefit = nan(n,1); TRL = nan(n,1);
-            UnitCost_USD = nan(n,1); DataProvenance = strings(n,1);
+            Mass_lb = nan(n,1); Merit = nan(n,1); MeritName = strings(n,1);
+            TRL = nan(n,1); DataProvenance = strings(n,1);
             Selected = false(n,1); SourceKind = strings(n,1);
             ModelledMass_lb = nan(n,1);
-            tc = testCase.Profile + "." + testCase.CandidateStereotype + ".";
             for i = 1:n
                 Path(i)               = string(rows{i,1});
                 ExpectedRole(i)       = string(rows{i,2});
@@ -1650,10 +1732,11 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 c = testCase.componentAt(testCase.AC + Path(i));
                 Found(i) = ~isempty(c);
                 if ~Found(i); continue; end
-                HasStereotype(i) = ismember(testCase.CandidateStereotype, ...
-                                            testCase.appliedStereotypes(c));
-                Role(i) = testCase.propText(c, tc + "RealizesRole");
-                Kind(i) = testCase.propText(c, tc + "RealizesKind");
+                [Stereotype(i), Role(i), MeritName(i)] = testCase.candidateStereotypeOf(c);
+                HasStereotype(i) = strlength(Stereotype(i)) > 0;
+                if ~HasStereotype(i); continue; end
+                st = testCase.Profile + "." + Stereotype(i) + ".";
+                Kind(i) = testCase.propText(c, st + "RealizesKind");
                 % Resolved against the L MODEL, not a list in this file: the
                 % claim "this realizes that kind" is only worth anything if the
                 % kind is still there under that role.
@@ -1661,21 +1744,38 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                                      testCase.LogicalPathPrefix + Role(i));
                 KindResolves(i) = testCase.pathResolves(testCase.LogiModel, ...
                                      testCase.LogicalPathPrefix + Role(i) + "/" + Kind(i));
-                Mass_lb(i)        = testCase.propNum(c, tc + "Mass_lb");
-                Benefit(i)        = testCase.propNum(c, tc + "Benefit");
-                TRL(i)            = testCase.propNum(c, tc + "TRL");
-                UnitCost_USD(i)   = testCase.propNum(c, tc + "UnitCost_USD");
-                DataProvenance(i) = testCase.propText(c, tc + "DataProvenance");
-                Selected(i)       = testCase.propBool(c, tc + "Selected");
+                Mass_lb(i)        = testCase.propNum(c, st + "Mass_lb");
+                Merit(i)          = testCase.propNum(c, st + MeritName(i));
+                TRL(i)            = testCase.propNum(c, st + "TRL");
+                DataProvenance(i) = testCase.propText(c, st + "DataProvenance");
+                Selected(i)       = testCase.propBool(c, st + "Selected");
                 SourceKind(i)     = testCase.rationaleText(c, "SourceKind");
                 % What the candidate would actually contribute to OEW: its own
                 % mass if lumped, the sum of its parts if decomposed.
                 ModelledMass_lb(i) = testCase.subtreeLeafMass(c, "all");
             end
             T = table(Path, ExpectedRole, ExpectedKind, ExpectedProvenance, Found, ...
-                HasStereotype, Role, Kind, RoleResolves, KindResolves, Mass_lb, ...
-                Benefit, TRL, UnitCost_USD, DataProvenance, Selected, SourceKind, ...
+                HasStereotype, Stereotype, Role, Kind, RoleResolves, KindResolves, ...
+                Mass_lb, Merit, MeritName, TRL, DataProvenance, Selected, SourceKind, ...
                 ModelledMass_lb);
+        end
+
+        function [stereo, role, meritName] = candidateStereotypeOf(testCase, comp)
+            % Which of the three candidate stereotypes COMP carries, and what
+            % that implies. Empty strings when it carries none, so a candidate
+            % the generator forgot to stereotype is reported rather than read
+            % against a property that does not exist.
+            stereo = ""; role = ""; meritName = "";
+            applied = testCase.appliedStereotypes(comp);
+            for i = 1:size(testCase.CandidateStereotypes,1)
+                name = string(testCase.CandidateStereotypes{i,2});
+                if ismember(name, applied)
+                    stereo    = name;
+                    role      = string(testCase.CandidateStereotypes{i,1});
+                    meritName = string(testCase.CandidateStereotypes{i,3});
+                    return
+                end
+            end
         end
 
         function s = leafMassSum(testCase, mode)
@@ -1683,7 +1783,7 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             % means at a variant:
             %   "active"   -- getActiveChoice: the aeroplane the model is
             %                 CONFIGURED as. What the roll-up measures.
-            %   "selected" -- TradeCandidate.Selected: the aeroplane the trade
+            %   "selected" -- the candidate's Selected: the aeroplane the trade
             %                 CHOSE, independent of the configuration.
             %   "all"      -- getChoices: what a walk that forgot about variants
             %                 would count. The D-012 failure mode, computed so
@@ -1777,12 +1877,14 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             end
         end
 
-        function paths = highestBenefitPaths(testCase, role)
-            % EMPTY when no benefit is readable, so a caller can tell "no" apart
-            % from "there is nothing to compare".
+        function paths = highestMeritPaths(testCase, role)
+            % Best on the criterion that is THIS trade's own -- thrust for the
+            % engines, a benefit for the other two. EMPTY when nothing is
+            % readable, so a caller can tell "no" apart from "there is nothing
+            % to compare".
             T = testCase.candidateTable();
             rows = T(T.ExpectedRole == string(role), :);
-            paths = rows.Path(rows.Benefit == max(rows.Benefit));
+            paths = rows.Path(rows.Merit == max(rows.Merit));
         end
 
         function refs = splitTraceRef(~, txt)
@@ -1932,15 +2034,19 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
         end
 
         function sel = selectedChoices(testCase, vc)
-            % The choices the trade SELECTED, read from TradeCandidate.Selected.
-            % Deliberately not getActiveChoice: this is the decision, not the
-            % configuration, and the whole value of the "selected" mass walk is
-            % that it can disagree with the active one.
+            % The choices the trade SELECTED, read from whichever candidate
+            % stereotype each choice carries. Deliberately not getActiveChoice:
+            % this is the decision, not the configuration, and the whole value
+            % of the "selected" mass walk is that it can disagree with the
+            % active one. A choice carrying no candidate stereotype counts as
+            % not selected, and is reported by testCandidatesCarryTradeParameters.
             choices = testCase.choicesOf(vc);
             keep = false(1, numel(choices));
-            qualified = testCase.Profile + "." + testCase.CandidateStereotype + ".Selected";
             for i = 1:numel(choices)
-                keep(i) = testCase.propBool(choices(i), qualified);
+                stereo = testCase.candidateStereotypeOf(choices(i));
+                if strlength(stereo) == 0; continue; end
+                keep(i) = testCase.propBool(choices(i), ...
+                    testCase.Profile + "." + stereo + ".Selected");
             end
             sel = choices(keep);
         end
@@ -2241,9 +2347,10 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
             % mass value function for every candidate against it. Checked
             % records every candidate actually scored, so the caller can prove
             % the sweep saw something.
-            d.NoUniqueBaseline = strings(1,0);
-            d.AboveCeiling     = strings(1,0);
-            d.Checked          = strings(1,0);
+            d.NoUniqueBaseline   = strings(1,0);
+            d.AboveCeiling       = strings(1,0);
+            d.ThrustAboveCeiling = strings(1,0);
+            d.Checked            = strings(1,0);
             T = testCase.candidateTable();
             for i = 1:size(testCase.VariantRows,1)
                 role = string(testCase.VariantRows{i,2});
@@ -2269,6 +2376,21 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                             "candidate = " + rows.Mass_lb(k) + " lb)";
                     end
                 end
+                % The engine trade's second ratio criterion, T/T_baseline. Same
+                % value function shape, same unbounded-above problem -- but this
+                % one is EXPECTED to breach, which is why it is collected apart
+                % from the mass breaches rather than mixed in with them.
+                if role ~= "PropulsionSystem"; continue; end
+                tBase = ref.Merit;
+                for k = 1:height(rows)
+                    v = rows.Merit(k) / tBase;
+                    if v > 1 + testCase.ValueCeilingTol
+                        d.ThrustAboveCeiling(end+1) = rows.Path(k) + " -> v = " + ...
+                            sprintf("%.4f", v) + " (baseline " + ...
+                            testCase.leafName(ref.Path) + " = " + tBase + " lbf, this " + ...
+                            "candidate = " + rows.Merit(k) + " lbf)";
+                    end
+                end
             end
         end
 
@@ -2284,15 +2406,17 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 rows = T(T.ExpectedRole == role, :);
                 for a = 1:height(rows)
                     for b = a+1:height(rows)
-                        same = abs(rows.Benefit(a) - rows.Benefit(b)) <= 1e-9 && ...
+                        % Merit is whichever criterion is this trade's own, so
+                        % the check follows the split without knowing about it.
+                        same = abs(rows.Merit(a)   - rows.Merit(b))   <= 1e-9 && ...
                                abs(rows.TRL(a)     - rows.TRL(b))     <= 1e-9 && ...
                                abs(rows.Mass_lb(a) - rows.Mass_lb(b)) <= 1e-9;
                         if same
                             dupes(end+1) = role + ": " + ...
                                 testCase.leafName(rows.Path(a)) + " and " + ...
-                                testCase.leafName(rows.Path(b)) + " both carry Benefit=" + ...
-                                rows.Benefit(a) + ", TRL=" + rows.TRL(a) + ", Mass_lb=" + ...
-                                rows.Mass_lb(a); %#ok<AGROW>
+                                testCase.leafName(rows.Path(b)) + " both carry " + ...
+                                rows.MeritName(a) + "=" + rows.Merit(a) + ", TRL=" + ...
+                                rows.TRL(a) + ", Mass_lb=" + rows.Mass_lb(a); %#ok<AGROW>
                         end
                     end
                 end

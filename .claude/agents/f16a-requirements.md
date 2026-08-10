@@ -40,7 +40,7 @@ findings) and `docs/01_requirements.md` + `docs/03_traceability.md`.
 |---|---|
 | `requirements/f16a.slreqx` | the originating requirements, `REQ_F16A_0xx` |
 | `requirements/f16a_derived.slreqx` | derived at F |
-| `requirements/f16a_logical_derived.slreqx` | `REQ_F16A_L01`–`L03`, the three decision requirements — Implement-linked by the **physical** trade study |
+| `requirements/f16a_logical_derived.slreqx` | `REQ_F16A_L01`–`L03`, the three decision requirements — each Implement-linked by the **physical** trade study that decides it (one per requirement, D-056) |
 | `requirements/f16a_physical_derived.slreqx` | `REQ_F16A_P0x`, derived at P |
 
 `tests_for_ai_coding/F16ARequirementsTest.m` asserts their ids, types, keywords and derive links.
