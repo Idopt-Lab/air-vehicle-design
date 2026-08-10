@@ -7,11 +7,13 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %   and the F-16's L2 constraint set (ConstraintAnalysis.from_requirements
 %   with the F-16 map F16ConstraintSet.constraint_map(), sharing this study's
 %   own aero/prop objects rather than a separate internal copy), then runs
-%   SizingLoopL2 to convergence. Unlike
-%   L1, S_ref is a fixed JSON input here, never solved for -- only T_SL
-%   updates each iteration, alongside re-sizing the tail and control
-%   surfaces via the separate, dependency-injected tail/ctrl objects built
-%   below (see TAIL SIZING further down this header).
+%   SizingLoopL2 to convergence. As of 2026-08-10 BOTH S_ref and T_SL are
+%   solved for each iteration, the same as at L1 (S_ref = W_TO/(W/S)_opt) --
+%   the JSON .geometry.wing.S_ft2 = 300 ft^2 is only F16GeomL2's starting
+%   value, no longer a frozen input. The tail and control surfaces are
+%   re-sized each iteration too, via the separate, dependency-injected
+%   tail/ctrl objects built below (see TAIL SIZING further down this
+%   header), and now genuinely change with S_ref.
 %
 %   [result, objs] = design_study_02_L2(...) additionally returns the
 %   handle objects (objs.aero/prop/wts/geom/miss/con) in their

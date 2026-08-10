@@ -99,28 +99,40 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
         % ================================================================ %
         % design_study_02_L2
         %
-        % FINDING (documented, not silently tightened away -- 2026-07-27):
+        % FINDING (documented, not silently tightened away -- 2026-07-27,
+        % NUMBERS REFRESHED 2026-08-10 when S_ref became a solved variable
+        % at L2/L3 -- see SizingLoopL2.m's header):
         % subplan 08's tolerance table expects W_TO in 27,000-37,000 lb
         % (+-15% of Brandt) and T_SL in 18,000-30,000 lbf (+-20% of
         % Brandt's 23,770). The ACTUAL converged L2 result is
-        % W_TO ~= 19,738 lb (-37.1% vs. Brandt) and T_SL ~= 13,668 lbf
-        % (-42.5% vs. Brandt) -- both below subplan 08's stated bands (the
-        % OPPOSITE direction from L1's +32% overshoot).
-        %   con.optimal_point() on F16ConstraintSet.build("L2") now gives
-        %   WS_opt=125.00 (matches the user's expected ~125 exactly, per
-        %   2026-07-27 correspondence -- confirms the concurrent Stall-
-        %   condition includeStall-default fix, made in a separate session
-        %   on tests/mission/TestMissionL2.m et al., also resolved L2's
-        %   constraint-analysis WS_opt) and TW_opt=0.6925 (reasonably close
-        %   to Brandt's 0.7576) -- so the constraint side is NOT the source
-        %   of this gap, unlike the earlier (now-fixed) L1/L2 WS_opt issue.
+        % W_TO ~= 23,076 lb (-26.5% vs. Brandt), T_SL ~= 20,086 lbf
+        % (-15.5% vs. Brandt, now INSIDE that band) and S_ref ~= 174.8 ft^2
+        % (-41.7% vs. Brandt's 300) -- W_TO still below subplan 08's stated
+        % band (the OPPOSITE direction from L1's +32% overshoot), though
+        % less so than the 19,738 lb / 13,668 lbf the loop gave while S_ref
+        % was frozen at 300 ft^2.
+        %   con.optimal_point() on F16ConstraintSet.build("L2") gives
+        %   WS_opt=132.00 psf, an interior point of the 20:7:160 sweep
+        %   (PointPerformanceBase.WS_RANGE_BRANDT), not a grid edge -- so
+        %   the solved S_ref is a real envelope optimum, not a sweep-limit
+        %   artifact. It was WS_opt=125.00 before the S_ref feedback path
+        %   existed (matching the user's expected ~125, per 2026-07-27
+        %   correspondence -- that confirmed the concurrent Stall-condition
+        %   includeStall-default fix, made in a separate session on
+        %   tests/mission/TestMissionL2.m et al.); the one-grid-point shift
+        %   is the smaller wing's own effect on CD0. So the constraint side
+        %   is NOT the source of the remaining W_TO gap, unlike the earlier
+        %   (now-fixed) L1/L2 WS_opt issue.
         %   Hand-evaluating the weight/mission closure directly (OEW(W_TO)
         %   + wts.W_payload_fixed + wts.W_payload_expendable +
-        %   compute_fuel(...)) confirms W_TO~=19,738 is a genuine fixed
-        %   point of the already-built F16WeightsL2/F16MissionL2 models
-        %   (implied OEW fraction ~=0.577 at that point, vs. Brandt's
-        %   actual ~=0.637) -- not a SizingLoopL2/design_study_02_L2 wiring
-        %   bug. Out of scope for this sizing-loop task, per the same
+        %   compute_fuel(...)) confirmed the then-current W_TO~=19,738 was a
+        %   genuine fixed point of the already-built F16WeightsL2/
+        %   F16MissionL2 models (implied OEW fraction ~=0.577 at that point,
+        %   vs. Brandt's actual ~=0.637) -- not a SizingLoopL2/
+        %   design_study_02_L2 wiring bug. That hand check has NOT been
+        %   re-run against the 2026-08-10 solved-S_ref closure, so treat the
+        %   0.577 figure as historical. Out of scope for this sizing-loop
+        %   task, per the same
         %   user direction as the L1 finding above (route test-suite/
         %   discipline-accuracy issues elsewhere). Widened to a physically-
         %   reasonable sanity band below, same rationale as L1's.
@@ -133,12 +145,20 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
             tc.verifyTrue(result.converged, 'design_study_02_L2 must converge.');
         end
 
-        function testDesignStudy02L2SRefIsFixedBrandtInput(tc)
-            % Unlike L1, S_ref is a fixed JSON input at L2/L3, never solved
-            % for -- must land exactly on Brandt's 300 ft^2 (F16GeomL2's
-            % own .wing.S_ft2 input), not merely "close."
-            result = design_study_02_L2();
-            tc.verifyEqual(result.S_ref, 300, 'AbsTol', 0);
+        function testDesignStudy02L2SRefTracksOptimumWingLoading(tc)
+            % CHANGED 2026-08-10: S_ref is now SOLVED FOR at L2/L3, same as
+            % L1 (SizingLoopL2.m header) -- it is no longer held at
+            % F16GeomL2's .wing.S_ft2 = 300 ft^2 JSON input, which is only
+            % the starting point now. The defining relation to check is
+            % therefore S_ref = W_TO / WS_opt, and the loop must have moved
+            % geom.S_ref off its JSON value.
+            [result, objs] = design_study_02_L2();
+            [WS_opt, ~] = objs.con.optimal_point();
+            fprintf('\n    S_ref=%.4f ft^2  W_TO/WS_opt=%.4f  (WS_opt=%.4f psf, Brandt S_ref=300)\n', ...
+                result.S_ref, result.W_TO/WS_opt, WS_opt);
+            tc.verifyEqual(result.S_ref, result.W_TO/WS_opt, 'RelTol', 1e-10);
+            tc.verifyEqual(objs.geom.S_ref, result.S_ref, 'AbsTol', 0);
+            tc.verifyNotEqual(result.S_ref, 300);
         end
 
         function testDesignStudy02L2WTOInPhysicalRange(tc)
@@ -219,12 +239,18 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
             tc.verifyTrue(result.converged, 'design_study_03_L3 must converge.');
         end
 
-        function testDesignStudy03L3SRefIsFixedInput(tc)
-            % Same as L2: S_ref is a fixed JSON input at L3 too, never
-            % solved for by SizingLoopL2.
-            result = design_study_03_L3();
-            geom = F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)));
-            tc.verifyEqual(result.S_ref, geom.S_ref, 'AbsTol', 0);
+        function testDesignStudy03L3SRefTracksOptimumWingLoading(tc)
+            % Same as L2 (CHANGED 2026-08-10): S_ref is solved for at L3 too,
+            % so check S_ref = W_TO/WS_opt and that the loop moved it off
+            % F16GeomL3's JSON .wing.S_ft2 starting value.
+            [result, objs] = design_study_03_L3();
+            [WS_opt, ~] = objs.con.optimal_point();
+            geom_json = F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)));
+            fprintf('\n    S_ref=%.4f ft^2  W_TO/WS_opt=%.4f  (WS_opt=%.4f psf, JSON start=%.2f)\n', ...
+                result.S_ref, result.W_TO/WS_opt, WS_opt, geom_json.S_ref);
+            tc.verifyEqual(result.S_ref, result.W_TO/WS_opt, 'RelTol', 1e-10);
+            tc.verifyEqual(objs.geom.S_ref, result.S_ref, 'AbsTol', 0);
+            tc.verifyNotEqual(result.S_ref, geom_json.S_ref);
         end
 
         function testDesignStudy03L3WTOInPhysicalRange(tc)

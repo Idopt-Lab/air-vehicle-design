@@ -3,12 +3,12 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
 %   takeoff-gross-weight + sea-level-thrust sizing loop, using mock
 %   discipline objects (same weights/mission stubs as TestSizingLoopL1.m,
 %   so the W_TO fixed point is identical: 3200 -- see that class's header
-%   for the derivation). S_ref is FIXED here (never touched by
-%   SizingLoopL2), unlike L1.
+%   for the derivation). S_ref is SOLVED FOR here as of 2026-08-10 (=
+%   W_TO/WS_opt, same as L1); it used to be held at its input value.
 
     methods (Static)
 
-        function [loop, con, TW_opt] = buildLoop()
+        function [loop, con, TW_opt, WS_opt] = buildLoop()
         %BUILDLOOP  A SizingLoopL2 wired to mock discipline objects and a
         %   real ConstraintAnalysis (same construction as
         %   TestSizingLoopL1.buildLoop). Tail/control-surface sizing
@@ -27,13 +27,13 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
             state     = AircraftState(10000, 0.6);
             c1        = LevelFlightConstraint("Toy", state, aero_stub, prop_stub, 1.0);
             con       = ConstraintAnalysis({c1}, 20:5:150);
-            [~, TW_opt] = con.optimal_point();
+            [WS_opt, TW_opt] = con.optimal_point();
 
             aero = FixedAeroStub(1.5, 0.02, 0.1, 0);
             prop = FixedPropStub(0.5);
             wts  = FixedWeightsStub();
             geom = FixedGeomStub();
-            geom.S_ref = 300;   % fixed input, never touched by SizingLoopL2
+            geom.S_ref = 300;   % starting value only -- SizingLoopL2 overwrites it with W_TO/WS_opt
             miss = FixedMissionStub();
             tail = FixedTailStub();
             ctrl = ControlSurfaceSizer(0.20, 0.40, 0.30, 0.90, 0.30, 0.90);
@@ -65,14 +65,26 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
             tc.verifyEqual(result.T_SL, expected_T_SL, 'AbsTol', 0.01);
         end
 
-        function testSRefNeverChanges(tc)
-            % Unlike SizingLoopL1, S_ref must stay exactly the fixed input
-            % value throughout -- this is the defining L2/L3 behavior
-            % difference from L1.
-            [loop, ~, ~] = TestSizingLoopL2.buildLoop();
+        function testSRefTracksOptimumWingLoading(tc)
+            % CHANGED 2026-08-10: S_ref is solved for, not held -- it must
+            % equal W_TO/WS_opt on exit, be written back into geom, and have
+            % moved off the 300 ft^2 starting value buildLoop set.
+            [loop, ~, ~, WS_opt] = TestSizingLoopL2.buildLoop();
+            result = loop.run(1000, 500, 'tol', 1e-3);
+            fprintf('\n    S_ref=%.6f  W_TO/WS_opt=%.6f  (WS_opt=%.4f)\n', ...
+                result.S_ref, result.W_TO/WS_opt, WS_opt);
+            tc.verifyEqual(result.S_ref, result.W_TO/WS_opt, 'RelTol', 1e-12);
+            tc.verifyEqual(loop.geom.S_ref, result.S_ref, 'AbsTol', 0);
+            tc.verifyNotEqual(result.S_ref, 300);
+        end
+
+        function testHistoryLogsSRef(tc)
+            % history now carries S_ref per iteration (it did not before
+            % 2026-08-10, when S_ref was loop-invariant).
+            [loop, ~, ~, WS_opt] = TestSizingLoopL2.buildLoop();
             result = loop.run(1000, 500);
-            tc.verifyEqual(result.S_ref, 300, 'AbsTol', 0);
-            tc.verifyEqual(loop.geom.S_ref, 300, 'AbsTol', 0);
+            tc.verifyTrue(isfield(result.history, 'S_ref'));
+            tc.verifyEqual(result.history(1).S_ref, result.history(1).W_TO/WS_opt, 'RelTol', 1e-12);
         end
 
         function testHistoryHasNIterRows(tc)

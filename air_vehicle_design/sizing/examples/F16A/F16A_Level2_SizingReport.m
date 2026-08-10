@@ -37,26 +37,31 @@ W_TO_guess = 30000;
 T_SL_guess = 20000;
 [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess);
 
-% TW_opt = the constraint-diagram-optimal thrust loading SizingLoopL2.run()
-% computes ONCE (before iterating) and holds fixed for the whole loop --
-% see that class's header. Every iteration re-derives T_SL = TW_opt*W_TO
-% from the CURRENT W_TO (SizingLoopL2.run's own formula); S_ref is a fixed
-% JSON input here and is never touched by the loop (unlike L1, where it's
-% solved for). Calling objs.con's own optimal_point() again here
-% (ConstraintAnalysis is a pure value class, and con is never mutated
-% during the run) reproduces the identical TW_opt the loop actually used --
-% its W/S output is unused at L2/L3, per that class's header.
-[~, TW_opt] = objs.con.optimal_point();
+% [WS_opt, TW_opt] = the constraint-diagram-optimal wing and thrust loading.
+% SizingLoopL2.run() re-reads them EVERY iteration (they move as the loop's
+% own S_ref/T_SL state changes the wetted area -- see that class's header)
+% and re-derives BOTH design variables from the CURRENT W_TO:
+%   S_ref = W_TO/WS_opt   and   T_SL = TW_opt*W_TO
+% S_ref is solved for at L2/L3 as of 2026-08-10, exactly as at L1; the JSON
+% .wing.S_ft2 value is only the starting point. Calling objs.con's own
+% optimal_point() again here (ConstraintAnalysis is a pure value class, and
+% con is never mutated during the run) reproduces the same pair the loop's
+% final re-derivation used, since objs are returned in their converged state.
+[WS_opt, TW_opt] = objs.con.optimal_point();
 
 fprintf('\n=== F-16A Level 2 Sizing Result ===\n');
 fprintf('  Converged:  %d\n', result.converged);
 fprintf('  Iterations: %d\n', result.n_iter);
 fprintf('  W_TO:       %.1f lbf  (Brandt = 31377 lbf, %+.1f%%)\n', ...
     result.W_TO, 100*(result.W_TO - 31377)/31377);
-fprintf('  S_ref:      %.2f ft^2 (fixed JSON input at L2 -- held CONSTANT for the whole run, never solved for)\n', result.S_ref);
+fprintf('  S_ref:      %.2f ft^2 (SOLVED as W_TO/(W/S)_opt; Brandt = 300 ft^2, %+.1f%%)\n', ...
+    result.S_ref, 100*(result.S_ref - 300)/300);
 fprintf('  T_SL:       %.1f lbf  (Brandt = 23770 lbf, %+.1f%%)\n', ...
     result.T_SL, 100*(result.T_SL - 23770)/23770);
-fprintf('  Optimum thrust loading (T/W)_opt = %.4f  (from ConstraintAnalysis.optimal_point, fixed for the whole run)\n', TW_opt);
+fprintf('  Optimum loading: (W/S)_opt = %.4f lbf/ft^2, (T/W)_opt = %.4f  (from ConstraintAnalysis.optimal_point, re-read every iteration)\n', ...
+    WS_opt, TW_opt);
+fprintf('  S_ref:      initial = %.2f ft^2  ->  final = %.2f ft^2\n', ...
+    result.history(1).S_ref, result.S_ref);
 fprintf('  T_SL:       initial = %.1f lbf (T_SL_guess)  ->  final = %.1f lbf\n', ...
     result.history(1).T_SL, result.T_SL);
 
@@ -64,32 +69,36 @@ last = result.history(end);
 fprintf('  S_ht=%.3f ft^2  S_vt=%.3f ft^2  S_ail=%.3f ft^2  S_elev=%.3f ft^2  S_rud=%.3f ft^2\n', ...
     last.S_ht, last.S_vt, last.S_ail, last.S_elev, last.S_rud);
 
-%% Sizing convergence plots (W_TO, OEW, fuel weight, T_SL per iteration)
-% Straight from SizingLoopL2.run's own returned history. T_SL tracks W_TO
-% every iteration (T_SL = TW_opt*W_TO, SizingLoopL2.run's own formula)
-% since TW_opt is fixed for the whole loop -- see that class's header.
-% S_ref does NOT get its own convergence plot: it is a fixed JSON input at
-% L2 (unlike L1), never touched by SizingLoopL2 -- SizingLoopL2's own
-% history struct has no S_ref field to plot, by design.
+%% Sizing convergence plots (W_TO, OEW, fuel weight, T_SL, S_ref per iteration)
+% Straight from SizingLoopL2.run's own returned history. T_SL and S_ref both
+% track W_TO every iteration (T_SL = TW_opt*W_TO, S_ref = W_TO/WS_opt --
+% SizingLoopL2.run's own formulas). S_ref gets the right-hand axis, matching
+% F16A_Level1_SizingReport.m, since it is in ft^2 rather than lbf. Before
+% 2026-08-10 S_ref was loop-invariant and had no history field to plot.
 
 iters     = [result.history.iter];
 WTO_hist  = [result.history.W_TO];
 OEW_hist  = [result.history.W_OEW];
 Fuel_hist = [result.history.W_fuel];
 TSL_hist  = [result.history.T_SL];
-
-% All 4 quantities on one graph -- W_TO, OEW, W_fuel, and T_SL are all in
-% lbf, so no secondary axis is needed (unlike L1's S_ref, which is ft^2).
+Sref_hist = [result.history.S_ref];
 
 figure('Name', 'L2 Sizing Convergence');
+yyaxis left
 plot(iters, WTO_hist, '-o', 'LineWidth', 1.5); hold on;
 plot(iters, OEW_hist, '-s', 'LineWidth', 1.5);
 plot(iters, Fuel_hist, '-^', 'LineWidth', 1.5);
 plot(iters, TSL_hist, '-d', 'LineWidth', 1.5);
+ylabel('Weight / Thrust [lbf]');
+
+yyaxis right
+plot(iters, Sref_hist, '-v', 'LineWidth', 1.5);
+ylabel('S_{ref} [ft^2]');
+
 grid on;
-xlabel('Iteration'); ylabel('Weight [lbf]');
-legend('W_{TO}', 'OEW', 'W_{fuel}', 'T_{SL}', 'Location', 'best');
-title(sprintf('F-16A Level 2 Sizing Convergence (T_{SL} = W_{TO} \\times (T/W)_{opt}, (T/W)_{opt} = %.4f; S_{ref} = %.2f ft^2 fixed)', TW_opt, result.S_ref));
+xlabel('Iteration');
+legend('W_{TO}', 'OEW', 'W_{fuel}', 'T_{SL}', 'S_{ref}', 'Location', 'best');
+title(sprintf('F-16A Level 2 Sizing Convergence ((W/S)_{opt} = %.2f lbf/ft^2, (T/W)_{opt} = %.4f)', WS_opt, TW_opt));
 
 %% Component-level weight breakdown
 % Calls F16WeightsL2's own group-weight methods at the converged W_TO --

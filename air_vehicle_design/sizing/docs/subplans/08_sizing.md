@@ -86,8 +86,13 @@ W_TO       = 0.5*W_TO + 0.5*W_TO_new        % under-relaxation
 ## SizingLoopL2 — Call Sequence (per iteration)
 
 Per the framework design intent (now captured in `CLAUDE.md` and `docs/PLAN.md`) + resolved decisions:
+
+> **SUPERSEDED 2026-08-10 — `S_ref` is no longer fixed at L2/L3.** `SizingLoopL2` now solves for `S_ref` every iteration exactly as `SizingLoopL1` does (`S_ref = W_TO / WS_opt`, written into `geom.S_ref`), so `optimal_point()`'s `W/S` output is used, not discarded, and `result.S_ref` / `result.history(k).S_ref` are solved outputs. The JSON `.geometry.wing.S_ft2` value is only the starting point. See `src/sizing/SizingLoopL2.m`'s header for the feedback paths and the current converged F-16A numbers; the pseudocode below reflects the pre-2026-08-10 behavior.
+
 ```matlab
-opt       = con.optimal_point(aero, prop)    % → {T_W} (S_ref fixed)
+opt        = con.optimal_point(aero, prop)   % → {W_S, T_W}
+S_ref      = W_TO / opt.W_S                  % ADDED 2026-08-10
+geom.S_ref = S_ref                           % ADDED 2026-08-10
 T_SL_new  = opt.T_W * W_TO
 prop.T0   = T_SL_new
 
