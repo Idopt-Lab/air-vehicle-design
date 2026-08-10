@@ -1,22 +1,23 @@
 function results = F16APhysicalMassRollup(options)
-%F16APHYSICALMASSROLLUP Roll part masses up to the F-16A empty weight (OEW).
-%   RESULTS = F16APHYSICALMASSROLLUP() instantiates physical/F16A_Physical.slx
-%   and rolls each part's Mass_lb up the tree (children before parents) to a
-%   subtotal at every assembly and a grand total -- the Operating Empty
-%   Weight -- at the aircraft root. It writes OEW into the aircraft's
-%   MeasureOfMerit.OEW_lb and saves, so the shipped model carries the MoM.
+%F16APHYSICALMASSROLLUP Add the part masses up to the F-16A empty weight (OEW).
+%   RESULTS = F16APHYSICALMASSROLLUP() builds a System Composer analysis
+%   instance of physical/F16A_Physical.slx and adds Mass_lb up the tree --
+%   children before parents -- to a subtotal at every assembly and a grand
+%   total at the aircraft: the Operating Empty Weight. It writes OEW into the
+%   aircraft's MeasureOfMerit.OEW_lb and saves.
 %
 %   RESULTS = F16APHYSICALMASSROLLUP(Persist=false) returns the same numbers
-%   but WRITES NOTHING. Tests use it: a test may not re-save the artifact it
-%   is asserting against.
+%   and WRITES NOTHING. Tests use it: a test may not re-save the artifact it
+%   is asserting against (D-029).
 %
 %   RESULTS fields: OEW, Airframe, Propulsion, Engine, AirframeLessEngine,
 %   Table (per-assembly subtotals).
 %
-%   Teaching point: this is a NATIVE System Composer parametric analysis
-%   (instantiate + iterate, Postorder). The instance contains only the ACTIVE
-%   choice of each variant role, so no "Selected" filtering appears anywhere
-%   below -- deliberate, not an omission (D-012).
+%   It runs as six printed steps and prints every mass it reads and every
+%   subtotal it forms, so a reader can add the tree up by hand and check it.
+%   The instance holds only the ACTIVE choice of each variant role, so the
+%   rejected candidates are not in the sum -- step 2 prints which ones were
+%   dropped, and that is the whole of D-012 (see also D-058).
 %
 %   Requires physical/F16A_Physical.slx (run generate_f16a_physical).
 
@@ -26,71 +27,115 @@ arguments
     options.Persist (1,1) logical = true
 end
 
-modelName   = "F16A_Physical";
-profileName = "F16A_PhysicalProps";
-massProp    = profileName + ".PhysicalItem.Mass_lb";
-oewMomProp  = profileName + ".MeasureOfMerit.OEW_lb";
+% ---------------------------------------------------------------------
+% WHAT THIS ROLL-UP IS ABOUT. Three names; the rest of the file is the walk.
+% ---------------------------------------------------------------------
+MODEL    = "F16A_Physical";                                % the model being measured
+PROFILE  = "F16A_PhysicalProps";                           % the profile holding the properties
+MASSPROP = "F16A_PhysicalProps.PhysicalItem.Mass_lb";      % what every part carries
+OEWPROP  = "F16A_PhysicalProps.MeasureOfMerit.OEW_lb";     % where the answer is recorded
 
-thisDir   = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
-physDir   = fullfile(thisDir, "physical");
-modelFile = fullfile(physDir, modelName + ".slx");
+fprintf("\n==========================================================\n");
+fprintf("  MASS ROLL-UP\n");
+fprintf("  Question: what does this aeroplane weigh empty?\n");
+fprintf("  Answer recorded in: Aircraft's MeasureOfMerit.OEW_lb\n");
+fprintf("==========================================================\n");
+
+% =====================================================================
+% STEP 1 -- OPEN THE MODEL
+% =====================================================================
+fprintf("\n[STEP 1] OPEN THE MODEL\n");
+
+root      = f16aRoot();                    % the example root, via the anchor file
+physDir   = fullfile(root, "physical");
+modelFile = fullfile(physDir, MODEL + ".slx");
 addpath(physDir);
 
-m = systemcomposer.loadModel(modelName);
-acPath = modelName + "/Aircraft";     % the system-of-interest component
-S = acPath + "/";
+if ~isfile(modelFile)
+    error("F16APhysicalMassRollup:noPhysicalModel", ...
+        "Missing %s. Run generate_f16a_physical first.", modelFile);
+end
 
-% Top-level assemblies for the reported table, READ FROM THE MODEL. A
-% hard-coded list silently drops a newly added assembly from the table while
-% OEW (read at the root) grows to include it, so the table stops summing to
-% the total printed beneath it; and a renamed assembly aborts the roll-up
-% mid-generate. Asking the aircraft what it is made of cannot do either.
-% Airframe and FlightControls are VARIANT nodes here, which is fine: the
-% variant node itself is listed by its parent, and its instance node carries
-% the active candidate's rolled-up mass.
-aircraft   = lookup(m, Path=char(acPath));
-assemblies = string({aircraft.Architecture.Components.Name});
-if isempty(assemblies)
+m = systemcomposer.loadModel(MODEL);
+fprintf("  Model    : %s\n", MODEL);
+fprintf("  Property : %s -- every part carries one\n", MASSPROP);
+if options.Persist
+    fprintf("  Mode     : will WRITE the OEW Measure of Merit and SAVE the model\n");
+else
+    fprintf("  Mode     : READ-ONLY -- nothing will be written and nothing saved\n");
+end
+
+% =====================================================================
+% STEP 2 -- BUILD THE ACTIVE-CONFIGURATION INSTANCE
+%
+% This is the step worth understanding. The MODEL holds every candidate of
+% every variant role -- both airframes, both flight control systems, all three
+% engines. An analysis INSTANCE holds only the one that is active. Sum the
+% model and you get an aeroplane with two airframes and three engines; sum the
+% instance and you get the one the trade selected.
+% =====================================================================
+fprintf("\n[STEP 2] BUILD THE ACTIVE-CONFIGURATION INSTANCE\n");
+fprintf("  The model holds every candidate. The instance holds only the chosen one:\n");
+
+nDropped = 0;
+for k = m.Architecture.Components
+    nDropped = nDropped + printChoices(k);
+end
+
+inst = instantiate(m.Architecture, PROFILE, "OEWRollup", ...
+    Strict=true, NormalizeUnits=false);
+aircraft = lookup(inst, "Path", char(MODEL + "/Aircraft"));
+
+fprintf("  -> %d rejected candidates carry a mass and are NOT in the sum below.\n", nDropped);
+fprintf("     That is why the roll-up runs AFTER the trade studies, not before.\n");
+
+% =====================================================================
+% STEP 3 -- ADD IT UP, CHILDREN BEFORE PARENTS
+%
+% One recursion, printed as it goes. A leaf hands its parent the mass it
+% carries; an assembly adds up what its parts handed it and hands the total
+% one level further up. The aircraft is the last to be added, so its total is
+% the Operating Empty Weight.
+% =====================================================================
+fprintf("\n[STEP 3] ADD IT UP -- CHILDREN BEFORE PARENTS\n\n");
+OEW = rollUp(aircraft, 0, MASSPROP);
+fprintf("\n  The last line is the Operating Empty Weight: %.2f lb.\n", OEW);
+
+% =====================================================================
+% STEP 4 -- THE ASSEMBLY TABLE
+% =====================================================================
+fprintf("\n[STEP 4] WHAT EACH ASSEMBLY CONTRIBUTES\n");
+
+% Ask the aircraft what it is made of rather than holding a list of names: a
+% hard-coded list silently drops a newly added assembly from this table while
+% OEW (taken at the root) grows to include it, so the table stops summing to
+% the total printed beneath it (D-054).
+kids = aircraft.Components;
+if isempty(kids)
     error("F16APhysicalMassRollup:noAssemblies", ...
-        "%s has no components, so there is nothing to roll up.", acPath);
+        "%s/Aircraft has no components, so there is nothing to roll up.", MODEL);
 end
+assemblies = arrayfun(@(k) string(k.Name), kids(:));
+asmMass    = arrayfun(@(k) double(k.getValue(char(MASSPROP))), kids(:));
 
-% --- Roll up: native System Composer analysis (ex2 pattern) --------------
-% Fall back to a plain recursion over the model if instantiate/iterate is
-% unavailable; both return identical numbers, so callers/tests are agnostic.
-useNative = true;
-try
-    inst = instantiate(m.Architecture, profileName, "OEWRollup", ...
-        Function=@f16aMassRollup, Strict=true, NormalizeUnits=false, ...
-        Direction="Postorder");
-    iterate(inst, "Postorder", @f16aMassRollup, Recurse=true);
-    rd = @(p) instMass(inst, p, massProp);   % read a rolled value by path
-catch ME
-    useNative = false;
-    warning("F16APhysicalMassRollup:native", ...
-        "Native instantiate/iterate unavailable (%s); using hand recursion.", ...
-        ME.message);
-    rd = @(p) archMass(lookup(m, Path=char(p)), massProp);
-end
-
-% Every path in this file is an INSTANCE path. The instance flattens a variant
-% -- the active choice node is elided and its children lifted under the variant
-% node -- so "Airframe" and "Propulsion/Engine" name the variant nodes and
-% carry the active candidate's rolled-up mass. Naming a candidate here
-% (".../Airframe/BlendedCrankedDelta") would be wrong twice over: it is an
-% architecture path, and it would hard-code one candidate into a roll-up whose
-% job is to follow whichever one is active.
-OEW        = rd(acPath);
-airframe   = rd(S + "Airframe");
-propulsion = rd(S + "Propulsion");
-engine     = rd(S + "Propulsion/Engine");
-
-% Per-assembly rolled masses (for the printed/returned summary).
-asmMass = zeros(numel(assemblies), 1);
 for i = 1:numel(assemblies)
-    asmMass(i) = rd(S + assemblies(i));
+    fprintf("  %s %9.2f lb  (%4.1f%% of OEW)\n", ...
+        pad(assemblies(i) + " ", 24, "right", "."), asmMass(i), 100*asmMass(i)/OEW);
 end
-T = table(assemblies(:), asmMass, 'VariableNames', {'Assembly','Mass_lb'});
+fprintf("  %s %9.2f lb  <- and that is the same %.2f the walk arrived at\n", ...
+    pad("SUM OF THE COLUMN ", 24, "right", "."), sum(asmMass), OEW);
+
+T = table(assemblies, asmMass, 'VariableNames', {'Assembly','Mass_lb'});
+
+% The three figures the docs and the cost model quote, read straight off the
+% instance by name -- no path strings, so there is no second path space to
+% keep straight.
+airframeNode   = childNode(aircraft, "Airframe");
+propulsionNode = childNode(aircraft, "Propulsion");
+engineNode     = childNode(propulsionNode, "Engine");
+airframe   = double(airframeNode.getValue(char(MASSPROP)));
+propulsion = double(propulsionNode.getValue(char(MASSPROP)));
+engine     = double(engineNode.getValue(char(MASSPROP)));
 
 results = struct( ...
     OEW = OEW, ...
@@ -100,90 +145,106 @@ results = struct( ...
     AirframeLessEngine = OEW - engine, ...   % standard "airframe unit weight" convention
     Table = T);
 
-% --- Record OEW as the mass Measure of Merit on the Aircraft component ----
-% Both statements are inside the guard, and both have to be: writing the
-% property without saving would leave the in-memory model dirty for whatever
-% runs next, which is its own kind of side effect.
+% =====================================================================
+% STEP 5 -- RECORD OEW AS THE MEASURE OF MERIT
+% =====================================================================
+fprintf("\n[STEP 5] RECORD OEW AS THE MEASURE OF MERIT\n");
 if options.Persist
-    setProperty(aircraft, char(oewMomProp), string(OEW));
-    save_system(modelName, char(modelFile));
+    acComp = lookup(m, Path=char(MODEL + "/Aircraft"));
+    setProperty(acComp, char(OEWPROP), string(OEW));
+    fprintf("  %s = %.2f  (goal: minimize)\n", OEWPROP, OEW);
+else
+    fprintf("  Read-only: NOT written. The model still carries whatever OEW it had.\n");
 end
 
-method = "native System Composer analysis";
-if ~useNative; method = "hand recursion (native fallback)"; end
-mode = "";
-if ~options.Persist; mode = ", read-only: OEW MoM not written, model not saved"; end
-fprintf("\n=== F-16A mass roll-up (%s%s) ===\n", method, mode);
-disp(T);
-fprintf("Airframe subtotal   : %10.2f lb\n", airframe);
-fprintf("Propulsion subtotal : %10.2f lb\n", propulsion);
-fprintf("Airframe less engine: %10.2f lb  (OEW - engine)\n", OEW - engine);
-fprintf("Operating Empty Wt  : %10.2f lb  (MoM: minimize)\n", OEW);
+% =====================================================================
+% STEP 6 -- SAVE
+% =====================================================================
+fprintf("\n[STEP 6] SAVE\n");
+if options.Persist
+    save_system(MODEL, char(modelFile));
+    fprintf("  Saved %s.slx.\n", MODEL);
+else
+    fprintf("  Read-only: nothing saved. The model on disk is untouched.\n");
+end
+
+fprintf("\n  Airframe subtotal    : %9.2f lb  (the six structural parts)\n", airframe);
+fprintf("  Propulsion subtotal  : %9.2f lb  (engine + inlet duct)\n", propulsion);
+fprintf("  Airframe less engine : %9.2f lb  = OEW - engine\n", OEW - engine);
+fprintf("  Operating Empty Wt   : %9.2f lb  (Measure of Merit: minimize)\n\n", OEW);
+fprintf("  One convention, so it is not misread: airframe-less-engine is the standard\n");
+fprintf("  'airframe unit weight'. It is NOT the %.2f lb the six structural parts\n", airframe);
+fprintf("  add up to -- those are two different questions with two different answers.\n\n");
 
 end
 
 % =====================================================================
-function f16aMassRollup(instance, varargin)
-%F16AMASSROLLUP Analysis function: sum Mass_lb bottom-up, write each subtotal.
-%   Mirrors ex2/CostAndWeightRollupAnalysis: a leaf keeps its own Mass_lb; an
-%   assembly (and the root) is overwritten with the sum of its children, so
-%   the Analysis Viewer shows the roll-up at every level. Weight only, and NO
-%   variant "active" filtering ON PURPOSE: the instance the iterator walks
-%   already contains only the active choice (D-012 / Stage-0 finding 2), so a
-%   filter here would be dead code that looked load-bearing.
-    if ~instance.isComponent(); return; end
-    rollupAndSet(instance);
+function total = rollUp(node, depth, massProp)
+%ROLLUP Add up Mass_lb over NODE's subtree, printing every step.
+%   A leaf contributes the mass it carries. An assembly is worth what its parts
+%   are worth, so its parts are added first -- that is what "children before
+%   parents" means, and it is the only reason the order matters.
+indent = repmat(' ', 1, 4 + 2*depth);
+kids   = node.Components;
 
-    function s = rollupAndSet(node)
-        prop = "F16A_PhysicalProps.PhysicalItem.Mass_lb";
-        kids = node.Components;
-        if isempty(kids)
-            % Leaf: its own mass is its contribution.
-            s = 0;
-            if node.hasValue(char(prop)); s = double(node.getValue(char(prop))); end
-        else
-            % Assembly/root: sum children, then write the subtotal back.
-            s = 0;
-            for ch = kids; s = s + rollupAndSet(ch); end
-            if node.hasValue(char(prop)); node.setValue(char(prop), s); end
-        end
+if isempty(kids)
+    total = 0;
+    if node.hasValue(char(massProp))
+        total = double(node.getValue(char(massProp)));
+    end
+    fprintf("%s%s %9.2f lb\n", indent, ...
+        pad(string(node.Name) + " ", 30 - 2*depth, "right", "."), total);
+    return
+end
+
+fprintf("%s%s\n", indent, string(node.Name));
+total = 0;
+for k = kids
+    total = total + rollUp(k, depth + 1, massProp);
+end
+fprintf("%s= %s %9.2f lb   (sum of the %d above)\n", indent, ...
+    pad(string(node.Name) + " ", 28 - 2*depth, "right", "."), total, numel(kids));
+
+% Write the subtotal back so the Analysis Viewer shows the roll-up at every
+% level, not just the total at the root.
+if node.hasValue(char(massProp))
+    node.setValue(char(massProp), total);
+end
+end
+
+% =====================================================================
+function nDropped = printChoices(comp)
+%PRINTCHOICES Print each variant role's active choice and the ones it beat.
+%   Walks the ARCHITECTURE, which is the only place the rejected candidates
+%   still exist -- the instance built in step 2 has already dropped them.
+nDropped = 0;
+if isa(comp, "systemcomposer.arch.VariantComponent")
+    % getChoices, never comp.Architecture.Components: the latter returns ZERO
+    % choices on a saved-and-reloaded model.
+    active  = getActiveChoice(comp);
+    choices = arrayfun(@(c) string(c.Name), getChoices(comp));
+    dropped = choices(choices ~= string(active.Name));
+    fprintf("    %s kept %-22s dropped %s\n", ...
+        pad(string(comp.Name) + " ", 18, "right", "."), string(active.Name), ...
+        strjoin(dropped, ", "));
+    nDropped = numel(dropped) + printChoices(active);
+    return
+end
+for k = comp.Architecture.Components
+    nDropped = nDropped + printChoices(k);
+end
+end
+
+% =====================================================================
+function node = childNode(parent, name)
+%CHILDNODE PARENT's child called NAME, by name rather than by path.
+for k = parent.Components
+    if string(k.Name) == name
+        node = k;
+        return
     end
 end
-
-% =====================================================================
-function v = instMass(inst, pth, prop)
-%INSTMASS Read a rolled mass from an instance node by path.
-node = lookup(inst, "Path", char(pth));
-v = double(node.getValue(char(prop)));
-end
-
-% =====================================================================
-function v = archMass(comp, prop)
-%ARCHMASS Fallback: recursively sum leaf Mass_lb under a model component.
-%   Used only when instantiate/iterate is unavailable. Unlike the native path
-%   above, this walks the ARCHITECTURE, which contains EVERY candidate of every
-%   variant role -- so without the first branch it would add the F100, the
-%   low-thrust surrogate AND the twin-engine surrogate together and report an
-%   aircraft with three
-%   engines and two airframes (D-012 / Stage-0 finding 2 is exactly this
-%   asymmetry: the instance filters, the architecture does not).
-%
-%   getActiveChoice is the right accessor here rather than getChoices: this
-%   function must reproduce the native path's number, and the native path sees
-%   the active configuration. It also sidesteps finding 6 -- a variant's
-%   .Architecture.Components returns ZERO on a saved-and-reloaded model, so the
-%   old code would have silently treated every variant role as a massless leaf
-%   instead of loudly over-counting. Both failure modes are gone.
-if isa(comp, "systemcomposer.arch.VariantComponent")
-    v = archMass(getActiveChoice(comp), prop);
-    return;
-end
-kids = comp.Architecture.Components;
-if isempty(kids)
-    v = str2double(string(getProperty(comp, char(prop))));
-    if isnan(v); v = 0; end
-else
-    v = 0;
-    for k = kids; v = v + archMass(k, prop); end
-end
+error("F16APhysicalMassRollup:noSuchChild", ...
+    "%s has no child called %s, so its subtotal cannot be reported.", ...
+    string(parent.Name), name);
 end

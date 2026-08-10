@@ -5,16 +5,18 @@
 > · **Trade studies**: `F16A{Engine,Airframe,FlightControls}TradeStudy.m`, run together by
 > `F16APhysicalTradeStudy.m`
 > · Vocabularies: `F16ASourceKind.m`, `F16ADataProvenance.m`
-> · Roll-ups: `F16APhysical{Mass,Materials,Fuel}Rollup.m`
+> · **Roll-ups**: `F16APhysical{Mass,Materials,Fuel}Rollup.m`, run together by
+> `F16APhysicalRollups.m`
 > · Tests: `tests_for_ai_coding/F16APhysicalArchitectureTest.m`, `verification/`
 
 The Logical layer said **how** — in solution roles — and laid out competing **kinds** without picking
 one. The Physical layer gives **concrete parts**, and teaches four ideas the earlier layers could not:
 
-1. **Roll-up analysis.** Parts carry properties; analyses sum them up the tree to emergent totals —
-   Operating Empty Weight, airframe composite fraction, available fuel. The mass roll-up is a
-   **native System Composer parametric analysis** (`instantiate`/`iterate`), the canonical MBSE
-   "the model computes an emergent property from its parts" move.
+1. **Roll-up analysis.** Parts carry properties; analyses gather them up the tree into emergent
+   totals — Operating Empty Weight, airframe composite fraction, available fuel. This is the
+   canonical MBSE "the model computes an emergent property from its parts" move. The mass roll-up
+   runs over a **System Composer analysis instance** (`instantiate`), which is what makes it measure
+   the *selected* configuration rather than every candidate at once.
 2. **Measures of Merit.** Empty weight and unit cost are **objectives to minimize**, not pass/fail
    thresholds — and they come from two different kinds of source.
 3. **Verified by.** For requirements that are genuine constraints, a test checks the roll-up and a
@@ -90,9 +92,11 @@ pricing an inlet delta into the twin-engine surrogate would invent a number we c
 than hidden inside a mass.
 
 **Two path spaces coexist, and you must use the right one.** Architecture paths gained a level
-(`…/Airframe/BlendedCrankedDelta/Wing`) and are what generators, tests and `lookup` use. Instance
-paths did not — the analysis instance *flattens* the variant, so the roll-ups still read
-`…/Aircraft/Airframe` and needed no change.
+(`…/Airframe/BlendedCrankedDelta/Wing`) and are what the generators, the tests and `lookup` use.
+Instance paths did not — the analysis instance *flattens* the variant, and `…/Aircraft/Airframe`
+still names the node carrying the active candidate's rolled-up mass. The mass roll-up sidesteps the
+distinction entirely by reading its subtotals off the instance **by child name** rather than by path
+(D-058), but anything using `lookup` still has to get it right.
 
 ## Mass roll-up → Operating Empty Weight
 
@@ -114,16 +118,38 @@ figures below are a reader's convenience, not the thing the test compares agains
 | Propulsion | InletDuct | 728.60 | | ArmamentSupport | 440.00 |
 | | | | | SecondaryStructure | 2016.86 |
 
-`F16APhysicalMassRollup.m` runs it the way MathWorks intends — a native architecture **instance**
-iterated bottom-up (`instantiate` → `iterate`, `Direction="Postorder"`), the same pattern shipped in
-[`ex2`](../../ex2). Subtotals: Airframe **6,722.88** · Propulsion **5,458.83** · **OEW 19,980.73 lb**.
+`F16APhysicalMassRollup.m` builds a System Composer analysis **instance** (`instantiate`) and walks it
+with one recursion that prints the tree as it adds it up — children before parents, a subtotal at
+every assembly, the grand total at the aircraft. Subtotals: Airframe **6,722.88** · Propulsion
+**5,458.83** · **OEW 19,980.73 lb**. Run it and you get the whole arithmetic, twenty-odd lines of it,
+in a form you can check by hand:
+
+```
+      Propulsion
+        Engine ...................   4730.23 lb
+        InletDuct ................    728.60 lb
+      = Propulsion ...............   5458.83 lb   (sum of the 2 above)
+```
+
+It used to hand that recursion to `iterate` as a native analysis function, the pattern shipped in
+[`ex2`](../../ex2), with a second architecture-side recursion behind it as a fallback. Both are gone
+(D-058): three ways to add up the same numbers is not a lesson, and the `instantiate`/`iterate` pair
+was summing the tree once per node, twice over. What is kept is the part that carries the teaching —
+the instance itself.
 
 **It is an active-configuration roll-up, and it did not have to become one.** The analysis instance
-contains only the active choice, so the native postorder sum counts the selected candidate and
-nothing else. Had it gone the other way, the four losing candidates would have added their masses and
-OEW would describe no aeroplane at all — `testOEWCountsOnlyTheActiveConfiguration` computes both sums
-from the model and asserts they differ. Architecture-side walks *do* need the `getActiveChoice`
-filter and have it (D-012).
+contains only the active choice, so the sum counts the selected candidate and nothing else. Had it
+gone the other way, the four losing candidates would have added their masses and OEW would describe
+no aeroplane at all — `testOEWCountsOnlyTheActiveConfiguration` computes both sums from the model and
+asserts they differ. Architecture-side walks *do* need the `getActiveChoice` filter and have it
+(D-012). Rather than leave that in a comment, step 2 of the roll-up prints it:
+
+```
+    Airframe ......... kept BlendedCrankedDelta    dropped ConventionalTrapWing
+    FlightControls ... kept FlyByWire              dropped HydroMechanical
+    Engine ........... kept F100_PW_200            dropped LowThrustSingle_Surrogate, TwinEngine_Surrogate
+  -> 4 rejected candidates carry a mass and are NOT in the sum below.
+```
 
 Turning three components into variant roles therefore did not change what the aircraft weighs. A
 trade that selects the production configuration cannot change what the production aeroplane weighs —

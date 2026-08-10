@@ -81,7 +81,11 @@ mbse/examples/f16a/
 │   ├─ F16AFlightControlsTradeStudy.m    handling / mass / TRL    → REQ_F16A_L02
 │   │                                    each standalone: open, read, score, decide, write back
 │   ├─ F16APhysicalTradeStudy.m          15-line runner: calls all three
-│   ├─ F16APhysical{Mass,Materials,Fuel}Rollup.m
+│   ├─ F16APhysicalMassRollup.m          part masses → OEW      (6 printed steps)
+│   ├─ F16APhysicalMaterialsRollup.m     composite fraction     (5 printed steps)
+│   ├─ F16APhysicalFuelRollup.m          available fuel         (4 printed steps)
+│   │                                    each standalone: the walk is in the file that uses it
+│   ├─ F16APhysicalRollups.m             runner: calls all three, read-only by default
 │   ├─ F16APhysicalCostModel.m           calls BrandtCost for the flyaway cost (needs /sizing/)
 │   └─ F16APhysicalMissionFuel.m         mission-fuel hook (NaN by design)
 ├─ tests_for_ai_coding/                  MACHINERY tests — guard rails, not teaching (D-055)
@@ -129,7 +133,8 @@ Open the models and run the tests:
 ```matlab
 systemcomposer.openModel("F16A_Physical")   % or F16A_Functional / F16A_Logical
 systemcomposer.allocation.editor            % the F→L and L→P allocation matrices
-F16APhysicalMassRollup                      % print the mass roll-up and OEW
+F16APhysicalMassRollup                      % ONE roll-up: the mass tree, step by step, to OEW
+F16APhysicalRollups                         % all three roll-ups; read-only, writes nothing
 F16AEngineTradeStudy                        % re-run ONE trade; six printed steps, start here
 F16APhysicalTradeStudy                      % re-run all three
 

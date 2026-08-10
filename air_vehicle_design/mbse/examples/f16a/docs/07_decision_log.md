@@ -67,10 +67,11 @@ depend on whether P has run.
 vocabulary and a Property Inspector dropdown instead of typo-prone strings. Costs two `classdef` files
 on the project path.
 
-### D-012 · The native roll-up needs no "active" filter; hand recursions do
-The `instantiate`/`iterate` mass roll-up stays a plain postorder sum; architecture-side recursions
-descend into `getActiveChoice` at a variant. **Why** The analysis instance contains only the active
-choice, while an architecture-side walk sees every choice and would double-count.
+### D-012 · The instance roll-up needs no "active" filter; hand recursions do
+The mass roll-up over the analysis instance stays a plain sum; architecture-side recursions descend
+into `getActiveChoice` at a variant. **Why** The analysis instance contains only the active choice,
+while an architecture-side walk sees every choice and would double-count. *The `iterate` half of this
+was dropped by **D-058**; the rule stands for every architecture-side walk that remains.*
 
 ### D-013 · Variant role wrappers are exempt from part stereotypes
 `PhysicalItem` and `Rationale` go on variant *choices* and plain components. **Why**
@@ -619,6 +620,8 @@ suites use `PathFixture` and close only the models they opened, not `bdclose("al
 
 **One walk, one home.** `fuelLeaves` and `materialLeaves` were the same variant-safe recursion twice
 over — the D-038 failure mode waiting to happen. Both now call `F16AStereotypeLeaves`.
+*Reversed by **D-057**, which inlines the walk back into each roll-up for legibility and names the
+tests that make the duplication affordable.*
 
 **Prose.** Every MATLAB help block is back inside the 20-line house rule (35 for a generator): what
 the file does, its inputs and outputs, the teaching point, and a `D-0xx` citation instead of a
@@ -726,3 +729,69 @@ class. Three trades scoring three different criteria do not have one.
 
 **The registry, again** (D-039, D-049, D-055). Two `removeFile`, three `addFile`,
 `runChecks(currentProject)` back to 12/12.
+
+### D-057 · One roll-up, one file, read as printed steps
+
+**Decided.** The three roll-ups get the treatment D-056 gave the trade studies. Each now runs as
+printed steps — the mass roll-up in six, materials in five, fuel in four — and prints every number it
+reads and every subtotal it forms, so a reader can add the tree up by hand and check it.
+`F16AStereotypeLeaves.m` is **deleted**; its walk is inlined into the fuel and materials roll-ups as
+`findFuelTanks` and `findMaterialParts`, each reading its own properties under its own names. A new
+`F16APhysicalRollups.m` runs all three, mirroring the `F16APhysicalTradeStudy` runner.
+**No number moved** — OEW 19,980.73, airframe 6,722.88, propulsion 5,458.83, composite 0.1928,
+fuel 6,300 lb.
+
+**Why.** Same reason as D-056: correct-but-impenetrable code is a defect in a teaching example. A
+student asked "how does a model compute an emergent property from its parts?" met a generic walk
+returning a values matrix whose column order the caller had to know (`vals(:,1)` mass, `vals(:,2)`
+fraction), dispatching on stereotype by `endsWith`, in a different file from either roll-up that used
+it. The three roll-ups printed six, three and three lines between them, against thirty-six per trade
+study — the walk itself, the thing being taught, was invisible.
+
+**This reverses D-054's "one walk, one home", and takes back its risk.** `findFuelTanks` and
+`findMaterialParts` are the same recursion twice over, which is the D-038 failure mode — fix one copy
+and not the other. That is the price, paid deliberately and for the same reason D-056 paid it. What
+makes it affordable is that both copies are pinned:
+`testFuelRollupDiscoversTanksByStereotype` recomputes the tank set independently, and
+`testMaterialsRollupFollowsActiveAirframe` pins the active candidate, the part count and the
+fraction. A variant rule fixed in one copy and not the other turns the suite red.
+
+**The files got longer, not shorter — 369 lines to 665.** Nearly all of the growth is `fprintf` and
+step banners. Simple is not the same as short here: the brief was to make the mechanism visible, and a
+walk that narrates itself costs lines. The *logic* shrank in every file.
+
+**What the narration teaches that a comment could not.** The mass roll-up's step 2 prints each
+variant role's kept and dropped candidates and totals them — "4 rejected candidates carry a mass and
+are NOT in the sum below" — so D-012's active-configuration rule is demonstrated rather than
+asserted. The materials roll-up prints the plain unweighted average (0.3417) beside the mass-weighted
+one (0.1928) and reads off the data why they differ, so "mass-weighted" stops being a word in a help
+block. The runner's closing block says the quiet part: three roll-ups, and only two of them are sums.
+
+**The registry, again** (D-039, D-049, D-055, D-056). One `removeFile`, one `addFile`,
+`runChecks(currentProject)` back to 12/12.
+
+### D-058 · The mass roll-up keeps the analysis instance and drops the second walk
+
+**Decided.** `F16APhysicalMassRollup` keeps `instantiate` and loses everything else that summed:
+`iterate`, the `Function=@f16aMassRollup` argument, the `archMass` architecture-side fallback, the
+`useNative` flag and the `rd` function handle that hid which path had run. One recursion remains, in
+the file, printing as it goes.
+
+**Why.** The file summed the same masses three ways and had to explain why two of them differed. The
+`Function=`/`iterate` pair was also doing far more work than it looked: the analysis function was
+handed to `instantiate` *and* to `iterate(…, Recurse=true)`, and it recursed the whole subtree from
+every node it was called on — so the tree was summed once per node, twice over. Measured in R2026a
+before removing it: `instantiate` with no `Function=` populates every property value, and `setValue`
+on an instance node works, so nothing was being bought.
+
+**Amends D-012, does not retire it.** The instance still contains only the active choice, and the
+architecture-side walks that remain still need `getActiveChoice` — `printChoices` here, the
+stereotype walks in the two other roll-ups, and the test suite's own walks. What is gone is the
+*second summing path*, which is the only thing that needed the asymmetry explained. Retires the
+fallback half of D-054's "there is no fallback now", by removing the fallback it was written about.
+
+**A path space went with it.** Subtotals are now read off the instance by child name
+(`childNode`), not by `lookup(inst, "Path", …)`, so the file contains no instance paths and a reader
+no longer has to know that an instance flattens a variant while the architecture does not. That trap
+is real and still documented in `05_physical.md`, because generators and tests still use
+architecture paths — it just is not in this file any more.
