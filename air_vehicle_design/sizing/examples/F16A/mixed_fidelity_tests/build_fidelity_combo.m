@@ -74,7 +74,7 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
             case "L2",     prop = F16PropL2(f16a_spec_path(2));
             case "Brandt"
                 eng = BrandtEngine(); eng.analyze();
-                prop = BrandtPropAdapter(eng);
+                prop = BrandtConstraintPropAdapter(eng);
             otherwise
                 error('build_fidelity_combo:unknownPropLevel', ...
                     'Unhandled propulsion level "%s".', propLv);
@@ -109,7 +109,7 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
             case "Brandt"
                 bgeom = BrandtGeometry(); bgeom.analyze();
                 baero = BrandtAerodynamics(bgeom); baero.analyze();
-                aero = BrandtAeroAdapter(baero);
+                aero = BrandtConstraintAeroAdapter(baero);
             otherwise
                 error('build_fidelity_combo:unknownAeroLevel', ...
                     'Unhandled aerodynamics level "%s".', aeroLv);

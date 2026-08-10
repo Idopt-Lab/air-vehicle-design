@@ -110,7 +110,7 @@ function S = make_stack(name)
             bg = BrandtGeometry();     bg.analyze();
             ba = BrandtAerodynamics(bg); ba.analyze();
             be = BrandtEngine();        be.analyze();
-            a = BrandtAeroAdapter(ba); p = BrandtPropAdapter(be); g = BrandtGeomAdapter(bg);
+            a = BrandtConstraintAeroAdapter(ba); p = BrandtConstraintPropAdapter(be); g = BrandtMissionGeomAdapter(bg);
     end
     S = struct('aero', a, 'prop', p, 'geom', g);
 end

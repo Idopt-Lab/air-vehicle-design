@@ -4,8 +4,8 @@ classdef BrandtMissionAdapter < MissionAnalysisBase
 %   MissionAnalysisBase contract, so "Brandt" can be selected as a fidelity
 %   LEVEL in the mixed-fidelity sizing harness alongside MissionAnalysisL1/L2.
 %
-%   SELF-CONTAINED, BY DESIGN (see BrandtGeomAdapter's header for the
-%   rationale, which applies identically here): the constructor builds ALL
+%   SELF-CONTAINED, BY DESIGN (see this adapters/ folder's BrandtGeomAdapter
+%   header for the rationale, which applies identically here): the constructor builds ALL
 %   of a private BrandtGeometry -> BrandtEngine -> BrandtAerodynamics ->
 %   BrandtMission chain and analyzes every link internally. No external
 %   geometry/aero/prop object is injected -- Mission=Brandt always reflects
@@ -53,8 +53,8 @@ classdef BrandtMissionAdapter < MissionAnalysisBase
             % Satisfy the MissionAnalysisBase constructor with the Brandt
             % discipline adapters + an empty segment list; none are read once
             % compute_fuel is overridden below (BrandtMission is self-contained).
-            obj@MissionAnalysisBase(BrandtAeroAdapter(aero), BrandtPropAdapter(eng), ...
-                BrandtGeomAdapter(geom), {}, struct());
+            obj@MissionAnalysisBase(BrandtConstraintAeroAdapter(aero), BrandtConstraintPropAdapter(eng), ...
+                BrandtMissionGeomAdapter(geom), {}, struct());
             obj.brandt = BrandtMission(aero, eng, geom);
         end
 
