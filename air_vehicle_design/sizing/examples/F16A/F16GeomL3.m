@@ -179,7 +179,12 @@ classdef F16GeomL3 < GeometryModelL3
         lambda_wing    = 0.2275    % --    FULL taper ratio      [Brandt Main!B20]
         LE_sweep_wing  = 40        % deg   LE sweep              [Brandt Main!B21]
         tc_wing        = 0.04      % --    uniform t/c; wing is genuinely uniform-tc (no root/tip split exists), so tc_r_wing/tc_t_wing mirror it as Dependent [Brandt Main!B22 'NACA 4-digit' = 1404 -> last two digits = 4% chord; corroborated TO 1F-16A-1 Fig. 1-2, NACA 64A204]
-        S_csw          = 68.03     % ft^2  wing control-surface area = flaperon 31.32 + LEF 36.71 [TO 1F-16A-1 Fig. 1-2]
+        % S_csw MOVED 2026-08-10 to the Dependent block: it is the wing
+        % control-surface BUILDUP, S_flaperon + S_lef, not an independent
+        % input. It was frozen at 68.03 while the sizing loop moved S_ref by
+        % ~40%, so Raymer Eq. 15.1's wing weight was using a control-surface
+        % area for a 300 ft^2 wing on a ~175 ft^2 wing. Still reproduces
+        % 68.03 exactly at the JSON baseline via the seeded T.O. components.
         x_apex_wing    = 17.786    % ft    wing apex (root LE) x-station aft of the nose [Brandt Main!B23 'X Location'] -- ADDED sub-step 2h for the area-ruled Amax; fixes Xexp_wing. Not derivable in-framework (Brandt pre-computes it as x_MAC_qc - y_MAC*tan(sweep_LE), readme_geom.md §2, and no MAC x/y stations exist here). PRECISION NOTE: a live Main-tab read logs 17.7858, 0.0011% below this; 17.786 is the scoped value and must not be "corrected" without a decision.
 
         % -- Horizontal tail: FULL planform from the S_ht + B_h pair --------- %
@@ -202,7 +207,12 @@ classdef F16GeomL3 < GeometryModelL3
         LE_sweep_vt       = 47.5    % deg   LE sweep, PHYSICAL [TO 1F-16A-1] -- INTENTIONAL divergence from L2's 40 [Brandt Main!H21] (todo 2026-07-24 GeomL3 §2)
         tc_r_vt           = 0.053   % --    root t/c, biconvex ~5.3% [TO 1F-16A-1 Sec. I] -- this pair is now the SINGLE t/c basis (locked decision 6): the former uniform tc_vt = 0.04 input [Brandt Main!H22 'NACA 4-digit' = '0004'; citation corrected 2026-07-25 from H24, which is 'Y Location'] is gone, and tc_vt is the Dependent mean 0.0415
         tc_t_vt           = 0.030   % --    tip  t/c, biconvex ~3.0% [TO 1F-16A-1 Sec. I]
-        S_r               = 11.65   % ft^2  rudder area           [TO 1F-16A-1 Fig. 1-2]
+        % S_r MOVED 2026-08-10 to the Dependent block as an alias of S_rud (the
+        % loop-written rudder area). It was frozen at the T.O. 11.65 while the
+        % loop shrank S_vt, so Raymer Eq. 15.3's (1 + S_r/S_vt)^0.348 term saw a
+        % rudder FRACTION that drifted upward with every iteration -- and the
+        % loop's own rudder area was discarded. Seeded to 11.65, so a freshly
+        % constructed object is unchanged.
         H_t               = 0       % ft    HT height above fuselage CL; F-16 conventional (non-T) tail, H_t/H_v = 0 [Raymer 6th ed. §15.3]
         H_v               = 1       % ft    any nonzero denominator for H_t/H_v [Raymer 6th ed. §15.3]
         AR_exposed_vt     = 1.294   % --    EXPOSED-planform AR, physical; Raymer Eq. 15.3 weights input [TO/USAF -- the one of the four that reconciles: clean-derived 1.3025, +0.7%]
@@ -242,7 +252,16 @@ classdef F16GeomL3 < GeometryModelL3
 
         % -- Configuration --------------------------------------------------- %
         L_t            = 22.0      % ft    tail arm, wing 1/4-MAC -> HT 1/4-MAC [estimate; verify TO 1F-16A-1] -- derivable only if component apex-x inputs are added (Brandt Main row 23 X-locations); todo 2026-07-24 GeomL3 §6
-        S_cs           = 190       % ft^2  total control-surface area = flaperon + HT + rudder + LEF [estimate] -- unpinned; no control-surface geometry exists in GeomL2/GeometryBase
+        % S_cs MOVED 2026-08-10 to the Dependent block as the component
+        % buildup S_csw + S_stab + S_rud. It was a frozen, self-described
+        % "unpinned estimate" of 190 ft^2 annotated "flaperon + HT + rudder +
+        % LEF" -- and that decomposition now EXISTS as real properties, so the
+        % estimate is superseded by the sum. At the JSON baseline the buildup
+        % gives 68.03 + 108 + 11.65 = 187.68 ft^2, 1.2% below the old 190
+        % estimate; the 190 is what changes, not the physics. Note the
+        % all-moving stabilator contributes its FULL S_ht -- which is the only
+        % reading under which the old 190 annotation adds up, an independent
+        % check on S_stab = S_ht.
 
         % -- Injected collaborator (NOT numeric spec data) ------------------- %
         prop                       % (1,1) PropulsionBase -- injected propulsion object; supplies prop.T_SL to the Dependent T_AB_SLS_lb (Phase 2/3a). At the L3 rung this is an F16PropL2: no L3 propulsion tier exists (locked decision 2026-07-25).
@@ -253,16 +272,37 @@ classdef F16GeomL3 < GeometryModelL3
     % ======================================================================= %
     properties
         % -- Control-surface areas ------------------------------------------ %
-        % NaN until an external control-surface-sizing object
-        % (ControlSurfaceSizer, injected into SizingLoopL2) writes them in.
         % Plain (not Dependent): no closed-form get.S_ail/etc. in terms of
-        % this object's OWN inputs alone. Distinct from S_r/S_csw/S_cs above,
-        % which are separate fixed WEIGHTS-equation inputs (T.O./estimate
-        % figures), not sizing-loop outputs -- no naming collision, but don't
-        % conflate them.
-        S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3]
+        % this object's OWN inputs alone -- an external control-surface-sizing
+        % object (ControlSurfaceSizer, injected into SizingLoopL2) writes them.
+        %
+        % SEEDED, NOT NaN (changed 2026-08-10). At L2 these start as NaN, but
+        % at L3 the constructor seeds S_flaperon/S_lef/S_rud from the T.O.
+        % 1F-16A-1 Fig. 1-2 measured areas, for two reasons:
+        %   1. L3 is the PHYSICAL / T.O. tier (CLAUDE.md), so the measured
+        %      areas are legitimate inputs to it -- the same status S_ht/S_vt
+        %      already have (JSON start value, overwritten by the loop).
+        %   2. S_csw/S_r/S_cs became Dependent on them below. Seeding is what
+        %      lets a freshly-constructed F16GeomL3 still reproduce the T.O.
+        %      figures EXACTLY, so every standalone (non-loop) consumer and
+        %      comparison report is unaffected by the new coupling.
+        % SizingLoopL2 then overwrites all six with Raymer/Roskam ESTIMATES on
+        % iteration 1. The seeded T.O. values and the loop's computed values
+        % are deliberately different things -- ground truth vs. estimate -- and
+        % tail_sizing_brandt_comparison.m reports them side by side. Do not
+        % "reconcile" one to the other.
+        %
+        % EXACTLY ONE of each pair is nonzero for a given airframe
+        % (ControlSurfaceSizer's constructor enforces it): S_ail XOR
+        % S_flaperon, S_elev XOR S_stab. For the F-16: S_flaperon and S_stab.
+        S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3] -- 0 for the F-16 (flaperon serves the roll role)
         S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator)
-        S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]
+        S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]; seeded 11.65 [TO 1F-16A-1 Fig. 1-2]
+
+        % Added 2026-08-10 with the wing-flap / all-moving-stabilator sizing.
+        S_flaperon = NaN   % ft^2  trailing-edge flaperon area [Roskam Part II Eq. 7.10]; seeded 31.32 [TO 1F-16A-1 Fig. 1-2]
+        S_lef      = NaN   % ft^2  leading-edge-flap area      [Roskam Part II Eq. 7.10]; seeded 36.71 [TO 1F-16A-1 Fig. 1-2]
+        S_stab     = NaN   % ft^2  all-moving stabilator area = S_ht [Raymer 6th ed. Table 6.5 footnote]; seeded 108.0 = S_ht [Brandt Main!C18]
     end
 
     % ===================================================================== %
@@ -328,6 +368,19 @@ classdef F16GeomL3 < GeometryModelL3
         Xexp_ht         % ft   exposed-root LE station [Brandt Geom!B8  = 38.93685]
         Xexp_vt         % ft   exposed-root LE station [cf. Geom!B10 = 38.09775 at his 40 deg; L3 gives 38.7283 at 47.5 deg]
 
+        % -- Control-surface-area buildups (ADDED 2026-08-10) ---------------- %
+        %    All three were frozen plain inputs until 2026-08-10 and are the
+        %    ONLY control-surface areas any weight equation consumes. They are
+        %    Dependent now so that a sizing-loop rescale of the wing and tail
+        %    reaches the weights, instead of the weights silently keeping a
+        %    300 ft^2-wing control-surface area on a ~175 ft^2 wing. Each
+        %    reproduces its former input value at the JSON baseline (the
+        %    components are seeded from the same T.O. figures) EXCEPT S_cs,
+        %    which becomes the 187.68 buildup in place of a 190 estimate.
+        S_csw          % ft^2  wing control surfaces = S_flaperon + S_lef; weights' "S_csw" [Raymer Eq. 15.1]
+        S_r            % ft^2  rudder area = S_rud; weights' "S_r" [Raymer Eq. 15.3]
+        S_cs           % ft^2  ALL control surfaces = S_csw + S_stab + S_rud; weights' "S_cs" [Raymer Eq. 15.17]
+
         % -- Total ----------------------------------------------------------- %
         S_wet          % ft^2  wing + HT + VT + fuselage + duct (duct term ADDED in Phase 2)
     end
@@ -362,8 +415,17 @@ classdef F16GeomL3 < GeometryModelL3
             obj.lambda_wing   = G.wing.taper;         % [Brandt Main!B20]
             obj.LE_sweep_wing = G.wing.sweep_LE_deg;  % [Brandt Main!B21]
             obj.tc_wing       = G.wing.tc_ratio;      % [Brandt Main!B22, NACA 4-digit 1404]
-            obj.S_csw         = G.wing.S_csw_ft2;     % [TO 1F-16A-1 Fig. 1-2]
             obj.x_apex_wing   = G.wing.x_apex_ft;     % [Brandt Main!B23 'X Location']
+
+            % Wing control surfaces: SEEDED from the T.O. measured areas, then
+            % overwritten by SizingLoopL2's ControlSurfaceSizer with Roskam
+            % Eq. 7.10 estimates. The Dependent S_csw is their sum, so this
+            % seeding is what makes a freshly-constructed object still report
+            % S_csw = 31.32 + 36.71 = 68.03 exactly. Replaces the former single
+            % S_csw_ft2 = 68.03 input, whose own JSON comment already recorded
+            % this decomposition.
+            obj.S_flaperon    = G.wing.flaperon_area_ft2;  % [TO 1F-16A-1 Fig. 1-2]
+            obj.S_lef         = G.wing.LEF_area_ft2;        % [TO 1F-16A-1 Fig. 1-2]
 
             % ---- horizontal tail (FULL planform + physical exposed set) - %
             %      No AR key by design: S_ft2 + span_ft fix the planform and
@@ -386,7 +448,11 @@ classdef F16GeomL3 < GeometryModelL3
             obj.LE_sweep_vt       = G.vertical_tail.sweep_LE_deg;    % 47.5 [TO 1F-16A-1]
             obj.tc_r_vt           = G.vertical_tail.tc_root;         % [TO 1F-16A-1 Sec. I]
             obj.tc_t_vt           = G.vertical_tail.tc_tip;          % [TO 1F-16A-1 Sec. I]
-            obj.S_r               = G.vertical_tail.rudder_area_ft2; % [TO 1F-16A-1 Fig. 1-2]
+            % SEEDED, not an input: the Dependent S_r is an alias of S_rud, so
+            % this is what makes a freshly-constructed object still report the
+            % T.O. 11.65 ft^2. SizingLoopL2 overwrites it with the Raymer
+            % Table 6.5 estimate.
+            obj.S_rud             = G.vertical_tail.rudder_area_ft2; % [TO 1F-16A-1 Fig. 1-2]
             obj.H_t               = G.vertical_tail.H_t_ft;          % [Raymer 6th ed. §15.3]
             obj.H_v               = G.vertical_tail.H_v_ft;          % [Raymer 6th ed. §15.3]
             obj.AR_exposed_vt     = G.vertical_tail.AR_exposed;      % [TO/USAF, physical]
@@ -421,7 +487,13 @@ classdef F16GeomL3 < GeometryModelL3
 
             % ---- configuration ----------------------------------------- %
             obj.L_t  = G.tail_arm_ft;                        % [estimate]
-            obj.S_cs = G.total_control_surface_area_ft2;     % [estimate]
+            % S_cs is no longer read from JSON: it is the Dependent buildup
+            % S_csw + S_stab + S_rud, and the former
+            % total_control_surface_area_ft2 = 190 estimate key is gone. The
+            % stabilator component needs seeding too, since S_stab is a plain
+            % loop output like the rest -- and for an all-moving tail it IS the
+            % tail [Raymer 6th ed. Table 6.5 footnote], so it seeds from S_ht.
+            obj.S_stab = obj.S_ht;                           % [Brandt Main!C18 via the all-moving-tail rule]
         end
 
         % ================================================================ %
@@ -742,6 +814,42 @@ classdef F16GeomL3 < GeometryModelL3
         % ---- Total ------------------------------------------------------ %
         function v = get.S_wet(obj)
             v = obj.get_S_wet();
+        end
+
+        % ---- Control-surface-area buildups (ADDED 2026-08-10) ------------ %
+        % These three are what the L3 weight equations actually consume. They
+        % were frozen plain inputs (68.03 / 11.65 / 190) that the sizing loop
+        % never touched; they are Dependent now so a wing/tail rescale reaches
+        % the weights. See the input-block comments above for the full record.
+
+        function v = get.S_csw(obj)
+            % Wing control-surface area, Raymer Eq. 15.1's "S_csw" -- the wing
+            % buildup only (flaperon + leading-edge flap), NOT the whole
+            % aircraft. 31.32 + 36.71 = 68.03 ft^2 at the JSON baseline
+            % [TO 1F-16A-1 Fig. 1-2], matching the former frozen input exactly.
+            v = obj.S_flaperon + obj.S_lef;
+        end
+
+        function v = get.S_r(obj)
+            % Rudder area, Raymer Eq. 15.3's "S_r". A pure alias of the
+            % loop-written S_rud, kept under the weights-facing name so
+            % F16WeightsL3.get.S_r needs no change. 11.65 ft^2 at the JSON
+            % baseline [TO 1F-16A-1 Fig. 1-2].
+            v = obj.S_rud;
+        end
+
+        function v = get.S_cs(obj)
+            % TOTAL control-surface area, Raymer Eq. 15.17's "S_cs" =
+            % flaperon + LEF + all-moving HT + rudder. 68.03 + 108 + 11.65 =
+            % 187.68 ft^2 at the JSON baseline, superseding a frozen "190
+            % [estimate, unpinned]" that carried exactly this annotation --
+            % the buildup now exists, so the estimate is retired.
+            %
+            % ★ The stabilator enters at FULL S_ht, not a fraction: on an
+            % all-moving tail the whole surface IS the pitch control [Raymer
+            % 6th ed. Table 6.5 footnote]. That is also the only reading under
+            % which the old 190 annotation adds up.
+            v = obj.S_csw + obj.S_stab + obj.S_rud;
         end
 
     end

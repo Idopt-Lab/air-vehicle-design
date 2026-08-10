@@ -191,9 +191,22 @@ classdef F16GeomL2 < GeometryModelL2
         % (ControlSurfaceSizer, injected into SizingLoopL2) writes them in.
         % Plain (not Dependent) because there is no closed-form get.S_ail/
         % etc. in terms of this object's OWN inputs alone.
+        %
+        % EXACTLY ONE of each pair below is nonzero for a given airframe --
+        % ControlSurfaceSizer's constructor enforces it (see that class's
+        % "ROLE EXCLUSIVITY" header note):
+        %   S_ail  XOR S_flaperon   (a flaperon already IS the roll surface)
+        %   S_elev XOR S_stab       (an all-moving tail has no hinged elevator)
+        % For the F-16 the live pair members are S_flaperon and S_stab; S_ail
+        % and S_elev both come back 0.
         S_ail  = NaN   % ft^2  aileron area  [Raymer 6th ed. Fig. 6.3]
         S_elev = NaN   % ft^2  elevator area [Raymer 6th ed. Table 6.5] -- 0 for the F-16 (all-moving stabilator, no separate elevator)
         S_rud  = NaN   % ft^2  rudder area   [Raymer 6th ed. Table 6.5]
+
+        % Added 2026-08-10 with the wing-flap / all-moving-stabilator sizing.
+        S_flaperon = NaN   % ft^2  trailing-edge flaperon area (aileron + flap in one) [Roskam Part II Eq. 7.10]
+        S_lef      = NaN   % ft^2  leading-edge-flap area                              [Roskam Part II Eq. 7.10]
+        S_stab     = NaN   % ft^2  all-moving stabilator area = S_ht                   [Raymer 6th ed. Table 6.5 footnote]
     end
 
     % ======================================================================= %

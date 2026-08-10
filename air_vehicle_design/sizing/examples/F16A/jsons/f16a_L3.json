@@ -10,13 +10,15 @@
     "_note": "Intentional divergences from L2 (vertical_tail.sweep_LE_deg, fuselage.length_ft, horizontal_tail.span_ft): F16GeomL3.md §2/§4. Derived quantities are Dependent getters; engine SLS thrust arrives by DI. ★ horizontal_tail has NO 'AR' key by design -- S_ft2 + span_ft fix the planform, AR_ht is Dependent; do not add one (todo 2026-07-25 §7). ★ MIXED PROVENANCE, OPEN: full-planform tail areas/AR/taper are Brandt's, carried alongside TO/USAF sweeps and span (todo 2026-07-25 §3).",
 
     "wing": {
-      "_src": "tc_ratio = Main!B22's 1404 -> 4%; AR and tc_ratio corroborated [TO Fig. 1-2, NACA 64A204]; S_csw_ft2 [TO Fig. 1-2, flaperon 31.32 + LEF 36.71; != Main!F18 LE-flap 21.314, todo 2026-07-21 Finding 5]; x_apex_ft [live cell 17.785833 -- 17.786 is the scoped value, do not 'correct', F16GeomL3.md §2 #35]",
+      "_src": "tc_ratio = Main!B22's 1404 -> 4%; AR and tc_ratio corroborated [TO Fig. 1-2, NACA 64A204]; x_apex_ft [live cell 17.785833 -- 17.786 is the scoped value, do not 'correct', F16GeomL3.md §2 #35]",
       "S_ft2":        300.0,
       "AR":           3.0,
       "taper":        0.2275,
       "sweep_LE_deg": 40.0,
       "tc_ratio":     0.04,
-      "S_csw_ft2":    68.03,
+      "flaperon_area_ft2": 31.32,
+      "LEF_area_ft2":      36.71,
+      "_control_surface_src": "SPLIT 2026-08-10 out of the former single S_csw_ft2 = 68.03, whose own comment already read 'flaperon 31.32 + LEF 36.71' [TO 1F-16A-1 Fig. 1-2]. F16GeomL3.S_csw is now the Dependent sum of these two, so 68.03 still reproduces exactly. These two are the MEASURED (ground-truth) areas and only SEED the properties -- SizingLoopL2 overwrites them with Roskam Eq. 7.10 estimates each iteration; tail_sizing_brandt_comparison.m reports computed vs. measured. NB neither matches Brandt Main!F18 LE-flap S = 21.314 (todo 2026-07-21 Finding 5) -- independent T.O. figures, not Brandt cells.",
       "x_apex_ft":    17.786
     },
 
@@ -95,8 +97,7 @@
 
     "tail_arm_ft": 22.0,
     "_tail_arm_ft_src": "L_t, wing 1/4-MAC to HT 1/4-MAC, ft [estimate, unpinned; verify TO] -- non-derivable, no MAC x-stations in the model. todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12.",
-    "total_control_surface_area_ft2": 190,
-    "_total_control_surface_area_ft2_src": "S_cs, ft2 = flaperon + HT + rudder + LEF [estimate, unpinned]; feeds Raymer Eq. 15.17. todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12."
+    "_REMOVED_total_control_surface_area_ft2": "WAS 190 ft2, S_cs = flaperon + HT + rudder + LEF [estimate, unpinned], feeding Raymer Eq. 15.17. REMOVED 2026-08-10: F16GeomL3.S_cs is now the Dependent buildup S_csw + S_stab + S_rud, i.e. exactly the four terms this key's own comment named, so the estimate is superseded by the sum. At the JSON baseline the buildup gives 68.03 + 108 + 11.65 = 187.68 ft2, 1.2% below the retired 190. Closes todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12 for S_cs (L_t above is still open)."
   },
 
   "aerodynamics": {

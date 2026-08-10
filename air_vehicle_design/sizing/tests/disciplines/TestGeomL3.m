@@ -602,15 +602,55 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testControlSurfaceAndConfigInputs(tc)
+        %   S_csw / S_r / S_cs BECAME DEPENDENT 2026-08-10. They were frozen
+        %   plain inputs that the sizing loop never touched, so the L3 weight
+        %   equations kept a 300 ft^2-wing control-surface area while the loop
+        %   converged S_ref to roughly 180. They are buildups on the
+        %   loop-written component areas now:
+        %       S_csw = S_flaperon + S_lef  = 31.32 + 36.71  = 68.03
+        %       S_r   = S_rud               =                  11.65
+        %       S_cs  = S_csw + S_stab + S_rud = 68.03 + 108 + 11.65 = 187.68
+        %   The first two still reproduce their old frozen values EXACTLY,
+        %   because F16GeomL3's constructor seeds the components from the same
+        %   T.O. 1F-16A-1 Fig. 1-2 measured areas. S_cs deliberately does not:
+        %   190 was an unpinned estimate annotated "flaperon + HT + rudder +
+        %   LEF", and the buildup of exactly those four terms is 187.68 (1.2%
+        %   below). The estimate is retired, not the physics.
             g = TestGeomL3.makeGeom();
-            tc.verifyEqual(g.S_csw, 68.03, 'AbsTol', 1e-12);   % wing control-surface area
-            tc.verifyEqual(g.S_cs,  190,   'AbsTol', 1e-12);   % total control-surface area
-            tc.verifyEqual(g.S_r,   11.65, 'AbsTol', 1e-12);   % rudder area
-            tc.verifyEqual(g.L_t,   22.0,  'AbsTol', 1e-12);   % tail arm
-            tc.verifyEqual(g.F_w,   7.0,   'AbsTol', 1e-12);   % fuselage width at HT
-            tc.verifyEqual(g.H_t,   0,     'AbsTol', 1e-12);   % conventional (non-T) tail
-            tc.verifyEqual(g.H_v,   1,     'AbsTol', 1e-12);
-            tc.verifyEqual(g.L_duct, 14.0, 'AbsTol', 1e-12);   % airframe duct length
+            tc.verifyEqual(g.S_csw, 68.03,  'AbsTol', 1e-10);   % wing control surfaces = flaperon + LEF
+            tc.verifyEqual(g.S_cs,  187.68, 'AbsTol', 1e-10);   % total = wing + stabilator + rudder (was a frozen 190 estimate)
+            tc.verifyEqual(g.S_r,   11.65,  'AbsTol', 1e-12);   % rudder area
+            tc.verifyEqual(g.L_t,   22.0,   'AbsTol', 1e-12);   % tail arm
+            tc.verifyEqual(g.F_w,   7.0,    'AbsTol', 1e-12);   % fuselage width at HT
+            tc.verifyEqual(g.H_t,   0,      'AbsTol', 1e-12);   % conventional (non-T) tail
+            tc.verifyEqual(g.H_v,   1,      'AbsTol', 1e-12);
+            tc.verifyEqual(g.L_duct, 14.0,  'AbsTol', 1e-12);   % airframe duct length
+        end
+
+        function testControlSurfaceBuildupsAreLiveNotFrozen(tc)
+        %   The staleness guard. Writing a component area must move its
+        %   buildup immediately -- that is the whole point of making these
+        %   three Dependent, and a stored copy would pass every value check
+        %   above while silently freezing under the sizing loop.
+            g = TestGeomL3.makeGeom();
+            g.S_flaperon = 20;
+            g.S_lef      = 30;
+            g.S_rud      = 10;
+            g.S_stab     = 50;
+            tc.verifyEqual(g.S_csw, 50,  'AbsTol', 1e-12, 'S_csw must recompute from S_flaperon + S_lef.');
+            tc.verifyEqual(g.S_r,   10,  'AbsTol', 1e-12, 'S_r must alias S_rud.');
+            tc.verifyEqual(g.S_cs,  110, 'AbsTol', 1e-12, 'S_cs must recompute from S_csw + S_stab + S_rud.');
+        end
+
+        function testStabilatorSeedsToTheFullTailArea(tc)
+        %   The F-16's horizontal tail is an all-moving stabilator, so its
+        %   control-surface area is the WHOLE tail [Raymer 6th ed. Table 6.5
+        %   footnote, "Supersonic usually all-moving tail without separate
+        %   elevator"] -- not a chord fraction of it. This is also the only
+        %   reading under which the retired S_cs = 190 annotation adds up.
+            g = TestGeomL3.makeGeom();
+            tc.verifyEqual(g.S_stab, g.S_ht, 'AbsTol', 1e-12);
+            tc.verifyEqual(g.S_stab, 108.0,  'AbsTol', 1e-12);
         end
 
         % ================================================================== %
@@ -725,7 +765,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % hand arithmetic above and nothing looser.
             p = F16PropL2(f16a_spec_path(2));
             g = F16GeomL3(f16a_spec_path(3), p);
-            a = F16AeroL2(g, f16a_spec_path(2));   % L2 aero: CD0 = Cfe*S_wet/S_ref
+            a = F16AeroL2(g, f16a_spec_path(2), f16a_control_surfaces());   % L2 aero: CD0 = Cfe*S_wet/S_ref
 
             tc.verifyEqual(g.T_AB_SLS_lb, p.T_SL, 'AbsTol', 1e-12, ...
                 'T_AB_SLS_lb must be the injected prop.T_SL, not a stored copy.');

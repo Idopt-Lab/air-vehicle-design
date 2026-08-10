@@ -37,7 +37,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         lambda_wing    % Wing taper ratio (FULL planform)      [INPUT]  weights' "lambda_w"
         LE_sweep_wing  % Wing LE sweep (deg)                   [INPUT]  weights' "Lambda_LE_w"
         tc_wing        % Wing uniform t/c                      [INPUT]  wing has no root/tip split
-        S_csw          % Wing control-surface area (ft²)       [INPUT]  weights' "S_csw"
+        S_csw          % Wing control-surface area (ft²)       [DERIVED] = S_flaperon + S_lef; weights' "S_csw". Was an INPUT (frozen 68.03) until 2026-08-10.
         x_apex_wing    % Wing apex (root LE) x-station (ft)    [INPUT]  17.786 [Brandt Main!B23]
         b_wing         % Wing span (ft)                        [DERIVED]
         c_root_wing    % Wing root chord (ft)                  [DERIVED] Raymer Eq. 7.6
@@ -82,7 +82,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         LE_sweep_vt       % VT LE sweep (deg)                   [INPUT]  47.5, physical; weights' "Lambda_LE_vt"
         tc_r_vt           % VT root t/c                         [INPUT]  0.053 [T.O. Sec. I]
         tc_t_vt           % VT tip  t/c                         [INPUT]  0.030 [T.O. Sec. I]
-        S_r               % VT rudder area (ft²)                [INPUT]  weights' "S_r"
+        S_r               % VT rudder area (ft²)                [DERIVED] = S_rud; weights' "S_r". Was an INPUT until 2026-08-10, when it became an alias of the sizing-loop-written rudder area so a tail rescale reaches Raymer Eq. 15.3.
         H_t               % HT height above fuselage CL (ft)    [INPUT]  weights' "H_t"
         H_v               % VT height / nonzero denominator (ft)[INPUT]  weights' "H_v"
         AR_exposed_vt     % VT EXPOSED aspect ratio             [INPUT]  1.294; weights' "AR_vt"
@@ -135,7 +135,24 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
     % ── Configuration ──────────────────────────────────────────────────── %
     properties (Abstract)
         L_t            % Tail arm, wing ¼-MAC → HT ¼-MAC (ft)  [INPUT]  weights' "L_t"
-        S_cs           % Total control-surface area (ft²)      [INPUT]  weights' "S_cs"
+        S_cs           % Total control-surface area (ft²)      [DERIVED] = S_csw + S_stab + S_rud; weights' "S_cs". Was an INPUT (frozen 190 estimate) until 2026-08-10.
+    end
+
+    % ── Control-surface areas written by the sizing loop ───────────────────── %
+    % Plain, mutable properties an injected ControlSurfaceSizer writes each
+    % iteration (SizingLoopL2), NOT computed by this class. Declared abstract
+    % here because the L3 S_csw/S_r/S_cs getters above are Dependent on them.
+    % Exactly one of each pair is nonzero for a given airframe -- S_ail XOR
+    % S_flaperon, S_elev XOR S_stab -- enforced by ControlSurfaceSizer's
+    % constructor. At L3 all six are SEEDED from the T.O. measured areas so a
+    % non-loop construction reproduces the ground-truth figures exactly.
+    properties (Abstract)
+        S_ail          % Aileron area (ft²)                    [LOOP OUTPUT] 0 for the F-16 (flaperon serves the roll role)
+        S_elev         % Elevator area (ft²)                   [LOOP OUTPUT] 0 for the F-16 (all-moving stabilator)
+        S_rud          % Rudder area (ft²)                     [LOOP OUTPUT] seeds 11.65 [T.O. Fig. 1-2]
+        S_flaperon     % TE flaperon area (ft²)                 [LOOP OUTPUT] seeds 31.32 [T.O. Fig. 1-2]
+        S_lef          % LE-flap area (ft²)                    [LOOP OUTPUT] seeds 36.71 [T.O. Fig. 1-2]
+        S_stab         % All-moving stabilator area (ft²)       [LOOP OUTPUT] = S_ht; seeds 108.0
     end
 
     methods (Abstract)

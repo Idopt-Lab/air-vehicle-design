@@ -776,7 +776,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         %     Delta(CD0) = 0.0035*19.2015640190/300 = 2.2401824689e-4
             p = F16PropL2(f16a_spec_path(2));
             g = F16GeomL2(f16a_spec_path(2), p);
-            a = F16AeroL2(g, f16a_spec_path(2));
+            a = F16AeroL2(g, f16a_spec_path(2), f16a_control_surfaces());
 
             tc.verifyEqual(g.T_AB_SLS_lb, p.T_SL, 'AbsTol', 1e-12, ...
                 'T_AB_SLS_lb must be the injected prop.T_SL, not a stored copy.');
