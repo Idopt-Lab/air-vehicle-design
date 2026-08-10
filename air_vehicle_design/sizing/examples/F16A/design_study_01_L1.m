@@ -2,7 +2,8 @@ function [result, objs] = design_study_01_L1(W_TO_guess)
 %DESIGN_STUDY_01_L1  F-16A Level-1 sizing study.
 %
 %   result = design_study_01_L1(W_TO_guess) builds fresh F16AeroL1/F16PropL1/
-%   F16WeightsL1/F16GeomL1/F16MissionL1 discipline objects plus the F-16's
+%   F16WeightsL1/F16GeomL1 discipline objects, the L1 mission analysis
+%   (MissionAnalysisL1.from_requirements over the CAP profile), plus the F-16's
 %   L1 constraint set (ConstraintAnalysis.from_requirements with the F-16
 %   map F16ConstraintSet.constraint_map(), sharing this study's own aero/prop
 %   objects rather than a separate internal copy), wires them into
@@ -36,7 +37,7 @@ aero = F16AeroL1(f16a_spec_path(1));
 prop = F16PropL1(f16a_spec_path(1));
 wts  = F16WeightsL1(f16a_spec_path(1));
 geom = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-miss = F16MissionL1(mission_profile_path());
+miss = MissionAnalysisL1.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
 
 con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
     F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);

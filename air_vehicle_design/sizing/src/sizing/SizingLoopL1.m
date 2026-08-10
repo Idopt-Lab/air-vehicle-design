@@ -53,7 +53,7 @@ classdef SizingLoopL1 < handle
 %       ([WS_opt, TW_opt]), not a struct from optimal_point(aero, prop).
 %     prop.T_SL (not prop.T0) is PropulsionBase's abstract sea-level-thrust
 %       property.
-%     miss.compute_fuel(aero, prop, W_TO) takes 3 args (MissionBase), not 4
+%     miss.compute_fuel(aero, prop, W_TO) takes 3 args (MissionAnalysisBase), not 4
 %       -- there is no "req" object with W_payload/S_ref fields anywhere in
 %       this codebase; payload comes from wts.W_payload_fixed/
 %       W_payload_expendable (WeightsBase abstract properties).
@@ -78,7 +78,7 @@ classdef SizingLoopL1 < handle
                 prop (1,1) PropulsionBase
                 wts  (1,1) WeightsBase
                 geom (1,1) GeometryBase
-                miss (1,1) MissionBase
+                miss (1,1) MissionAnalysisBase
                 con  (1,1) ConstraintAnalysis
             end
             obj.aero = aero;

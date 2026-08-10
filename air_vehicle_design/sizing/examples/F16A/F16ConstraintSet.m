@@ -22,25 +22,22 @@ classdef F16ConstraintSet
 %   Excess Power is a specific-excess-power demand (Ps>0); the two field rows
 %   map to Takeoff/Landing.
 %
-%   STALL IS EXCLUDED BY DEFAULT: constraint_map() omits the Stall condition,
-%   so it is not built (a condition absent from the map is simply skipped --
-%   there is no includeStall flag anymore). Stall has no Brandt reference row
-%   to validate its CLmax against, and at L2/L3 its wall sits on AeroL2/L3's
-%   geometry-based CLEAN CLmax estimate (~0.91 vs L1's Roskam-table ~1.50 --
-%   see F16AeroL2.m/F16AeroL3.m). That low CLmax put Stall's wall at
-%   W/S~=62-64 psf, tighter than every real condition, so with Stall in the
-%   set it silently became the BINDING constraint and pulled the reported
-%   optimum to W/S~=62 at L2/L3 (vs. Brandt's W/S=104.59). Use
-%   constraint_map_with_stall() to add it back as a sanity-check overlay, but
-%   note it will again dominate optimal_point() at L2/L3. The underlying
-%   clean-CLmax gap is tracked in ToDo_Darshan.md §3.
+%   STALL IS NOT AN F-16 DIAGRAM CONSTRAINT: the requirements JSON carries no
+%   Stall condition, so none is built (selection is driven by the JSON; a
+%   condition it does not list is simply not built -- there is no includeStall
+%   flag). Stall was removed because at L2/L3 its wall sits on AeroL2/L3's
+%   geometry-based CLEAN CLmax estimate (~0.91 vs L1's Roskam-table ~1.50),
+%   which put the wall at W/S ~ 62 psf and spuriously bound the optimum (vs.
+%   Brandt's W/S = 104.59). The fix belongs in aerodynamics (clean-CLmax root
+%   cause, ToDo_Darshan.md §3); re-add a Stall condition to the JSON once it
+%   lands. StallConstraint.m still exists and is unit-tested standalone.
 
     methods (Static)
 
         function m = constraint_map()
-        %CONSTRAINT_MAP  The F-16's condition-name -> ConstraintType map, Stall
-        %   excluded (the 8 diagram conditions). See class header for why Stall
-        %   is left out by default and for the thrust-row -> class rationale.
+        %CONSTRAINT_MAP  The F-16's condition-name -> ConstraintType map (the 8
+        %   diagram conditions). See the class header for the thrust-row -> class
+        %   rationale and for why Stall is not among them.
             m = dictionary;
             m("Max Mach")                   = ConstraintType.LevelFlight;
             m("Cruise")                     = ConstraintType.LevelFlight;
@@ -50,14 +47,6 @@ classdef F16ConstraintSet
             m("Excess Power")               = ConstraintType.ExcessPower;
             m("Takeoff")                    = ConstraintType.Takeoff;
             m("Landing")                    = ConstraintType.Landing;
-        end
-
-        function m = constraint_map_with_stall()
-        %CONSTRAINT_MAP_WITH_STALL  constraint_map() plus the Stall wall
-        %   (StallConstraint), for a 9-condition sanity-check overlay. Stall
-        %   tends to dominate the optimum at L2/L3 -- see class header.
-            m = F16ConstraintSet.constraint_map();
-            m("Stall") = ConstraintType.Stall;
         end
 
     end

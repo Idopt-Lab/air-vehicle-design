@@ -49,6 +49,16 @@ classdef BrandtConstraintAeroAdapter < AerodynamicsBase
         brandtAero   % BrandtAerodynamics handle (analyze() already called)
     end
 
+    properties (Constant)
+        %AIRCRAFT_CATEGORY  Canonical class flag, for mission analysis.
+        %   The Brandt F-16A is a jet fighter; mission analysis reads
+        %   aero.aircraft_category to pick the Roskam Table 2.1/2.2 row (via
+        %   MissionEquations.to_roskam_row), matching how F16AeroL*.aircraft_category
+        %   is read on the F-16 stacks. Added for mission analysis; the
+        %   constraint reproduction test does not use it. No equation.
+        aircraft_category = "jet_fighter"
+    end
+
     methods
 
         function obj = BrandtConstraintAeroAdapter(brandtAero)

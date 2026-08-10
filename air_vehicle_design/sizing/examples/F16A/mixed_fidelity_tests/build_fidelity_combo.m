@@ -10,8 +10,7 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 %   propLv                               -- one of "L1"/"L2"/"Brandt" (no L3
 %                                            propulsion tier exists anywhere
 %                                            in this framework -- see
-%                                            CLAUDE.md's propulsion-tier
-%                                            note).
+%                                            design_study_03_L3.m's header).
 %   loopLv                               -- one of "L1"/"L2" (there is no
 %                                            "Brandt loop": Brandt's
 %                                            spreadsheet has no injectable
@@ -33,10 +32,9 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 %
 %   Construction proceeds in DEPENDENCY ORDER -- prop -> geom -> aero -> wts
 %   -> miss -> constraints/loop -- exactly mirroring design_study_01_L1.m /
-%   design_study_02_L2.m / design_study_03_L3.m and
-%   F16ConstraintSet.buildDisciplines, reusing their exact construction
-%   calls and the f16a_spec_path(level)/f16a_requirements_path()/
-%   mission_profile_path() helpers verbatim. EACH discipline's construction
+%   design_study_02_L2.m / design_study_03_L3.m, reusing their exact
+%   construction calls and the f16a_spec_path(level)/f16a_requirements_path()
+%   helpers verbatim. EACH discipline's construction
 %   is wrapped in its OWN try/catch: on failure this function returns
 %   IMMEDIATELY with status.ok=false, status.stage set to the discipline
 %   that failed, and status.message = the caught exception's message, and
@@ -46,10 +44,10 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 %   stack trace out of this function. See COMPATIBILITY_NOTES.md for the
 %   recurring failure patterns this surfaces.
 %
-%   On success for all five disciplines, builds ConstraintAnalysis via
-%   ConstraintAnalysis.from_requirements(aero, prop, ..., F16ConstraintSet.
-%   constraint_map(), ...) (same call shape as every design_study_*.m),
-%   picks SizingLoopL1 or SizingLoopL2 per
+%   On success for all five disciplines, builds the constraint analysis via
+%   ConstraintAnalysis.from_requirements(aero, prop, ...,
+%   F16ConstraintSet.constraint_map(), ...) (same call shape as every
+%   design_study_*.m), picks SizingLoopL1 or SizingLoopL2 per
 %   loopLv (L3 disciplines reuse SizingLoopL2, per design_study_03_L3.m --
 %   sizing has no per-fidelity-level equation set of its own), runs it
 %   (also inside its own try/catch -> status.stage = "loop" on failure OR
@@ -74,7 +72,9 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
         switch propLv
             case "L1",     prop = F16PropL1(f16a_spec_path(1));
             case "L2",     prop = F16PropL2(f16a_spec_path(2));
-            case "Brandt", prop = BrandtPropAdapter();
+            case "Brandt"
+                eng = BrandtEngine(); eng.analyze();
+                prop = BrandtPropAdapter(eng);
             otherwise
                 error('build_fidelity_combo:unknownPropLevel', ...
                     'Unhandled propulsion level "%s".', propLv);
@@ -106,7 +106,10 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
             case "L1",     aero = F16AeroL1(f16a_spec_path(1));
             case "L2",     aero = F16AeroL2(geom, f16a_spec_path(2));
             case "L3",     aero = F16AeroL3(geom, f16a_spec_path(3));
-            case "Brandt", aero = BrandtAeroAdapter();
+            case "Brandt"
+                bgeom = BrandtGeometry(); bgeom.analyze();
+                baero = BrandtAerodynamics(bgeom); baero.analyze();
+                aero = BrandtAeroAdapter(baero);
             otherwise
                 error('build_fidelity_combo:unknownAeroLevel', ...
                     'Unhandled aerodynamics level "%s".', aeroLv);
@@ -134,10 +137,12 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
 
     % ---- Mission --------------------------------------------------------%
     try
+        % L1/L2 = new core mission (aircraft-agnostic, injects aero/prop/geom).
+        % L3 mission maps to MissionAnalysisL2 (there is no L3 mission tier).
         switch missionLv
-            case "L1",     miss = F16MissionL1(mission_profile_path());
-            case "L2",     miss = F16MissionL2(mission_profile_path());
-            case "L3",     miss = F16MissionL3(mission_profile_path());
+            case "L1",     miss = MissionAnalysisL1.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
+            case "L2",     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
+            case "L3",     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
             case "Brandt", miss = BrandtMissionAdapter();
             otherwise
                 error('build_fidelity_combo:unknownMissionLevel', ...
@@ -151,8 +156,9 @@ function [objs, status] = build_fidelity_combo(geomLv, aeroLv, propLv, weightsLv
     % ---- Constraint set + analysis (same call shape as every
     %      design_study_*.m) -------------------------------------------- %
     try
-        con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
-            F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
+        con = ConstraintAnalysis.from_requirements(aero, prop, ...
+            f16a_requirements_path(), F16ConstraintSet.constraint_map(), ...
+            PointPerformanceBase.WS_RANGE_BRANDT);
     catch ME
         status = struct('ok', false, 'stage', 'constraints', 'message', ME.message);
         return

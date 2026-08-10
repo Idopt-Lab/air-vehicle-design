@@ -6,7 +6,8 @@ classdef SandCL2
 %   ALSO calls weighted_cg directly for its own x_cg (fidelity-collapse
 %   rule: the equation is level-agnostic -- it lives here once, not
 %   duplicated on SandCL3 -- exactly the cross-toolbox-reuse pattern already
-%   used elsewhere in this repo, e.g. GeomL3.size_tail -> GeomL1.size_tail).
+%   used elsewhere in this repo, e.g. TailL2 cross-calling
+%   TailL1.compute_tail_arm).
 %
 %   Companion doc: src/disciplines/stability_control/SandCL2.md
 

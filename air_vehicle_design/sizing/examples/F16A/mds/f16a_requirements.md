@@ -38,9 +38,9 @@ minor (Raymer Eq. 10.10 `W_en` +0.62 % at 2.05; L3 OEW 15705.33 → 15725.41). T
 
 ## 2. `constraints` block — schema
 
-The `constraints` block holds the 9 F-16A conditions (Stall last), each an object under
+The `constraints` block holds the 8 F-16A conditions, each an object under
 `constraints.conditions`. Each object holds requirement / condition data ONLY. The block stays
-inside this file (not a sibling `f16a_constraints.json`); it is small today (9 conditions, ~6
+inside this file (not a sibling `f16a_constraints.json`); it is small today (8 conditions, ~6
 fields each). It is read by `ConstraintSetImporter.read_conditions` and wired into concrete
 constraint objects by `ConstraintAnalysis.from_requirements`, which picks each condition's
 constraint class from a caller-supplied condition-name → `ConstraintType` map (the F-16's map is
@@ -63,8 +63,9 @@ constraint class from a caller-supplied condition-name → `ConstraintType` map 
   `LevelFlightConstraint` (n = 1, Ps = 0); Combat Turn 1/2 → `SustainedTurnConstraint` (n > 1);
   Excess Power → `ExcessPowerConstraint` (Ps > 0) — plus Takeoff → `TakeoffConstraint` (a direct
   `Both_WbyS_TbyW` sibling, ground-roll equation).
-- `Only_WbyS` rows → Landing → `LandingConstraint`; Stall → `StallConstraint` (Stall is omitted
-  from the default map, so it is not built unless `F16ConstraintSet.constraint_map_with_stall` is used).
+- `Only_WbyS` rows → Landing → `LandingConstraint`. (Stall is NOT an F-16 diagram condition — the
+  JSON carries none; its L2/L3 clean-CLmax wall would spuriously bind the optimum, ToDo_Darshan.md §3.
+  `StallConstraint` still exists and is unit-tested standalone.)
 - `Only_TbyW` → none used by the F-16 set today.
 
 [src: `F16ConstraintSet.m`, `src/constraints/ConstraintType.m`, `src/constraints/ConstraintAnalysis.m`, `src/constraints/MasterEquationConstraint.m`,
@@ -99,11 +100,13 @@ Both_WbyS_TbyW`), but it takes the field fields above, not the thrust fields, an
 Landing is power-off, so it carries no `mach` / `power_setting` / `n` / `Ps_fps` — only
 `altitude_ft` (0), `beta` (1.0), `distance_ft`, `mu`, `k_factor`.
 
-### 2.4 Stall-condition fields
+### 2.4 Stall — not carried as a condition
 
-Stall: `category` = `"Only_WbyS"`, `altitude_ft` = 0, `mach` = 0.217466, `beta` = 1.0. No thrust
-or field-roll fields. Stall is not a Brandt `Consts`-sheet row; the Mach comes from the Brandt
-"Ps" sheet cell B10 (see §3.3).
+Stall is NOT an F-16 diagram condition and is absent from `constraints.conditions`. At L2/L3 the
+aero object's geometry-based clean CLmax (~0.91) would put the stall wall at W/S ~ 62 psf and
+spuriously bind the optimum; the fix belongs in aerodynamics (ToDo_Darshan.md §3). `StallConstraint`
+still exists and is unit-tested standalone. Reference stall-speed value, for when it is re-added:
+Mach 0.217466 at sea level [Brandt `Ps!B10`] (see §3.3).
 
 ---
 
@@ -145,15 +148,11 @@ corroborated by `cell-map` `Consts!C23:F28`.
   kinematic approximation, NOT an aero quantity [`Consts!AT32`;
   `f16a_geometry.json` `constraints.takeoff.mach_liftoff`].
 
-### 3.3 Stall condition
+### 3.3 Stall — not a current condition
 
-| name | category | alt_ft | mach | beta | source |
-|------|----------|--------|------|------|--------|
-| Stall | Only_WbyS | 0 | 0.217466 | 1.0 | Brandt "Ps" sheet cell B10 (`Ps!B10`) |
-
-`mach` = 0.217466: sea-level stall-speed requirement, cited to `Ps!B10`; corroborated in-repo by
-`StallConstraint.m`
-(same value). Not a Brandt `Consts`-sheet row and not carried in `f16a_geometry.json`.
+Not carried in `constraints.conditions` (see §2.4). Reference value for a future re-add: Mach
+0.217466 at sea level, category `Only_WbyS` [Brandt `Ps!B10`]; not a Brandt `Consts`-sheet row and
+not in `f16a_geometry.json`.
 
 ---
 

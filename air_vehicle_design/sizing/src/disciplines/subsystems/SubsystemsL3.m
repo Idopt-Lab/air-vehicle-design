@@ -10,8 +10,8 @@ classdef SubsystemsL3
 %   station table instead of GeomL2's envelope-ellipse approximation
 %   (docs/subplans/09_subsystems.md Fidelity split). Every other equation is
 %   level-agnostic and is REUSED by direct cross-toolbox call to
-%   SubsystemsL2, not duplicated -- same reuse pattern as GeomL3 cross-
-%   calling GeomL1/GeomL2 statics (e.g. GeomL3.size_tail -> GeomL1.size_tail).
+%   SubsystemsL2, not duplicated -- same reuse pattern used elsewhere in this
+%   repo (e.g. TailL2 cross-calling TailL1.compute_tail_arm).
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL3.md
 

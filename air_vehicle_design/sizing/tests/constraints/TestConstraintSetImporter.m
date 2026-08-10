@@ -10,13 +10,13 @@ classdef TestConstraintSetImporter < matlab.unittest.TestCase
 
     methods (Test)
 
-        function testAllNineConditionsPresent(tc)
+        function testAllEightConditionsPresent(tc)
             cond = ConstraintSetImporter.read_conditions(f16a_requirements_path());
-            tc.verifyEqual(numel(cond), 9);
+            tc.verifyEqual(numel(cond), 8);
             names = arrayfun(@(c) string(c.name), cond);
             expectedNames = ["Max Mach", "Cruise", "Max Alt", ...
                 "Combat Turn 1 (subsonic)", "Combat Turn 2 (supersonic)", ...
-                "Excess Power", "Takeoff", "Landing", "Stall"];
+                "Excess Power", "Takeoff", "Landing"];
             tc.verifyEqual(names(:), expectedNames(:));
         end
 
@@ -52,13 +52,6 @@ classdef TestConstraintSetImporter < matlab.unittest.TestCase
             la = TestConstraintSetImporter.byName(cond, "Landing");
             tc.verifyEqual(la.distance_ft, 4000, 'AbsTol', 1e-9);
             tc.verifyEqual(la.mu, 0.50, 'AbsTol', 1e-9);
-        end
-
-        function testStallMach(tc)
-            cond = ConstraintSetImporter.read_conditions(f16a_requirements_path());
-            st = TestConstraintSetImporter.byName(cond, "Stall");
-            tc.verifyEqual(st.mach, 0.217466, 'AbsTol', 1e-9);
-            tc.verifyEqual(string(st.category), "Only_WbyS");
         end
 
         function testMissingConstraintsBlockErrors(tc)

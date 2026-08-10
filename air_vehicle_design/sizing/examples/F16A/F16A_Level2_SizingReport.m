@@ -6,8 +6,8 @@
 %   W_wings/W_tail/W_fuselage/W_landing_gear/W_installed_engine/
 %   W_all_else_empty properties -- Raymer Table 15.2 unit-weight buildup)
 % * Real aerodynamic-coefficient breakdown at each mission segment (L2's
-%   mission fuel closure genuinely calls F16AeroL2.drag_polar per segment,
-%   unlike L1 -- see F16MissionL2's header)
+%   mission fuel closure calls the injected aero's drag_polar per segment --
+%   MissionAnalysisL2)
 % * A note on why no internal fuel-volume check is available at this
 %   fidelity level (only F16WeightsL3 carries V_t/V_i/V_p)
 %
@@ -24,7 +24,8 @@
 
 %% Run the L2 design study
 % design_study_02_L2 builds fresh F16AeroL2/F16PropL2/F16WeightsL2/
-% F16GeomL2/F16MissionL2 objects, plus the separate, dependency-injected
+% F16GeomL2 objects plus the L2 mission analysis (MissionAnalysisL2), plus
+% the separate, dependency-injected
 % F16TailL1/ControlSurfaceSizer tail- and control-surface-sizing objects
 % (2026-08-03 absorption into Geometry REVERTED, 2026-08-05 -- tail sizing
 % is not a method on F16GeomL2 any more), wires them all into SizingLoopL2,
@@ -124,76 +125,36 @@ title('F-16A Level 2 Component-Level Weight Breakdown');
 fprintf('\n  Check: sum(components) - OEW(W_TO_final) = %.4f lbf (should be ~0)\n', ...
     (W_wing + W_tail.HT + W_tail.VT + W_fus + W_lg + W_eng + W_else) - objs.wts.OEW(W_TO_final));
 
-%% Real aerodynamic-coefficient breakdown at each mission segment
-% Unlike L1, F16MissionL2's mission-fuel closure genuinely calls
-% F16AeroL2.drag_polar/F16PropL2 per segment (Cruise/Dash/Combat/Loiter;
-% Climb is energy-height sub-integrated). This section calls
-% MissionL2.get_mission_fuel directly (the same static F16MissionL2.
-% compute_fuel delegates to) to recover its second output (breakdown,
-% including the per-segment starting weight W_after_lbf), which
-% F16MissionL2.compute_fuel itself discards -- then re-evaluates
-% F16AeroL2.drag_polar/compute_CL/compute_CD at each segment's tabulated
-% condition and the weight AT THE START of that segment (same
-% single-point-approximation convention MissionL2 itself uses -- see its
-% class header). Ground-roll/fixed-fraction segments (startup/taxi/
-% takeoff/landing) are not evaluated -- there is no steady-level-flight
-% condition to define CL/CD for them.
+%% Mission fuel + key drivers by segment
+% MissionAnalysisL2's master-equation legs call the injected aero/prop, so the
+% per-segment fuel, and the L/D and TSFC that drove each leg, come straight
+% from the mission breakdown (total_fuel) -- no re-evaluation needed. Fixed-
+% fraction ground/landing legs have no L/D and show blank.
 
-[~, breakdown] = MissionL2.get_mission_fuel(objs.miss.missiondata, W_TO_final, objs.aero, objs.prop);
+[~, breakdown] = objs.miss.total_fuel(W_TO_final);
 
-missiondata = objs.miss.missiondata;
-names   = missiondata.segment_names;
-alt_ft  = missiondata.alt_ft;
-mach    = missiondata.mach_end;
-n       = numel(names);
-
-W_start = zeros(1, n);
-W_start(1) = W_TO_final;
-if n > 1
-    W_start(2:end) = breakdown.W_after_lbf(1:end-1);
-end
-
-aero_segments = ["climb", "cruise", "dash", "combat", "loiter"];
-
-CD0 = nan(1, n); K1 = nan(1, n); K2 = nan(1, n);
-CL  = nan(1, n); CD = nan(1, n); LD = nan(1, n);
-
+seg_names = breakdown.names;
+n = numel(seg_names);
+LD = nan(1, n); TSFC = nan(1, n);
 for i = 1:n
-    seg = MissionL1.normalize_segment_name(names(i));
-    if ~ismember(seg, aero_segments)
-        continue
-    end
-    state = AircraftState(alt_ft(i), mach(i));
-    polar = objs.aero.drag_polar(state);
-    CD0(i) = polar.CD0;
-    K1(i)  = polar.K1;
-    K2(i)  = polar.K2;
-    CL(i)  = objs.aero.compute_CL(W_start(i), state.q, objs.geom.S_ref);
-    CD(i)  = objs.aero.compute_CD(polar.CD0, polar.K1, polar.K2, CL(i));
-    LD(i)  = CL(i) / CD(i);
+    d = breakdown.debug{i};
+    if isfield(d, 'LD'),          LD(i)   = d.LD; end
+    if isfield(d, 'TSFC_per_hr'), TSFC(i) = d.TSFC_per_hr; end
 end
 
-aeroTable = table(names(:), alt_ft(:), mach(:), W_start(:), CD0(:), K1(:), K2(:), CL(:), CD(:), LD(:), ...
-    'VariableNames', {'Segment', 'Altitude_ft', 'Mach', 'W_start_lbf', 'CD0', 'K1', 'K2', 'CL', 'CD', 'L_D'});
-disp('Level 2 aerodynamic-coefficient breakdown by mission segment:');
-disp(aeroTable);
-
-figure('Name', 'L2 Aerodynamic Coefficient Breakdown');
-tiledlayout(3, 1);
-nexttile;
-bar(categorical(names, names, 'Ordinal', true), CD0);
-grid on; ylabel('CD_0'); title('F-16A Level 2 CD_0 by Mission Segment');
-nexttile;
-bar(categorical(names, names, 'Ordinal', true), CL);
-grid on; ylabel('C_L'); title('F-16A Level 2 C_L by Mission Segment');
-nexttile;
-bar(categorical(names, names, 'Ordinal', true), LD);
-grid on; ylabel('L/D'); title('F-16A Level 2 L/D by Mission Segment');
+segTable = table(seg_names(:), breakdown.fuel_lbf(:), breakdown.W_after(:), LD(:), TSFC(:), ...
+    'VariableNames', {'Segment', 'FuelUsed_lbf', 'W_after_lbf', 'L_D', 'TSFC_per_hr'});
+disp('Level 2 mission fuel + drivers by segment:');
+disp(segTable);
 
 figure('Name', 'L2 Mission Fuel by Segment');
-bar(categorical(names, names, 'Ordinal', true), breakdown.fuel_used_lbf);
-grid on; ylabel('Fuel Used [lbf]');
-title('F-16A Level 2 Mission Fuel by Segment');
+tiledlayout(2, 1);
+nexttile;
+bar(categorical(seg_names(:), seg_names(:), 'Ordinal', true), breakdown.fuel_lbf(:));
+grid on; ylabel('Fuel Used [lbf]'); title('F-16A Level 2 Mission Fuel by Segment');
+nexttile;
+bar(categorical(seg_names(:), seg_names(:), 'Ordinal', true), LD(:));
+grid on; ylabel('L/D'); title('F-16A Level 2 L/D by Mission Segment');
 
 %% Internal fuel-volume check
 % NOT MODELED AT L2: F16WeightsL2 carries no fuel-tank-volume inputs (no
