@@ -152,6 +152,44 @@ classdef AeroL2
             val = 0.9 * Delta_cl_max * (S_flapped / S_ref) * cosd(Lambda_HL_deg);
         end
 
+        function val = compute_S_flapped_ratio(eta_out, eta_in, lambda_taper)
+        %COMPUTE_S_FLAPPED_RATIO  S_flapped/S_ref for a spanwise device covering
+        %   [eta_in, eta_out] of the semispan on a tapered wing.
+        %   [Roskam, "Airplane Design Part II," Eq. 7.10]:
+        %     S_flapped/S_ref = (eta_out - eta_in)
+        %                       * (2 - (1-lambda)*(eta_in + eta_out)) / (1 + lambda)
+        %
+        %   PROMOTED HERE 2026-08-10. It used to be an identical instance method
+        %   on BOTH F16AeroL2 and F16AeroL3 (a verbatim duplicate). It is a pure
+        %   function of three scalars with no object access, so it belongs in this
+        %   toolbox's low-level tier -- and it now has a THIRD caller outside
+        %   aerodynamics: ControlSurfaceSizer sizes the flaperon and leading-edge
+        %   flap areas from it. That cross-discipline static call follows the
+        %   established pattern in this framework (SandCL3.CL_alpha_h delegates to
+        %   AeroL2.CL_alpha; TailL2 delegates to TailL1.compute_tail_arm).
+        %
+        %   NOTE ON WHAT THIS RETURNS: the ratio is the fraction of the WING
+        %   REFERENCE AREA lying in the device's span band -- NOT the device's own
+        %   planform area. Multiply by the device's chord fraction to get that
+        %   (see ControlSurfaceSizer.size).
+        %
+        %   eta_in, eta_out -- inboard/outboard span stations, fraction of semispan
+        %   lambda_taper    -- wing taper ratio (tip chord / root chord)
+            arguments
+                eta_out      (1,1) double {mustBeInRange(eta_out, 0, 1)}
+                eta_in       (1,1) double {mustBeInRange(eta_in, 0, 1)}
+                lambda_taper (1,1) double {mustBePositive}
+            end
+            if eta_out < eta_in
+                error('AeroL2:invalidSpanStations', ...
+                    ['Outboard span station eta_out = %g is inboard of eta_in = %g. ' ...
+                     'The argument order is (eta_out, eta_in), outboard FIRST.'], ...
+                    eta_out, eta_in);
+            end
+            val = (eta_out - eta_in) * (2 - (1 - lambda_taper) * (eta_in + eta_out)) ...
+                  / (1 + lambda_taper);
+        end
+
         function val = lookup_Delta_cl_max_values(liftdevice, config, cp_c)
             switch liftdevice
                 case {'plain','split'},          base = 0.9;

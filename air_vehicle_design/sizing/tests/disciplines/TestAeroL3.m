@@ -53,7 +53,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         %   propulsion object -- the nacelle diameter is sqrt(T_AB_SLS/1900),
         %   engine data rather than airframe data.
             a = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                          f16a_spec_path(3));
+                          f16a_spec_path(3), f16a_control_surfaces());
         end
         function J = readAeroL3JSON()
         %READAEROL3JSON  The .aerodynamics block of the unified L3 JSON.
@@ -242,14 +242,14 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % guard is now mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]),
             % so a bad tier fails HERE.
             g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            tc.verifyError(@() F16AeroL3(g1, f16a_spec_path(3)), ...
+            tc.verifyError(@() F16AeroL3(g1, f16a_spec_path(3), f16a_control_surfaces()), ...
                 'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must be rejected at F16AeroL3 construction.');
             % Positive control: both accepted tiers still construct.
             tc.verifyClass(F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                f16a_spec_path(3)), 'F16AeroL3');
+                f16a_spec_path(3), f16a_control_surfaces()), 'F16AeroL3');
             tc.verifyClass(F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
-                f16a_spec_path(3)), 'F16AeroL3');
+                f16a_spec_path(3), f16a_control_surfaces()), 'F16AeroL3');
         end
 
         function testCD0WaveDecreasesTowardHigherMach(tc)
@@ -413,7 +413,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % was reported satisfied. AircraftState permits mach=0, so this must
             % error at the buildup.
             a3 = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                           f16a_spec_path(3));
+                           f16a_spec_path(3), f16a_control_surfaces());
             tc.verifyError(@() a3.drag_polar(AircraftState(0, 0)), ...
                 'AeroL3:machOutOfDomain', ...
                 'The L3 component buildup must reject M=0, not return NaN CD0.');
@@ -431,7 +431,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         function testCD0BuildupFiniteAtSmallPositiveMach(tc)
             % The guard must reject only M=0, not a legitimate low-speed point.
             a3 = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                           f16a_spec_path(3));
+                           f16a_spec_path(3), f16a_control_surfaces());
             polar = a3.drag_polar(AircraftState(0, 0.1));
             tc.verifyTrue(isfinite(polar.CD0) && polar.CD0 > 0, ...
                 'CD0 must be finite and positive at a small nonzero Mach.');
@@ -445,8 +445,8 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % With identical injected geometry the two levels must now agree
             % exactly: both are the same Raymer Eq. 12.6 evaluation.
             g  = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            a2 = F16AeroL2(g, f16a_spec_path(2));
-            a3 = F16AeroL3(g, f16a_spec_path(3));
+            a2 = F16AeroL2(g, f16a_spec_path(2), f16a_control_surfaces());
+            a3 = F16AeroL3(g, f16a_spec_path(3), f16a_control_surfaces());
             for M = [0, 0.6, 0.87]
                 tc.verifyEqual(a3.get_CL_alpha(M), a2.get_CL_alpha(M), 'RelTol', 1e-12, ...
                     sprintf(['L3 and L2 CL_alpha must agree at M=%.2f for identical ' ...
@@ -495,6 +495,14 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         %   it is a continuous schedule, not in this repo. 17 deg remains
         %   unpinned against a primary source (T.O. 1F-16A-1).
         %
+        %   NOTE (2026-08-10): the user separately confirmed the LEF is a
+        %   slat-like automatic device, not a control effector, and that its
+        %   dynamic AoA/Mach schedule is explicitly OUT OF SCOPE for this
+        %   framework -- the mission segments use fixed per-segment deflections
+        %   by design (see testLEFIsNotAControlEffector). This test is about
+        %   citing THAT fixed value against a primary source, not about
+        %   modeling the schedule, and stays red until that citation exists.
+        %
         %   HOW THIS TEST DETECTS IT: keys off F16AeroL3.m's own comment
         %   sentence, following TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo's
         %   pattern for a non-JSON-marker TODO. Do NOT make this green by
@@ -504,6 +512,32 @@ classdef TestAeroL3 < matlab.unittest.TestCase
                 ['TODO (EXPECTED RED): the LEF schedule near rotation/touchdown ' ...
                  'is not pinned to a primary source; F16AeroL3.m still carries ' ...
                  'the standing TO-DO.']);
+        end
+
+        function testLEFIsNotAControlEffector(tc)
+        %TESTLEFISNOTACONTROLEFFECTOR  The F-16's leading-edge flap is a
+        %   slat-like AUTOMATIC stall-prevention / manoeuvre device, scheduled
+        %   by the flight control system on angle of attack and dynamic-to-
+        %   static pressure ratio to keep the wing flow attached. It does NOT
+        %   respond to pitch, roll or yaw commands (user clarification,
+        %   2026-08-10). The three actual effectors are the all-moving
+        %   stabilator, the flaperons and the rudder.
+        %
+        %   This matters because ControlSurfaceSizer emits S_lef alongside the
+        %   real effectors and geom.S_csw/S_cs include it -- which is correct
+        %   (it is an actuated surface with area a weight equation must see) but
+        %   invites reading it as a control effector. Guarded here so the
+        %   distinction survives in the code rather than only in a comment.
+            src_aero = fileread(which('F16AeroL3'));
+            tc.verifyTrue(contains(src_aero, 'NOT a control effector') || ...
+                          contains(src_aero, 'not a control effector'), ...
+                'F16AeroL3.m must record that the LEF is not a control effector.');
+            % The device row this class looks up is Raymer Table 12.2's "slat",
+            % which is the right aerodynamic analogue for a stall-prevention LE
+            % device -- so the naming is deliberate, not a leftover.
+            a = TestAeroL3.makeAero();
+            tc.verifyEqual(a.hld_LE, "slat", ...
+                'hld_LE must stay the Raymer Table 12.2 "slat" row -- see F16AeroL3.m.');
         end
 
     end

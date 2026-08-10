@@ -42,7 +42,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         %   diameter is sized from engine thrust (sqrt(T_AB_SLS/1900)), which is
         %   engine data, not airframe data, so F16GeomL2 takes (json_path, prop).
             a = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                          f16a_spec_path(2));
+                          f16a_spec_path(2), f16a_control_surfaces());
         end
         function J = readAeroL2JSON()
         %READAEROL2JSON  The .aerodynamics block of the unified L2 JSON.
@@ -403,14 +403,14 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             % mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]), so a wrong
             % tier must fail HERE, at construction.
             g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            tc.verifyError(@() F16AeroL2(g1, f16a_spec_path(2)), ...
+            tc.verifyError(@() F16AeroL2(g1, f16a_spec_path(2), f16a_control_surfaces()), ...
                 'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must be rejected at F16AeroL2 construction.');
             % Positive control: both accepted tiers still construct.
             tc.verifyClass(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                f16a_spec_path(2)), 'F16AeroL2');
+                f16a_spec_path(2), f16a_control_surfaces()), 'F16AeroL2');
             tc.verifyClass(F16AeroL2(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
-                f16a_spec_path(2)), 'F16AeroL2');
+                f16a_spec_path(2), f16a_control_surfaces()), 'F16AeroL2');
         end
 
         % ================================================================== %
