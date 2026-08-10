@@ -97,6 +97,50 @@ classdef F16AeroL2 < AeroModelL2
         delta_flap_L_deg  = 20
         k_f_flap          = 0.28    % Raymer 6th ed. Eq. 12.62 (partial-span)
 
+        % --- Leading-edge flap (the "slat" of this class's naming), ADDED
+        % 2026-08-10 -- L2 previously modeled NO leading-edge device at all,
+        % only the trailing-edge flaperon above. That is a real fidelity gap,
+        % not a simplification: LandingConstraint.WS_max() and
+        % TakeoffConstraint read CLmax_TO/CLmax_L straight from this class, so
+        % SizingLoopL2's landing wall was missing the LEF's lift contribution
+        % entirely while SizingLoopL3 (via F16AeroL3) had it -- exactly the gap
+        % VnV/BrandtF16A/todo.md's 2026-08-10 entry traces as the reason L2 and
+        % L3's W/S optima, which happened to coincide before that entry's
+        % flaperon-band correction, diverged afterward.
+        %
+        % Values, fractions, and citations are IDENTICAL to F16AeroL3's -- same
+        % physical device on the same airframe, no L2-specific evidence exists
+        % for a different deflection or coefficient, so there is no reason for
+        % the two fidelity levels to disagree here. c_slat_over_c/eta_slat_in/
+        % eta_slat_out are Dependent below, reading the SAME injected ctrl
+        % object F16AeroL3 does (f16a_control_surfaces()), so both classes
+        % share one description of the LEF, not two.
+        %
+        % ★ THE LEF IS NOT A CONTROL EFFECTOR (same clarification as
+        % F16AeroL3.m). It is a slat-like automatic stall-prevention /
+        % manoeuvre device the flight control system schedules on AoA and
+        % dynamic-to-static pressure ratio to keep the wing flow attached; it
+        % does not respond to pitch, roll or yaw commands (user clarification,
+        % 2026-08-10). It is modeled here for its LIFT and DRAG contribution to
+        % CLmax_TO/CLmax_L/CD0_TO/CD0_L, not because it flies the aircraft --
+        % the three actual effectors are the all-moving stabilator, the
+        % flaperons and the rudder.
+        %
+        % TODO (ported from F16AeroL3, same open item): the LEF is NOT a fixed
+        % "TO/L config" value in reality -- it is auto-scheduled by the flight
+        % control computer as a function of AoA and Mach, and sits at -2 deg
+        % only during ground roll/taxi before rotation (web-sourced
+        % 2026-07-30). delta_slat_TO/L_deg = 17 is a stand-in for the LEF
+        % position near the high-AoA rotation/touchdown condition these
+        % CLmax_TO/CLmax_L values represent, NOT the ground-roll -2 deg figure.
+        % Still unpinned against a primary schedule (AoA/Mach breakpoints, not
+        % a single number) -- see TestAeroL2.testTODO_LEFScheduleNotPinned.
+        hld_LE            = "slat"
+        F_slat            = 0.0144  % Raymer Eq. 12.61 "F_flap" analog (plain, un-slotted)
+        delta_slat_TO_deg = 17
+        delta_slat_L_deg  = 17
+        k_slat            = 0.14    % Raymer Eq. 12.62 "k_f" analog (full-span)
+
         %E_WD  Wave-drag efficiency factor [Brandt F-16A.xls Aero tab, Aero!B8
         %   formula; VnV/BrandtF16A/BrandtAerodynamics.m's Ewd / readme_aero.md
         %   "Wave drag factor (Sears-Haack reference)"]. A TUNED calibration
@@ -142,6 +186,17 @@ classdef F16AeroL2 < AeroModelL2
         eta_flap_in       % —     inboard span station         <- ctrl.eta_flaperon_in
         eta_flap_out      % —     outboard span station        <- ctrl.eta_flaperon_out
 
+        %C_SLAT_OVER_C, ETA_SLAT_IN, ETA_SLAT_OUT  Leading-edge-flap chord
+        %   fraction and span band, read LIVE from the injected
+        %   ControlSurfaceSizer (ADDED 2026-08-10, closing L2's missing-LEF
+        %   fidelity gap -- see the properties block above). The SAME
+        %   ctrl.c_lef_frac/eta_lef_in/eta_lef_out F16AeroL3 already reads, so
+        %   L2 and L3 share one description of the device instead of L2
+        %   simply omitting it.
+        c_slat_over_c     % —     LEF chord/wing chord         <- ctrl.c_lef_frac
+        eta_slat_in       % —     inboard span station         <- ctrl.eta_lef_in
+        eta_slat_out      % —     outboard span station        <- ctrl.eta_lef_out
+
         %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, read LIVE
         %   from the injected geometry object (mirrors F16AeroL3's identically-
         %   named Dependent pair). TIER-SPECIFIC, deliberately: obj.geom.Amax is
@@ -179,6 +234,12 @@ classdef F16AeroL2 < AeroModelL2
         %   are aerodynamic operating conditions and Raymer-equation
         %   coefficients, not control-surface geometry -- a deflection schedule
         %   is not something a sizing loop resizes.
+        %
+        %   LEADING-EDGE FLAP ADDED 2026-08-10, same ctrl DI pattern: the same
+        %   c_slat_over_c/eta_slat_in/eta_slat_out fractions F16AeroL3 already
+        %   read from obj.ctrl. L2 previously had NO leading-edge device model
+        %   at all -- see the properties block for why that was a real fidelity
+        %   gap, not a simplification, and VnV/BrandtF16A/todo.md 2026-08-10.
             arguments
                 % GeometryBase is too weak a guard: it declares only
                 % S_ref/S_wet/get_S_ref/get_S_wet, so an F16GeomL1 (whose
@@ -232,6 +293,11 @@ classdef F16AeroL2 < AeroModelL2
         function v = get.c_flap_over_c(obj); v = obj.ctrl.c_flaperon_frac; end
         function v = get.eta_flap_in(obj);   v = obj.ctrl.eta_flaperon_in; end
         function v = get.eta_flap_out(obj);  v = obj.ctrl.eta_flaperon_out; end
+
+        % ---- LEF fractions, live from the injected sizer ------------------ %
+        function v = get.c_slat_over_c(obj); v = obj.ctrl.c_lef_frac;      end
+        function v = get.eta_slat_in(obj);   v = obj.ctrl.eta_lef_in;      end
+        function v = get.eta_slat_out(obj);  v = obj.ctrl.eta_lef_out;     end
         function v = get.Amax_ft2(obj);      v = obj.geom.Amax;          end
         function v = get.L_aircraft_ft(obj); v = obj.geom.L_aircraft;    end
 
@@ -325,11 +391,13 @@ classdef F16AeroL2 < AeroModelL2
         end
 
         % ================================================================ %
-        % High-lift-device deltas (L2: trailing-edge flap from real geometry).
-        % Geometry (taper, S_ref, quarter-chord sweep) is read live via the
-        % Dependent getters above; the flap control-surface estimates are aero
-        % inputs. Delta_e_osw stays tabulated -- Raymer has no closed-form
-        % flapped-wing Oswald-efficiency formula.
+        % High-lift-device deltas (L2: trailing-edge flaperon AND leading-edge
+        % flap, from real geometry -- the LEF closed 2026-08-10; see the
+        % properties block). Geometry (taper, S_ref, quarter-chord and
+        % leading-edge sweep) is read live via the Dependent getters above;
+        % the flap/slat control-surface estimates are aero inputs. Delta_e_osw
+        % stays tabulated -- Raymer has no closed-form flapped-wing Oswald-
+        % efficiency formula.
         % ================================================================ %
 
         % compute_S_flapped_ratio (Roskam Part II Eq. 7.10) MOVED 2026-08-10 to
@@ -360,6 +428,31 @@ classdef F16AeroL2 < AeroModelL2
             val = AeroL2.compute_Delta_CL_max_values(Delta_cl_max, S_flapped, obj.S_ref, obj.Lambda_c4_deg);
         end
 
+        function val = Delta_CD0_slat(obj, delta_slat_deg)
+        %DELTA_CD0_SLAT  Raymer 6th ed. Eq. 12.61 FORM, adapted for the F-16 LE
+        %   device (no separately-cited LE analog exists in the text). ADDED
+        %   2026-08-10, mirrors F16AeroL3's method of the same name exactly.
+            S_slatted_ratio = AeroL2.compute_S_flapped_ratio(obj.eta_slat_out, obj.eta_slat_in, obj.taper);
+            val = obj.F_slat * obj.c_slat_over_c * S_slatted_ratio * (delta_slat_deg - 10);
+        end
+
+        function val = Delta_CDi_slat(obj, Delta_CL_slat)
+        %DELTA_CDI_SLAT  Raymer 6th ed. Eq. 12.62 FORM, adapted for the LE
+        %   device. ADDED 2026-08-10, mirrors F16AeroL3's method of the same
+        %   name exactly.
+            val = obj.k_slat * Delta_CL_slat^2 * cosd(obj.Lambda_c4_deg);
+        end
+
+        function val = Delta_CLmax_slat(obj, config)
+        %DELTA_CLMAX_SLAT  Raymer 6th ed. Table 12.2 + Eq. 12.21 for the LE
+        %   device (full-span; hinge line = wing LE sweep). ADDED 2026-08-10,
+        %   mirrors F16AeroL3's method of the same name exactly.
+            S_slatted_ratio = AeroL2.compute_S_flapped_ratio(obj.eta_slat_out, obj.eta_slat_in, obj.taper);
+            S_slatted       = S_slatted_ratio * obj.S_ref;
+            Delta_cl_max    = AeroL2.lookup_Delta_cl_max_values(obj.hld_LE, config, obj.c_slat_over_c);
+            val = AeroL2.compute_Delta_CL_max_values(Delta_cl_max, S_slatted, obj.S_ref, obj.Lambda_LE_deg);
+        end
+
         function val = get_Delta_e_osw_TO(obj)
             val = obj.roskam_e_osw("takeoff_flaps") - obj.roskam_e_osw("clean");
         end
@@ -369,28 +462,33 @@ classdef F16AeroL2 < AeroModelL2
         end
 
         function val = get_Delta_CD0_TO(obj)
-        %GET_DELTA_CD0_TO  Flap (Eq. 12.61) + gear (Roskam Table 3.6, tabulated).
-            val = obj.Delta_CD0_flap(obj.delta_flap_TO_deg) + obj.roskam_Delta_CD0("landing_gear");
+        %GET_DELTA_CD0_TO  Flap (Eq. 12.61) + slat (Eq. 12.61 form, ADDED
+        %   2026-08-10) + gear (Roskam Table 3.6, tabulated).
+            val = obj.Delta_CD0_flap(obj.delta_flap_TO_deg) + obj.Delta_CD0_slat(obj.delta_slat_TO_deg) ...
+                + obj.roskam_Delta_CD0("landing_gear");
         end
 
         function val = get_Delta_CD0_L(obj)
-            val = obj.Delta_CD0_flap(obj.delta_flap_L_deg) + obj.roskam_Delta_CD0("landing_gear");
+            val = obj.Delta_CD0_flap(obj.delta_flap_L_deg) + obj.Delta_CD0_slat(obj.delta_slat_L_deg) ...
+                + obj.roskam_Delta_CD0("landing_gear");
         end
 
         function val = get_Delta_CLmax_TO(obj)
-            val = obj.Delta_CLmax_flap('TO');
+        %GET_DELTA_CLMAX_TO  Flaperon + LEF (ADDED 2026-08-10; see the
+        %   properties block for why L2 previously omitted the LEF).
+            val = obj.Delta_CLmax_flap('TO') + obj.Delta_CLmax_slat('TO');
         end
 
         function val = get_Delta_CLmax_L(obj)
-            val = obj.Delta_CLmax_flap('L');
+            val = obj.Delta_CLmax_flap('L') + obj.Delta_CLmax_slat('L');
         end
 
         function val = get_Delta_CDi_TO(obj)
-            val = obj.Delta_CDi_flap(obj.get_Delta_CLmax_TO());
+            val = obj.Delta_CDi_flap(obj.Delta_CLmax_flap('TO')) + obj.Delta_CDi_slat(obj.Delta_CLmax_slat('TO'));
         end
 
         function val = get_Delta_CDi_L(obj)
-            val = obj.Delta_CDi_flap(obj.get_Delta_CLmax_L());
+            val = obj.Delta_CDi_flap(obj.Delta_CLmax_flap('L')) + obj.Delta_CDi_slat(obj.Delta_CLmax_slat('L'));
         end
 
         function val = get_CLmax_TO(obj)

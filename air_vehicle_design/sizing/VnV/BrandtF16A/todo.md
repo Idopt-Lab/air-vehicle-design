@@ -988,5 +988,45 @@ so it is not rediscovered later.
 
 ---
 
+## 2026-08-10 (later) — CLOSED: F16AeroL2 had no leading-edge-device model at all
+
+**Closes the divergence this file's own history traces above.** Running both sizing studies at the
+commit just before this entry's parent (`a429076`) gives `W/S` optima of L1=111, L2=132, L3=132 psf —
+L2 and L3 agreeing. After the flaperon-band correction earlier in this file's 2026-08-10 section, they
+diverged to L2=104, L3=111. Tracing why (see this file's Finding-adjacent investigation, same day)
+found the real cause: **`F16AeroL2` modeled only the trailing-edge flaperon's contribution to
+`CLmax_TO`/`CLmax_L` — it had no leading-edge-flap (LEF) term at all** — while `F16AeroL3` modeled
+both. `LandingConstraint.WS_max()` reads `CLmax_L` straight from the injected aero object, so L2's
+landing wall was permanently ~5.3 psf tighter than L3's for a reason having nothing to do with either
+fidelity level's *intended* differences — a modeling omission, not a deliberate simplification. The
+apparent L2/L3 agreement pre-flaperon-fix was coincidental grid quantization (both walls, 133.02 and
+138.57 psf, happened to floor to the same 7-psf grid point); the coincidence broke once the whole
+baseline shifted down ~24 psf and the ~5.3 psf gap between them crossed a grid line.
+
+**Fix:** ported `F16AeroL3`'s `Delta_CD0_slat`/`Delta_CDi_slat`/`Delta_CLmax_slat` methods and
+`hld_LE`/`F_slat`/`k_slat`/`delta_slat_TO_deg`/`delta_slat_L_deg` properties into `F16AeroL2`
+verbatim — same equations, same citations, same values, no L2-specific evidence exists for a
+different number. `c_slat_over_c`/`eta_slat_in`/`eta_slat_out` are Dependent getters onto the SAME
+injected `ControlSurfaceSizer` (`f16a_control_surfaces()`) `F16AeroL3` already reads, so L2 and L3
+now share one description of the LEF instead of L2 omitting it. `get_Delta_CLmax_{TO,L}`,
+`get_Delta_CD0_{TO,L}`, and `get_Delta_CDi_{TO,L}` now sum the flaperon and LEF contributions
+independently (never combining one device's `ΔCLmax` into the other's induced-drag coefficient,
+since `k_f_flap` ≠ `k_slat`) -- exactly mirroring `F16AeroL3`'s existing assembly.
+
+**Result, confirmed by re-running both studies:** `L2.CLmax_L` now equals `L3.CLmax_L` exactly
+(1.1525 = 0.9163 clean + 0.2056 flap + 0.0328 slat, identical decomposition at both levels), L2's
+landing wall moves from 109.13 to 114.48 psf (matching L3's 114.40 to within 0.08 psf, the small
+remainder from other genuine L2-vs-L3 CD0/weight fidelity differences), and **`W/S` optimum moves
+from 104 back to 111 psf — now agreeing with both L3 and L1.** `S_ref` 222.31 → 207.55 ft²; `W_TO`
+23,120.65 → 23,037.50 lbf; `T_SL` 20,253.01 → 20,174.15 lbf; 17 iterations, converged.
+
+**Ported, not re-litigated:** `delta_slat_TO/L_deg = 17` carries the SAME "unpinned against a primary
+schedule" citation gap `F16AeroL3` already had (`TestAeroL3.testTODO_LEFScheduleNotPinned`) — a
+mirrored guard, `TestAeroL2.testTODO_LEFScheduleNotPinned`, keeps L2's copy red until that closes,
+which it must do for BOTH classes together since they now cite the same open item. Total red-test
+count: 12 → 13.
+
+---
+
 *No entries resolved. Add new dated sections above this line for future discrepancies; do not
 edit or remove prior entries.*

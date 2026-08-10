@@ -415,7 +415,11 @@ classdef TestAeroL2 < matlab.unittest.TestCase
 
         % ================================================================== %
         % High-lift-device deltas -- ordering/sign only (formulas are
-        % geometry-driven; exact magnitudes are report items, not unit checks)
+        % geometry-driven; exact magnitudes are report items, not unit checks).
+        % Trailing-edge flaperon AND leading-edge flap (the LEF was ADDED
+        % 2026-08-10 -- L2 previously modeled no leading-edge device at all;
+        % see F16AeroL2.m's properties block for why that was a real fidelity
+        % gap against F16AeroL3, not a simplification).
         % ================================================================== %
 
         function testDeltaCLmaxFlapOrdered(tc)
@@ -428,10 +432,43 @@ classdef TestAeroL2 < matlab.unittest.TestCase
 
         function testDeltaCD0FlapOrdered(tc)
             % Larger landing flap deflection -> larger parasite increment
-            % (Raymer Eq. 12.61, linear in delta-10).
+            % (Raymer Eq. 12.61, linear in delta-10). The slat's OWN deflection
+            % is identical at TO and L (delta_slat_TO_deg == delta_slat_L_deg),
+            % so it adds the same constant to both sides and the ordering is
+            % preserved on the flap term alone.
             a = TestAeroL2.makeAero();
             tc.verifyGreaterThan(a.get_Delta_CD0_TO(), 0);
             tc.verifyGreaterThan(a.get_Delta_CD0_L(), a.get_Delta_CD0_TO());
+        end
+
+        function testDeltaCD0SlatPositive(tc)
+            % LE slat parasite increment (Eq. 12.61 form) is positive. Mirrors
+            % TestAeroL3.testDeltaCD0SlatPositive -- same method, same formula.
+            a = TestAeroL2.makeAero();
+            tc.verifyGreaterThan(a.Delta_CD0_slat(a.delta_slat_TO_deg), 0);
+        end
+
+        function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
+            % L2 now adds the LE slat on top of the TE flaperon, same as L3 ->
+            % total > flaperon alone. THE REGRESSION GUARD for this task: before
+            % 2026-08-10, get_Delta_CLmax_TO() equaled Delta_CLmax_flap('TO')
+            % exactly (no slat term existed), so this assertion would have
+            % failed with equal, not greater.
+            a = TestAeroL2.makeAero();
+            tc.verifyGreaterThan(a.get_Delta_CLmax_TO(), a.Delta_CLmax_flap('TO'));
+            tc.verifyGreaterThan(a.get_Delta_CLmax_L(), a.Delta_CLmax_flap('L'));
+        end
+
+        function testCLmaxTOAndLReflectBothDevices(tc)
+            % get_CLmax_TO/L must include the slat, not just the flaperon --
+            % checked against the clean CLmax plus each device's OWN delta,
+            % summed independently (Delta_CDi_flap/Delta_CDi_slat use different
+            % k coefficients, so the deltas are never combined before use).
+            a = TestAeroL2.makeAero();
+            expected_TO = a.get_CLmax([]) + a.Delta_CLmax_flap('TO') + a.Delta_CLmax_slat('TO');
+            expected_L  = a.get_CLmax([]) + a.Delta_CLmax_flap('L')  + a.Delta_CLmax_slat('L');
+            tc.verifyEqual(a.get_CLmax_TO(), expected_TO, 'RelTol', 1e-12);
+            tc.verifyEqual(a.get_CLmax_L(),  expected_L,  'RelTol', 1e-12);
         end
 
         function testLookupDeltaClMaxWarnsOnUnrecognizedConfig(tc)
@@ -512,6 +549,51 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             J = TestAeroL2.readAeroL2JSON();
             tc.verifyFalse(isfield(J, 'x_TODO_wave_drag_factor_E_WD'), ...
                 'TODO: E_WD=2.2 is a tuned calibration input, not a spec value.');
+        end
+
+        function testTODO_LEFScheduleNotPinned(tc)
+        %TESTTODO_LEFSCHEDULENOTPINNED  Deliberate, EXPECTED red. Mirrors
+        %   TestAeroL3.testTODO_LEFScheduleNotPinned -- the LEF was ADDED to L2
+        %   2026-08-10, ported from F16AeroL3 with the identical open citation
+        %   gap (same values, same missing primary source), so it inherits the
+        %   same standing TODO rather than starting clean.
+        %
+        %   WHAT IS MISSING: delta_slat_TO_deg/delta_slat_L_deg = 17 in
+        %   F16AeroL2.m is a stand-in for the leading-edge flap's real,
+        %   AoA/Mach-scheduled position near the rotation/touchdown condition
+        %   CLmax_TO/CLmax_L represent -- not pinned to a primary source
+        %   (T.O. 1F-16A-1). See F16AeroL3.testTODO_LEFScheduleNotPinned for
+        %   the full research history; not re-run here since it is the same
+        %   physical device on the same airframe.
+        %
+        %   HOW THIS TEST DETECTS IT: keys off F16AeroL2.m's own comment
+        %   sentence, same pattern as TestAeroL3's version. Do NOT make this
+        %   green by deleting the comment without actually pinning the
+        %   schedule -- and do not make it green independently of L3's: both
+        %   must close together, since they cite the same open item.
+            src = fileread(which('F16AeroL2'));
+            tc.verifyFalse(contains(src, 'Still unpinned against a primary'), ...
+                ['TODO (EXPECTED RED): the LEF schedule near rotation/touchdown ' ...
+                 'is not pinned to a primary source; F16AeroL2.m still carries ' ...
+                 'the standing TO-DO ported from F16AeroL3.']);
+        end
+
+        function testLEFIsNotAControlEffector(tc)
+        %TESTLEFISNOTACONTROLEFFECTOR  Mirrors TestAeroL3's test of the same
+        %   name. The F-16's leading-edge flap is a slat-like AUTOMATIC
+        %   stall-prevention / manoeuvre device, scheduled by the flight
+        %   control system on angle of attack and dynamic-to-static pressure
+        %   ratio to keep the wing flow attached. It does NOT respond to
+        %   pitch, roll or yaw commands (user clarification, 2026-08-10). The
+        %   three actual effectors are the all-moving stabilator, the
+        %   flaperons and the rudder -- unchanged by adding this device's LIFT
+        %   AND DRAG contribution to L2's CLmax_TO/CLmax_L/CD0_TO/CD0_L.
+            src = fileread(which('F16AeroL2'));
+            tc.verifyTrue(contains(src, 'NOT A CONTROL EFFECTOR', 'IgnoreCase', true), ...
+                'F16AeroL2.m must record why the LEF was added and what it is.');
+            a = TestAeroL2.makeAero();
+            tc.verifyEqual(a.hld_LE, "slat", ...
+                'hld_LE must be the Raymer Table 12.2 "slat" row -- see F16AeroL2.m.');
         end
 
     end
