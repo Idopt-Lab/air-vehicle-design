@@ -841,5 +841,152 @@ already-implemented S&C quantity are unaffected.
 
 ---
 
+## 2026-08-10 — Control-surface sizing in SizingLoopL2 (flaperon / LE flap / stabilator / rudder)
+
+**Context:** the L2/L3 sizing loop already re-sized the tail and the control surfaces every
+iteration, but it sized an *aileron* and an *elevator* — the two surfaces the F-16 does not have —
+while neither of its real wing surfaces was sized at all, and its all-moving tail's control area was
+carried nowhere. Widened to six surfaces (`S_ail`/`S_elev`/`S_rud`/`S_flaperon`/`S_lef`/`S_stab`), and
+the three weights-facing areas on `F16GeomL3` (`S_csw`/`S_r`/`S_cs`) were converted from frozen inputs
+into Dependent buildups on them. Per the standing scribe rule, the findings below are **flagged, not
+resolved**: every computed value stays a cited Raymer/Roskam estimate and none was fitted backwards to
+close a gap against the measured areas.
+
+**Standing rule recorded for this and future work (user, 2026-08-10):** the USAF / T.O. 1F-16A-1
+values are the aircraft's *actual* geometry and serve as **ground truth to measure the equations
+against**; Raymer/Roskam fractions are **estimates the code computes with**. The two directions must
+not be mixed. Generating the F-16's geometry from scratch with the code is explicitly out of scope for
+this session, so L3 keeps the measured areas as its *seeded* inputs (it is the physical/T.O. tier) and
+the loop's computed estimates are reported beside them.
+
+### Finding 1 — rudder area: Raymer estimate is +39.1 % above the measured value, and it now has weight consequences
+
+`f16a_control_surfaces()` uses Raymer 6th ed. Table 6.5's Fighter/attack `Cr/C = 0.30` and p.161's
+"about 90 % of the tail span". At the JSON baseline (`S_vt` = 60 ft²) that gives
+`0.30 × 0.90 × 60 = 16.20 ft²` against T.O. 1F-16A-1 Fig. 1-2's measured **11.65 ft²**: **+39.06 %**,
+the framework's largest control-surface error.
+
+This mattered less before 2026-08-10 because the loop's rudder area fed nothing. It matters now:
+`F16GeomL3.S_r` aliases it into Raymer Eq. 15.3's `(1 + S_r/S_vt)^0.348` vertical-tail weight term.
+**Not calibrated to 11.65** — back-solving the fractions from a measured area is the
+back-calculated-value-as-input pattern `docs/PLAN.md` forbids, and it would turn
+`tail_sizing_brandt_comparison.m`'s accuracy row into a tautology. **For Casey's sign-off:** is
+Raymer's printed fraction the right thing for a conceptual-design tool to carry here, or should the
+T.O. drawing's *fractions* (not its area) be read off and wired in as genuine F-16 spec data?
+
+### Finding 2 — two editions of Raymer Table 6.5 give different rudder chord fractions
+
+`GeomL1.lookup_control_surface_fraction('jet_fighter', 'rudder')` returns **0.33**, cited to Raymer
+**7th** ed. Table 6.5. `f16a_control_surfaces()` uses **0.30**, cited to Raymer **6th** ed. Table 6.5.
+Both citations appear correct for their own edition; nothing keeps them in sync, and the two values
+are used by different parts of the framework. Note the 6th-ed. extract
+(`docs/reference_extracts/Raymer_Aircraft_Design_6ed/06_initial_sizing.md`) also carries an explicit
+"column headers scrambled by OCR, `[verify p. 162]`" caveat on that table. **For Casey:** which edition
+is canonical for this framework?
+
+### Finding 3 — the aero classes' flaperon span band was far too generous, and correcting it moved the design point
+
+`F16AeroL2`/`F16AeroL3` carried `eta_flap_in/out = 0.10/0.90` with `c_flap_over_c = 0.25` as
+hardcoded, in-code-flagged-as-unverified estimates. Those imply a flaperon of
+`0.25 × ratio(0.90, 0.10, 0.2275) × 300 = 60 ft²` — **nearly double** the measured 31.32 ft². Making
+`ControlSurfaceSizer` the single source of truth replaced them with `0.35/0.75` (0.40 extent from
+Raymer Fig. 6.3's band, placed outboard of the strake), giving 28.11 ft², **−10.24 %**.
+
+**This changed the converged design point at both levels**, and the chain is worth recording because
+it is not obvious that sizing a control surface should move the wing: a narrower flap band lowers
+Roskam Eq. 7.10's flapped-area ratio → lowers `Delta_CLmax_flap` and `Delta_CD0_flap` → tightens the
+takeoff and landing constraints → moves `WS_opt` → moves `S_ref = W_TO/WS_opt`.
+
+| | before 2026-08-10 | after |
+|---|---|---|
+| L2 | `W_TO` 23,075.65 lbf, `S_ref` 174.82 ft², `T_SL` 20,086.32 lbf, 19 iter, `WS_opt` 132 psf | `W_TO` 23,120.65, `S_ref` 222.31, `T_SL` 20,253.01, 17 iter, `WS_opt` 104 psf |
+| L3 | `W_TO` 23,972.46 lbf, `S_ref` 181.61 ft², `T_SL` 17,220.66 lbf, 12 iter, `WS_opt` 132 psf | `W_TO` 23,338.62, `S_ref` 210.26, `T_SL` 17,245.01, 12 iter, `WS_opt` 111 psf |
+
+Both new `WS_opt` values remain interior points — and exact grid points (20+7k) — of
+`PointPerformanceBase.WS_RANGE_BRANDT`, so neither is a sweep-limit artifact. **For Casey:** the
+0.35/0.75 stations are a judgement call within Fig. 6.3's band (the figure fixes only the *extent*);
+confirm that band placement, or supply T.O. stations.
+
+### Finding 4 — the leading-edge flap reads +21.6 % high, driven by `eta_lef_in = 0`
+
+`c_lef_frac = 0.15`, `eta = 0.00–0.98`, carried over unchanged from `F16AeroL3`'s existing
+`c_slat_over_c`/`eta_slat_*` estimates, give 44.66 ft² against the measured **36.71 ft²** (**+21.64 %**).
+`eta_lef_in = 0` is the main cause and is known to be physically wrong — the real LEF begins *outboard*
+of the strake, not at the centreline. Deliberately left alone rather than adjusted to close the gap
+(same reasoning as Finding 1). Note also that the aero classes call this device a "slat" while the
+F-16 has leading-edge **flaps**; `hld_LE = "slat"` is retained only because that is the literal Raymer
+Table 12.2 row name the lookup uses.
+
+**Partly-cancelling errors, worth knowing:** the flaperon reads 10 % low and the LEF 22 % high, so
+their sum `S_csw` = 72.77 vs 68.03 is only **+6.96 %**. `S_csw` is what Raymer Eq. 15.1 consumes, so
+the wing-weight term looks better than either component justifies. Do not read the sum's agreement as
+evidence that both parts are right.
+
+### Finding 5 — `S_cs` = 190 ft² retired in favour of a 187.68 ft² buildup
+
+`f16a_L3.json`'s `total_control_surface_area_ft2 = 190` was self-described as an "estimate, unpinned"
+annotated *"flaperon + HT + rudder + LEF"*. Those four terms now exist as real properties, so
+`F16GeomL3.S_cs` is the Dependent buildup `S_csw + S_stab + S_rud`, which at the JSON baseline is
+`68.03 + 108 + 11.65 = ` **187.68 ft²** — 1.22 % below the retired estimate. The JSON key is removed
+(replaced by a `_REMOVED_…` provenance note). Consequence, via Raymer Eq. 15.17
+(`S_cs^0.489`): flight-controls weight 925.283 → **919.748 lbf** (−0.60 %), systems group
+4578.039 → **4572.504**, `OEW(31,377)` 15,795.156 → **15,789.621 lbf** (−0.035 %).
+
+Note the buildup only reconciles with the retired 190 if the all-moving stabilator contributes its
+**full** `S_ht`, which is an independent check on `S_stab = S_ht` [Raymer 6th ed. Table 6.5 footnote,
+"Supersonic usually all-moving tail without separate elevator"]. `S_csw` (68.03) and `S_r` (11.65) both
+still reproduce their former frozen values *exactly*, because the constructor seeds their components
+from the same T.O. figures — so Eqs. 15.1 and 15.3 are unchanged at the baseline. This closes the
+`S_cs` half of todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12; the `L_t` half stays open (see Finding 7).
+
+### Finding 5b — the leading-edge flap is NOT a control effector
+
+**Clarification from the user, 2026-08-10.** The F-16's LEF is functionally a **slat**: a
+flight-control-system-scheduled, automatic stall-prevention / manoeuvre device that keeps the flow over
+the wing attached. It **does not respond to pitch, roll or yaw commands**. The airframe's three actual
+effectors are the all-moving stabilator, the flaperons and the rudder.
+
+This is worth recording because the framework's own structure invites the wrong reading: the LEF comes
+out of `ControlSurfaceSizer.size()` next to the real effectors, and `geom.S_csw`/`S_cs` include it. That
+is **correct for weight and area purposes** — it is an actuated surface with real planform area that
+Raymer Eqs. 15.1 and 15.17 must see, and the retired `S_cs` = 190 annotation counted it too — but it is
+not a control effector. Guarded now by `TestAeroL3.testLEFIsNotAControlEffector`. It also vindicates
+`hld_LE = "slat"`: Raymer Table 12.2's "slat" row is the right aerodynamic analogue, not a leftover.
+
+**Its dynamic AoA/Mach schedule is explicitly out of scope for this session** (user decision,
+2026-08-10): the real device follows a continuous flight-control law, but this framework has no time
+domain, and the mission segments already use fixed per-segment slat deflections
+(`delta_slat_TO/L_deg`). A NASA-sourced schedule and a corresponding `AeroL3` static were drafted and
+then explicitly withdrawn by the user ("We're not doing the schedule reporting. Get that out of here.")
+— nothing in the repo references either any more. `TestAeroL3.testTODO_LEFScheduleNotPinned` is
+unchanged and stays red for the original reason: `delta_slat_TO/L_deg = 17` remains an unpinned
+stand-in against a primary source.
+
+### Finding 6 — `F16AeroL2.delta_flap_TO_deg = 15` is uncited and disagrees with L3's 20 for the same aircraft
+
+`F16AeroL3` records web-sourced evidence (2026-07-30) that the F-16 uses the **same** 20° trailing-edge
+flap setting for takeoff and landing, and sets both to 20. `F16AeroL2` still carries an uncited 15° for
+takeoff. A configuration summary the user supplied 2026-08-10 (F-16.net / StackExchange /
+ryanporto.com — secondary web sources) **corroborates the 20° down** figure and adds **23° up**, which
+has no consumer in the high-lift path. Left at 15 rather than silently changed: it moves L2 takeoff
+`CLmax` and belongs in a deliberate aero decision, not a control-surface change. **For Casey:** should
+L2 adopt 20° to match L3 and the sources?
+
+The same secondary reference gives a **20° maximum LEF deflection**, an upper bound consistent with — but
+not pinning — `delta_slat_TO/L_deg = 17`, which stands for the LEF position near the high-AoA
+rotation/touchdown condition. `TestAeroL3.testTODO_LEFScheduleNotPinned` therefore stays RED: the real
+device is scheduled on AoA and Mach, and a single maximum is not a schedule (see Finding 5b — that
+schedule is explicitly out of scope for this session, not merely unpinned).
+
+### Finding 7 — two independent definitions of the tail arm, only one of which tracks the loop
+
+Adjacent to this work and **not** addressed by it. `F16GeomL3.L_t = 22.0 ft` is a frozen
+"estimate, unpinned" input read *only* by `F16WeightsL3` (Raymer Eq. 15.3), while the tail sizer
+independently uses `TailL1.compute_tail_arm(L_fus) = 0.475 × L_fus ≈ 22.56 ft` at the L3 fuselage
+length. One physical quantity, two values, and only the sizer's follows the sizing loop. Recorded here
+so it is not rediscovered later.
+
+---
+
 *No entries resolved. Add new dated sections above this line for future discrepancies; do not
 edit or remove prior entries.*

@@ -119,20 +119,52 @@ Convergence: `|W_TO_new − W_TO| < tol` AND `|T_SL_new − T_SL| < tol`.
 
 ## Control Surface Sizing
 
-Added to `SizingLoopL2` per resolved decisions. Implemented in a new class:
+**REWRITTEN 2026-08-10.** The table this section used to carry was wrong in three ways that the
+implementation had already corrected: Raymer Table 6.5 has **no aileron column at all** (the aileron
+guideline is Fig. 6.3, a shaded chart); Table 6.5's `Ce/C` and `Cr/C` are **tail-chord** fractions, not
+area fractions of `S_HT`/`S_VT`, so a span-fraction factor is required to get an area; and the F-16 has
+neither a separate aileron nor a separate elevator, so those were exactly the two surfaces the old
+design sized. See `src/sizing/ControlSurfaceSizer.m`'s header, which is authoritative.
 
-**File:** `src/sizing/ControlSurfaceSizer.m` (plain class, not abstract)
+**File:** `src/sizing/ControlSurfaceSizer.m` (plain `handle` class, not abstract, no per-fidelity tier —
+it has no equation set that varies with fidelity).
 
-**Method:** `size(geom)→struct(S_ail, S_elev, S_rud)`
+**Method:** `size(geom) → struct(S_ail, S_elev, S_rud, S_flaperon, S_lef, S_stab)`
+
+Reads `geom.S_ref`, `geom.S_ht`, `geom.S_vt` and — for the wing flaps — `geom.lambda_wing`, all live.
+Two families:
 
 | Surface | Equation | Reference |
 |---------|----------|-----------|
-| Aileron | S_ail = f_ail × S_ref; f_ail from historical fraction | Raymer 6th ed, Table 6.5 |
-| Elevator | S_elev = f_elev × S_HT; f_elev from historical fraction | Raymer 6th ed, Table 6.5 |
-| Rudder | S_rud = f_rud × S_VT; f_rud from historical fraction | Raymer 6th ed, Table 6.5 |
-| Configuration | Conventional / delta / canard selection | Raymer 6th ed, Figure 6.3 |
+| Aileron | `S_ail = c_ail_frac × b_ail_frac × S_ref` | Raymer 6th ed. Fig. 6.3 (chord/span band, p.161) |
+| Elevator | `S_elev = c_elev_frac × b_elev_frac × S_ht` | Raymer 6th ed. Table 6.5 `Ce/C`; p.161 ~90 % span |
+| Rudder | `S_rud = c_rud_frac × b_rud_frac × S_vt` | Raymer 6th ed. Table 6.5 `Cr/C`; p.161 ~90 % span |
+| Flaperon | `S_flaperon = c_frac × ratio(η_out, η_in, λ) × S_ref` | Roskam Part II Eq. 7.10 via `AeroL2.compute_S_flapped_ratio` |
+| LE flap | `S_lef = c_frac × ratio(η_out, η_in, λ) × S_ref` | same |
+| Stabilator | `S_stab = S_ht` when `ht_all_moving` | Raymer 6th ed. Table 6.5 footnote |
 
-For the F-16 (delta wing + conventional tail + no canard): the fractions from Table 6.5 for fighter category are used. Exact fractions TBD at implementation when Raymer Table 6.5 is read.
+The wing flaps use span **stations** rather than a bare span fraction because Roskam Eq. 7.10 carries
+the taper term: on a wing tapered to λ = 0.2275, the same span *extent* placed inboard or outboard
+gives different areas, which a bare chord × span product cannot see.
+
+**Role exclusivity, enforced in the constructor:** exactly one of (`S_ail`, `S_flaperon`) and one of
+(`S_elev`, `S_stab`) is nonzero for a given airframe. A flaperon already *is* the roll surface, and an
+all-moving stabilator has no hinged elevator, so declaring both of either pair double-counts one
+physical surface and silently inflates every downstream area sum.
+
+**For the F-16** (`examples/F16A/f16a_control_surfaces.m`, the single place the wiring lives): flaperon
++ leading-edge flaps + all-moving stabilator + rudder; `c_ail_frac = c_elev_frac = 0`. That function's
+header carries every fraction's provenance and its measured accuracy against T.O. 1F-16A-1 Fig. 1-2.
+Note the framework computes **estimates** and the T.O. areas are **comparison targets** — see
+`VnV/BrandtF16A/todo.md` 2026-08-10 for the accuracy findings and the standing rule on not mixing the
+two directions.
+
+**Weights coupling (L3 only).** `F16GeomL3`'s `S_csw` (= `S_flaperon + S_lef`, Raymer Eq. 15.1), `S_r`
+(= `S_rud`, Eq. 15.3) and `S_cs` (= `S_csw + S_stab + S_rud`, Eq. 15.17) are `Dependent` on the areas
+this loop writes, so a wing or tail rescale reaches OEW. They were frozen inputs until 2026-08-10, which
+meant the L3 weights kept a 300 ft²-wing control-surface area while the loop converged `S_ref` to
+roughly 210. `F16GeomL2` has no such properties and `F16WeightsL2` consumes none, so at L2 the
+control-surface areas remain report-only.
 
 ---
 
