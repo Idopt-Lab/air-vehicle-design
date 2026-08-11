@@ -12,7 +12,7 @@ function results = F16APhysicalFuelRollup()
 %   This is the "available" side of REQ_F16A_P01. The "required" side comes
 %   from F16APhysicalMissionFuel, and the verify test compares the two.
 %   Capacity is expressed as fuel WEIGHT (lb) so it compares directly with
-%   mission fuel burn (D-041).
+%   mission fuel burn (D-041) -- which since D-059 is a real number.
 %
 %   It asks the model which parts hold fuel instead of assuming a list of
 %   names (D-038). The walk is at the bottom of this file, on purpose: this
@@ -100,9 +100,10 @@ fprintf("\n[STEP 4] REPORT\n");
 fprintf("  Total available internal fuel: %.0f lb, in %d tanks.\n", total, numel(names));
 fprintf("  This is a plain SUM: tanks do not interact, so capacity simply adds.\n\n");
 fprintf("  It is only half of REQ_F16A_P01. The other half -- how much fuel the\n");
-fprintf("  mission REQUIRES -- comes from F16APhysicalMissionFuel, which returns NaN\n");
-fprintf("  by design (D-042). So REQ_F16A_P01 is UNEVALUATED, not met and not\n");
-fprintf("  violated, and F16AFuelVerificationTest is red for that reason.\n\n");
+fprintf("  mission REQUIRES -- comes from F16APhysicalMissionFuel, which reads the\n");
+fprintf("  mission the /sizing/ analysis flew into this model (D-059). The two are\n");
+fprintf("  compared by F16AFuelVerificationTest, which passes: the tanks hold more\n");
+fprintf("  than the mission burns.\n\n");
 
 end
 

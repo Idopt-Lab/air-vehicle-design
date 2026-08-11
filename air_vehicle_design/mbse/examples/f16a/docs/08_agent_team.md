@@ -50,7 +50,7 @@ Load the MathWorks skills for the layer you are touching, and confirm R2026a API
 
 ## R2026a API findings
 
-Measured on this machine, not recalled from documentation. These four drive real design choices.
+Measured on this machine, not recalled from documentation. Each drives a real design choice.
 
 | Question | Finding |
 |---|---|
@@ -63,3 +63,20 @@ Measured on this machine, not recalled from documentation. These four drive real
 Pre-existing gotchas that still hold: connect ports with the two-argument `connect(src,dst)`; unload
 allocation sets and profiles *before* closing models/dictionaries in a generator's cleanup;
 `string(NaN)` is `<missing>` and `setProperty` rejects it — use `string(num2str(NaN))`.
+
+## Activity diagram API (R2026a)
+
+Measured before the mission activity was written, because `setBehaviorType` shipped in this release and
+the package is p-coded with empty help. Two of these decided whether D-059 was buildable at all.
+
+| Question | Finding |
+|---|---|
+| `systemcomposer.createActivity` returns what? | A `systemcomposer.activity.Model`; the root is `am.Activity`. It saves as a plain **`.slx`** |
+| `addNode` argument order | **`addNode(name, type)` — name FIRST.** Type is lowercase from `initial`, `activityfinal`, `flowfinal`, `joinfork`, `mergedecision`, `action`. Passing the type first gives a `mustBeMember` error that looks like a bad type name and is really a bad *order* |
+| Where does `connect` live? | On the **nodes**, never on the `Activity` — `act.connect(a,b)` errors "Unrecognized method". `a.connect(b)` joins actions; `pinOut.connect(pinIn)` joins pins. Returns an `activity.Flow` |
+| Typed object flow | `addPin(name, "in"\|"out")`, then `pin.ObjectType = <DataInterface>`. The activity model links an existing dictionary with `am.linkDictionary(file)` and reads interfaces off `am.TypesDictionary` — so the mission reuses `F16A_Functional.sldd` rather than minting a second one |
+| Binding an action to MATLAB | `setBehaviorType(a,"MATLAB")` sets `ActionBehavior`; `BehaviorDefinition` is then a free-form string that **accepts a call expression with arguments** (`F16AMissionSegment('Takeoff')`). One function serves all ten phases — ten near-identical wrappers are not needed |
+| Nesting an activity | `setBehaviorType(a,"Activity")` creates `a.ChildActivity`, named after the action and carrying a `ParentAction` back-pointer. This is how Combat holds F2T2EA |
+| **Can a requirement link to an action?** | **Yes, via the handle.** `slreq.createLink(action, req)` **fails** (`APIFailedToCreateLink`); `slreq.createLink(action.SimulinkHandle, req)` succeeds, as does the SID (`model:2`). The link lands in domain `linktype_rmi_simulink` |
+| **Can an action be an allocation source?** | **Yes, via the object.** `createAllocationSet(name, activityModelName, targetModelName)` then `scenario.allocate(actionObject, component)`. Note the asymmetry with the line above: **slreq wants the handle, allocation wants the object** |
+| Can a component's behaviour BE an activity? | **No.** `systemcomposer.ArchitectureType` is `{Architecture, SoftwareArchitecture, SimulinkModel, SimulinkSubsystem, Stateflow}` — there is no `Activity` member, and `createBehavior` accepts nothing else. This is why `ExecuteMissionProfile` was deleted rather than kept as a component owning the mission (D-059) |

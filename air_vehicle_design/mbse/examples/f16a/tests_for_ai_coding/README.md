@@ -9,14 +9,16 @@ they are *not* part of the lesson.
 
 ```matlab
 openProject("f16a.prj")
-run_ai_tests          % all four suites; every one must be green
+run_ai_tests          % all six suites; every one must be green
 ```
 
 | Suite | Checks |
 |---|---|
 | `F16ARequirementsTest` | the four requirement sets: ids, counts, keywords, no vendor token or number in a decision requirement |
-| `F16AFunctionalArchitectureTest` | the F model: 26 functions, no unconnected port, R→F Implement links |
-| `F16ALogicalArchitectureTest` | the L model: 9 roles, 4 interfaces, 14 allocation edges, 6 technology-neutral kinds, and that **no number ever appears at L** |
+| `F16AFunctionalArchitectureTest` | the capability tree: 9 capabilities, no ports at all, R→F Implement links |
+| `F16AMissionActivityTest` | the mission activity: 10 phase actions in flow order on a typed FlightState flow, each bound to `F16AMissionSegment`, Combat nesting F2T2EA, 18 Implement links, every phase using a capability |
+| `F16AMissionAnalysisTest` | the mission NUMBERS: totals against `Miss!O9`/`O8`, the four omitted segments still free, the action binding agreeing with the walk |
+| `F16ALogicalArchitectureTest` | the L model: 9 roles, 4 interfaces, 14 allocation edges across **two** sets (7 capability + 7 kill-chain), 6 technology-neutral kinds, and that **no number ever appears at L** |
 | `F16APhysicalArchitectureTest` | the P model: 30 components, the three candidate stereotypes and their per-trade property sets, the 16 leaf masses against the `sizing/` ground truth, roll-up self-consistency, the L→P realization, provenance, each trade's recorded verdict |
 
 `F16ATestCase` is the shared base class: the architecture walk, the stereotype
@@ -38,12 +40,13 @@ folders (D-055).
 |---|---|---|
 | Asks | is the model **built** correctly? | does the **design** meet this requirement? |
 | Asserts | structure, links, self-consistency | one requirement's criterion |
-| Expected state | **all green** | **two of three red, by design** |
+| Expected state | **all green** | **one of three red, by design** |
 | Traceability | none | a hand-made **Verify** link per test |
 | Audience | whoever is changing the model | students |
 
-The three tests in `verification/` are the teaching payload — they show a
-requirement that is met, one that is *unevaluated*, and one that is *violated*.
-Read [`../docs/README.md`](../docs/README.md), "Three requirements, three
-verification states", before touching them. **Nothing here should ever be red;
-two things there always are.**
+The three tests in `verification/` are the teaching payload — two requirements
+that are *met* and one that is *violated*. Read
+[`../docs/README.md`](../docs/README.md), "Three requirements, two verification
+states", before touching them. **Nothing here should ever be red; one thing
+there always is.** (There were two until D-060 turned the fuel verification
+green; what that cost is argued in the decision log.)

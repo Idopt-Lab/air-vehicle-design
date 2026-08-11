@@ -94,18 +94,24 @@ correctly is part of the assignment, not a prerequisite to it.
 
 **Eleven requirements carry the `todo` keyword, and they are exactly this set** — the nine above plus
 `023` and `024`. `F16ARequirementsTest` asserts that set *as a whole*, so a twelfth exercise cannot
-appear, and one of the eleven cannot be quietly answered, without a test going red. Two red
+appear, and one of the eleven cannot be quietly answered, without a test going red. Two
 requirements are pointedly **not** in it: `REQ_F16A_025` has a real criterion that was evaluated and
-came out *no* (**D-051**), and `REQ_F16A_P01`'s verification is pending by design (**D-042**).
-Neither is outstanding work, and neither is an exercise.
+came out *no* (**D-051**), and `REQ_F16A_P01` is verified and met (**D-060**). Neither is
+outstanding work, and neither is an exercise.
 
 > `Engage` is not in this table because it already traces to REQ_F16A_021 (payload release).
 
 ## Coverage summary
 
-Every **leaf function** (all 23) now traces to at least one requirement. The three
-composites — `ExecuteMissionProfile`, `ProvideAircraftFunctions`, `Aviate` — are
+Every **leaf function** traces to at least one requirement — the ten mission-phase actions and the
+six kill-chain actions in `F16A_MissionActivity`, and the seven leaf capabilities in
+`F16A_Functional`. The two composites that remain, `ProvideAircraftFunctions` and `Aviate`, are
 organizational containers; their children carry the traceability.
+
+`ExecuteMissionProfile` used to be a third such container, and its being one was the tell: it
+carried no traceability and could not be allocated, because a temporal thread modelled as a
+component hierarchy is the wrong metaclass for the job. It is now an activity, and its actions both
+trace and allocate (**D-059**).
 
 ### Requirements intentionally *not* linked at the F layer
 

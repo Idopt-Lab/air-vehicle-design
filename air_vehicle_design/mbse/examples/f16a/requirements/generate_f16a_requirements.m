@@ -202,8 +202,8 @@ r.Keywords = ["draft","auto-generated","todo"];
 % row now inventories one number where it lists two.
 % The reference aircraft does NOT satisfy it: SM_land = +0.21 %MAC is not
 % negative, so F16AStaticMarginVerificationTest is expected RED. That is the
-% teaching point -- a requirement evaluated and violated, which is a
-% different state from REQ_F16A_P01's evaluated-nothing (D-042).
+% teaching point -- a requirement evaluated and violated, and since D-060 it
+% is the example's only intentional red.
 % No "verify" keyword here, nor on 022 or P01: the Verify link is the record
 % that a requirement has a test, and a generator-written keyword restating
 % it is a derived fact that can drift out of step with the link (D-048).

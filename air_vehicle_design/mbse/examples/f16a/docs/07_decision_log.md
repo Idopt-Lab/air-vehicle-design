@@ -364,12 +364,12 @@ no fuel density and no fuel volume — it works entirely in fuel weight — so v
 with no home in the reference model to support a quantity nothing else consumes. `REQ_F16A_P01`'s
 *"(volume, expressed as fuel-weight capacity)"* is the settled formulation, not a hedge.
 
-### D-042 · The fuel verification stays RED, permanently and by design
-`F16APhysicalMissionFuel` keeps returning `NaN`; `F16AFuelVerificationTest` keeps failing;
-`REQ_F16A_P01` stays **unevaluated**. It is not wired to `BrandtMission`, now or later.
-**Why** The red test *is* the teaching artifact — "verification set up, traceable, not yet satisfied"
-is the state a real programme lives in, and nothing else here shows it. Wiring it to
-`Miss!O9 = 6000.43 lb` would teach the opposite lesson, and one requirement can only teach one.
+### D-042 → superseded by **D-060**
+Kept `F16APhysicalMissionFuel` at `NaN` so `REQ_F16A_P01` stayed **unevaluated** and its test red —
+"verification set up, traceable, not yet satisfied", the state a real programme lives in. It said the
+mission would not be wired to `BrandtMission` "now or later"; **D-059 wired it and D-060 turned the
+requirement green**, which costs the example its unevaluated artifact. What that cost buys, and why it
+was judged worth paying, is argued in D-060 rather than repeated here.
 
 ### D-043 · Cost is a whole-aircraft Measure of Merit only; it never enters the trade
 `F16APhysicalCostModel` gets a real DAPCA-IV implementation following
@@ -402,16 +402,14 @@ prices *this* model instead of re-fetching Brandt's own figure. That is what kee
 `Simulation` and keeps the comparison a real cross-check rather than a tautology — passing Brandt's
 own `wt_results` would have compared Brandt to Brandt.
 
-**The mission argument is a placeholder, and provably inert.** `run()` demands a `miss_results` only
-because `validate_run_` asserts the O&M and life-cycle terms are non-NaN; `C_unit_flyaway_usd` never
-reads it, `BrandtCost.m:128–131` being its only consumers. NaN is not available — that assert is the
-whole reason a placeholder is needed. The values are `1`, not a plausible fuel burn and sortie time,
-because mission fuel is not computed in this model (D-042) and a realistic-looking placeholder is a
-number a reader could mistake for one. The O&M and LCC figures it produces are discarded.
-`testFlyawayCostIgnoresTheMissionPlaceholder` runs the reference model twice with wildly different
-mission inputs and requires an identical flyaway — and requires the O&M costs to *differ*, so the
-invariance check cannot pass vacuously. **When mission fuel is eventually computed and fed back, the
-placeholder is replaced and the O&M figures become real; the flyaway will not move.**
+**The mission argument was a placeholder, and provably inert — until D-061 made it real.** `run()`
+demands a `miss_results` only because `validate_run_` asserts the O&M and life-cycle terms are
+non-NaN; `C_unit_flyaway_usd` never reads it, `BrandtCost.m:128–131` being its only consumers. While
+mission fuel was not computed here the values were `1`, deliberately implausible so no reader could
+mistake them for data, and the O&M and LCC figures were discarded. **The prediction this entry made —
+"the placeholder is replaced and the O&M figures become real; the flyaway will not move" — was
+measured and held: the flyaway stayed at $68.4705M** (D-061). The invariance test survives, renamed,
+because it is what made the substitution safe.
 
 **Cost is read from the model, cross-checked against the reference.** `Tmax` comes from the winning
 engine's `Thrust_SL_lb` (D-053, D-056) rather than a second copy of the JSON figure, and the two are asserted
@@ -512,8 +510,9 @@ and carries `REQ_F16A_L02`'s implicit premise that the instability is *bounded*.
 
 **The landing failure is a property of the reference model, not of the F-16A** — Brandt's neutral point
 is a simplified approximation, so this model drifts *stable* at light weight where the real aeroplane
-does not. The numbers, the CG-travel explanation and the three verification states are in
+does not. The numbers, the CG-travel explanation and the verification-state table are in
 [`01_requirements.md`](01_requirements.md) and [`README.md`](README.md); they are not repeated here.
+*Since D-060 this is the example's only intentional red.*
 
 ### D-052 · `PhysicalItem` gets its own `DataProvenance`; the default is `Simulation`
 A mass is an engineering value like any other, so the stereotype that holds it declares where it came
@@ -603,8 +602,10 @@ winner. Same rule, one home, evaluated at the first point it can be.
 
 **A `NaN` is never reported as a violation.** The materials roll-up could return `NaN` from an
 unreadable property and `F16AMaterialsVerificationTest` reported it as an exceeded 20% cap — a
-VIOLATED verdict on a requirement nothing had evaluated, the exact distinction D-042/D-051 exist to
-draw. Both roll-ups now name the offending part and stop; the test carries an UNEVALUATED branch.
+VIOLATED verdict on a requirement nothing had evaluated, the exact distinction D-051 draws (and
+D-042 drew, until D-060). Both roll-ups now name the offending part and stop; the test carries an
+UNEVALUATED branch — which since D-060 is where that state is demonstrated, the shipped red having
+gone green.
 
 **Silent omissions became errors.** `linkImplement` skipped a requirement id that no longer resolved
 and the generator still printed its success banner; it now raises `:missingRequirement`. The mass
@@ -649,7 +650,8 @@ user's: these exist so an agent editing a generator cannot silently break the mo
 **Every assertion was preserved.** Measured before and after: 108 machinery cases passing, 0
 failing, and afterwards 124 passing, 0 failing — the growth is `MassLeafRows` becoming 16 named
 parameterized cases instead of one loop, so a leaf-mass drift now names the part. The two
-intentional reds (D-042 fuel UNEVALUATED, D-051 static margin VIOLATED) are still exactly two.
+intentional reds at the time (D-042 fuel UNEVALUATED, D-051 static margin VIOLATED) were still
+exactly two. *D-060 has since taken the fuel red green, leaving one.*
 
 **`F16ATestCase`.** A new abstract base class holds what the L and P suites had each written for
 themselves: the variant-aware architecture walk (`descend`/`descendInto`, duplicated verbatim), the
@@ -795,3 +797,110 @@ fallback half of D-054's "there is no fallback now", by removing the fallback it
 no longer has to know that an instance flattens a variant while the architecture does not. That trap
 is real and still documented in `05_physical.md`, because generators and tests still use
 architecture paths — it just is not in this file any more.
+
+### D-059 · The mission profile is an ACTIVITY DIAGRAM, not ten components
+
+**Decided.** `ExecuteMissionProfile` and its sixteen sub-components are gone. The mission is
+`functions/F16A_MissionActivity.slx`: ten activity **actions** on a typed `FlightState` object flow,
+with Combat's behaviour a **child activity** holding the F2T2EA chain. `F16A_Functional` keeps the
+capability tree and drops to **9 components** and its three root ports. The F layer is now two
+artifacts because functions are two kinds of thing — capabilities, which the aircraft can do at any
+moment, and a mission, which it does in order.
+
+**Why the old model was wrong, not merely different.** A mission profile is a behaviour: each phase
+consumes an aircraft state and produces a lighter one. Modelled with the *structural* metaclass, pins
+were drawn as ports and actions as components — and the consequence was not cosmetic. The phases
+**could not be allocated to anything**, which `generate_f16a_logical` recorded as a decision ("they
+are orchestration realized BY these capabilities") and a test enforced. That exclusion was a
+metaclass symptom. As actions they allocate normally, and the gap closes.
+
+**The analysis link is a behaviour binding, not a stored number.** Each phase action carries
+`F16AMissionSegment('<phase>')` as its `BehaviorDefinition`, so the model records **how** its fuel is
+computed. Re-run the analysis and the model follows. Nothing here restates a segment equation:
+`F16AMissionReference` calls `sizing/VnV/BrandtF16A/BrandtMission.m` behind D-047's path guard and
+caches the one result all ten actions read. **Combat is the one action without a MATLAB binding** —
+an action has exactly one behaviour and Combat's is the kill chain; its fuel still comes from the
+same analysis, because the walk asks `F16AMissionSegment` for all ten regardless.
+
+**Fourteen segments, ten phases, and the difference is checked.** The model omits three zero-duration
+Patrol waypoints and the degenerate `Climb2` re-entry node. Omitting a segment is honest only while
+it is free, so `F16AMissionAnalysis` **asserts** all four cost zero fuel and zero time and stops the
+run otherwise — the model would be flying a cheaper mission than the one it claims. Measured:
+**5959.80 lb over 94.00 min**, against `Miss!O9 = 6000.43` and `Miss!O8 = 94.06`, both inside the ±1%
+band `/sizing/` holds itself to. Two traps are documented where they bite: the total excludes Landing
+by construction, and `fuel_lb` already nets out Combat's 4400 lb release.
+
+**Two allocation sets where there was one.** A set binds to a *source model*, and 7 of the 14 F→L
+edges start in the kill chain. `F16A_FunctionToLogical` keeps the 7 capability edges;
+`F16A_KillChainToLogical` takes the 7 kill-chain ones. **Nothing about what they assert changed, only
+which file each starts in** — the tests count across both and still require 14 edges from 13 sources
+with `Target` fanning out to 2.
+
+**Phases use capabilities; they do not allocate to roles.** `F16A_MissionUsesCapability` records 59
+edges from phase actions to the capabilities each needs. **The mechanism is allocation; the semantic
+is use** — `Cruise → GenerateLift` is not "performed by": `GenerateLift` is not a part, not a
+decomposition of Cruise (Climb and Dash share it), not a refinement. Cruise *requires* it. The set is
+named for what it means. Phases stop there rather than reaching through to the logical roles, because
+`Cruise → Airframe` is just `Cruise → GenerateLift → Airframe` composed, and since every phase needs
+airframe, propulsion and fuel that matrix would be nearly full and say almost nothing.
+
+**Eighteen requirement links moved with the phases** — 001–010, the phase-specific half of 017/018,
+021 and D05–D09 — and are created next to the actions they attach to. **`slreq.createLink(action, req)`
+fails**; it takes the action's `SimulinkHandle`. The allocation editor wants the **object**. That
+asymmetry is measured and tabulated in `08_agent_team.md`, along with `addNode(name, type)` taking the
+name first and `connect` living on the nodes rather than the activity.
+
+**What was considered and rejected.** A **Stateflow chart**: right formalism, wrong subject — mission
+phases do not branch, react to events or revisit, so the guards would only ever mean "the previous
+segment finished", and a component can be composite *or* have behaviour, not both. A **sequence
+diagram** for F2T2EA, which genuinely is an interaction: `arch.Model` exposes only
+`createView`/`getView`/`deleteView`, so it cannot be generated and a hand-drawn one would be
+destroyed by the next run. It is in `TODO.md` as a later pass needing an explicit carve-out from the
+generators-only rule. Keeping `ExecuteMissionProfile` as an **empty leaf** pointing at the activity:
+`systemcomposer.ArchitectureType` has no `Activity` member, so a component cannot own one, and a stub
+that only points elsewhere is what D-054 removed.
+
+### D-060 · `REQ_F16A_P01` is answered, and D-042 is superseded
+
+**Decided.** *Supersedes D-042.* `F16APhysicalMissionFuel` reads
+`MeasureOfMerit.MissionFuel_lb` off the model instead of returning `NaN`, and
+`F16AFuelVerificationTest` **passes**: 6300 lb of tankage against 5959.80 lb of mission fuel, about
+340 lb of margin.
+
+**What this costs, stated plainly.** D-042 kept the red because *unevaluated* — verification set up,
+traceable and not yet satisfied — is the state a real programme lives in, and nothing else here showed
+it. The example shipped three verification states and now ships **two**. The static-margin landing case
+(D-051) is the **only** intentional red; a second red is now a regression, where the standing rule used
+to say two. The `UNEVALUATED` branches survive in the roll-up guards and
+`F16AMaterialsVerificationTest` (D-054), so the concept is still demonstrable — it is just no longer
+demonstrated by a shipped failure.
+
+**Why supersede anyway.** D-042's reasoning held while there was no mission in the model. Once D-059
+put a real one there, a function called `F16APhysicalMissionFuel` returning `NaN` next to an analysis
+reporting 5959.80 lb is not a lesson, it is a contradiction a reader has to resolve. It reads the
+Measure of Merit rather than re-running the analysis, which keeps it symmetric with the available side
+— both ask the model.
+
+### D-061 · Operating and life-cycle cost become real Measures of Merit
+
+**Decided.** `F16APhysicalCostModel` returns a struct and the aircraft gains four properties beside
+`UnitCost_USD`: `MissionFuel_lb`, `MissionTime_min`, `OMCostAnnual_USD`, `OMCostLife_USD`,
+`LifeCycleCost_USD`. The `missionPlaceholder` — `struct('total_fuel_lb',1,'total_time_min',1)` — is
+gone; section 9c writes the real mission and the cost model reads it off the model, the same shape as
+OEW and for the same reason.
+
+**The flyaway does not move, and that is the finding.** Fuel reaches cost through exactly one path,
+`BrandtCost.m:128-131`, which feeds only the O&M terms. Measured before and after: **$68.4705M**,
+unchanged. What replacing the placeholder bought is three real numbers *below* the flyaway —
+$1.24M/yr, $24.77M over life, $93.24M life-cycle, against BrandtCost's own $24.84M and $93.26M — not
+a different flyaway. D-043 predicted exactly this and it is worth having measured.
+
+**`testFlyawayCostIgnoresTheMissionPlaceholder` became `testFlyawayCostIgnoresTheMission`.** There is
+no placeholder to ignore any more; the invariance it measures is what made replacing the placeholder
+safe, so the test gained force rather than losing its subject.
+
+**`REQ_F16A_P02` exists so the figure is traced.** It **poses** the question and does not answer it:
+no cost ceiling, because no sourced affordability target exists for this example and inventing one
+would be inventing a requirement (D-037, D-045). Implement-linked from `Aircraft` alongside
+`REQ_F16A_026` — DAPCA prices an airframe, not a part. No verification test: there is no criterion to
+test against, only a number to produce.

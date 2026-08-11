@@ -1,22 +1,21 @@
 classdef F16AFuelVerificationTest < matlab.unittest.TestCase
     %F16AFUELVERIFICATIONTEST Verify REQ_F16A_P01 (fuel volume sufficiency).
-    %   Checks that the available internal fuel (F16APhysicalFuelRollup, ~6300
-    %   lb) is at least the mission fuel required (F16APhysicalMissionFuel).
+    %   Checks that the available internal fuel (F16APhysicalFuelRollup, 6300
+    %   lb) is at least the mission fuel required (F16APhysicalMissionFuel,
+    %   ~5960 lb from the /sizing/ mission analysis). It passes, with about
+    %   340 lb of margin.
     %
-    %   IT FAILS BY DESIGN, AND PERMANENTLY (D-042). The required side is NaN
-    %   and STAYS NaN: F16APhysicalMissionFuel is never wired to the /sizing/
-    %   mission analysis -- not now, not later. So the comparison is
-    %   available >= NaN, which is false. Do NOT make this green by connecting
-    %   mission fuel: the red IS the teaching artifact. It shows verification
-    %   that is set up, traceable and NOT YET SATISFIED -- the state a real
-    %   programme lives in for most of its life.
+    %   IT USED TO FAIL BY DESIGN. Until D-060 the required side was NaN, so
+    %   nothing was compared and REQ_F16A_P01 was UNEVALUATED -- a deliberate
+    %   teaching artifact showing verification that is set up and traceable but
+    %   not yet satisfied. D-059 connected the mission analysis, so there is now
+    %   a real number to compare and the requirement is answered.
     %
-    %   WHICH RED IS THIS? The example ships two, and they are different STATES.
-    %   This one is UNEVALUATED: required = NaN, so nothing was compared and
-    %   REQ_F16A_P01 has not been answered. It is not violated, and no claim
-    %   about the aircraft follows from it. The other is VIOLATED --
-    %   F16AStaticMarginVerificationTest at landing, where both sides are finite
-    %   numbers, the comparison was genuinely made and the design lost (D-051).
+    %   THE EXAMPLE STILL SHIPS ONE INTENTIONAL RED, and it is a different
+    %   state: F16AStaticMarginVerificationTest's landing case is VIOLATED --
+    %   both sides are finite, the comparison was genuinely made, and the design
+    %   lost (D-051). Met and violated are not the same as unevaluated, and the
+    %   UNEVALUATED branch survives in the roll-up guards (D-054).
     %
     %   See also F16AMATERIALSVERIFICATIONTEST, F16ASTATICMARGINVERIFICATIONTEST.
 
@@ -37,17 +36,11 @@ classdef F16AFuelVerificationTest < matlab.unittest.TestCase
             % REQ_F16A_P01: available internal fuel shall be >= mission fuel.
             available = F16APhysicalFuelRollup().AvailableFuel_lb;
             required  = F16APhysicalMissionFuel();
-            % The diagnostic names the STATE, not a repair. Telling a reader to
-            % connect the mission analysis would instruct them to do the one
-            % thing D-042 decided against, and would present an unevaluated
-            % requirement as an outstanding chore.
-            msg = sprintf("REQ_F16A_P01 UNEVALUATED -- this failure is EXPECTED and " + ...
-                "PERMANENT (D-042): available=%.0f lb, required=%g. Nothing has been " + ...
-                "compared: F16APhysicalMissionFuel returns NaN BY DESIGN, so this red " + ...
-                "is not a violation and says nothing about the aircraft. Do NOT clear " + ...
-                "it by wiring mission fuel to the /sizing/ analysis. Contrast the " + ...
-                "landing red in F16AStaticMarginVerificationTest, where both sides are " + ...
-                "finite numbers and the design genuinely fails.", available, required);
+            msg = sprintf("REQ_F16A_P01 VIOLATED: the aircraft carries %.0f lb of " + ...
+                "internal fuel but the design mission needs %.0f lb, a shortfall " + ...
+                "of %.0f lb. Both sides are real numbers, so this is a statement " + ...
+                "about the aircraft: either the tanks or the mission has to " + ...
+                "change.", available, required, required - available);
             testCase.verifyGreaterThanOrEqual(available, required, msg);
         end
     end

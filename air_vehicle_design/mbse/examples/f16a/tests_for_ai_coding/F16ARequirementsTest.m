@@ -85,10 +85,10 @@ classdef F16ARequirementsTest < F16ATestCase
                 "'todo' must mark exactly the eleven student exercises " + ...
                 "(D-045, D-046) -- no more, no fewer.");
             % 025 has a real evaluated criterion whose answer is no (D-046);
-            % P01's verification is pending BY DESIGN (D-042). Both are red;
-            % neither is outstanding student work.
+            % P01 is verified and met (D-060). Neither is outstanding student
+            % work, and one of them being red does not make it so.
             testCase.verifyNoOffenders(intersect(actual, ["REQ_F16A_025","REQ_F16A_P01"]), ...
-                "REQ_F16A_025 (D-046) and REQ_F16A_P01 (D-042) are not student " + ...
+                "REQ_F16A_025 (D-046) and REQ_F16A_P01 (D-060) are not student " + ...
                 "exercises and must not carry 'todo'");
         end
 
@@ -153,8 +153,8 @@ classdef F16ARequirementsTest < F16ATestCase
                 "f16a_functional_derived.slreqx: REQ_F16A_D01-D09 + root.");
             testCase.verifyEqual(numel(itemsOf(testCase.LogiSet)), 4, ...
                 "f16a_logical_derived.slreqx: REQ_F16A_L01-L03 + root.");
-            testCase.verifyEqual(numel(itemsOf(testCase.PhysSet)), 2, ...
-                "f16a_physical_derived.slreqx: REQ_F16A_P01 + root.");
+            testCase.verifyEqual(numel(itemsOf(testCase.PhysSet)), 3, ...
+                "f16a_physical_derived.slreqx: REQ_F16A_P01, P02 + root.");
         end
 
         function testRequirementIdsUniqueAcrossSets(testCase)

@@ -25,12 +25,12 @@ traceability is the whole point of MBSE: you can always answer "why does this pa
 | Layer | Artifact |
 |-------|----------|
 | **R** – Requirements | `requirements/f16a.slreqx` (26 requirements) |
-| **F** – Functions | `functions/F16A_Functional.slx` (26 functions, 39 links) |
-| **L** – Logical | `logical/F16A_Logical.slx` (9 roles, 3 presenting technology-neutral **kinds** — the choice between them is decided at P; allocation set with 14 edges) |
-| **P** – Physical | `physical/F16A_Physical.slx` (30 components incl. 7 candidates across 3 variant roles; a **trade study** that scores them, decides, and writes the decision back to L and to REQ_F16A_L01–L03; realization allocation; mass/materials/fuel roll-ups; OEW & cost MoMs) |
+| **F** – Functions | `functions/F16A_Functional.slx` (9 capabilities) **and** `functions/F16A_MissionActivity.slx` (the mission as 10 activity **actions**, each bound to the `/sizing/` analysis); 39 links |
+| **L** – Logical | `logical/F16A_Logical.slx` (9 roles, 3 presenting technology-neutral **kinds** — the choice between them is decided at P; 14 allocation edges across two sets) |
+| **P** – Physical | `physical/F16A_Physical.slx` (30 components incl. 7 candidates across 3 variant roles; a **trade study** that scores them, decides, and writes the decision back to L and to REQ_F16A_L01–L03; realization allocation; mass/materials/fuel roll-ups; OEW, mission, and cost/life-cycle-cost MoMs) |
 
 All four layers are built. Three requirements carry a "verified by" test, and they are in
-**three different states** — see [below](#three-requirements-three-verification-states).
+**two different states** — see [below](#three-requirements-two-verification-states).
 
 ## Documentation map
 
@@ -57,15 +57,22 @@ mbse/examples/f16a/
 │   ├─ f16a.slreqx                       sizing-derived requirements (pristine)
 │   ├─ f16a_functional_derived.slreqx    derived placeholders (D01–D09)
 │   ├─ f16a_logical_derived.slreqx       decision requirements (L01–L03)
-│   ├─ f16a_physical_derived.slreqx      physical requirements (P01: fuel)
+│   ├─ f16a_physical_derived.slreqx      physical requirements (P01 fuel, P02 life-cycle cost)
 │   └─ generate_f16a_*requirements.m     one generator per set
-├─ functions/                            F layer
-│   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx
-│   └─ generate_f16a_functional.m
+├─ functions/                            F layer — TWO artifacts, two metaclasses (D-059)
+│   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx   the capability tree (no ports)
+│   ├─ generate_f16a_functional.m        builds it, then calls the activity generator
+│   ├─ F16A_MissionActivity.slx + ~mdl.slmx      the mission as an ACTIVITY diagram
+│   ├─ generate_f16a_mission_activity.m  10 actions, F2T2EA child activity, 18 links
+│   ├─ F16A_MissionUsesCapability.mldatx phase → capability (mechanism allocation, semantic use)
+│   ├─ F16AMissionAnalysis.m             the printed walk over the ten phases (5 steps)
+│   ├─ F16AMissionSegment.m              one phase's numbers — each action's BehaviorDefinition
+│   └─ F16AMissionReference.m            calls /sizing/ BrandtMission once, and remembers
 ├─ logical/                              L layer
 │   ├─ F16A_Logical.slx + .sldd + ~mdl.slmx
 │   ├─ F16A_LogicalOptions.xml           stereotype profile (Selected, DecisionRef)
-│   ├─ F16A_FunctionToLogical.mldatx     function → logical allocation
+│   ├─ F16A_FunctionToLogical.mldatx     capability → logical allocation (7 edges)
+│   ├─ F16A_KillChainToLogical.mldatx    kill-chain action → logical allocation (7 edges)
 │   └─ generate_f16a_logical.m
 ├─ physical/                             P layer
 │   ├─ F16A_Physical.slx + .sldd + ~mdl.slmx
@@ -86,17 +93,18 @@ mbse/examples/f16a/
 │   ├─ F16APhysicalFuelRollup.m          available fuel         (4 printed steps)
 │   │                                    each standalone: the walk is in the file that uses it
 │   ├─ F16APhysicalRollups.m             runner: calls all three, read-only by default
-│   ├─ F16APhysicalCostModel.m           calls BrandtCost for the flyaway cost (needs /sizing/)
-│   └─ F16APhysicalMissionFuel.m         mission-fuel hook (NaN by design)
+│   ├─ F16APhysicalCostModel.m           calls BrandtCost: flyaway, O&M, LCC (needs /sizing/)
+│   └─ F16APhysicalMissionFuel.m         reads MissionFuel_lb off the model (P01's required side)
 ├─ tests_for_ai_coding/                  MACHINERY tests — guard rails, not teaching (D-055)
 │   ├─ README.md                         what these are, and why they are not verification/
 │   ├─ F16ATestCase.m                    shared base: the walk, the readers, verifyNoOffenders
 │   ├─ F16A{Requirements,FunctionalArchitecture,LogicalArchitecture}Test.m
+│   ├─ F16AMission{Activity,Analysis}Test.m  the mission is wired / the mission is right
 │   ├─ F16APhysicalArchitectureTest.m    the P model is built correctly
-│   └─ run_ai_tests.m                    runs all four; every one must be green
+│   └─ run_ai_tests.m                    runs all six; every one must be green
 └─ verification/                         requirement-verification tests — the teaching payload
     ├─ F16AMaterialsVerificationTest.m   REQ_F16A_022 — green
-    ├─ F16AFuelVerificationTest.m        REQ_F16A_P01 — red by design
+    ├─ F16AFuelVerificationTest.m        REQ_F16A_P01 — green since D-060
     ├─ F16AStaticMarginVerificationTest.m  REQ_F16A_025 — 2 pass, 1 red by design
     └─ *VerificationTest~m.slmx          manual verify link sets (requirement → test)
 ```
@@ -138,37 +146,39 @@ F16APhysicalRollups                         % all three roll-ups; read-only, wri
 F16AEngineTradeStudy                        % re-run ONE trade; six printed steps, start here
 F16APhysicalTradeStudy                      % re-run all three
 
-run_ai_tests                                   % MACHINERY: all four suites, all green
+run_ai_tests                                   % MACHINERY: all six suites, all green
 
 runtests("F16AMaterialsVerificationTest")      % REQ_F16A_022 — green
 runtests("F16AStaticMarginVerificationTest")   % REQ_F16A_025 — 2 pass, 1 RED BY DESIGN
-runtests("F16AFuelVerificationTest")           % REQ_F16A_P01 — RED BY DESIGN
+runtests("F16AFuelVerificationTest")           % REQ_F16A_P01 — passes since D-060
 ```
 
 The two kinds are run separately on purpose. `run_ai_tests` asks *is the model
 built correctly?* and **every one of its cases must pass** — a red there is a
 regression. The three verification suites ask *does the design meet this
-requirement?*, and two of them are red by design. See
+requirement?*, and one of them is red by design. See
 [`../tests_for_ai_coding/README.md`](../tests_for_ai_coding/README.md).
 
-**Two reds are the expected state, and they are different reds.** A third failure is a
-regression. A run that reports "2 tests fail" and stops has missed the point:
+**One red is the expected state.** A second failure is a regression. A run that reports
+"1 test fails" and stops has missed the point:
 
-### Three requirements, three verification states
+### Three requirements, two verification states
 
 | Requirement | Test | State | What it teaches |
 |---|---|---|---|
 | `REQ_F16A_022` composite ≤ 20% | `F16AMaterialsVerificationTest` | 🟢 **met** | the requirement holds, and the evidence is a roll-up over the model itself |
-| `REQ_F16A_P01` fuel volume | `F16AFuelVerificationTest` | 🔴 **unevaluated** | verification is set up, linked and traceable — but nothing has been computed, so *nothing has been checked* (D-042) |
+| `REQ_F16A_P01` fuel volume | `F16AFuelVerificationTest` | 🟢 **met** | 6300 lb of tankage against 5960 lb of mission fuel — evidence that leaves the model entirely, and comes back from the `/sizing/` analysis (D-059) |
 | `REQ_F16A_025` static margin | `F16AStaticMarginVerificationTest` | 🔴 **violated** | the requirement *was* evaluated, against a real number, and **the design does not meet it** (D-051) |
 
-A requirement can be met, not met, or not yet judged — and a red square tells you which only if
-you read why. The middle state is the one a real programme spends most of its life in, and
-nothing else here shows it. Three consequences worth holding on to:
+A requirement can be met, not met, or not yet judged. **The third state used to be shipped:**
+`REQ_F16A_P01` was deliberately unevaluated — traceable, linked, and comparing against `NaN` — until
+D-059 gave the model a real mission and D-060 turned it green. That was a real loss, argued in the
+decision log; the `UNEVALUATED` branch survives inside the roll-up guards and
+`F16AMaterialsVerificationTest`, so the state is still reachable, just no longer demonstrated by a
+failing test. Two consequences worth holding on to:
 
-- **A pending verification is not a failing design; a failing verification is not a broken tool.**
-  `REQ_F16A_P01` says nothing at all about the fuel system's adequacy. `REQ_F16A_025` says
-  something quite specific about the aircraft's balance.
+- **A failing verification is not a broken tool.** `REQ_F16A_025` says something quite specific
+  about the aircraft's balance, and the analysis behind it is working correctly.
 - **`testAnalysisProducedUsableMargins` passing is what separates them.** It was built so that
   "the aircraft violates `REQ_F16A_025`" and "the analysis that evaluates it is broken" could
   never arrive looking identical. It is green while its two siblings split 1–1, so the landing
@@ -179,8 +189,8 @@ nothing else here shows it. Three consequences worth holding on to:
 
 The P layer's tests are split two ways on purpose: `F16APhysicalArchitectureTest` is
 **machinery**, and the three `*VerificationTest` files are **requirement verification**, one per
-requirement. One combined suite would report "2 failures" and hide that they mean different
-things — which is also why the machinery suites live in their own folder (D-055). There used to be
+requirement. One combined suite would report a failure count and hide what the failures mean —
+which is also why the machinery suites live in their own folder (D-055). There used to be
 a third, `F16APhysicalTradeGuardsTest`, feeding a shared guard class bad data and watching it
 refuse; D-056 moved the guards inline into the three trade scripts and retired it.
 

@@ -81,6 +81,7 @@ addpath(thisDir);   % so F16APhysicalMassRollup / F16APhysicalCostModel resolve
 addpath(physDir);
 addpath(logiDir);
 addpath(reqDir);
+addpath(fullfile(thisDir, "functions"));   % F16AMissionAnalysis, for section 9c
 
 % ---------------------------------------------------------------------
 % 0) Idempotent cleanup (unload in-memory sets/profiles BEFORE models/dicts;
@@ -257,6 +258,17 @@ mom.addProperty("OEW_lb",       Type="double", DefaultValue="0");   % <- mass ro
 % placeholder but an unbeatably good one; a default that silently produces a
 % plausible number is worse than one that stops the run.
 mom.addProperty("UnitCost_USD", Type="double", DefaultValue="NaN"); % <- cost-model function
+% The mission the aircraft is sized to fly, written by section 9c from the
+% /sizing/ analysis. MissionFuel_lb is the "required" side of REQ_F16A_P01 and
+% the only input the cost model has to the O&M terms below (D-059).
+mom.addProperty("MissionFuel_lb",  Type="double", DefaultValue="NaN");
+mom.addProperty("MissionTime_min", Type="double", DefaultValue="NaN");
+% Operating and life-cycle cost. These are the terms real mission fuel actually
+% moves -- the flyaway above is invariant to it (D-043) -- so they stopped being
+% discarded when the mission stopped being a placeholder (D-061).
+mom.addProperty("OMCostAnnual_USD",  Type="double", DefaultValue="NaN");
+mom.addProperty("OMCostLife_USD",    Type="double", DefaultValue="NaN");
+mom.addProperty("LifeCycleCost_USD", Type="double", DefaultValue="NaN");
 % String defaults are evaluated as MATLAB expressions, so quote the literal.
 mom.addProperty("Goal",         Type="string", DefaultValue="'Minimize'");
 % Material: composite fraction per part -> airframe composite roll-up (REQ_022).
@@ -841,6 +853,11 @@ fuelSysC  = lookup(m, Path=char(S + "FuelSystem"));
 
 % Cost MoM -> REQ_026 (Implement, from the Aircraft).
 linkImplement(aircraft, origSet, "REQ_F16A_026");
+% Life-cycle cost -> REQ_P02, likewise from the Aircraft. DAPCA prices an
+% airframe, not a part, so both cost requirements attach to the whole aeroplane
+% (D-043). No verification test: P02 asks for the figure to exist and be
+% traceable, and nothing here supplies a ceiling to test it against (D-061).
+linkImplement(aircraft, physSet, "REQ_F16A_P02");
 % Materials -> REQ_022 (Implement, from the Airframe; Verify link added manually).
 % The link stays on the VARIANT ROLE, not on a candidate. The composite cap
 % binds the airframe whichever candidate wins -- which is why both candidates
@@ -878,7 +895,26 @@ mats    = F16APhysicalMaterialsRollup();
 fuel    = F16APhysicalFuelRollup();
 
 % ---------------------------------------------------------------------
-% 9b) Cost Measure of Merit -- AFTER the roll-ups, because it needs OEW.
+% 9c) The mission this aircraft is sized to fly.
+%
+%     Runs the /sizing/ mission analysis and records the result on the
+%     aircraft. It sits between the roll-ups and the cost model because the
+%     cost model READS these two properties off the model rather than
+%     recomputing them -- the same shape as OEW, and for the same reason: the
+%     model is what gets priced, not a number passed sideways.
+%
+%     MissionFuel_lb is also the "required" side of REQ_F16A_P01, which the
+%     fuel verification compares against the tanks' capacity (D-059).
+% ---------------------------------------------------------------------
+mission = F16AMissionAnalysis();
+setProperty(aircraft, profileName + ".MeasureOfMerit.MissionFuel_lb", ...
+    string(num2str(mission.TotalFuel_lb)));
+setProperty(aircraft, profileName + ".MeasureOfMerit.MissionTime_min", ...
+    string(num2str(mission.TotalTime_min)));
+save_system(modelName, char(modelFile));
+
+% ---------------------------------------------------------------------
+% 9d) Cost Measures of Merit -- AFTER the roll-ups, because it needs OEW.
 %
 %     The teaching contrast, in the order the code now runs: OEW came from a
 %     bottom-up ROLL-UP of the parts (section 9), and cost comes from a
@@ -889,18 +925,24 @@ fuel    = F16APhysicalFuelRollup();
 %     analysis output of this repo. BrandtCost's own ~$68.4M (quoted in
 %     REQ_F16A_026) is the cross-check, not the value.
 %
-%     The chain now needs /sizing/ at build time: F16APhysicalCostModel CALLS
+%     The chain needs /sizing/ at build time: F16APhysicalCostModel CALLS
 %     BrandtCost.run rather than restating the DAPCA arithmetic, handing it this
-%     model's rolled-up OEW. Missing, it errors and names the dependency rather
-%     than inventing a rate. Its mission argument is a placeholder -- run() wants
-%     one only for the O&M terms, which are discarded (D-042).
+%     model's rolled-up OEW and the mission section 9c just wrote. Missing, it
+%     errors and names the dependency rather than inventing a rate.
+%
+%     THE FLYAWAY DOES NOT MOVE WITH MISSION FUEL, and that is the point worth
+%     noticing: fuel reaches only the O&M terms (BrandtCost.m:128-131). What
+%     replacing the old placeholder bought is three real numbers below the
+%     flyaway, not a different flyaway (D-061).
 %
 %     No candidate carries a cost at all: it was NaN on all seven permanently
 %     (D-043), so D-056 stopped declaring the property.
 % ---------------------------------------------------------------------
-unitCost = F16APhysicalCostModel(m);
+costs = F16APhysicalCostModel(m);
 % num2str, not string(): string(NaN) is <missing>, which setProperty rejects.
-setProperty(aircraft, profileName + ".MeasureOfMerit.UnitCost_USD", string(num2str(unitCost)));
+for f = string(fieldnames(costs))'
+    setProperty(aircraft, profileName + ".MeasureOfMerit." + f, string(num2str(costs.(f))));
+end
 save_system(modelName, char(modelFile));
 
 nComp = countComps(m.Architecture);

@@ -149,11 +149,11 @@ would pass, and `REQ_F16A_L02`'s fly-by-wire justification quietly assumes the i
 mission and the two margins straddle zero. Burning fuel and releasing stores moves the CG *forward*,
 so landing is the forward, most-stable end — the end where this requirement bites.
 
-**This is the example's third verification state, and it was built on purpose.** `REQ_F16A_022` is
-met. `REQ_F16A_P01` is red because nothing has been computed (D-042) — *unevaluated*. `REQ_F16A_025`
-is red because something **was** computed and the design does not meet it — *violated*. Those are
-different facts wearing the same colour, and the distinction is the lesson; see
-[`README.md`](README.md#three-requirements-three-verification-states). Two earlier decisions had a run
+**This is the example's only intentional red, and it was built on purpose.** `REQ_F16A_022` and
+`REQ_F16A_P01` are met; `REQ_F16A_025` is red because something **was** computed and the design does
+not meet it — *violated*, which is a different fact from *unevaluated*. The example used to ship
+that third state too, in `REQ_F16A_P01`, until D-059 gave the model a real mission and D-060 turned
+it green; see [`README.md`](README.md#three-requirements-two-verification-states). Two earlier decisions had a run
 at this: D-044 wanted `REQ_F16A_024` to be *"the example's first requirement the reference aircraft does
 not meet"*, and D-046 set that aside — correctly, since the gear-angle conventions are ambiguous —
 but widened `025` until the reference figure fitted inside it, and the lesson went with it. D-051

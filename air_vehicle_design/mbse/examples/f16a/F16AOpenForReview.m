@@ -1,15 +1,23 @@
 function F16AOpenForReview()
 %F16AOPENFORREVIEW Load the whole F-16A RFLP model so traceability is visible.
-%   Loads all three System Composer models, all four requirement sets and every
-%   verification link set, then opens the Requirements Editor. Run this before
-%   reviewing requirements.
+%   Loads all four System Composer artifacts (three architectures and the
+%   mission activity), all four requirement sets and every verification link
+%   set, then opens the Requirements Editor. Run this before reviewing
+%   requirements.
 %
 %   WHY THIS IS NEEDED: a link lives in the link set of the artifact it points
 %   FROM, never in the requirement set. An "Implemented by" link therefore ships
 %   with the MODEL and a "Verified by" link with the TEST, so a requirement set
 %   opened on its own shows neither -- REQ_F16A_020/023/024/025 (L) and
-%   REQ_F16A_022/026 + REQ_F16A_P01 (P) read as un-implemented, and every Verify
-%   link is invisible. Loading the models and the test link sets makes them appear.
+%   REQ_F16A_022/026 + REQ_F16A_P01/P02 (P) read as un-implemented, and every
+%   Verify link is invisible. Loading the models and the test link sets makes
+%   them appear.
+%
+%   THE MISSION ACTIVITY IS NOT OPTIONAL HERE. Since D-059 eighteen links --
+%   REQ_F16A_001-010, the phase-specific half of 017/018, 021 and D05-D09 --
+%   point from ACTIONS in F16A_MissionActivity. Leave it unloaded and every
+%   mission-phase requirement reads as un-implemented, which is the exact
+%   failure this function exists to prevent.
 %
 %   Regenerating is link-safe: slreq.new builds each requirement set from
 %   scratch, but a full rebuild of all four was measured to leave the hand-made
@@ -29,6 +37,9 @@ addpath(thisDir, ...
 systemcomposer.loadModel("F16A_Functional");
 systemcomposer.loadModel("F16A_Logical");
 systemcomposer.loadModel("F16A_Physical");
+% The activity is opened with openActivity, not loadModel -- it is an activity
+% diagram model, and it carries 18 of the 39 Implement links.
+systemcomposer.openActivity("F16A_MissionActivity");
 
 % Load every requirement set (base + the three derived sets).
 reqFiles = ["f16a.slreqx","f16a_functional_derived.slreqx", ...
@@ -46,8 +57,8 @@ for k = 1:numel(lnkSets)
     slreq.load(fullfile(lnkSets(k).folder, lnkSets(k).name));
 end
 
-fprintf("Loaded 3 models, %d requirement sets, %d verification link set(s).\n", ...
-    numel(reqFiles), numel(lnkSets));
+fprintf("Loaded 3 architectures + the mission activity, %d requirement sets, " + ...
+    "%d verification link set(s).\n", numel(reqFiles), numel(lnkSets));
 reportVerifyLinks(vDir);
 
 try slreq.editor(); catch, end   % open the editor if a display is available

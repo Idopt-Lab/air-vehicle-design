@@ -1,14 +1,14 @@
 function results = run_ai_tests()
 %RUN_AI_TESTS Run every machinery suite in this folder.
-%   RESULTS = RUN_AI_TESTS() runs the four suites that check the F-16A model is
+%   RESULTS = RUN_AI_TESTS() runs the suites that check the F-16A model is
 %   built correctly, and prints a one-line summary per suite.
 %
-%   ALL OF THESE MUST BE GREEN. The two tests that fail by design are the
-%   requirement-verification tests in verification/, which this does not run --
-%   see docs/README.md, "Three requirements, three verification states".
+%   ALL OF THESE MUST BE GREEN. The one test that fails by design is a
+%   requirement-verification test in verification/, which this does not run --
+%   see docs/README.md, "Three requirements, two verification states".
 %
-%   The folder is scanned rather than listed, so a fifth suite is picked up
-%   the day it is added.
+%   The folder is scanned rather than listed, so a new suite is picked up the
+%   day it is added -- which is how the two mission suites arrived (D-059).
 
 here  = fileparts(mfilename("fullpath"));
 suite = matlab.unittest.TestSuite.fromFolder(here);

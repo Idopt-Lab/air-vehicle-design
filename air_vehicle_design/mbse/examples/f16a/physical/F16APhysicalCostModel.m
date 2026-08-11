@@ -1,24 +1,25 @@
-function cost = F16APhysicalCostModel(m, options)
-%F16APHYSICALCOSTMODEL Unit flyaway cost for the F-16A, by the DAPCA IV model.
-%   COST = F16APHYSICALCOSTMODEL(M) returns a unit flyaway cost in USD for the
-%   physical model M, to populate MeasureOfMerit.UnitCost_USD on the aircraft.
+function costs = F16APhysicalCostModel(m, options)
+%F16APHYSICALCOSTMODEL Cost of the F-16A, by the DAPCA IV model.
+%   COSTS = F16APHYSICALCOSTMODEL(M) prices the physical model M and returns a
+%   struct: UnitCost_USD, OMCostAnnual_USD, OMCostLife_USD, LifeCycleCost_USD.
 %
 %   F16APHYSICALCOSTMODEL(M, PreconditionOnly=true) checks only that the DAPCA
-%   constants still describe this aircraft, and returns without pricing. The
-%   generator calls it that way as soon as the trade has a winner, so a build
-%   that CANNOT be priced stops there instead of saving a model whose cost
-%   Measure of Merit it will never fill in.
+%   constants still describe this aircraft, and returns a struct of NaN without
+%   pricing. The generator calls it that way as soon as the trade has a winner,
+%   so a build that CANNOT be priced stops there instead of saving a model
+%   whose cost Measures of Merit it will never fill in.
 %
 %   Teaching point: OEW is a bottom-up ROLL-UP of the parts
 %   (F16APhysicalMassRollup), but cost is not a sum of part costs -- it is the
 %   output of a parametric model. OEW <- roll-up, cost <- function.
 %
 %   It CALLS sizing/VnV/BrandtF16A/BrandtCost.m rather than restating DAPCA IV,
-%   handing it THIS model's rolled-up OEW, so the result is a Simulation and
-%   BrandtCost's own ~$68.4M stays a real cross-check. It must run AFTER the
-%   mass roll-up: an unset OEW is an error here, not a cheap aeroplane (D-043).
+%   handing it THIS model's rolled-up OEW and THIS model's mission fuel, so the
+%   results are Simulations and BrandtCost's own figures stay real
+%   cross-checks. It runs AFTER the mass roll-up and after section 9c: an unset
+%   OEW or mission is an error here, not a cheap aeroplane (D-043, D-059).
 %
-%   See also F16APHYSICALMASSROLLUP, F16ADATAPROVENANCE.
+%   See also F16APHYSICALMASSROLLUP, F16AMISSIONANALYSIS, F16ADATAPROVENANCE.
 
 arguments
     m (1,1) systemcomposer.arch.Model
@@ -55,14 +56,13 @@ if abs(Tmax - TmaxRef) > 1e-6
 end
 
 if options.PreconditionOnly
-    cost = NaN;   % nothing was priced, and the caller asked for nothing
+    costs = emptyCosts();   % nothing was priced, and the caller asked for nothing
     return
 end
 
 % --- We: this model's own rolled-up empty weight --------------------------
 aircraft = lookup(m, Path='F16A_Physical/Aircraft');
-We = str2double(string(getProperty(aircraft, ...
-    char(profileName + ".MeasureOfMerit.OEW_lb"))));
+We = readMoM(aircraft, profileName, "OEW_lb");
 if ~isfinite(We) || We <= 0
     error("F16APhysicalCostModel:oewNotRolledUp", ...
         "The aircraft's OEW Measure of Merit is %s, so there is no empty weight " + ...
@@ -70,35 +70,60 @@ if ~isfinite(We) || We <= 0
         "the section 8 / section 9 ordering D-043 corrected.", string(num2str(We)));
 end
 
-% --- Price THIS model's empty weight with the reference's own code --------
+% --- The mission THIS model flies, read back off the aircraft --------------
+% Not recomputed here: section 9c wrote it, and the cost model prices what the
+% model says it flies. total_time_min is a DIVISOR in BrandtCost.m:128 with no
+% zero guard of its own, so a non-positive time is rejected here rather than
+% silently returning an infinite life-cycle cost.
+fuel_lb  = readMoM(aircraft, profileName, "MissionFuel_lb");
+time_min = readMoM(aircraft, profileName, "MissionTime_min");
+if ~isfinite(fuel_lb) || fuel_lb <= 0 || ~isfinite(time_min) || time_min <= 0
+    error("F16APhysicalCostModel:missionNotAnalysed", ...
+        "The aircraft's mission Measures of Merit are %s lb over %s min, so " + ...
+        "there is no sortie to cost. Run F16AMissionAnalysis and write them " + ...
+        "before the cost model -- this is the section 9c / 9d ordering (D-059).", ...
+        string(num2str(fuel_lb)), string(num2str(time_min)));
+end
+
+% --- Price THIS model with the reference's own code -----------------------
 % W_TO_lb is validated by run() and then never read by any cost term
 % (BrandtCost.m:78-80 is its only appearance); the sizing point is passed
 % because it is the honest value, not because the arithmetic needs it.
-r = costObj.run(SIZING_POINT_LB, struct('W_empty_lb', We), missionPlaceholder());
-cost = r.C_unit_flyaway_usd;
+r = costObj.run(SIZING_POINT_LB, struct('W_empty_lb', We), ...
+    struct('total_fuel_lb', fuel_lb, 'total_time_min', time_min));
 
-fprintf("\n=== F-16A unit flyaway cost (BrandtCost DAPCA IV, this model's OEW) ===\n");
+costs = struct( ...
+    UnitCost_USD      = r.C_unit_flyaway_usd, ...
+    OMCostAnnual_USD  = r.C_OM_annual_usd, ...
+    OMCostLife_USD    = r.C_OM_life_usd, ...
+    LifeCycleCost_USD = r.C_LCC_usd);
+
+fprintf("\n=== F-16A cost (BrandtCost DAPCA IV, this model's OEW and mission) ===\n");
 fprintf("  We (rolled up)      : %10.2f lb\n", We);
-fprintf("  Unit flyaway cost   : $%9.2fM  (Simulation)\n", cost/1e6);
-fprintf("  BrandtCost reference: $%9.2fM  (cross-check, REQ_F16A_026)\n", 68.4);
-fprintf("  O&M / LCC           : discarded -- computed from a placeholder mission (D-042)\n");
+fprintf("  Mission (9c)        : %10.2f lb over %.2f min\n", fuel_lb, time_min);
+fprintf("  Unit flyaway cost   : $%9.2fM  (Simulation; BrandtCost ref $%.1fM, REQ_F16A_026)\n", ...
+    costs.UnitCost_USD/1e6, 68.4);
+fprintf("  O&M, annual         : $%9.2fM\n", costs.OMCostAnnual_USD/1e6);
+fprintf("  O&M over life       : $%9.2fM  (BrandtCost ref $%.2fM)\n", ...
+    costs.OMCostLife_USD/1e6, 24.84);
+fprintf("  Life-cycle cost     : $%9.2fM  (BrandtCost ref $%.2fM, REQ_F16A_P02)\n", ...
+    costs.LifeCycleCost_USD/1e6, 93.26);
+fprintf("  The flyaway does NOT move with mission fuel -- only the three below it do.\n");
 
 end
 
 % =====================================================================
-function miss = missionPlaceholder()
-%MISSIONPLACEHOLDER The inert mission argument BrandtCost.run insists on.
-%   run() demands a miss_results only so its validate_run_ can assert the O&M
-%   and life-cycle terms are non-NaN. The FLYAWAY cost never reads them
-%   (BrandtCost.m:128-131 are their only consumers), so they cannot move the
-%   number returned above -- testFlyawayCostIgnoresTheMissionPlaceholder
-%   measures that rather than asking a reader to take it on trust.
-%
-%   The values are 1, not a plausible fuel burn and sortie time, ON PURPOSE:
-%   mission fuel is not computed in this model (D-042), and a realistic-looking
-%   placeholder would be a number a reader could mistake for one. NaN is not
-%   available -- validate_run_ rejects it, which is why a placeholder is needed.
-miss = struct('total_fuel_lb', 1, 'total_time_min', 1);
+function c = emptyCosts()
+%EMPTYCOSTS The shape the caller expects, with nothing priced in it.
+c = struct(UnitCost_USD = NaN, OMCostAnnual_USD = NaN, ...
+           OMCostLife_USD = NaN, LifeCycleCost_USD = NaN);
+end
+
+% =====================================================================
+function v = readMoM(aircraft, profileName, prop)
+%READMOM One Measure of Merit off the aircraft, as a number.
+v = str2double(string(getProperty(aircraft, ...
+    char(profileName + ".MeasureOfMerit." + prop))));
 end
 
 % =====================================================================

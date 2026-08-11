@@ -434,11 +434,16 @@ this change does not do (D-005, D-026, D-043).
 
 Two consequences worth naming. The generator chain now needs `/sizing/` **at build time** — absent,
 `F16APhysicalCostModel` errors and names the dependency rather than inventing a rate. And
-`BrandtCost.run` insists on a mission result it uses **only** for O&M, so a **placeholder** goes in
-and only the flyaway comes out: mission fuel is not computed in this model (D-042). The placeholder
-is provably inert — `testFlyawayCostIgnoresTheMissionPlaceholder` runs the reference twice with
-wildly different mission inputs and requires the same flyaway. When mission fuel is eventually wired
-back in, the placeholder is replaced and the discarded O&M figures become real.
+`BrandtCost.run` reads the mission for its **O&M terms only**, which for a long time meant a
+deliberately implausible placeholder went in and only the flyaway came out.
+
+**Since D-059 the mission is real**, written to `MeasureOfMerit.MissionFuel_lb` and
+`MissionTime_min` by section 9c and read back by the cost model — so `OMCostAnnual_USD`,
+`OMCostLife_USD` and `LifeCycleCost_USD` joined the aircraft's Measures of Merit (D-061). **The
+flyaway did not move**: $68.4705M before and after, exactly as this entry predicted, because
+`BrandtCost.m:128-131` are the mission's only consumers. `testFlyawayCostIgnoresTheMission` still
+runs the reference twice with wildly different mission inputs and requires the same flyaway — it is
+what made replacing the placeholder safe.
 
 `UnitCost_USD` **defaults to `NaN`**, not `0`. A default that silently produces a *plausible* number
 is worse than one that stops the run: under a ratio value function `$0` is not neutral, it is
@@ -491,14 +496,20 @@ the **available** fuel, and the **required** side comes from `F16APhysicalMissio
 > **The 6300 lb is an `Estimate` (D-023).** Brandt's mission fuel is 6296.30 lb (`Wt!B6`); 3 × 2100
 > is an even split of a rounded number, and the real F-16A tankage is not three equal tanks.
 
-This verification is **intentionally failing, permanently** (D-042). The mission-fuel hook returns
-`NaN` — we do not invent a mission-fuel number — so `available ≥ NaN` is false. **It does not go
-green later: the pending state *is* the deliverable**, and wiring it to `/sizing/` would teach the
-opposite lesson.
+**The test passes, with about 340 lb of margin**: 6300 lb of tankage against the 5959.80 lb the
+`/sizing/` mission analysis burns (D-060). `F16APhysicalMissionFuel` reads
+`MeasureOfMerit.MissionFuel_lb` off the model rather than re-running the analysis, which keeps it
+symmetric with the available side — both ask the model.
 
-**Do not confuse it with the example's other red.** `REQ_F16A_P01` is **unevaluated**; `REQ_F16A_025`
-is **evaluated and violated** (D-051). Same colour, different fact — see
-[`README.md`](README.md#three-requirements-three-verification-states).
+**This verification used to be intentionally red**, and permanently: the mission-fuel hook returned
+`NaN`, so `available ≥ NaN` was false and `REQ_F16A_P01` was *unevaluated* — verification set up,
+traceable and not yet satisfied, the state a real programme lives in for most of its life. D-042
+argued that state was worth shipping; D-059 gave the model a real mission and D-060 judged that a
+function returning `NaN` beside an analysis reporting 5959.80 lb had become a contradiction rather
+than a lesson. **The example is one teaching state poorer for it**, and the decision log says so.
+
+The remaining red, `REQ_F16A_025`, is **evaluated and violated** (D-051) — see
+[`README.md`](README.md#three-requirements-two-verification-states).
 
 ## Realization — the L→P relationship
 
@@ -573,8 +584,11 @@ The RFLP loop is closed **and resolved**: R → F → L → P, traceably connect
 requirements *verified by* tests and the three open logical questions each answered by its own trade
 study, whose arithmetic, inputs and audit trail are all in the model.
 
-Open work is in [`../TODO.md`](../TODO.md). **Wiring
-`F16APhysicalMissionFuel` to `/sizing/` is not on that list and will not appear on a later one**: the
-pending fuel verification is a **deliverable, not a gap** (D-042).
+Since D-059 the loop also **runs an analysis**: the mission activity's actions carry the `/sizing/`
+mission analysis as their behaviour, its fuel burn lands on the aircraft as a Measure of Merit, and
+the cost model prices the sortie from it. The model records how its numbers are computed, not just
+what they came out as.
+
+Open work is in [`../TODO.md`](../TODO.md).
 
 For *why* the trade lives here rather than at L, see [`06_methodology.md`](06_methodology.md).

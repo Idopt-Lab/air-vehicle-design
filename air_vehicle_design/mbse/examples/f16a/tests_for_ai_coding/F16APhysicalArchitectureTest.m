@@ -685,14 +685,38 @@ classdef F16APhysicalArchitectureTest < F16ATestCase
                 "longer evaluate the same model -- explain it before widening this.");
         end
 
-        function testFlyawayCostIgnoresTheMissionPlaceholder(testCase)
-            % F16APhysicalCostModel hands BrandtCost.run a PLACEHOLDER mission,
-            % because run() demands one only so validate_run_ can assert the O&M
-            % terms are non-NaN -- the flyaway never reads it. Mission fuel is
-            % deliberately not computed here (D-042), so that placeholder must
-            % not be able to move the cost. Measured, not asserted: run the
-            % reference model twice with wildly different mission inputs and
-            % require an IDENTICAL flyaway.
+        function testMissionAndCostMeasuresOfMerit(testCase)
+            % The mission the aircraft is sized to fly, and the three cost
+            % figures it moves. All five arrived with D-059/D-061; before that
+            % the mission was a placeholder and the O&M terms were discarded.
+            ac = testCase.Model.lookup(Path="F16A_Physical/Aircraft");
+            bad = strings(1,0);
+            for p = ["MissionFuel_lb","MissionTime_min","OMCostAnnual_USD", ...
+                     "OMCostLife_USD","LifeCycleCost_USD"]
+                v = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit." + p);
+                if ~isfinite(v) || v <= 0
+                    bad(end+1) = p + " = " + string(num2str(v)); %#ok<AGROW>
+                end
+            end
+            testCase.verifyNoOffenders(bad, "Measure of Merit was never written");
+
+            % Life-cycle cost is O&M over life PLUS the flyaway, so it must
+            % exceed both. A wiring slip that stored the same number twice
+            % would otherwise pass the finite-and-positive sweep above.
+            flyaway = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.UnitCost_USD");
+            omLife  = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.OMCostLife_USD");
+            lcc     = testCase.propNum(ac, testCase.Profile + ".MeasureOfMerit.LifeCycleCost_USD");
+            testCase.verifyEqual(lcc, flyaway + omLife, "RelTol", 1e-6, ...
+                "Life-cycle cost should be the flyaway plus O&M over life.");
+        end
+
+        function testFlyawayCostIgnoresTheMission(testCase)
+            % The flyaway does not read the mission at all: BrandtCost.m:128-131
+            % are its only consumers and they feed the O&M terms. That is what
+            % made the old placeholder safe, and what makes replacing it with a
+            % REAL mission (D-059) a change that moves O&M and nothing else.
+            % Measured, not asserted: run the reference twice with wildly
+            % different mission inputs and require an IDENTICAL flyaway.
             import matlab.unittest.fixtures.PathFixture
             brandtDir = F16APhysicalArchitectureTest.brandtF16ADir();
             testCase.assumeTrue(isfolder(brandtDir), ...

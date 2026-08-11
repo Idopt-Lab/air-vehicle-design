@@ -2,9 +2,11 @@ function generate_f16a_logical()
 %GENERATE_F16A_LOGICAL Build the F-16A Logical-layer architecture (RFLP "L").
 %   Creates logical/F16A_Logical.slx, its interface dictionary
 %   F16A_Logical.sldd, the solution-option profile F16A_LogicalOptions.xml and
-%   the allocation set F16A_FunctionToLogical.mldatx, which ties each function
-%   (F) to the role that realizes it. It also Implement-links roles back to the
-%   requirements (R) that only a solution role can satisfy.
+%   TWO allocation sets tying each function (F) to the role that realizes it:
+%   F16A_FunctionToLogical.mldatx from the capability tree, and
+%   F16A_KillChainToLogical.mldatx from the mission activity's kill chain. It
+%   also Implement-links roles back to the requirements (R) that only a
+%   solution role can satisfy.
 %
 %   Where F says WHAT the aircraft must do, L says HOW -- in nine solution
 %   roles -- and records that a role can usually be realized more than one way.
@@ -20,9 +22,14 @@ function generate_f16a_logical()
 %   (D-001, D-010).
 %
 %   13 leaf functions allocate to the roles over 14 edges -- the one 1->2
-%   fan-out being Target -> AvionicsSuite + WeaponSystem. The ten temporal
-%   mission phases are NOT allocated: they are orchestration realized BY these
-%   capabilities.
+%   fan-out being Target -> AvionicsSuite + WeaponSystem. 7 start in the
+%   capability tree and 7 in the kill chain, which is why there are two sets.
+%
+%   The ten mission phases do not allocate to roles HERE. They are
+%   orchestration: each one uses capabilities, and those capabilities allocate
+%   to roles. That chain is recorded by F16A_MissionUsesCapability, built with
+%   the activity (D-059) -- storing phase -> role as well would be a second
+%   home for a fact the two existing hops already give.
 %
 %   Roles, allocation matrix and the deferred requirements homed here:
 %   docs/04_logical.md and docs/03_traceability.md. R2026a variant and
@@ -34,9 +41,11 @@ function generate_f16a_logical()
 
 modelName   = "F16A_Logical";
 funcName    = "F16A_Functional";
+actName     = "F16A_MissionActivity";
 profileName = "F16A_LogicalOptions";
 oldProfName = "F16A_LogicalTrades";   % retired (D-008); cleaned up, never written
 allocName   = "F16A_FunctionToLogical";
+killAllocName = "F16A_KillChainToLogical";
 
 thisDir  = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
 logiDir  = fullfile(thisDir, "logical");
@@ -47,6 +56,7 @@ modelFile= fullfile(logiDir, modelName + ".slx");
 slmxFile = fullfile(logiDir, modelName + "~mdl.slmx");
 profFile = fullfile(logiDir, profileName + ".xml");
 allocFile= fullfile(logiDir, allocName + ".mldatx");   % allocation sets save as .mldatx
+killAllocFile = fullfile(logiDir, killAllocName + ".mldatx");
 origFile = fullfile(reqDir, "f16a.slreqx");
 
 if ~isfolder(logiDir); mkdir(logiDir); end
@@ -60,6 +70,11 @@ if ~isfile(origFile)
 end
 if ~isfile(fullfile(fcnDir, funcName + ".slx"))
     error("Missing %s.slx. Run generate_f16a_functional first.", funcName);
+end
+if ~isfile(fullfile(fcnDir, actName + ".slx"))
+    error("Missing %s.slx. Run generate_f16a_functional first -- the kill-chain " + ...
+        "functions live in the mission activity now, and half this generator's " + ...
+        "allocation edges start there (D-059).", actName);
 end
 
 % Make the models, dictionary, profile and requirement sets resolvable by name.
@@ -98,7 +113,9 @@ cleanupFiles = [dictFile, modelFile, slmxFile, profFile, allocFile, ...
     fullfile(thisDir, profileName + ".xml"), fullfile(pwd, profileName + ".xml"), ...
     fullfile(logiDir, oldProfName + ".xml"), ...
     fullfile(thisDir, oldProfName + ".xml"), fullfile(pwd, oldProfName + ".xml"), ...
-    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx")];
+    fullfile(thisDir, allocName + ".mldatx"), fullfile(pwd, allocName + ".mldatx"), ...
+    killAllocFile, fullfile(thisDir, killAllocName + ".mldatx"), ...
+    fullfile(pwd, killAllocName + ".mldatx")];
 for f = cleanupFiles
     if isfile(f); delete(f); end
 end
@@ -230,14 +247,19 @@ save_system(modelName, char(modelFile));
 % 7) Allocation set: function -> logical role (targets the ROLE, i.e. the
 %    variant container, independent of which choice is active).
 % ---------------------------------------------------------------------
+%    TWO SETS, BECAUSE AN ALLOCATION SET BINDS TO A SOURCE MODEL and the
+%    functions no longer live in one. The capabilities are components in
+%    F16A_Functional; the kill chain became ACTIONS in F16A_MissionActivity
+%    (D-059). Nothing about what these fourteen edges assert has changed --
+%    only which file each starts in.
 srcModel = systemcomposer.loadModel(funcName);
+actModel = systemcomposer.openActivity(char(actName));
+killChain = actModel.Activity.getNode("Combat").ChildActivity;
 
-FP = "F16A_Functional/";
-AV = FP + "ProvideAircraftFunctions/Aviate/";
-NC = FP + "ProvideAircraftFunctions/";
-CB = FP + "ExecuteMissionProfile/Combat/";
+AV = "F16A_Functional/ProvideAircraftFunctions/Aviate/";
+NC = "F16A_Functional/ProvideAircraftFunctions/";
 
-% {functionPath, logicalRolePath}
+% Capability tree -> roles. {functionPath, logicalRolePath}
 edges = {
     AV+"GenerateLift",                 S+"Airframe";
     AV+"ProduceThrust",                S+"PropulsionSystem";
@@ -246,13 +268,6 @@ edges = {
     AV+"MaintainStructuralIntegrity",  S+"Airframe";
     NC+"Navigate",                     S+"AvionicsSuite";
     NC+"Communicate",                  S+"CommunicationSystem";
-    CB+"Find",                         S+"AvionicsSuite";
-    CB+"Fix",                          S+"AvionicsSuite";
-    CB+"Track",                        S+"AvionicsSuite";
-    CB+"Target",                       S+"AvionicsSuite";      % Target is the one
-    CB+"Target",                       S+"WeaponSystem";       % 1 -> 2 fan-out
-    CB+"Assess",                       S+"AvionicsSuite";
-    CB+"Engage",                       S+"WeaponSystem";
 };
 
 alloc = systemcomposer.allocation.createAllocationSet(allocName, funcName, modelName);
@@ -264,6 +279,29 @@ for i = 1:size(edges,1)
 end
 alloc.save();
 relocate(allocName + ".mldatx", allocFile, thisDir);  % ensure it lands in logical/
+
+% Kill chain -> roles. The allocation editor takes the action OBJECT here,
+% where slreq.createLink wanted its handle (08_agent_team.md).
+% {killChainActionName, logicalRolePath}
+killEdges = {
+    "Find",   S+"AvionicsSuite";
+    "Fix",    S+"AvionicsSuite";
+    "Track",  S+"AvionicsSuite";
+    "Target", S+"AvionicsSuite";      % Target is the one
+    "Target", S+"WeaponSystem";       % 1 -> 2 fan-out
+    "Assess", S+"AvionicsSuite";
+    "Engage", S+"WeaponSystem";
+};
+
+killAlloc = systemcomposer.allocation.createAllocationSet(killAllocName, actName, modelName);
+killScenario = killAlloc.getScenario("Scenario 1");
+for i = 1:size(killEdges,1)
+    srcElem = killChain.getNode(killEdges{i,1});
+    dstElem = m.lookup(Path=char(killEdges{i,2}));
+    killScenario.allocate(srcElem, dstElem);
+end
+killAlloc.save();
+relocate(killAllocName + ".mldatx", killAllocFile, thisDir);
 
 % ---------------------------------------------------------------------
 % 8) L-layer Implement links: deferred requirements a solution role owns.
@@ -304,8 +342,10 @@ end
 nComp = countComps(m.Architecture);     % roles AND the kinds they present
 census = sprintf("%d components (%d solution roles, %d of them variant, plus %d kinds)", ...
     nComp, nRole, nVariant, nKind);
-fprintf("Built %s with %s, %d allocation edges, %d L Implement links.\n", ...
-    modelName, census, size(edges,1), size(lLinks,1));
+fprintf("Built %s with %s, %d allocation edges (%d from the capability tree, " + ...
+    "%d from the kill chain), %d L Implement links.\n", ...
+    modelName, census, size(edges,1)+size(killEdges,1), size(edges,1), ...
+    size(killEdges,1), size(lLinks,1));
 fprintf("Options are UNRESOLVED: every kind has Selected=false, DecisionRef='TBD', " + ...
     "and the active choice is a placeholder.\nRun F16APhysicalTradeStudy to decide.\n");
 

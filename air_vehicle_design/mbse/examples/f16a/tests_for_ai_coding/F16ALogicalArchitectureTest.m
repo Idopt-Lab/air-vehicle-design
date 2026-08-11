@@ -19,8 +19,10 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
 
     properties
         FuncModel   % F16A_Functional (allocation source)
+        ActModel    % F16A_MissionActivity (the other allocation source)
         OrigSet     % f16a.slreqx (deferred reqs land here)
         Alloc       % F16A_FunctionToLogical allocation set
+        KillAlloc   % F16A_KillChainToLogical allocation set
     end
 
     properties (Constant)
@@ -80,12 +82,16 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
             testCase.Model     = systemcomposer.loadModel("F16A_Logical");
             testCase.FuncModel = systemcomposer.loadModel("F16A_Functional");
             testCase.OrigSet   = slreq.load(fullfile(root,"requirements","f16a.slreqx"));
+            testCase.ActModel  = systemcomposer.openActivity("F16A_MissionActivity");
             testCase.Alloc     = systemcomposer.allocation.load("F16A_FunctionToLogical");
+            testCase.KillAlloc = systemcomposer.allocation.load("F16A_KillChainToLogical");
             % Close only what this suite opened; bdclose("all") would discard
             % unrelated models the user had open, including F16AOpenForReview's.
             testCase.addTeardown(@() testCase.Alloc.close());
+            testCase.addTeardown(@() testCase.KillAlloc.close());
             testCase.addTeardown(@() bdclose("F16A_Logical"));
             testCase.addTeardown(@() bdclose("F16A_Functional"));
+            testCase.addTeardown(@() bdclose("F16A_MissionActivity"));
         end
     end
 
@@ -140,6 +146,20 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
         function testAllocationSetExists(testCase)
             testCase.verifyNotEmpty(testCase.Alloc.getScenario("Scenario 1"), ...
                 "Missing default allocation scenario.");
+            testCase.verifyNotEmpty(testCase.KillAlloc.getScenario("Scenario 1"), ...
+                "Missing default scenario in the kill-chain allocation set.");
+        end
+
+        function testTheSplitKeptBothHalves(testCase)
+            % The 14 edges split 7 / 7 when the kill chain became actions
+            % (D-059). Checking each half separately means an empty set cannot
+            % hide behind a correct total.
+            testCase.verifyNumElements( ...
+                testCase.Alloc.getScenario("Scenario 1").Allocations, 7, ...
+                "Expected 7 capability-tree edges in F16A_FunctionToLogical.");
+            testCase.verifyNumElements( ...
+                testCase.KillAlloc.getScenario("Scenario 1").Allocations, 7, ...
+                "Expected 7 kill-chain edges in F16A_KillChainToLogical.");
         end
 
         function testAllocationCoverageFunctions(testCase)
@@ -160,13 +180,19 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
             testCase.verifyNoOffenders(wrong, "Source should have exactly 1 edge");
         end
 
-        function testMissionPhasesNotAllocated(testCase)
-            % No temporal phase (or composite) is an allocation source.
+        function testMissionPhasesDoNotAllocateStraightToRoles(testCase)
+            % A phase reaches a role by composition -- Cruise uses GenerateLift
+            % (F16A_MissionUsesCapability) and GenerateLift allocates to
+            % Airframe. Storing Cruise -> Airframe as well would be a second
+            % home for a derived fact, and since every phase needs airframe,
+            % propulsion and fuel the matrix would be nearly full and say
+            % almost nothing (D-059). That the phases DO use capabilities is
+            % asserted by F16AMissionActivityTest, where the set lives.
             allocated = string(keys(testCase.sourceCounts()));
             testCase.verifyNoOffenders( ...
-                intersect(allocated, [testCase.MissionPhases, "ExecuteMissionProfile", ...
-                    "ProvideAircraftFunctions","Aviate","Combat"]), ...
-                "Phases and composites must not be allocated");
+                intersect(allocated, [testCase.MissionPhases, ...
+                    "ProvideAircraftFunctions","Aviate"]), ...
+                "Phases and composites must not allocate straight to roles");
         end
 
         function testDeferredRequirementsPickedUpAtL(testCase)
@@ -345,19 +371,25 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
         end
 
         function testAllocatedComponentsResolve(testCase)
-            % Sampled allocation endpoints resolve in both models.
-            samples = { ...
-                "F16A_Functional/ProvideAircraftFunctions/Aviate/ProduceThrust", ...
-                    testCase.Root + "PropulsionSystem"; ...
-                "F16A_Functional/ExecuteMissionProfile/Combat/Engage", ...
-                    testCase.Root + "WeaponSystem"};
+            % Sampled allocation endpoints resolve, one per SOURCE MODEL --
+            % the capability tree and the mission activity now supply seven
+            % edges each (D-059).
+            %
+            % isempty, not try/catch: lookup on a path that does not exist
+            % returns EMPTY rather than erroring, so a catch-only check passed
+            % vacuously and kept passing after the kill chain moved.
             unresolved = strings(1,0);
-            for i = 1:size(samples,1)
-                try testCase.FuncModel.lookup(Path=char(samples{i,1}));
-                catch, unresolved(end+1) = "source " + samples{i,1}; %#ok<AGROW>
-                end
-                try testCase.Model.lookup(Path=char(samples{i,2}));
-                catch, unresolved(end+1) = "target " + samples{i,2}; %#ok<AGROW>
+            capSrc = "F16A_Functional/ProvideAircraftFunctions/Aviate/ProduceThrust";
+            if isempty(lookupOrEmpty(testCase.FuncModel, capSrc))
+                unresolved(end+1) = "source " + capSrc;
+            end
+            killSrc = "Engage";
+            if isempty(nodeOrEmpty(testCase.ActModel, killSrc))
+                unresolved(end+1) = "source Combat/" + killSrc;
+            end
+            for target = testCase.Root + ["PropulsionSystem","WeaponSystem"]
+                if isempty(lookupOrEmpty(testCase.Model, target))
+                    unresolved(end+1) = "target " + target; %#ok<AGROW>
                 end
             end
             testCase.verifyNoOffenders(unresolved, "Allocation endpoint not found");
@@ -385,13 +417,18 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
         end
 
         function counts = sourceCounts(testCase)
-            % Tally allocation edges by source-function short name.
-            scenario = testCase.Alloc.getScenario("Scenario 1");
+            % Tally F->L allocation edges by source-function short name, across
+            % BOTH sets. An allocation set binds to one source model, and since
+            % D-059 the functions live in two: the capability tree in
+            % F16A_Functional, the kill chain in F16A_MissionActivity. The
+            % fourteen edges are unchanged; only their filing is.
             counts = containers.Map();
-            for a = scenario.Allocations
-                nm = char(a.Source.Name);
-                if isKey(counts, nm); counts(nm) = counts(nm) + 1;
-                else;                 counts(nm) = 1;
+            for set = [testCase.Alloc, testCase.KillAlloc]
+                for a = set.getScenario("Scenario 1").Allocations
+                    nm = char(a.Source.Name);
+                    if isKey(counts, nm); counts(nm) = counts(nm) + 1;
+                    else;                 counts(nm) = 1;
+                    end
                 end
             end
         end
@@ -511,4 +548,18 @@ classdef F16ALogicalArchitectureTest < F16ATestCase
         end
 
     end
+end
+
+% =====================================================================
+function e = lookupOrEmpty(model, path)
+%LOOKUPOREMPTY A component, or empty -- never an error and never a surprise.
+try e = model.lookup(Path=char(path)); catch, e = []; end
+end
+
+% =====================================================================
+function n = nodeOrEmpty(activityModel, name)
+%NODEOREMPTY A kill-chain action of the mission activity, or empty.
+try n = activityModel.Activity.getNode("Combat").ChildActivity.getNode(char(name));
+catch, n = [];
+end
 end
