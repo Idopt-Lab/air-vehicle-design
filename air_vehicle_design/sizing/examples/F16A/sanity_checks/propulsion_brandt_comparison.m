@@ -14,7 +14,7 @@ function T_all = propulsion_brandt_comparison()
 %     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); propulsion_brandt_comparison"
 %
 %   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
-%     f16a_spec_path(N) -> examples/F16A/f16a_L{N}.json, the SPEC file. The
+%     f16a_spec_path(N) -> examples/F16A/inputs/f16a_L{N}.json, the SPEC file. The
 %                          .propulsion block carries:
 %                            L1  engine_type, T_SL
 %                            L2  + T_SL_mil, T_t4_max_F, TSFC_install_factor,
@@ -78,7 +78,7 @@ function T_all = propulsion_brandt_comparison()
 %   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 gt          = jsondecode(fileread(gt_path)).propulsion;
 
@@ -232,8 +232,8 @@ meta.preamble = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'propulsion_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'propulsion_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'propulsion_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'propulsion_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

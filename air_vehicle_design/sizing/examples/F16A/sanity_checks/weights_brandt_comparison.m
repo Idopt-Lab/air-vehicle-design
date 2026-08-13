@@ -15,12 +15,12 @@ function T_all = weights_brandt_comparison()
 %     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); weights_brandt_comparison"
 %
 %   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
-%     f16a_spec_path(N)        -> examples/F16A/f16a_L{N}.json, the SPEC file.
+%     f16a_spec_path(N)        -> examples/F16A/inputs/f16a_L{N}.json, the SPEC file.
 %                                 The .weights block carries the payload split
 %                                 and, at L3, the Sec. 15.3.1 coefficients and
 %                                 counts. Geometry is NOT in there any more —
 %                                 it arrives by injection (below).
-%     f16a_requirements_path() -> examples/F16A/f16a_requirements.json, the
+%     f16a_requirements_path() -> examples/F16A/inputs/f16a_requirements.json, the
 %                                 REQUIREMENTS file: design_mach (Raymer
 %                                 Eq. 10.10) and the cruise condition (L3's
 %                                 SFC_mission). Not per-fidelity.
@@ -84,7 +84,7 @@ function T_all = weights_brandt_comparison()
 %   while citing Wt!B12, which reads 19,980.70 (review finding #14).
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 gt          = jsondecode(fileread(gt_path)).weights;
 
@@ -563,8 +563,8 @@ meta.preamble = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'weights_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'weights_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'weights_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'weights_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

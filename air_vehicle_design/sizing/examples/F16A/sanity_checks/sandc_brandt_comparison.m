@@ -39,8 +39,8 @@ function T_all = sandc_brandt_comparison()
 %   informational per CLAUDE.md, not a target to hit.
 %
 %   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
-%     f16a_spec_path(2)/(3)    -> examples/F16A/f16a_L{2,3}.json .stability_control
-%     f16a_requirements_path() -> examples/F16A/f16a_requirements.json (cruise Mach 0.87, DI-reused via weights.cruise_mach)
+%     f16a_spec_path(2)/(3)    -> examples/F16A/inputs/f16a_L{2,3}.json .stability_control
+%     f16a_requirements_path() -> examples/F16A/inputs/f16a_requirements.json (cruise Mach 0.87, DI-reused via weights.cruise_mach)
 %   Ground truth: VnV/BrandtF16A/GroundTruth/f16a_stability_control_ground_truth.json
 %   (neutral_point, cg_takeoff, cg_landing, CLa_aircraft, CLa_per_surface,
 %   aero_center) and f16a_ground_truth.json .weights (TOGW/fuel, the run
@@ -72,7 +72,7 @@ function T_all = sandc_brandt_comparison()
 %   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_stability_control_ground_truth.json');
 gt_all_path = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 gt          = jsondecode(fileread(gt_path)).stability_control;
@@ -227,8 +227,8 @@ meta.preamble = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'sandc_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'sandc_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'sandc_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'sandc_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

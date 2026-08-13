@@ -88,7 +88,7 @@ function T = constraints_brandt_comparison()
 
 % ── Self-contained path setup: add the Brandt classes + adapters ─────────── %
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 vnv_dir     = fullfile(sizing_root, 'VnV', 'BrandtF16A');
 if isempty(which('BrandtConstraintAnalysis'))
     addpath(vnv_dir);
@@ -221,8 +221,8 @@ meta.footer = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'constraints_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'constraints_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'constraints_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'constraints_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

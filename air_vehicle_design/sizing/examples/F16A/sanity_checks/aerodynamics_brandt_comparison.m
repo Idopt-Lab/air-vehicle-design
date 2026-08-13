@@ -15,7 +15,7 @@ function T_all = aerodynamics_brandt_comparison()
 %     $ matlab -batch "addpath(genpath('src')); addpath(genpath('examples')); aerodynamics_brandt_comparison"
 %
 %   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
-%     f16a_spec_path(N) -> examples/F16A/f16a_L{N}.json, the SPEC file. Aero
+%     f16a_spec_path(N) -> examples/F16A/inputs/f16a_L{N}.json, the SPEC file. Aero
 %                          reads its .aerodynamics block:
 %                            L1  aircraft type + the folded Mattingly curves
 %                            L2  airfoil section data + the Oswald-e selector
@@ -71,7 +71,7 @@ function T_all = aerodynamics_brandt_comparison()
 %   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 gt          = jsondecode(fileread(gt_path)).aerodynamics;
 
@@ -96,7 +96,7 @@ brandt_k1a = @(M) ap(nearestIdx(ap_mach, M)).k1;    % nearest tabulated k1
 % nacelle diameter -- and so duct wetted area and CD0 -- is sized from thrust.
 % L3 geometry is INTENTIONALLY divergent from L2 (physical/T.O. values: VT LE
 % sweep 47.5 vs 40, L_fus 47.5 vs 46.5, HT span 18.5 primary), so L2-vs-L3
-% differences below are expected, not errors -- see examples/F16A/F16GeomL3.md.
+% differences below are expected, not errors -- see examples/F16A/models/disciplines/geom/F16GeomL3.md.
 a1   = F16AeroL1(f16a_spec_path(1));
 prop = F16PropL2(f16a_spec_path(2));
 g2   = F16GeomL2(f16a_spec_path(2), prop);
@@ -260,8 +260,8 @@ meta.footer = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'aerodynamics_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'aerodynamics_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'aerodynamics_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'aerodynamics_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

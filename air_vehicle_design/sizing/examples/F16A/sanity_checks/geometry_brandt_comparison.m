@@ -16,11 +16,11 @@ function T_all = geometry_brandt_comparison()
 %
 %   ─── WHERE THE INPUTS COME FROM ─────────────────────────────────────────
 %   Never hardcode a path. Two helpers resolve everything:
-%     f16a_spec_path(N)        -> examples/F16A/f16a_L{N}.json, the SPEC file:
+%     f16a_spec_path(N)        -> examples/F16A/inputs/f16a_L{N}.json, the SPEC file:
 %                                 what the aircraft IS (areas, AR, sweeps, t/c,
 %                                 fuselage envelope). One file per fidelity
 %                                 level; geometry reads its .geometry block.
-%     f16a_requirements_path() -> examples/F16A/f16a_requirements.json, the
+%     f16a_requirements_path() -> examples/F16A/inputs/f16a_requirements.json, the
 %                                 REQUIREMENTS file: what the aircraft must DO
 %                                 (design Mach, cruise condition). NOT per-
 %                                 fidelity — requirements do not vary with it.
@@ -64,7 +64,7 @@ function T_all = geometry_brandt_comparison()
 %   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 frames_path = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_geometry.json');
 gt          = jsondecode(fileread(gt_path)).geometry;   % geometry section of the unified ground-truth file
@@ -371,8 +371,8 @@ meta.footer = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'geometry_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'geometry_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'geometry_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'geometry_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

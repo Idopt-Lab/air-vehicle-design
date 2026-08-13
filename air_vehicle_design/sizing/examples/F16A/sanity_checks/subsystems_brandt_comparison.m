@@ -66,7 +66,7 @@ function T_all = subsystems_brandt_comparison()
 %   backfill a unit test's expected value (CLAUDE.md's two-tier rule).
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_subsystems_ground_truth.json');
 gt_all_path = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 gt          = jsondecode(fileread(gt_path)).subsystems;
@@ -264,8 +264,8 @@ meta.preamble = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'subsystems_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'subsystems_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'subsystems_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'subsystems_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

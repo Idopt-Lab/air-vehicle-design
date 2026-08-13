@@ -3,8 +3,8 @@ function T_all = tail_sizing_brandt_comparison()
 %
 %   Runs the actual F16TailL1/F16TailL2 discipline code and puts its S_ht/
 %   S_vt output next to Brandt's workbook values. Follows the same
-%   structure/helpers as examples/F16A/geometry_brandt_comparison.m and
-%   examples/F16A/fidelity_comparison.m.
+%   structure/helpers as
+%   examples/F16A/sanity_checks/geometry_brandt_comparison.m.
 %
 %   ─── HOW TO RUN ─────────────────────────────────────────────────────────
 %     >> cd air_vehicle_design/sizing
@@ -53,7 +53,7 @@ function T_all = tail_sizing_brandt_comparison()
 %   aircraft's areas tightly, and that is not a defect in this framework.
 
 script_dir  = fileparts(mfilename('fullpath'));
-sizing_root = fileparts(fileparts(script_dir));
+sizing_root = fileparts(fileparts(fileparts(script_dir)));
 gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_ground_truth.json');
 gt          = jsondecode(fileread(gt_path)).tail_sizing;
 
@@ -111,7 +111,7 @@ meta = struct( ...
     'condition',     'Wing geometry from F16GeomL2 (S_ref=300 ft^2, AR_wing=3.0, lambda_wing=0.2275, L_fus=46.5 ft).', ...
     'referenceDesc', ['Brandt F-16A.xls, via `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json` [`.tail_sizing`] ' ...
                       '-- Main!C18 (S_ht), Main!H18 (S_vt).'], ...
-    'secondDesc',    'No second source for this discipline yet -- L3 (Raymer Ch. 16 stability-and-control sizing) is a documented-TODO stub, see examples/F16A/tail_sizing_brandt_comparison.m header and TestTailL3.m.' );
+    'secondDesc',    'No second source for this discipline yet -- L3 (Raymer Ch. 16 stability-and-control sizing) is a documented-TODO stub, see examples/F16A/sanity_checks/tail_sizing_brandt_comparison.m header and TestTailL3.m.' );
 
 meta.preamble = { ...
     ['**Both L1 and L2 are historical-average / category-level volume-coefficient methods, not a stability-and-' ...
@@ -127,8 +127,8 @@ meta.preamble = { ...
 
 ComparisonReport.show(T, meta);
 
-out_json = fullfile(script_dir, 'jsons', 'tail_sizing_brandt_comparison.json');
-out_md   = fullfile(script_dir, 'mds', 'tail_sizing_brandt_comparison.md');
+out_json = fullfile(script_dir, '..', 'output', 'tail_sizing_brandt_comparison.json');
+out_md   = fullfile(script_dir, '..', 'output', 'tail_sizing_brandt_comparison.md');
 ComparisonReport.writeJson(T, out_json, meta);
 ComparisonReport.writeMarkdown(T, out_md, meta);
 fprintf('  JSON     -> %s\n', out_json);

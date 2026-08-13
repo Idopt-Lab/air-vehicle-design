@@ -1,5 +1,5 @@
-function results = mission_comparison_report()
-%MISSION_COMPARISON_REPORT  Informational cross-fidelity mission fuel report.
+function results = mission_brandt_comparison()
+%MISSION_BRANDT_COMPARISON  Informational cross-fidelity mission fuel report.
 %
 %   Runs the two mission-analysis fidelities (MissionAnalysisL1 / L2) over the
 %   two mission profiles (CAP, Brandt-14) and the four discipline stacks
@@ -9,8 +9,8 @@ function results = mission_comparison_report()
 %
 %   INFORMATIONAL ONLY -- not a pass/fail unit test, and never used to backfill
 %   a unit test's expected value (that separation is the CLAUDE.md two-tier
-%   rule). Prints console tables and writes examples/F16A/mds/
-%   mission_comparison_report.md + .json.
+%   rule). Prints console tables and writes examples/F16A/output/
+%   mission_brandt_comparison.md + .json.
 %
 %   Combos run:
 %     L1 mission x CAP           x {disc-L1, disc-L2, disc-L3, Brandt}
@@ -63,7 +63,7 @@ function results = mission_comparison_report()
     end
 
     write_exports(results);
-    fprintf('\nWrote mds/mission_comparison_report.md and .json\n');
+    fprintf('\nWrote output/mission_brandt_comparison.md and .json\n');
 end
 
 % ------------------------------------------------------------------------- %
@@ -154,11 +154,11 @@ end
 
 % ------------------------------------------------------------------------- %
 function write_exports(results)
-    outdir = fullfile(fileparts(mfilename('fullpath')), 'mds');
+    outdir = fullfile(fileparts(mfilename('fullpath')), '..', 'output');
     if ~exist(outdir, 'dir'), mkdir(outdir); end
 
     % JSON
-    fid = fopen(fullfile(outdir, 'mission_comparison_report.json'), 'w');
+    fid = fopen(fullfile(outdir, 'mission_brandt_comparison.json'), 'w');
     fwrite(fid, jsonencode(results, 'PrettyPrint', true));
     fclose(fid);
 
@@ -167,7 +167,7 @@ function write_exports(results)
     L(end+1) = "# Mission Fuel Comparison (informational)";
     L(end+1) = "";
     L(end+1) = sprintf("Fixed W_TO = %.0f lbf. Brandt Miss-tab ground-truth total = 6000.43 lb.", results.W_TO);
-    L(end+1) = "Informational only (not pass/fail). See mission_comparison_report.m.";
+    L(end+1) = "Informational only (not pass/fail). See mission_brandt_comparison.m.";
     for k = 1:numel(results.runs)
         rn = results.runs{k};
         L(end+1) = "";
@@ -187,5 +187,5 @@ function write_exports(results)
         for s = 1:numel(rn.stacks), row = row + sprintf(" **%.1f** |", rn.stacks(s).raw_burn); end
         L(end+1) = row;
     end
-    writelines(L, fullfile(outdir, 'mission_comparison_report.md'));
+    writelines(L, fullfile(outdir, 'mission_brandt_comparison.md'));
 end
