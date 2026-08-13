@@ -1,12 +1,12 @@
 # f16a_requirements — companion doc
 
-Companion to `examples/F16A/jsons/f16a_requirements.json` — the F-16A Block 10/15 top-level
+Companion to `examples/F16A/inputs/f16a_requirements.json` — the F-16A Block 10/15 top-level
 design **REQUIREMENTS** (what the aircraft must DO). The file is fidelity-independent (one
 file, no `_L{1,2,3}` suffix) and is read via `f16a_requirements_path()`.
 
 **SCOPE GUARD.** This file holds requirements ONLY — never SPEC data (what the aircraft IS —
 reference areas, AR, taper, sweep, t/c, fuselage envelope, thrust, engine model: those stay in
-`examples/F16A/f16a_L{1,2,3}.json`) and never DISCIPLINE-owned quantities (CLmax, CD0, K1, K2,
+`examples/F16A/inputs/f16a_L{1,2,3}.json`) and never DISCIPLINE-owned quantities (CLmax, CD0, K1, K2,
 CDx, thrust-lapse alpha, TSFC: those come from the injected aero/prop objects at run time — see
 §4). The constraint conditions live here too, in the `constraints` block, because each is a
 requirement (sustain 4.5 g at 20 kft, cruise at M 0.87 / 36 kft, take off in 4000 ft).

@@ -1,6 +1,6 @@
 function p = f16a_requirements_path()
 %F16A_REQUIREMENTS_PATH  Absolute path to the F-16A requirements JSON.
-%   p = f16a_requirements_path() returns examples/F16A/f16a_requirements.json.
+%   p = f16a_requirements_path() returns examples/F16A/inputs/f16a_requirements.json.
 %
 %   REQUIREMENTS vs SPEC -- the distinction this file exists to enforce.
 %   f16a_spec_path(N) returns per-fidelity AIRCRAFT SPEC data: what this
@@ -23,5 +23,5 @@ function p = f16a_requirements_path()
 %   injection; design_mach for the Raymer Eq. 10.10 engine weight) and
 %   F16GeomL1 (design_mach -> GeomL1.get_AR_eq, Raymer 7th ed. Table 4.1).
     here = fileparts(mfilename('fullpath'));
-    p = fullfile(here, 'jsons', 'f16a_requirements.json');
+    p = fullfile(here, '..', 'inputs', 'f16a_requirements.json');
 end
