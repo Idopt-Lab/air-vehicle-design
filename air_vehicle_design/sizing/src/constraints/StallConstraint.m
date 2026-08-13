@@ -22,7 +22,7 @@ classdef StallConstraint < Only_WbyS
 %
 %   where q, rho, V come from the AircraftState supplied at construction (the
 %   F-16's Stall condition is Mach 0.217466 at sea level -- Brandt F-16A.xls
-%   "Ps" sheet cell B10, a row in examples/F16A/mds/f16a_requirements.md);
+%   "Ps" sheet cell B10, a row in examples/F16A/inputs/f16a_requirements.md);
 %   CLmax from aero.get_CLmax(state) (clean CLmax -- the AerodynamicsBase
 %   interface has no flapped-configuration argument yet, deferred TODO
 %   ToDo_Darshan.md §1).

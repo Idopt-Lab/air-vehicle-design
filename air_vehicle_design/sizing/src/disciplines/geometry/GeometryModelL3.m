@@ -12,7 +12,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
 %   [DERIVED] below must be Dependent getters on the concrete class, never
 %   stored values.
 %
-%   Authoritative spec: examples/F16A/F16GeomL3.md
+%   Authoritative spec: examples/F16A/models/disciplines/geom/F16GeomL3.md
 %   Toolbox companion:  src/disciplines/geometry/GeomL3.md
 
 

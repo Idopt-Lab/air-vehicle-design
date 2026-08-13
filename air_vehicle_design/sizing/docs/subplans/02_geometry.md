@@ -12,7 +12,7 @@ Implement `GeometryBase` and three generic fidelity levels (L1, L2, L3). Then im
 
 **L3 is the physical / T.O. tier**, not simply "L2 with more detail": where a physical or T.O. 1F-16A-1 value differs from Brandt's, `GeomL3` uses the physical one (VT LE sweep 47.5° vs 40°, `L_fus` 47.5 vs 46.5, HT span 18.5 ft taken as the primary span so `AR_ht` = 3.169 is derived). Those divergences are intentional and are annotated `BY DESIGN` in `geometry_brandt_comparison.md`.
 
-Two structural points that post-date this subplan's original text — the authoritative write-up is `examples/F16A/F16GeomL3.md`:
+Two structural points that post-date this subplan's original text — the authoritative write-up is `examples/F16A/models/disciplines/geom/F16GeomL3.md`:
 - **Geometry receives an injected propulsion object** (`F16GeomL{2,3}(json_path, prop)`): the nacelle diameter, and hence duct wetted area and CD0, is sized from engine SLS thrust, which is engine data rather than airframe data.
 - **`Amax` is tier-specific by design** — L2 uses the fuselage-envelope ellipse (the low-fidelity form per `readme_geom.md` §7), L3 the whole-aircraft area-ruled buildup that Raymer Eq. 12.44 requires. Do not unify them.
 
@@ -36,8 +36,8 @@ Three-tier pattern per level `N`: `GeometryBase` (abstract) ← `GeometryModelLN
 
 | File | What it provides |
 |------|-----------------|
-| `examples/F16A/F16GeomL1.m` | Wires in `aircraft_category = 'jet_fighter'` + S_ref for the Roskam/Raymer regressions; delegates to `GeomL1` statics |
-| `examples/F16A/F16GeomL2.m` | Wires in AR=3.0, λ, Λ_LE=40°, t/c, fuselage/HT/VT envelope from F-16 spec; delegates to `GeomL2` statics. Reference implementation of the **input vs. derived (Dependent-getter)** optimization-ready pattern (see below) |
+| `examples/F16A/models/disciplines/geom/F16GeomL1.m` | Wires in `aircraft_category = 'jet_fighter'` + S_ref for the Roskam/Raymer regressions; delegates to `GeomL1` statics |
+| `examples/F16A/models/disciplines/geom/F16GeomL2.m` | Wires in AR=3.0, λ, Λ_LE=40°, t/c, fuselage/HT/VT envelope from F-16 spec; delegates to `GeomL2` statics. Reference implementation of the **input vs. derived (Dependent-getter)** optimization-ready pattern (see below) |
 
 ### Tests
 
@@ -116,7 +116,7 @@ The generic `GeomL2` toolbox holds the textbook planform/wetted-area equations, 
 | F16 S_wet (L1 regression) at W_TO=31,377 lb | physically reasonable range (1,000–1,600 ft²) | regression bounds |
 | All outputs positive | > 0 | exact |
 
-Note: We do not test against Brandt's S_wet=1,331.09 ft² as an exact target — the regression will give a range, not Brandt's calibrated value. Brandt agreement is reported separately by `examples/F16A/geometry_brandt_comparison.m` against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`, not by these unit tests.
+Note: We do not test against Brandt's S_wet=1,331.09 ft² as an exact target — the regression will give a range, not Brandt's calibrated value. Brandt agreement is reported separately by `examples/F16A/sanity_checks/geometry_brandt_comparison.m` against `VnV/BrandtF16A/GroundTruth/f16a_ground_truth.json`, not by these unit tests.
 
 ---
 

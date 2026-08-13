@@ -53,5 +53,5 @@ qualities.
 ## 5. Full L3 contract (for reference — declared on `SandCModelL3`, not here)
 
 See `src/disciplines/stability_control/SandCL3.md` for the complete Eq. 16.8–16.18/16.25 set and
-`examples/F16A/F16SandCL3.md` for which of those are fully implemented vs. documented citation GAPs
+`examples/F16A/models/disciplines/sandc/F16SandCL3.md` for which of those are fully implemented vs. documented citation GAPs
 (`CL_w`, `CL_h`, `Cm_cg_trim`).

@@ -16,7 +16,7 @@ classdef (Abstract) SandCModelL2 < StabControlBase
 %   can supply. F16SandCL2 computes ONLY
 %     x_cg = Sum(W_i * x_i) / Sum(W_i)
 %   over the 10 WeightsL2-matched component groups in
-%   examples/F16A/jsons/f16a_L2.json
+%   examples/F16A/inputs/f16a_L2.json
 %   .stability_control.component_x_stations.groups (wing, horizontal_tail,
 %   vertical_tail, fuselage, landing_gear, installed_engine, subsystems_lump,
 %   strake, payload, fuel), with each group's WEIGHT read live by DI from an

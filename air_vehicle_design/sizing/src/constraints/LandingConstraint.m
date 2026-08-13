@@ -47,7 +47,7 @@ classdef LandingConstraint < Only_WbyS
 %   touchdown-speed margin V_TD/V_stall (1.3, the FAR-style approach-speed
 %   margin); beta is the landing weight fraction W_land/W_TO (1.0 -- landing,
 %   like takeoff, is treated at full W_TO in this simplified framework).
-%   Condition values: examples/F16A/mds/f16a_requirements.md.
+%   Condition values: examples/F16A/inputs/f16a_requirements.md.
 %
 %   NOTE ON CLmax/CD0 BASIS: WS_max() uses the FLAPPED landing configuration
 %   (aero.get_CLmax_L(), aero.drag_polar(state).CD0 + aero.get_Delta_CD0_L(...)),

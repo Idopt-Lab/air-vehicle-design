@@ -35,7 +35,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 %   was anchored 4.2 % LOW, so keeping it would have biased every weight in the
 %   framework light -- and per CLAUDE.md's two-tier rule an agreement check is
 %   not a unit test at all. Both figures are now labelled columns of
-%   examples/F16A/weights_brandt_comparison.m (Brandt = 19,980.70,
+%   examples/F16A/sanity_checks/weights_brandt_comparison.m (Brandt = 19,980.70,
 %   Alt = 19,148.08). The old header block also mis-cited it; corrected here.
 %
 %   NOTHING IN THIS FILE MAY TAKE AN EXPECTED VALUE FROM
@@ -179,7 +179,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         function testDesignMachComesFromRequirementsFile(tc)
         %TESTDESIGNMACHCOMESFROMREQUIREMENTSFILE  Requirement, not spec data.
         %   design_mach lives in the fidelity-independent
-        %   examples/F16A/f16a_requirements.json, not in .weights. Compared
+        %   examples/F16A/inputs/f16a_requirements.json, not in .weights. Compared
         %   against the file so a JSON edit cannot silently desync, and
         %   separately asserted NOT to be the T.O. Mach LIMIT 2.05, which is a
         %   different number from Brandt's design Mach 2.0 (todo Sec. P4-13).

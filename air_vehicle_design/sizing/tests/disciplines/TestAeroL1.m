@@ -24,7 +24,7 @@ classdef TestAeroL1 < matlab.unittest.TestCase
 %   These are TRUE unit tests: every "expected" value is HAND-COMPUTED from the
 %   cited formula/table with the arithmetic shown inline, never copied from a
 %   code output or a Brandt figure. ALL Brandt / multi-source comparisons live
-%   in the separate examples/F16A/aerodynamics_brandt_comparison.m report
+%   in the separate examples/F16A/sanity_checks/aerodynamics_brandt_comparison.m report
 %   (informational, not pass/fail), NOT here.
 %
 %   NOTE ON DELETED TESTS (do not re-add): the previous TestAeroL1 asserted
@@ -41,10 +41,10 @@ classdef TestAeroL1 < matlab.unittest.TestCase
 
     methods (Static, Access = private)
         function J = readAeroJSON(name)
-        %READAEROJSON  Load an examples/F16A aero JSON by filename.
+        %READAEROJSON  Load an examples/F16A aero input JSON by filename.
             this_dir    = fileparts(mfilename('fullpath'));
             sizing_root = fileparts(fileparts(this_dir));
-            J = jsondecode(fileread(fullfile(sizing_root, 'examples', 'F16A', 'jsons', name)));
+            J = jsondecode(fileread(fullfile(sizing_root, 'examples', 'F16A', 'inputs', name)));
         end
     end
 

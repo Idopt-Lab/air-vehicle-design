@@ -16,7 +16,7 @@ classdef ClimbSegment < MasterEquationSegment
 %   this same drag+energy master equation, not Brandt's Miss-tab q_43 override
 %   or its separate thrust-based accel form (fuel = alpha*T_SL*cT*t, Miss!C13).
 %   These generalizations make the L2 Brandt-stack total run ~+8.9% high vs
-%   BrandtMission.m; see mission_comparison_report.m for the per-leg breakdown.
+%   BrandtMission.m; see mission_brandt_comparison.m for the per-leg breakdown.
 
     methods
         function obj = ClimbSegment()

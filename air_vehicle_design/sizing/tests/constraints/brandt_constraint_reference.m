@@ -10,7 +10,7 @@ function ref = brandt_constraint_reference(WS_psf)
 %
 %   This replaces the retired baseline/F16Baseline.m constraint tables: every
 %   value below is computed LIVE from VnV/BrandtF16A, the same Brandt model the
-%   informational report examples/F16A/constraints_brandt_comparison.m uses, so
+%   informational report examples/F16A/sanity_checks/constraints_brandt_comparison.m uses, so
 %   the tests validate against one authoritative source rather than a
 %   hand-transcribed copy.
 %

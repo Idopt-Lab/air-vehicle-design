@@ -3,7 +3,7 @@
 Which weight quantity is produced at which fidelity level, by which function, under what citation,
 and who consumes it. As-built from `src/base/WeightsBase.m`,
 `src/disciplines/weights/WeightsL{1,2,3}.m` + `WeightsModelL{1,2,3}.m`, and
-`examples/F16A/F16WeightsL{1,2,3}.m`. Companions: `geometry_parameter_usage.md`,
+`examples/F16A/models/disciplines/weights/F16WeightsL{1,2,3}.m`. Companions: `geometry_parameter_usage.md`,
 `aerodynamics_parameter_usage.md`, `propulsion_parameter_usage.md`.
 
 The three levels are different **models**, not refinements of one model: L1 is a statistical
@@ -15,8 +15,8 @@ component build-up. Per-component agreement between levels — or with Brandt �
 ## 1. Downstream consumers
 
 `OEW(W_TO)` is the only output anything reads. No mission or sizing orchestrator exists yet
-(steps 7–8 not started), so today the consumers are `weights_brandt_comparison` and
-`fidelity_comparison`. The component/group properties are `Dependent` and exist for reporting and for
+(steps 7–8 not started), so today the consumer is `weights_brandt_comparison`.
+The component/group properties are `Dependent` and exist for reporting and for
 the sizing loop that will drive `W_TO`.
 
 `W_TO` and `W_energy` are `NaN` state inputs on the object, mutated by the sizing loop. Getters that

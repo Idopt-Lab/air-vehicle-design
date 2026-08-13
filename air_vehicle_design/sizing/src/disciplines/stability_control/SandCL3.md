@@ -56,7 +56,7 @@ coefficients are calibrated against `S_wing`, and Raymer gives no equivalent tai
 documented simplification, not a citation gap).
 
 **Sanity check** (hand-computed, no MATLAB execution available in this pass — see
-`examples/F16A/F16SandCL3.md` §6 for the full worked numbers): `x_ac_wing` fed `F16GeomL3`'s own wing
+`examples/F16A/models/disciplines/sandc/F16SandCL3.md` §6 for the full worked numbers): `x_ac_wing` fed `F16GeomL3`'s own wing
 inputs at `M < 0.4` (`Delta_x_ac = 0`) gives `x_acw ≈ 25.591 ft`, within **+0.01%** of Brandt's own
 live `S&C (2)` sheet `xacW = 25.589 ft` (`docs/subplans/10_stability_control.md` "Ground Truth") —
 strong corroboration despite the different geometry basis (`GeomL3` physical vs. Brandt's own).

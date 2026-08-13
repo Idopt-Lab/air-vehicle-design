@@ -37,8 +37,8 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
     properties (TestParameter)
         % Aero/prop discipline pairing per fidelity level. No F16PropL3
         % exists yet, so L3 pairs F16AeroL3 with F16PropL2 (highest
-        % propulsion fidelity available) -- same pairing fidelity_comparison.m
-        % uses elsewhere (its L3 propulsion columns are NaN for the same reason).
+        % propulsion fidelity available) -- the same pairing the sanity_checks
+        % comparison reports use (their L3 propulsion columns are NaN for the same reason).
         fidelityLevel = {'L1', 'L2', 'L3'};
     end
 
@@ -272,7 +272,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Max Mach condition --------------------------------------
         % 36,000 ft, M=1.60, n=1.0, 100% AB, Ps=0, beta=0.8997
-        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % [examples/F16A/inputs/f16a_requirements.md; Brandt Consts sheet
         % (via brandt_constraint_reference)]
 
         function testF16MaxMachAlphaNearBrandt(tc)
@@ -373,7 +373,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Max Alt (ceiling) condition -------------------------------
         % 50,000 ft, M=0.87, n=1.0, 100% AB, Ps=0, beta=0.8997
-        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % [examples/F16A/inputs/f16a_requirements.md; Brandt Consts sheet
         % (via brandt_constraint_reference)]
         %
         % Like Max Mach (not Cruise), this condition is flown at 100% AB, so
@@ -466,7 +466,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Combat Turn 1 (subsonic) condition -------------------------
         % 20,000 ft, M=0.87, n=4.5, 100% AB, Ps=0, beta=0.8997
-        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % [examples/F16A/inputs/f16a_requirements.md; Brandt Consts sheet
         % (via brandt_constraint_reference)]
         %
         % Like Max Mach and Max Alt (not Cruise), this condition is flown at
@@ -564,7 +564,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Combat Turn 2 (supersonic) condition -----------------------
         % 36,000 ft, M=1.4, n=1.4, 100% AB, Ps=0, beta=0.8997
-        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % [examples/F16A/inputs/f16a_requirements.md; Brandt Consts sheet
         % (via brandt_constraint_reference)]
         %
         % Like Combat Turn 1, this condition is flown at 100% AB, so
@@ -667,7 +667,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Cruise condition ------------------------------------------
         % 36,000 ft, M=0.87, n=1.0, 0% AB (dry/mil power), Ps=0, beta=0.8997
-        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % [examples/F16A/inputs/f16a_requirements.md; Brandt Consts sheet
         % (via brandt_constraint_reference)]
         %
         % ALPHA BASIS (updated): Cruise is flown at 0% AB/dry (mil) power, so
@@ -685,7 +685,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         % silently falls back to the AB-basis thrust_lapse, so Cruise at L1
         % specifically is UNAFFECTED by this fix and stays as inaccurate as
         % before -- do not be surprised its numbers didn't move. Full
-        % diagnosis: cruise_and_combatturn2_error_scrape.md Sec 2.
+        % diagnosis: see MasterEquationConstraint.m's power-setting rationale.
 
         function testF16CruiseAlphaNearBrandt(tc)
             % F16PropL2's mil-power lapse, expressed on the AB T_SL scale via
@@ -783,7 +783,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
 
         % --- F-16 Excess Power (Ps) condition --------------------------------
         % 10,000 ft, M=0.87, n=1.0, 100% AB, Ps=500 ft/s, beta=0.8997
-        % [examples/F16A/mds/f16a_requirements.md; Brandt Consts sheet
+        % [examples/F16A/inputs/f16a_requirements.md; Brandt Consts sheet
         % (via brandt_constraint_reference)]
         %
         % Like Max Alt/Combat Turn 1/Combat Turn 2 (not Cruise), this

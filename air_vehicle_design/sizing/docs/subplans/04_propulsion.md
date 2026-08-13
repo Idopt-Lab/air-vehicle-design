@@ -30,8 +30,8 @@ Three-tier pattern per level `N`: `PropulsionBase` (abstract) ← `PropulsionMod
 
 | File | What it provides |
 |------|-----------------|
-| `examples/F16A/F16PropL1.m` | Reads `.propulsion` from `f16a_L1.json` (`engine_type`, `T_SL`); `engine_type` selects the Raymer TSFC table + Martins lapse exponent; delegates to `PropL1` statics. `T_SL_wet` is `Dependent` on `T_SL`, not read |
-| `examples/F16A/F16PropL2.m` | Reads `.propulsion` from `f16a_L2.json` (`engine_type`, `T_SL`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`, `bypass_ratio`); `engine_type` selects the Mattingly `C1/C2` coefficient set; delegates to `PropL2` statics. `T_SL_wet` is `Dependent` on `T_SL`, not read |
+| `examples/F16A/models/disciplines/prop/F16PropL1.m` | Reads `.propulsion` from `f16a_L1.json` (`engine_type`, `T_SL`); `engine_type` selects the Raymer TSFC table + Martins lapse exponent; delegates to `PropL1` statics. `T_SL_wet` is `Dependent` on `T_SL`, not read |
+| `examples/F16A/models/disciplines/prop/F16PropL2.m` | Reads `.propulsion` from `f16a_L2.json` (`engine_type`, `T_SL`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`, `bypass_ratio`); `engine_type` selects the Mattingly `C1/C2` coefficient set; delegates to `PropL2` statics. `T_SL_wet` is `Dependent` on `T_SL`, not read |
 
 ### Tests
 
@@ -45,7 +45,7 @@ Three-tier pattern per level `N`: `PropulsionBase` (abstract) ← `PropulsionMod
 | File | Purpose |
 |------|---------|
 | `examples/F16A/propulsion_brandt_comparison.{m,json,md}` | **Informational** Brandt comparison report (NOT a test, not in `run_all_tests`) — framework vs `f16a_ground_truth.json` `.propulsion`, %Diff + notes. |
-| `examples/F16A/F16PropL1.md`, `F16PropL2.md` | Per-file companion docs (method → `PropL*` static → citation; input-vs-Dependent classification). |
+| `examples/F16A/models/disciplines/prop/F16PropL1.md`, `F16PropL2.md` | Per-file companion docs (method → `PropL*` static → citation; input-vs-Dependent classification). |
 | `docs/propulsion_parameter_usage.md` | Quantity → (level, function, citation) + Brandt ground-truth "expected" tables. |
 
 ---
@@ -56,7 +56,7 @@ Three-tier pattern per level `N`: `PropulsionBase` (abstract) ← `PropulsionMod
 - **Required-JSON-path constructors.** `F16PropL1(json_path)` reads `.propulsion` → `engine_type`, `T_SL`. `F16PropL2(json_path)` reads `.propulsion` → `engine_type`, `T_SL`, `T_SL_mil`, `T_t4_max_F`, `TSFC_install_factor`, `bypass_ratio`. A no-arg call now errors (`MATLAB:minrhs`). Every abstract method is a one-line delegation to the `PropLN` static toolbox; no equations are overridden. (Geometry's own constructors are no longer a parallel: `F16GeomL1` takes a second *requirements* path and `F16GeomL2/L3` take an injected propulsion object.)
 - **`T_SL_wet` is NOT a JSON input** (Phase 3, 2026-07-25). It was a self-documented alias of `T_SL`, i.e. the same number keyed twice with nothing keeping the copies in sync. The key was deleted from every `f16a_L*.json` and `T_SL_wet` is now `Dependent` on `T_SL` at both levels.
 - **`bypass_ratio` = 0.71** (F100-PW-200) was added at L2 for Raymer Eq. 10.10, which the weights tier calls through propulsion DI to compute engine weight. **Pinned 2026-07-30** to `[Nicolai & Carichner Table 14.3, F100-PW-100]` (the direct predecessor engine); see `_cite_bypass_ratio` in `f16a_L2.json`. Previously carried a `_TODO_bypass_ratio` marker calling this untraceable, which was an oversight -- the source was already in-repo.
-- **Inputs-vs-`Dependent` split** applied (`examples/F16A/F16GeomL2.m` is the reference). Inputs are a plain mutable `properties` block set once from the JSON (an optimizer may mutate `T_SL` etc. in place — do not defensively guard). Sea-level thrust (`T_SL = 23,770 lbf`) is a genuine design-variable input.
+- **Inputs-vs-`Dependent` split** applied (`examples/F16A/models/disciplines/geom/F16GeomL2.m` is the reference). Inputs are a plain mutable `properties` block set once from the JSON (an optimizer may mutate `T_SL` etc. in place — do not defensively guard). Sea-level thrust (`T_SL = 23,770 lbf`) is a genuine design-variable input.
 - `F16PropL2.TR` is a `properties (Dependent)` `get.TR` (= `PropL2.compute_TR(T_t4_max_F+459.67)` [Mattingly Eq. D.6]) — recomputed live on read, never frozen in the constructor. It is degenerate ≡ 1.0 (only `T_t4_max` is an input; `T_t4_SLS` is unknown, so `compute_TR` defaults it to `T_t4_max`). This matches Brandt (Engn(s)!S1) and is an accepted known limitation, not a bug — genuine optimization visibility would require a separate `T_t4_SLS` input (user 2026-07-24; not to be added now).
 - **C1/C2 are NOT class Constants and are NOT in the JSON.** They are engine-class constants selected by `engine_type` inside the toolbox: `PropL2.lookup_TSFC_coeffs(engine_type)` → 0.90/0.30/1.60/0.27 for `low_bypass_turbofan_AB` [Mattingly Eq. 3.55a/b]. `PropulsionModelL2` declares abstract `engine_type` + `TR` (the former abstract `Constant C1/C2` block was removed). L1's `engine_type` likewise selects the Raymer Table 3.3 TSFC rows and the Martins lapse exponent.
 - **Installed-TSFC path is wired:** `PropL2.get_TSFC_installed` / `get_TSFC_AB_installed` = uninstalled × `TSFC_install_factor` (1.08, Brandt Miss!C25); concrete delegators `compute_TSFC_installed` / `compute_TSFC_AB_installed`. Uninstalled `get_TSFC` / `compute_TSFC_mil` / `compute_TSFC_AB` are kept.

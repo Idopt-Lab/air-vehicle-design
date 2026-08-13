@@ -4,7 +4,7 @@
 **Consumed by:** Step 6 (constraints); Steps 7–8 (mission, sizing) not started.
 
 Authoritative per-file detail lives in the companion docs (`src/base/AerodynamicsBase.md`,
-`src/disciplines/aerodynamics/AeroL{1,2,3}.md`, `examples/F16A/F16AeroL{1,2,3}.md`) and the
+`src/disciplines/aerodynamics/AeroL{1,2,3}.md`, `examples/F16A/models/disciplines/aero/F16AeroL{1,2,3}.md`) and the
 parameter map `docs/aerodynamics_parameter_usage.md`.
 
 ## K-convention (A)
@@ -30,7 +30,7 @@ L1 is geometry-free. No Brandt outputs are hardcoded as inputs (no `S_wet=1371`,
 `e0=0.9086`).
 
 Genuine aero spec inputs come from the `.aerodynamics` block of the **unified per-level JSON**
-(`examples/F16A/f16a_L{1,2,3}.json`, resolved via `f16a_spec_path`). Constructors **require** the
+(`examples/F16A/inputs/f16a_L{1,2,3}.json`, resolved via `f16a_spec_path`). Constructors **require** the
 path — no silent default; `F16AeroL2/L3` also require the injected geometry object.
 
 ## Fidelity ladder
@@ -55,7 +55,7 @@ path — no silent default; `F16AeroL2/L3` also require the injected geometry ob
   `Amax`/`L_aircraft` LIVE from the injected geometry object (Phase 2 sub-step 2h, 2026-07-25 —
   `GeomL3` computes an area-ruled `Amax`; the earlier "geometry exposes no area-ruled Amax" note is
   obsolete). `GeomL2` deliberately keeps the low-fidelity fuselage-envelope form — see
-  `examples/F16A/F16GeomL3.md` §4.
+  `examples/F16A/models/disciplines/geom/F16GeomL3.md` §4.
 - **Transonic (0.95 < M < 1.05) not modeled** — `drag_polar` returns NaN there (avoids the Eq. 12.51
   supersonic-K1 pole near M=1).
 
@@ -76,5 +76,5 @@ path — no silent default; `F16AeroL2/L3` also require the injected geometry ob
 runtests('tests/disciplines/TestAeroL1.m'); runtests('tests/disciplines/TestAeroL2.m'); runtests('tests/disciplines/TestAeroL3.m')
 ```
 Green except the labeled `testTODO_*` citation placeholders. The Brandt comparison report
-(`examples/F16A/aerodynamics_brandt_comparison.m`) is informational, never used to backfill a unit
+(`examples/F16A/sanity_checks/aerodynamics_brandt_comparison.m`) is informational, never used to backfill a unit
 test's expected value.

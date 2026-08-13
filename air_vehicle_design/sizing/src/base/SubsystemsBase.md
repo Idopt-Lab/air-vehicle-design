@@ -76,7 +76,7 @@ support multiple jet-fuel types each with their own cited density, and must have
 battery-electric (energy-density) path rather than a special case bolted onto the liquid-fuel path.
 
 **No Brandt ground truth exists for fuel or avionics volume** — `VnV/BrandtF16A/GroundTruth/*.json`
-only has component *weights*, never volumes, for these terms. `examples/F16A/subsystems_brandt_comparison.m`
+only has component *weights*, never volumes, for these terms. `examples/F16A/sanity_checks/subsystems_brandt_comparison.m`
 carries these as `NOT MODELED` gap rows, not an agreement check.
 
 ## 5. To-dos

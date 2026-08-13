@@ -44,7 +44,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 %   against Brandt's loose tolerances either way (both formulas agree to
 %   within a percent or two for this aircraft's thin, near-uniform sections).
 %
-%   PHASE 2 (2026-07-25, locked user decisions; spec examples/F16A/F16GeomL3.md
+%   PHASE 2 (2026-07-25, locked user decisions; spec examples/F16A/models/disciplines/geom/F16GeomL3.md
 %   -- that doc governs BOTH tiers). What changed here:
 %     * CONSTRUCTOR: F16GeomL2(json_path, prop). A propulsion object is now a
 %       REQUIRED injected argument, because the nacelle diameter -- and hence
@@ -260,12 +260,12 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             tc.verifyEqual(received, 300, 'AbsTol', 1e-9);
         end
 
-        % --- L_fus (used directly by fidelity_comparison.m) --------------
+        % --- L_fus (used directly by geometry_brandt_comparison.m) -------
 
         function testLfusMatchesBrandt(tc)
         % L2 exposes L_fus as a plain property (not a method, unlike L1's
         % get_L_fus). RENAMED/FIXED 2026-07-22 (was testLfusMatchesTO): the
-        % OOP-practice pass re-sourced L_fus from examples/F16A/f16a_L2.json's
+        % OOP-practice pass re-sourced L_fus from examples/F16A/inputs/f16a_L2.json's
         % fuselage.length_ft (Brandt Main!B32 = 46.5 ft), replacing the old
         % T.O.-manual literal (47.5 ft) this test used to check against --
         % see F16GeomL2.m's constructor and f16a_L2.json's "_comment"

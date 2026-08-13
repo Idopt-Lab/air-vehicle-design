@@ -20,7 +20,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
 %   sweep Lambda_c/4=32.1831783983 deg (independently hand-computed in
 %   TestGeomL2.testConvertSweepWingQC..., a GEOMETRY result, not an aero one).
 %   No Brandt-comparison assertions here -- those live in the separate
-%   examples/F16A/aerodynamics_brandt_comparison.m report.
+%   examples/F16A/sanity_checks/aerodynamics_brandt_comparison.m report.
 %
 %   NOTE ON DELETED TESTS (do not re-add): the previous TestAeroL2 asserted
 %   CL_alpha at M=0 AND M=0.6 against the SAME Brandt per-degree constant

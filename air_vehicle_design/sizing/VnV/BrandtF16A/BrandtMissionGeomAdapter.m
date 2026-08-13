@@ -1,19 +1,18 @@
 classdef BrandtMissionGeomAdapter < GeometryBase
 %BRANDTMISSIONGEOMADAPTER  Makes a BrandtGeometry object satisfy the src
 %   GeometryBase interface, so the Brandt discipline stack can be injected
-%   into mission analysis alongside BrandtConstraintAeroAdapter /
-%   BrandtConstraintPropAdapter.
+%   into mission analysis alongside BrandtAeroAdapter /
+%   BrandtPropAdapter.
 %
-%   RENAMED 2026-08-10 (from BrandtGeomAdapter): this class collided with
-%   the unrelated, differently-shaped examples/F16A/mixed_fidelity_tests/
-%   adapters/BrandtGeomAdapter.m (optional-json-path constructor, exposes
-%   "Brandt" as a selectable fidelity LEVEL, PLAIN mutable S_ref so
-%   SizingLoopL1 can overwrite it in place). run_all_tests.m puts both this
-%   file's directory (VnV/BrandtF16A, via genpath) and that one's on the
-%   MATLAB path every run; with the same class name, whichever came first on
-%   the path silently shadowed the other -- same failure mode the sibling
-%   BrandtConstraintAeroAdapter/BrandtConstraintPropAdapter rename already
-%   fixed (see those files' headers), just not yet applied here.
+%   NAME. Mission analysis is this adapter's only consumer, so a plain
+%   BrandtGeomAdapter name would read more naturally. The "Mission" qualifier
+%   is kept on purpose: the mixed-fidelity swap harness (examples/F16A/
+%   mixed_fidelity_tests/) and its own adapters/BrandtGeomAdapter.m were
+%   deleted on 2026-08-12 for a planned rewrite. No name collision exists
+%   right now, but this qualifier keeps the plain BrandtGeomAdapter name free
+%   so that rewrite can re-use it without shadowing this class on the MATLAB
+%   path (the failure mode the sibling BrandtAeroAdapter / BrandtPropAdapter
+%   rename already documents).
 %
 %   PURPOSE. Mission analysis takes an injected GeometryBase and reads
 %   geom.get_S_ref() (wing reference area, for W/S and the Breguet CL) and

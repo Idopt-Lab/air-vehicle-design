@@ -24,7 +24,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 %   CD0, CLmax_TO, alpha_AB) and checks it reproduces his tabulated value
 %   directly.
 %
-%   The F-16 Takeoff field condition [examples/F16A/mds/f16a_requirements.md
+%   The F-16 Takeoff field condition [examples/F16A/inputs/f16a_requirements.md
 %   field-condition table]: sea level, k_TO=1.2, S_G=4,000 ft, mu=0.03,
 %   beta=1.0. Brandt's full 21-point Consts-sheet row 32 (via
 %   brandt_constraint_reference, BrandtConstraintAnalysis.run().TW_takeoff) is
@@ -74,7 +74,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
         function testDefaultBetaAndKTO(tc)
             % beta and k_TO default to 1.0 and 1.2 (field constraints, per
-            % examples/F16A/mds/f16a_requirements.md) when omitted.
+            % examples/F16A/inputs/f16a_requirements.md) when omitted.
             state = AircraftState(0, 0.1);
             obj   = TakeoffConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), F16PropL2(f16a_spec_path(2)), 4000, 0.03);
             tc.verifyEqual(obj.beta, 1.0);
@@ -263,7 +263,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
         % --- F-16 Takeoff field condition -----------------------------------
         % Sea level, k_TO=1.2, S_G=4,000 ft, beta=1.0
-        % [examples/F16A/mds/f16a_requirements.md field-condition table]
+        % [examples/F16A/inputs/f16a_requirements.md field-condition table]
 
         function testF16TakeoffRequiredTWPhysicalRange(tc)
             % Sanity check only -- no Brandt TW_Takeoff table to compare

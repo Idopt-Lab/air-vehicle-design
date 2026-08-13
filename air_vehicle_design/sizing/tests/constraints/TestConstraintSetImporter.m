@@ -2,7 +2,7 @@ classdef TestConstraintSetImporter < matlab.unittest.TestCase
 %TESTCONSTRAINTSETIMPORTER  Unit tests for the generic ConstraintSetImporter
 %   (reads constraint conditions from a requirements JSON into a struct
 %   array), exercised against the F-16's
-%   examples/F16A/jsons/f16a_requirements.json.
+%   examples/F16A/inputs/f16a_requirements.json.
 %
 %   Rewritten 2026-08-04 (subplan 06-refactor T3): the importer now reads the
 %   requirements JSON's constraints.conditions block with explicit keys, not

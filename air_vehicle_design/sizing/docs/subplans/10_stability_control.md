@@ -54,7 +54,7 @@ coefficients (the `0.4`/`1.1` breakpoints, the `2.5` exponent) are now also full
 (chart vs. root-quarter-chord position as % fuselage length) — no digitized/citable value existed
 anywhere in this repo (legacy code read an undefined property). Casey read the chart directly at the
 F-16's actual root-quarter-chord position (44.17% of fuselage length) and supplied **K_fus ≈ 0.025** —
-now a citable scalar input, `examples/F16A/jsons/f16a_L3.json`'s new
+now a citable scalar input, `examples/F16A/inputs/f16a_L3.json`'s new
 `.stability_control.fuselage_moment.K_fus` key.
 
 **Depends on:** Step 2 (Geometry L2/L3 — MAC, x_ac, tail geometry), Step 3 (Aerodynamics — `CL_alpha`,
@@ -238,7 +238,7 @@ Same three-tier + toolbox pattern as every other discipline:
 | Base | `src/base/StabControlBase.m` | Abstract contract — `static_margin`, `neutral_point`, `Cm_cg` |
 | Enforcers | `src/disciplines/stability_control/SandCModelL1/L2/L3.m` | Per-level abstract method/property declarations |
 | Toolboxes | `src/disciplines/stability_control/SandCL1/L2/L3.m` | The actual Ch. 16 equations, cited, level-agnostic statics (see collapse contingency above) |
-| Concrete | `examples/F16A/F16SandCL1/L2/L3.m` | F-16 wiring, single delegation lines into the toolbox |
+| Concrete | `examples/F16A/models/disciplines/sandc/F16SandCL1/L2/L3.m` | F-16 wiring, single delegation lines into the toolbox |
 | Tests | `tests/disciplines/TestSandCL1/L2/L3.m` | Per-static-method unit tests |
 | Report | `examples/F16A/sandc_brandt_comparison.{m,json,md}` | Informational comparison vs. `BrandtBalanceStabControl` |
 
@@ -248,7 +248,7 @@ Same three-tier + toolbox pattern as every other discipline:
 
 Per Casey's decision (confirmed): the per-component weight **x-location** (moment-arm station) data this
 discipline needs is a **new, S&C-owned input table**, supplied alongside S&C's own JSON
-(`examples/F16A/jsons/f16a_L{2,3}.json` `.stability_control.component_x_stations`). This is explicitly
+(`examples/F16A/inputs/f16a_L{2,3}.json` `.stability_control.component_x_stations`). This is explicitly
 **not** a retrofit of `WeightsL3`'s contract; `WeightsL3` continues to expose only weight values, and
 S&C is the only consumer of the x-location mapping.
 
@@ -302,7 +302,7 @@ non-geometry equations need, likely `F16WeightsL1` and nothing else.
 |---|---|
 | `get_np()` is a stub with no arguments and no body — errors if called | Every declared method has a real implementation before it ships; no stubs |
 | `get_static_stability` convenience wrapper passes its arguments to `get_static_margin` in the wrong order and omits required args | Don't add a convenience wrapper until its argument order is tested directly, not just exercised indirectly by a caller that happens to bypass it |
-| `Xbar_p = 33.775` (thrust x-location) hardcoded "temporarily" | **RESOLVED (2026-08-04, Casey's closure request).** `x_p = F16GeomL3.x_inlet` (=15.0 ft) by DI reuse — justified because Raymer 6th ed. Eqs. 16.26–16.28 (p.604) define `F_p` as specifically the inlet-front-face normal force, so `x_inlet` IS the cited application point, not a guess (the literal `33.775` is never ported). `z_t`/`F_p` themselves are set to 0 as explicit, cited simplifications: Raymer p.604 ("If the thrust axis passes through or near the c.g., this term can be ignored") and p.609 ("it is common in early conceptual design to calculate the trim condition without including the thrust effects unless the thrust axis is well above or below the c.g."). See `examples/F16A/F16SandCL3.m`'s `Cm_cg_trim` header. |
+| `Xbar_p = 33.775` (thrust x-location) hardcoded "temporarily" | **RESOLVED (2026-08-04, Casey's closure request).** `x_p = F16GeomL3.x_inlet` (=15.0 ft) by DI reuse — justified because Raymer 6th ed. Eqs. 16.26–16.28 (p.604) define `F_p` as specifically the inlet-front-face normal force, so `x_inlet` IS the cited application point, not a guess (the literal `33.775` is never ported). `z_t`/`F_p` themselves are set to 0 as explicit, cited simplifications: Raymer p.604 ("If the thrust axis passes through or near the c.g., this term can be ignored") and p.609 ("it is common in early conceptual design to calculate the trim condition without including the thrust effects unless the thrust axis is well above or below the c.g."). See `examples/F16A/models/disciplines/sandc/F16SandCL3.m`'s `Cm_cg_trim` header. |
 | `eta_h` computed from `q_h/q` then immediately overwritten to a hardcoded `0.9` | **UPDATE (2026-08-04, primary source, p.591):** `η_h=0.90` is not an arbitrary legacy hack — Raymer's own text calls it out as "the typical value" ("[η_h] ranges from about 0.85–0.95... with 0.90 as the typical value"), for use when no better `q_h/q` data exists. The bug is not the *value*, it's *silently discarding a computed value in favor of the constant without saying so*. Fix: implement `η_h` as a required toolbox-static argument; `F16SandCL3` may pass `0.90` as its actual argument, cited to Raymer p.591's "typical value," as long as it's an explicit, commented default — not a silent override of something else computed and thrown away. |
 | Ambiguous "FIGURE OUT WHAT C IS" comment re: mean-chord usage | Pin the exact chord definition (MAC vs. some other reference length) per equation before implementing, not after |
 | **(found 2026-08-03, scribe pass)** `compute_SM` divides the correct ratio by an extra, uncited `100`: `output = ((Xbar_np - Xbar_cg)/c_bar)/100` — if SM is meant to be a fraction (as `readme_bsc.md`'s `SM=(x_np-x_cg)/MAC_W` and Nicolai Eq. 22.1 both give it), this silently shrinks the result 100×. Not in the subplan's original bug list; adding here since it directly touches Eq. 16.11. | Implement Eq. 16.11 as the bare ratio `(x_np - x_cg)/c̄`, no extra scaling; if a %-form is wanted for display, convert at the call site, not inside the toolbox static. |

@@ -11,7 +11,7 @@ classdef TestPropL2 < matlab.unittest.TestCase
 %   (α_dry/α_AB/α_eff, installed TSFC 0.70/2.20, ...) as an expected value.
 %   The Mattingly-model-vs-Brandt-model closeness comparison at the six
 %   constraint conditions is INFORMATIONAL and lives in
-%   examples/F16A/propulsion_brandt_comparison.m — NOT here. (Those comparisons
+%   examples/F16A/sanity_checks/propulsion_brandt_comparison.m — NOT here. (Those comparisons
 %   pit two different engine models against each other and were previously
 %   "asserted" with a blanket 30% tolerance; that is not a unit test.)
 %

@@ -1,7 +1,7 @@
 classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %TESTF16CONSTRAINTSET  Unit tests for F16ConstraintSet (Layer-2 wiring of
 %   the F-16's constraint conditions from the requirements JSON
-%   examples/F16A/jsons/f16a_requirements.json into concrete
+%   examples/F16A/inputs/f16a_requirements.json into concrete
 %   MasterEquationConstraint specializations (LevelFlight/SustainedTurn/
 %   ExcessPower) and TakeoffConstraint/LandingConstraint objects, and its
 %   end-to-end use with ConstraintAnalysis.

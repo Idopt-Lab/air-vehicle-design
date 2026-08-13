@@ -3,7 +3,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 %
 %   TIER 1 (unit/correctness) per CLAUDE.md's two-tier-tests-never-blended
 %   convention -- part of run_all_tests, must be green. Companion Tier-2
-%   report: examples/F16A/subsystems_brandt_comparison.m (informational,
+%   report: examples/F16A/sanity_checks/subsystems_brandt_comparison.m (informational,
 %   NOT here).
 %
 %   Every "expected" value below is HAND-COMPUTED from the cited formula

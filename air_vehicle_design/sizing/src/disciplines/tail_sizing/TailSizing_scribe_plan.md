@@ -3,7 +3,7 @@
 **RETIRED 2026-08-03:** the standalone `tail_sizing` discipline this doc planned is deleted — tail
 sizing is organizationally part of the Geometry discipline now (Casey's decision), with the same
 equations/citations/coefficients ported into `src/disciplines/geometry/GeomL1.m`/`GeomL2.m`/`GeomL3.m`
-and `examples/F16A/F16GeomL1.m`/`F16GeomL2.m`/`F16GeomL3.m`'s "TAIL SIZING" marked sections. This file
+and `examples/F16A/models/disciplines/geom/F16GeomL1.m`/`F16GeomL2.m`/`F16GeomL3.m`'s "TAIL SIZING" marked sections. This file
 is kept solely as the historical discrepancy-resolution record (several `.m`/test comments in the
 Geometry files above cite it by name); every other file in the former `src/disciplines/tail_sizing/`
 directory is deleted.
@@ -60,9 +60,9 @@ Files to create (per the coordinator's approved structure):
 | static toolbox | `src/disciplines/tail_sizing/TailL1.m` | L1 volume-coefficient equations |
 | static toolbox | `src/disciplines/tail_sizing/TailL2.m` | L2 historical-estimate equations |
 | static toolbox | `src/disciplines/tail_sizing/TailL3.m` | L3 stability-and-control equations (TODO-stub, §6) |
-| Tier 3 concrete | `examples/F16A/F16TailL1.m` | F-16 wiring, delegates to `TailL1` |
-| Tier 3 concrete | `examples/F16A/F16TailL2.m` | F-16 wiring, delegates to `TailL2` |
-| Tier 3 concrete | `examples/F16A/F16TailL3.m` | F-16 wiring, delegates to `TailL3` (TODO-stub, §6) |
+| Tier 3 concrete | `examples/F16A/models/disciplines/tail/F16TailL1.m` | F-16 wiring, delegates to `TailL1` |
+| Tier 3 concrete | `examples/F16A/models/disciplines/tail/F16TailL2.m` | F-16 wiring, delegates to `TailL2` |
+| Tier 3 concrete | `examples/F16A/models/disciplines/tail/F16TailL3.m` | F-16 wiring, delegates to `TailL3` (TODO-stub, §6) |
 
 **Finalized integration contract, all three levels** (§5.2): the abstract method every tier
 implements returns exactly `struct('S_ht', S_ht, 'S_vt', S_vt)` — no other fields, no injected
@@ -76,13 +76,13 @@ return shape once, at the top of the hierarchy, rather than per level.
 | File | Status |
 |---|---|
 | `src/disciplines/tail_sizing/TailSizingLevel1.m` | Migrates into `TailL1`/`TailSizingModelL1`. **Values change** during migration: `c_HT`/`c_VT` become 0.315/0.063, tail arm becomes `0.475*L_fus`, citation becomes Raymer 7th ed. — see §2/§4. |
-| `examples/F16A/disciplines/F16TailSizingLevel1.m` | Migrates into `examples/F16A/F16TailL1.m` with the updated 0.315/0.063 wiring. |
+| `examples/F16A/disciplines/F16TailSizingLevel1.m` | Migrates into `examples/F16A/models/disciplines/tail/F16TailL1.m` with the updated 0.315/0.063 wiring. |
 | `tests/tail_sizing/TestTailSizingLevel1.m` | Existing green test asserting the OLD 0.40/0.07/`0.5*L_fus` values — will need `test-writer` to update expected values to match the finalized 0.315/0.063/`0.475*L_fus`, not scribe's call to edit but flagged so it isn't missed. |
 | `src/disciplines/geometry/GeomL1.m` | **RETIRE** `compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`, `compute_S_HT`, `compute_S_VT` — decided 2026-07-28 (§2). Their logic is what becomes `TailL1` (ported, not duplicated). |
 | `src/disciplines/geometry/GeomL1.md` | Remove the corresponding rows/sections (§§2–4 tail-volume entries) once the methods are deleted from `GeomL1.m`. |
 | `tests/disciplines/TestGeomL1.m` | Remove `testTailVolumeCoeffsF16`, `testUnknownCategoryTailVolumeThrows`, `testTailArmFormula`, and the `compute_S_HT`/`compute_S_VT`-adjacent tests once the methods move — again a `test-writer`/`geometry-equations-expert` task, flagged here. |
 | `src/sizing/SizingLoopL2.m` | **Confirmed in-scope change** (not a scribe edit): `tail (1,1) TailSizingLevel1` → `tail (1,1) TailSizingBase` (or whichever tier is common to L1/L2/L3). See §3. |
-| `examples/F16A/design_study_02_L2.m`, `design_study_03_L3.m` | Both currently construct `F16TailSizingLevel1()` regardless of fidelity level. Once `F16TailL2`/`F16TailL3` exist, whether these switch to the matching tier is an implementation-loop decision — not re-litigated here. |
+| `examples/F16A/models/sizing/design_study_02_L2.m`, `design_study_03_L3.m` | Both currently construct `F16TailSizingLevel1()` regardless of fidelity level. Once `F16TailL2`/`F16TailL3` exist, whether these switch to the matching tier is an implementation-loop decision — not re-litigated here. |
 | `tests/sizing/TestSizingLoopL2.m`, `tests/sizing/FixedGeomStub.m` | Existing green tests constructing `TailSizingLevel1(...)` directly — must keep passing or be explicitly superseded by `test-writer`. |
 | `src/sizing/ControlSurfaceSizer.m` | **Out of scope**, untouched. |
 
@@ -152,7 +152,7 @@ to overlook).
 
 Also still live and **not** re-litigated by this finalization pass (unchanged from the original
 plan, carried forward as context, not new decisions):
-- `examples/F16A/design_study_02_L2.m` and `design_study_03_L3.m` both construct
+- `examples/F16A/models/sizing/design_study_02_L2.m` and `design_study_03_L3.m` both construct
   `F16TailSizingLevel1()` today. Whether they switch to the matching new tier once `F16TailL2`/
   `F16TailL3` exist is left to the implementation loop's judgment.
 - `tests/tail_sizing/TestTailSizingLevel1.m`, `tests/sizing/TestSizingLoopL2.m` (via

@@ -6,7 +6,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
 %   "Geometry has no L3").
 %   2026-07-25 (PHASE 2, locked user decisions): promoted from a weights-only
 %   tier to the FULL L3 geometry tier consumed by L3 geometry + aero + weights.
-%   Authoritative spec: examples/F16A/F16GeomL3.md.
+%   Authoritative spec: examples/F16A/models/disciplines/geom/F16GeomL3.md.
 %
 %   L3 is the HIGHER-fidelity PHYSICAL / T.O.-geometry tier: where a
 %   physical/T.O. value differs from Brandt, GeomL3 uses the physical one (VT LE

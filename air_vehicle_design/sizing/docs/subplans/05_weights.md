@@ -58,12 +58,12 @@ that is **not** in the inheritance chain and holds the equations.
 
 | File | What it provides |
 |---|---|
-| `examples/F16A/F16WeightsL1.m` | `aircraft_category` + payload from `f16a_L1.json`; delegates to `WeightsL1` |
-| `examples/F16A/F16WeightsL2.m` | Spec/mission inputs from `f16a_L2.json`, `design_mach` from `f16a_requirements.json`, **injected** `F16GeomL2` + `F16PropL2`; delegates to `WeightsL2` |
-| `examples/F16A/F16WeightsL3.m` | 42 numeric inputs from `f16a_L3.json .weights` + `f16a_requirements.json`, **injected `F16GeomL3`** + `F16PropL2`; delegates to `WeightsL3` |
-| `examples/F16A/f16a_requirements.json` | **NEW (Phase 4)** — fidelity-independent requirements: `cruise.altitude_ft`, `cruise.mach`, `design_mach` |
-| `examples/F16A/f16a_requirements_path.m` | Resolver, no `level` argument (that absence is the documentation that requirements are fidelity-independent) |
-| `examples/F16A/F16Weights{L1,L2,L3}.md` | Per-class companion docs (input/derived tables, per-method citations, deviations) |
+| `examples/F16A/models/disciplines/weights/F16WeightsL1.m` | `aircraft_category` + payload from `f16a_L1.json`; delegates to `WeightsL1` |
+| `examples/F16A/models/disciplines/weights/F16WeightsL2.m` | Spec/mission inputs from `f16a_L2.json`, `design_mach` from `f16a_requirements.json`, **injected** `F16GeomL2` + `F16PropL2`; delegates to `WeightsL2` |
+| `examples/F16A/models/disciplines/weights/F16WeightsL3.m` | 42 numeric inputs from `f16a_L3.json .weights` + `f16a_requirements.json`, **injected `F16GeomL3`** + `F16PropL2`; delegates to `WeightsL3` |
+| `examples/F16A/inputs/f16a_requirements.json` | **NEW (Phase 4)** — fidelity-independent requirements: `cruise.altitude_ft`, `cruise.mach`, `design_mach` |
+| `examples/F16A/helpers/f16a_requirements_path.m` | Resolver, no `level` argument (that absence is the documentation that requirements are fidelity-independent) |
+| `examples/F16A/models/disciplines/weights/F16Weights{L1,L2,L3}.md` | Per-class companion docs (input/derived tables, per-method citations, deviations) |
 
 ### Tests and report
 
@@ -102,7 +102,7 @@ drives `[Raymer 6th ed. Table 4.1]` `AR_eq`), so the requirements file has a geo
 
 ---
 
-## 4. Input vs derived — the optimization-ready split (CLAUDE.md; reference `examples/F16A/F16GeomL2.m`)
+## 4. Input vs derived — the optimization-ready split (CLAUDE.md; reference `examples/F16A/models/disciplines/geom/F16GeomL2.m`)
 
 Counted live 2026-07-25 from the metaclass `PropertyList`:
 
@@ -277,7 +277,7 @@ both red by design.
 
 **Tier 2 — Brandt comparison report (informational, NOT pass/fail, not in `run_all_tests`).**
 
-`examples/F16A/weights_brandt_comparison.m` → `.json` + `.md`. **45 data rows in 7 sections**
+`examples/F16A/sanity_checks/weights_brandt_comparison.m` → `.json` + `.md`. **45 data rows in 7 sections**
 (1 OEW / 2 structural / 3 engine+systems / 4 engine weight / 4b the two DI'd scalars / 5 NOT-MODELED
 gap tally / 6 open-item sensitivities). Columns: `Parameter | Fidelity | Computed | Brandt | PctDiff |
 Alt | Divergence | Source | Notes`.
