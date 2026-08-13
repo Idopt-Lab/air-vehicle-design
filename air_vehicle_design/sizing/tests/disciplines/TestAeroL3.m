@@ -362,10 +362,35 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         % High-lift-device / gear deltas -- ordering/sign only
         % ================================================================== %
 
-        function testDeltaCD0SlatPositive(tc)
-            % LE slat parasite increment (Eq. 12.61 form) is positive.
+        function testDeltaCD0LefPositive(tc)
+            % LE-flap parasite increment (Eq. 12.61 form) is positive.
             g = TestAeroL3.makeAero();
-            tc.verifyGreaterThan(g.Delta_CD0_slat(g.delta_slat_TO_deg), 0);
+            tc.verifyGreaterThan(g.Delta_CD0_lef(g.delta_lef_TO_deg), 0);
+        end
+
+        function testDeltaCLmaxLefMatchesLeadingEdgeFlapRow(tc)
+        %TESTDELTACLMAXLEFMATCHESLEADINGEDGEFLAPROW  RECLASSIFICATION
+        %   REGRESSION GUARD (2026-08-11). Mirrors TestAeroL2's test of the
+        %   same intent. Delta_CLmax_lef must use Raymer Table 12.2's
+        %   'leading-edge flap' row (flat Delta_cl_max=0.3), NOT 'slat'
+        %   (0.4*c'/c) -- see F16AeroL3.m's properties block reclassification
+        %   note (Brandt's own geometry chart shows a hinged, non-translating
+        %   panel, not a device that translates on tracks).
+            g = TestAeroL3.makeAero();
+            tc.verifyEqual(g.hld_LE, "leading-edge flap", ...
+                'hld_LE must be Raymer Table 12.2''s "leading-edge flap" row.');
+            S_lef_ratio = AeroL2.compute_S_flapped_ratio(g.eta_lef_out, g.eta_lef_in, g.taper);
+            S_lef_area  = S_lef_ratio * g.S_ref;
+            expected_correct = AeroL2.compute_Delta_CL_max_values( ...
+                AeroL2.lookup_Delta_cl_max_values(g.hld_LE, 'L', NaN), ...
+                S_lef_area, g.S_ref, g.Lambda_LE_deg);
+            expected_wrong = AeroL2.compute_Delta_CL_max_values( ...
+                AeroL2.lookup_Delta_cl_max_values('slat', 'L', g.c_lef_over_c), ...
+                S_lef_area, g.S_ref, g.Lambda_LE_deg);
+            tc.verifyEqual(g.Delta_CLmax_lef('L'), expected_correct, 'RelTol', 1e-12, ...
+                'Delta_CLmax_lef must use the flat ''leading-edge flap'' row.');
+            tc.verifyNotEqual(g.Delta_CLmax_lef('L'), expected_wrong, ...
+                'Guard is meaningless if the ''leading-edge flap'' and ''slat'' rows happened to agree.');
         end
 
         function testDeltaCD0GeardownPositive(tc)
@@ -374,8 +399,8 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             tc.verifyGreaterThan(g.compute_Delta_CD0_geardown(AircraftState(0, 0.2)), 0);
         end
 
-        function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
-            % L3 adds the LE slat on top of the TE flap -> total > flap alone.
+        function testDeltaCLmaxFlapPlusLefExceedsFlapAlone(tc)
+            % L3 adds the LE flap on top of the TE flap -> total > flap alone.
             g = TestAeroL3.makeAero();
             tc.verifyGreaterThan(g.get_Delta_CLmax_TO(), g.Delta_CLmax_flap('TO'));
         end
@@ -486,7 +511,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         %   A-3 noted this open item had no guarding test, unlike every other
         %   citation gap in Aerodynamics.
         %
-        %   WHAT IS MISSING: delta_slat_TO_deg/delta_slat_L_deg = 17 in
+        %   WHAT IS MISSING: delta_lef_TO_deg/delta_lef_L_deg = 17 in
         %   F16AeroL3.m is a stand-in for the leading-edge flap's real,
         %   AoA/Mach-scheduled position near the rotation/touchdown condition
         %   CLmax_TO/CLmax_L represent. Web research (2026-07-30) pinned the
@@ -532,12 +557,13 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             tc.verifyTrue(contains(src_aero, 'NOT a control effector') || ...
                           contains(src_aero, 'not a control effector'), ...
                 'F16AeroL3.m must record that the LEF is not a control effector.');
-            % The device row this class looks up is Raymer Table 12.2's "slat",
-            % which is the right aerodynamic analogue for a stall-prevention LE
-            % device -- so the naming is deliberate, not a leftover.
+            % The device row this class looks up is Raymer Table 12.2's
+            % "leading-edge flap" (RECLASSIFIED 2026-08-11 from "slat" --
+            % Brandt's own geometry chart shows a hinged, constant-chord panel
+            % that does not translate on tracks).
             a = TestAeroL3.makeAero();
-            tc.verifyEqual(a.hld_LE, "slat", ...
-                'hld_LE must stay the Raymer Table 12.2 "slat" row -- see F16AeroL3.m.');
+            tc.verifyEqual(a.hld_LE, "leading-edge flap", ...
+                'hld_LE must be the Raymer Table 12.2 "leading-edge flap" row -- see F16AeroL3.m.');
         end
 
     end

@@ -48,6 +48,34 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         %READAEROL2JSON  The .aerodynamics block of the unified L2 JSON.
             J = jsondecode(fileread(f16a_spec_path(2))).aerodynamics;
         end
+
+        function b = brandtAero()
+            g = BrandtGeometry;  g.analyze;
+            b = BrandtAerodynamics(g);  b.analyze;
+        end
+    end
+
+    properties (Constant)
+        ALT_FT = 36000
+        M_SUB  = 0.6
+        M_SUP  = 1.6
+        CL_REF = 0.5
+    end
+
+    methods (Access = private)
+        function verifyGap(tc, label, computed, expected, relBound)
+            fprintf('\n    %s: framework=%.6f  Brandt=%.6f  gap=%+.3f %%\n', ...
+                label, computed, expected, 100*(computed - expected)/abs(expected));
+            tc.verifyEqual(computed, expected, 'RelTol', relBound, sprintf( ...
+                '%s: the framework/Brandt gap left its %.4g %% band.', label, 100*relBound));
+        end
+
+        function verifyGapAbs(tc, label, computed, expected, absBound)
+            fprintf('\n    %s: framework=%.6f  Brandt=%.6f  gap=%+.6f\n', ...
+                label, computed, expected, computed - expected);
+            tc.verifyEqual(computed, expected, 'AbsTol', absBound, sprintf( ...
+                '%s: the framework/Brandt gap left its %.4g absolute band.', label, absBound));
+        end
     end
 
     methods (Test)
@@ -432,8 +460,8 @@ classdef TestAeroL2 < matlab.unittest.TestCase
 
         function testDeltaCD0FlapOrdered(tc)
             % Larger landing flap deflection -> larger parasite increment
-            % (Raymer Eq. 12.61, linear in delta-10). The slat's OWN deflection
-            % is identical at TO and L (delta_slat_TO_deg == delta_slat_L_deg),
+            % (Raymer Eq. 12.61, linear in delta-10). The LEF's OWN deflection
+            % is identical at TO and L (delta_lef_TO_deg == delta_lef_L_deg),
             % so it adds the same constant to both sides and the ordering is
             % preserved on the flap term alone.
             a = TestAeroL2.makeAero();
@@ -441,32 +469,62 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             tc.verifyGreaterThan(a.get_Delta_CD0_L(), a.get_Delta_CD0_TO());
         end
 
-        function testDeltaCD0SlatPositive(tc)
-            % LE slat parasite increment (Eq. 12.61 form) is positive. Mirrors
-            % TestAeroL3.testDeltaCD0SlatPositive -- same method, same formula.
+        function testDeltaCD0LefPositive(tc)
+            % LE flap parasite increment (Eq. 12.61 form) is positive. Mirrors
+            % TestAeroL3.testDeltaCD0LefPositive -- same method, same formula.
             a = TestAeroL2.makeAero();
-            tc.verifyGreaterThan(a.Delta_CD0_slat(a.delta_slat_TO_deg), 0);
+            tc.verifyGreaterThan(a.Delta_CD0_lef(a.delta_lef_TO_deg), 0);
         end
 
-        function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
-            % L2 now adds the LE slat on top of the TE flaperon, same as L3 ->
+        function testDeltaCLmaxFlapPlusLefExceedsFlapAlone(tc)
+            % L2 adds the LE flap on top of the TE flaperon, same as L3 ->
             % total > flaperon alone. THE REGRESSION GUARD for this task: before
             % 2026-08-10, get_Delta_CLmax_TO() equaled Delta_CLmax_flap('TO')
-            % exactly (no slat term existed), so this assertion would have
-            % failed with equal, not greater.
+            % exactly (no LEF term existed), so this assertion would have
+            % failed with equal, not greater. It failed again, deliberately,
+            % during the 2026-08-11 LEF-removal experiment; the LEF was
+            % restored the same day and this guard restored with it.
             a = TestAeroL2.makeAero();
             tc.verifyGreaterThan(a.get_Delta_CLmax_TO(), a.Delta_CLmax_flap('TO'));
             tc.verifyGreaterThan(a.get_Delta_CLmax_L(), a.Delta_CLmax_flap('L'));
         end
 
+        function testDeltaCLmaxLefIgnoresChordRatio(tc)
+        %TESTDELTACLMAXLEFIGNORESCHORDRATIO  RECLASSIFICATION REGRESSION GUARD
+        %   (2026-08-11). Delta_CLmax_lef must use Raymer Table 12.2's
+        %   'leading-edge flap' row (flat Delta_cl_max=0.3), NOT 'slat'
+        %   (0.4*c'/c) -- see F16AeroL2.m's properties block reclassification
+        %   note (Brandt's own geometry chart shows a hinged, non-translating
+        %   panel). Since the flat row ignores its chord-ratio argument
+        %   entirely, Delta_CLmax_lef must be IDENTICAL for two aero objects
+        %   that differ ONLY in c_lef_frac -- unlike Delta_CD0_lef, which
+        %   SHOULD differ (Eq. 12.61's own cf/c term, unaffected by this
+        %   reclassification). c_lef_frac is SetAccess=private on
+        %   ControlSurfaceSizer, so two separately-constructed sizers are used
+        %   rather than mutating one in place.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            ctrl_a = ControlSurfaceSizer(0,0,0,0,0.30,0.90, ...
+                'c_flaperon_frac', 0.25, 'eta_flaperon_in', 0.35, 'eta_flaperon_out', 0.75, ...
+                'c_lef_frac', 0.1157, 'eta_lef_in', 0.0, 'eta_lef_out', 0.98, 'ht_all_moving', true);
+            ctrl_b = ControlSurfaceSizer(0,0,0,0,0.30,0.90, ...
+                'c_flaperon_frac', 0.25, 'eta_flaperon_in', 0.35, 'eta_flaperon_out', 0.75, ...
+                'c_lef_frac', 2 * 0.1157, 'eta_lef_in', 0.0, 'eta_lef_out', 0.98, 'ht_all_moving', true);
+            a = F16AeroL2(g, f16a_spec_path(2), ctrl_a);
+            b = F16AeroL2(g, f16a_spec_path(2), ctrl_b);
+            tc.verifyEqual(a.Delta_CLmax_lef('L'), b.Delta_CLmax_lef('L'), 'RelTol', 1e-12, ...
+                'Delta_CLmax_lef must not depend on c_lef_over_c (flat Table 12.2 row).');
+            tc.verifyNotEqual(a.Delta_CD0_lef(a.delta_lef_L_deg), b.Delta_CD0_lef(b.delta_lef_L_deg), ...
+                'Delta_CD0_lef SHOULD still depend on c_lef_over_c (Eq. 12.61 cf/c term).');
+        end
+
         function testCLmaxTOAndLReflectBothDevices(tc)
-            % get_CLmax_TO/L must include the slat, not just the flaperon --
+            % get_CLmax_TO/L must include the LEF, not just the flaperon --
             % checked against the clean CLmax plus each device's OWN delta,
-            % summed independently (Delta_CDi_flap/Delta_CDi_slat use different
+            % summed independently (Delta_CDi_flap/Delta_CDi_lef use different
             % k coefficients, so the deltas are never combined before use).
             a = TestAeroL2.makeAero();
-            expected_TO = a.get_CLmax([]) + a.Delta_CLmax_flap('TO') + a.Delta_CLmax_slat('TO');
-            expected_L  = a.get_CLmax([]) + a.Delta_CLmax_flap('L')  + a.Delta_CLmax_slat('L');
+            expected_TO = a.get_CLmax([]) + a.Delta_CLmax_flap('TO') + a.Delta_CLmax_lef('TO');
+            expected_L  = a.get_CLmax([]) + a.Delta_CLmax_flap('L')  + a.Delta_CLmax_lef('L');
             tc.verifyEqual(a.get_CLmax_TO(), expected_TO, 'RelTol', 1e-12);
             tc.verifyEqual(a.get_CLmax_L(),  expected_L,  'RelTol', 1e-12);
         end
@@ -558,7 +616,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
         %   gap (same values, same missing primary source), so it inherits the
         %   same standing TODO rather than starting clean.
         %
-        %   WHAT IS MISSING: delta_slat_TO_deg/delta_slat_L_deg = 17 in
+        %   WHAT IS MISSING: delta_lef_TO_deg/delta_lef_L_deg = 17 in
         %   F16AeroL2.m is a stand-in for the leading-edge flap's real,
         %   AoA/Mach-scheduled position near the rotation/touchdown condition
         %   CLmax_TO/CLmax_L represent -- not pinned to a primary source
@@ -580,11 +638,11 @@ classdef TestAeroL2 < matlab.unittest.TestCase
 
         function testLEFIsNotAControlEffector(tc)
         %TESTLEFISNOTACONTROLEFFECTOR  Mirrors TestAeroL3's test of the same
-        %   name. The F-16's leading-edge flap is a slat-like AUTOMATIC
-        %   stall-prevention / manoeuvre device, scheduled by the flight
-        %   control system on angle of attack and dynamic-to-static pressure
-        %   ratio to keep the wing flow attached. It does NOT respond to
-        %   pitch, roll or yaw commands (user clarification, 2026-08-10). The
+        %   name. The F-16's leading-edge flap is an AUTOMATIC stall-
+        %   prevention / manoeuvre device, scheduled by the flight control
+        %   system on angle of attack and dynamic-to-static pressure ratio to
+        %   keep the wing flow attached. It does NOT respond to pitch, roll or
+        %   yaw commands (user clarification, 2026-08-10/2026-08-11). The
         %   three actual effectors are the all-moving stabilator, the
         %   flaperons and the rudder -- unchanged by adding this device's LIFT
         %   AND DRAG contribution to L2's CLmax_TO/CLmax_L/CD0_TO/CD0_L.
@@ -592,8 +650,179 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             tc.verifyTrue(contains(src, 'NOT A CONTROL EFFECTOR', 'IgnoreCase', true), ...
                 'F16AeroL2.m must record why the LEF was added and what it is.');
             a = TestAeroL2.makeAero();
-            tc.verifyEqual(a.hld_LE, "slat", ...
-                'hld_LE must be the Raymer Table 12.2 "slat" row -- see F16AeroL2.m.');
+            tc.verifyEqual(a.hld_LE, "leading-edge flap", ...
+                ['hld_LE must be the Raymer Table 12.2 "leading-edge flap" row (RECLASSIFIED ' ...
+                 '2026-08-11 from "slat" -- Brandt''s own geometry chart shows a hinged, ' ...
+                 'non-translating panel) -- see F16AeroL2.m.']);
+        end
+
+        % ================================================================== %
+        % BRANDT GAP TESTS -- every L2 aero value that Brandt also computes.
+        %
+        % Each test reads the framework value, reads Brandt's own value from a
+        % live BrandtAerodynamics object, and bounds the GAP between them. The
+        % two sides use different equations, so a gap is expected. These tests
+        % measure that gap and hold it still. They do NOT assert that the
+        % framework reproduces Brandt.
+        %
+        % HOW A BOUND IS SET: it is the gap as measured on 2026-08-12, rounded
+        % up to the next step in {1,2,3,5,7,10,15,20,25,30,35,40,45,50,55,60} %.
+        % The bound is therefore a CHARACTERIZATION, not an accuracy
+        % requirement. Nothing here says the gap is acceptable.
+        %
+        % IF ONE GOES RED: an input or an equation moved on one of the two
+        % sides. Find which side, then decide. Never widen the bound to make it
+        % green, and never change an equation to close a gap.
+        %
+        % TWO CD0 BASES, DO NOT MIX THEM: Brandt's CDmin_sub is skin friction
+        % only, which is the basis the framework CD0 uses. His mission CD0 also
+        % holds form, interference and wave drag. Tests against the mission
+        % basis carry a "mission basis" label and a much wider band, because
+        % the gap is mostly the missing terms and not a disagreement.
+        %
+        % Condition: 36,000 ft, M = 0.6 subsonic and M = 1.6 supersonic.
+        % ================================================================== %
+
+        function testBrandtGapCD0Subsonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB)).CD0;
+            tc.verifyGap('CD0 subsonic', computed, b.CDmin_sub, 0.05);
+        end
+
+        function testBrandtGapCD0SubsonicMissionBasis(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB)).CD0;
+            tc.verifyGap('CD0 subsonic, mission basis', computed, b.CD0, 0.40);
+        end
+
+        function testBrandtGapCD0Supersonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUP)).CD0;
+            tc.verifyGap('CD0 supersonic', computed, b.run(tc.M_SUP).CD0, 0.10);
+        end
+
+        function testBrandtGapCD0Takeoff(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB)).CD0 ...
+                     + a.get_Delta_CD0_TO();
+            tc.verifyGap('CD0 takeoff', computed, b.CD0_takeoff, 0.07);
+        end
+
+        function testBrandtGapK1Subsonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB)).K1;
+            tc.verifyGap('K1 subsonic', computed, b.run(tc.M_SUB).K1, 0.01);
+        end
+
+        function testBrandtGapK1Supersonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUP)).K1;
+            tc.verifyGap('K1 supersonic', computed, b.run(tc.M_SUP).K1, 0.10);
+        end
+
+        function testBrandtGapK2Subsonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB)).K2;
+            tc.verifyGap('K2 subsonic', computed, b.run(tc.M_SUB).K2, 0.30);
+        end
+
+        function testBrandtGapK2Supersonic(tc)
+            % Both sides drop the camber term above M = 1, so both are 0.
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUP)).K2;
+            tc.verifyGapAbs('K2 supersonic', computed, b.run(tc.M_SUP).K2, 1e-12);
+        end
+
+        function testBrandtGapOswaldOfficial(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            tc.verifyGap('Oswald e, Raymer Eq. 12.49', a.get_e_osw(), b.e0, 0.01);
+        end
+
+        function testBrandtGapOswaldBrandtAlternate(tc)
+            % Positive control: Brandt's own formula on Brandt's own inputs, so
+            % this must reproduce his e0 to machine precision.
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            tc.verifyGap('Oswald e, Brandt alternate', a.get_e_osw_brandt(), b.e0, 1e-6);
+        end
+
+        function testBrandtGapCLmaxClean(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            tc.verifyGap('CLmax clean', a.get_CLmax([]), b.CLmax_clean, 0.10);
+        end
+
+        function testBrandtGapCLmaxTakeoff(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            tc.verifyGap('CLmax takeoff', a.get_CLmax_TO(), b.CLmax_takeoff, 0.07);
+        end
+
+        function testBrandtGapCLmaxLanding(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            tc.verifyGap('CLmax landing', a.get_CLmax_L(), b.CLmax_landing, 0.15);
+        end
+
+        function testBrandtGapCLalpha(tc)
+            % Brandt stores the WING slope per degree. get_CL_alpha is also a
+            % finite-wing method, so his whole-aircraft A32 is the wrong pair.
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            tc.verifyGap('CL_alpha at M=0 [1/rad]', a.get_CL_alpha(0), ...
+                b.CL_alpha_wing * 180/pi, 0.03);
+        end
+
+        function testBrandtGapCDiSubsonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB)).K1 * tc.CL_REF^2;
+            tc.verifyGap('CDi subsonic at CL=0.5', computed, ...
+                b.run(tc.M_SUB).K1 * tc.CL_REF^2, 0.01);
+        end
+
+        function testBrandtGapCDiSupersonic(tc)
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            computed = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUP)).K1 * tc.CL_REF^2;
+            tc.verifyGap('CDi supersonic at CL=0.5', computed, ...
+                b.run(tc.M_SUP).K1 * tc.CL_REF^2, 0.10);
+        end
+
+        function testBrandtGapTotalCDSubsonic(tc)
+            % Brandt's drag_polar uses his MISSION CD0, so this gap is mostly
+            % the CD0 basis difference and not the polar shape.
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            p = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB));
+            computed = p.CD0 + p.K1*tc.CL_REF^2 + p.K2*tc.CL_REF;
+            tc.verifyGap('CD at CL=0.5, mission basis', computed, ...
+                b.drag_polar(tc.CL_REF), 0.20);
+        end
+
+        function testBrandtGapLDmax(tc)
+            % Same mission-basis CD0 caveat as testBrandtGapTotalCDSubsonic.
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            p = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB));
+            tc.verifyGap('LD_max, mission basis', 0.5/sqrt(p.CD0*p.K1), b.LD_max, 0.25);
+        end
+
+        function testBrandtGapCLopt(tc)
+            % Same mission-basis CD0 caveat as testBrandtGapTotalCDSubsonic.
+            a = TestAeroL2.makeAero();
+            b = TestAeroL2.brandtAero();
+            p = a.drag_polar(AircraftState(tc.ALT_FT, tc.M_SUB));
+            tc.verifyGap('CL_opt, mission basis', sqrt(p.CD0/p.K1), b.CL_opt, 0.20);
         end
 
     end

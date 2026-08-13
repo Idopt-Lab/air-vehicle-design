@@ -45,7 +45,10 @@ classdef TestControlSurfaceSizer < matlab.unittest.TestCase
     properties (Constant)
         % F-16 baseline, for the hand-computed values documented above.
         F16_S_FLAPERON = 345075/12275     % ft^2  = 28.112016293... (0.25 * ratio(0.75,0.35,0.2275) * 300)
-        F16_S_LEF      = 54814095/1227500 % ft^2  = 44.655067210... (0.15 * ratio(0.98,0.00,0.2275) * 300)
+        F16_S_LEF      = 34.443941841140528 % ft^2 (0.1157 * ratio(0.98,0.00,0.2275) * 300). UPDATED
+                          % 2026-08-11: c_lef_frac corrected from an uncited 0.15 to a MEASURED 0.1157
+                          % (cf=1.31 ft / cbar_wing=11.32 ft, Brandt Main! Chart 17 "LE Flap" series --
+                          % see f16a_control_surfaces.m). Was 54814095/1227500 = 44.655067210...
         F16_S_STAB     = 108.0                % ft^2  = S_ht (all-moving)
         F16_S_RUD      = 16.2                 % ft^2  0.30 * 0.90 * 60
     end

@@ -191,6 +191,34 @@ classdef AeroL2
         end
 
         function val = lookup_Delta_cl_max_values(liftdevice, config, cp_c)
+        %LOOKUP_DELTA_CL_MAX_VALUES  [Raymer 6th ed. Table 12.2.]
+        %
+        %   cp_c IS THE EXTENDED-CHORD RATIO, NOT A CHORD FRACTION (bug found
+        %   2026-08-11, VnV/BrandtF16A/todo.md): Raymer's caption defines
+        %   cp_c = c'/c as the ratio of the chord WITH the device deployed to
+        %   the chord WITHOUT it -- c' is the extended chord length (user
+        %   confirmation, 2026-08-11), c is the retracted chord. For a device
+        %   that mostly rotates rather than translates (a slat), cp_c is close
+        %   to 1.0, NOT the device's own chord as a fraction of the wing chord
+        %   (that quantity is cf/c -- a different, correctly-named parameter
+        %   used by Eq. 12.61/12.62's F_flap/k_f drag terms, e.g. F16AeroL2's
+        %   c_flap_over_c/c_slat_over_c). Cross-checked against DATCOM 1978
+        %   Sec. 6.1.1.3's equivalent formula (reproduced with the identical
+        %   "ratio of the chord with and without deflection" definition in
+        %   Scholz, "Aircraft Design" course notes, Ch.8 Eq.(8.5)/p.8-13,
+        %   HAW Hamburg) -- both sources use c'/c for the same physical
+        %   quantity. Only 'fowler'/'double slotted'/'triple slotted'/'slat'
+        %   multiply by cp_c (devices that meaningfully extend chord); the
+        %   'leading-edge flap'/'kruger flap' row does NOT (flat base=0.3),
+        %   because that device rotates on a hinge rather than translating --
+        %   cp_c is ignored for that branch and callers may pass NaN.
+        %   F16AeroL2/L3's Delta_CLmax_lef briefly (2026-08-11) passed a chord
+        %   FRACTION here under the WRONG row ('slat', via the LEF's own
+        %   cf/c = 0.15), understating Delta_cl_max ~6.7x, before being
+        %   RECLASSIFIED to 'leading-edge flap' the same day once Brandt's own
+        %   geometry chart showed the device to be a hinged, non-translating
+        %   panel (VnV/BrandtF16A/todo.md 2026-08-11) -- so no cp_c value was
+        %   ultimately needed for the F-16's LEF at all.
             switch liftdevice
                 case {'plain','split'},          base = 0.9;
                 case 'slotted',                  base = 1.3;
