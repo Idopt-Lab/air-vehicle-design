@@ -40,7 +40,7 @@ geom = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
 miss = MissionAnalysisL1.from_requirements(aero, prop, geom, f16a_requirements_path(), "cap");
 
 con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
-    F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
+    F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_SIZING);
 
 loop = SizingLoopL1(aero, prop, wts, geom, miss, con);
 result = loop.run(W_TO_guess);

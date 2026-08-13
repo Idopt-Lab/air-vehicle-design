@@ -74,7 +74,7 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
     tail = F16TailL1();
 
     con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
-        F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
+        F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_SIZING);
 
     loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
     result = loop.run(W_TO_guess, T_SL_guess);

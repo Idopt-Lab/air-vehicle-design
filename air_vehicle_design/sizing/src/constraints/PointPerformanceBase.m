@@ -41,6 +41,31 @@ classdef (Abstract) PointPerformanceBase < handle
         %   there]. Shared here so every constraint condition sweeps the same
         %   W/S points Brandt used, for diagram/verification parity.
         WS_RANGE_BRANDT = 20:7:160
+
+        %WS_RANGE_SIZING  Wing-loading sweep the DESIGN STUDIES optimize over:
+        %   the same 20-160 psf range as WS_RANGE_BRANDT above, sampled 50%
+        %   finer (20 intervals -> 30 intervals, so 21 points -> 31 points,
+        %   step 7 -> 14/3 = 4.667 psf). Built with linspace so both end points
+        %   land exactly on 20 and 160.
+        %
+        %   WHY THIS IS A SEPARATE CONSTANT, not a wider WS_RANGE_BRANDT.
+        %   WS_RANGE_BRANDT is a CITED artifact, not a free parameter: it is the
+        %   exact 21-point sweep Brandt's Consts sheet tabulates, and
+        %   TestMasterEquationConstraint/TestTakeoffConstraint compare
+        %   required_TW(WS_RANGE_BRANDT) element-by-element against Brandt's own
+        %   21-row columns. Resampling it would break that parity check AND make
+        %   its citation false. So verification keeps Brandt's points and sizing
+        %   gets its own sweep.
+        %
+        %   THE RANGE IS CITED, THE RESOLUTION IS NOT. 20-160 psf comes from
+        %   Brandt. The 50% refinement is a NUMERICAL-METHOD choice with no
+        %   textbook source: ConstraintAnalysis.optimal_point does a plain grid
+        %   argmin with no interpolation, so the reported optimum can only ever
+        %   be a sample point, and a coarse step quantizes it. A finer grid
+        %   lowers that quantization error. It does not change any physics, and
+        %   it cannot resolve two designs whose governing bounds sit closer
+        %   together than one step.
+        WS_RANGE_SIZING = linspace(20, 160, 31)
     end
 
     methods (Abstract)

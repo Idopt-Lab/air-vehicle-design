@@ -23,6 +23,6 @@ geom = F16GeomL3(f16a_spec_path(3), prop);
 aero = F16AeroL3(geom, f16a_spec_path(3), f16a_control_surfaces());
 
 ca = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
-    F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
+    F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_SIZING);
 ca.plot_diagram();
 ca.report();

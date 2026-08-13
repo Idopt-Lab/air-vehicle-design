@@ -26,10 +26,10 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %   TAIL SIZING (2026-08-03 absorption into Geometry REVERTED, 2026-08-05):
 %   tail sizing and control-surface sizing are separate, dependency-injected
 %   objects again -- F16TailL1() (Raymer 7th ed. Table 6.4 volume-
-%   coefficient method, 0.315/0.063, tail arm 0.475*L_fus; hardcoded, no
+%   coefficient method, 0.315/0.063; hardcoded, no
 %   arguments) and ControlSurfaceSizer(...). SizingLoopL2's run() body calls
-%   tail.size(S_ref, b_wing, cbar_wing, L_fus) every iteration (reading
-%   those four scalars live off geom) and writes the result into
+%   tail.size(S_ref, b_wing, cbar_wing, L_HT, L_VT) every iteration (reading
+%   those five scalars live off geom) and writes the result into
 %   geom.S_ht/S_vt. F16TailL1 is the SAME object shared, unmodified, across
 %   both this study and design_study_03_L3.m -- see SizingLoopL2.m's header
 %   for why only an L1-shaped tail object is ever wired into production.
@@ -62,10 +62,13 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
 %       about 90% of the tail span"].
     arguments
          % TODO (7/31/2026): These should not be hardcoded.
+         % 8/13/2026: These values appear to not be hardcoded, and are
+         % overwritten by the function arguments.
         W_TO_guess (1,1) double {mustBePositive} = 30000
         T_SL_guess (1,1) double {mustBePositive} = 20000
     end
 
+    % Initialize some objects of each discipline class.
     prop = F16PropL2(f16a_spec_path(2));
     geom = F16GeomL2(f16a_spec_path(2), prop);
     % ctrl BEFORE aero: F16AeroL2 takes it by DI now (the flaperon's chord/span
@@ -78,10 +81,10 @@ function [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess)
     tail = F16TailL1();
 
     con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
-        F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);
+        F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_SIZING);
 
-    loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl);
-    result = loop.run(W_TO_guess, T_SL_guess);
+    loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail, ctrl); % Initializes "loop" object of class "SizingLoopL2."
+    result = loop.run(W_TO_guess, T_SL_guess); % Runs the loop.
 
     objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
         'miss', miss, 'con', con);
