@@ -305,8 +305,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   GeometryModelL2 does not -- a genuine, pre-existing latent gap
         %   this loosening exposes rather than introduces. So Weights=L3 +
         %   Geometry=L2 must fail at RUNTIME (the first geometry-dependent
-        %   read, inside OEW), not at construction. See
-        %   examples/F16A/mixed_fidelity_tests/COMPATIBILITY_NOTES.md.
+        %   read, inside OEW), not at construction.
             prop = TestWeightsL3.makeProp();
             g2   = F16GeomL2(f16a_spec_path(2), prop);
             g1   = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());

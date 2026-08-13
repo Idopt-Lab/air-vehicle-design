@@ -335,7 +335,7 @@ Geometry is removed again:
   `obj.tail.size(...)`/`obj.ctrl.size(obj.geom)` and writes the results into `obj.geom.S_ht`/`S_vt`/
   `S_ail`/`S_elev`/`S_rud`, instead of calling `obj.geom.size_tail()`/`size_control_surfaces()`
   directly. Call sites updated: `FixedGeomStub.m`, `TestSizingLoopL2.m`, `design_study_02_L2.m`,
-  `design_study_03_L3.m`, `mixed_fidelity_tests/build_fidelity_combo.m`.
+  `design_study_03_L3.m`.
 
 Full rationale, citations, and discrepancy record: `src/disciplines/tail_sizing/TailSizing_scribe_plan.md`
 (the historical record kept through both the 2026-08-03 absorption and this reversal), `VnV/BrandtF16A/todo.md`
