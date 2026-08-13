@@ -153,7 +153,7 @@ grid on; ylabel('L/D'); title('F-16A Level 1 L/D by Mission Segment (from the mi
 %% Internal fuel-volume check
 % NOT MODELED AT L1: F16WeightsL1 carries no fuel-tank-volume inputs (no
 % V_t/V_i/V_p) -- those only exist on F16WeightsL3 (see
-% F16A_Level3_SizingReport.m). L1's weight model is a single empty-weight
+% run_sizing_report_L3.m). L1's weight model is a single empty-weight
 % regression with no internal-geometry/volume representation at all.
 fprintf('\nInternal fuel-volume check: not modeled at L1 (no V_t/V_i/V_p on F16WeightsL1; see F16WeightsL3 at L3).\n');
 

@@ -159,7 +159,7 @@ grid on; ylabel('L/D'); title('F-16A Level 2 L/D by Mission Segment');
 %% Internal fuel-volume check
 % NOT MODELED AT L2: F16WeightsL2 carries no fuel-tank-volume inputs (no
 % V_t/V_i/V_p) -- those only exist on F16WeightsL3 (see
-% F16A_Level3_SizingReport.m's "Internal fuel-volume check" section). L2's
+% run_sizing_report_L3.m's "Internal fuel-volume check" section). L2's
 % weight model uses a flat 1.3x installed-engine factor and no fuel-system
 % volume equation (Raymer Eq. 15.9, V_t-dependent, is L3-only).
 fprintf('\nInternal fuel-volume check: not modeled at L2 (no V_t/V_i/V_p on F16WeightsL2; see F16WeightsL3 at L3).\n');
