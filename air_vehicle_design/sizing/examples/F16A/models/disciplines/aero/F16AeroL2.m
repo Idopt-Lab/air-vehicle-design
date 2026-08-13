@@ -245,7 +245,7 @@ classdef F16AeroL2 < AeroModelL2
             CLmax = AeroL2.get_CLmax(obj);
         end
 
-        % ---- Auxiliary accessors (used by fidelity_comparison, etc.) ------ %
+        % ---- Auxiliary accessors (used by the comparison reports, etc.) ------ %
         function e = get_e_osw(obj)
         %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49).
             e = AeroL2.get_e_osw(obj);
