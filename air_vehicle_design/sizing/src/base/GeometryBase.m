@@ -66,6 +66,105 @@ end
             b = sqrt(AR * S_ref);
         end
 
+        % ------------------------------------------------------------------ %
+        % MAC STATION (added 2026-08-11 with the tail-arm definition fix).
+        %
+        % These four statics build the x-station of a lifting surface's mean
+        % aerodynamic chord and its quarter-chord point -- the reference
+        % station BOTH tail-volume-coefficient methods measure the tail moment
+        % arm between:
+        %   [Raymer 6th ed. Sec. 6.5.2, p.158]  "Moment arm L is approximated
+        %     as tail-quarter-chord to wing-quarter-chord distance."
+        %   [Nicolai & Carichner, Eqs. (11.1)/(11.2), pp.286/289]  l_VT/l_HT =
+        %     distance from the initial c.g. estimate to the quarter-chord of
+        %     the tail mac (Fig. 11.1, p.285).
+        % Before this addition no x_MAC/y_MAC quantity existed outside the
+        % stability-and-control toolbox, which is why tail sizing had to fall
+        % back on Raymer's pre-layout fuselage-length fraction.
+        % ------------------------------------------------------------------ %
+
+        function y = compute_y_mac(b, lambda)
+        %COMPUTE_Y_MAC  Spanwise station of the MAC measured from the
+        %   centreline [ft], MIRRORED surfaces (wing, conventional HT):
+        %     y_MAC = (b/6) * (1 + 2*lambda) / (1 + lambda)
+        %   b is the FULL span, not the semispan.
+        %
+        %   Use compute_y_mac_panel for a single-panel surface (vertical
+        %   tail); passing a single panel's span here halves the answer.
+        %
+        %   Standard linearly-tapered-planform identity; no textbook equation
+        %   number could be pinned against the references in this repo -- the
+        %   same citation status convert_sweep already carries, and the same
+        %   formula the pre-existing SandCL3.y_MAC_span carries (that method
+        %   now delegates here rather than duplicating it). It reproduces
+        %   VnV/BrandtF16A/readme_bsc.md's own y_MAC term and
+        %   BrandtBalanceStabControl.surfaceGeom_'s
+        %   y_MAC = (semispan/3)*(1+2*lambda)/(1+lambda) exactly.
+        %
+        %   TODO (citation gap, 2026-08-11): this identity sits with Raymer's
+        %   Eqs. 7.6-7.8, which this file already cites by number, but
+        %   docs/reference_extracts/ holds NO Raymer Chapter-7 extract, so the
+        %   equation number cannot be verified here and is deliberately not
+        %   guessed. Pin it when a Ch. 7 extract exists.
+            arguments
+                b      (1,1) double {mustBePositive}
+                lambda (1,1) double {mustBeNonnegative}
+            end
+            y = (b/6) * (1 + 2*lambda) / (1 + lambda);
+        end
+
+        function y = compute_y_mac_panel(b_panel, lambda)
+        %COMPUTE_Y_MAC_PANEL  Spanwise station of the MAC measured from the
+        %   ROOT [ft], SINGLE-PANEL surfaces (vertical tail):
+        %     y_MAC = (b_panel/3) * (1 + 2*lambda) / (1 + lambda)
+        %
+        %   Same identity as compute_y_mac with twice the coefficient, because
+        %   root->tip spans the full b_panel rather than a semispan -- the same
+        %   mirrored/panel pairing convert_sweep/convert_sweep_panel already
+        %   uses. This is literally the form
+        %   BrandtBalanceStabControl.surfaceGeom_ applies to every surface,
+        %   because that method is fed a semispan for mirrored surfaces and a
+        %   panel span for the vertical tail. Citation status as compute_y_mac.
+            arguments
+                b_panel (1,1) double {mustBePositive}
+                lambda  (1,1) double {mustBeNonnegative}
+            end
+            y = (b_panel/3) * (1 + 2*lambda) / (1 + lambda);
+        end
+
+        function x = compute_x_mac_le(x_apex, y_mac, LE_sweep_deg)
+        %COMPUTE_X_MAC_LE  x-station of the LEADING EDGE of a lifting
+        %   surface's MAC [ft], from the surface's own apex (root-chord LE)
+        %   station:
+        %     x_MAC_LE = x_apex + y_MAC * tan(Lambda_LE)
+        %   [VnV/BrandtF16A/readme_bsc.md, "MAC station and aerodynamic
+        %   center": x_MAC = x_LE,r + y_MAC*tan(Lambda_LE); implemented in
+        %   BrandtBalanceStabControl.surfaceGeom_]. Standard swept-planform
+        %   identity, same citation status as compute_y_mac.
+            arguments
+                x_apex       (1,1) double {mustBeReal}
+                y_mac        (1,1) double {mustBeReal}
+                LE_sweep_deg (1,1) double {mustBeReal}
+            end
+            x = x_apex + y_mac * tand(LE_sweep_deg);
+        end
+
+        function x = compute_x_mac_quarter_chord(x_mac_le, cbar)
+        %COMPUTE_X_MAC_QUARTER_CHORD  x-station of the QUARTER-CHORD point of
+        %   a lifting surface's MAC [ft]:
+        %     x_c/4 = x_MAC_LE + 0.25 * cbar
+        %   This is the station Raymer's tail moment arm is measured between
+        %   [Raymer 6th ed. Sec. 6.5.2, p.158] and the station Nicolai's tail
+        %   moment arm ends at [Nicolai & Carichner Eqs. (11.1)/(11.2)]. The
+        %   0.25 is definitional (a quarter chord), not a fitted coefficient.
+        %   [VnV/BrandtF16A/readme_bsc.md: x_ac = x_MAC + 0.25*MAC]
+            arguments
+                x_mac_le (1,1) double {mustBeReal}
+                cbar     (1,1) double {mustBePositive}
+            end
+            x = x_mac_le + 0.25 * cbar;
+        end
+
         function Lambda_x_deg = convert_sweep(Lambda_LE_deg, AR, lambda, x)
         %CONVERT_SWEEP  LE sweep -> sweep at chord fraction x [deg], MIRRORED
         %   surfaces (wing, conventional HT).

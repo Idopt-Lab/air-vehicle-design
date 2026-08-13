@@ -140,6 +140,7 @@ classdef F16GeomL2 < GeometryModelL2
         lambda_wing    = 0.2275    % —     [Brandt Main!B20 'Taper Ratio'; citation corrected 2026-07-25 from B21]
         AR_wing        = 3.0       % —     [Brandt Main!B19]
         LE_sweep_wing  = 40        % deg   [Brandt Main!B21 'Sweep, deg'; citation corrected 2026-07-25 from B20]
+        x_apex_wing    = 17.786    % ft    wing apex (root LE) x-station aft of the nose [Brandt Main!B23 'X Location'] — ADDED 2026-08-11 for the tail moment arm; the SAME cell and value F16GeomL3 already used for its area-ruled Amax. PRECISION NOTE (carried from F16GeomL3): a live Main-tab read logs 17.7858, 0.0011% below this; 17.786 is the scoped value and must not be "corrected" without a decision.
 
         % ── Horizontal tail (all-moving stabilator; biconvex) ───────────── %
         S_ht           = 108.0     % ft^2  full reference planform area [Brandt Main!C18]
@@ -148,6 +149,7 @@ classdef F16GeomL2 < GeometryModelL2
         LE_sweep_ht    = 40        % deg   [Brandt Main!C21 'Sweep, deg'; citation corrected 2026-07-25 from C20]
         tc_r_ht        = 0.060     % —     [TO Sec I; biconvex root ~6%] — NOT a Brandt value, see class header. Now the SINGLE t/c basis: Brandt's uniform HT t/c [Main!C22 'NACA 4-digit' = '0004' -> 0.04; citation corrected from C24] is no longer an input, and the Dependent tc_ht is this pair's mean.
         tc_t_ht        = 0.035     % —     [TO Sec I; biconvex tip ~3.5%]
+        x_le_ht        = 36.0      % ft    HT root LE x-station aft of the nose [Brandt Main!C23 'X Location', live-read 2026-07-25] — ADDED 2026-08-11 for the tail moment arm; same cell/value as F16GeomL3
 
         % ── Vertical tail (biconvex) ─────────────────────────────────────── %
         S_vt           = 60.0      % ft^2  full reference planform area [Brandt Main!H18]
@@ -156,6 +158,7 @@ classdef F16GeomL2 < GeometryModelL2
         LE_sweep_vt    = 40        % deg   [Brandt Main!H21 'Sweep, deg'; citation corrected 2026-07-25 from H20]
         tc_r_vt        = 0.053     % —     [TO Sec I; biconvex root ~5.3%] — NOT a Brandt value, see class header. Now the SINGLE t/c basis: Brandt's uniform VT t/c [Main!H22 'NACA 4-digit' = '0004' -> 0.04; citation corrected from H24] is no longer an input, and the Dependent tc_vt is this pair's mean.
         tc_t_vt        = 0.030     % —     [TO Sec I; biconvex tip ~3.0%]
+        x_le_vt        = 36.0      % ft    VT root LE x-station aft of the nose [Brandt Main!H23 'X Location'] — ADDED 2026-08-11 for the tail moment arm; same cell/value as F16GeomL3
 
         % ── Fuselage (equivalent cylindrical midsection) ─────────────────── %
         L_fus          = 46.5      % ft    [Brandt Main!B32]
@@ -259,6 +262,21 @@ classdef F16GeomL2 < GeometryModelL2
         T_AB_SLS_lb    % lbf   = prop.T_SL (INJECTED, no longer a stored copy) [Brandt Engn(s)!T_AB_SLS = Main!D29 = 23770]
         D_inlet        % ft    GeometryBase.compute_nacelle_diameter(T_AB_SLS_lb) = sqrt(T/1900) [Brandt Engn(s) tab, D_nac; readme_geom.md Sec. 3]
         D_exit         % ft    = D_inlet (Brandt models the nacelle as a constant-diameter cylinder)
+
+        % ── MAC stations and tail moment arms (ADDED 2026-08-11) ──────────── %
+        %   The layout quantities tail sizing needs. All four stations are
+        %   measured aft of the nose, in the same datum as x_apex_wing/x_le_ht/
+        %   x_le_vt. Every one recomputes live, so a mutated S_ref (which moves
+        %   the wing MAC and therefore its quarter-chord station) or a mutated
+        %   S_ht/S_vt (which moves the tail mac stations) changes the arm on
+        %   the next read -- that is the point: the arm genuinely depends on
+        %   how big the surfaces are.
+        x_mac_le_wing  % ft    x of the wing MAC leading edge
+        x_c4_wing      % ft    x of the wing MAC quarter-chord = 25.5891 at the JSON baseline (Brandt's own live S&C(2) sheet gives xacW = 25.589)
+        x_c4_ht        % ft    x of the HT mac quarter-chord
+        x_c4_vt        % ft    x of the VT mac quarter-chord
+        L_HT           % ft    HT moment arm = x_c4_ht - x_c4_wing [Raymer 6th ed. Sec. 6.5.2, p.158]
+        L_VT           % ft    VT moment arm = x_c4_vt - x_c4_wing [same]
     end
 
     methods
@@ -289,6 +307,7 @@ classdef F16GeomL2 < GeometryModelL2
             obj.lambda_wing   = J.wing.taper;        % [Brandt Main!B20]
             obj.LE_sweep_wing = J.wing.sweep_LE_deg; % [Brandt Main!B21]
             obj.tc_wing       = J.wing.tc_ratio;     % [Brandt Main!B22, NACA 4-digit 1404]
+            obj.x_apex_wing   = J.wing.x_apex_ft;    % [Brandt Main!B23 'X Location']
 
             % ---- horizontal tail (all-moving stabilator / "pitch_ctrl") -- %
             %      No tc_ratio read: the T.O. root/tip split is the single t/c
@@ -299,6 +318,7 @@ classdef F16GeomL2 < GeometryModelL2
             obj.LE_sweep_ht = J.horizontal_tail.sweep_LE_deg;  % [Brandt Main!C21]
             obj.tc_r_ht     = J.horizontal_tail.tc_root;   % [TO Sec I; biconvex root]
             obj.tc_t_ht     = J.horizontal_tail.tc_tip;    % [TO Sec I; biconvex tip]
+            obj.x_le_ht     = J.horizontal_tail.x_le_ft;   % [Brandt Main!C23 'X Location']
 
             % ---- vertical tail ------------------------------------------- %
             obj.S_vt        = J.vertical_tail.S_ft2;           % [Brandt Main!H18]
@@ -307,6 +327,7 @@ classdef F16GeomL2 < GeometryModelL2
             obj.LE_sweep_vt = J.vertical_tail.sweep_LE_deg;    % [Brandt Main!H21]
             obj.tc_r_vt     = J.vertical_tail.tc_root;
             obj.tc_t_vt     = J.vertical_tail.tc_tip;
+            obj.x_le_vt     = J.vertical_tail.x_le_ft;     % [Brandt Main!H23 'X Location']
 
             % ---- fuselage / whole aircraft ------------------------------- %
             obj.L_fus          = J.fuselage.length_ft;     % [Brandt Main!B32]
@@ -524,6 +545,43 @@ classdef F16GeomL2 < GeometryModelL2
         end
         function v = get.D_exit(obj)
             v = obj.D_inlet;   % constant-diameter cylinder nacelle -> frustum degenerates to pi*D*L
+        end
+
+        % ---- MAC stations and tail moment arms (ADDED 2026-08-11) --------- %
+        %  Formulas + citations live in GeometryBase.compute_y_mac /
+        %  compute_y_mac_panel / compute_x_mac_le / compute_x_mac_quarter_chord
+        %  and in TailL1.compute_tail_arm_quarter_chord. Nothing is duplicated
+        %  here; these getters only compose them with this aircraft's inputs.
+        function v = get.x_mac_le_wing(obj)
+            y = GeometryBase.compute_y_mac(obj.b_wing, obj.lambda_wing);   % MIRRORED surface
+            v = GeometryBase.compute_x_mac_le(obj.x_apex_wing, y, obj.LE_sweep_wing);
+        end
+        function v = get.x_c4_wing(obj)
+            v = GeometryBase.compute_x_mac_quarter_chord(obj.x_mac_le_wing, obj.cbar_wing);
+        end
+        function v = get.x_c4_ht(obj)
+            % HT is a MIRRORED surface, so b_ht is a FULL span and the
+            % centreline form applies -- same call shape as the wing.
+            cbar_ht_local = GeometryBase.compute_mac(obj.c_root_ht, obj.lambda_ht);
+            y   = GeometryBase.compute_y_mac(obj.b_ht, obj.lambda_ht);
+            xle = GeometryBase.compute_x_mac_le(obj.x_le_ht, y, obj.LE_sweep_ht);
+            v   = GeometryBase.compute_x_mac_quarter_chord(xle, cbar_ht_local);
+        end
+        function v = get.x_c4_vt(obj)
+            % VT is a SINGLE PANEL: b_vt is the root-to-tip span, not a
+            % semispan, so the panel form is required (the mirrored form would
+            % halve y_MAC) -- the same mirrored/panel distinction
+            % QC_sweep_vt already makes with convert_sweep_panel.
+            cbar_vt_local = GeometryBase.compute_mac(obj.c_root_vt, obj.lambda_vt);
+            y   = GeometryBase.compute_y_mac_panel(obj.b_vt, obj.lambda_vt);
+            xle = GeometryBase.compute_x_mac_le(obj.x_le_vt, y, obj.LE_sweep_vt);
+            v   = GeometryBase.compute_x_mac_quarter_chord(xle, cbar_vt_local);
+        end
+        function v = get.L_HT(obj)
+            v = TailL1.compute_tail_arm_quarter_chord(obj.x_c4_ht, obj.x_c4_wing);
+        end
+        function v = get.L_VT(obj)
+            v = TailL1.compute_tail_arm_quarter_chord(obj.x_c4_vt, obj.x_c4_wing);
         end
 
         % ---- Total -------------------------------------------------------- %

@@ -251,7 +251,17 @@ classdef F16GeomL3 < GeometryModelL3
         n_engines      = 1         % --    number of engines [Brandt Main!B28, live-confirmed inside the Geom!H47 and Geom!AE31 formulas]. Lives in GEOMETRY only because the Amax flow-through deduction needs it and no propulsion class exposes an engine count today (F16PropL2 exposes engine_type, T_SL, T_SL_wet, T_SL_mil, T_t4_max_F, TSFC_install_factor, TR -- no count). If a propulsion-side n_engines is added it should move to .propulsion and arrive by DI, exactly as T_AB_SLS_lb already does. todo §16.1 row 5
 
         % -- Configuration --------------------------------------------------- %
-        L_t            = 22.0      % ft    tail arm, wing 1/4-MAC -> HT 1/4-MAC [estimate; verify TO 1F-16A-1] -- derivable only if component apex-x inputs are added (Brandt Main row 23 X-locations); todo 2026-07-24 GeomL3 §6
+        % L_t MOVED 2026-08-11 to the Dependent block as an alias of the new
+        % L_HT. It was a frozen 22.0 ft input whose own comment called it an
+        % "estimate; verify TO 1F-16A-1" and said it was "derivable only if
+        % component apex-x inputs are added (Brandt Main row 23 X-locations)".
+        % Those three x-station inputs were added in the 2026-07-25 Phase-2
+        % area-ruled-Amax work (x_apex_wing / x_le_ht / x_le_vt above), so the
+        % stated precondition has been satisfied since then and the estimate is
+        % now superseded by the real wing-c/4-to-HT-c/4 distance. This closes
+        % VnV/BrandtF16A/todo.md Finding 7 (two independent tail-arm
+        % definitions, only one of which tracked the sizing loop) and
+        % todo 2026-07-24 GeomL3 §6 / 2026-07-25 §12's L_t half.
         % S_cs MOVED 2026-08-10 to the Dependent block as the component
         % buildup S_csw + S_stab + S_rud. It was a frozen, self-described
         % "unpinned estimate" of 190 ft^2 annotated "flaperon + HT + rudder +
@@ -381,6 +391,24 @@ classdef F16GeomL3 < GeometryModelL3
         S_r            % ft^2  rudder area = S_rud; weights' "S_r" [Raymer Eq. 15.3]
         S_cs           % ft^2  ALL control surfaces = S_csw + S_stab + S_rud; weights' "S_cs" [Raymer Eq. 15.17]
 
+        % -- MAC stations and tail moment arms (ADDED 2026-08-11) ------------ %
+        %    The three x_* INPUT stations they are built from already existed
+        %    (added for the area-ruled Amax); these turn them into the layout
+        %    quantity tail sizing and Raymer Eq. 15.3 actually want. L_t was a
+        %    frozen, self-described "estimate, unpinned" 22.0 ft input and is
+        %    now DERIVED -- closing VnV/BrandtF16A/todo.md Finding 7, which
+        %    recorded that one physical quantity had two values (a frozen 22.0
+        %    read by the weights and a 0.475*L_fus = 22.56 used by the sizer)
+        %    and that only the sizer's tracked the loop. Now there is one
+        %    value and it tracks the loop.
+        x_mac_le_wing  % ft    x of the wing MAC leading edge
+        x_c4_wing      % ft    x of the wing MAC quarter-chord [cf. Brandt's live S&C(2) sheet xacW = 25.589]
+        x_c4_ht        % ft    x of the HT mac quarter-chord
+        x_c4_vt        % ft    x of the VT mac quarter-chord
+        L_HT           % ft    HT moment arm = x_c4_ht - x_c4_wing [Raymer 6th ed. Sec. 6.5.2, p.158]
+        L_VT           % ft    VT moment arm = x_c4_vt - x_c4_wing [same]
+        L_t            % ft    ALIAS of L_HT, kept because Raymer Eq. 15.3's own symbol is L_t and F16WeightsL3 reads geom.L_t
+
         % -- Total ----------------------------------------------------------- %
         S_wet          % ft^2  wing + HT + VT + fuselage + duct (duct term ADDED in Phase 2)
     end
@@ -486,7 +514,10 @@ classdef F16GeomL3 < GeometryModelL3
             obj.n_engines = G.engine.n_engines;            % [Brandt Main!B28]
 
             % ---- configuration ----------------------------------------- %
-            obj.L_t  = G.tail_arm_ft;                        % [estimate]
+            % L_t is no longer read from JSON either (2026-08-11): it is the
+            % Dependent alias of L_HT = x_c4_ht - x_c4_wing, built from the
+            % x_apex_wing / x_le_ht stations read above. The former
+            % tail_arm_ft = 22.0 estimate key is gone from f16a_L3.json.
             % S_cs is no longer read from JSON: it is the Dependent buildup
             % S_csw + S_stab + S_rud, and the former
             % total_control_surface_area_ft2 = 190 estimate key is gone. The
@@ -850,6 +881,62 @@ classdef F16GeomL3 < GeometryModelL3
             % 6th ed. Table 6.5 footnote]. That is also the only reading under
             % which the old 190 annotation adds up.
             v = obj.S_csw + obj.S_stab + obj.S_rud;
+        end
+
+        % ---- MAC stations and tail moment arms (ADDED 2026-08-11) -------- %
+        %  Formulas + citations live in GeometryBase.compute_y_mac /
+        %  compute_y_mac_panel / compute_x_mac_le / compute_x_mac_quarter_chord
+        %  and in TailL1.compute_tail_arm_quarter_chord. Identical bodies to
+        %  F16GeomL2's, deliberately: these are fidelity-independent planform
+        %  identities, and the two tiers differ only through the inputs they
+        %  read (L3's VT LE sweep 47.5 deg vs L2's 40, and L3's PRIMARY HT span
+        %  B_h = 18.5 ft vs L2's derived sqrt(AR_ht*S_ht) = 18.0 -- both are
+        %  the documented BY DESIGN divergences, so the two tiers give slightly
+        %  different arms for the same reason they already give different
+        %  exposed areas).
+
+        function v = get.x_mac_le_wing(obj)
+            y = GeometryBase.compute_y_mac(obj.b_wing, obj.lambda_wing);   % MIRRORED surface
+            v = GeometryBase.compute_x_mac_le(obj.x_apex_wing, y, obj.LE_sweep_wing);
+        end
+        function v = get.x_c4_wing(obj)
+            % 25.5891 ft at the JSON baseline. Independent corroboration:
+            % Brandt's own live S&C(2) sheet gives xacW = 25.589 ft
+            % (docs/subplans/10_stability_control.md "Ground Truth"), and
+            % SandCL3.x_ac_wing -- which composes the same three statics --
+            % was already hand-checked against it to +0.01%.
+            v = GeometryBase.compute_x_mac_quarter_chord(obj.x_mac_le_wing, obj.cbar_wing);
+        end
+        function v = get.x_c4_ht(obj)
+            % HT is a MIRRORED surface: b_ht (= B_h, the PRIMARY span) is a
+            % FULL span, so the centreline form applies.
+            cbar_ht_local = GeometryBase.compute_mac(obj.c_root_ht, obj.lambda_ht);
+            y   = GeometryBase.compute_y_mac(obj.b_ht, obj.lambda_ht);
+            xle = GeometryBase.compute_x_mac_le(obj.x_le_ht, y, obj.LE_sweep_ht);
+            v   = GeometryBase.compute_x_mac_quarter_chord(xle, cbar_ht_local);
+        end
+        function v = get.x_c4_vt(obj)
+            % VT is a SINGLE PANEL: b_vt is root-to-tip, not a semispan, so
+            % the panel form is required -- the same mirrored/panel
+            % distinction QC_sweep_vt already makes with convert_sweep_panel.
+            cbar_vt_local = GeometryBase.compute_mac(obj.c_root_vt, obj.lambda_vt);
+            y   = GeometryBase.compute_y_mac_panel(obj.b_vt, obj.lambda_vt);
+            xle = GeometryBase.compute_x_mac_le(obj.x_le_vt, y, obj.LE_sweep_vt);
+            v   = GeometryBase.compute_x_mac_quarter_chord(xle, cbar_vt_local);
+        end
+        function v = get.L_HT(obj)
+            v = TailL1.compute_tail_arm_quarter_chord(obj.x_c4_ht, obj.x_c4_wing);
+        end
+        function v = get.L_VT(obj)
+            v = TailL1.compute_tail_arm_quarter_chord(obj.x_c4_vt, obj.x_c4_wing);
+        end
+        function v = get.L_t(obj)
+            % Raymer Eq. 15.3's own symbol for the same quantity: "tail length
+            % (wing 1/4-MAC -> tail 1/4-MAC)" [docs/reference_extracts/
+            % raymer_data.md, Ch. 15 variable list]. Alias, not a second
+            % definition -- see the input-block note where the frozen 22.0
+            % used to live.
+            v = obj.L_HT;
         end
 
     end

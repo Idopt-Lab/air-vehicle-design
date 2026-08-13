@@ -6,11 +6,12 @@
   "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
 
   "geometry": {
-    "_src": "Surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %; wing B22 = 1404 -> 4%, corroborated TO Fig. 1-2 NACA 64A204). tc_root, tc_tip [TO Sec. I biconvex]. fuselage length_ft, max_width_ft, max_height_ft [Main!B32/C32/D32]. engine duct_length_ft [Main!F32, label E32 'Compr Face'].",
+    "_src": "Surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %; wing B22 = 1404 -> 4%, corroborated TO Fig. 1-2 NACA 64A204), 23 = 'X Location' (x_apex_ft / x_le_ft). tc_root, tc_tip [TO Sec. I biconvex]. fuselage length_ft, max_width_ft, max_height_ft [Main!B32/C32/D32]. engine duct_length_ft [Main!F32, label E32 'Compr Face'].",
     "_note": "Row map also in F16GeomL2.md / F16GeomL3.md §2. Derived quantities are Dependent getters; engine SLS thrust arrives by DI from .propulsion.T_SL.",
-    "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04},
-    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_root": 0.060, "tc_tip": 0.035},
-    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_root": 0.053, "tc_tip": 0.030},
+    "_x_station_src": "x_apex_ft [Main!B23 = 17.785833 live; 17.786 is the scoped value, do not 'correct'], horizontal_tail.x_le_ft [Main!C23], vertical_tail.x_le_ft [Main!H23]. ADDED 2026-08-11: identical cells and values to f16a_L3.json, which already carried them for the area-ruled Amax. They exist here so the tail moment arm can be the real wing-c/4-to-tail-c/4 distance [Raymer 6th ed. Sec. 6.5.2, p.158] / initial-c.g.-to-tail-c/4 distance [Nicolai & Carichner Eqs. (11.1)/(11.2)] instead of Raymer's pre-layout 0.475*L_fus stand-in, which for this airframe overstates the arm by ~46%.",
+    "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04, "x_apex_ft": 17.786},
+    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_root": 0.060, "tc_tip": 0.035, "x_le_ft": 36.0},
+    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_root": 0.053, "tc_tip": 0.030, "x_le_ft": 36.0},
     "fuselage":        {"length_ft": 46.5, "max_width_ft": 7.0, "max_height_ft": 5.0},
     "engine":          {"duct_length_ft": 14.0, "n_engines": 1},
     "overall_length_ft": 47.65,

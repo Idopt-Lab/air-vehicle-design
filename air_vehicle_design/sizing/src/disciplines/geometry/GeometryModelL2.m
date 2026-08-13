@@ -38,6 +38,38 @@ classdef (Abstract) GeometryModelL2 < GeometryBase
         %                L_fuselage; provenance OPEN, todo.md 2026-07-25 §6.
         Amax
         L_aircraft
+
+        %X-STATIONS AND TAIL MOMENT ARMS (added 2026-08-11 with the tail-arm
+        %   definition fix). Before this, GeometryModelL2 had no x-station
+        %   property at all, so tail sizing could only approximate the moment
+        %   arm as a fraction of fuselage length -- for the F-16A that is
+        %   22.09 ft against a real 15.09 ft, +46 %, and S_HT is inversely
+        %   proportional to it.
+        %     x_apex_wing  [INPUT]   wing apex (root LE) x-station, ft
+        %                            [Brandt Main!B23 'X Location']
+        %     x_le_ht      [INPUT]   HT root LE x-station, ft [Brandt Main!C23]
+        %     x_le_vt      [INPUT]   VT root LE x-station, ft [Brandt Main!H23]
+        %     x_mac_le_wing[DERIVED] x of the wing MAC leading edge, ft
+        %     x_c4_wing    [DERIVED] x of the wing MAC quarter-chord, ft --
+        %                            the reference Raymer's arm starts at
+        %                            [Raymer 6th ed. Sec. 6.5.2, p.158]
+        %     x_c4_ht      [DERIVED] x of the HT mac quarter-chord, ft
+        %     x_c4_vt      [DERIVED] x of the VT mac quarter-chord, ft
+        %     L_HT         [DERIVED] x_c4_ht - x_c4_wing, ft
+        %     L_VT         [DERIVED] x_c4_vt - x_c4_wing, ft
+        %   L_HT/L_VT are Raymer's definition. Nicolai's c.g.-referenced arm
+        %   is built by TailL2 from x_mac_le_wing + cbar_wing, deliberately
+        %   NOT stored here: the 0.30-mac c.g. stand-in is a property of that
+        %   sizing method, not of the airframe.
+        x_apex_wing
+        x_le_ht
+        x_le_vt
+        x_mac_le_wing
+        x_c4_wing
+        x_c4_ht
+        x_c4_vt
+        L_HT
+        L_VT
     end
 
          % Properties for the main wings

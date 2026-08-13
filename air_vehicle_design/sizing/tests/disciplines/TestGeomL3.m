@@ -616,11 +616,20 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         %   190 was an unpinned estimate annotated "flaperon + HT + rudder +
         %   LEF", and the buildup of exactly those four terms is 187.68 (1.2%
         %   below). The estimate is retired, not the physics.
+        %
+        %   L_t BECAME DEPENDENT 2026-08-11, the same way and for the same
+        %   reason: it was a frozen 22.0 ft input whose own comment called it
+        %   an "estimate; verify TO 1F-16A-1", and it is now the alias of L_HT
+        %   = x_c/4,HT - x_c/4,wing, which is Raymer Eq. 15.3's own stated
+        %   symbol -- "tail length (wing 1/4-MAC -> tail 1/4-MAC)". Hand
+        %   value 15.1297440182 ft; the full station-by-station derivation is
+        %   in testMacStationsAndTailArmsHandComputed below, and the
+        %   NOT-22.0 guard sits there too.
             g = TestGeomL3.makeGeom();
             tc.verifyEqual(g.S_csw, 68.03,  'AbsTol', 1e-10);   % wing control surfaces = flaperon + LEF
             tc.verifyEqual(g.S_cs,  187.68, 'AbsTol', 1e-10);   % total = wing + stabilator + rudder (was a frozen 190 estimate)
             tc.verifyEqual(g.S_r,   11.65,  'AbsTol', 1e-12);   % rudder area
-            tc.verifyEqual(g.L_t,   22.0,   'AbsTol', 1e-12);   % tail arm
+            tc.verifyEqual(g.L_t,   15.1297440182, 'RelTol', 1e-7);   % tail arm, DERIVED (was a frozen 22.0)
             tc.verifyEqual(g.F_w,   7.0,    'AbsTol', 1e-12);   % fuselage width at HT
             tc.verifyEqual(g.H_t,   0,      'AbsTol', 1e-12);   % conventional (non-T) tail
             tc.verifyEqual(g.H_v,   1,      'AbsTol', 1e-12);
@@ -839,6 +848,149 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             tc.verifyError(@() setfield(g, 'D_inlet',        999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'QC_sweep_vt',    999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'S_wet',         999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+        end
+
+        % ================================================================== %
+        % MAC STATIONS AND TAIL MOMENT ARMS (ADDED 2026-08-11)
+        %
+        % x_mac_le_wing / x_c4_wing / x_c4_ht / x_c4_vt / L_HT / L_VT, plus
+        % L_t as the alias of L_HT. The three x_* INPUT stations they are
+        % built from already existed (added for the area-ruled Amax); this
+        % block covers the layout quantities tail sizing and Raymer Eq. 15.3
+        % now build from them.
+        %
+        % L3 IS NOT L2 HERE, deliberately, in two places -- both are the
+        % documented physical/T.O.-tier divergences, not errors:
+        %   - the HT takes B_h = 18.5 ft as the PRIMARY span (AR_ht derived),
+        %     against L2's AR_ht = 3.0 -> b_ht = 18.0, so the HT chords and
+        %     therefore x_c4_ht differ;
+        %   - the VT LE sweep is the physical 47.5 deg against L2's Brandt
+        %     40 deg, so x_c4_vt and L_VT differ far more.
+        % ================================================================== %
+
+        function testMacStationsAndTailArmsHandComputed(tc)
+        % HAND-COMPUTED EXPECTED VALUES -- fraction/decimal arithmetic done in
+        % this comment block from the JSON inputs, NOT read from the code
+        % under test. Formulas: GeometryBase.compute_y_mac /
+        % compute_y_mac_panel / compute_x_mac_le / compute_x_mac_quarter_chord
+        % composed with Raymer 7th ed. Eqs. 7.6/7.8, and
+        % TailL1.compute_tail_arm_quarter_chord for the arms
+        % [Raymer 6th ed. Sec. 6.5.2, p.158].
+        %
+        % Constants: tan(40 deg) = 0.83909963117727793,
+        %            tan(47.5 deg) = 1.0913085010.
+        %
+        %  WING (identical inputs to L2: S_ref=300, AR=3.0, lambda=0.2275,
+        %  LE sweep 40 deg, x_apex_wing=17.786)
+        %   b        = sqrt(3*300) = 30 EXACTLY
+        %   c_root   = 8000/491                       = 16.2932790224 ft
+        %   cbar     = 2729080/241081                 = 11.3201786951 ft
+        %   y_MAC    = (30/6)*(1.455/1.2275) = 2910/491 = 5.9266802444 ft
+        %   x_MAC_LE = 17.786 + 4.9730752071          = 22.7590752071 ft
+        %   x_c/4    = 22.7590752071 + 2.8300446738   = 25.5891198809 ft
+        %  HORIZONTAL TAIL (mirrored; S_ht=108 with B_h=18.5 as PRIMARY span,
+        %  lambda_ht=0.2275, LE sweep 40 deg, x_le_ht=36)
+        %   c_root   = 2*108/(18.5*1.2275) = 172800/18167 = 9.5117520779 ft
+        %              (the same figure testHTPlanformFromSpanAreaPair above
+        %               already hand-derives and asserts independently)
+        %   cbar_ht  = (2/3)*c_root*(1.27925625/1.2275)   = 6.6085367518 ft
+        %   y_MAC    = (18.5/6)*(582/491)                 = 3.6547861507 ft
+        %   x_MAC_LE = 36 + 3.0667297111                  = 39.0667297111 ft
+        %   x_c/4    = 39.0667297111 + 1.6521341880       = 40.7188638991 ft
+        %  VERTICAL TAIL (SINGLE PANEL; S_vt=60, AR_vt=1.6, lambda_vt=0.5,
+        %  LE sweep 47.5 deg PHYSICAL, x_le_vt=36)
+        %   b_vt     = sqrt(96)                       =  9.7979589711 ft
+        %   c_root   = 10*sqrt(6)/3                   =  8.1649658093 ft
+        %   cbar_vt  = 70*sqrt(6)/27                  =  6.3505289628 ft
+        %   y_MAC    = 4*sqrt(96)/9                   =  4.3546484316 ft
+        %   x_MAC_LE = 36 + 4.3546484316*1.0913085010
+        %            = 36 + 4.7522648522              = 40.7522648522 ft
+        %   x_c/4    = 40.7522648522 + 1.5876322407   = 42.3398970929 ft
+        %  ARMS
+        %   L_HT = 40.7188638991 - 25.5891198809      = 15.1297440182 ft
+        %   L_VT = 42.3398970929 - 25.5891198809      = 16.7507772120 ft
+        %
+        % TOLERANCE. The arithmetic is carried to 11-12 significant figures
+        % through two tangent evaluations and three or four products, so its
+        % truncation is ~1e-10 relative. RelTol 1e-7 is three decades of
+        % margin over that. Not fitted to the code's output.
+            g = TestGeomL3.makeGeom();
+            fprintf(['\n    L3 stations: x_MAC_LE,w=%.7f x_c/4,w=%.7f x_c/4,ht=%.7f ' ...
+                     'x_c/4,vt=%.7f | L_HT=%.7f L_VT=%.7f ft\n'], ...
+                g.x_mac_le_wing, g.x_c4_wing, g.x_c4_ht, g.x_c4_vt, g.L_HT, g.L_VT);
+            tc.verifyEqual(g.x_mac_le_wing, 22.7590752071, 'RelTol', 1e-7);
+            tc.verifyEqual(g.x_c4_wing,     25.5891198809, 'RelTol', 1e-7);
+            tc.verifyEqual(g.x_c4_ht,       40.7188638991, 'RelTol', 1e-7);
+            tc.verifyEqual(g.x_c4_vt,       42.3398970929, 'RelTol', 1e-7);
+            tc.verifyEqual(g.L_HT,          15.1297440182, 'RelTol', 1e-7, ...
+                'L_HT must be the wing-c/4 to HT-c/4 distance at the 18.5 ft HT span.');
+            tc.verifyEqual(g.L_VT,          16.7507772120, 'RelTol', 1e-7, ...
+                'L_VT must be the wing-c/4 to VT-c/4 distance at the physical 47.5 deg LE sweep.');
+        end
+
+        function testLtIsTheAliasOfLHTNotAFrozenEstimate(tc)
+        % L_t BECAME DEPENDENT 2026-08-11, closing VnV/BrandtF16A/todo.md
+        % Finding 7 (two independent tail-arm definitions, only one of which
+        % tracked the sizing loop). Raymer Eq. 15.3's own symbol is L_t and it
+        % defines it as "tail length (wing 1/4-MAC -> tail 1/4-MAC)", which IS
+        % L_HT, so the two must be the same object, not two numbers.
+        %
+        % The retired 22.0 ft is asserted against explicitly: it was a
+        % self-described "estimate; verify TO 1F-16A-1", it is +45.4 % on the
+        % real 15.1297440182 ft, and Eq. 15.3 carries L_t^-1.
+            g = TestGeomL3.makeGeom();
+            tc.verifyEqual(g.L_t, g.L_HT, 'AbsTol', 0, ...
+                'L_t must BE L_HT (an alias), not a second, independently stored arm.');
+            tc.verifyNotEqual(g.L_t, 22.0, ...
+                'L_t must NOT be the retired frozen 22.0 ft estimate.');
+            tc.verifyNotEqual(g.L_t, 0.475 * g.L_fus, ...
+                'L_t must NOT be Raymer''s pre-layout 0.475*L_fus fraction either.');
+        end
+
+        function testTailArmsTrackTheirOwnInputsLive(tc)
+        % LIVE-RECOMPUTE GUARD, and the thing the frozen 22.0 could never do:
+        % the arm must move when the sizing loop moves the surfaces. Hand
+        % reasoning, no arithmetic needed:
+        %   - the wing apex enters x_MAC_LE additively, so a +1 ft translation
+        %     moves x_c4_wing by exactly +1 and shortens BOTH arms by 1;
+        %   - the HT root LE likewise lengthens L_HT (and L_t with it) by
+        %     exactly its own translation, and cannot touch L_VT;
+        %   - shrinking S_ref (what the sizing loop actually does) shortens the
+        %     wing chords, which moves the wing c/4 forward, which LENGTHENS
+        %     the arm.
+            g = TestGeomL3.makeGeom();
+            L_HT0 = g.L_HT;  L_VT0 = g.L_VT;
+
+            g.x_apex_wing = g.x_apex_wing + 1.0;
+            tc.verifyEqual(g.L_HT, L_HT0 - 1.0, 'AbsTol', 1e-9);
+            tc.verifyEqual(g.L_VT, L_VT0 - 1.0, 'AbsTol', 1e-9);
+            g.x_apex_wing = g.x_apex_wing - 1.0;
+
+            g.x_le_ht = g.x_le_ht + 1.0;
+            tc.verifyEqual(g.L_HT, L_HT0 + 1.0, 'AbsTol', 1e-9);
+            tc.verifyEqual(g.L_t,  L_HT0 + 1.0, 'AbsTol', 1e-9, ...
+                'L_t must follow L_HT live -- this is what the frozen 22.0 could not do.');
+            tc.verifyEqual(g.L_VT, L_VT0, 'RelTol', 1e-12, ...
+                'The HT station must not touch the VT arm.');
+            g.x_le_ht = g.x_le_ht - 1.0;
+
+            g.S_ref = 0.60 * g.S_ref;   % sizing-loop-style shrink
+            tc.verifyGreaterThan(g.L_HT, L_HT0, ...
+                'A smaller wing puts its c/4 further forward, lengthening the arm.');
+        end
+
+        function testTailArmsAreReadOnly(tc)
+        % Derived quantities are outputs. This is the direct guard on the
+        % anti-pattern the L_t change removed: a frozen literal must not be
+        % writable back over the computed arm.
+            g = TestGeomL3.makeGeom();
+            tc.verifyError(@() setfield(g, 'x_mac_le_wing', 999),  'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'x_c4_wing',     999),  'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'x_c4_ht',       999),  'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'x_c4_vt',       999),  'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'L_HT',          22.0), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'L_VT',          22.0), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'L_t',           22.0), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         % ================================================================== %

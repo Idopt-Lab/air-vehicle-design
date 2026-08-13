@@ -132,9 +132,28 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         Xexp_vt         % VT exposed-root LE x (ft)      [DERIVED] 38.7283 [cf. Geom!B10 = 38.0978]
     end
 
+    % ── MAC stations and tail moment arms ──────────────────────────────── %
+    % Added 2026-08-11 with the tail-arm definition fix. The three x_* INPUT
+    % stations already existed (declared with their own surfaces above, for the
+    % area-ruled Amax buildup); what is new is that the mac quarter-chord
+    % stations built from them are now first-class DERIVED properties, so tail
+    % sizing can measure a real moment arm instead of approximating it as a
+    % fraction of fuselage length. Formulas + citations:
+    % GeometryBase.compute_y_mac(_panel)/compute_x_mac_le/
+    % compute_x_mac_quarter_chord; arm definition
+    % TailL1.compute_tail_arm_quarter_chord [Raymer 6th ed. Sec. 6.5.2, p.158].
+    properties (Abstract)
+        x_mac_le_wing  % Wing MAC leading-edge x-station (ft)  [DERIVED]
+        x_c4_wing      % Wing MAC quarter-chord x-station (ft) [DERIVED] 25.5891; cf. Brandt S&C(2) xacW = 25.589
+        x_c4_ht        % HT   mac quarter-chord x-station (ft) [DERIVED]
+        x_c4_vt        % VT   mac quarter-chord x-station (ft) [DERIVED]
+        L_HT           % Tail arm x_c4_ht - x_c4_wing (ft)     [DERIVED] Raymer's definition
+        L_VT           % Tail arm x_c4_vt - x_c4_wing (ft)     [DERIVED] Raymer's definition
+    end
+
     % ── Configuration ──────────────────────────────────────────────────── %
     properties (Abstract)
-        L_t            % Tail arm, wing ¼-MAC → HT ¼-MAC (ft)  [INPUT]  weights' "L_t"
+        L_t            % Tail arm, wing ¼-MAC → HT ¼-MAC (ft)  [DERIVED] = L_HT; weights' "L_t". Was an INPUT (frozen, self-described "estimate, unpinned" 22.0) until 2026-08-11 -- todo.md Finding 7.
         S_cs           % Total control-surface area (ft²)      [DERIVED] = S_csw + S_stab + S_rud; weights' "S_cs". Was an INPUT (frozen 190 estimate) until 2026-08-10.
     end
 

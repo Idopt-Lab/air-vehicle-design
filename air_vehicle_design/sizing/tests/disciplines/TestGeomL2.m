@@ -260,7 +260,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             tc.verifyEqual(received, 300, 'AbsTol', 1e-9);
         end
 
-        % --- L_fus (used directly by geometry_brandt_comparison.m) -------
+        % --- L_fus (used directly by geometry_brandt_comparison.m) --------------
 
         function testLfusMatchesBrandt(tc)
         % L2 exposes L_fus as a plain property (not a method, unlike L1's
@@ -345,6 +345,95 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             received = GeometryBase.compute_span(9, 225);
             fprintf('\n    span: received = %.10f ft,  hand-computed = 45.0000000000 ft\n', received);
             tc.verifyEqual(received, 45.0, 'AbsTol', 1e-9);
+        end
+
+        % ================================================================== %
+        % GeometryBase MAC-STATION statics (ADDED 2026-08-11 with the tail-arm
+        % definition fix): compute_y_mac, compute_y_mac_panel,
+        % compute_x_mac_le, compute_x_mac_quarter_chord.
+        %
+        % These four build the station BOTH tail-volume-coefficient methods
+        % measure the moment arm between [Raymer 6th ed. Sec. 6.5.2, p.158;
+        % Nicolai & Carichner Eqs. (11.1)/(11.2), pp.286/289]. Every input
+        % below is an invented scalar chosen to make the arithmetic exact, and
+        % is deliberately NOT the F-16's own geometry -- the F-16 stations get
+        % their own test further down.
+        % ================================================================== %
+
+        function testComputeYMacMirroredSurface(tc)
+        % y_MAC = (b/6)*(1+2*lambda)/(1+lambda), b = FULL span.
+        % Hand-computed at b=60 ft, lambda=0.25:
+        %   (60/6)*(1.5/1.25) = 10*1.2 = 12.0 ft EXACTLY.
+            received = GeometryBase.compute_y_mac(60, 0.25);
+            fprintf('\n    y_MAC (mirrored): received = %.10f ft,  hand-computed = 12.0000000000 ft\n', received);
+            tc.verifyEqual(received, 12.0, 'AbsTol', 1e-9);
+        end
+
+        function testComputeYMacRectangularDegenerateCase(tc)
+        % An INDEPENDENT check of the same formula that needs no arithmetic at
+        % all: for an untapered (lambda = 1) mirrored surface the MAC sits at
+        % the midpoint of the semispan, y_MAC = b/4, by symmetry.
+        %   (b/6)*(3/2) = b/4.  At b = 60 -> 15.0 ft EXACTLY.
+            tc.verifyEqual(GeometryBase.compute_y_mac(60, 1.0), 15.0, 'AbsTol', 1e-9, ...
+                'An untapered mirrored surface must put y_MAC at b/4.');
+        end
+
+        function testComputeYMacPanelIsTwiceTheMirroredForm(tc)
+        % y_MAC = (b_panel/3)*(1+2*lambda)/(1+lambda) -- the SINGLE-PANEL form
+        % (vertical tail), measured from the root, twice the mirrored
+        % coefficient because root->tip spans the whole b_panel rather than a
+        % semispan. Hand-computed at b_panel=30 ft, lambda=0.25:
+        %   (30/3)*(1.5/1.25) = 10*1.2 = 12.0 ft EXACTLY.
+        % Structural half of the test: at the SAME span and taper the panel
+        % form must be exactly 2x the mirrored form. Feeding a single panel's
+        % span to the mirrored form halves the answer, which is the trap this
+        % pairing exists to catch (the same trap convert_sweep /
+        % convert_sweep_panel already carry).
+            received = GeometryBase.compute_y_mac_panel(30, 0.25);
+            fprintf('\n    y_MAC (panel): received = %.10f ft,  hand-computed = 12.0000000000 ft\n', received);
+            tc.verifyEqual(received, 12.0, 'AbsTol', 1e-9);
+            tc.verifyEqual(received, 2 * GeometryBase.compute_y_mac(30, 0.25), 'RelTol', 1e-12, ...
+                'The panel form must be exactly twice the mirrored form at the same span/taper.');
+        end
+
+        function testComputeYMacPanelRectangularDegenerateCase(tc)
+        % Same no-arithmetic check as the mirrored case: an untapered single
+        % panel puts its MAC at the panel midpoint, y_MAC = b_panel/2.
+        %   (b/3)*(3/2) = b/2.  At b_panel = 30 -> 15.0 ft EXACTLY.
+            tc.verifyEqual(GeometryBase.compute_y_mac_panel(30, 1.0), 15.0, 'AbsTol', 1e-9, ...
+                'An untapered single panel must put y_MAC at b_panel/2.');
+        end
+
+        function testComputeXMacLe(tc)
+        % x_MAC_LE = x_apex + y_MAC*tan(Lambda_LE)  [VnV/BrandtF16A/
+        % readme_bsc.md, "MAC station and aerodynamic center"].
+        % Hand-computed at x_apex=10 ft, y_MAC=8 ft, Lambda_LE=45 deg:
+        %   tan(45 deg) = 1 exactly -> 10 + 8*1 = 18.0 ft EXACTLY.
+            received = GeometryBase.compute_x_mac_le(10, 8, 45);
+            fprintf('\n    x_MAC_LE: received = %.10f ft,  hand-computed = 18.0000000000 ft\n', received);
+            tc.verifyEqual(received, 18.0, 'AbsTol', 1e-9);
+        end
+
+        function testComputeXMacLeUnsweptDegenerateCase(tc)
+        % An unswept surface's MAC leading edge sits at the apex station
+        % whatever the span: tan(0) = 0 exactly. Guards against a sign or
+        % units slip in the tangent term (a degrees/radians mix-up would show
+        % up here only if the sweep were nonzero, hence the 30 deg companion
+        % below).
+            tc.verifyEqual(GeometryBase.compute_x_mac_le(10, 8, 0), 10.0, 'AbsTol', 1e-12);
+            % 30 deg: tan(30 deg) = 0.57735026918962576 -> 10 + 8*0.57735026918962576
+            %                                            = 14.618802153517006 ft.
+            tc.verifyEqual(GeometryBase.compute_x_mac_le(10, 8, 30), 14.618802153517006, ...
+                'RelTol', 1e-12, 'The sweep argument is in DEGREES, not radians.');
+        end
+
+        function testComputeXMacQuarterChord(tc)
+        % x_c/4 = x_MAC_LE + 0.25*cbar. The 0.25 is definitional (a quarter
+        % chord), not a fitted coefficient. Hand-computed at x_MAC_LE=18 ft,
+        % cbar=12 ft: 18 + 3 = 21.0 ft EXACTLY.
+            received = GeometryBase.compute_x_mac_quarter_chord(18, 12);
+            fprintf('\n    x_c/4: received = %.10f ft,  hand-computed = 21.0000000000 ft\n', received);
+            tc.verifyEqual(received, 21.0, 'AbsTol', 1e-9);
         end
 
         function testConvertSweepGenericCase(tc)
@@ -801,6 +890,158 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             tc.verifyEqual(cd0_1 - cd0_0, 2.2401824689e-4, 'RelTol', 1e-6, ...
                 ['CD0 must move by Cfe*Delta(S_wet_duct)/S_ref when engine thrust ' ...
                  'changes -- this whole chain was dead before Phase 2.']);
+        end
+
+        % ================================================================== %
+        % MAC STATIONS AND TAIL MOMENT ARMS (ADDED 2026-08-11)
+        %
+        % x_mac_le_wing / x_c4_wing / x_c4_ht / x_c4_vt / L_HT / L_VT, the
+        % Dependent layout quantities tail sizing needs. Before this addition
+        % no x_MAC/y_MAC quantity existed outside the stability-and-control
+        % toolbox, which is why tail sizing had to fall back on Raymer's
+        % pre-layout fuselage-length fraction, 0.475*L_fus.
+        % ================================================================== %
+
+        function testMacStationsAndTailArmsHandComputed(tc)
+        % HAND-COMPUTED EXPECTED VALUES -- fraction/decimal arithmetic done in
+        % this comment block from the JSON inputs, NOT read from the code
+        % under test. Formulas: GeometryBase.compute_y_mac /
+        % compute_y_mac_panel / compute_x_mac_le / compute_x_mac_quarter_chord
+        % (tested individually above on invented scalars) composed with
+        % Raymer 7th ed. Eqs. 7.6/7.8 for the chords, and
+        % TailL1.compute_tail_arm_quarter_chord for the two arms
+        % [Raymer 6th ed. Sec. 6.5.2, p.158].
+        %
+        % Inputs [Brandt Main! rows 18-23]: S_ref=300, AR_wing=3.0,
+        % lambda_wing=0.2275, LE_sweep_wing=40 deg, x_apex_wing=17.786;
+        % S_ht=108, AR_ht=3.0, lambda_ht=0.2275, LE_sweep_ht=40 deg,
+        % x_le_ht=36; S_vt=60, AR_vt=1.6, lambda_vt=0.5, LE_sweep_vt=40 deg,
+        % x_le_vt=36.  Constant: tan(40 deg) = 0.83909963117727793.
+        %
+        %  WING
+        %   b       = sqrt(3*300) = 30 EXACTLY
+        %   c_root  = 2*300/(30*1.2275) = 8000/491     = 16.2932790224 ft
+        %   cbar    = (2/3)*c_root*(1.27925625/1.2275) = 2729080/241081
+        %                                              = 11.3201786951 ft
+        %   y_MAC   = (30/6)*(1.455/1.2275) = 2910/491 =  5.9266802444 ft
+        %   x_MAC_LE= 17.786 + 5.9266802444*0.83909963117727793
+        %           = 17.786 + 4.9730752071            = 22.7590752071 ft
+        %   x_c/4   = 22.7590752071 + 0.25*11.3201786951
+        %           = 22.7590752071 + 2.8300446738     = 25.5891198809 ft
+        %  HORIZONTAL TAIL (mirrored -> centreline y_MAC form)
+        %   b_ht    = sqrt(3*108) = 18 EXACTLY
+        %   c_root  = 2*108/(18*1.2275) = 4800/491     =  9.7759674134 ft
+        %   cbar_ht = 0.6*cbar_wing                    =  6.7921072171 ft
+        %   y_MAC   = (18/6)*(582/491)                 =  3.5560081466 ft
+        %   x_MAC_LE= 36 + 2.9838451243                = 38.9838451243 ft
+        %   x_c/4   = 38.9838451243 + 1.6980268043     = 40.6818719286 ft
+        %  VERTICAL TAIL (SINGLE PANEL -> panel y_MAC form, coefficient b/3)
+        %   b_vt    = sqrt(1.6*60) = sqrt(96)          =  9.7979589711 ft
+        %   c_root  = 2*60/(9.7979589711*1.5) = 10*sqrt(6)/3
+        %                                              =  8.1649658093 ft
+        %   cbar_vt = (7/9)*c_root = 70*sqrt(6)/27     =  6.3505289628 ft
+        %   y_MAC   = (9.7979589711/3)*(2/1.5) = 4*sqrt(96)/9
+        %                                              =  4.3546484316 ft
+        %   x_MAC_LE= 36 + 3.6539838928                = 39.6539838928 ft
+        %   x_c/4   = 39.6539838928 + 1.5876322407     = 41.2416161335 ft
+        %  ARMS
+        %   L_HT = 40.6818719286 - 25.5891198809       = 15.0927520477 ft
+        %   L_VT = 41.2416161335 - 25.5891198809       = 15.6524962526 ft
+        %
+        % TOLERANCE. The arithmetic is carried to 11-12 significant figures
+        % through one tangent evaluation (a standard constant) and three or
+        % four products, so its truncation is ~1e-10 relative. RelTol 1e-7 is
+        % three decades of margin over that truncation. It is NOT fitted to
+        % the code's output.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            fprintf(['\n    L2 stations: x_MAC_LE,w=%.7f x_c/4,w=%.7f x_c/4,ht=%.7f ' ...
+                     'x_c/4,vt=%.7f | L_HT=%.7f L_VT=%.7f ft\n'], ...
+                g.x_mac_le_wing, g.x_c4_wing, g.x_c4_ht, g.x_c4_vt, g.L_HT, g.L_VT);
+            tc.verifyEqual(g.x_mac_le_wing, 22.7590752071, 'RelTol', 1e-7);
+            tc.verifyEqual(g.x_c4_wing,     25.5891198809, 'RelTol', 1e-7);
+            tc.verifyEqual(g.x_c4_ht,       40.6818719286, 'RelTol', 1e-7);
+            tc.verifyEqual(g.x_c4_vt,       41.2416161335, 'RelTol', 1e-7);
+            tc.verifyEqual(g.L_HT,          15.0927520477, 'RelTol', 1e-7, ...
+                'L_HT must be the wing-c/4 to HT-c/4 distance.');
+            tc.verifyEqual(g.L_VT,          15.6524962526, 'RelTol', 1e-7, ...
+                'L_VT must be the wing-c/4 to VT-c/4 distance, its own arm.');
+        end
+
+        function testTailArmsAreNotTheFuselageLengthFraction(tc)
+        % THE REGRESSION THIS BLOCK EXISTS TO PREVENT (2026-08-11). The arm
+        % used to be TailL1.compute_tail_arm(L_fus) = 0.475*46.5 = 22.0875 ft,
+        % Raymer's own PRE-LAYOUT approximation (6th ed. p.159-160) of the
+        % p.158 station-to-station distance. F16GeomL2 has the layout, so the
+        % real arms apply: 15.0927520477 and 15.6524962526 ft (hand-derived
+        % above). The fraction is +46.3 % on L_HT and +41.1 % on L_VT, and
+        % since S_HT goes as 1/L_HT it was worth -31.6 % on the sized tail.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyNotEqual(g.L_HT, 0.475 * g.L_fus, ...
+                'L_HT must NOT be 0.475*L_fus.');
+            tc.verifyNotEqual(g.L_VT, 0.475 * g.L_fus, ...
+                'L_VT must NOT be 0.475*L_fus.');
+            tc.verifyGreaterThan((0.475*g.L_fus - g.L_HT) / g.L_HT, 0.40, ...
+                'The retired fraction overstates the real HT arm by >40 %.');
+            % The two arms are NOT equal to each other either: the VT mac
+            % quarter-chord is not the HT mac quarter-chord, which is exactly
+            % why size() takes two arms now.
+            tc.verifyNotEqual(g.L_HT, g.L_VT, ...
+                'The HT and VT arms are different distances and must not be merged.');
+        end
+
+        function testMacStationsTrackTheirOwnInputsLive(tc)
+        % LIVE-RECOMPUTE GUARD (the optimization-ready property design --
+        % CLAUDE.md). The arm genuinely depends on how big the surfaces are,
+        % so every one of these must follow a mutated input with NO
+        % reconstruction:
+        %   - moving the wing apex aft moves x_c4_wing aft by the same amount
+        %     and SHORTENS both arms by it (a pure translation: the apex
+        %     enters x_MAC_LE additively);
+        %   - moving the HT root LE aft lengthens L_HT by the same amount and
+        %     leaves L_VT alone;
+        %   - growing AR_wing lengthens the span, which moves y_MAC outboard,
+        %     which moves the swept wing MAC aft.
+        % Hand-computed deltas, all exact translations of +1.0 ft.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            x_c4_w0 = g.x_c4_wing;  L_HT0 = g.L_HT;  L_VT0 = g.L_VT;
+
+            g.x_apex_wing = g.x_apex_wing + 1.0;
+            tc.verifyEqual(g.x_c4_wing, x_c4_w0 + 1.0, 'AbsTol', 1e-9, ...
+                'x_c4_wing must translate exactly with the wing apex.');
+            tc.verifyEqual(g.L_HT, L_HT0 - 1.0, 'AbsTol', 1e-9, ...
+                'Moving the wing aft must shorten L_HT by the same amount, live.');
+            tc.verifyEqual(g.L_VT, L_VT0 - 1.0, 'AbsTol', 1e-9, ...
+                'Moving the wing aft must shorten L_VT by the same amount, live.');
+            g.x_apex_wing = g.x_apex_wing - 1.0;
+            tc.verifyEqual(g.L_HT, L_HT0, 'RelTol', 1e-12, ...
+                'Restoring the input must restore the arm -- Dependent, never cached.');
+
+            g.x_le_ht = g.x_le_ht + 1.0;
+            tc.verifyEqual(g.L_HT, L_HT0 + 1.0, 'AbsTol', 1e-9, ...
+                'Moving the HT aft must lengthen L_HT by the same amount, live.');
+            tc.verifyEqual(g.L_VT, L_VT0, 'RelTol', 1e-12, ...
+                'The HT station must not touch the VT arm.');
+            g.x_le_ht = g.x_le_ht - 1.0;
+
+            g.AR_wing = g.AR_wing + 1;   % optimizer-style in-place mutation
+            tc.verifyGreaterThan(g.x_c4_wing, x_c4_w0, ...
+                'A larger AR moves y_MAC outboard, so the swept wing MAC moves aft.');
+            tc.verifyLessThan(g.L_HT, L_HT0, ...
+                'A wing MAC further aft shortens the tail arm -- read live.');
+        end
+
+        function testMacStationsAndArmsAreReadOnly(tc)
+        % Derived (Dependent) quantities are outputs: assigning to one must
+        % error, so a frozen literal cannot be written back over a computed
+        % station or arm -- which is exactly what the retired L3 L_t = 22.0
+        % input was.
+            g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyError(@() setfield(g, 'x_mac_le_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'x_c4_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'x_c4_ht', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'x_c4_vt', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'L_HT', 22.0875), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'L_VT', 22.0875), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         % ================================================================== %
