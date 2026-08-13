@@ -1,15 +1,13 @@
-classdef BrandtConstraintPropAdapter < PropulsionBase
-%BRANDTCONSTRAINTPROPADAPTER  Makes a BrandtEngine object satisfy the src
+classdef BrandtPropAdapter < PropulsionBase
+%BRANDTPROPADAPTER  Makes a BrandtEngine object satisfy the src
 %   PropulsionBase interface, for the src-vs-Brandt reproduction test.
 %
-%   RENAMED 2026-08-07 (from BrandtPropAdapter): this class collided with
-%   the unrelated, differently-shaped examples/F16A/mixed_fidelity_tests/
-%   adapters/BrandtPropAdapter.m (no-arg constructor, exposes "Brandt" as a
-%   selectable fidelity LEVEL). run_all_tests.m puts both this file's
-%   directory (VnV/BrandtF16A, via genpath) and that one's on the MATLAB
-%   path every run; with the same class name, whichever came first on the
-%   path silently shadowed the other, breaking the all-Brandt mixed-fidelity
-%   combo (constructed with zero args, which only that OTHER class accepts).
+%   USED BY BOTH the constraint reproduction test AND mission analysis, so
+%   the name carries no consumer qualifier. From 2026-08-07 to 2026-08-12
+%   this class was named BrandtConstraintPropAdapter, to avoid a class-name
+%   collision with a duplicate examples/F16A/mixed_fidelity_tests/adapters/
+%   BrandtPropAdapter.m. That duplicate is deleted, so this file uses the
+%   plain name again.
 %
 %   PURPOSE. The src constraint classes take an injected PropulsionBase
 %   object and call thrust_lapse(state) (AB rows) or
@@ -48,8 +46,8 @@ classdef BrandtConstraintPropAdapter < PropulsionBase
 
     methods
 
-        function obj = BrandtConstraintPropAdapter(brandtEng)
-        %BRANDTCONSTRAINTPROPADAPTER  Wrap an analyzed BrandtEngine handle.
+        function obj = BrandtPropAdapter(brandtEng)
+        %BRANDTPROPADAPTER  Wrap an analyzed BrandtEngine handle.
         %   brandtEng -- a BrandtEngine that has had analyze() called.
             arguments
                 brandtEng (1,1) BrandtEngine
