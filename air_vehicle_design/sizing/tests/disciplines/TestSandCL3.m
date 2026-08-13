@@ -44,7 +44,7 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % TestSandCL2.testF16SandCL2XCgMatchesIndependentRecompute -- reads
         % the 10 group weights off the PUBLIC F16WeightsL3 API and pairs them
         % with the JSON's own cg_x_ft stations (hand-transcribed from
-        % examples/F16A/jsons/f16a_L3.json .stability_control
+        % examples/F16A/inputs/f16a_L3.json .stability_control
         % .component_x_stations.groups -- IDENTICAL values to f16a_L2.json's,
         % per that file's own note), then computes the weighted average by
         % hand here, NOT via SandCL2.weighted_cg or F16SandCL3's own private

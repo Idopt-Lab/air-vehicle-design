@@ -6,7 +6,7 @@ classdef TestPropL1 < matlab.unittest.TestCase
 %   atmosphere table, or a real engine spec) or hand arithmetic. NOTHING here
 %   reads f16a_ground_truth.json or any Brandt engine-MODEL output as an
 %   expected value — the Mattingly/L1-vs-Brandt closeness comparison lives in
-%   examples/F16A/propulsion_brandt_comparison.m (informational, not a test).
+%   examples/F16A/sanity_checks/propulsion_brandt_comparison.m (informational, not a test).
 %
 %   Constructor is required-JSON-path: F16PropL1(f16a_spec_path(1)). The no-arg
 %   form now errors MATLAB:minrhs (covered by testNoArgConstructorErrors).

@@ -48,7 +48,7 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 %   liftoff-speed margin V_TO/V_stall (1.2); S_G is the required ground-roll
 %   distance, ft; mu is the ground-roll rolling-friction coefficient (not
 %   defaulted -- a runway/surface property, not a universal margin). Condition
-%   values: examples/F16A/mds/f16a_requirements.md.
+%   values: examples/F16A/inputs/f16a_requirements.md.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Takeoff"

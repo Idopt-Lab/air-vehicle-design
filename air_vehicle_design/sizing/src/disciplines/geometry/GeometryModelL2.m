@@ -13,7 +13,7 @@ classdef (Abstract) GeometryModelL2 < GeometryBase
 %   chords, MAC, sweep-station conversions, exposed and wetted areas,
 %   diameters, totals). A concrete class must implement the derived kind as
 %   Dependent getters that recompute on read, never as stored values.
-%   examples/F16A/F16GeomL2.m is the reference implementation.
+%   examples/F16A/models/disciplines/geom/F16GeomL2.m is the reference implementation.
 
 
     % Abstract properties cannot have validation attributes in MATLAB.

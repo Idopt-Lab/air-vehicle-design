@@ -27,7 +27,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %   provenances ~4.3 % apart, so the citation was a wrong-workbook
 %   attribution -- AND, per CLAUDE.md's two-tier rule, an agreement check
 %   against ground truth is not a unit test at all. Both figures now appear as
-%   labelled columns of examples/F16A/weights_brandt_comparison.m
+%   labelled columns of examples/F16A/sanity_checks/weights_brandt_comparison.m
 %   (Brandt = 19,980.70, Alt = 19,148.08).
 %
 %   NOTHING IN THIS FILE MAY TAKE AN EXPECTED VALUE FROM

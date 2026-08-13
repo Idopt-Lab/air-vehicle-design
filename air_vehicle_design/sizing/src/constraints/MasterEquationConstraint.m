@@ -31,7 +31,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %   where q, V come from AircraftState; CD0, K1, K2 from aero.drag_polar(state);
 %   alpha from get_alpha(). beta, n, Ps are stakeholder/mission inputs for the
 %   condition (e.g. F-16 Max Mach: beta=0.8997, n=1.0, Ps=0 at 36,000 ft /
-%   M=1.60 -- see examples/F16A/mds/f16a_requirements.md).
+%   M=1.60 -- see examples/F16A/inputs/f16a_requirements.md).
 %
 %   POWER SETTING. alpha is drawn on the basis the condition is constructed
 %   with: "AB" -> prop.thrust_lapse(state) (AB/max-power, the PropulsionBase
@@ -39,8 +39,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %   -> prop.thrust_lapse_mil_on_AB_scale(state) (T_mil/T_SL_AB -- still on the
 %   AB T_SL scale so the resulting T/W stays comparable with every other,
 %   AB-flown condition on the same diagram). Conditions flown at 0% AB/mil
-%   power (e.g. Cruise) must use powerSetting="mil". See get_alpha and
-%   examples/F16A/mds/cruise_and_combatturn2_error_scrape.md Sec 2.
+%   power (e.g. Cruise) must use powerSetting="mil". See get_alpha.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Max Mach"
@@ -158,7 +157,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %GET_ALPHA  Thrust lapse on the basis this condition was constructed
         %   with: AB (prop.thrust_lapse) or mil
         %   (prop.thrust_lapse_mil_on_AB_scale). See the powerSetting property
-        %   and cruise_and_combatturn2_error_scrape.md Sec 2 for why Cruise
+        %   for why Cruise
         %   needs the mil basis.
             if obj.powerSetting == "mil"
                 alpha = obj.prop.thrust_lapse_mil_on_AB_scale(obj.state);
@@ -176,8 +175,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %   power_setting field ("AB"/"mil"). Used by the Master-Equation
         %   subclasses' fromCondition factories. "mil" draws the thrust lapse
         %   from prop.thrust_lapse_mil_on_AB_scale (a dry/military-power
-        %   condition), "AB" from prop.thrust_lapse -- see get_alpha and
-        %   examples/F16A/mds/cruise_and_combatturn2_error_scrape.md Sec. 2.
+        %   condition), "AB" from prop.thrust_lapse -- see get_alpha.
         %
         %   Errors rather than defaulting on a missing or out-of-set value: an
         %   unstated power setting silently defaulting to "AB" is exactly the

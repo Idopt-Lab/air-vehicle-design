@@ -5,7 +5,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
 %   convention -- part of run_all_tests, must be green, with ONE deliberate
 %   exception (testTODO_BatteryVolumetricEnergyDensityNotInRepo, clearly
 %   labeled below). Companion Tier-2 report:
-%   examples/F16A/subsystems_brandt_comparison.m (informational, NOT here).
+%   examples/F16A/sanity_checks/subsystems_brandt_comparison.m (informational, NOT here).
 %
 %   Every "expected" value below is HAND-COMPUTED from the cited formula
 %   with independently-chosen scalars (deliberately NOT the F-16's own

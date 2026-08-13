@@ -4,7 +4,7 @@ classdef MissionProfileReader
 %   Generic Layer-1 utility -- the mission-analysis analogue of
 %   ConstraintSetImporter. Any aircraft's mission requirements can be read with
 %   this, as long as the file follows the requirements-JSON layout the F-16 uses
-%   (examples/F16A/jsons/f16a_requirements.json): a top-level "missions" object
+%   (examples/F16A/inputs/f16a_requirements.json): a top-level "missions" object
 %   keyed by profile name, each profile carrying mission-level scalars
 %   (warmup_fuel_per_engine_lb, reserve_fuel_fraction, mu_rolling, mu_braking,
 %   liftoff_factor, approach_factor) and an ordered "segments" array. Each

@@ -29,7 +29,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   A +-40 % tolerance on a mis-cited target is not a unit test, and per
 %   CLAUDE.md's two-tier rule an agreement check is not one either. Both figures
 %   and the whole per-group breakdown now live in
-%   examples/F16A/weights_brandt_comparison.m. The old header block also
+%   examples/F16A/sanity_checks/weights_brandt_comparison.m. The old header block also
 %   mis-cited the cell; corrected here.
 %
 %   NOTHING IN THIS FILE MAY TAKE AN EXPECTED VALUE FROM

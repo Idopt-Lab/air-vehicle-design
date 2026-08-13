@@ -230,7 +230,7 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % the flat 0.40/0.07 the old, superseded TailSizingLevel1 used (its
         % own retired test recorded S_ht~=58.4/S_vt~=27.1, ~46%/~55% below
         % Brandt's 108.0/60.0). No assertion here is tolerance-fitted to
-        % Brandt; see examples/F16A/tail_sizing_brandt_comparison.m for the
+        % Brandt; see examples/F16A/sanity_checks/tail_sizing_brandt_comparison.m for the
         % actual (non-pass/fail) comparison report.
             geom = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             obj    = F16TailL1();

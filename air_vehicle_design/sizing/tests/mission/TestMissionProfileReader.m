@@ -2,7 +2,7 @@ classdef TestMissionProfileReader < matlab.unittest.TestCase
 %TESTMISSIONPROFILEREADER  Unit tests for MissionProfileReader.read_profile.
 %
 %   Verifies the reader decodes the two mission profiles in
-%   examples/F16A/jsons/f16a_requirements.json (.missions block) into the
+%   examples/F16A/inputs/f16a_requirements.json (.missions block) into the
 %   expected ordered segment struct arrays + mission-level scalars, and that it
 %   errors clearly on a missing profile / file / segment type.
 %

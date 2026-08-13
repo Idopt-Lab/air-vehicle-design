@@ -4,7 +4,7 @@ classdef ConstraintSetImporter
 %   Generic Layer-1 utility. Any aircraft's constraint requirements (one
 %   object per point-performance/field/stall condition) can be read with this,
 %   as long as the file follows the requirements-JSON layout the F-16 uses
-%   (examples/F16A/jsons/f16a_requirements.json): a top-level "constraints"
+%   (examples/F16A/inputs/f16a_requirements.json): a top-level "constraints"
 %   block whose "conditions" member is an array of condition objects. Each
 %   object carries REQUIREMENT / CONDITION data ONLY -- the flight condition
 %   and the field-performance requirement -- keyed by explicit field names
@@ -12,11 +12,11 @@ classdef ConstraintSetImporter
 %   / power_setting or distance_ft / mu / k_factor / mach_liftoff). It carries
 %   NO discipline-owned quantity (no CLmax, CD0, K1, K2, CDx, thrust-lapse
 %   alpha, or TSFC): those come from the injected aero/prop objects at run
-%   time. See examples/F16A/mds/f16a_requirements.md for the schema and
+%   time. See examples/F16A/inputs/f16a_requirements.md for the schema and
 %   per-field citations.
 %
 %   Aircraft-specific wiring of each condition into a concrete constraint
-%   object is a Layer-2 concern -- see examples/F16A/F16ConstraintSet.m.
+%   object is a Layer-2 concern -- see examples/F16A/models/sizing/F16ConstraintSet.m.
 %
 %   Deliberately thin: it does NOT append atmosphere columns (temperature,
 %   density, dynamic pressure) -- AircraftState derives those from

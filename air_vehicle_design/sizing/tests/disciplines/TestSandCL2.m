@@ -89,7 +89,7 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         % PUBLIC F16WeightsL2 API (not via F16SandCL2's own private
         % group_weight switch) and pair them with the JSON's own cg_x_ft
         % stations (hand-transcribed here from
-        % examples/F16A/jsons/f16a_L2.json .stability_control
+        % examples/F16A/inputs/f16a_L2.json .stability_control
         % .component_x_stations.groups, group order wing/horizontal_tail/
         % vertical_tail/fuselage/landing_gear/installed_engine/
         % subsystems_lump/strake/payload/fuel), then compute the weighted

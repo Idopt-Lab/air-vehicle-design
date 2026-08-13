@@ -26,13 +26,12 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 %   the equation as coded, independent of which aero discipline object
 %   supplies CLmax/CD0.
 %
-%   The F-16 Landing field condition [examples/F16A/mds/f16a_requirements.md
+%   The F-16 Landing field condition [examples/F16A/inputs/f16a_requirements.md
 %   field-condition table]: sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50,
 %   beta=1.0. testF16LandingWSMaxByFidelityLevel (parameterized over L1/L2/L3)
 %   computes each fidelity level's OWN flapped-landing CLmax/CD0
 %   (get_CLmax_L() + clean-CD0-plus-get_Delta_CD0_L(), the same assembly
-%   examples/F16A/fidelity_comparison.m uses and the same assembly WS_max()
-%   itself now calls -- ad-hoc methods present on every F16AeroLN class but
+%   WS_max() itself now calls -- ad-hoc methods present on every F16AeroLN class but
 %   still not part of the generic AerodynamicsBase interface, see
 %   LandingConstraint.m's header "NOTE ON CLmax/CD0 BASIS"), feeds them
 %   through a FixedAeroStub into the real WS_max(), and prints -- organized
@@ -350,13 +349,13 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
         % --- F-16 Landing field condition -----------------------------------
         % Sea level, k_L=1.3, S_FR=4,000 ft, mu=0.50, beta=1.0
-        % [examples/F16A/mds/f16a_requirements.md field-condition table]
+        % [examples/F16A/inputs/f16a_requirements.md field-condition table]
 
         function testF16LandingWSMaxByFidelityLevel(tc, fidelityLevel)
             % Computes the F-16 landing wing-loading limit at each fidelity
             % level using that level's OWN flapped-landing CLmax/CD0
             % (get_CLmax_L() + clean-CD0-plus-get_Delta_CD0_L(), the same
-            % assembly examples/F16A/fidelity_comparison.m uses -- ad-hoc
+            % assembly WS_max() itself uses -- ad-hoc
             % methods present on all three F16AeroLN classes but not part of
             % the generic AerodynamicsBase interface, see
             % LandingConstraint.m's header "NOTE ON CLmax/CD0 BASIS"),
@@ -425,8 +424,8 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
 
         function [aero, CLmax_land, CD0_land, K1, K2] = landingAeroValues(fidelityLevel)
         %LANDINGAEROVALUES  Flapped-landing CLmax/CD0 (get_CLmax_L() and
-        %   clean-CD0 + get_Delta_CD0_L(), matching
-        %   examples/F16A/fidelity_comparison.m's cd0_L_total/clmax_L_total
+        %   clean-CD0 + get_Delta_CD0_L(), matching the
+        %   cd0_L_total/clmax_L_total flapped-landing
         %   assembly) plus the clean drag-polar K1/K2, for the given F-16
         %   fidelity level. L3's get_Delta_CD0_L needs a state argument
         %   (gear-strut Reynolds-number lookup); L1/L2's do not -- see
@@ -442,8 +441,7 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
             switch fidelityLevel
                 case 'L1'
                     % L1 is geometry-free and has NO get_CD0 (migrated to L2);
-                    % read the clean CD0 from the Mattingly drag polar instead
-                    % (same fix applied in examples/F16A/fidelity_comparison.m).
+                    % read the clean CD0 from the Mattingly drag polar instead.
                     CD0_clean   = polar.CD0;
                     Delta_CD0_L = aero.get_Delta_CD0_L();
                 case 'L2'

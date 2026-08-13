@@ -27,7 +27,7 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
 %   INPUT vs DERIVED. Every quantity below the injected collaborators is
 %   DERIVED -- recomputed live on every read/call, never cached, matching the
 %   optimization-ready pattern (CLAUDE.md; reference implementation
-%   examples/F16A/F16GeomL2.m).
+%   examples/F16A/models/disciplines/geom/F16GeomL2.m).
 %
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL2.md
 
@@ -53,7 +53,7 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
     % toolbox-style form that takes a genuine external argument, e.g.
     % battery_volume below). The concrete class implements each as a
     % `get.<name>` Dependent getter recomputing live -- CLAUDE.md
-    % "Optimization-ready property design"; examples/F16A/F16GeomL2.m /
+    % "Optimization-ready property design"; examples/F16A/models/disciplines/geom/F16GeomL2.m /
     % F16WeightsL2.m are the reference implementations of this exact split.
     % ======================================================================= %
     properties (Abstract)

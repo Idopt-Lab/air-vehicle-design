@@ -33,7 +33,7 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
 %       its own local minimum and crossing the descending "Max Mach"/
 %       "Excess Power" curves near W/S=76 in the coarse (7-unit-step)
 %       Brandt sweep -- a separately-documented L1 aero/propulsion fidelity
-%       gap (`examples/F16A/remaining_constraints_scrape.md` Sec. 3), out of
+%       gap (a documented L1 aero/propulsion fidelity limitation), out of
 %       scope for this sizing-loop task and for the Stall fix -- flagged for
 %       separate follow-up, per user direction (2026-07-27) to route
 %       test-suite issues elsewhere.
