@@ -11,7 +11,7 @@ covers the F-16-specific wiring.
 ## 1. Role
 
 The CG term only — `x_cg = Sum(W_i * x_i) / Sum(W_i)` over the 10 `WeightsL2`-matched component
-groups. Per `docs/subplans/10_stability_control.md`'s "DECIDED: F16SandCL2 is limited to the CG term
+groups. Per the original stability-and-control design's "DECIDED: F16SandCL2 is limited to the CG term
 only" note: `F16GeomL2` exposes NO x-station properties at all, so none of Eqs. 16.4–16.15 are
 computable at this fidelity level — this is not a scope choice, it is what the injected geometry
 object can supply (there is in fact no geometry object injected at all at this tier).
@@ -34,7 +34,7 @@ Two of the 10 groups this class reads (`strake` → `W_strake`; the struct-field
 particular is an F-16-only LERX term added directly to `F16WeightsL2`, never declared on
 `WeightsBase`/`WeightsModelL2`. A `WeightsModelL2` type guard would therefore not actually guarantee
 the members this class reads. The `component_x_stations` grouping itself is explicitly built "from
-THIS framework's own WeightsL2/WeightsL3 groups" (`docs/subplans/10_stability_control.md`
+THIS framework's own WeightsL2/WeightsL3 groups" (the original stability-and-control design's
 "Component-x-location buildup") — i.e. tied to this exact concrete class's shape, not a generic
 weights contract. **Decision**: type `weights` as `(1,1) F16WeightsL2` concretely, matching the
 launch instruction's own "Inject F16WeightsL2" wording.
@@ -58,8 +58,8 @@ launch instruction's own "Inject F16WeightsL2" wording.
 
 `W_energy` is a **plain** property (never a computed/guarded getter) — reading it before mission
 analysis sets it simply returns `NaN`, and `SandCL2.weighted_cg`'s ordinary IEEE arithmetic
-propagates that `NaN` straight into `x_cg`, with no error. This is the ONE graceful-NaN case
-`docs/subplans/10_stability_control.md` asks for.
+propagates that `NaN` straight into `x_cg`, with no error. This is the ONE graceful-NaN case the
+original stability-and-control design asks for.
 
 `W_landing_gear` and `W_all_else_empty`, by contrast, are genuinely `W_TO`-scaled fractions guarded
 by `F16WeightsL2.requireWTO` — reading `x_cg` before a candidate `W_TO` exists errors loudly through

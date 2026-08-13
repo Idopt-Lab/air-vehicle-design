@@ -1,13 +1,13 @@
 classdef TestF16LandingGearL3 < matlab.unittest.TestCase
 %TESTF16LANDINGGEARL3  Unit tests for F16LandingGearL3 (F-16-only, no
-%   abstract Base/Model tier -- docs/subplans/09_subsystems.md Files to
+%   abstract Base/Model tier -- original step-9 subsystems design, Files to
 %   Create).
 %
 %   TIER 1 (unit/correctness) per CLAUDE.md's two-tier-tests-never-blended
 %   convention -- part of run_all_tests, must be green. NO deliberate TODO
 %   test in this file: F16LandingGearL3's gear-bay-volume citation gap
-%   (subplan item 11) is the SAME open gap as F16LandingGearL2's, and is
-%   pinned exactly once, for BOTH classes, in
+%   (original step-9 subsystems design, item 11) is the SAME open gap as
+%   F16LandingGearL2's, and is pinned exactly once, for BOTH classes, in
 %   TestF16LandingGearL2.testTODO_GearBayVolumePackagingNotInRepo -- adding
 %   a second TODO test here would double-count a single open gap in the
 %   suite's TODO-test tally.
@@ -52,9 +52,9 @@ classdef TestF16LandingGearL3 < matlab.unittest.TestCase
         function testTireDiameterAndWidthMatchL2ForSameWTO(tc)
         % Bit-identical-behavior guard: given the SAME W_TO and category row,
         % L3's Dependent getters must produce the SAME numbers as L2's --
-        % tire sizing does not change with geometry fidelity (subplan
-        % "Kept as a separate class... today the two classes' equations are
-        % IDENTICAL").
+        % tire sizing does not change with geometry fidelity (F16LandingGearL3.m
+        % header, "Kept as a separate class... today the two classes' equations
+        % are IDENTICAL").
             prop = F16PropL2(f16a_spec_path(2));
 
             g2 = F16GeomL2(f16a_spec_path(2), prop);

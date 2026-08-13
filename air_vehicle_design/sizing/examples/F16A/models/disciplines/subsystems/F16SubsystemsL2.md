@@ -4,7 +4,7 @@ F-16A Block 10/15 Level-2 subsystems student class (`classdef F16SubsystemsL2 < 
 Every abstract method is a single delegation line into the `SubsystemsL2` static toolbox — no
 equations are duplicated here. See `src/disciplines/subsystems/SubsystemsL2.md` for the full
 equation/citation detail; this file covers the F-16-specific wiring and the design decisions the
-subplan left open.
+original step-9 subsystems design left open.
 
 ---
 
@@ -26,7 +26,7 @@ weight fraction of `W_empty`.
 
 ## 3. Judgment call: `fuel_weight_source`
 
-The subplan (Design Notes / Dependency Injection) names this constructor argument
+The original step-9 subsystems design names this constructor argument
 `fuel_weight_source` and says it may be "mission analysis or `F16WeightsL2` — pick whichever exposes
 it most directly," without pinning down which. **No mission-analysis discipline exists in this repo
 yet.** `F16WeightsL2`/`F16WeightsL3` already expose BOTH quantities this class needs:
@@ -76,7 +76,7 @@ below, the last two because they are the Tier-1 orchestrator contract declared o
 
 ## 5. Judgment call: landing-gear bay volume is NOT auto-summed into `internal_volume()`
 
-The subplan's Objectives §3 ("producing a bay volume that also feeds the internal-volume total") is
+The original step-9 design's goal ("producing a bay volume that also feeds the internal-volume total") is
 aspirational and blocked on item 11's citation gap — `F16LandingGearL2.bay_volume()` always errors
 (no textbook tire+strut stowage-volume formula exists anywhere in this repo). Auto-summing an
 always-erroring term into `internal_volume()` would make every call to `internal_volume()` fail hard,

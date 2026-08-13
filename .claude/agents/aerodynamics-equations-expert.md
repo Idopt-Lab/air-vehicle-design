@@ -21,7 +21,7 @@ Genuine aero spec (Cfe, airfoil section data, per-component Q / laminar fraction
 
 ## What "correct" means here
 - Every equation you write must match its cited textbook source exactly — same form, coefficients, and variable definitions. Follow the Scribe's approved companion doc citation precisely; don't substitute a different-looking formula.
-- **K-convention is settled: Convention A.** `CD = CD0 + K1·CL² + K2·CL` with K1 the quadratic/induced factor and K2 the linear camber-offset term. This is what `AerodynamicsBase.compute_CD`, `AeroL2`, `ThrustConstraint`, Mattingly Eq. 2.9, and Brandt all use. The stale `temp_AI/docs/disciplines/01_aerodynamics.md` and `docs/subplans/03_aerodynamics.md` have K1/K2 swapped — do not follow them.
+- **K-convention is settled: Convention A.** `CD = CD0 + K1·CL² + K2·CL` with K1 the quadratic/induced factor and K2 the linear camber-offset term. This is what `AerodynamicsBase.compute_CD`, `AeroL2`, `ThrustConstraint`, Mattingly Eq. 2.9, and Brandt all use.
 - The abstract base enforces only the common core: `drag_polar(state) → struct(CD0, K1, K2)` (Convention A) and `get_CLmax(state)`. Do NOT push author-specific decompositions (Nicolai K′/K″, Raymer single-K, Nicolai break-polar K_B) into the base — those live inside the level toolboxes; expose them as internal statics and map into the canonical (CD0, K1, K2) triple.
 - For Brandt-workbook formulas (`VnV/BrandtF16A`), get the formula from its own `.m` files and `readme_aero.md`/`cell-map.md` before re-deriving from the live `.xls`.
 - Never hardcode a derived/calibrated result as a constant — no back-calculated Cfe=0.005908, no e_osw=0.9086. Compute from real inputs. This repo has a documented history of exactly this bug; undoing it is the point.

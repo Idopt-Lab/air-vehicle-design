@@ -142,7 +142,7 @@ matches the recovered table's actual row count exactly. Its CATEGORY breakdown, 
 in the original, lost content itself, not introduced by the merge loss. A direct recount of the
 recovered table gives the correct breakdown: **2 CONFLICT / 8 FROM-CODE / 26 VERIFY / 26 IMAGE-ONLY**,
 which sums to exactly 62 with no separate fifth category. This correction has been applied everywhere
-the wrong breakdown was quoted (`WeightsL3.m`, `TestWeightsL3.m`, `docs/subplans/05_weights.md`,
+the wrong breakdown was quoted (`WeightsL3.m`, `TestWeightsL3.m`, the original weights design plan,
 `F16WeightsL3.md`). The full 62-row table itself is still not restored into this file.
 
 **Context:** Phase-A documentation pass for the Propulsion deep-dive (mirrors the Geometry and
@@ -164,26 +164,26 @@ The single formula α = σ^m (σ = ρ/ρ_SL) is cited three inconsistent ways:
   power law: α = σ^0.6   [Raymer 6th §5.4]"*
 - `tests/disciplines/TestPropL1.m:201`: *"expected_SL = 1.0; % σ=1 at SLS regardless of Mach
   [Raymer §5.4]"*
-- `docs/subplans/04_propulsion.md:74`: *"α (thrust lapse) | (ρ / ρ_SL)^0.6 | Raymer 6th ed, Ch 3"*
+- the original propulsion design plan: *"α (thrust lapse) | (ρ / ρ_SL)^0.6 | Raymer 6th ed, Ch 3"*
 The repo Martins extract (`metabook_data.md`) confirms Eq. 10.7 (turbojet, m=1.0) and Eq. 10.9
 (turbofan, general m; the specific m=0.6 is the Ch. 4 approximation, `metabook_data.md` line 226). No
 Raymer §5.4 extract exists in the repo (`raymer_data.md` covers Ch. 10/12/15 only) → the "Raymer §5.4"
 / "Raymer Ch 3" citation is unverifiable AND conflicts with the verified Martins citation.
 **RESOLVED (user, 2026-07-24):** use **Martins metabook Eq. 10.9** as the source for α = σ^m. The
-`PropulsionModelL1.m` / `TestPropL1.m` "Raymer §5.4" and subplan "Raymer Ch 3" citations are to be
-corrected to Martins in the implementation step (Step 1c). No `.m`/`.json` files were edited in this
+`PropulsionModelL1.m` / `TestPropL1.m` "Raymer §5.4" and the original propulsion design plan's
+"Raymer Ch 3" citations are to be corrected to Martins in the implementation step (Step 1c). No `.m`/`.json` files were edited in this
 documentation pass.
 
-### Entry 2 — Subplan TSFC units drift (/3600 → 1/s) vs. code (1/hr throughout) — RESOLVED (user, 2026-07-24)
-`docs/subplans/04_propulsion.md` states TSFC is converted to 1/s:
+### Entry 2 — Design-plan TSFC units drift (/3600 → 1/s) vs. code (1/hr throughout) — RESOLVED (user, 2026-07-24)
+The original propulsion design plan states TSFC is converted to 1/s:
 - `:72-73`: *"low-BPR mixed turbofan: 0.8/hr → /3600 → 1/s"*, *"0.7/hr → /3600"*
 - `:79-80`: *"(0.9 + 0.30 × M) × sqrt(θ) [1/hr → /3600]"*, *"(1.6 + 0.27 × M) × sqrt(θ) [1/hr → /3600]"*
 The code keeps TSFC in **1/hr** everywhere, with no /3600: `PropL1.lookup_TSFC_table`/`get_TSFC`
 (0.80/0.70), `PropL2.TSFC_mil`/`TSFC_AB`, and `PropulsionBase.m:11` (*"TSFC in
-lbf_fuel/(hr·lbf_thrust) [1/hr]"*). The subplan misstates the as-built unit.
+lbf_fuel/(hr·lbf_thrust) [1/hr]"*). The original design plan misstates the as-built unit.
 **RESOLVED (user, 2026-07-24):** use **1/hr** for TSFC throughout — the code's 1/hr is correct; the
-subplan's `/3600 → 1/s` statements are wrong and will be corrected to 1/hr in the docs-cleanup step
-(1d, `docs/subplans/04_propulsion.md`). No `.m` change needed (code is already 1/hr).
+design plan's `/3600 → 1/s` statements are wrong and will be corrected to 1/hr in the docs-cleanup step
+(1d, in the original propulsion design plan). No `.m` change needed (code is already 1/hr).
 
 ### Entry 3 — Raymer engine-diameter coeffs 0.033 (Eq. 10.6) / 0.024 (Eq. 10.12): OCR-vs-book — RESOLVED (user, 2026-07-24)
 `src/disciplines/propulsion/PropL2.m:182-183` (`engine_diam_nonAB`) uses 0.033 and `:224-225`
@@ -436,7 +436,7 @@ citation that does not exist yet. Full record in `TailSizing_scribe_plan.md` §6
 ## 2026-07-31 — Subsystems deep-dive, Phase A (documentation): `gear` block provenance and implied gear-load-split
 
 **Context:** scribe documentation pass for the brand-new Subsystems discipline
-(`docs/subplans/09_subsystems.md`), researching a citable source for the new `F16LandingGearL2`/`L3`
+(the original subsystems design plan), researching a citable source for the new `F16LandingGearL2`/`L3`
 classes' "gear-load-split" input (what fraction of `W_TO` each gear carries, needed to get the
 per-wheel load `W_w` that Raymer's statistical tire-sizing formula, Table 11.1, takes as its argument).
 Did **not** open the live `Brandt-F16-A.xls` in this pass (documentation-only; no MATLAB MCP/COM tool
@@ -475,7 +475,7 @@ source already in this repo: `docs/reference_extracts/08_fuselage_sizing.md` §8
 (Nicolai & Carichner, p.202): *"Nose gear rule of thumb: 20% of TOGW on the nose wheel for good
 steering."* It also contradicts Raymer's stated typical split (Ch. 11 p.344 prose, *"the main tires
 carry about 90% of the total aircraft weight... Nose tires carry only about 10%"* — see
-`docs/subplans/09_subsystems.md` Equations & Citations §8). A real F-16 nose gear carrying 73% of
+the original subsystems design plan's Equations & Citations §8). A real F-16 nose gear carrying 73% of
 `W_TO` (vs. main gear's 27%) would be a radically unconventional, almost certainly incorrect,
 weight-and-balance configuration for a tricycle-gear fighter. The likely candidates are: `x_nose_ft`/
 `x_main_ft` in the uncross-checked `gear` block (Finding 1) being wrong, mislabeled, or measured in a
@@ -487,7 +487,7 @@ cell if the Excel model itself computes one.
 
 **Why it matters now:** the new `F16LandingGearL2`/`F16LandingGearL3` classes need a gear-load-split
 input to convert `W_TO` into the per-wheel load `W_w` that Raymer's Table 11.1 tire-sizing formula
-takes as its argument. `docs/subplans/09_subsystems.md` recommends defaulting to Raymer's own stated
+takes as its argument. The original subsystems design plan recommends defaulting to Raymer's own stated
 90%/10% (needs no geometry, matches the discipline's "statistical method" framing) and explicitly
 **not** wiring in the Brandt-derived 26.7%/73.3% split until this is resolved. **Flagging for user
 review — not resolved here**, per the standing scribe rule. Needs: (a) a live-`Brandt-F16-A.xls` COM
@@ -500,8 +500,8 @@ station values are the more likely source of the discrepancy, or whether it is n
 
 ## 2026-08-03 — Stability & Control deep-dive, Phase A (documentation): BSC-sheet cell-map gap + blocked live-workbook checks → RESOLVED (live-xls read, 2026-08-03)
 
-**Context:** scribe documentation pass for subplan 10 (Stability & Control, longitudinal static stability
-in steady level flight only — `docs/subplans/10_stability_control.md`). No MATLAB COM/`actxserver`-
+**Context:** scribe documentation pass for the original Stability & Control design plan (longitudinal
+static stability in steady level flight only). No MATLAB COM/`actxserver`-
 capable tool was available in this session (only `Read`/`Grep`/`Glob`/`Write`/`Edit`/`WebFetch`) — `Read`
 on any `.xlsx` fails outright ("cannot read binary files"). Two items are logged here as gaps discovered
 while trying to cross-check against live workbooks, per this file's stated scope ("or gaps discovered
@@ -524,16 +524,16 @@ wording, which currently implies one does.
 
 **RESOLVED (live-xls read, 2026-08-03):** opened `Brandt-F16-A.xls` via MATLAB `readcell` (read-only).
 The workbook has no sheet literally named "BSC" — the sheet is named **`S&C (2)`** (118 rows × 23 cols),
-exactly the sheet this subplan's "Ground Truth" section had speculated about. Its longitudinal-static-
+exactly the sheet the original S&C design plan's "Ground Truth" section had speculated about. Its longitudinal-static-
 stability rows (`xnp`, `xcg_Lndg`, `xcgTakeoff`, `SM`) match `readme_bsc.md`'s recorded ground-truth
 values essentially exactly (`x_np=26.1677 ft`, `x_cg_land=26.1369 ft`, `x_cg_TO=26.1925 ft`), confirming
 `readme_bsc.md`/`BrandtBalanceStabControl.m` already reads this sheet's numbers — `readme_bsc.md:6`'s
 "BSC" wording should be read as an informal nickname, not a literal sheet name; `cell-map.md` should gain
 an `S&C (2)` entry. Full cell layout (which rows hold which quantity, and their in-sheet citations —
 several rows cite **Roskam Eqns 3.17/3.19/3.24/3.38**, not Raymer Ch. 16) is now written up in
-`docs/subplans/10_stability_control.md`'s "Ground Truth" section, "Live-workbook read (2026-08-03,
+the original S&C design plan's "Ground Truth" section, "Live-workbook read (2026-08-03,
 coordinator session)" subsection. Most of the sheet (lateral-directional derivatives, short-period
-dynamics) is out of this subplan's scope and was not cell-mapped in detail.
+dynamics) is out of the original design plan's scope and was not cell-mapped in detail.
 
 ### Gap 2 — `temp_Casey/inputs/F-16A Block 50.xlsx`'s `Stability&Control` sheet: existence corroborated in code; cell layout and any overlap with `BrandtBalanceStabControl` unchecked
 A different workbook from Gap 1 — `temp_Casey`'s legacy input file, not Brandt's ground-truth file.
@@ -548,11 +548,11 @@ check whether its component x-locations/weights duplicate or conflict with
 `BrandtBalanceStabControl.m`'s own computed `xcg_*_ft` properties (wing, fuse, pitch, vert, nacelle,
 strake, engine, gear, inlet, ctrl, elec, hyd, ECS, other, avionics, armament, fuel1/2/3) — two
 independently-sourced component-station tables that may describe the same physical aircraft. **Why it
-matters now:** `docs/subplans/10_stability_control.md`'s "Component-x-location buildup" section plans a
+matters now:** the original S&C design plan's "Component-x-location buildup" section plans a
 brand-new S&C-owned input table built fresh from `WeightsL3`/`GeomL3`; this legacy sheet is a candidate
 pre-existing alternative (or cross-check) that has not been evaluated. Needs a live-workbook read (both
 files) before `io` builds the new table, and before deciding whether the legacy sheet's numbers should
-inform it. Full detail in `docs/subplans/10_stability_control.md`'s "Ground Truth" section, "Scribe
+inform it. Full detail in the original S&C design plan's "Ground Truth" section, "Scribe
 follow-up (2026-08-03)" subsection.
 
 **RESOLVED (live-xls read, 2026-08-03):** opened `temp_Casey/inputs/F-16A Block 50.xlsx`'s
@@ -562,7 +562,7 @@ unpopulated). 22 component rows: Wing, Fuselage, HT, VT, Nacelles, Strakes, Engi
 Controls, Electrical, Hydraulics, ECS, Other, Avionics, Armaments, Fixed Payload, Exp Payload 1/2, Fuel
 1/2/3 — matching `BrandtBalanceStabControl.m`'s own `xcg_*_ft` property list almost 1:1. **Not checked
 line-by-line against `BrandtBalanceStabControl.m`'s computed values** (that comparison is still future
-work, deferred to the `io` pass per `docs/subplans/10_stability_control.md`'s "Ground Truth" section) —
+work, deferred to the `io` pass per the original S&C design plan's "Ground Truth" section) —
 this resolution closes only the "does the sheet exist, and what is its cell layout" question, not the
 "do the two sources agree" question.
 
@@ -575,7 +575,7 @@ Ch. 16 starts book p.585 / PDF p.615) directly, ahead of the implementation loop
 Ch. 16 in full (book pp.585–619, covering all of §16.3 "Longitudinal Static Stability and Control" plus
 the start of §16.4 "Lateral-Directional," which is out of scope and not read further) via extracted PDF
 pages (PyMuPDF page extraction to a scratch file, since the source PDF is too large for direct text
-extraction). This supersedes the 2026-08-03 web-cross-check entries in `docs/subplans/10_stability_control.md`
+extraction). This supersedes the 2026-08-03 web-cross-check entries in the original S&C design plan
 ("Equations & Citations" §1/§2) with a primary-source read. Three corrections and one new gap found:
 
 ### Correction 1 — Eq. 16.8 is `Cm_α` (the pitching-moment DERIVATIVE), not a "full itemized Cm_cg buildup"
@@ -589,7 +589,7 @@ Cm_α = CL_α(X̄cg − X̄acw) + Cm_α,fus − η_h(S_h/S_w)CL_αh(∂α_h/∂�
 point, solving `Cm_α=0`) and Eq. (16.10)/(16.11) (Cm_α restated in terms of `X_np`; static margin). There
 is no separately-numbered "full itemized Cm_cg" equation beyond Eq. (16.7) (coefficient form, Row 2) —
 `Cm_fus` is already inside Eq. (16.7)'s `Cm_fus` term (the web source's buildup wasn't wrong on content,
-just on which equation number it belongs to). Row 3 in the subplan should be re-labeled as `Cm_α`
+just on which equation number it belongs to). Row 3 in the original design plan should be re-labeled as `Cm_α`
 (Eq. 16.8), a genuinely distinct quantity from Row 2, not a variant of it.
 
 ### Correction 2 — Eq. 16.9 DOES have a thrust term; Raymer's own text sanctions dropping it ("power-off")
@@ -612,14 +612,14 @@ quarter-chord as percent of fuselage length"). This is an EXACT match, including
 computes exactly `(K_fus*W_f^2*L_f)/(c*S_w)` with a code comment "% per deg" and cites "Raymer 6th ed, eq
 16.25" directly — confirming the legacy code's formula is correct AS A PER-DEG QUANTITY, but every
 downstream consumer (Eqs. 16.8/16.9, which are per-RADIAN throughout) must multiply this term by
-`180/π` (≈57.3) to convert before use — exactly the missing factor flagged in the subplan's Legacy Bugs
-table 2026-08-03 entry, now upgraded from "likely, web-sourced, not independently confirmed" to
+`180/π` (≈57.3) to convert before use — exactly the missing factor flagged in the original design plan's
+Legacy Bugs table 2026-08-03 entry, now upgraded from "likely, web-sourced, not independently confirmed" to
 **CONFIRMED, primary source, Raymer 6th ed. p.603, verbatim "per deg" label**.
 
 ### New gap — Fig. 16.14's `K_fus` chart has no digitized/citable numeric value anywhere in this repo
 Legacy code reads `K_fus = design.geom.wings.Main.Kfus` (line 121) — a property with NO numeric
 definition found anywhere searchable in `temp_Casey` (grepped the whole `sizing/` tree for
-`Kfus`/`K_fus`: only the two `SandCLevel3.m` read-site hits and this subplan's own prose exist; no config,
+`Kfus`/`K_fus`: only the two `SandCLevel3.m` read-site hits and the original design plan's own prose exist; no config,
 input file, or `.mat` sets a value). Fig. 16.14 is a chart (K_fus, y-axis 0–0.05, vs. x-axis "position of
 root quarter-chord as % of fuselage length," 10–60%; NACA TR 711) with no in-repo digitization. **Not
 resolved here** — flagged for the implementation phase to either (a) digitize a handful of points
@@ -632,7 +632,7 @@ handled elsewhere in this discipline, pending Casey's decision.
 Eq. 16.4 (Row 1), Eq. 16.5/16.7 (Row 2), Eq. 16.11 (Row 5, `SM=(X̄np−X̄cg)`, no `/100`), Eq. 16.12 (Row 6 —
 **all 5 coefficients now confirmed** including the `0.4`/`1.1` breakpoints and the `2.5` exponent, not
 just the 3 Casey spot-checked on 2026-08-03), Eq. 16.13/16.14 (Rows 7/8), and Eqs. 16.15–16.18 (Row 9) all
-match the subplan's existing formulas exactly. One scope clarification on Row 9: Eqs. 16.15–16.18 are the
+match the original design plan's existing formulas exactly. One scope clarification on Row 9: Eqs. 16.15–16.18 are the
 GENERAL plain-flap/control-surface-deflection family (the book explicitly applies it to "elevator,
 aileron, and rudder" alike, p.596) — not a separately-numbered "elevator-specific" equation as the
 2026-08-03 entry's phrasing implied. Casey's choice to use this family (Eq. 16.16 combined with Eq.
@@ -673,7 +673,7 @@ a physical-layout topic, not a stability-derivative one, so it is not a plausibl
 Roskam's separate title, "Airplane Flight Dynamics and Automatic Flight Controls, Part I," the book
 Brandt's `S&C (2)` sheet's Ch. 3 numbering (3.17–3.38) actually belongs to.** That title is not present in
 this Readings folder under any filename. The "Major new lead" callout in
-`docs/subplans/10_stability_control.md` and the earlier todo.md entry both stand as written — this is
+the original S&C design plan and the earlier todo.md entry both stand as written — this is
 independent confirmation, not a reversal.
 
 **Bonus finding, not what was asked but relevant:** `aircraft_design_metabook.pdf` (Martins, "The
@@ -778,7 +778,7 @@ not, on its own, enough to fully compute `Cm_cg_trim` (Raymer Eq. 16.5/16.7) —
 `Cm_acw`, the wing's own zero-lift pitching-moment coefficient about its aerodynamic center. Grepped
 `F16AeroL3.m` and every `src/disciplines/aerodynamics/*.m` file directly for any `Cm`/`Cm0`/`Cm_ac`/
 `pitching_moment` property: **none exists anywhere in this repo's Aerodynamics discipline, at any fidelity
-level.** This is a genuinely new finding, not something previously flagged in the subplan's original
+level.** This is a genuinely new finding, not something previously flagged in the original design plan's
 GAP list — logged here rather than invented. `F16SandCL3.Cm_cg_trim` still errors, but now with a much
 narrower, more specific reason (`F16SandCL3:wingZeroLiftMomentNotAvailable`, was
 `F16SandCL3:thrustLocationNotAvailable`). Two candidate future paths, neither pursued yet: (a) Roskam's

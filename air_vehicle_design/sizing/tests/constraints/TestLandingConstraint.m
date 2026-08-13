@@ -89,8 +89,8 @@ classdef TestLandingConstraint < matlab.unittest.TestCase
         end
 
         function testDefaultBetaAndKL(tc)
-            % beta and k_L default to 1.0 and 1.3 (field constraint, per
-            % subplans/06_constraint_analysis.md) when omitted.
+            % beta and k_L default to 1.0 and 1.3 (field constraint, per the
+            % original step-6 constraint-analysis design) when omitted.
             state = AircraftState(0, 0.1);
             obj   = LandingConstraint("Toy", state, F16AeroL1(f16a_spec_path(1)), 4000, 0.5);
             tc.verifyEqual(obj.beta, 1.0);

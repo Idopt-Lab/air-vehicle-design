@@ -7,7 +7,7 @@ classdef SandCL3
 %
 %   Every method below is LEVEL-AGNOSTIC: plain scalar arguments only, never
 %   reading tier-level obj state -- exactly like AeroL2.CL_alpha or
-%   AeroL1.oswald_eff (docs/subplans/10_stability_control.md's
+%   AeroL1.oswald_eff (the original stability-and-control design's
 %   "Fidelity-collapse contingency"). F16SandCL3 reads its injected
 %   collaborators' CURRENT state, converts units, and calls these statics;
 %   none of that glue lives here.
@@ -87,8 +87,8 @@ classdef SandCL3
         %   y_MAC_span/x_LE_MAC -- matches readme_bsc.md's own x_ac formula
         %   exactly, modulo the Mach-shift term (Brandt's simplified neutral-
         %   point approximation omits it). Hand-checked against Brandt's
-        %   live S&C(2) sheet xacW = 25.589 ft (docs/subplans/
-        %   10_stability_control.md "Ground Truth"): this formula, fed
+        %   live S&C(2) sheet xacW = 25.589 ft (the original stability-and-
+        %   control design's "Ground Truth"): this formula, fed
         %   F16GeomL3's own inputs at M<0.4 (Delta_x_ac=0), gives 25.591 ft
         %   (+0.01%) -- strong corroboration despite the different geometry
         %   basis (GeomL3 physical vs. Brandt's own).
@@ -159,7 +159,7 @@ classdef SandCL3
 
         % ================================================================== %
         % Tail lift-curve slope -- reused from the Aero toolbox, not
-        % re-derived (docs/subplans/10_stability_control.md "Eqs. 16.13/
+        % re-derived (the original stability-and-control design's "Eqs. 16.13/
         % 16.14/16.15 stay in scope" decision note).
         % ================================================================== %
 
@@ -269,8 +269,8 @@ classdef SandCL3
         %CM_ALPHA_FROM_NEUTRAL_POINT  [Raymer 6th ed. Eq. 16.10] -- Cm_alpha
         %   restated in terms of the neutral point; a cross-check against
         %   Cm_alpha (Eq. 16.8) at consistent inputs. Not required by the
-        %   subplan, implemented because it is essentially free once
-        %   neutral_point/Cm_alpha exist:
+        %   original stability-and-control design, implemented because it is
+        %   essentially free once neutral_point/Cm_alpha exist:
         %     Cm_alpha = -(CL_alpha + eta_h*(Sh/Sw)*CL_alpha_h*(dalpha_h/dalpha))
         %                * (Xnp_bar - Xcg_bar)
             arguments

@@ -18,8 +18,8 @@ The `SubsystemsL1`/`SubsystemsL2`/`SubsystemsL3` static toolboxes hold the equat
 in this chain — concrete classes delegate to them.
 
 `F16LandingGearL2`/`F16LandingGearL3` are **not** part of this chain at all — no abstract Base/Model
-tier exists for landing gear (not every airframe has conventional landing gear), per
-`docs/subplans/09_subsystems.md` "Files to Create."
+tier exists for landing gear (not every airframe has conventional landing gear), per the original
+step-9 subsystems design.
 
 ## 2. Abstract contract
 
@@ -39,7 +39,7 @@ tier exists for landing gear (not every airframe has conventional landing gear),
 
 | Method | Returns | Signature note |
 |---|---|---|
-| `internal_volume(obj, W_empty)` | total usable internal volume estimate, ft³ | declared at L1's widest signature (mirrors `GeometryBase.get_S_wet(obj, W_TO)`); L2/L3 concretes implement the zero-extra-arg form `internal_volume(obj)`, reading an injected weights collaborator live instead. This is a documented, deliberate arity asymmetry — MATLAB does not enforce matching arity between an abstract declaration and its override — **not** a repeat of the legacy accidental 2-arg-vs-3-arg signature drift (`docs/subplans/09_subsystems.md` "Legacy Bugs to Avoid" item 2), which was undocumented. |
+| `internal_volume(obj, W_empty)` | total usable internal volume estimate, ft³ | declared at L1's widest signature (mirrors `GeometryBase.get_S_wet(obj, W_TO)`); L2/L3 concretes implement the zero-extra-arg form `internal_volume(obj)`, reading an injected weights collaborator live instead. This is a documented, deliberate arity asymmetry — MATLAB does not enforce matching arity between an abstract declaration and its override — **not** a repeat of the legacy accidental 2-arg-vs-3-arg signature drift (a legacy bug to avoid), which was undocumented. |
 | `fuel_volume_check(obj, required_weight_lb)` | struct: `available_vol_ft3`, `required_vol_ft3`, `sufficient` (logical) | same asymmetry: L1 callers pass `required_weight_lb` explicitly; L2/L3 read it live from an injected `fuel_weight_source` (a `WeightsBase` object), never a hardcoded literal. |
 | `fuel_volume_from_weight(obj, fuel_weight_lb)` | ft³ | the definitional weight→volume conversion specialized to the fuel path (`weight_to_volume(fuel_weight_lb, obj.fuel_density)`). Same signature at EVERY level — no widest-signature asymmetry needed, since every tier already takes an explicit weight argument for this one. NO packaging factor applied (that only applies to the geometric `fuselage_usable_fuel_volume`, a different quantity). |
 
@@ -70,7 +70,7 @@ whichever kind that tier actually needs.
 
 ## 4. Conventions
 
-**Fuel-volume sufficiency, precisely** (per Casey, `docs/subplans/09_subsystems.md` Design Notes):
+**Fuel-volume sufficiency, precisely** (per Casey, the original step-9 subsystems design):
 `fuel_volume_check` must sum fuselage-internal **and** wing-internal volume, never just one, must
 support multiple jet-fuel types each with their own cited density, and must have a parallel
 battery-electric (energy-density) path rather than a special case bolted onto the liquid-fuel path.

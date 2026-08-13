@@ -367,7 +367,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         %   TestGeomL3.testTODO_OverallLengthCitationNotPinned and
         %   TestAeroL2.testTODO_ClAlpha2DUnverified.
         %
-        %   WHAT IS MISSING: docs/subplans/05_weights.md:81,88 cites Raymer
+        %   WHAT IS MISSING: the original step-5 weights design cites Raymer
         %   *Table 6.1* for the same empty-weight-fraction power law that
         %   WeightsL1 cites as *Table 3.1*. Locked decision (user 2026-07-24):
         %   keep Table 3.1 plus the Roskam bound; Table 6.1's coefficients are

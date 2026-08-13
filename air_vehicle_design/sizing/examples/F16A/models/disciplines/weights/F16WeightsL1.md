@@ -92,6 +92,6 @@ agreement check against ground truth is not a unit test. The unit tier keeps phy
 
 | Item | Guard |
 |---|---|
-| Raymer **Table 6.1** is cited by `docs/subplans/05_weights.md` for the same power law, but its coefficients are **not in this repo** — the code uses Table 3.1. The user must supply Table 6.1 to settle which is intended | `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` — deliberately red |
+| Raymer **Table 6.1** is cited by the original step-5 weights design for the same power law, but its coefficients are **not in this repo** — the code uses Table 3.1. The user must supply Table 6.1 to settle which is intended | `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` — deliberately red |
 | The Raymer Table 3.1 extract carries a fifth row (UAV-Tac Recce / UCAV, A = 1.67, C = −0.16) the code does not | not a defect; noted |
 | Both coefficient tables come from secondary/OCR sources rather than the printed books | in-code `⚠ verify` markers |

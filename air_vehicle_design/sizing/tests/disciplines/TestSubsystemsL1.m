@@ -14,8 +14,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 %   tests that read the JSON directly and assert against the JSON's own
 %   independently-known values -- e.g. that fuel_type is literally 'JP-8').
 %
-%   L1 is tabulation-only (docs/subplans/09_subsystems.md Fidelity split):
-%   no geometry, no fuel-tank packaging factor, no landing-gear counterpart.
+%   L1 is tabulation-only (Fidelity split): no geometry, no fuel-tank
+%   packaging factor, no landing-gear counterpart.
 %   Methods needing an external weight (W_empty, a required fuel weight)
 %   take it as an explicit argument rather than reading an injected object,
 %   so most high-level toolbox calls below use a lightweight STRUCT standing
@@ -40,9 +40,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
     methods (Test)
 
         % ================================================================== %
-        % LOW-LEVEL LOOKUPS -- pure tables, hand-verified against the subplan's
-        % transcription of the physical books (docs/subplans/09_subsystems.md
-        % Equations & Citations items 2-3).
+        % LOW-LEVEL LOOKUPS -- pure tables, hand-verified against the original
+        % step-9 design's transcription of the physical books.
         % ================================================================== %
 
         function testLookupFuelDensityAllFourTypes(tc)
@@ -125,9 +124,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testLookupAvionicsWeightFractionRangeSpotChecks(tc)
         % [Raymer 6th ed. Table 11.6, p.375], full 8-row table -- spot-check
-        % three rows independently transcribed from the subplan's own
-        % reproduction (docs/subplans/09_subsystems.md Equations & Citations
-        % item 3).
+        % three rows independently transcribed from the original step-9
+        % design's own reproduction.
             received = SubsystemsL1.lookup_avionics_weight_fraction_range('Fighters');
             expected = [0.03, 0.08];
             fprintf('  [L1] testLookupAvionicsWeightFractionRangeSpotChecks (Fighters): expected=%s, received=%s\n', mat2str(expected), mat2str(received));
@@ -162,8 +160,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testLookupAvionicsWeightFractionIsRangeMidpoint(tc)
         % DECIDED (Casey, 2026-08-03): the row's own range midpoint, not the
-        % legacy code's low-end 0.03 (docs/subplans/09_subsystems.md
-        % Equations & Citations item 3). Hand-computed midpoints:
+        % legacy code's low-end 0.03. Hand-computed midpoints:
         %   Fighters:      (0.03+0.08)/2 = 0.055
         %   Jet transport: (0.01+0.02)/2 = 0.015
         %   Business jet:  (0.04+0.05)/2 = 0.045
@@ -206,8 +203,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testAvionicsDensityL1IsRaymerRangeAverage(tc)
         % [Raymer 6th ed. Ch.11 p.375 prose]: "about 30-45 lb/ft^3" -> mean = 37.5.
-        % Distinct from L2/L3's flat Nicolai 45 (docs/subplans/09_subsystems.md
-        % Equations & Citations item 4) -- this is the fidelity-split guard.
+        % Distinct from L2/L3's flat Nicolai 45 -- this is the fidelity-split
+        % guard.
             obj = struct();   % avionics_density(obj) does not read obj at L1
             received = SubsystemsL1.avionics_density(obj);
             expected = 37.5;
@@ -256,7 +253,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testFuelVolumeFromWeightHandComputed(tc)
         % No packaging factor at L1 (not usable -- no geometric raw volume
-        % exists yet; docs/subplans/09_subsystems.md item 1 status).
+        % exists yet).
         %   JP-8: 500 / 50.0  = 10.0 ft^3 exactly.
         %   JP-4: 486 / 48.6  = 10.0 ft^3 exactly (chosen so both cases give
         %   a clean round number, independent of each other).

@@ -7,14 +7,14 @@ classdef (Abstract) SubsystemsModelL3 < SubsystemsBase
 %
 %   Same shape and same abstract contract as SubsystemsModelL2 -- L3 refines
 %   the fuselage raw-volume term with GeomL3's frame-integrated station
-%   areas instead of GeomL2's envelope-ellipse approximation (docs/subplans/
-%   09_subsystems.md Fidelity split), but every equation is otherwise
-%   identical. Kept as a SEPARATE abstract class (rather than reusing
-%   SubsystemsModelL2) only because geom is typed to a different concrete
-%   tier (GeometryModelL3, not GeometryModelL2) -- MATLAB abstract property
-%   lists carry no type constraint, but the concrete F16SubsystemsL3's
-%   constructor arguments block enforces it, mirroring F16WeightsL3's own
-%   geom (1,1) GeometryModelL3 DI guard.
+%   areas instead of GeomL2's envelope-ellipse approximation (Fidelity
+%   split), but every equation is otherwise identical. Kept as a SEPARATE
+%   abstract class (rather than reusing SubsystemsModelL2) only because geom
+%   is typed to a different concrete tier (GeometryModelL3, not
+%   GeometryModelL2) -- MATLAB abstract property lists carry no type
+%   constraint, but the concrete F16SubsystemsL3's constructor arguments
+%   block enforces it, mirroring F16WeightsL3's own geom (1,1)
+%   GeometryModelL3 DI guard.
 %
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL3.md
 
@@ -55,7 +55,7 @@ classdef (Abstract) SubsystemsModelL3 < SubsystemsBase
     methods (Abstract)
 
         %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation GAP, same as
-        %   L2 (subplan Eq. §7). Stays a METHOD -- same rationale as
+        %   L2. Stays a METHOD -- same rationale as
         %   SubsystemsModelL2.battery_volume (external argument, and a
         %   Dependent getter must never be allowed to throw).
         val = battery_volume(obj, E_required_kWh)

@@ -1,7 +1,7 @@
 # F16LandingGearL2
 
 F-16A Block 10/15 Level-2 landing-gear student class (`classdef F16LandingGearL2 < handle`,
-**F-16-only, no abstract Base/Model tier** — docs/subplans/09_subsystems.md Files to Create). Not
+**F-16-only, no abstract Base/Model tier** — original step-9 subsystems design, Files to Create). Not
 every airframe has conventional landing gear, so this discipline does not get a generic
 `src/disciplines/` home the way Geometry/Aerodynamics/Propulsion/Weights/Subsystems do.
 
@@ -53,7 +53,7 @@ As with `SubsystemsL2`'s fuel/avionics tables, the tire-sizing diameter/width co
 
 - **Two main wheels.** The F-16 uses a standard tricycle arrangement — one nose wheel, two main
   wheels — so Table 11.1's per-wheel load `W_w` is `main_pct·W_TO / 2`, not the full main-gear load.
-  This is ordinary tricycle-gear configuration knowledge, not a subplan-pinned citation; documented
+  This is ordinary tricycle-gear configuration knowledge, not a textbook-pinned citation; documented
   as `N_MAIN_WHEELS = 2` / `N_NOSE_WHEELS = 1` class constants rather than left as a silent literal.
 - **No geometry injection.** A future gear-bay-volume formula would need a fuselage envelope to place
   the bay into, but `bay_volume()` errors unconditionally regardless of any geometry access — wiring

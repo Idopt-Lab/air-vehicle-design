@@ -8,13 +8,13 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
 %   error identically rather than reissuing its own -- duplicating the
 %   TODO-test marker here would double-count the same open gap).
 %
-%   L3 differs from L2 in exactly ONE respect (docs/subplans/09_subsystems.md
-%   Fidelity split): the fuselage raw-volume term is fed A_top/A_side from
-%   GeomL3's frame-integrated station table instead of GeomL2's envelope-
-%   ellipse approximation. Every other equation is level-agnostic and
-%   REUSED by direct cross-toolbox call to SubsystemsL2 -- this file
-%   therefore focuses on (a) the new frame-integration low-level static,
-%   (b) that fuselage_raw_volume actually uses it (not the L2 ellipse), and
+%   L3 differs from L2 in exactly ONE respect (Fidelity split): the fuselage
+%   raw-volume term is fed A_top/A_side from GeomL3's frame-integrated
+%   station table instead of GeomL2's envelope-ellipse approximation. Every
+%   other equation is level-agnostic and REUSED by direct cross-toolbox call
+%   to SubsystemsL2 -- this file therefore focuses on (a) the new
+%   frame-integration low-level static, (b) that fuselage_raw_volume actually
+%   uses it (not the L2 ellipse), and
 %   (c) that every reused equation still agrees with SubsystemsL2/L1, plus
 %   the same optimization-ready property-design guards as TestSubsystemsL2.
 

@@ -1,7 +1,6 @@
 # Aircraft Sizing Framework — Rewrite Plan
 
 > **Living document.** Maintained by Darshan Sarojini and collaborators.
-> Subplans live at `air_vehicle_design/sizing/docs/subplans/`.
 > Primary architecture reference: the repo's top-level `CLAUDE.md` and this `PLAN.md`.
 
 ---
@@ -143,8 +142,7 @@ air_vehicle_design/sizing/
 ├── VnV/BrandtF16A/
 │   ├── GroundTruth/f16a_ground_truth.json  ← consolidated validation ground truth (.geometry/.aerodynamics/.propulsion/.weights)
 │   └── todo.md                             ← dated discrepancy / open-decision log (user-review items)
-└── docs/                PLAN.md, {aerodynamics,geometry,propulsion,weights}_parameter_usage.md,
-                         subplans/01_aircraft_state … 08_sizing.md
+└── docs/                PLAN.md, {aerodynamics,geometry,propulsion,weights}_parameter_usage.md
 ```
 
 ---
@@ -176,17 +174,17 @@ Each step ends with: **Claude runs MATLAB, all tests pass, then STOP for profess
 
 Status reflects the code tree (this table historically went stale — trust `git log` and `src/`).
 
-| Step | Title | Subplan | Status |
-|------|-------|---------|--------|
-| 0 | Inputs + Test Infrastructure | *(superseded; `requirements.json` half PARTLY revived 2026-07-25 — see below)* | Superseded |
-| 1 | AircraftState | [01_aircraft_state.md](subplans/01_aircraft_state.md) | Done |
-| 2 | Geometry (L1/L2) | [02_geometry.md](subplans/02_geometry.md) | Done |
-| 3 | Aerodynamics (L1/L2/L3) | [03_aerodynamics.md](subplans/03_aerodynamics.md) | Done |
-| 4 | Propulsion (L1/L2) | [04_propulsion.md](subplans/04_propulsion.md) | Done |
-| 5 | Weights (L1/L2/L3) | [05_weights.md](subplans/05_weights.md) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
-| 6 | Constraint Analysis | *(subplan removed 2026-08-04 — completed; as-is is `src/constraints/` + `examples/F16A/inputs/f16a_requirements.md`)* | Done |
-| 7 | Mission Analysis | [07_mission_analysis.md](subplans/07_mission_analysis.md) | Done (`0b0dfb4`/`40dfdf2`/`9510bc3`) |
-| 8 | Sizing | [08_sizing.md](subplans/08_sizing.md) | Not started |
+| Step | Title | Status |
+|------|-------|--------|
+| 0 | Inputs + Test Infrastructure | Superseded (`requirements.json` half PARTLY revived 2026-07-25 — see below) |
+| 1 | AircraftState | Done |
+| 2 | Geometry (L1/L2) | Done |
+| 3 | Aerodynamics (L1/L2/L3) | Done |
+| 4 | Propulsion (L1/L2) | Done |
+| 5 | Weights (L1/L2/L3) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
+| 6 | Constraint Analysis | Done (as-is is `src/constraints/` + `examples/F16A/inputs/f16a_requirements.md`) |
+| 7 | Mission Analysis | Done (`0b0dfb4`/`40dfdf2`/`9510bc3`) |
+| 8 | Sizing | Not started |
 
 ---
 
@@ -229,31 +227,31 @@ ground truth all live under `VnV/BrandtF16A/`.
 
 ### Step 1 — AircraftState
 
-See [subplans/01_aircraft_state.md](subplans/01_aircraft_state.md). **STOP after tests pass.**
+**STOP after tests pass.**
 
 ---
 
 ### Step 2 — Geometry
 
-See [subplans/02_geometry.md](subplans/02_geometry.md). **STOP after tests pass.**
+**STOP after tests pass.**
 
 ---
 
 ### Step 3 — Aerodynamics
 
-See [subplans/03_aerodynamics.md](subplans/03_aerodynamics.md). **STOP after tests pass.**
+**STOP after tests pass.**
 
 ---
 
 ### Step 4 — Propulsion
 
-See [subplans/04_propulsion.md](subplans/04_propulsion.md). **STOP after tests pass.**
+**STOP after tests pass.**
 
 ---
 
 ### Step 5 — Weights
 
-See [subplans/05_weights.md](subplans/05_weights.md) — rewritten to as-built 2026-07-25.
+As-built 2026-07-25 (Phase-4 redesign).
 **STOP after tests pass.**
 
 As built (Phase-4 redesign, 2026-07-25; edition citations corrected 2026-07-30 against the physical
@@ -268,7 +266,7 @@ L3 43 inputs + 2 injected objects / 31 `Dependent`.
 Two standing labelled-red TO-DOs remain by design (Raymer Table 6.1 coefficients absent from the repo;
 every §15.3.1 exponent unverified against the printed book), plus open user decisions on the `K_d = 0`
 silent zero, the uncited `0.95` landing-weight factor and the uncited 6.7 lb/gal fuel density — all
-enumerated in `subplans/05_weights.md` §8 and `VnV/BrandtF16A/todo.md`.
+enumerated in `VnV/BrandtF16A/todo.md`.
 Comparison report: `examples/F16A/weights_brandt_comparison.{m,json,md}` — informational, 45 data rows
 in 7 sections, **not** in `run_all_tests`.
 
@@ -276,20 +274,20 @@ in 7 sections, **not** in `run_all_tests`.
 
 ### Step 6 — Constraint Analysis
 
-Done. The subplan was removed on 2026-08-04 (work complete). The as-is implementation is
+Done. The step-6 constraint-analysis plan was retired 2026-08-04 (work complete). The as-is implementation is
 `src/constraints/`; the F-16 condition data is `examples/F16A/inputs/f16a_requirements.md`.
 
 ---
 
 ### Step 7 — Mission Analysis
 
-See [subplans/07_mission_analysis.md](subplans/07_mission_analysis.md). **STOP after tests pass.**
+**STOP after tests pass.**
 
 ---
 
 ### Step 8 — Sizing
 
-See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
+**STOP after tests pass.**
 
 ---
 
@@ -299,7 +297,7 @@ See [subplans/08_sizing.md](subplans/08_sizing.md). **STOP after tests pass.**
 2. Claude runs MATLAB (`runtests`) after each step. Step is not done until all tests pass.
 3. `temp_Casey/` is read-only reference. Equations cross-checked before use.
 4. No feature added beyond what the step requires.
-5. Each subplan `.md` is written/expanded at the start of its implementation step.
+5. Each step's design is documented at the start of its implementation step.
 6. After each step: STOP and wait for professor to review code and run MATLAB independently.
 7. Do not search the internet unless explicitly asked to. Use locally available resources: `docs/reference_extracts/` (Raymer/Roskam/Mattingly/Nicolai extracts) and `VnV/BrandtF16A/` (Brandt workbook, readmes, cell-map).
 8. Claude's responses and writing are to adhere to ASD-STE100 Simplified Technical English, located in \sizing\docs\ASD-STE100_ISSUE9.pdf.
@@ -366,6 +364,6 @@ In addition to tail sizing, `SizingLoopL2` performs a quick control surface sizi
 </details>
 
 **Constraint conditions:**
-The implementation reads `examples/F16A/Constraints.xlsx` via `ConstraintSetImporter`. See the Step 6 subplan for the condition table. β = 0.8997 for operational constraints, β = 1.0 for takeoff/landing; the ground-roll distance (4,000 ft) is used for the field constraint equation.
+The implementation reads `examples/F16A/Constraints.xlsx` via `ConstraintSetImporter`. β = 0.8997 for operational constraints, β = 1.0 for takeoff/landing; the ground-roll distance (4,000 ft) is used for the field constraint equation.
 
 **Airfoil:** the aero discipline uses **NACA 64A204** (T.O. 1F-16A-1 Fig. 1-2, root & tip) as authoritative. Brandt's NACA 1404 (alpha_L0 = −1.047°, t/c = 0.04) is used only in the Brandt-alternate comparison path.

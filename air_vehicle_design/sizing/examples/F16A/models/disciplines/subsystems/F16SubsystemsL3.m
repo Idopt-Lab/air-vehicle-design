@@ -9,9 +9,9 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
 %   Roskam Eq. 6.2/6.3 wing volume, Nicolai fuel/avionics tables); the ONLY
 %   difference is that the fuselage raw-volume term is fed A_top/A_side from
 %   the injected L3 geometry's frame-integrated station table instead of
-%   L2's envelope-ellipse approximation (docs/subplans/09_subsystems.md
-%   Fidelity split). SubsystemsL3 reuses SubsystemsL2's statics directly for
-%   every level-agnostic equation -- see SubsystemsL3.m's header.
+%   L2's envelope-ellipse approximation (Fidelity split). SubsystemsL3
+%   reuses SubsystemsL2's statics directly for every level-agnostic equation
+%   -- see SubsystemsL3.m's header.
 %
 %   internal_volume() and the "landing-gear bay volume not auto-summed" note
 %   are identical to F16SubsystemsL2 -- see that class's header for the full

@@ -21,7 +21,7 @@ classdef SubsystemsL2
 %   II Eq. 12.1, which uses tau = (t/c)_root/(t/c)_tip. Implemented exactly
 %   per Eq. 6.3's own stated definition; do NOT "fix" it to match Eq. 12.1's
 %   convention -- Roskam does not use one consistent tau across his own
-%   equations (docs/subplans/09_subsystems.md Equations & Citations item 6).
+%   equations.
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL2.md
 
@@ -40,8 +40,7 @@ classdef SubsystemsL2
         function val = avionics_density(obj) %#ok<INUSD>
         %AVIONICS_DENSITY  Flat 45 lb/ft^3, L2/L3's own figure.
         %   [Nicolai & Carichner, Sec.8.1.11, p.210] -- fidelity-split
-        %   decision (Casey, 2026-07-31; docs/subplans/09_subsystems.md
-        %   Equations & Citations item 4), distinct from L1's Raymer-range
+        %   decision (Casey, 2026-07-31), distinct from L1's Raymer-range
         %   average (~37.5).
             val = 45.0;
         end
@@ -117,8 +116,8 @@ classdef SubsystemsL2
         end
 
         function val = battery_volume(obj, E_required_kWh) %#ok<INUSD,STOUT>
-        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation GAP (subplan
-        %   Eq. §7). Only GRAVIMETRIC specific energy is cited anywhere in
+        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation GAP. Only
+        %   GRAVIMETRIC specific energy is cited anywhere in
         %   this repo [Nicolai & Carichner, Table 14.2, p.363, batteries
         %   0.27 kWh/lb]; no citable VOLUMETRIC energy density (kWh/ft^3) or
         %   pack density (lb/ft^3) exists to convert a required energy into a
@@ -130,8 +129,7 @@ classdef SubsystemsL2
                  'pack density (lb/ft^3) exists anywhere in this repository -- ' ...
                  'only gravimetric specific energy is cited [Nicolai & ' ...
                  'Carichner, Table 14.2, p.363, 0.27 kWh/lb]. Not implemented, ' ...
-                 'not guessed. See docs/subplans/09_subsystems.md Equations & ' ...
-                 'Citations Sec.7 and examples/F16A/inputs/f16a_L2.json ' ...
+                 'not guessed. See examples/F16A/inputs/f16a_L2.json ' ...
                  '.subsystems._TODO_battery_specific_volume for the full gap ' ...
                  'record.']);
         end
@@ -211,8 +209,7 @@ classdef SubsystemsL2
         %   REPLACES the legacy uncited "MFV" formula (t_avg=0.7*(...),
         %   MFV=0.3*S_ref*t_avg) -- no source for its 0.7/0.3 coefficients
         %   was found anywhere in this repo, so it is dropped entirely, not
-        %   carried forward in any form (docs/subplans/09_subsystems.md
-        %   Equations & Citations item 6).
+        %   carried forward in any form.
             arguments
                 S       (1,1) double {mustBePositive}
                 b       (1,1) double {mustBePositive}

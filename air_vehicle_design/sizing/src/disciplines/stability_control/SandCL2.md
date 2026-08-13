@@ -33,8 +33,8 @@ $$x_{cg} = \frac{\sum_i W_i x_i}{\sum_i W_i}$$
 `weighted_cg`'s `arguments` block validates `weights_vec`/`x_vec` with `mustBeReal` only — **no**
 `mustBeNonnegative`/`mustBePositive`. Those validators would *reject* NaN outright (e.g. `NaN >= 0`
 is `false`), which would turn the fuel group's pre-mission-analysis `W_energy = NaN` into a thrown
-error instead of the documented, graceful NaN propagation
-`docs/subplans/10_stability_control.md` requires. Ordinary IEEE arithmetic
+error instead of the documented, graceful NaN propagation the original stability-and-control design
+requires. Ordinary IEEE arithmetic
 (`sum(weights_vec .* x_vec) / sum(weights_vec)`) does the rest with no special-case code.
 
 `weighted_cg` does guard one thing loudly: a length mismatch between `weights_vec` and `x_vec`

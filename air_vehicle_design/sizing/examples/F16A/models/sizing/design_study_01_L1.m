@@ -22,8 +22,8 @@ function [result, objs] = design_study_01_L1(W_TO_guess)
 %   convergence check demonstrates the loop actually converges rather than
 %   starting at the answer.
 %
-%   VALIDATION TARGET [docs/PLAN.md F-16A Validation Targets; docs/subplans/
-%   08_sizing.md test tolerance table]: Brandt W_TO = 31,377 lbf, expect
+%   VALIDATION TARGET [docs/PLAN.md F-16A Validation Targets; the original
+%   step-8 test tolerance table]: Brandt W_TO = 31,377 lbf, expect
 %   this L1 study's W_TO in 25,000-40,000 lbf (+-20%) and S_ref in
 %   250-360 ft^2 (+-20% of Brandt's 300 ft^2 -- which is itself an L2/L3
 %   INPUT, not an L1 target; L1's S_ref is genuinely solved for here, not

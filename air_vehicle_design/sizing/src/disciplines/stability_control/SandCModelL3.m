@@ -10,7 +10,7 @@ classdef (Abstract) SandCModelL3 < StabControlBase
      %
      %   L3 is the FULL Raymer 6th ed. Ch. 16 Sec. 16.3 longitudinal-static-
      %   stability equation set that is actually implementable today (primary-
-     %   source-corrected 2026-08-04, see docs/subplans/10_stability_control.md):
+     %   source-corrected 2026-08-04):
      %     Eq. 16.8  -- Cm_alpha (pitching-moment derivative)
      %     Eq. 16.9  -- neutral point
      %     Eq. 16.10 -- Cm_alpha restated via the neutral point (bonus cross-check)

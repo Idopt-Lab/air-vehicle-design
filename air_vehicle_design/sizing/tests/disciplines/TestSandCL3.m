@@ -417,7 +417,7 @@ classdef TestSandCL3 < matlab.unittest.TestCase
             expected = 25.589;
             fprintf('  [L3-S&C] testF16SandCL3XAcwFiniteAndNearBrandtWithinAFewPercent: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'RelTol', 0.08, ...
-                'x_acw should land within a few % of Brandt''s xacW=25.589 ft (docs/subplans/10_stability_control.md "Ground Truth"), modulo the documented Mach-shift-term gap.');
+                'x_acw should land within a few % of Brandt''s xacW=25.589 ft (the original stability-and-control design''s "Ground Truth"), modulo the documented Mach-shift-term gap.');
             fprintf('  [L3-S&C] testF16SandCL3XAcwFiniteAndNearBrandtWithinAFewPercent: x_acw=%.6g must exceed x_apex_wing=%.6g\n', received, g3.x_apex_wing);
             tc.verifyGreaterThan(received, g3.x_apex_wing, ...
                 'The wing aerodynamic center must lie aft of the wing apex.');

@@ -30,9 +30,9 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %                           (fuel_weight_source.W_energy) AND W_empty for
 %                           the avionics-weight term
 %                           (fuel_weight_source.OEW(fuel_weight_source.W_TO)).
-%                           JUDGMENT CALL: the subplan names this argument
-%                           "fuel_weight_source" and says it may be "mission
-%                           analysis or F16WeightsL2 -- pick whichever
+%                           JUDGMENT CALL: the original design names this
+%                           argument "fuel_weight_source" and says it may be
+%                           "mission analysis or F16WeightsL2 -- pick whichever
 %                           exposes it most directly." No mission-analysis
 %                           discipline exists in this repo yet, and
 %                           F16WeightsL2/F16WeightsL3 already expose BOTH
@@ -45,9 +45,9 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %   removed elsewhere in this framework (see F16GeomL2.m / F16WeightsL2.m).
 %   ============================================================================
 %
-%   LANDING-GEAR BAY VOLUME -- NOT auto-summed. Objectives §3 of the subplan
-%   ("producing a bay volume that also feeds the internal-volume total") is
-%   aspirational and blocked on item 11's citation gap (no textbook bay-
+%   LANDING-GEAR BAY VOLUME -- NOT auto-summed. The original step-9 design's
+%   goal ("producing a bay volume that also feeds the internal-volume total")
+%   is aspirational and blocked on item 11's citation gap (no textbook bay-
 %   volume packaging formula exists anywhere in this repo --
 %   F16LandingGearL2.bay_volume always errors). Auto-summing it into
 %   internal_volume() would make every call fail hard, defeating the

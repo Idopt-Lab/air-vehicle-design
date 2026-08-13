@@ -6,8 +6,7 @@ classdef F16SandCL3 < SandCModelL3
 %   toolboxes -- no equations are duplicated here; this file is DI/unit-
 %   conversion glue only.
 %
-%   METHOD (primary-source-corrected 2026-08-04, see
-%   docs/subplans/10_stability_control.md):
+%   METHOD (primary-source-corrected 2026-08-04):
 %     x_cg      -- weighted-average CG [readme_bsc.md "CG closure"], SAME
 %                  static (SandCL2.weighted_cg) F16SandCL2 uses.
 %     x_acw     -- wing aerodynamic center [Raymer 6th ed. Eq. 16.12].
@@ -103,8 +102,8 @@ classdef F16SandCL3 < SandCModelL3
 %   overwrite; 0.90 is the only value ever used, explicitly, here).
 %   dalphah_dalpha = 1 - d(epsilon)/d(alpha) = 1 (Eq. 16.23) since downwash is
 %   OUT OF SCOPE this pass (d(epsilon)/d(alpha) = 0) -- the documented
-%   simplification the subplan requires wherever a Raymer equation includes a
-%   downwash term.
+%   simplification the original stability-and-control design requires wherever
+%   a Raymer equation includes a downwash term.
 %
 %   SOURCES:
 %     [Raymer] D.P. Raymer, Aircraft Design 6th ed., Ch. 16 Sec. 16.3,
@@ -274,7 +273,7 @@ classdef F16SandCL3 < SandCModelL3
 
         function v = get.CL_alpha_wing(obj)
             % Read DIRECTLY from Aero -- not re-derived (this discipline's own
-            % decision, docs/subplans/10_stability_control.md).
+            % decision in the original stability-and-control design).
             v = obj.aero.get_CL_alpha(obj.weights.cruise_mach);
         end
 
@@ -333,8 +332,9 @@ classdef F16SandCL3 < SandCModelL3
         function val = Cm_alpha_via_neutral_point(obj)
         %CM_ALPHA_VIA_NEUTRAL_POINT  [Raymer 6th ed. Eq. 16.10] -- bonus
         %   cross-check against Cm_alpha (Eq. 16.8) at the SAME inputs; not
-        %   required by the subplan, essentially free once x_np/Cm_alpha
-        %   exist. NOT part of the SandCModelL3 abstract contract.
+        %   required by the original stability-and-control design, essentially
+        %   free once x_np/Cm_alpha exist. NOT part of the SandCModelL3
+        %   abstract contract.
             [Xnp_bar, Xcg_bar, ~] = obj.neutral_point_bar();
             g = obj.geom;
             val = SandCL3.Cm_alpha_from_neutral_point(obj.CL_alpha_wing, obj.eta_h, ...

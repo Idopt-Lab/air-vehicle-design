@@ -15,13 +15,13 @@ classdef F16LandingGearL3 < handle
 %   inherit handle semantics from transitively.
 %
 %   Kept as a separate class from F16LandingGearL2 (rather than reusing it
-%   outright) only to match the subplan's Files-to-Create table, which lists
-%   both, and the JSON's parallel f16a_L3.json .subsystems.landing_gear
-%   block / companion doc -- JUDGMENT CALL, flagged: today the two classes'
-%   equations are IDENTICAL, and L3 carries no geometry injection either
-%   (see F16LandingGearL2.md "no geometry input" note), because bay_volume
-%   (item 11) errors regardless of which geometry tier might eventually
-%   supply a fuselage envelope for it.
+%   outright) only to match the original step-9 subsystems design's
+%   Files-to-Create table, which lists both, and the JSON's parallel
+%   f16a_L3.json .subsystems.landing_gear block / companion doc -- JUDGMENT
+%   CALL, flagged: today the two classes' equations are IDENTICAL, and L3
+%   carries no geometry injection either (see F16LandingGearL2.md "no
+%   geometry input" note), because bay_volume (item 11) errors regardless of
+%   which geometry tier might eventually supply a fuselage envelope for it.
 %
 %   CONSTRUCTOR: F16LandingGearL3(json_path, weights). Both REQUIRED.
 %
@@ -129,17 +129,16 @@ classdef F16LandingGearL3 < handle
 
         function val = bay_volume(obj) %#ok<MANU,STOUT>
         %BAY_VOLUME  NOT IMPLEMENTED -- same documented citation GAP as
-        %   F16LandingGearL2 (subplan item 11). Errors with its OWN error
-        %   identifier (not a reused F16LandingGearL2 id) so a test/caller
-        %   can distinguish which class's gap fired.
+        %   F16LandingGearL2 (original step-9 subsystems design, item 11).
+        %   Errors with its OWN error identifier (not a reused F16LandingGearL2
+        %   id) so a test/caller can distinguish which class's gap fired.
             error('F16LandingGearL3:bayVolumeNotAvailable', ...
                 ['No textbook bay-volume (tire+strut stowage) packaging ' ...
                  'formula was found anywhere in this repository -- Raymer ' ...
                  'Ch.11 covers tire/strut/shock-absorber SIZE only. Not ' ...
                  'implemented, not guessed. Tire/strut SIZE ' ...
                  '(tire_diameter_main/tire_width_main/etc.) is unaffected. ' ...
-                 'See docs/subplans/09_subsystems.md Equations & Citations ' ...
-                 'Sec.11 and examples/F16A/inputs/f16a_L3.json ' ...
+                 'See examples/F16A/inputs/f16a_L3.json ' ...
                  '.subsystems._TODO_gear_bay_volume_packaging for the full ' ...
                  'gap record.']);
         end

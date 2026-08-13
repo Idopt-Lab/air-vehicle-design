@@ -22,8 +22,8 @@ delegate to them.
 ## 2. Why this Base is thinner than every other discipline's
 
 Every other discipline's Base (`AerodynamicsBase.drag_polar`/`get_CLmax`, `WeightsBase.OEW`, ...)
-declares a contract common to ALL fidelity levels. Stability & Control cannot do that: per
-`docs/subplans/10_stability_control.md`'s "DECIDED (Casey, 2026-08-03): F16SandCL2 is limited to the
+declares a contract common to ALL fidelity levels. Stability & Control cannot do that: per the
+original stability-and-control design's "DECIDED (Casey, 2026-08-03): F16SandCL2 is limited to the
 CG term only" note, `F16GeomL2` exposes **no x-station properties at all** (no
 `x_apex_wing`/`x_le_ht`/`x_le_vt`/`x_inlet`/tail-arm equivalent — only `F16GeomL3` has these), so
 every Ch. 16 quantity except the CG buildup genuinely cannot run at L2. The only quantity both tiers

@@ -14,7 +14,7 @@ There is no package manager, build step, or linter — this is plain MATLAB sour
 
 ## Working in `air_vehicle_design/sizing/` — read this first
 
-`sizing/` is a from-scratch rewrite of a legacy Excel/MATLAB sizing tool, validated throughout against the F-16A Block 10/15 (Brandt spreadsheet) as ground truth. **Before doing any implementation work here, read `sizing/docs/PLAN.md` in full** — it is the living plan and source of truth for architecture decisions, not this file. Also check the relevant `sizing/docs/subplans/0N_*.md` for the step being worked on.
+`sizing/` is a from-scratch rewrite of a legacy Excel/MATLAB sizing tool, validated throughout against the F-16A Block 10/15 (Brandt spreadsheet) as ground truth. **Before doing any implementation work here, read `sizing/docs/PLAN.md` in full** — it is the living plan and source of truth for architecture decisions, not this file.
 
 Non-negotiable rules from PLAN.md:
 1. Every equation must cite a source (Raymer ch/eq, Roskam part/eq, Mattingly ch, Brandt section, etc.). Zero uncited equations.

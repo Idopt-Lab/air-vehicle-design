@@ -6,7 +6,7 @@ Level-3 stability & control static toolbox (`classdef SandCL3`, `methods (Static
 
 **Every method is level-agnostic**: plain scalar arguments only, never reading tier-level `obj`
 state — exactly like `AeroL2.CL_alpha`/`AeroL1.oswald_eff`
-(`docs/subplans/10_stability_control.md`'s "Fidelity-collapse contingency"). `F16SandCL3` reads its
+(the original stability-and-control design's "Fidelity-collapse contingency"). `F16SandCL3` reads its
 injected collaborators' CURRENT state, converts units (deg→rad, per-deg→per-rad, x-station→MAC
 fraction), and calls these statics; none of that glue lives here.
 
@@ -58,7 +58,7 @@ documented simplification, not a citation gap).
 **Sanity check** (hand-computed, no MATLAB execution available in this pass — see
 `examples/F16A/models/disciplines/sandc/F16SandCL3.md` §6 for the full worked numbers): `x_ac_wing` fed `F16GeomL3`'s own wing
 inputs at `M < 0.4` (`Delta_x_ac = 0`) gives `x_acw ≈ 25.591 ft`, within **+0.01%** of Brandt's own
-live `S&C (2)` sheet `xacW = 25.589 ft` (`docs/subplans/10_stability_control.md` "Ground Truth") —
+live `S&C (2)` sheet `xacW = 25.589 ft` (the original stability-and-control design's "Ground Truth") —
 strong corroboration despite the different geometry basis (`GeomL3` physical vs. Brandt's own).
 
 ### Eq. 16.25 — fuselage pitching-moment-derivative contribution
@@ -76,7 +76,7 @@ fuselage length) → `K_fus ≈ 0.025` — `f16a_L3.json` `.stability_control.fu
 
 Reuses `AeroL2.CL_alpha` [Raymer 6th ed. Eq. 12.6/12.8] a second time with the horizontal tail's own
 `AR`/quarter-chord sweep substituted for the wing's — not a new Aero method
-(`docs/subplans/10_stability_control.md`'s "Eqs. 16.13/16.14/16.15 stay in scope" decision). The
+(the original stability-and-control design's "Eqs. 16.13/16.14/16.15 stay in scope" decision). The
 exposed-area knockdown factor and 2-D section lift slope are left empty, exactly as
 `F16AeroL2/L3.get_CL_alpha` already does for the wing itself, invoking `AeroL2.CL_alpha`'s own
 documented `eta=0.95` default [Eq. 12.8] rather than inventing an HT-specific value.
@@ -109,8 +109,9 @@ own text (p.593): *"It is common to neglect the inlet or propeller force term F_
 determine 'power-off' stability... Typically, these allowances for power-on will reduce the static
 margin by about 1–3% for jets."*
 
-`Cm_alpha_from_neutral_point` (Eq. 16.10) is a bonus cross-check, not required by the subplan —
-implemented because it is essentially free once `neutral_point`/`Cm_alpha` exist.
+`Cm_alpha_from_neutral_point` (Eq. 16.10) is a bonus cross-check, not required by the original
+stability-and-control design — implemented because it is essentially free once
+`neutral_point`/`Cm_alpha` exist.
 
 `static_margin` divides by nothing further — Eq. 16.11 is the bare ratio. The legacy
 `temp_Casey` `SandCLevel3.compute_SM` divides by an extra, uncited `100`; this static deliberately
@@ -161,9 +162,8 @@ DERIVATIVE, not the trim moment balance itself.
 | `CL_h` | tail incidence `i_h` — no citable value anywhere in this repo | `F16SandCL3.CL_h` | `F16SandCL3:tailIncidenceNotAvailable` |
 | `Cm_cg_coefficient` | thrust x-location `x_p` and vertical offset `z_t` — no citable value anywhere in this repo | `F16SandCL3.Cm_cg_trim` | `F16SandCL3:thrustLocationNotAvailable` |
 
-See `docs/subplans/10_stability_control.md`'s `_TODO_x_p`/`_TODO_i_w_i_h` notes and the matching
-`f16a_L3.json` `.stability_control` keys for the full gap record. No placeholder value is guessed
-anywhere for `x_p`, `z_t`, `i_w`, or `i_h`.
+See the `f16a_L3.json` `.stability_control` `_TODO_x_p`/`_TODO_i_w_i_h` keys for the full gap record.
+No placeholder value is guessed anywhere for `x_p`, `z_t`, `i_w`, or `i_h`.
 
 ## 4. Legacy bugs avoided (from `temp_Casey/src/Disciplines/StabAndCont/SandCLevel3.m`)
 

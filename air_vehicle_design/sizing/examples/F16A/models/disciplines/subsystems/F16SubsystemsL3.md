@@ -39,8 +39,8 @@ delegated to `SubsystemsL2.fuel_volume`, which would silently substitute L2's en
 
 Identical to `F16SubsystemsL2.md` §3 (`fuel_weight_source` typing) and §5 (landing-gear bay volume
 not auto-summed) — nothing new is introduced at this tier beyond the fuselage raw-volume source
-swap, which the subplan itself directs ("refined by GeomL3's station data instead of GeomL2's
-envelope approximation").
+swap, which the original step-9 design itself directs ("refined by GeomL3's station data instead of
+GeomL2's envelope approximation").
 
 ## 4. Constructor
 
