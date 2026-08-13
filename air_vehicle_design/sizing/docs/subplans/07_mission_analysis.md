@@ -10,7 +10,7 @@
 > equation), plus per-leg `segments/*.m`, the `MissionEquations` static toolbox,
 > and `MissionProfileReader`. There is **no L3 mission tier** and **no N=20/N=40
 > discretization**. Mission profiles live in
-> `examples/F16A/jsons/f16a_requirements.json` (`.missions` block). The code in
+> `examples/F16A/inputs/f16a_requirements.json` (`.missions` block). The code in
 > `src/core/mission/` is authoritative; the text below is retained only as
 > historical rationale — do NOT use it as an implementation spec.
 **Depends on:** Steps 1–5 (all disciplines — Mission calls `aero`/`prop` at L2/L3), Step 6
@@ -25,7 +25,7 @@ Implement `MissionBase` (Tier 1), `MissionModelL1/L2/L3` (Tier 2 abstract enforc
 `F16MissionL1/L2/L3` (Tier 3 concrete), following the identical pattern already used by
 `propulsion`/`aerodynamics`/`weights` (see `src/base/PropulsionBase.m` +
 `src/disciplines/propulsion/PropulsionModelL1.m` + `src/disciplines/propulsion/PropL1.m` +
-`examples/F16A/F16PropL1.m` for a clean 4-file example of the pattern this discipline must follow).
+`examples/F16A/models/disciplines/prop/F16PropL1.m` for a clean 4-file example of the pattern this discipline must follow).
 
 Key deliverable: `compute_fuel(obj, aero, prop, W_TO)` → total mission fuel weight (lbf), computed
 by looping over a mission profile's named segments and dispatching to per-segment fuel-fraction
@@ -155,7 +155,7 @@ read `examples/F16A/Mission_Profile.xlsx`, not reach into `temp_Casey/inputs/` a
 | `tests/mission/TestMissionProfileImporter.m` | Generic importer against `examples/F16A/Mission_Profile.xlsx` |
 
 Brandt comparison (informational, not pass/fail — separate from the tests above, same convention
-as `examples/F16A/geometry_brandt_comparison.m`): `examples/F16A/mission_brandt_comparison.m`.
+as `examples/F16A/sanity_checks/geometry_brandt_comparison.m`): `examples/F16A/sanity_checks/mission_brandt_comparison.m`.
 
 ---
 
@@ -208,7 +208,7 @@ and do not make the generic segment-dispatch loop match Brandt segment-for-segme
    calibrated spreadsheet logic — a different TSFC model ("Old" `sqrt(theta)` lapse, not the
    generic Roskam/Mattingly forms below), Ps-based climb timing, and a different segment count/
    naming. It exists **solely** as the ground-truth target for the informational
-   `examples/F16A/mission_brandt_comparison.m` report (never a unit-test "expected" value, per the
+   `examples/F16A/sanity_checks/mission_brandt_comparison.m` report (never a unit-test "expected" value, per the
    project's two-test-tier rule) — it must **not** be hardcoded into `MissionL1/L2/L3`'s generic
    equations or into `F16MissionL*`'s CAP profile, for the same reason `Cfe`/`e_osw` must not be
    hardcoded into F-16 aerodynamics (see PLAN.md's Layer-2 rule).
@@ -239,7 +239,7 @@ and do not make the generic segment-dispatch loop match Brandt segment-for-segme
   `prop.compute_TSFC_AB(state)` (AB power, e.g. Dash/Combat/Takeoff) as appropriate — **not** an
   ad hoc scalar multiplier on cruise TSFC (see Known Issues: `TSFC_dash = TSFC_cruise*10`).
   `compute_TSFC_AB` already exists on `F16PropL2`/`F16PropL3` (Mattingly Eq. 3.55b coefficients,
-  `C1_AB=1.60, C2_AB=0.27` — confirmed by reading `examples/F16A/F16PropL2.m`), so this is calling
+  `C1_AB=1.60, C2_AB=0.27` — confirmed by reading `examples/F16A/models/disciplines/prop/F16PropL2.m`), so this is calling
   an already-implemented method, not new propulsion work.
 - L3 sub-divides cruise/dash into N=20 sub-intervals (cruise-climb effect: L/D improves as weight
   drops); climb uses an energy-height method, discretized at its own N=40 (user-directed

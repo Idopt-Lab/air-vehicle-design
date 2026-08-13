@@ -3,7 +3,7 @@
 Which geometric quantity is produced at which fidelity level, by which member, under what citation,
 and who consumes it. As-built from `src/base/GeometryBase.m`,
 `src/disciplines/geometry/GeomL{1,2,3}.m` + `GeometryModelL{1,2,3}.m`, and
-`examples/F16A/F16GeomL{1,2,3}.m`. Companions: `aerodynamics_parameter_usage.md`,
+`examples/F16A/models/disciplines/geom/F16GeomL{1,2,3}.m`. Companions: `aerodynamics_parameter_usage.md`,
 `propulsion_parameter_usage.md`, `weights_parameter_usage.md`.
 
 Geometry is **L1 / L2 / L3**. L1 is a statistical tier (regressions on `W_TO`, no planform); L2 is

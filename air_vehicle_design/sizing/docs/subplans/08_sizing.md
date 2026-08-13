@@ -37,9 +37,9 @@ The sizing loops are fully generic. F-16-specific work is in the design study sc
 
 | File | Purpose |
 |------|---------|
-| `examples/F16A/design_study_01_L1.m` | F16L1 disciplines → SizingLoopL1 |
-| `examples/F16A/design_study_02_L2.m` | F16L2 disciplines → SizingLoopL2 |
-| `examples/F16A/design_study_03_L3.m` | F16L3 disciplines → SizingLoopL2 |
+| `examples/F16A/models/sizing/design_study_01_L1.m` | F16L1 disciplines → SizingLoopL1 |
+| `examples/F16A/models/sizing/design_study_02_L2.m` | F16L2 disciplines → SizingLoopL2 |
+| `examples/F16A/models/sizing/design_study_03_L3.m` | F16L3 disciplines → SizingLoopL2 |
 
 ### Tests
 

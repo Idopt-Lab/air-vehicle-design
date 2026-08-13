@@ -3,7 +3,7 @@
 Which aero quantity is produced at which fidelity level, by which function, under what citation, and
 who consumes it. As-built from `src/base/AerodynamicsBase.m`,
 `src/disciplines/aerodynamics/AeroL{1,2,3}.m` + `AeroModelL{1,2,3}.m`, and
-`examples/F16A/F16AeroL{1,2,3}.m`. Companions: `geometry_parameter_usage.md`,
+`examples/F16A/models/disciplines/aero/F16AeroL{1,2,3}.m`. Companions: `geometry_parameter_usage.md`,
 `propulsion_parameter_usage.md`, `weights_parameter_usage.md`.
 
 **K-convention (A):** `CD = CD0 + K1·CL² + K2·CL` — K1 quadratic/induced, K2 linear/camber. Used by
@@ -17,7 +17,7 @@ Brandt `Aero!G17`.
 | Consumer | Reads | Via |
 |---|---|---|
 | Constraint classes (`ThrustConstraint`, `TakeoffConstraint`, `LandingConstraint`, `StallConstraint`) | `drag_polar(state) → {CD0, K1, K2}`, `get_CLmax(state)` | `ConstraintAnalysis` / `F16ConstraintSet` |
-| Comparison reports | also `get_e_osw`, `get_CL_alpha`, HLD/gear deltas | `fidelity_comparison`, `aerodynamics_brandt_comparison` |
+| Comparison reports | also `get_e_osw`, `get_CL_alpha`, HLD/gear deltas | `aerodynamics_brandt_comparison` |
 
 `drag_polar` and `get_CLmax` are the only outputs production code reads. No mission/sizing
 orchestrator exists yet (steps 7–8 not started).

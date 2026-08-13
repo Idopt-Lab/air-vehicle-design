@@ -3,7 +3,7 @@
 Which propulsion quantity is produced at which fidelity level, by which function, under what
 citation, and who consumes it. As-built from `src/base/PropulsionBase.m`,
 `src/disciplines/propulsion/PropL{1,2}.m` + `PropulsionModelL{1,2}.m`, and
-`examples/F16A/F16Prop{L1,L2}.m`. Companions: `geometry_parameter_usage.md`,
+`examples/F16A/models/disciplines/prop/F16Prop{L1,L2}.m`. Companions: `geometry_parameter_usage.md`,
 `aerodynamics_parameter_usage.md`, `weights_parameter_usage.md`.
 
 **Propulsion is L1 / L2 only — there is no L3 tier and none is planned.** `F16PropL2` *is* the L3
