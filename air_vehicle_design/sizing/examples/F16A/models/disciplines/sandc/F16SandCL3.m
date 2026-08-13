@@ -114,7 +114,7 @@ classdef F16SandCL3 < SandCModelL3
 %       "x_MAC = x_LE,r + y_MAC*tan(Lambda_LE)" cross-checks.
 %     [TO] T.O. 1F-16A-1 -- via the injected F16GeomL3's own physical inputs.
 %
-%   Companion doc: examples/F16A/F16SandCL3.md
+%   Companion doc: examples/F16A/models/disciplines/sandc/F16SandCL3.md
 
     % ======================================================================= %
     % Fixed group order -- matches f16a_L3.json

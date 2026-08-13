@@ -14,7 +14,7 @@ classdef F16SandCL2 < SandCModelL2
 %   over the 10 WeightsL2-matched component groups (wing, horizontal_tail,
 %   vertical_tail, fuselage, landing_gear, installed_engine, subsystems_lump,
 %   strake, payload, fuel) in
-%   examples/F16A/jsons/f16a_L2.json .stability_control.component_x_stations
+%   examples/F16A/inputs/f16a_L2.json .stability_control.component_x_stations
 %   .groups. Each group's x-STATION (cg_x_ft) is READ ONCE from the JSON at
 %   construction (static spec data, an engineering estimate re-aggregated
 %   from the legacy temp_Casey "Stability&Control" sheet -- see that JSON
@@ -69,7 +69,7 @@ classdef F16SandCL2 < SandCModelL2
 %       temp_Casey/inputs/F-16A Block 50.xlsx's "Stability&Control" sheet,
 %       22 rows, into this framework's own 10 WeightsL2/L3 groups).
 %
-%   Companion doc: examples/F16A/F16SandCL2.md
+%   Companion doc: examples/F16A/models/disciplines/sandc/F16SandCL2.md
 
     % ======================================================================= %
     % Fixed group order -- matches f16a_L2.json
