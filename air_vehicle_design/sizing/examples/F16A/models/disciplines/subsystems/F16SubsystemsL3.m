@@ -29,7 +29,7 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
 %
 %   SOURCES: same as F16SubsystemsL2 -- see that class's header.
 %
-%   Companion doc: examples/F16A/F16SubsystemsL3.md
+%   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL3.md
 
     % ======================================================================= %
     % INPUTS (3) + 2 injected objects -- plain mutable properties, set once

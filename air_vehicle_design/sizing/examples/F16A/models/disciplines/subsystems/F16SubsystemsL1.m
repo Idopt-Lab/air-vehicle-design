@@ -27,7 +27,7 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
 %               per the subplan), Table 11.6, p.375 (avionics weight
 %               fraction + following-paragraph density range).
 %
-%   Companion doc: examples/F16A/F16SubsystemsL1.md
+%   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL1.md
 
     % ======================================================================= %
     % INPUTS (2) -- plain mutable properties, set once by the constructor.

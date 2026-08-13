@@ -66,7 +66,7 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %               (battery gravimetric specific energy -- the cited half of
 %               item 7's GAP).
 %
-%   Companion doc: examples/F16A/F16SubsystemsL2.md
+%   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL2.md
 
     % ======================================================================= %
     % INPUTS (3) + 2 injected objects -- plain mutable properties, set once
