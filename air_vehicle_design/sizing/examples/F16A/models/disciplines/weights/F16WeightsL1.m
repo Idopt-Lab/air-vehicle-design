@@ -29,7 +29,7 @@ classdef F16WeightsL1 < WeightsModelL1
 %
 %   ============================================================================
 %   INPUT vs DERIVED — the optimization-ready pattern (CLAUDE.md; reference
-%   implementation examples/F16A/F16GeomL2.m).
+%   implementation examples/F16A/models/disciplines/geom/F16GeomL2.m).
 %
 %   L1 has 5 INPUTS and 0 DERIVED, and zero is the right answer:
 %     * WeightsModelL1 declares no abstract properties, so there is no
@@ -51,7 +51,7 @@ classdef F16WeightsL1 < WeightsModelL1
 %   unified L1 input JSON (f16a_spec_path(1)). No silent default — a no-argument
 %   call errors, matching F16PropL2(json_path) / F16GeomL2(json_path, prop).
 %
-%   L1 does NOT read examples/F16A/f16a_requirements.json and injects nothing.
+%   L1 does NOT read examples/F16A/inputs/f16a_requirements.json and injects nothing.
 %   Both regressions take only W_TO and aircraft_category, so there is no design
 %   Mach, no cruise condition, no geometry and no propulsion object to inject —
 %   L1 is the only weights level with no dependency injection at all.

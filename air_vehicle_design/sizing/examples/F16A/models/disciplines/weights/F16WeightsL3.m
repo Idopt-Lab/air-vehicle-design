@@ -26,7 +26,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %
 %   STRAKE (LERX) TERM — ADDED 2026-07-29: k_strake * S_strake = 4.5 * 20 =
 %   90.00 lbf [Brandt Main!D18 / Wt!H7]. Previously unmodeled at every fidelity
-%   level (examples/F16A/mds/weights_brandt_comparison.md section 5); mirrors
+%   level (examples/F16A/output/weights_brandt_comparison.md section 5); mirrors
 %   F16WeightsL2's identical addition. See the S_strake/k_strake property
 %   comment for why this borrows Brandt's own coefficient rather than a
 %   Raymer §15.3.1 equation (there is no strake equation in that section).
@@ -43,7 +43,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %
 %   ============================================================================
 %   INPUT vs DERIVED — the optimization-ready pattern (CLAUDE.md; reference
-%   implementation examples/F16A/F16GeomL2.m).
+%   implementation examples/F16A/models/disciplines/geom/F16GeomL2.m).
 %   45 INPUTS (44 numeric + 1 string) + 2 injected objects; 32 DERIVED (31 + W_strake, added 2026-07-29).
 %
 %   Phase 4 moved 32 of the former 72 plain properties: 23 frozen geometry

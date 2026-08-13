@@ -33,7 +33,7 @@ classdef F16WeightsL2 < WeightsModelL2
 %   STRAKE (LERX) TERM — ADDED 2026-07-29: k_strake * S_strake = 4.5 * 20 =
 %   90.00 lbf [Brandt Main!D18 / Wt!H7]. Previously unmodeled at every fidelity
 %   level; it was the single largest identified "NOT MODELED" gap item in
-%   examples/F16A/mds/weights_brandt_comparison.md section 5 (13.68% of Brandt
+%   examples/F16A/output/weights_brandt_comparison.md section 5 (13.68% of Brandt
 %   Wt!B12, alongside nacelles/other-structure/armament-support, which remain
 %   unmodeled). See the S_strake/k_strake property comment for why this term
 %   borrows Brandt's own coefficient rather than a Raymer Table 15.2 row (that
@@ -41,7 +41,7 @@ classdef F16WeightsL2 < WeightsModelL2
 %
 %   ============================================================================
 %   INPUT vs DERIVED — the optimization-ready pattern (CLAUDE.md; reference
-%   implementation examples/F16A/F16GeomL2.m, whose header carries the full
+%   implementation examples/F16A/models/disciplines/geom/F16GeomL2.m, whose header carries the full
 %   rationale).  7 INPUTS (6 numeric + 1 string) + 2 injected objects; 12 DERIVED.
 %
 %     (1) INPUTS — a plain, mutable `properties` block: the genuine spec /
@@ -139,7 +139,7 @@ classdef F16WeightsL2 < WeightsModelL2
         %S_STRAKE, K_STRAKE  Strake (LERX) structural weight inputs, ADDED
         %   2026-07-29 -- previously unmodeled at any fidelity level (the single
         %   largest identified item in the "NOT MODELED" gap tally,
-        %   examples/F16A/mds/weights_brandt_comparison.md section 5: 13.68% of
+        %   examples/F16A/output/weights_brandt_comparison.md section 5: 13.68% of
         %   Brandt Wt!B12). [Brandt F-16A.xls Main!D18 = 20 ft^2 (planform
         %   reference area) / Wt!H7 = 4.5 lbf/ft^2 (structural surface density)].
         %   CROSS-MODEL BORROW, DELIBERATE: Raymer 6th ed. Table 15.2 (this
