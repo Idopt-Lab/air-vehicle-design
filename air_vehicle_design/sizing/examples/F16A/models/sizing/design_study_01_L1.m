@@ -12,7 +12,7 @@ function [result, objs] = design_study_01_L1(W_TO_guess)
 %   [result, objs] = design_study_01_L1(...) additionally returns the
 %   handle objects (objs.aero/prop/wts/geom/miss/con) in their final,
 %   converged state -- e.g. for post-processing/reporting scripts
-%   (F16A_Level1_SizingReport.m) that need to call further methods on them
+%   (run_sizing_report_L1.m) that need to call further methods on them
 %   (weight/aero breakdowns) after the loop has converged. Optional and
 %   additive: existing single-output callers (tests/sizing/
 %   TestF16SizingStudies.m) are unaffected.

@@ -4,7 +4,7 @@ classdef F16ConstraintSet
 %   Layer-2 (aircraft-specific) data only. This class no longer builds
 %   constraint objects itself -- that is now generic Layer-1 work done by
 %   ConstraintAnalysis.from_requirements(aero, prop, json_path, classMap,
-%   WS_range), which reads examples/F16A/jsons/f16a_requirements.json and, for
+%   WS_range), which reads examples/F16A/inputs/f16a_requirements.json and, for
 %   each condition, dispatches to the ConstraintType the map selects. This
 %   class supplies only that map: which specific constraint class models each
 %   of the F-16's named conditions.
