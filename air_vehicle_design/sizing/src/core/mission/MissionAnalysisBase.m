@@ -76,6 +76,7 @@ classdef (Abstract) MissionAnalysisBase < handle
             end
             ctx = obj.build_context(W_TO);
 
+            % Note (Casey): You really ought to pre-load every single segment name, instead of obtaining it with each iteration of the loop.
             n         = numel(obj.segments);
             names     = strings(1, n);
             fuel_lbf  = zeros(1, n);
@@ -84,6 +85,7 @@ classdef (Abstract) MissionAnalysisBase < handle
 
             W = W_TO;
             raw_burn = 0;
+            % Note (Casey): I don't like how this re-loads the mission profile every time it runs. It's inefficient.
             for i = 1:n
                 seg  = obj.segments{i};
                 fuel = seg.step(W, ctx);

@@ -115,7 +115,8 @@
   "missions": {
     "_comment": "Mission PROFILES: the ordered segment sequence each mission flies -- a REQUIREMENT (what the aircraft must DO), fidelity-independent. Each segment block carries the MINIMUM per-segment inputs only: type, end flight condition (alt_ft/mach_end = END-of-segment waypoint; the segment START is the previous segment's end), and whichever of distance_nm / time_min / drop_lb / percent_ab / cd0_increment applies. NO discipline-owned data (CLmax, CD0, K1/K2, thrust, TSFC come from the injected aero/prop objects) and NO spec data (aircraft_category from the injected aero object; n_engines from the injected geometry object).",
     "_cite": "cap = temp_Casey/inputs/Mission_Profile.xlsx CAP sheet (via the retired examples/F16A/jsons/mission_profile.json); brandt_14seg = VnV/BrandtF16A/GroundTruth/f16a_geometry.json .mission (Brandt-F16-A.xls Miss tab).",
-    "_note_percent_ab": "percent_ab: afterburner setting 0-100 (0 = mil/dry, 100 = full AB, 50 = partial). Omitted => 0 (dry). Selects/blends the prop TSFC: cT = cT_dry + (percent_ab/100)*(cT_AB - cT_dry).",
+    "_note_percent_ab": "percent_ab: afterburner setting 0-100 (0 = mil/dry, 100 = full AB, 50 = partial). Omitted => 0 (dry). Selects/blends the prop TSFC: cT = cT_dry + (percent_ab/100)*(cT_AB - cT_dry), and the thrust lapse alpha the same way [MissionEquations.select_alpha].",
+    "_note_cap_climb_ab": "CAP Climb uses percent_ab = 100 (added 2026-08-13). The key was absent, thus the climb to 40,000 ft used dry thrust. The F-16 climbs with the afterburner [T.O. 1F-16A-1 Sec. VI, climb schedule at MAX power]. With dry thrust and a high weight, the specific excess power becomes negative near 40,000 ft. The Brandt profile keeps its own settings, because it replicates Brandt's workbook.",
     "_note_cd0_increment": "cd0_increment: en-route external-stores parasite-drag increment added to the clean CD0 in the L2 drag-fuel term. Omitted => 0. Deliberately NOT set on takeoff/landing -- their gear+flap drag comes from aero.get_Delta_CD0_TO()/get_Delta_CD0_L() instead, so putting it here too would double-count. Brandt CDx values applied here: 0.010 on Accel..Combat, 0 afterward.",
 
     "cap": {
@@ -130,7 +131,7 @@
         {"type": "startup", "name": "Startup"},
         {"type": "taxi",    "name": "Taxi"},
         {"type": "takeoff", "name": "Takeoff", "alt_ft": 0,     "mach_end": 0.282},
-        {"type": "climb",   "name": "Climb",   "alt_ft": 40000, "mach_end": 0.87},
+        {"type": "climb",   "name": "Climb",   "alt_ft": 40000, "mach_end": 0.87, "percent_ab": 100},
         {"type": "cruise",  "name": "Cruise",  "alt_ft": 40000, "mach_end": 0.87, "distance_nm": 189.879},
         {"type": "dash",    "name": "Dash",    "alt_ft": 40000, "mach_end": 1.60, "distance_nm": 49.968, "percent_ab": 100},
         {"type": "combat",  "name": "Combat",  "alt_ft": 25000, "mach_end": 0.80, "time_min": 2.0, "drop_lb": 4400, "percent_ab": 100},

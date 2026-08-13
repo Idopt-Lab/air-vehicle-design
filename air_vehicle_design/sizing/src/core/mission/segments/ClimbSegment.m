@@ -12,6 +12,10 @@ classdef ClimbSegment < MasterEquationSegment
 %   Ps-based climbs also average TSFC between start and end (average_tsfc = true,
 %   Miss-tab D33/L33). A same-condition leg (Climb2: dh = dV = 0) yields t = 0.
 %
+%   Ps must be positive when the leg changes the altitude or the speed. If Ps
+%   is not positive, the aircraft is at or above its ceiling and cannot fly
+%   the leg. segment_time then gives an error [ClimbSegment:cannotClimb].
+%
 %   Uses the standard dynamic pressure q = 0.5*rho*V^2 and handles ACCEL with
 %   this same drag+energy master equation, not Brandt's Miss-tab q_43 override
 %   or its separate thrust-based accel form (fuel = alpha*T_SL*cT*t, Miss!C13).
@@ -24,6 +28,7 @@ classdef ClimbSegment < MasterEquationSegment
         end
 
         function t = segment_time(obj, ctx)
+            % Note (Casey, 8/13/2026): Is it possible to vectorize this? It'd reduce execution time.
             st_s = obj.start_state();
             st_e = obj.end_state();
             V_s = st_s.V;  V_e = st_e.V;
@@ -51,6 +56,19 @@ classdef ClimbSegment < MasterEquationSegment
             dh = obj.alt_end_ft - obj.alt_start_ft;
             dV = V_e - V_s;
             Vsum = V_s + V_e;
+
+            % Stop if Ps is not positive. The abs() below would make the
+            % negative time positive, and the segment would burn fuel for
+            % hours. A leg that holds altitude and speed is an exception,
+            % because its time is 0.
+            changes_state = (dh ~= 0) || (dV ~= 0);
+            if changes_state && Ps <= 0
+                error('ClimbSegment:cannotClimb', ...
+                    ['Segment "%s" is not possible. Ps = %.4f ft/s ' ...
+                     '(start %+.4f, end %+.4f). The aircraft is at or above ' ...
+                     'its ceiling at W = %.0f lbf and T/W = %.4f.'], ...
+                    obj.name, Ps, Ps_s, Ps_e, obj.W_before, TW);
+            end
 
             t_alt = 0;
             t_vel = 0;
