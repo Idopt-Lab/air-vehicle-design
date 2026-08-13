@@ -36,3 +36,8 @@ codegen/
 .buildtool/
 
 /air_vehicle_design/mbse/examples/ex2/resources/project
+
+# Generated F-16A sanity-check reports (regenerable by sanity_checks/*.m);
+# .gitkeep tracked so the folder exists on a fresh clone
+/air_vehicle_design/sizing/examples/F16A/output/*
+!/air_vehicle_design/sizing/examples/F16A/output/.gitkeep
