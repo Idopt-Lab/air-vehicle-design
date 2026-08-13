@@ -46,11 +46,14 @@ classdef FixedTailStub < TailSizingModelL1
 
     methods
 
-        function result = size(obj, S_ref, b, cbar, L_fus)
-        %SIZE  Delegates to TailL1's real statics (0.475*L_fus tail arm),
-        %   using this stub's arbitrary c_HT/c_VT.
-            L_HT = TailL1.compute_tail_arm(L_fus);
-            L_VT = L_HT;
+        function result = size(obj, S_ref, b, cbar, L_HT, L_VT)
+        %SIZE  Delegates to TailL1's real statics, using this stub's
+        %   arbitrary c_HT/c_VT.
+        %   SIGNATURE CHANGED 2026-08-11 with TailSizingBase's: the last
+        %   argument was L_fus and the arm was computed here as 0.475*L_fus.
+        %   The arms are now supplied by the caller (SizingLoopL2 passes
+        %   geom.L_HT/geom.L_VT), because the arm is a layout quantity --
+        %   see TailSizingBase.m's header.
             S_ht = TailL1.compute_S_HT(obj.c_HT, cbar, S_ref, L_HT);
             S_vt = TailL1.compute_S_VT(obj.c_VT, b, S_ref, L_VT);
             result = struct('S_ht', S_ht, 'S_vt', S_vt);

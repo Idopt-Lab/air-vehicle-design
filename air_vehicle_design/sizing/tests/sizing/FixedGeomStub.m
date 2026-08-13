@@ -34,6 +34,16 @@ classdef FixedGeomStub < GeometryBase
         % is the F-16's, purely so the stub exercises a realistic tapered wing;
         % nothing here is validated against it.
         lambda_wing = 0.2275
+        % L_HT / L_VT ADDED 2026-08-11: SizingLoopL2 now passes the tail
+        % MOMENT ARMS to tail.size(...) instead of L_fus, because the arm is a
+        % layout quantity the geometry object owns (TailSizingBase.m header).
+        % Arbitrary fixed values in the right physical ballpark for a stub
+        % whose whole point is genericity -- nothing is validated against
+        % them, and TestSizingLoopL2 only checks that the loop plumbs the call
+        % through and gets positive areas. A real geometry class computes them
+        % as x_c4_tail - x_c4_wing [Raymer 6th ed. Sec. 6.5.2, p.158].
+        L_HT = 15
+        L_VT = 15
         S_ht = NaN
         S_vt = NaN
         S_ail = NaN

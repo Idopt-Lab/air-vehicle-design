@@ -15,9 +15,17 @@ classdef F16TailL1 < TailSizingModelL1
 %   documented as such throughout F16GeomL2/F16GeomL3 and
 %   ControlSurfaceSizer's F-16 wiring, where S_elev=0) -- see
 %   TailL1.compute_tail_volume_coeffs and TailSizing_scribe_plan.md
-%   Sec. 2/4]. Tail moment arm L_HT=L_VT=0.475*L_fus [same source,
-%   aft-mounted single-engine text rule; 0.475 is the midpoint of the
-%   stated 0.45-0.50 range].
+%   Sec. 2/4].
+%
+%   TAIL MOMENT ARM IS NOW AN ARGUMENT (2026-08-11), not 0.475*L_fus
+%   computed inside. Raymer's arm is the "tail-quarter-chord to
+%   wing-quarter-chord distance" (6th ed. Sec. 6.5.2, p.158); the fuselage
+%   fraction is his stated approximation of it "at this stage", i.e. before a
+%   layout exists. For the F-16A it gives 22.09 ft against a real 15.09 ft,
+%   +46%, and S_HT is inversely proportional to the arm -- so it accounted for
+%   essentially the whole gap between this class's S_ht and the real
+%   airframe's. The coefficients above are unchanged and were never the
+%   problem.
 %
 %   MIGRATED (2026-07-28) from examples/F16TailSizingLevel1.m, whose values
 %   (c_HT=0.40, c_VT=0.07, tail arm=0.5*L_fus, Raymer 6th ed.) are
@@ -52,16 +60,24 @@ classdef F16TailL1 < TailSizingModelL1
             [obj.c_HT, obj.c_VT] = TailL1.compute_tail_volume_coeffs('jet_fighter', true, true);
         end
 
-        function result = size(obj, S_ref, b, cbar, L_fus)
+        function result = size(obj, S_ref, b, cbar, L_HT, L_VT)
         %SIZE  Horizontal- and vertical-tail reference areas [ft^2].
-        %   [Raymer 7th ed. Table 6.4 + text]  See TailSizingBase.m for the
-        %   contract; TailL1.size for the formula.
+        %   [Raymer 6th ed. Eqs. (6.28)/(6.29) + Table 6.4 + text]  See
+        %   TailSizingBase.m for the contract; TailL1.size for the formula.
         %
         %   S_ref  -- wing reference area, ft^2
         %   b      -- wing span, ft
         %   cbar   -- wing mean aerodynamic chord, ft
-        %   L_fus  -- fuselage length, ft
-            result = TailL1.size(obj, S_ref, b, cbar, L_fus);
+        %   L_HT   -- wing mac c/4 -> HORIZONTAL-tail mac c/4 distance, ft
+        %   L_VT   -- wing mac c/4 -> VERTICAL-tail   mac c/4 distance, ft
+        %
+        %   SIGNATURE CHANGED 2026-08-11: the last argument was L_fus and the
+        %   arm was 0.475*L_fus inside. See TailL1.m's header -- that fraction
+        %   is Raymer's pre-layout approximation OF this arm, not a second
+        %   definition of it, and it overstates the F-16A's real arm by ~46%.
+        %   Callers with a layout pass geom.L_HT/geom.L_VT; callers with no
+        %   layout at all pass TailL1.compute_tail_arm(L_fus) twice.
+            result = TailL1.size(obj, S_ref, b, cbar, L_HT, L_VT);
         end
 
     end
