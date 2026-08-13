@@ -11,7 +11,7 @@ classdef F16GeomL3 < GeometryModelL3
 %   "Geometry has no L3").
 %   2026-07-25 (PHASE 2, locked user decision): promoted from a weights-only
 %   tier to the FULL L3 geometry tier consumed by L3 geometry + aero + weights.
-%   Authoritative spec: examples/F16A/F16GeomL3.md.  This is the HIGHER-fidelity
+%   Authoritative spec: examples/F16A/models/disciplines/geom/F16GeomL3.md.  This is the HIGHER-fidelity
 %   PHYSICAL / T.O.-geometry tier: where a physical/T.O. value differs from
 %   Brandt, GeomL3 uses the physical one (VT LE sweep 47.5 deg, L_fus 47.5 ft,
 %   HT span B_h 18.5 ft as the PRIMARY span, exposed HT/VT AR 2.114/1.294 and
@@ -29,7 +29,7 @@ classdef F16GeomL3 < GeometryModelL3
 %   class Phase 2 removes.
 %
 %   ============================================================================
-%   INPUT vs DERIVED -- the optimization-ready pattern.  examples/F16A/F16GeomL2.m
+%   INPUT vs DERIVED -- the optimization-ready pattern.  examples/F16A/models/disciplines/geom/F16GeomL2.m
 %   is the reference implementation; its header carries the full rationale.
 %
 %     (1) INPUTS -- a plain, mutable `properties` block: the 38 genuine
@@ -154,7 +154,7 @@ classdef F16GeomL3 < GeometryModelL3
 %
 %   SOURCES:
 %     [Brandt] Brandt F-16A.xls, Main/Geom/Engn(s) tabs, reproduced in
-%       examples/F16A/f16a_L3.json (.geometry, per-value _src fields).
+%       examples/F16A/inputs/f16a_L3.json (.geometry, per-value _src fields).
 %       CITATION CORRECTION 2026-07-25 (F16GeomL3.md §2 is authoritative, zero
 %       computed values change): Main row 20 = 'Taper Ratio', row 21 =
 %       'Sweep, deg', row 22 = 'NACA 4-digit' (last two digits = % chord t/c).

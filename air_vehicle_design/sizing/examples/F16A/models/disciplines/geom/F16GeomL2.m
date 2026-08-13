@@ -61,7 +61,7 @@ classdef F16GeomL2 < GeometryModelL2
 %   bug (correct value ≈32.2 deg; see F16GeomL2.md).
 %
 %   PHASE-2 CHANGES (2026-07-25, locked user decisions; spec in
-%   examples/F16A/F16GeomL3.md — that doc governs BOTH tiers):
+%   examples/F16A/models/disciplines/geom/F16GeomL3.md — that doc governs BOTH tiers):
 %     * PROPULSION IS INJECTED. `T_AB_SLS_lb = 23770` was a stored input, i.e.
 %       propulsion data frozen into geometry: verified live that setting
 %       p2.T_SL = 30000 left geom.D_inlet and the aero CD0 unchanged, so
@@ -118,7 +118,7 @@ classdef F16GeomL2 < GeometryModelL2
 %   SOURCES:
 %     [Brandt] Brandt F-16A.xls, Main tab (via
 %       VnV/BrandtF16A/GroundTruth/f16a_geometry.json), reproduced in
-%       examples/F16A/f16a_L2.json (.geometry) — genuine spec/ground-truth inputs.
+%       examples/F16A/inputs/f16a_L2.json (.geometry) — genuine spec/ground-truth inputs.
 %     [TO]     T.O. 1F-16A-1, Sec. I — HT/VT root/tip t/c splits (not a
 %       Brandt value; Brandt uses one uniform tc per surface).
 
@@ -180,7 +180,7 @@ classdef F16GeomL2 < GeometryModelL2
         % ── Tail reference areas ─────────────────────────────────────────── %
         % NaN until an external tail-sizing object (F16TailL2, injected into
         % SizingLoopL2, NOT owned by this geometry class -- see
-        % src/base/TailSizingBase.m / examples/F16A/F16TailL2.m) writes
+        % src/base/TailSizingBase.m / examples/F16A/models/disciplines/tail/F16TailL2.m) writes
         % S_ht/S_vt back in. S_ht/S_vt are also real spec-data INPUTS in
         % other contexts (see the input properties block above -- Brandt
         % Main!C18/H18); this is the same pair of properties, either set
