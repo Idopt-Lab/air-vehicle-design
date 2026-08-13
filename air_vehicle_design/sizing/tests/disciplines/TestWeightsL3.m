@@ -62,7 +62,9 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %       Lambda_LE_w = 40 deg, S_csw = 68.03, S_ht = 51.148643 (EXPOSED),
 %       F_w = 7.0, B_h = 18.5, S_vt = 40.889669 (EXPOSED), AR_vt = 1.294,
 %       lambda_vt = 0.437, Lambda_LE_vt = 47.5 deg, H_t = 0, H_v = 1,
-%       L_t = 22.0, S_r = 11.65, L_fus = 47.5, D_fus = 5.0 (structural
+%       L_t = 15.1297440182 (a DEPENDENT alias of geom.L_HT since
+%       2026-08-11; was a frozen 22.0 input -- see the derivation under
+%       Eq. 15.3 below), S_r = 11.65, L_fus = 47.5, D_fus = 5.0 (structural
 %       DEPTH), W_fus = 7.0, S_cs = 187.68 (a DEPENDENT buildup since
 %       2026-08-10, S_csw + S_stab + S_rud; was a frozen 190 estimate)
 %     propulsion by DI: T_max = 23770, BPR = 0.71
@@ -111,19 +113,61 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   Eq. 15.3  VT = 0.452*K_rht*(1+H_t/H_v)^0.5*(W_dg*N_z)^0.488*S_vt^0.718
 %                  *M^0.341*L_t^-1*(1+S_r/S_vt)^0.348*AR_vt^0.223
 %                  *(1+lambda_vt)^0.25*cos(Lambda_LE_vt)^-0.323
+%
+%     ** L_t CHANGED 2026-08-11: 22.0 -> 15.1297440182 ft, and this whole
+%     chain is re-evaluated below (the old chain gave 313.0505 lbf). L_t was a
+%     frozen input whose OWN comment called it an "estimate; verify TO
+%     1F-16A-1"; F16GeomL3.L_t is now the Dependent alias of L_HT, i.e.
+%     Raymer Eq. 15.3's own stated symbol -- "tail length (wing 1/4-MAC ->
+%     tail 1/4-MAC)". Eq. 15.3 carries L_t^-1, so the -31.2 % on the arm is
+%     +45.4 % on the vertical-tail weight. NOTE the whole change enters
+%     through THIS ONE FACTOR: no other Sec. 15.3.1 equation reads L_t, and
+%     Eq. 15.2 (HT) has no arm at all, so its 200.5104 is unchanged. **
+%
+%     L_t hand-derived from the F16GeomL3 stations [Raymer 6th ed.
+%     Sec. 6.5.2, p.158; GeometryBase.compute_y_mac / compute_x_mac_le /
+%     compute_x_mac_quarter_chord]. Inputs: S_ref=300, AR_w=3.0,
+%     lambda_w=0.2275, Lambda_LE_w=40 deg, x_apex_wing=17.786; S_ht=108
+%     (FULL), B_h=18.5 (PRIMARY span at L3, so AR_ht is derived and the HT
+%     chords differ from L2's), lambda_ht=0.2275, Lambda_LE_ht=40 deg,
+%     x_le_ht=36.  Constant: tan(40 deg) = 0.83909963117727793.
+%       WING  c_root = 2*300/(30*1.2275) = 8000/491     = 16.2932790224 ft
+%             cbar   = 2729080/241081                   = 11.3201786951 ft
+%             y_MAC  = (30/6)*(1.455/1.2275) = 2910/491 =  5.9266802444 ft
+%             x_MAC_LE = 17.786 + 5.9266802444*0.8390996312
+%                      = 17.786 + 4.9730752071          = 22.7590752071 ft
+%             x_c/4  = 22.7590752071 + 2.8300446738     = 25.5891198809 ft
+%       HT    c_root = 2*108/(18.5*1.2275) = 172800/18167 = 9.5117520779 ft
+%              (independently hand-derived and asserted in
+%               TestGeomL3.testHTPlanformFromSpanAreaPair)
+%             cbar   = (2/3)*c_root*(1.27925625/1.2275) =  6.6085367518 ft
+%             y_MAC  = (18.5/6)*(582/491)               =  3.6547861507 ft
+%             x_MAC_LE = 36 + 3.6547861507*0.8390996312
+%                      = 36 + 3.0667297111              = 39.0667297111 ft
+%             x_c/4  = 39.0667297111 + 1.6521341880     = 40.7188638991 ft
+%       L_t = L_HT = 40.7188638991 - 25.5891198809      = 15.1297440182 ft
+%
 %     (1+0/1)^0.5 = 1
-%     423589.5^0.488 = exp(0.488*12.95652006) = exp(6.32278179) = 557.1207
-%     40.889669^0.718 = exp(0.718*3.71087710) = exp(2.66440975) = 14.359424
-%     2.0^0.341 = exp(0.341*0.69314718) = exp(0.23636319) = 1.2666339
-%     1/22 = 0.04545455
-%     1+11.65/40.889669 = 1.28491280 ; ^0.348 = exp(0.348*0.25069090)
-%       = exp(0.08724043) = 1.0911589
-%     1.294^0.223 = exp(0.223*0.25773820) = exp(0.05747562) = 1.0591594
-%     1.437^0.25  = exp(0.25*0.36255750) = exp(0.09063938) = 1.0948741
-%     cos(47.5)^-0.323 = exp(-0.323*-0.39216860) = exp(0.12667046) = 1.135043
-%     0.452*1.047 = 0.473244 ; *557.1207 = 263.66403 ; *14.359424 = 3786.0659
-%       *1.2666339 = 4795.305 ; *0.04545455 = 217.9684 ; *1.0911589 = 237.8382
-%       *1.0591594 = 251.9085 ; *1.0948741 = 275.8083 ; *1.135043 = 313.0505 lbf
+%     423589.5^0.488 = exp(0.488*12.95651997) = exp(6.32278175) = 557.12063
+%     40.889669^0.718 = exp(0.718*3.71087744) = exp(2.66440994) = 14.3594741
+%     2.0^0.341 = exp(0.341*0.69314718) = exp(0.23636319) = 1.26663421
+%     1/15.1297440182 = 0.066094972
+%     1+11.65/40.889669 = 1.28491304 ; ^0.348 = exp(0.348*0.25069104)
+%       = exp(0.08724048) = 1.09115901
+%     1.294^0.223 = exp(0.223*0.25773820) = exp(0.05747562) = 1.05915943
+%     1.437^0.25  = exp(0.25*0.36255750) = exp(0.09063938) = 1.09487409
+%     cos(47.5)^-0.323 = exp(-0.323*-0.39216860) = exp(0.12667046) = 1.13504290
+%     0.452*1.047 = 0.473244 ; *557.12063 = 263.65399 ; *14.3594741 = 3785.9334
+%       *1.26663421 = 4795.3928 ; *0.066094972 = 316.95135 ; *1.09115901 = 345.84432
+%       *1.05915943 = 366.30427 ; *1.09487409 = 401.05705 ; *1.13504290
+%       = 455.2170 lbf
+%     Cross-check by rescaling the OLD chain's printed result, an independent
+%     route to the same number: 313.0505*(22.0/15.1297440182)
+%       = 313.0505*1.45408937 = 455.2034 lbf. The 3e-5 spread between the two
+%     routes is the truncation of the hand arithmetic (the old chain also
+%     carries two visible slips of its own, at 263.66403 and 14.359424), and
+%     both routes sit far inside the RelTol 1e-3 used below. 455.217 is the
+%     value asserted, being the freshly re-evaluated chain.
 %
 %   Eq. 15.4  FUSELAGE = 0.499*K_dwf*W_dg^0.35*N_z^0.25*L_fus^0.5
 %                        *D_fus^0.849*W_fus^0.685
@@ -248,9 +292,12 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %
 %   OEW(31377) = wing + HT + VT + fuselage + LG.main + LG.nose
 %                + engine group + systems group + strake
-%              = 2396.944 + 200.5104 + 313.0505 + 3674.18 + 989.843
+%              = 2396.944 + 200.5104 + 455.217 + 3674.18 + 989.843
 %                + 170.9044 + 3381.6847 + 4572.504 + 90.00
-%              = 15789.621 lbf   (was 15795.156; same -5.535 lbf, -0.035 %)
+%              = 15931.788 lbf
+%     (was 15789.621 with the frozen L_t = 22.0 ft. The whole +142.167 lbf,
+%     +0.90 %, is Eq. 15.3's vertical tail: a shorter tail arm needs a heavier
+%     fin for the same volume coefficient. No other term moves.)
 %
 %   Strake (ADDED 2026-07-29): k_strake * S_strake = 4.5 * 20 = 90.00 lbf
 %   exact [Brandt Main!D18 / Wt!H7]. See F16WeightsL3.m's S_strake/k_strake
@@ -387,13 +434,35 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         end
 
         function testTailWeightsEq152And153HandComputed(tc)
-            % Header derivations, Eqs. 15.2 -> 200.5104 and 15.3 -> 313.0505.
+            % Header derivations, Eqs. 15.2 -> 200.5104 and 15.3 -> 455.217.
+            % Eq. 15.2 is UNCHANGED by the 2026-08-11 tail-arm fix (it carries
+            % no arm at all); Eq. 15.3 was 313.0505 against the retired frozen
+            % L_t = 22.0 ft and is re-derived in this file's header against
+            % the real wing-c/4-to-HT-c/4 arm, 15.1297440182 ft.
             w = TestWeightsL3.makeW3();
             W_t = w.weight_tail(31377);
             tc.verifyEqual(W_t.HT, 200.5104, 'RelTol', 1e-3, ...
                 'Eq. 15.2 HT weight must be 200.5104 lbf (EXPOSED S_ht = 51.148643).');
-            tc.verifyEqual(W_t.VT, 313.0505, 'RelTol', 1e-3, ...
-                'Eq. 15.3 VT weight must be 313.0505 lbf (EXPOSED S_vt/AR_vt/lambda_vt).');
+            tc.verifyEqual(W_t.VT, 455.217, 'RelTol', 1e-3, ...
+                'Eq. 15.3 VT weight must be 455.217 lbf (EXPOSED S_vt/AR_vt/lambda_vt, L_t = 15.1297440182 ft).');
+            tc.verifyNotEqual(W_t.VT, 313.0505, ...
+                'Eq. 15.3 must NOT still be evaluating at the retired frozen L_t = 22.0 ft.');
+        end
+
+        function testVerticalTailWeightIsInverselyProportionalToTheArm(tc)
+        % The structural reason the 2026-08-11 arm fix moved OEW at all:
+        % Eq. 15.3 carries L_t^-1 and NOTHING else in Sec. 15.3.1 reads L_t.
+        % Doubling the arm must therefore halve the VT weight exactly and
+        % leave the HT weight untouched -- an invariant of the equation, so it
+        % holds whatever the exponents turn out to be (see the standing
+        % exponent to-do at the top of this file).
+            w   = TestWeightsL3.makeW3();
+            W_0 = w.weight_tail(31377);
+            VT_2L = WeightsL3.vertical_tail(31377, w.N_z, w.S_vt, w.K_rht, ...
+                        w.H_t, w.H_v, w.design_mach, 2*w.L_t, w.S_r, ...
+                        w.AR_vt, w.lambda_vt, w.Lambda_LE_vt);
+            tc.verifyEqual(VT_2L, 0.5 * W_0.VT, 'RelTol', 1e-12, ...
+                'Eq. 15.3 must go exactly as 1/L_t.');
         end
 
         function testFuselageWeightEq154HandComputed(tc)
@@ -685,9 +754,13 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
         function testOEWHandComputed(tc)
         %TESTOEWHANDCOMPUTED  Header total -- replaces the removed +-40 % gate.
+        %   RECOMPUTED 2026-08-11: 15789.621 -> 15931.788 lbf. The entire
+        %   +142.167 lbf is Eq. 15.3's vertical tail under the corrected tail
+        %   arm (22.0 -> 15.1297440182 ft); every other group term is
+        %   bit-for-bit what it was. Derivation in this file's header block.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.OEW(31377), 15789.621, 'RelTol', 1e-3, ...
-                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15789.621 lbf.');
+            tc.verifyEqual(w.OEW(31377), 15931.788, 'RelTol', 1e-3, ...
+                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15931.788 lbf.');
         end
 
         function testStrakeWeightHandComputed(tc)
@@ -735,7 +808,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %TESTOEWWORKSWITHWTOUNSET  OEW is a pure function of its argument.
             w = TestWeightsL3.makeW3();
             tc.verifyTrue(isnan(w.W_TO), 'obj.W_TO must be NaN until set.');
-            tc.verifyEqual(w.OEW(31377), 15789.621, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.OEW(31377), 15931.788, 'RelTol', 1e-3, ...
                 'OEW must be computable with obj.W_TO unset.');
         end
 

@@ -216,7 +216,7 @@ classdef F16WeightsL3 < WeightsModelL3
         %  STRAKE (LERX), ADDED 2026-07-29
         % ================================================================== %
         %S_STRAKE, K_STRAKE  Strake structural weight inputs -- previously
-        %   unmodeled at every fidelity level (examples/F16A/mds/
+        %   unmodeled at every fidelity level (examples/F16A/output/
         %   weights_brandt_comparison.md section 5: 13.68% of Brandt Wt!B12).
         %   [Brandt F-16A.xls Main!D18 = 20 ft^2 / Wt!H7 = 4.5 lbf/ft^2].
         %   CROSS-MODEL BORROW, DELIBERATE: Raymer §15.3.1 (Eqs. 15.1-15.24, this
@@ -261,7 +261,7 @@ classdef F16WeightsL3 < WeightsModelL3
         Lambda_LE_vt % deg  VT LE sweep                 [Eq. 15.3] = geom.LE_sweep_vt (47.5)
         H_t          % ft   HT height above fuselage CL [Eq. 15.3] = geom.H_t (0)
         H_v          % ft   VT height scale             [Eq. 15.3] = geom.H_v (1)
-        L_t          % ft   tail arm, wing 1/4-MAC to HT 1/4-MAC [Eq. 15.3] = geom.L_t (22.0)
+        L_t          % ft   tail arm, wing 1/4-MAC to HT 1/4-MAC [Eq. 15.3] = geom.L_t (15.1297) — CHANGED 2026-08-11 from a frozen 22.0 input. geom.L_t is now an ALIAS for geom.L_HT, the real x_c4_ht - x_c4_wing station difference, so it tracks the sizing loop instead of standing still. The old 22.0 came from the retired 0.475*L_fus fuselage-fraction rule, which overstated the arm ~46%; see VnV/BrandtF16A/todo.md Finding 7, now closed.
         S_r          % ft^2 rudder area                 [Eq. 15.3] = geom.S_r (11.65)
         L_fus        % ft   fuselage structural length  [Eq. 15.4] = geom.L_fus (47.5)
         D_fus        % ft   max fuselage structural DEPTH [Eq. 15.4] = geom.H_max_fuselage (5.0) — ★ NOT geom.D_fus = 6.0
