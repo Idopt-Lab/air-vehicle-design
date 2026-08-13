@@ -33,8 +33,8 @@
 % output (objs) exposes those same objects, already mutated to their
 % converged state, for the reporting below.
 
-W_TO_guess = 30000;
-T_SL_guess = 20000;
+W_TO_guess = 45000;
+T_SL_guess = 15000;
 [result, objs] = design_study_02_L2(W_TO_guess, T_SL_guess);
 
 % [WS_opt, TW_opt] = the constraint-diagram-optimal wing and thrust loading.

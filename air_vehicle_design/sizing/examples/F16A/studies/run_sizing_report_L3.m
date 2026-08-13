@@ -33,7 +33,7 @@
 % SizingLoopL2, and runs it to convergence. The second output (objs)
 % exposes those same objects, already mutated to their converged state.
 
-W_TO_guess = 30000;
+W_TO_guess = 45000;
 T_SL_guess = 20000;
 [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess);
 

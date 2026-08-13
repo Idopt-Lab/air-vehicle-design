@@ -1,3 +1,4 @@
+%% 
 %RUN_ALL_TESTS  Execute the full aircraft-sizing test suite.
 %
 %   Run from the repository root:

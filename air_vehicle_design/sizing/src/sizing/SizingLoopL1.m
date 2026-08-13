@@ -47,6 +47,16 @@ classdef SizingLoopL1 < handle
 %   41,437.5 lbf vs. the additive form's 41,433.1 lbf, a 0.01% gap). This
 %   form converges in far fewer iterations (8 vs. 81 on that same study).
 %
+%   FALLBACK: Raymer's divide has a pole where the empty and fuel fractions
+%   sum to 1. A high W_TO_guess can put an early iteration past that pole,
+%   which makes W_TO_new negative. The loop then uses Nicolai's algebraic sum
+%     W_TO_new = W_empty + W_fuel + W_fixed   [Nicolai & Carichner Eq. (5.1),
+%     p. 124]
+%   when the denominator is MIN_DENOM or less. W_fixed is Nicolai's payload
+%   (crew + equipment + expendables) = W_payload_fixed + W_payload_expendable.
+%   The two forms have the same fixed point, thus the fallback changes only
+%   the path. result.n_fallback counts the iterations that use it.
+%
 %   CORRECTIONS TO subplan 08's PSEUDOCODE (verified against the as-built
 %   APIs):
 %     con.optimal_point() takes NO arguments and returns TWO outputs
@@ -60,6 +70,14 @@ classdef SizingLoopL1 < handle
 % TODO (8/3/2026): Remember to remove extra documentation during final
 % pass. Should store the decisions and rationalization in some kind of
 % archive later. Include timestamp of comment creation.
+
+    properties (Constant)
+        % Smallest (1 - f_empty - f_fuel) that Raymer's divide can use. Below
+        % this the loop uses Nicolai Eq. 5.1 instead. The denominator equals
+        % W_payload/W_TO at convergence, which is 0.19 for the F-16A at L1, so
+        % this limit stays clear of the converged answer.
+        MIN_DENOM = 0.05
+    end
 
     properties (SetAccess = private)
         aero
@@ -111,6 +129,7 @@ classdef SizingLoopL1 < handle
 
             W_TO = W_TO_guess;
             converged = false;
+            n_fallback = 0;   % count of iterations that used Nicolai Eq. 5.1
             history = struct('iter', {}, 'W_TO', {}, 'S_ref', {}, 'T_SL', {}, 'W_fuel', {}, 'W_OEW', {});
 
             for iter = 1:opts.max_iter
@@ -132,7 +151,17 @@ classdef SizingLoopL1 < handle
                 W_payload = obj.wts.W_payload_fixed + obj.wts.W_payload_expendable;
                 f_empty   = W_OEW / W_TO;
                 f_fuel    = W_fuel / W_TO;
-                W_TO_new  = W_payload / (1 - f_empty - f_fuel);
+                denom     = 1 - f_empty - f_fuel;
+
+                % Raymer's form has a pole at denom = 0. Use Nicolai's
+                % algebraic sum when the denominator gets too small. Both
+                % forms give the same answer at convergence (see header).
+                if denom > SizingLoopL1.MIN_DENOM
+                    W_TO_new = W_payload / denom;                % Raymer Eq. 3.4
+                else
+                    W_TO_new = W_OEW + W_fuel + W_payload;       % Nicolai Eq. 5.1
+                    n_fallback = n_fallback + 1;
+                end
                 difference = W_TO_new - W_TO;
 
                 history(end+1) = struct('iter', iter, 'W_TO', W_TO, 'S_ref', S_ref, ...
@@ -162,7 +191,8 @@ classdef SizingLoopL1 < handle
             obj.wts.W_TO = W_TO;
 
             result = struct('W_TO', W_TO, 'S_ref', S_ref, 'T_SL', T_SL, ...
-                'n_iter', iter, 'converged', converged, 'history', history);
+                'n_iter', iter, 'converged', converged, 'history', history, ...
+                'n_fallback', n_fallback);
         end
 
     end

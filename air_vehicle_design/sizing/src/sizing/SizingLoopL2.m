@@ -14,9 +14,10 @@ classdef SizingLoopL2 < handle
 %   F16TailL1/L2/L3) and src/sizing/ControlSurfaceSizer.m are restored, and
 %   this constructor once again takes tail (1,1) TailSizingBase and
 %   ctrl (1,1) ControlSurfaceSizer as required arguments. Each iteration
-%   this loop calls tail.size(S_ref, b, cbar, L_fus) -- TailSizingBase's
-%   WIDEST abstract signature (see TailSizingBase.m's header), read live off
-%   obj.geom -- and ctrl.size(obj.geom) (reads geom.S_ref/S_ht/S_vt and, for
+%   this loop calls tail.size(S_ref, b, cbar, L_HT, L_VT) --
+%   TailSizingBase's WIDEST abstract signature (see TailSizingBase.m's
+%   header), read live off obj.geom -- and ctrl.size(obj.geom) (reads
+%   geom.S_ref/S_ht/S_vt and, for
 %   the wing flaps, geom.lambda_wing), then writes the results back into
 %   obj.geom's plain S_ht/S_vt/S_ail/S_elev/S_rud/S_flaperon/S_lef/S_stab
 %   properties. Production wires in F16TailL1() (shared, unmodified,
@@ -67,7 +68,7 @@ classdef SizingLoopL2 < handle
 %   Every iteration also re-sizes the tail and control surfaces from the
 %   CURRENT S_ref and wing geometry (both of which now move with W_TO --
 %   see above; before 2026-08-10 they were loop-invariant):
-%     tail_result   = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+%     tail_result   = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_HT, obj.geom.L_VT);
 %     obj.geom.S_ht = tail_result.S_ht;
 %     obj.geom.S_vt = tail_result.S_vt;
 %     cs_result     = obj.ctrl.size(obj.geom);
@@ -131,7 +132,18 @@ classdef SizingLoopL2 < handle
 %   |W_TO_new-W_TO| < tol AND |T_SL_new-T_SL| < tol [docs/subplans/08_sizing.md].
 %   Supersedes an earlier additive closure [WeightsBase.m header] -- same
 %   fixed point either way (see SizingLoopL1.m's header for the
-%   derivation). The <0.005% multiplicative-vs-additive gap and ~2x
+%   derivation).
+%
+%   FALLBACK: Raymer's divide has a pole where the empty and fuel fractions
+%   sum to 1. A high W_TO_guess can put an early iteration past that pole,
+%   which makes W_TO_new negative. The loop then uses Nicolai's algebraic sum
+%     W_TO_new = W_empty + W_fuel + W_fixed   [Nicolai & Carichner Eq. (5.1),
+%     p. 124]
+%   when the denominator is MIN_DENOM or less. W_fixed is Nicolai's payload
+%   (crew + equipment + expendables) = W_payload_fixed + W_payload_expendable.
+%   The two forms have the same fixed point, thus the fallback changes only
+%   the path. result.n_fallback counts the iterations that use it.
+%   The <0.005% multiplicative-vs-additive gap and ~2x
 %   faster convergence were confirmed empirically pre-2026-08-03, when
 %   con.optimal_point() was still called once before the loop (F-16A L2:
 %   21,181.0 vs. 21,181.6 lbf; L3, reusing this same class: 23,039.1 vs.
@@ -194,6 +206,14 @@ classdef SizingLoopL2 < handle
 % TODO (8/3/2026): You could move this section (72 - 100) (constructor and
 % properties) into some sort of base enforcer class that is also accessible
 % to subclasses. Apply this to SizingLoopL1, too.
+    properties (Constant)
+        % Smallest (1 - f_empty - f_fuel) that Raymer's divide can use. Below
+        % this the loop uses Nicolai Eq. 5.1 instead. The denominator equals
+        % W_payload/W_TO at convergence, which is 0.22 for the F-16A, so this
+        % limit stays clear of the converged answer.
+        MIN_DENOM = 0.05
+    end
+
     properties (SetAccess = private)
         aero
         prop
@@ -253,6 +273,7 @@ classdef SizingLoopL2 < handle
             W_TO = W_TO_guess;
             T_SL = T_SL_guess;
             converged = false;
+            n_fallback = 0;   % count of iterations that used Nicolai Eq. 5.1
             history = struct('iter', {}, 'W_TO', {}, 'S_ref', {}, 'T_SL', {}, 'S_ht', {}, ...
                 'S_vt', {}, 'S_ail', {}, 'S_elev', {}, 'S_rud', {}, ...
                 'S_flaperon', {}, 'S_lef', {}, 'S_stab', {}, 'W_fuel', {}, 'W_OEW', {});
@@ -265,8 +286,11 @@ classdef SizingLoopL2 < handle
 
                 S_ref = W_TO / WS_opt;
                 obj.geom.S_ref = S_ref;
+                % TODO (8/13/2026): Remember, if the S_ref is changing,
+                % then all the wing dimensions should change from that.
+                % Ensure that these updates are firing.
 
-                T_SL_new = TW_opt * W_TO;
+                T_SL_new = TW_opt * W_TO; % TODO (8/13/2026): This isn't even using the new T_SL, and this STILL BOTHERS ME.
                 obj.prop.T_SL = T_SL_new;
 
                 % TAIL/CONTROL-SURFACE -> WEIGHT COUPLING (documented
@@ -282,7 +306,7 @@ classdef SizingLoopL2 < handle
                 % control-surface sizing with no extra wiring here; skipping
                 % the block below would silently freeze OEW's tail/VT
                 % weight terms at whatever geom last held.
-                tail_result   = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+                tail_result   = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_HT, obj.geom.L_VT);
                 obj.geom.S_ht = tail_result.S_ht;
                 obj.geom.S_vt = tail_result.S_vt;
 
@@ -301,7 +325,6 @@ classdef SizingLoopL2 < handle
                 W_OEW  = obj.wts.OEW(W_TO);
                 % TODO (8/3/2026): Make a mermaid chart to see exactly what
                 % data goes where during runtime. Don't forget the loop.
-                % Also 
 
                 obj.wts.W_TO     = W_TO;
                 obj.wts.W_energy = W_fuel;
@@ -312,7 +335,17 @@ classdef SizingLoopL2 < handle
                 W_payload = obj.wts.W_payload_fixed + obj.wts.W_payload_expendable;
                 f_empty   = W_OEW / W_TO;
                 f_fuel    = W_fuel / W_TO;
-                W_TO_new  = W_payload / (1 - f_empty - f_fuel);
+                denom     = 1 - f_empty - f_fuel;
+
+                % Raymer's form has a pole at denom = 0. Use Nicolai's
+                % algebraic sum when the denominator gets too small. Both
+                % forms give the same answer at convergence (see header).
+                if denom > SizingLoopL2.MIN_DENOM
+                    W_TO_new = W_payload / denom;                % Raymer Eq. 3.4
+                else
+                    W_TO_new = W_OEW + W_fuel + W_payload;       % Nicolai Eq. 5.1
+                    n_fallback = n_fallback + 1;
+                end
 
                 diff_W = W_TO_new - W_TO;
                 diff_T = T_SL_new - T_SL;
@@ -349,7 +382,7 @@ classdef SizingLoopL2 < handle
             obj.geom.S_ref = S_ref;
             T_SL = TW_opt * W_TO;
             obj.prop.T_SL = T_SL;
-            tail_result         = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
+            tail_result         = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_HT, obj.geom.L_VT);
             obj.geom.S_ht       = tail_result.S_ht;
             obj.geom.S_vt       = tail_result.S_vt;
             cs_result           = obj.ctrl.size(obj.geom);
@@ -362,7 +395,8 @@ classdef SizingLoopL2 < handle
             obj.wts.W_TO = W_TO;
 
             result = struct('W_TO', W_TO, 'S_ref', S_ref, 'T_SL', T_SL, ...
-                'n_iter', iter, 'converged', converged, 'history', history);
+                'n_iter', iter, 'converged', converged, 'history', history, ...
+                'n_fallback', n_fallback);
         end
 
     end
