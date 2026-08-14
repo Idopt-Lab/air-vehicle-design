@@ -24,6 +24,12 @@ objs = f16_brandt_stack();
 ts = TSDiagram(objs.aero, objs.prop, objs.wts, objs.geom, objs.miss, ...
     objs.con, objs.tail);
 
+% Inner-closure tuning (2026-08-14): the Brandt stack's TOGW closure has a
+% steep map slope (m ~= -2.9; see SizingSteps.relax's RELAXATION CHOICE
+% note), so the 0.5 default oscillates past max_iter and NaNs cells.
+ts.relax_W0    = 0.25;
+ts.max_iter_W0 = 400;
+
 % Uniform grids (TSDiagram.plot's feasible-region shading assumes uniform
 % spacing). Ranges bracket the F-16A actual point (S = 300 ft^2,
 % T = 23,770 lbf) with margin on both sides.

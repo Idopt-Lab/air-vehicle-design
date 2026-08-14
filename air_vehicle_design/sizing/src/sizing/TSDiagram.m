@@ -31,6 +31,17 @@ classdef TSDiagram < handle
         tail    % (1,1) TailSizingBase
     end
 
+    properties
+        % Per-stack tuning knobs for the INNER TOGW closure (added
+        % 2026-08-14). converge_W0's opts default to these, so every grid/
+        % curve method inherits them without per-call plumbing. Stacks with
+        % a large fixed-OEW content have a steep closure-map slope and need
+        % a smaller relaxation -- see SizingSteps.relax's RELAXATION CHOICE
+        % note (Brandt F-16A: slope ~= -2.9 -> relax_W0 ~= 0.25).
+        relax_W0    (1,1) double {mustBeInRange(relax_W0, 0, 1, "exclude-lower")} = 0.5
+        max_iter_W0 (1,1) double {mustBePositive, mustBeInteger} = 200
+    end
+
     properties (Access = private)
         % Warm start for converge_W0: the last converged W0. A neighboring
         % (T, S) cell converges to a nearby weight, so seeding from the
@@ -76,7 +87,9 @@ classdef TSDiagram < handle
         %
         %   Returns NaN -- NEVER errors -- when the closure denominator
         %   goes non-positive, W0 exceeds opts.W0_cap, a discipline
-        %   returns a non-finite weight, or max_iter is hit. NaN marks an
+        %   returns a non-finite weight OR THROWS at the cell's state
+        %   (warned, not silent -- e.g. a mission segment hitting negative
+        %   fuel at an extreme cell), or max_iter is hit. NaN marks an
         %   infeasible (T, S) cell.
         %
         %   opts.W0_guess   -- lbf. Default: last converged W0 (warm
@@ -94,8 +107,8 @@ classdef TSDiagram < handle
                 S_ref (1,1) double {mustBePositive}
                 opts.W0_guess   (1,1) double = NaN
                 opts.tol_rel    (1,1) double {mustBePositive} = 1e-6
-                opts.max_iter   (1,1) double {mustBePositive, mustBeInteger} = 200
-                opts.relaxation (1,1) double {mustBeInRange(opts.relaxation, 0, 1, "exclude-lower")} = 0.5
+                opts.max_iter   (1,1) double {mustBePositive, mustBeInteger} = obj.max_iter_W0
+                opts.relaxation (1,1) double {mustBeInRange(opts.relaxation, 0, 1, "exclude-lower")} = obj.relax_W0
                 opts.W0_cap     (1,1) double {mustBePositive} = 1e7
             end
             if ~isnan(opts.W0_guess) && ~(opts.W0_guess > 0)
@@ -126,8 +139,22 @@ classdef TSDiagram < handle
                     % geometries carry W_TO as a state variable.
                     obj.geom.W_TO = W0;
                 end
-                [W_fuel, ~] = obj.miss.total_fuel(W0);
-                W_OEW = obj.wts.OEW(W0);
+                try
+                    [W_fuel, ~] = obj.miss.total_fuel(W0);
+                    W_OEW = obj.wts.OEW(W0);
+                catch de
+                    % A discipline THREW at this (T, S, W0) state -- e.g. a
+                    % mission segment hit an unphysical condition (negative
+                    % fuel, transonic NaN band) at an extreme grid cell.
+                    % Algorithm-2 semantics: the cell is infeasible -> NaN.
+                    % The warning keeps real wiring bugs visible (never a
+                    % silent swallow).
+                    warning('TSDiagram:cellDisciplineError', ...
+                        'converge_W0(T=%.6g, S=%.6g) at W0=%.6g: %s -> cell marked NaN.', ...
+                        T_SL, S_ref, W0, de.message);
+                    W0 = NaN;
+                    return;
+                end
                 if ~(isfinite(W_fuel) && isfinite(W_OEW))
                     W0 = NaN;   % a discipline broke down at this cell
                     return;
@@ -465,9 +492,16 @@ classdef TSDiagram < handle
                 0.60 * ones(numel(T_grid), numel(S_grid)), ...
                 0.85 * ones(numel(T_grid), numel(S_grid)), ...
                 0.60 * ones(numel(T_grid), numel(S_grid)));
-            image(ax, 'XData', S_grid, 'YData', T_grid, 'CData', green, ...
-                'AlphaData', 0.25 * double(feasible), ...
-                'DisplayName', 'Feasible region (sized aircraft)');
+            % NOTE: image() objects do not accept DisplayName; exclude the
+            % shading from the legend and label it via an invisible patch
+            % proxy instead.
+            h_img = image(ax, 'XData', S_grid, 'YData', T_grid, 'CData', green, ...
+                'AlphaData', 0.25 * double(feasible));
+            % Low-level image primitives expose no Annotation/LegendInformation;
+            % HandleVisibility 'off' keeps the shading out of the legend.
+            h_img.HandleVisibility = 'off';
+            patch(ax, NaN, NaN, [0.60 0.85 0.60], 'FaceAlpha', 0.25, ...
+                'EdgeColor', 'none', 'DisplayName', 'Feasible region (sized aircraft)');
             set(ax, 'YDir', 'normal');   % keep thrust increasing upward
 
             colors = lines(n_p + n_w);
