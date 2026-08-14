@@ -133,30 +133,48 @@ classdef TSDiagram < handle
                 W0 = W_payload / 0.1;   % seed heuristic (see help above)
             end
 
+            shrink_left = 12;    % seed-path recovery budget (see loop note)
+            SHRINK      = 0.7;   % W0 pull-back factor per recovery step
             for iter = 1:opts.max_iter
                 if isprop(obj.geom, 'W_TO')
                     % Guarded write, as in SizingLoopL1: L1 regression
                     % geometries carry W_TO as a state variable.
                     obj.geom.W_TO = W0;
                 end
+                % SEED-PATH RECOVERY (added 2026-08-14). The W0 iterates can
+                % transit ABOVE the mission-flyable weight band on the way
+                % down from a high seed -- at a transient W0 the mission
+                % demands more fuel than the aircraft holds (a landing/climb
+                % segment sees a negative weight and throws), or the closure
+                % denominator goes non-positive -- even though the FIXED
+                % POINT below is perfectly feasible (measured: Max Alt curve
+                % cells failing at transient W0 ~ 42,700 whose fixed point is
+                % ~30,000). Fuel fraction rises with W0 at fixed (T, S), so
+                % the recovery is to SHRINK W0 back into the flyable band and
+                % continue; only when the shrink budget is exhausted is the
+                % cell truly infeasible -> NaN (warned, never silent).
+                blew_up = false;
                 try
                     [W_fuel, ~] = obj.miss.total_fuel(W0);
                     W_OEW = obj.wts.OEW(W0);
+                    if ~(isfinite(W_fuel) && isfinite(W_OEW))
+                        blew_up = true;
+                        de_msg = 'non-finite mission fuel or OEW';
+                    end
                 catch de
-                    % A discipline THREW at this (T, S, W0) state -- e.g. a
-                    % mission segment hit an unphysical condition (negative
-                    % fuel, transonic NaN band) at an extreme grid cell.
-                    % Algorithm-2 semantics: the cell is infeasible -> NaN.
-                    % The warning keeps real wiring bugs visible (never a
-                    % silent swallow).
-                    warning('TSDiagram:cellDisciplineError', ...
-                        'converge_W0(T=%.6g, S=%.6g) at W0=%.6g: %s -> cell marked NaN.', ...
-                        T_SL, S_ref, W0, de.message);
-                    W0 = NaN;
-                    return;
+                    blew_up = true;
+                    de_msg = de.message;
                 end
-                if ~(isfinite(W_fuel) && isfinite(W_OEW))
-                    W0 = NaN;   % a discipline broke down at this cell
+                if blew_up
+                    if shrink_left > 0
+                        shrink_left = shrink_left - 1;
+                        W0 = max(W0 * SHRINK, W_payload * 1.05);
+                        continue;
+                    end
+                    warning('TSDiagram:cellDisciplineError', ...
+                        'converge_W0(T=%.6g, S=%.6g) at W0=%.6g: %s -> cell marked NaN (shrink budget exhausted).', ...
+                        T_SL, S_ref, W0, de_msg);
+                    W0 = NaN;
                     return;
                 end
                 obj.wts.W_TO     = W0;
@@ -165,8 +183,19 @@ classdef TSDiagram < handle
                 % TOGW closure step [metabook Algorithm 2 / Algorithm 1;
                 % Raymer 6th ed. Eq. 3.4].
                 [W0_new, ~] = SizingSteps.togw_update(W_payload, W_OEW, W_fuel, W0);
-                if isnan(W0_new) || W0_new > opts.W0_cap
-                    W0 = NaN;   % closure infeasible or diverging
+                if isnan(W0_new)
+                    % denom <= 0 at THIS W0 (ff + ef >= 1) -- same too-high-
+                    % transient symptom; shrink before giving up.
+                    if shrink_left > 0
+                        shrink_left = shrink_left - 1;
+                        W0 = max(W0 * SHRINK, W_payload * 1.05);
+                        continue;
+                    end
+                    W0 = NaN;   % closure infeasible at every tried W0
+                    return;
+                end
+                if W0_new > opts.W0_cap
+                    W0 = NaN;   % diverging upward
                     return;
                 end
                 if abs(W0_new - W0) / W0_new < opts.tol_rel
@@ -395,9 +424,18 @@ classdef TSDiagram < handle
         %   estimate; objective contours (fuel burn, DOC) can then be
         %   superimposed."]
         %
-        %   Returns struct('T_grid', 'S_grid', 'W0', 'W_fuel') with W0 and
-        %   W_fuel as numel(T_grid) x numel(S_grid) matrices, NaN at
-        %   infeasible cells.
+        %   Returns struct('T_grid', 'S_grid', 'W0', 'W_fuel', 'feasible')
+        %   with W0/W_fuel as numel(T_grid) x numel(S_grid) matrices (NaN at
+        %   unsized cells) and feasible as the logical CELL-WISE constraint
+        %   check: at each SIZED cell the residual of EVERY constraint is
+        %   evaluated at that cell's own converged design point
+        %   DesignPoint(W0, T, S) (g <= 0 feasible,
+        %   PointPerformanceBase convention). Cell-wise evaluation is
+        %   deliberate (2026-08-14): deriving feasibility from the traced
+        %   constraint_curve lines breaks when a curve point legitimately
+        %   does not exist (its boundary aircraft cannot fly the design
+        %   mission -- e.g. the takeoff boundary at large S), which would
+        %   wrongly poison every cell in that column.
             arguments
                 obj
                 T_grid (1,:) double {mustBePositive}
@@ -407,20 +445,26 @@ classdef TSDiagram < handle
             n_S = numel(S_grid);
             W0_mat     = NaN(n_T, n_S);
             W_fuel_mat = NaN(n_T, n_S);
+            feas_mat   = false(n_T, n_S);
+            G_TOL      = 1e-9;   % residual slack for exactly-on-boundary cells
             for i = 1:n_T
                 for j = 1:n_S
                     w = obj.converge_W0(T_grid(i), S_grid(j));
                     if isfinite(w)
                         W0_mat(i, j) = w;
                         % converge_W0 leaves geom/prop at this cell's
-                        % state, so this read is consistent with w.
+                        % state, so these reads are consistent with w.
                         [wf, ~] = obj.miss.total_fuel(w);
                         W_fuel_mat(i, j) = wf;
+                        dp = DesignPoint(w, T_grid(i), S_grid(j));
+                        g  = cellfun(@(con) con.constraint_residual(dp), ...
+                            obj.con.constraints);
+                        feas_mat(i, j) = all(g <= G_TOL);
                     end
                 end
             end
             fgrid = struct('T_grid', T_grid, 'S_grid', S_grid, ...
-                'W0', W0_mat, 'W_fuel', W_fuel_mat);
+                'W0', W0_mat, 'W_fuel', W_fuel_mat, 'feasible', feas_mat);
         end
 
         function fig = plot(obj, opts)
@@ -435,12 +479,17 @@ classdef TSDiagram < handle
         %   opts.actual -- optional struct('T', lbf, 'S', ft^2, 'label',
         %                  text) marking a real aircraft [Fig. 4.7's
         %                  "Actual 777-200LR" marker precedent].
+        %   opts.grid   -- optional precomputed fuel_grid(T_grid, S_grid)
+        %                  result; must match the grids exactly. Avoids
+        %                  recomputing the whole mesh when the caller
+        %                  already ran fuel_grid for its own export.
         %
-        %   Feasible-region mask (evaluated on the T_grid x S_grid mesh):
-        %   T at or above EVERY producer curve's T(S), and S at or below
-        %   EVERY wall curve's S(T). A NaN curve point makes its cells
-        %   non-feasible (unknown is not shaded). The shading image
-        %   assumes uniformly spaced grids.
+        %   Feasible-region mask: fuel_grid's cell-wise constraint check --
+        %   the cell is SIZED (finite converged W0) and every constraint's
+        %   signed residual at DesignPoint(W0, T, S) is <= 0. The traced
+        %   curves are drawn but deliberately NOT used for the mask (see
+        %   fuel_grid's header). The shading image assumes uniformly spaced
+        %   grids.
         %
         %   Figure/legend conventions follow
         %   src/constraints/ConstraintAnalysis.plot_diagram.
@@ -449,6 +498,7 @@ classdef TSDiagram < handle
                 opts.S_grid (1,:) double {mustBePositive} = double.empty(1, 0)
                 opts.T_grid (1,:) double {mustBePositive} = double.empty(1, 0)
                 opts.actual struct = struct([])
+                opts.grid   struct = struct([])   % precomputed fuel_grid result
             end
             if isempty(opts.S_grid) || isempty(opts.T_grid)
                 error('TSDiagram:gridRequired', ...
@@ -470,37 +520,47 @@ classdef TSDiagram < handle
             for kk = 1:n_w
                 wall_curves{kk} = obj.wall_curve(kk, T_grid);
             end
-            fg = obj.fuel_grid(T_grid, S_grid);   % [S4.12 objective contours]
-
-            % Feasible mask on the mesh: NaN comparisons are false, so an
-            % unconverged curve point leaves its cells unshaded.
-            feasible = true(numel(T_grid), numel(S_grid));
-            for kk = 1:n_p
-                feasible = feasible & (T_grid(:) >= curves{kk}.T);          % nT x nS
-            end
-            for kk = 1:n_w
-                feasible = feasible & (S_grid(:).' <= wall_curves{kk}.S(:)); % nT x nS
+            if ~isempty(opts.grid)
+                fg = opts.grid;
+                if ~isequal(fg.S_grid(:).', S_grid) || ~isequal(fg.T_grid(:).', T_grid)
+                    error('TSDiagram:gridMismatch', ...
+                        'opts.grid was computed on different S/T grids than opts.S_grid/T_grid.');
+                end
+            else
+                fg = obj.fuel_grid(T_grid, S_grid);   % [S4.12 objective contours]
             end
 
-            fig = figure('Name', 'T-S Diagram');
+            % Feasible mask: fuel_grid's CELL-WISE constraint_residual check
+            % (see fuel_grid's header for why the traced curves are NOT used
+            % for feasibility -- a legitimately-nonexistent curve point would
+            % poison its whole column).
+            if ~isfield(fg, 'feasible')
+                error('TSDiagram:staleGrid', ...
+                    'opts.grid lacks the feasible field; recompute it with fuel_grid.');
+            end
+            feasible = fg.feasible;
+
+            fig = figure('Name', 'T-S Diagram', 'Color', 'w');
+            if isprop(fig, 'Theme')
+                fig.Theme = 'light';   % batch sessions inherit the desktop
+            end                        % theme; force light for readable exports
             ax  = axes(fig);
             hold(ax, 'on');
 
-            % Feasible-region shading: a flat green image with per-cell
-            % transparency (same green as ConstraintAnalysis.plot_diagram).
-            green = cat(3, ...
-                0.60 * ones(numel(T_grid), numel(S_grid)), ...
-                0.85 * ones(numel(T_grid), numel(S_grid)), ...
-                0.60 * ones(numel(T_grid), numel(S_grid)));
+            % Feasible-region shading: a flat LIGHT-BLUE image with per-cell
+            % transparency [metabook Figs. 4.6/4.7 shade the feasible design
+            % space blue]; infeasible/unsized cells stay white.
+            blue = cat(3, ...
+                0.55 * ones(numel(T_grid), numel(S_grid)), ...
+                0.70 * ones(numel(T_grid), numel(S_grid)), ...
+                0.95 * ones(numel(T_grid), numel(S_grid)));
             % NOTE: image() objects do not accept DisplayName; exclude the
-            % shading from the legend and label it via an invisible patch
-            % proxy instead.
-            h_img = image(ax, 'XData', S_grid, 'YData', T_grid, 'CData', green, ...
-                'AlphaData', 0.25 * double(feasible));
-            % Low-level image primitives expose no Annotation/LegendInformation;
-            % HandleVisibility 'off' keeps the shading out of the legend.
+            % shading from the legend (HandleVisibility) and label it via an
+            % invisible patch proxy instead.
+            h_img = image(ax, 'XData', S_grid, 'YData', T_grid, 'CData', blue, ...
+                'AlphaData', 0.40 * double(feasible));
             h_img.HandleVisibility = 'off';
-            patch(ax, NaN, NaN, [0.60 0.85 0.60], 'FaceAlpha', 0.25, ...
+            patch(ax, NaN, NaN, [0.55 0.70 0.95], 'FaceAlpha', 0.40, ...
                 'EdgeColor', 'none', 'DisplayName', 'Feasible region (sized aircraft)');
             set(ax, 'YDir', 'normal');   % keep thrust increasing upward
 
@@ -516,8 +576,9 @@ classdef TSDiagram < handle
 
             % Fuel-burn objective contours [S4.12].
             if any(isfinite(fg.W_fuel), 'all')
-                contour(ax, S_grid, T_grid, fg.W_fuel, 'ShowText', 'on', ...
-                    'LineColor', [0.45 0.45 0.45], ...
+                contour(ax, S_grid, T_grid, fg.W_fuel, 12, 'ShowText', 'on', ...
+                    'LineColor', [0.40 0.40 0.40], 'LineWidth', 0.75, ...
+                    'LabelSpacing', 288, ...
                     'DisplayName', 'Fuel burn W_{fuel} [lbf]');
             end
 
@@ -532,7 +593,7 @@ classdef TSDiagram < handle
                 if isfield(a, 'label') && strlength(string(a.label)) > 0
                     lbl = string(a.label);
                 end
-                plot(ax, a.S, a.T, 'ks', 'MarkerSize', 10, ...
+                plot(ax, a.S, a.T, 'kp', 'MarkerSize', 16, 'LineWidth', 1.0, ...
                     'MarkerFaceColor', [0.95 0.75 0.10], 'DisplayName', lbl);
             end
 

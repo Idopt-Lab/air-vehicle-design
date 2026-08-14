@@ -33,8 +33,8 @@ ts.max_iter_W0 = 400;
 % Uniform grids (TSDiagram.plot's feasible-region shading assumes uniform
 % spacing). Ranges bracket the F-16A actual point (S = 300 ft^2,
 % T = 23,770 lbf) with margin on both sides.
-S_grid = linspace(220, 420, 11);    % ft^2
-T_grid = linspace(12e3, 40e3, 11);  % lbf
+S_grid = linspace(200, 440, 25);    % ft^2 (25 pts -- fine fuel contours)
+T_grid = linspace(12e3, 40e3, 25);  % lbf
 
 % Actual-aircraft marker [metabook Fig. 4.7 marker precedent]:
 % S = 300 ft^2 [Brandt Main!B18], T_SL(AB) = 23,770 lbf [Brandt Engn!T_AB_SLS].
@@ -48,13 +48,12 @@ fprintf('Converged W_TO at (T = %.0f lbf, S = %.0f ft^2): %.1f lbf (Brandt = 313
     actual.T, actual.S, W0_actual, 100*(W0_actual - 31377)/31377);
 
 % Fuel-burn/TOGW grid for the results export [metabook S4.12 objective
-% contours]. ts.plot below re-runs the same grid internally (it takes no
-% precomputed data); the repeat is warm-started cell to cell and this is an
-% offline study script, so the duplicate cost is accepted for a simple API.
+% contours]. The precomputed grid is passed straight into ts.plot ('grid'
+% option) so the mesh is computed once.
 fg = ts.fuel_grid(T_grid, S_grid);
 
 % The diagram itself [metabook Fig. 4.7].
-fig = ts.plot('S_grid', S_grid, 'T_grid', T_grid, 'actual', actual);
+fig = ts.plot('S_grid', S_grid, 'T_grid', T_grid, 'actual', actual, 'grid', fg);
 
 % ---- Exports into the gitignored output/ (sanity_checks pattern) -------- %
 outdir = fullfile(fileparts(mfilename('fullpath')), '..', 'output');
