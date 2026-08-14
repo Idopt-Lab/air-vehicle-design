@@ -18,6 +18,10 @@ classdef GeomL2
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): This feels unnecessary for a number of reasons. Firstly, not all designs will have a tail, so implicitly enforcing this at the toolbox level
+        % is going to cause problems in the future. Secondly, how would a tailless design override the component summation? That is, how would they tell the program
+        % that their design is tailless? This wrapper should be removed. The student classes will be expected to sum their components as they see fit, and are expected
+        % to show some autonomous decision-making.
         function val = get_S_wet(obj)
         %GET_S_WET  Total wetted area [ft^2]: wing + HT + VT + fuselage + duct.
         %   Takes no W_TO argument (contrast L1). The duct is included
@@ -29,40 +33,55 @@ classdef GeomL2
                   GeomL2.get_S_wet_duct(obj);
         end
 
+        % TODO (8/14/2026): Don't need this wrapper.
         function val = get_S_wet_wing(obj)
         %GET_S_WET_WING  Wing wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
             val = GeomL2.compute_roskam_planform(obj.S_exposed_wing, ...
                       obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
         end
 
+        % TODO (8/14/2026): Don't need this wrapper.
         function val = get_S_wet_HT(obj)
         %GET_S_WET_HT  Horizontal-tail wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
             val = GeomL2.compute_roskam_planform(obj.S_exposed_ht, ...
                       obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
         end
 
+        % TODO (8/14/2026): Don't need this wrapper.
         function val = get_S_wet_VT(obj)
         %GET_S_WET_VT  Vertical-tail wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
             val = GeomL2.compute_roskam_planform(obj.S_exposed_vt, ...
                       obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);
         end
 
+        % TODO (8/14/2026): Don't need this wrapper.
         function val = get_S_wet_fuselage(obj)
         %GET_S_WET_FUSELAGE  Fuselage wetted area [ft^2].  [Roskam Vol. II Eq. 12.3]
         %   Brandt's low-fi and high-fi alternates are available as named methods.
             val = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);
         end
 
+        % TODO (8/14/2026): Don't need this wrapper.
         function val = get_S_wet_duct(obj)
         %GET_S_WET_DUCT  Inlet + duct wetted area [ft^2].  [Raymer 6th ed. Sec. 7.3]
             val = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct);
         end
 
+        % TODO (8/14/2026): Don't need this wrapper.
         function val = get_S_exposed_wing(obj)
         %GET_S_EXPOSED_WING  Wing exposed planform area [ft^2] (passthrough).
             val = obj.S_exposed_wing;
         end
 
+        % TODO (8/14/2026): I think the idea is fine, but we should decompose this into individual "compute" functions that compute
+        % the wetted areas of generic shapes of arbitrary dimensions.
+        % Decompose this into functions that compute the wetted/surface areas of these shapes. Syntax: Shape(arguments/dimensions)
+        % Cone(radius, length)
+        % Pyramid(face_side_length1, face_side_length2, face_side_length3, face_side_length4, height)
+        % Sphere(radius)
+        % Cylinder(radius, length)
+        % Oval(width, height, length)
+        % Note: Should this idea be in L3? Yes. Don't add it here in L2.
         function val = get_S_wet_fuselage_brandt_lowfi(obj)
         %GET_S_WET_FUSELAGE_BRANDT_LOWFI  Brandt "1/3-cone+2/3-cylinder" fuselage
         %   S_wet, reading obj.W_max_fuselage/H_max_fuselage/L_fuselage.
@@ -74,6 +93,9 @@ classdef GeomL2
         % LOW-LEVEL: pure math — take only scalars/arrays, no object access.
         % ================================================================== %
 
+        % TODO (8/14/2026): Try to find a non-Brandt version of this equation, one that
+        % estimates the wetted planform area of a lifting surface like a wing. Roskam may have something.
+        % Since Roskam has it, this Brandt form should be removed from the toolbox.
         function val = compute_wet_planform(S_exp, tc)
         %COMPUTE_WET_PLANFORM  Lifting-surface wetted area [ft^2], uniform t/c.
         %   [Brandt F-16A.xls, Geom!B13]. Alternate to compute_roskam_planform.
@@ -84,6 +106,7 @@ classdef GeomL2
             val = S_exp * (1.977 + 0.52 * tc);
         end
 
+        % TODO (8/14/2026): This answers my previous question.
         function val = compute_roskam_planform(S_exp, tc_r, tc_t, lambda)
         %COMPUTE_ROSKAM_PLANFORM  Lifting-surface wetted area [ft^2], variable
         %   root/tip t/c.  [Roskam Vol. II Eq. 12.1]
@@ -121,6 +144,7 @@ classdef GeomL2
                   * (1 + 1/lambda_f^2);
         end
 
+        % TODO (8/14/2026): Do not include Brandt in the toolbox.
         function val = compute_s_wet_fus_brandt_lowfi(max_width, max_height, L_fuse)
         %COMPUTE_S_WET_FUS_BRANDT_LOWFI  Fuselage wetted area [ft^2], Brandt's
         %   "1/3-cone + 2/3-cylinder" approximation.  [Brandt F-16A.xls, Geom!B3]
@@ -133,6 +157,7 @@ classdef GeomL2
             val   = (5/6) * pi * D_avg * L_fuse;
         end
 
+        % TODO (8/14/2026): This seems way too high fidelity to be in L2.
         function val = compute_s_wet_fus_brandt_highfi(frame_x, frame_zchine, frame_z, frame_w, frame_h)
         %COMPUTE_S_WET_FUS_BRANDT_HIGHFI  Fuselage wetted area [ft^2] by trapezoidal
         %   integration of per-frame perimeters.  [Brandt F-16A.xls, Geom!D23]
@@ -169,7 +194,8 @@ classdef GeomL2
             val = sum(dS);
         end
 
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+        % TODO (7/28/2026): This seems too high-fidelity to be in L2. Also, there's areference to "chines," which
+        % are design-specific, and therefore don't belong inside this toolbox.
         function P = compute_frame_perimeter(w, h, z_chine, z_center)
         %COMPUTE_FRAME_PERIMETER  Perimeter [ft] of one fuselage frame under the
         %   cosine cross-section model.  [Brandt F-16A.xls, Geom frame model]

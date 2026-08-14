@@ -24,21 +24,25 @@ classdef GeomL1
         % HIGH-LEVEL: take the concrete object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): Why do you need a function whose sole purpose is to call a SINGLE OTHER FUNCTION???
         function val = get_S_wet_statistical(obj, W_TO)
         %GET_S_WET_STATISTICAL  Total wetted area [ft^2].  [Roskam Vol. I Table 3.5]
             val = GeomL1.compute_s_wet_regression(obj.aircraft_category, W_TO);
         end
 
+        % TODO (8/14/2026): Why do you need a function whose sole purpose is to call a SINGLE OTHER FUNCTION???
         function val = get_L_fus(obj, W_TO)
         %GET_L_FUS  Fuselage length [ft].  [Raymer 6th ed. Table 6.3]
             val = GeomL1.compute_l_fus_regression(obj.aircraft_category, W_TO);
         end
-
+        
+        % TODO (8/14/2026): Why do you need a function whose sole purpose is to call a SINGLE OTHER FUNCTION???
         function val = get_AR_eq(obj)
         %GET_AR_EQ  Equivalent aspect ratio from design Mach.  [Raymer 7th ed. Table 4.1]
             val = GeomL1.compute_AR_eq(obj.aircraft_category, obj.M_max);
         end
 
+        % TODO (8/14/2026): Why do you need a function whose sole purpose is to call a SINGLE OTHER FUNCTION???
         function val = get_control_surface_fraction(obj, surface)
         %GET_CONTROL_SURFACE_FRACTION  Chord fraction C/c.  [Raymer 7th ed. Table 6.5]
         %   surface: 'elevator' | 'rudder'.
@@ -55,12 +59,14 @@ classdef GeomL1
             val = 10^c * W_TO^d;
         end
 
+
         function val = compute_l_fus_regression(aircraft_category, W_TO)
         %COMPUTE_L_FUS_REGRESSION  [Raymer 6th ed. Table 6.3]
             [a, C] = GeomL1.lookup_lfus(aircraft_category);
             val = a * W_TO^C;
         end
 
+        % TODO (8/14/2026): This looks fine. Don't touch.
         function [c, d] = lookup_swet(cat)
         %LOOKUP_SWET  [Roskam Vol. I Table 3.5]
             switch cat
@@ -75,6 +81,7 @@ classdef GeomL1
             end
         end
 
+        % TODO (8/14/2026): This looks fine. Don't touch.
         function [a, C] = lookup_lfus(cat)
         %LOOKUP_LFUS  [Raymer 6th ed. Table 6.3]; ft from lbf.
             switch cat
@@ -88,6 +95,7 @@ classdef GeomL1
             end
         end
 
+        % TODO (8/14/2026): This looks fine, but I wonder why there's a dependency injection in this.
         function val = compute_AR_eq(aircraft_category, M_max)
         %COMPUTE_AR_EQ  [Raymer 7th ed. Table 4.1, jet-fighter (dogfighter) row]
             arguments
@@ -98,6 +106,11 @@ classdef GeomL1
             val = a * M_max^C;
         end
 
+        % TODO (8/14/2026): Missing categories for sailplanes, homebuilt, general aviation (single & twin engine), agricultural aircraft, twin turboprop, flying boats, jet trainer, jet fighter (dogfighter & other), military jet cargo/bomber, and jet transport.
+        % For sailplanes, the equivalent aspect ratio is 0.19*(best L/D)^(1.3).
+        % For props, the equivalent AR is a fixed number.
+        % For jets, the equivalent AR is determined via equation, a*M_max^c. The table 4.1 gives the coefficients based on aircraft's category.
+        % It should be noted that the equivalent aspect ratio = wing span squared divided by wing/canard areas ( (b^2)/(S_ref), where S_ref can be for the wings in question).
         function [a, C] = lookup_AR_eq(cat)
         %LOOKUP_AR_EQ  [Raymer 7th ed. Table 4.1, jet-fighter (dogfighter) row]
             switch cat
@@ -108,11 +121,13 @@ classdef GeomL1
             end
         end
 
+        % TODO (8/14/2026): Why do you need a separate function for the sole purpose of calling another function... what????
         function val = compute_control_surface_fraction(aircraft_category, surface)
         %COMPUTE_CONTROL_SURFACE_FRACTION  [Raymer 7th ed. Table 6.5]
             val = GeomL1.lookup_control_surface_fraction(aircraft_category, surface);
         end
 
+        % TODO (8/14/2026): Add categories for jet transport, jet trainer, business jet, general aviation (single & twin engine), and sailplane.
         function val = lookup_control_surface_fraction(cat, surface)
         %LOOKUP_CONTROL_SURFACE_FRACTION  [Raymer 7th ed. Table 6.5, jet-fighter row]
         %   Elevator 0.30 is the all-moving-tail row value, not a hinged-elevator
