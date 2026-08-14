@@ -1,0 +1,188 @@
+{
+  "_comment": "Boeing 777-200LR top-level design REQUIREMENTS -- what the aircraft must DO, fidelity-independent. Read the same way as f16a_requirements.json. SCOPE GUARD: requirements only, never spec data (reference area, AR, thrust, engine model stay in examples/B777/inputs/b777_L1.json) and never discipline-owned quantities (CLmax, CD0, K1, thrust-lapse alpha, TSFC come from the injected B777AeroL1 / B777PropL1 objects at run time). Each constraint row carries only its config string; the aero object supplies that config's polar and CLmax through HighLiftConfigBridge. Full docs + per-field citations: examples/B777/inputs/b777_requirements.md.",
+  "_cite": "metabook = AE481 metabook worked Example 4.2, docs/reference_extracts/metabook_data.md; Roskam Table 3.1 etc. are the primary tables the metabook names. Constraint-class field names verified against src/constraints/{TakeoffFieldLengthConstraint, LandingFieldLengthConstraint, ClimbGradientConstraint, ExcessPowerConstraint, LevelFlightConstraint}.m fromCondition readers.",
+  "cruise": {
+    "_src": "cruise condition [metabook \u00a74.11 Eq. 4.57] -- 40000 ft, M 0.84 (q = 228.8 lbf/ft2). Consumed by the mission long_range cruise segment and the Cruise constraint.",
+    "altitude_ft": 40000,
+    "mach": 0.84
+  },
+  "design_range_nmi": 8555,
+  "_TODO_design_range_nmi": "Design mission range 6,000 nmi -- a TYPICAL 777-200LR long-haul stage, NOT the ~8,555 nmi max-range point (which has the highest fuel fraction and, with the metabook L1 fuel/weight estimates, does not close at the real wing area). 6,000 nmi + 145,000 lbf payload converges to ~701,000 lbf (-8.6% vs the real 766,800). A design choice, not a pinned Boeing value -- _TODO.",
+  "constraints": {
+    "_comment": "The ~10 B777 constraint conditions. Each object holds REQUIREMENT / CONDITION data ONLY. NO discipline-owned quantity is present: CLmax/CD0/K1 come from the injected B777AeroL1 object for the row's config string (via HighLiftConfigBridge), thrust-lapse alpha and TSFC from the injected B777PropL1 object, and n_engines (OEI factor) from the injected prop object. Unlike the F-16 set, most field/climb rows do NOT carry beta -- the metabook field and climb equations use explicit weight_ratio corrections. Only Ceiling (ExcessPowerConstraint) and Cruise (LevelFlightConstraint) carry beta, because those Master-Equation classes require it. Condition name -> concrete class is chosen explicitly by the future B777ConstraintSet map (implementation phase). See b777_requirements.md \u00a7\u00a72-3.",
+    "_cite": "metabook = AE481 metabook worked Example 4.2, docs/reference_extracts/metabook_data.md.",
+    "_note_field_length_classes": "The B777 uses the FAR-25 STATISTICAL field-length classes (TakeoffFieldLengthConstraint / LandingFieldLengthConstraint, metabook Eqs. 4.14-4.19/4.45-4.48), NOT the Mattingly/Roskam ground-roll siblings the F-16 uses. See b777_requirements.md \u00a72.2.",
+    "_note_climb_CLmax": "The six climb rows read CD0/K1/CLmax LIVE from the aero object for cond.config -- the config-CLmax basis (D1/D2, RESOLVED 2026-08-13 in favour of the printed values for parity) lives in the aero CONFIG POLAR data (b777_L1.json .aerodynamics.config_polars), NOT here. See b777_requirements.md \u00a73.3.",
+    "conditions": [
+      {
+        "name": "Takeoff Field Length",
+        "category": "Both_WbyS_TbyW",
+        "BFL_ft": 12000,
+        "sigma": 0.95,
+        "_src": "TakeoffFieldLengthConstraint.fromCondition reads BFL_ft, sigma. BFL_ft [metabook Eq. 4.47, TOP = 12000/37.5 = 320]; sigma [metabook Eq. 4.48, hot day near sea level rho/rhoSL = 0.95]. CLmax_TO read live from aero 'takeoff_flaps_gear_down'. See b777_requirements.md \u00a73.1."
+      },
+      {
+        "name": "Landing Field Length",
+        "category": "Only_WbyS",
+        "runway_ft": 12000,
+        "Sa_ft": 1000,
+        "weight_ratio": 0.65,
+        "sigma": 0.95,
+        "runway_factor": 0.6,
+        "_src": "LandingFieldLengthConstraint.fromCondition reads runway_ft, Sa_ft, weight_ratio, sigma, optional runway_factor (defaults 0.6). All [metabook Eq. 4.46]: runway_ft = S_runway; Sa_ft = airliner approach distance [Eq. 4.19]; weight_ratio = MLW/MTOW for the 777-200LR; sigma = hot day near sea level; runway_factor = FAR landing-field multiple (0.6 = 1/1.67). CLmax_L read live from aero 'landing_flaps_gear_down'. See b777_requirements.md \u00a73.2."
+      },
+      {
+        "name": "Climb 1 (takeoff, FAR 25.111)",
+        "category": "Only_TbyW",
+        "G": 0.012,
+        "ks": 1.2,
+        "config": "takeoff_flaps_gear_up",
+        "oei": true,
+        "hot_day": true,
+        "max_continuous": false,
+        "weight_ratio": 1.0,
+        "altitude_ft": 0,
+        "_src": "ClimbGradientConstraint.fromCondition reads G, ks, config, optional oei/hot_day/max_continuous/weight_ratio [metabook Eq. 4.49]. altitude_ft informational. oei factor N/(N-1) uses n_engines from the injected prop object. See b777_requirements.md \u00a73.3."
+      },
+      {
+        "name": "Climb 2 (transition, FAR 25.121)",
+        "category": "Only_TbyW",
+        "G": 0.0,
+        "ks": 1.15,
+        "config": "takeoff_flaps_gear_down",
+        "oei": true,
+        "hot_day": true,
+        "max_continuous": false,
+        "weight_ratio": 1.0,
+        "altitude_ft": 0,
+        "_src": "ClimbGradientConstraint [metabook Eq. 4.50]. altitude_ft informational. See b777_requirements.md \u00a73.3."
+      },
+      {
+        "name": "Climb 3 (2nd segment, FAR 25.121)",
+        "category": "Only_TbyW",
+        "G": 0.024,
+        "ks": 1.2,
+        "config": "takeoff_flaps_gear_up",
+        "oei": true,
+        "hot_day": true,
+        "max_continuous": false,
+        "weight_ratio": 1.0,
+        "altitude_ft": 0,
+        "_src": "ClimbGradientConstraint [metabook Eq. 4.51]. altitude_ft informational. See b777_requirements.md \u00a73.3."
+      },
+      {
+        "name": "Climb 4 (enroute, FAR 25.121)",
+        "category": "Only_TbyW",
+        "G": 0.012,
+        "ks": 1.25,
+        "config": "clean",
+        "oei": true,
+        "hot_day": true,
+        "max_continuous": true,
+        "weight_ratio": 1.0,
+        "altitude_ft": 0,
+        "_src": "ClimbGradientConstraint [metabook Eq. 4.52]. Only max_continuous = true row (1/0.94 factor) and only clean-config row (flaps + gear retracted). altitude_ft informational. See b777_requirements.md \u00a73.3."
+      },
+      {
+        "name": "Climb 5 (AEO balked landing, FAR 25.119)",
+        "category": "Only_TbyW",
+        "G": 0.032,
+        "ks": 1.3,
+        "config": "landing_flaps_gear_down",
+        "oei": false,
+        "hot_day": true,
+        "max_continuous": false,
+        "weight_ratio": 0.65,
+        "altitude_ft": 0,
+        "_src": "ClimbGradientConstraint [metabook Eq. 4.53]. AEO (all-engines-operating) balked landing -- oei = false. weight_ratio = 0.65 (MLW/MTOW). altitude_ft informational. See b777_requirements.md \u00a73.3."
+      },
+      {
+        "name": "Climb 6 (OEI balked landing, FAR 25.121)",
+        "category": "Only_TbyW",
+        "G": 0.021,
+        "ks": 1.5,
+        "config": "approach",
+        "oei": true,
+        "hot_day": true,
+        "max_continuous": false,
+        "weight_ratio": 0.65,
+        "altitude_ft": 0,
+        "_src": "ClimbGradientConstraint [metabook Eq. 4.54]. approach config: CD0 = 0.08847 = mean(0.06097, 0.11597), CLmax = 0.85*2.6 = 2.21 (from the aero object). weight_ratio = 0.65 (MLW/MTOW). altitude_ft informational. See b777_requirements.md \u00a73.3."
+      },
+      {
+        "name": "Ceiling",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 42000,
+        "mach": 0.84,
+        "beta": 1.0,
+        "Ps_fps": 0.813,
+        "power_setting": "mil",
+        "_src": "ExcessPowerConstraint.fromCondition reads altitude_ft, mach, beta, Ps_fps, power_setting. altitude_ft [metabook Eq. 4.56 service ceiling]; beta = 1.0 (Master-Equation classes require beta; ceiling at full weight, W/W_TO = 1.0); power_setting = mil (high-BPR transports do not use afterburner). Ps_fps = 0.813 is DERIVED Ps = G*V: G = 0.001 [metabook Eq. 4.56], V = M*a = 0.84*968.1 = 813.2 ft/s at 42000 ft (isothermal stratosphere, a = sqrt(1.4*1716.5*389.97) = 968.1 ft/s), Ps = 0.001*813.2 = 0.8132 ft/s. See b777_requirements.md \u00a73.4.",
+        "_TODO_mach": "ceiling mach = 0.84 is a stand-in -- the metabook does not print a ceiling Mach; recommended = the cruise Mach 0.84 (the example's own high-altitude cruise Mach). If the confirmed ceiling Mach differs, Ps_fps must be recomputed at the new V. Remove this key when a ceiling Mach is pinned or the cruise-Mach recommendation is accepted. See b777_requirements.md \u00a73.4 / \u00a76.",
+        "_note_parity": "The Master-Equation ExcessPowerConstraint uses ISA thrust lapse from AircraftState (alpha = sigma^m), NOT the metabook's printed off-ISA alpha = 0.2331^0.6. The comparison report evaluates the printed Eq. 4.56 with the printed ratio for parity (D5). See b777_requirements.md \u00a73.4."
+      },
+      {
+        "name": "Cruise",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 40000,
+        "mach": 0.84,
+        "beta": 1.0,
+        "power_setting": "mil",
+        "_src": "LevelFlightConstraint.fromCondition reads altitude_ft, mach, beta, power_setting (n = 1, Ps = 0 fixed by the class). altitude_ft, mach [metabook Eq. 4.57, q = 228.8 lbf/ft2]; beta = 1.0 (Master-Equation classes require beta; take W/W_TO = 1.0 unless a cruise-start fraction is specified as a requirement); power_setting = mil (high-BPR transport, no afterburner). The framework uses ISA lapse rather than the printed 0.2846 ratio (D5). See b777_requirements.md \u00a73.5."
+      }
+    ]
+  },
+  "missions": {
+    "_comment": "Mission PROFILES: the ordered segment sequence each mission flies -- a REQUIREMENT, fidelity-independent. The B777 has one mission, long_range: a standard transport profile [metabook \u00a72 / Algorithm 3; Roskam Table 3.4 historical fractions where a physics equation does not apply]. Each segment carries the MINIMUM per-segment inputs: type, end flight condition (alt_ft/mach_end), and whichever of distance_nm / time_min applies. NO discipline-owned data (CLmax, CD0, K1, thrust, TSFC come from the injected aero/prop objects) and NO spec data. See b777_requirements.md \u00a75.",
+    "_cite": "metabook = AE481 metabook Example 4.2 / \u00a72, docs/reference_extracts/metabook_data.md; Raymer Table 3.4 historical weight fractions; metabook Eq. 2.7 (Breguet cruise), Eq. 2.17 (reserve).",
+    "_note_implementation_flag": "A transport FIXED-FRACTION MissionEquations entry (Raymer Table 3.4 fractions + metabook Eq. 2.7 cruise + Eq. 2.17 reserve) is NOT yet in the repo's MissionEquations and must be added in the implementation phase before this mission runs. Code change, not a JSON input -- flagged so it is not missed. See b777_requirements.md \u00a75.4.",
+    "long_range": {
+      "_description": "Standard transport profile -- startup/taxi/takeoff (folded historical 0.970), climb (0.985), cruise (Breguet Eq. 2.7), descent (0.990), landing/taxi (0.995). Reserve + trapped fuel are the 6% reserve_fuel_fraction markup [Eq. 2.17] applied on top by MissionAnalysisBase -- NOT a separate loiter segment (that would double-count). Every physics/historical segment yields a fuel burn.",
+      "reserve_fuel_fraction": 0.06,
+      "_cite_reserve_fuel_fraction": "Wf/W0 = (1 - W_final/W0)*1.06 [metabook Eq. 2.17] -- the 6% covers reserve and trapped fuel. See b777_requirements.md \u00a75.3.",
+      "segments": [
+        {
+          "type": "startup",
+          "name": "Startup"
+        },
+        {
+          "type": "taxi",
+          "name": "Taxi"
+        },
+        {
+          "type": "takeoff",
+          "name": "Takeoff",
+          "alt_ft": 0,
+          "mach_end": 0.84
+        },
+        {
+          "type": "climb",
+          "name": "Climb",
+          "alt_ft": 40000,
+          "mach_end": 0.84
+        },
+        {
+          "type": "cruise",
+          "name": "Cruise",
+          "alt_ft": 40000,
+          "mach_end": 0.84,
+          "distance_nm": 6000
+        },
+        {
+          "type": "descent",
+          "name": "Descent",
+          "alt_ft": 0,
+          "mach_end": 0.3
+        },
+        {
+          "type": "landing",
+          "name": "Landing",
+          "alt_ft": 0,
+          "mach_end": 0.0
+        }
+      ],
+      "_TODO_cruise_distance_nm": "The Cruise segment distance_nm = 8555 nmi is the same stand-in as top-level design_range_nmi -- the 777-200LR design range, not pinned to a primary source. cruise Mach 0.84 and altitude 40000 ft are cited [metabook Eq. 4.57]. Primary source needed: a Boeing 777-200LR payload-range chart / Airport Planning document. Remove this key when the range is pinned. See b777_requirements.md \u00a75.2.",
+      "_note_takeoff_climb_mach_end": "mach_end on the takeoff/climb segments = 0.84 is the cruise Mach used as the climb terminal condition; the metabook Example 4.2 fixed-fraction profile does not print intermediate Mach waypoints (startup/climb/descent/landing use Raymer Table 3.4 historical fractions, not a physics Mach). Carried for schema completeness. See b777_requirements.md \u00a75.1."
+    }
+  }
+}

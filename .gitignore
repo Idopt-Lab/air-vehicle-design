@@ -41,3 +41,8 @@ codegen/
 # .gitkeep tracked so the folder exists on a fresh clone
 /air_vehicle_design/sizing/examples/F16A/output/*
 !/air_vehicle_design/sizing/examples/F16A/output/.gitkeep
+
+# Generated B777-200LR study + sanity-check reports (regenerable by
+# studies/*.m and sanity_checks/*.m); .gitkeep tracked so the folder exists
+/air_vehicle_design/sizing/examples/B777/output/*
+!/air_vehicle_design/sizing/examples/B777/output/.gitkeep
