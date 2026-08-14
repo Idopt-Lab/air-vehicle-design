@@ -39,12 +39,17 @@ classdef ConstraintType
     end
 
     enumeration
-        Takeoff       ("TakeoffConstraint")
-        Landing       ("LandingConstraint")
-        Stall         ("StallConstraint")
-        LevelFlight   ("LevelFlightConstraint")
-        SustainedTurn ("SustainedTurnConstraint")
-        ExcessPower   ("ExcessPowerConstraint")
+        Takeoff                 ("TakeoffConstraint")
+        Landing                 ("LandingConstraint")
+        Stall                   ("StallConstraint")
+        LevelFlight             ("LevelFlightConstraint")
+        SustainedTurn           ("SustainedTurnConstraint")
+        ExcessPower             ("ExcessPowerConstraint")
+        TakeoffFieldLength      ("TakeoffFieldLengthConstraint")
+        LandingFieldLengthFAR25 ("LandingFieldLengthConstraint")
+        ClimbGradient           ("ClimbGradientConstraint")
+        ManeuveringExcessPower  ("ManeuveringExcessPowerConstraint")
+        InstantaneousTurn       ("InstantaneousTurnConstraint")
     end
 
 end
