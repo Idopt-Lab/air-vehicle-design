@@ -130,13 +130,6 @@ For transport jets: c = 0.0199, d = 0.7531
 | Prop seaplane                        | 0.0065 |
 | Jet seaplane                         | 0.0040 |
 
-### CD0 as Function of Wing Area S
-
-```
-CD0 = Cf_e * (Swet_rest + 2*S) / S                             (4.58)
-```
-(Used when wing area S is a design variable; Swet_rest = wetted area of all non-wing components)
-
 ### Drag Increments by Configuration (Roskam Table 3.6)
 
 | Configuration                  | Delta_CD0      | Oswald e    |
@@ -166,8 +159,9 @@ T/W  = (W/S) / ((rho/rhoSL) * CLmax_TO * TOP25)               (4.16)
 sland = 80 * (W/S) * (1/((rho/rhoSL)*CLmax)) + sa             (4.19)
 sa = 1000 ft (airliner) or 600 ft (GA)
 FAR 25 landing field = sland * 1.67
-Rearranged: W/S = (rho/rhoSL)*CLmax/80 * (Sland_avail/1.67 - sa)  (4.45)
+Rearranged: W/S = (rho/rhoSL)*CLmax/80 * (Sland - Sa)          (4.45)
 ```
+- Sland in Eq. 4.45 is the FAR 25 landing field length. In Example 4.2 the metabook sets Sland = 0.6 x the available runway (printed p. 45). (An earlier version of this extract wrote "Sland_avail/1.67" inside Eq. 4.45; the printed equation has no 1.67 factor. Corrected 2026-08-13.)
 
 ### Climb Constraint (Jet-Powered)
 
@@ -244,25 +238,33 @@ Previously stated approximation (Ch. 4): T ≈ (rho_c/rhoSL)^0.6 * T_SLS
 | Takeoff      | 2.0   |
 | Landing      | 2.6   |
 
-### Boeing 777-200LR Worked Example (Table 4.3)
+### §4.11 "Putting It All Together" — Example 4.2: 777-200LR Preliminary Sizing (printed pp. 44–47)
 
-| Parameter          | Value (SI)          | Value (US)         |
-|--------------------|---------------------|--------------------|
-| AR                 | 9.8                 | 9.8                |
-| Span b             | 64.80 m             | 212 ft             |
-| Wing area Sref     | 427.8 m²            | 4605 ft²           |
-| MTOW W0            | 347,815 kg          | 766,800 lb         |
-| W/S (TO)           | 695.5 kg/m²         | 142.45 lb/ft²      |
-| Cruise Mach        | 0.84                | —                  |
-| Cruise altitude    | 40,000 ft           | —                  |
-| Dynamic pressure q | —                   | 228.8 lbf/ft²      |
-| Service ceiling    | 42,000 ft           | —                  |
-| rho_c/rhoSL        | 0.2331              | —                  |
-| CD0 (clean)        | 0.01597             | —                  |
-| Cf_e               | 0.0026              | —                  |
-| e                  | 0.85                | —                  |
+Worked example: long-range airliner based on the Boeing 777-200LR with GE90-110B engines. All numbers below are the printed values, verified against the PDF on 2026-08-13. Results are compared against the actual 777-200LR (Table 4.3).
 
-### 777-200LR Drag Polars
+#### Table 4.3 — Parameters for the 777-200LR (printed p. 44)
+
+| Parameter      | Value (SI)   | Value (US)     |
+|----------------|--------------|----------------|
+| AR             | 9.8          | 9.8            |
+| Span           | 64.80 m      | 212 ft         |
+| Wing area Sref | 427.8 m²     | 4,605 ft²      |
+| MTOW W0        | 347,815 kg   | 766,800 lb     |
+| TO W/S         | 695.5 kg/m²  | 142.45 lb/ft²  |
+
+#### Drag polar buildup (printed p. 44, Eqs. 4.42–4.44)
+
+```
+Swet = 10^0.0199 * 766,800^0.7531 = 28,291 ft²                  (4.42)
+f    = 0.0026 * 28,291 = 73.56 ft²        [assumed Cf = 0.0026]  (4.43)
+CD0  = f/S = 0.01597                       [S = 4,605 ft²]        (4.44)
+```
+- Eq. 4.42 uses the transport-jet coefficients of the Eq. 4.9 wetted-area regression (c = 0.0199, d = 0.7531). See "Known discrepancies" entry D3 below: the repo's `GeomL1.lookup_swet` carries d = 0.7351 for this row.
+- The printed text at Eq. 4.43 reads "assume Cf = 0.0026 in Eq. (??)" — a broken equation cross-reference in the printed PDF (build dated 2021-10-17). The same broken "(??)" appears on printed p. 35 before Fig. 4.4.
+
+#### The five drag polars (printed p. 44)
+
+Built with AR = 9.8 and the span-efficiency and Delta_CD0 values from Table 4.2 (clean e ~0.85, takeoff flaps ~0.80, landing flaps ~0.75):
 
 | Configuration             | CD polar                              |
 |---------------------------|---------------------------------------|
@@ -271,6 +273,166 @@ Previously stated approximation (Ch. 4): T ≈ (rho_c/rhoSL)^0.6 * T_SLS
 | TO flaps, gear down       | CD = 0.06097 + 0.04054*CL²           |
 | Landing flaps, gear up    | CD = 0.09097 + 0.04324*CL²           |
 | Landing flaps, gear down  | CD = 0.11597 + 0.04324*CL²           |
+
+Fig. 4.5 (printed p. 45) plots the five polars; each curve ends at its assumed CLmax.
+
+#### Landing field length (printed p. 45, Eqs. 4.45–4.46)
+
+```
+W/S = (rho/rhoSL)*CLmax/80 * (Sland - Sa)                        (4.45)
+W/S = 0.95*CLmax/(80 * 0.65) * (12,000 * 0.6 - 1,000)
+    = 113.27 * CLmax                                              (4.46)
+```
+- MLW/MTOW ~ 0.65 for the 777-200LR; the 0.65 divisor converts the landing-weight W/S to a takeoff W/S.
+- Runway length 12,000 ft, multiplied by 0.6 to get the FAR-compliant landing field length Sland.
+- Sa = 1,000 ft (airliner value); rho/rhoSL = 0.95 (hot day near sea level).
+
+CLmax assumptions (printed p. 45, from Roskam 1989, Table 3.1, Vol. 1):
+- CLmax,cruise = 0.9
+- CLmax,takeoff = 2.0
+- CLmax,landing = 2.6
+
+#### Takeoff (printed pp. 45–46, Eqs. 4.47–4.48)
+
+```
+TOP = BFL/37.5 = 12,000/37.5 = 320.0                              (4.47)
+T/W = (W/S) / (304.0 * CLmax_TO)                                  (4.48)
+```
+- 304.0 = 0.95 * 320 — the density ratio and TOP substituted into Eq. 4.16.
+
+#### The six climb constraints (printed p. 46, Eqs. 4.49–4.54, exactly as printed)
+
+All six apply Eq. 4.24 with the Eq. 4.25 correction factors; two engines, so the OEI factor is (2/1).
+
+```
+Climb 1 — takeoff climb (FAR 25.111):
+T/W = (1/0.8)(2/1)(1.2²/2.2 * 0.03597 + 2.2/1.2² * 0.04054 + 0.012)          (4.49)
+
+Climb 2 — transition segment climb (FAR 25.121):
+T/W = (1/0.8)(2/1)(1.15²/2.2 * 0.06097 + 2.2/1.15² * 0.04054 + 0.0)          (4.50)
+
+Climb 3 — second segment climb (FAR 25.121):
+T/W = (1/0.8)(2/1)(1.2²/2.2 * 0.03597 + 2.2/1.2² * 0.04054 + 0.024)          (4.51)
+
+Climb 4 — enroute climb (FAR 25.121):
+T/W = (1/0.8)(1/0.94)(2/1)(1.25²/0.9 * 0.01597 + 0.9/1.25² * 0.03815 + 0.012) (4.52)
+
+Climb 5 — AEO balked landing climb (FAR 25.119):
+T/W = (1/0.8)(0.65/1)(1.3²/2.6 * 0.11597 + 2.6/1.3² * 0.04324 + 0.032)       (4.53)
+
+Climb 6 — OEI balked landing climb (FAR 25.121):
+T/W = (1/0.8)(2/1)(0.65/1)(1.5²/(0.85*2.6) * 0.08847
+      + (0.85*2.6)/1.5² * 0.04324 + 0.021)                                     (4.54)
+```
+Printed notes on p. 46:
+- ks values as printed: 1.2 / 1.15 / 1.2 / 1.25 / 1.3 / 1.5. Gradients G as printed: 0.012 / 0.0 / 0.024 / 0.012 / 0.032 / 0.021.
+- Climb 4 also uses the maximum-continuous-thrust factor (1/0.94) and the clean-configuration CD0 and K values (flaps and gear retracted).
+- Climbs 5 and 6 use the 0.65 maximum-landing-weight correction; Climb 5 (AEO) has no OEI factor.
+- Climb 6 (approach): CD0 approximated as the mean of the takeoff and landing gear-down values, mean(0.06097, 0.11597) = 0.08847; approach CLmax approximated as 0.85 * CLmax,landing = 0.85 * 2.6.
+- See "Known discrepancies" entries D1 and D2 below: Eqs. 4.49–4.51 use CLmax = 2.2 where p. 45 assumes CLmax,takeoff = 2.0, and Eq. 4.49 uses the gear-UP CD0 although FAR 25.111 (p. 39 list) is gear-down.
+
+#### Ceiling (printed p. 47, Eqs. 4.55–4.56)
+
+```
+T = (rho_c/rhoSL)^0.6 * T_SLS                                     (4.55)
+T/W = 1/(rho_c/rhoSL)^0.6 * (G + 2*sqrt(CD0/(pi*AR*e)))
+    = 1/0.2331^0.6 * (0.001 + 2*sqrt(0.01597/(pi * 9.8 * 0.85)))  (4.56)
+```
+- Service ceiling 42,000 ft, so rho_c/rhoSL = 0.2331. Climb gradient at the ceiling set to G = 0.001 (slightly above zero, not the absolute ceiling).
+- The thrust in Eq. 4.30 must be sea-level static; Eq. 4.55 supplies the altitude lapse.
+
+#### Cruise (printed p. 47, Eq. 4.57)
+
+```
+T/W = 1/0.2846^0.6 * (228.8 * 0.01597/(W/S)
+      + (W/S) * 1/(228.8 * pi * 9.8 * 0.85))                      (4.57)
+```
+- Cruise condition: Mach 0.84 at 40,000 ft, which gives q = 228.8 lbf/ft².
+- 0.2846 is the printed density ratio used for the 40,000-ft thrust lapse. The metabook does not show its derivation. (Standard-atmosphere rho/rhoSL at 40,000 ft is ~0.246.)
+
+#### Fig. 4.6 (printed p. 48) — T/W–W/S plot
+
+Plot of all constraints above in T/W vs W/S (lb/ft²) space: the cruise curve, the diagonal takeoff-field-length line, the six horizontal climb lines, the ceiling line, and the vertical landing-field-length line at W/S = 113.27 * CLmax,landing (= 294.5 lb/ft², computed from the printed Eq. 4.46 coefficient). The feasible design space is shaded. A marker labeled "Actual 777-200LR" sits inside the feasible region.
+
+### §4.12 T–S Plot and Objective Function Contours (printed pp. 47–51)
+
+To size in the dimensional parameters T and S, the weight-estimation code must take T and S as variables, and the T/W–W/S constraint equations are reused with iteration to place each constraint in dimensional space. Each point of the resulting T–S plot corresponds to a sized aircraft with a converged weight estimate; objective contours (fuel burn, DOC) can then be superimposed.
+
+#### §4.12.1 Updating the weight estimation — three-step design-point procedure (printed p. 49)
+
+1. Pick a point on the T/W vs W/S plot as the design point.
+2. Use the T/W and W/S at the design point with the initial weight estimation to find T and S at that design point.
+3. Modify the weight-estimation code to calculate TOGW as a function of S and T (Algorithm 2).
+
+The preliminary weight code can also be replaced with the Chapter 7 component weight estimate. (The printed cross-references on p. 49 read "Algorithm 0" three times — broken LaTeX references; the targets are Algorithms 2 and 3.)
+
+#### Algorithm 2 — Iteration for estimating TOGW as a function of T and S (printed p. 49)
+
+```
+W0 = W_guess                                  # initial guess
+eps = 1e-6                                    # relative convergence tolerance
+Delta = 2*eps                                 # any value greater than the tolerance
+while Delta > eps:
+    We/W0 = A * W0^C                          # empty-weight fraction
+    We = (We/W0) * W0                         # empty weight
+    We = We + Dens_wing * (S - S_DesignPoint) # wing-weight delta, areal density "from 7.1" (as printed)
+    We = We + W_eng(T0) - W_eng,DesignPoint(T0)   # engine-weight delta
+    Compute Wf/W0(S)                          # fuel fraction as a function of S
+    W0_new = (W_crew + W_payload) / (1 - Wf/W0 - We/W0)
+    Delta = |W0_new - W0| / |W0_new|
+    W0 = W0_new
+```
+- The fuel fraction is a function of S because the wing size changes the wetted area, and so CD0 and the cruise L/D (via Eq. 4.58).
+- With T and W available, the taxi (W1/W0) and takeoff (W2/W1) fractions can be estimated directly (Algorithm 3) instead of taken from historical data, although they rarely differ much from the historical values.
+- Printed typos in the algorithm: "areaial density" (for "areal"), and an unbalanced closing parenthesis on the engine-weight line.
+
+#### CD0 as a function of wing area S (printed p. 49, Eq. 4.58)
+
+```
+CD0 = Cf * Swet/S = Cf * (Swet,rest + 2*S) / S                   (4.58)
+```
+- Wing wetted area roughly approximated as 2S; Swet,rest = wetted area of the aircraft excluding the wings.
+
+#### Algorithm 3 — A more detailed fuel-fraction calculation (printed p. 50)
+
+```
+W1/W0 = 1 - c_SL * (15min/1hr) * (0.05*T/W0)  # 15 min idle at 5% max thrust
+W1 = (W1/W0) * W0
+W2/W1 = 1 - c_SL * (1min/1hr) * (T/W1)        # 1 min at max (takeoff) thrust
+W3/W2 = historical value                       # climb segment
+Compute CD0(S)                                 # via Eq. 4.58
+CL = sqrt(CD0/k)                               # optimal CL that maximizes L/D
+L/D = 0.94*CL / (CD0 + k*CL²)                 # L/D calculated for the optimal CL
+W4/W3 = exp(-R*c/(V*(L/D)))                   # cruise fuel ratio, Breguet
+W5/W4, W6/W5 = historical values               # descent and landing segments
+W6/W0 = (W6/W5)(W5/W4)(W4/W3)(W3/W2)(W2/W1)(W1/W0)
+Wf/W0 = 1 - W6/W0
+```
+
+#### §4.12.2 Solving for the constraint lines — Algorithm 4 (printed p. 50)
+
+For constraints expressed as T/W = f(W/S) — e.g., for the takeoff constraint, T/W = f(W/S) = (W/S)/((rho/rhoSL)*CLmax*TOP):
+
+```
+S = S_begin : dS : S_end
+for i = 1:length(S):
+    S0 = S(i)                     # prescribe wing area
+    T(i) = T_guess                # initial thrust guess
+    tolerance = 0.1               # convergence tolerance
+    converged = False
+    while converged == False:
+        W = W(S0, T(i))           # compute TOGW (Algorithm 2)
+        Compute W/S0              # compute wing loading
+        (T/W)_new = f(W/S0)       # compute T/W from the constraint equation
+        T_new = (T/W)_new * W     # compute new total thrust
+        if |T_new - T(i)| <= tolerance: converged = True
+        T(i) = T_new              # update thrust value ("Uptade" in print)
+```
+For constraints that depend on W/S alone (e.g., landing field length): prescribe T, guess S, compute W, solve for S_new, and iterate until convergence. Repeat for a range of T values.
+
+#### Fig. 4.7 (printed p. 51) — T–S plot
+
+The same constraints plotted in T (lb) vs S (ft², axis 2,000–6,000) space, each now a curve produced by Algorithm 4. The feasible region is shaded. A marker shows the actual aircraft, labeled "Actual 777-200LR (T = 220000 lb and S = 4605 ft²)".
 
 ---
 
@@ -793,3 +955,58 @@ F-16 references found:
 - Howe, D. "Aircraft Loading and Structural Layout." AIAA, 2004.
 - Martins, J.R.R.A. et al. (2003) — complex-step method paper
 - Kenway & Martins (2014) — coupled MDA sensitivity (adjoint)
+
+---
+
+## Known discrepancies (2026-08-13 sizing pass)
+
+Logged by the scribe during the Step-0 extract extension. User dispositions recorded 2026-08-13 (Sarojini); D5 added after the thrust-lapse check.
+
+### D1 — Metabook-internal: climb Eqs. 4.49–4.51 use CLmax = 2.2; p. 45 assumes CLmax,takeoff = 2.0
+
+- Source: metabook printed p. 45 (CLmax assumptions) vs printed p. 46 (Eqs. 4.49–4.51). Verified against the PDF 2026-08-13.
+- p. 45 states the Roskam Table 3.1 assumptions: CLmax,cruise = 0.9, CLmax,takeoff = 2.0, CLmax,landing = 2.6.
+- The printed takeoff-configuration climb equations use 2.2 in every CLmax slot:
+  - Eq. 4.49: `(1.2²/2.2)*0.03597 + (2.2/1.2²)*0.04054 + 0.012`
+  - Eq. 4.50: `(1.15²/2.2)*0.06097 + (2.2/1.15²)*0.04054 + 0.0`
+  - Eq. 4.51: `(1.2²/2.2)*0.03597 + (2.2/1.2²)*0.04054 + 0.024`
+  - Note: the checklist for this pass flagged Eqs. 4.49 and 4.51; verification shows Eq. 4.50 uses 2.2 as well.
+- The metabook does not explain the 2.2. It matches none of the p. 45 assumptions.
+- Why it matters: climb-constraint tests will cite these printed equations for expected values. Reproducing 2.2 (as printed) vs 2.0 (as stated on p. 45) changes the expected T/W.
+- RESOLVED 2026-08-13 (Sarojini): use the PRINTED value (2.2) — comparison parity with the worked example. The B777 requirements JSON carries 2.2 with a note pointing here.
+
+### D2 — Metabook-internal: Eq. 4.49 (FAR 25.111 takeoff climb, gear DOWN) uses the gear-UP CD0
+
+- Source: metabook printed p. 39 (FAR 25.111 configuration list: "Takeoff flaps, landing gear deployed") vs printed p. 46, Eq. 4.49. Verified against the PDF 2026-08-13.
+- Eq. 4.49 uses CD0 = 0.03597, the "TO flaps, gear up" polar value (p. 44). The gear-down polar value is 0.06097.
+- Cross-check: Eq. 4.51 (second segment, gear UP per the p. 40 FAR list) correctly uses 0.03597, and Eq. 4.50 (transition, gear down) correctly uses 0.06097. Only Eq. 4.49 conflicts with its own FAR configuration list.
+- Why it matters: the takeoff-climb constraint expected value changes by the landing-gear Delta_CD0 (0.015–0.025 per Table 4.2).
+- RESOLVED 2026-08-13 (Sarojini): use the PRINTED value (gear-up CD0 = 0.03597 in the Climb-1 row) — comparison parity with the worked example. The B777 requirements JSON carries the printed configuration with a note pointing here.
+
+### D3 — Repo vs metabook: transport-jet wetted-area exponent d = 0.7351 (repo) vs 0.7531 (metabook)
+
+- Repo: `src/disciplines/geometry/GeomL1.m`, `lookup_swet`, `transport_jet` row: c = 0.0199, d = 0.7351, cited `[Roskam Vol. I Table 3.5]`.
+- Metabook: printed p. 35 (Eq. 4.9 prose): "For transport jets, c = 0.0199 and d = 0.7531", citing Roskam (1989), Eqn. (3.22) / Table 3.5, Vol. 1. Printed p. 44, Eq. 4.42 uses 0.7531 and gets Swet = 10^0.0199 * 766,800^0.7531 = 28,291 ft². The arithmetic confirms 0.7531 (d = 0.7351 would give ~22,170 ft²).
+- `docs/reference_extracts/roskam_vol1_data.md` checked 2026-08-13: it does NOT transcribe Roskam Eq. (3.22) / Table 3.5 (no wetted-area content at all), so the repo holds no independent transcription of the printed Roskam row.
+- The two candidate values are digit transpositions of each other. Reconciliation requires the printed Roskam Vol. I Table 3.5.
+- Scope note: the F-16A pipeline uses the `jet_fighter` row (c = -0.1289, d = 0.7506), so current F-16A results do not change. The value matters for any transport-jet L1 sizing (e.g., the 777 example above).
+- RESOLVED 2026-08-13 (Sarojini): use the METABOOK value (d = 0.7531). `GeomL1.lookup_swet` transport_jet row to be corrected in the Step-2 src-extension batch (approved discipline-file change), with its test updated.
+
+### D4 — External source (Aero 481 student code) — recorded now so it is not lost
+
+- Source: student code at `C:\Users\darsh\Downloads\Aero 481 Code\`. It will be extracted properly in a later step. NOT verified line-by-line in this pass; recorded from the coordinator's inspection.
+- (a) `+Constraints/` climb gradients use `G = asin(213/343)` and `G = asin(121/300)` — the climb ANGLE in radians. Metabook Eq. 4.24 wants the gradient itself (the sine ratio, e.g. 213/343), not asin of it.
+- (b) `InstantaneousTurn.m` contains `g = 9.087` (typo for 9.807 m/s²).
+- (c) `Design01.m` wetted-area regression `Swet = 4*S` is annotated "I made this up" by its author.
+- Why it matters: this code may serve as a worked-example reference for the sizing studies. These three items must not be carried over.
+- RESOLVED 2026-08-13 (Sarojini): (a) use sin (the gradient ratio), not asin; (b) use the correct g (32.174 ft/s² / 9.807 m/s²); (c) do NOT use Swet = 4*S — use Roskam/Raymer/Nicolai-type L1 wetted-area regressions (e.g. `GeomL1.lookup_swet` jet_fighter row) for the F-35 example. The F-35 comparison report annotates each deviation from the student code.
+
+### D5 — Metabook thrust lapse in Example 4.2: density ratios off ISA, and the 0.6 exponent is the GENERIC form, not an engine-type model
+
+- Added 2026-08-13 after the user asked whether the Eq. 4.56/4.57 lapse is for a fighter (turbojet) or a commercial transport (high-bypass turbofan).
+- **What the metabook itself provides (Ch. 10, printed pp. 102–103):** Eq. 10.7 turbojet: `T = T_SLS*(rho/rho0)` — exponent m = 1. Eq. 10.8 turbofan (BPR ~5): `T = T_SLS*A*M^(-n)`, A and n functions of altitude. Eq. 10.9 GENERIC fit: `T = T0*(rho/rho0)^m`, m unspecified. The Ch. 4 example uses m = 0.6 with no engine-type justification — so the sigma^0.6 in Eqs. 4.55–4.57 is the generic Eq. 10.9 form, NOT the metabook's turbojet model and NOT its turbofan-specific model.
+- **Empirical check against the metabook's own GE90 data (Table 10.1 = Nicolai Table J.6, the actual 777 engine, high BPR):** climb thrust at M = 0.6, 10,000 -> 40,000 ft: T ratio = 13,699/42,091 = 0.326; ISA sigma ratio = 0.2462/0.7385 = 0.333 -> m = 1.02. At M = 0.7, 20,000 -> 40,000 ft: m = 1.07. A high-BPR turbofan lapses with m ~ 1.0–1.1, so sigma^0.6 UNDER-predicts the lapse (optimistic thrust at altitude) for the 777 class. At 40,000 ft: alpha = 0.2846^0.6 = 0.470 (printed) vs 0.2462^0.6 = 0.431 (ISA sigma with m = 0.6) vs 0.246 (m = 1, GE90-like).
+- **Density-ratio values:** the printed 0.2846 (Eq. 4.57, "40,000 ft") equals ISA sigma at ~37,000 ft; ISA sigma at 40,000 ft is 0.2462. The printed 0.2331 (Eq. 4.56, "42,000 ft") equals ISA sigma at ~41,100 ft; ISA sigma at 42,000 ft is 0.2236. Neither matches ISA at its stated altitude, and the metabook shows no derivation.
+- Why it matters: `B777PropL1.thrust_lapse` and the comparison against the printed Eqs. 4.56/4.57.
+- Proposed handling: the comparison report evaluates Eqs. 4.56/4.57 with the PRINTED ratios (parity); the B777PropL1 model uses ISA sigma from `AircraftState` with the lapse exponent m as a cited JSON input. Choice of m (0.6 printed vs ~1.0 GE90 fit) is a Step-3 gate decision.
+- PENDING user decision (m for the B777 propulsion model).
