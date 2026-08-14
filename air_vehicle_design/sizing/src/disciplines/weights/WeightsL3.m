@@ -35,6 +35,7 @@ classdef WeightsL3
         % HIGH-LEVEL
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function oew = OEW(obj, W_TO)
             W_str  = WeightsL3.weight_wing(obj, W_TO);
             W_tail = WeightsL3.weight_tail(obj, W_TO);
@@ -50,12 +51,14 @@ classdef WeightsL3
         % Structural group
         % ------------------------------------------------------------------ %
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_wing(obj, W_TO)
             W = WeightsL3.wing(W_TO, obj.N_z, obj.S_w, obj.AR_w, obj.tc_root, ...
                                obj.lambda_w, obj.Lambda_LE_w, obj.S_csw, ...
                                obj.K_dw, obj.K_vs);
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W_tail = weight_tail(obj, W_TO)
             W_tail.HT = WeightsL3.horizontal_tail(W_TO, obj.N_z, obj.S_ht, ...
                                                    obj.F_w, obj.B_h);
@@ -65,11 +68,13 @@ classdef WeightsL3
                                                  obj.AR_vt, obj.lambda_vt, obj.Lambda_LE_vt);
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_fuselage(obj, W_TO)
             W = WeightsL3.fuselage(W_TO, obj.N_z, obj.L_fus, obj.D_fus, ...
                                    obj.W_fus, obj.K_dwf);
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W_lg = weight_landing_gear(obj, W_TO)
             L_m_in = obj.L_m * 12;
             L_n_in = obj.L_n * 12;
@@ -79,6 +84,7 @@ classdef WeightsL3
             W_lg.nose = WeightsL3.nose_gear(W_l, obj.N_l, L_n_in, obj.N_nw);
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_engine_section(obj, ~)
             W.engine   = obj.W_en * obj.N_en; % dry/UNINSTALLED engine weight [Raymer 7th ed. Eq. 10.10 via the concrete class; NOT a §15.3.1 equation]
             W.mounts   = WeightsL3.engine_mounts(obj.N_en, obj.T_max, obj.N_z);
@@ -95,6 +101,7 @@ classdef WeightsL3
                          W.tailpipe + W.cooling + W.oil + W.controls + W.starter;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_systems(obj, W_TO)
             W.fuel_sys     = WeightsL3.fuel_system(obj.V_t, obj.V_i, obj.V_p, ...
                                                      obj.N_t, obj.N_en, ...
