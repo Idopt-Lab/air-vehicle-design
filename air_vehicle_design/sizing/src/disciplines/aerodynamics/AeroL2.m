@@ -37,6 +37,8 @@ classdef AeroL2
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, another artefact of the subclass-to-enforcer era. Relocate to 
+        % F-16 example if it hasn't already been.
         function polar = drag_polar(obj, state)
         %DRAG_POLAR  L2 clean drag polar {CD0, K1, K2} at the flight state.
         %   Subsonic: Cfe-based CD0, Oswald K1, camber K2. Supersonic:
@@ -66,6 +68,8 @@ classdef AeroL2
             end
         end
 
+        % TODO (8/14/2026): Same as with the previous function; an artefact of being a subclass, which it
+        % no longer is. Relocate to F-16 example if it hasn't been already.
         function CLmax = get_CLmax(obj)
         %GET_CLMAX  Geometry-based clean CLmax.  Raymer 6th ed. Eq. 12.15.
         %   Reads obj.cl_max_2D (airfoil) and obj.Lambda_c4_deg (injected
@@ -74,6 +78,7 @@ classdef AeroL2
             CLmax = AeroL2.CLmax_clean(obj.cl_max_2D, obj.Lambda_c4_deg);
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function e = get_e_osw(obj)
         %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49).
         %   Selected by obj.e_method ("official"). Brandt's own e0 (Aero!G12)
@@ -92,6 +97,7 @@ classdef AeroL2
             end
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function val = get_CD0(obj)
         %GET_CD0  Subsonic clean CD0 = Cfe*(S_wet/S_ref).  Raymer Eq. 12.23.
         %   Cfe (obj.Cfe) is the genuine Raymer Table 12.3 spec value
@@ -106,6 +112,7 @@ classdef AeroL2
             val = AeroL2.CD0_from_Cf(Cf, obj.S_wet, obj.S_ref);
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function val = get_K1(obj, M)
         %GET_K1  Induced-drag factor at Mach M (subsonic or supersonic branch).
         %   Transonic band errors (use drag_polar for the NaN signal).
@@ -121,6 +128,7 @@ classdef AeroL2
             end
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function val = get_K2(obj, K1_sub, M)
         %GET_K2  Polar-offset term (Convention A).
         %   Subsonic: CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2) (see
@@ -132,6 +140,7 @@ classdef AeroL2
             val        = AeroL2.K2_value(K1_sub, CL_minD, M);
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function val = get_CL_alpha(obj, M)
             if ~isprop(obj, 'cl_alpha_2D') || isempty(obj.cl_alpha_2D)
                 error('AeroL2:missingClAlpha2D', ...
@@ -145,6 +154,7 @@ classdef AeroL2
             val = AeroL2.CL_alpha(obj.AR, obj.Lambda_c4_deg, M, [], [], [], obj.cl_alpha_2D);
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function val = compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
         %COMPUTE_DELTA_CL_MAX_VALUES  Wing CLmax increment from a deployed HLD.
         %   0.9 * Delta_cl_max * (S_flapped/S_ref) * cos(Lambda_HL)
@@ -190,6 +200,7 @@ classdef AeroL2
                   / (1 + lambda_taper);
         end
 
+        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
         function val = lookup_Delta_cl_max_values(liftdevice, config, cp_c)
         %LOOKUP_DELTA_CL_MAX_VALUES  [Raymer 6th ed. Table 12.2.]
         %
@@ -282,6 +293,7 @@ classdef AeroL2
             end
         end
 
+        % TODO (8/14/2026): I want the toolboxes to remain as independent from Brandt as possible; remove this from this toolbox.
         function e = oswald_eff_brandt(AR, Lambda_LE_deg)
             arguments
                 AR            (1,1) double {mustBePositive}
@@ -398,6 +410,7 @@ classdef AeroL2
             CLmax = 0.9 * cl_max_2D * cosd(Lambda_c4_deg);
         end
 
+        % TODO (8/14/2026): I feel like this should go in some sort of utility class, but hold off on that, for now.
         function mu = dyn_viscosity(T_atm_R)
         %DYN_VISCOSITY  Sutherland's law, English units (Raymer 6th ed. Sec. 12.3.1).
         %   Returns mu in slug/(ft*s).  mu_ref=3.737e-7 at T_ref=518.67 R,
@@ -408,6 +421,7 @@ classdef AeroL2
             mu     = mu_ref * (T_atm_R/T_ref)^1.5 * (T_ref+C_suth)/(T_atm_R+C_suth);
         end
 
+        % TODO (8/14/2026): Where is this used?
         function Re = compute_Re(state, l_ref)
         %COMPUTE_RE  Re = rho*V*l/mu  (Raymer 6th ed. Eq. 12.25).
         %   Shared with the L3 component buildup.
@@ -415,6 +429,7 @@ classdef AeroL2
             Re = state.rho * state.V * l_ref / mu;
         end
 
+        % TODO (8/14/2026): It appears that some of the component-level drag buildup has bled into L2.
         function Cf = Cf_turbulent(Re, M)
         %CF_TURBULENT  Compressible turbulent flat-plate Cf.
         %   Cf = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Raymer 6th ed. Eq. 12.27.
