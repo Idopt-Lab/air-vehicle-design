@@ -108,6 +108,156 @@ classdef ConstraintAnalysis
             WS_opt      = feasible_WS(local_idx);
         end
 
+        function [WS_opt, TW_opt, info] = optimal_point_continuous(obj, x0, opts)
+        %OPTIMAL_POINT_CONTINUOUS  Continuous, sweep-free refinement of
+        %   optimal_point(): minimize T/W over x = [W/S, T/W] subject to every
+        %   constraint's signed residual, via fmincon. Same design-point
+        %   definition and citation as optimal_point [Raymer, "Aircraft
+        %   Design: A Conceptual Approach," 6th ed., AIAA, 2018, ch. 5 -- the
+        %   design point that minimizes required engine size is the feasible
+        %   point with the smallest T/W]; where optimal_point is limited to
+        %   the WS_range grid nodes, this method locates the exact envelope
+        %   minimum between them.
+        %
+        %       min  T/W                       over x = [W/S, T/W]
+        %       s.t. g_i = constraints{i}.constraint_residual(dp(x)) <= 0
+        %            min(WS_range) <= W/S <= max(WS_range),  T/W >= TW_FLOOR
+        %
+        %   ALL constraints enter fmincon's nonlcon uniformly -- required_TW
+        %   producers and W/S walls alike -- through the signed residual
+        %   g = required - available, g <= 0 FEASIBLE, which
+        %   PointPerformanceBase.m defines as exactly the fmincon nonlcon
+        %   sign convention. No max-envelope is formed here; fmincon sees
+        %   each condition as its own smooth inequality.
+        %
+        %   dp(x): DesignPoint's constructor takes physical (W_TO, T_SL,
+        %   S_ref), but every category's constraint_residual reads dp only
+        %   through the dimensionless dp.WS and dp.TW (see Only_WbyS.m,
+        %   Both_WbyS_TbyW.m, Only_TbyW.m -- each documents which of the two
+        %   it uses), so the absolute scale is arbitrary: a unit-weight point
+        %   W_TO = 1 lbf, T_SL = T/W, S_ref = 1/(W/S) reproduces any
+        %   (W/S, T/W) exactly.
+        %
+        %   x0   -- optional (1,2) seed [W/S, T/W]. Omitted or empty: seeded
+        %           from obj.optimal_point(), the grid argmin -- a robust
+        %           global seed, since the grid search cannot be trapped in a
+        %           local basin. Callers like the sizing loop pass the
+        %           previous iterate to warm-start.
+        %   opts -- name-value options; Display (default "none") is passed
+        %           through to fmincon.
+        %
+        %   Algorithm 'sqp' because the residuals are smooth closed-form
+        %   curves, the problem is small and dense (2 variables, a handful of
+        %   constraints), and sqp is robust to the seed lying ON the
+        %   constraint envelope -- the grid-argmin seed always does.
+        %
+        %   SCALING (essential, 2026-08-14 fix): fmincon works on
+        %   z = [W/S / WS_s, T/W / TW_s] with WS_s, TW_s taken from the seed,
+        %   not on [W/S, T/W] directly. Near the envelope minimum the
+        %   residual's W/S-gradient vanishes by definition, so in raw units
+        %   the Lagrangian curvature is O(TW/WS^2) ~ 1e-5 and sqp's
+        %   BFGS/identity Hessian produces steps of that same tiny order --
+        %   the solver stalls at the seed (observed: 97 -> 97.00006 on a toy
+        %   whose true optimum is 100). In seed-normalized variables the
+        %   curvature is O(TW) ~ 0.1-1 and sqp converges in a few
+        %   iterations. Central finite differences for the same
+        %   shallow-envelope accuracy reason.
+        %
+        %   Returns WS_opt, TW_opt plus an info struct: exitflag, iterations,
+        %   funcCount (from fmincon's output), the final residual vector g in
+        %   constraint order, and the near-active mask |g| < ACTIVE_TOL with
+        %   the matching constraint names (which constraints bind). Errors
+        %   with identifier ConstraintAnalysis:optimalPointContinuousInfeasible
+        %   if exitflag <= 0 -- never returns a silent bad point -- and
+        %   errors up front if fmincon (Optimization Toolbox) is absent.
+        %   Recompute-on-read like the rest of the class (see header):
+        %   nothing is cached; every call re-reads the live constraint
+        %   objects, so a mutated aero/prop shows up immediately.
+        %
+        %   Added 2026-08-13 (user-directed): continuous, sweep-free
+        %   refinement of optimal_point(); realizes docs/ToDo_Darshan.md
+        %   item 2.
+            arguments
+                obj (1,1) ConstraintAnalysis
+                x0 double {mustBeReal, mustBeFinite, mustBeNonnegative} = []
+                opts.Display (1,1) string = "none"
+            end
+            if ~exist('fmincon', 'file')
+                error('ConstraintAnalysis:optimizationToolboxRequired', ...
+                    ['optimal_point_continuous requires fmincon ', ...
+                     '(Optimization Toolbox), which is not on the MATLAB path.']);
+            end
+            if isempty(x0)
+                [WS_seed, TW_seed] = obj.optimal_point();
+                if isempty(WS_seed) || isempty(TW_seed)
+                    % Grid seed found no feasible node (all WS_range above the
+                    % tightest wall, or no producers): fail loudly here rather
+                    % than inside reshape with an unrelated identifier.
+                    error('ConstraintAnalysis:optimalPointContinuousInfeasible', ...
+                        ['optimal_point() found no feasible grid node to seed ', ...
+                         'from (empty feasible set on WS_range).']);
+                end
+                x0 = [WS_seed, TW_seed];
+            elseif numel(x0) ~= 2
+                error('ConstraintAnalysis:invalidSeed', ...
+                    'x0 must be a 2-element [W/S, T/W] seed; got %d element(s).', ...
+                    numel(x0));
+            end
+            x0 = reshape(x0, 1, 2);
+
+            % T/W floor: strictly positive (not 0) because DesignPoint
+            % requires T_SL > 0 (mustBePositive), and sqp honors bounds at
+            % every iterate, so make_dp is never handed T/W = 0.
+            TW_FLOOR   = 1e-6;   % dimensionless T/W lower bound
+            ACTIVE_TOL = 1e-6;   % |g| below this counts as a binding constraint
+
+            % Seed-normalized variables z = x ./ s -- see SCALING note in the
+            % header. The seed is feasible and positive, so s is a valid
+            % characteristic scale for both variables.
+            s = [x0(1), max(x0(2), TW_FLOOR)];
+
+            % Unit-weight DesignPoint reproducing (W/S, T/W) -- see header.
+            make_dp   = @(x) DesignPoint(1, x(2), 1 / x(1));
+            residuals = @(dp) cellfun(@(con) con.constraint_residual(dp), ...
+                obj.constraints);
+            nonlcon   = @(z) deal(residuals(make_dp(z .* s)), []);
+            objective = @(z) z(2);   % minimize T/W (scale factor s(2) > 0 drops
+                                     % out of the argmin) [Raymer ch. 5]
+
+            lb = [min(obj.WS_range), TW_FLOOR] ./ s;
+            ub = [max(obj.WS_range), Inf] ./ s;
+
+            fmincon_opts = optimoptions('fmincon', 'Algorithm', 'sqp', ...
+                'Display', opts.Display, ...
+                'FiniteDifferenceType', 'central', ...  % shallow-envelope accuracy
+                'OptimalityTolerance', 1e-8, ...
+                'StepTolerance', 1e-12, ...
+                'MaxIterations', 500);
+            [z_opt, ~, exitflag, output] = fmincon(objective, x0 ./ s, ...
+                [], [], [], [], lb, ub, nonlcon, fmincon_opts);
+            x_opt = z_opt .* s;
+
+            if exitflag <= 0
+                error('ConstraintAnalysis:optimalPointContinuousInfeasible', ...
+                    ['fmincon did not converge to a feasible design point ', ...
+                     '(exitflag = %d): %s'], exitflag, output.message);
+            end
+
+            WS_opt = x_opt(1);
+            TW_opt = x_opt(2);
+
+            g_final     = residuals(make_dp(x_opt));   % 1 x n, constraint order
+            names       = obj.constraint_names();
+            active_mask = abs(g_final) < ACTIVE_TOL;
+            info = struct( ...
+                'exitflag',     exitflag, ...
+                'iterations',   output.iterations, ...
+                'funcCount',    output.funcCount, ...
+                'residuals',    g_final, ...
+                'active_mask',  active_mask, ...
+                'active_names', names(active_mask));
+        end
+
         function fig = plot_diagram(obj)
         %PLOT_DIAGRAM  Draw the constraint diagram: shaded feasible region, one
         %   curve per required_TW producer, a vertical dashed line per wall
