@@ -547,9 +547,28 @@ classdef TSDiagram < handle
             ax  = axes(fig);
             hold(ax, 'on');
 
+            % UN-SIZED region shading (added 2026-08-14, user review): cells
+            % where converge_W0 found NO converged aircraft at ANY weight --
+            % for this fighter mission, the M1.6 dash drag (which grows with
+            % S) exceeds the maximum available thrust below a T_min(S)
+            % boundary. Constraint curves and fuel contours CANNOT exist
+            % there; shading it gray makes their termination self-
+            % explanatory instead of looking like missing data.
+            unsized = ~isfinite(fg.W0);
+            gray = cat(3, ...
+                0.88 * ones(numel(T_grid), numel(S_grid)), ...
+                0.88 * ones(numel(T_grid), numel(S_grid)), ...
+                0.88 * ones(numel(T_grid), numel(S_grid)));
+            h_gray = image(ax, 'XData', S_grid, 'YData', T_grid, 'CData', gray, ...
+                'AlphaData', 0.9 * double(unsized));
+            h_gray.HandleVisibility = 'off';
+            patch(ax, NaN, NaN, [0.88 0.88 0.88], 'FaceAlpha', 0.9, ...
+                'EdgeColor', 'none', ...
+                'DisplayName', 'Mission infeasible (no sized aircraft)');
+
             % Feasible-region shading: a flat LIGHT-BLUE image with per-cell
             % transparency [metabook Figs. 4.6/4.7 shade the feasible design
-            % space blue]; infeasible/unsized cells stay white.
+            % space blue]; sized-but-constraint-infeasible cells stay white.
             blue = cat(3, ...
                 0.55 * ones(numel(T_grid), numel(S_grid)), ...
                 0.70 * ones(numel(T_grid), numel(S_grid)), ...
@@ -574,12 +593,24 @@ classdef TSDiagram < handle
                     'Color', colors(n_p + kk, :), 'DisplayName', wall_curves{kk}.name);
             end
 
-            % Fuel-burn objective contours [S4.12].
-            if any(isfinite(fg.W_fuel), 'all')
-                contour(ax, S_grid, T_grid, fg.W_fuel, 12, 'ShowText', 'on', ...
-                    'LineColor', [0.40 0.40 0.40], 'LineWidth', 0.75, ...
+            % Fuel-burn objective contours [S4.12], drawn ONLY over the
+            % FEASIBLE region (2026-08-14, user review). Two reasons: (1) a
+            % design point is only ever read inside the feasible region, and
+            % (2) sized-but-infeasible cells near the mission-flyability
+            % boundary have fuel burn that blows up smoothly (dash 1 - D/T ->
+            % 0) up to ~1.5x the feasible max, so contouring the full field
+            % bunches levels at the boundary and fragments the lines. Masking
+            % to the feasible cells gives evenly spaced, unbroken contours
+            % over the region that matters.
+            if any(fg.feasible, 'all')
+                wf_masked = fg.W_fuel;
+                wf_masked(~fg.feasible) = NaN;     % contour skips NaN cells
+                wf_feas = fg.W_fuel(fg.feasible);
+                levels  = linspace(min(wf_feas), max(wf_feas), 10);
+                contour(ax, S_grid, T_grid, wf_masked, levels, 'ShowText', 'on', ...
+                    'LineColor', [0.20 0.20 0.20], 'LineWidth', 0.75, ...
                     'LabelSpacing', 288, ...
-                    'DisplayName', 'Fuel burn W_{fuel} [lbf]');
+                    'DisplayName', 'Fuel burn W_{fuel} [lbf], feasible region');
             end
 
             % Optional actual-aircraft marker [Fig. 4.7 precedent].
