@@ -125,91 +125,40 @@ classdef TSDiagram < handle
             obj.prop.T_SL = T_SL;
 
             W_payload = obj.wts.W_payload_fixed + obj.wts.W_payload_expendable;
+
+            % SEED SELECTION (bracketed, 2026-08-14). No single seed works for
+            % every aircraft. An aircraft with a largely FIXED, geometry-driven
+            % empty weight (e.g. the Brandt F-16A, OEW ~= const) needs a seed
+            % ABOVE the fixed point: below it, OEW/W0 already exceeds 1 - ff and
+            % the closure denominator is negative. A high-payload-fraction
+            % transport whose empty weight scales with W0 needs a seed BELOW the
+            % fixed point: above it, at a fixed wing the cruise CL runs past
+            % L/D_max and the fuel fraction diverges. So try candidate seeds in
+            % order and take the first that converges -- an explicit W0_guess
+            % wins; else the warm-start from the last converged cell (a near
+            % neighbour on a grid scan); else W_payload/0.1 (~10% payload
+            % fraction, seeds ABOVE for fighters) then W_payload/0.25 (~25%,
+            % seeds BELOW for transports).
             if ~isnan(opts.W0_guess)
-                W0 = opts.W0_guess;
-            elseif ~isnan(obj.last_W0_)
-                W0 = obj.last_W0_;
+                seeds = opts.W0_guess;
             else
-                W0 = W_payload / 0.1;   % seed heuristic (see help above)
+                seeds = [obj.last_W0_, W_payload / 0.1, W_payload / 0.25];
+                seeds = seeds(isfinite(seeds) & seeds > 0);
             end
 
-            shrink_left = 12;    % seed-path recovery budget (see loop note)
-            SHRINK      = 0.7;   % W0 pull-back factor per recovery step
-            for iter = 1:opts.max_iter
-                if isprop(obj.geom, 'W_TO')
-                    % Guarded write, as in SizingLoopL1: L1 regression
-                    % geometries carry W_TO as a state variable.
-                    obj.geom.W_TO = W0;
-                end
-                % SEED-PATH RECOVERY (added 2026-08-14). The W0 iterates can
-                % transit ABOVE the mission-flyable weight band on the way
-                % down from a high seed -- at a transient W0 the mission
-                % demands more fuel than the aircraft holds (a landing/climb
-                % segment sees a negative weight and throws), or the closure
-                % denominator goes non-positive -- even though the FIXED
-                % POINT below is perfectly feasible (measured: Max Alt curve
-                % cells failing at transient W0 ~ 42,700 whose fixed point is
-                % ~30,000). Fuel fraction rises with W0 at fixed (T, S), so
-                % the recovery is to SHRINK W0 back into the flyable band and
-                % continue; only when the shrink budget is exhausted is the
-                % cell truly infeasible -> NaN (warned, never silent).
-                blew_up = false;
-                try
-                    [W_fuel, ~] = obj.miss.total_fuel(W0);
-                    W_OEW = obj.wts.OEW(W0);
-                    if ~(isfinite(W_fuel) && isfinite(W_OEW))
-                        blew_up = true;
-                        de_msg = 'non-finite mission fuel or OEW';
-                    end
-                catch de
-                    blew_up = true;
-                    de_msg = de.message;
-                end
-                if blew_up
-                    if shrink_left > 0
-                        shrink_left = shrink_left - 1;
-                        W0 = max(W0 * SHRINK, W_payload * 1.05);
-                        continue;
-                    end
-                    warning('TSDiagram:cellDisciplineError', ...
-                        'converge_W0(T=%.6g, S=%.6g) at W0=%.6g: %s -> cell marked NaN (shrink budget exhausted).', ...
-                        T_SL, S_ref, W0, de_msg);
-                    W0 = NaN;
-                    return;
-                end
-                obj.wts.W_TO     = W0;
-                obj.wts.W_energy = W_fuel;
-
-                % TOGW closure step [metabook Algorithm 2 / Algorithm 1;
-                % Raymer 6th ed. Eq. 3.4].
-                [W0_new, ~] = SizingSteps.togw_update(W_payload, W_OEW, W_fuel, W0);
-                if isnan(W0_new)
-                    % denom <= 0 at THIS W0 (ff + ef >= 1) -- same too-high-
-                    % transient symptom; shrink before giving up.
-                    if shrink_left > 0
-                        shrink_left = shrink_left - 1;
-                        W0 = max(W0 * SHRINK, W_payload * 1.05);
-                        continue;
-                    end
-                    W0 = NaN;   % closure infeasible at every tried W0
-                    return;
-                end
-                if W0_new > opts.W0_cap
-                    W0 = NaN;   % diverging upward
-                    return;
-                end
-                if abs(W0_new - W0) / W0_new < opts.tol_rel
-                    W0 = W0_new;
-                    obj.last_W0_ = W0;   % warm start for the next cell
-                    return;
-                end
-                W0 = SizingSteps.relax(W0, W0_new, opts.relaxation);
-                if W0 > opts.W0_cap
-                    W0 = NaN;
-                    return;
+            W0 = NaN;
+            for s = seeds
+                W0 = obj.run_closure_(s, W_payload, T_SL, S_ref, opts);
+                if isfinite(W0)
+                    return;   % run_closure_ set obj.last_W0_ on success
                 end
             end
-            W0 = NaN;   % max_iter hit without convergence
+            % Every candidate seed failed -> the (T, S) cell is genuinely
+            % infeasible (no sized aircraft). NaN, warned once, never silent.
+            warning('TSDiagram:cellInfeasible', ...
+                ['converge_W0(T=%.6g, S=%.6g): no converged aircraft from any ', ...
+                 'seed -- cell marked NaN (mission-infeasible or diverging ', ...
+                 'closure).'], T_SL, S_ref);
         end
 
         function list = producers(obj)
@@ -641,6 +590,81 @@ classdef TSDiagram < handle
     end
 
     methods (Access = private)
+
+        function W0 = run_closure_(obj, W0_seed, W_payload, T_SL, S_ref, opts) %#ok<INUSD>
+        %RUN_CLOSURE_  One TOGW fixed-point solve [metabook Algorithm 2] from a
+        %   single seed W0_seed. Returns the converged W0, or NaN (silently --
+        %   converge_W0 warns once if every seed fails) when this seed diverges
+        %   upward past W0_cap, hits an infeasible transient the shrink-recovery
+        %   cannot escape, or exhausts max_iter. Sets obj.last_W0_ on success.
+        %   T_SL/S_ref are carried only for the (now converge_W0-level) message.
+            W0 = W0_seed;
+            shrink_left = 12;    % seed-path recovery budget (see below)
+            SHRINK      = 0.7;   % W0 pull-back factor per recovery step
+            for iter = 1:opts.max_iter
+                if isprop(obj.geom, 'W_TO')
+                    % Guarded write, as in SizingLoopL1: L1 regression
+                    % geometries carry W_TO as a state variable.
+                    obj.geom.W_TO = W0;
+                end
+                % SEED-PATH RECOVERY: a W0 iterate can transit ABOVE the
+                % mission-flyable band (a segment sees negative weight and
+                % throws, or the denominator goes non-positive) even though a
+                % feasible fixed point exists lower down. Fuel fraction rises
+                % with W0 at fixed (T, S), so shrink W0 back and continue; give
+                % up to NaN only when the shrink budget is spent.
+                blew_up = false;
+                try
+                    [W_fuel, ~] = obj.miss.total_fuel(W0);
+                    W_OEW = obj.wts.OEW(W0);
+                    if ~(isfinite(W_fuel) && isfinite(W_OEW))
+                        blew_up = true;
+                    end
+                catch
+                    blew_up = true;
+                end
+                if blew_up
+                    if shrink_left > 0
+                        shrink_left = shrink_left - 1;
+                        W0 = max(W0 * SHRINK, W_payload * 1.05);
+                        continue;
+                    end
+                    W0 = NaN;
+                    return;
+                end
+                obj.wts.W_TO     = W0;
+                obj.wts.W_energy = W_fuel;
+
+                % TOGW closure step [metabook Algorithm 2 / Algorithm 1;
+                % Raymer 6th ed. Eq. 3.4].
+                [W0_new, ~] = SizingSteps.togw_update(W_payload, W_OEW, W_fuel, W0);
+                if isnan(W0_new)
+                    % denom <= 0 (ff + ef >= 1) -- shrink before giving up.
+                    if shrink_left > 0
+                        shrink_left = shrink_left - 1;
+                        W0 = max(W0 * SHRINK, W_payload * 1.05);
+                        continue;
+                    end
+                    W0 = NaN;
+                    return;
+                end
+                if W0_new > opts.W0_cap
+                    W0 = NaN;   % diverging upward
+                    return;
+                end
+                if abs(W0_new - W0) / W0_new < opts.tol_rel
+                    W0 = W0_new;
+                    obj.last_W0_ = W0;   % warm start for the next cell
+                    return;
+                end
+                W0 = SizingSteps.relax(W0, W0_new, opts.relaxation);
+                if W0 > opts.W0_cap
+                    W0 = NaN;
+                    return;
+                end
+            end
+            W0 = NaN;   % max_iter hit without convergence
+        end
 
         function T = default_T_seed(obj, S_first)
         %DEFAULT_T_SEED  Thrust seed for constraint_curve's first S point.
