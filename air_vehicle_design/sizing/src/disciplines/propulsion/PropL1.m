@@ -14,6 +14,7 @@ classdef PropL1
     properties (Constant, Access = private)
         RHO_SL = 0.002377;   % slug/ft³ — ISA sea-level density [Mattingly App. B]
         % TODO (7/13/2026): Standard atmospheric conditions at sea level should be its own class.
+        % TODO (8/14/2026): Standard atmospheric conditions at sea-level should be its own class. This is still true, today.
     end
 
     methods (Static)
@@ -22,6 +23,8 @@ classdef PropL1
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): This appears to be an artefact from when the toolboxes were subclasses of the enforcers.
+        % These wrappers are no longer necessary and should be replaced with the "compute" functions that actually do the math.
         function alpha = get_thrust_lapse(obj, state)
         %GET_THRUST_LAPSE  Density-ratio lapse: α = σ^m, m from engine-type table.
         %   [Martins AE481 course notes (metabook), Eqs. 10.7 / 10.9]
@@ -29,6 +32,8 @@ classdef PropL1
             alpha = PropL1.sigma_lapse(state.rho, m);
         end
 
+        % TODO (8/14/2026): This appears to be in the same boat as the "get_thrust_lapse" function. Same problem, same solution.
+        % These wrappers should be moved into the F16 example, if they aren't already.
         function c_t = get_TSFC(obj, state)
         %GET_TSFC  Categorical TSFC from engine-type table (1/hr).
         %   M < 0.4 → loiter TSFC; M >= 0.4 → cruise TSFC.  [Raymer 6th Table 3.3]
@@ -59,6 +64,7 @@ classdef PropL1
         %   α = σ^m,  σ = ρ/ρ_SL.  [Martins AE481 course notes (metabook)]
         %   m = 1.0: turbojet — thrust scales linearly with density  [Eq. 10.7]
         %   m = 0.6: turbofan — general low-to-high-BPR fit          [Eq. 10.9]
+        % >>>>>>>>>>    N.B: "m" IS NOT MACH NUMBER, IT'S A COEFFICIENT!    <<<<<<<<<<<<<
             switch engine_type
                 case {'turbojet', 'turbojet_AB'}
                     m = 1.0;
