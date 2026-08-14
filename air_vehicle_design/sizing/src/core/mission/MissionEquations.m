@@ -86,10 +86,11 @@ classdef MissionEquations
         function wf = roskam_fixed_fraction(aircraft_category, phase)
         %ROSKAM_FIXED_FRACTION  Mission-phase fuel-weight fraction W_end/W_start
         %   for a constant-fraction segment.
-        %   [Roskam, Airplane Design Part I, Table 2.1, p.12, fighter row].
-        %   Climb is the mean of Roskam's 0.90-0.96 range (= 0.93). The canonical
-        %   aircraft_category selects the row via to_roskam_row (Roskam prints
-        %   'fighter'); do not rename the row to match the key.
+        %   Fighter row: [Roskam, Airplane Design Part I, Table 2.1, p.12].
+        %     Climb is the mean of Roskam's 0.90-0.96 range (= 0.93).
+        %   Transport row: [Raymer Table 3.4, metabook_data.md lines 28-36].
+        %   The canonical aircraft_category selects the row via to_roskam_row
+        %   ('fighter' / 'transport'); do not rename the row to match the key.
             row   = MissionEquations.to_roskam_row(aircraft_category);
             phase = lower(string(phase));
             switch row
@@ -106,6 +107,34 @@ classdef MissionEquations
                                 ['No Roskam Table 2.1 fixed fuel fraction for phase ', ...
                                  '"%s" (fighter row).'], phase);
                     end
+                case "transport"
+                    % Jet-transport fixed fuel fractions.
+                    % [Raymer Table 3.4, metabook_data.md lines 28-36]. That
+                    % table gives four bundled rows:
+                    %   engine start + warm-up/takeoff = 0.970
+                    %   climb                          = 0.985
+                    %   descent                        = 0.990
+                    %   landing + taxi                 = 0.995
+                    % The 0.970 row bundles startup + warm-up + takeoff into a
+                    % single fraction. To keep the per-phase interface (each
+                    % segment must yield a burn), the whole 0.970 bundle is
+                    % assigned to the "takeoff" phase and "startup"/"taxi"
+                    % (pre-takeoff ground ops) are set to 1.000 (no additional
+                    % burn) so the product across startup*taxi*takeoff equals
+                    % the printed 0.970 exactly -- no double counting. The
+                    % 0.995 landing+taxi bundle maps to "landing".
+                    switch phase
+                        case "startup", wf = 1.000;   % folded into takeoff bundle
+                        case "taxi",    wf = 1.000;    % folded into takeoff bundle
+                        case "takeoff", wf = 0.970;    % start+warmup+takeoff bundle
+                        case "climb",   wf = 0.985;
+                        case "descent", wf = 0.990;
+                        case "landing", wf = 0.995;    % landing + taxi bundle
+                        otherwise
+                            error('MissionEquations:unknownPhase', ...
+                                ['No Raymer Table 3.4 fixed fuel fraction for phase ', ...
+                                 '"%s" (transport row).'], phase);
+                    end
                 otherwise
                     error('MissionEquations:unsupportedCategory', ...
                         ['Roskam Table 2.1 fixed fractions are implemented only for ', ...
@@ -121,10 +150,13 @@ classdef MissionEquations
             switch lower(string(aircraft_category))
                 case {"jet_fighter", "fighter"}
                     row = "fighter";
+                case {"jet_transport", "transport_jet", "transport"}
+                    row = "transport";
                 otherwise
                     error('MissionEquations:unknownCategory', ...
-                        ['No Roskam Table 2.1/2.2 row mapping for aircraft_category ', ...
-                         '"%s". Only jet_fighter is implemented.'], aircraft_category);
+                        ['No mission-fraction row mapping for aircraft_category ', ...
+                         '"%s". Only jet_fighter and jet_transport are implemented.'], ...
+                        aircraft_category);
             end
         end
 

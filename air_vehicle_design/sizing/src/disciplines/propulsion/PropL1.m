@@ -41,9 +41,34 @@ classdef PropL1
             end
         end
 
+        function c_t = tsfc_mattingly_hibpr(state)
+        %TSFC_MATTINGLY_HIBPR  High-bypass-turbofan TSFC [1/hr] from Mach and
+        %   temperature ratio.
+        %   [metabook_data.md Eq. 10.11 / Mattingly 1996 Eq. 1.36a, line 710]:
+        %     c = (0.4 + 0.45*M) * sqrt(theta)
+        %   theta = T_atm / T_std (dimensionless static temperature ratio;
+        %   read straight from AircraftState.theta, Mattingly Eq. 2.52a). This
+        %   is the Mach- and altitude-dependent alternative to the constant
+        %   lookup_TSFC_table row, for a high-bypass civil turbofan.
+        %   c in lb_fuel/(lbf*hr).
+            c_t = PropL1.tsfc_mattingly_hibpr_raw(state.mach, state.theta);
+        end
+
         % ================================================================== %
         % LOW-LEVEL: pure math — scalars only.
         % ================================================================== %
+
+        function c_t = tsfc_mattingly_hibpr_raw(M, theta)
+        %TSFC_MATTINGLY_HIBPR_RAW  c = (0.4 + 0.45*M)*sqrt(theta).
+        %   [metabook_data.md Eq. 10.11 / Mattingly 1996 Eq. 1.36a, line 710]
+        %   M     -- flight Mach number.
+        %   theta -- static temperature ratio T_atm/T_std (dimensionless).
+            arguments
+                M     (1,1) double {mustBeNonnegative}
+                theta (1,1) double {mustBePositive}
+            end
+            c_t = (0.4 + 0.45 * M) * sqrt(theta);
+        end
 
         function alpha = sigma_lapse(rho, m)
         %SIGMA_LAPSE  α = σ^m where σ = ρ/ρ_SL.

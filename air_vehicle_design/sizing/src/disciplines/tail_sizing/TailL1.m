@@ -96,11 +96,17 @@ classdef TailL1
         %   [Raymer 7th ed. Table 6.4, jet-fighter row]
             switch cat
                 case 'jet_fighter', c_HT = 0.40; c_VT = 0.07;
+                case 'jet_transport'
+                    % Jet-transport typical tail-volume coefficients.
+                    % [metabook_data.md Ch.8 Eqs. 8.1/8.2, lines 599-600:
+                    %  "cVT ~ 0.09 jet transports", "cHT ~ 1.0 jet transports";
+                    %  agrees with Raymer 7th ed. Table 6.4 jet-transport row.]
+                    c_HT = 1.00; c_VT = 0.09;
                 otherwise
                     error('TailL1:unknownCategory', ...
                         ['Unknown aircraft_category "%s" for tail-volume ' ...
                          'coefficients -- only the Raymer 7th ed. Table 6.4 ' ...
-                         'jet-fighter row is implemented.'], cat);
+                         'jet-fighter and jet-transport rows are implemented.'], cat);
             end
         end
 
@@ -112,6 +118,29 @@ classdef TailL1
                 L_fus (1,1) double {mustBePositive}
             end
             L = 0.475 * L_fus;
+        end
+
+        function L = compute_tail_arm_wing_mounted(L_fus)
+        %COMPUTE_TAIL_ARM_WING_MOUNTED  Tail moment arm [ft] for a
+        %   wing-mounted-engine transport, as a fraction of fuselage length.
+        %
+        %   L_HT = L_VT = 0.525 * L_fus  [Raymer text, wing-mounted-engine
+        %   transport tail arm 50-55% of fuselage length; 0.525 is the
+        %   midpoint of that range].
+        %
+        %   *** UNCITED IN THE REPO EXTRACTS ***  metabook_data.md does NOT
+        %   carry the wing-mounted-engine 50-55% tail-arm rule (its Ch.8 has
+        %   only the tail-volume coefficients, not the arm fraction), and no
+        %   other docs/reference_extracts/ file transcribes it. The 0.525
+        %   value is therefore a labeled TODO per repo citation policy: it is
+        %   used so the B777 path is functional, but a deliberately-failing
+        %   testTODO must guard it in the tail tests until the printed Raymer
+        %   text is transcribed into an extract. Do NOT cite this to
+        %   metabook_data.md.
+            arguments
+                L_fus (1,1) double {mustBePositive}
+            end
+            L = 0.525 * L_fus;   % [UNCITED -- see the TODO above]
         end
 
         function val = compute_S_HT(c_HT, cbar, S_ref, L_HT)

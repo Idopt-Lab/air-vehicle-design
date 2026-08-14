@@ -66,7 +66,11 @@ classdef GeomL1
             switch cat
                 case 'jet_fighter',    c = -0.1289; d = 0.7506;
                 case 'jet_bomber',     c =  0.1213; d = 0.7306;
-                case 'transport_jet',  c =  0.0199; d = 0.7351;
+                % transport_jet d corrected 0.7351 -> 0.7531 (digit
+                % transposition) per disposition D3, metabook_data.md Eq. 4.9 /
+                % Eq. 4.42 (d = 0.7531; the 0.7351 value gave ~22,170 ft^2
+                % instead of the printed 28,291 ft^2). Sarojini, 2026-08-14.
+                case 'transport_jet',  c =  0.0199; d = 0.7531;
                 case 'business_jet',   c =  0.2263; d = 0.6977;
                 case 'military_cargo', c = -0.0866; d = 0.8099;
                 otherwise

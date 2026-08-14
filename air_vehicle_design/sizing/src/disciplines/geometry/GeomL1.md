@@ -60,9 +60,14 @@ $$AR_{eq} = a\,M_{max}^{\,C}$$
 |---|---|---|
 | `jet_fighter` | −0.1289 | 0.7506 |
 | `jet_bomber` | 0.1213 | 0.7306 |
-| `transport_jet` | 0.0199 | 0.7351 |
+| `transport_jet` | 0.0199 | 0.7531 |
 | `business_jet` | 0.2263 | 0.6977 |
 | `military_cargo` | −0.0866 | 0.8099 |
+
+The `transport_jet` exponent was corrected `0.7351 → 0.7531` (digit transposition) per disposition
+D3 (`metabook_data.md` Eq. 4.9 / Eq. 4.42, Sarojini 2026-08-14): `d = 0.7531` reproduces the printed
+`S_wet = 10^0.0199 · 766,800^0.7531 = 28,291 ft²`, whereas `0.7351` gave ~22,170 ft². The `jet_fighter`
+row (the F-16A path) is unaffected.
 
 `lookup_lfus` — Raymer 6th ed. Table 6.3 (ft from lbf):
 
