@@ -1,5 +1,7 @@
 %% F-16A Level 1 Sizing Report
-% Runs the L1 W_TO sizing study (|design_study_01_L1|) and reports:
+% Runs the L1 W_TO sizing study (|f16_sizing_L1|, which drives the new
+% src/sizing/SizingLoopL1.m; it replaced |design_study_01_L1| 2026-08-13)
+% and reports:
 %
 % * Sizing convergence (W_TO, OEW, fuel weight per iteration)
 % * A high-level weight breakdown (L1 has no per-component weight model --
@@ -26,22 +28,23 @@
 % clear; clc; close all;
 
 %% Run the L1 design study
-% design_study_01_L1 builds fresh F16AeroL1/F16PropL1/F16WeightsL1/
+% f16_sizing_L1 builds fresh F16AeroL1/F16PropL1/F16WeightsL1/
 % F16GeomL1 objects plus the L1 mission analysis (MissionAnalysisL1), wires
 % them into SizingLoopL1, and runs it
 % to convergence. The second output (objs) exposes those same objects,
 % already mutated to their converged state, for the reporting below.
 
 W_TO_guess = 30000;
-[result, objs] = design_study_01_L1(W_TO_guess);
+[result, objs] = f16_sizing_L1(W_TO_guess);
 
-% [WS_opt, TW_opt] = the constraint-diagram-optimal wing-loading/thrust-
-% ratio SizingLoopL1.run() computes ONCE (before iterating) and holds fixed
-% for the whole loop -- see that class's header. Calling objs.con's own
-% optimal_point() again here (ConstraintAnalysis is a pure value class, and
-% con is never mutated during the run) reproduces the identical WS_opt the
-% loop actually used, without re-deriving anything.
-[WS_opt, TW_opt] = objs.con.optimal_point();
+% (WS_opt, TW_opt) = the constraint-diagram-optimal wing-loading/thrust-
+% ratio SizingLoopL1.run() solves ONCE (before iterating, via
+% ConstraintAnalysis.optimal_point_continuous) and holds fixed for the
+% whole loop -- see that class's header. The result struct carries the
+% exact values the loop used, so read them from there rather than
+% re-solving.
+WS_opt = result.WS;
+TW_opt = result.TW;
 
 fprintf('\n=== F-16A Level 1 Sizing Result ===\n');
 fprintf('  Converged:  %d\n', result.converged);
@@ -51,23 +54,24 @@ fprintf('  W_TO:       %.1f lbf  (Brandt = 31377 lbf, %+.1f%%)\n', ...
 fprintf('  S_ref:      %.2f ft^2 (Brandt = 300 ft^2, %+.1f%%; L1 solves for S_ref, not an input)\n', ...
     result.S_ref, 100*(result.S_ref - 300)/300);
 fprintf('  T_SL:       %.1f lbf\n', result.T_SL);
-fprintf('  Optimum wing loading (W/S)_opt = %.3f lbf/ft^2  (Brandt = 104.59 lbf/ft^2; from ConstraintAnalysis.optimal_point, fixed for the whole run)\n', WS_opt);
+fprintf('  Optimum wing loading (W/S)_opt = %.3f lbf/ft^2  (Brandt = 104.59 lbf/ft^2; from ConstraintAnalysis.optimal_point_continuous, fixed for the whole run)\n', WS_opt);
 fprintf('  Optimum thrust loading (T/W)_opt = %.4f\n', TW_opt);
 fprintf('  S_ref:      initial = %.2f ft^2 (from W_TO_guess/WS_opt)  ->  final = %.2f ft^2\n', ...
-    result.history(1).S_ref, result.S_ref);
+    result.history(1).W0 / WS_opt, result.S_ref);
 
 %% Sizing convergence plots (W_TO, OEW, fuel weight, S_ref per iteration)
-% Straight from SizingLoopL1.run's own returned history -- no
-% recomputation, just plotting the struct array it already produced. S_ref
-% tracks W_TO every iteration (S_ref = W_TO/WS_opt, SizingLoopL1.run's own
-% formula) since WS_opt is fixed for the whole loop -- see that class's
-% header.
+% Straight from SizingLoopL1.run's own returned history -- no new physics,
+% just plotting the struct array it already produced (history logs W0 =
+% the pre-update W_TO iterate). S_ref tracks W_TO every iteration (S_ref =
+% W_TO/WS_opt, SizingLoopL1.run's own formula) since WS_opt is fixed for
+% the whole loop, so it is re-derived here from the logged W0 -- the
+% history carries no separate S_ref field.
 
 iters     = [result.history.iter];
-WTO_hist  = [result.history.W_TO];
+WTO_hist  = [result.history.W0];
 OEW_hist  = [result.history.W_OEW];
 Fuel_hist = [result.history.W_fuel];
-Sref_hist = [result.history.S_ref];
+Sref_hist = WTO_hist / WS_opt;
 
 % All 4 quantities on one graph. W_TO/OEW/W_fuel share units (lbf) and go
 % on the left axis; S_ref (ft^2, a very different magnitude) goes on a

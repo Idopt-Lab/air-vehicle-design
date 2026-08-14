@@ -11,7 +11,7 @@
 %   This script builds the L3 discipline objects explicitly and injects them
 %   into ConstraintAnalysis.from_requirements. To analyze a different fidelity
 %   level, swap the three construction lines below for the matching L1/L2 constructors
-%   (see design_study_01_L1.m / design_study_02_L2.m); to analyze a subset of
+%   (see f16_sizing_L1.m / f16_sizing_L2.m); to analyze a subset of
 %   conditions, trim the constraints list.
 
 % Caller owns discipline construction (dependency injection): build the L3
