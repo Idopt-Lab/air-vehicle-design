@@ -24,8 +24,9 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
 %               Design," Ch.8, p.210 (fuel density Table 8.6; avionics
 %               density Sec.8.1.11 -- NOT used at L1, see avionics_density).
 %     [Raymer]  D.P. Raymer, Aircraft Design 7th ed. (cited here as 6th ed.
-%               per the subplan), Table 11.6, p.375 (avionics weight
-%               fraction + following-paragraph density range).
+%               per the original step-9 design plan), Table 11.6, p.375
+%               (avionics weight fraction + following-paragraph density
+%               range).
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL1.md
 

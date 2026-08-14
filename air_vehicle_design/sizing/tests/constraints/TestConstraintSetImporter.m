@@ -4,9 +4,9 @@ classdef TestConstraintSetImporter < matlab.unittest.TestCase
 %   array), exercised against the F-16's
 %   examples/F16A/inputs/f16a_requirements.json.
 %
-%   Rewritten 2026-08-04 (subplan 06-refactor T3): the importer now reads the
-%   requirements JSON's constraints.conditions block with explicit keys, not
-%   the retired Constraints.xlsx workbook with mangled column names.
+%   Rewritten 2026-08-04 (step-6 constraint-analysis refactor, T3): the importer
+%   now reads the requirements JSON's constraints.conditions block with explicit
+%   keys, not the retired Constraints.xlsx workbook with mangled column names.
 
     methods (Test)
 

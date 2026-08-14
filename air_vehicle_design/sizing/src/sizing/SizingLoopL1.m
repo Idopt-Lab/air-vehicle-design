@@ -1,11 +1,11 @@
 classdef SizingLoopL1 < handle
 %SIZINGLOOPL1  Generic Level-1 takeoff-gross-weight sizing loop.
 %
-%   Single-state-variable (W_TO) fixed-point iteration [docs/subplans/08_sizing.md].
+%   Single-state-variable (W_TO) fixed-point iteration.
 %   Flat orchestrator, not a discipline: constructor-injected with six
 %   already-built discipline/analysis objects, mutated in place (handle
 %   semantics) as the loop iterates -- create fresh objects for each design
-%   study, per subplan 08's Design Notes. No abstract Base/ModelLN split
+%   study, per the original step-8 sizing design notes. No abstract Base/ModelLN split
 %   (matches how ConstraintAnalysis, the other system-level piece, was
 %   built): sizing has no per-fidelity equation set of its own to vary.
 %
@@ -30,7 +30,7 @@ classdef SizingLoopL1 < handle
 %   ratios and the CURRENT W_TO guess:
 %     S_ref = W_TO / WS_opt;   geom.S_ref = S_ref;
 %     T_SL  = TW_opt * W_TO;   prop.T_SL  = T_SL;
-%   -- both scale with the converging weight, matching subplan 08's
+%   -- both scale with the converging weight, matching the original step-8
 %   pseudocode and the legacy F-16 L1 driver script
 %   (temp_Casey/.../F16A_Level1_Sizing_ClassBased_Example.m:284,286).
 %

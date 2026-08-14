@@ -10,9 +10,8 @@ classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
 %   F16WeightsL1.OEW(obj, W_TO) takes W_TO rather than injecting a weights
 %   object at L1.
 %
-%   No fuel-tank packaging factor is usable at L1 (docs/subplans/09_subsystems.md
-%   Equations & Citations item 1: "not usable at L1 -- no geometric raw volume
-%   exists yet"), and there is no landing-gear counterpart at L1 at all (no
+%   No fuel-tank packaging factor is usable at L1 (no geometric raw volume
+%   exists yet), and there is no landing-gear counterpart at L1 at all (no
 %   fuselage envelope to place a bay into).
 %
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL1.md

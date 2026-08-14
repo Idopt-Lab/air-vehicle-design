@@ -1,8 +1,8 @@
 classdef F16LandingGearL2 < handle
 %F16LANDINGGEARL2  F-16A Block 10/15 Level-2 landing-gear student class.
 %
-%   F-16-ONLY, NO ABSTRACT BASE TIER (docs/subplans/09_subsystems.md Files to
-%   Create): not every airframe has conventional landing gear (e.g.
+%   F-16-ONLY, NO ABSTRACT BASE TIER (original step-9 subsystems design,
+%   Files to Create): not every airframe has conventional landing gear (e.g.
 %   seaplanes), so this class does not get a generic src/disciplines/ home
 %   the way Geometry/Aerodynamics/Propulsion/Weights/Subsystems do. It still
 %   follows the toolbox-static-equations pattern where that makes sense --
@@ -35,12 +35,12 @@ classdef F16LandingGearL2 < handle
 %   TWO-WHEEL MAIN GEAR ASSUMPTION: the F-16 uses a standard tricycle
 %   arrangement -- one nose wheel, two main wheels -- so the per-wheel main
 %   load W_w that Table 11.1 wants is HALF the total main-gear load. This is
-%   ordinary tricycle-gear configuration knowledge (not a subplan-pinned
+%   ordinary tricycle-gear configuration knowledge (not a textbook-pinned
 %   citation), documented here as a judgment call rather than left silent.
 %
 %   GEAR BAY VOLUME -- NOT IMPLEMENTED. See bay_volume: documented citation
-%   GAP (subplan item 11). Tire/strut SIZE (diameter/width) is fully
-%   implemented and unaffected.
+%   GAP (original step-9 subsystems design, item 11). Tire/strut SIZE
+%   (diameter/width) is fully implemented and unaffected.
 %
 %   DEPENDENCY INJECTION: weights -- (1,1) WeightsBase. Only W_TO is read.
 %   Geometry is deliberately NOT injected: no equation implemented here
@@ -174,20 +174,20 @@ classdef F16LandingGearL2 < handle
         end
 
         function val = bay_volume(obj) %#ok<MANU,STOUT>
-        %BAY_VOLUME  NOT IMPLEMENTED -- documented citation GAP (subplan
-        %   item 11). No textbook formula for tire+strut bay-volume
-        %   packaging was found anywhere in this repo: Raymer's Ch.11 covers
-        %   tire/strut/shock-absorber SIZE, not a bay-VOLUME packaging
-        %   estimate the way Nicolai's Ch.8 fuel/avionics sections give one.
-        %   Errors rather than fabricating a geometric-envelope assumption.
+        %BAY_VOLUME  NOT IMPLEMENTED -- documented citation GAP (original
+        %   step-9 subsystems design, item 11). No textbook formula for
+        %   tire+strut bay-volume packaging was found anywhere in this repo:
+        %   Raymer's Ch.11 covers tire/strut/shock-absorber SIZE, not a
+        %   bay-VOLUME packaging estimate the way Nicolai's Ch.8 fuel/avionics
+        %   sections give one. Errors rather than fabricating a
+        %   geometric-envelope assumption.
             error('F16LandingGearL2:bayVolumeNotAvailable', ...
                 ['No textbook bay-volume (tire+strut stowage) packaging ' ...
                  'formula was found anywhere in this repository -- Raymer ' ...
                  'Ch.11 covers tire/strut/shock-absorber SIZE only. Not ' ...
                  'implemented, not guessed. Tire/strut SIZE ' ...
                  '(tire_diameter_main/tire_width_main/etc.) is unaffected. ' ...
-                 'See docs/subplans/09_subsystems.md Equations & Citations ' ...
-                 'Sec.11 and examples/F16A/inputs/f16a_L2.json ' ...
+                 'See examples/F16A/inputs/f16a_L2.json ' ...
                  '.subsystems._TODO_gear_bay_volume_packaging for the full ' ...
                  'gap record.']);
         end

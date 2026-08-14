@@ -25,8 +25,8 @@ classdef SandCL2
         %   W_energy, a mission-analysis STATE that reads NaN until the
         %   mission/sizing loop sets it -- see WeightsBase.m), ordinary IEEE
         %   arithmetic propagates that NaN straight into x_cg. This is the
-        %   documented, GRACEFUL signal docs/subplans/10_stability_control.md
-        %   asks for -- not an error. (mustBeNonnegative/mustBePositive would
+        %   documented, GRACEFUL signal the original stability-and-control
+        %   design asks for -- not an error. (mustBeNonnegative/mustBePositive would
         %   have rejected NaN outright -- e.g. NaN >= 0 is false -- so they
         %   are deliberately NOT applied here.)
             arguments

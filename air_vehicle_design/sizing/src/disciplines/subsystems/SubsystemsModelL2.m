@@ -20,9 +20,8 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
 %                           fuel weight for fuel_volume_check (obj.W_energy)
 %                           AND W_empty for the avionics-weight term
 %                           (obj.OEW(obj.W_TO)) -- one injected collaborator
-%                           serves both roles, matching the subplan's own
-%                           "mission analysis or F16WeightsL2" wording
-%                           (Design Notes / Dependency Injection).
+%                           serves both roles, matching the original
+%                           "mission analysis or F16WeightsL2" design intent.
 %
 %   INPUT vs DERIVED. Every quantity below the injected collaborators is
 %   DERIVED -- recomputed live on every read/call, never cached, matching the
@@ -70,8 +69,7 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
         %FUSELAGE_USABLE_FUEL_VOLUME  fuselage_raw_volume * packaging_factor
         %   [ft^3]. The packaging factor MUST be applied before this figure
         %   is compared against a required fuel volume -- the legacy code
-        %   never applied one (docs/subplans/09_subsystems.md Eq. §5b,
-        %   "Legacy Bugs to Avoid" addendum).
+        %   never applied one (a legacy bug to avoid).
         fuselage_usable_fuel_volume
 
         %WING_FUEL_VOLUME  Wing-internal fuel volume [ft^3].
@@ -84,9 +82,9 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
 
     methods (Abstract)
 
-        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation GAP (subplan
-        %   Eq. §7). Stays a METHOD (not a Dependent property): it takes a
-        %   genuine external argument (E_required_kWh), AND a Dependent
+        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation GAP. Stays a
+        %   METHOD (not a Dependent property): it takes a genuine external
+        %   argument (E_required_kWh), AND a Dependent
         %   getter must never be allowed to throw -- MATLAB's own object
         %   display/introspection machinery (e.g. `disp(obj)`) evaluates
         %   every Dependent property's getter eagerly, so a deliberately-

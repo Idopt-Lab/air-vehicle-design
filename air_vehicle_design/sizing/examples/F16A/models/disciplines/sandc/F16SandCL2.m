@@ -2,8 +2,8 @@ classdef F16SandCL2 < SandCModelL2
 %F16SANDCL2  F-16A Block 10/15 Level-2 stability & control student class.
 %
 %   Inherits from SandCModelL2 (abstract enforcer). Computes ONLY the
-%   aircraft center-of-gravity x-station, x_cg -- per
-%   docs/subplans/10_stability_control.md's "DECIDED (Casey, 2026-08-03):
+%   aircraft center-of-gravity x-station, x_cg -- per the original
+%   stability-and-control design's "DECIDED (Casey, 2026-08-03):
 %   F16SandCL2 is limited to the CG term only" note: F16GeomL2 exposes NO
 %   x-station properties at all, so none of Eqs. 16.4/16.5/16.7/16.8/16.9/
 %   16.11/16.12/16.13/16.14/16.15 are computable at this fidelity level --
@@ -42,8 +42,8 @@ classdef F16SandCL2 < SandCModelL2
 %                guarantee the members this class reads. The
 %                component_x_stations grouping itself is explicitly built
 %                "from THIS framework's own WeightsL2/WeightsL3 groups"
-%                (docs/subplans/10_stability_control.md "Component-x-location
-%                buildup"), i.e. tied to this exact concrete class's shape,
+%                (the original stability-and-control design's "Component-x-
+%                location buildup"), i.e. tied to this exact concrete class's shape,
 %                not a generic weights contract -- matching the launch
 %                instruction's own "Inject F16WeightsL2" (concrete) wording.
 %   ============================================================================
@@ -64,8 +64,8 @@ classdef F16SandCL2 < SandCModelL2
 %   SOURCES:
 %     [readme_bsc.md] VnV/BrandtF16A/readme_bsc.md "CG closure" -- the
 %       weighted-average CG identity this class's one formula implements.
-%     Component weight/x-station data: docs/subplans/10_stability_control.md
-%       "Component-x-location buildup" (re-aggregated from
+%     Component weight/x-station data: the original stability-and-control
+%       design's "Component-x-location buildup" (re-aggregated from
 %       temp_Casey/inputs/F-16A Block 50.xlsx's "Stability&Control" sheet,
 %       22 rows, into this framework's own 10 WeightsL2/L3 groups).
 %

@@ -5,8 +5,8 @@ classdef (Abstract) SandCModelL2 < StabControlBase
 %   fidelity level satisfies the Tier-1 contract independently, not by
 %   inheriting SandCModelL(N-1)).
 %
-%   Adds NOTHING beyond the inherited x_cg. Per
-%   docs/subplans/10_stability_control.md's "DECIDED (Casey, 2026-08-03):
+%   Adds NOTHING beyond the inherited x_cg. Per the original stability-and-
+%   control design's "DECIDED (Casey, 2026-08-03):
 %   F16SandCL2 is limited to the CG term only" note: F16GeomL2 exposes NO
 %   x-station properties at all (no x_apex_wing/x_le_ht/x_le_vt/x_inlet/tail-
 %   arm equivalent -- confirmed by direct inspection of F16GeomL2.m; only

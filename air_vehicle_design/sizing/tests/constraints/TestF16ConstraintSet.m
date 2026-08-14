@@ -6,11 +6,11 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
 %   ExcessPower) and TakeoffConstraint/LandingConstraint objects, and its
 %   end-to-end use with ConstraintAnalysis.
 %
-%   Updated 2026-08-04 (subplan 06-refactor T3): the build path now reads the
-%   requirements JSON, not Constraints.xlsx. power_setting is sourced directly
-%   from the JSON, and Takeoff is modeled at the JSON's mach_liftoff = 0.2
-%   (was a hardcoded 0.1). The two Combat rows carry their JSON names
-%   ("Combat Turn 1 (subsonic)" / "Combat Turn 2 (supersonic)").
+%   Updated 2026-08-04 (step-6 constraint-analysis refactor, T3): the build
+%   path now reads the requirements JSON, not Constraints.xlsx. power_setting
+%   is sourced directly from the JSON, and Takeoff is modeled at the JSON's
+%   mach_liftoff = 0.2 (was a hardcoded 0.1). The two Combat rows carry their
+%   JSON names ("Combat Turn 1 (subsonic)" / "Combat Turn 2 (supersonic)").
 %
 %   The optimal W/S and T/W are checked against broad physics-bounds ranges,
 %   NOT Brandt's exact W/S=104.59/T/W=0.7576 -- this framework's textbook

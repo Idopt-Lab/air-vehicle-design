@@ -8,8 +8,8 @@ function [result, objs] = design_study_03_L3(W_TO_guess, T_SL_guess)
 %   (ConstraintAnalysis.from_requirements with the
 %   F-16 map F16ConstraintSet.constraint_map(), sharing this study's own
 %   aero/prop objects rather than a separate internal copy), and runs
-%   SizingLoopL2 -- reused unmodified, per
-%   docs/subplans/08_sizing.md ("L3 design study -> SizingLoopL2"): sizing
+%   SizingLoopL2 -- reused unmodified, per the original step-8 sizing plan
+%   ("L3 design study -> SizingLoopL2"): sizing
 %   has no per-fidelity-level equation set of its own, only a state-variable
 %   count (2 at both L2 and L3), so no new SizingLoopL3 class exists or is
 %   needed.

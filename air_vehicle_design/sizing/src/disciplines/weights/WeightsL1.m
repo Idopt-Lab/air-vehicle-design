@@ -12,9 +12,9 @@ classdef WeightsL1
 %   Raymer rather than being Raymer, and the Roskam rows were OCR-recovered
 %   from an image-only table carrying its own verify-against-the-book warning.
 %
-%   TODO: docs/subplans/05_weights.md cites Raymer Table 6.1 for the same power
-%   law, but Table 6.1's coefficients are NOT present in this repo -- the code
-%   uses Table 3.1. Guarded by
+%   TODO: the original step-5 weights design cites Raymer Table 6.1 for the
+%   same power law, but Table 6.1's coefficients are NOT present in this repo
+%   -- the code uses Table 3.1. Guarded by
 %   TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo.
 %
 %   Companion doc: src/disciplines/weights/WeightsL1.md

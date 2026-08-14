@@ -66,5 +66,5 @@ At $W_{TO}$ = 31,377 lbf: fraction 0.609055, OEW 19110.313 lbf, Roskam bound 156
 
 | Item | Guard |
 |---|---|
-| `docs/subplans/05_weights.md` cites Raymer **Table 6.1** for the same power law, but Table 6.1's coefficients are not in this repo — the code uses Table 3.1. The user must supply Table 6.1 to settle which is intended | `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` — deliberately red, and it keys off a literal sentence in `WeightsL1.m`'s header |
+| The original step-5 weights design cites Raymer **Table 6.1** for the same power law, but Table 6.1's coefficients are not in this repo — the code uses Table 3.1. The user must supply Table 6.1 to settle which is intended | `TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo` — deliberately red, and it keys off a literal sentence in `WeightsL1.m`'s header |
 | The Table 3.1 extract carries a fifth row (UAV-Tac Recce / UCAV, $A$ = 1.67, $C$ = −0.16) the code does not | noted, not a defect |

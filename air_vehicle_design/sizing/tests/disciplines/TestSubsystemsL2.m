@@ -123,8 +123,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         end
 
         function testComputeWingFuelVolumeTauConventionIsTipOverRoot(tc)
-        % REGRESSION GUARD for the item-6 convention warning
-        % (docs/subplans/09_subsystems.md): Eq. 6.3 defines
+        % REGRESSION GUARD for the tau_w convention warning: Eq. 6.3 defines
         % tau_w = (t/c)_tip/(t/c)_root, the OPPOSITE of Roskam's own Eq. 12.1
         % tau = root/tip. Swapping tc_r and tc_t must NOT give the same
         % answer (it would, if the code had silently "fixed" the convention
@@ -470,9 +469,9 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         end
 
         % ------------------------------------------------------------------ %
-        % DELIBERATE TODO -- battery volumetric energy density (subplan
-        % Equations & Citations item 7). NOT a failure to fix -- this test
-        % PINS the documented, correctly-erroring citation-gap behavior:
+        % DELIBERATE TODO -- battery volumetric energy density. NOT a failure
+        % to fix -- this test PINS the documented, correctly-erroring
+        % citation-gap behavior:
         % SubsystemsL2.battery_volume must refuse to fabricate a coefficient
         % and must error with its documented identifier. If this test ever
         % goes red because battery_volume stops erroring, that means someone
@@ -482,7 +481,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
 
         function testTODO_BatteryVolumetricEnergyDensityNotInRepo(tc)
         %TESTTODO_BATTERYVOLUMETRICENERGYDENSITYNOTINREPO  Documented citation
-        %   GAP (docs/subplans/09_subsystems.md Equations & Citations item 7).
+        %   GAP.
         %
         %   WHAT IS MISSING: no citable BATTERY VOLUMETRIC energy density
         %   (kWh/ft^3, kWh/L) or pack density (lb/ft^3) exists anywhere in
@@ -520,8 +519,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             tc.verifyError(@() SubsystemsL2.battery_volume(struct(), 10), ...
                 'SubsystemsL2:batteryVolumetricDensityNotAvailable', ...
                 ['TODO (documented gap, EXPECTED to error): no citable battery volumetric ' ...
-                 'energy density exists in this repo. docs/subplans/09_subsystems.md Equations ' ...
-                 '& Citations item 7.']);
+                 'energy density exists in this repo.']);
         end
 
         % ================================================================== %

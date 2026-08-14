@@ -1,6 +1,6 @@
 classdef TestF16LandingGearL2 < matlab.unittest.TestCase
 %TESTF16LANDINGGEARL2  Unit tests for F16LandingGearL2 (F-16-only, no
-%   abstract Base/Model tier -- docs/subplans/09_subsystems.md Files to
+%   abstract Base/Model tier -- original step-9 subsystems design, Files to
 %   Create).
 %
 %   TIER 1 (unit/correctness) per CLAUDE.md's two-tier-tests-never-blended
@@ -61,8 +61,8 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
 
         function testLookupTireSizingCoeffsAllFourRows(tc)
         % [Raymer 6th ed. Table 11.1, p.344] Full 4-row table, transcribed
-        % independently from the subplan's own reproduction (docs/subplans/
-        % 09_subsystems.md Equations & Citations item 9/9b).
+        % independently from the original step-9 subsystems design's own
+        % reproduction (Equations & Citations item 9/9b).
             c = F16LandingGearL2.lookup_tire_sizing_coeffs('General aviation');
             tc.verifyEqual([c.A_d, c.B_d, c.A_w, c.B_w], [1.51, 0.349, 0.7150, 0.312], 'AbsTol', 1e-9);
 
@@ -115,7 +115,7 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
 
         function testNoseTireIsDecidedFractionOfMain(tc)
         % [Raymer Table 11.1 page, prose] nose tire 60-100% of main; DECIDED
-        % midpoint 0.80 (docs/subplans/09_subsystems.md item 9c).
+        % midpoint 0.80 (original step-9 subsystems design, item 9c).
             lg = TestF16LandingGearL2.makeLG(20000);
             tc.verifyEqual(lg.tire_diameter_nose, 0.80*lg.tire_diameter_main, 'AbsTol', 1e-9);
             tc.verifyEqual(lg.tire_width_nose,    0.80*lg.tire_width_main,    'AbsTol', 1e-9);
@@ -173,7 +173,8 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
         end
 
         % ------------------------------------------------------------------ %
-        % DELIBERATE TODO -- gear bay-volume packaging (subplan item 11).
+        % DELIBERATE TODO -- gear bay-volume packaging (original step-9
+        % subsystems design, item 11).
         % NOT a failure to fix -- PINS the documented, correctly-erroring
         % citation-gap behavior of BOTH F16LandingGearL2.bay_volume and
         % F16LandingGearL3.bay_volume (one test, since both classes share
@@ -184,7 +185,7 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
 
         function testTODO_GearBayVolumePackagingNotInRepo(tc)
         %TESTTODO_GEARBAYVOLUMEPACKAGINGNOTINREPO  Documented citation GAP
-        %   (docs/subplans/09_subsystems.md Equations & Citations item 11).
+        %   (original step-9 subsystems design, Equations & Citations item 11).
         %
         %   WHAT IS MISSING: no textbook formula for tire+strut bay-volume
         %   packaging was found anywhere in this repo. Raymer's Ch.11 covers

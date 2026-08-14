@@ -36,8 +36,7 @@ classdef SubsystemsL1
         %   [Raymer 6th ed. Ch.11, p.375, prose immediately after Table 11.6:
         %   "volume can be estimated assuming that avionics has an average
         %   density of about 30-45 lb/ft^3"] -- range average, NOT Nicolai's
-        %   flat 45 (that is the L2/L3 figure; docs/subplans/09_subsystems.md
-        %   Equations & Citations item 4, fidelity-split decision).
+        %   flat 45 (that is the L2/L3 figure; fidelity-split decision).
             val = mean([30, 45]);   % = 37.5
         end
 
@@ -64,9 +63,8 @@ classdef SubsystemsL1
 
         function val = fuel_volume_from_weight(obj, fuel_weight_lb)
         %FUEL_VOLUME_FROM_WEIGHT  fuel_weight_lb / fuel_density [ft^3].
-        %   NO packaging factor applied -- not usable at L1 (docs/subplans/
-        %   09_subsystems.md Equations & Citations item 1 status: "Not
-        %   usable at L1 -- no geometric raw volume exists yet").
+        %   NO packaging factor applied -- not usable at L1 (no geometric raw
+        %   volume exists yet).
             arguments
                 obj
                 fuel_weight_lb (1,1) double {mustBeNonnegative}
@@ -76,11 +74,11 @@ classdef SubsystemsL1
 
         function val = fuselage_raw_volume(obj) %#ok<INUSD>
         %FUSELAGE_RAW_VOLUME  Honestly 0 -- no fuselage geometry exists at L1
-        %   (docs/subplans/09_subsystems.md Objectives, Fidelity split: L1 is
-        %   tabulation-only). Not guessed -- matches the same "no bay
-        %   geometry yet" answer fuel_volume_check already gives at this
-        %   tier. Declared on SubsystemsBase so every fidelity level provides
-        %   this member, even where the honest answer is a constant.
+        %   (Fidelity split: L1 is tabulation-only). Not guessed -- matches
+        %   the same "no bay geometry yet" answer fuel_volume_check already
+        %   gives at this tier. Declared on SubsystemsBase so every fidelity
+        %   level provides this member, even where the honest answer is a
+        %   constant.
             val = 0;
         end
 
@@ -93,7 +91,7 @@ classdef SubsystemsL1
         function val = internal_volume(obj, W_empty)
         %INTERNAL_VOLUME  L1 total usable internal volume [ft^3] = avionics
         %   volume only -- no fuel-bay or gear-bay geometry exists at this
-        %   tier (Fidelity split, docs/subplans/09_subsystems.md Objectives).
+        %   tier (Fidelity split).
             val = SubsystemsL1.avionics_volume(obj, W_empty);
         end
 
@@ -122,8 +120,7 @@ classdef SubsystemsL1
         %LOOKUP_FUEL_DENSITY  Fuel density [lb/ft^3] by type.
         %   [Nicolai & Carichner, Table 8.6, p.210]. Replaces the legacy
         %   code's single hardcoded, uncited 6.47 (JP-4-only, threw on any
-        %   other type -- docs/subplans/09_subsystems.md "Legacy Bugs to
-        %   Avoid" item 4).
+        %   other type -- a legacy bug to avoid).
             switch fuel_type
                 case 'JP-4',          d = 48.6;
                 case 'JP-5',          d = 51.1;
@@ -182,8 +179,7 @@ classdef SubsystemsL1
         %LOOKUP_AVIONICS_WEIGHT_FRACTION  Decided fraction = the row's own
         %   range midpoint [Raymer 6th ed. Table 11.6, p.375]. DECIDED
         %   (Casey, 2026-08-03): use the midpoint rather than the legacy
-        %   code's low-end value (docs/subplans/09_subsystems.md Equations &
-        %   Citations item 3).
+        %   code's low-end value.
             range = SubsystemsL1.lookup_avionics_weight_fraction_range(table_row);
             val   = mean(range);
         end

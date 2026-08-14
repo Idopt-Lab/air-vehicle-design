@@ -32,7 +32,7 @@ Today, `F16LandingGearL2` and `F16LandingGearL3`'s equations are **identical** â
 only `W_TO` (via the injected weights object) and the gear-load split, and `F16LandingGearL3` neither
 injects geometry nor reads any L3-specific geometry quantity, because `bay_volume()` (the one method
 that would eventually need a fuselage envelope) errors regardless of geometry tier. The two classes
-are kept separate only to match the subplan's Files-to-Create table (which lists both) and the
+are kept separate only to match the original step-9 subsystems design's Files-to-Create table (which lists both) and the
 JSON's parallel `f16a_L2.json`/`f16a_L3.json` `.subsystems.landing_gear` blocks and per-level
 companion docs â€” **flagged explicitly as a judgment call**: if item 11 (gear bay volume) is ever
 resolved with an L2-vs-L3 fidelity distinction of its own (e.g. L3 placing the bay against

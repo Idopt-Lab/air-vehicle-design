@@ -5,8 +5,8 @@ classdef TestSandCL2 < matlab.unittest.TestCase
 %   TIER 1 (unit/correctness) per CLAUDE.md's two-tier-tests-never-blended
 %   convention -- part of run_all_tests, must be green. No deliberate TODO
 %   test in this file: F16SandCL2's ONE quantity (x_cg) has no citation gap
-%   (docs/subplans/10_stability_control.md "DECIDED: F16SandCL2 is limited
-%   to the CG term only").
+%   (per the original stability-and-control design "DECIDED: F16SandCL2 is
+%   limited to the CG term only").
 %
 %   SCOPE: F16SandCL2 computes ONLY x_cg = Sum(W_i*x_i)/Sum(W_i) over the 10
 %   WeightsL2-matched component groups -- see F16SandCL2.m's own header.

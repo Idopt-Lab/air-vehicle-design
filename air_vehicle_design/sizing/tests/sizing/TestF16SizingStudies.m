@@ -6,15 +6,15 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
 %   separate tests/examples/F16A/ folder), matching the established
 %   tests/constraints/ and tests/mission/ convention of NOT splitting
 %   generic vs. F-16-specific tests -- see this repo's sizing plan for why
-%   this deliberately deviates from subplan 08's literal
+%   this deliberately deviates from the original step-8 literal
 %   tests/examples/F16A/... path.
 %
 %   FINDING (documented, not silently tightened away -- 2026-07-27):
-%   docs/subplans/08_sizing.md's own tolerance table expects
+%   the original step-8 tolerance table expects
 %   design_study_01_L1's W_TO in 25,000-40,000 lb (+-20% of Brandt's
 %   31,377) and S_ref in 250-360 ft^2. The ACTUAL converged L1 result is
 %   W_TO ~= 41,433 lb (+32.1% vs. Brandt) and S_ref ~= 545 ft^2 -- both
-%   outside subplan 08's stated bands. SizingLoopL1/design_study_01_L1's
+%   outside the original step-8 stated bands. SizingLoopL1/design_study_01_L1's
 %   own wiring is not the cause (traced and confirmed correct):
 %     - con.optimal_point() on F16ConstraintSet.build("L1") gives
 %       WS_opt~=76.0, TW_opt~=0.793. TW_opt is fine (per user, 2026-07-27),
@@ -45,7 +45,7 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
 %       (S_ref/T_SL never feed back into this L1 weight/mission closure) --
 %       confirmed by hand-evaluating both methods directly.
 %   The assertions below use a wider, physically-reasonable sanity band
-%   instead of subplan 08's specific +-20% figure (still catches a
+%   instead of the original step-8 specific +-20% figure (still catches a
 %   genuinely broken/divergent/negative result), and print the actual
 %   numbers plus the Brandt/target comparison so this is visible to anyone
 %   running the suite, rather than force-fit or silently loosened away.
@@ -60,25 +60,25 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
         end
 
         function testDesignStudy01L1WTOInPhysicalRange(tc)
-            % See class header FINDING: subplan 08's 25,000-40,000 lb band
+            % See class header FINDING: the original step-8 25,000-40,000 lb band
             % (+-20% of Brandt) is NOT met by the actual composed L1
             % closure (~41,433 lb, +32.1%) -- widened here to a
             % physically-reasonable sanity band (still catches a genuinely
             % broken/divergent/negative result) rather than force-fit.
             result = design_study_01_L1();
-            fprintf('\n    W_TO=%.2f lb (Brandt=31377, %+.1f%%; subplan 08 target band 25000-40000)\n', ...
+            fprintf('\n    W_TO=%.2f lb (Brandt=31377, %+.1f%%; step-8 target band 25000-40000)\n', ...
                 result.W_TO, 100*(result.W_TO-31377)/31377);
             tc.verifyGreaterThanOrEqual(result.W_TO, 20000);
             tc.verifyLessThanOrEqual(result.W_TO, 50000);
         end
 
         function testDesignStudy01L1SRefInPhysicalRange(tc)
-            % See class header FINDING: subplan 08's 250-360 ft^2 band
+            % See class header FINDING: the original step-8 250-360 ft^2 band
             % (+-20% of Brandt's 300, an L2/L3 INPUT there) is NOT met by
             % the actual composed L1 closure (~545 ft^2) -- widened here to
             % a physically-reasonable sanity band rather than force-fit.
             result = design_study_01_L1();
-            fprintf('\n    S_ref=%.2f ft^2 (Brandt=300, %+.1f%%; subplan 08 target band 250-360)\n', ...
+            fprintf('\n    S_ref=%.2f ft^2 (Brandt=300, %+.1f%%; step-8 target band 250-360)\n', ...
                 result.S_ref, 100*(result.S_ref-300)/300);
             tc.verifyGreaterThanOrEqual(result.S_ref, 200);
             tc.verifyLessThanOrEqual(result.S_ref, 650);
@@ -171,30 +171,30 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
         end
 
         function testDesignStudy02L2WTOInPhysicalRange(tc)
-            % See header FINDING above: subplan 08's 27,000-37,000 lb band
+            % See header FINDING above: the original step-8 27,000-37,000 lb band
             % is NOT met by the actual composed L2 closure (~19,738 lb,
             % -37.1%) -- widened to a physically-reasonable sanity band
             % (still catches a genuinely broken/divergent/negative result).
             result = design_study_02_L2();
-            fprintf('\n    W_TO=%.2f lb (Brandt=31377, %+.1f%%; subplan 08 target band 27000-37000)\n', ...
+            fprintf('\n    W_TO=%.2f lb (Brandt=31377, %+.1f%%; step-8 target band 27000-37000)\n', ...
                 result.W_TO, 100*(result.W_TO-31377)/31377);
             tc.verifyGreaterThanOrEqual(result.W_TO, 12000);
             tc.verifyLessThanOrEqual(result.W_TO, 45000);
         end
 
         function testDesignStudy02L2TSLInPhysicalRange(tc)
-            % See header FINDING above: subplan 08's 18,000-30,000 lbf band
+            % See header FINDING above: the original step-8 18,000-30,000 lbf band
             % is NOT met by the actual composed L2 closure (~13,668 lbf,
             % -42.5%) -- widened to a physically-reasonable sanity band.
             result = design_study_02_L2();
-            fprintf('\n    T_SL=%.2f lbf (Brandt=23770, %+.1f%%; subplan 08 target band 18000-30000)\n', ...
+            fprintf('\n    T_SL=%.2f lbf (Brandt=23770, %+.1f%%; step-8 target band 18000-30000)\n', ...
                 result.T_SL, 100*(result.T_SL-23770)/23770);
             tc.verifyGreaterThanOrEqual(result.T_SL, 8000);
             tc.verifyLessThanOrEqual(result.T_SL, 35000);
         end
 
         function testDesignStudy02L2TailAndControlSurfaceAreasPositive(tc)
-            % [docs/subplans/08_sizing.md test table: "Control surface areas
+            % [original step-8 test table: "Control surface areas
             % positive (L2)", "S_HT, S_VT positive after tail sizing (L2)"]
             % design_study_02_L2's result struct doesn't expose the
             % mutated geom object directly (its S_ref/W_TO/T_SL/n_iter/
@@ -344,7 +344,7 @@ classdef TestF16SizingStudies < matlab.unittest.TestCase
         end
 
         function testDesignStudy03L3TailAndControlSurfaceAreasPositive(tc)
-            % [docs/subplans/08_sizing.md test table: "All three design
+            % [original step-8 test table: "All three design
             % studies converge"] -- mirrors
             % testDesignStudy02L2TailAndControlSurfaceAreasPositive.
             result = design_study_03_L3();

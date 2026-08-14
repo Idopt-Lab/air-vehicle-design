@@ -2,8 +2,8 @@ classdef SizingLoopL2 < handle
 %SIZINGLOOPL2  Generic Level-2 (also serves Level-3) takeoff-gross-weight
 %   and sea-level-thrust sizing loop.
 %
-%   Two-state-variable (W_TO, T_SL) fixed-point iteration
-%   [docs/subplans/08_sizing.md]. Flat orchestrator, not a discipline --
+%   Two-state-variable (W_TO, T_SL) fixed-point iteration.
+%   Flat orchestrator, not a discipline --
 %   see SizingLoopL1.m's header for the architecture rationale (same
 %   applies here).
 %
@@ -129,7 +129,7 @@ classdef SizingLoopL2 < handle
 %   with We=OEW(W_TO) and W_fuel=miss.compute_fuel(...) evaluated at the
 %   CURRENT W_TO guess, under-relaxed toward W_TO; T_SL likewise
 %   under-relaxed toward T_SL_new. Convergence requires BOTH
-%   |W_TO_new-W_TO| < tol AND |T_SL_new-T_SL| < tol [docs/subplans/08_sizing.md].
+%   |W_TO_new-W_TO| < tol AND |T_SL_new-T_SL| < tol.
 %   Supersedes an earlier additive closure [WeightsBase.m header] -- same
 %   fixed point either way (see SizingLoopL1.m's header for the
 %   derivation).
@@ -199,7 +199,7 @@ classdef SizingLoopL2 < handle
 %   The multiplicative-vs-additive comparison was never re-run against the
 %   live envelope, so treat those side-by-side numbers as historical.
 %
-%   CORRECTIONS TO subplan 08's PSEUDOCODE -- same three as SizingLoopL1.m
+%   CORRECTIONS TO the original step-8 PSEUDOCODE -- same three as SizingLoopL1.m
 %   (con.optimal_point() no-arg/two-output; prop.T_SL not prop.T0;
 %   miss.compute_fuel 3 args, payload from wts not a "req" object) -- plus:
 %     geom.S_HT/S_VT -> geom.S_ht/S_vt (F16GeomL2's actual property casing).

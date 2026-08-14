@@ -106,7 +106,7 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
         end
 
         function testTailAndControlSurfaceAreasPositive(tc)
-            % [docs/subplans/08_sizing.md test table: "Control surface areas
+            % [original step-8 test table: "Control surface areas
             % positive (L2)", "S_HT, S_VT positive after tail sizing (L2)"]
             [loop, ~, ~] = TestSizingLoopL2.buildLoop();
             loop.run(1000, 500);

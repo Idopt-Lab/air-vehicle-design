@@ -8,10 +8,10 @@ classdef SubsystemsL3
 %   L3 differs from L2 in exactly ONE respect: the fuselage raw-volume term
 %   (Raymer Eq. 7.14) is fed A_top/A_side from GeomL3's frame-integrated
 %   station table instead of GeomL2's envelope-ellipse approximation
-%   (docs/subplans/09_subsystems.md Fidelity split). Every other equation is
-%   level-agnostic and is REUSED by direct cross-toolbox call to
-%   SubsystemsL2, not duplicated -- same reuse pattern used elsewhere in this
-%   repo (e.g. TailL2 cross-calling TailL1.compute_tail_arm).
+%   (Fidelity split). Every other equation is level-agnostic and is REUSED
+%   by direct cross-toolbox call to SubsystemsL2, not duplicated -- same
+%   reuse pattern used elsewhere in this repo (e.g. TailL2 cross-calling
+%   TailL1.compute_tail_arm).
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL3.md
 
@@ -94,8 +94,8 @@ classdef SubsystemsL3
 
         function val = battery_volume(obj, E_required_kWh)
         %BATTERY_VOLUME  NOT IMPLEMENTED -- same documented citation GAP as
-        %   L2 (subplan Eq. §7); reused (errors identically) from
-        %   SubsystemsL2, not duplicated.
+        %   L2; reused (errors identically) from SubsystemsL2, not
+        %   duplicated.
             val = SubsystemsL2.battery_volume(obj, E_required_kWh);
         end
 

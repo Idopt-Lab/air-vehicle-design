@@ -83,7 +83,7 @@ classdef ControlSurfaceSizer < handle
 %   since Raymer Eqs. 16.16/16.18 describe a hinged flap deflection that does
 %   not exist on a stabilator.
 %
-%   CORRECTS docs/subplans/08_sizing.md's "S_ail = f_ail x S_ref ...
+%   CORRECTS the original step-8 sizing plan's "S_ail = f_ail x S_ref ...
 %   fractions from Table 6.5" -- verified against the actual Raymer text:
 %   Table 6.5 has no aileron column at all (aileron is Fig. 6.3, a chart),
 %   and its Ce/C, Cr/C entries are TAIL CHORD fractions, not area fractions

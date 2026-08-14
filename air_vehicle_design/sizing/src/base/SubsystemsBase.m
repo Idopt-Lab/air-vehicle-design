@@ -18,13 +18,13 @@ classdef (Abstract) SubsystemsBase < handle
 %   injected weights collaborator live. MATLAB does not enforce matching
 %   arity between an abstract declaration and its override -- this is a
 %   documented, deliberate asymmetry, not the legacy signature-mismatch bug
-%   (docs/subplans/09_subsystems.md "Legacy Bugs to Avoid" item 2) which was
-%   an UNDOCUMENTED, accidental 2-arg-vs-3-arg drift.
+%   (a legacy bug to avoid) which was an UNDOCUMENTED, accidental
+%   2-arg-vs-3-arg drift.
 %
 %   AVIONICS VOLUME MUST BE SUMMED. Every internal_volume() implementation at
 %   every level must actually add its avionics-volume term into the returned
-%   total -- the legacy code computed it and silently dropped it
-%   (docs/subplans/09_subsystems.md "Legacy Bugs to Avoid" item 1).
+%   total -- the legacy code computed it and silently dropped it (a legacy
+%   bug to avoid).
 %
 %   Companion doc: src/base/SubsystemsBase.md
 %
@@ -61,8 +61,7 @@ classdef (Abstract) SubsystemsBase < handle
         %   NAME at every level; different cited VALUE by design -- L1 uses
         %   Raymer's own following-paragraph range average (~37.5); L2/L3
         %   switch to Nicolai's flat 45 [Sec.8.1.11] (fidelity-split
-        %   decision, docs/subplans/09_subsystems.md Equations & Citations
-        %   item 4).
+        %   decision).
         avionics_density
 
         %FUEL_DENSITY  Fuel density [lb/ft^3] for obj.fuel_type.
