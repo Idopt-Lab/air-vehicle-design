@@ -1,7 +1,9 @@
 classdef TestB777Disciplines < matlab.unittest.TestCase
 %TESTB777DISCIPLINES  Tier-1 unit/correctness tests for the Boeing 777-200LR
-%   Level-1 discipline classes (B777GeomL1 / B777AeroL1 / B777PropL1 /
-%   B777WeightsL1 / B777TailL1), metabook worked Example 4.2.
+%   discipline classes: L2 geometry (B777GeomL2, real trapezoidal planform +
+%   exposed areas, metabook Table 7.2/7.3) and L2 component-build-up weights
+%   (B777WeightsL2, Algorithm 5), plus L1 aero/prop/tail (B777AeroL1 /
+%   B777PropL1 / B777TailL1). metabook worked Examples 4.2 and 7.1.
 %
 %   These are hand-computed spot checks: every "expected" value is derived
 %   independently from the cited metabook Eq/Table (or an independent
@@ -10,9 +12,9 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
 %
 %   Construction (coordinator-verified stack):
 %       sp = b777_spec_path(1);
-%       geom = B777GeomL1(sp);  prop = B777PropL1(sp);
+%       geom = B777GeomL2(sp);  prop = B777PropL1(sp);
 %       aero = B777AeroL1(geom, sp);  tail = B777TailL1();
-%       wts  = B777WeightsL1(sp, geom, prop);
+%       wts  = B777WeightsL2(sp, geom, prop);
 %
 %   ── HAND-COMPUTED EXPECTED VALUES AND THEIR DERIVATIONS ──────────────────
 %
@@ -58,24 +60,30 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
 %     get_TSFC(any) = 0.52 1/hr exactly (the GE90 deck value) [Table 10.1].
 %     lapse_exponent_m = 0.6 [metabook Eqs. 4.55-4.57; decision D5].
 %
-%   WEIGHTS [Raymer Table 3.1 jet_transport; metabook §4.12.1 Algorithm 2]
-%     At the BASELINE design point (W_TO = 766800, geom at S_ref = 4605 with
-%     the self-consistent baseline tail areas, prop.T_SL = 220000) all four
-%     delta terms are zero, so OEW collapses to the pure regression:
-%       We/W0 = Kvs*A*W0^C = 1.00*1.02*766800^(-0.06)
-%       766800^(-0.06) = exp(-0.06*ln(766800))
-%                      = exp(-0.06*13.550048) = exp(-0.8130029)
-%                      = 0.4435256...
-%       We/W0 = 1.02*0.4435256 = 0.4523961...
-%       OEW    = 0.4523961*766800 = 346,897.3... lbf
-%     RelTol 2e-3 (not tighter): the baseline tail areas are computed
-%     self-consistently through B777TailL1, so the tail delta is zero only to
-%     the tail toolbox's own numeric reproduction; 2e-3 covers that
-%     self-consistent residual (the brief's stated allowance), while a real
-%     wiring error (a missing regression term) would move OEW by >> 0.2%.
-%     Monotonic delta checks: OEW(766800) rises when geom.S_ref grows (wing
-%     areal delta, +10 lb/ft^2 [Table 15.2]) and when geom.S_ht grows (HT
-%     areal delta, +5.5 lb/ft^2 [Table 15.2]).
+%   GEOMETRY L2 -- EXPOSED AREAS + MAC [metabook Table 7.2/7.3, Eq. 7.2-7.9]
+%     From the Table 7.2 trapezoids B777GeomL2 computes the EXPOSED planform
+%     areas (wing 3923, H-tail 903, V-tail 604 ft^2) and the fuselage WETTED
+%     area (13125 ft^2) -- metabook Table 7.3 -- and the MAC / 40%-MAC location
+%     (Eq. 7.5-7.9: MAC_W 27.9, x40%MAC_W 100.4, x40%MAC_HT 192.1, x40%MAC_VT
+%     187.6). The exposed WING area scales with S_ref (the fixed fuselage
+%     covers relatively less as the wing grows); the H/V-tail and fuselage are
+%     held. The metabook prints the exposed areas but NOT the exposed-area
+%     equations, so the geometry reproduces Table 7.3 by construction (the local
+%     body widths are tuned to it) -- these tests assert the reproduction.
+%
+%   WEIGHTS L2 -- COMPONENT BUILD-UP [metabook §7.2 Algorithm 5, Table 7.1/7.3]
+%     OEW is the sum of individual component weights (NOT the L1 empty-weight
+%     fraction), so it responds to W0, S_ref (via the exposed wing) and T0 (via
+%     the engine). At the baseline (W_TO = 766800, S_ref = 4605, prop.T_SL =
+%     220000 -> T0 = 110000/engine):
+%       installed engine = 1.3 * n * Wengine(T0)          [Roskam 7.13-7.19; Table 7.1 1.3x]
+%       wing 10*3923 + ht 5.5*903 + vt 5.5*604 + fus 5*13125    [Table 7.1 areal x Table 7.3 areas]
+%       + 0.043*W0 (gear) + 0.17*W0 (all-else)            [Table 7.1 fractions]
+%       OEW ~ 334,043 lbf  (+4% vs actual 320,000: the Roskam engine
+%       over-predicts the modern GE90 at the sizing 110k thrust; NOT Table 7.3's
+%       323,778, which used 89k/engine -- USER decision to use the sizing T_SL).
+%     Coupling checks: OEW(766800) rises when geom.S_ref grows (exposed wing,
+%     10 lb/ft^2) and when prop.T_SL grows (heavier engine).
 %
 %   TAIL [metabook Ch.8 Eqs. 8.1/8.2 c_HT=1.0, c_VT=0.09; wing-mounted arm]
 %     L_arm = 0.525*L_fus = 0.525*209 = 109.725 ft
@@ -106,19 +114,31 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         CD0_CLEAN     = 0.0159732030   % 0.0026*(28291/4605) = 0.0026*6.14353963
         K1_CLEAN      = 0.0382123920   % 1/(pi*9.8*0.85) = 1/26.1694668
 
-        % ── Hand-computed weights baseline OEW (Raymer Table 3.1) ─────────
-        OEW_BASELINE  = 346897.3    % lbf  1.02*766800^-0.06 * 766800
-        W0_BASELINE   = 766800      % lbf  [metabook Table 4.3]
+        % ── metabook Table 7.3 exposed planform / fuselage wetted areas ───
+        S_EXP_WING    = 3923        % ft^2  [metabook Table 7.3]
+        S_EXP_HT      = 903         % ft^2  [metabook Table 7.3]
+        S_EXP_VT      = 604         % ft^2  [metabook Table 7.3]
+        S_WET_FUS     = 13125       % ft^2  [metabook Table 7.3]
+
+        % ── metabook Eq. 7.5-7.9 MAC / 40%-MAC location ───────────────────
+        MAC_W         = 27.9        % ft    [metabook Eq. 7.5]
+        X40MAC_W      = 100.4       % ft    [metabook Eq. 7.6]
+        X40MAC_HT     = 192.1       % ft    [metabook Eq. 7.7]
+        X40MAC_VT     = 187.6       % ft    [metabook Eq. 7.9]
+
+        % ── L2 component-build-up baseline OEW (Algorithm 5) ──────────────
+        OEW_L2_BASELINE = 334043    % lbf  Algorithm 5 sum at W0=766800, T_SL=220000 (see header)
+        W0_BASELINE     = 766800    % lbf  [metabook Table 4.3]
     end
 
     methods (Static)
         function [geom, prop, aero, tail, wts] = buildStack()
             sp   = b777_spec_path(1);
-            geom = B777GeomL1(sp);
+            geom = B777GeomL2(sp);
             prop = B777PropL1(sp);
             aero = B777AeroL1(geom, sp);
             tail = B777TailL1();
-            wts  = B777WeightsL1(sp, geom, prop);
+            wts  = B777WeightsL2(sp, geom, prop);
         end
     end
 
@@ -129,7 +149,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
 
         function testSwetBaseline(tc)
         % S_wet = S_wet_rest + 2*S_ref = 19081 + 2*4605 = 28291 ft^2 [Eq. 4.58].
-            geom = B777GeomL1(b777_spec_path(1));
+            geom = B777GeomL2(b777_spec_path(1));
             fprintf('\n    S_wet: received = %.4f ft^2,  hand-computed = %d ft^2\n', ...
                 geom.get_S_wet(), tc.S_WET_BASE);
             tc.verifyEqual(geom.get_S_wet(), tc.S_WET_BASE, 'AbsTol', 1, ...
@@ -140,7 +160,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
 
         function testSpanAndMeanChord(tc)
         % b = sqrt(AR*S_ref) = sqrt(9.8*4605); cbar = S_ref/b [metabook Eq. 11.5 note].
-            geom = B777GeomL1(b777_spec_path(1));
+            geom = B777GeomL2(b777_spec_path(1));
             fprintf('\n    b_wing = %.6f ft (hand %.6f);  cbar_wing = %.6f ft (hand %.6f)\n', ...
                 geom.b_wing, tc.B_WING, geom.cbar_wing, tc.CBAR_WING);
             tc.verifyEqual(geom.b_wing, tc.B_WING, 'RelTol', 1e-6, ...
@@ -153,7 +173,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         % Dependent S_wet must follow a mutated wing area with NO reconstruction
         % (the live CD0(S) coupling): set S_ref = 5000 -> S_wet = 19081 + 2*5000
         % = 29081 ft^2 (S_wet_rest is unchanged).
-            geom = B777GeomL1(b777_spec_path(1));
+            geom = B777GeomL2(b777_spec_path(1));
             geom.S_ref = 5000;               % optimizer-style in-place mutation
             expected = 19081 + 2*5000;       % = 29081, hand-computed [Eq. 4.58]
             fprintf('\n    S_wet after S_ref=5000: received = %.4f ft^2,  hand = %d ft^2\n', ...
@@ -164,7 +184,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
 
         function testGeomDerivedReadOnly(tc)
         % Derived (Dependent) quantities are outputs -- assigning must error.
-            geom = B777GeomL1(b777_spec_path(1));
+            geom = B777GeomL2(b777_spec_path(1));
             tc.verifyError(@() setfield(geom, 'S_wet', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(geom, 'b_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
@@ -173,11 +193,58 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         % The B777 L1 geometry has a real planform; the W_TO-regression methods
         % it inherits from GeometryModelL1 must ERROR (fail loud), not return a
         % wrong-model number.
-            geom = B777GeomL1(b777_spec_path(1));
+            geom = B777GeomL2(b777_spec_path(1));
             tc.verifyError(@() geom.get_S_wet_statistical(766800), ...
-                'B777GeomL1:notApplicable');
+                'B777GeomL2:notApplicable');
             tc.verifyError(@() geom.get_L_fus(766800), ...
-                'B777GeomL1:notApplicable');
+                'B777GeomL2:notApplicable');
+        end
+
+        % ---- GEOMETRY L2: exposed areas + MAC ---------------------------- %
+
+        function testExposedAreasMatchTable73(tc)
+        % The exposed planform areas (wing/HT/VT) and the fuselage wetted area
+        % must reproduce metabook Table 7.3: 3923 / 903 / 604 / 13125 ft^2.
+            geom = B777GeomL2(b777_spec_path(1));
+            fprintf('\n    exposed wing=%.1f (T7.3 %d)  ht=%.1f (%d)  vt=%.1f (%d)  fus_wet=%.1f (%d)\n', ...
+                geom.S_exposed_wing, tc.S_EXP_WING, geom.S_exposed_ht, tc.S_EXP_HT, ...
+                geom.S_exposed_vt, tc.S_EXP_VT, geom.S_wet_fus, tc.S_WET_FUS);
+            tc.verifyEqual(geom.S_exposed_wing,  tc.S_EXP_WING, 'RelTol', 2e-3, ...
+                'Exposed wing area must match Table 7.3 (3923 ft^2).');
+            tc.verifyEqual(geom.S_exposed_ht,    tc.S_EXP_HT,   'RelTol', 2e-3, ...
+                'Exposed H-tail area must match Table 7.3 (903 ft^2).');
+            tc.verifyEqual(geom.S_exposed_vt,    tc.S_EXP_VT,   'RelTol', 2e-3, ...
+                'Exposed V-tail area must match Table 7.3 (604 ft^2).');
+            tc.verifyEqual(geom.S_wet_fus,       tc.S_WET_FUS,  'RelTol', 2e-3, ...
+                'Fuselage wetted area must match Table 7.3 (13125 ft^2).');
+        end
+
+        function testMACAndX40MAC(tc)
+        % MAC and 40%-MAC location must match the worked Eq. 7.5-7.9 values.
+            geom = B777GeomL2(b777_spec_path(1));
+            fprintf('\n    MAC_W=%.2f (Eq7.5 %.1f)  x40W=%.1f (Eq7.6 %.1f)  x40HT=%.1f (Eq7.7 %.1f)  x40VT=%.1f (Eq7.9 %.1f)\n', ...
+                geom.MAC_wing, tc.MAC_W, geom.x40MAC_wing, tc.X40MAC_W, ...
+                geom.x40MAC_htail, tc.X40MAC_HT, geom.x40MAC_vtail, tc.X40MAC_VT);
+            tc.verifyEqual(geom.MAC_wing,     tc.MAC_W,     'RelTol', 3e-3, 'MAC_wing [Eq. 7.5].');
+            tc.verifyEqual(geom.x40MAC_wing,  tc.X40MAC_W,  'RelTol', 3e-3, 'x40MAC_wing [Eq. 7.6].');
+            tc.verifyEqual(geom.x40MAC_htail, tc.X40MAC_HT, 'RelTol', 3e-3, 'x40MAC_htail [Eq. 7.7].');
+            tc.verifyEqual(geom.x40MAC_vtail, tc.X40MAC_VT, 'RelTol', 3e-3, ...
+                'x40MAC_vtail must use TWICE the span [Eq. 7.9].');
+        end
+
+        function testExposedWingScalesWithSref(tc)
+        % The exposed wing area tracks a mutated S_ref: a larger wing has a
+        % larger exposed area, and the exposed FRACTION rises (the fixed
+        % fuselage covers relatively less).
+            geom = B777GeomL2(b777_spec_path(1));
+            exp0 = geom.S_exposed_wing;  frac0 = exp0 / geom.S_ref;
+            geom.S_ref = 5200;
+            exp1 = geom.S_exposed_wing;  frac1 = exp1 / geom.S_ref;
+            fprintf('\n    S_ref 4605->5200: exposed %.1f->%.1f, fraction %.4f->%.4f\n', ...
+                exp0, exp1, frac0, frac1);
+            tc.verifyGreaterThan(exp1, exp0, 'Exposed wing area must grow with S_ref.');
+            tc.verifyGreaterThan(frac1, frac0, ...
+                'Exposed fraction must rise (fixed fuselage covers relatively less).');
         end
 
         % ---- AERODYNAMICS ------------------------------------------------ %
@@ -318,64 +385,67 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
             tc.verifyEqual(prop.lapse_exponent_m, 0.6, 'AbsTol', 1e-12);
         end
 
-        % ---- WEIGHTS ----------------------------------------------------- %
+        % ---- WEIGHTS (L2 component build-up, Algorithm 5) ---------------- %
 
-        function testOEWBaselineRegression(tc)
-        % At the baseline design point (all four deltas zero) OEW collapses to
-        % We/W0*W0 = 1.02*766800^-0.06 * 766800 = 346,897 lbf [Raymer Table 3.1].
-        % The tail must be sized first so the baseline HT/VT delta is zero.
-            [geom, ~, ~, tail, wts] = TestB777Disciplines.buildStack();
-            t = tail.size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
-            geom.S_ht = t.S_ht;   % write the baseline tail areas back
-            geom.S_vt = t.S_vt;
-            received = wts.OEW(tc.W0_BASELINE);
-            fprintf('\n    OEW(766800) baseline = %.2f lbf (hand-computed regression %.1f, %+.3f%%)\n', ...
-                received, tc.OEW_BASELINE, 100*(received - tc.OEW_BASELINE)/tc.OEW_BASELINE);
-            tc.verifyEqual(received, tc.OEW_BASELINE, 'RelTol', 2e-3, ...
-                ['OEW(766800) at baseline geometry must be the pure We/W0 ', ...
-                 'regression 1.02*766800^-0.06*766800 = 346,897 lbf ', ...
-                 '(deltas ~0; RelTol 2e-3 for the self-consistent tail residual).']);
+        function testOEWComponentBuildup(tc)
+        % OEW is the metabook Algorithm 5 component sum. The independent
+        % expected reassembles it from the geom's exposed areas, the Roskam
+        % engine formula (evaluated IN-TEST, not read from the class), and the
+        % Table 7.1 areal densities / fractions / installed 1.3x factor -- and
+        % must equal wts.OEW. NO tail sizing is needed: the component build-up
+        % uses the EXPOSED tail areas (Table 7.3), not the tail write-back slots.
+            [geom, prop, ~, ~, wts] = TestB777Disciplines.buildStack();
+            W0 = tc.W0_BASELINE;
+            n  = prop.n_engines;
+            T0 = prop.T_SL / n;                         % per-engine SLS thrust
+            % Independent Roskam single-engine uninstalled weight [Eqs. 7.13-7.19].
+            dry  = 0.521*T0^0.9;
+            Weng = dry + 0.082*T0^0.65 + 0.034*T0 + 0.26*T0^0.5 + 9.33*(dry/1000)^1.078;
+            expected = 1.3*n*Weng ...                   % installed engine [Table 7.1 1.3x]
+                     + 10.0*geom.S_exposed_wing ...      % wing     [Table 7.1]
+                     + 5.5 *geom.S_exposed_ht ...        % H-tail   [Table 7.1]
+                     + 5.5 *geom.S_exposed_vt ...        % V-tail   [Table 7.1]
+                     + 5.0 *geom.S_wet_fus ...           % fuselage [Table 7.1]
+                     + 0.043*W0 + 0.17*W0;               % gear + all-else [Table 7.1]
+            received = wts.OEW(W0);
+            fprintf('\n    OEW(766800) build-up: received=%.1f  hand=%.1f (~%d; %+.1f%% vs actual 320000)\n', ...
+                received, expected, tc.OEW_L2_BASELINE, 100*(received-320000)/320000);
+            tc.verifyEqual(received, expected, 'RelTol', 1e-9, ...
+                'OEW must equal the Algorithm 5 component sum (installed engine + areal + fractions).');
+            tc.verifyEqual(received, tc.OEW_L2_BASELINE, 'RelTol', 5e-3, ...
+                'OEW at baseline is ~334,043 lbf (Roskam GE90 over-prediction at the 110k sizing thrust).');
         end
 
         function testOEWIncreasesWithWingArea(tc)
-        % Growing geom.S_ref adds a POSITIVE wing areal delta
-        % (dens_wing = 10 lb/ft^2 [Raymer Table 15.2]) at fixed W_TO, so
-        % OEW(766800) must increase. Independent lower bound on the increment:
-        % 10*(5000 - 4605) = 3950 lbf.
-            [geom, ~, ~, tail, wts] = TestB777Disciplines.buildStack();
-            t = tail.size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
-            geom.S_ht = t.S_ht;  geom.S_vt = t.S_vt;
-            oew_0 = wts.OEW(tc.W0_BASELINE);
-            geom.S_ref = 5000;                        % in-place mutation
-            oew_1 = wts.OEW(tc.W0_BASELINE);
-            fprintf('\n    OEW at S_ref=4605: %.1f;  at S_ref=5000: %.1f (delta %+.1f, hand-min wing delta 3950)\n', ...
-                oew_0, oew_1, oew_1 - oew_0);
-            tc.verifyGreaterThan(oew_1, oew_0, ...
-                'OEW must rise with wing area (positive Table 15.2 areal delta).');
-            tc.verifyGreaterThanOrEqual(oew_1 - oew_0, 10*(5000 - 4605) - 1, ...
-                'The OEW increment must be at least the 10 lb/ft^2 wing areal delta.');
+        % The component build-up responds to S_ref: growing geom.S_ref grows the
+        % EXPOSED wing area, so the wing weight (10 lb/ft^2 [Table 7.1]) rises.
+        % Independent increment: exactly 10 * (exposed(5000) - exposed(4605)).
+            [geom, ~, ~, ~, wts] = TestB777Disciplines.buildStack();
+            oew_0 = wts.OEW(tc.W0_BASELINE);  exp_0 = geom.S_exposed_wing;
+            geom.S_ref = 5000;                          % in-place mutation
+            oew_1 = wts.OEW(tc.W0_BASELINE);  exp_1 = geom.S_exposed_wing;
+            fprintf('\n    OEW S_ref 4605->5000: %.1f -> %.1f (delta %+.1f; 10*dExposed = %.1f)\n', ...
+                oew_0, oew_1, oew_1 - oew_0, 10*(exp_1 - exp_0));
+            tc.verifyGreaterThan(oew_1, oew_0, 'OEW must rise with wing area.');
+            tc.verifyEqual(oew_1 - oew_0, 10*(exp_1 - exp_0), 'AbsTol', 1e-6, ...
+                'The OEW increment must be exactly 10 lb/ft^2 * the exposed-wing-area increment.');
         end
 
-        function testOEWIncreasesWithTailArea(tc)
-        % Growing geom.S_ht adds a POSITIVE HT areal delta (dens_HT = 5.5
-        % lb/ft^2 [Raymer Table 15.2]) at fixed W_TO. Independent increment:
-        % 5.5*(S_ht + 100 - S_ht) = 550 lbf for a +100 ft^2 bump.
-            [geom, ~, ~, tail, wts] = TestB777Disciplines.buildStack();
-            t = tail.size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
-            geom.S_ht = t.S_ht;  geom.S_vt = t.S_vt;
+        function testOEWIncreasesWithThrust(tc)
+        % The component build-up responds to T0: growing prop.T_SL grows the
+        % Roskam installed-engine weight, so OEW rises (the T0 sizing coupling).
+            [~, prop, ~, ~, wts] = TestB777Disciplines.buildStack();
             oew_0 = wts.OEW(tc.W0_BASELINE);
-            geom.S_ht = geom.S_ht + 100;              % in-place mutation
+            prop.T_SL = prop.T_SL * 1.2;                % +20% thrust, in-place
             oew_1 = wts.OEW(tc.W0_BASELINE);
-            fprintf('\n    OEW HT +100 ft^2: delta = %+.4f lbf (hand 5.5*100 = 550)\n', oew_1 - oew_0);
-            tc.verifyEqual(oew_1 - oew_0, 5.5*100, 'AbsTol', 1e-6, ...
-                'A +100 ft^2 HT area must add exactly 5.5*100 = 550 lbf [Table 15.2].');
+            fprintf('\n    OEW T_SL +20%%: %.1f -> %.1f (delta %+.1f)\n', oew_0, oew_1, oew_1 - oew_0);
+            tc.verifyGreaterThan(oew_1, oew_0, ...
+                'OEW must rise with T_SL (heavier Roskam engine).');
         end
 
         function testOEWRejectsNonPositiveWTO(tc)
         % OEW's arguments block guards W_TO (mustBePositive, mustBeFinite).
-            [geom, ~, ~, tail, wts] = TestB777Disciplines.buildStack();
-            t = tail.size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
-            geom.S_ht = t.S_ht;  geom.S_vt = t.S_vt;
+            [~, ~, ~, ~, wts] = TestB777Disciplines.buildStack();
             tc.verifyError(@() wts.OEW(-5), 'MATLAB:validators:mustBePositive');
             tc.verifyError(@() wts.OEW(Inf), 'MATLAB:validators:mustBeFinite');
         end

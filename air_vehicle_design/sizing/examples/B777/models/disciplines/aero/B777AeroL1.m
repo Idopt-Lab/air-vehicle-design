@@ -46,7 +46,7 @@ classdef B777AeroL1 < AeroModelL1
 %
 %   Inheritance: AerodynamicsBase -> AeroModelL1 -> B777AeroL1
 %
-%   Expected outputs at baseline S=4605, AR=9.8 (fresh B777GeomL1):
+%   Expected outputs at baseline S=4605, AR=9.8 (fresh B777GeomL2):
 %     CD0_clean = 0.0026*(28291/4605) ~ 0.01597   [metabook Eq. 4.8/4.58]
 %     K1_clean  = 1/(pi*9.8*0.85)     ~ 0.03821    [metabook Eq. 2.10]
 %     get_config_polar reproduces the five metabook polars + approach.

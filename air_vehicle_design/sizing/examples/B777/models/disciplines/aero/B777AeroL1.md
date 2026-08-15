@@ -23,7 +23,7 @@ block). No silent defaults.
 ## 1. Constructor
 
 ```matlab
-g1 = B777GeomL1(b777_spec_path(1));
+g1 = B777GeomL2(b777_spec_path(1));
 a1 = B777AeroL1(g1, b777_spec_path(1));
 ```
 

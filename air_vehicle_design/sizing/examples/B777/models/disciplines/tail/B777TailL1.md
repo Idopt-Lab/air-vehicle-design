@@ -34,10 +34,10 @@ UNCORRECTED base lookup:
 | `c_VT` | 0.09 | vertical-tail volume coefficient [metabook Ch.8 Eq. 8.1; Raymer 7th ed. Table 6.4 jet-transport row] |
 
 No geometry object is injected at L1: `GeometryModelL1` exposes `S_ref`/`b`/`cbar` as scalars, so the
-caller supplies `S_ref`/`b`/`cbar`/`L_fus` raw. Typical wiring reads them off `B777GeomL1`:
+caller supplies `S_ref`/`b`/`cbar`/`L_fus` raw. Typical wiring reads them off `B777GeomL2`:
 
 ```matlab
-geom = B777GeomL1(b777_spec_path(1));
+geom = B777GeomL2(b777_spec_path(1));
 r    = B777TailL1().size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
 ```
 
@@ -87,5 +87,5 @@ The two areas reuse the same cited `TailL1.compute_S_HT` / `compute_S_VT` static
 ### As-built values
 
 `c_HT = 1.00`, `c_VT = 0.09` (uncorrected jet-transport base), arm fraction `0.525` (uncited TODO).
-The two areas depend on the wing planform passed in from `B777GeomL1` (`S_ref = 4605`, `b_wing`,
+The two areas depend on the wing planform passed in from `B777GeomL2` (`S_ref = 4605`, `b_wing`,
 `cbar_wing`, `L_fus = 209`).

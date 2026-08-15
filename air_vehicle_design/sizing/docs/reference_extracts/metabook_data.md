@@ -515,6 +515,72 @@ x_40%MAC = xMAC + 0.4*MAC                                                  (7.4)
 CG: x_CG = sum(Wi * xCG_i) / sum(Wi)                                      (7.1)
 ```
 
+### §7.2 Worked Example 7.1 — Preliminary Empty Weight, 777-200LR
+
+**Table 7.1 multipliers/locations** (with the areal densities above): the wing,
+H-tail and V-tail areal weights multiply the **EXPOSED planform area**; the
+fuselage areal weight multiplies the **WETTED area**. Installed engine =
+**1.3 × (uninstalled engine weight)**; landing gear = **0.043·W0** (transport);
+all-else empty = **0.17·W0**. CG locations: wing/H-tail/V-tail 40% MAC,
+fuselage 40–50% length.
+
+**Table 7.2 — 777-200LR equivalent-trapezoidal planform parameters**
+
+| Surface | c_root (ft) | c_tip (ft) | x_RLE (ft) | b (ft) | Λ_LE (deg) |
+|---|---|---|---|---|---|
+| Wing            | 41.3 | 4.7 | 64.0  | 206.0 | 33.7 |
+| Horizontal Tail | 23.0 | 8.2 | 173.4 | 71.0  | 38.7 |
+| Vertical Tail   | 27.8 | 8.2 | 166.2 | 33.6  | 44.4 |
+
+Worked MAC / 40%-MAC (metabook Eq. 7.5–7.9):
+```
+MAC_W        = (2/3)*(41.3 + 4.7 - 41.3*4.7/(41.3+4.7)) = 27.9 ft            (7.5)
+x_40%MAC,W   = 64.0 + (206/6)*(41.3+2*4.7)/(41.3+4.7)*tan(33.7) + 0.4*27.9
+             = 100.4 ft                                                       (7.6)
+x_40%MAC,HT  = 192.1 ft                                                       (7.7)
+MAC_VT       = (2/3)*(27.8 + 8.2 - 27.8*8.2/(27.8+8.2)) = 19.8 ft            (7.8)
+x_40%MAC,VT  = 166.2 + (2*33.6/6)*(27.8+2*8.2)/(27.8+8.2)*tan(44.4) + 0.4*19.8
+             = 187.6 ft    (NOTE: TWICE the span is used for the VT)          (7.9)
+```
+
+**Table 7.3 — empty-weight buildup, 777-200LR** (multiplier = exposed planform
+for wing/tails, wetted area for fuselage; the exposed-area equations are NOT
+printed in the metabook — only these values):
+
+| Component        | Ratio       | Multiplier    | Weight (lb) | CG (ft) |
+|---|---|---|---|---|
+| Wing             | 10 lb/ft²   | 3,923 ft²     | 39,230  | 100.4 |
+| Horizontal tail  | 5.5 lb/ft²  | 903 ft²       | 4,967   | 192.1 |
+| Vertical tail    | 5.5 lb/ft²  | 604 ft²       | 3,322   | 187.6 |
+| Fuselage         | 5 lb/ft²    | 13,125 ft²    | 65,625  | 93    |
+| Nose landing gear| 0.043×0.15  | 766,000 lb    | 4,941   | 19.3  |
+| Main landing gear| 0.043×0.85  | 766,000 lb    | 27,997  | 103.9 |
+| Installed engine | 1.3         | 36,520        | 47,476  | 77.3  |
+| All-else empty   | 0.17        | 766,000 lb    | 130,220 | 93    |
+| **Total**        |             |               | **323,778** | (CG 93.9 ft) |
+
+**Table 7.4 — empty-weight comparison, 777-200LR**
+
+| Actual We | First estimate (Ch.2 fraction) | %Δ | Buildup estimate (Ch.7) | %Δ |
+|---|---|---|---|---|
+| 320,000 lb | 349,993 lb | +9.4% | 323,778 lb | +1.2% |
+
+**Discrepancy D8 — engine 1.3× in Algorithm 5.** The printed Algorithm 5
+pseudocode computes the engine term as `n_engine·Wengine` (uninstalled), but
+Table 7.1 ("installed engine = 1.3 × engine weight") and the worked Table 7.3
+(47,476 = 1.3 × 36,520) DO apply the 1.3, and the 323,778 total includes it.
+RESOLUTION (2026-08-15): apply the 1.3 (per the worked example). B777WeightsL2
+does so.
+
+**Discrepancy D9 — engine thrust in Table 7.3.** Table 7.3's engine weight
+(uninstalled 36,520 for 2 engines → 18,260/engine) only reproduces at
+**T0 ≈ 89,000 lb/engine** (178k total), but Fig. 4.6/4.7 (the constraint and
+T–S diagrams) use **T = 220,000** (110k/engine). The metabook is internally
+inconsistent. RESOLUTION (Sarojini 2026-08-15): the weights use the **sizing
+T_SL** (220k) so OEW responds to the real thrust; at 220k the Roskam engine is
+~10k heavier, so the B777GeomL2/WeightsL2 stack sizes to OEW ≈ 334k (+4% vs
+actual 320k, the Roskam GE90 over-prediction), NOT Table 7.3's 323,778.
+
 ### Wing Weight Regression (Raymer, Transport/Cargo)
 
 ```

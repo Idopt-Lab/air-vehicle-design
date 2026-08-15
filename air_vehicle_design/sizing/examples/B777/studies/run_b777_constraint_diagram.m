@@ -24,7 +24,7 @@
 % injects the geometry object so its clean CD0 tracks the wing area.
 sp   = b777_spec_path(1);
 rp   = b777_requirements_path();
-geom = B777GeomL1(sp);
+geom = B777GeomL2(sp);
 prop = B777PropL1(sp);
 aero = B777AeroL1(geom, sp);
 

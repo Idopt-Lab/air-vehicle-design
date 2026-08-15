@@ -6,7 +6,7 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
 %
 %   Stack (coordinator-verified):
 %       sp = b777_spec_path(1);  rp = b777_requirements_path();
-%       geom = B777GeomL1(sp);  prop = B777PropL1(sp);  aero = B777AeroL1(geom, sp);
+%       geom = B777GeomL2(sp);  prop = B777PropL1(sp);  aero = B777AeroL1(geom, sp);
 %
 %   ── HAND-COMPUTED EXPECTED VALUES AND DERIVATIONS ────────────────────────
 %
@@ -55,7 +55,7 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
     methods (Static)
         function [aero, prop] = buildAeroProp()
             sp   = b777_spec_path(1);
-            geom = B777GeomL1(sp);
+            geom = B777GeomL2(sp);
             prop = B777PropL1(sp);
             aero = B777AeroL1(geom, sp);
         end

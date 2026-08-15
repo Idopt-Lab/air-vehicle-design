@@ -1,5 +1,5 @@
 {
-  "_comment": "Boeing 777-200LR Level-1 SPEC inputs -- what the aircraft IS. Read by the future B777GeomL1, B777AeroL1, B777PropL1, B777WeightsL1/L2. Full docs + per-field citations: examples/B777/inputs/b777_L1.md. SCOPE GUARD: spec data only (reference areas, AR, fuselage size, thrust, engine model, config-polar table); requirements (field lengths, climb gradients, cruise point, range) live in examples/B777/inputs/b777_requirements.json. aircraft_category sits at the top level, not inside a discipline block.",
+  "_comment": "Boeing 777-200LR SPEC inputs -- what the aircraft IS. Read by B777GeomL2 (real trapezoidal planform + exposed areas), B777AeroL1, B777PropL1, B777WeightsL2 (component build-up). Full docs + per-field citations: examples/B777/inputs/b777_L1.md. SCOPE GUARD: spec data only (reference areas, AR, fuselage size, thrust, engine model, config-polar table); requirements (field lengths, climb gradients, cruise point, range) live in examples/B777/inputs/b777_requirements.json. aircraft_category sits at the top level, not inside a discipline block.",
   "_cite": "metabook = AE481 metabook worked Example 4.2, docs/reference_extracts/metabook_data.md; Raymer = Raymer 6th ed.; Roskam = Roskam Part I; Mattingly = Mattingly: Aircraft Engine Design. Bracketed citations below name the metabook Eq/Table and the primary table the metabook itself cites.",
   "aircraft_category": "jet_transport",
   "_aircraft_category_src": "ONE canonical class flag for every discipline [metabook \u00a74.11, 777-200LR long-range airliner]. Selects the Raymer Table 3.1 We/W0 row (WeightsL1.lookup_coeffs, printed 'jet_transport'), the GeomL1 swet/lfus rows (printed 'transport_jet'), and the CLmax table row. Source tables name this category differently, so each lookup translates the canonical value to its own printed row name -- do NOT rename a table row to match this key.",
@@ -11,7 +11,20 @@
     "n_engines": 2,
     "S_wet_rest": 19081.0,
     "L_fus": 209.0,
-    "_TODO_L_fus": "L_fus = 209 ft (~63.73 m) is a stand-in -- the published Boeing 777-200LR overall length -- traceable to no primary source in this repo. The metabook Example 4.2 does NOT print a fuselage or overall length (it takes Swet from the Eq. 4.42 MTOW regression, so L_fus may end up unused at L1). Primary source needed: a Boeing 777-200LR type document / Airport Planning document. Remove this key when pinned. See b777_L1.md \u00a72.2."
+    "_TODO_L_fus": "L_fus = 209 ft (~63.73 m) is a stand-in -- the published Boeing 777-200LR overall length -- traceable to no primary source in this repo. The metabook Example 4.2 does NOT print a fuselage or overall length (it takes Swet from the Eq. 4.42 MTOW regression, so L_fus may end up unused at L1). Primary source needed: a Boeing 777-200LR type document / Airport Planning document. Remove this key when pinned. See b777_L1.md \u00a72.2.",
+
+    "_note_L2_trapezoids": "B777GeomL2 (component-weight fidelity) adds the equivalent-trapezoidal planform parameters for the wing, horizontal tail, and vertical tail [metabook Table 7.2, 777-200LR]. From these it computes the MAC and 40%-MAC location (Eq. 7.2-7.9) and the EXPOSED planform areas (metabook Table 7.3: wing 3923, HT 903, VT 604 ft2). The trapezoids scale with the design variable S_ref; the fuselage geometry is fixed. See b777_L1.md \u00a72.4 and docs/reference_extracts/metabook_data.md \u00a77.2.",
+    "wing_trapezoid":  {"c_root_ft": 41.3, "c_tip_ft": 4.7, "b_ft": 206.0, "Lambda_LE_deg": 33.7, "x_RLE_ft": 64.0},
+    "htail_trapezoid": {"c_root_ft": 23.0, "c_tip_ft": 8.2, "b_ft": 71.0,  "Lambda_LE_deg": 38.7, "x_RLE_ft": 173.4},
+    "vtail_trapezoid": {"c_root_ft": 27.8, "c_tip_ft": 8.2, "b_ft": 33.6,  "Lambda_LE_deg": 44.4, "x_RLE_ft": 166.2},
+
+    "fuselage": {
+      "diameter_ft": 20.33,
+      "width_at_wing_ft": 20.65,
+      "width_at_htail_ft": 9.29,
+      "wetted_form_factor": 0.9832,
+      "_src": "diameter 20.33 ft = published 777 fuselage width (6.20 m). width_at_wing / width_at_htail / wetted_form_factor are TUNED so the geometry reproduces the metabook Table 7.3 exposed areas (wing 3923, HT 903 ft2) and fuselage wetted area (13125 ft2): the metabook prints the exposed areas but NOT the exposed-planform / wetted-area equations, so the local body widths (approx the fuselage 20.3 ft at the wing, the tailcone approx 9.3 ft at the H-tail) and the fuselage wetted form factor (S_wet_fus = pi*D*L_fus*factor, factor approx 0.983 for nose/tail taper) are set to match Table 7.3. See b777_L1.md \u00a72.4."
+    }
   },
   "aerodynamics": {
     "_src": "Cfe [Raymer Table 12.3 civil transport; metabook Eq. 4.43]; e_clean [metabook Table 4.2 clean; \u00a74.11]. Config-polar table = the printed five metabook polars (metabook \u00a74.11, five-polar table) + the derived approach row (\u00a73.3); each row's K1 = 1/(pi*AR*e) with AR = 9.8, K2 = 0 (uncambered-basis high-lift polars). CLmax per config [Roskam Table 3.1; metabook \u00a74.11]. See b777_L1.md \u00a73.",
@@ -79,8 +92,7 @@
     "S_baseline": 4605.0,
     "T_baseline_per_engine": 110000.0,
     "_TODO_T_baseline_per_engine": "T_baseline_per_engine = 110000 lbf is the same stand-in as .propulsion.T_per_engine -- the GE90-110B per-engine rating, not pinned. Baseline total T = 220000 lbf (110000/engine) is cited to the metabook (Fig. 4.7 caption); the per-engine split is the _TODO. Remove this key when the per-engine rating is pinned. See b777_L1.md \u00a74.1 / \u00a75.3.",
-    "W_payload": 145000,
-    "_TODO_W_payload": "W_payload = 100000 lbf is an ORDER-OF-MAGNITUDE stand-in for the 777-200LR design payload at the range point (full passenger + baggage load) -- the metabook Example 4.2 does not print a payload. Primary source needed: a Boeing 777-200LR payload-range chart / Airport Planning document. Do NOT treat this as a precise value. Remove this key when pinned. See b777_L1.md \u00a75.3.",
-    "_src_W_payload": "Design payload 145,000 lbf = a realistic 2-class 777-200LR payload (~317 pax at ~215 lb incl. bags + belly cargo). Was a 100,000 lbf order-of-magnitude stand-in; raised to a realistic value so the metabook L1 closure carries a realistic payload fraction (~0.21) and converges to a 777-class weight. Still a design choice, not pinned to a Boeing payload-range chart -- _TODO. See b777_L1.md \u00a75.3."
+    "W_payload": 78821,
+    "_src_W_payload": "Fixed carried weight (crew + passengers) = (14 crew + 314 passengers) x 109 kg = 328 x 109 = 35,752 kg = 78,821 lbf [metabook Example 2.1 requirements: 14 crew and 314 passengers, each 109 kg]. This is the Wcrew + Wpayload numerator of metabook Eq. 2.2; the 777-200LR carries no expendable/belly cargo at this long-range point. With this payload the metabook L1 closure sizes near the actual 777-200LR (MTOW 766,800 lbf, OEW 320,000 lbf); see sanity_checks/b777_metabook_comparison.m."
   }
 }

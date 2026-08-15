@@ -34,8 +34,8 @@ classdef B777TailL1 < TailSizingModelL1
 %
 %   No geometry object is injected at L1: GeometryModelL1 exposes S_ref/b/cbar as
 %   scalars, so the caller supplies S_ref/b/cbar/L_fus raw -- unchanged
-%   TailSizingBase interface. Typical wiring reads them off B777GeomL1:
-%       geom = B777GeomL1(b777_spec_path(1));
+%   TailSizingBase interface. Typical wiring reads them off B777GeomL2:
+%       geom = B777GeomL2(b777_spec_path(1));
 %       r    = B777TailL1().size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
 %
 %   Constructor takes no arguments: jet_transport is a B777 spec fact, baked in

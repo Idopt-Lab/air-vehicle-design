@@ -1,7 +1,8 @@
 classdef TestB777Sizing < matlab.unittest.TestCase
 %TESTB777SIZING  Tier-1 CONVERGENCE + PHYSICAL-SANITY tests for the Boeing
-%   777-200LR L1 sizing stack (metabook §4.12 Algorithm 2 TOGW closure via
-%   TSDiagram.converge_W0 and fuel_grid).
+%   777-200LR sizing stack (L2 geometry + L2 component-build-up weights;
+%   metabook §4.12 Algorithm 2 TOGW closure via TSDiagram.converge_W0 and
+%   fuel_grid).
 %
 %   These are NOT metabook-agreement checks. Agreement of the converged W0
 %   with the real 777-200LR (766,800 lbf) is INFORMATIONAL and belongs in the
@@ -11,8 +12,8 @@ classdef TestB777Sizing < matlab.unittest.TestCase
 %
 %   Stack (coordinator-verified):
 %       sp = b777_spec_path(1);  rp = b777_requirements_path();
-%       geom = B777GeomL1(sp);  prop = B777PropL1(sp);  aero = B777AeroL1(geom, sp);
-%       tail = B777TailL1();     wts  = B777WeightsL1(sp, geom, prop);
+%       geom = B777GeomL2(sp);  prop = B777PropL1(sp);  aero = B777AeroL1(geom, sp);
+%       tail = B777TailL1();     wts  = B777WeightsL2(sp, geom, prop);
 %       miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "long_range");
 %       con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
 %                  B777ConstraintSet.constraint_map(), WS_range);
@@ -21,14 +22,13 @@ classdef TestB777Sizing < matlab.unittest.TestCase
 %   ── RATIONALE FOR THE BANDS (all documented, none reverse-engineered) ────
 %
 %   CONVERGENCE. converge_W0(220000, 4605) prescribes the real 777-200LR
-%   thrust (2x110000) and wing area, then closes TOGW. TSDiagram's bracketed
-%   seed selection (2026-08-14) tries W_payload/0.1 then W_payload/0.25, so a
-%   high-payload-fraction transport converges from the default seed. The
-%   converged W0 is finite and in a SANE transport band 600,000 < W0 < 850,000
-%   lbf. It sits ~8.6% BELOW the real 766,800 (the metabook-method L1 result at
-%   the 6,000 nmi / 145,000 lbf design point, per b777_requirements.json's own
-%   note) -- that -8.6% is the metabook-method outcome, reported in the
-%   comparison script, NOT asserted tightly here.
+%   thrust (2x110000) and wing area, then closes TOGW. With the L2 component
+%   build-up (fixed structural terms + only the 0.213*W0 gear/all-else
+%   fraction) the closure is stable and lands at ~760,000 lbf (~-0.86% vs the
+%   real 766,800) for the metabook Example 2.1 mission (9,150 nmi + 30-min
+%   loiter, 78,821 lbf crew+payload). The band 600,000 < W0 < 850,000 is a sane
+%   transport range; the exact agreement is the comparison-report topic, NOT
+%   asserted tightly here.
 %
 %   GUESS-INDEPENDENCE. Two NEARBY (T, S) cells must give consistent W0 (the
 %   closure is well-conditioned near the design point; the bracketed seed
@@ -40,7 +40,7 @@ classdef TestB777Sizing < matlab.unittest.TestCase
 %     * 0 < OEW < W_TO                       (empty weight is a fraction of gross)
 %     * W_fuel > 0                           (the mission burns fuel)
 %     * payload fraction W_payload/W_TO in a plausible transport band [0.10,0.35]
-%       (145,000 lbf payload; a long-range twin sits ~0.19-0.21)
+%       (78,821 lbf crew+payload; a long-range twin at MTOW sits ~0.10)
 %     * W/S = W_TO/S in a transport range [80, 200] lbf/ft^2 at S = 4605
 %       (766,800/4605 = 166; the converged lighter aircraft is lower but stays
 %        well inside a jet-transport wing-loading band)
@@ -48,7 +48,7 @@ classdef TestB777Sizing < matlab.unittest.TestCase
 %   FUEL_GRID BOUNDARY. Over a small (T, S) mesh spanning below and above the
 %   design point, SOME cells are sized/feasible and SOME are infeasible (NaN) --
 %   the mission-flyability boundary (a too-small wing or too-little thrust
-%   cannot fly the 6,000 nmi mission, so converge_W0 returns NaN there).
+%   cannot fly the 9,150 nmi mission, so converge_W0 returns NaN there).
 
     properties (Constant)
         T_DESIGN     = 220000     % lbf  design-point SLS thrust (2x110000) [metabook Fig. 4.7]
@@ -56,7 +56,7 @@ classdef TestB777Sizing < matlab.unittest.TestCase
         W0_REAL      = 766800     % lbf  real 777-200LR MTOW (informational)
         W0_LO        = 600000     % lbf  sane lower band
         W0_HI        = 850000     % lbf  sane upper band
-        W_PAYLOAD    = 145000     % lbf  design payload [b777_L1.json .weights.W_payload]
+        W_PAYLOAD    = 78821      % lbf  crew + passengers [metabook Example 2.1; b777_L1.json .weights.W_payload]
     end
 
     methods (Static)
@@ -66,11 +66,11 @@ classdef TestB777Sizing < matlab.unittest.TestCase
             end
             sp   = b777_spec_path(1);
             rp   = string(b777_requirements_path());
-            geom = B777GeomL1(sp);
+            geom = B777GeomL2(sp);                    % L2 real-planform geometry
             prop = B777PropL1(sp);
             aero = B777AeroL1(geom, sp);
             tail = B777TailL1();
-            wts  = B777WeightsL1(sp, geom, prop);
+            wts  = B777WeightsL2(sp, geom, prop);     % L2 component build-up weights
             miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "long_range");
             con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
                 B777ConstraintSet.constraint_map(), WS_range);
@@ -83,9 +83,9 @@ classdef TestB777Sizing < matlab.unittest.TestCase
 
         function testConvergeW0FiniteAndSane(tc)
         % converge_W0 at the real (T, S) design cell is finite and in the sane
-        % transport band 600,000 < W0 < 850,000 lbf. The -8.6% offset vs the
-        % real 766,800 is the metabook-method result (comparison-report topic),
-        % NOT a tight assertion here.
+        % transport band 600,000 < W0 < 850,000 lbf (the L2 build-up lands
+        % ~-0.86% from the real 766,800 -- comparison-report topic, NOT a tight
+        % assertion here).
             ts = TestB777Sizing.buildTSDiagram();
             W0 = ts.converge_W0(tc.T_DESIGN, tc.S_DESIGN);
             fprintf('\n    converge_W0(%d, %d) = %.1f lbf (real 777 = %d, %+.2f%%)\n', ...
@@ -135,8 +135,8 @@ classdef TestB777Sizing < matlab.unittest.TestCase
             tc.verifyGreaterThan(OEW, 0, 'OEW must be positive.');
             tc.verifyLessThan(OEW, W0, 'OEW must be a fraction of gross weight (< W_TO).');
             tc.verifyGreaterThan(W_fuel, 0, 'The mission must burn positive fuel.');
-            tc.verifyGreaterThanOrEqual(pay_frac, 0.10, ...
-                'Payload fraction must be at least a plausible 0.10.');
+            tc.verifyGreaterThanOrEqual(pay_frac, 0.08, ...
+                'Payload fraction must be at least a plausible 0.08 (Example 2.1 payload ~0.10 at MTOW).');
             tc.verifyLessThanOrEqual(pay_frac, 0.35, ...
                 'Payload fraction must be at most a plausible 0.35.');
             tc.verifyGreaterThanOrEqual(WS, 80, ...
@@ -152,7 +152,7 @@ classdef TestB777Sizing < matlab.unittest.TestCase
         % Over a small (T, S) mesh straddling the design point, SOME cells are
         % sized (finite W0) and SOME are mission-infeasible (NaN) -- the
         % flyability boundary. A too-small wing / too-little thrust cannot fly
-        % the 6,000 nmi mission, so converge_W0 returns NaN there.
+        % the 9,150 nmi mission, so converge_W0 returns NaN there.
         % The warning TSDiagram raises on an infeasible cell is expected here.
             ts = TestB777Sizing.buildTSDiagram();
             T_grid = [140000, 220000, 300000];

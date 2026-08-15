@@ -26,19 +26,22 @@ function results = b777_metabook_comparison()
 %       so the mission closes; the report EVALUATES Eq. 10.11 to quantify the gap.
 %     * Engine weight: Roskam Eq. 7.13-7.19 overestimates the real GE90; the
 %       delta-weight model cancels it at the baseline design point.
-%     * Design mission: 6,000 nmi / 145,000 lbf payload is a realistic design
-%       choice, NOT the ~8,555 nmi max-range point. The converged design weight
-%       is -8.6% vs the actual 766,800 lbf.
+%     * Design mission: metabook Example 2.1 -- 9,150 nmi cruise + 30-min loiter,
+%       carrying 78,821 lbf (14 crew + 314 passengers x 109 kg). The converged
+%       design weight is compared to the actual 777-200LR (MTOW 766,800 lbf =
+%       347,815 kg page 17; OEW 320,000 lbf Table 7.4).
 
     sp = b777_spec_path(1);
     rp = b777_requirements_path();
 
-    % Live B777 L1 stack.
-    geom = B777GeomL1(sp);
+    % Live B777 stack: L2 geometry (real trapezoidal planform + exposed areas,
+    % metabook Table 7.2/7.3) and L2 component-build-up weights (Algorithm 5),
+    % with L1 aero/prop/tail.
+    geom = B777GeomL2(sp);
     prop = B777PropL1(sp);
     aero = B777AeroL1(geom, sp);
     tail = B777TailL1();
-    wts  = B777WeightsL1(sp, geom, prop);
+    wts  = B777WeightsL2(sp, geom, prop);
 
     fprintf('\n================ B777 vs METABOOK Example 4.2 (informational) ================\n');
 
@@ -165,11 +168,11 @@ function results = b777_metabook_comparison()
     TW_conv = 220000 / W0_conv;
 
     rows{end+1} = crow('Converged design', 'W_TO [lbf]', W0_conv, 766800, ...
-        'metabook Table 4.3 (actual)', 'BY DESIGN: 6000 nmi/145k payload, not max-range');
-    rows{end+1} = crow('Converged design', 'OEW [lbf]', OEW_conv, NaN, ...
-        'metabook §4.12.1 Algorithm 2', 'delta-weight model at converged W_TO');
+        'metabook p.17 / Table 4.3 (actual MTOW)', 'Example 2.1: 9150 nmi, 78,821 lb (14 crew + 314 pax @ 109 kg)');
+    rows{end+1} = crow('Converged design', 'OEW [lbf]', OEW_conv, 320000, ...
+        'metabook Table 7.4 (actual OEW)', 'Ch.7 component build-up (Algorithm 5) at T_SL=220k; +4% = Roskam GE90 over-prediction');
     rows{end+1} = crow('Converged design', 'W_fuel [lbf]', Wf_conv, NaN, ...
-        'metabook §4.12 Algorithm 3', 'L1 mission long_range fuel');
+        'metabook §4.12 Algorithm 3', 'L1 mission long_range fuel (9150 nmi cruise + 30-min loiter + 6% reserve)');
     rows{end+1} = crow('Converged design', 'W/S [psf]', WS_conv, 142.45, ...
         'metabook Table 4.3', '');
     rows{end+1} = crow('Converged design', 'T/W', TW_conv, 220000/766800, ...

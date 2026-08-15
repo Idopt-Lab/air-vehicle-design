@@ -22,11 +22,11 @@
 % the stack is built fresh here and used for nothing else afterwards.
 sp   = b777_spec_path(1);
 rp   = b777_requirements_path();
-geom = B777GeomL1(sp);
+geom = B777GeomL2(sp);
 prop = B777PropL1(sp);
 aero = B777AeroL1(geom, sp);
 tail = B777TailL1();
-wts  = B777WeightsL1(sp, geom, prop);
+wts  = B777WeightsL2(sp, geom, prop);
 miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "long_range");
 con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
     B777ConstraintSet.constraint_map(), linspace(60, 300, 241));
