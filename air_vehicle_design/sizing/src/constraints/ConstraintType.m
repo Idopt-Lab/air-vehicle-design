@@ -50,6 +50,7 @@ classdef ConstraintType
         ClimbGradient           ("ClimbGradientConstraint")
         ManeuveringExcessPower  ("ManeuveringExcessPowerConstraint")
         InstantaneousTurn       ("InstantaneousTurnConstraint")
+        Ceiling                 ("CeilingConstraint")
     end
 
 end
