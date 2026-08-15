@@ -163,6 +163,41 @@ classdef F16AeroL1 < AeroModelL1
             val = obj.get_CLmax([]) + obj.get_Delta_CLmax_L();
         end
 
+        function cfg = get_config_polar(obj, config)
+        %GET_CONFIG_POLAR  Per-high-lift-config polar, built on the F-16 clean
+        %   drag polar plus this class's config-distinguishing methods
+        %   (get_CLmax_TO/_L, get_Delta_CD0_TO/_L) -- the AerodynamicsBase
+        %   contract the FAR-25 field-length/climb constraints read.
+        %
+        %   The clean CD0/K1 are Mach-dependent, but the six configs are
+        %   LOW-SPEED high-lift states, so they are evaluated at a nominal
+        %   takeoff/landing condition (sea level, M = 0.2). The F-16 sizes with
+        %   the MILITARY Takeoff/Landing constraints, not the FAR-25 field-
+        %   length path, so this method completes the base contract by reusing
+        %   the existing config deltas. F-16 aero models clean/takeoff/landing
+        %   (no separate gear-up/gear-down split), so both takeoff_* configs map
+        %   to the takeoff deltas and both landing_* plus approach to landing.
+            arguments
+                obj
+                config (1,1) string {mustBeMember(config, ...
+                    ["clean", ...
+                     "takeoff_flaps_gear_up", "takeoff_flaps_gear_down", ...
+                     "landing_flaps_gear_up", "landing_flaps_gear_down", ...
+                     "approach"])}
+            end
+            ref   = AircraftState(0, 0.2);   % nominal low-speed takeoff/landing condition
+            clean = obj.drag_polar(ref);
+            switch config
+                case "clean"
+                    CD0 = clean.CD0;                          CLmax = obj.get_CLmax(ref);
+                case {"takeoff_flaps_gear_up", "takeoff_flaps_gear_down"}
+                    CD0 = clean.CD0 + obj.get_Delta_CD0_TO(); CLmax = obj.get_CLmax_TO();
+                otherwise   % landing_flaps_gear_up/down, approach
+                    CD0 = clean.CD0 + obj.get_Delta_CD0_L();  CLmax = obj.get_CLmax_L();
+            end
+            cfg = struct('CD0', CD0, 'K1', clean.K1, 'K2', clean.K2, 'CLmax', CLmax);
+        end
+
     end
 
     methods (Access = private)

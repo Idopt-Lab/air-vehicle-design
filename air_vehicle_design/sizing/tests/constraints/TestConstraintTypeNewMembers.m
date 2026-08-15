@@ -51,7 +51,9 @@ classdef TestConstraintTypeNewMembers < matlab.unittest.TestCase
         % --- build() dispatch per new member -------------------------------
 
         function testBuildTakeoffFieldLength(tc)
-            cond = struct('name', 'Takeoff Field Length', 'BFL_ft', 12000, 'sigma', 0.95);
+            % altitude_ft=1742.4 -> sigma=0.95 derived from the state (Ex 4.2 hot day).
+            cond = struct('name', 'Takeoff Field Length', 'BFL_ft', 12000, ...
+                'altitude_ft', 1742.4);
             c = ConstraintType.TakeoffFieldLength.build(cond, ...
                 TestConstraintTypeNewMembers.aeroStub(), TestConstraintTypeNewMembers.propStub());
             tc.verifyClass(c, 'TakeoffFieldLengthConstraint');
@@ -59,8 +61,9 @@ classdef TestConstraintTypeNewMembers < matlab.unittest.TestCase
         end
 
         function testBuildLandingFieldLengthFAR25(tc)
+            % altitude_ft=1742.4 -> sigma=0.95 derived from the state (Ex 4.2 hot day).
             cond = struct('name', 'Landing Field Length', 'runway_ft', 12000, ...
-                'Sa_ft', 1000, 'weight_ratio', 0.65, 'sigma', 0.95);
+                'Sa_ft', 1000, 'weight_ratio', 0.65, 'altitude_ft', 1742.4);
             c = ConstraintType.LandingFieldLengthFAR25.build(cond, ...
                 TestConstraintTypeNewMembers.aeroStub(), TestConstraintTypeNewMembers.propStub());
             tc.verifyClass(c, 'LandingFieldLengthConstraint');

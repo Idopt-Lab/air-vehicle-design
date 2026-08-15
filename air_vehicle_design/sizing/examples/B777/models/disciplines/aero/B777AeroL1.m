@@ -33,7 +33,7 @@ classdef B777AeroL1 < AeroModelL1
 %   aero object (MissionAnalysisBase, isprop(aero,'aircraft_category')) to select
 %   the transport fixed-fraction MissionEquations row.
 %
-%   get_config_polar(config) satisfies the HighLiftConfigBridge contract the
+%   get_config_polar(config) overrides the AerodynamicsBase contract the
 %   FAR-25 field-length and climb-gradient constraints need: it returns
 %   struct(CD0, K1, K2, CLmax) for each of the six configs, reproducing the five
 %   printed metabook polars plus the derived approach polar. CD0 and K1 track S
@@ -164,11 +164,12 @@ classdef B777AeroL1 < AeroModelL1
             CLmax = obj.CLmax_config("clean");
         end
 
-        % ---- Per-config polar (HighLiftConfigBridge contract) ------------- %
+        % ---- Per-config polar (AerodynamicsBase get_config_polar) --------- %
         function cfg = get_config_polar(obj, config)
         %GET_CONFIG_POLAR  Drag polar + CLmax for a named high-lift config.
-        %   Returns struct(CD0, K1, K2, CLmax) -- the HighLiftConfigBridge
-        %   contract the FAR-25 field-length and climb-gradient constraints read.
+        %   Returns struct(CD0, K1, K2, CLmax) -- overrides the AerodynamicsBase
+        %   get_config_polar contract the FAR-25 field-length and climb-gradient
+        %   constraints read.
         %   Tracks BOTH S and AR live:
         %     CD0 = CD0_clean_live + Delta_CD0_config(config)  [metabook §4.11]
         %     K1  = 1/(pi*AR_live*e_config(config))            [metabook Eq. 2.10]

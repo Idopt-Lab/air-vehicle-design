@@ -81,15 +81,15 @@ because `geom.S_wet = S_wet_rest + 2·S_ref`; `K1` tracks `AR`.
 |---|---|---|
 | `drag_polar(~)` | CLEAN polar `{CD0, K1, K2=0}`, tracking `S` live. `CD0 = AeroL2.CD0_from_Cf(Cfe, S_wet, S_ref)`; `K1 = 1/(π·AR·e_clean)`; `K2 = 0` (uncambered-basis metabook polar). `state` unused at L1 (no Mach/altitude dependence in the clean polar) | [metabook Eq. 4.8/4.58; Eq. 2.10] |
 | `get_CLmax(~)` | clean max lift = `CLmax_config("clean")` = 0.9. `state` unused (config-independent clean value) | [Roskam Table 3.1; metabook §4.11] |
-| `get_config_polar(config)` | `struct(CD0, K1, K2, CLmax)` for a named high-lift config — the `HighLiftConfigBridge` contract. Tracks BOTH `S` and `AR` live: `CD0 = CD0_clean_live + Delta_CD0_config(config)`; `K1 = 1/(π·AR_live·e_config(config))`; `CLmax = CLmax_config(config)` | [metabook §4.11; Eq. 2.10; Roskam Table 3.1] |
+| `get_config_polar(config)` | `struct(CD0, K1, K2, CLmax)` for a named high-lift config — overrides the `AerodynamicsBase.get_config_polar` contract. Tracks BOTH `S` and `AR` live: `CD0 = CD0_clean_live + Delta_CD0_config(config)`; `K1 = 1/(π·AR_live·e_config(config))`; `CLmax = CLmax_config(config)` | [metabook §4.11; Eq. 2.10; Roskam Table 3.1] |
 | `get_CLmax_TO()` | takeoff-config max lift = `CLmax_config("takeoff_flaps_gear_down")` = 2.0 | [Roskam Table 3.1] |
 | `get_CLmax_L()` | landing-config max lift = `CLmax_config("landing_flaps_gear_down")` = 2.6 | [Roskam Table 3.1] |
 | `get_Delta_CD0_TO()` | takeoff-config ΔCD0 (gear-down row) | [metabook §4.11 config increment] |
 | `get_Delta_CD0_L()` | landing-config ΔCD0 (gear-down row) | [metabook §4.11 config increment] |
 
 `get_config_polar` accepts the six config strings `clean`, `takeoff_flaps_gear_up`,
-`takeoff_flaps_gear_down`, `landing_flaps_gear_up`, `landing_flaps_gear_down`, `approach` — matching
-`HighLiftConfigBridge.CONFIGS` exactly. The `get_CLmax_TO/_L` + `get_Delta_CD0_TO/_L` wrappers let the
+`takeoff_flaps_gear_down`, `landing_flaps_gear_up`, `landing_flaps_gear_down`, `approach` — the set
+`AerodynamicsBase.get_config_polar` validates. The `get_CLmax_TO/_L` + `get_Delta_CD0_TO/_L` wrappers let the
 B777 also work with the MILITARY Takeoff/Landing constraints and the mission, even though the FAR-25
 path prefers `get_config_polar`. Takeoff ⇒ gear-down takeoff config; Landing ⇒ gear-down landing.
 

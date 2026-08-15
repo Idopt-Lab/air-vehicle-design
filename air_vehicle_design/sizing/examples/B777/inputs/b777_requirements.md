@@ -17,7 +17,7 @@ Example 4.2, `docs/reference_extracts/metabook_data.md`. `[Roskam Table 3.1]` et
 tables the metabook names.
 
 **Discipline-owned exclusions.** CLmax, CD0 and K per config are NOT carried here. They come from
-the injected `B777AeroL1` object through `HighLiftConfigBridge.polar(aero, config)`. Each constraint
+the injected `B777AeroL1` object through `aero.get_config_polar(config)`. Each constraint
 row carries only its `config` string; the aero object supplies the polar and CLmax for that config.
 See §4.
 
@@ -223,7 +223,7 @@ objects at run time.
 
 | Quantity | Owner | Why excluded |
 |----------|-------|--------------|
-| CLmax per config (0.9 / 2.0 / 2.6 / 2.21) | aero | From `HighLiftConfigBridge.polar(aero, config).CLmax`. Carried in the config-polar table in `b777_L1.md` §3.1, read live by the field-length and climb constraints. |
+| CLmax per config (0.9 / 2.0 / 2.6 / 2.21) | aero | From `aero.get_config_polar(config).CLmax`. Carried in the config-polar table in `b777_L1.md` §3.1, read live by the field-length and climb constraints. |
 | CD0, K1 per config | aero | From `aero.get_config_polar(config)`. The five metabook polars live in the aero object, not here. |
 | thrust-lapse alpha | prop | From `prop.thrust_lapse(state)` (AB) / `thrust_lapse_mil_on_AB_scale(state)` (mil), selected by `power_setting`. Uses ISA density from `AircraftState`. |
 | TSFC | prop | Mattingly Eq. 10.11 high-BPR form; a discipline internal, never a constraint input. |

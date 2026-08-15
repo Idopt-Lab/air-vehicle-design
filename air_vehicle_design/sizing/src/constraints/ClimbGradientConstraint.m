@@ -12,7 +12,7 @@ classdef ClimbGradientConstraint < Only_TbyW
 %   W/S, and the aggregator reads it as a flat T/W floor.
 %
 %   CD0/K1/CLmax are pulled fresh from the injected aero object each call
-%   (through the HighLiftConfigBridge, for the constructor's config string), so
+%   (through aero.get_config_polar, for the constructor's config string), so
 %   the constraint tracks the current sizing-loop iteration and fidelity level.
 %
 %   EQUATION [Metabook (Aero 481 metabook), docs/reference_extracts/
@@ -49,8 +49,8 @@ classdef ClimbGradientConstraint < Only_TbyW
 %
 %   CLmax SOURCE (and two metabook-internal discrepancies that surface HERE).
 %   CD0_cfg, K1_cfg AND CLmax are ALL read live from the injected aero object
-%   for the constructor's config string (HighLiftConfigBridge.polar(aero,
-%   config).CLmax) -- this class hardcodes NEITHER the polar NOR CLmax. So the
+%   for the constructor's config string (aero.get_config_polar(config).CLmax)
+%   -- this class hardcodes NEITHER the polar NOR CLmax. So the
 %   CLmax used in the induced term is whatever the config polar carries; the
 %   worked-example parity value is that config's CLmax, supplied as data, not a
 %   constant baked into this class. Two known metabook-internal discrepancies
@@ -86,11 +86,11 @@ classdef ClimbGradientConstraint < Only_TbyW
     end
 
     properties (SetAccess = private)
-        aero            % AerodynamicsBase -- supplies CD0/K1/CLmax via HighLiftConfigBridge.polar(aero,config)
+        aero            % AerodynamicsBase -- supplies CD0/K1/CLmax via aero.get_config_polar(config)
         prop            % PropulsionBase   -- supplies engine count via n_engines (guarded read)
         G               % double -- required climb gradient sin(gamma), dimensionless
         ks              % double -- speed ratio V/V_stall at the climb condition
-        config          % string -- high-lift configuration name (a HighLiftConfigBridge config)
+        config          % string -- high-lift configuration name (an aero.get_config_polar config)
         oei             % logical -- one-engine-inoperative segment
         hot_day         % logical -- apply the 1/0.8 hot-day thrust derate
         max_continuous  % logical -- apply the 1/0.94 max-continuous-thrust factor
@@ -136,14 +136,14 @@ classdef ClimbGradientConstraint < Only_TbyW
         %   returns this at every W/S.
         %
         %   CD0/K1/CLmax are the segment's high-lift config values, pulled fresh
-        %   from the aero object each call (HighLiftConfigBridge). FAILS LOUDLY
+        %   from the aero object each call (aero.get_config_polar). FAILS LOUDLY
         %   on a non-finite result: the config polar can be non-finite (a
         %   mis-injected aero object or an unmodeled config), and a NaN T/W
         %   floor is silently dropped from the aggregator's envelope -- error
         %   here so an un-evaluable climb constraint is a visible failure.
         %
         %   [Metabook Eqs. 4.24-4.25; worked Ex. 4.2 Eqs. 4.49-4.54.]
-            cfg = HighLiftConfigBridge.polar(obj.aero, obj.config);
+            cfg = obj.aero.get_config_polar(obj.config);
 
             f_hot   = 1.0;
             f_mcont = 1.0;

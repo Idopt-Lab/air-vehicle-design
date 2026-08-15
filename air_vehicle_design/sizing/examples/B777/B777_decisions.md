@@ -44,7 +44,7 @@ independent of `m`. The `m` decision only affects what `B777PropL1.thrust_lapse`
   in favour of the printed 2.2 for parity).
 
 `TakeoffFieldLengthConstraint` and `ClimbGradientConstraint` BOTH read the SAME
-`takeoff_flaps_gear_up` / `takeoff_flaps_gear_down` config CLmax through `HighLiftConfigBridge`. So
+`takeoff_flaps_gear_up` / `takeoff_flaps_gear_down` config CLmax through `aero.get_config_polar`. So
 whichever CLmax the config carries, one of the two printed families will not match exactly.
 
 **Options.**

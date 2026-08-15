@@ -1,5 +1,5 @@
 {
-  "_comment": "Boeing 777-200LR top-level design REQUIREMENTS -- what the aircraft must DO, fidelity-independent. Read the same way as f16a_requirements.json. SCOPE GUARD: requirements only, never spec data (reference area, AR, thrust, engine model stay in examples/B777/inputs/b777_L1.json) and never discipline-owned quantities (CLmax, CD0, K1, thrust-lapse alpha, TSFC come from the injected B777AeroL1 / B777PropL1 objects at run time). Each constraint row carries only its config string; the aero object supplies that config's polar and CLmax through HighLiftConfigBridge. Full docs + per-field citations: examples/B777/inputs/b777_requirements.md.",
+  "_comment": "Boeing 777-200LR top-level design REQUIREMENTS -- what the aircraft must DO, fidelity-independent. Read the same way as f16a_requirements.json. SCOPE GUARD: requirements only, never spec data (reference area, AR, thrust, engine model stay in examples/B777/inputs/b777_L1.json) and never discipline-owned quantities (CLmax, CD0, K1, thrust-lapse alpha, TSFC come from the injected B777AeroL1 / B777PropL1 objects at run time). Each constraint row carries only its config string; the aero object supplies that config's polar and CLmax through aero.get_config_polar (the AerodynamicsBase contract). Full docs + per-field citations: examples/B777/inputs/b777_requirements.md.",
   "_cite": "metabook = AE481 metabook worked Example 4.2, docs/reference_extracts/metabook_data.md; Roskam Table 3.1 etc. are the primary tables the metabook names. Constraint-class field names verified against src/constraints/{TakeoffFieldLengthConstraint, LandingFieldLengthConstraint, ClimbGradientConstraint, ExcessPowerConstraint, LevelFlightConstraint}.m fromCondition readers.",
   "cruise": {
     "_src": "cruise condition [metabook \u00a74.11 Eq. 4.57] -- 40000 ft, M 0.84 (q = 228.8 lbf/ft2). Consumed by the mission long_range cruise segment and the Cruise constraint.",
@@ -9,7 +9,7 @@
   "design_range_nmi": 8555,
   "_TODO_design_range_nmi": "Design mission range 6,000 nmi -- a TYPICAL 777-200LR long-haul stage, NOT the ~8,555 nmi max-range point (which has the highest fuel fraction and, with the metabook L1 fuel/weight estimates, does not close at the real wing area). 6,000 nmi + 145,000 lbf payload converges to ~701,000 lbf (-8.6% vs the real 766,800). A design choice, not a pinned Boeing value -- _TODO.",
   "constraints": {
-    "_comment": "The ~10 B777 constraint conditions. Each object holds REQUIREMENT / CONDITION data ONLY. NO discipline-owned quantity is present: CLmax/CD0/K1 come from the injected B777AeroL1 object for the row's config string (via HighLiftConfigBridge), thrust-lapse alpha and TSFC from the injected B777PropL1 object, and n_engines (OEI factor) from the injected prop object. Unlike the F-16 set, most field/climb rows do NOT carry beta -- the metabook field and climb equations use explicit weight_ratio corrections. Only Ceiling (ExcessPowerConstraint) and Cruise (LevelFlightConstraint) carry beta, because those Master-Equation classes require it. Condition name -> concrete class is chosen explicitly by the future B777ConstraintSet map (implementation phase). See b777_requirements.md \u00a7\u00a72-3.",
+    "_comment": "The ~10 B777 constraint conditions. Each object holds REQUIREMENT / CONDITION data ONLY. NO discipline-owned quantity is present: CLmax/CD0/K1 come from the injected B777AeroL1 object for the row's config string (via aero.get_config_polar), thrust-lapse alpha and TSFC from the injected B777PropL1 object, and n_engines (OEI factor) from the injected prop object. Unlike the F-16 set, most field/climb rows do NOT carry beta -- the metabook field and climb equations use explicit weight_ratio corrections. Only Ceiling (ExcessPowerConstraint) and Cruise (LevelFlightConstraint) carry beta, because those Master-Equation classes require it. Condition name -> concrete class is chosen explicitly by the future B777ConstraintSet map (implementation phase). See b777_requirements.md \u00a7\u00a72-3.",
     "_cite": "metabook = AE481 metabook worked Example 4.2, docs/reference_extracts/metabook_data.md.",
     "_note_field_length_classes": "The B777 uses the FAR-25 STATISTICAL field-length classes (TakeoffFieldLengthConstraint / LandingFieldLengthConstraint, metabook Eqs. 4.14-4.19/4.45-4.48), NOT the Mattingly/Roskam ground-roll siblings the F-16 uses. See b777_requirements.md \u00a72.2.",
     "_note_climb_CLmax": "The six climb rows read CD0/K1/CLmax LIVE from the aero object for cond.config -- the config-CLmax basis (D1/D2, RESOLVED 2026-08-13 in favour of the printed values for parity) lives in the aero CONFIG POLAR data (b777_L1.json .aerodynamics.config_polars), NOT here. See b777_requirements.md \u00a73.3.",
@@ -18,8 +18,8 @@
         "name": "Takeoff Field Length",
         "category": "Both_WbyS_TbyW",
         "BFL_ft": 12000,
-        "sigma": 0.95,
-        "_src": "TakeoffFieldLengthConstraint.fromCondition reads BFL_ft, sigma. BFL_ft [metabook Eq. 4.47, TOP = 12000/37.5 = 320]; sigma [metabook Eq. 4.48, hot day near sea level rho/rhoSL = 0.95]. CLmax_TO read live from aero 'takeoff_flaps_gear_down'. See b777_requirements.md \u00a73.1."
+        "altitude_ft": 1742.4,
+        "_src": "TakeoffFieldLengthConstraint.fromCondition reads BFL_ft and the takeoff-field condition (altitude_ft; sigma = rho/rhoSL derived from that state). BFL_ft [metabook Eq. 4.47, TOP = 12000/37.5 = 320]. sigma [metabook Eq. 4.48, hot day near sea level rho/rhoSL = 0.95]: this ISA-only framework represents the hot day as the matching DENSITY ALTITUDE -- AircraftState(1742.4 ft) has sigma = 0.95000, reproducing the metabook denominator constant 0.95*320 = 304.0. CLmax_TO read live from aero 'takeoff_flaps_gear_down'. See b777_requirements.md \u00a73.1."
       },
       {
         "name": "Landing Field Length",
@@ -27,9 +27,9 @@
         "runway_ft": 12000,
         "Sa_ft": 1000,
         "weight_ratio": 0.65,
-        "sigma": 0.95,
+        "altitude_ft": 1742.4,
         "runway_factor": 0.6,
-        "_src": "LandingFieldLengthConstraint.fromCondition reads runway_ft, Sa_ft, weight_ratio, sigma, optional runway_factor (defaults 0.6). All [metabook Eq. 4.46]: runway_ft = S_runway; Sa_ft = airliner approach distance [Eq. 4.19]; weight_ratio = MLW/MTOW for the 777-200LR; sigma = hot day near sea level; runway_factor = FAR landing-field multiple (0.6 = 1/1.67). CLmax_L read live from aero 'landing_flaps_gear_down'. See b777_requirements.md \u00a73.2."
+        "_src": "LandingFieldLengthConstraint.fromCondition reads runway_ft, Sa_ft, weight_ratio, the landing-field condition (altitude_ft; sigma = rho/rhoSL derived from that state), optional runway_factor (defaults 0.6). All [metabook Eq. 4.46]: runway_ft = S_runway; Sa_ft = airliner approach distance [Eq. 4.19]; weight_ratio = MLW/MTOW for the 777-200LR; sigma = hot day near sea level, represented as density altitude AircraftState(1742.4 ft) = sigma 0.95000; runway_factor = FAR landing-field multiple (0.6 = 1/1.67). CLmax_L read live from aero 'landing_flaps_gear_down'. See b777_requirements.md \u00a73.2."
       },
       {
         "name": "Climb 1 (takeoff, FAR 25.111)",

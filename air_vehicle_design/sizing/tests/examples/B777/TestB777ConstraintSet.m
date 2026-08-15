@@ -121,6 +121,9 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
         function testTakeoffFieldLengthRequiredTW(tc)
         % required_TW(142.45) = 142.45/(sigma*CLmax_TO*TOP25) = 142.45/608
         % with sigma=0.95, CLmax_TO=2.0 (PHYSICAL), TOP25=12000/37.5=320.
+        % sigma is now DERIVED from the requirements-JSON altitude (1742.4 ft,
+        % the hot-day density altitude) -> sigma = 0.95 to ~1e-7, so the check
+        % uses RelTol 1e-5 rather than the exact-input 1e-9.
             [aero, prop] = TestB777ConstraintSet.buildAeroProp();
             list = ConstraintAnalysis.build_constraints(aero, prop, ...
                 string(b777_requirements_path()), B777ConstraintSet.constraint_map());
@@ -128,7 +131,7 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
             received = c.required_TW(142.45);
             fprintf('\n    TFL required_TW(142.45) = %.8f (hand 142.45/608 = %.8f)\n', ...
                 received, tc.TFL_TW_142_45);
-            tc.verifyEqual(received, tc.TFL_TW_142_45, 'RelTol', 1e-9, ...
+            tc.verifyEqual(received, tc.TFL_TW_142_45, 'RelTol', 1e-5, ...
                 ['Takeoff-field required_TW(142.45) must be 142.45/(0.95*2.0*320) ', ...
                  '= 142.45/608 with the PHYSICAL CLmax_TO = 2.0.']);
             % Linear through the origin: doubling W/S doubles required T/W.
@@ -147,7 +150,9 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
             c = TestB777ConstraintSet.findByName(list, "Landing Field Length");
             received = c.WS_max();
             fprintf('\n    LFL WS_max = %.4f lbf/ft^2 (hand %.4f)\n', received, tc.LFL_WS_MAX);
-            tc.verifyEqual(received, tc.LFL_WS_MAX, 'RelTol', 1e-6, ...
+            % sigma derived from the requirements-JSON altitude (1742.4 ft) ->
+            % sigma = 0.95 to ~1e-7, so RelTol 1e-5 (was exact-input 1e-6).
+            tc.verifyEqual(received, tc.LFL_WS_MAX, 'RelTol', 1e-5, ...
                 ['Landing-field WS_max must be sigma*CLmax_L/80*(runway*rf - Sa)/wr ', ...
                  '= 294.5 lbf/ft^2 with the PHYSICAL CLmax_L = 2.6.']);
         end

@@ -10,6 +10,12 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
 %     W/S <= sigma * CLmax_L / 80
 %              * (S_runway * runway_factor - Sa) / weight_ratio    (Eq. 4.45/4.46)
 %
+%   sigma = rho/rho_SL is DERIVED FROM THE STATE the constraint is built with
+%   (not a separate input): the landing-field density ratio is exactly what the
+%   AircraftState carries. A sea-level state gives sigma = 1.0; the metabook's
+%   hot-day sigma = 0.95 is represented as the matching DENSITY ALTITUDE
+%   (AircraftState(1742.4 ft) has sigma = 0.95000).
+%
 %   HAND-COMPUTED EXPECTED VALUE (in the properties block below), independently
 %   derived from Eq. 4.45/4.46 with the metabook Example 4.2 inputs -- NOT a
 %   copy of LandingFieldLengthConstraint's own algebra:
@@ -22,11 +28,7 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
 %       available_field = S_runway*runway_factor - Sa
 %                       = 12000*0.6 - 1000 = 7200 - 1000 = 6200 ft
 %       WS_max = sigma * CLmax_L / 80 * available_field / weight_ratio
-%              = 0.95 * 2.6 / 80 * 6200 / 0.65
-%              = (2.47 / 80) * 6200 / 0.65
-%              = 0.0308750 * 6200 / 0.65
-%              = 191.425 / 0.65
-%              = 294.5 lbf/ft^2   (exactly 294.5)
+%              = 0.95 * 2.6 / 80 * 6200 / 0.65 = 294.5 lbf/ft^2
 %
 %   Cross-check against the class header's own Eq. 4.46 shorthand
 %   (WS = 113.27 * CLmax): 113.27 * 2.6 = 294.502 -- agrees to rounding of the
@@ -38,12 +40,12 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
 
     properties (Constant)
         % Metabook Example 4.2 landing-field inputs [Eq. 4.46].
-        SIGMA         = 0.95    % [Ex. 4.2] hot-day near-SL air-density ratio
         S_RUNWAY_FT   = 12000   % [Ex. 4.2] available runway length, ft
         RUNWAY_FACTOR = 0.6     % [Ex. 4.2] FAR landing-field multiple (0.6 = 1/1.67)
         SA_FT         = 1000    % [Ex. 4.2] obstacle-clearance approach distance, ft
         WEIGHT_RATIO  = 0.65    % [Ex. 4.2] MLW/MTOW
         CLMAX_L       = 2.6     % [FixedConfigAeroStub default landing_flaps_gear_down]
+        HOT_DAY_ALT_FT = 1742.4 % density altitude giving sigma = 0.95000 [Ex. 4.2 hot day]
 
         % Hand-computed WS_max [Eq. 4.45/4.46, Ex. 4.2]:
         %   0.95*2.6/80 * (12000*0.6 - 1000)/0.65 = 294.5 lbf/ft^2.
@@ -57,14 +59,20 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
             aero = FixedConfigAeroStub();
         end
 
+        function state = hotDayState()
+        %HOTDAYSTATE  Density altitude reproducing the Ex 4.2 hot day (sigma=0.95).
+            state = AircraftState(TestLandingFieldLengthConstraint.HOT_DAY_ALT_FT, 0.2);
+        end
+
         function obj = defaultConstraint()
-        %DEFAULTCONSTRAINT  The metabook Example 4.2 landing-field constraint.
+        %DEFAULTCONSTRAINT  The metabook Example 4.2 landing-field constraint
+        %   (hot-day density altitude -> sigma = 0.95).
             obj = LandingFieldLengthConstraint("Landing Field Length", ...
+                TestLandingFieldLengthConstraint.hotDayState(), ...
                 TestLandingFieldLengthConstraint.defaultAero(), ...
                 TestLandingFieldLengthConstraint.S_RUNWAY_FT, ...
                 TestLandingFieldLengthConstraint.SA_FT, ...
                 TestLandingFieldLengthConstraint.WEIGHT_RATIO, ...
-                TestLandingFieldLengthConstraint.SIGMA, ...
                 TestLandingFieldLengthConstraint.RUNWAY_FACTOR);
         end
 
@@ -88,15 +96,20 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
         % --- Hand-computed equation (metabook Ex 4.2) ----------------------
 
         function testWSMaxMatchesHandComputed(tc)
-            % WS_max must equal the independently hand-computed Eq. 4.45/4.46
-            % value 294.5 lbf/ft^2 [Ex. 4.2].
-            obj = TestLandingFieldLengthConstraint.defaultConstraint();
+            % The hot-day density altitude must give sigma ~ 0.95, and WS_max
+            % must then equal the hand-computed Eq. 4.45/4.46 value 294.5 [Ex 4.2].
+            state = TestLandingFieldLengthConstraint.hotDayState();
+            sigma = state.rho / AircraftState(0, 0.2).rho;
+            tc.verifyEqual(sigma, 0.95, 'RelTol', 1e-3, ...
+                'The 1742.4 ft density altitude must give sigma ~ 0.95 (Ex 4.2 hot day).');
 
+            obj = TestLandingFieldLengthConstraint.defaultConstraint();
             received = obj.WS_max();
             expected = TestLandingFieldLengthConstraint.EXPECTED_WS_MAX;
 
-            fprintf('\n    LFL WS_max: received=%.4f  hand=%.4f\n', received, expected);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-3, ...
+            fprintf('\n    LFL WS_max: received=%.4f  hand=%.4f  (sigma=%.6f)\n', ...
+                received, expected, sigma);
+            tc.verifyEqual(received, expected, 'AbsTol', 5e-2, ...
                 'WS_max must equal the hand-computed Eq. 4.45/4.46 value (294.5).');
         end
 
@@ -104,26 +117,25 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
 
         function testRunwayFactorDefaultsToPointSix(tc)
             % runway_factor defaults to 0.6 when omitted (FAR 1/1.67 multiple).
-            % weight_ratio and sigma default to 1.0; supply them explicitly so
-            % only runway_factor is defaulted here.
+            % weight_ratio supplied explicitly so only runway_factor is defaulted.
             obj = LandingFieldLengthConstraint("LFL", ...
+                TestLandingFieldLengthConstraint.hotDayState(), ...
                 TestLandingFieldLengthConstraint.defaultAero(), ...
-                12000, 1000, 0.65, 0.95);
-            % Same inputs as the hand-computed case, runway_factor defaulted to
-            % 0.6 -> the same 294.5 result.
+                12000, 1000, 0.65);
             tc.verifyEqual(obj.WS_max(), ...
-                TestLandingFieldLengthConstraint.EXPECTED_WS_MAX, 'AbsTol', 1e-3, ...
+                TestLandingFieldLengthConstraint.EXPECTED_WS_MAX, 'AbsTol', 5e-2, ...
                 'runway_factor must default to 0.6.');
         end
 
-        function testWeightRatioAndSigmaDefaultToOne(tc)
-            % weight_ratio and sigma both default to 1.0 when omitted.
-            % WS_max = 1.0*2.6/80 * (12000*0.6 - 1000)/1.0 = 2.6/80*6200 = 201.5.
-            obj = LandingFieldLengthConstraint("LFL", ...
+        function testWeightRatioDefaultsToOne(tc)
+            % weight_ratio defaults to 1.0 when omitted. Use a SEA-LEVEL state so
+            % sigma = 1.0 exactly:
+            %   WS_max = 1.0*2.6/80 * (12000*0.6 - 1000)/1.0 = 2.6/80*6200 = 201.5.
+            obj = LandingFieldLengthConstraint("LFL", AircraftState(0, 0.2), ...
                 TestLandingFieldLengthConstraint.defaultAero(), 12000, 1000);
             expected = 1.0 * 2.6 / 80 * (12000 * 0.6 - 1000) / 1.0;
             tc.verifyEqual(obj.WS_max(), expected, 'AbsTol', 1e-3, ...
-                'weight_ratio and sigma must default to 1.0.');
+                'weight_ratio must default to 1.0 (sea-level state -> sigma=1.0).');
         end
 
         % --- Feasibility residual (Only_WbyS) ------------------------------
@@ -153,11 +165,11 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
         % --- fromCondition factory -----------------------------------------
 
         function testFromConditionMatchesDirectConstructor(tc)
-            % fromCondition reads cond.name/runway_ft/Sa_ft/weight_ratio/sigma
-            % and the optional cond.runway_factor.
+            % fromCondition reads name/runway_ft/Sa_ft/weight_ratio/altitude_ft
+            % (sigma derived from that state) and the optional runway_factor.
             cond = struct('name', 'Landing Field Length', ...
                 'runway_ft', 12000, 'Sa_ft', 1000, 'weight_ratio', 0.65, ...
-                'sigma', 0.95, 'runway_factor', 0.6);
+                'altitude_ft', 1742.4, 'runway_factor', 0.6);
             aero = TestLandingFieldLengthConstraint.defaultAero();
 
             obj_fc  = LandingFieldLengthConstraint.fromCondition(cond, aero, []);
@@ -173,12 +185,12 @@ classdef TestLandingFieldLengthConstraint < matlab.unittest.TestCase
             % constructor default (0.6).
             cond = struct('name', 'Landing Field Length', ...
                 'runway_ft', 12000, 'Sa_ft', 1000, 'weight_ratio', 0.65, ...
-                'sigma', 0.95);
+                'altitude_ft', 1742.4);
             aero = TestLandingFieldLengthConstraint.defaultAero();
 
             obj_fc = LandingFieldLengthConstraint.fromCondition(cond, aero, []);
             tc.verifyEqual(obj_fc.WS_max(), ...
-                TestLandingFieldLengthConstraint.EXPECTED_WS_MAX, 'AbsTol', 1e-3, ...
+                TestLandingFieldLengthConstraint.EXPECTED_WS_MAX, 'AbsTol', 5e-2, ...
                 'fromCondition must default runway_factor to 0.6 when absent.');
         end
 
