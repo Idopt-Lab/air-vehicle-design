@@ -32,7 +32,7 @@ aero = B777AeroL1(geom, sp);
 
 % W/S sweep [psf]: 60..300 covers the actual 777 at 142.45 and the landing-wall
 % W/S ~ 294.5 [metabook Eq. 4.46, 113.27*2.6]. 241 points -> ~1 psf resolution.
-WS_sweep = linspace(60, 300, 241);
+WS_sweep = linspace(20, 340, 321);   % from low W/S so the cruise curve forms the left boundary (metabook Fig 4.6)
 
 ca = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
     B777ConstraintSet.constraint_map(), WS_sweep);

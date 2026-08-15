@@ -111,15 +111,14 @@
       },
       {
         "name": "Ceiling",
-        "category": "Both_WbyS_TbyW",
+        "category": "Only_TbyW",
         "altitude_ft": 42000,
         "mach": 0.84,
-        "beta": 1.0,
-        "Ps_fps": 0.813,
+        "G": 0.001,
         "power_setting": "mil",
-        "_src": "ExcessPowerConstraint.fromCondition reads altitude_ft, mach, beta, Ps_fps, power_setting. altitude_ft [metabook Eq. 4.56 service ceiling]; beta = 1.0 (Master-Equation classes require beta; ceiling at full weight, W/W_TO = 1.0); power_setting = mil (high-BPR transports do not use afterburner). Ps_fps = 0.813 is DERIVED Ps = G*V: G = 0.001 [metabook Eq. 4.56], V = M*a = 0.84*968.1 = 813.2 ft/s at 42000 ft (isothermal stratosphere, a = sqrt(1.4*1716.5*389.97) = 968.1 ft/s), Ps = 0.001*813.2 = 0.8132 ft/s. See b777_requirements.md \u00a73.4.",
-        "_TODO_mach": "ceiling mach = 0.84 is a stand-in -- the metabook does not print a ceiling Mach; recommended = the cruise Mach 0.84 (the example's own high-altitude cruise Mach). If the confirmed ceiling Mach differs, Ps_fps must be recomputed at the new V. Remove this key when a ceiling Mach is pinned or the cruise-Mach recommendation is accepted. See b777_requirements.md \u00a73.4 / \u00a76.",
-        "_note_parity": "The Master-Equation ExcessPowerConstraint uses ISA thrust lapse from AircraftState (alpha = sigma^m), NOT the metabook's printed off-ISA alpha = 0.2331^0.6. The comparison report evaluates the printed Eq. 4.56 with the printed ratio for parity (D5). See b777_requirements.md \u00a73.4."
+        "_src": "CeilingConstraint.fromCondition reads altitude_ft, mach, G, power_setting. Service ceiling: minimum-T/W form T_SL/W = (1/alpha)*(2*sqrt(CD0*K1)+G) [metabook Eq. 4.30/4.56] -- a HORIZONTAL line (W/S-independent), NOT the W/S-dependent ExcessPower U-curve. G = 0.001 residual climb gradient [metabook Eq. 4.56]. power_setting = mil (high-BPR transports do not use afterburner). See b777_requirements.md.",
+        "_TODO_mach": "ceiling mach = 0.84 stand-in (= cruise Mach; the metabook prints no ceiling Mach). Sets the drag polar / thrust lapse condition. Remove when pinned.",
+        "_note_parity": "CeilingConstraint uses ISA thrust lapse from AircraftState (alpha=sigma^m at 42000 ft, sigma_ISA=0.2236) vs the metabook's printed off-ISA alpha=0.2331^0.6 (sigma=0.2331 = ISA at ~41135 ft). ~2% gap (D5). Comparison report evaluates the printed Eq. 4.56 for parity."
       },
       {
         "name": "Cruise",

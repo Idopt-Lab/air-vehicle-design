@@ -38,8 +38,8 @@ ts = TSDiagram(aero, prop, wts, geom, miss, con, tail);
 % Uniform grids (TSDiagram.plot's feasible-region shading assumes uniform
 % spacing). Ranges bracket the actual 777 (S = 4605 ft^2, T = 220000 lbf) and
 % the converged design point on both sides.
-S_grid = linspace(3500, 6500, 25);      % ft^2
-T_grid = linspace(150000, 320000, 25);  % lbf
+S_grid = linspace(2000, 6000, 28);      % ft^2 (metabook Fig 4.7 axes)
+T_grid = linspace(30000, 350000, 28);   % lbf (metabook Fig 4.7 axes)
 
 % Actual-aircraft marker [metabook Fig. 4.7: "Actual 777-200LR (T = 220000 lb
 % and S = 4605 ft2)"].

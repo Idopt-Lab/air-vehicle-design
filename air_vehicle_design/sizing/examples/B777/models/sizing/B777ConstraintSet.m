@@ -25,7 +25,7 @@ classdef B777ConstraintSet
 %     * SIX FAR-25 climb segments, all ClimbGradient (Eqs. 4.49-4.54): the
 %       balked-landing/2nd-segment/enroute rows differ only in G/ks/config/oei,
 %       which the requirements JSON carries per row -- one class, six conditions.
-%     * Ceiling -> ExcessPower (service-ceiling Ps > 0, Eq. 4.56).
+%     * Ceiling -> Ceiling (minimum-T/W horizontal line, Eq. 4.30/4.56).
 %     * Cruise -> LevelFlight (n = 1, Ps = 0, Eq. 4.57).
 %
 %   The keys below are the EXACT condition "name" strings in
@@ -47,7 +47,7 @@ classdef B777ConstraintSet
             m("Climb 4 (enroute, FAR 25.121)")       = ConstraintType.ClimbGradient;
             m("Climb 5 (AEO balked landing, FAR 25.119)") = ConstraintType.ClimbGradient;
             m("Climb 6 (OEI balked landing, FAR 25.121)") = ConstraintType.ClimbGradient;
-            m("Ceiling")                             = ConstraintType.ExcessPower;
+            m("Ceiling")                             = ConstraintType.Ceiling;
             m("Cruise")                              = ConstraintType.LevelFlight;
         end
 

@@ -1010,3 +1010,16 @@ Logged by the scribe during the Step-0 extract extension. User dispositions reco
 - Why it matters: `B777PropL1.thrust_lapse` and the comparison against the printed Eqs. 4.56/4.57.
 - Proposed handling: the comparison report evaluates Eqs. 4.56/4.57 with the PRINTED ratios (parity); the B777PropL1 model uses ISA sigma from `AircraftState` with the lapse exponent m as a cited JSON input. Choice of m (0.6 printed vs ~1.0 GE90 fit) is a Step-3 gate decision.
 - PENDING user decision (m for the B777 propulsion model).
+
+### D6 — Fig. 4.6 cruise curve is inconsistent with the printed Eq. 4.57
+
+- Added 2026-08-14 (B777 figure-fidelity check). Digitising Fig. 4.6 (printed p. 48) and comparing to Eq. 4.57 (p. 47): the plotted cruise curve reads ~0.30 at W/S = 45 and a minimum ~0.13, whereas Eq. 4.57 gives ~0.19 at W/S = 45 and a minimum of 0.105 at W/S = 148.
+- Root cause: Eq. 4.57 uses q = 228.8 psf and the density ratio 0.2846 for "M0.84, 40,000 ft," but ISA at 40,000 ft / M0.84 gives q = 193.5 psf and sigma = 0.2462 (q = 228.8 and sigma = 0.2846 are the ISA values at ~37,000 ft). The metabook's stated cruise altitude (40,000 ft) is inconsistent with its own q and density ratio. Likewise the ceiling "42,000 ft" sigma = 0.2331 is ISA at ~41,135 ft (ISA at 42,000 ft = 0.2236).
+- Disposition (Sarojini 2026-08-14): the B777 example uses PHYSICALLY-CORRECT ISA at the stated altitudes (q = 193.5 at 40,000 ft), so its cruise curve is ~10% off the book's erroneous curve BY DESIGN. My code is correct; the metabook figure/equation is internally inconsistent.
+
+### D7 — Fig. 4.7 climb lines are inconsistent with the §4.12 method (fixed CD0 vs the prescribed CD0(S))
+
+- Added 2026-08-14 (B777 figure-fidelity check). Fig. 4.7 (printed p. 51) shows the climb T-lines RISING monotonically with S (second-segment climb ~185,000 lb at S = 2000 to ~205,000 at S = 6000), implying W_TO increases monotonically with S. But the metabook's own Algorithm 2 (§4.12), computed with Eq. 4.58's CD0(S) = Cf*(Swet_rest + 2S)/S coupling, 10 lb/ft^2 wing areal density, and the optimal-CL Breguet cruise, gives a U-SHAPED W_TO(S) with a minimum near S = 5500 (807k at S=3000 -> 733k at S=5500 -> 735k at S=6000).
+- Root cause (verified by direct computation 2026-08-14): the monotonic rise is reproduced only when CD0 is held FIXED at the design value 0.01597 (666k at S=3000 -> 800k at S=6000). With CD0 fixed, a bigger wing gives no L/D gain, so the +10 lb/ft^2 wing weight dominates and W_TO rises with S. Fig. 4.7 was therefore plotted WITHOUT the Eq. 4.58 CD0(S) coupling that §4.12 explicitly prescribes for the T-S plot.
+- Disposition (Sarojini 2026-08-14): the B777 example uses the prescribed CD0(S) coupling (Eq. 4.58), so its W_TO(S) is U-shaped -- matching the metabook's own Algorithm 2, NOT the inconsistent Fig. 4.7. My code is correct; the metabook figure ignores its own §4.12 method.
+
