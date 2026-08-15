@@ -217,7 +217,7 @@ classdef TestPropL1 < matlab.unittest.TestCase
             % entry points that must return the identical value.
             g = F16PropL1(f16a_spec_path(1));
             state = AircraftState(20000, 0.7);
-            tc.verifyEqual(g.thrust_lapse(state), g.get_thrust_lapse(state), ...
+            tc.verifyEqual(g.thrust_lapse(state, "AB"), g.get_thrust_lapse(state), ...
                 'AbsTol', tc.TOL_EXACT, 'thrust_lapse and get_thrust_lapse must agree.');
         end
 

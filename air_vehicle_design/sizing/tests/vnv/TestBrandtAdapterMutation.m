@@ -146,8 +146,8 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
             states = {AircraftState(30000, 0.9), AircraftState(0, 0.4)};
 
             oew1 = wA.OEW(tc.W_TO_GT);
-            alpha_AB0  = cellfun(@(s) pA.thrust_lapse(s), states);
-            alpha_mil0 = cellfun(@(s) pA.thrust_lapse_mil_on_AB_scale(s), states);
+            alpha_AB0  = cellfun(@(s) pA.thrust_lapse(s, "AB"), states);
+            alpha_mil0 = cellfun(@(s) pA.thrust_lapse(s, "mil"), states);
 
             pA.T_SL = 2 * tc.T_AB_STOCK;
 
@@ -157,8 +157,8 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
                 'RelTol', 1e-12, ...
                 'T_sl_dry must scale by the same factor (dry/AB ratio preserved).');
 
-            alpha_AB1  = cellfun(@(s) pA.thrust_lapse(s), states);
-            alpha_mil1 = cellfun(@(s) pA.thrust_lapse_mil_on_AB_scale(s), states);
+            alpha_AB1  = cellfun(@(s) pA.thrust_lapse(s, "AB"), states);
+            alpha_mil1 = cellfun(@(s) pA.thrust_lapse(s, "mil"), states);
             tc.verifyEqual(alpha_AB1, alpha_AB0, 'RelTol', 1e-12, ...
                 'AB thrust lapse must be invariant under the ratio-preserving rubber scale.');
             tc.verifyEqual(alpha_mil1, alpha_mil0, 'RelTol', 1e-12, ...

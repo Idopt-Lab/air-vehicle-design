@@ -8,9 +8,10 @@ classdef FixedPropStub < PropulsionBase
 %   performance value (e.g. Takeoff) needs to feed it Brandt's own fixed
 %   alpha_AB, not drive it through a real F16PropLN model.
 %
-%   FixedPropStub(alpha) always returns that alpha from thrust_lapse(state),
-%   no matter what state is passed in. T_SL/TSFC are unused placeholders the
-%   abstract class demands; they have no effect on any test.
+%   FixedPropStub(alpha) always returns that alpha from
+%   thrust_lapse(state, rating), no matter what state or rating is passed in.
+%   T_SL/TSFC are unused placeholders the abstract class demands; they have no
+%   effect on any test.
 
     properties
         T_SL = 1
@@ -27,7 +28,7 @@ classdef FixedPropStub < PropulsionBase
             obj.alpha = alpha;
         end
 
-        function a = thrust_lapse(obj, ~)
+        function a = thrust_lapse(obj, ~, ~)
             a = obj.alpha;
         end
 

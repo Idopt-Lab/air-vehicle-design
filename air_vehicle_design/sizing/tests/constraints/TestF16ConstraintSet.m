@@ -177,8 +177,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             cruise_AB = LevelFlightConstraint(cruise.name, cruise.state, aero, prop, ...
                 cruise.beta, "AB");
 
-            alpha_mil = prop.thrust_lapse_mil_on_AB_scale(cruise.state);
-            alpha_AB  = prop.thrust_lapse(cruise.state);
+            alpha_mil = prop.thrust_lapse(cruise.state, "mil");
+            alpha_AB  = prop.thrust_lapse(cruise.state, "AB");
             tc.verifyLessThan(alpha_mil, alpha_AB, ...
                 'Sanity: the mil-on-AB-scale lapse must be below the AB lapse.');
 
@@ -194,17 +194,24 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
                 'The mil basis must demand MORE T/W than the AB basis at Cruise.');
         end
 
-        function testMissingOrPartialABPercentErrors(tc)
-            % An unstated power setting silently defaulting to "AB" is the bug
-            % being fixed, so a NaN AB% must error rather than default. Partial
-            % afterburner is not modeled either (PropulsionBase exposes only the
-            % two discrete bases), so it must error too. Exercised through the
-            % private mapper via the public build path's own contract: construct
-            % the two invalid cases directly.
-            tc.verifyError(@() LevelFlightConstraint("X", AircraftState(0, 0.5), ...
+        function testMissingOrInvalidPowerSettingErrors(tc)
+            % A MISSING power_setting still errors at construction time
+            % (requirePowerSetting) -- silently defaulting to "AB" is the bug
+            % this guards.
+            tc.verifyError(@() MasterEquationConstraint.requirePowerSetting( ...
+                struct('name', "X")), ...
+                'MasterEquationConstraint:missingPowerSetting', ...
+                'A missing power_setting must error loudly, not default to AB.');
+            % An INVALID / partial rating is no longer rejected at construction:
+            % the constraint carries the rating string and the INJECTED prop
+            % validates it against its engine's ratings when thrust_lapse is
+            % called. So "partial" builds, then errors (mustBeMember) at
+            % EVALUATION -- the F-16 engine has only {mil, AB}.
+            c = LevelFlightConstraint("X", AircraftState(0, 0.5), ...
                 F16AeroL1(f16a_spec_path(1)), F16PropL1(f16a_spec_path(1)), ...
-                0.9, "partial"), 'MATLAB:validators:mustBeMember', ...
-                'A Master-Equation constraint must reject a power setting outside {AB, mil}.');
+                0.9, "partial");
+            tc.verifyError(@() c.required_TW(90), 'MATLAB:validators:mustBeMember', ...
+                'The injected F-16 prop must reject a rating outside {mil, AB} at evaluation.');
         end
 
         function testTakeoffStateUsesLiftoffMach(tc)

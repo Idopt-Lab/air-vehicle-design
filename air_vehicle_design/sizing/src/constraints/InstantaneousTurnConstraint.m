@@ -60,9 +60,9 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
     properties (SetAccess = private)
         state         % AircraftState -- flight condition (altitude, Mach)
         aero          % AerodynamicsBase -- supplies CD0, K1 via drag_polar(state) (clean)
-        prop          % PropulsionBase   -- supplies alpha via thrust_lapse(state)
+        prop          % PropulsionBase   -- supplies alpha via thrust_lapse(state, rating)
         turn_rate_dps % double, deg/s -- required instantaneous turn rate
-        powerSetting  % string "AB"/"mil" -- basis get_alpha draws the thrust lapse from
+        powerSetting  % string -- engine power rating passed to prop.thrust_lapse (fighter "mil"/"AB", transport "cont"/"TO"/"max")
         n             % double -- load factor implied by the turn rate (computed in the constructor)
     end
 
@@ -79,7 +79,7 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
                 aero          (1,1) AerodynamicsBase
                 prop          (1,1) PropulsionBase
                 turn_rate_dps (1,1) double {mustBePositive}
-                powerSetting  (1,1) string {mustBeMember(powerSetting, ["AB","mil"])} = "AB"
+                powerSetting  (1,1) string = "AB"
             end
             obj.name          = name;
             obj.state         = state;
@@ -141,17 +141,13 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
     methods (Access = protected)
 
         function alpha = get_alpha(obj)
-        %GET_ALPHA  Thrust lapse on the basis this condition was constructed
-        %   with: "mil" -> prop.thrust_lapse_mil_on_AB_scale (T_mil on the AB
-        %   T_SL scale), "AB" -> prop.thrust_lapse (AB/max power). Same basis
-        %   logic as MasterEquationConstraint.get_alpha, copied here because
-        %   InstantaneousTurnConstraint is a Both_WbyS_TbyW sibling of the
-        %   Master-Equation subtree, not a child of it.
-            if obj.powerSetting == "mil"
-                alpha = obj.prop.thrust_lapse_mil_on_AB_scale(obj.state);
-            else
-                alpha = obj.prop.thrust_lapse(obj.state);
-            end
+        %GET_ALPHA  Thrust lapse at this condition's power setting. The rating
+        %   is passed straight to the injected prop, which validates it against
+        %   the ratings its engine has (fighter "mil"/"AB"; transport
+        %   "cont"/"TO"/"max"). Same logic as MasterEquationConstraint.get_alpha,
+        %   here because InstantaneousTurnConstraint is a Both_WbyS_TbyW sibling
+        %   of the Master-Equation subtree, not a child of it.
+            alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
         end
 
     end

@@ -43,10 +43,11 @@ classdef CeilingConstraint < Only_TbyW
 %   it). CD0/K1 and alpha are pulled fresh each call, so the constraint
 %   tracks the current sizing-loop iteration and fidelity level.
 %
-%   POWER SETTING. alpha is drawn on the basis the condition is constructed
-%   with, exactly as MasterEquationConstraint: "AB" -> prop.thrust_lapse
-%   (max-power), "mil" -> prop.thrust_lapse_mil_on_AB_scale (dry/military,
-%   still on the AB T_SL scale). A transport ceiling is a mil-power point.
+%   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting), exactly as
+%   MasterEquationConstraint: the injected prop validates the rating against
+%   its engine's ratings (fighter "mil"/"AB"; transport "cont"/"TO"/"max"), all
+%   on the one max-power T_SL basis. A transport ceiling is a max/continuous
+%   point ("max"); a fighter dry-power ceiling is "mil".
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Ceiling"
@@ -57,7 +58,7 @@ classdef CeilingConstraint < Only_TbyW
         aero          % AerodynamicsBase -- supplies CD0, K1 via drag_polar(state)
         prop          % PropulsionBase   -- supplies alpha via thrust_lapse(state)
         G             % double -- required residual climb gradient at the ceiling
-        powerSetting  % string "AB" or "mil" -- basis prop.thrust_lapse is drawn from
+        powerSetting  % string -- engine power rating passed to prop.thrust_lapse (fighter "mil"/"AB", transport "cont"/"TO"/"max")
     end
 
     methods
@@ -69,7 +70,7 @@ classdef CeilingConstraint < Only_TbyW
                 aero  (1,1) AerodynamicsBase
                 prop  (1,1) PropulsionBase
                 G     (1,1) double {mustBeNonnegative}
-                powerSetting (1,1) string {mustBeMember(powerSetting, ["AB","mil"])} = "mil"
+                powerSetting (1,1) string = "mil"
             end
             obj.name  = name;
             obj.state = state;
@@ -112,15 +113,11 @@ classdef CeilingConstraint < Only_TbyW
     methods (Access = protected)
 
         function alpha = get_alpha(obj)
-        %GET_ALPHA  Thrust lapse on the basis this condition was constructed
-        %   with: AB (prop.thrust_lapse) or mil
-        %   (prop.thrust_lapse_mil_on_AB_scale). Mirrors
-        %   MasterEquationConstraint.get_alpha.
-            if obj.powerSetting == "mil"
-                alpha = obj.prop.thrust_lapse_mil_on_AB_scale(obj.state);
-            else
-                alpha = obj.prop.thrust_lapse(obj.state);
-            end
+        %GET_ALPHA  Thrust lapse at this ceiling's power setting. The rating is
+        %   passed straight to the injected prop, which validates it against the
+        %   ratings its engine has (fighter "mil"/"AB"; transport
+        %   "cont"/"TO"/"max"). Mirrors MasterEquationConstraint.get_alpha.
+            alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
         end
 
     end

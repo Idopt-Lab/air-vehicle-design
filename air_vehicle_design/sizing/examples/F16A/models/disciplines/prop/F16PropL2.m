@@ -120,19 +120,26 @@ classdef F16PropL2 < PropulsionModelL2
         end
 
         % ---- Thrust lapse (Mattingly Eq. 2.54) ---------------------------- %
-        function alpha = thrust_lapse(obj, state)
-            alpha = PropL2.get_thrust_lapse(obj, state);
+        function alpha = thrust_lapse(obj, state, rating)
+        %THRUST_LAPSE  Mattingly thrust lapse at the given rating [Eq. 2.54].
+        %   "AB"  -> full afterburner lapse T_AB/T_SL_AB.
+        %   "mil" -> military/dry lapse on the AB T_SL scale (T_mil/T_SL_AB,
+        %            renormalized per Brandt F-16A.xls Consts col AU -- so a
+        %            dry-power condition shares the AB T_SL diagram axis).
+            arguments
+                obj
+                state  (1,1) AircraftState
+                rating (1,1) string {mustBeMember(rating, ["mil","AB"])}
+            end
+            if rating == "mil"
+                alpha = PropL2.get_thrust_lapse_mil_on_AB_scale(obj, state);
+            else
+                alpha = PropL2.get_thrust_lapse(obj, state);
+            end
         end
 
         function alpha = compute_thrust_lapse_mil(obj, state)
             alpha = PropL2.get_thrust_lapse_mil(obj, state);
-        end
-
-        function alpha = thrust_lapse_mil_on_AB_scale(obj, state)
-        %THRUST_LAPSE_MIL_ON_AB_SCALE  Mil lapse on AB T_SL scale.
-        %   [Mattingly Eq. 2.54b; renormalized per Brandt F-16A.xls Consts
-        %   col AU convention -- see PropulsionBase.m.]
-            alpha = PropL2.get_thrust_lapse_mil_on_AB_scale(obj, state);
         end
 
         function alpha = compute_thrust_lapse_AB(obj, state)

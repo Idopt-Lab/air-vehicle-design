@@ -50,9 +50,9 @@ optimization visibility would need a separate `T_t4_SLS` input, deliberately not
 
 | Method | Delegates to | Formula | Source |
 |---|---|---|---|
-| `thrust_lapse(state)` / `compute_thrust_lapse_AB` | `PropL2.thrust_lapse_AB(δ₀, θ₀, TR)` | θ₀ ≤ TR → δ₀; θ₀ > TR → `δ₀(1 − 3.5(θ₀−TR)/θ₀)` | Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a |
+| `thrust_lapse(state, "AB")` / `compute_thrust_lapse_AB` | `PropL2.thrust_lapse_AB(δ₀, θ₀, TR)` | θ₀ ≤ TR → δ₀; θ₀ > TR → `δ₀(1 − 3.5(θ₀−TR)/θ₀)` | Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a |
 | `compute_thrust_lapse_mil` | `PropL2.thrust_lapse_mil` | θ₀ ≤ TR → 0.6δ₀; θ₀ > TR → `0.6δ₀(1 − 3.8(θ₀−TR)/θ₀)` | Mattingly Eq. 2.54b |
-| `thrust_lapse_mil_on_AB_scale` | `PropL2.get_thrust_lapse_mil_on_AB_scale` | `α_mil·(T_SL_mil/T_SL_wet)` | Mattingly Eq. 2.54b + Brandt `Consts` col AU convention |
+| `thrust_lapse(state, "mil")` | `PropL2.get_thrust_lapse_mil_on_AB_scale` | `α_mil·(T_SL_mil/T_SL_wet)` — mil lapse on the AB `T_SL` axis (was `thrust_lapse_mil_on_AB_scale`) | Mattingly Eq. 2.54b + Brandt `Consts` col AU convention |
 | `get_TSFC(state)` / `compute_TSFC_mil` | `PropL2.TSFC_mil(C1, C2, M, θ)` | `(0.90 + 0.30M)√θ` | Mattingly Eq. 3.12 + 3.55a |
 | `compute_TSFC_AB` | `PropL2.TSFC_AB` | `(1.60 + 0.27M)√θ` | Mattingly Eq. 3.12 + 3.55b |
 | `compute_TSFC_installed` / `compute_TSFC_AB_installed` | — | uninstalled × `TSFC_install_factor` | Brandt `Miss!C25` |

@@ -144,7 +144,7 @@ idx_cruise = find(strcmp({cc.condition}, 'cruise'), 1);
 if ~isempty(idx_cruise)
     c     = cc(idx_cruise);
     st    = AircraftState(c.alt_ft, c.mach);
-    a_mil = p2.thrust_lapse_mil_on_AB_scale(st);
+    a_mil = p2.thrust_lapse(st, "mil");
     note  = ['Cruise is flown 0% AB (dry). Framework alpha_mil = 0.6*delta_0 renormalized to the AB axis ' ...
              '(x T_SL_mil/T_SL_wet). Brandt AU = AS*(T_dry/T_AB). Mattingly has no below-TR Mach term; expected high.'];
     T = [T; prow(sprintf('alpha_mil-on-AB @ cruise (%dft M%.2f)', c.alt_ft, c.mach), ...

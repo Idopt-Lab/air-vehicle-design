@@ -115,8 +115,8 @@
         "altitude_ft": 42000,
         "mach": 0.84,
         "G": 0.001,
-        "power_setting": "mil",
-        "_src": "CeilingConstraint.fromCondition reads altitude_ft, mach, G, power_setting. Service ceiling: minimum-T/W form T_SL/W = (1/alpha)*(2*sqrt(CD0*K1)+G) [metabook Eq. 4.30/4.56] -- a HORIZONTAL line (W/S-independent), NOT the W/S-dependent ExcessPower U-curve. G = 0.001 residual climb gradient [metabook Eq. 4.56]. power_setting = mil (high-BPR transports do not use afterburner). See b777_requirements.md.",
+        "power_setting": "max",
+        "_src": "CeilingConstraint.fromCondition reads altitude_ft, mach, G, power_setting. Service ceiling: minimum-T/W form T_SL/W = (1/alpha)*(2*sqrt(CD0*K1)+G) [metabook Eq. 4.30/4.56] -- a HORIZONTAL line (W/S-independent), NOT the W/S-dependent ExcessPower U-curve. G = 0.001 residual climb gradient [metabook Eq. 4.56]. power_setting = max (high-BPR transport rating set {cont,TO,max}; the metabook ceiling Eq. 4.56 uses full sigma^0.6 lapse, so 'max', not the derated 'cont'). See b777_requirements.md.",
         "_TODO_mach": "ceiling mach = 0.84 stand-in (= cruise Mach; the metabook prints no ceiling Mach). Sets the drag polar / thrust lapse condition. Remove when pinned.",
         "_note_parity": "CeilingConstraint uses ISA thrust lapse from AircraftState (alpha=sigma^m at 42000 ft, sigma_ISA=0.2236) vs the metabook's printed off-ISA alpha=0.2331^0.6 (sigma=0.2331 = ISA at ~41135 ft). ~2% gap (D5). Comparison report evaluates the printed Eq. 4.56 for parity."
       },
@@ -126,8 +126,8 @@
         "altitude_ft": 40000,
         "mach": 0.84,
         "beta": 1.0,
-        "power_setting": "mil",
-        "_src": "LevelFlightConstraint.fromCondition reads altitude_ft, mach, beta, power_setting (n = 1, Ps = 0 fixed by the class). altitude_ft, mach [metabook Eq. 4.57, q = 228.8 lbf/ft2]; beta = 1.0 (Master-Equation classes require beta; take W/W_TO = 1.0 unless a cruise-start fraction is specified as a requirement); power_setting = mil (high-BPR transport, no afterburner). The framework uses ISA lapse rather than the printed 0.2846 ratio (D5). See b777_requirements.md \u00a73.5."
+        "power_setting": "max",
+        "_src": "LevelFlightConstraint.fromCondition reads altitude_ft, mach, beta, power_setting (n = 1, Ps = 0 fixed by the class). altitude_ft, mach [metabook Eq. 4.57, q = 228.8 lbf/ft2]; beta = 1.0 (Master-Equation classes require beta; take W/W_TO = 1.0 unless a cruise-start fraction is specified as a requirement); power_setting = max (high-BPR transport rating set {cont,TO,max}; metabook cruise Eq. 4.57 uses full sigma^0.6 lapse). The framework uses ISA lapse rather than the printed 0.2846 ratio (D5). See b777_requirements.md \u00a73.5."
       }
     ]
   },

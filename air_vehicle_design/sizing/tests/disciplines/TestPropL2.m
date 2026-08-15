@@ -216,15 +216,15 @@ classdef TestPropL2 < matlab.unittest.TestCase
             % == compute_thrust_lapse_AB.
             g = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.7);
-            tc.verifyEqual(g.thrust_lapse(state), g.compute_thrust_lapse_AB(state), ...
+            tc.verifyEqual(g.thrust_lapse(state, "AB"), g.compute_thrust_lapse_AB(state), ...
                 'AbsTol', tc.TOL_EXACT);
         end
 
         function testThrustLapseDecreasesWithAltitude(tc)
             % Qualitative: AB lapse falls with altitude at fixed Mach.
             g = F16PropL2(f16a_spec_path(2));
-            tc.verifyGreaterThan(g.thrust_lapse(AircraftState(0, 0.87)), ...
-                g.thrust_lapse(AircraftState(36000, 0.87)));
+            tc.verifyGreaterThan(g.thrust_lapse(AircraftState(0, 0.87), "AB"), ...
+                g.thrust_lapse(AircraftState(36000, 0.87), "AB"));
         end
 
         function testStudentClassTSFCABExceedsMil(tc)

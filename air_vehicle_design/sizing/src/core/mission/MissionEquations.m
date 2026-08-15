@@ -165,15 +165,19 @@ classdef MissionEquations
         %   at a flight state and AB setting, blended by percent_ab:
         %     alpha = alpha_mil + (percent_ab/100) * (alpha_AB - alpha_mil)
         %   [Brandt Miss-tab run(alt,M,pct/100).alpha_AB_ref blend]. alpha_mil is
-        %   thrust_lapse_mil_on_AB_scale (mil power on the AB scale), alpha_AB is
-        %   thrust_lapse (full AB). T_available = T_SL * alpha (no *n_engines --
-        %   T_SL is already the total AB thrust and alpha is total-normalized).
-            a_mil = prop.thrust_lapse_mil_on_AB_scale(state);
+        %   prop.thrust_lapse(state,"mil") (mil power on the AB scale), alpha_AB
+        %   is prop.thrust_lapse(state,"AB") (full AB). T_available = T_SL * alpha
+        %   (no *n_engines -- T_SL is already the total AB thrust and alpha is
+        %   total-normalized). Only the afterburning ClimbSegment/CombatSegment
+        %   (fighter L2/L3 missions) call this, so the "mil"/"AB" ratings are the
+        %   right vocabulary; transports fly the L1 fixed-fraction mission, which
+        %   never reaches this path.
+            a_mil = prop.thrust_lapse(state, "mil");
             if percent_ab <= 0
                 a = a_mil;
                 return
             end
-            a_ab = prop.thrust_lapse(state);
+            a_ab = prop.thrust_lapse(state, "AB");
             a = a_mil + (percent_ab / 100) * (a_ab - a_mil);
         end
 

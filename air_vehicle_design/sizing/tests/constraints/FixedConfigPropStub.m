@@ -11,8 +11,8 @@ classdef FixedConfigPropStub < PropulsionBase
 %   and TSFC.
 %
 %   It subclasses PropulsionBase only because that is the type the constraint
-%   constructors require. thrust_lapse / thrust_lapse_mil_on_AB_scale / get_TSFC
-%   return constructor-supplied constants, no matter what state is passed in.
+%   constructors require. thrust_lapse / get_TSFC return constructor-supplied
+%   constants, no matter what state or rating is passed in.
 
     properties
         T_SL      = 1     % lbf -- sea-level static thrust (mutable; some constraints read it)
@@ -41,15 +41,9 @@ classdef FixedConfigPropStub < PropulsionBase
             obj.TSFC      = TSFC;
         end
 
-        function a = thrust_lapse(obj, ~)
-        %THRUST_LAPSE  Constant lapse, state-independent.
-            a = obj.alpha;
-        end
-
-        function a = thrust_lapse_mil_on_AB_scale(obj, ~)
-        %THRUST_LAPSE_MIL_ON_AB_SCALE  Same constant lapse (no mil/AB split in
-        %   a stub); overrides the PropulsionBase default only to stay
-        %   explicitly state-independent.
+        function a = thrust_lapse(obj, ~, ~)
+        %THRUST_LAPSE  Constant lapse, state- and rating-independent (accepts
+        %   any rating and returns the constructor-supplied alpha).
             a = obj.alpha;
         end
 

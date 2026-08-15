@@ -78,12 +78,11 @@ constraint class from a caller-supplied condition-name → `ConstraintType` map 
 |-------|------|---------|-------|
 | `n` | number | Load factor | selects `LevelFlight` (1) vs `SustainedTurn` (>1) |
 | `Ps_fps` | number | Specific excess power required | ft/s; > 0 selects `ExcessPowerConstraint` |
-| `power_setting` | string | Engine power state | `"AB"` or `"mil"`, stored directly in the JSON and validated by `MasterEquationConstraint.requirePowerSetting` (no AB%→setting mapping) |
+| `power_setting` | string | Engine power state | `"AB"` or `"mil"` (F-16 engine ratings), stored directly in the JSON; `requirePowerSetting` checks it is PRESENT, and the injected prop validates the value when `thrust_lapse` is called (no AB%→setting mapping) |
 
-`power_setting` selects the thrust-lapse basis (`"mil"` →
-`PropulsionBase.thrust_lapse_mil_on_AB_scale`, `"AB"` → `PropulsionBase.thrust_lapse`). It
-replaces the raw AB% number: the framework models only the two discrete bases, so a partial-AB
-value errors.
+`power_setting` names the engine rating passed to `prop.thrust_lapse(state, rating)`
+(`"mil"` → `T_mil/T_SL_AB`, `"AB"` → full AB). It replaces the raw AB% number: the F-16 engine
+has only the two discrete ratings, so a partial-AB value errors when `thrust_lapse` is called.
 
 ### 2.3 Field-condition fields (Takeoff, Landing)
 
@@ -168,7 +167,7 @@ verification targets, not inputs.
 | `CD0`, `K1`, `K2` | aero | From `aero.drag_polar(state)` (Aero-tab CDmin_sub basis), supplied live. |
 | `CDx` (takeoff/landing gear+flap drag = 0.035 / 0.045) | aero | Already provided by aero via `get_Delta_CD0_TO()` / `get_Delta_CD0_L()` at L1/L2/L3, so NOT a JSON input. |
 | `CDx` (six thrust rows) | — | Brandt's per-condition `CDx` is **0.0** for all six thrust rows [`f16a_geometry.json` `conditions.*.CDx` = 0.0], so there is nothing to carry. |
-| `alpha` (thrust lapse) | prop | From `prop.thrust_lapse(state)` (AB) / `thrust_lapse_mil_on_AB_scale(state)` (mil), selected by `power_setting` [`Consts!AU`]. |
+| `alpha` (thrust lapse) | prop | From `prop.thrust_lapse(state, power_setting)` (`"AB"` → full AB, `"mil"` → mil on the AB `T_SL` axis) [`Consts!AU`]. |
 | `thrust`, `TSFC`, `Cfe` | prop / aero | Discipline internals; never constraint inputs. |
 | `Vstall` | aero (derived) | The Brandt `Consts`-tab `Vstall` column is not read — the speed margins live in `k_factor`. |
 

@@ -10,17 +10,17 @@ classdef BrandtPropAdapter < PropulsionBase
 %   plain name again.
 %
 %   PURPOSE. The src constraint classes take an injected PropulsionBase
-%   object and call thrust_lapse(state) (AB rows) or
-%   thrust_lapse_mil_on_AB_scale(state) (mil rows) on it. This adapter wraps
-%   a VnV BrandtEngine handle so the SAME src constraint code draws Brandt's
-%   own thrust lapse -- see tests/constraints/TestConstraintAnalysisVsBrandt.m.
+%   object and call thrust_lapse(state, rating) on it, with rating "AB" (AB
+%   rows) or "mil" (mil rows). This adapter wraps a VnV BrandtEngine handle so
+%   the SAME src constraint code draws Brandt's own thrust lapse -- see
+%   tests/constraints/TestConstraintAnalysisVsBrandt.m.
 %
-%   THRUST-LAPSE BASIS. Both methods return alpha_AB_ref -- thrust normalised
+%   THRUST-LAPSE BASIS. thrust_lapse returns alpha_AB_ref -- thrust normalised
 %   to the AB SLS thrust T_sl_AB -- exactly the quantity Brandt's Consts tab
 %   uses (Consts!AU) and BrandtConstraintAnalysis.masterConstraint_ reads.
-%   The afterburner fraction is the only difference between the two:
-%     thrust_lapse                -> run(alt, M, 1.0).alpha_AB_ref  (full AB)
-%     thrust_lapse_mil_on_AB_scale-> run(alt, M, 0.0).alpha_AB_ref  (mil/dry)
+%   The afterburner fraction is the only difference between the two ratings:
+%     thrust_lapse(state,"AB")  -> run(alt, M, 1.0).alpha_AB_ref  (full AB)
+%     thrust_lapse(state,"mil") -> run(alt, M, 0.0).alpha_AB_ref  (mil/dry)
 %   A src Master-Equation row built with powerSetting "AB" draws the first, a
 %   "mil" row (e.g. Cruise) the second -- matching Brandt, which evaluates
 %   each row at eng.run(alt, mach, pct_AB/100).alpha_AB_ref with pct_AB = 100
@@ -36,9 +36,9 @@ classdef BrandtPropAdapter < PropulsionBase
 %   SETTABLE: the sizing loops rubber-scale the engine by assigning
 %   propAdapter.T_SL = <new AB SLS thrust>. The setter scales T_sl_dry and
 %   T_sl_AB by the SAME factor, preserving the dry/AB ratio -- the Engn(s)-tab
-%   thrust-lapse alphas are pure ratios (T/T_sl), so every thrust_lapse /
-%   thrust_lapse_mil_on_AB_scale value is INVARIANT under the scaling; only
-%   absolute thrust (and anything sized from it) moves. See set.T_SL.
+%   thrust-lapse alphas are pure ratios (T/T_sl), so every thrust_lapse value
+%   (at either rating) is INVARIANT under the scaling; only absolute thrust
+%   (and anything sized from it) moves. See set.T_SL.
 %
 %   THRUST OWNERSHIP. The wrapped BrandtEngine is the single LIVE thrust
 %   source. BrandtWeight keeps its own inp.engine.T_AB_SLS_lb COPY (engine +
@@ -80,8 +80,8 @@ classdef BrandtPropAdapter < PropulsionBase
         %     T_sl_dry = T_sl_dry * scale
         %     T_sl_AB  = val
         %   The Engn(s)-tab lapse formulas return alpha = T/T_sl (pure
-        %   ratios), so thrust_lapse and thrust_lapse_mil_on_AB_scale are
-        %   invariant under this scaling. TSFC_sl_dry/TSFC_sl_AB are NOT
+        %   ratios), so thrust_lapse (at either rating) is invariant under
+        %   this scaling. TSFC_sl_dry/TSFC_sl_AB are NOT
         %   scaled: a rubber engine keeps its specific fuel consumption.
         %
         %   NO re-analyze: BrandtEngine.analyze() caches NOTHING derived from
@@ -106,20 +106,25 @@ classdef BrandtPropAdapter < PropulsionBase
             eng.inp.engine.T_AB_SLS_lb  = eng.T_sl_AB;
         end
 
-        function alpha = thrust_lapse(obj, state)
-        %THRUST_LAPSE  Full-AB thrust lapse alpha = T_AB/T_sl_AB at the state.
-        %   Brandt eng.run(alt, M, 1.0).alpha_AB_ref (pct_AB = 100 %).
-            r = obj.brandtEng.run(state.altitude_ft, state.mach, 1.0);
-            alpha = r.alpha_AB_ref;
-        end
-
-        function alpha = thrust_lapse_mil_on_AB_scale(obj, state)
-        %THRUST_LAPSE_MIL_ON_AB_SCALE  Mil-power thrust lapse on the AB T_SL
-        %   scale: alpha = T_mil/T_sl_AB. Brandt eng.run(alt, M, 0.0).
-        %   alpha_AB_ref (pct_AB = 0 %). OVERRIDES the PropulsionBase default
-        %   (which would fall back to the full-AB lapse) so a mil-power row
-        %   (Cruise) uses Brandt's exact dry-power alpha, not the AB value.
-            r = obj.brandtEng.run(state.altitude_ft, state.mach, 0.0);
+        function alpha = thrust_lapse(obj, state, rating)
+        %THRUST_LAPSE  Thrust lapse on the AB T_SL scale at the given rating.
+        %   "AB"  -> full-AB lapse T_AB/T_sl_AB: Brandt eng.run(alt,M,1.0)
+        %            .alpha_AB_ref (pct_AB = 100 %).
+        %   "mil" -> mil/dry lapse on the AB T_SL scale T_mil/T_sl_AB: Brandt
+        %            eng.run(alt,M,0.0).alpha_AB_ref (pct_AB = 0 %), so a
+        %            dry-power row (Cruise) uses Brandt's exact dry-power alpha,
+        %            not the AB value.
+            arguments
+                obj
+                state  (1,1) AircraftState
+                rating (1,1) string {mustBeMember(rating, ["mil","AB"])}
+            end
+            if rating == "mil"
+                frac = 0.0;
+            else
+                frac = 1.0;
+            end
+            r = obj.brandtEng.run(state.altitude_ft, state.mach, frac);
             alpha = r.alpha_AB_ref;
         end
 

@@ -33,7 +33,7 @@ Methods every concrete class must implement:
 
 | Method | Returns | Used by |
 |---|---|---|
-| `thrust_lapse(obj, state)` | `α = T(alt, M)/T_SL` at AB/max power, scalar in [0, 1] | constraint analysis, the future sizing loop |
+| `thrust_lapse(obj, state, rating)` | `α = T_at_rating(alt, M)/T_SL`, scalar in [0, 1], on the one max-power `T_SL` basis | constraint analysis, the sizing loop, mission `select_alpha` |
 | `get_TSFC(obj, state)` | mil-power TSFC, `lbf_fuel/(hr·lbf_thrust)` | the future Breguet-range mission analysis; weights L3 reads it at the cruise condition |
 
 **`TSFC` is not an abstract property**, deliberately. It was one until 2026-07-25 and was removed:
@@ -43,15 +43,23 @@ abstract-contract artifact" `TSFC = 0` while the real value came from `get_TSFC(
 consumer trusting the documented property contract read **0** instead of a TSFC. The abstract
 *method* is the contract.
 
-## 3. Concrete utilities
+## 3. Thrust rating
 
-| Method | Behaviour | Source |
+`thrust_lapse` takes a `rating` string naming the engine power setting; each concrete class
+validates it against the ratings its engine actually has:
+
+| Aircraft class | Ratings | Meaning |
 |---|---|---|
-| `thrust_lapse_mil_on_AB_scale(obj, state)` | mil-power lapse expressed on the **AB** `T_SL` scale: `α = T_mil(alt,M)/T_SL_AB`, not `/T_SL_mil`. Defaults to `obj.thrust_lapse(state)` | Brandt `Consts` col AU convention |
+| jet fighter (afterburning) | `"mil"`, `"AB"` | military/dry, full afterburner |
+| transport (no afterburner) | `"cont"`, `"TO"`, `"max"` | max continuous (0.94× takeoff), takeoff |
 
-The default is correct for any concrete class with no separate mil-power model — `F16PropL1`'s
-density-only lapse cannot distinguish power settings at all. `F16PropL2` overrides it with the real
-`α_mil·(T_SL_mil/T_SL_wet)`.
+All ratings are expressed on the **one max-power `T_SL` basis** (`α = T_at_rating(alt,M) / T_SL`,
+with `T_SL` the max/AB SLS thrust), so every rating lands on the same `T_SL/W_TO` constraint-diagram
+axis — a dry/`"mil"` fighter condition (e.g. Cruise) stays comparable with an AB-flown one. This
+replaces the former `thrust_lapse_mil_on_AB_scale` utility: `thrust_lapse(state, "mil")` now returns
+`T_mil(alt,M)/T_SL_AB`. `F16PropL1`'s density-only lapse cannot distinguish power settings, so its
+`"mil"` and `"AB"` return the same value; `F16PropL2` returns the real
+`α_mil·(T_SL_mil/T_SL_wet)` for `"mil"`.
 
 The reason this exists: a dry-power point-performance condition (cruise is flown at 0 % AB) has to
 be expressed on the same `T_SL_AB / W_TO` axis as the AB-flown conditions, or the constraint diagram

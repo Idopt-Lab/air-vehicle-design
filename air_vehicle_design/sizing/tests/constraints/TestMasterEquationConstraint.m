@@ -119,7 +119,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             WS    = 90;
 
             polar = aero.drag_polar(state);
-            alpha = prop.thrust_lapse(state);
+            alpha = prop.thrust_lapse(state, "AB");
             q     = state.q;
             V     = state.V;
 
@@ -254,7 +254,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             n     = 1.0;
 
             polar = aero.drag_polar(state);
-            alpha = prop.thrust_lapse(state);
+            alpha = prop.thrust_lapse(state, "AB");
             q     = state.q;
             A     = q * polar.CD0 / alpha;
             B     = (q / alpha) * polar.K1 * (n * beta / q)^2;
@@ -283,7 +283,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Eq. 2.54.
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
-            received = prop.thrust_lapse(state);
+            received = prop.thrust_lapse(state, "AB");
             expected = tc.ref.eng.run(36000, 1.60, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Max Mach, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
@@ -388,7 +388,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % alpha_AB -- same AbsTol as the Max Mach/Cruise alpha checks.
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
-            received = prop.thrust_lapse(state);
+            received = prop.thrust_lapse(state, "AB");
             expected = tc.ref.eng.run(50000, 0.87, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Max Alt, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
@@ -483,7 +483,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % alpha checks.
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
-            received = prop.thrust_lapse(state);
+            received = prop.thrust_lapse(state, "AB");
             expected = tc.ref.eng.run(20000, 0.87, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Combat Turn 1, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
@@ -577,7 +577,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Brandt's alpha_AB -- same AbsTol as the other AB conditions.
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
-            received = prop.thrust_lapse(state);
+            received = prop.thrust_lapse(state, "AB");
             expected = tc.ref.eng.run(36000, 1.40, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Combat Turn 2, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...
@@ -696,7 +696,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % check found this lands ~0.032 absolute off, well inside it.
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
-            received = prop.thrust_lapse_mil_on_AB_scale(state);
+            received = prop.thrust_lapse(state, "mil");
             expected = tc.ref.eng.run(36000, 0.87, 0.0).alpha_AB_ref;   % [Brandt Consts, mil/dry -> alpha_mil_T_AB]
             fprintf('\n    alpha (Cruise, mil-on-AB-scale basis): received=%.4f  Brandt alpha_mil_T_AB=%.4f\n', ...
                 received, expected);
@@ -801,7 +801,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % alpha_AB -- same AbsTol as the other AB conditions.
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
-            received = prop.thrust_lapse(state);
+            received = prop.thrust_lapse(state, "AB");
             expected = tc.ref.eng.run(10000, 0.87, 1.0).alpha_AB_ref;   % [Brandt Consts, 100% AB]
             fprintf('\n    alpha (Ps, AB): received=%.4f  Brandt=%.4f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', tc.ALPHA_ABS_TOL, ...

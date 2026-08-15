@@ -104,7 +104,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
             CLmax_TO = aero.get_CLmax_TO();
             CD0_TO   = aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO();
-            alpha    = prop.thrust_lapse(state);
+            alpha    = prop.thrust_lapse(state, "AB");
             rho      = state.rho;
             g        = 32.174;
 

@@ -43,7 +43,7 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
 %   density via g for the ratio to be dimensionless; CLmax_TO from
 %   aero.get_CLmax_TO(); CD0_TO from aero.drag_polar(state).CD0 +
 %   aero.get_Delta_CD0_TO(...) (flapped takeoff config); alpha from
-%   prop.thrust_lapse(state); beta is the takeoff weight fraction (1.0 --
+%   prop.thrust_lapse(state, "AB"); beta is the takeoff weight fraction (1.0 --
 %   takeoff burns negligible fuel before brake release); k_TO is the
 %   liftoff-speed margin V_TO/V_stall (1.2); S_G is the required ground-roll
 %   distance, ft; mu is the ground-roll rolling-friction coefficient (not
@@ -57,7 +57,7 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
     properties (SetAccess = private)
         state   % AircraftState -- sea-level takeoff flight condition
         aero    % AerodynamicsBase -- supplies CLmax_TO/CD0_TO via get_CLmax_TO()/(drag_polar(state).CD0 + get_Delta_CD0_TO(...))
-        prop    % PropulsionBase -- supplies alpha via thrust_lapse(state)
+        prop    % PropulsionBase -- supplies alpha via thrust_lapse(state, "AB")
         S_G     % double, ft -- required takeoff ground-roll distance
         mu      % double -- ground-roll rolling-friction coefficient
         beta    % double -- takeoff weight fraction W/W_TO
@@ -164,10 +164,11 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
         end
 
         function alpha = get_alpha(obj)
-        %GET_ALPHA  Thrust lapse (AB/max power). Exposed as its own method so
-        %   the exact alpha a condition applied can be read back;
-        %   TakeoffConstraint has no mil/AB distinction to select between.
-            alpha = obj.prop.thrust_lapse(obj.state);
+        %GET_ALPHA  Thrust lapse at full takeoff power ("AB"). Takeoff is always
+        %   flown at full (afterburning, for the F-16) power, so the rating is
+        %   fixed here rather than selected -- exposed as its own method so the
+        %   exact alpha a condition applied can be read back.
+            alpha = obj.prop.thrust_lapse(obj.state, "AB");
         end
 
     end

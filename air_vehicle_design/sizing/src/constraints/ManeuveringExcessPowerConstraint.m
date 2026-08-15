@@ -37,7 +37,7 @@ classdef ManeuveringExcessPowerConstraint < MasterEquationConstraint
                 beta  (1,1) double {mustBePositive}
                 n     (1,1) double {mustBePositive}
                 Ps    (1,1) double {mustBeNonnegative}
-                powerSetting (1,1) string {mustBeMember(powerSetting, ["AB","mil"])} = "AB"
+                powerSetting (1,1) string = "AB"   % rating validated by the injected prop (fighter "mil"/"AB", transport "cont"/"TO"/"max")
             end
             obj@MasterEquationConstraint(name, state, aero, prop, beta, n, Ps, powerSetting);
         end

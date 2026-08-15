@@ -225,7 +225,7 @@ objects at run time.
 |----------|-------|--------------|
 | CLmax per config (0.9 / 2.0 / 2.6 / 2.21) | aero | From `aero.get_config_polar(config).CLmax`. Carried in the config-polar table in `b777_L1.md` §3.1, read live by the field-length and climb constraints. |
 | CD0, K1 per config | aero | From `aero.get_config_polar(config)`. The five metabook polars live in the aero object, not here. |
-| thrust-lapse alpha | prop | From `prop.thrust_lapse(state)` (AB) / `thrust_lapse_mil_on_AB_scale(state)` (mil), selected by `power_setting`. Uses ISA density from `AircraftState`. |
+| thrust-lapse alpha | prop | From `prop.thrust_lapse(state, power_setting)`. The B777 uses the transport rating set `{cont, TO, max}` (no afterburner); ceiling/cruise use `"max"` (full `σ^0.6`). Uses ISA density from `AircraftState`. |
 | TSFC | prop | Mattingly Eq. 10.11 high-BPR form; a discipline internal, never a constraint input. |
 | `n_engines` | prop | Read by `ClimbGradientConstraint` from the injected prop object for the OEI factor. Spec data (`b777_L1.json` .propulsion), not a requirement. |
 

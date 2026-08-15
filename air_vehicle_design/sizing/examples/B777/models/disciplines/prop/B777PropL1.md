@@ -4,9 +4,10 @@ Boeing 777-200LR Level-1 propulsion — 2× GE90-110B, the metabook Example 4.2 
 B777PropL1 < PropulsionModelL1`; every method delegates to the `PropL1` static toolbox — no equations
 are duplicated here.
 
-**NO AFTERBURNER.** A high-bypass transport has no AB, so the wet/mil/AB thrust distinction the F-16
-carries collapses to a single basis: `T_SL` is the max SLS thrust, and `thrust_lapse` and
-`thrust_lapse_mil_on_AB_scale` are the SAME lapse.
+**NO AFTERBURNER.** A high-bypass transport has no AB, so it uses the transport rating set
+`"cont"`/`"TO"`/`"max"` (not the fighter `"mil"`/`"AB"`). `T_SL` is the max (takeoff) SLS thrust;
+`"TO"`/`"max"` give the full `σ^m` lapse and `"cont"` applies the 0.94 max-continuous derate
+(metabook Eq. 4.25).
 
 ---
 
@@ -42,9 +43,8 @@ input or a per-`state` method.
 
 | Method | Delegates to / does | Source |
 |---|---|---|
-| `thrust_lapse(state)` | `α = σ^m`, `σ = ρ/ρ_SL`, `m = lapse_exponent_m`, via `PropL1.sigma_lapse(state.rho, m)`. The engine-type table is bypassed on purpose (D5) | [metabook Eqs. 4.55/10.9] |
-| `get_thrust_lapse(state)` | alias for `thrust_lapse` | [metabook Eqs. 4.55/10.9] |
-| `thrust_lapse_mil_on_AB_scale(state)` | returns `thrust_lapse` — a high-bypass transport has NO afterburner, so mil and AB thrust are one and the same. Overrides the `PropulsionBase` default only to document that this is deliberate, not an omission | one basis; `b777_L1.md` §4 |
+| `thrust_lapse(state, rating)` | `"TO"`/`"max"`: `α = σ^m`, `σ = ρ/ρ_SL`, `m = lapse_exponent_m`, via `PropL1.sigma_lapse(state.rho, m)`. `"cont"`: `0.94·σ^m` (max continuous). The engine-type table is bypassed on purpose (D5) | [metabook Eqs. 4.55/10.9; Eq. 4.25] |
+| `get_thrust_lapse(state)` | the base (max/takeoff) `σ^m` lapse, no rating derate | [metabook Eqs. 4.55/10.9] |
 | `get_TSFC(~)` | cruise TSFC [1/hr] = `obj.tsfc_cruise` = 0.52. `state` unused | [metabook Table 10.1] — see §4 |
 | `lookup_TSFC(state)` | `PropulsionModelL1` contract alias for `get_TSFC` | [metabook Table 10.1] |
 
@@ -80,7 +80,7 @@ quantify the overestimate.
 |---|---|---|
 | **D5** — thrust-lapse exponent `m` | `m = 0.6` | The metabook Example 4.2 uses `α = σ^0.6` (Eqs. 4.55–4.57), the GENERIC Eq. 10.9 fit, with no engine-type justification. Carried as a cited JSON input (`lapse_exponent_m`) so the choice is explicit. The metabook's OWN GE90 Table 10.1 data fits `m ≈ 1.0–1.1` for a high-BPR turbofan — the printed 0.6 is a metabook-internal choice, adopted for worked-example parity (`b777_L1.md` §4.2) |
 | Cruise TSFC | `tsfc_cruise = 0.52` from [metabook Table 10.1] | The generic Eq. 10.11 form overestimates the GE90 by ~30 % and diverges the closure; the engine's own deck SFC is a metabook-DATA value, not a sizing-answer backfill — see §4 |
-| No afterburner | single thrust basis | high-BPR transport; `thrust_lapse_mil_on_AB_scale` == `thrust_lapse` |
+| No afterburner | transport rating set `{cont, TO, max}` | high-BPR transport; `"TO"` == `"max"` (full takeoff), `"cont"` = 0.94× (max continuous, Eq. 4.25) |
 
 ## 6. To-dos
 

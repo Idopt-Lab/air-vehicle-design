@@ -13,7 +13,7 @@ classdef MissionStubProp < PropulsionBase
     end
 
     methods
-        function alpha = thrust_lapse(obj, ~)
+        function alpha = thrust_lapse(obj, ~, ~)
             alpha = obj.alpha_;
         end
         function c_t = get_TSFC(obj, ~)

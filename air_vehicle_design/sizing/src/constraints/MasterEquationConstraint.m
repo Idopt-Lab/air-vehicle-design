@@ -33,13 +33,13 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %   condition (e.g. F-16 Max Mach: beta=0.8997, n=1.0, Ps=0 at 36,000 ft /
 %   M=1.60 -- see examples/F16A/inputs/f16a_requirements.md).
 %
-%   POWER SETTING. alpha is drawn on the basis the condition is constructed
-%   with: "AB" -> prop.thrust_lapse(state) (AB/max-power, the PropulsionBase
-%   default; use a 100%-AB flight condition for an afterburning point); "mil"
-%   -> prop.thrust_lapse_mil_on_AB_scale(state) (T_mil/T_SL_AB -- still on the
-%   AB T_SL scale so the resulting T/W stays comparable with every other,
-%   AB-flown condition on the same diagram). Conditions flown at 0% AB/mil
-%   power (e.g. Cruise) must use powerSetting="mil". See get_alpha.
+%   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting). The rating
+%   string names the engine power setting and is validated by the injected
+%   prop against the ratings its engine has: a jet fighter has "mil"
+%   (military/dry) and "AB" (afterburner); a transport has "cont" (max
+%   continuous), "TO"/"max" (takeoff). All ratings are on the one max-power
+%   T_SL basis, so a dry/"mil" condition (e.g. Cruise) stays comparable with an
+%   AB-flown condition on the same T_SL/W_TO diagram. See get_alpha.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Max Mach"
@@ -52,7 +52,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         beta    % double -- weight fraction W/W_TO at this condition
         n       % double -- load factor
         Ps      % double, ft/s -- required specific excess power (0 for sustained flight)
-        powerSetting  % string "AB" or "mil" -- which basis prop.thrust_lapse is drawn from, see get_alpha
+        powerSetting  % string -- engine power rating passed to prop.thrust_lapse (fighter "mil"/"AB", transport "cont"/"TO"/"max"); see get_alpha
     end
 
     methods
@@ -66,7 +66,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
                 beta  (1,1) double {mustBePositive}
                 n     (1,1) double {mustBePositive} = 1.0
                 Ps    (1,1) double {mustBeNonnegative} = 0.0
-                powerSetting (1,1) string {mustBeMember(powerSetting, ["AB","mil"])} = "AB"
+                powerSetting (1,1) string = "AB"
             end
             obj.name  = name;
             obj.state = state;
@@ -154,16 +154,13 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         end
 
         function alpha = get_alpha(obj)
-        %GET_ALPHA  Thrust lapse on the basis this condition was constructed
-        %   with: AB (prop.thrust_lapse) or mil
-        %   (prop.thrust_lapse_mil_on_AB_scale). See the powerSetting property
-        %   for why Cruise
-        %   needs the mil basis.
-            if obj.powerSetting == "mil"
-                alpha = obj.prop.thrust_lapse_mil_on_AB_scale(obj.state);
-            else
-                alpha = obj.prop.thrust_lapse(obj.state);
-            end
+        %GET_ALPHA  Thrust lapse at this condition's power setting. The rating
+        %   string is passed straight to the injected prop, which validates it
+        %   against the ratings its engine actually has (fighter "mil"/"AB";
+        %   transport "cont"/"TO"/"max") and returns the lapse on the max-power
+        %   T_SL basis -- see PropulsionBase.thrust_lapse. This is why Cruise
+        %   uses "mil" (a fighter dry-power point stays on the AB T_SL axis).
+            alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
         end
 
     end
@@ -171,16 +168,17 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
     methods (Static)
 
         function powerSetting = requirePowerSetting(cond)
-        %REQUIREPOWERSETTING  Read + validate a thrust condition's
-        %   power_setting field ("AB"/"mil"). Used by the Master-Equation
-        %   subclasses' fromCondition factories. "mil" draws the thrust lapse
-        %   from prop.thrust_lapse_mil_on_AB_scale (a dry/military-power
-        %   condition), "AB" from prop.thrust_lapse -- see get_alpha.
+        %REQUIREPOWERSETTING  Read a thrust condition's power_setting field and
+        %   require that it is present. Used by the Master-Equation subclasses'
+        %   fromCondition factories (and CeilingConstraint/InstantaneousTurn).
         %
-        %   Errors rather than defaulting on a missing or out-of-set value: an
-        %   unstated power setting silently defaulting to "AB" is exactly the
-        %   bug this validator prevents, and only the two discrete bases are
-        %   modeled (there is no partial-AB thrust model).
+        %   Errors rather than defaulting on a missing value: an unstated power
+        %   setting silently defaulting to "AB" is exactly the bug this
+        %   validator prevents. The rating STRING is NOT validated here against
+        %   a fixed set -- the injected propulsion object owns which ratings its
+        %   engine has (fighter "mil"/"AB"; transport "cont"/"TO"/"max") and
+        %   validates the string when thrust_lapse(state, rating) is called, so
+        %   a constraint stays engine-agnostic.
             arguments
                 cond (1,1) struct
             end
@@ -188,17 +186,12 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
             if ~isfield(cond, 'power_setting') || isempty(cond.power_setting)
                 error('MasterEquationConstraint:missingPowerSetting', ...
                     ['Constraint "%s" has no power_setting. A Master-Equation ', ...
-                     'constraint needs an explicit power setting ("mil" or "AB"); ', ...
-                     'add the power_setting field to this condition in the ', ...
+                     'constraint needs an explicit power setting (fighter ', ...
+                     '"mil"/"AB", transport "cont"/"TO"/"max"); add the ', ...
+                     'power_setting field to this condition in the ', ...
                      'requirements JSON.'], name);
             end
             powerSetting = string(cond.power_setting);
-            if ~ismember(powerSetting, ["AB", "mil"])
-                error('MasterEquationConstraint:invalidPowerSetting', ...
-                    ['Constraint "%s" specifies power_setting = "%s". Only "mil" ', ...
-                     'and "AB" are modeled -- PropulsionBase exposes no ', ...
-                     'partial-afterburner thrust lapse.'], name, powerSetting);
-            end
         end
 
     end

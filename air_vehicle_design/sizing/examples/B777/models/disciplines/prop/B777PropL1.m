@@ -6,7 +6,9 @@ classdef B777PropL1 < PropulsionModelL1
 %
 %   Level-1 model (metabook Example 4.2):
 %     thrust_lapse -- density-ratio law alpha = sigma^m, sigma = rho/rho_SL
-%                     [metabook Eqs. 4.55/10.9]. m is carried as the INPUT
+%                     [metabook Eqs. 4.55/10.9], at a transport rating
+%                     ("TO"/"max" = takeoff; "cont" = 0.94*sigma^m max
+%                     continuous, Eq. 4.25). m is carried as the INPUT
 %                     lapse_exponent_m = 0.6 (the metabook's generic Eq. 10.9
 %                     fit) rather than resolved from the engine-type table, so
 %                     the modelling choice is explicit and cited (b777_L1.md §4.2,
@@ -17,10 +19,10 @@ classdef B777PropL1 < PropulsionModelL1
 %                     dependent form the B777 mission prefers over PropL1's crude
 %                     categorical TSFC row.
 %
-%   NO AFTERBURNER. A high-bypass transport has no AB, so the wet/mil/AB thrust
-%   distinction the F-16 carries collapses to a single basis: T_SL is the max
-%   SLS thrust, thrust_lapse and thrust_lapse_mil_on_AB_scale are the SAME lapse
-%   (see the overridden method below).
+%   NO AFTERBURNER. A high-bypass transport has no AB, so it uses the transport
+%   rating set "cont"/"TO"/"max" (not the fighter "mil"/"AB"). T_SL is the max
+%   (takeoff) SLS thrust; "TO"/"max" give the full sigma^m lapse and "cont"
+%   applies the 0.94 max-continuous derate (Eq. 4.25).
 %
 %   CONSTRUCTOR: B777PropL1(json_path). Reads the .propulsion block of a
 %   required unified L1 input JSON (b777_spec_path(1)). No silent default.
@@ -42,6 +44,10 @@ classdef B777PropL1 < PropulsionModelL1
         n_engines        = 2        % --   engine count [metabook §4.11]
         lapse_exponent_m = 0.6      % --   density-ratio lapse exponent alpha = sigma^m [metabook Eqs. 4.55/10.9; decision D5, b777_L1.md §4.2]. Carried as an explicit INPUT rather than a table lookup so the modelling choice is cited.
         tsfc_cruise      = 0.52     % 1/hr cruise TSFC [metabook Table 10.1, GE90 cruise-partial-power rows at 40,000 ft (~0.50-0.54)]. USED instead of the generic Mattingly Eq. 10.11 form (which gives ~0.675 at M0.84/40kft -- a ~30% overestimate of the real GE90 that makes the max-range mission fuel exceed the aircraft's capacity, so converge_W0 diverges). Using the engine's OWN deck SFC (Table 10.1) is a metabook-DATA value, not backfilled from the sizing answer, and lets the modelled 777 close near its size (matching the metabook's own feasible-777 Fig. 4.7). See get_TSFC + b777_L1.md.
+    end
+
+    properties (Constant, Access = private)
+        MAX_CONTINUOUS_FRACTION = 0.94   % -- max-continuous thrust is 94% of takeoff thrust [metabook Eq. 4.25]
     end
 
     methods
@@ -66,25 +72,33 @@ classdef B777PropL1 < PropulsionModelL1
         % PropulsionBase / PropulsionModelL1 contract -- single delegations.
         % ================================================================== %
 
-        function alpha = thrust_lapse(obj, state)
-        %THRUST_LAPSE  alpha = sigma^m, sigma = rho/rho_SL [metabook Eqs. 4.55/
-        %   10.9]. m is obj.lapse_exponent_m (an explicit input), passed
-        %   straight to the pure-math static PropL1.sigma_lapse(rho, m) -- the
-        %   engine-type table is bypassed on purpose (decision D5).
-            alpha = PropL1.sigma_lapse(state.rho, obj.lapse_exponent_m);
+        function alpha = thrust_lapse(obj, state, rating)
+        %THRUST_LAPSE  Density-ratio lapse at the given transport rating.
+        %   "TO"/"max": alpha = sigma^m, sigma = rho/rho_SL [metabook Eqs.
+        %   4.55/10.9] -- full takeoff thrust. "cont": 0.94 * sigma^m --
+        %   max-continuous thrust is 94% of takeoff thrust [metabook Eq. 4.25].
+        %   A high-bypass transport has NO afterburner, so the ratings are the
+        %   transport set "cont"/"TO"/"max", not the fighter "mil"/"AB". m is
+        %   obj.lapse_exponent_m (an explicit input), passed to the pure-math
+        %   static PropL1.sigma_lapse(rho, m) -- the engine-type table is
+        %   bypassed on purpose (decision D5).
+            arguments
+                obj
+                state  (1,1) AircraftState
+                rating (1,1) string {mustBeMember(rating, ["cont","TO","max"])}
+            end
+            base = PropL1.sigma_lapse(state.rho, obj.lapse_exponent_m);
+            if rating == "cont"
+                alpha = B777PropL1.MAX_CONTINUOUS_FRACTION * base;   % Eq. 4.25
+            else
+                alpha = base;   % "TO"/"max" = full takeoff thrust
+            end
         end
 
         function alpha = get_thrust_lapse(obj, state)
-            alpha = obj.thrust_lapse(state);
-        end
-
-        function alpha = thrust_lapse_mil_on_AB_scale(obj, state)
-        %THRUST_LAPSE_MIL_ON_AB_SCALE  A high-bypass transport has NO afterburner,
-        %   so mil and AB thrust are one and the same: the mil-on-AB-scale lapse
-        %   IS thrust_lapse. Overrides the PropulsionBase default (which already
-        %   returns thrust_lapse) only to document that this is deliberate, not an
-        %   omission. One basis; b777_L1.md §4.
-            alpha = obj.thrust_lapse(state);
+        %GET_THRUST_LAPSE  PropulsionModelL1 contract: the base (max/takeoff)
+        %   density-ratio lapse sigma^m, no rating derate.
+            alpha = PropL1.sigma_lapse(state.rho, obj.lapse_exponent_m);
         end
 
         function c_t = get_TSFC(obj, ~)

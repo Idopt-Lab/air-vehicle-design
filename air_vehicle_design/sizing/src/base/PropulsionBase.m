@@ -2,12 +2,24 @@ classdef (Abstract) PropulsionBase < handle
 %PROPULSIONBASE  Tier-1 abstract enforcer for all propulsion discipline classes.
 %
 %   Declares the two methods orchestrators call plus the sea-level thrust
-%   property, and provides one defaulted utility.
+%   property.
 %
 %   Inheritance: PropulsionBase -> PropulsionModelLN (abstract) -> F16PropLN
 %   The PropLN static toolboxes are NOT in this chain.
 %
 %   Propulsion is L1/L2 only; F16PropL2 also serves the L3 rung.
+%
+%   THRUST RATING. thrust_lapse takes a rating string naming the engine power
+%   setting, and each concrete class validates it against the ratings its
+%   engine actually has:
+%     - jet fighter (afterburning): "mil" (military/dry) and "AB" (afterburner)
+%     - transport (no afterburner):  "cont" (max continuous), "TO"/"max" (takeoff)
+%   All ratings are expressed on the ONE max-power T_SL basis (lapse =
+%   T_at_rating(alt,M) / T_SL, with T_SL the max/AB sea-level static thrust),
+%   so every rating lands on the same T_SL/W_TO constraint-diagram axis. A
+%   dry/"mil" fighter condition therefore stays comparable with an AB-flown
+%   one on the same diagram (this replaces the old thrust_lapse_mil_on_AB_scale
+%   utility, which is now thrust_lapse(state,"mil")).
 %
 %   Companion doc: src/base/PropulsionBase.md
 
@@ -17,30 +29,17 @@ classdef (Abstract) PropulsionBase < handle
 
     methods (Abstract)
 
-        %THRUST_LAPSE  alpha = T(alt,M)/T_SL at AB/max power.
-        %   state — AircraftState. Returns scalar alpha in [0, 1].
-        alpha = thrust_lapse(obj, state)
+        %THRUST_LAPSE  alpha = T_at_rating(alt,M)/T_SL at the given power rating.
+        %   state — AircraftState. rating — engine power-setting string the
+        %   concrete class validates (fighter "mil"/"AB"; transport
+        %   "cont"/"TO"/"max"). Returns scalar alpha in [0, 1].
+        alpha = thrust_lapse(obj, state, rating)
 
         %GET_TSFC  Mil-power thrust-specific fuel consumption [1/hr].
         %   For AB TSFC call compute_TSFC_AB on the concrete class.
         %   TSFC is a function of the flight state, so it is a method here and
         %   deliberately not an abstract property.
         c_t = get_TSFC(obj, state)
-
-    end
-
-    methods
-
-        function alpha = thrust_lapse_mil_on_AB_scale(obj, state)
-        %THRUST_LAPSE_MIL_ON_AB_SCALE  Mil-power lapse expressed on the AB T_SL
-        %   scale: alpha = T_mil(alt,M)/T_SL_AB.  [Brandt F-16A.xls, Consts col AU]
-        %
-        %   Lets a dry-power condition share the T_SL_AB/W_TO constraint-diagram
-        %   axis with AB-flown conditions. Defaults to the AB-basis lapse, which
-        %   is correct for a class with no separate mil-power model; override in
-        %   a concrete class that has one.
-            alpha = obj.thrust_lapse(state);
-        end
 
     end
 

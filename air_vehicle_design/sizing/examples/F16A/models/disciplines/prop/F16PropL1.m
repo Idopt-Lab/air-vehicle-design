@@ -64,7 +64,17 @@ classdef F16PropL1 < PropulsionModelL1
             v = obj.T_SL;   % wet/AB SLS thrust IS T_SL by the PropulsionBase convention
         end
 
-        function alpha = thrust_lapse(obj, state)
+        function alpha = thrust_lapse(obj, state, rating)
+        %THRUST_LAPSE  L1 density-ratio lapse alpha = sigma^m [Eq. 10.9].
+        %   L1 has NO mil/AB split (a single density-ratio law), so both the
+        %   "mil" and "AB" ratings return the same lapse; the rating is still
+        %   required and validated so a caller cannot silently pass a setting
+        %   the F-16 engine does not have.
+            arguments
+                obj
+                state  (1,1) AircraftState
+                rating (1,1) string {mustBeMember(rating, ["mil","AB"])}
+            end
             alpha = PropL1.get_thrust_lapse(obj, state);
         end
 
