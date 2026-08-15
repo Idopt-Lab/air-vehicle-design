@@ -5,6 +5,18 @@ classdef F16GeomL2 < GeometryModelL2
 %   is satisfied by a single delegation line to GeomL2 statics — no formulas
 %   are duplicated here.
 %
+%   CORE vs F-16 DETAIL (2026-08-15). GeometryModelL2 was slimmed to the
+%   aircraft-AGNOSTIC core (exposed areas, HT/VT reference areas, wing span,
+%   fuselage length + wetted area). The detailed per-surface breakdown this
+%   class also carries — per-surface t/c, LE/TE/QC sweeps, taper, aspect ratios,
+%   root/tip chords, per-surface wetted areas, the inlet/duct component, and the
+%   whole-aircraft wave-drag geometry (Amax, L_aircraft) — is FIGHTER-specific:
+%   only the F-16 component drag build-up (F16AeroL2/L3, F16WeightsL3,
+%   F16SubsystemsL2) reads it. Those members are now CONCRETE members of this
+%   class, no longer an abstract obligation on every L2 geometry (a transport's
+%   B777GeomL2 has no use for them). The drag-build-up consumers read them off
+%   this concrete object, unchanged.
+%
 %   2026-07-22: Geometry's former L3 tier was eliminated and merged into L2
 %   (user decision — see src/disciplines/geometry/GeomL2.md's dated note).
 %   This class is the merge of the former F16GeomL2 and F16GeomL3 — full

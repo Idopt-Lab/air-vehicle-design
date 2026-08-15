@@ -1,139 +1,64 @@
 classdef (Abstract) GeometryModelL2 < GeometryBase
-%GEOMETRYMODELL2  Tier-2 abstract enforcer for Level-2 geometry.
+%GEOMETRYMODELL2  Tier-2 abstract enforcer for Level-2 geometry -- the
+%   AIRCRAFT-AGNOSTIC core contract.
 %
 %   Inherits GeometryBase directly, not GeometryModelL1: each fidelity level
 %   satisfies the Tier-1 contract independently.
 %
-%   Declares the properties and component-S_wet methods a concrete L2 class
-%   must provide. No equations, no constants.
+%   AGNOSTIC CORE (slimmed 2026-08-15). This enforcer declares ONLY the geometry
+%   quantities that any aircraft's L2 geometry must supply and that cross-
+%   discipline consumers read regardless of aircraft type:
+%     - the L2 WEIGHTS build-up reads the exposed wing/HT/VT planform areas and
+%       the fuselage wetted area (surface density x area);
+%     - the tail-sizing / tail-volume path reads the wing span and the HT/VT
+%       reference areas (the sizing-loop write-back slots);
+%     - the fuselage length anchors the tail arm.
+%   Both F16GeomL2 (fighter) and B777GeomL2 (transport) satisfy exactly this set.
 %
-%   INPUT vs DERIVED. The properties below split into genuine design-variable
-%   spec data an optimizer varies (areas, aspect ratios, taper, sweep, t/c,
-%   fuselage envelope, duct length) and quantities computed from them (spans,
-%   chords, MAC, sweep-station conversions, exposed and wetted areas,
-%   diameters, totals). A concrete class must implement the derived kind as
-%   Dependent getters that recompute on read, never as stored values.
-%   examples/F16A/models/disciplines/geom/F16GeomL2.m is the reference implementation.
+%   WHAT IS **NOT** HERE (2026-08-15 slim). The detailed per-surface breakdown a
+%   COMPONENT DRAG BUILD-UP needs -- per-surface t/c, leading/trailing/quarter-
+%   chord sweeps, taper, aspect ratios, root/tip chords, per-surface wetted
+%   areas, the inlet/engine duct wetted area, and the whole-aircraft wave-drag
+%   geometry (Amax, L_aircraft) -- is NOT aircraft-agnostic: only a high-fidelity
+%   drag build-up (the F-16's F16AeroL2/L3, F16WeightsL3, F16SubsystemsL2)
+%   consumes it, and a transport with a simple Cfe*Swet/Sref polar has no use for
+%   it. Those members therefore live as CONCRETE members on F16GeomL2 (where they
+%   always did), NOT as an abstract obligation on every L2 geometry. A concrete
+%   class MAY expose more than this core; it just is not forced to. The F-16
+%   drag-build-up consumers still read that detail off the concrete F16GeomL2
+%   object they are handed (their mustBeA guard accepts any GeometryModelL2, and
+%   F16GeomL2 carries the detail concretely).
+%
+%   INPUT vs DERIVED. A concrete class supplies the design-variable inputs
+%   (reference areas an optimizer varies) as plain properties and every quantity
+%   computed from them (spans, exposed/wetted areas) as Dependent getters that
+%   recompute on read, never as stored values.
+%   examples/F16A/models/disciplines/geom/F16GeomL2.m is the fighter reference
+%   implementation; examples/B777/models/disciplines/geom/B777GeomL2.m the
+%   transport one.
 
 
     % Abstract properties cannot have validation attributes in MATLAB.
-    % Size/type validation is enforced in the first concrete class (GeomL2).
-    % Properties for the fuselage
+    % Size/type validation is enforced in the first concrete class.
     properties (Abstract)
-        L_fuselage % Fuselage length (ft)
-        W_max_fuselage % Maximum width of the fuselage (ft)
-        H_max_fuselage % Maximum height of the fuselage
+        L_fuselage      % ft    fuselage length (anchors the tail arm)
+        b_wing          % ft    wing span (tail-volume / tail-sizing input)
 
-        %AMAX, L_AIRCRAFT  Whole-aircraft wave-drag geometry (added 2026-07-25,
-        %   Phase 2). Declared here as well as on GeometryModelL3 so an aero
-        %   consumer typed against either tier has one declared contract --
-        %   F16AeroL3 reads both live for the Raymer Eq. 12.44 Sears-Haack term.
-        %   Before Phase 2 they were frozen Brandt OUTPUTS stored as aero
-        %   INPUTS, so supersonic wave drag could not respond to a fuselage
-        %   change at all.
-        %     Amax       [DERIVED] max cross-section, ft^2, via
-        %                GeometryBase.compute_Amax_elliptical -- distinct from
-        %                Brandt Geom!B20's area-ruled flow-through-net figure.
-        %     L_aircraft [INPUT]   overall length, ft -- distinct from
-        %                L_fuselage; provenance OPEN, todo.md 2026-07-25 §6.
-        Amax
-        L_aircraft
-    end
+        S_ht            % ft^2  FULL H-tail reference planform area -- sizing-loop
+                        %       write-back slot the tail-sizing object sets
+        S_vt            % ft^2  FULL V-tail reference planform area -- write-back slot
 
-         % Properties for the main wings
-     properties (Abstract)
-          S_exposed_wing
-          S_wet_wing
-          QC_sweep_wing
-          lambda_wing
-          b_wing
-          AR_wing
-          LE_sweep_wing
-          TE_sweep_wing
-          c_tip_wing
-          c_root_wing
-          tc_wing
-          tc_r_wing
-          tc_t_wing
-     end
-
-    % Properties for the horizontal tail (moved from the former
-    % GeometryModelL3, 2026-07-22 L3-elimination merge). Naming: lowercase
-    % `_ht` suffix throughout; `QC_sweep_ht` keeps the `QC` prefix
-    % capitalized to match the pre-existing wing property `QC_sweep_wing` —
-    % only the trailing HT/VT suffix is lowercased project-wide, never the
-    % whole property name (2026-07-22 casing resolution, corrected from an
-    % earlier fully-lowercase `qc_sweep_ht` — see F16GeomL2.md). AR/LE/TE/
-    % c_root/c_tip prefixes keep their original capitalization, matching the
-    % codebase convention already used outside Geometry (WeightsL2.S_ht,
-    % WeightsL3.AR_ht). tc_ht/tc_r_ht/tc_t_ht are included here (they were
-    % NOT part of the former L3 abstract contract, which had the same gap on
-    % the wing side) because the now-official S_wet formula
-    % (compute_roskam_planform) requires the root/tip split — see
-    % F16GeomL2.md's "full breakdown is required" resolution.
-    properties (Abstract)
-          S_ht            % INPUT: full reference planform area, ft^2 (was a
-                          % constructor local `S_ht_full` before 2026-07-22;
-                          % promoted to a first-class input property so span/
-                          % chord/exposed-area derivations read it live)
-          S_exposed_ht
-          S_wet_ht
-          QC_sweep_ht
-          lambda_ht
-          b_ht
-          AR_ht
-          LE_sweep_ht
-          TE_sweep_ht
-          c_root_ht
-          c_tip_ht
-          tc_ht
-          tc_r_ht
-          tc_t_ht
-    end
-
-    % Properties for the vertical tail (same rationale as the horizontal
-    % tail block above).
-    properties (Abstract)
-          S_vt            % INPUT: full reference planform area, ft^2 (was a
-                          % constructor local `S_vt_full` before 2026-07-22;
-                          % promoted to a first-class input property — same
-                          % rationale as S_ht above)
-          S_exposed_vt
-          S_wet_vt
-          QC_sweep_vt
-          lambda_vt
-          b_vt
-          AR_vt
-          LE_sweep_vt
-          TE_sweep_vt
-          c_root_vt
-          c_tip_vt
-          tc_vt
-          tc_r_vt
-          tc_t_vt
+        S_exposed_wing  % ft^2  exposed wing planform   (L2 weights build-up)
+        S_exposed_ht    % ft^2  exposed H-tail planform  (L2 weights build-up)
+        S_exposed_vt    % ft^2  exposed V-tail planform  (L2 weights build-up)
     end
 
     methods (Abstract)
-        %GET_S_WET_WING  Wing wetted area. Official formula (2026-07-22
-        %   resolution): Roskam Vol. II Eq. 12.1, variable root/tip t/c.
-        val = get_S_wet_wing(obj)
-
-        %GET_S_WET_HT  Horizontal tail wetted area.
-        val = get_S_wet_HT(obj)
-
-        %GET_S_WET_VT  Vertical tail wetted area.
-        val = get_S_wet_VT(obj)
-
-        %GET_S_WET_FUSELAGE  Fuselage wetted area (cylindrical midsection model).
+        %GET_S_WET_FUSELAGE  Fuselage wetted area, ft^2. Read by the L2 weights
+        %   fuselage term (surface density x wetted area).
         val = get_S_wet_fuselage(obj)
 
-        %GET_S_WET_DUCT  Inlet + engine duct wetted area (frustum formula).
-        %   Moved from the former GeometryModelL3 (Geometry L3 eliminated
-        %   2026-07-22, merged into L2 — see GeomL2.md's dated note).
-        val = get_S_wet_duct(obj)
-
         %GET_S_EXPOSED_WING  Passthrough accessor for the wing exposed area.
-        %   Moved from the former GeometryModelL3.
         val = get_S_exposed_wing(obj)
     end
 end
