@@ -10,16 +10,14 @@
 %   figure/JSON/MD export into the gitignored examples/B777/output/ follows the
 %   sanity_checks scripts and run_F16_TS_diagram.m.
 %
-%   READING THE DIAGRAM. For a transport the min-T/W optimal_point lands at LOW
-%   W/S: the takeoff-field-length line rises with W/S and dominates the envelope
-%   at high W/S, so the smallest-T/W feasible point sits at the left edge of the
-%   sweep. That point is NOT the transport design point -- a transport is
-%   designed at HIGH W/S (a small, efficient wing at high wing loading). The
-%   diagram is therefore read by INSPECTION against the actual-777 marker at
-%   (W/S = 142.45, T/W = 0.287) [metabook Table 4.3 / Fig. 4.7 caption], which
-%   the metabook shows sitting inside the feasible region. The reported
-%   optimal_point is printed for completeness but flagged as the low-W/S envelope
-%   minimum, not the design intent.
+%   READING THE DIAGRAM. Down and to the right is better for a jet (low T/W =
+%   small engine, high W/S = small efficient wing). The binding lower boundary
+%   is the 2nd-segment-climb floor (a flat T/W line); the takeoff-field-length
+%   line rises with W/S and crosses it. optimal_point() returns the DOWN-RIGHT
+%   corner -- the climb-floor / takeoff-line intersection -- which is the
+%   transport design point. The actual-777 marker at (W/S = 142.45, T/W = 0.287)
+%   [metabook Table 4.3 / Fig. 4.7 caption] sits just up-and-left of it, inside
+%   the feasible region (the real aircraft carries margin above the corner).
 
 % Caller owns discipline construction (dependency injection): build the B777 L1
 % aero/prop pair explicitly, then hand it to the constraint set. B777AeroL1
@@ -57,10 +55,10 @@ plot(ax, WS_actual, TW_actual, 'kp', 'MarkerSize', 16, 'LineWidth', 1.0, ...
 title(ax, 'B777-200LR Constraint Diagram [metabook Fig. 4.6]');
 hold(ax, 'off');
 
-% Envelope minimum (low-W/S; see header -- NOT the transport design point).
+% Design point: the down-right corner (climb floor / takeoff line intersection).
 [WS_opt, TW_opt] = ca.optimal_point();
 fprintf('\nB777 constraint diagram [metabook Fig. 4.6]\n');
-fprintf('  Envelope min (low-W/S, NOT the design point): W/S = %.2f psf, T/W = %.4f\n', ...
+fprintf('  Design point (climb-floor / takeoff corner): W/S = %.2f psf, T/W = %.4f\n', ...
     WS_opt, TW_opt);
 fprintf('  Actual 777-200LR marker: W/S = %.2f psf, T/W = %.4f [metabook Table 4.3]\n', ...
     WS_actual, TW_actual);
@@ -93,7 +91,7 @@ results = struct( ...
     'envelope_TW',    env, ...
     'wall_min_psf',   wall_min, ...
     'optimum',        struct('WS_psf', WS_opt, 'TW', TW_opt, ...
-                         'note', 'low-W/S envelope minimum, NOT the transport design point'), ...
+                         'note', 'down-right design point: climb-floor / takeoff-line corner'), ...
     'actual_777',     struct('WS_psf', WS_actual, 'TW', TW_actual, ...
                          'TW_envelope_at_actual', TW_env_at_actual, ...
                          'feasible', actual_feasible, ...
@@ -110,7 +108,7 @@ L(end+1) = "Ten constraints (2 field-length + 6 FAR-25 climb + ceiling + cruise)
 L(end+1) = "";
 L(end+1) = sprintf("- W/S sweep: %.0f to %.0f psf (%d points)", ...
     min(WS_sweep), max(WS_sweep), numel(WS_sweep));
-L(end+1) = sprintf("- Envelope minimum (LOW W/S, not the design point): W/S = %.2f psf, T/W = %.4f", ...
+L(end+1) = sprintf("- Design point (climb-floor / takeoff corner, down-right): W/S = %.2f psf, T/W = %.4f", ...
     WS_opt, TW_opt);
 L(end+1) = sprintf("- Tightest W/S wall (landing field length): %.2f psf", wall_min);
 L(end+1) = sprintf("- Actual 777-200LR marker: W/S = %.2f psf, T/W = %.4f [metabook Table 4.3]", ...
@@ -118,8 +116,8 @@ L(end+1) = sprintf("- Actual 777-200LR marker: W/S = %.2f psf, T/W = %.4f [metab
 L(end+1) = sprintf("- Envelope T/W demanded at the actual W/S: %.4f -> marker feasible: %s", ...
     TW_env_at_actual, string(actual_feasible));
 L(end+1) = "";
-L(end+1) = "A transport is designed at HIGH W/S (small efficient wing); the low-W/S envelope";
-L(end+1) = "minimum is NOT the design point. Read the diagram by inspection against the marker.";
+L(end+1) = "Down and to the right is better for a jet. The design point is the climb-floor /";
+L(end+1) = "takeoff-line corner; the actual 777 sits just up-and-left of it, inside feasible.";
 L(end+1) = "";
 L(end+1) = "Figure: `b777_constraint_diagram.png`. Full envelope: `b777_constraint_diagram.json`.";
 writelines(L, fullfile(outdir, 'b777_constraint_diagram.md'));

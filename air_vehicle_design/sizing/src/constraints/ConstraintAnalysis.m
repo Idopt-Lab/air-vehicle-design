@@ -93,19 +93,39 @@ classdef ConstraintAnalysis
         end
 
         function [WS_opt, TW_opt] = optimal_point(obj)
-        %OPTIMAL_POINT  [W/S, T/W] at the minimum of the constraint envelope,
-        %   restricted to W/S at or below the tightest wall. Grid argmin over
-        %   the feasible part of WS_range (no continuous optimizer -- the sweep
-        %   resolution is the caller's choice). See class header for the
-        %   envelope/wall/argmin definition, the recompute-on-read note, and
-        %   the citation.
+        %OPTIMAL_POINT  [W/S, T/W] design point on the constraint envelope: the
+        %   minimum T/W over the feasible W/S range (at or below the tightest
+        %   wall) and, among the feasible points AT that minimum, the HIGHEST
+        %   W/S. Grid search over WS_range (no continuous optimizer -- the sweep
+        %   resolution is the caller's choice).
+        %
+        %   WHY THE HIGHEST W/S AT THE MINIMUM. On a constraint diagram a jet is
+        %   better DOWN and to the RIGHT: low T/W (small engine) and high W/S
+        %   (small, efficient wing). Where the envelope minimum is a flat
+        %   PLATEAU -- e.g. a transport's binding 2nd-segment-climb floor spans a
+        %   W/S band -- the design point is the RIGHT end of that plateau, the
+        %   climb-floor / takeoff-line corner. Returning the FIRST minimum
+        %   instead (plain argmin) reports the left, low-W/S end, which is not
+        %   the design point. A unique minimum (curved fighter constraints, no
+        %   plateau) is unaffected: the highest W/S at the minimum is the
+        %   minimum itself.
+        %
+        %   See class header for the envelope/wall definition, the
+        %   recompute-on-read note, and the citation.
             env      = obj.envelope();
             wall_min = obj.min_wall();
 
-            feasible = obj.WS_range <= wall_min;
-            [TW_opt, local_idx] = min(env(feasible));
-            feasible_WS = obj.WS_range(feasible);
-            WS_opt      = feasible_WS(local_idx);
+            feasible     = obj.WS_range <= wall_min;
+            feasible_WS  = obj.WS_range(feasible);
+            feasible_env = env(feasible);
+
+            TW_opt = min(feasible_env);
+            % Down-right corner: among the minimum-T/W feasible points, take the
+            % one at the highest W/S. The plateau is exactly flat (a binding
+            % floor is a constant), so a tight tolerance catches it without
+            % over-capturing a smooth minimum.
+            at_min = feasible_env <= TW_opt + 1e-9 * max(1, abs(TW_opt));
+            WS_opt = max(feasible_WS(at_min));
         end
 
         function [WS_opt, TW_opt, info] = optimal_point_continuous(obj, x0, opts)
