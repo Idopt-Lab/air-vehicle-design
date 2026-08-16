@@ -4,7 +4,7 @@ classdef FixedTailStub < TailSizingModelL1
 %
 %   WHY THIS EXISTS (2026-07-28): SizingLoopL2's `tail` constructor argument
 %   is typed (1,1) TailSizingBase -- the Tier-1 abstract enforcer shared
-%   by F16TailL1/F16TailL2/F16TailL3 -- rather than the old concrete
+%   by F16TailL1/F16TailL2 -- rather than the old concrete
 %   TailSizingLevel1 (see src/disciplines/tail_sizing/
 %   TailSizing_scribe_plan.md Secs. 2/3). TailSizingLevel1 inherits only
 %   `handle`, NOT TailSizingBase, so TestSizingLoopL2.m's previous
@@ -27,9 +27,8 @@ classdef FixedTailStub < TailSizingModelL1
 %   detour; this file's four-scalar shape was always the correct one for
 %   that call convention. Production (design_study_02_L2.m,
 %   design_study_03_L3.m) uses F16TailL1() -- the same shared, unmodified
-%   object across both design studies -- not F16TailL2/F16TailL3, which
-%   are Nicolai-alternate and stability-and-control-stub paths respectively,
-%   never wired into SizingLoopL2.
+%   object across both design studies -- not F16TailL2, which is the
+%   Nicolai-alternate path, never wired into SizingLoopL2.
 %
 %   size() delegates into the REAL TailL1 toolbox statics (same tail-arm
 %   rule, 0.475*L_fus, as production code) -- not a duplicated formula --

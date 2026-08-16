@@ -75,6 +75,15 @@ concrete on `F16GeomL2`, not an abstract obligation on every L2 geometry.
 `WeightsModelL2` is the agnostic component-build-up enforcer. `B777GeomL2` and
 `B777WeightsL2` inherit the slim cores.
 
+## 2026-08-16 — Tail sizing has no L3 tier
+
+Removed the never-implemented Level-3 tail-sizing stub (`TailL3`,
+`TailSizingModelL3`, `F16TailL3`, `TestTailL3`). `size()` only threw
+`TailL3:citationNotAvailable`; no aircraft constructed it; and the Raymer
+Ch. 16 stability-and-control sizing equations it needed are not in the repo.
+Tail sizing now has L1 and L2 only, like propulsion. If S&C-based tail sizing
+is built later, add the tier back with real, cited equations.
+
 ## Propulsion has no L3 tier
 
 There is no `PropL3` / `PropulsionModelL3` / `F16PropL3`, and none is planned.

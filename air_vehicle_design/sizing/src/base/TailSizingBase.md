@@ -21,7 +21,7 @@ TailSizingBase → TailSizingModelLN (abstract) → F16TailLN (concrete)
 
 Each `TailSizingModelLN` enforcer inherits `TailSizingBase` **directly**, not `TailSizingModelL(N-1)`.
 
-The `TailL1` / `TailL2` / `TailL3` static toolboxes hold the equations and are **not** in this chain
+The `TailL1` / `TailL2` static toolboxes hold the equations and are **not** in this chain
 — concrete classes call them as `TailLN.method(...)`.
 
 ## 3. Abstract contract
@@ -36,8 +36,8 @@ geometry object read back out of it (`TailSizing_scribe_plan.md` Sec. 0/5.2, loc
 **Signature note.** The abstract declaration above is the WIDEST signature any implementer needs — it
 is L1's own signature verbatim, because `GeometryModelL1` has no planform at all (only a
 `W_TO`-based `S_wet` regression), so L1's caller must supply `S_ref`/`b`/`cbar`/`L_fus` as raw
-scalars. L2/L3 instead take an injected `GeometryModelL2`/`GeometryModelL3` collaborator at
-**construction** and implement `size(obj)` with no further arguments. MATLAB does not enforce
+scalars. L2 instead takes an injected `GeometryModelL2` collaborator at
+**construction** and implements `size(obj)` with no further arguments. MATLAB does not enforce
 matching arity between an abstract declaration and its override — the same idiom already used by
 `GeometryBase.get_S_wet(obj, W_TO)`, whose own comment states this explicitly, and which L2/L3
 geometry classes already override as `get_S_wet(obj)`.
