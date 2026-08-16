@@ -1,0 +1,56 @@
+name: Deploy reference library
+
+# Builds the Jekyll site in references/ and publishes it to GitHub Pages.
+#
+# The site lives in references/ rather than docs/ so that docs/ stays free for
+# code documentation. GitHub Pages' "deploy from a branch" mode can only serve
+# / or /docs, so this workflow does the build instead. Set
+# Settings -> Pages -> Build and deployment -> Source to "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'references/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deployment finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./references
+          destination: ./_site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
