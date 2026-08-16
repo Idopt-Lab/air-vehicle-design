@@ -1,0 +1,150 @@
+%% run_aero481_TS_diagram
+%   F-35 (Aero 481 Design01 provenance) dimensional T-S sizing diagram, the
+%   fighter analogue of Aero 481's T_S.m. Builds the Aero481 L1 discipline stack
+%   plus the L1 DCA mission, drives src/sizing/TSDiagram.m: every (T, S) cell is
+%   a SIZED aircraft with a converged TOGW [metabook S4.12 Algorithm 2], with
+%   the per-constraint boundaries traced as T(S) / S(T) curves [Algorithm 4] and
+%   the F-35 design point marked.
+%
+%   TWELVE CONSTRAINTS -- ALIGNED WITH AERO 481. The constraint curves are the 12
+%   ACTIVE Aero 481 constraints (Cruise, Dash, 2 sustained turns, 6 SEP,
+%   instantaneous turn, ceiling); the 6 FAR-25 climbs and the framework-only
+%   Takeoff/Landing were dropped (user decision; see Aero481ConstraintSet). The 6 SEP
+%   rows use the Aero 481 50%-fuel combat weight (beta = 0.8285 in the
+%   requirements JSON).
+%
+%   S RANGE -- AERO 481 RANGE. Aero 481's T_S.m sweeps S = 30-50 m^2 =
+%   323-538 ft^2. The T grid brackets the real F135 (43,000 lbf SLS AB).
+%
+%   WHY THE FUEL CONTOURS VARY GENTLY (read this before interpreting the figure).
+%   The F-35 L1 weights are the Aero 481 A02 delta model (Aero481WeightsL1 -- a
+%   Sainristil empty-weight fraction PLUS a wing delta in S_ref and an engine
+%   delta in T_SL, both about self-scaling design-point baselines), so OEW and
+%   hence the converged TOGW respond to the (T, S) grid. The response is mild
+%   because both deltas are measured about baselines that scale with W_TO. The
+%   SUBSTANCE of this F-35 diagram is still the per-constraint CURVES in
+%   dimensional (T, S) space -- exactly like Aero 481's T_S.m, which plots the
+%   constraint boundaries in T vs S and reads the design point off their
+%   intersection, NOT an OEW-driven fuel field. Contrast the B777 metabook
+%   diagram, whose transport empty weight scales with W0 and so gives genuinely
+%   curved fuel contours.
+%
+%   Style/wiring follows examples/B777/studies/run_b777_TS_diagram.m (caller owns
+%   discipline construction); export follows the sanity_checks scripts (console +
+%   files into the gitignored examples/Aero481/output/).
+
+% Caller owns discipline construction (dependency injection). TSDiagram mutates
+% the shared geom/prop objects in place during the scan (see its header); the
+% stack is built fresh here and used for nothing else afterwards. The weights
+% object uses the A481 A02 delta model -- three-arg constructor (injects geom
+% for S_ref and prop for T_SL).
+sp   = aero481_spec_path(1);
+rp   = aero481_requirements_path();
+aero = Aero481AeroL1(sp);
+prop = Aero481PropL1(sp);
+geom = Aero481GeomL1(sp, rp);
+tail = Aero481TailL1();
+wts  = Aero481WeightsL1(sp, geom, prop);   % A481 A02 delta model -- injects geom (S_ref) + prop (T_SL)
+miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "dca");
+con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
+    Aero481ConstraintSet.constraint_map(), linspace(20, 200, 181));
+
+ts = TSDiagram(aero, prop, wts, geom, miss, con, tail);
+% Default relax_W0 / max_iter kept -- the pure-fraction closure is stable.
+
+% Uniform grids (TSDiagram.plot's feasible-region shading assumes uniform
+% spacing), on Aero 481's range now that the F-35 sizes to ~61k (lapse OFF,
+% matching A481 -- disc A6 resolved). The S grid spans Aero 481's T_S.m range
+% 30-50 m^2 (~323-538 ft^2); the T grid brackets the real F135 (43,000 lbf) with
+% margin on both sides. This range holds the design cell (T = 43,000, S = 538)
+% INSIDE the feasible region -- the framework now matches Aero 481's design, so
+% there is no longer an infeasible-corner / fidelity-gap narrative.
+S_grid = linspace(323, 538, 28);        % ft^2 (A481 T_S.m 30-50 m^2)
+T_grid = linspace(20000, 70000, 28);    % lbf  (brackets the real F135 43,000)
+
+% Reference sizing at the real F135 thrust (43,000 lbf SLS AB) and the Aero 481
+% design wing (538 ft^2 ~ 50 m^2), reported in the console/JSON only -- NOT
+% marked on the plot (removed 2026-08-15, user request -- confusing). The A02
+% fixed-cell closure here reproduces Aero 481 A02 to ~2%.
+actual = struct('T', 43000, 'S', 538, 'label', "reference sizing (T=43000, S=538)");
+
+% Converged TOGW at the reference cell [metabook Algorithm 2], for the export.
+W0_actual = ts.converge_W0(actual.T, actual.S);
+fprintf('\nAero 481 Design01 T-S diagram [Aero 481 T_S.m analogue]\n');
+fprintf('  Reference sizing at (T = %.0f lbf, S = %.0f ft^2): W_TO = %.1f lbf\n', ...
+    actual.T, actual.S, W0_actual);
+
+% TOGW / fuel grid for the export [metabook S4.12 objective contours]. The
+% precomputed grid is passed straight into ts.plot ('grid' option) so the mesh
+% is computed once. NOTE (see header): with the pure-fraction OEW + constant
+% CD0 these come out nearly FLAT -- the constraint curves carry the diagram.
+fg = ts.fuel_grid(T_grid, S_grid);
+
+% The diagram itself [Aero 481 T_S.m analogue].
+fig = ts.plot('S_grid', S_grid, 'T_grid', T_grid, 'grid', fg);   % no 'actual' -> no design-point marker
+
+% ---- Exports into the gitignored output/ (sanity_checks pattern) ---------- %
+outdir = fullfile(fileparts(mfilename('fullpath')), '..', 'output');
+if ~exist(outdir, 'dir'), mkdir(outdir); end
+
+exportgraphics(fig, fullfile(outdir, 'aero481_TS_diagram.png'), 'Resolution', 200);
+
+% Flatness metric for the export: how much W_TO actually varies across the grid.
+W0_finite = fg.W0(isfinite(fg.W0));
+if isempty(W0_finite)
+    W0_spread_pct = NaN;
+else
+    W0_spread_pct = 100 * (max(W0_finite) - min(W0_finite)) / min(W0_finite);
+end
+
+results = struct( ...
+    'stack',      'Aero481 L1 disciplines x L1 DCA mission (Aero 481 Design01)', ...
+    'S_grid_ft2', S_grid, ...
+    'T_grid_lbf', T_grid, ...
+    'W0_lbf',     fg.W0, ...          % converged TOGW per (T, S) cell, NaN = infeasible
+    'W_fuel_lbf', fg.W_fuel, ...      % mission fuel per (T, S) cell
+    'W0_spread_pct', W0_spread_pct, ...  % max-min W_TO spread over finite cells (~0 = flat)
+    'relax_W0',   ts.relax_W0, ...
+    'design_point', struct('T_lbf', actual.T, 'S_ft2', actual.S, ...
+                         'label', actual.label, 'W0_converged_lbf', W0_actual, ...
+                         'WS_psf', 92.17, 'TW', 1.2, 'cite', 'A481 Design01.m:20-21'));
+fid = fopen(fullfile(outdir, 'aero481_TS_diagram.json'), 'w');
+fwrite(fid, jsonencode(results, 'PrettyPrint', true));
+fclose(fid);
+
+L = strings(0, 1);
+L(end+1) = "# F-35 T-S Sizing Diagram [Aero 481 T_S.m analogue]";
+L(end+1) = "";
+L(end+1) = "Generated by `studies/run_aero481_TS_diagram.m` over the Aero481 L1 stack + L1 DCA mission.";
+L(end+1) = "Every grid point is a sized aircraft with a converged TOGW [metabook S4.12].";
+L(end+1) = "";
+L(end+1) = "## The fuel contours vary gently -- the constraint curves are the substance";
+L(end+1) = "";
+L(end+1) = "The F-35 L1 weights are the Aero 481 A02 delta model (`Aero481WeightsL1` -- Sainristil";
+L(end+1) = "fraction PLUS a wing delta in S_ref and an engine delta in T_SL about self-scaling";
+L(end+1) = "design-point baselines), so OEW and the converged TOGW respond to the (T, S) grid,";
+L(end+1) = "mildly, because both deltas are measured about baselines that scale with W_TO.";
+L(end+1) = "This diagram's substance is still the per-constraint";
+L(end+1) = "boundaries in dimensional (T, S) space -- exactly like Aero 481's `T_S.m`, which";
+L(end+1) = "reads the design point off the constraint intersection, not an OEW-driven fuel";
+L(end+1) = "field. (Contrast the B777 metabook diagram, whose W0-scaling transport empty";
+L(end+1) = "weight gives genuinely curved fuel contours.)";
+L(end+1) = "";
+L(end+1) = sprintf("- S grid: %.0f to %.0f ft^2 (%d points, A481 T_S.m 30-50 m^2)", ...
+    min(S_grid), max(S_grid), numel(S_grid));
+L(end+1) = sprintf("- T grid: %.0f to %.0f lbf (%d points, brackets the F-35A 43,000)", ...
+    min(T_grid), max(T_grid), numel(T_grid));
+L(end+1) = sprintf("- relax_W0 = %.2f (default -- pure-fraction closure is stable)", ts.relax_W0);
+L(end+1) = sprintf("- Converged W_TO at the design point (T = %.0f, S = %.0f): %.1f lbf", ...
+    actual.T, actual.S, W0_actual);
+L(end+1) = sprintf("- W_TO spread across the finite grid cells: %.3f%% (near 0 confirms the flat field)", ...
+    W0_spread_pct);
+L(end+1) = sprintf("- Infeasible/unconverged cells (NaN): %d of %d", ...
+    nnz(~isfinite(fg.W0)), numel(fg.W0));
+L(end+1) = "";
+L(end+1) = "Figure: `aero481_TS_diagram.png`. Full grids: `aero481_TS_diagram.json`.";
+writelines(L, fullfile(outdir, 'aero481_TS_diagram.md'));
+
+fprintf('  W_TO spread across the grid: %.3f%% (near 0 = flat fuel field, as expected)\n', W0_spread_pct);
+fprintf('  Infeasible/unconverged cells (NaN): %d of %d\n', nnz(~isfinite(fg.W0)), numel(fg.W0));
+fprintf('\nWrote output/aero481_TS_diagram.png, .json and .md\n');
