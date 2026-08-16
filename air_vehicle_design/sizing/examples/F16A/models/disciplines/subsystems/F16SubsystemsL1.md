@@ -26,15 +26,11 @@ are a human-readable cross-check that the code's own lookup produces the same fi
 
 ## 3. Derived (5 `Dependent` properties + 3 methods)
 
-**CORRECTED (matlab-oop-expert review, 2026-08-03):** an earlier draft of this file claimed "0
-DERIVED, mirrors F16WeightsL1" for every quantity on this class. That is only true of the three
-quantities that take a genuine *external* weight argument (`avionics_weight`, `avionics_volume`,
-`fuel_volume_from_weight` — these correctly stay methods, exactly like `F16WeightsL1.OEW(obj, W_TO)`,
-since `W_empty`/`fuel_weight_lb` is not `obj`'s own stored state and there is nothing to cache).
-`avionics_weight_fraction`, `avionics_density`, and `fuel_density` take **zero** extra arguments and
-read only `obj`'s own stored `avionics_table_row`/`fuel_type` — the same "self-contained, no external
-argument" shape as `F16GeomL2`'s Dependent getters, so they are now `properties (Dependent)`, and
-`SubsystemsModelL1` declares them as abstract properties (not abstract methods).
+The three quantities that take a genuine *external* weight argument (`avionics_weight`,
+`avionics_volume`, `fuel_volume_from_weight`) stay methods, like `F16WeightsL1.OEW(obj, W_TO)`.
+`avionics_weight_fraction`, `avionics_density`, and `fuel_density` take zero extra arguments and read
+only `obj`'s stored `avionics_table_row`/`fuel_type`, so they are `properties (Dependent)`;
+`SubsystemsModelL1` declares them as abstract properties.
 
 | Member | Kind |
 |---|---|

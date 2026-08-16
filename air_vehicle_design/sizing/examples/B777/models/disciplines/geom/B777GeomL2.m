@@ -2,47 +2,32 @@ classdef B777GeomL2 < GeometryModelL2
 %B777GEOML2  Boeing 777-200LR Level-2 geometry: real trapezoidal planform with
 %   MAC and EXPOSED planform areas (metabook Chapter 7, Example 7.1).
 %
-%   Replaces B777GeomL1. Where L1 carried only S_ref/AR + the Eq. 4.58 wetted-
-%   area decomposition, L2 adds the equivalent-trapezoidal planform parameters
-%   (metabook Table 7.2) for the wing, horizontal tail, and vertical tail, and
-%   from them computes:
+%   Adds the equivalent-trapezoidal planform parameters (metabook Table 7.2) for
+%   the wing, horizontal tail, and vertical tail, and from them computes:
 %     - the mean aerodynamic chord and 40%-MAC location  [Eq. 7.2-7.9]
 %     - the EXPOSED planform areas of the wing/HT/VT      [Table 7.3]
 %     - the fuselage wetted area                          [Table 7.3]
-%   These feed the component-weight build-up B777WeightsL2 (Algorithm 5): the
-%   wing/HT/VT weights use the EXPOSED planform areas and the fuselage weight
-%   uses the wetted area [metabook Table 7.1 multipliers].
+%   These feed B777WeightsL2 (Algorithm 5): wing/HT/VT weights use the exposed
+%   planform areas, the fuselage weight uses the wetted area [Table 7.1].
 %
-%   INHERITANCE. Inherits GeometryModelL2, the aircraft-AGNOSTIC L2 geometry
-%   core contract (slimmed 2026-08-15). This class supplies exactly that core --
-%   exposed wing/HT/VT planform areas, HT/VT reference-area write-back slots,
-%   wing span, fuselage length + wetted area, plus get_S_exposed_wing /
-%   get_S_wet_fuselage. It does NOT carry the F-16's detailed per-surface drag-
-%   build-up geometry (t/c, sweeps, duct, wave drag), which is fighter-specific
-%   and lives concretely on F16GeomL2; a transport with a simple Cfe*Swet/Sref
-%   polar has no use for it. It also preserves the B777GeomL1 consumer contract
-%   (S_ref, S_wet, cbar_wing, n_engines, get_S_ref, get_S_wet) so B777AeroL1, the
-%   tail sizing, and the constraint/mission stacks read it unchanged.
+%   Inherits GeometryModelL2, the aircraft-AGNOSTIC L2 core (exposed wing/HT/VT
+%   areas, HT/VT write-back slots, wing span, fuselage length + wetted area,
+%   get_S_exposed_wing / get_S_wet_fuselage). It does NOT carry the F-16's
+%   detailed drag-build-up geometry (that lives on F16GeomL2). It preserves the
+%   B777GeomL1 consumer contract (S_ref, S_wet, cbar_wing, n_engines, get_S_ref,
+%   get_S_wet).
 %
-%   S_ref COUPLING (the sizing lever). S_ref is the wing design variable. The
-%   wing trapezoid scales isometrically with it (linear dimensions ~ sqrt(S_ref
-%   /S_ref_baseline), holding trapezoidal AR and taper), so the EXPOSED wing
-%   area -- and hence the wing weight -- tracks a sizing change to S_ref. The
-%   fuselage geometry is fixed, so as the wing grows a relatively smaller part
-%   is covered by the fuselage (exposed fraction rises). The HT/VT trapezoids
-%   are held at their Table 7.2 baseline (their exposed areas do not scale with
-%   S_ref at L2 -- the wing is the dominant weight-vs-area lever); the tail
-%   reference areas S_ht/S_vt remain the tail-sizing write-back slots used by
-%   the aero/tail-volume path.
+%   S_ref COUPLING (the sizing lever): S_ref is the wing design variable; the
+%   wing trapezoid scales isometrically (linear dims ~ sqrt(S_ref/S_ref_baseline),
+%   holding AR and taper), so the exposed wing area -- and wing weight -- tracks
+%   S_ref. The HT/VT trapezoids are held at their Table 7.2 baseline; S_ht/S_vt
+%   remain the tail-sizing write-back slots.
 %
-%   EXPOSED-AREA METHOD. exposed = gross trapezoid - the center portion covered
-%   by the body: covered = w_body*c_root - (c_root-c_tip)/b*(w_body^2/2) (the
-%   chord integrated over |y| < w_body/2, both sides). The VT root is the
-%   exposed root (w_body = 0), so its exposed area is the whole trapezoid. The
-%   metabook prints the exposed areas (Table 7.3) but NOT the exposed-area
-%   equations, so the local body widths (fuselage at the wing, tailcone at the
-%   HT) and the fuselage wetted form factor are tuned to reproduce Table 7.3 --
-%   see the fuselage block of b777_L1.json.
+%   EXPOSED-AREA METHOD: exposed = gross trapezoid - the body-covered center,
+%   covered = w_body*c_root - (c_root-c_tip)/b*(w_body^2/2). VT root is exposed
+%   (w_body = 0). The metabook prints the exposed areas (Table 7.3) but not the
+%   equations, so the body widths and fuselage wetted form factor are tuned to
+%   reproduce Table 7.3 (see the fuselage block of b777_L1.json).
 %
 %   Inheritance: GeometryBase -> GeometryModelL2 -> B777GeomL2
 %
@@ -157,8 +142,7 @@ classdef B777GeomL2 < GeometryModelL2
 
         function val = get_S_wet_fuselage(obj)
         %GET_S_WET_FUSELAGE  Fuselage wetted area, ft^2 [metabook Table 7.3].
-        %   The L2 weights fuselage term reads this. Same value as the S_wet_fus
-        %   Dependent (kept for the B777 comparison reports/tests).
+        %   Read by the L2 weights fuselage term; same value as S_wet_fus.
             val = obj.S_wet_fus;
         end
 
@@ -274,13 +258,11 @@ classdef B777GeomL2 < GeometryModelL2
     methods (Static)
 
         function A = exposed_area(c_root, c_tip, b, w_body)
-        %EXPOSED_AREA  Exposed trapezoidal planform area [ft^2]: the gross
-        %   trapezoid minus the center portion covered by a body of width
-        %   w_body. covered = w_body*c_root - (c_root-c_tip)/b*(w_body^2/2) --
-        %   the chord integrated over |y| < w_body/2, both sides. w_body = 0
-        %   gives the whole trapezoid (an exposed-root surface, e.g. the VT).
-        %   [metabook Table 7.3; the exposed-area equation is not printed, so the
-        %   body widths are tuned to reproduce Table 7.3 -- see class header.]
+        %EXPOSED_AREA  Exposed trapezoidal planform area [ft^2]: gross trapezoid
+        %   minus the center covered by a body of width w_body.
+        %   covered = w_body*c_root - (c_root-c_tip)/b*(w_body^2/2). w_body = 0
+        %   gives the whole trapezoid (exposed root, e.g. the VT).
+        %   [metabook Table 7.3; body widths tuned to Table 7.3, see class header.]
             gross = b * (c_root + c_tip) / 2;
             if w_body <= 0
                 A = gross;

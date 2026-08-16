@@ -1,19 +1,17 @@
 classdef PropL1
 %PROPL1  Level-1 propulsion static toolbox: density-ratio lapse, table TSFC.
 %
-%   Call as PropL1.method(...); never instantiated, not in the inheritance
-%   chain. F16PropL1 inherits PropulsionModelL1 and delegates to these statics.
+%   Call as PropL1.method(...); never instantiated. F16PropL1 delegates here.
 %
 %   Thrust lapse: [Martins AE481 metabook Eq. 10.9], exponent by engine type
-%   per Eq. 10.7. TSFC: [Raymer 6th ed. Table 3.3] for jet engines, [Table
-%   3.4] for 'turboprop' (a different, power-specific quantity) -- a
-%   two-value table with no Mach or afterburner dependence.
+%   per Eq. 10.7. TSFC: [Raymer 6th ed. Table 3.3] jet engines, [Table 3.4]
+%   turboprop (power-specific). No Mach or afterburner dependence.
 %
 %   Companion doc: src/disciplines/propulsion/PropL1.md
 
     properties (Constant, Access = private)
         RHO_SL = 0.002377;   % slug/ft³ — ISA sea-level density [Mattingly App. B]
-        % TODO (7/13/2026): Standard atmospheric conditions at sea level should be its own class.
+        % TODO: sea-level atmosphere should be its own class.
     end
 
     methods (Static)
@@ -42,15 +40,11 @@ classdef PropL1
         end
 
         function c_t = tsfc_mattingly_hibpr(state)
-        %TSFC_MATTINGLY_HIBPR  High-bypass-turbofan TSFC [1/hr] from Mach and
-        %   temperature ratio.
-        %   [metabook_data.md Eq. 10.11 / Mattingly 1996 Eq. 1.36a, line 710]:
-        %     c = (0.4 + 0.45*M) * sqrt(theta)
-        %   theta = T_atm / T_std (dimensionless static temperature ratio;
-        %   read straight from AircraftState.theta, Mattingly Eq. 2.52a). This
-        %   is the Mach- and altitude-dependent alternative to the constant
-        %   lookup_TSFC_table row, for a high-bypass civil turbofan.
-        %   c in lb_fuel/(lbf*hr).
+        %TSFC_MATTINGLY_HIBPR  High-bypass-turbofan TSFC [lb_fuel/(lbf*hr)].
+        %   c = (0.4 + 0.45*M)*sqrt(theta)
+        %   [metabook_data.md Eq. 10.11 / Mattingly 1996 Eq. 1.36a, line 710].
+        %   theta = static temperature ratio T_atm/T_std [Mattingly Eq. 2.52a].
+        %   Mach- and altitude-dependent alternative to lookup_TSFC_table.
             c_t = PropL1.tsfc_mattingly_hibpr_raw(state.mach, state.theta);
         end
 
@@ -100,14 +94,12 @@ classdef PropL1
 
         function tbl = lookup_TSFC_table(engine_type)
         %LOOKUP_TSFC_TABLE  Categorical cruise/loiter TSFC by engine type.
-        %   Source: Raymer 6th ed. Table 3.3 (jet engines, thrust-specific,
-        %   1/hr) and Table 3.4 (propeller engines, power-specific Cbhp,
-        %   lb/hr/bhp -- a DIFFERENT physical quantity, not interchangeable
-        %   with the jet rows without a power/thrust relation).
+        %   [Raymer 6th ed. Table 3.3] jet engines (thrust-specific, 1/hr);
+        %   [Table 3.4] propeller engines (power-specific Cbhp, lb/hr/bhp -- a
+        %   different quantity, not interchangeable with the jet rows).
         %   Returns struct with fields .cruise and .loiter.
-        %   AB operation is NOT modelled here — see L2/L3 Mattingly Eq. 3.55.
-        %   AB capability does not affect cruise/loiter TSFC; _AB variants share
-        %   the same values as their dry counterparts.
+        %   AB not modelled here (see L2/L3 [Mattingly Eq. 3.55]); _AB variants
+        %   share the dry values.
             switch engine_type
                 case {'turbojet', 'turbojet_AB'}
                     tbl = struct('cruise', 0.90, 'loiter', 0.80);
@@ -116,9 +108,7 @@ classdef PropL1
                 case 'high_bypass_turbofan'
                     tbl = struct('cruise', 0.50, 'loiter', 0.40);
                 case 'turboprop'
-                    % Table 3.4 Cbhp [lb/hr/bhp], NOT Table 3.3's 1/hr basis.
-                    % Fixed 2026-07-30 (previously duplicated the turbojet
-                    % row, 0.90/0.80, which was a mis-transcription).
+                    % [Raymer Table 3.4] Cbhp [lb/hr/bhp], not Table 3.3's 1/hr basis.
                     warning('PropL1:turbopropIsPowerBasis', ...
                         ['turboprop TSFC is Raymer Table 3.4 Cbhp [lb/hr/bhp], a ' ...
                          'power-specific fuel consumption -- not the thrust-specific ' ...

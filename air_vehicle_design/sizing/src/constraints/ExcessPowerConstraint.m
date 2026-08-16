@@ -3,14 +3,12 @@ classdef ExcessPowerConstraint < MasterEquationConstraint
 %   demand (Ps>0, n=1).
 %
 %   The Master-Equation specialization for a climb/acceleration requirement
-%   expressed as a required specific excess power Ps>0 in level (n=1.0)
-%   flight: the D = (beta/alpha)*(Ps/V) term is now active (nonzero), on top
-%   of the usual zero-lift and induced-drag terms. The F-16 "Excess Power"
-%   condition (Ps=500 ft/s at 10,000 ft, M=0.87) is an ExcessPowerConstraint.
+%   as a required specific excess power Ps>0 in level (n=1.0) flight: the
+%   D = (beta/alpha)*(Ps/V) term is active. The F-16 "Excess Power" condition
+%   (Ps=500 ft/s at 10,000 ft, M=0.87) is an ExcessPowerConstraint.
 %
-%   All physics, the A/B/C/D assembly, the non-finite self-guard, and the
-%   equation citation live in MasterEquationConstraint -- this class only
-%   fixes n=1 and takes Ps as an input.
+%   All physics and the citation live in MasterEquationConstraint; this class
+%   only fixes n=1 and takes Ps as an input.
 
     methods
 

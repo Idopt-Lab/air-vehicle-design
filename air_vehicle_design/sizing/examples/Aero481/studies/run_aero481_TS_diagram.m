@@ -1,43 +1,25 @@
 %% run_aero481_TS_diagram
 %   F-35 (Aero 481 Design01 provenance) dimensional T-S sizing diagram, the
-%   fighter analogue of Aero 481's T_S.m. Builds the Aero481 L1 discipline stack
-%   plus the L1 DCA mission, drives src/sizing/TSDiagram.m: every (T, S) cell is
-%   a SIZED aircraft with a converged TOGW [metabook S4.12 Algorithm 2], with
-%   the per-constraint boundaries traced as T(S) / S(T) curves [Algorithm 4] and
-%   the F-35 design point marked.
+%   fighter analogue of Aero 481's T_S.m. Builds the Aero481 L1 stack + L1 DCA
+%   mission, drives src/sizing/TSDiagram.m: every (T, S) cell is a SIZED aircraft
+%   with a converged TOGW [metabook S4.12 Algorithm 2], the per-constraint
+%   boundaries traced as T(S) / S(T) curves [Algorithm 4].
 %
-%   TWELVE CONSTRAINTS -- ALIGNED WITH AERO 481. The constraint curves are the 12
-%   ACTIVE Aero 481 constraints (Cruise, Dash, 2 sustained turns, 6 SEP,
-%   instantaneous turn, ceiling); the 6 FAR-25 climbs and the framework-only
-%   Takeoff/Landing were dropped (user decision; see Aero481ConstraintSet). The 6 SEP
-%   rows use the Aero 481 50%-fuel combat weight (beta = 0.8285 in the
-%   requirements JSON).
+%   TWELVE CONSTRAINTS -- the 12 ACTIVE Aero 481 constraints (see
+%   Aero481ConstraintSet); the 6 FAR-25 climbs and Takeoff/Landing were dropped.
+%   The 6 SEP rows use the 50%-fuel combat weight (beta = 0.8285).
 %
-%   S RANGE -- AERO 481 RANGE. Aero 481's T_S.m sweeps S = 30-50 m^2 =
-%   323-538 ft^2. The T grid brackets the real F135 (43,000 lbf SLS AB).
+%   S RANGE = Aero 481's T_S.m 30-50 m^2 = 323-538 ft^2; the T grid brackets the
+%   real F135 (43,000 lbf SLS AB).
 %
-%   WHY THE FUEL CONTOURS VARY GENTLY (read this before interpreting the figure).
-%   The F-35 L1 weights are the Aero 481 A02 delta model (Aero481WeightsL1 -- a
-%   Sainristil empty-weight fraction PLUS a wing delta in S_ref and an engine
-%   delta in T_SL, both about self-scaling design-point baselines), so OEW and
-%   hence the converged TOGW respond to the (T, S) grid. The response is mild
-%   because both deltas are measured about baselines that scale with W_TO. The
-%   SUBSTANCE of this F-35 diagram is still the per-constraint CURVES in
-%   dimensional (T, S) space -- exactly like Aero 481's T_S.m, which plots the
-%   constraint boundaries in T vs S and reads the design point off their
-%   intersection, NOT an OEW-driven fuel field. Contrast the B777 metabook
-%   diagram, whose transport empty weight scales with W0 and so gives genuinely
-%   curved fuel contours.
-%
-%   Style/wiring follows examples/B777/studies/run_b777_TS_diagram.m (caller owns
-%   discipline construction); export follows the sanity_checks scripts (console +
-%   files into the gitignored examples/Aero481/output/).
+%   The fuel contours vary GENTLY (the A02 delta model's baselines self-scale
+%   with W_TO), so the diagram's substance is the per-constraint CURVES, like
+%   Aero 481's T_S.m. Contrast the B777, whose W0-scaling empty weight gives
+%   genuinely curved fuel contours.
 
 % Caller owns discipline construction (dependency injection). TSDiagram mutates
-% the shared geom/prop objects in place during the scan (see its header); the
-% stack is built fresh here and used for nothing else afterwards. The weights
-% object uses the A481 A02 delta model -- three-arg constructor (injects geom
-% for S_ref and prop for T_SL).
+% the shared geom/prop in place during the scan. The weights object is the A481
+% A02 delta model -- three-arg constructor (injects geom, prop).
 sp   = aero481_spec_path(1);
 rp   = aero481_requirements_path();
 aero = Aero481AeroL1(sp);
@@ -53,19 +35,14 @@ ts = TSDiagram(aero, prop, wts, geom, miss, con, tail);
 % Default relax_W0 / max_iter kept -- the pure-fraction closure is stable.
 
 % Uniform grids (TSDiagram.plot's feasible-region shading assumes uniform
-% spacing), on Aero 481's range now that the F-35 sizes to ~61k (lapse OFF,
-% matching A481 -- disc A6 resolved). The S grid spans Aero 481's T_S.m range
-% 30-50 m^2 (~323-538 ft^2); the T grid brackets the real F135 (43,000 lbf) with
-% margin on both sides. This range holds the design cell (T = 43,000, S = 538)
-% INSIDE the feasible region -- the framework now matches Aero 481's design, so
-% there is no longer an infeasible-corner / fidelity-gap narrative.
+% spacing). S spans Aero 481's T_S.m range 30-50 m^2 (~323-538 ft^2); T brackets
+% the real F135 (43,000 lbf). This range holds the design cell (T = 43,000,
+% S = 538) inside the feasible region.
 S_grid = linspace(323, 538, 28);        % ft^2 (A481 T_S.m 30-50 m^2)
 T_grid = linspace(20000, 70000, 28);    % lbf  (brackets the real F135 43,000)
 
-% Reference sizing at the real F135 thrust (43,000 lbf SLS AB) and the Aero 481
-% design wing (538 ft^2 ~ 50 m^2), reported in the console/JSON only -- NOT
-% marked on the plot (removed 2026-08-15, user request -- confusing). The A02
-% fixed-cell closure here reproduces Aero 481 A02 to ~2%.
+% Reference sizing at the real F135 thrust and design wing, reported in
+% console/JSON only (not marked on the plot). Reproduces Aero 481 A02 to ~2%.
 actual = struct('T', 43000, 'S', 538, 'label', "reference sizing (T=43000, S=538)");
 
 % Converged TOGW at the reference cell [metabook Algorithm 2], for the export.
@@ -74,10 +51,9 @@ fprintf('\nAero 481 Design01 T-S diagram [Aero 481 T_S.m analogue]\n');
 fprintf('  Reference sizing at (T = %.0f lbf, S = %.0f ft^2): W_TO = %.1f lbf\n', ...
     actual.T, actual.S, W0_actual);
 
-% TOGW / fuel grid for the export [metabook S4.12 objective contours]. The
-% precomputed grid is passed straight into ts.plot ('grid' option) so the mesh
-% is computed once. NOTE (see header): with the pure-fraction OEW + constant
-% CD0 these come out nearly FLAT -- the constraint curves carry the diagram.
+% TOGW / fuel grid for the export [metabook S4.12 objective contours], passed
+% into ts.plot ('grid' option) so the mesh is computed once. Nearly flat (see
+% header) -- the constraint curves carry the diagram.
 fg = ts.fuel_grid(T_grid, S_grid);
 
 % The diagram itself [Aero 481 T_S.m analogue].

@@ -1,16 +1,8 @@
 classdef (Abstract) WeightsModelL1 < WeightsBase
-%WEIGHTSMODELL1  Tier-2 abstract enforcer for Level-1 weights.
-%
-%   Inherits WeightsBase directly, not another WeightsModelLN.
-%
-%   L1 is a statistical empty-weight fraction: a power law in W_TO with an
-%   independent regression as a lower bound. No geometry, no engine data, so a
-%   concrete L1 class injects nothing.
-%
-%   No DERIVED properties are declared. OEW is a method taking W_TO, and at
-%   this tier the whole model is one closed-form evaluation, so there is
-%   nothing to recompute on read.
-%
+%WEIGHTSMODELL1  Tier-2 abstract enforcer for Level-1 weights (statistical
+%   empty-weight fraction). Inherits WeightsBase; declares the abstract members
+%   a concrete L1 class must supply. No DERIVED properties.
+%   History and rationale: docs/decision_log.md.
 %   Toolbox companion: src/disciplines/weights/WeightsL1.md
 
     properties (Abstract)

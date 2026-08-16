@@ -30,9 +30,8 @@ has its own toolbox, `GeomL3`.
 
 `get_S_wet` takes no `W_TO` argument (contrast L1) and includes the duct unconditionally; a concrete
 class with no duct sets `D_inlet = D_exit = L_duct = 0`. `compute_s_wet_duct` treats this exact triple
-as "no duct given," warns (`GeomL2:noDuctGeometry`), and returns 0, rather than silently degenerating
-or throwing a validation error (fixed 2026-07-30; `L_duct` previously required `mustBePositive`, which
-contradicted this documented convention — see `TestGeomL2.testDuctNoDuctGivesWarningAndZero`).
+as "no duct given," warns (`GeomL2:noDuctGeometry`), and returns 0. See
+`TestGeomL2.testDuctNoDuctGivesWarningAndZero`.
 
 ## 3. Equations
 

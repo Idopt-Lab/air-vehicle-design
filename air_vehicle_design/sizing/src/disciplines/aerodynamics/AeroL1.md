@@ -34,12 +34,12 @@ geometry buildup, so a concrete L1 class takes no geometry object.
 $$C_D = C_{D_0}(M) + K_1(M)\,C_L^{2} + K_2\,C_L$$
 
 $C_{D_0}(M)$ and $K_1(M)$ are interpolated by Mach from the fighter "Current" type-curves
-[Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10 and Fig. 2.11]. A tabulated figure has no transonic pole, so the curves
-are evaluated across the whole Mach range — contrast `AeroL2`'s Eq. 12.51 supersonic path, which
-does.
+[Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10 and Fig. 2.11]. A tabulated figure has no
+transonic pole, so the curves are evaluated across the whole Mach range — unlike `AeroL2`'s
+Eq. 12.51 supersonic path.
 
-$K_2 = 0$ for an uncambered fighter [Mattingly: Aircraft Engine Design, 2nd edition Sec. 2.3.1]. Any other `design_type` errors:
-the cambered-type curve fit is not in this repo.
+$K_2 = 0$ for an uncambered fighter [Mattingly: Aircraft Engine Design, 2nd edition Sec. 2.3.1]. Any
+other `design_type` errors: the cambered-type curve fit is not in this repo.
 
 **CLmax**, as the range mean of the aircraft type's column [Roskam Vol. I Table 3.1]:
 
@@ -54,11 +54,11 @@ $$\Delta C_{L_{max},TO} = \overline{C_{L_{max},TO}} - \overline{C_{L_{max},clean
   \Delta C_{L_{max},L} = \overline{C_{L_{max},L}} - \overline{C_{L_{max},clean}}$$
 
 Fighter totals are therefore clean **1.50**, takeoff **1.70**, landing **2.10**, all from one table.
-`lookup_CLmax` still implements Table 3.3 (fighter 0.90) and is unit-tested, but is deliberately not
-wired into `get_CLmax` — mixing the two gave totals belonging to neither table.
+`lookup_CLmax` implements Table 3.3 (fighter 0.90) and is unit-tested, but is not wired into
+`get_CLmax` — mixing the two gives totals belonging to neither table.
 
-The resulting L1→L2 step (1.50 against Raymer Eq. 12.15's 0.913) is the largest in the fidelity
-ladder and is intentional: a type-only statistical mean against a geometry-based estimate.
+The L1→L2 step (1.50 against Raymer Eq. 12.15's 0.913) is the largest in the fidelity ladder and is
+intentional: a type-only statistical mean against a geometry-based estimate.
 
 **Category vocabulary.** The canonical key is `jet_fighter`; Roskam's CLmax table prints `fighter`.
 `to_CLmax_table_row` translates. Do not rename the table row to match the key — the row name is what

@@ -1,46 +1,30 @@
 classdef F16AeroL2 < AeroModelL2
 %F16AEROL2  F-16A Block 10 Level-2 aerodynamics student class.
 %
-%   Inherits AeroModelL2 (abstract enforcer).  L2 is the GEOMETRY-DEPENDENT
+%   Inherits AeroModelL2 (abstract enforcer).  L2 is the geometry-dependent
 %   clean drag polar + finite-wing lift; every abstract method delegates to the
-%   AeroL2 static toolbox, EXCEPT drag_polar's supersonic branch (see below).
+%   AeroL2 static toolbox, except drag_polar's supersonic branch (see below).
 %
-%   SUPERSONIC WAVE DRAG (added 2026-07-29): the generic AeroL2 toolbox's
-%   supersonic CD0 is turbulent skin friction only (no wave-drag term -- see
-%   AeroL2.get_CD0_supersonic's header), which reads LOWER than the subsonic
-%   CD0 at the F-16's M=1.6 Max Mach point -- physically backwards, and found
-%   to be the dominant reason the L2 constraint diagram's Max Mach curve read
-%   ~70-80% low vs. Brandt across the whole W/S range. This class overrides
-%   drag_polar to add Brandt's own whole-aircraft wave-drag increment
-%   (compute_CD0_wave, Brandt Aero!B8/G8) on top of the subsonic CD0 for
-%   M >= MACH_SUPERSONIC_MIN -- deliberately kept HERE (F-16-specific), not in
-%   the generic toolbox, since it is Brandt's own tuned formula (E_WD=2.2),
-%   not a generic textbook equation another aircraft could reuse untuned. This
-%   is intentionally simpler than L3's full Raymer Eq. 12.44/12.45 buildup
-%   (F16AeroL3.compute_CD0_wave) -- no per-component analysis, just the
-%   whole-aircraft Sears-Haack term -- appropriate to L2's fidelity tier.
+%   SUPERSONIC WAVE DRAG: the generic AeroL2 toolbox's supersonic CD0 is
+%   turbulent skin friction only (no wave-drag term), which reads lower than
+%   the subsonic CD0 at the F-16's M=1.6 point. This class overrides drag_polar
+%   to add Brandt's whole-aircraft wave-drag increment (compute_CD0_wave,
+%   Brandt Aero!B8/G8) on top of the subsonic CD0 for M >= MACH_SUPERSONIC_MIN.
+%   Kept here (F-16-specific) rather than in the generic toolbox, since it is
+%   Brandt's tuned formula (E_WD=2.2), not a generic textbook equation. Simpler
+%   than L3's full Raymer Eq. 12.44/12.45 buildup -- whole-aircraft Sears-Haack
+%   term only.
 %
-%   ============================================================================
 %   DEPENDENCY INJECTION + INPUT vs DERIVED (optimization-ready design).
-%   The constructor takes a REQUIRED injected geometry object and a REQUIRED
+%   The constructor takes a required injected geometry object and a required
 %   unified L2 input JSON path (f16a_spec_path(2); reads its .aerodynamics
-%   block). No silent defaults for either.
-%   Properties split into two blocks, mirroring F16GeomL2:
-%
-%     (1) INPUTS -- a plain, mutable `properties` block holding ONLY genuine
-%         aero spec data (equivalent skin-friction coefficient, airfoil section
-%         properties, Oswald-e method selector, and control-surface / high-lift
-%         estimates). Set once by the constructor from the JSON.
-%
-%     (2) DERIVED (Dependent) -- geometry read LIVE from the injected geometry
-%         object on every read (S_ref, S_wet, AR, leading-edge & quarter-chord
-%         sweep, taper, characteristic length). NO geometry number is stored on
-%         this class: when an optimizer mutates a geometry input
-%         (obj.geom.AR_wing = ...), the next aero read reflects it. This
-%         removes the historical hardcoded-geometry bugs (S_wet=1371 [a Brandt
-%         back-calc output], Lambda_c4_deg=37 [wrong; the injected quarter-chord
-%         sweep is ~32.2 deg], AR/S_ref/Lambda_LE/taper literals).
-%   ============================================================================
+%   block). No silent defaults. Properties split, mirroring F16GeomL2:
+%     (1) INPUTS -- plain mutable block of aero spec data only (Cfe-selector,
+%         airfoil section, Oswald-e method, control-surface/high-lift
+%         estimates), set once by the constructor.
+%     (2) DERIVED (Dependent) -- geometry read live from the injected geometry
+%         object on every read. No geometry number is stored on this class, so
+%         a mutated geometry input reflects on the next aero read.
 %
 %   Inheritance: AerodynamicsBase -> AeroModelL2 -> F16AeroL2
 %
@@ -50,16 +34,13 @@ classdef F16AeroL2 < AeroModelL2
 %     K1    = 1/(pi*AR*e) ~ 0.117
 %     CLmax = 0.9*1.20*cos(32.2 deg) ~ 0.914                    [Raymer Eq. 12.15]
 
-    % ======================================================================= %
     % INPUTS -- aero-only spec data (mutable; from the unified L2 JSON's
-    % .aerodynamics block). NO geometry here (see the Dependent block below).
-    % ======================================================================= %
+    % .aerodynamics block). No geometry here (see the Dependent block below).
     properties
         geom              % injected geometry object (all geometry read live from it)
 
         %AIRCRAFT_CATEGORY  Canonical class flag ("jet_fighter"); selects the
-        %   Raymer Table 12.3 Cfe row. Read from the single top-level
-        %   aircraft_category key -- see the Dependent Cfe below.
+        %   Raymer Table 12.3 Cfe row -- see the Dependent Cfe below.
         aircraft_category
 
         e_method          % Oswald-e selector; "official" -> Raymer Eq. 12.48/12.49
@@ -72,10 +53,9 @@ classdef F16AeroL2 < AeroModelL2
         cl_max_2D         % 2-D section cl_max (feeds clean CLmax, Eq. 12.15)
         cl_alpha_2D       % 1/rad; 2-D lift slope (optional eta term, Eq. 12.8)
 
-        % --- Trailing-edge flap (flaperon) control-surface estimates. These
-        % are genuine aero/control-surface spec (NOT geometry), not in the aero
-        % JSON; carried as flagged hardcoded inputs. TODO: verify against T.O.
-        % 1F-16A-1 (flaperon is a small-authority camber device, ~20 deg max).
+        % --- Trailing-edge flap (flaperon) control-surface estimates. Aero/
+        % control-surface spec (not geometry), not in the aero JSON; hardcoded
+        % inputs. TODO: verify against T.O. 1F-16A-1 (flaperon ~20 deg max).
         hld_TE            = "plain"
         c_flap_over_c     = 0.25
         eta_flap_in       = 0.10
@@ -86,43 +66,32 @@ classdef F16AeroL2 < AeroModelL2
 
         %E_WD  Wave-drag efficiency factor [Brandt F-16A.xls Aero tab, Aero!B8
         %   formula; VnV/BrandtF16A/BrandtAerodynamics.m's Ewd / readme_aero.md
-        %   "Wave drag factor (Sears-Haack reference)"]. A TUNED calibration
-        %   input (back-checked to Brandt/Casey, not a measured F-16 datum) --
-        %   same value/status as F16AeroL3's E_WD; see f16a_L2.json's
-        %   "_TODO_wave_drag_factor_E_WD" and TestAeroL2.testTODO_EWDCalibrationInput.
+        %   "Wave drag factor (Sears-Haack reference)"]. A tuned calibration
+        %   input; same value/status as F16AeroL3's E_WD.
         E_WD
     end
 
-    % ======================================================================= %
     % DERIVED -- geometry read live from obj.geom on every read (no cache,
-    % never stale). Read-only (no set-methods). Fixes the historical hardcoded-
-    % geometry bugs by construction.
-    % ======================================================================= %
+    % never stale). Read-only (no set-methods).
     properties (Dependent)
         %CFE  Equivalent skin-friction coefficient, Raymer Table 12.3, selected
-        %   by aircraft_category (0.0035 for an Air Force fighter). Was a stored
-        %   JSON input until Phase 3 (2026-07-25): a published table constant is
-        %   not an input, and holding it as one invited tuning it -- the
-        %   0.005908 value was used to force CD0 onto Brandt's mission
-        %   polar, exactly the back-calculated-value-as-input pattern PLAN.md
-        %   forbids. The JSON now supplies only the category that selects it.
+        %   by aircraft_category (0.0035 for an Air Force fighter). The JSON
+        %   supplies only the category that selects it, not the value.
         Cfe
 
         S_ref             % ft^2  wing reference area          <- geom.S_ref
         S_wet             % ft^2  total wetted area            <- geom.S_wet
         AR                % —     wing aspect ratio            <- geom.AR_wing
         Lambda_LE_deg     % deg   wing leading-edge sweep      <- geom.LE_sweep_wing
-        Lambda_c4_deg     % deg   wing quarter-chord sweep     <- geom.QC_sweep_wing (~32.2, fixes the 37 bug)
+        Lambda_c4_deg     % deg   wing quarter-chord sweep     <- geom.QC_sweep_wing (~32.2)
         taper             % —     wing taper ratio             <- geom.lambda_wing
         L_char            % ft    characteristic length for the aircraft-level
                           %       supersonic Reynolds number   <- geom.L_fus
 
-        %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, read LIVE
-        %   from the injected geometry object (mirrors F16AeroL3's identically-
-        %   named Dependent pair). TIER-SPECIFIC, deliberately: obj.geom.Amax is
-        %   the fuselage-ENVELOPE ellipse (pi/4)*W*H at L2 -- the correct
-        %   L2-fidelity form per F16GeomL2.m's Amax getter and CLAUDE.md's Amax
-        %   tiering note -- NOT L3's area-ruled buildup. Do not "unify" the two.
+        %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, read live
+        %   from the injected geometry object. Tier-specific: obj.geom.Amax is
+        %   the fuselage-envelope ellipse (pi/4)*W*H at L2 (the correct
+        %   L2-fidelity form), not L3's area-ruled buildup. Do not unify the two.
         Amax_ft2          % ft^2  <- geom.Amax (fuselage-envelope ellipse at L2)
         L_aircraft_ft     % ft    <- geom.L_aircraft
     end
@@ -136,12 +105,9 @@ classdef F16AeroL2 < AeroModelL2
         %   and the path must be supplied. Sets ONLY the aero inputs; all
         %   geometry is produced live by the Dependent getters from obj.geom.
             arguments
-                % GeometryBase is too weak a guard: it declares only
-                % S_ref/S_wet/get_S_ref/get_S_wet, so an F16GeomL1 (whose
-                % S_wet is a TOGW regression, not a planform) or any other
-                % subclass constructed fine and then produced wrong or zero
-                % drag at first use rather than failing here. Narrowed
-                % 2026-07-25 to the tiers that actually satisfy the aero
+                % GeometryBase is too weak a guard (only S_ref/S_wet), so an
+                % F16GeomL1 or other subclass would construct fine then produce
+                % wrong drag. Narrowed to the tiers that satisfy the aero
                 % contract; both L2 and L3 geometry do.
                 geom      (1,1) {mustBeA(geom, ["GeometryModelL2", "GeometryModelL3"])}
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
@@ -150,11 +116,8 @@ classdef F16AeroL2 < AeroModelL2
 
             J = jsondecode(fileread(json_path));
             A = J.aerodynamics;
-            % ONE canonical category key, top-level: it selects rows in several
-            % different discipline tables, so it is not aerodynamics' property to
-            % own. Until Phase 3 it was stored three times under two spellings
-            % (.geometry.aircraft_category, .aerodynamics.aircraft_type,
-            % .weights.aircraft_category) with nothing keeping them in sync.
+            % ONE canonical top-level category key -- selects rows in several
+            % discipline tables, so not aerodynamics' property to own.
             obj.aircraft_category = string(J.aircraft_category);
             obj.e_method = string(A.e_method);
             af = A.airfoil;
@@ -186,19 +149,13 @@ classdef F16AeroL2 < AeroModelL2
 
         % ---- Core contract (base) ----------------------------------------- %
         function polar = drag_polar(obj, state)
-        %DRAG_POLAR  Subsonic/transonic: unchanged, delegates to the generic
-        %   AeroL2 toolbox. Supersonic: F-16-SPECIFIC override -- the generic
-        %   toolbox's AeroL2.get_CD0_supersonic is turbulent skin friction only
-        %   (no wave drag; see its own header), which reads BELOW the subsonic
-        %   CD0 at the F-16's Max Mach point (M=1.6) -- physically backwards,
-        %   and the dominant reason the L2 constraint diagram's Max Mach curve
-        %   used to read 70-80% low vs. Brandt across the full W/S range
-        %   (2026-07-29 investigation). This class instead adds Brandt's own
-        %   whole-aircraft wave-drag increment (compute_CD0_wave) on top of the
-        %   subsonic CD0, matching the "CD0 = CD0_subsonic + CD_wave" split
-        %   Brandt's own Aero-tab methodology uses. K1/K2 are untouched (the
-        %   generic K1_supersonic already tracks Brandt's supersonic K1 to a
-        %   few percent -- not part of the gap this override fixes).
+        %DRAG_POLAR  Subsonic/transonic: delegates to the generic AeroL2
+        %   toolbox. Supersonic: F-16-specific override -- the generic
+        %   AeroL2.get_CD0_supersonic is turbulent skin friction only, which
+        %   reads below the subsonic CD0 at the F-16's Max Mach point (M=1.6).
+        %   This class adds Brandt's whole-aircraft wave-drag increment
+        %   (compute_CD0_wave) on top of the subsonic CD0, matching Brandt's
+        %   "CD0 = CD0_subsonic + CD_wave" split. K1/K2 untouched.
             M = state.mach;
             regime = AeroL2.flight_regime(M);
             if regime == "supersonic"
@@ -218,22 +175,15 @@ classdef F16AeroL2 < AeroModelL2
         %     CD0_wave = (4.5*pi/S_ref)*(Amax/L_aircraft)^2 * E_WD
         %                * (0.74 + 0.37*cos(Lambda_LE)) * [1 - 0.3*sqrt(M - M_CD0max)]
         %     M_CD0max = (1/cos(Lambda_LE))^0.2                          [Aero!G8]
-        %   Distinct from Raymer Eq. 12.44/12.45's own sweep/Mach fairing used
-        %   at L3 (F16AeroL3.compute_CD0_wave) -- same (9*pi/2)=(4.5*pi)
-        %   Sears-Haack coefficient, different empirical correction terms; this
-        %   is Brandt's own formula, not a Raymer-textbook one, so it is kept
-        %   here (F-16-specific) rather than folded into the generic AeroL2
-        %   toolbox. Amax/L_aircraft read LIVE from the injected L2 geometry
-        %   (obj.geom.Amax = fuselage-envelope ellipse, the L2-fidelity form --
-        %   see the Amax_ft2 property comment).
+        %   Distinct from Raymer Eq. 12.44/12.45's fairing used at L3 -- same
+        %   (9*pi/2)=(4.5*pi) Sears-Haack coefficient, different empirical
+        %   correction terms; Brandt's own formula, kept here (F-16-specific).
+        %   Amax/L_aircraft read live from the L2 geometry (fuselage-envelope
+        %   ellipse, the L2-fidelity form).
         %
-        %   Clamped at M_CD0max via max(0, ...): Brandt's own worksheet only
-        %   applies this term for M >= M_wave, fairing linearly from Mcrit in
-        %   the transition band below that -- reproducing that finer transonic
-        %   fairing is out of scope here (AeroL2's transonic band, 0.95-1.05,
-        %   is already explicitly "not modeled"); the clamp just keeps the
-        %   sqrt real for the narrow sliver between MACH_SUPERSONIC_MIN (1.05)
-        %   and M_CD0max (1.0547 for the F-16's 40 deg LE sweep).
+        %   Clamped at M_CD0max via max(0, ...) to keep the sqrt real for the
+        %   narrow sliver between MACH_SUPERSONIC_MIN (1.05) and M_CD0max
+        %   (1.0547 for the F-16's 40 deg LE sweep).
             M = state.mach;
             M_CD0max = (1 / cosd(obj.Lambda_LE_deg))^0.2;
             Dq_SH = 4.5*pi * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
@@ -355,13 +305,10 @@ classdef F16AeroL2 < AeroModelL2
         %   drag polar plus this class's config-distinguishing methods
         %   (get_CLmax_TO/_L, get_Delta_CD0_TO/_L) -- the AerodynamicsBase
         %   contract the FAR-25 field-length/climb constraints read. The six
-        %   configs are LOW-SPEED high-lift states, so the clean polar is taken
-        %   at a nominal takeoff/landing condition (sea level, M = 0.2). The
-        %   F-16 sizes with the MILITARY Takeoff/Landing constraints, so this
-        %   completes the base contract via the parasite-drag increment (the L2
-        %   flap-induced-drag term feeds the primary drag_polar path, not this
-        %   base-contract accessor). Both takeoff_* configs map to the takeoff
-        %   deltas, both landing_* plus approach to the landing deltas.
+        %   configs are low-speed high-lift states, so the clean polar is taken
+        %   at a nominal takeoff/landing condition (sea level, M = 0.2). Both
+        %   takeoff_* configs map to the takeoff deltas, both landing_* plus
+        %   approach to the landing deltas.
             arguments
                 obj
                 config (1,1) string {mustBeMember(config, ...

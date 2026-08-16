@@ -4,82 +4,48 @@ classdef ClimbGradientConstraint < Only_TbyW
 %
 %   Generic Layer-1 constraint. Given a required climb gradient G (= sin gamma),
 %   a speed ratio ks = V/V_stall, a high-lift configuration string, and the
-%   injected aero/prop discipline objects, it returns the thrust-to-weight
-%   ratio required to hold that gradient in the specified segment. The
-%   climb-gradient relation is INDEPENDENT of wing loading (W/S cancels between
-%   the drag and lift terms at the fixed climb CL = CLmax/ks^2), so it belongs
-%   to the Only_TbyW category: required_TW returns this same TW_min at every
-%   W/S, and the aggregator reads it as a flat T/W floor.
+%   injected aero/prop objects, it returns the T/W required to hold that
+%   gradient. The relation is INDEPENDENT of wing loading (W/S cancels at the
+%   fixed climb CL = CLmax/ks^2): Only_TbyW category, read as a flat T/W floor.
 %
-%   CD0/K1/CLmax are pulled fresh from the injected aero object each call
-%   (through aero.get_config_polar, for the constructor's config string), so
-%   the constraint tracks the current sizing-loop iteration and fidelity level.
+%   CD0/K1/CLmax are pulled fresh from the aero object each call (through
+%   aero.get_config_polar).
 %
-%   EQUATION [Metabook (Aero 481 metabook), docs/reference_extracts/
-%   metabook_data.md "§4.7 Climb," Eq. 4.24 with the Eq. 4.25 correction
-%   factors and the "§4.7" FAR-25 gradient table; worked Example 4.2,
-%   Eqs. 4.49-4.54]:
+%   EQUATION [metabook_data.md "§4.7 Climb," Eq. 4.24 with the Eq. 4.25
+%   correction factors and the "§4.7" FAR-25 gradient table; worked Example
+%   4.2, Eqs. 4.49-4.54]:
 %
 %     (T/W)_climb = (ks^2/CLmax) * CD0 + (CLmax/ks^2) * (1/(pi*AR*e)) + G   (4.24)
 %     (T/W)_req   = (1/0.8) * (1/0.94) * (N/(N-1)) * (W/W_TO) * (T/W)_climb (4.25)
 %
-%   K-CONVENTION MAPPING. The metabook writes the induced-drag term with the
-%   explicit Oswald factor 1/(pi*AR*e). This repo's drag polar is
-%   CD = CD0 + K1*CL^2 + K2*CL with K1 = 1/(pi*AR*e), so the metabook's
-%   1/(pi*AR*e) IS our K1 (the quadratic/induced factor). The class therefore
-%   uses CLmax/ks^2 * K1_cfg for the induced term. (K2, the camber-offset term,
-%   does not appear in the metabook's climb form and is not added here; the
-%   FAR-25 high-lift configs the metabook tabulates are uncambered-basis
-%   polars, K2 = 0.)
-%
-%   Assembled with the Eq. 4.25 correction factors as multiplicative flags:
+%   K-convention: the metabook's 1/(pi*AR*e) IS this repo's K1 (drag polar
+%   CD = CD0 + K1*CL^2 + K2*CL). K2 does not appear in the metabook climb form
+%   (the tabulated configs are uncambered-basis, K2 = 0). Assembled as:
 %
 %     TW_min = f_hot * f_mcont * f_oei * weight_ratio
 %              * ( ks^2/CLmax * CD0_cfg + CLmax/ks^2 * K1_cfg + G )
 %
 %     f_hot   = 1/0.8       if hot_day        else 1   (hot-day thrust derate)
-%     f_mcont = 1/0.94      if max_continuous else 1   (max-continuous vs takeoff thrust)
+%     f_mcont = 1/0.94      if max_continuous else 1   (max-continuous vs takeoff)
 %     f_oei   = N/(N-1)     if oei            else 1   (one-engine-inoperative)
 %
-%   where G is the required gradient sin(gamma) (dimensionless), ks = V/V_stall,
-%   and CD0_cfg/K1_cfg/CLmax are the drag polar and max-lift of the segment's
-%   high-lift configuration. Example 4.2 hand-check, Climb 1 (Eq. 4.49, TO
-%   flaps gear up, two engines, OEI, hot day): (1/0.8)(2/1)(1.2^2/2.2 * 0.03597
-%   + 2.2/1.2^2 * 0.04054 + 0.012) = 0.243700.
+%   Example 4.2 hand-check, Climb 1 (Eq. 4.49): (1/0.8)(2/1)(1.2^2/2.2 *
+%   0.03597 + 2.2/1.2^2 * 0.04054 + 0.012) = 0.243700.
 %
-%   CLmax SOURCE (and two metabook-internal discrepancies that surface HERE).
-%   CD0_cfg, K1_cfg AND CLmax are ALL read live from the injected aero object
-%   for the constructor's config string (aero.get_config_polar(config).CLmax)
-%   -- this class hardcodes NEITHER the polar NOR CLmax. So the
-%   CLmax used in the induced term is whatever the config polar carries; the
-%   worked-example parity value is that config's CLmax, supplied as data, not a
-%   constant baked into this class. Two known metabook-internal discrepancies
-%   therefore live in the DATA (the config polar), not in this equation, but
-%   surface at this constraint -- see docs/reference_extracts/metabook_data.md
-%   "Known discrepancies," entries D1 and D2:
-%     * D1: the printed takeoff-config climb Eqs. 4.49-4.51 use CLmax = 2.2 in
-%           every CLmax slot, although p. 45 states the Roskam Table 3.1
-%           assumption CLmax,takeoff = 2.0. RESOLVED (Sarojini 2026-08-13): use
-%           the PRINTED 2.2 for worked-example parity, so the takeoff config
-%           polar the aero object reports must carry CLmax = 2.2 to reproduce
-%           Eqs. 4.49-4.51. This class does not choose 2.2 vs 2.0 -- it reads
-%           whatever the injected config polar reports.
-%     * D2: printed Eq. 4.49 (FAR 25.111 takeoff climb, gear DOWN per the p. 39
-%           config list) uses the gear-UP CD0 = 0.03597, not the gear-down
-%           0.06097. RESOLVED (Sarojini 2026-08-13): use the PRINTED gear-up
-%           CD0 for parity. Again a config-polar/data choice, not this equation.
+%   CD0_cfg/K1_cfg/CLmax are ALL read live from the config polar; this class
+%   hardcodes none of them. Two metabook-internal discrepancies live in that
+%   DATA but surface here -- see metabook_data.md "Known discrepancies":
+%     * D1: printed takeoff-config Eqs. 4.49-4.51 use CLmax = 2.2, though p. 45
+%           states CLmax,takeoff = 2.0. RESOLVED: use the printed 2.2, so the
+%           takeoff config polar must carry CLmax = 2.2.
+%     * D2: printed Eq. 4.49 (gear DOWN per the p. 39 config list) uses the
+%           gear-UP CD0 = 0.03597. RESOLVED: use the printed gear-up CD0.
 %
-%   OEI ON A SINGLE-ENGINE AIRCRAFT IS UNDEFINED. If oei is requested with
-%   N_eng == 1 the f_oei factor N/(N-1) is a division by zero -- an
-%   engine-out climb has no meaning for a single-engine aircraft. This errors
-%   loudly (ClimbGradientConstraint:oeiSingleEngine) rather than returning Inf.
-%
-%   ENGINE COUNT. N_eng is read from the injected propulsion object via a
-%   GUARDED isprop read (obj.prop.n_engines) -- engine count is
-%   propulsion-system spec, not airframe data, so it is owned by propulsion.
-%   NOTE: mission analysis reads the engine count from the geometry object
-%   (geom.n_engines) for its own purposes; the two must agree, and reconciling
-%   them onto a single owner is a standing item (see ToDo_Darshan.md).
+%   OEI with N_eng == 1 is undefined (N/(N-1) divides by zero); this errors
+%   loudly (ClimbGradientConstraint:oeiSingleEngine). N_eng is a guarded read
+%   of the injected prop's n_engines (engine count is a propulsion spec).
+%   Mission analysis reads it from geometry; reconciling the owner is a
+%   standing item (see ToDo_Darshan.md).
 
     properties (SetAccess = protected)
         name            % string -- condition label, e.g. "2nd Segment Climb"
@@ -136,11 +102,8 @@ classdef ClimbGradientConstraint < Only_TbyW
         %   returns this at every W/S.
         %
         %   CD0/K1/CLmax are the segment's high-lift config values, pulled fresh
-        %   from the aero object each call (aero.get_config_polar). FAILS LOUDLY
-        %   on a non-finite result: the config polar can be non-finite (a
-        %   mis-injected aero object or an unmodeled config), and a NaN T/W
-        %   floor is silently dropped from the aggregator's envelope -- error
-        %   here so an un-evaluable climb constraint is a visible failure.
+        %   from the aero object each call. Fails loudly on a non-finite result:
+        %   a NaN T/W floor is silently dropped from the aggregator's envelope.
         %
         %   [Metabook Eqs. 4.24-4.25; worked Ex. 4.2 Eqs. 4.49-4.54.]
             cfg = obj.aero.get_config_polar(obj.config);
@@ -192,10 +155,8 @@ classdef ClimbGradientConstraint < Only_TbyW
 
         function N = get_n_engines(obj)
         %GET_N_ENGINES  Engine count from the injected propulsion object, via a
-        %   guarded isprop read. Engine count is propulsion-system spec (it sets
-        %   the OEI factor N/(N-1)), so it is owned by propulsion, not
-        %   hardcoded here. Errors loudly naming the contract if the injected
-        %   prop object does not expose n_engines.
+        %   guarded isprop read (engine count is a propulsion spec). Errors
+        %   loudly if the injected prop does not expose n_engines.
             if ~isprop(obj.prop, 'n_engines')
                 error('ClimbGradientConstraint:missingNEngines', ...
                     ['Constraint "%s": the injected propulsion object (class ', ...

@@ -1,55 +1,36 @@
 classdef F16LandingGearL2 < handle
 %F16LANDINGGEARL2  F-16A Block 10/15 Level-2 landing-gear student class.
 %
-%   F-16-ONLY, NO ABSTRACT BASE TIER (original step-9 subsystems design,
-%   Files to Create): not every airframe has conventional landing gear (e.g.
-%   seaplanes), so this class does not get a generic src/disciplines/ home
-%   the way Geometry/Aerodynamics/Propulsion/Weights/Subsystems do. It still
-%   follows the toolbox-static-equations pattern where that makes sense --
-%   the high-level instance methods below read obj's own inputs and the
-%   injected weights object, then delegate to Static low-level methods that
-%   take only scalars, mirroring e.g. GeomL2's high-level/low-level split.
+%   F-16-only, no abstract Base tier: not every airframe has conventional
+%   landing gear, so this class does not get a generic src/disciplines/ home.
+%   It still follows the toolbox-static-equations pattern -- high-level
+%   instance methods read obj's inputs and the injected weights object, then
+%   delegate to Static low-level methods that take only scalars.
 %
-%   < handle IS REQUIRED (matlab-oop-expert review, 2026-08-03): this class
-%   has genuine mutable design-variable state (main_pct, nose_pct,
-%   nose_tire_fraction_of_main, aircraft_category_table_row) that an
-%   optimizer/sizing loop mutates in place, exactly like every other
-%   discipline object in this framework -- but unlike those, this class has
-%   no abstract Base tier to inherit `< handle` from transitively. Without
-%   it, this would silently be a MATLAB VALUE class: passing an instance into
-%   a function and mutating a property there would not propagate back to the
-%   caller, breaking the "optimizer mutates the object in place" doctrine
-%   CLAUDE.md's "Optimization-ready property design" section assumes
-%   throughout. Every OTHER stateful discipline class in examples/F16A/
-%   inherits `< handle` transitively via its Base/Model tier; this class and
-%   F16LandingGearL3 are the only two with no such tier, so they must state
-%   it directly.
+%   < handle IS REQUIRED: this class has genuine mutable design-variable state
+%   an optimizer/sizing loop mutates in place, but has no abstract Base tier to
+%   inherit `< handle` from transitively. Without it, it would silently be a
+%   value class and property mutations would not propagate back to the caller.
 %
 %   METHOD: Raymer 6th ed. Ch.11 statistical tire sizing (Table 11.1, p.344)
-%   off the per-wheel static load, itself derived from the gear load split
-%   (90% main / 10% nose, Raymer p.344 prose) applied to W_TO -- already a
-%   plain STATE property on the injected weights object
-%   (F16WeightsL1.m:74-ish "candidate gross takeoff weight... mutated in
-%   place by the sizing loop").
+%   off the per-wheel static load, from the gear load split (90% main / 10%
+%   nose, Raymer p.344 prose) applied to W_TO.
 %
 %   TWO-WHEEL MAIN GEAR ASSUMPTION: the F-16 uses a standard tricycle
-%   arrangement -- one nose wheel, two main wheels -- so the per-wheel main
-%   load W_w that Table 11.1 wants is HALF the total main-gear load. This is
-%   ordinary tricycle-gear configuration knowledge (not a textbook-pinned
-%   citation), documented here as a judgment call rather than left silent.
+%   arrangement (one nose wheel, two main wheels), so the per-wheel main load
+%   W_w that Table 11.1 wants is half the total main-gear load. Ordinary
+%   tricycle-gear configuration knowledge (a judgment call, not a citation).
 %
-%   GEAR BAY VOLUME -- NOT IMPLEMENTED. See bay_volume: documented citation
-%   GAP (original step-9 subsystems design, item 11). Tire/strut SIZE
-%   (diameter/width) is fully implemented and unaffected.
+%   GEAR BAY VOLUME -- not implemented. See bay_volume: documented citation
+%   GAP (item 11). Tire/strut SIZE (diameter/width) is unaffected.
 %
 %   DEPENDENCY INJECTION: weights -- (1,1) WeightsBase. Only W_TO is read.
-%   Geometry is deliberately NOT injected: no equation implemented here
-%   reads it (bay_volume errors regardless of any fuselage envelope), and
-%   CLAUDE.md's "no feature beyond what the current step requires" rule
-%   argues against wiring an unused collaborator in anticipation of a future
-%   citation. Add it when item 11 is resolved, not before.
+%   Geometry is not injected: no equation here reads it. Add it when item 11
+%   is resolved, not before.
 %
-%   CONSTRUCTOR: F16LandingGearL2(json_path, weights). Both REQUIRED.
+%   CONSTRUCTOR: F16LandingGearL2(json_path, weights). Both required.
+%
+%   History and rationale: docs/decision_log.md
 %
 %   SOURCES:
 %     [Raymer] D.P. Raymer, Aircraft Design 6th ed., Ch.11, p.344 (gear load
@@ -62,10 +43,8 @@ classdef F16LandingGearL2 < handle
         N_NOSE_WHEELS = 1   % F-16 standard tricycle gear: one nose wheel
     end
 
-    % ======================================================================= %
     % INPUTS (5) + 1 injected object -- plain mutable properties, set once by
     % the constructor. Authoritative table: F16LandingGearL2.md §2.
-    % ======================================================================= %
     properties
         aircraft_category_table_row = 'Jet fighter/trainer'  % selects lookup_tire_sizing_coeffs [Raymer 6th ed. Table 11.1, p.344; f16a_L2.json .subsystems.landing_gear.tire_sizing.aircraft_category_table_row]
         main_pct = 90   % % of W_TO carried by the main gear [Raymer 6th ed. Ch.11 p.344 prose; f16a_L2.json .subsystems.landing_gear.gear_load_split.main_pct]
@@ -76,18 +55,11 @@ classdef F16LandingGearL2 < handle
         weights   % (1,1) WeightsBase -- supplies W_TO
     end
 
-    % ======================================================================= %
-    % DERIVED (8) -- zero-extra-arg quantities that read ONLY the inputs/
+    % DERIVED (8) -- zero-extra-arg quantities that read only the inputs/
     % injected weights collaborator above. Dependent getters, recomputed live
-    % on every read -- never a cached/frozen value (CLAUDE.md "Optimization-
-    % ready property design"; mirrors F16GeomL2/F16WeightsL2). bay_volume
-    % stays a plain METHOD, not Dependent: it deliberately errors (item 11's
-    % citation gap), and a Dependent getter must never be allowed to throw --
-    % MATLAB's own object display/introspection machinery evaluates every
-    % Dependent property's getter eagerly (e.g. `disp(obj)`), so an always-
-    % erroring member would break ordinary object display if it were
-    % Dependent.
-    % ======================================================================= %
+    % on every read. bay_volume stays a plain METHOD, not Dependent: it
+    % deliberately errors (item 11's citation gap), and a Dependent getter's
+    % eager evaluation (e.g. `disp(obj)`) would break object display.
     properties (Dependent)
         W_main_total
         W_nose_total

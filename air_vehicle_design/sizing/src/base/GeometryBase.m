@@ -106,9 +106,8 @@ end
         function val = compute_Amax_elliptical(W_max, H_max)
         %COMPUTE_AMAX_ELLIPTICAL  Max cross-section of an equivalent elliptical
         %   fuselage [ft^2]. Feeds the Sears-Haack term [Raymer 6th ed. Eq. 12.44].
-        %
-        %   This is the LOW-fidelity, fuselage-only form used at L2. L3 computes
-        %   a whole-aircraft area-ruled Amax instead (GeomL3.get_Amax).
+        %   Low-fidelity fuselage-only form used at L2; L3 uses a whole-aircraft
+        %   area-ruled Amax (GeomL3.get_Amax).
         %
         %   TODO: standard elliptical-cross-section identity with no known
         %   textbook equation number. Pin a citation or accept the

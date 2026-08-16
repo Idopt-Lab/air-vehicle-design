@@ -1,31 +1,21 @@
 classdef StallConstraint < Only_WbyS
 %STALLCONSTRAINT  Stall-speed upper bound on wing loading.
 %
-%   Generic Layer-1 constraint. Given a flight condition (AircraftState) at
-%   which the stall-speed requirement is specified, and the current-iteration
-%   aero discipline object, it returns the upper bound this requirement imposes
-%   on wing loading W/S -- not a required T/W. Stall is an unpowered
-%   (idle-thrust) condition, so it belongs to the Only_WbyS category (same as
-%   LandingConstraint): the aggregator reads WS_max() as a vertical W/S wall.
-%   CLmax is pulled fresh from aero.get_CLmax(state) each call, not a
-%   constraint input.
+%   Generic Layer-1 constraint. Given the flight condition at which the
+%   stall-speed requirement is specified and the aero object, it returns the
+%   upper bound on wing loading W/S -- not a required T/W. Stall is unpowered:
+%   Only_WbyS category, read as a vertical W/S wall. CLmax is pulled fresh from
+%   aero.get_CLmax(state) each call.
 %
-%   EQUATION [level, unaccelerated flight at CLmax: lift equals weight,
-%   L = W_TO = q*S*CLmax => W_TO/S = q*CLmax, with q = 0.5*rho*V^2 the dynamic
-%   pressure at the stall condition -- Raymer, "Aircraft Design: A Conceptual
-%   Approach," 6th ed., AIAA, 2018, ch. 5, Eq. 5.5
-%   (V_stall = sqrt(2*(W/S)/(rho*CLmax))) rearranged for W/S; matches
-%   NPTEL_Fighter_Aircraft_Sizing.ipynb's Stall class (cells 10-12,
-%   compute_WbyS_Npm2 = 0.5*rho*V^2*CLmax)]:
+%   EQUATION [level flight at CLmax, L = W_TO = q*S*CLmax => W_TO/S = q*CLmax --
+%   Raymer 6th ed., AIAA 2018, ch. 5, Eq. 5.5 rearranged for W/S; matches
+%   NPTEL_Fighter_Aircraft_Sizing.ipynb Stall (cells 10-12)]:
 %
 %     W_TO/S <= q * CLmax
 %
-%   where q, rho, V come from the AircraftState supplied at construction (the
-%   F-16's Stall condition is Mach 0.217466 at sea level -- Brandt F-16A.xls
-%   "Ps" sheet cell B10, a row in examples/F16A/inputs/f16a_requirements.md);
-%   CLmax from aero.get_CLmax(state) (clean CLmax -- the AerodynamicsBase
-%   interface has no flapped-configuration argument yet, deferred TODO
-%   ToDo_Darshan.md §1).
+%   q, rho, V come from the AircraftState at construction (the F-16 Stall
+%   condition is Mach 0.217466 at sea level -- Brandt F-16A.xls "Ps" B10);
+%   CLmax from aero.get_CLmax(state) (clean CLmax).
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Stall"

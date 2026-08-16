@@ -2,8 +2,7 @@
 
 F-16A Block 10/15 Level-3 landing-gear student class (`classdef F16LandingGearL3 < handle`,
 **F-16-only, no abstract Base/Model tier** — same rationale as `F16LandingGearL2`, see that class's
-companion doc). `< handle` added 2026-08-03 for the same reason as `F16LandingGearL2` — see that
-class's companion doc.
+companion doc, including the `< handle` requirement).
 
 ---
 
@@ -21,10 +20,10 @@ Identical shape to `F16LandingGearL2.md` §2, read from `f16a_L3.json` `.subsyst
 instead of `f16a_L2.json`'s block of the same name (same values: `'Jet fighter/trainer'`, 90/10,
 0.80).
 
-**Derived-property shape (2026-08-03 correction, see `F16LandingGearL2.md` §1 for the full
-rationale):** `W_main_total`, `W_nose_total`, `W_w_main`, `W_w_nose`, `tire_diameter_main`,
-`tire_width_main`, `tire_diameter_nose`, and `tire_width_nose` are `properties (Dependent)` on this
-class too (not methods). `bay_volume` stays a plain method (deliberately errors).
+**Derived-property shape (see `F16LandingGearL2.md` §1):** `W_main_total`, `W_nose_total`,
+`W_w_main`, `W_w_nose`, `tire_diameter_main`, `tire_width_main`, `tire_diameter_nose`, and
+`tire_width_nose` are `properties (Dependent)`. `bay_volume` stays a plain method (deliberately
+errors).
 
 ## 3. Judgment call: why a separate class exists at all
 

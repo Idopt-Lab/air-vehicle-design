@@ -4,13 +4,10 @@ F-16A Block 10/15 Level-1 aerodynamics. `classdef F16AeroL1 < AeroModelL1`; ever
 a one-line delegation into the `AeroL1` static toolbox.
 
 **L1 takes no injected geometry object** — contrast `F16AeroL2`/`L3`, whose constructors require one.
-CD0(M) is still the Mattingly Fig. 2.10 fighter "Current" type-curve (geometry-free). **K1(M) is
-equation-based** (changed 2026-07-29): `AeroL1.k1_from_geometry` reuses `AeroL2`'s own Raymer
-equations (Eq. 12.48–12.50 subsonic, Eq. 12.51 supersonic), fed the real F-16 wing `AR`/`Lambda_LE_deg`
-— two genuine spec scalars read directly from JSON, not an injected geometry object. This replaced the
-old Mattingly Fig. 2.11 generic K1 curve (flat 0.18 subsonic), which was ~55% higher than Brandt's
-calibrated F-16 K1=0.1160 and pulled `design_study_01_L1`'s optimum W/S down to 76 instead of Brandt's
-104.59 (see `F16AeroL1.m`'s class header / git history for the full diagnostic).
+CD0(M) is the Mattingly Fig. 2.10 fighter "Current" type-curve (geometry-free). **K1(M) is
+equation-based**: `AeroL1.k1_from_geometry` reuses `AeroL2`'s own Raymer equations (Eq. 12.48–12.50
+subsonic, Eq. 12.51 supersonic), fed the real F-16 wing `AR`/`Lambda_LE_deg` — two spec scalars read
+directly from JSON, not an injected geometry object. Reproduces Brandt's calibrated F-16 K1=0.1160.
 
 ---
 

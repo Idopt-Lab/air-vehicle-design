@@ -4,54 +4,35 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
 %
 %   Generic Layer-1 constraint. Given a required instantaneous turn rate
 %   [deg/s], a flight condition (AircraftState), a power setting, and the
-%   injected aero/prop discipline objects, it returns the thrust-to-weight
-%   ratio required to hold that turn rate as a function of wing loading W/S.
-%   The load factor n implied by the turn rate is computed once in the
-%   constructor from the turn rate and the state's true airspeed. Belongs to
-%   the Both_WbyS_TbyW category.
+%   injected aero/prop objects, it returns the T/W required to hold that turn
+%   rate vs. wing loading W/S. The load factor n is computed once in the
+%   constructor from the turn rate and the state's true airspeed.
+%   Both_WbyS_TbyW category.
 %
-%   PROVENANCE. This is the Aero 481 student-code formulation
-%   (+Constraints/InstantaneousTurn.m), with TWO deliberate, documented
-%   corrections/additions relative to that file:
+%   PROVENANCE. The Aero 481 student-code formulation
+%   (+Constraints/InstantaneousTurn.m), with two deliberate changes:
+%   (a) g correction: Aero 481 sets g = 9.087 (typo for 9.807 m/s^2); this
+%       class uses English g = 32.174 ft/s^2, so the typo is moot.
+%   (b) Thrust-lapse alpha added: Aero 481 models no lapse; this class divides
+%       by alpha so the result sits on the sea-level-static T_SL/W_TO axis.
 %
-%   (a) g CORRECTION. Aero 481's file sets g = 9.087 -- a transcription typo
-%       for 9.807 m/s^2 (its own comment reads "define gravity (9.807 m/s^2)").
-%       This class uses the English standard gravity g = 32.174 ft/s^2, so the
-%       typo is moot, but it is flagged here so the discrepancy is on record.
-%
-%   (b) THRUST-LAPSE ALPHA ADDED. Aero 481 models no thrust lapse (its
-%       T/W = q*CD/(n*W/S) is on an installed-thrust basis at altitude). This
-%       class divides by alpha (get_alpha, mil/AB per powerSetting) so the
-%       result sits on the same sea-level-static T_SL/W_TO axis as every other
-%       constraint on this framework's diagram. This is a deliberate addition,
-%       not part of the Aero 481 source.
-%
-%   DERIVATION (reproduced from the Aero 481 file, corrected/extended):
+%   DERIVATION:
 %     n     = omega * V / g            (turn rate omega [rad/s], V [ft/s])
-%     CL    = n * (W/S) / q            (lift = n*W, CL = L/(q*S))
+%     CL    = n * (W/S) / q
 %     CD    = CD0 + K1 * CL^2          (repo K-convention, clean polar)
-%     T/W   = q * CD / (n * (W/S))     (Aero 481 "vertical maneuver": Ps=0,
-%                                       rearranged from Ps = V*(T-D)/W)
-%   Substituting CL and CD and dividing by alpha expands to
+%     T/W   = q * CD / (n * (W/S))     (Aero 481 "vertical maneuver": Ps=0)
+%   dividing by alpha expands to
 %     required_TW(WS) = (1/alpha) * ( q*CD0 ./ (n*WS) + n*K1 .* WS / q )
-%   CD0/K1 come from aero.drag_polar(state) in the CLEAN configuration -- an
-%   instantaneous turn is a clean maneuver (no flaps/gear).
+%   CD0/K1 come from aero.drag_polar(state), CLEAN (no flaps/gear).
 %
-%   ALTERNATIVE / STANDARD FORM (NOT used here). The TEXTBOOK instantaneous-turn
-%   constraint is a CLmax-limited W/S WALL, W/S <= q*CLmax/n (an Only_WbyS),
-%   because an instantaneous turn trades stored energy (altitude/airspeed), not
-%   thrust -- the limiting factor is the wing's ability to generate the lift for
-%   load factor n, not the engine. Aero 481's divide-drag-by-n*(W/S) form treats
-%   it instead as a thrust condition ("vertical maneuver"), which is a
-%   nonstandard choice. This class implements the Aero 481 form (as specified)
-%   but records the standard alternative here.
+%   ALTERNATIVE standard form (NOT used here): the textbook instantaneous-turn
+%   constraint is a CLmax-limited W/S wall, W/S <= q*CLmax/n (an Only_WbyS), since the
+%   limit is wing lift, not thrust. Aero 481's thrust-condition form is
+%   nonstandard; this class implements it as specified.
 %
-%   _TODO: pin this formulation to a primary source. Raymer ch. 5's
-%   instantaneous-turn / corner-speed treatment (and the CLmax-limited W/S wall
-%   above) is the citation this class should ultimately carry; the Aero 481
-%   student code is provenance, not a primary reference. Flagged for the
-%   coordinator -- a test should fail loudly against the missing primary
-%   citation rather than have a plausible one stubbed in.
+%   _TODO: pin this formulation to a primary source (Raymer ch. 5
+%   instantaneous-turn / corner-speed). Aero 481 code is provenance, not a
+%   primary reference; a test should fail loudly on the missing citation.
 
     properties (SetAccess = protected)
         name          % string -- condition label, e.g. "Instantaneous Turn"
@@ -88,10 +69,8 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
             obj.turn_rate_dps = turn_rate_dps;
             obj.powerSetting  = powerSetting;
 
-            % Load factor from the required turn rate: n = omega*V/g, with omega
-            % in rad/s (deg2rad(turn_rate_dps)) and V the state's true airspeed.
-            % g = 32.174 ft/s^2 (English), correcting Aero 481's 9.087 typo --
-            % see PROVENANCE (a).
+            % Load factor from the turn rate: n = omega*V/g (omega in rad/s,
+            % V the state's true airspeed, g English). See PROVENANCE (a).
             obj.n = deg2rad(turn_rate_dps) * state.V / InstantaneousTurnConstraint.G_FTS2;
         end
 
@@ -102,17 +81,11 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
         %     TW = (1/alpha) * ( q*CD0 ./ (n*WS) + n*K1 .* WS / q )
         %
         %   WS may be scalar or array; TW is returned the same size. CD0/K1 are
-        %   the CLEAN drag polar (instantaneous turn is a clean maneuver),
-        %   pulled fresh from aero each call; alpha from get_alpha (mil/AB per
-        %   powerSetting). n was computed in the constructor from the turn rate.
+        %   the CLEAN drag polar, pulled fresh from aero each call; alpha from
+        %   get_alpha. n was computed in the constructor from the turn rate.
         %
-        %   FAILS LOUDLY on a non-finite A/B coefficient: CD0/K1 come from the
-        %   aero drag polar and alpha from the prop thrust lapse, either of
-        %   which can be non-finite (AeroL2/L3 return NaN CD0/K1 across the
-        %   unmodeled transonic band by design, and a mis-injected discipline
-        %   object can too). A NaN required_TW is silently omitted from
-        %   ConstraintAnalysis's max() envelope, so error here instead --
-        %   mirrors MasterEquationConstraint's guard.
+        %   Fails loudly on a non-finite A/B coefficient: a NaN required_TW is
+        %   silently dropped from ConstraintAnalysis's max() envelope.
             polar = obj.aero.drag_polar(obj.state);
             alpha = obj.get_alpha();
             q     = obj.state.q;
@@ -141,12 +114,9 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
     methods (Access = protected)
 
         function alpha = get_alpha(obj)
-        %GET_ALPHA  Thrust lapse at this condition's power setting. The rating
-        %   is passed straight to the injected prop, which validates it against
-        %   the ratings its engine has (fighter "mil"/"AB"; transport
-        %   "cont"/"TO"/"max"). Same logic as MasterEquationConstraint.get_alpha,
-        %   here because InstantaneousTurnConstraint is a Both_WbyS_TbyW sibling
-        %   of the Master-Equation subtree, not a child of it.
+        %GET_ALPHA  Thrust lapse at this condition's power setting, validated by
+        %   the injected prop. Same logic as MasterEquationConstraint.get_alpha
+        %   (this class is a Both_WbyS_TbyW sibling, not a child, of it).
             alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
         end
 

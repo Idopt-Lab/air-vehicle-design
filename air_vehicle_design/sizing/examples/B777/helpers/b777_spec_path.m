@@ -5,10 +5,8 @@ function p = b777_spec_path(level)
 %   propulsion (.propulsion) and weights (.weights) inputs the level's
 %   B777GeomL2 / B777AeroL1 / B777PropL1 / B777WeightsL2 classes read.
 %
-%   B777 is L1-ONLY: the metabook Example 4.2 statistical method is the only
-%   fidelity carried for this example, so mustBeMember pins level to 1. This is
-%   the same helper idiom as f16a_spec_path, deliberately narrowed from the
-%   F-16's [1 2 3] set (there is no b777_L2.json / b777_L3.json).
+%   B777 is L1-ONLY (metabook Example 4.2 is the only fidelity), so mustBeMember
+%   pins level to 1 (same idiom as f16a_spec_path).
     arguments
         level (1,1) double {mustBeMember(level, 1)}
     end

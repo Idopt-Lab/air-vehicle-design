@@ -1,27 +1,18 @@
 classdef SizingLoopL1 < handle
-%SIZINGLOOPL1  Level-1 (initial design framework) takeoff-gross-weight
-%   sizing loop.
+%SIZINGLOOPL1  Level-1 takeoff-gross-weight sizing loop.
 %
-%   Single-state (W_TO) fixed-point iteration, following the initial
-%   design framework [docs/reference_extracts/martins_slides_data.md --
-%   Slide 6]: the design diagram is consulted ONCE, before the loop -- it
-%   supplies the (W0/Sref, T0/W0) design point, and it does NOT sit inside
-%   the MTOW iteration. Each iteration re-derives the absolute S_ref and
-%   T_SL from those fixed ratios and the current W_TO, then closes weight
-%   with the TOGW step [docs/reference_extracts/metabook_data.md -- Ch. 2,
-%   "TOGW Iteration Algorithm (Algorithm 1)"; Raymer 6th ed. Eq. 3.4] via
+%   Single-state (W_TO) fixed-point iteration [martins_slides_data.md
+%   Slide 6]: the design diagram is consulted ONCE, before the loop, and
+%   supplies the (W0/Sref, T0/W0) design point. Each iteration re-derives
+%   S_ref and T_SL from those fixed ratios and the current W_TO, then
+%   closes weight with the TOGW step [metabook_data.md Ch. 2 "TOGW
+%   Iteration Algorithm (Algorithm 1)"; Raymer 6th ed. Eq. 3.4] via
 %   SizingSteps.togw_update.
 %
-%   Flat orchestrator, not a discipline (same rationale as
-%   ConstraintAnalysis / MissionAnalysisBase): constructor-injected with
-%   six already-built objects, mutated in place (handle semantics) as the
-%   loop iterates. obj.aero is stored for completeness of the injected
-%   stack -- this loop never calls it directly; the mission and constraint
-%   objects hold the same handle and read it live.
-%
-%   Recompute-on-read: nothing is cached here. Every iteration writes the
-%   design variables (geom.S_ref, prop.T_SL, wts.W_TO/W_energy) into the
-%   discipline objects and re-reads mission fuel and OEW fresh.
+%   Flat orchestrator, not a discipline: constructor-injected with six
+%   built objects, mutated in place (handle semantics). obj.aero is stored
+%   but never called directly; the mission/constraint objects read it live.
+%   Nothing is cached (recompute-on-read).
 
     properties (SetAccess = private)
         aero    % (1,1) AerodynamicsBase
@@ -84,10 +75,8 @@ classdef SizingLoopL1 < handle
                 opts.relaxation (1,1) double {mustBeInRange(opts.relaxation, 0, 1, "exclude-lower")} = 0.5
             end
 
-            % Design diagram solved ONCE, before the loop [martins slides
-            % Slide 6: the design diagram box sits outside the MTOW
-            % iteration]. WS/TW are ratios; the absolutes S_ref/T_SL are
-            % re-derived from them each iteration below.
+            % Design diagram solved ONCE, before the loop [Slide 6]. WS/TW
+            % are ratios; S_ref/T_SL are re-derived each iteration below.
             [WS, TW] = obj.con.optimal_point_continuous();
 
             W0 = W_TO_guess;
@@ -101,10 +90,9 @@ classdef SizingLoopL1 < handle
                 % Wing sized by the fixed design point [Slide 6].
                 obj.geom.S_ref = W0 / WS;
                 if isprop(obj.geom, 'W_TO')
-                    % L1 regression geometries (e.g. F16GeomL1) carry W_TO
-                    % as a state variable for their S_wet/L_fus
-                    % regressions; guarded write -- a planform geometry
-                    % (L2/L3) has no W_TO property and skips this.
+                    % Guarded write: L1 regression geometries (e.g.
+                    % F16GeomL1) carry W_TO for their S_wet/L_fus
+                    % regressions; an L2/L3 planform geometry has none.
                     obj.geom.W_TO = W0;
                 end
                 % Engine sized by the fixed design point [Slide 6].
@@ -158,9 +146,8 @@ classdef SizingLoopL1 < handle
             end
 
             % Final write-through at the returned W0: the loop body wrote
-            % the disciplines at the PRE-update W0, so re-derive
-            % S_ref/T_SL/weights once more to keep the mutated objects and
-            % the result consistent with the returned W_TO.
+            % the disciplines at the pre-update W0, so re-derive
+            % S_ref/T_SL/weights once more for consistency.
             obj.geom.S_ref = W0 / WS;
             if isprop(obj.geom, 'W_TO')
                 obj.geom.W_TO = W0;

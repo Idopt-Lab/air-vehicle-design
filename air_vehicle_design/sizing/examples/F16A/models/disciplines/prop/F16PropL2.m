@@ -57,34 +57,23 @@ classdef F16PropL2 < PropulsionModelL2
 
         %BYPASS_RATIO  — engine bypass ratio (F100-PW-200 class). Consumed by
         %   Raymer Eq. 10.10's exp(-0.81*BPR) term in the weights engine-weight
-        %   estimate, which reads it off this object by dependency injection.
-        %   Added 2026-07-25: the JSON key was written in Phase 3 without a
-        %   property to read it, so it sat unread until Phase 4 needed it.
-        %   Cited 2026-07-30: [Nicolai & Carichner Table 14.3, F100-PW-100],
-        %   docs/reference_extracts/14_propulsion_fundamentals.md:581
-        %   -- the direct predecessor of the F100-PW-200 this model otherwise
-        %   uses, same cross-check basis already used for T_SL_wet.
+        %   estimate, read off this object by dependency injection.
+        %   [Nicolai & Carichner Table 14.3, F100-PW-100],
+        %   docs/reference_extracts/14_propulsion_fundamentals.md:581 -- the
+        %   direct predecessor of the F100-PW-200 this model otherwise uses.
         bypass_ratio = 0.71
-        % (No stored TSFC property -- removed 2026-07-25 along with the
-        % PropulsionBase abstract declaration it existed to satisfy. TSFC is
-        % state-dependent: call get_TSFC(obj, state).)
+        % No stored TSFC property -- TSFC is state-dependent; call get_TSFC(obj, state).
     end
 
-    % ======================================================================= %
     % DERIVED — computed live from the inputs above on every read (no cache,
-    % never stale). Read-only: assigning errors (no set-method), which is
-    % correct — it is an output.
-    % ======================================================================= %
+    % never stale). Read-only: assigning errors (no set-method).
     properties (Dependent)
         TR   % — throttle ratio; get.TR = PropL2.compute_TR(T_t4_max °F→°R) [Mattingly Eq. D.6]
 
         %T_SL_WET  lbf — AB (max) SLS thrust. An ALIAS for T_SL, kept because
         %   several call sites read the wet/AB name explicitly (e.g.
         %   PropL2.thrust_lapse_mil_on_AB_scale's T_SL_mil/T_SL_wet ratio).
-        %   Was a stored input duplicating T_SL in both the class and the JSON
-        %   (Phase 3, 2026-07-25): two independently-settable copies of one
-        %   quantity, so an optimizer changing T_SL left T_SL_wet stale and the
-        %   mil-on-AB lapse silently wrong. Now Dependent, so they cannot diverge.
+        %   Dependent so it cannot diverge from T_SL under mutation.
         T_SL_wet
     end
 

@@ -1,53 +1,30 @@
 %% run_aero481_constraint_diagram
 %   F-35 (Aero 481 Design01 provenance) constraint diagram (T/W vs W/S). Builds
-%   the F-35 L1 discipline stack, aggregates the 12 Aero 481 constraint conditions
-%   (Aero481ConstraintSet.constraint_map, reading aero481_requirements.json) through the
-%   generic ConstraintAnalysis, draws the diagram, and marks the Design01 design
-%   point.
+%   the F-35 L1 stack, aggregates the Aero 481 conditions
+%   (Aero481ConstraintSet.constraint_map, reading aero481_requirements.json)
+%   through the generic ConstraintAnalysis, and draws the diagram.
 %
-%   TWELVE CONSTRAINTS -- ALIGNED WITH AERO 481. The diagram carries exactly the
-%   12 ACTIVE Aero 481 constraints: Cruise, Dash, two sustained turns, six SEP
-%   points, instantaneous turn, and ceiling. The six FAR-25 climb gradients and
-%   the framework-only Takeoff/Landing were dropped (user decision; see
-%   Aero481ConstraintSet). The six SEP rows evaluate at the Aero 481 50%-fuel COMBAT
-%   weight (beta = 0.8285 in the requirements JSON); the other rows stay at
-%   takeoff weight, matching Aero 481.
+%   TWELVE CONSTRAINTS -- the 12 ACTIVE Aero 481 constraints (see
+%   Aero481ConstraintSet); the 6 FAR-25 climbs and Takeoff/Landing were dropped.
+%   The 6 SEP rows use the 50%-fuel combat weight (beta = 0.8285).
 %
-%   W/S SWEEP -- AERO 481 RANGE. Aero 481's TW_WS.m sweeps 200-700 kgf/m^2 =
-%   200*9.807/47.880 .. 700*9.807/47.880 psf ~ 41 .. 143 psf. This script uses
-%   linspace(41, 143, 200) psf to match.
+%   W/S SWEEP = Aero 481's TW_WS.m range 200-700 kgf/m^2 ~ 41..143 psf.
 %
-%   NO OPTIMUM MARKER. Aero 481 computes no optimum, and for a fighter the
-%   least-T/W ("small-engine") corner is meaningless -- the design region is a
-%   HIGH T/W, moderate W/S corner set by the maneuver / SEP / dash constraints.
-%   This script therefore marks only the DESIGNER'S chosen Design01 point, read
-%   off the diagram, at (W/S = 92.17 psf, T/W = 1.2) [A481 Design01.m:20-21] --
-%   NOT an optimum computed by the aggregator.
+%   NO OPTIMUM MARKER: Aero 481 computes no optimum, and for a fighter the
+%   least-T/W corner is meaningless (the design region is a HIGH T/W, moderate
+%   W/S corner set by the maneuver / SEP / dash constraints).
 %
-%   Style/wiring follows examples/B777/studies/run_b777_constraint_diagram.m and
-%   examples/F16A/studies/run_F16_constraint_diagram.m (caller owns discipline
-%   construction -- dependency injection); the figure/JSON/MD export into the
-%   gitignored examples/Aero481/output/ follows the sanity_checks scripts.
-%
-%   READING THE DIAGRAM -- THIS IS A FIGHTER, NOT A JET TRANSPORT. For a jet
-%   transport (the B777) down-and-to-the-right is better (low T/W = small engine,
-%   high W/S = small efficient wing). A FIGHTER reads the OPPOSITE way for T/W:
-%   sustained-turn / specific-excess-power / dash requirements DEMAND a high T/W,
-%   so the design region is a HIGH T/W, moderate W/S corner. The binding
-%   producers here are the maneuver constraints (sustained turn, SEP, dash),
-%   which push the envelope UP.
+%   READING THE DIAGRAM (fighter, not transport): sustained-turn / SEP / dash
+%   demand a high T/W, so the design region is up-and-right, not down-and-right.
 
-% Caller owns discipline construction (dependency injection): build the F-35 L1
-% aero/prop pair explicitly, then hand it to the constraint set. Aero481AeroL1 is
-% geometry-light (no injected geometry object): AR and Lambda_LE_deg are scalar
-% wing-spec inputs read straight from the .aerodynamics JSON block.
+% Caller owns discipline construction (dependency injection). Aero481AeroL1 is
+% geometry-light (AR and Lambda_LE_deg from the .aerodynamics JSON block).
 sp   = aero481_spec_path(1);
 rp   = aero481_requirements_path();
 prop = Aero481PropL1(sp);
 aero = Aero481AeroL1(sp);
 
-% W/S sweep [psf]: Aero 481's TW_WS.m range 200-700 kgf/m^2 = ~41..143 psf
-% (200*9.807/47.880 .. 700*9.807/47.880). 200 points.
+% W/S sweep [psf]: Aero 481's TW_WS.m range 200-700 kgf/m^2 = ~41..143 psf.
 WS_sweep = linspace(41, 143, 200);
 
 ca = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
@@ -55,16 +32,12 @@ ca = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
 
 fig = ca.plot_diagram();
 
-% Force a light theme for batch export (plot_diagram, unlike TSDiagram.plot,
-% does not set these itself). See run_b777_constraint_diagram.m for the idiom.
+% Force a light theme for batch export (plot_diagram does not set it itself).
 fig.Color = 'w';
 if isprop(fig, 'Theme'), fig.Theme = 'light'; end
 
-% NO design point is marked (removed 2026-08-15, user request -- a single marked
-% point on top of the constraint curves was confusing). The diagram shows only
-% the constraint curves + the feasible envelope; the meaningful design-driving
-% numbers (the binding T/W floor, the stall/approach W/S wall, and the corner
-% where they meet) are reported below and exported.
+% No design point is marked; the design-driving numbers (binding T/W floor,
+% stall/approach W/S wall, and the corner where they meet) are reported below.
 ax = fig.CurrentAxes;
 title(ax, 'Aero 481 Design01 Constraint Diagram');
 

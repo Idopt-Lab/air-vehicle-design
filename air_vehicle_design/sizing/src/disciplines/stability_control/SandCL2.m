@@ -2,12 +2,8 @@ classdef SandCL2
 %SANDCL2  Level-2 stability & control static toolbox: the CG term only.
 %
 %   Call as SandCL2.method(...); never instantiated, not in the inheritance
-%   chain. F16SandCL2 inherits SandCModelL2 and delegates here. F16SandCL3
-%   ALSO calls weighted_cg directly for its own x_cg (fidelity-collapse
-%   rule: the equation is level-agnostic -- it lives here once, not
-%   duplicated on SandCL3 -- exactly the cross-toolbox-reuse pattern already
-%   used elsewhere in this repo, e.g. TailL2 cross-calling
-%   TailL1.compute_tail_arm).
+%   chain. F16SandCL2 delegates here; F16SandCL3 also calls weighted_cg for
+%   its own x_cg (the equation is level-agnostic, so it lives here once).
 %
 %   Companion doc: src/disciplines/stability_control/SandCL2.md
 
@@ -20,15 +16,10 @@ classdef SandCL2
         %   "CG closure" formula]:
         %     x_cg = Sum(W_i * x_i) / Sum(W_i)
         %
-        %   Deliberately NO NaN-rejecting validator on weights_vec: if any
-        %   component weight is NaN (in particular the 'fuel' group's
-        %   W_energy, a mission-analysis STATE that reads NaN until the
-        %   mission/sizing loop sets it -- see WeightsBase.m), ordinary IEEE
-        %   arithmetic propagates that NaN straight into x_cg. This is the
-        %   documented, GRACEFUL signal the original stability-and-control
-        %   design asks for -- not an error. (mustBeNonnegative/mustBePositive would
-        %   have rejected NaN outright -- e.g. NaN >= 0 is false -- so they
-        %   are deliberately NOT applied here.)
+        %   No NaN-rejecting validator on weights_vec: a NaN component weight
+        %   (e.g. the fuel group's W_energy before the mission/sizing loop
+        %   sets it -- see WeightsBase.m) propagates through IEEE arithmetic
+        %   into x_cg. This graceful NaN signal is by design, not an error.
             arguments
                 weights_vec (1,:) double {mustBeReal}
                 x_vec       (1,:) double {mustBeReal}

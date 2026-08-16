@@ -10,16 +10,13 @@ classdef (Abstract) PropulsionBase < handle
 %   Propulsion is L1/L2 only; F16PropL2 also serves the L3 rung.
 %
 %   THRUST RATING. thrust_lapse takes a rating string naming the engine power
-%   setting, and each concrete class validates it against the ratings its
-%   engine actually has:
+%   setting; each concrete class validates it against the ratings its engine
+%   has:
 %     - jet fighter (afterburning): "mil" (military/dry) and "AB" (afterburner)
 %     - transport (no afterburner):  "cont" (max continuous), "TO"/"max" (takeoff)
-%   All ratings are expressed on the ONE max-power T_SL basis (lapse =
-%   T_at_rating(alt,M) / T_SL, with T_SL the max/AB sea-level static thrust),
-%   so every rating lands on the same T_SL/W_TO constraint-diagram axis. A
-%   dry/"mil" fighter condition therefore stays comparable with an AB-flown
-%   one on the same diagram (this replaces the old thrust_lapse_mil_on_AB_scale
-%   utility, which is now thrust_lapse(state,"mil")).
+%   All ratings use the one max-power T_SL basis (lapse =
+%   T_at_rating(alt,M) / T_SL, T_SL the max/AB sea-level static thrust), so
+%   every rating lands on the same T_SL/W_TO constraint-diagram axis.
 %
 %   Companion doc: src/base/PropulsionBase.md
 

@@ -1,172 +1,79 @@
 classdef F16WeightsL2 < WeightsModelL2
 %F16WEIGHTSL2  F-16A Block 10/15 Level-2 weight estimation student class.
 %
-%   Inherits from WeightsModelL2 (abstract enforcer).  Every abstract method is
-%   satisfied by a single delegation line to WeightsL2 statics — no equations
-%   are duplicated here.
-%
-%   METHOD:
+%   Inherits from WeightsModelL2. Every abstract method delegates to a WeightsL2
+%   static. L2 is surface density × area plus fractions:
 %     Structural group — Raymer 6th ed. Table 15.2 surface density (psf × area):
 %       wing 9, HT 4, VT 5.3 lbf/ft^2 on the EXPOSED planform areas;
 %       fuselage 4.8 lbf/ft^2 on the WETTED area.
 %     Engine + all-else — AE481 metabook Sec. 7 "Fraction-Based Weight
 %       Estimates" table: LG 0.033·W_TO, installed engine 1.3 × bare,
-%       all-else-empty 0.17·W_TO. ! These three are NOT Raymer Table 15.2
-%       (settled 2026-07-25, todo §P4-7) — Table 15.2 is the psf table only.
+%       all-else-empty 0.17·W_TO. These three are NOT Raymer Table 15.2 (that
+%       table is the psf table only).
 %
 %   OEW = W_wings + W_tail.HT + W_tail.VT + W_fuselage + W_landing_gear
 %         + W_installed_engine + W_all_else_empty + W_strake
 %
-%   Call WeightsL1.compute_We_roskam(obj, W_TO) for the L1 Roskam lower bound to
-%   compare this buildup against.
+%   The strake (LERX) term is k_strake·S_strake = 90.00 lbf [Brandt Main!D18 /
+%   Wt!H7]; see the S_strake/k_strake property comment for the cross-model borrow
+%   (Raymer Table 15.2 has no strake row).
 %
-%   VALUES at W_TO = 31,377 lbf (computed live 2026-07-25; strake term added
-%   2026-07-29):
-%     wing 1766.03 | HT 199.39 | VT 216.72 | fuselage 3505.45
-%     LG 1035.44 | installed engine 3607.53 | all-else 5334.09 | strake 90.00
-%     OEW = 15754.65 lbf   (-21.14 % vs Brandt Wt!B12 = 19980.70;
-%                           -17.70 % vs corrections.xls 19148.08)
-%     OEW(45000) = 18520.12 lbf — and it MOVES, which it did not before
-%                           (review finding #5, see below).
-%   With the Brandt engine-weight alternate instead: OEW = 16877.35 (-15.53 %).
+%   Inputs are mutable spec/requirement data; Dependent getters recompute on
+%   read (no stored copy, read-only). 7 inputs + 2 injected objects; 13 Dependent.
 %
-%   STRAKE (LERX) TERM — ADDED 2026-07-29: k_strake * S_strake = 4.5 * 20 =
-%   90.00 lbf [Brandt Main!D18 / Wt!H7]. Previously unmodeled at every fidelity
-%   level; it was the single largest identified "NOT MODELED" gap item in
-%   examples/F16A/output/weights_brandt_comparison.md section 5 (13.68% of Brandt
-%   Wt!B12, alongside nacelles/other-structure/armament-support, which remain
-%   unmodeled). See the S_strake/k_strake property comment for why this term
-%   borrows Brandt's own coefficient rather than a Raymer Table 15.2 row (that
-%   table has no strake category at all).
+%   Constructor: F16WeightsL2(json_path, req_path, geom, prop) — all four
+%   required, no silent default.
+%       json_path — f16a_spec_path(2): aircraft_category + .weights.
+%       req_path  — f16a_requirements_path(): design_mach.
+%       geom      — GeometryModelL2 or GeometryModelL3 (both declare the four
+%                   members read: S_exposed_wing/_ht/_vt, get_S_wet_fuselage).
+%       prop      — PropulsionBase; supplies T_SL and bypass_ratio.
 %
-%   ============================================================================
-%   INPUT vs DERIVED — the optimization-ready pattern (CLAUDE.md; reference
-%   implementation examples/F16A/models/disciplines/geom/F16GeomL2.m, whose header carries the full
-%   rationale).  7 INPUTS (6 numeric + 1 string) + 2 injected objects; 12 DERIVED.
-%
-%     (1) INPUTS — a plain, mutable `properties` block: the genuine spec /
-%         requirement / mission numbers, set once by the constructor (the two
-%         state variables are mutated by the sizing and mission loops).
-%     (2) DERIVED — a `properties (Dependent)` block: the four geometry
-%         quantities and two engine weights that arrive by dependency injection,
-%         plus the six component/group weights. Each `get.<name>` recomputes
-%         live on every read; there is NO stored copy, so nothing can go stale.
-%         Read-only (no set-methods) — assigning errors, which is correct: they
-%         are outputs.
-%
-%   ★ TWO DEFECTS THIS CONVERSION REMOVES — both were in this file:
-%
-%   REVIEW FINDING #5 — W_all_else_empty was FROZEN at a Brandt output.
-%     The old constructor read, verbatim:
-%         obj.W_all_else_empty = WeightsL2.weight_all_else_empty(obj, 31377);
-%     Two separate defects in one line:
-%       (a) Stale under mutation. OEW(45000) carried an all-else group of
-%           0.17·31377 = 5334.09 where 0.17·45000 = 7650.00 is required —
-%           UNDERSTATED BY 2315.91 lbf (reproduced live 2026-07-25). Every
-%           TestWeightsL2 case called OEW(31377), the single argument at which
-%           the bug is invisible, which is why no test caught it.
-%       (b) 31,377 is Brandt Wt!B3 = 31377.000000 (live, formula =Main!O15) — a
-%           sizing OUTPUT, explicitly forbidden as an input by CLAUDE.md ("do not
-%           hardcode Brandt's back-calculated calibration values"). The old
-%           comment even labelled it "Brandt B38".
-%     W_all_else_empty is now Dependent = 0.17·obj.W_TO, and WeightsL2.OEW
-%     recomputes the term at its own W_TO argument.
-%
-%   REVIEW FINDING #12 — four "computed total" properties could read NaN.
-%     W_wings / W_landing_gear / W_tail / W_fuselage were satisfied with `= NaN`
-%     and NO code ever assigned them (WeightsL2.OEW computed locally and
-%     discarded), so a consumer reading the documented contract got NaN. All four
-%     are now Dependent. A property documented as computed can no longer read NaN.
-%   todo 2026-07-24 §3c items 1 and 6; docs/weights_parameter_usage.md §4.
-%   ============================================================================
-%
-%   CONSTRUCTOR (CHANGED 2026-07-25, Phase 4):
-%     F16WeightsL2(json_path, req_path, geom, prop)  — all four REQUIRED.
-%       json_path — f16a_spec_path(2): top-level aircraft_category + .weights.
-%       req_path  — f16a_requirements_path(): design_mach (a REQUIREMENT, not
-%                   spec data, hence the separate fidelity-independent file).
-%       geom      — (1,1) {mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])}.
-%                   Loosened 2026-08-05 to accept EITHER geometry tier, mirroring
-%                   the precedent already set by F16AeroL2.m/F16AeroL3.m: both
-%                   GeometryModelL2 and GeometryModelL3 abstractly declare all
-%                   four members this class reads (S_exposed_wing, S_exposed_ht,
-%                   S_exposed_vt, get_S_wet_fuselage) IDENTICALLY, so accepting
-%                   either tier is mechanically safe — a wrong tier still fails
-%                   at CONSTRUCTION if it satisfies neither contract, it simply
-%                   no longer fails when the tier is L3 instead of L2. (Earlier
-%                   revisions of this file pinned geom to exactly GeometryModelL2
-%                   as a deliberate choice; that choice is deliberately reversed
-%                   here to enable mixed-fidelity sizing runs — the finding-#10
-%                   lesson about a wrong tier resolving to different physical
-%                   quantities mid-run still holds and is why the guard stays a
-%                   `mustBeA` allow-list rather than being removed outright.)
-%       prop      — (1,1) PropulsionBase; supplies T_SL and bypass_ratio.
-%     No silent default anywhere: a defaulted injection would silently re-freeze
-%     engine or geometry data, which is the defect class Phase 4 removes.
+%   History and rationale: docs/decision_log.md
 %
 %   SOURCES:
 %     [Brandt]  Brandt F-16A.xls, sheet "Wt" — validation targets ONLY, never a
-%               calibration input. Brandt's own psf coefficients (wing 6.75,
-%               fuselage 5.0, pitch 6.0, VT 6.0, live-read Wt!C7:H7) are a
-%               DIFFERENT model and are never used here.
+%               calibration input.
 %     [Raymer]  D.P. Raymer, Aircraft Design 7th ed., AIAA, Table 15.2.
 %     [AE481]   AE481 Aircraft Design Metabook Sec. 7, Fraction-Based Weight
 %               Estimates table (installed engine, all-else-empty, LG fraction).
 %     [TO]      T.O. 1F-16A-1, USAF/EPAF F-16A/B Blocks 10/15.
 
     % ======================================================================= %
-    % INPUTS (6 numeric + 1 string) + 2 injected objects — plain mutable
-    % properties, set once by the constructor. Every DERIVED property below
-    % recomputes live from these (and from the injected objects) on every read.
-    % Authoritative table with all citations: F16WeightsL2.md §2.
+    % INPUTS (6 numeric + 1 string) + 2 injected objects — mutable spec data.
+    % Citations: F16WeightsL2.md §2.
     % ======================================================================= %
     properties
         aircraft_category = 'jet_fighter'  % selects the Raymer Tbl 15.2 psf row and the metabook Sec. 7 LG fraction [f16a_L2.json top-level aircraft_category — ONE canonical class flag per aircraft]
 
-        N_en        = 1     % --   number of engines [T.O. 1F-16A-1 Sec. I]. Not derivable: no propulsion class exposes an engine count (geom.n_engines exists only as a .geometry stopgap, todo 2026-07-25 Phase 2 §22)
+        N_en        = 1     % --   number of engines [T.O. 1F-16A-1 Sec. I]. Not derivable: no propulsion class exposes an engine count
 
-        design_mach = 2.0   % --   design maximum Mach; feeds Raymer 7th ed. Eq. 10.10's M^0.25 for W_en. From f16a_requirements.json, NOT the .weights block: it is an aircraft REQUIREMENT, not weights spec data. [Brandt Main! aircraft.Mmax = 2.0; GroundTruth/f16a_geometry.json:9 "Mmax": 2.0] ★ NOT the T.O. 1F-16A-1 operating Mach LIMIT, which is a DIFFERENT number, 2.05 [GroundTruth/f16a_ground_truth.json:228]. 2.0 != 2.05 (-2.44 %); live W_en sensitivity 2775.0210 -> 2792.2046 (+0.62 %). Citing 2.0 to the T.O. would attribute a Brandt input to a primary document that says otherwise — todo 2026-07-25 Phase 4 §P4-13
+        design_mach = 2.0   % --   design maximum Mach; feeds Raymer 7th ed. Eq. 10.10's M^0.25 for W_en. From f16a_requirements.json (a REQUIREMENT, not weights spec data). [Brandt Main! aircraft.Mmax = 2.0]. NOT the T.O. operating Mach limit 2.05
 
         % ----- WeightsBase abstract properties -----
-        W_TO               = NaN   % lbf  candidate gross takeoff weight; STATE — the optimizer's variable, mutated in place by the sizing loop [WeightsBase contract]
-        W_energy           = NaN   % lbf  internal fuel; STATE, set by mission analysis [WeightsBase contract]. ! Was 6296.3 = Brandt Wt!B6 (=B3-B4-B5-B12, live formula), a back-calculated OUTPUT — forbidden as an input. Deleted from the JSON in Phase 3
-        W_payload_expendable = 4400 % lbf  expendable payload (stores) [Brandt Wt!B5 = 4400.000000 (live), =Main!O17]
-        W_payload_fixed    = 700   % lbf  fixed equipment + crew [Brandt Wt!B4 = 700.000000 (live), =Main!O16]
-        % ! Both payload values are currently INERT — no WeightsL* static reads
-        %   them (grepped 2026-07-25). They satisfy the WeightsBase closure
-        %   contract for the future sizing loop.
+        W_TO               = NaN   % lbf  candidate gross takeoff weight; STATE, mutated by the sizing loop [WeightsBase contract]
+        W_energy           = NaN   % lbf  internal fuel; STATE, set by mission analysis [WeightsBase contract]
+        W_payload_expendable = 4400 % lbf  expendable payload (stores) [Brandt Wt!B5 = Main!O17]
+        W_payload_fixed    = 700   % lbf  fixed equipment + crew [Brandt Wt!B4 = Main!O16]
+        % Both payload values are inert; they satisfy the WeightsBase closure
+        % contract for the sizing loop.
 
-        %S_STRAKE, K_STRAKE  Strake (LERX) structural weight inputs, ADDED
-        %   2026-07-29 -- previously unmodeled at any fidelity level (the single
-        %   largest identified item in the "NOT MODELED" gap tally,
-        %   examples/F16A/output/weights_brandt_comparison.md section 5: 13.68% of
-        %   Brandt Wt!B12). [Brandt F-16A.xls Main!D18 = 20 ft^2 (planform
-        %   reference area) / Wt!H7 = 4.5 lbf/ft^2 (structural surface density)].
-        %   CROSS-MODEL BORROW, DELIBERATE: Raymer 6th ed. Table 15.2 (this
-        %   class's official structural-group source) has NO strake/LERX row --
-        %   it is not a category that table's generic aircraft-structure
-        %   regression covers. Unlike wing/fuselage/HT/VT (where Brandt's own
-        %   6.75/5.0/6.0/6.0 psf coefficients exist but are deliberately NOT
-        %   used here because a genuine Raymer alternative does exist, see this
-        %   class's header), no Raymer alternative exists for the strake, so
-        %   Brandt's own value is the only available source. This is NOT the
-        %   forbidden back-calculated-output pattern (Cfe=0.005908,
-        %   e_osw=0.9086): Brandt applies k_strake to S_strake as a genuine
-        %   INPUT assumption in his own worksheet, the same computational role
-        %   k_wing=6.75 plays there -- it is not reverse-fit to a result.
+        %S_STRAKE, K_STRAKE  Strake (LERX) structural weight inputs. [Brandt
+        %   Main!D18 = 20 ft^2 / Wt!H7 = 4.5 lbf/ft^2]. Cross-model borrow:
+        %   Raymer Table 15.2 has no strake row, so Brandt's own coefficient is
+        %   the only source; it is a genuine input in his worksheet, not a
+        %   back-calculated output. History and rationale: docs/decision_log.md
         S_strake  % ft^2   strake planform reference area   [Brandt Main!D18]
         k_strake  % lbf/ft^2  strake structural surface density [Brandt Wt!H7]
 
         % ----- Injected collaborators (NOT numeric spec data) -----
-        geom   % (1,1) GeometryModelL2 OR GeometryModelL3 (loosened 2026-08-05) — supplies the four EXPOSED/WETTED areas below by DI, replacing four hardcoded literals (review finding #11's L2 half)
-        prop   % (1,1) PropulsionBase  — supplies T_SL and bypass_ratio for Raymer Eq. 10.10, replacing a hardcoded W_en = 3030 [estimate]
+        geom   % (1,1) GeometryModelL2 OR GeometryModelL3 — supplies the four EXPOSED/WETTED areas below by DI
+        prop   % (1,1) PropulsionBase  — supplies T_SL and bypass_ratio for Raymer Eq. 10.10
     end
 
     % ======================================================================= %
-    % DERIVED (12) — recomputed live from the inputs / injected objects on every
-    % read. No cache, never stale. Read-only: assigning to any of these errors
-    % (there are no set-methods), which is correct — they are outputs.
-    % Authoritative table with all citations: F16WeightsL2.md §3.
+    % DERIVED (13) — recomputed live on read; read-only.
+    % Citations: F16WeightsL2.md §3.
     % ======================================================================= %
     properties (Dependent)
         % -- Geometry, by DI from the injected geom (4) -------------------- %
@@ -185,26 +92,19 @@ classdef F16WeightsL2 < WeightsModelL2
         W_fuselage         % lbf  [Raymer 6th ed. Tbl 15.2]  4.8 · S_wet_fus  = 3505.45
         W_landing_gear     % lbf  [AE481 metabook Sec. 7]    0.033 · W_TO     = 1035.44 at 31377
         W_installed_engine % lbf  [AE481 metabook Sec. 7]    1.3 · N_en · W_en = 3607.53
-        W_all_else_empty   % lbf  [AE481 metabook Sec. 7]    0.17 · W_TO      = 5334.09 at 31377 / 7650.00 at 45000 — ★ this is review finding #5
-        W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00, added 2026-07-29 (see S_strake/k_strake property comment)
+        W_all_else_empty   % lbf  [AE481 metabook Sec. 7]    0.17 · W_TO      = 5334.09 at 31377 / 7650.00 at 45000
+        W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00 (see S_strake/k_strake property comment)
     end
 
     methods
 
         function obj = F16WeightsL2(json_path, req_path, geom, prop)
-        %F16WEIGHTSL2  Construct from a required spec JSON path, a required
-        %   requirements JSON path, a required injected L2 geometry object and a
-        %   required injected propulsion object. NO silent default on any of the
-        %   four. Sets ONLY input properties; every derived quantity is produced
-        %   live by its Dependent getter — nothing is computed and frozen here
-        %   (that was review finding #5).
+        %F16WEIGHTSL2  Construct from a required spec JSON path, requirements
+        %   JSON path, injected L2/L3 geometry object and injected propulsion
+        %   object. No silent default. Sets only input properties.
         %
-        %   geom must be a GeometryModelL2 OR GeometryModelL3 subclass (loosened
-        %   2026-08-05, see the class header): only S_exposed_wing,
-        %   S_exposed_ht, S_exposed_vt and get_S_wet_fuselage() are read, and
-        %   both tiers declare these identically.
-        %   prop must be a PropulsionBase subclass: only T_SL and bypass_ratio
-        %   are read, both for Raymer Eq. 10.10.
+        %   geom reads S_exposed_wing/_ht/_vt and get_S_wet_fuselage(); prop
+        %   reads T_SL and bypass_ratio for Raymer Eq. 10.10.
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
                 req_path        {mustBeTextScalar, mustBeNonzeroLengthText}
@@ -241,16 +141,10 @@ classdef F16WeightsL2 < WeightsModelL2
 
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
-        %   [Raymer 6th ed. Table 15.2 + AE481 metabook Sec. 7] + this class's
-        %   own strake term (Brandt Main!D18/Wt!H7 -- ADDED 2026-07-29, see the
-        %   S_strake/k_strake property comment for why it lives here rather
-        %   than in the generic WeightsL2 toolbox: Raymer Table 15.2 has no
-        %   strake category, so it is not a quantity another aircraft's L2
-        %   weights class could reuse unmodified).
-        %   Every W_TO-scaling term (landing gear, all-else-empty) is recomputed
-        %   inside WeightsL2.OEW at this argument, NOT read off obj.W_TO.
-        %   W_strake carries no W_TO dependence (pure area x density, like the
-        %   wing/tail/fuselage groups), so it is simply added on top.
+        %   [Raymer 6th ed. Table 15.2 + AE481 metabook Sec. 7] + the strake term
+        %   (Brandt Main!D18/Wt!H7). Every W_TO-scaling term (landing gear,
+        %   all-else-empty) is recomputed inside WeightsL2.OEW at this argument,
+        %   not read off obj.W_TO. W_strake is pure area x density, added on top.
             oew = WeightsL2.OEW(obj, W_TO) + obj.W_strake;
         end
 
@@ -277,16 +171,12 @@ classdef F16WeightsL2 < WeightsModelL2
         % ---- Geometry, by DI (the exposed-vs-FULL name trap) -------------- %
         function v = get.S_w(obj)
             % Raymer Table 15.2 takes the EXPOSED planform area.
-            % [Brandt Geom!7 exposed-S wing row; readme_geom.md §4.3] via
-            % GeomL2.compute_S_exposed_horizontal. Replaces a stored 196.23.
             v = obj.geom.S_exposed_wing;
         end
         function v = get.S_ht(obj)
             % ★ NAME TRAP: geom.S_exposed_ht (49.8473), NOT geom.S_ht = 108.
-            % After the Phase-2 geometry rename, S_ht/S_vt/AR_ht/lambda_ht mean
-            % FULL planform on BOTH geometry tiers; Raymer Table 15.2 wants the
-            % EXPOSED planform. Wiring geom.S_ht here is silent — no error, a
-            % plausible wrong number (docs/weights_parameter_usage.md §2).
+            % Raymer Table 15.2 wants the EXPOSED planform; wiring geom.S_ht is
+            % silent — no error, a plausible wrong number.
             v = obj.geom.S_exposed_ht;
         end
         function v = get.S_vt(obj)
@@ -294,11 +184,9 @@ classdef F16WeightsL2 < WeightsModelL2
             v = obj.geom.S_exposed_vt;
         end
         function v = get.S_wet_fus(obj)
-            % Fuselage WETTED area, [Roskam Vol. II Eq. 12.3] via
-            % GeomL2.compute_s_wet_fus_cyl = 730.3023 ft^2. Replaces a stored
-            % 750 [estimate; verify TO], i.e. -2.627 %: the geometry DI removes
-            % an unpinned estimate. Note this term alone takes WETTED area — the
-            % three lifting surfaces above take PLANFORM.
+            % Fuselage WETTED area [Roskam Vol. II Eq. 12.3] = 730.3023 ft^2.
+            % This term alone takes WETTED area; the three surfaces above take
+            % PLANFORM.
             v = obj.geom.get_S_wet_fuselage();
         end
 
@@ -306,80 +194,52 @@ classdef F16WeightsL2 < WeightsModelL2
         function v = get.W_en(obj)
             % OFFICIAL: Raymer 7th ed. Eq. 10.10, UNINSTALLED —
             %   W = 0.0637·T^1.1·M^0.25·exp(-0.81·BPR) = 2775.0210 lbf
-            % [coefficient confirmed at raymer_data.md:38]. Implemented once, in
-            % PropL2.engine_weight_AB; not duplicated here.
-            % Replaces a stored W_en = 3030 [estimate; verify TO/Jane's] that was
-            % pinned to nothing. T and BPR arrive from the injected prop, M from
-            % the requirements file, so mutating prop.T_SL now flows all the way
-            % through to W_installed_engine.
-            % The metabook's ×1.3 installed factor is applied in
-            % W_installed_engine, not here: this property is the BARE weight.
+            % [coefficient at raymer_data.md:38], in PropL2.engine_weight_AB.
+            % BARE weight; the ×1.3 installed factor is applied in
+            % W_installed_engine.
             v = PropL2.engine_weight_AB(obj.prop.T_SL, obj.design_mach, obj.prop.bypass_ratio);
         end
         function v = get.W_en_brandt(obj)
             % ALTERNATE, comparison report ONLY — never summed into OEW.
-            % 0.199·T_AB = 4730.2300 lbf [Brandt Wt!B11 = 4730.230000 (live);
-            % the 0.199 literal is 'Engn(s)'!D22 (live), label 'Engn(s) Old'!C22
-            % = "Engine with AB:  Weng = "; readme_wt.md:230 attributes it to
-            % Brandt 1997 Table 6.2 and states it is the INSTALLED formula, so it
-            % gets NO ×1.3 — settled decision 1, todo §P4-1a].
-            % Brandt's coefficient is never ported into the framework equation;
-            % this exists so the report can show his model fed his own thrust as
-            % a positive control on the propulsion DI.
+            % 0.199·T_AB = 4730.2300 lbf [Brandt Wt!B11; the 0.199 literal is
+            % 'Engn(s)'!D22, readme_wt.md:230 attributes it to Brandt 1997
+            % Table 6.2 as the INSTALLED formula, so no ×1.3]. Positive control
+            % on the propulsion DI.
             v = WeightsL2.engine_weight_brandt(obj.prop.T_SL);
         end
 
         % ---- Component / group weights ----------------------------------- %
-        % The three structural groups below are NOT guarded on W_TO. Each
-        % toolbox method declares its second argument as `~` -- they are pure
-        % area x density (Raymer Table 15.2 psf) and carry no W_TO dependence.
-        % An earlier version guarded them anyway "for uniformity", which
-        % asserted a dependency that does not exist; only the genuinely
-        % W_TO-dependent getters below use requireWTO.
+        % The three structural groups are pure area x density (Raymer Table 15.2
+        % psf) and carry no W_TO dependence, so they are NOT guarded on W_TO;
+        % only the genuinely W_TO-dependent getters below use requireWTO.
         function v = get.W_wings(obj)
-            % Was `= NaN`, never assigned (review finding #12).
             v = WeightsL2.weight_wing(obj, obj.W_TO);
         end
         function v = get.W_tail(obj)
-            % Was `= NaN`, never assigned (review finding #12).
             v = WeightsL2.weight_tail(obj, obj.W_TO);
         end
         function v = get.W_fuselage(obj)
-            % Was `= NaN`, never assigned (review finding #12).
             v = WeightsL2.weight_fuselage(obj, obj.W_TO);
         end
         function v = get.W_landing_gear(obj)
-            % Was `= NaN`, never assigned (review finding #12). Genuinely
-            % W_TO-dependent (0.033·W_TO), so freezing it was never an option.
+            % Genuinely W_TO-dependent (0.033·W_TO).
             v = WeightsL2.weight_landing_gear(obj, obj.requireWTO('W_landing_gear'));
         end
         function v = get.W_installed_engine(obj)
             % 1.3 · N_en · W_en = 3607.5273 lbf [AE481 metabook Sec. 7,
-            % metabook_data.md:333]. The ×1.3 is L2-ONLY (settled decision 1):
-            % L3 sums Raymer's installation items individually, so applying it
-            % there would double-count.
-            % Was computed in the constructor and frozen. That freeze was
-            % numerically harmless (this term is W_TO-independent), but it hid
-            % W_en behind a literal — now that W_en is Eq. 10.10 on the injected
-            % thrust, a frozen copy would go stale the moment prop.T_SL moved.
+            % metabook_data.md:333]. The ×1.3 is L2-ONLY: L3 sums Raymer's
+            % installation items individually.
             v = WeightsL2.weight_installed_engine(obj);
         end
         function v = get.W_all_else_empty(obj)
-            % ★ REVIEW FINDING #5, FIXED. 0.17 · obj.W_TO [AE481 metabook Sec. 7,
-            % metabook_data.md:334], recomputed live on every read.
-            % Previously: WeightsL2.weight_all_else_empty(obj, 31377) evaluated
-            % ONCE in the constructor and frozen into a plain property, so
-            % OEW(45000) understated by 2315.91 lbf and 31,377 — Brandt Wt!B3, an
-            % OUTPUT — had become a calibration input.
+            % 0.17 · obj.W_TO [AE481 metabook Sec. 7, metabook_data.md:334],
+            % recomputed live on every read.
             v = WeightsL2.weight_all_else_empty(obj, obj.requireWTO('W_all_else_empty'));
         end
 
         function v = get.W_strake(obj)
-            % ADDED 2026-07-29. k_strake * S_strake = 4.5 * 20 = 90.00 lbf
-            % [Brandt Wt!H9 = 4.5*20 = 90.00 exact]. Pure area x density, no
-            % W_TO dependence -- same structural-group pattern as W_wings/
-            % W_tail/W_fuselage above. See the S_strake/k_strake property
-            % comment for the cross-model-borrow rationale.
+            % k_strake * S_strake = 4.5 * 20 = 90.00 lbf [Brandt Wt!H9 = 4.5*20].
+            % Pure area x density, no W_TO dependence.
             v = obj.k_strake * obj.S_strake;
         end
 
@@ -389,24 +249,11 @@ classdef F16WeightsL2 < WeightsModelL2
 
         function W_TO = requireWTO(obj, whatFor)
         %REQUIREWTO  Return obj.W_TO, erroring if it has not been set.
-        %   Applied to EXACTLY the getters that genuinely depend on W_TO:
-        %   W_landing_gear (0.033·W_TO) and W_all_else_empty (0.17·W_TO). Both
-        %   would otherwise return a silent NaN — the failure mode Phase 1e was
-        %   written to eliminate (Phase-1f precedent: F16GeomL1.requireWTO).
-        %
-        %   NOT applied to W_wings / W_tail / W_fuselage / W_installed_engine.
-        %   Those toolbox methods declare their W_TO argument as `~`: the
-        %   structural groups are pure area × density (Raymer Table 15.2 psf) and
-        %   the engine group is a thrust correlation. An earlier version guarded
-        %   all of them "for uniformity", justified as "there is no design point
-        %   until a gross weight is chosen". That was wrong on two counts — it
-        %   asserted a dependency the formulas do not have, and it was not even
-        %   uniform (W_installed_engine was never guarded), so the stated
-        %   rationale did not describe the code. A guard should encode a real
-        %   dependency, not a house style; if a formula later gains a W_TO term,
-        %   add the guard then.
-        %   Per-component weights are also reachable through the toolbox statics
-        %   (WeightsL2.weight_wing(obj, W_TO) etc.), which is what OEW(W_TO) uses.
+        %   Applied to exactly the getters that depend on W_TO: W_landing_gear
+        %   (0.033·W_TO) and W_all_else_empty (0.17·W_TO). Not applied to the
+        %   structural groups or the engine group, which carry no W_TO term.
+        %   Per-component weights are also reachable via the toolbox statics
+        %   (WeightsL2.weight_wing(obj, W_TO) etc.), which OEW(W_TO) uses.
             W_TO = obj.W_TO;
             if ~isfinite(W_TO) || W_TO <= 0
                 error('F16WeightsL2:WTONotSet', ...

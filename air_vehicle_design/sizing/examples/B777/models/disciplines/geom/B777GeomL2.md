@@ -17,24 +17,14 @@ equivalent-trapezoidal parameters and derives the exposed/wetted areas and the
 MAC from them.
 
 The `L2` tag is the geometry *fidelity*. The class inherits **`GeometryModelL2`**,
-which was slimmed on 2026-08-15 to the aircraft-**agnostic** L2 core: exposed
-wing/H-tail/V-tail planform areas, H/V-tail reference-area write-back slots, wing
-span, fuselage length, and `get_S_wet_fuselage`/`get_S_exposed_wing`. This class
-supplies exactly that core. It does **not** carry the F-16's detailed per-surface
-drag-build-up geometry (per-surface t/c, LE/TE/QC sweeps, taper, aspect ratios,
-root/tip chords, inlet duct, wave-drag `Amax`/`L_aircraft`) — that detail is
-fighter-specific, lives concretely on `F16GeomL2`, and a transport with a simple
-`Cfe·Swet/Sref` polar has no use for it. It also preserves the `B777GeomL1`
-consumer contract (`S_ref`, `S_wet`, `cbar_wing`, `L_fus`/`L_fuselage`,
-`n_engines`, `get_S_ref`, `get_S_wet`), so `B777AeroL1`, the tail sizing, and the
-constraint/mission stacks read it unchanged.
-
-> **Why `GeometryModelL2` now, not `GeometryModelL1`?** Before the 2026-08-15
-> slim, the L2 enforcer *was* the F-16's fully-decomposed member set, so this
-> class inherited `GeometryModelL1` to avoid it. With `GeometryModelL2` reduced
-> to the agnostic core, that reason is gone: an L2 transport geometry belongs
-> under the L2 enforcer, and the weights DI (`B777WeightsL2`) now types its
-> injected geom against `GeometryModelL2` rather than the bare `GeometryBase`.
+the aircraft-**agnostic** L2 core: exposed wing/H-tail/V-tail planform areas,
+H/V-tail reference-area write-back slots, wing span, fuselage length, and
+`get_S_wet_fuselage`/`get_S_exposed_wing`. It does **not** carry the F-16's
+detailed per-surface drag-build-up geometry (that is fighter-specific and lives
+on `F16GeomL2`). It preserves the `B777GeomL1` consumer contract (`S_ref`,
+`S_wet`, `cbar_wing`, `L_fus`/`L_fuselage`, `n_engines`, `get_S_ref`,
+`get_S_wet`), so `B777AeroL1`, the tail sizing, and the constraint/mission
+stacks read it unchanged.
 
 ## 2. Inputs (Table 7.2 + fuselage)
 

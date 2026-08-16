@@ -27,8 +27,8 @@ originating here are the area-ruled `Amax` buildup and two helpers.
 | `get_S_wet(obj)` | total, including the duct | — |
 | `get_Amax(obj)` | whole-aircraft area-ruled max cross-section [ft²] | Brandt F-16A.xls, Geom!H47 → B20 |
 
-`compute_c_root_exposed` belongs beside `GeomL2`'s exposed-area statics; it lives here only because
-it was extracted during the `Amax` work.
+`compute_c_root_exposed` belongs beside `GeomL2`'s exposed-area statics; it lives here because it
+was extracted during the `Amax` work.
 
 ## 3. Equations
 
@@ -82,11 +82,11 @@ fuselage-envelope ellipse **at this tier only** — L2 keeps
 ## 4. Modelling notes
 
 - **Round-trip control.** Rescaling with $L_{fus} = 46.5$ reproduces Brandt's `Geom!B20` to
-  −0.0001 %. At the as-built 47.5 ft the result is 24.703652 ft², and that −1.62 % gap is the
+  −0.0001 %. At the as-built 47.5 ft the result is 24.703652 ft². The −1.62 % gap is the
   fuselage-length divergence, not a model error.
 - **The strake is deliberately absent.** It is active only forward of the governing station, so
-  including it changes `Amax` by exactly 0.000 %.
-- **Two Brandt spreadsheet bugs are not replicated**: the VT column's wing-tip-chord copy-paste, and
+  including it changes `Amax` by 0.000 %.
+- **Two Brandt spreadsheet bugs are not replicated**: the VT column's wing-tip-chord copy-paste and
   the strake column's divisor. Both are worth 0.000 % here.
 - **Canopy bulge.** $\max(h/H_{max}) = 1.50$, so "maximum fuselage depth" is not the tallest frame in
   the table it scales.

@@ -1,11 +1,10 @@
 # PropL1
 
 Level-1 propulsion static toolbox (`classdef PropL1`, `methods (Static)` only). Called as
-`PropL1.method(...)`; never instantiated and not in the inheritance chain. `F16PropL1` inherits
-`PropulsionModelL1` and delegates here.
+`PropL1.method(...)`; never instantiated. `F16PropL1` inherits `PropulsionModelL1` and delegates here.
 
-**L1 is the simplest usable engine model:** a density-ratio thrust lapse and a two-value TSFC table.
-No Mach term in the lapse, no afterburner split, no supersonic value.
+L1 is the simplest usable engine model: a density-ratio thrust lapse and a two-value TSFC table.
+No Mach term, no afterburner split, no supersonic value.
 
 ---
 
@@ -25,9 +24,8 @@ $$\alpha = \sigma^{m} \qquad \sigma = \frac{\rho}{\rho_{SL}}$$
 $m = 0.6$ for a turbofan, $1.0$ for a turbojet. $\rho_{SL} = 0.002377$ slug/ft³
 [Mattingly: Aircraft Engine Design, 2nd edition App. B].
 
-Note what this does *not* contain: there is no Mach term, so the lapse cannot distinguish a dry from
-an afterburning power setting, and it degrades at extreme altitude and supersonic Mach. That is the
-L1 limitation, not a defect.
+The lapse has no Mach term, so it cannot distinguish dry from afterburning power, and it degrades at
+extreme altitude and supersonic Mach. This is the L1 limitation, not a defect.
 
 **TSFC** [Raymer 6th ed. Table 3.3, low-bypass turbofan] — a two-value table:
 
@@ -42,8 +40,7 @@ At 36,000 ft / M 0.87: $\alpha = 0.48374118$, $c_t = 0.80$ hr⁻¹.
 
 ## 4. Category coverage
 
-`engine_type` selects both the lapse exponent and the TSFC row. Unlisted types error rather than
-falling back to a default.
+`engine_type` selects both the lapse exponent and the TSFC row. Unlisted types error.
 
 ## 5. To-dos
 

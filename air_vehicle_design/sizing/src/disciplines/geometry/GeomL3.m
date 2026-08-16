@@ -1,13 +1,12 @@
 classdef GeomL3
 %GEOML3  Level-3 geometry static toolbox: the physical / T.O. tier.
-%
 %   Call as GeomL3.method(...); never instantiated, not in the inheritance
 %   chain. F16GeomL3 inherits GeometryModelL3 and delegates to these statics.
 %
-%   Most equations are REUSED from GeomL2 and GeometryBase -- L3 differs by the
-%   inputs it is fed (physical/T.O. values where they differ from Brandt's), not
-%   by the formulas. The only formulas originating here are the area-ruled Amax
-%   buildup and its helpers compute_c_root_exposed and compute_engine_length.
+%   Most equations are reused from GeomL2 and GeometryBase; L3 differs by the
+%   physical/T.O. inputs it is fed, not by the formulas. The only formulas
+%   originating here are the area-ruled Amax buildup and its helpers
+%   compute_c_root_exposed and compute_engine_length.
 %
 %   Official lifting-surface wetted area: [Roskam Vol. II Eq. 12.1], fed the
 %   T.O. root/tip t/c splits.
@@ -17,10 +16,9 @@ classdef GeomL3
     methods (Static)
 
         % ================================================================== %
-        % HIGH-LEVEL: take the student object, return the result. Each simply
-        % selects a REUSED GeomL2 low-level static — no new formula here.
-        % (get_Amax is the one exception: it assembles the sub-step 2h
-        % area-ruling statics further down this file.)
+        % HIGH-LEVEL: take the object, return the result. Each selects a reused
+        % GeomL2 low-level static — no new formula here. get_Amax is the
+        % exception: it assembles the area-ruling statics further down.
         % ================================================================== %
 
         function val = get_S_wet(obj)
@@ -64,15 +62,14 @@ classdef GeomL3
         end
 
         function val = get_S_exposed_wing(obj)
-        %GET_S_EXPOSED_WING  Passthrough accessor for the DERIVED wing exposed
-        %   area (the Dependent getter does the compute).
+        %GET_S_EXPOSED_WING  Wing exposed area [ft^2] (passthrough; the
+        %   Dependent getter does the compute).
             val = obj.S_exposed_wing;
         end
 
         % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         function val = get_Amax(obj)
-            % This basically locates the maximum cross-sectional area of the entire plane, including the fuselage
-            % and wings combined.
+            % Max cross-sectional area of the whole aircraft (fuselage + wings).
             [x, w, h] = GeomL3.denormalize_frames(obj.frames_normalized, ...
                             obj.L_fus, obj.W_max_fuselage, obj.H_max_fuselage);
 
@@ -99,10 +96,9 @@ classdef GeomL3
         end
 
         % ================================================================== %
-        % LOW-LEVEL: pure math on scalars/vectors, no object.  Added in
-        % sub-step 2h (2026-07-25) for the AREA-RULED Amax.  These are the only
-        % formulas that originate in this toolbox; every other equation GeomL3
-        % uses is reused from GeomL2 / GeometryBase (see the class header).
+        % LOW-LEVEL: pure math on scalars/vectors, no object. These area-ruled
+        % Amax formulas are the only ones originating in this toolbox; every
+        % other equation is reused from GeomL2 / GeometryBase.
         % ================================================================== %
 
         function [x, w, h] = denormalize_frames(frames_normalized, L_fus, W_max, H_max)
@@ -152,13 +148,12 @@ classdef GeomL3
         %COMPUTE_SURFACE_CS_AREA  Cross-section [ft^2] contributed by one
         %   lifting surface at each station, under Brandt's cosine
         %   area-distribution model.  [Brandt F-16A.xls, Geom!Y/AA/AC 26:45]
-        %
         %   Xexp is the exposed-root leading-edge station; G_hs_exp the
         %   exposed half-span (mirrored) or full span (VT).
         %
-        %   Two Brandt spreadsheet bugs are deliberately NOT replicated: the
-        %   VT column's wing-tip-chord copy-paste, and the strake column's
-        %   divisor. Both are worth 0.000 % of this aircraft's Amax.
+        %   Two Brandt spreadsheet bugs are NOT replicated (each worth 0.000 %
+        %   of Amax): the VT column's wing-tip-chord copy-paste and the strake
+        %   column's divisor.
         %
         %   TODO: the cosine area-distribution model is Brandt's own
         %   construction with no textbook source in this repo (todo.md Phase 2).

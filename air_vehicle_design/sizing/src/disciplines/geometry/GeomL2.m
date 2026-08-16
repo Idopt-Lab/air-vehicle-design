@@ -1,14 +1,12 @@
 classdef GeomL2
 %GEOML2  Level-2 geometry static toolbox: component wetted and exposed areas.
-%
 %   Call as GeomL2.method(...); never instantiated, not in the inheritance
 %   chain. F16GeomL2 inherits GeometryModelL2 and delegates to these statics.
 %
 %   Official formulas: lifting surfaces [Roskam Vol. II Eq. 12.1], fuselage
-%   [Roskam Vol. II Eq. 12.3], duct [Raymer 6th ed. Sec. 7.3].
-%
-%   Brandt's own uniform-t/c and fuselage formulas are kept as separately named
-%   alternates for the comparison report; they are not the default path.
+%   [Roskam Vol. II Eq. 12.3], duct [Raymer 6th ed. Sec. 7.3]. Brandt's own
+%   uniform-t/c and fuselage formulas are named alternates for the comparison
+%   report, not the default path.
 %
 %   Companion doc: src/disciplines/geometry/GeomL2.md
 
@@ -21,9 +19,8 @@ classdef GeomL2
         function val = get_S_wet(obj)
         %GET_S_WET  Total wetted area [ft^2]: wing + HT + VT + fuselage + duct.
         %   Takes no W_TO argument (contrast L1). The duct is included
-        %   unconditionally; a concrete class with no duct should set
-        %   D_inlet = D_exit = L_duct = 0, which warns and gives 0 duct
-        %   wetted area (see compute_s_wet_duct).
+        %   unconditionally; a class with no duct sets D_inlet = D_exit =
+        %   L_duct = 0, which warns and gives 0 (see compute_s_wet_duct).
             val = GeomL2.get_S_wet_wing(obj)     + GeomL2.get_S_wet_HT(obj) + ...
                   GeomL2.get_S_wet_VT(obj)        + GeomL2.get_S_wet_fuselage(obj) + ...
                   GeomL2.get_S_wet_duct(obj);
@@ -87,8 +84,7 @@ classdef GeomL2
         function val = compute_roskam_planform(S_exp, tc_r, tc_t, lambda)
         %COMPUTE_ROSKAM_PLANFORM  Lifting-surface wetted area [ft^2], variable
         %   root/tip t/c.  [Roskam Vol. II Eq. 12.1]
-        %   Validators guard the two denominators: tc_t against a zero-division
-        %   to Inf, lambda against (1+lambda) = 0.
+        %   Validators guard the tc_t and (1+lambda) denominators.
             arguments
                 S_exp  (1,1) double {mustBePositive}
                 tc_r   (1,1) double {mustBePositive}
@@ -101,8 +97,8 @@ classdef GeomL2
         function val = compute_s_wet_fus_cyl(D_fus, L_fus)
         %COMPUTE_S_WET_FUS_CYL  Fuselage wetted area [ft^2], cylindrical midsection.
         %   [Roskam Vol. II Eq. 12.3]
-        %   Valid only for fineness ratio L/D > 2; below that the formula would
-        %   silently return a complex number, so it errors instead.
+        %   Valid only for fineness ratio L/D > 2; errors below that (the
+        %   formula would return a complex number).
             arguments
                 D_fus (1,1) double {mustBePositive}
                 L_fus (1,1) double {mustBePositive}
@@ -202,11 +198,9 @@ classdef GeomL2
         function val = compute_s_wet_duct(D_inlet, D_exit, L_duct)
         %COMPUTE_S_WET_DUCT  Duct wetted area [ft^2] as a right circular frustum.
         %   [Raymer 6th ed. Sec. 7.3]. Degenerates to a cylinder when
-        %   D_inlet == D_exit. A concrete class with no duct sets
-        %   D_inlet = D_exit = L_duct = 0; this is treated as "no duct given"
-        %   rather than a normal zero-length duct, so it warns and returns 0
-        %   instead of silently degenerating (a genuine spec omission should
-        %   be visible, not indistinguishable from a design choice).
+        %   D_inlet == D_exit. The triple D_inlet = D_exit = L_duct = 0 means
+        %   "no duct given": it warns and returns 0, so a spec omission stays
+        %   visible.
             arguments
                 D_inlet (1,1) double {mustBeNonnegative}
                 D_exit  (1,1) double {mustBeNonnegative}

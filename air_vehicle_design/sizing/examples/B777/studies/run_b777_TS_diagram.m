@@ -1,25 +1,17 @@
 %% run_b777_TS_diagram
 %   Boeing 777-200LR dimensional T-S sizing diagram [metabook Example 4.2,
-%   §4.12, Fig. 4.7]. Builds the B777 L1 discipline stack plus the L1 mission,
-%   drives src/sizing/TSDiagram.m: every (T, S) cell is a SIZED aircraft with a
+%   §4.12, Fig. 4.7]. Builds the B777 L1 stack plus the L1 mission, drives
+%   src/sizing/TSDiagram.m: every (T, S) cell is a SIZED aircraft with a
 %   converged TOGW [metabook Algorithm 2], constraints traced as T(S)/S(T)
 %   curves [Algorithm 4], fuel-burn contours superimposed, and the actual
 %   777-200LR marked.
 %
-%   Style/wiring follows examples/F16A/studies/run_F16_TS_diagram.m (caller owns
-%   discipline construction); export follows the sanity_checks scripts (console +
-%   files into the gitignored examples/B777/output/).
-%
-%   RELAXATION. The metabook L1 transport closure is stable from below (empty
-%   weight scales with W0 via the Raymer We/W0 regression), so the default
-%   relax_W0 = 0.5 converges cleanly across this grid -- no per-stack tuning is
-%   needed (contrast the F-16 Brandt stack, whose steep fixed-OEW closure needs
-%   0.25). Left at the default here; if a future spec change makes the grid show
-%   spurious NaNs, set ts.relax_W0 lower and document it.
+%   RELAXATION. The transport closure is stable from below (empty weight scales
+%   with W0), so the default relax_W0 = 0.5 converges cleanly (contrast the F-16
+%   Brandt stack, which needs 0.25).
 
 % Caller owns discipline construction (dependency injection). TSDiagram mutates
-% the shared geom/prop/wts objects in place during the scan (see its header);
-% the stack is built fresh here and used for nothing else afterwards.
+% the shared geom/prop/wts in place during the scan.
 sp   = b777_spec_path(1);
 rp   = b777_requirements_path();
 geom = B777GeomL2(sp);
@@ -32,12 +24,10 @@ con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
     B777ConstraintSet.constraint_map(), linspace(60, 300, 241));
 
 ts = TSDiagram(aero, prop, wts, geom, miss, con, tail);
-% Default relax_W0 = 0.5 is kept (see header -- the transport closure is stable
-% from below). max_iter left at the default 200.
+% Default relax_W0 = 0.5 kept (see header). max_iter at the default 200.
 
 % Uniform grids (TSDiagram.plot's feasible-region shading assumes uniform
-% spacing). Ranges bracket the actual 777 (S = 4605 ft^2, T = 220000 lbf) and
-% the converged design point on both sides.
+% spacing), bracketing the actual 777 (S = 4605 ft^2, T = 220000 lbf).
 S_grid = linspace(2000, 6000, 28);      % ft^2 (metabook Fig 4.7 axes)
 T_grid = linspace(30000, 350000, 28);   % lbf (metabook Fig 4.7 axes)
 
@@ -45,17 +35,15 @@ T_grid = linspace(30000, 350000, 28);   % lbf (metabook Fig 4.7 axes)
 % and S = 4605 ft2)"].
 actual = struct('T', 220000, 'S', 4605, 'label', "Actual 777-200LR");
 
-% Converged TOGW at the actual aircraft's (T, S) cell [metabook Algorithm 2],
-% for the results export. Compare against the actual 766,800 lbf (expect the
-% BY-DESIGN -8.6% metabook-L1 offset -- see b777_metabook_comparison.m).
+% Converged TOGW at the actual (T, S) cell [metabook Algorithm 2], vs the actual
+% 766,800 lbf (see b777_metabook_comparison.m).
 W0_actual = ts.converge_W0(actual.T, actual.S);
 fprintf('\nB777 T-S diagram [metabook Fig. 4.7]\n');
 fprintf('  Converged W_TO at (T = %.0f lbf, S = %.0f ft^2): %.1f lbf (actual = 766800, %+.2f%%)\n', ...
     actual.T, actual.S, W0_actual, 100*(W0_actual - 766800)/766800);
 
-% Fuel-burn/TOGW grid for the results export [metabook §4.12 objective
-% contours]. The precomputed grid is passed straight into ts.plot ('grid'
-% option) so the mesh is computed once.
+% Fuel-burn/TOGW grid for the export [metabook §4.12 objective contours], passed
+% into ts.plot ('grid' option) so the mesh is computed once.
 fg = ts.fuel_grid(T_grid, S_grid);
 
 % The diagram itself [metabook Fig. 4.7].

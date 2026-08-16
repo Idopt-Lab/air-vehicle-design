@@ -31,9 +31,8 @@ wing area. This is the equivalent-skin-friction method [metabook Eq. 4.8 = Rayme
 >   climb-gradient constraints read `get_config_polar`).
 >
 > So `drag_polar` clean (0.014) **INTENTIONALLY** differs from `get_config_polar("clean")` (0.0236).
-> Before this fix `drag_polar` returned the frozen 0.0236, which made the framework mission burn too
-> much fuel (0.386 vs A03's 0.343) and sized the F-35 ≈2× too heavy. Do NOT unify the two — the
-> divergence is A481's own mission-vs-constraint inconsistency, faithfully carried.
+> Do NOT unify the two — the divergence is A481's own mission-vs-constraint inconsistency, faithfully
+> carried.
 
 The geometry `Swet = 4·S` regression is separately REJECTED for the geometry wetted-area path (disc
 A1, Roskam Table 3.5 used instead); `swet_over_sref = 4` is kept HERE only for A03 mission fidelity.
@@ -146,13 +145,10 @@ The scribe plan and input JSON assert `AeroL2.oswald_eff(4, 0) = 0.9153`. **The 
 − 0.64         = 0.934395
 ```
 
-This is confirmed against the same formula `TestAeroL2` already validates at AR = 8 (0.8105923). The
-documented 0.9153 corresponds to AR ≈ 4.56, not 4 — it appears to be a transcription error in the
-F-35 docs (`aero481_scribe_plan.md` §2.3, `aero481_L1.md` §2, `aero481_discrepancies.md` A2,
-`aero481_data.md` §II.5, and the JSON `e_clean` field). Because this class computes `e` **live** (never
-the frozen 0.9153), it uses the correct ≈ 0.9344 and the resulting `K1 ≈ 0.08516`. The
-0.9153 / `K1 = 0.08694` pairing in the docs must be corrected by the coordinator/scribe; the aero
-equation implemented here is correct.
+The documented 0.9153 corresponds to AR ≈ 4.56, not 4 — a transcription error in the F-35 docs
+(`aero481_discrepancies.md` A2 and the JSON `e_clean` field). This class computes `e` **live**, so it
+uses the correct ≈ 0.9344 and `K1 ≈ 0.08516`. The 0.9153 / `K1 = 0.08694` pairing in the docs must be
+corrected; the equation here is correct.
 
 `K2 = 0` (uncambered-basis; no camber / CL_minD data at L1) — Convention A `CD = CD0 + K1·CL² + K2·CL`
 [Mattingly AED 2nd ed. Eq. 2.9].

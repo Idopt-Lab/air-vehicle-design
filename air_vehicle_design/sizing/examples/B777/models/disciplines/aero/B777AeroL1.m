@@ -1,48 +1,36 @@
 classdef B777AeroL1 < AeroModelL1
 %B777AEROL1  Boeing 777-200LR Level-1 aerodynamics class (metabook Example 4.2).
 %
-%   Inherits AeroModelL1 (abstract enforcer). AeroModelL1 adds no abstract
-%   members beyond AerodynamicsBase's drag_polar / get_CLmax.
+%   Inherits AeroModelL1 (abstract enforcer, no members beyond
+%   AerodynamicsBase's drag_polar / get_CLmax).
 %
-%   L1 is the geometry-COUPLED metabook drag polar. Unlike F16AeroL1 (which is
-%   geometry-FREE -- Roskam-table CD0/CLmax type curves), B777AeroL1 INJECTS a
-%   geometry object so its clean CD0 tracks the wing area an optimizer mutates:
-%       CD0_clean = Cfe * (S_wet / S_ref)          [metabook Eq. 4.8 = Raymer
-%                                                    Eq. 12.23]
+%   L1 is the geometry-COUPLED metabook drag polar. Unlike F16AeroL1
+%   (geometry-FREE), B777AeroL1 INJECTS a geometry object so its clean CD0 tracks
+%   a mutated wing area:
+%       CD0_clean = Cfe * (S_wet / S_ref)   [metabook Eq. 4.8 = Raymer Eq. 12.23]
 %   with geom.S_wet = S_wet_rest + 2*S_ref [metabook Eq. 4.58], so CD0 tracks S.
 %
-%   ============================================================================
-%   DEPENDENCY INJECTION + INPUT vs DERIVED (optimization-ready design), mirroring
-%   F16AeroL2. The constructor takes a REQUIRED injected geometry object and a
-%   REQUIRED unified L1 input JSON path (b777_spec_path(1); reads its
-%   .aerodynamics block). No silent defaults.
+%   DEPENDENCY INJECTION + INPUT vs DERIVED (optimization-ready, as F16AeroL2).
+%   The constructor takes a REQUIRED injected geometry object and a REQUIRED L1
+%   JSON path (b777_spec_path(1); reads .aerodynamics). No silent defaults.
+%     (1) INPUTS -- aero spec data (Cfe, e_clean, aircraft_category) plus the
+%         per-config scalars (ΔCD0, e, CLmax) DERIVED ONCE from the config-polar
+%         table + baseline AR (functions of the JSON alone, so freezing them is
+%         correct).
+%     (2) DERIVED (Dependent) -- S_ref/S_wet/AR read LIVE from obj.geom (nothing
+%         stored), so the next drag_polar reflects a mutated geometry.
 %
-%     (1) INPUTS -- a plain, mutable `properties` block: ONLY genuine aero spec
-%         data (Cfe, e_clean, aircraft_category) plus the DERIVED-ONCE-FROM-INPUTS
-%         config scalars (per-config ΔCD0, e, CLmax). The last three are computed
-%         in the constructor from the config-polar table and the baseline AR, and
-%         stored -- they are functions of the JSON inputs alone (not of live
-%         geometry), so computing them once is correct. This is the "derive once
-%         from inputs" case, distinct from live geometry.
-%     (2) DERIVED (Dependent) -- geometry read LIVE from obj.geom on every read
-%         (S_ref, S_wet, AR). NO geometry number is stored; when an optimizer
-%         mutates obj.geom.S_ref or obj.geom.AR, the next drag_polar reflects it.
-%   ============================================================================
+%   aircraft_category = "jet_transport": the mission reads it (MissionAnalysisBase,
+%   isprop(aero,'aircraft_category')) to pick the transport fixed-fraction row.
 %
-%   aircraft_category = "jet_transport": the mission analysis reads this off the
-%   aero object (MissionAnalysisBase, isprop(aero,'aircraft_category')) to select
-%   the transport fixed-fraction MissionEquations row.
+%   get_config_polar(config) overrides the AerodynamicsBase contract the FAR-25
+%   field-length / climb-gradient constraints read: struct(CD0, K1, K2, CLmax)
+%   per config, reproducing the five printed metabook polars plus the derived
+%   approach polar; CD0/K1 track S and AR live.
 %
-%   get_config_polar(config) overrides the AerodynamicsBase contract the
-%   FAR-25 field-length and climb-gradient constraints need: it returns
-%   struct(CD0, K1, K2, CLmax) for each of the six configs, reproducing the five
-%   printed metabook polars plus the derived approach polar. CD0 and K1 track S
-%   and AR live (clean CD0 from geom.S_wet, K1 = 1/(pi*geom.AR*e_config)).
-%
-%   PHYSICAL CLmax carried: 2.0 both takeoff configs, 2.6 both landing, 0.9
-%   clean, 2.21 approach (USER decision 2026-08-14, b777_L1.md §3.2). The
-%   metabook-internal climb D1 deviation (printed climb Eqs. use CLmax=2.2 in the
-%   takeoff slot) is the comparison report's concern, NOT hardcoded here.
+%   PHYSICAL CLmax carried: 2.0 both takeoff, 2.6 both landing, 0.9 clean, 2.21
+%   approach (USER decision, b777_L1.md §3.2). The climb D1 deviation is the
+%   comparison report's concern, not hardcoded here.
 %
 %   Inheritance: AerodynamicsBase -> AeroModelL1 -> B777AeroL1
 %
@@ -72,10 +60,8 @@ classdef B777AeroL1 < AeroModelL1
         e_clean    = 0.85    % clean-config Oswald efficiency [metabook Table 4.2]; sets the live clean K1 = 1/(pi*AR*e_clean)
 
         %DELTA_CD0_CONFIG, E_CONFIG, CLMAX_CONFIG  Per-config scalars DERIVED ONCE
-        %   in the constructor from the JSON config-polar table + baseline AR.
-        %   These are functions of the JSON inputs alone (NOT of live geometry),
-        %   so computing them once is correct -- unlike the live geometry in the
-        %   Dependent block. Keyed dictionaries: config-name string -> scalar.
+        %   in the constructor from the JSON config-polar table + baseline AR
+        %   (functions of the JSON alone). Keyed dictionaries: config -> scalar.
         %     Delta_CD0_config(cfg) = table.CD0[cfg] - table.CD0[clean]
         %     e_config(cfg)         = 1/(pi*AR_baseline*table.K1[cfg])
         %     CLmax_config(cfg)     = table.CLmax[cfg]  (PHYSICAL values)
@@ -99,11 +85,9 @@ classdef B777AeroL1 < AeroModelL1
 
         function obj = B777AeroL1(geom, json_path)
         %B777AEROL1  Construct from a required injected geometry object and a
-        %   required unified L1 input JSON path (b777_spec_path(1)); reads its
-        %   .aerodynamics block. No silent defaults: both must be supplied.
-        %   Sets the aero inputs and derives the per-config scalars ONCE from the
-        %   config-polar table; all live geometry is produced by the Dependent
-        %   getters from obj.geom.
+        %   required L1 input JSON path (b777_spec_path(1); reads .aerodynamics).
+        %   No silent defaults. Sets the aero inputs and derives the per-config
+        %   scalars ONCE; live geometry comes from the Dependent getters.
             arguments
                 geom      (1,1) GeometryBase
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
@@ -116,9 +100,8 @@ classdef B777AeroL1 < AeroModelL1
             obj.Cfe               = A.Cfe;                         % [Raymer Table 12.3; metabook Eq. 4.43]
             obj.e_clean           = A.e_clean;                     % [metabook Table 4.2]
 
-            % Derive the per-config scalars ONCE from the printed table. These
-            % depend only on the JSON (config CD0/K1/CLmax) and the baseline AR,
-            % not on live geometry -- so freezing them here is correct.
+            % Derive the per-config scalars ONCE from the printed table (depend
+            % on the JSON + baseline AR, not live geometry).
             AR_baseline = geom.AR;
             T = A.config_polars;
             CD0_clean = T.clean.CD0;
@@ -168,16 +151,13 @@ classdef B777AeroL1 < AeroModelL1
         function cfg = get_config_polar(obj, config)
         %GET_CONFIG_POLAR  Drag polar + CLmax for a named high-lift config.
         %   Returns struct(CD0, K1, K2, CLmax) -- overrides the AerodynamicsBase
-        %   get_config_polar contract the FAR-25 field-length and climb-gradient
-        %   constraints read.
+        %   contract the FAR-25 field-length / climb-gradient constraints read.
         %   Tracks BOTH S and AR live:
         %     CD0 = CD0_clean_live + Delta_CD0_config(config)  [metabook §4.11]
         %     K1  = 1/(pi*AR_live*e_config(config))            [metabook Eq. 2.10]
         %     K2  = 0
         %     CLmax = CLmax_config(config)   (PHYSICAL [Roskam Table 3.1])
-        %   At baseline S/AR this reproduces the five printed metabook polars plus
-        %   the derived approach polar (e.g. clean 0.01597; +0.020 -> takeoff
-        %   gear-up 0.03597; +0.100 -> landing gear-down 0.11597).
+        %   At baseline S/AR reproduces the five printed metabook polars + approach.
             arguments
                 obj
                 config (1,1) string {mustBeMember(config, ...
@@ -194,10 +174,9 @@ classdef B777AeroL1 < AeroModelL1
         end
 
         % ---- Thin wrappers over the config table -------------------------- %
-        % These let the B777 also work with the existing MILITARY Takeoff /
-        % Landing constraints (which call get_CLmax_TO/_L and get_Delta_CD0_TO/_L)
-        % and the mission, even though the FAR-25 path prefers get_config_polar.
-        % Takeoff => the gear-down takeoff config; Landing => gear-down landing.
+        % For the MILITARY Takeoff/Landing constraints and the mission (which
+        % call get_CLmax_TO/_L and get_Delta_CD0_TO/_L). Takeoff => gear-down
+        % takeoff config; Landing => gear-down landing.
 
         function v = get_CLmax_TO(obj)
         %GET_CLMAX_TO  Takeoff-config max lift (2.0) [Roskam Table 3.1].

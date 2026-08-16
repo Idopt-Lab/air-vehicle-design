@@ -23,37 +23,23 @@ classdef ConstraintAnalysis
 %   method and ConstraintType); the two-arg constructor above stays the entry
 %   point for a hand-built or pre-trimmed constraint list.
 %
-%   DESIGN POINT [Raymer, "Aircraft Design: A Conceptual Approach," 6th ed.,
-%   AIAA, 2018, ch. 5 -- constraint-diagram methodology: the feasible region
-%   is bounded below by the upper envelope of all T/W-vs-W/S constraint curves
-%   (an aircraft must satisfy every constraint at once, so it needs at least
-%   the largest T/W any one condition demands at a given W/S) and on the right
-%   by the tightest W/S wall; the design point that minimizes required engine
-%   size is the point on that envelope with the smallest T/W in the feasible
-%   W/S band]:
+%   DESIGN POINT [Raymer 6th ed., AIAA 2018, ch. 5]: the feasible region is
+%   bounded below by the upper envelope of the T/W-vs-W/S producer curves and
+%   on the right by the tightest W/S wall; the design point that minimizes
+%   engine size is the feasible point with the smallest T/W:
 %
 %     TW_envelope(WS) = max_i required_TW_i(WS)              (producers only)
 %     WS_feasible     = { WS in WS_range : WS <= min_j WS_max_j }   (walls)
 %     [WS_opt, TW_opt] = argmin_{WS in WS_feasible} TW_envelope(WS)
 %
-%   optimal_point() finds [WS_opt, TW_opt] by direct grid search over the
-%   feasible part of WS_range (no interpolation; resolution is the caller's).
-%   envelope() exposes TW_envelope(WS) over the full WS_range and is the
-%   reusable helper the other reads call. plot_diagram() draws each producer
-%   curve, each wall as a vertical line, the shaded feasible region, and the
-%   optimum.
+%   optimal_point() grid-searches the feasible part of WS_range. envelope()
+%   exposes TW_envelope(WS) over the full sweep. plot_diagram() draws each
+%   producer curve, each wall, the shaded feasible region, and the optimum.
 %
-%   RECOMPUTE-ON-READ. This class stores only the inputs (the constraint list
-%   and the sweep); it caches no rows/envelope. Every public read rebuilds the
-%   rows live from the constraint objects, matching the project's inputs-vs-
-%   Dependent philosophy (CLAUDE.md, F16GeomL2.m): the sizing loop mutates the
-%   injected aero/prop objects in place, so a cached table would go stale the
-%   instant a design variable changed. The formulas are cheap, so
-%   recompute-on-read costs nothing measurable and removes the staleness bug by
-%   construction. producer_rows()/min_wall() are the shared private helpers.
-%
-%   Generic Layer-1 aggregator: does not know which aircraft or fidelity level
-%   produced the constraints.
+%   Recompute-on-read: stores only the constraint list and sweep, caches no
+%   rows/envelope. The sizing loop mutates the injected aero/prop in place, so
+%   a cached table would go stale. producer_rows()/min_wall() are the shared
+%   private helpers. Generic Layer-1 aggregator, aircraft-agnostic.
 
     properties (SetAccess = private)
         constraints (1,:) cell
@@ -96,22 +82,14 @@ classdef ConstraintAnalysis
         %OPTIMAL_POINT  [W/S, T/W] design point on the constraint envelope: the
         %   minimum T/W over the feasible W/S range (at or below the tightest
         %   wall) and, among the feasible points AT that minimum, the HIGHEST
-        %   W/S. Grid search over WS_range (no continuous optimizer -- the sweep
-        %   resolution is the caller's choice).
+        %   W/S. Grid search over WS_range (resolution is the caller's choice).
         %
-        %   WHY THE HIGHEST W/S AT THE MINIMUM. On a constraint diagram a jet is
-        %   better DOWN and to the RIGHT: low T/W (small engine) and high W/S
-        %   (small, efficient wing). Where the envelope minimum is a flat
-        %   PLATEAU -- e.g. a transport's binding 2nd-segment-climb floor spans a
-        %   W/S band -- the design point is the RIGHT end of that plateau, the
-        %   climb-floor / takeoff-line corner. Returning the FIRST minimum
-        %   instead (plain argmin) reports the left, low-W/S end, which is not
-        %   the design point. A unique minimum (curved fighter constraints, no
-        %   plateau) is unaffected: the highest W/S at the minimum is the
-        %   minimum itself.
+        %   Highest W/S at the minimum: a jet is better down and to the right
+        %   (low T/W, high W/S). Where the envelope minimum is a flat plateau
+        %   (e.g. a binding climb floor spanning a W/S band) the design point
+        %   is the right end. A unique minimum is unaffected.
         %
-        %   See class header for the envelope/wall definition, the
-        %   recompute-on-read note, and the citation.
+        %   See class header for the envelope/wall definition and citation.
             env      = obj.envelope();
             wall_min = obj.min_wall();
 
@@ -132,71 +110,39 @@ classdef ConstraintAnalysis
         %OPTIMAL_POINT_CONTINUOUS  Continuous, sweep-free refinement of
         %   optimal_point(): minimize T/W over x = [W/S, T/W] subject to every
         %   constraint's signed residual, via fmincon. Same design-point
-        %   definition and citation as optimal_point [Raymer, "Aircraft
-        %   Design: A Conceptual Approach," 6th ed., AIAA, 2018, ch. 5 -- the
-        %   design point that minimizes required engine size is the feasible
-        %   point with the smallest T/W]; where optimal_point is limited to
-        %   the WS_range grid nodes, this method locates the exact envelope
-        %   minimum between them.
+        %   definition and citation as optimal_point [Raymer 6th ed., ch. 5];
+        %   locates the exact envelope minimum between the grid nodes.
         %
         %       min  T/W                       over x = [W/S, T/W]
         %       s.t. g_i = constraints{i}.constraint_residual(dp(x)) <= 0
         %            min(WS_range) <= W/S <= max(WS_range),  T/W >= TW_FLOOR
         %
-        %   ALL constraints enter fmincon's nonlcon uniformly -- required_TW
-        %   producers and W/S walls alike -- through the signed residual
-        %   g = required - available, g <= 0 FEASIBLE, which
-        %   PointPerformanceBase.m defines as exactly the fmincon nonlcon
-        %   sign convention. No max-envelope is formed here; fmincon sees
-        %   each condition as its own smooth inequality.
+        %   All constraints enter fmincon's nonlcon uniformly through the
+        %   signed residual g = required - available, g <= 0 feasible
+        %   (PointPerformanceBase's convention). No max-envelope is formed.
         %
-        %   dp(x): DesignPoint's constructor takes physical (W_TO, T_SL,
-        %   S_ref), but every category's constraint_residual reads dp only
-        %   through the dimensionless dp.WS and dp.TW (see Only_WbyS.m,
-        %   Both_WbyS_TbyW.m, Only_TbyW.m -- each documents which of the two
-        %   it uses), so the absolute scale is arbitrary: a unit-weight point
-        %   W_TO = 1 lbf, T_SL = T/W, S_ref = 1/(W/S) reproduces any
-        %   (W/S, T/W) exactly.
+        %   dp(x): constraint_residual reads dp only through dp.WS and dp.TW,
+        %   so the absolute scale is arbitrary; a unit-weight point
+        %   W_TO = 1, T_SL = T/W, S_ref = 1/(W/S) reproduces any (W/S, T/W).
         %
-        %   x0   -- optional (1,2) seed [W/S, T/W]. Omitted or empty: seeded
-        %           from obj.optimal_point(), the grid argmin -- a robust
-        %           global seed, since the grid search cannot be trapped in a
-        %           local basin. Callers like the sizing loop pass the
-        %           previous iterate to warm-start.
-        %   opts -- name-value options; Display (default "none") is passed
-        %           through to fmincon.
+        %   x0   -- optional (1,2) seed [W/S, T/W]. Empty: seeded from
+        %           obj.optimal_point() (grid argmin, a robust global seed).
+        %           A sizing loop passes the previous iterate to warm-start.
+        %   opts -- name-value; Display (default "none") passes to fmincon.
         %
-        %   Algorithm 'sqp' because the residuals are smooth closed-form
-        %   curves, the problem is small and dense (2 variables, a handful of
-        %   constraints), and sqp is robust to the seed lying ON the
-        %   constraint envelope -- the grid-argmin seed always does.
-        %
-        %   SCALING (essential, 2026-08-14 fix): fmincon works on
-        %   z = [W/S / WS_s, T/W / TW_s] with WS_s, TW_s taken from the seed,
-        %   not on [W/S, T/W] directly. Near the envelope minimum the
-        %   residual's W/S-gradient vanishes by definition, so in raw units
-        %   the Lagrangian curvature is O(TW/WS^2) ~ 1e-5 and sqp's
-        %   BFGS/identity Hessian produces steps of that same tiny order --
-        %   the solver stalls at the seed (observed: 97 -> 97.00006 on a toy
-        %   whose true optimum is 100). In seed-normalized variables the
-        %   curvature is O(TW) ~ 0.1-1 and sqp converges in a few
-        %   iterations. Central finite differences for the same
-        %   shallow-envelope accuracy reason.
+        %   Algorithm 'sqp': smooth closed-form residuals, small dense
+        %   problem, robust to a seed on the envelope. fmincon works on
+        %   seed-normalized z = x ./ s (not raw [W/S, T/W]): near the minimum
+        %   the raw Lagrangian curvature is O(TW/WS^2) ~ 1e-5 and sqp stalls;
+        %   normalized it is O(TW) and converges. Central finite differences
+        %   for the same shallow-envelope accuracy.
         %
         %   Returns WS_opt, TW_opt plus an info struct: exitflag, iterations,
-        %   funcCount (from fmincon's output), the final residual vector g in
-        %   constraint order, and the near-active mask |g| < ACTIVE_TOL with
-        %   the matching constraint names (which constraints bind). Errors
-        %   with identifier ConstraintAnalysis:optimalPointContinuousInfeasible
-        %   if exitflag <= 0 -- never returns a silent bad point -- and
-        %   errors up front if fmincon (Optimization Toolbox) is absent.
-        %   Recompute-on-read like the rest of the class (see header):
-        %   nothing is cached; every call re-reads the live constraint
-        %   objects, so a mutated aero/prop shows up immediately.
-        %
-        %   Added 2026-08-13 (user-directed): continuous, sweep-free
-        %   refinement of optimal_point(); realizes docs/ToDo_Darshan.md
-        %   item 2.
+        %   funcCount, the final residual vector g in constraint order, and
+        %   the near-active mask |g| < ACTIVE_TOL with matching names. Errors
+        %   ConstraintAnalysis:optimalPointContinuousInfeasible if
+        %   exitflag <= 0, and errors up front if fmincon is absent.
+        %   Recompute-on-read (see header).
             arguments
                 obj (1,1) ConstraintAnalysis
                 x0 double {mustBeReal, mustBeFinite, mustBeNonnegative} = []
@@ -210,9 +156,7 @@ classdef ConstraintAnalysis
             if isempty(x0)
                 [WS_seed, TW_seed] = obj.optimal_point();
                 if isempty(WS_seed) || isempty(TW_seed)
-                    % Grid seed found no feasible node (all WS_range above the
-                    % tightest wall, or no producers): fail loudly here rather
-                    % than inside reshape with an unrelated identifier.
+                    % Grid seed found no feasible node: fail loudly here.
                     error('ConstraintAnalysis:optimalPointContinuousInfeasible', ...
                         ['optimal_point() found no feasible grid node to seed ', ...
                          'from (empty feasible set on WS_range).']);
@@ -225,15 +169,12 @@ classdef ConstraintAnalysis
             end
             x0 = reshape(x0, 1, 2);
 
-            % T/W floor: strictly positive (not 0) because DesignPoint
-            % requires T_SL > 0 (mustBePositive), and sqp honors bounds at
-            % every iterate, so make_dp is never handed T/W = 0.
+            % T/W floor strictly positive: DesignPoint requires T_SL > 0 and
+            % sqp honors bounds, so make_dp is never handed T/W = 0.
             TW_FLOOR   = 1e-6;   % dimensionless T/W lower bound
             ACTIVE_TOL = 1e-6;   % |g| below this counts as a binding constraint
 
-            % Seed-normalized variables z = x ./ s -- see SCALING note in the
-            % header. The seed is feasible and positive, so s is a valid
-            % characteristic scale for both variables.
+            % Seed-normalized variables z = x ./ s (see header SCALING note).
             s = [x0(1), max(x0(2), TW_FLOOR)];
 
             % Unit-weight DesignPoint reproducing (W/S, T/W) -- see header.
@@ -353,19 +294,13 @@ classdef ConstraintAnalysis
         %   requirements JSON plus a condition-name -> ConstraintType map,
         %   wiring the injected aero/prop into every constraint.
         %
-        %   aero, prop -- the discipline objects injected into each constraint
-        %                 (dependency injection; typically handle objects a
-        %                 sizing loop mutates in place, so each constraint's
-        %                 next read tracks the current design -- see the class
-        %                 header "RECOMPUTE-ON-READ").
+        %   aero, prop -- discipline objects injected into each constraint
+        %                 (typically handles a sizing loop mutates in place).
         %   json_path  -- requirements JSON path (e.g. f16a_requirements_path()).
         %   classMap   -- dictionary(string -> ConstraintType). Each JSON
         %                 condition whose name is a key is built via that
-        %                 ConstraintType; a condition ABSENT from the map is
-        %                 intentionally excluded (this is how e.g. a Stall wall
-        %                 is left out -- there is no includeStall flag). Keying
-        %                 on the ConstraintType enum means only IMPLEMENTED
-        %                 constraint classes can be selected.
+        %                 ConstraintType; a condition absent from the map is
+        %                 excluded (this is how e.g. a Stall wall is left out).
         %   WS_range   -- wing-loading sweep handed to the aggregator.
             arguments
                 aero (1,1) AerodynamicsBase

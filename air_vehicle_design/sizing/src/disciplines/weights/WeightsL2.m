@@ -1,15 +1,14 @@
 classdef WeightsL2
 %WEIGHTSL2  Level-2 weights static toolbox: surface density x area, plus fractions.
 %
-%   Call as WeightsL2.method(...); never instantiated, not in the inheritance
-%   chain. F16WeightsL2 inherits WeightsModelL2 and delegates to these statics.
+%   Call as WeightsL2.method(...); never instantiated. F16WeightsL2 inherits
+%   WeightsModelL2 and delegates here.
 %
 %   Structural groups: [Raymer 6th ed. Table 15.2] psf surface densities on
 %   real areas. Landing gear, installed engine and all-else-empty: the AE481
-%   metabook Sec. 7 fraction table -- a SEPARATE, unnumbered table, not
-%   Table 15.2, which in the repo extract carries only the psf densities.
+%   metabook Sec. 7 fraction table (a separate, unnumbered table).
 %
-%   OEW(W_TO) must evaluate both fraction terms at the PASSED W_TO and must not
+%   OEW(W_TO) evaluates both fraction terms at the PASSED W_TO. It must not
 %   read the W_all_else_empty / W_installed_engine properties, which are pinned
 %   to the object's own W_TO.
 %
@@ -123,22 +122,15 @@ classdef WeightsL2
                 case 'jet_fighter',      f = 0.033;  % non-Navy fighter [metabook_data.md:330]
                 case 'jet_transport',    f = 0.043;  % transport [metabook_data.md:332]
                 case 'general_aviation'
-                    % TODO (todo 2026-07-25 Phase 4 §P4-7, OPEN): 0.057 is
-                    % UNCITED. The metabook fraction table (metabook_data.md:328-334)
-                    % has NO general-aviation landing-gear row — only fighter
-                    % 0.033 (:330), Navy fighter 0.045 (:331) and transport
-                    % 0.043 (:332). This value has no source anywhere in the
-                    % repo; it is retained unchanged rather than deleted or
-                    % re-derived, and must not be cited to the metabook until the
-                    % user supplies a source. It does not affect the F-16A
-                    % (jet_fighter), so this is a citation-integrity item.
+                    % TODO (todo Phase 4 §P4-7, OPEN): 0.057 is UNCITED. The
+                    % metabook fraction table (metabook_data.md:328-334) has no
+                    % general-aviation row. Do not cite to the metabook until
+                    % the user supplies a source. Does not affect the F-16A.
                     f = 0.057;  % [UNCITED — see the TODO above]
                 otherwise
-                    % NOTE: the extract carries a Navy-fighter row, 0.045 *W0
-                    % [metabook_data.md:331], that this lookup deliberately does
-                    % NOT add — no consumer exists and adding it would be a
-                    % feature beyond this phase. Recorded so its absence reads as
-                    % a decision, not an oversight. todo §P4-7 (open).
+                    % NOTE: the extract's Navy-fighter row, 0.045 *W0
+                    % [metabook_data.md:331], is deliberately not added — no
+                    % consumer. todo §P4-7 (open).
                     error('WeightsL2:UnknownCategory', ...
                           'No LG fraction for "%s".', aircraft_category);
             end

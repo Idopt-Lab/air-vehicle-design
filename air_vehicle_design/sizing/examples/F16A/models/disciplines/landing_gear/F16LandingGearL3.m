@@ -1,29 +1,21 @@
 classdef F16LandingGearL3 < handle
 %F16LANDINGGEARL3  F-16A Block 10/15 Level-3 landing-gear student class.
 %
-%   F-16-ONLY, NO ABSTRACT BASE TIER -- same rationale as F16LandingGearL2
-%   (see that class's header). Identical equations to F16LandingGearL2
-%   (Raymer 6th ed. Ch.11 Table 11.1 statistical tire sizing + the 90/10
-%   gear load split): tire sizing depends only on W_TO and the gear-load
-%   split, neither of which changes with geometry fidelity, so this class
-%   REUSES F16LandingGearL2's Static low-level methods (tire_diameter,
-%   tire_width, lookup_tire_sizing_coeffs) directly rather than duplicating
-%   the Table 11.1 switch-case.
+%   F-16-only, no abstract Base tier -- same rationale as F16LandingGearL2.
+%   Identical equations to F16LandingGearL2 (Raymer 6th ed. Ch.11 Table 11.1
+%   statistical tire sizing + the 90/10 gear load split): tire sizing depends
+%   only on W_TO and the gear-load split, neither of which changes with
+%   geometry fidelity, so this class reuses F16LandingGearL2's Static low-level
+%   methods (tire_diameter, tire_width, lookup_tire_sizing_coeffs) directly.
 %
-%   < handle IS REQUIRED -- same rationale as F16LandingGearL2 (see that
-%   class's header): genuine mutable design-variable state, no Base tier to
-%   inherit handle semantics from transitively.
+%   < handle IS REQUIRED -- same rationale as F16LandingGearL2.
 %
-%   Kept as a separate class from F16LandingGearL2 (rather than reusing it
-%   outright) only to match the original step-9 subsystems design's
-%   Files-to-Create table, which lists both, and the JSON's parallel
-%   f16a_L3.json .subsystems.landing_gear block / companion doc -- JUDGMENT
-%   CALL, flagged: today the two classes' equations are IDENTICAL, and L3
-%   carries no geometry injection either (see F16LandingGearL2.md "no
-%   geometry input" note), because bay_volume (item 11) errors regardless of
-%   which geometry tier might eventually supply a fuselage envelope for it.
+%   Kept as a separate class from F16LandingGearL2 only to match the parallel
+%   f16a_L3.json .subsystems.landing_gear block / companion doc -- judgment
+%   call: the two classes' equations are identical, and L3 carries no geometry
+%   injection either (bay_volume, item 11, errors regardless of geometry tier).
 %
-%   CONSTRUCTOR: F16LandingGearL3(json_path, weights). Both REQUIRED.
+%   CONSTRUCTOR: F16LandingGearL3(json_path, weights). Both required.
 %
 %   SOURCES: same as F16LandingGearL2 -- see that class's header.
 %
@@ -34,10 +26,8 @@ classdef F16LandingGearL3 < handle
         N_NOSE_WHEELS = 1   % F-16 standard tricycle gear: one nose wheel
     end
 
-    % ======================================================================= %
     % INPUTS (4) + 1 injected object -- plain mutable properties, set once by
     % the constructor. Authoritative table: F16LandingGearL3.md §2.
-    % ======================================================================= %
     properties
         aircraft_category_table_row = 'Jet fighter/trainer'  % [Raymer 6th ed. Table 11.1, p.344; f16a_L3.json .subsystems.landing_gear.tire_sizing.aircraft_category_table_row]
         main_pct = 90   % [Raymer 6th ed. Ch.11 p.344 prose; f16a_L3.json .subsystems.landing_gear.gear_load_split.main_pct]
@@ -48,12 +38,9 @@ classdef F16LandingGearL3 < handle
         weights   % (1,1) WeightsBase -- supplies W_TO
     end
 
-    % ======================================================================= %
-    % DERIVED (8) -- same rationale as F16LandingGearL2 (see that class's
-    % header note on Dependent vs. plain-method): zero-extra-arg quantities
-    % that read only the inputs/injected weights collaborator above.
+    % DERIVED (8) -- same rationale as F16LandingGearL2: zero-extra-arg
+    % quantities that read only the inputs/injected weights collaborator above.
     % bay_volume stays a plain METHOD, not Dependent (deliberately errors).
-    % ======================================================================= %
     properties (Dependent)
         W_main_total
         W_nose_total

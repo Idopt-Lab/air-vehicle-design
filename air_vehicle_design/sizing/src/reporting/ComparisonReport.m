@@ -2,12 +2,8 @@ classdef ComparisonReport
 %COMPARISONREPORT  Shared builder/renderer for the *_brandt_comparison reports.
 %
 %   ONE renderer for all four discipline comparison reports (geometry,
-%   aerodynamics, propulsion, weights) so their console blocks, .json and .md
-%   outputs are identical in shape by construction. Each script previously
-%   carried its own private copies of row/section/table_to_rows/write_markdown,
-%   which had already drifted into four different column sets (8, 9 and 10
-%   columns, and three different names for "the other source"). A shared
-%   renderer is the only thing that keeps them from drifting again.
+%   aerodynamics, propulsion, weights) so their console/.json/.md outputs are
+%   identical in shape by construction.
 %
 %   THE COLUMN SCHEME (identical in every report):
 %
@@ -15,28 +11,21 @@ classdef ComparisonReport
 %     Divergence | Cite | Notes
 %
 %     Parameter   what was computed, with units
-%     Fidelity    which tier produced it -- 'L1' / 'L2' / 'L3', or 'N/A' when
-%                 nothing models the quantity, or '--' for a reported-but-
-%                 rejected variant
+%     Fidelity    which tier produced it -- 'L1'/'L2'/'L3', 'N/A', or '--' for
+%                 a reported-but-rejected variant
 %     Computed    the framework's value
-%     Reference   the primary ground-truth value (Brandt, in every report today)
+%     Reference   the primary ground-truth value (Brandt today)
 %     %Diff       (Computed - Reference)/Reference, signed
-%     2nd Source  the report's SECOND ground truth, named in its preamble:
-%                 geometry -> T.O. 1F-16A-1 / USAF 3-view
-%                 aerodynamics -> AF manual figure, or a published estimate
-%                 propulsion -> the corresponding Brandt-model figure
-%                 weights -> corrections.xls (Casey's revised workbook)
-%                 Brandt is never the only ground truth, and where two sources
-%                 disagree the L3 tier deliberately follows the physical one.
-%                 This column is what makes that visible instead of looking
-%                 like framework error.
+%     2nd Source  the report's second ground truth, named in its preamble.
+%                 Where the two sources disagree the L3 tier follows the
+%                 physical one; this column makes that visible.
 %     Divergence  three states -- see `row`'s help below
 %     Cite        where the Reference value comes from (cell / document)
 %     Notes       why the numbers differ, in words
 %
 %   These reports are INFORMATIONAL ONLY. No pass/fail assertions, not part of
-%   run_all_tests, and no value in them may ever be used to backfill a unit
-%   test's expected value (CLAUDE.md's two-tier rule).
+%   run_all_tests, and no value may ever backfill a unit test's expected value
+%   (CLAUDE.md's two-tier rule).
 
     methods (Static)
 

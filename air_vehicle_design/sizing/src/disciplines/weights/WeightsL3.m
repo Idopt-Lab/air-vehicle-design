@@ -1,12 +1,11 @@
 classdef WeightsL3
 %WEIGHTSL3  Level-3 weights static toolbox: Raymer Sec. 15.3.1 buildup.
 %
-%   Call as WeightsL3.method(...); never instantiated, not in the inheritance
-%   chain. F16WeightsL3 inherits WeightsModelL3 and delegates to these statics.
+%   Call as WeightsL3.method(...); never instantiated. F16WeightsL3 inherits
+%   WeightsModelL3 and delegates here.
 %
 %   Every equation here is [Raymer 6th ed. Sec. 15.3.1], Eqs. 15.1-15.24
-%   (fighter/attack statistical weights). Individual methods cite their own
-%   equation number only.
+%   (fighter/attack statistical weights). Each method cites its own equation.
 %
 %   UNITS (Raymer's nomenclature, English throughout):
 %     weights, thrust                          [lbf]
@@ -17,15 +16,13 @@ classdef WeightsL3
 %     V_t, V_i, V_p                            [gal]
 %     SFC [1/hr], R_kva [kVA], K_* and N_* [-]
 %
-%   TODO: EVERY Sec. 15.3.1 EXPONENT IS UNVERIFIED AGAINST THE BOOK.
-%   62 rows: 2 CONFLICT / 8 FROM-CODE / 26 VERIFY / 26 IMAGE-ONLY (corrected
-%   2026-07-30 by a direct recount of the recovered table; the previous
-%   9/24/27/5 figures summed to 67, not the table's actual 62 rows).
-%   The two CONFLICT rows keep their code values: Eq. 15.13 N_en^1.023
-%   (extract says 1.078) and Eq. 15.3 cos(Lambda_vt)^-0.323 (extract says
-%   -1.0). Do not change a value to make the guard green. Guarded by
+%   TODO: EVERY Sec. 15.3.1 EXPONENT IS UNVERIFIED AGAINST THE BOOK. 62 rows:
+%   2 CONFLICT / 8 FROM-CODE / 26 VERIFY / 26 IMAGE-ONLY. The two CONFLICT
+%   rows keep their code values: Eq. 15.13 N_en^1.023 (extract says 1.078) and
+%   Eq. 15.3 cos(Lambda_vt)^-0.323 (extract says -1.0). Do not change a value
+%   to make the guard green. Guarded by
 %   TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified; checklist in
-%   VnV/BrandtF16A/todo.md 2026-07-24 Sec. 3a.
+%   VnV/BrandtF16A/todo.md Sec. 3a.
 %
 %   Companion doc: src/disciplines/weights/WeightsL3.md
 

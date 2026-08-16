@@ -6,14 +6,11 @@ classdef (Abstract) Only_WbyS < PointPerformanceBase
 %   imposes on wing loading (e.g. LandingConstraint's braking ground roll,
 %   StallConstraint's stall-speed requirement). An Only_WbyS imposes no thrust
 %   demand, so it has no required_TW; ConstraintAnalysis reads it as an
-%   explicit W/S wall via WS_max() (excluding W/S > WS_max from the optimum
-%   search), not as a curve.
+%   explicit W/S wall via WS_max(), not as a curve.
 %
-%   Mirrors NPTEL_Fighter_Aircraft_Sizing.ipynb's Only_WbyS class -- the
-%   notebook groups point-performance conditions into three categories
-%   (Only_WbyS, Only_TbyW, Both_WbyS_TbyW) by which of W/S and T/W each
-%   condition's governing equation depends on (see the sibling category
-%   classes Only_TbyW.m / Both_WbyS_TbyW.m).
+%   [NPTEL_Fighter_Aircraft_Sizing.ipynb groups point-performance conditions
+%   into three categories -- Only_WbyS, Only_TbyW, Both_WbyS_TbyW -- by which
+%   of W/S and T/W each governing equation depends on.]
 
     methods (Abstract)
 
@@ -31,13 +28,9 @@ classdef (Abstract) Only_WbyS < PointPerformanceBase
         %
         %       g = dp.WS - obj.WS_max()    (g <= 0 feasible)
         %
-        %   A W/S-wall condition: the residual is on the W/S axis, dp.TW
-        %   unused. WS_max is an upper bound (the design must be AT MOST this
-        %   loaded), so g = dp.WS - WS_max <= 0 is feasible -- the same
-        %   required - available sign convention every category uses
-        %   (PointPerformanceBase.m). g = -margin. Mirrors
-        %   NPTEL_Fighter_Aircraft_Sizing.ipynb's Only_WbyS.compute_constraint
-        %   (cell 9).
+        %   A W/S wall: residual on the W/S axis, dp.TW unused. WS_max is an
+        %   upper bound, so g = dp.WS - WS_max <= 0 is feasible. g = -margin.
+        %   [NPTEL_Fighter_Aircraft_Sizing.ipynb cell 9.]
         %
         %   dp -- a DesignPoint (W_TO, T_SL, S_ref); only dp.WS is used.
             arguments

@@ -9,9 +9,9 @@ external weight (avionics `W_empty`, a required fuel weight) take it as an expli
 exactly as `F16WeightsL1.OEW(obj, W_TO)` takes `W_TO` rather than injecting a weights object.
 
 `avionics_weight_fraction`, `avionics_density`, `fuel_density`, `fuselage_raw_volume` and
-`fuel_volume` are declared as the shared abstract contract on `src/base/SubsystemsBase.m` (2026-08-03),
-not independently per fidelity level — see that file's header note. `fuselage_raw_volume`/`fuel_volume`
-are honestly 0 here: L1 has no fuselage or fuel-bay geometry to compute them from, not guessed.
+`fuel_volume` are the shared abstract contract on `src/base/SubsystemsBase.m`, not declared per
+fidelity level. `fuselage_raw_volume`/`fuel_volume` are honestly 0 here: L1 has no fuselage or
+fuel-bay geometry to compute them from.
 
 ---
 
@@ -44,9 +44,9 @@ are honestly 0 here: L1 has no fuselage or fuel-bay geometry to compute them fro
 $$W_{avionics} = f_{avionics}(cat) \cdot W_{empty} \qquad
   V_{avionics} = \frac{W_{avionics}}{\rho_{avionics,L1}}$$
 
-$f_{avionics}$ is the DECIDED value: the Table 11.6 row's own range midpoint (Casey, 2026-08-03).
-$\rho_{avionics,L1} = 37.5$ lb/ft³ is the average of Raymer's own stated 30–45 lb/ft³ range — L1's
-own figure, distinct from L2/L3's flat Nicolai 45 lb/ft³ (fidelity-split decision, Casey, 2026-07-31).
+$f_{avionics}$ is the Table 11.6 row's range midpoint. $\rho_{avionics,L1} = 37.5$ lb/ft³ is the
+average of Raymer's stated 30–45 lb/ft³ range — L1's figure, distinct from L2/L3's flat Nicolai
+45 lb/ft³.
 
 **Fuel volume from weight** — Nicolai & Carichner Table 8.6:
 
@@ -65,9 +65,8 @@ No packaging factor: item 1's status is "not usable at L1 — no geometric raw v
 | JP-8 | 6.7 | 50.0 |
 | Aviation gas | 6.0 | 44.9 |
 
-F-16 example uses **JP-8** (Casey, 2026-08-03 — T.O. 1F-16A-1's own stated nominal internal-fuel
-type, `usaf_f16_data.md:86`), replacing the legacy code's single hardcoded, uncited 6.47 (JP-4-only,
-which also does not exactly match Table 8.6's own JP-4 figure of 6.5).
+F-16 example uses **JP-8** — T.O. 1F-16A-1's stated nominal internal-fuel type
+(`usaf_f16_data.md:86`).
 
 `lookup_avionics_weight_fraction_range` — Raymer 6th ed. Table 11.6, p.375, full 8-row table:
 
@@ -82,8 +81,7 @@ which also does not exactly match Table 8.6's own JP-4 figure of 6.5).
 | Bombers | 0.06–0.08 |
 | Jet trainers | 0.03–0.04 |
 
-F-16 example uses the **Fighters** row, decided midpoint **0.055** (Casey, 2026-08-03) — not the
-legacy code's hardcoded 0.03, which is the low end of the same correct range, not a wrong value.
+F-16 example uses the **Fighters** row, midpoint **0.055**.
 
 Every lookup errors (`SubsystemsL1:unknownFuelType` / `SubsystemsL1:unknownAvionicsCategory`) for an
 unlisted category rather than guessing.

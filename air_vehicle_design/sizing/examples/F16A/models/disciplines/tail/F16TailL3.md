@@ -31,7 +31,7 @@ t3.size(300, 30, 11, 46.5)   % also errors: TailL3:citationNotAvailable
 
 This is a **deliberate, expected failure** — not a bug. Raymer Ch. 16's stability-and-control
 tail-sizing equations are not verifiable from anything in this repository (full record: `TailL3.md`
-Sec. 1; `VnV/BrandtF16A/todo.md` 2026-07-28 Finding 3, status RESOLVED-DEFERRED).
+Sec. 1; `VnV/BrandtF16A/todo.md` Finding 3, status RESOLVED-DEFERRED).
 
 ## 3. Why this class exists at all
 

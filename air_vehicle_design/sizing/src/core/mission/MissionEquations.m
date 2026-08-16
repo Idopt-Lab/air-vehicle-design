@@ -108,21 +108,12 @@ classdef MissionEquations
                                  '"%s" (fighter row).'], phase);
                     end
                 case "transport"
-                    % Jet-transport fixed fuel fractions.
-                    % [Raymer Table 3.4, metabook_data.md lines 28-36]. That
-                    % table gives four bundled rows:
-                    %   engine start + warm-up/takeoff = 0.970
-                    %   climb                          = 0.985
-                    %   descent                        = 0.990
-                    %   landing + taxi                 = 0.995
-                    % The 0.970 row bundles startup + warm-up + takeoff into a
-                    % single fraction. To keep the per-phase interface (each
-                    % segment must yield a burn), the whole 0.970 bundle is
-                    % assigned to the "takeoff" phase and "startup"/"taxi"
-                    % (pre-takeoff ground ops) are set to 1.000 (no additional
-                    % burn) so the product across startup*taxi*takeoff equals
-                    % the printed 0.970 exactly -- no double counting. The
-                    % 0.995 landing+taxi bundle maps to "landing".
+                    % Jet-transport fixed fuel fractions [Raymer Table 3.4,
+                    % metabook_data.md lines 28-36]. The 0.970 row bundles
+                    % start+warm-up+takeoff; it is assigned wholly to "takeoff"
+                    % with startup/taxi set to 1.000, so the product equals the
+                    % printed 0.970 with no double counting. The 0.995
+                    % landing+taxi bundle maps to "landing".
                     switch phase
                         case "startup", wf = 1.000;   % folded into takeoff bundle
                         case "taxi",    wf = 1.000;    % folded into takeoff bundle

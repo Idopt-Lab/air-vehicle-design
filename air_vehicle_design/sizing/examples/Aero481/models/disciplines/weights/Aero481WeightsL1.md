@@ -24,27 +24,17 @@ and are marked `_TODO -- UNCITED` (A7). See `examples/Aero481/aero481_scribe_pla
 
 ---
 
-## The delta model was removed, then RESTORED (2026-08-15)
+## The self-scaling baselines keep A02 stable
 
-An earlier pass **removed** the delta model in favour of the bare Sainristil fraction, because a
-fraction-plus-deltas build-up appeared to make the L1 sizing loop run away (`W_TO -> 1.2e6 lbf`). That
-diagnosis was wrong. The runaway was a **fixed-baseline bug in `SizingLoopL1`**, not a defect of the
-A02 model: `SizingLoopL1` had frozen a NON-scaling baseline (constant `S_ref_baseline` / `T_baseline`),
-which turned each delta into a second `W_TO`-proportional term and drove the empty-weight fraction
-toward 1.
+Both A02 delta baselines self-scale with `W_TO`, so each delta stays BOUNDED and OEW does not run away:
 
-The delta model is now **RESTORED** because A02 shows it is **A481's own model** and is **stable with
-A02's self-scaling baselines**:
+- **The WING baseline `W_TO / design_WS_psf`** is the wing area the current `W_TO` wants at the design
+  wing loading. The wing delta `rho_w*(S_ref - W_TO/design_WS_psf)` tracks only the deviation of the
+  ACTUAL `S_ref` from that area.
+- **The ENGINE baseline `design_TW * W_TO`** is the design-T/W-implied thrust. The engine delta
+  measures only how far the ACTUAL thrust `prop.T_SL` sits from it.
 
-- **The WING baseline `W_TO / design_WS_psf`** is the wing area the CURRENT `W_TO` wants at the design
-  wing loading. It scales WITH `W_TO`, so the wing delta `rho_w*(S_ref - W_TO/design_WS_psf)` tracks
-  only the deviation of the ACTUAL `S_ref` from the design-wing-loading area, not `W_TO` itself.
-- **The ENGINE baseline `design_TW * W_TO`** is the design-T/W-implied thrust. It too scales WITH
-  `W_TO`, so the engine delta measures only how far the ACTUAL installed thrust `prop.T_SL` sits from
-  the design-T/W thrust.
-
-With both baselines self-scaling, each delta stays BOUNDED and OEW does not run away. This is verified:
-`A02(Design01, T_SL = 43000 lbf, S = 50 m^2)` sizes the F-35 to **62,399 lb**.
+Verified: `A02(Design01, T_SL = 43000 lbf, S = 50 m^2)` sizes the F-35 to **62,399 lb**.
 
 ---
 

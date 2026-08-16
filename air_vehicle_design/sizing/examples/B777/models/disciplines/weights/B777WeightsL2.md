@@ -47,10 +47,9 @@ toolbox statics (`wing_unit_weight` 10, `HT/VT_unit_weight` 5.5,
 | **S_ref** | `geom.S_exposed_wing` | a bigger wing → bigger exposed area → heavier wing |
 | **T0** | `prop.T_SL / n` → Roskam | more thrust → heavier engine |
 
-This is exactly why the closure is now stable where the L1 fraction model
-diverged: the structural terms are **fixed** (geometry/thrust, not W0), so only
-the `0.213·W0` gear+all-else fraction scales — `We/W0` falls as `W0` rises
-instead of staying at the runaway 0.452 constant.
+The closure is stable because the structural terms are **fixed**
+(geometry/thrust, not W0), so only the `0.213·W0` gear+all-else fraction scales
+— `We/W0` falls as `W0` rises.
 
 ## 3. Baseline value and the two metabook decisions
 

@@ -1,21 +1,16 @@
 classdef WeightsL1
 %WEIGHTSL1  Level-1 weights static toolbox: statistical empty-weight fraction.
 %
-%   Call as WeightsL1.method(...); never instantiated, not in the inheritance
-%   chain. F16WeightsL1 inherits WeightsModelL1 and delegates to these statics.
+%   Call as WeightsL1.method(...); never instantiated. F16WeightsL1 inherits
+%   WeightsModelL1 and delegates here.
 %
 %   Central estimate: [Raymer 6th ed. Table 3.1] empty-weight-fraction power
 %   law. Independent lower bound: [Roskam Part I Eq. 2.16 with Table 2.15].
-%   Both take only W_TO -- L1 has no geometry and no engine data.
+%   Both take only W_TO. Both coefficient sets are secondary-source extracts.
 %
-%   Both coefficient sets come from secondary sources: the metabook cites
-%   Raymer rather than being Raymer, and the Roskam rows were OCR-recovered
-%   from an image-only table carrying its own verify-against-the-book warning.
-%
-%   TODO: the original step-5 weights design cites Raymer Table 6.1 for the
-%   same power law, but Table 6.1's coefficients are NOT present in this repo
-%   -- the code uses Table 3.1. Guarded by
-%   TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo.
+%   TODO: the original step-5 design cites Raymer Table 6.1 for the same power
+%   law, but Table 6.1's coefficients are NOT present in this repo -- the code
+%   uses Table 3.1. Guarded by TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo.
 %
 %   Companion doc: src/disciplines/weights/WeightsL1.md
 
@@ -27,9 +22,8 @@ classdef WeightsL1
 
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] via the Raymer Table 3.1 power law.
-        %   [Raymer 6th ed. Table 3.1]  The OFFICIAL L1 answer — see the class
-        %   header for why the Raymer central estimate is used here rather than
-        %   the Roskam lower bound.
+        %   [Raymer 6th ed. Table 3.1]  The L1 answer (Raymer central estimate,
+        %   not the Roskam lower bound).
         %   W_TO — candidate gross weight [lbf].
             oew = WeightsL1.compute_We_fraction(obj, W_TO, obj.aircraft_category) * W_TO;
         end
@@ -64,10 +58,8 @@ classdef WeightsL1
         %     Weng_start   = 9.33  * (Weng_dry/1000)^1.078  (7.18)
         %     Wengine_total = sum of the above              (7.19)
         %
-        %   T0_lbf -- maximum SLS thrust per engine [lbf]. Returns the total
-        %   weight of ONE engine [lbf] (dry + oil + reverser + controls +
-        %   start). metabook_data.md lists no Eq. 7.17 term; the five printed
-        %   components are summed exactly as Eq. 7.19 states.
+        %   T0_lbf -- max SLS thrust per engine [lbf]. Returns the total weight
+        %   of ONE engine [lbf]. No Eq. 7.17 term is listed; sum is Eq. 7.19.
             arguments
                 T0_lbf (1,1) double {mustBePositive}
             end
@@ -104,18 +96,14 @@ classdef WeightsL1
         function c = lookup_coeffs(aircraft_category)
         %LOOKUP_COEFFS  Return (Kvs, A, C) constants for Raymer Table 3.1.
         %   aircraft_category — char/string (e.g. 'jet_fighter').
-        %   Every row below is transcribed from the named repo extract
-        %   docs/reference_extracts/metabook_data.md, which
-        %   is the AE481 metabook's copy of Raymer Table 3.1 (a SECONDARY
-        %   source citing Raymer, not Raymer itself).
+        %   Rows transcribed from docs/reference_extracts/metabook_data.md (the
+        %   AE481 metabook's copy of Raymer Table 3.1, a secondary source).
         %   [! verify all rows against the printed Raymer 6th ed. Table 3.1
         %      before citing as book-verified — todo §P4-8]
-        %   A is the US-unit coefficient (the extract also lists A (SI), unused).
-        %   K_vs = 1.00 fixed sweep / 1.04 variable sweep [metabook_data.md:20-22];
-        %   the F-16 is fixed-sweep, so 1.04 is never exercised here.
+        %   A is the US-unit coefficient. K_vs = 1.00 fixed / 1.04 variable
+        %   sweep [metabook_data.md:20-22]; the F-16 is fixed-sweep.
         %   NOT CARRIED: the extract's 5th row, UAV-Tac Recce / UCAV
-        %   (A = 1.67, C = -0.16, metabook_data.md:25) — no consumer, recorded
-        %   for completeness rather than added speculatively.
+        %   (A = 1.67, C = -0.16, metabook_data.md:25) — no consumer.
             switch lower(aircraft_category)
                 case 'jet_fighter'
                     c = struct('A', 2.34, 'C', -0.13, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:22]
@@ -135,10 +123,9 @@ classdef WeightsL1
         function c = lookup_roskam_coeffs(aircraft_category)
         %LOOKUP_ROSKAM_COEFFS  Return (A, B) constants for Roskam Table 2.15.
         %   [Roskam Part I Table 2.15, book p.47 / PDF p.59]
-        %   All five rows transcribed from the named repo extract
-        %   docs/reference_extracts/roskam_vol1_data.md:57-61.
-        %   The extract's caveat (:63): the full 12-category table is image-only
-        %   and these rows were OCR-recovered — traceable, not book-verified.
+        %   Five rows transcribed from
+        %   docs/reference_extracts/roskam_vol1_data.md:57-61. The extract's
+        %   caveat (:63): image-only table, OCR-recovered, not book-verified.
             switch lower(aircraft_category)
                 case 'jet_fighter'
                     c = struct('A', 0.5091, 'B', 0.9505);  % Fighters — jets [roskam_vol1_data.md:57]

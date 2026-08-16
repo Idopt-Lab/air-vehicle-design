@@ -1,12 +1,7 @@
 classdef (Abstract) PropulsionModelL1 < PropulsionBase
 %PROPULSIONMODELL1  Tier-2 abstract enforcer for Level-1 propulsion.
-%
-%   Inherits PropulsionBase directly, not another PropulsionModelLN.
-%
-%   L1 is a density-ratio thrust lapse and a two-value TSFC table: no Mach
-%   term in the lapse, no afterburner split, no supersonic value.
-%
-%   Toolbox companion: src/disciplines/propulsion/PropL1.md
+%   Declares the L1 propulsion contract (density-ratio lapse, two-value TSFC
+%   table). See docs/decision_log.md. Toolbox companion: PropL1.md
 
     properties (Abstract)
         engine_type    % string; selects the PropL1 lapse exponent and TSFC row

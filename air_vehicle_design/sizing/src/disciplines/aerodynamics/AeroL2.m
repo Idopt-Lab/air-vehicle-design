@@ -1,32 +1,27 @@
 classdef AeroL2
 %AEROL2  Level-2 aerodynamics static toolbox: geometry-dependent clean polar.
-%
 %   Call as AeroL2.method(...); never instantiated, not in the inheritance
 %   chain. F16AeroL2 inherits AeroModelL2 and delegates to these statics.
-%
-%   All geometry is read from the injected geometry object through the concrete
-%   class's Dependent getters; this toolbox never sees a hardcoded geometry
-%   number. The skin-friction primitives (dyn_viscosity, compute_Re,
-%   Cf_turbulent) live here as the single source of truth and are also called
-%   by the L3 component buildup.
+%   Geometry is read from the injected geometry object through the concrete
+%   class's Dependent getters. The skin-friction primitives (dyn_viscosity,
+%   compute_Re, Cf_turbulent) are the single source of truth, shared with the
+%   L3 component buildup.
 %
 %   Sources: [Raymer 6th ed. Eq. 12.23] parasite drag; [Table 12.3] Cfe;
 %   [Eq. 12.48/12.49] Oswald e; [Eq. 12.50/12.51] K1; [Eq. 12.6] lift slope;
 %   [Eq. 12.15] clean CLmax; [Eq. 12.25/12.27] Reynolds number and Cf;
 %   [Sec. 12.3.1] viscosity. K2 subsonic follows [Brandt Sec. 4.3, Aero!G17].
 %
-%   TRANSONIC BAND (MACH_SUBSONIC_MAX < M < MACH_SUPERSONIC_MIN) is not
+%   Transonic band (MACH_SUBSONIC_MAX < M < MACH_SUPERSONIC_MIN) is not
 %   modelled: Eq. 12.51 has a pole at 4*AR*beta = 2 (M ~ 1.014 at AR = 3), so
-%   that band returns NaN as an explicit "not modelled" signal rather than a
-%   singular value.
-%
+%   the band returns NaN rather than a singular value.
 %   Companion doc: src/disciplines/aerodynamics/AeroL2.md
 
     properties (Constant)
         % Transonic-band boundaries (see class header). Subsonic below
         % MACH_SUBSONIC_MAX; supersonic at/above MACH_SUPERSONIC_MIN; the band
-        % in between is "not modeled". MACH_SUPERSONIC_MIN=1.05 sits clear of
-        % the Eq. 12.51 pole at M~1.014 (AR=3).
+        % in between is not modeled. MACH_SUPERSONIC_MIN=1.05 clears the
+        % Eq. 12.51 pole at M~1.014 (AR=3).
         MACH_SUBSONIC_MAX  = 0.95
         MACH_SUPERSONIC_MIN = 1.05
     end
@@ -75,10 +70,10 @@ classdef AeroL2
         end
 
         function e = get_e_osw(obj)
-        %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49).
+        %GET_E_OSW  Official Oswald efficiency [Raymer Eq. 12.48/12.49].
         %   Selected by obj.e_method ("official"). Brandt's own e0 (Aero!G12)
-        %   is available as the SEPARATE static oswald_eff_brandt for the
-        %   comparison report ONLY -- it is never what drag_polar returns.
+        %   is the separate static oswald_eff_brandt, for the comparison report
+        %   only; drag_polar never returns it.
             switch string(obj.e_method)
                 case "official"
                     e = AeroL2.oswald_eff(obj.AR, obj.Lambda_LE_deg);
@@ -93,10 +88,9 @@ classdef AeroL2
         end
 
         function val = get_CD0(obj)
-        %GET_CD0  Subsonic clean CD0 = Cfe*(S_wet/S_ref).  Raymer Eq. 12.23.
-        %   Cfe (obj.Cfe) is the genuine Raymer Table 12.3 spec value
-        %   (0.0035, AF fighter); S_wet/S_ref are read live from the injected
-        %   geometry object.
+        %GET_CD0  Subsonic clean CD0 = Cfe*(S_wet/S_ref).  [Raymer Eq. 12.23]
+        %   Cfe (obj.Cfe) is the Raymer Table 12.3 value (0.0035, AF fighter);
+        %   S_wet/S_ref are read live from the injected geometry object.
             val = AeroL2.CD0_from_Cf(obj.Cfe, obj.S_wet, obj.S_ref);
         end
 
@@ -124,9 +118,9 @@ classdef AeroL2
         function val = get_K2(obj, K1_sub, M)
         %GET_K2  Polar-offset term (Convention A).
         %   Subsonic: CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2) (see
-        %   compute_CL_minD -- not Brandt's own method), then
-        %   K2 = -2*K1_sub*CL_minD [Brandt Aero!G17]. Nonzero for the
-        %   F-16's cambered NACA 64A204 (design_CL=0.2). M>=1: K2=0.
+        %   compute_CL_minD), then K2 = -2*K1_sub*CL_minD [Brandt Aero!G17].
+        %   Nonzero for the F-16's cambered NACA 64A204 (design_CL=0.2).
+        %   M>=1: K2=0.
             CL_alpha_M = AeroL2.get_CL_alpha(obj, M);
             CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
             val        = AeroL2.K2_value(K1_sub, CL_minD, M);
@@ -249,9 +243,7 @@ classdef AeroL2
 
         function K2 = K2_value(K1_sub, CL_minD, M)
         %K2_VALUE  Polar-offset term (Convention A).
-        %   K2 = -2*K1_sub*CL_minD  (M<1)   [Brandt Aero!G17 -- this
-        %   structure is genuinely Brandt's; see compute_CL_minD for the
-        %   CL_minD input, which is NOT Brandt's own method]
+        %   K2 = -2*K1_sub*CL_minD  (M<1)   [Brandt Aero!G17]
         %   K2 = 0                  (M>=1)  (linearized supersonic theory)
             if M >= 1
                 K2 = 0;
@@ -297,14 +289,9 @@ classdef AeroL2
 
         function CL_minD = compute_CL_minD(CL_alpha, alpha_L0_deg)
         %COMPUTE_CL_MIND  CL at minimum drag.
-        %   CL_minD = CL_alpha * (-deg2rad(alpha_L0)/2). Standard thin-
-        %   airfoil zero-lift relation, NOT Brandt's own method (Brandt
-        %   derives an equivalent quantity from the airfoil's NACA 4-digit
-        %   designation at Aero!G20; per Casey, that method is unclear and
-        %   not being reproduced here -- this equation is kept deliberately
-        %   as the framework's own choice, corrected 2026-07-30 from a
-        %   previous, inaccurate "[Brandt Sec. 4.3]" citation that implied
-        %   this exact form was Brandt's; see audit finding A-2).
+        %   CL_minD = CL_alpha * (-deg2rad(alpha_L0)/2). Standard thin-airfoil
+        %   zero-lift relation, the framework's own choice (not Brandt's
+        %   Aero!G20 NACA-designation method).
         %   Uncambered airfoil (alpha_L0 = 0) -> CL_minD = 0 -> K2 = 0.
             CL_minD = CL_alpha * (-deg2rad(alpha_L0_deg) / 2);
         end

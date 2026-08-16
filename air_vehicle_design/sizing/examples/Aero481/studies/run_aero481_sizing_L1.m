@@ -1,48 +1,30 @@
 %% run_aero481_sizing_L1
 %   F-35 (Aero 481 Design01 provenance) Level-1 sizing study. Reproduces Aero
-%   481's A02 sizing result: the F-35 is sized at the REAL F135 thrust in a
-%   FIXED (T, S) cell, NOT at the constraint-diagram optimum.
+%   481's A02 sizing: the F-35 is sized at the REAL F135 thrust in a FIXED (T, S)
+%   cell, NOT at the constraint-diagram optimum.
 %
-%   WHY A FIXED (T, S) CELL, NOT THE CONSTRAINT OPTIMUM (read this first).
-%   Aero 481 Design01 fixes W/S = 92.17 psf and T/W = 1.2 as design CHOICES, and
-%   its A02 algorithm sizes the aircraft at that design point -- it does NOT read
-%   a T/W off the constraint envelope. The Design01 T/W = 1.2 is ASPIRATIONAL:
-%   the real F-35A carries the F135 (43,000 lbf SLS with afterburner), and at the
-%   ~61k TOGW the framework sizes to, the ACTUAL T/W = 43,000 / W_TO ~ 0.70 -- far
-%   below 1.2. The A02 engine delta (Aero481WeightsL1.OEW) credits exactly that
-%   difference: installing a 43,000 lbf engine instead of the design-T/W-implied
-%   ~74,880 lbf engine is a large negative OEW term, which is why the F-35 sizes
-%   SMALL (~61k) rather than to a heavy aspirational-thrust point. Sizing at the
-%   constraint optimum would size a DIFFERENT (aspirational-T/W) aircraft, not
-%   Aero 481's -- so this study drives the fixed-cell A02 closure directly.
+%   WHY A FIXED CELL. Aero 481 Design01 fixes W/S = 92.17 psf and T/W = 1.2 as
+%   design CHOICES and sizes at that point. T/W = 1.2 is ASPIRATIONAL: the real
+%   F135 (43,000 lbf) gives ACTUAL T/W ~ 0.70 at the ~61k TOGW. The A02 engine
+%   delta (Aero481WeightsL1.OEW) credits that difference, so the F-35 sizes SMALL.
 %
-%   HOW. The framework's TSDiagram.converge_W0(T_SL, S_ref) IS the A02 fixed-cell
-%   closure: it writes prop.T_SL and geom.S_ref, then iterates the TOGW fixed
-%   point [metabook S4.12 Algorithm 2 / Raymer 6th ed. Eq. 3.4] on the mission
-%   fuel fraction and the A02 empty-weight build-up. Called at the real F135
-%   thrust (43,000 lbf) and the design wing (S = 538 ft^2 ~ 50 m^2), it returns
-%   the sized F-35 TOGW. converge_W0 leaves geom/prop/wts at that cell's state,
-%   so OEW and mission fuel are read straight back afterward.
+%   HOW. TSDiagram.converge_W0(T_SL, S_ref) IS the A02 fixed-cell closure: it
+%   writes prop.T_SL and geom.S_ref, then iterates the TOGW fixed point
+%   [metabook S4.12 Algorithm 2 / Raymer 6th ed. Eq. 3.4]. Called at the real
+%   F135 thrust and the design wing (S = 538 ft^2 ~ 50 m^2). It leaves
+%   geom/prop/wts at that cell's state, so OEW and fuel are read straight back.
 %
-%   Style/wiring follows examples/F16A/models/sizing/f16_sizing_L1.m and the B777
-%   studies; export follows the sanity_checks scripts (console + files into the
-%   gitignored output/).
-%
-%   VALIDATION CONTEXT. Aero 481's A02 sizes the F-35 to ~62,399 lb at
-%   (Design01, 43,000 lbf, 50 m^2) [A481 +Algorithms/A02.m]. The framework
-%   reproduces that within ~2% (lapse is now OFF, matching A481 -- disc A6
-%   resolved). Cross-check to the published F-35A (MTOW ~65,900-70,000 lb) is a
-%   fidelity/design gap (disc A5), NOT a bug -- Design01's AR/wing differ from
-%   the real jet. See sanity_checks/aero481_comparison.m.
+%   VALIDATION. Aero 481's A02 sizes to ~62,399 lb at (Design01, 43,000 lbf,
+%   50 m^2) [A481 +Algorithms/A02.m]; the framework reproduces within ~2% (lapse
+%   OFF, disc A6). The published-F-35A gap (disc A5) is a fidelity/design gap.
+%   See sanity_checks/aero481_comparison.m.
 
 sp = aero481_spec_path(1);
 rp = aero481_requirements_path();
 
-% Caller owns discipline construction (dependency injection). The full seven-
-% object stack is built here; TSDiagram mutates the shared geom/prop/wts objects
-% in place during converge_W0 (see its header) and they are used for nothing
-% else afterward. The weights object is the A481 A02 delta model -- three-arg
-% constructor (injects geom for S_ref, prop for T_SL).
+% Caller owns discipline construction (dependency injection). TSDiagram mutates
+% the shared geom/prop/wts in place during converge_W0. The weights object is
+% the A481 A02 delta model -- three-arg constructor (injects geom, prop).
 aero = Aero481AeroL1(sp);
 prop = Aero481PropL1(sp);
 geom = Aero481GeomL1(sp, rp);
@@ -50,8 +32,8 @@ tail = Aero481TailL1();
 wts  = Aero481WeightsL1(sp, geom, prop);   % A481 A02 delta model -- injects geom (S_ref) + prop (T_SL)
 miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "dca");
 
-% The constraint set is still built (the diagram/optimum are reported for
-% context), but it does NOT drive the sizing -- the fixed (T, S) cell does.
+% The constraint set is built for context but does NOT drive the sizing -- the
+% fixed (T, S) cell does.
 WS_sweep = linspace(20, 200, 181);
 con = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
     Aero481ConstraintSet.constraint_map(), WS_sweep);

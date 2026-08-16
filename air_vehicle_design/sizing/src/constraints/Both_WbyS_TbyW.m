@@ -9,8 +9,8 @@ classdef (Abstract) Both_WbyS_TbyW < PointPerformanceBase
 %   required T/W exists and varies with W/S. A concrete subclass
 %   (MasterEquationConstraint for the Mattingly Master Equation,
 %   TakeoffConstraint for the ground-roll relation) supplies required_TW(WS)
-%   from its own physics. Mirrors NPTEL_Fighter_Aircraft_Sizing.ipynb's
-%   Both_WbyS_TbyW class (see Only_WbyS.m for the three-category grouping).
+%   from its own physics. [NPTEL_Fighter_Aircraft_Sizing.ipynb; see
+%   Only_WbyS.m for the three-category grouping.]
 
     methods (Abstract)
 
@@ -31,15 +31,10 @@ classdef (Abstract) Both_WbyS_TbyW < PointPerformanceBase
         %
         %       g = obj.required_TW(dp.WS) - dp.TW    (g <= 0 feasible)
         %
-        %   required_TW is a LOWER bound (this condition demands at least that
-        %   much T/W at the design point's wing loading dp.WS), so g = required
-        %   - available <= 0 is feasible. Both sides sit on the sea-level-static
-        %   T_SL/W_TO axis (required_TW divides its thrust demand by the
-        %   condition's alpha; available is the installed dp.TW), with no
-        %   thrust-lapse scaling -- the same axis the constraint diagram plots.
-        %   g = -margin. Mirrors NPTEL_Fighter_Aircraft_Sizing.ipynb's
-        %   Both_WbyS_TbyW.compute_constraint (cell 9): necessary - actual,
-        %   feasible <= 0.
+        %   required_TW is a lower bound, so g = required - available <= 0 is
+        %   feasible. Both sides sit on the SL-static T_SL/W_TO axis (no
+        %   thrust-lapse scaling). g = -margin.
+        %   [NPTEL_Fighter_Aircraft_Sizing.ipynb cell 9.]
         %
         %   dp -- a DesignPoint (W_TO, T_SL, S_ref); dp.WS and dp.TW are used.
             arguments

@@ -1,16 +1,8 @@
 classdef (Abstract) PropulsionModelL2 < PropulsionBase
 %PROPULSIONMODELL2  Tier-2 abstract enforcer for Level-2 propulsion.
-%
-%   Inherits PropulsionBase directly, not another PropulsionModelLN.
-%
-%   L2 is the Mattingly parametric model, with separate mil (dry) and AB (wet)
-%   branches for both thrust lapse and TSFC.
-%
-%   The C1/C2 TSFC coefficients are NOT abstract members: they are
-%   engine-class constants selected by engine_type inside the PropL2 toolbox.
-%   A concrete class supplies engine_type and the throttle ratio.
-%
-%   Toolbox companion: src/disciplines/propulsion/PropL2.md
+%   Declares the L2 propulsion contract (Mattingly parametric model, separate
+%   mil/AB branches for lapse and TSFC). A concrete class supplies engine_type
+%   and throttle ratio. See docs/decision_log.md. Toolbox companion: PropL2.md
 
     properties (Abstract)
         engine_type % string; selects the PropL2 TSFC coefficient set

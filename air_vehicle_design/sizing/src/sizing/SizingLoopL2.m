@@ -1,36 +1,24 @@
 classdef SizingLoopL2 < handle
-%SIZINGLOOPL2  Level-2 (preliminary design framework) takeoff-gross-weight
-%   and sea-level-thrust sizing loop. Also serves the L3 rung.
+%SIZINGLOOPL2  Level-2 takeoff-gross-weight and sea-level-thrust sizing
+%   loop. Also serves the L3 rung.
 %
-%   Two-state (W_TO, T_SL) fixed-point iteration, following the
-%   preliminary design framework [docs/reference_extracts/
-%   martins_slides_data.md -- Slide 8]: TWO coupled iterations (the MTOW
-%   iteration from W0_guess AND the T0 iteration from T0_guess), a tail
-%   sizing box that feeds the empty-weight and drag-polar boxes, and
-%   point-performance (constraint) checks EACH iteration. Unlike L1, the
-%   design point is re-solved from the constraints every iteration: the
-%   wing is resized from the evolving W0, and the thrust write feeds back
-%   into geometry (nacelle sizing) and therefore CD0, so the constraint
-%   envelope genuinely moves as the loop state evolves.
+%   Two-state (W_TO, T_SL) fixed-point iteration [martins_slides_data.md
+%   Slide 8]: two coupled iterations, a tail-sizing box feeding the
+%   empty-weight and drag-polar boxes, and point-performance (constraint)
+%   checks EACH iteration. Unlike L1 the design point is re-solved every
+%   iteration: the wing resizes from the evolving W0, and the thrust write
+%   feeds geometry (nacelle sizing) and so CD0, so the constraint envelope
+%   moves as the loop state evolves.
 %
-%   Weight closure per iteration: TOGW step [docs/reference_extracts/
-%   metabook_data.md -- Ch. 2, "TOGW Iteration Algorithm (Algorithm 1)";
-%   Raymer 6th ed. Eq. 3.4] via SizingSteps.togw_update.
+%   Weight closure per iteration: TOGW step [metabook_data.md Ch. 2 "TOGW
+%   Iteration Algorithm (Algorithm 1)"; Raymer 6th ed. Eq. 3.4] via
+%   SizingSteps.togw_update.
 %
-%   NO ControlSurfaceSizer here, deliberately: Slide 8 has no
-%   control-surface box, and control-surface areas feed no OEW term in the
-%   current weights classes -- sizing them inside this loop would add
-%   coupling that does not exist. Callers that want control-surface areas
-%   run src/sizing/ControlSurfaceSizer.m on the converged geometry
-%   afterwards.
+%   No ControlSurfaceSizer here: Slide 8 has no control-surface box and
+%   those areas feed no OEW term. No WS_design input: the (W/S, T/W) point
+%   comes from obj.con.optimal_point_continuous every iteration.
 %
-%   NO WS_design input, deliberately: the (W/S, T/W) design point comes
-%   from obj.con.optimal_point_continuous every iteration (warm-started
-%   with the previous iterate), never from the caller.
-%
-%   Flat orchestrator, not a discipline -- see SizingLoopL1.m's header for
-%   the shared rationale (aero stored but never called directly here;
-%   handle semantics; recompute-on-read, nothing cached).
+%   Flat orchestrator, not a discipline -- see SizingLoopL1.m's header.
 
     properties (SetAccess = private)
         aero    % (1,1) AerodynamicsBase
@@ -103,11 +91,9 @@ classdef SizingLoopL2 < handle
             T_SL = T_SL_guess;
 
             % Seed the design point once before the loop. Write the thrust
-            % guess into prop FIRST so the seed solve does not read a
-            % stale, pre-guess CD0 (F16GeomL2/L3's nacelle diameter is
-            % Dependent on prop.T_SL); geometry still holds its current
-            % S_ref for this first solve -- iteration 1 re-solves with the
-            % resized wing.
+            % guess into prop FIRST so the seed solve reads a fresh CD0
+            % (F16GeomL2/L3's nacelle diameter is Dependent on prop.T_SL);
+            % iteration 1 re-solves with the resized wing.
             obj.prop.T_SL = T_SL;
             [WS, TW] = obj.con.optimal_point_continuous();
 
@@ -125,9 +111,8 @@ classdef SizingLoopL2 < handle
 
                 % 2. Tail resize -> OEW coupling [Slide 8: the tail-sizing
                 %    box feeds the empty-weight and drag-polar boxes]. The
-                %    weights class reads geom's tail areas live through its
-                %    own Dependent getters, so OEW below already reflects
-                %    this iteration's tail.
+                %    weights class reads geom's tail areas live, so OEW
+                %    below already reflects this iteration's tail.
                 tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, ...
                     obj.geom.cbar_wing, obj.geom.L_fus);
                 obj.geom.S_ht = tail_result.S_ht;
@@ -206,11 +191,9 @@ classdef SizingLoopL2 < handle
                     opts.max_iter, W0, T_SL);
             end
 
-            % Final write-through: steps 1-3 at the converged point, then
-            % ONE final design-point solve so the reported WS/TW match the
-            % final geometry/thrust state, plus a final mission/OEW read
-            % so the result and the wts bookkeeping are consistent with
-            % the returned (W_TO, T_SL).
+            % Final write-through: steps 1-3 at the converged point, then one
+            % final design-point solve and mission/OEW read so the result
+            % and wts bookkeeping match the returned (W_TO, T_SL).
             obj.geom.S_ref = W0 / WS;
             tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, ...
                 obj.geom.cbar_wing, obj.geom.L_fus);

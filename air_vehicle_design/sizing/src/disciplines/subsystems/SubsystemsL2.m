@@ -1,54 +1,46 @@
 classdef SubsystemsL2
 %SUBSYSTEMSL2  Level-2 subsystems static toolbox: geometry-derived volumes.
 %
-%   Call as SubsystemsL2.method(...); never instantiated, not in the
-%   inheritance chain. F16SubsystemsL2 inherits SubsystemsModelL2 and
+%   Call as SubsystemsL2.method(...); never instantiated. F16SubsystemsL2
 %   delegates here.
 %
-%   Official formulas: fuselage-internal raw volume [Raymer 6th ed. Eq. 7.14],
-%   wing-internal fuel volume [Roskam, Airplane Design Part II, Ch.6, Eq.
-%   6.2/6.3], fuel-tank packaging factor / fuel-type density [Nicolai &
-%   Carichner, Ch.8, p.210], avionics weight fraction [Raymer 6th ed. Table
-%   11.6] with L2's own flat Nicolai avionics density (45 lb/ft^3).
-%
-%   Fuel density and the avionics weight-fraction lookup are LEVEL-AGNOSTIC
-%   (same Nicolai/Raymer tables as L1) and are reused via a direct cross-
-%   toolbox call to SubsystemsL1 rather than duplicated here -- same reuse
-%   pattern as GeomL3 cross-calling GeomL1/GeomL2 statics.
+%   Formulas: fuselage raw volume [Raymer 6th ed. Eq. 7.14]; wing fuel volume
+%   [Roskam, Airplane Design Part II, Ch.6, Eq. 6.2/6.3]; packaging factor and
+%   fuel density [Nicolai & Carichner, Ch.8, p.210]; avionics weight fraction
+%   [Raymer 6th ed. Table 11.6] with L2's flat Nicolai avionics density
+%   (45 lb/ft^3). Fuel density and the avionics weight-fraction lookup are
+%   level-agnostic and are reused from SubsystemsL1, not duplicated.
 %
 %   ROSKAM tau_w CONVENTION WARNING: Eq. 6.3 defines tau_w = (t/c)_tip /
-%   (t/c)_root -- the OPPOSITE of the geometry discipline's own Roskam Vol.
-%   II Eq. 12.1, which uses tau = (t/c)_root/(t/c)_tip. Implemented exactly
-%   per Eq. 6.3's own stated definition; do NOT "fix" it to match Eq. 12.1's
-%   convention -- Roskam does not use one consistent tau across his own
-%   equations.
+%   (t/c)_root -- the OPPOSITE of the geometry discipline's Roskam Vol. II
+%   Eq. 12.1, which uses tau = (t/c)_root/(t/c)_tip. Implemented per Eq. 6.3's
+%   stated definition; do NOT "fix" it to match Eq. 12.1 -- Roskam does not
+%   use one consistent tau across his equations.
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL2.md
 
     methods (Static)
 
         % ================================================================== %
-        % HIGH-LEVEL: take the student object, return the result.
+        % HIGH-LEVEL: take the object, return the result.
         % ================================================================== %
 
         function val = avionics_weight_fraction(obj)
-        %AVIONICS_WEIGHT_FRACTION  Level-agnostic Raymer Table 11.6 lookup --
-        %   reused directly from SubsystemsL1, not duplicated.
+        %AVIONICS_WEIGHT_FRACTION  Level-agnostic Raymer Table 11.6 lookup,
+        %   reused from SubsystemsL1.
             val = SubsystemsL1.lookup_avionics_weight_fraction(obj.avionics_table_row);
         end
 
         function val = avionics_density(obj) %#ok<INUSD>
-        %AVIONICS_DENSITY  Flat 45 lb/ft^3, L2/L3's own figure.
-        %   [Nicolai & Carichner, Sec.8.1.11, p.210] -- fidelity-split
-        %   decision (Casey, 2026-07-31), distinct from L1's Raymer-range
-        %   average (~37.5).
+        %AVIONICS_DENSITY  Flat 45 lb/ft^3, the L2/L3 figure, distinct from
+        %   L1's Raymer range average (~37.5).
+        %   [Nicolai & Carichner, Sec.8.1.11, p.210]
             val = 45.0;
         end
 
         function val = avionics_weight(obj)
-        %AVIONICS_WEIGHT  fraction * W_empty [lbf]. W_empty = obj's own
-        %   injected fuel_weight_source.OEW(fuel_weight_source.W_TO) --
-        %   self-referencing, zero extra args.
+        %AVIONICS_WEIGHT  fraction * W_empty [lbf]. W_empty =
+        %   fuel_weight_source.OEW(fuel_weight_source.W_TO); zero extra args.
             ws = obj.fuel_weight_source;
             W_empty = ws.OEW(ws.W_TO);
             val = SubsystemsL2.avionics_weight_fraction(obj) * W_empty;
@@ -61,8 +53,8 @@ classdef SubsystemsL2
         end
 
         function val = fuel_density(obj)
-        %FUEL_DENSITY  Level-agnostic Nicolai Table 8.6 lookup -- reused
-        %   directly from SubsystemsL1, not duplicated.
+        %FUEL_DENSITY  Level-agnostic Nicolai Table 8.6 lookup, reused from
+        %   SubsystemsL1.
             val = SubsystemsL1.lookup_fuel_density(obj.fuel_type);
         end
 
@@ -77,9 +69,8 @@ classdef SubsystemsL2
 
         function val = fuselage_usable_fuel_volume(obj)
         %FUSELAGE_USABLE_FUEL_VOLUME  fuselage_raw_volume * packaging_factor
-        %   [ft^3]. Packaging factor applied BEFORE any comparison against a
-        %   required fuel volume (item 5b; "Legacy Bugs to Avoid" addendum --
-        %   the legacy code compared raw volume directly).
+        %   [ft^3]. Packaging factor is applied before any comparison against
+        %   a required fuel volume.
             pf = SubsystemsL2.lookup_packaging_factor(obj.packaging_factor_category);
             val = SubsystemsL2.fuselage_raw_volume(obj) * pf;
         end
@@ -93,12 +84,9 @@ classdef SubsystemsL2
 
         function val = fuel_volume_from_weight(obj, fuel_weight_lb)
         %FUEL_VOLUME_FROM_WEIGHT  fuel_weight_lb / fuel_density [ft^3]. The
-        %   definitional weight/density conversion, level-agnostic -- reused
-        %   via SubsystemsBase.weight_to_volume, not duplicated. NO packaging
-        %   factor applied: that only applies to the GEOMETRIC raw volume
-        %   (fuselage_usable_fuel_volume) -- this is a weight-derived figure,
-        %   a different quantity (see fuel_volume_check's own required_vol
-        %   computation, which uses this identical path).
+        %   definitional weight/density conversion, level-agnostic. No
+        %   packaging factor: that applies only to the geometric raw volume
+        %   (fuselage_usable_fuel_volume). This is a weight-derived figure.
             arguments
                 obj
                 fuel_weight_lb (1,1) double {mustBeNonnegative}
@@ -107,23 +95,18 @@ classdef SubsystemsL2
         end
 
         function val = fuel_volume(obj)
-        %FUEL_VOLUME  Total available (usable) fuel volume [ft^3] =
-        %   fuselage-internal (packaged) + wing-internal. Same sum
-        %   fuel_volume_check reports as 'available_vol_ft3' -- named here as
-        %   its own property so a caller can read it without the full
-        %   sufficiency-check struct.
+        %FUEL_VOLUME  Total usable fuel volume [ft^3] = fuselage-internal
+        %   (packaged) + wing-internal. Same sum fuel_volume_check reports as
+        %   'available_vol_ft3', exposed as its own member.
             val = SubsystemsL2.fuselage_usable_fuel_volume(obj) + SubsystemsL2.wing_fuel_volume(obj);
         end
 
         function val = battery_volume(obj, E_required_kWh) %#ok<INUSD,STOUT>
-        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation GAP. Only
-        %   GRAVIMETRIC specific energy is cited anywhere in
-        %   this repo [Nicolai & Carichner, Table 14.2, p.363, batteries
-        %   0.27 kWh/lb]; no citable VOLUMETRIC energy density (kWh/ft^3) or
-        %   pack density (lb/ft^3) exists to convert a required energy into a
-        %   volume. Errors rather than fabricating a coefficient -- mirrors
-        %   TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo's
-        %   established documented-TODO convention.
+        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation gap. Only
+        %   gravimetric specific energy is cited [Nicolai & Carichner,
+        %   Table 14.2, p.363, batteries 0.27 kWh/lb]; no citable volumetric
+        %   energy density (kWh/ft^3) or pack density (lb/ft^3) exists to
+        %   convert required energy into volume. Errors rather than fabricate.
             error('SubsystemsL2:batteryVolumetricDensityNotAvailable', ...
                 ['No citable battery VOLUMETRIC energy density (kWh/ft^3) or ' ...
                  'pack density (lb/ft^3) exists anywhere in this repository -- ' ...
@@ -137,19 +120,17 @@ classdef SubsystemsL2
         function val = internal_volume(obj)
         %INTERNAL_VOLUME  Total usable internal volume [ft^3] = fuselage
         %   usable fuel volume + wing fuel volume + avionics volume.
-        %   Landing-gear bay volume is DELIBERATELY NOT summed here -- item
-        %   11's citation gap means that term always errors; auto-summing it
-        %   would make every internal_volume() call fail. See
-        %   F16SubsystemsL2.md "Landing-gear bay volume" note.
+        %   Landing-gear bay volume is deliberately NOT summed: its citation
+        %   gap makes that term always error, so auto-summing it would fail
+        %   every call. See F16SubsystemsL2.md "Landing-gear bay volume".
             val = SubsystemsL2.fuel_volume(obj) + SubsystemsL2.avionics_volume(obj);
         end
 
         function result = fuel_volume_check(obj)
         %FUEL_VOLUME_CHECK  Compares fuel_volume(obj) (fuselage-internal
-        %   packaged + wing-internal, NEVER just one -- "Legacy Bugs to
-        %   Avoid" item 5) against obj.fuel_weight_source.W_energy, converted
-        %   to a required volume via fuel_volume_from_weight. Errors if
-        %   W_energy has not yet been set by mission analysis.
+        %   packaged + wing-internal, never just one) against
+        %   obj.fuel_weight_source.W_energy, converted to a required volume
+        %   via fuel_volume_from_weight. Errors if W_energy is not yet set.
             available = SubsystemsL2.fuel_volume(obj);
             W_energy = obj.fuel_weight_source.W_energy;
             if ~isfinite(W_energy)
@@ -183,14 +164,10 @@ classdef SubsystemsL2
         function [A_top, A_side] = compute_envelope_projected_areas(L_fus, W_max, H_max)
         %COMPUTE_ENVELOPE_PROJECTED_AREAS  Top-view and side-view projected
         %   areas [ft^2] of the fuselage envelope, feeding Raymer Eq. 7.14's
-        %   A_top/A_side inputs. Modeled as elliptical planform/profile
-        %   footprints (length L, width W_max / height H_max) -- the natural
-        %   extension of GeometryBase.compute_Amax_elliptical's existing
-        %   (pi/4)*W*H cross-section-ellipse assumption to the LENGTHWISE
-        %   projections, consistent with L2's "fuselage-envelope ellipse"
-        %   geometry model (no separate equation number; standard elliptical-
-        %   footprint identity, same citation status as
-        %   GeometryBase.compute_Amax_elliptical).
+        %   A_top/A_side inputs. Elliptical footprints (length L, width W_max
+        %   / height H_max): the lengthwise extension of
+        %   GeometryBase.compute_Amax_elliptical's (pi/4)*W*H assumption. No
+        %   separate equation number; same citation status as that method.
             arguments
                 L_fus (1,1) double {mustBePositive}
                 W_max (1,1) double {mustBePositive}
@@ -206,10 +183,6 @@ classdef SubsystemsL2
         %   attributed by Roskam to Torenbeek Ref.17 Eqn. B-12]
         %   tau_w = (t/c)_tip / (t/c)_root [Eq. 6.3] -- see this class's
         %   header for the convention warning vs. Roskam Eq. 12.1.
-        %   REPLACES the legacy uncited "MFV" formula (t_avg=0.7*(...),
-        %   MFV=0.3*S_ref*t_avg) -- no source for its 0.7/0.3 coefficients
-        %   was found anywhere in this repo, so it is dropped entirely, not
-        %   carried forward in any form.
             arguments
                 S       (1,1) double {mustBePositive}
                 b       (1,1) double {mustBePositive}
@@ -224,9 +197,8 @@ classdef SubsystemsL2
 
         function pf = lookup_packaging_factor(category)
         %LOOKUP_PACKAGING_FACTOR  Fuel-tank usable-volume packaging factor by
-        %   construction/location category.
-        %   [Nicolai & Carichner, p.210, unnumbered "Fuel Tank Packaging
-        %   Factors" table]. Full 5-row table, reproduced verbatim.
+        %   construction/location category. Full 5-row table, verbatim.
+        %   [Nicolai & Carichner, p.210, "Fuel Tank Packaging Factors" table]
             switch category
                 case 'Integral tank — shallow fuselage', pf = 0.80;
                 case 'Integral tank — deep fuselage',     pf = 0.85;

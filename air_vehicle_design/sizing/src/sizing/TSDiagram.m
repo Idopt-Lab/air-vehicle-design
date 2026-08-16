@@ -1,25 +1,17 @@
 classdef TSDiagram < handle
 %TSDIAGRAM  Dimensional T-S (thrust vs. wing area) sizing diagram.
+%   [metabook_data.md Ch. 4 "S4.12 T-S Plot and Objective Function
+%   Contours": each T-S point is a sized aircraft. Algorithm 2 converges
+%   TOGW at a prescribed (T, S); Algorithm 4 traces each constraint as a
+%   T(S) curve; Fig. 4.7 shades the feasible region and marks the aircraft.]
 %
-%   [docs/reference_extracts/metabook_data.md -- Ch. 4, "S4.12 T-S Plot
-%   and Objective Function Contours": every point of a T-S plot is a SIZED
-%   aircraft with a converged weight estimate; the T/W-vs-W/S constraint
-%   equations are reused with iteration to place each constraint in
-%   dimensional (T, S) space, and objective contours (fuel burn) are then
-%   superimposed. Algorithm 2 converges TOGW at a prescribed (T, S);
-%   Algorithm 4 traces each constraint as a T(S) curve; Fig. 4.7 shows the
-%   resulting plot with the feasible region shaded and the actual aircraft
-%   marked.]
+%   Injected with the same seven-object stack as SizingLoopL2. converge_W0
+%   mutates the shared geom/prop/wts objects in place: after any call they
+%   hold the LAST (T, S) cell state, not a design point.
 %
-%   Injected with the same seven-object stack as SizingLoopL2. SIDE
-%   EFFECTS: converge_W0 (and everything built on it) mutates the shared
-%   geom/prop/wts objects in place -- after any call they hold the state
-%   of the LAST (T, S) cell evaluated, not a design point. Use fresh
-%   objects, or re-run a sizing loop, when the diagram scan is done.
-%
-%   NaN CONVENTION: an infeasible or unconverged (T, S) cell is marked
-%   NaN, never an error, so grid scans over aggressive ranges complete and
-%   the plot simply leaves those cells blank.
+%   NaN convention: an infeasible or unconverged (T, S) cell is marked NaN,
+%   never an error, so a grid scan completes and leaves those cells blank.
+%   History and rationale: docs/decision_log.md
 
     properties (SetAccess = private)
         aero    % (1,1) AerodynamicsBase
@@ -32,21 +24,16 @@ classdef TSDiagram < handle
     end
 
     properties
-        % Per-stack tuning knobs for the INNER TOGW closure (added
-        % 2026-08-14). converge_W0's opts default to these, so every grid/
-        % curve method inherits them without per-call plumbing. Stacks with
-        % a large fixed-OEW content have a steep closure-map slope and need
-        % a smaller relaxation -- see SizingSteps.relax's RELAXATION CHOICE
-        % note (Brandt F-16A: slope ~= -2.9 -> relax_W0 ~= 0.25).
+        % Per-stack tuning knobs for the inner TOGW closure. converge_W0's
+        % opts default to these. Stacks with a large fixed-OEW content need
+        % a smaller relaxation -- see SizingSteps.relax.
         relax_W0    (1,1) double {mustBeInRange(relax_W0, 0, 1, "exclude-lower")} = 0.5
         max_iter_W0 (1,1) double {mustBePositive, mustBeInteger} = 200
     end
 
     properties (Access = private)
-        % Warm start for converge_W0: the last converged W0. A neighboring
-        % (T, S) cell converges to a nearby weight, so seeding from the
-        % last success cuts iterations across a grid scan. NaN until the
-        % first success.
+        % Warm start for converge_W0: the last converged W0. NaN until the
+        % first success. A neighbouring cell converges to a nearby weight.
         last_W0_ (1,1) double = NaN
     end
 
@@ -73,31 +60,22 @@ classdef TSDiagram < handle
 
         function W0 = converge_W0(obj, T_SL, S_ref, opts)
         %CONVERGE_W0  Converged TOGW [lbf] at a prescribed (T_SL, S_ref).
-        %   [metabook S4.12 Algorithm 2: prescribe T and S, then iterate
-        %   the TOGW closure to convergence. The fuel fraction is a
-        %   function of S because the wing size changes the wetted area
-        %   and so CD0 (metabook Eq. 4.58) -- this framework gets that
-        %   coupling automatically, because geom.S_ref feeds the aero
-        %   object's CD0 live and the mission re-reads it every call.]
+        %   [metabook S4.12 Algorithm 2: prescribe T and S, iterate the
+        %   TOGW closure to convergence. Fuel fraction depends on S through
+        %   the wetted area and CD0 (metabook Eq. 4.58); geom.S_ref feeds
+        %   the aero CD0 live and the mission re-reads it each call.]
         %
-        %   Writes geom.S_ref, tail areas (once per call -- they depend on
-        %   S_ref, not W0), and prop.T_SL, then runs the same TOGW fixed
-        %   point as SizingLoopL1's inner loop (SizingSteps.togw_update /
-        %   SizingSteps.relax).
+        %   Writes geom.S_ref, tail areas, and prop.T_SL, then runs the same
+        %   TOGW fixed point as SizingLoopL1 (SizingSteps.togw_update/relax).
         %
-        %   Returns NaN -- NEVER errors -- when the closure denominator
-        %   goes non-positive, W0 exceeds opts.W0_cap, a discipline
-        %   returns a non-finite weight OR THROWS at the cell's state
-        %   (warned, not silent -- e.g. a mission segment hitting negative
-        %   fuel at an extreme cell), or max_iter is hit. NaN marks an
-        %   infeasible (T, S) cell.
+        %   Returns NaN -- never errors -- for an infeasible (T, S) cell:
+        %   non-positive closure denominator, W0 past opts.W0_cap, a
+        %   discipline returning non-finite or throwing (warned), or
+        %   max_iter hit.
         %
-        %   opts.W0_guess   -- lbf. Default: last converged W0 (warm
-        %                      start), else W_payload/0.1 (a ~10% payload
-        %                      fraction seed heuristic; seed only, the
-        %                      converged value does not depend on it).
-        %   opts.tol_rel    -- relative tolerance. Default 1e-6 [metabook
-        %                      Algorithm 2 uses eps = 1e-6].
+        %   opts.W0_guess   -- lbf. Default: last converged W0 (warm start),
+        %                      else W_payload/0.1 (~10% payload fraction).
+        %   opts.tol_rel    -- relative tolerance. Default 1e-6 [Algorithm 2].
         %   opts.max_iter   -- maximum iterations. Default 200.
         %   opts.relaxation -- under-relaxation in (0,1]. Default 0.5.
         %   opts.W0_cap     -- lbf, divergence cap. Default 1e7.
@@ -126,19 +104,12 @@ classdef TSDiagram < handle
 
             W_payload = obj.wts.W_payload_fixed + obj.wts.W_payload_expendable;
 
-            % SEED SELECTION (bracketed, 2026-08-14). No single seed works for
-            % every aircraft. An aircraft with a largely FIXED, geometry-driven
-            % empty weight (e.g. the Brandt F-16A, OEW ~= const) needs a seed
-            % ABOVE the fixed point: below it, OEW/W0 already exceeds 1 - ff and
-            % the closure denominator is negative. A high-payload-fraction
-            % transport whose empty weight scales with W0 needs a seed BELOW the
-            % fixed point: above it, at a fixed wing the cruise CL runs past
-            % L/D_max and the fuel fraction diverges. So try candidate seeds in
-            % order and take the first that converges -- an explicit W0_guess
-            % wins; else the warm-start from the last converged cell (a near
-            % neighbour on a grid scan); else W_payload/0.1 (~10% payload
-            % fraction, seeds ABOVE for fighters) then W_payload/0.25 (~25%,
-            % seeds BELOW for transports).
+            % Bracketed seed selection: no single seed works for every
+            % aircraft. Fighters (fixed OEW) need a seed above the fixed
+            % point; transports (OEW scales with W0) need one below. Try
+            % candidate seeds in order, take the first that converges:
+            % explicit W0_guess, else warm-start last_W0_, else
+            % W_payload/0.1 (~10% fraction, above) then /0.25 (~25%, below).
             if ~isnan(opts.W0_guess)
                 seeds = opts.W0_guess;
             else
@@ -153,8 +124,7 @@ classdef TSDiagram < handle
                     return;   % run_closure_ set obj.last_W0_ on success
                 end
             end
-            % Every candidate seed failed -> the (T, S) cell is genuinely
-            % infeasible (no sized aircraft). NaN, warned once, never silent.
+            % Every seed failed -> the cell is infeasible. NaN, warned once.
             warning('TSDiagram:cellInfeasible', ...
                 ['converge_W0(T=%.6g, S=%.6g): no converged aircraft from any ', ...
                  'seed -- cell marked NaN (mission-infeasible or diverging ', ...
@@ -368,23 +338,17 @@ classdef TSDiagram < handle
 
         function fgrid = fuel_grid(obj, T_grid, S_grid)
         %FUEL_GRID  Converged TOGW and mission fuel burn over a (T, S) mesh.
-        %   [metabook S4.12: "Each point of the resulting T-S plot
-        %   corresponds to a sized aircraft with a converged weight
-        %   estimate; objective contours (fuel burn, DOC) can then be
-        %   superimposed."]
+        %   [metabook S4.12: each T-S point is a sized aircraft; objective
+        %   contours (fuel burn) are superimposed.]
         %
-        %   Returns struct('T_grid', 'S_grid', 'W0', 'W_fuel', 'feasible')
-        %   with W0/W_fuel as numel(T_grid) x numel(S_grid) matrices (NaN at
-        %   unsized cells) and feasible as the logical CELL-WISE constraint
-        %   check: at each SIZED cell the residual of EVERY constraint is
-        %   evaluated at that cell's own converged design point
-        %   DesignPoint(W0, T, S) (g <= 0 feasible,
-        %   PointPerformanceBase convention). Cell-wise evaluation is
-        %   deliberate (2026-08-14): deriving feasibility from the traced
-        %   constraint_curve lines breaks when a curve point legitimately
-        %   does not exist (its boundary aircraft cannot fly the design
-        %   mission -- e.g. the takeoff boundary at large S), which would
-        %   wrongly poison every cell in that column.
+        %   Returns struct('T_grid', 'S_grid', 'W0', 'W_fuel', 'feasible').
+        %   W0/W_fuel are numel(T_grid) x numel(S_grid) matrices (NaN at
+        %   unsized cells). feasible is the CELL-WISE constraint check: at
+        %   each sized cell every constraint residual is evaluated at that
+        %   cell's own DesignPoint(W0, T, S) (g <= 0 feasible,
+        %   PointPerformanceBase convention). Cell-wise, not curve-derived:
+        %   a traced curve point may legitimately not exist and would
+        %   otherwise poison its whole column.
             arguments
                 obj
                 T_grid (1,:) double {mustBePositive}
@@ -429,19 +393,12 @@ classdef TSDiagram < handle
         %                  text) marking a real aircraft [Fig. 4.7's
         %                  "Actual 777-200LR" marker precedent].
         %   opts.grid   -- optional precomputed fuel_grid(T_grid, S_grid)
-        %                  result; must match the grids exactly. Avoids
-        %                  recomputing the whole mesh when the caller
-        %                  already ran fuel_grid for its own export.
+        %                  result; must match the grids exactly.
         %
-        %   Feasible-region mask: fuel_grid's cell-wise constraint check --
-        %   the cell is SIZED (finite converged W0) and every constraint's
-        %   signed residual at DesignPoint(W0, T, S) is <= 0. The traced
-        %   curves are drawn but deliberately NOT used for the mask (see
-        %   fuel_grid's header). The shading image assumes uniformly spaced
-        %   grids.
-        %
-        %   Figure/legend conventions follow
-        %   src/constraints/ConstraintAnalysis.plot_diagram.
+        %   Feasible-region mask uses fuel_grid's cell-wise constraint check,
+        %   not the traced curves (see fuel_grid's header). The shading
+        %   image assumes uniformly spaced grids. Figure/legend conventions
+        %   follow ConstraintAnalysis.plot_diagram.
             arguments
                 obj
                 opts.S_grid (1,:) double {mustBePositive} = double.empty(1, 0)
@@ -479,10 +436,7 @@ classdef TSDiagram < handle
                 fg = obj.fuel_grid(T_grid, S_grid);   % [S4.12 objective contours]
             end
 
-            % Feasible mask: fuel_grid's CELL-WISE constraint_residual check
-            % (see fuel_grid's header for why the traced curves are NOT used
-            % for feasibility -- a legitimately-nonexistent curve point would
-            % poison its whole column).
+            % Feasible mask: fuel_grid's cell-wise constraint check.
             if ~isfield(fg, 'feasible')
                 error('TSDiagram:staleGrid', ...
                     'opts.grid lacks the feasible field; recompute it with fuel_grid.');
@@ -491,18 +445,14 @@ classdef TSDiagram < handle
 
             fig = figure('Name', 'T-S Diagram', 'Color', 'w');
             if isprop(fig, 'Theme')
-                fig.Theme = 'light';   % batch sessions inherit the desktop
-            end                        % theme; force light for readable exports
+                fig.Theme = 'light';   % force light for readable exports
+            end
             ax  = axes(fig);
             hold(ax, 'on');
 
-            % UN-SIZED region shading (added 2026-08-14, user review): cells
-            % where converge_W0 found NO converged aircraft at ANY weight --
-            % for this fighter mission, the M1.6 dash drag (which grows with
-            % S) exceeds the maximum available thrust below a T_min(S)
-            % boundary. Constraint curves and fuel contours CANNOT exist
-            % there; shading it gray makes their termination self-
-            % explanatory instead of looking like missing data.
+            % Un-sized region shading: cells with no converged aircraft at
+            % any weight. Constraint curves and fuel contours cannot exist
+            % there; gray shading makes their termination self-explanatory.
             unsized = ~isfinite(fg.W0);
             gray = cat(3, ...
                 0.88 * ones(numel(T_grid), numel(S_grid)), ...
@@ -515,16 +465,14 @@ classdef TSDiagram < handle
                 'EdgeColor', 'none', ...
                 'DisplayName', 'Mission infeasible (no sized aircraft)');
 
-            % Feasible-region shading: a flat LIGHT-BLUE image with per-cell
-            % transparency [metabook Figs. 4.6/4.7 shade the feasible design
-            % space blue]; sized-but-constraint-infeasible cells stay white.
+            % Feasible-region shading: a flat light-blue image with per-cell
+            % transparency [metabook Figs. 4.6/4.7 shade feasible space blue];
+            % sized-but-constraint-infeasible cells stay white.
             blue = cat(3, ...
                 0.55 * ones(numel(T_grid), numel(S_grid)), ...
                 0.70 * ones(numel(T_grid), numel(S_grid)), ...
                 0.95 * ones(numel(T_grid), numel(S_grid)));
-            % NOTE: image() objects do not accept DisplayName; exclude the
-            % shading from the legend (HandleVisibility) and label it via an
-            % invisible patch proxy instead.
+            % image() takes no DisplayName; label via an invisible patch proxy.
             h_img = image(ax, 'XData', S_grid, 'YData', T_grid, 'CData', blue, ...
                 'AlphaData', 0.40 * double(feasible));
             h_img.HandleVisibility = 'off';
@@ -542,15 +490,10 @@ classdef TSDiagram < handle
                     'Color', colors(n_p + kk, :), 'DisplayName', wall_curves{kk}.name);
             end
 
-            % Fuel-burn objective contours [S4.12], drawn ONLY over the
-            % FEASIBLE region (2026-08-14, user review). Two reasons: (1) a
-            % design point is only ever read inside the feasible region, and
-            % (2) sized-but-infeasible cells near the mission-flyability
-            % boundary have fuel burn that blows up smoothly (dash 1 - D/T ->
-            % 0) up to ~1.5x the feasible max, so contouring the full field
-            % bunches levels at the boundary and fragments the lines. Masking
-            % to the feasible cells gives evenly spaced, unbroken contours
-            % over the region that matters.
+            % Fuel-burn objective contours [S4.12], drawn only over the
+            % feasible region: masking to feasible cells gives evenly spaced,
+            % unbroken contours (the full field bunches levels at the
+            % mission-flyability boundary where fuel burn blows up).
             if any(fg.feasible, 'all')
                 wf_masked = fg.W_fuel;
                 wf_masked(~fg.feasible) = NaN;     % contour skips NaN cells
@@ -592,27 +535,23 @@ classdef TSDiagram < handle
     methods (Access = private)
 
         function W0 = run_closure_(obj, W0_seed, W_payload, T_SL, S_ref, opts) %#ok<INUSD>
-        %RUN_CLOSURE_  One TOGW fixed-point solve [metabook Algorithm 2] from a
-        %   single seed W0_seed. Returns the converged W0, or NaN (silently --
-        %   converge_W0 warns once if every seed fails) when this seed diverges
-        %   upward past W0_cap, hits an infeasible transient the shrink-recovery
-        %   cannot escape, or exhausts max_iter. Sets obj.last_W0_ on success.
-        %   T_SL/S_ref are carried only for the (now converge_W0-level) message.
+        %RUN_CLOSURE_  One TOGW fixed-point solve [metabook Algorithm 2] from
+        %   a single seed. Returns the converged W0, or NaN (silently --
+        %   converge_W0 warns once) when the seed diverges past W0_cap, hits
+        %   an infeasible transient recovery cannot escape, or exhausts
+        %   max_iter. Sets obj.last_W0_ on success.
             W0 = W0_seed;
-            shrink_left = 12;    % seed-path recovery budget (see below)
+            shrink_left = 12;    % seed-path recovery budget
             SHRINK      = 0.7;   % W0 pull-back factor per recovery step
             for iter = 1:opts.max_iter
                 if isprop(obj.geom, 'W_TO')
-                    % Guarded write, as in SizingLoopL1: L1 regression
-                    % geometries carry W_TO as a state variable.
+                    % Guarded write: L1 regression geometries carry W_TO.
                     obj.geom.W_TO = W0;
                 end
-                % SEED-PATH RECOVERY: a W0 iterate can transit ABOVE the
-                % mission-flyable band (a segment sees negative weight and
-                % throws, or the denominator goes non-positive) even though a
-                % feasible fixed point exists lower down. Fuel fraction rises
-                % with W0 at fixed (T, S), so shrink W0 back and continue; give
-                % up to NaN only when the shrink budget is spent.
+                % Seed-path recovery: a W0 iterate can transit above the
+                % mission-flyable band even though a feasible fixed point
+                % exists lower down. Shrink W0 back and continue; give up to
+                % NaN only when the shrink budget is spent.
                 blew_up = false;
                 try
                     [W_fuel, ~] = obj.miss.total_fuel(W0);
@@ -635,8 +574,8 @@ classdef TSDiagram < handle
                 obj.wts.W_TO     = W0;
                 obj.wts.W_energy = W_fuel;
 
-                % TOGW closure step [metabook Algorithm 2 / Algorithm 1;
-                % Raymer 6th ed. Eq. 3.4].
+                % TOGW closure step [metabook Algorithm 1; Raymer 6th ed.
+                % Eq. 3.4].
                 [W0_new, ~] = SizingSteps.togw_update(W_payload, W_OEW, W_fuel, W0);
                 if isnan(W0_new)
                     % denom <= 0 (ff + ef >= 1) -- shrink before giving up.

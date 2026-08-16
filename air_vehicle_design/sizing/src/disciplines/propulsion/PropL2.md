@@ -1,8 +1,7 @@
 # PropL2
 
 Level-2 propulsion static toolbox (`classdef PropL2`, `methods (Static)` only). Called as
-`PropL2.method(...)`; never instantiated and not in the inheritance chain. `F16PropL2` inherits
-`PropulsionModelL2` and delegates here.
+`PropL2.method(...)`; never instantiated. `F16PropL2` inherits `PropulsionModelL2` and delegates here.
 
 L2 is the **Mattingly parametric model**, with separate mil (dry) and AB (wet) branches for both
 thrust lapse and TSFC. `F16PropL2` also serves the L3 rung — there is no L3 propulsion tier.
@@ -35,8 +34,8 @@ $$\alpha_{mil} = \begin{cases}
 $\delta_0$ and $\theta_0$ are the total pressure and temperature ratios carried on `AircraftState`
 [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.52].
 
-**Mil lapse on the AB scale** [Brandt F-16A.xls, Consts col AU] — needed so a dry-power condition can
-share the $T_{SL,AB}/W_{TO}$ constraint-diagram axis with AB-flown conditions:
+**Mil lapse on the AB scale** [Brandt F-16A.xls, Consts col AU] — lets a dry-power condition share the
+$T_{SL,AB}/W_{TO}$ constraint-diagram axis with AB-flown conditions:
 
 $$\alpha_{mil\to AB} = \alpha_{mil}\,\frac{T_{SL,mil}}{T_{SL,wet}}$$
 
@@ -45,9 +44,8 @@ $\theta$ the *static* temperature ratio:
 
 $$c_t = \left(C_1 + C_2 M\right)\sqrt{\theta}$$
 
-For a low-bypass afterburning turbofan: $C_1/C_2$ = 0.90 / 0.30 mil, 1.60 / 0.27 AB. These are
-engine-class constants selected by `engine_type` inside `lookup_TSFC_coeffs` — not class `Constant`s
-and not in the JSON.
+For a low-bypass afterburning turbofan: $C_1/C_2$ = 0.90 / 0.30 mil, 1.60 / 0.27 AB. `engine_type`
+selects these engine-class constants inside `lookup_TSFC_coeffs` — not class `Constant`s, not in the JSON.
 
 **Installed TSFC** [Brandt Miss!C25]: $c_{t,installed} = 1.08\,c_{t,uninstalled}$.
 
@@ -56,16 +54,16 @@ and not in the JSON.
 $$TR = \frac{T_{t4,max}}{T_{t4,SLS}}$$
 
 **Parametric engine sizing** [Raymer 6th ed. Sec. 10.3.2]. Eq. 10.4–10.9 non-afterburning, Eq.
-10.10–10.15 afterburning. The afterburning engine weight [Eq. 10.10] is the one that is wired — the
-weights tier calls it through propulsion DI:
+10.10–10.15 afterburning. Only the afterburning engine weight [Eq. 10.10] is wired — the weights tier
+calls it through propulsion DI:
 
 $$W_{engine} = 0.0637\,T^{1.1}\,M^{0.25}\,e^{-0.81\,BPR}$$
 
-## 3. Installed vs uninstalled — the trap in this discipline
+## 3. Installed vs uninstalled
 
 The Mattingly TSFC above is **uninstalled**. Brandt's stored SLS values (0.70 mil / 2.20 AB) are
-**already installed** — they include the 1.08 factor. Applying 1.08 on top of them double-counts.
-Compare like with like: the framework's *installed* rows against Brandt's stored values.
+**already installed** — they include the 1.08 factor. Applying 1.08 again double-counts. Compare the
+framework's *installed* rows against Brandt's stored values.
 
 ## 4. As-built values
 
@@ -73,8 +71,8 @@ At 36,000 ft / M 0.87: $\alpha_{AB} = 0.36739545$, $c_{t,mil} = 1.0071158$ hr⁻
 `engine_weight_AB(23770, 2.0, 0.71)` = 2775.021 lbf.
 
 **`TR` is degenerate at 1.0.** Only $T_{t4,max}$ is an input; $T_{t4,SLS}$ is unknown, so
-`compute_TR` defaults it to $T_{t4,max}$. This matches Brandt (Engn(s)!S1) and is an accepted
-limitation — genuine throttle-ratio visibility would need a separate $T_{t4,SLS}$ input.
+`compute_TR` defaults it to $T_{t4,max}$. This matches Brandt (Engn(s)!S1). A separate $T_{t4,SLS}$
+input would be needed for genuine throttle-ratio visibility.
 
 ## 5. To-dos
 

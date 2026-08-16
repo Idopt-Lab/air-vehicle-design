@@ -1,27 +1,19 @@
 %% run_b777_constraint_diagram
 %   Boeing 777-200LR constraint diagram (T/W vs W/S) [metabook Example 4.2,
-%   Fig. 4.6]. Builds the B777 L1 discipline stack, aggregates the ten
-%   constraint conditions (B777ConstraintSet.constraint_map, reading
-%   b777_requirements.json) through the generic ConstraintAnalysis, draws the
-%   diagram, and overlays the ACTUAL 777-200LR design point for reference.
+%   Fig. 4.6]. Builds the B777 L1 stack, aggregates the ten conditions
+%   (B777ConstraintSet.constraint_map, reading b777_requirements.json) through
+%   the generic ConstraintAnalysis, draws the diagram, and overlays the ACTUAL
+%   777-200LR design point.
 %
-%   Style/wiring follows examples/F16A/studies/run_F16_constraint_diagram.m
-%   (caller owns discipline construction -- dependency injection); the
-%   figure/JSON/MD export into the gitignored examples/B777/output/ follows the
-%   sanity_checks scripts and run_F16_TS_diagram.m.
-%
-%   READING THE DIAGRAM. Down and to the right is better for a jet (low T/W =
-%   small engine, high W/S = small efficient wing). The binding lower boundary
-%   is the 2nd-segment-climb floor (a flat T/W line); the takeoff-field-length
-%   line rises with W/S and crosses it. optimal_point() returns the DOWN-RIGHT
-%   corner -- the climb-floor / takeoff-line intersection -- which is the
-%   transport design point. The actual-777 marker at (W/S = 142.45, T/W = 0.287)
-%   [metabook Table 4.3 / Fig. 4.7 caption] sits just up-and-left of it, inside
-%   the feasible region (the real aircraft carries margin above the corner).
+%   READING THE DIAGRAM. Down-and-to-the-right is better for a jet. The binding
+%   lower boundary is the 2nd-segment-climb floor; the takeoff-field-length line
+%   rises and crosses it. optimal_point() returns the down-right corner (the
+%   transport design point). The actual-777 marker (W/S = 142.45, T/W = 0.287)
+%   [metabook Table 4.3 / Fig. 4.7 caption] sits just up-and-left, inside the
+%   feasible region.
 
-% Caller owns discipline construction (dependency injection): build the B777 L1
-% aero/prop pair explicitly, then hand it to the constraint set. B777AeroL1
-% injects the geometry object so its clean CD0 tracks the wing area.
+% Caller owns discipline construction (dependency injection). B777AeroL1 injects
+% the geometry object so its clean CD0 tracks the wing area.
 sp   = b777_spec_path(1);
 rp   = b777_requirements_path();
 geom = B777GeomL2(sp);
@@ -37,14 +29,12 @@ ca = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
 
 fig = ca.plot_diagram();
 
-% Force a light theme for batch export (plot_diagram, unlike TSDiagram.plot,
-% does not set these itself). See run_F16_TS_diagram.m for the idiom.
+% Force a light theme for batch export (plot_diagram does not set it itself).
 fig.Color = 'w';
 if isprop(fig, 'Theme'), fig.Theme = 'light'; end
 
 % Actual 777-200LR design-point marker [metabook Table 4.3: W/S = 142.45 psf;
-% Fig. 4.7 caption: T = 220000 lbf at W0 = 766800 lbf -> T/W = 0.287]. The
-% metabook shows it inside the feasible region.
+% Fig. 4.7 caption: T = 220000 lbf at W0 = 766800 lbf -> T/W = 0.287].
 WS_actual = 142.45;
 TW_actual = 220000 / 766800;   % = 0.2869
 ax = fig.CurrentAxes;
@@ -63,8 +53,7 @@ fprintf('  Design point (climb-floor / takeoff corner): W/S = %.2f psf, T/W = %.
 fprintf('  Actual 777-200LR marker: W/S = %.2f psf, T/W = %.4f [metabook Table 4.3]\n', ...
     WS_actual, TW_actual);
 
-% Is the actual-777 point feasible against the live envelope + walls? Read the
-% envelope T/W and the tightest wall at the actual W/S by interpolation.
+% Is the actual-777 point feasible against the live envelope + walls?
 env      = ca.envelope();              % 1 x numel(WS_sweep)
 TW_env_at_actual = interp1(WS_sweep, env, WS_actual, 'linear', NaN);
 % Tightest W/S wall (smallest WS_max over the Only_WbyS constraints).

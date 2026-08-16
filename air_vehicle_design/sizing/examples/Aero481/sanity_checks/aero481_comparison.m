@@ -2,61 +2,29 @@ function results = aero481_comparison()
 %Aero481_AERO481_COMPARISON  Informational F-35 model vs Aero 481 Design01.
 %
 %   Compares the F-35 L1 discipline model against the INLINE Aero 481
-%   +Constraints/* reference formulas (C:\Users\darsh\Downloads\Aero 481
-%   Code\+Constraints\: Cruise.m, SustainedTurn.m, SpecExcessPower.m,
-%   InstantaneousTurn.m, Ceiling.m, plus the All.m driver), evaluated at the
-%   Design01 design wing-loading W/S = 92.17 psf (= 450 kg/m^2 * 9.807 = 4413
-%   N/m^2 [A481 Design01.m:21]). Per-constraint framework required_TW vs the
-%   transcribed A481 T/W.
+%   +Constraints/* reference formulas (Cruise.m, SustainedTurn.m,
+%   SpecExcessPower.m, InstantaneousTurn.m, Ceiling.m, All.m), at the Design01
+%   design wing-loading W/S = 92.17 psf [A481 Design01.m:21]. Per-constraint
+%   framework required_TW vs the transcribed A481 T/W.
 %
-%   INFORMATIONAL ONLY -- not a pass/fail unit test, and NEVER used to backfill a
-%   unit test's expected value (the CLAUDE.md two-tier rule). Prints console
-%   tables and writes examples/Aero481/output/aero481_comparison.{md,json}.
-%   Mirrors sanity_checks/b777_metabook_comparison.m and the
-%   brandt_constraint_reference.m transcription pattern.
+%   INFORMATIONAL ONLY -- not a pass/fail unit test, never used to backfill an
+%   expected value (CLAUDE.md two-tier rule). Prints console tables and writes
+%   examples/Aero481/output/aero481_comparison.{md,json}.
 %
-%   The A481 reference formulas are transcribed HERE in SI, faithful to the
-%   source (Utility.StdAtm Section 01 for all F-35 altitudes <11 km; W/S in
-%   N/m^2; T/W dimensionless). The A481 g = 9.087 typo (disc A3) is reproduced
-%   in the InstantaneousTurn transcription so the printed A481 value matches what
-%   Aero 481 actually computes -- the framework value corrects it, and the delta
-%   is annotated. Aero 481 applies NO thrust lapse (disc A6); the framework lapse
-%   is now OFF too (m = 0), so the A6 section below reports alpha = 1 at every
-%   altitude and the per-constraint deltas are no longer lapse-driven.
+%   The A481 formulas are transcribed here in SI (Utility.StdAtm Section 01,
+%   altitudes <11 km). The A481 g = 9.087 typo (disc A3) is reproduced in the
+%   InstantaneousTurn transcription; the framework corrects it. Section 11 sizes
+%   the framework at the real F135 thrust via TSDiagram.converge_W0 and compares
+%   to Aero 481's A02 values (~2%).
 %
-%   A02 MTOW REPRODUCTION (section 12). Beyond the per-constraint check, the
-%   report sizes the framework at the real F135 thrust (43,000 lbf) x a few
-%   design wings via TSDiagram.converge_W0 (the A02 fixed-cell closure) and
-%   compares the converged TOGW to Aero 481's A02 values -- the faithfulness
-%   check (~2%).
+%   ANNOTATED SYSTEMATIC DELTAS (see aero481_discrepancies.md): A6 thrust lapse
+%   now ZERO (framework m = 0 matches A481); A2 Oswald identical at Lambda_LE <
+%   30 deg; A4 climb rows dropped; SEP combat weight now matched (beta = 0.8285,
+%   ff = 0.343); A8 mission fractions (published cross-check only).
 %
-%   ANNOTATED SYSTEMATIC DELTAS (Aero 481 vs framework; see
-%   examples/Aero481/aero481_discrepancies.md):
-%     * A6 (thrust lapse) -- Aero 481 uses installed thrust at altitude with no
-%       alpha = T(alt)/T_SL term. The framework lapse is now OFF (m = 0), so
-%       alpha = sigma^0 = 1 at every altitude, matching A481. This delta is now
-%       ZERO; the A6 section below reports alpha = 1 to document the resolution.
-%     * A2 (Oswald form) -- A481 Utility.Oswald(AR) = 1.78*(1-0.045*AR^0.68)-0.64
-%       IS Raymer 6th ed. Eq. 12.48 (the framework's low-sweep branch), so at
-%       Lambda_LE < 30 deg the two are IDENTICAL. Any e delta is zero here.
-%     * A4 (climb gradient) -- no longer relevant here: the six FAR-25 climb rows
-%       were DROPPED (transport-cert gradients, not applicable to a fighter; user
-%       decision). No climb comparison is made.
-%     * SEP maneuver (combat) weight -- A481 SpecExcessPower.m ALONE evaluates at
-%       a 50%-internal-fuel COMBAT weight (W_S_mw = W_S*(1+(1-ff))/2*n, ff = 0.343
-%       the DCA fuel fraction => combat fraction (1+(1-0.343))/2 = 0.8285) [A481
-%       SpecExcessPower.m:28]. The framework now REPRODUCES this: the 6 SEP rows
-%       carry beta = 0.8285 in aero481_requirements.json, and the master equation
-%       applies the load factor n separately. So this delta is now ZERO (both use
-%       the same combat weight); the transcription below uses ff = 0.343.
-%     * A8 (mission fractions) -- Roskam Part I Table 2.1 fighter fractions
-%       replace A03's uncited ff1..ffdescent. Not a constraint delta; noted for
-%       the published cross-check row only.
-%
-%   PUBLISHED F-35A CROSS-CHECK (order-of-magnitude only, aero481_data.md Part I):
-%   MTOW ~65,900-70,000 lb, T = 43,000 lbf, S = 460 ft^2 -> W/S ~143-152 psf vs
-%   Design01's 92.2; AR 4 (Design01) vs published 2.66 (35 ft span / 460 ft^2,
-%   disc A5).
+%   PUBLISHED F-35A CROSS-CHECK (order-of-magnitude, aero481_data.md Part I):
+%   MTOW ~65,900-70,000 lb, T = 43,000 lbf, S = 460 ft^2; AR 4 (Design01) vs
+%   published 2.66 (disc A5).
 
     sp = aero481_spec_path(1);
     rp = aero481_requirements_path();
@@ -139,10 +107,8 @@ function results = aero481_comparison()
     %    A481 SpecExcessPower.m: COMBAT weight W_S_mw = W_S*(1+(1-ff))/2*n;
     %      CL = W_S_mw/q;  CD = CD0 + CL^2/(pi*AR*e);
     %      T_W = Ps/v + q*CD/W_S_mw.  [A481 SpecExcessPower.m:28,44,47,50]
-    %    ff = 0.343 (the DCA fuel fraction) => combat fraction (1+(1-0.343))/2 =
-    %    0.8285, matching the beta = 0.8285 the 6 SEP rows now carry in
-    %    aero481_requirements.json. Ps in m/s (ft value read as ft/s per
-    %    _note_Ps_unit, converted to m/s for the A481 v [m/s]).
+    %    ff = 0.343 (DCA fuel fraction) => combat fraction 0.8285 (= the beta the
+    %    6 SEP rows carry). Ps read as ft/s, converted to m/s for the A481 v.
     % --------------------------------------------------------------------- %
     FT2M = 0.3048;
     sep_specs = { ...
@@ -177,8 +143,7 @@ function results = aero481_comparison()
     %    A481 InstantaneousTurn.m REPRODUCED WITH THE g = 9.087 TYPO (disc A3):
     %      n = rot*v/g;  W_S_n = W_S*n;  CL = W_S_n/q;
     %      CD = CD0 + CL^2/(pi*AR*e);  T_W = q*CD/W_S_n.  [lines 32,35,38,47,50,56]
-    %    The framework class corrects g to 32.174 ft/s^2, so the delta here is
-    %    partly the A3 gravity fix and partly the A6 lapse.
+    %    The framework class corrects g to 32.174 ft/s^2 (the delta here).
     % --------------------------------------------------------------------- %
     [q_it, v_it] = a481_qv(35000, 1.60);
     rot = 18 * pi / 180;               % rad/s [A481 All.m:86]
@@ -214,12 +179,8 @@ function results = aero481_comparison()
     % --------------------------------------------------------------------- %
 
     % --------------------------------------------------------------------- %
-    % 9. A6 THRUST-LAPSE section (now RESOLVED) -- report the framework lapse
-    %     factors the transcriptions above do NOT carry, so the per-row deltas
-    %     above are readable. The framework lapse exponent m is now 0, so
-    %     alpha = sigma^0 = 1 at every altitude -- matching A481 (which applies no
-    %     lapse). These rows should print alpha = 1.0 (delta 0%), documenting the
-    %     A6 resolution. mil-on-AB scale is reported for reference.
+    % 9. A6 THRUST-LAPSE section (RESOLVED). Framework m = 0, so alpha = 1 at
+    %     every altitude -- matching A481 (no lapse). mil-on-AB scale reported.
     % --------------------------------------------------------------------- %
     m_lapse = prop.lapse_exponent_m;                 % 0 (lapse OFF, matches A481)
     mil_scale = prop.T_SL_mil / prop.T_SL;           % 28000/43000 = 0.6512
@@ -237,8 +198,7 @@ function results = aero481_comparison()
 
     % --------------------------------------------------------------------- %
     % 10. Published F-35A cross-check (order-of-magnitude, aero481_data.md Part I).
-    %     Design values vs the published jet -- a fidelity/design gap (disc A5),
-    %     NOT a bug. a481/published carried in the note; model column = Design01.
+    %     Design values vs the published jet -- a fidelity/design gap (disc A5).
     % --------------------------------------------------------------------- %
     rows{end+1} = crow('Published X-check', 'AR', AR, 2.66, ...
         'A481 Design01.m:49 vs aero481_data.md Part I', ...
@@ -251,13 +211,10 @@ function results = aero481_comparison()
         'Design01 T/W 1.2 vs published 43,000/65,900 = 0.65 (T = 43,000 lbf)');
 
     % --------------------------------------------------------------------- %
-    % 11. A02 MTOW reproduction (the faithfulness check). Size the framework at
-    %     the real F135 thrust (43,000 lbf) x a few design wings and compare the
-    %     converged TOGW to Aero 481's A02 values. TSDiagram.converge_W0 IS the
-    %     A02 fixed-cell closure (writes prop.T_SL / geom.S_ref, iterates the TOGW
-    %     fixed point on the mission fuel fraction + the A02 empty-weight build-up
-    %     -- see Aero481WeightsL1.OEW). The lapse is now OFF (m = 0), matching A481
-    %     (disc A6 resolved), so the reproduction is faithful (~2%). A02 refs:
+    % 11. A02 MTOW reproduction (faithfulness check). Size the framework at the
+    %     real F135 thrust (43,000 lbf) x a few design wings via
+    %     TSDiagram.converge_W0 (the A02 fixed-cell closure) and compare the
+    %     converged TOGW to Aero 481's A02 values (~2%). A02 refs:
     %     A02(Design01, 43,000 lbf, {45,50,55} m^2) [A481 +Algorithms/A02.m].
     % --------------------------------------------------------------------- %
     geom  = Aero481GeomL1(sp, rp);
@@ -334,9 +291,7 @@ function [q, v] = deal_qv(alt_ft, M)
 end
 
 function tw = TW_design_ratio(prop)
-%TW_DESIGN_RATIO  Design01 T/W = 1.2 (the marker). Kept as a tiny helper so the
-%   published-cross-check row reads the design T/W from a named source rather
-%   than a bare literal; prop is unused (the value is the Design01 choice).
+%TW_DESIGN_RATIO  Design01 T/W = 1.2 [A481 Design01.m:20]. prop unused.
     tw = 1.2;   %#ok<INUSD>  [A481 Design01.m:20]
 end
 
@@ -355,9 +310,7 @@ function r = crow(section, label, model, a481, cite, note)
 end
 
 function c = find_con(cons, con_names, name)
-%FIND_CON  The constraint object whose .name matches, from the built cell array.
-%   Errors if the name is absent -- a typo guard, so a mis-typed lookup fails
-%   loudly rather than silently comparing against the wrong constraint.
+%FIND_CON  The constraint object whose .name matches. Errors if absent (typo guard).
     idx = find(con_names == name, 1);
     if isempty(idx)
         error('aero481_comparison:constraintNotFound', ...

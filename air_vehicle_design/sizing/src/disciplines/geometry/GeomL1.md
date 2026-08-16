@@ -26,17 +26,10 @@ There is no planform.
 | `get_AR_eq(obj)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
 | `get_control_surface_fraction(obj, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
 
-**TAIL SIZING — RE-RETIRED 2026-08-05** (RESTORED 2026-08-03, RETIRED 2026-07-28 before that):
-`size_tail`, `compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`, `compute_tail_arm`,
-`compute_S_HT`, `compute_S_VT` briefly lived on this toolbox (2026-08-03 through 2026-08-05) under
-Casey's 2026-08-03 decision that tail sizing was organizationally part of Geometry. That decision is
-reversed again: tail sizing (and control-surface sizing) are back to being their own standalone
-objects, so these methods are gone from `GeomL1` a second time and live again in
-`src/disciplines/tail_sizing/TailL1.m` (restored verbatim from git history, same bodies/citations as
-before the 2026-08-03 absorption — nothing about the equations changed across either move). See
-`src/disciplines/tail_sizing/TailSizing_scribe_plan.md` for the historical discrepancy-resolution
-record (two competing L1 tail-sizing implementations existed in this repo before 2026-07-28 — the one
-that survived is what's implemented in `TailL1.m` today).
+**Tail sizing is not here.** `size_tail`, `compute_tail_volume_coeffs`,
+`lookup_tail_volume_coeffs`, `compute_tail_arm`, `compute_S_HT`, and `compute_S_VT` live in
+`src/disciplines/tail_sizing/TailL1.m`. Tail sizing and control-surface sizing are standalone
+disciplines. See `src/disciplines/tail_sizing/TailSizing_scribe_plan.md` for the equation record.
 
 ## 3. Equations
 
@@ -64,10 +57,9 @@ $$AR_{eq} = a\,M_{max}^{\,C}$$
 | `business_jet` | 0.2263 | 0.6977 |
 | `military_cargo` | −0.0866 | 0.8099 |
 
-The `transport_jet` exponent was corrected `0.7351 → 0.7531` (digit transposition) per disposition
-D3 (`metabook_data.md` Eq. 4.9 / Eq. 4.42, Sarojini 2026-08-14): `d = 0.7531` reproduces the printed
-`S_wet = 10^0.0199 · 766,800^0.7531 = 28,291 ft²`, whereas `0.7351` gave ~22,170 ft². The `jet_fighter`
-row (the F-16A path) is unaffected.
+The `transport_jet` exponent is `d = 0.7531` per disposition D3 (`metabook_data.md` Eq. 4.9 /
+Eq. 4.42). It reproduces the printed `S_wet = 10^0.0199 · 766,800^0.7531 = 28,291 ft²`. The
+`jet_fighter` row (the F-16A path) is unaffected.
 
 `lookup_lfus` — Raymer 6th ed. Table 6.3 (ft from lbf):
 

@@ -35,19 +35,12 @@ classdef (Abstract) AerodynamicsBase < handle
         %     clean, takeoff_flaps_gear_up, takeoff_flaps_gear_down,
         %     landing_flaps_gear_up, landing_flaps_gear_down, approach.
         %
-        %   The two core abstract methods (drag_polar/get_CLmax) expose only the
-        %   CLEAN polar. A per-configuration polar is what distinguishes a clean
-        %   from a dirty (flaps + gear) configuration, so it belongs on the
-        %   aircraft-specific aerodynamics class, built on that class's existing
-        %   config-distinguishing methods (get_CLmax_TO/get_CLmax_L,
-        %   get_Delta_CD0_TO/get_Delta_CD0_L). This base method is the contract
-        %   and the loud guard: a concrete class a FAR-25 field-length or climb
-        %   constraint needs MUST override it.
-        %
-        %   The default ERRORS rather than being declared Abstract, so aero
-        %   classes that never see those constraints -- e.g. the Brandt F-16A
-        %   validation adapter, which sizes with the military Takeoff/Landing
-        %   constraints -- are not forced to implement a method they never call.
+        %   drag_polar/get_CLmax expose only the clean polar. A concrete class a
+        %   FAR-25 field-length or climb constraint needs must override this,
+        %   building on its config-distinguishing methods (get_CLmax_TO/_L,
+        %   get_Delta_CD0_TO/_L). The default errors rather than being abstract,
+        %   so classes that never see those constraints are not forced to
+        %   implement it.
             arguments
                 obj
                 config (1,1) string {mustBeMember(config, ...

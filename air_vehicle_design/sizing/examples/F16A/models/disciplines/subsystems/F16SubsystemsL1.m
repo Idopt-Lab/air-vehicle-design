@@ -22,31 +22,24 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
 %   SOURCES:
 %     [Nicolai] Nicolai & Carichner, "Fundamentals of Aircraft and Airship
 %               Design," Ch.8, p.210 (fuel density Table 8.6; avionics
-%               density Sec.8.1.11 -- NOT used at L1, see avionics_density).
-%     [Raymer]  D.P. Raymer, Aircraft Design 7th ed. (cited here as 6th ed.
-%               per the original step-9 design plan), Table 11.6, p.375
-%               (avionics weight fraction + following-paragraph density
-%               range).
+%               density Sec.8.1.11 -- not used at L1, see avionics_density).
+%     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., Table 11.6, p.375
+%               (avionics weight fraction + following-paragraph density range).
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL1.md
 
-    % ======================================================================= %
     % INPUTS (2) -- plain mutable properties, set once by the constructor.
     % Authoritative table with all citations: F16SubsystemsL1.md §2.
-    % ======================================================================= %
     properties
         fuel_type          = 'JP-8'      % selects SubsystemsL1.lookup_fuel_density [Nicolai & Carichner Table 8.6; f16a_L1.json .subsystems.fuel.fuel_type]
         avionics_table_row = 'Fighters'  % selects SubsystemsL1.lookup_avionics_weight_fraction [Raymer 6th ed. Table 11.6; f16a_L1.json .subsystems.avionics.aircraft_category_table_row]
     end
 
-    % ======================================================================= %
-    % DERIVED (5) -- zero-extra-arg quantities that read ONLY the inputs
-    % above. Dependent getters, recomputed live on every read -- never a
-    % cached/frozen value (CLAUDE.md "Optimization-ready property design").
-    % SubsystemsBase declares these as ABSTRACT PROPERTIES, not abstract
-    % methods, for exactly this reason. fuselage_raw_volume/fuel_volume are
-    % honestly 0 at L1 (no fuselage/fuel-bay geometry exists at this tier).
-    % ======================================================================= %
+    % DERIVED (5) -- zero-extra-arg quantities that read only the inputs above.
+    % Dependent getters, recomputed live on every read. SubsystemsBase declares
+    % these as abstract PROPERTIES, not abstract methods.
+    % fuselage_raw_volume/fuel_volume are honestly 0 at L1 (no fuselage/fuel-bay
+    % geometry at this tier).
     properties (Dependent)
         avionics_weight_fraction
         avionics_density

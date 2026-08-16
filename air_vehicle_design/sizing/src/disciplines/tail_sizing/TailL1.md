@@ -1,8 +1,7 @@
 # TailL1
 
 Level-1 tail-sizing static toolbox (`classdef TailL1`, `methods (Static)` only). Called as
-`TailL1.method(...)`; never instantiated and not in the inheritance chain. `F16TailL1` inherits
-`TailSizingModelL1` and delegates here.
+`TailL1.method(...)`; never instantiated. `F16TailL1` inherits `TailSizingModelL1` and delegates here.
 
 **L1 is the volume-coefficient method**: sizes `S_ht`/`S_vt` from a tail volume coefficient, an
 assumed tail moment arm (a fraction of fuselage length), and the wing planform (`S_ref`, `b`,
@@ -57,9 +56,8 @@ $$c_{HT} = 0.40 \times 0.90 \times 0.875 = 0.315 \qquad c_{VT} = 0.07 \times 0.9
 
 ## 5. Worked example (independent hand check, not F-16 spec data)
 
-Using `S_ref=300 ft²`, `b=30 ft`, `cbar=11.320178695127362 ft`, `L_fus=46.5 ft` (F16GeomL2-consistent
-wing numbers, used here only as representative scalars — see `F16TailL1.md` for the actual F-16
-class's own worked example and Brandt comparison):
+Using `S_ref=300 ft²`, `b=30 ft`, `cbar=11.320178695127362 ft`, `L_fus=46.5 ft` (representative
+scalars — see `F16TailL1.md` for the F-16 class's own worked example and Brandt comparison):
 
 ```
 L_HT = L_VT = 0.475 * 46.5 = 22.0875 ft
@@ -67,26 +65,13 @@ S_ht = 0.315 * 11.320178695127362 * 300 / 22.0875 = 48.43268 ft^2
 S_vt = 0.063 * 30 * 300 / 22.0875               = 25.67063 ft^2
 ```
 
-## 6. Migration record (2026-07-28)
+## 6. Migration record
 
-These statics are **ported, not re-derived**, from the orphaned `src/disciplines/geometry/GeomL1.m`
-methods of the same names (`compute_tail_volume_coeffs`, `lookup_tail_volume_coeffs`,
-`compute_tail_arm`, `compute_S_HT`, `compute_S_VT`). Two competing L1 tail-sizing implementations
-existed in this repo simultaneously:
-
-| | Live, wired, tested | Orphaned, never called |
-|---|---|---|
-| Coefficients | `c_HT=0.40`, `c_VT=0.07` | same base, but with RSS/all-moving-tail text corrections applied → `0.315`/`0.063` |
-| Tail arm | `0.5*L_fus` | `0.475*L_fus` |
-| Citation | Raymer 6th ed. | Raymer 7th ed. |
-
-**Decision (user, 2026-07-28, `TailSizing_scribe_plan.md` Sec. 2): adopt the orphaned `GeomL1` set as
-canonical.** `GeomL1.m` has had these five methods **deleted** as part of this migration — tail sizing
-is not geometry's job, and leaving a second, now-stale copy there would recreate the exact
-discrepancy just resolved. The old `TailSizingLevel1`/`F16TailSizingLevel1` classes (which carried the
-now-superseded 0.40/0.07/6th-ed./`0.5*L_fus` values) are superseded by this toolbox and `F16TailL1`.
+These statics are ported, not re-derived, from the orphaned
+`src/disciplines/geometry/GeomL1.m` methods of the same names. Full history and rationale:
+`docs/decision_log.md`; `TailSizing_scribe_plan.md` Sec. 2.
 
 ## 7. To-dos
 
-None open for L1. (The generic-vs-F-16-specific coefficient question is resolved at L2 instead — see
-`TailL2.md` Sec. 6/7.)
+None open for L1. The generic-vs-F-16-specific coefficient question is resolved at L2 — see
+`TailL2.md`.

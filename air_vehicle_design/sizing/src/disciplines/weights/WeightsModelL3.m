@@ -1,20 +1,15 @@
 classdef (Abstract) WeightsModelL3 < WeightsBase
-%WEIGHTSMODELL3  Tier-2 abstract enforcer for Level-3 weights.
-%
-%   Inherits WeightsBase directly, not another WeightsModelLN.
-%
-%   L3 is the [Raymer 6th ed. Sec. 15.3.1] fighter/attack component buildup,
-%   Eqs. 15.1-15.24, plus [Raymer 7th ed. Eq. 10.10] for the dry engine
-%   weight, which is not a Sec. 15.3.1 equation (7th ed. confirmed correct
-%   for this one equation only, per Sarojini). Most geometry arrives by
-%   dependency injection from a geometry object rather than as literals on
-%   the concrete class.
+%WEIGHTSMODELL3  Tier-2 abstract enforcer for Level-3 weights: the
+%   [Raymer 6th ed. Sec. 15.3.1] fighter/attack component buildup, Eqs.
+%   15.1-15.24, plus [Raymer 7th ed. Eq. 10.10] for the dry engine weight.
+%   Inherits WeightsBase; declares the abstract members a concrete L3 class
+%   must supply. Most geometry arrives by dependency injection.
 %
 %     OEW = structural + landing gear + engine section + systems
 %
 %   The DERIVED properties below must be Dependent getters on the concrete
 %   class, never stored values.
-%
+%   History and rationale: docs/decision_log.md.
 %   Toolbox companion: src/disciplines/weights/WeightsL3.md
 
      properties (Abstract)

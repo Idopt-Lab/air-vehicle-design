@@ -1,14 +1,10 @@
 classdef (Abstract) WeightsModelL2 < WeightsBase
-%WEIGHTSMODELL2  Tier-2 abstract enforcer for Level-2 weights.
-%
-%   Inherits WeightsBase directly, not another WeightsModelLN.
-%
-%   L2 is surface density x area for the structural groups, plus fractions of
-%   gross weight for landing gear, installed engine and all-else-empty.
-%
-%   The DERIVED properties below must be Dependent getters on the concrete
-%   class, never stored values.
-%
+%WEIGHTSMODELL2  Tier-2 abstract enforcer for Level-2 weights (surface density
+%   x area for structural groups, plus gross-weight fractions for landing gear,
+%   installed engine and all-else-empty). Inherits WeightsBase; declares the
+%   abstract members a concrete L2 class must supply. The DERIVED properties
+%   below must be Dependent getters on the concrete class, never stored values.
+%   History and rationale: docs/decision_log.md.
 %   Toolbox companion: src/disciplines/weights/WeightsL2.md
 
     properties (Abstract)

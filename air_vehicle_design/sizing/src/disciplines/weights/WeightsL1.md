@@ -1,11 +1,11 @@
 # WeightsL1
 
 Level-1 weights static toolbox (`classdef WeightsL1`, `methods (Static)` only). Called as
-`WeightsL1.method(...)`; never instantiated and not in the inheritance chain. `F16WeightsL1` inherits
-`WeightsModelL1` and delegates here.
+`WeightsL1.method(...)`; never instantiated. `F16WeightsL1` inherits `WeightsModelL1` and delegates
+here.
 
 **L1 is a statistical empty-weight fraction.** Both regressions take only $W_{TO}$ — no geometry, no
-engine data — which is why L1 is the only weights level that injects nothing.
+engine data — so L1 injects nothing.
 
 ---
 
@@ -29,9 +29,8 @@ $$\frac{W_e}{W_{TO}} = K_{vs}\,A\,W_{TO}^{\,C}
 
 $$W_E = 10^{\left(\log_{10} W_{TO} - A\right)/B}$$
 
-This is a **minimum bound**, not a competing estimate — the historical efficiency frontier. A real
-OEW must sit above it, so a negative difference against ground truth is the correct result and its
-magnitude is not an error measure.
+This is a **minimum bound**, not a competing estimate. A real OEW must sit above it, so a negative
+difference against ground truth is correct and its magnitude is not an error measure.
 
 ## 3. Coefficients
 
@@ -54,9 +53,8 @@ magnitude is not an error measure.
 | `military_patrol_bomber` | −0.2009 | 1.1037 |
 | `supersonic_cruise` | 0.0833 | 1.0335 |
 
-Both sets come from **secondary sources**: the metabook cites Raymer rather than being Raymer, and
-the Roskam rows were OCR-recovered from an image-only table that carries its own
-verify-against-the-book warning.
+Both sets come from **secondary sources**: the metabook cites Raymer, and the Roskam rows were
+OCR-recovered from an image-only table that carries its own verify-against-the-book warning.
 
 ## 4. As-built values
 

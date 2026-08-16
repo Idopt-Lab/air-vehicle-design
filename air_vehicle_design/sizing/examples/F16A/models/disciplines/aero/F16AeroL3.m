@@ -6,45 +6,36 @@ classdef F16AeroL3 < AeroModelL3
 %   (Raymer Eq. 12.41, M >= 1.2). Most methods delegate to the AeroL3 static
 %   toolbox; drag_polar/get_CD0_buildup add the wave-drag term on top.
 %
-%   ============================================================================
 %   DEPENDENCY INJECTION + INPUT vs DERIVED (optimization-ready design).
-%   Constructor takes a REQUIRED injected geometry object and a REQUIRED
+%   Constructor takes a required injected geometry object and a required
 %   unified L3 input JSON path (f16a_spec_path(3); reads its .aerodynamics
 %   block; no silent defaults). Properties split:
-%
-%     (1) INPUTS -- plain/Constant blocks of genuine aero constants only:
-%         per-component interference Q, laminar fraction, body/surface flag,
-%         surface roughness, max-thickness chordwise station, airfoil section
-%         data, wave-drag factor, misc/leakage drag allowances, and the
-%         high-lift/gear control-surface estimates. From the unified L3 JSON's
-%         .aerodynamics block.
-%
-%     (2) DERIVED (Dependent) -- ALL geometry read LIVE from the injected
-%         geometry object: reference area/AR/sweep/taper AND the per-component
+%     (1) INPUTS -- plain/Constant blocks of aero constants only (per-component
+%         interference Q, laminar fraction, body/surface flag, surface
+%         roughness, max-thickness station, airfoil section data, wave-drag
+%         factor, misc/leakage drag allowances, high-lift/gear estimates).
+%     (2) DERIVED (Dependent) -- all geometry read live from the injected
+%         geometry object: reference area/AR/sweep/taper and the per-component
 %         wetted-area / reference-length / diameter / t-c / max-thickness-line-
-%         sweep arrays (component order: wing, HT, VT, fuselage, duct). NO
-%         geometry number is stored on this class -- the historical hardcoded
-%         component arrays (S_wet_comp=[397 130 111 644 139], l_ref_comp,
-%         D_comp, tc_comp, Lambda_m_comp=[35 35 42 0 0], Lambda_c4_deg=37) are
-%         gone; each is rebuilt live from obj.geom on every read.
-%   ============================================================================
+%         sweep arrays (order: wing, HT, VT, fuselage, duct). No geometry
+%         number is stored on this class; each is rebuilt live on every read.
 %
 %   Inheritance: AerodynamicsBase -> AeroModelL3 -> F16AeroL3
 %   Component order: [1] wing, [2] HT, [3] VT, [4] fuselage, [5] duct
+%
+%   History and rationale: docs/decision_log.md
 
-    % ======================================================================= %
     % INPUTS -- aero-only constants (from the unified L3 JSON's .aerodynamics
-    % block). NO geometry.
-    % ======================================================================= %
+    % block). No geometry.
     properties
         geom              % injected geometry object (all geometry read live from it)
 
-        aircraft_category % string; canonical top-level class flag, read from the unified JSON's top-level aircraft_category key (same as F16AeroL1/L2 expose). Not used by any L3 aero equation -- exposed so mission analysis can read aero.aircraft_category by DI at every fidelity for the Roskam Table 2.1/2.2 row.
+        aircraft_category % string; canonical top-level class flag. Not used by any L3 aero equation -- exposed so mission analysis can read it by DI for the Roskam Table 2.1/2.2 row.
 
         % Airfoil (NACA 64A204).
         alpha_L0          % deg; zero-lift AOA (drives CL_minD -> K2)
         cl_max_2D         % 2-D section cl_max (feeds clean CLmax, Eq. 12.15)
-        cl_alpha_2D       % 1/rad; 2-D lift slope -> eta term (Raymer Eq. 12.8). Added 2026-07-25: without it AeroL2.get_CL_alpha fell back to eta=0.95, so L3 was LESS informed than L2 on the same airfoil.
+        cl_alpha_2D       % 1/rad; 2-D lift slope -> eta term (Raymer Eq. 12.8)
 
         % Per-component aero constants (component order above).
         x_c_max_comp      % — chordwise max-thickness station (surfaces; 0 for bodies)
@@ -64,13 +55,10 @@ classdef F16AeroL3 < AeroModelL3
     properties (Constant)
         % --- Trailing-edge flaperon control-surface estimates (aero spec, not
         % geometry; not in the aero JSON).
-        % delta_flap_TO/L_deg = 20 deg, BOTH takeoff and landing, web-sourced
-        % 2026-07-30 (f-16.net forum + Aerosoft F-16 simulator manual, cross-
-        % checking each other): with gear down the flaperons go to 20 deg as
-        % trailing-edge flaps; during ground roll before liftoff the TEF is
-        % also 20 deg down (only retracting above 240-370 kt once airborne).
-        % Was previously an uncited 15/20 deg split (TO/L) -- the 15 deg TO
-        % figure is corrected; the two conditions use the SAME TEF setting.
+        % delta_flap_TO/L_deg = 20 deg, both takeoff and landing [f-16.net
+        % forum + Aerosoft F-16 simulator manual]: gear down, the flaperons go
+        % to 20 deg as trailing-edge flaps; ground roll before liftoff is also
+        % 20 deg down (retracting above 240-370 kt once airborne).
         hld_TE            = "plain"
         c_flap_over_c     = 0.25
         eta_flap_in       = 0.10
@@ -80,16 +68,11 @@ classdef F16AeroL3 < AeroModelL3
         k_f_flap          = 0.28    % Raymer 6th ed. Eq. 12.62 (partial-span)
 
         % --- Leading-edge slat (maneuvering flap) estimates.
-        % TODO: verify vs T.O. 1F-16A-1. The LEF is NOT a fixed "TO/L config"
-        % value in reality -- it is auto-scheduled by the flight control
-        % computer as a function of AoA and Mach, and sits at -2 deg only
-        % during ground roll/taxi before rotation (web-sourced 2026-07-30,
-        % same sources as the TEF note above). delta_slat_TO/L_deg = 17 here
-        % is a stand-in for the LEF position near the high-AoA rotation/
-        % touchdown condition these CLmax_TO/CLmax_L values represent, NOT
-        % the ground-roll -2 deg figure -- plugging in -2 deg would be wrong
-        % for a different flight regime. Still unpinned against a primary
-        % schedule (AoA/Mach breakpoints, not a single number).
+        % TODO: verify vs T.O. 1F-16A-1. The LEF is auto-scheduled by the flight
+        % control computer as a function of AoA and Mach, not a fixed TO/L
+        % value. delta_slat_TO/L_deg = 17 is a stand-in for the LEF position
+        % near the high-AoA rotation/touchdown condition these CLmax_TO/CLmax_L
+        % values represent. Still unpinned against a primary schedule.
         hld_LE            = "slat"
         c_slat_over_c     = 0.15
         eta_slat_in       = 0.0
@@ -109,15 +92,13 @@ classdef F16AeroL3 < AeroModelL3
         n_gear_legs      = 3
     end
 
-    % ======================================================================= %
     % DERIVED -- geometry read live from obj.geom on every read (no cache).
     % Read-only. Component arrays are in the order wing/HT/VT/fuselage/duct.
-    % ======================================================================= %
     properties (Dependent)
         S_ref             % ft^2  <- geom.S_ref
         AR                % —     <- geom.AR_wing
         Lambda_LE_deg     % deg   <- geom.LE_sweep_wing
-        Lambda_c4_deg     % deg   <- geom.QC_sweep_wing (~32.2, fixes the 37 bug)
+        Lambda_c4_deg     % deg   <- geom.QC_sweep_wing (~32.2)
         taper             % —     <- geom.lambda_wing
 
         S_wet_comp        % ft^2  per-component wetted area   <- geom (Roskam Eq.12.1/12.3, frustum)
@@ -126,15 +107,9 @@ classdef F16AeroL3 < AeroModelL3
         tc_comp           % —     per-component thickness ratio<- geom (mean root/tip for HT/VT)
         Lambda_m_comp     % deg   per-component max-thickness-line sweep <- geom (convert_sweep at x_c_max)
 
-        %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, now read
-        %   LIVE from the injected geometry object (Phase 2, 2026-07-25). Both
-        %   were plain INPUT properties fed from f16a_L3.json's
-        %   .aerodynamics.wave_drag block, whose values were Brandt geometry
-        %   OUTPUTS (Geom!B20 = 25.110556, Geom!B21 = 48.303947) frozen as aero
-        %   inputs — while geometry_brandt_comparison.m reported Amax as "NOT
-        %   MODELED". The framework consumed as an input the very number it
-        %   reported as unmodelled, and the Sears-Haack term could not respond to
-        %   a fuselage change. That JSON block is deleted; these are Dependent.
+        %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, read live
+        %   from the injected geometry object so the Sears-Haack term responds
+        %   to a fuselage change.
         Amax_ft2          % ft^2 <- geom.Amax. TIER-SPECIFIC: area-ruled buildup at L3 (24.7037, what Eq. 12.44 wants), fuselage-envelope ellipse at L2 (27.4889). See get.Amax_ft2.
         L_aircraft_ft     % ft   <- geom.L_aircraft (overall length input, distinct from the fuselage L_fus)
 
@@ -151,15 +126,11 @@ classdef F16AeroL3 < AeroModelL3
         %   geometry (incl. per-component arrays) is produced live by the
         %   Dependent getters from obj.geom.
             arguments
-                % GeometryBase is too weak a guard -- it declares only
-                % S_ref/S_wet/get_S_ref/get_S_wet, while this class reads ~20
-                % members off obj.geom. A wrong tier therefore constructed
-                % cleanly and then died mid-run inside get.S_wet_comp, or worse
-                % resolved members whose MEANING differed (before Phase 2's
-                % rename, GeometryModelL3's AR_ht/lambda_ht were EXPOSED-planform
-                % while GeometryModelL2's are FULL -- silently wrong MAC, Re and
-                % form factor, no error). Narrowed 2026-07-25 so a bad tier fails
-                % at CONSTRUCTION; both L2 and L3 geometry satisfy the contract.
+                % GeometryBase is too weak a guard (only S_ref/S_wet), while
+                % this class reads ~20 members off obj.geom -- a wrong tier
+                % would construct cleanly then die mid-run. Narrowed so a bad
+                % tier fails at construction; both L2 and L3 geometry satisfy
+                % the contract.
                 geom      (1,1) {mustBeA(geom, ["GeometryModelL2", "GeometryModelL3"])}
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
@@ -185,9 +156,7 @@ classdef F16AeroL3 < AeroModelL3
                                 J.is_body.vertical_tail, J.is_body.fuselage, J.is_body.duct]);
             obj.k            = J.surface_roughness_k_ft.wing;   % uniform roughness
             obj.E_WD         = J.wave_drag_factor_E_WD;
-            % Amax_ft2 / L_aircraft_ft are NOT read here any more -- they are
-            % Dependent on obj.geom (Phase 2, 2026-07-25). The
-            % .aerodynamics.wave_drag JSON block they used to come from is gone.
+            % Amax_ft2 / L_aircraft_ft are Dependent on obj.geom, not read here.
             obj.CD0_LandP    = J.CD0_LandP;
             obj.Dq_gun_port  = J.misc_drag_areas.Dq_gun_port_ft2;
             obj.Dq_hook_USAF = J.misc_drag_areas.Dq_hook_USAF_ft2;
@@ -228,12 +197,10 @@ classdef F16AeroL3 < AeroModelL3
         function v = get.Lambda_m_comp(obj)
             % Max-thickness-line sweep per surface: convert the injected LE
             % sweep to the chordwise max-thickness station x_c_max via the
-            % shared GeometryBase sweep identities (fixes the old hardcoded
-            % [35 35 42] estimate). Wing/HT are MIRRORED surfaces (4/AR form);
-            % the VT is a SINGLE PANEL, so it takes convert_sweep_panel's 2/AR
-            % form -- using the mirrored form there fed a wrong max-thickness
-            % sweep into the Raymer Eq. 12.30 VT form factor and hence the whole
-            % L3 CD0 buildup (fixed 2026-07-25: 28.70 -> 34.73 deg). Bodies: 0.
+            % shared GeometryBase sweep identities. Wing/HT are mirrored
+            % surfaces (4/AR form); the VT is a single panel, so it takes
+            % convert_sweep_panel's 2/AR form (feeds the Raymer Eq. 12.30 VT
+            % form factor). Bodies: 0.
             g = obj.geom;
             wing = GeometryBase.convert_sweep(g.LE_sweep_wing, g.AR_wing, g.lambda_wing, obj.x_c_max_comp(1));
             ht   = GeometryBase.convert_sweep(g.LE_sweep_ht,   g.AR_ht,   g.lambda_ht,   obj.x_c_max_comp(2));
@@ -246,31 +213,12 @@ classdef F16AeroL3 < AeroModelL3
 
         function v = get.Amax_ft2(obj)
             % Whole-aircraft max cross-section, live from the injected geometry.
-            %
-            % WHAT THIS IS DEPENDS ON THE INJECTED TIER, deliberately:
-            %   F16GeomL3 -> the AREA-RULED buildup: MAX over 20 x-stations of
-            %      (rescaled fuselage frames + wing/HT/VT cosine sections +
-            %      nacelle) less n_eng*pi*D^2/5. F-16A: 24.7037 ft^2. This is
-            %      the quantity Raymer Eq. 12.44 actually wants, and it is what
-            %      an L3 aero object should be given.
-            %   F16GeomL2 -> the fuselage-ENVELOPE ellipse (pi/4)*W*H = 27.4889,
-            %      which readme_geom.md Sec 7 classifies as the LOW-fidelity
-            %      Amax. Correct for L2, WRONG for L3 -- injecting an L2 geometry
-            %      here silently substitutes a fuselage-only quantity for a
-            %      whole-aircraft one and inflates CD0_wave ~23%.
-            %
-            % With the area-ruled Amax, CD0_wave sits -0.54% from the
-            % Brandt-referenced term with E_WD = 2.2 UNCHANGED -- no retune.
-            %
-            % Brandt Geom!B20 = 25.110556 is the same KIND of quantity as the L3
-            % value -- an area-ruled MAX (32.971053) net of a 7.8605 ft^2 engine
-            % flow-through deduction -- so the -1.62% gap is a genuine, small
-            % fidelity difference (L3's fuselage is 47.5 ft vs Brandt's 46.5),
-            % not the definitional mismatch the ellipse had. TestGeomL3's
-            % round-trip control reproduces Geom!B20 to -0.0001% when L_fus is
-            % set back to 46.5. See F16GeomL3.md §4 and
-            % VnV/BrandtF16A/todo.md 2026-07-25 Phase 2 Sec 4b (the affine
-            % rescaling is UNCITED) and Sec 5 (the bare pi*D^2/5 literal).
+            % Tier-specific, deliberately:
+            %   F16GeomL3 -> area-ruled buildup (24.7037 ft^2), the quantity
+            %      Raymer Eq. 12.44 wants -- correct for an L3 aero object.
+            %   F16GeomL2 -> fuselage-envelope ellipse (pi/4)*W*H = 27.4889, the
+            %      low-fidelity form -- wrong for L3 (inflates CD0_wave ~23%).
+            % See F16GeomL3.md §4 and VnV/BrandtF16A/todo.md Phase 2 Sec 4b/5.
             v = obj.geom.Amax;
         end
 
@@ -278,11 +226,8 @@ classdef F16AeroL3 < AeroModelL3
             % Overall aircraft length, live from geometry (47.65 ft published
             % airframe length). Distinct from the fuselage L_fus used for the
             % component skin-friction Re and FF_body -- do not conflate the two
-            % length scales. Provenance is a STANDING OPEN item: the value is
-            % user-approved but is not traceable to any document in this repo,
-            % and Brandt Geom!B21 = 48.303947 is a MAX() over x-stations, i.e. an
-            % extent rather than a spec length, so it does not pin it
-            % (todo.md 2026-07-25 Phase 2 §6).
+            % length scales. Provenance is a standing open item (todo.md Phase
+            % 2 §6).
             v = obj.geom.L_aircraft;
         end
 
@@ -319,31 +264,12 @@ classdef F16AeroL3 < AeroModelL3
         %     (D/q)_SH   = (9*pi/2)*(Amax/l)^2                                  [12.44]
         %     (D/q)_wave = E_WD*[1 - 0.386*(M-1.2)^0.57*(1 - pi*Lambda_LE^0.77/100)]*(D/q)_SH  [12.45]
         %     CD0_wave   = (D/q)_wave / S_ref
-        %   Amax/l are WHOLE-AIRCRAFT quantities read LIVE from the injected
-        %   geometry object via the Dependent obj.Amax_ft2 / obj.L_aircraft_ft
-        %   (Phase 2, 2026-07-25) -- so this term now responds to a fuselage
-        %   change instead of staying pinned to the baseline airframe. They are
-        %   distinct from the fuselage-component L_fus/D_fus used elsewhere for
-        %   the skin-friction Re/FF_body calc; do not conflate the two length
-        %   scales.
-        %
-        %   E_WD IS NOT MIS-CALIBRATED BY THIS CHANGE, and was not retuned.
-        %   E_WD = 2.2 was tuned against Brandt's own Amax/l pair, so the risk of
-        %   replacing his frozen inputs was that the tuning would no longer
-        %   apply. It still does, because the L3 Amax is the same KIND of
-        %   quantity he computed: (Amax/l)^2 moves only 0.270239 -> 0.268780,
-        %   and CD0_wave lands -0.54% from the Brandt-referenced term with
-        %   E_WD = 2.2 untouched. The E_WD that would make it exact is 2.2119 --
-        %   0.54% away, i.e. well inside the noise of a tuned factor, so no
-        %   retune is justified or applied.
-        %   (An intermediate 2026-07-25 version used the fuselage-ENVELOPE
-        %   ellipse here, which DID inflate this term +23.15% and would have
-        %   needed E_WD = 1.7864 to hide it. That was a fidelity inversion --
-        %   a low-fidelity Amax in the high-fidelity tier -- and was replaced by
-        %   the area-ruled buildup rather than absorbed by retuning. See
-        %   f16a_L3.json's _amax_via_DI note; the _TODO_wave_drag_factor_E_WD
-        %   marker stays open for the separate question of whether 2.2 is
-        %   sourceable at all.)
+        %   Amax/l are whole-aircraft quantities read live from the injected
+        %   geometry via obj.Amax_ft2 / obj.L_aircraft_ft, so this term responds
+        %   to a fuselage change. Distinct from the fuselage-component L_fus/D_fus
+        %   used for the skin-friction Re/FF_body calc; do not conflate.
+        %   E_WD = 2.2 is a tuned calibration input (the _TODO_wave_drag_factor_E_WD
+        %   marker stays open for whether 2.2 is sourceable at all).
             M     = state.mach;
             Dq_SH = (9*pi/2) * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
             val   = obj.E_WD ...
@@ -492,13 +418,10 @@ classdef F16AeroL3 < AeroModelL3
         %   drag polar plus this class's config-distinguishing methods
         %   (get_CLmax_TO/_L, get_Delta_CD0_TO/_L) -- the AerodynamicsBase
         %   contract the FAR-25 field-length/climb constraints read. The six
-        %   configs are LOW-SPEED high-lift states, so the clean polar AND the
-        %   L3 gear-down buildup (get_Delta_CD0_TO/_L take a state at L3) are
-        %   evaluated at a nominal takeoff/landing condition (sea level,
-        %   M = 0.2). The F-16 sizes with the MILITARY Takeoff/Landing
-        %   constraints, so this completes the base contract via the parasite-
-        %   drag increment. Both takeoff_* configs map to the takeoff deltas,
-        %   both landing_* plus approach to the landing deltas.
+        %   configs are low-speed high-lift states, so the clean polar and the
+        %   L3 gear-down buildup are evaluated at a nominal takeoff/landing
+        %   condition (sea level, M = 0.2). Both takeoff_* configs map to the
+        %   takeoff deltas, both landing_* plus approach to the landing deltas.
             arguments
                 obj
                 config (1,1) string {mustBeMember(config, ...

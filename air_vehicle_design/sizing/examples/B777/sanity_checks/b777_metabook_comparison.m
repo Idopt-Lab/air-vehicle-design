@@ -1,35 +1,26 @@
 function results = b777_metabook_comparison()
 %B777_METABOOK_COMPARISON  Informational B777 model vs metabook Example 4.2.
 %
-%   Compares the B777 L1 discipline model against the PRINTED numbers of the
-%   metabook worked Example 4.2 (docs/reference_extracts/metabook_data.md,
-%   §4.11 / §4.12): the drag-polar buildup, the five config polars, the
-%   field-length/climb/ceiling/cruise constraint values, and the converged
-%   design point vs the actual 777-200LR.
+%   Compares the B777 L1 model against the PRINTED metabook Example 4.2 numbers
+%   (docs/reference_extracts/metabook_data.md §4.11/§4.12): drag-polar buildup,
+%   five config polars, field-length/climb/ceiling/cruise constraints, and the
+%   converged design point vs the actual 777-200LR.
 %
-%   INFORMATIONAL ONLY -- not a pass/fail unit test, and never used to backfill a
-%   unit test's expected value (the CLAUDE.md two-tier rule). Prints console
-%   tables and writes examples/B777/output/b777_metabook_comparison.{md,json}.
-%   Mirrors the sanity_checks/*_brandt_comparison.m pattern.
+%   INFORMATIONAL ONLY -- not a pass/fail unit test, never used to backfill an
+%   expected value (CLAUDE.md two-tier rule). Prints console tables and writes
+%   examples/B777/output/b777_metabook_comparison.{md,json}.
 %
 %   ANNOTATED BY-DESIGN GAPS (metabook-internal or modelling choices, NOT bugs):
-%     * D1: the model carries PHYSICAL CLmax = 2.0 in the takeoff config (USER
-%       decision 2026-08-14), while the printed climb Eqs. 4.49-4.51 use 2.2 in
-%       the takeoff slot. The takeoff-flap climbs therefore differ by ~ the
-%       (2.2/2.0) CLmax factor. The report evaluates the printed Eqs. with 2.2
-%       for parity and prints the model's 2.0-based value beside it.
-%     * D5: the framework thrust lapse is ISA sigma^m; the printed ceiling/cruise
-%       Eqs. 4.56/4.57 use off-ISA density ratios (0.2331, 0.2846). The report
-%       evaluates the printed Eqs. with the PRINTED ratios for parity.
-%     * TSFC: the generic Mattingly Eq. 10.11 gives ~0.675 at M0.84/40kft, ~30%
-%       above the GE90's ~0.52. The model uses the Table 10.1 deck value (0.52)
-%       so the mission closes; the report EVALUATES Eq. 10.11 to quantify the gap.
-%     * Engine weight: Roskam Eq. 7.13-7.19 overestimates the real GE90; the
-%       delta-weight model cancels it at the baseline design point.
-%     * Design mission: metabook Example 2.1 -- 9,150 nmi cruise + 30-min loiter,
-%       carrying 78,821 lbf (14 crew + 314 passengers x 109 kg). The converged
-%       design weight is compared to the actual 777-200LR (MTOW 766,800 lbf =
-%       347,815 kg page 17; OEW 320,000 lbf Table 7.4).
+%     * D1: model carries PHYSICAL CLmax = 2.0 in takeoff; printed climb Eqs.
+%       4.49-4.51 use 2.2. Report evaluates the printed Eqs. with 2.2 for parity.
+%     * D5: framework lapse is ISA sigma^m; printed ceiling/cruise Eqs. 4.56/4.57
+%       use off-ISA ratios (0.2331, 0.2846). Report uses the printed ratios.
+%     * TSFC: generic Mattingly Eq. 10.11 (~0.675) overestimates the GE90 ~30%;
+%       the model uses the Table 10.1 deck value (0.52). Report quantifies the gap.
+%     * Engine weight: Roskam Eqs. 7.13-7.19 overestimate the GE90.
+%     * Design mission: metabook Example 2.1 (9,150 nmi + 30-min loiter, 78,821
+%       lbf). Converged weight vs the actual 777-200LR (MTOW 766,800 lbf p.17;
+%       OEW 320,000 lbf Table 7.4).
 
     sp = b777_spec_path(1);
     rp = b777_requirements_path();
@@ -96,9 +87,8 @@ function results = b777_metabook_comparison()
         'metabook Eq. 4.48', 'T/W=(W/S)/(304*CLmax_TO), CLmax_TO=2.0');
 
     % 3c. The six climb T/W [metabook Eqs. 4.49-4.54]. Climbs are Only_TbyW
-    %     (W/S-independent), so required_TW at any W/S is the constant value.
-    %     Printed values below are the metabook Eqs. evaluated AS PRINTED (with
-    %     CLmax=2.2 in the takeoff slot for Climbs 1-3 -- the D1 deviation).
+    %     (W/S-independent). Printed values are the metabook Eqs. AS PRINTED
+    %     (CLmax=2.2 in the takeoff slot for Climbs 1-3 -- the D1 deviation).
     climb_names = { ...
         'Climb 1 (takeoff, FAR 25.111)', ...
         'Climb 2 (transition, FAR 25.121)', ...
@@ -128,9 +118,8 @@ function results = b777_metabook_comparison()
     end
 
     % 3d. Ceiling [metabook Eq. 4.56] and Cruise [metabook Eq. 4.57], evaluated
-    %     with the PRINTED off-ISA density ratios for parity (D5). The model uses
-    %     ISA sigma^m, so the model curve is a function of W/S; report both the
-    %     printed scalar and the model's required_TW at the actual W/S = 142.45.
+    %     with the PRINTED off-ISA density ratios for parity (D5). Reports both
+    %     the printed scalar and the model's required_TW at W/S = 142.45.
     e_cl = 0.85; AR = 9.8; CD0_cl = 0.01597;
     ceiling_printed = 1/0.2331^0.6 * (0.001 + 2*sqrt(CD0_cl/(pi*AR*e_cl)));   % Eq. 4.56
     cruise_printed  = 1/0.2846^0.6 * (228.8*CD0_cl/WS_probe ...
@@ -202,9 +191,7 @@ end
 
 % ------------------------------------------------------------------------- %
 function c = find_con(cons, con_names, name)
-%FIND_CON  The constraint object whose .name matches, from the built cell array.
-%   Errors if the name is absent -- a typo guard, so a mis-typed lookup fails
-%   loudly rather than silently comparing against the wrong constraint.
+%FIND_CON  The constraint object whose .name matches. Errors if absent (typo guard).
     idx = find(con_names == name, 1);
     if isempty(idx)
         error('b777_metabook_comparison:constraintNotFound', ...

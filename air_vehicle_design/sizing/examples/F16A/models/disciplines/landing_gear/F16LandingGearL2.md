@@ -5,12 +5,10 @@ F-16A Block 10/15 Level-2 landing-gear student class (`classdef F16LandingGearL2
 every airframe has conventional landing gear, so this discipline does not get a generic
 `src/disciplines/` home the way Geometry/Aerodynamics/Propulsion/Weights/Subsystems do.
 
-**CORRECTED (matlab-oop-expert review, 2026-08-03): `< handle` added.** This class was originally a
-plain MATLAB value class — every other stateful discipline class in `examples/F16A/` gets `handle`
-semantics transitively via its Base/Model tier, but this class has none, so the omission was silent.
-Without `handle`, mutating `main_pct`/`nose_pct`/etc. on an instance passed into a function would not
-propagate back to the caller, breaking the "optimizer mutates the object in place" doctrine
-(CLAUDE.md "Optimization-ready property design") this whole framework depends on.
+`< handle` is required: without it, mutating `main_pct`/`nose_pct`/etc. on an instance passed into a
+function would not propagate back to the caller, breaking the "optimizer mutates the object in place"
+doctrine (CLAUDE.md "Optimization-ready property design"). This class has no Base/Model tier to
+inherit `handle` semantics from transitively, so it states it directly.
 
 ---
 
@@ -26,13 +24,11 @@ object's `W_TO`.
 | High-level — plain method (deliberately errors; a `Dependent` getter must never throw) | `bay_volume()` |
 | Low-level (`Static`) — scalars/strings only | `tire_diameter`, `tire_width`, `lookup_tire_sizing_coeffs` |
 
-**CORRECTED (matlab-oop-expert review, 2026-08-03):** the eight tire/load quantities above were
-originally plain methods. Since each takes zero extra arguments and reads only `obj`'s own stored
-inputs plus the injected `weights` collaborator, they are now `properties (Dependent)` getters,
-matching `F16GeomL2`/`F16WeightsL2`'s "Optimization-ready property design" convention (CLAUDE.md).
-`bay_volume` stays a plain method: it deliberately errors, and MATLAB's object-display machinery
-evaluates every `Dependent` getter eagerly (e.g. `disp(obj)`), so an always-erroring member must not
-be `Dependent`.
+The eight tire/load quantities each take zero extra arguments and read only `obj`'s stored inputs
+plus the injected `weights` collaborator, so they are `properties (Dependent)` getters, matching
+`F16GeomL2`/`F16WeightsL2`'s "Optimization-ready property design" convention (CLAUDE.md). `bay_volume`
+stays a plain method: it deliberately errors, and MATLAB's object-display machinery evaluates every
+`Dependent` getter eagerly (e.g. `disp(obj)`), so an always-erroring member must not be `Dependent`.
 
 ## 2. Inputs (4) + 1 injected object
 

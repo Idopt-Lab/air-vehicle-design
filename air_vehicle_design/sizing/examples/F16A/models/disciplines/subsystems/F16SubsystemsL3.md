@@ -15,13 +15,13 @@ instead of `GeometryModelL2`, which changes `fuselage_raw_volume`'s `A_top`/`A_s
 Same as `F16SubsystemsL2` — see that file. Every equation is level-agnostic and reused by
 `SubsystemsL3` directly from `SubsystemsL2`, except the fuselage raw-volume term.
 
-**Derived-property shape (2026-08-03 correction, see `F16SubsystemsL2.md` §4 for the full
-rationale):** `avionics_weight_fraction`, `avionics_density`, `avionics_weight`, `avionics_volume`,
-`fuel_density`, `fuselage_raw_volume`, `fuselage_usable_fuel_volume`, `wing_fuel_volume`, and
-`fuel_volume` are `properties (Dependent)` on this class (not methods) — each reads only `obj`'s own
-stored inputs/injected collaborators with zero extra arguments. `fuel_volume` sums THIS class's own
-`fuselage_usable_fuel_volume`/`wing_fuel_volume` (frame-integrated fuselage term), deliberately not
-delegated to `SubsystemsL2.fuel_volume`, which would silently substitute L2's envelope-ellipse term.
+**Derived-property shape (see `F16SubsystemsL2.md` §4):** `avionics_weight_fraction`,
+`avionics_density`, `avionics_weight`, `avionics_volume`, `fuel_density`, `fuselage_raw_volume`,
+`fuselage_usable_fuel_volume`, `wing_fuel_volume`, and `fuel_volume` are `properties (Dependent)`,
+each reading only `obj`'s stored inputs/injected collaborators with zero extra arguments.
+`fuel_volume` sums this class's own `fuselage_usable_fuel_volume`/`wing_fuel_volume` (frame-integrated
+fuselage term), not delegated to `SubsystemsL2.fuel_volume`, which would substitute L2's
+envelope-ellipse term.
 `battery_volume`, `fuel_volume_from_weight`, `internal_volume`, and `fuel_volume_check` remain methods
 (external argument, or Tier-1 orchestrator contract).
 

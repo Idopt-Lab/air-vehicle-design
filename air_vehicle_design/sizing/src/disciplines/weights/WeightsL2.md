@@ -1,8 +1,8 @@
 # WeightsL2
 
 Level-2 weights static toolbox (`classdef WeightsL2`, `methods (Static)` only). Called as
-`WeightsL2.method(...)`; never instantiated and not in the inheritance chain. `F16WeightsL2` inherits
-`WeightsModelL2` and delegates here.
+`WeightsL2.method(...)`; never instantiated. `F16WeightsL2` inherits `WeightsModelL2` and delegates
+here.
 
 **L2 is surface density × area for the structural groups, plus fractions of gross weight** for
 landing gear, installed engine and all-else-empty.
@@ -60,14 +60,13 @@ installed-engine factor 1.3; all-else 0.17.
 psf densities; the fractions are a separate, unnumbered metabook table. Brandt uses 0.034 for landing
 gear where this uses 0.033 — different models, reported side by side.
 
-## 4. Two rules that have bitten before
+## 4. Two rules
 
 - **`OEW(W_TO)` must evaluate both fraction terms at the passed argument.** It must not read the
   `W_all_else_empty` / `W_installed_engine` properties, which are pinned to the object's own `W_TO`.
-  Getting this wrong froze the all-else term at `0.17 × 31377` — a ground-truth *output* used as a
-  calibration input. Guarded by `TestWeightsL2.testOEWScalesWithItsArgumentNotAFrozenWTO`.
+  Guarded by `TestWeightsL2.testOEWScalesWithItsArgumentNotAFrozenWTO`.
 - **The ×1.3 installed factor is L2-only.** L2 has no installation buildup, so one lumped factor is
-  right here and only here; L3 builds the installation item by item and would double-count it.
+  correct here; L3 builds the installation item by item and would double-count it.
   `engine_weight_brandt` is report-only and never summed into `OEW`, guarded by
   `testBrandtEngineAlternateIsNeverSummedIntoOEW`.
 

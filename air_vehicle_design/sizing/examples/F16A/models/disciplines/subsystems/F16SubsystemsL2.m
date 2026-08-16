@@ -16,47 +16,25 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %   avionics_volume. Landing-gear bay volume is deliberately NOT summed in
 %   here -- see the "Landing-gear bay volume" note below.
 %
-%   ============================================================================
 %   DEPENDENCY INJECTION (mirrors F16WeightsL2's geom/prop DI pattern):
-%     geom               -- (1,1) GeometryModelL2, guarded at the L2
-%                           ENFORCER (not GeometryBase), so a wrong-tier
-%                           geometry object fails at CONSTRUCTION. Only
+%     geom               -- (1,1) GeometryModelL2, guarded at the L2 enforcer
+%                           so a wrong-tier object fails at construction. Only
 %                           S_ref, b_wing, tc_r_wing, tc_t_wing, lambda_wing
-%                           (wing-volume term) and L_fuselage,
-%                           W_max_fuselage, H_max_fuselage (fuselage-volume
-%                           term) are read.
-%     fuel_weight_source -- (1,1) WeightsBase. Supplies BOTH the required
-%                           fuel weight for fuel_volume_check
-%                           (fuel_weight_source.W_energy) AND W_empty for
-%                           the avionics-weight term
-%                           (fuel_weight_source.OEW(fuel_weight_source.W_TO)).
-%                           JUDGMENT CALL: the original design names this
-%                           argument "fuel_weight_source" and says it may be
-%                           "mission analysis or F16WeightsL2 -- pick whichever
-%                           exposes it most directly." No mission-analysis
-%                           discipline exists in this repo yet, and
-%                           F16WeightsL2/F16WeightsL3 already expose BOTH
-%                           W_energy (STATE) and OEW(W_TO) (avionics'
-%                           W_empty), so one injected WeightsBase-typed
-%                           object serves both roles rather than injecting
-%                           two separate collaborators for one discipline.
-%   No silent default on either argument -- a defaulted injection would
-%   silently re-freeze geometry or weights data, the defect class Phase 2/4
-%   removed elsewhere in this framework (see F16GeomL2.m / F16WeightsL2.m).
-%   ============================================================================
+%                           (wing-volume term) and L_fuselage, W_max_fuselage,
+%                           H_max_fuselage (fuselage-volume term) are read.
+%     fuel_weight_source -- (1,1) WeightsBase. Supplies both the required fuel
+%                           weight for fuel_volume_check (W_energy) and W_empty
+%                           for the avionics-weight term (OEW(W_TO)). One
+%                           injected object serves both roles.
+%   No silent default on either argument.
 %
-%   LANDING-GEAR BAY VOLUME -- NOT auto-summed. The original step-9 design's
-%   goal ("producing a bay volume that also feeds the internal-volume total")
-%   is aspirational and blocked on item 11's citation gap (no textbook bay-
-%   volume packaging formula exists anywhere in this repo --
-%   F16LandingGearL2.bay_volume always errors). Auto-summing it into
-%   internal_volume() would make every call fail hard, defeating the
-%   fuel/avionics-are-usable-now purpose; a caller wanting the gear
-%   contribution once it lands should call F16LandingGearL2.bay_volume()
-%   directly and add it in, not rely on this class to do it silently.
+%   LANDING-GEAR BAY VOLUME -- not auto-summed. Blocked on item 11's citation
+%   gap (no textbook bay-volume packaging formula exists in this repo --
+%   F16LandingGearL2.bay_volume always errors). A caller wanting the gear
+%   contribution should call F16LandingGearL2.bay_volume() directly and add it.
 %
 %   CONSTRUCTOR: F16SubsystemsL2(json_path, geom, fuel_weight_source). All
-%   three REQUIRED.
+%   three required.
 %
 %   SOURCES:
 %     [Raymer] D.P. Raymer, Aircraft Design 6th/7th ed., Eq. 7.14, Table 11.6.
@@ -68,10 +46,8 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL2.md
 
-    % ======================================================================= %
-    % INPUTS (3) + 2 injected objects -- plain mutable properties, set once
-    % by the constructor. Authoritative table: F16SubsystemsL2.md §2.
-    % ======================================================================= %
+    % INPUTS (3) + 2 injected objects -- plain mutable properties, set once by
+    % the constructor. Authoritative table: F16SubsystemsL2.md §2.
     properties
         fuel_type                 = 'JP-8'                              % [f16a_L2.json .subsystems.fuel.fuel_type]
         packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L2.json .subsystems.fuel.packaging_factor_category]
@@ -82,18 +58,11 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         fuel_weight_source  % (1,1) WeightsBase -- supplies W_energy (fuel sufficiency check) and OEW/W_TO (avionics W_empty)
     end
 
-    % ======================================================================= %
-    % DERIVED (9) -- zero-extra-arg quantities that read ONLY the inputs/
-    % injected collaborators above. Dependent getters, recomputed live on
-    % every read -- never a cached/frozen value (CLAUDE.md "Optimization-
-    % ready property design"; mirrors F16WeightsL2's W_wings/W_tail/...
-    % split). SubsystemsBase/SubsystemsModelL2 declare these as ABSTRACT
-    % PROPERTIES, not abstract methods, for exactly this reason.
-    % battery_volume and fuel_volume_from_weight stay methods (see
-    % SubsystemsBase.m/SubsystemsModelL2.m) -- both take a genuine external
-    % argument, and battery_volume deliberately errors, so neither can be
-    % Dependent.
-    % ======================================================================= %
+    % DERIVED (9) -- zero-extra-arg quantities that read only the inputs/
+    % injected collaborators above. Dependent getters, recomputed live on every
+    % read; SubsystemsBase/SubsystemsModelL2 declare these as abstract
+    % PROPERTIES. battery_volume and fuel_volume_from_weight stay methods (both
+    % take an external argument, and battery_volume deliberately errors).
     properties (Dependent)
         avionics_weight_fraction
         avionics_density

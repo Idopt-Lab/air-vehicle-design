@@ -43,20 +43,13 @@ into one discipline for what is really one underlying "the current candidate wei
 
 ## 4. Derived
 
-**CORRECTED (matlab-oop-expert review, 2026-08-03):** an earlier draft of this file implemented every
-derived quantity as a plain method and documented that as deliberate, reasoning by analogy to
-`F16WeightsL1`'s "OEW stays a METHOD" precedent. That analogy does not hold here: OEW stays a method
-because it takes an *externally-varying* argument (`W_TO`, a candidate the sizing loop iterates over,
-not `obj`'s own stored state) — the exact same reason `battery_volume(E_required_kWh)` below stays a
-method. The other eight quantities take **zero extra arguments** and read **only** `obj`'s own stored
-inputs / injected collaborators (`fuel_type`, `avionics_table_row`, `geom`, `fuel_weight_source`) —
-structurally identical to `F16WeightsL2`'s `W_wings`/`W_tail`/`W_fuselage`/... split, which *is*
-implemented as `properties (Dependent)` there. Per CLAUDE.md's "Optimization-ready property design"
-doctrine, these eight are now `properties (Dependent)` getters on `F16SubsystemsL2`, and
-`SubsystemsModelL2` now declares them as abstract **properties** rather than abstract methods (mirroring
-`WeightsModelL2`'s `W_wings` abstract-property / `weight_wing(obj, W_TO)` abstract-method split).
-`battery_volume`, `internal_volume`, and `fuel_volume_check` remain methods — the first two reasons
-below, the last two because they are the Tier-1 orchestrator contract declared on `SubsystemsBase`.
+`battery_volume(E_required_kWh)` stays a method because it takes an externally-varying argument. The
+other eight quantities take zero extra arguments and read only `obj`'s stored inputs / injected
+collaborators (`fuel_type`, `avionics_table_row`, `geom`, `fuel_weight_source`), structurally
+identical to `F16WeightsL2`'s `W_wings`/`W_tail`/`W_fuselage`/... split, so they are
+`properties (Dependent)` getters; `SubsystemsModelL2` declares them as abstract properties.
+`internal_volume` and `fuel_volume_check` remain methods (the Tier-1 orchestrator contract on
+`SubsystemsBase`).
 
 | Member | Kind | Formula |
 |---|---|---|

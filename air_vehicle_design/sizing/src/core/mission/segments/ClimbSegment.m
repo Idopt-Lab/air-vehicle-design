@@ -12,11 +12,10 @@ classdef ClimbSegment < MasterEquationSegment
 %   Ps-based climbs also average TSFC between start and end (average_tsfc = true,
 %   Miss-tab D33/L33). A same-condition leg (Climb2: dh = dV = 0) yields t = 0.
 %
-%   Uses the standard dynamic pressure q = 0.5*rho*V^2 and handles ACCEL with
-%   this same drag+energy master equation, not Brandt's Miss-tab q_43 override
-%   or its separate thrust-based accel form (fuel = alpha*T_SL*cT*t, Miss!C13).
-%   These generalizations make the L2 Brandt-stack total run ~+8.9% high vs
-%   BrandtMission.m; see mission_brandt_comparison.m for the per-leg breakdown.
+%   Handles ACCEL with this same drag+energy master equation, not Brandt's
+%   Miss-tab q_43 override or its separate thrust-based accel form
+%   (fuel = alpha*T_SL*cT*t, Miss!C13). This makes the L2 Brandt-stack total
+%   run ~+8.9% high vs BrandtMission.m; see mission_brandt_comparison.m.
 
     methods
         function obj = ClimbSegment()

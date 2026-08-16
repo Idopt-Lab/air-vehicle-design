@@ -4,15 +4,12 @@ classdef LevelFlightConstraint < MasterEquationConstraint
 %
 %   The Master-Equation specialization for steady, wings-level, non-turning,
 %   non-climbing flight: load factor n=1.0 and specific excess power Ps=0.0,
-%   so the induced-drag term uses n=1 and the excess-power D term vanishes.
-%   The F-16 "Max Mach", "Cruise" and "Max Alt" conditions are all
-%   LevelFlightConstraints -- they differ ONLY in flight state (altitude,
-%   Mach) and power setting (AB vs. mil, e.g. Cruise is dry/mil power), not
-%   in load factor or excess-power demand.
+%   so the excess-power D term vanishes. The F-16 "Max Mach", "Cruise" and
+%   "Max Alt" conditions are all LevelFlightConstraints, differing only in
+%   flight state and power setting.
 %
-%   All physics, the A/B/C/D assembly, the non-finite self-guard, and the
-%   equation citation live in MasterEquationConstraint -- this class only
-%   fixes n=1 and Ps=0.
+%   All physics and the citation live in MasterEquationConstraint; this class
+%   only fixes n=1 and Ps=0.
 
     methods
 

@@ -13,8 +13,7 @@ t1 = F16TailL1();
 
 No arguments. The F-16's category (`jet_fighter`) and both correction flags (relaxed static
 stability, all-moving stabilator) are F-16 spec facts, baked in via
-`TailL1.compute_tail_volume_coeffs('jet_fighter', true, true)` — not read from JSON, matching the
-category of decision already used for the superseded `F16TailSizingLevel1`'s hardcoded 0.40/0.07.
+`TailL1.compute_tail_volume_coeffs('jet_fighter', true, true)` — not read from JSON.
 
 ## 2. Coefficients (computed at construction, `SetAccess = private` thereafter)
 
@@ -57,22 +56,9 @@ S_vt = 0.063 * 30 * 300 / 22.0875                 = 25.67063 ft^2
 
 **Brandt comparison (informational only, not a pass/fail gate):** Brandt's `S_ht=108.0 ft²` /
 `S_vt=60.0 ft²` (`F16GeomL2.m`, Brandt `Main!C18`/`H18`) are −55.2% / −57.2% away from the worked
-example above. Table 6.4's own coefficients are described as "conservative averages" across many
-aircraft in a category, so an individual real aircraft reading this far from a historical-average
-coefficient is not implausible for this coarse method — but it is large enough to flag, not quietly
-accept (same finding the retired `TestTailSizingLevel1.testF16TailAreasVsBrandt` already made at the
-pre-correction 0.40/0.07/`0.5*L_fus` values, where the gap was −46%/−55%; the RSS/all-moving-tail
-corrections and the smaller `0.475` arm fraction widen it further, not narrow it — see
-`TailSizing_scribe_plan.md` Sec. 2 item 4).
+example above. Table 6.4's coefficients are "conservative averages" across a category, so a large
+gap is not implausible for this coarse method — but it is large enough to flag.
 
-## 4. Migration record (2026-07-28)
-
-Supersedes `examples/F16TailSizingLevel1.m` (`c_HT=0.40`, `c_VT=0.07`, tail arm `0.5*L_fus`, Raymer
-6th ed.) — see `TailL1.md` Sec. 6 for the full discrepancy-resolution record. The old class and its
-test (`tests/tail_sizing/TestTailSizingLevel1.m`) are deleted (removal completed 2026-07-30, per the
-scribe plan's "once tests pass, remove" gate). This class and `TailL1` are the only implementation
-now.
-
-## 5. To-dos
+## 4. To-dos
 
 None open.

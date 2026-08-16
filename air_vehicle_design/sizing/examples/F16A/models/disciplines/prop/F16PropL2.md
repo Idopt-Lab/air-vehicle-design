@@ -83,7 +83,7 @@ At 36,000 ft / M 0.87:
 
 | Item | Status |
 |---|---|
-| ~~`bypass_ratio` = 0.71 is traceable to no in-repo source~~ **FIXED 2026-07-30** | pinned to `[Nicolai & Carichner Table 14.3, F100-PW-100]`, `_cite_bypass_ratio` in `f16a_L2.json` |
+| `bypass_ratio` = 0.71 | pinned to `[Nicolai & Carichner Table 14.3, F100-PW-100]`, `_cite_bypass_ratio` in `f16a_L2.json` |
 | `TR` is degenerate ≡ 1.0 — a separate `T_t4_SLS` input would be needed for real throttle-ratio visibility | accepted, deliberately not added |
 | `PropL2`'s parametric engine sizing beyond Eq. 10.10 (length, diameter, cruise SFC/thrust — Eq. 10.4–10.15) is implemented and unit-tested but **unwired**; geometry sizes the nacelle independently from `T_SL` | — |
 

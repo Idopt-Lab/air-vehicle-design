@@ -10,59 +10,40 @@ classdef LandingConstraint < Only_WbyS
 %   (idle/braking, not powered flight), so it belongs to the Only_WbyS
 %   category: the aggregator reads WS_max() as a vertical W/S wall.
 %
-%   CLmax_land/CD0_land are pulled fresh from the aero object each call, not
-%   constraint inputs. get_CLmax_L/get_Delta_CD0_L are the flapped-landing
-%   methods every F16AeroLN class implements (cited Roskam/Raymer flap CLmax
-%   delta and CD0 increment) but which are NOT part of the enforced
-%   AerodynamicsBase interface (see "NOTE ON CLmax/CD0 BASIS" below);
-%   formalizing a high-lift-config argument is a deferred TODO
-%   (ToDo_Darshan.md §1). Any AerodynamicsBase subclass passed here must
+%   CLmax_land/CD0_land are pulled fresh from the aero object each call.
+%   get_CLmax_L/get_Delta_CD0_L are flapped-landing methods every F16AeroLN
+%   class implements but which are NOT part of the abstract AerodynamicsBase
+%   interface (see "NOTE ON CLmax/CD0 BASIS"); any aero passed here must
 %   implement them.
 %
 %   EQUATION [landing ground-roll-with-braking sizing relation: touchdown
-%   speed V_TD = k_L*V_stall decelerates to a stop under braking friction plus
-%   aerodynamic drag, a_avg = g*(mu + 0.83*CD0/CLmax_land), giving
-%   S_FR = V_TD^2 / (2*a_avg); substituting V_stall^2 = 2*(W/S)/(rho*CLmax_land)
-%   and solving for W/S. The 0.83 is a ground-roll velocity-averaging factor
-%   applying the drag contribution over the braking run. Roskam, "Airplane
-%   Design, Part I: Preliminary Sizing of Airplanes," DARcorporation, Ch. 3
-%   landing-distance sizing, Military method (ground-roll-with-braking form,
-%   not the FAR23/25 statistical field-length correlations). NOT Raymer:
-%   Raymer ch. 5 ("Landing," Sec. 5.4) gives the statistical FAR field-length
-%   correlation (S_FAR23 = 80*(W/S)/(sigma*CLmax), no mu/CD0/k_L term).
-%   Cross-checked against temp_Casey's landing_constraint.m (reference only):
-%     Wto_S = (Distance*rho*g*(mu*CLmax + 0.83*CD0)) / (1.69*beta)
-%   is algebraically identical with k_L^2 in place of the literal 1.69
-%   (1.3^2). Reproduces Brandt's landing W/S wall to <0.1% when fed Brandt's
-%   own flapped CLmax_land/CD0 -- see TestLandingConstraint.m]:
+%   speed V_TD = k_L*V_stall decelerates under braking friction plus
+%   aerodynamic drag, a_avg = g*(mu + 0.83*CD0/CLmax_land), S_FR = V_TD^2 /
+%   (2*a_avg), with V_stall^2 = 2*(W/S)/(rho*CLmax_land), solved for W/S. The
+%   0.83 is a velocity-averaging factor. Roskam, "Airplane Design, Part I,"
+%   DARcorporation, Ch. 3 landing-distance sizing, Military method. NOT Raymer
+%   (ch. 5 gives the statistical FAR correlation, no mu/CD0/k_L term).
+%   Reproduces Brandt's landing W/S wall to <0.1% when fed Brandt's own
+%   flapped CLmax_land/CD0 -- see TestLandingConstraint.m]:
 %
 %     W_TO/S <= rho * g * S_FR * (mu * CLmax_land + 0.83 * CD0_land) / (k_L^2 * beta)
 %
-%   where rho is sea-level density; g is standard gravity, included for the
-%   same English lbf/lbf-basis reason as TakeoffConstraint.m; CLmax_land from
-%   aero.get_CLmax_L(), CD0_land from aero.drag_polar(state).CD0 +
-%   aero.get_Delta_CD0_L(...) (flapped landing config -- see "NOTE ON CLmax/CD0
-%   BASIS"); mu is the braking-surface friction coefficient (not defaulted -- a
-%   runway/braking-system property, not a universal margin); k_L is the
-%   touchdown-speed margin V_TD/V_stall (1.3, the FAR-style approach-speed
-%   margin); beta is the landing weight fraction W_land/W_TO (1.0 -- landing,
-%   like takeoff, is treated at full W_TO in this simplified framework).
-%   Condition values: examples/F16A/inputs/f16a_requirements.md.
+%   rho is sea-level density; g is standard gravity (same English lbf/lbf
+%   basis as TakeoffConstraint.m); CLmax_land from get_CLmax_L(), CD0_land
+%   from drag_polar(state).CD0 + get_Delta_CD0_L(...) (flapped); mu is the
+%   braking-surface friction coefficient (a runway property, not defaulted);
+%   k_L is the touchdown-speed margin V_TD/V_stall (1.3); beta is the landing
+%   weight fraction (1.0). Condition values:
+%   examples/F16A/inputs/f16a_requirements.md.
 %
-%   NOTE ON CLmax/CD0 BASIS: WS_max() uses the FLAPPED landing configuration
-%   (aero.get_CLmax_L(), aero.drag_polar(state).CD0 + aero.get_Delta_CD0_L(...)),
-%   not the clean values. get_CLmax_L/get_Delta_CD0_L are not on the enforced
-%   AerodynamicsBase interface (only drag_polar and get_CLmax are abstract),
-%   so any subclass passed here must implement them (deferred TODO,
-%   ToDo_Darshan.md §1). get_Delta_CD0_L's signature is not uniform across
-%   fidelity levels (F16AeroL1/L2 take no argument, F16AeroL3 takes the flight
-%   state for a gear-strut Reynolds-number lookup); WS_max() dispatches on this
-%   via metaclass reflection on aero's declared InputNames, since
-%   nargin(@obj.aero.get_Delta_CD0_L) returns -1 for bound instance-method
-%   handles. Even so, WS_max may sit below Brandt's flight-calibrated value:
-%   this framework's flap/slat CLmax/CD0 buildups are textbook estimates, not
-%   Brandt's calibrated flapped values -- see TestLandingConstraint.m's F-16
-%   diagnostic, which is not an exact-match assertion for that reason.
+%   NOTE ON CLmax/CD0 BASIS: WS_max() uses the FLAPPED landing configuration,
+%   not clean values. get_CLmax_L/get_Delta_CD0_L are not on the abstract
+%   AerodynamicsBase interface, so any aero passed here must implement them.
+%   get_Delta_CD0_L's arity is not uniform across fidelity levels (F16AeroL1/L2
+%   take none, F16AeroL3 takes the flight state); WS_max() dispatches via
+%   metaclass reflection on InputNames. WS_max may sit below Brandt's
+%   flight-calibrated value: the flap/slat buildups are textbook estimates, so
+%   TestLandingConstraint.m's F-16 diagnostic is not an exact-match assertion.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Landing"
@@ -106,10 +87,8 @@ classdef LandingConstraint < Only_WbyS
         function WS = WS_max(obj)
         %WS_MAX  Upper bound on wing loading W/S [lbf/ft^2] this landing
         %   requirement imposes. See class header for the equation and
-        %   citation. CLmax_land/CD0_land are the FLAPPED landing values
-        %   (get_CLmax_L/get_Delta_CD0_L, see "NOTE ON CLmax/CD0 BASIS"),
-        %   pulled fresh from the aero discipline object each call, so this
-        %   tracks the current-iteration aerodynamics.
+        %   citation. CLmax_land/CD0_land are the FLAPPED landing values,
+        %   pulled fresh from the aero object each call.
             CLmax_land     = obj.aero.get_CLmax_L();
             Delta_CD0_land = LandingConstraint.get_Delta_CD0_L_dispatched(obj.aero, obj.state);
             CD0_land       = obj.aero.drag_polar(obj.state).CD0 + Delta_CD0_land;
@@ -126,13 +105,10 @@ classdef LandingConstraint < Only_WbyS
 
         function delta = get_Delta_CD0_L_dispatched(aero, state)
         %GET_DELTA_CD0_L_DISPATCHED  Calls aero.get_Delta_CD0_L() with or
-        %   without the flight state, matching whichever arity aero's
-        %   fidelity level declares (F16AeroL1/L2 take none, F16AeroL3 takes
-        %   state for a gear-strut Reynolds-number lookup -- see class
-        %   header "NOTE ON CLmax/CD0 BASIS"). Dispatches via metaclass
-        %   reflection on the method's declared InputNames, since
-        %   nargin(@aero.get_Delta_CD0_L) returns -1 for bound instance-
-        %   method handles and is not a reliable arity check.
+        %   without the flight state, matching the arity aero's fidelity level
+        %   declares (F16AeroL1/L2 take none, F16AeroL3 takes state).
+        %   Dispatches via metaclass reflection on InputNames, since nargin on
+        %   a bound instance-method handle returns -1.
             mc = metaclass(aero);
             m  = findobj(mc.MethodList, 'Name', 'get_Delta_CD0_L');
             if isempty(m)

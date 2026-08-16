@@ -44,11 +44,9 @@ fuselage envelope and integrated against station `x`:
 
 $$A_{top} = \int_0^{L} w(x)\,dx \qquad A_{side} = \int_0^{L} h(x)\,dx$$
 
-A $(x{=}0,\,w{=}0,\,h{=}0)$ nose station is prepended before integrating, mirroring
-`GeomL2.compute_s_wet_fus_brandt_highfi`'s own frame-integration convention (that method prepends
-`x=0, P=0` the same way). No separate textbook equation number — this is a definitional trapezoidal
-integration of the geometry object's own frame data to obtain the `A_top`/`A_side` quantities Raymer
-Eq. 7.14 calls for; the `3.4/(4L)` combination formula itself remains the cited Raymer equation.
+A $(x{=}0,\,w{=}0,\,h{=}0)$ nose station is prepended before integrating. No separate textbook
+equation number — a definitional trapezoidal integration to obtain the `A_top`/`A_side` quantities
+Raymer Eq. 7.14 calls for; the `3.4/(4L)` formula remains the cited Raymer equation.
 
 ## 4. Coefficients
 
@@ -57,7 +55,6 @@ None originate here — see `SubsystemsL1.md` §4 (fuel density, avionics weight
 
 ## 5. To-dos
 
-Same two documented citation gaps as L2 (`SubsystemsL2.md` §5) — `battery_volume` reuses (and thus
-inherits) `SubsystemsL2`'s error identically; `F16LandingGearL3.bay_volume` carries its own,
-separately-identified error (`F16LandingGearL3:bayVolumeNotAvailable`) rather than reusing
-`F16LandingGearL2`'s, so a test/caller can tell which class's gap fired.
+Same two documented citation gaps as L2 (`SubsystemsL2.md` §5). `battery_volume` reuses
+`SubsystemsL2`'s error identically; `F16LandingGearL3.bay_volume` carries its own error
+(`F16LandingGearL3:bayVolumeNotAvailable`), so a caller can tell which class's gap fired.

@@ -123,24 +123,15 @@ test-writer should recompute from the state, not from this rounded figure).
 
 ---
 
-## 5. Deliberate deviation from Aero 481 -- ADDED THRUST LAPSE (A6)
-
-**This is the single largest intentional deviation of the whole F-35 example from its Aero 481
-design source, and it lives in this class.** It is USER-APPROVED (Gate-1, discrepancy A6).
+## 5. Thrust lapse vs Aero 481 (A6)
 
 Aero 481 applies **NO** thrust lapse: every `+Constraints/*` file uses installed thrust at altitude
-with no `alpha = T(alt)/T_SL` term at all. This class applies the framework density lapse
-`alpha = sigma^0.6` on the AB scale [metabook Eq. 10.9 / `PropL1.sigma_lapse`], plus the mil-on-AB
-renormalization `alpha_mil = 0.6512 * sigma^0.6`.
+with no `alpha = T(alt)/T_SL` term. The framework lapse (`alpha = sigma^m` on the AB scale [metabook
+Eq. 10.9 / `PropL1.sigma_lapse`], plus the mil-on-AB `alpha_mil = 0.6512 * sigma^m`) puts every F-35
+constraint onto the same sea-level-static `T_SL/W_TO` axis the F-16A / B777 diagrams use.
 
-Why: this puts every F-35 constraint onto the same sea-level-static `T_SL/W_TO` axis the framework
-constraint diagram uses, so the F-35 conditions are directly comparable with the F-16A / B777
-diagrams. It shifts every altitude constraint (the higher the altitude, the lower `sigma`, the lower
-`alpha`, the higher the required `T_SL/W_TO`), so it cannot be silent.
-
-Disposition: apply the lapse (framework convention), document it here prominently, and give it its
-**own section** in the comparison report `sanity_checks/aero481_comparison.m`. See
-`aero481_discrepancies.md` A6 and `aero481_L1.md` section 3.2.
+See `aero481_discrepancies.md` A6 and the class header for the disposition; the comparison report
+`sanity_checks/aero481_comparison.m` quantifies it.
 
 ---
 

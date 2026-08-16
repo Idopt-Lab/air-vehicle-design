@@ -2,30 +2,22 @@ classdef B777PropL1 < PropulsionModelL1
 %B777PROPL1  Boeing 777-200LR Level-1 propulsion class (2x GE90-110B).
 %
 %   Inherits PropulsionModelL1 (abstract enforcer). Every method delegates to
-%   the PropL1 static toolbox -- no equations are duplicated here.
+%   the PropL1 static toolbox.
 %
 %   Level-1 model (metabook Example 4.2):
 %     thrust_lapse -- density-ratio law alpha = sigma^m, sigma = rho/rho_SL
 %                     [metabook Eqs. 4.55/10.9], at a transport rating
-%                     ("TO"/"max" = takeoff; "cont" = 0.94*sigma^m max
-%                     continuous, Eq. 4.25). m is carried as the INPUT
-%                     lapse_exponent_m = 0.6 (the metabook's generic Eq. 10.9
-%                     fit) rather than resolved from the engine-type table, so
-%                     the modelling choice is explicit and cited (b777_L1.md §4.2,
-%                     decision D5).
-%     get_TSFC     -- high-bypass Mattingly form c = (0.4 + 0.45*M)*sqrt(theta)
-%                     [1/hr] [metabook Eq. 10.11 = Mattingly 1996 Eq. 1.36a],
-%                     theta from AircraftState. This is the Mach/temperature-
-%                     dependent form the B777 mission prefers over PropL1's crude
-%                     categorical TSFC row.
+%                     ("TO"/"max" = takeoff; "cont" = 0.94*sigma^m, Eq. 4.25). m
+%                     is the INPUT lapse_exponent_m = 0.6 (generic Eq. 10.9 fit),
+%                     carried explicitly rather than from the engine-type table
+%                     (decision D5, b777_L1.md §4.2).
+%     get_TSFC     -- cruise TSFC from tsfc_cruise (the GE90 deck value, see §4).
 %
-%   NO AFTERBURNER. A high-bypass transport has no AB, so it uses the transport
-%   rating set "cont"/"TO"/"max" (not the fighter "mil"/"AB"). T_SL is the max
-%   (takeoff) SLS thrust; "TO"/"max" give the full sigma^m lapse and "cont"
-%   applies the 0.94 max-continuous derate (Eq. 4.25).
+%   NO AFTERBURNER. A high-bypass transport uses the transport rating set
+%   "cont"/"TO"/"max" (not the fighter "mil"/"AB"). T_SL is the max (takeoff)
+%   SLS thrust; "TO"/"max" give the full sigma^m lapse, "cont" the 0.94 derate.
 %
-%   CONSTRUCTOR: B777PropL1(json_path). Reads the .propulsion block of a
-%   required unified L1 input JSON (b777_spec_path(1)). No silent default.
+%   CONSTRUCTOR: B777PropL1(json_path) -- reads .propulsion, no silent default.
 %
 %   Inheritance: PropulsionBase -> PropulsionModelL1 -> B777PropL1
 %
@@ -43,7 +35,7 @@ classdef B777PropL1 < PropulsionModelL1
         T_SL             = 220000   % lbf  max SLS thrust, total (2x GE90-110B) [PropulsionBase contract; metabook Fig. 4.7 caption]
         n_engines        = 2        % --   engine count [metabook §4.11]
         lapse_exponent_m = 0.6      % --   density-ratio lapse exponent alpha = sigma^m [metabook Eqs. 4.55/10.9; decision D5, b777_L1.md §4.2]. Carried as an explicit INPUT rather than a table lookup so the modelling choice is cited.
-        tsfc_cruise      = 0.52     % 1/hr cruise TSFC [metabook Table 10.1, GE90 cruise-partial-power rows at 40,000 ft (~0.50-0.54)]. USED instead of the generic Mattingly Eq. 10.11 form (which gives ~0.675 at M0.84/40kft -- a ~30% overestimate of the real GE90 that makes the max-range mission fuel exceed the aircraft's capacity, so converge_W0 diverges). Using the engine's OWN deck SFC (Table 10.1) is a metabook-DATA value, not backfilled from the sizing answer, and lets the modelled 777 close near its size (matching the metabook's own feasible-777 Fig. 4.7). See get_TSFC + b777_L1.md.
+        tsfc_cruise      = 0.52     % 1/hr cruise TSFC [metabook Table 10.1, GE90 at 40,000 ft ~0.50-0.54]. Used instead of the generic Mattingly Eq. 10.11 (which overestimates the GE90 ~30% and diverges converge_W0). See get_TSFC + b777_L1.md §4.
     end
 
     properties (Constant, Access = private)
@@ -75,13 +67,10 @@ classdef B777PropL1 < PropulsionModelL1
         function alpha = thrust_lapse(obj, state, rating)
         %THRUST_LAPSE  Density-ratio lapse at the given transport rating.
         %   "TO"/"max": alpha = sigma^m, sigma = rho/rho_SL [metabook Eqs.
-        %   4.55/10.9] -- full takeoff thrust. "cont": 0.94 * sigma^m --
-        %   max-continuous thrust is 94% of takeoff thrust [metabook Eq. 4.25].
-        %   A high-bypass transport has NO afterburner, so the ratings are the
-        %   transport set "cont"/"TO"/"max", not the fighter "mil"/"AB". m is
-        %   obj.lapse_exponent_m (an explicit input), passed to the pure-math
-        %   static PropL1.sigma_lapse(rho, m) -- the engine-type table is
-        %   bypassed on purpose (decision D5).
+        %   4.55/10.9]. "cont": 0.94 * sigma^m (max-continuous) [metabook
+        %   Eq. 4.25]. Transport rating set "cont"/"TO"/"max" (no afterburner).
+        %   m = obj.lapse_exponent_m (explicit input, engine-type table bypassed,
+        %   decision D5), via PropL1.sigma_lapse.
             arguments
                 obj
                 state  (1,1) AircraftState
@@ -102,19 +91,11 @@ classdef B777PropL1 < PropulsionModelL1
         end
 
         function c_t = get_TSFC(obj, ~)
-        %GET_TSFC  Cruise TSFC [1/hr] = obj.tsfc_cruise, the GE90's real deck
-        %   SFC [metabook Table 10.1, ~0.52 at 40,000 ft].
-        %
-        %   NOT the generic Mattingly high-bypass form c = (0.4+0.45*M)*sqrt(theta)
-        %   [metabook Eq. 10.11], which gives ~0.675 at M0.84/40kft and
-        %   overestimates the real GE90 by ~30%. That overestimate makes the
-        %   8,555-nmi max-range mission demand more fuel than the aircraft can
-        %   carry, so the TOGW closure (converge_W0) diverges. The engine's own
-        %   Table 10.1 deck value is a metabook-sourced DATA input (see the
-        %   tsfc_cruise property) -- using it, the modelled 777 closes and sits
-        %   in the T-S feasible region, as the metabook's own Fig. 4.7 shows.
-        %   PropL1.tsfc_mattingly_hibpr (Eq. 10.11) stays available; the
-        %   comparison report evaluates it to quantify the overestimate.
+        %GET_TSFC  Cruise TSFC [1/hr] = obj.tsfc_cruise, the GE90's real deck SFC
+        %   [metabook Table 10.1, ~0.52 at 40,000 ft]. NOT the generic Mattingly
+        %   form (Eq. 10.11), which overestimates the GE90 ~30% and diverges
+        %   converge_W0. PropL1.tsfc_mattingly_hibpr stays available for the
+        %   comparison report. See the tsfc_cruise property.
             c_t = obj.tsfc_cruise;
         end
 

@@ -4,39 +4,25 @@ classdef TakeoffFieldLengthConstraint < Both_WbyS_TbyW
 %
 %   Generic Layer-1 constraint. Given a required balanced-field length (BFL)
 %   and the takeoff-field flight condition (an AircraftState), it returns the
-%   thrust-to-weight ratio required to lift off within that field length as a
-%   function of wing loading W/S. Belongs to the Both_WbyS_TbyW category and
-%   supplies the required_TW(WS) that category declares abstract. The relation
-%   is LINEAR THROUGH THE ORIGIN in W/S (unlike the Master-Equation takeoff
-%   sibling, which adds a rolling-friction/drag constant C term).
+%   T/W required to lift off within that field length vs. wing loading W/S.
+%   Both_WbyS_TbyW category. The relation is LINEAR THROUGH THE ORIGIN in W/S
+%   (unlike the Master-Equation takeoff sibling, which adds a constant C term).
 %
-%   FIELD AIR-DENSITY RATIO FROM THE STATE. The Takeoff-Parameter relation
-%   scales with sigma = rho/rho_SL, the field air-density ratio. That IS the
-%   density ratio the injected AircraftState already carries, so it is derived
-%   from the state (sigma = state.rho / rho_SL, ISA sea-level density) rather
-%   than passed as a separate input. A hot day near sea level (Example 4.2's
-%   sigma = 0.95) is represented as the matching field DENSITY ALTITUDE: in
-%   this ISA-only framework AircraftState(1742.4 ft) has sigma = 0.95000, so a
-%   takeoff condition built at that altitude reproduces the metabook constant.
+%   Field air-density ratio from the state: the relation scales with
+%   sigma = rho/rho_SL, derived from state.rho, not passed separately. A hot
+%   day near sea level (Example 4.2's sigma = 0.95) is the matching field
+%   density altitude: AircraftState(1742.4 ft) has sigma = 0.95000 here.
 %
-%   NO THRUST-LAPSE ALPHA AND NO PROP. Unlike the sibling Mattingly
-%   TakeoffConstraint -- which divides its ground-roll thrust demand by the
-%   engine thrust lapse alpha (T_SL/W_TO axis) -- the Takeoff Parameter (TOP)
-%   correlation embeds the takeoff thrust model STATISTICALLY inside the 37.5
-%   calibration constant (fit to a fleet of FAR-25 jets at their takeoff power
-%   setting). The sigma above is the AIR-DENSITY ratio, not the engine thrust
-%   lapse; dividing by a separately-modeled alpha would double-count the thrust
-%   model, so this class takes no prop object and applies no alpha. The result
-%   is already on the same sea-level-static T_SL/W_TO axis the diagram plots.
-%   See the class-header contrast note in TakeoffConstraint.m.
+%   No thrust-lapse alpha and no prop: the Takeoff Parameter (TOP) correlation
+%   embeds the takeoff thrust model statistically in the 37.5 constant, so
+%   dividing by a separate alpha would double-count. The result is already on
+%   the sea-level-static T_SL/W_TO axis.
 %
-%   CLmax_TO is pulled fresh from the injected aero object each call (through
-%   aero.get_config_polar), not a constraint input, so the constraint tracks
-%   the current sizing-loop iteration and fidelity level automatically.
+%   CLmax_TO is pulled fresh from the aero object each call (through
+%   aero.get_config_polar).
 %
-%   EQUATION [Metabook (Aero 481 metabook), docs/reference_extracts/
-%   metabook_data.md "§4.5 Takeoff Field Length," Eqs. 4.14-4.16; worked
-%   Example 4.2, Eqs. 4.47-4.48]:
+%   EQUATION [metabook_data.md "§4.5 Takeoff Field Length," Eqs. 4.14-4.16;
+%   worked Example 4.2, Eqs. 4.47-4.48]:
 %
 %     TOP25       = BFL / 37.5                                         (4.15)
 %     T_SL/W_TO   = (W_TO/S) / (sigma * CLmax_TO * TOP25)             (4.16)
@@ -90,13 +76,8 @@ classdef TakeoffFieldLengthConstraint < Both_WbyS_TbyW
         %   coeff = 1/(sigma * CLmax_TO * TOP25). WS may be scalar or array;
         %   TW is returned the same size.
         %
-        %   FAILS LOUDLY on a non-finite coefficient. CLmax_TO comes from the
-        %   aero high-lift config, which can legitimately be non-finite (a
-        %   mis-injected discipline object, or an unmodeled config). A NaN
-        %   required_TW is silently omitted from ConstraintAnalysis's max()
-        %   envelope, so an un-evaluable condition would read as SATISFIED off
-        %   a curve that does not exist. Erroring here makes that a visible
-        %   failure -- mirrors TakeoffConstraint's guard.
+        %   Fails loudly on a non-finite coefficient: a NaN required_TW is
+        %   silently dropped from ConstraintAnalysis's max() envelope.
         %
         %   [Metabook Eqs. 4.15-4.16; worked Ex. 4.2 Eqs. 4.47-4.48.]
             CLmax_TO = obj.aero.get_config_polar("takeoff_flaps_gear_down").CLmax;
@@ -120,13 +101,9 @@ classdef TakeoffFieldLengthConstraint < Both_WbyS_TbyW
         function obj = fromCondition(cond, aero, ~)
         %FROMCONDITION  Build from a requirements-JSON condition struct + the
         %   injected aero. Reads cond.BFL_ft and the takeoff-field flight
-        %   condition (cond.altitude_ft, and cond.mach when present -- a nominal
-        %   low takeoff Mach otherwise, since only the density enters the TOP
-        %   correlation). sigma is derived from that state's density. prop is
-        %   accepted for a uniform factory signature but IGNORED -- the TOP
-        %   correlation models takeoff thrust statistically and needs no
-        %   propulsion object (see class header "NO THRUST-LAPSE ALPHA AND NO
-        %   PROP"). Uniform factory dispatched by ConstraintType.
+        %   condition (cond.altitude_ft, cond.mach when present -- else a
+        %   nominal low Mach, only density enters). prop is accepted for a
+        %   uniform signature but ignored. Dispatched by ConstraintType.
             if isfield(cond, 'mach') && ~isempty(cond.mach)
                 mach = cond.mach;
             else

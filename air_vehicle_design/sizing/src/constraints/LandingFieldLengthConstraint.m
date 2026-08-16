@@ -4,32 +4,22 @@ classdef LandingFieldLengthConstraint < Only_WbyS
 %
 %   Generic Layer-1 constraint. Given a required runway length, an
 %   obstacle-clearance approach distance Sa, a landing-to-takeoff weight ratio,
-%   the landing-field flight condition (an AircraftState), and a runway
-%   multiple, it returns the UPPER BOUND this landing-field requirement imposes
-%   on wing loading W/S -- not a required T/W. Braking landing has no thrust
-%   demand, so it belongs to the Only_WbyS category: the aggregator reads
-%   WS_max() as a vertical W/S wall.
+%   the landing-field flight condition, and a runway multiple, it returns the
+%   UPPER BOUND on wing loading W/S -- not a required T/W. Braking landing has
+%   no thrust demand: Only_WbyS category, read as a vertical W/S wall.
 %
-%   This is the FAR-25 statistical field-length correlation (Roskam's
-%   80*(W/S)/(sigma*CLmax) + Sa relation), NOT the Roskam Military
-%   ground-roll-with-braking form that the sibling LandingConstraint.m uses.
-%   Use this class for FAR-25 airliner / civil landing sizing.
+%   The FAR-25 statistical field-length correlation (Roskam's
+%   80*(W/S)/(sigma*CLmax) + Sa), NOT the Roskam Military ground-roll form the
+%   sibling LandingConstraint.m uses. Use for FAR-25 airliner/civil sizing.
 %
-%   FIELD AIR-DENSITY RATIO FROM THE STATE. The relation scales with
-%   sigma = rho/rho_SL, the field air-density ratio. That IS the density ratio
-%   the injected AircraftState carries, so it is derived from the state
-%   (sigma = state.rho / rho_SL, ISA sea-level density) rather than passed as a
-%   separate input. A hot day near sea level (Example 4.2's sigma = 0.95) is
-%   represented as the matching field DENSITY ALTITUDE: AircraftState(1742.4 ft)
-%   has sigma = 0.95000 in this ISA-only framework.
+%   Field air-density ratio from the state: sigma = state.rho / rho_SL, not
+%   passed separately. Example 4.2's sigma = 0.95 is AircraftState(1742.4 ft).
 %
-%   CLmax_L is pulled fresh from the injected aero object each call (through
-%   aero.get_config_polar), not a constraint input, so the constraint tracks
-%   the current sizing-loop iteration and fidelity level automatically.
+%   CLmax_L is pulled fresh from the aero object each call (through
+%   aero.get_config_polar).
 %
-%   EQUATION [Metabook (Aero 481 metabook), docs/reference_extracts/
-%   metabook_data.md "§4.6 Landing Field Length," Eqs. 4.19 / 4.45; worked
-%   Example 4.2, Eq. 4.46]:
+%   EQUATION [metabook_data.md "§4.6 Landing Field Length," Eqs. 4.19 / 4.45;
+%   worked Example 4.2, Eq. 4.46]:
 %
 %     sland = 80 * (W/S) / (sigma * CLmax_L) + Sa                      (4.19)
 %   solved for W/S, with the FAR runway multiple and weight-ratio corrections:
@@ -107,10 +97,9 @@ classdef LandingFieldLengthConstraint < Only_WbyS
         %   the aero high-lift config each call, so this tracks the
         %   current-iteration aerodynamics.
         %
-        %   FAILS LOUDLY on a non-finite bound (a mis-injected discipline object
-        %   or unmodeled config gives a non-finite CLmax_L). An Only_WbyS wall
-        %   is read directly by the aggregator, so a NaN wall would silently
-        %   drop the whole constraint -- error here instead.
+        %   Fails loudly on a non-finite bound: an Only_WbyS wall is read
+        %   directly by the aggregator, so a NaN wall would silently drop the
+        %   whole constraint.
         %
         %   [Metabook Eqs. 4.19/4.45; worked Ex. 4.2 Eq. 4.46.]
             CLmax_L = obj.aero.get_config_polar("landing_flaps_gear_down").CLmax;
@@ -141,13 +130,10 @@ classdef LandingFieldLengthConstraint < Only_WbyS
         function obj = fromCondition(cond, aero, ~)
         %FROMCONDITION  Build from a requirements-JSON condition struct + the
         %   injected aero. Reads cond.runway_ft, cond.Sa_ft, cond.weight_ratio,
-        %   the landing-field flight condition (cond.altitude_ft, and cond.mach
-        %   when present -- a nominal low approach Mach otherwise, since only the
-        %   density enters the correlation), and the optional cond.runway_factor
-        %   (defaulted to 0.6 when absent). sigma is derived from that state's
-        %   density. prop is accepted for a uniform factory signature but
-        %   unused -- landing is unpowered. Uniform factory dispatched by
-        %   ConstraintType.
+        %   the landing-field flight condition (cond.altitude_ft, cond.mach when
+        %   present -- else a nominal low Mach, only density enters), and the
+        %   optional cond.runway_factor (default 0.6). prop is accepted for a
+        %   uniform signature but unused. Dispatched by ConstraintType.
             if isfield(cond, 'mach') && ~isempty(cond.mach)
                 mach = cond.mach;
             else

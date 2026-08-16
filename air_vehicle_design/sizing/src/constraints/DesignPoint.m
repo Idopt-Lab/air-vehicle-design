@@ -53,15 +53,12 @@ classdef DesignPoint
         end
 
         function WS = get.WS(obj)
-        %GET.WS  Wing loading W_TO / S_ref, lbf/ft^2. S_ref is guaranteed
-        %   positive by the constructor, so the division is always defined.
+        %GET.WS  Wing loading W_TO / S_ref, lbf/ft^2.
             WS = obj.W_TO / obj.S_ref;
         end
 
         function TW = get.TW(obj)
-        %GET.TW  Thrust-to-weight ratio T_SL / W_TO, dimensionless. W_TO is
-        %   guaranteed positive by the constructor, so the division is always
-        %   defined.
+        %GET.TW  Thrust-to-weight ratio T_SL / W_TO, dimensionless.
             TW = obj.T_SL / obj.W_TO;
         end
     end

@@ -52,23 +52,14 @@ classdef SizingSteps
 
         function x = relax(x_old, x_new, w)
         %RELAX  Under-relaxed update x = x_old + w*(x_new - x_old).
-        %   Standard successive-substitution damping for a fixed-point
-        %   iteration (numerical method, no physics citation applies).
-        %   w in (0, 1]: w = 1 is the full step to x_new; smaller w damps
-        %   the update to stabilize convergence.
+        %   Successive-substitution damping for a fixed-point iteration
+        %   (numerical method, no physics citation). w in (0, 1]: w = 1 is
+        %   the full step to x_new; smaller w stabilizes convergence.
         %
-        %   RELAXATION CHOICE (added 2026-08-14). If the unrelaxed map has
-        %   slope m = d(x_new)/d(x_old) at the fixed point, the relaxed
-        %   slope is (1 - w) + w*m; the iteration converges only when its
-        %   magnitude is < 1, and w = 1/(1 - m) nulls it (fastest). For
-        %   the TOGW closure, m ~= -W_payload*|d(ef)/dW0|/denom^2 with
-        %   ef = OEW/W0 -- aircraft with a large fixed-OEW content have
-        %   steep m. Measured on the Brandt F-16A stack: m ~= -2.9, so
-        %   the 0.5 default leaves |slope| ~= 0.95 (very slow, oscillating)
-        %   while w ~= 0.25 converges in a handful of iterations. Callers
-        %   should tune the loops' relaxation opts per stack; the Aero 481
-        %   reference code used w = 0.2 on a 777-class closure for the
-        %   same reason.
+        %   Choose w per stack: aircraft with a large fixed-OEW content have
+        %   a steep closure-map slope and need a smaller w (Brandt F-16A
+        %   slope ~= -2.9 -> w ~= 0.25).
+        %   History and rationale: docs/decision_log.md
             arguments
                 x_old (1,1) double
                 x_new (1,1) double

@@ -1,44 +1,26 @@
 classdef AeroL1
 %AEROL1  Level-1 aerodynamics static toolbox: aircraft type only, no geometry.
-%
 %   Call as AeroL1.method(...); never instantiated, not in the inheritance
 %   chain. F16AeroL1 inherits AeroModelL1 and delegates to these statics.
+%   High-level statics take the concrete object; low-level statics take only
+%   scalars and arrays.
 %
-%   Two tiers: high-level statics take the concrete object; low-level statics
-%   take only scalars and arrays.
+%   Drag polar [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]. CD0(M)
+%   interpolated from the fighter "Current" type-curve [Mattingly Fig. 2.10].
+%   K1 is equation-based (not a curve): k1_from_geometry reuses AeroL2's Raymer
+%   equations [Eq. 12.48-12.50 subsonic Oswald-e/K1, Eq. 12.51 supersonic K1]
+%   fed the real F-16 wing AR/sweep. K2 = 0 for an uncambered fighter
+%   [Mattingly Sec. 2.3.1]. CLmax and high-lift increments [Roskam Vol. I
+%   Table 3.1, Table 3.6].
 %
-%   Drag polar: [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]. CD0(M) interpolated from the
-%   fighter "Current" type-curve [Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10]; K2 = 0 for an
-%   uncambered fighter [Mattingly: Aircraft Engine Design, 2nd edition Sec. 2.3.1]. CLmax and the high-lift
-%   increments: [Roskam Vol. I Table 3.1, Table 3.6].
-%
-%   K1 -- EQUATION-BASED, NOT A CURVE (changed 2026-07-29, user direction):
-%   K1 previously interpolated Mattingly's GENERIC Fig. 2.11 fighter type-curve
-%   (flat 0.18 subsonic), which was ~55% higher than Brandt's own calibrated
-%   F-16 K1=0.1160 and was found to pull design_study_01_L1's optimal_point()
-%   down to W/S=76 instead of Brandt's 104.59 (see git history / F16AeroL1.m's
-%   prior header for the full diagnostic). k1_from_geometry below instead
-%   reuses AeroL2's own Raymer equations (Eq. 12.48-12.50 subsonic Oswald-e/K1,
-%   Eq. 12.51 supersonic K1), fed the real F-16 wing AR/sweep (genuine spec
-%   data, not derived geometry -- see F16AeroL1.m's AR/Lambda_LE_deg
-%   properties), the same low-level cross-tier reuse pattern this repo already
-%   uses for the skin-friction primitives (AeroL2.dyn_viscosity/compute_Re/
-%   Cf_turbulent, shared with the L3 component buildup). This makes L1's K1 a
-%   real, cited equation instead of an un-digitized placeholder table -- see
-%   TestAeroL1.testTODO_MattinglyCurvesArePlaceholder, now CD0-only.
-%
-%   TRANSONIC GAP (NEW for L1, matches L2/L3): Raymer Eq. 12.51's pole near
-%   M=1 (AeroL2.m class header) means k1_from_geometry returns NaN in
-%   AeroL2's transonic band (0.95 <= M < 1.05) -- a real behavior change from
-%   the old smooth Mattingly curve, and from L1's own CD0(M), which stays a
-%   smooth curve interpolation with no gap. None of the F-16's actual
-%   requirements-JSON conditions fall in that band (all are M<=0.87 or
-%   M>=1.05), so this does not affect the F-16's L1 constraint set.
+%   Transonic gap: Eq. 12.51's pole near M=1 makes k1_from_geometry return NaN
+%   in the AeroL2 transonic band (0.95 <= M < 1.05); CD0(M) stays a smooth
+%   curve with no gap. No F-16 requirement condition falls in that band.
 %
 %   TODO: Mattingly Fig. 2.10 is not in this repo. The CD0 curve block in
 %   f16a_L1.json is seeded from 5 AAF worked-example points and marked
 %   _placeholder. Guarded by TestAeroL1.testTODO_MattinglyCurvesArePlaceholder.
-%
+%   History and rationale: docs/decision_log.md
 %   Companion doc: src/disciplines/aerodynamics/AeroL1.md
 
 % Type-based tables (no geometry): Roskam CLmax by category and the
@@ -57,12 +39,10 @@ classdef AeroL1
 
         function polar = drag_polar(obj, state)
         %DRAG_POLAR  Assemble the L1 drag polar.  Returns struct(CD0, K1, K2).
-        %   CD0(M) interpolated from the student object's Mattingly Fig. 2.10
-        %   "Current" curve table; K1 computed from the object's real wing
-        %   AR/Lambda_LE_deg via k1_from_geometry (Raymer Eq. 12.48-12.50/
-        %   12.51, see class header "K1 -- EQUATION-BASED"); K2 = 0 for the
-        %   fighter/uncambered type.  Mattingly: Aircraft Engine Design, 2nd
-        %   edition, Eq. 2.9.
+        %   CD0(M) interpolated from the object's Mattingly Fig. 2.10 "Current"
+        %   curve; K1 from the object's wing AR/Lambda_LE_deg via
+        %   k1_from_geometry [Raymer Eq. 12.48-12.50/12.51]; K2 = 0 for the
+        %   uncambered fighter. [Mattingly Eq. 2.9]
             cd0 = AeroL1.interp_curve(obj.cd0_curve_mach, obj.cd0_curve_value, state.mach);
             k1  = AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach);
             k2  = AeroL1.mattingly_K2(obj.design_type);
@@ -78,21 +58,14 @@ classdef AeroL1
         % ================================================================== %
 
         function K1 = k1_from_geometry(AR, Lambda_LE_deg, M)
-        %K1_FROM_GEOMETRY  Induced-drag factor from real wing AR/sweep,
-        %   reusing AeroL2's own low-level Raymer equations -- see class
-        %   header "K1 -- EQUATION-BASED, NOT A CURVE" for the full rationale
-        %   and why this cross-tier reuse of AeroL2's pure-math statics
-        %   matches the codebase's existing precedent (skin-friction
-        %   primitives shared with the L3 component buildup).
+        %K1_FROM_GEOMETRY  Induced-drag factor from wing AR/sweep, reusing
+        %   AeroL2's low-level Raymer equations.
         %     Subsonic (M < AeroL2.MACH_SUBSONIC_MAX):
         %       e  = AeroL2.oswald_eff(AR, Lambda_LE_deg)   [Raymer Eq. 12.48/12.49]
         %       K1 = AeroL2.K1_subsonic(e, AR)              [Raymer Eq. 12.50]
         %     Supersonic (M >= AeroL2.MACH_SUPERSONIC_MIN):
         %       K1 = AeroL2.K1_supersonic(M, AR, Lambda_LE_deg)  [Raymer Eq. 12.51]
-        %     Transonic band in between: NaN (Eq. 12.51 pole near M=1, same
-        %     "not modeled" convention as AeroL2.drag_polar -- see that
-        %     class's header). Unlike L1's CD0(M), which stays a smooth curve
-        %     interpolation through this band with no gap.
+        %     Transonic band: NaN (Eq. 12.51 pole near M=1).
             arguments
                 AR            (1,1) double {mustBePositive}
                 Lambda_LE_deg (1,1) double {mustBeReal}

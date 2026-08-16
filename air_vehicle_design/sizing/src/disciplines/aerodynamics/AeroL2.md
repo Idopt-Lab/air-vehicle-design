@@ -4,12 +4,11 @@ Level-2 aerodynamics static toolbox (`classdef AeroL2`, `methods (Static)` only)
 `AeroL2.method(...)`; never instantiated and not in the inheritance chain. `F16AeroL2` inherits
 `AeroModelL2` and delegates here.
 
-L2 is the **geometry-dependent** clean drag polar plus finite-wing lift. All geometry is read from
-the injected geometry object through the concrete class's `Dependent` getters; this toolbox never
-sees a hardcoded geometry number.
+L2 is the **geometry-dependent** clean drag polar plus finite-wing lift. Geometry is read from the
+injected geometry object through the concrete class's `Dependent` getters.
 
-The skin-friction primitives (`dyn_viscosity`, `compute_Re`, `Cf_turbulent`) live here as the single
-source of truth and are also called by the L3 buildup.
+The skin-friction primitives (`dyn_viscosity`, `compute_Re`, `Cf_turbulent`) are the single source of
+truth here and are also called by the L3 buildup.
 
 ---
 
@@ -69,17 +68,15 @@ with $\mu$ from Sutherland's law in English units.
 ## 3. Transonic band
 
 For $0.95 < M < 1.05$ the polar is **not modelled**: Eq. 12.51 has a pole at $4\,AR\,\beta = 2$, i.e.
-$M \approx 1.014$ at $AR = 3$. The band returns `NaN` as an explicit "not modelled" signal rather
-than a singular value.
+$M \approx 1.014$ at $AR = 3$. The band returns `NaN` rather than a singular value.
 
 That `NaN` is caught downstream — both `Both_WbyS_TbyW.required_TW` and `ConstraintAnalysis` refuse
-to evaluate rather than propagating it.
+to evaluate rather than propagate it.
 
 ## 4. Two things that are not inputs
 
 - **`Cfe`** is the `aircraft_category`-selected Raymer Table 12.3 row, via `lookup_Cfe` — not a JSON
-  input. A published table constant is not spec data, and holding it as one invites tuning it onto a
-  target.
+  input. A published table constant is not spec data.
 - **`oswald_eff_brandt`** implements Brandt's own correlation [Aero!G12] and exists only for the
   comparison report. `get_e_osw` errors on any `e_method` other than `"official"`.
 

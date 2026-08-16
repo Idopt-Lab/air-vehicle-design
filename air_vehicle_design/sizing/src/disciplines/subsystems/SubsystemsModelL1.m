@@ -1,19 +1,11 @@
 classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
 %SUBSYSTEMSMODELL1  Tier-2 abstract enforcer for Level-1 subsystems.
 %
-%   Inherits SubsystemsBase directly, not another SubsystemsModelLN.
+%   Inherits SubsystemsBase directly. L1 is tabulation only: no geometry, no
+%   injected collaborators. Methods needing an external weight take it as an
+%   explicit argument. No packaging factor and no landing-gear bay at L1.
 %
-%   L1 is TABULATION ONLY -- Nicolai & Carichner Ch.8-style lookups, no
-%   geometry, no injected collaborators. A concrete L1 class injects nothing;
-%   every method that needs an external weight (avionics W_empty, a required
-%   fuel weight) takes it as an explicit argument, exactly the way
-%   F16WeightsL1.OEW(obj, W_TO) takes W_TO rather than injecting a weights
-%   object at L1.
-%
-%   No fuel-tank packaging factor is usable at L1 (no geometric raw volume
-%   exists yet), and there is no landing-gear counterpart at L1 at all (no
-%   fuselage envelope to place a bay into).
-%
+%   History and rationale: docs/decision_log.md
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL1.md
 
     properties (Abstract)
@@ -23,13 +15,9 @@ classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
 
     % ======================================================================= %
     % avionics_weight_fraction, avionics_density, fuel_density,
-    % fuselage_raw_volume and fuel_volume are declared on SubsystemsBase, not
-    % here -- see that file's 2026-08-03 header note. avionics_weight and
-    % avionics_volume stay declared HERE (not lifted): L1 has no injected
-    % weights object, so both MUST take W_empty as an explicit argument
-    % [WeightsBase.OEW(obj, W_TO) is the established precedent for this
-    % "stays a method because it takes an explicit external argument" shape]
-    % -- a kind (method) that L2/L3 deliberately do NOT share, since they
+    % fuselage_raw_volume and fuel_volume are declared on SubsystemsBase. Only
+    % avionics_weight and avionics_volume stay methods here: L1 has no injected
+    % weights object, so both take W_empty as an explicit argument. L2/L3
     % implement the same-named members as Dependent properties instead.
     % ======================================================================= %
     methods (Abstract)

@@ -67,9 +67,8 @@ classdef (Abstract) MissionAnalysisBase < handle
         %   per-segment fuel (which EXCLUDES payload drop) into raw_burn, then
         %   marks it up by the reserve fuel fraction [Roskam Part I Eq. 2.14/2.15]:
         %     W_fuel = raw_burn * (1 + reserve_fuel_fraction).
-        %   The ~6000 lb soft-check target is raw_burn (breakdown.raw_burn), not
-        %   W_fuel. breakdown carries per-segment names/fuel/W_after plus each
-        %   segment's debug struct (L/D, TSFC, ...) for the comparison report.
+        %   breakdown carries per-segment names/fuel/W_after plus each segment's
+        %   debug struct (L/D, TSFC, ...) for the comparison report.
             arguments
                 obj
                 W_TO (1,1) double {mustBePositive}
@@ -110,13 +109,9 @@ classdef (Abstract) MissionAnalysisBase < handle
         end
 
         function W_fuel = compute_fuel(obj, aero, prop, W_TO) %#ok<INUSL>
-        %COMPUTE_FUEL  Sizing-loop-compatible entry point.
-        %   Signature matches the retired MissionBase.compute_fuel(aero, prop,
-        %   W_TO) so SizingLoopL1/L2 change only their type annotation. The aero
-        %   and prop arguments are accepted for signature compatibility but the
-        %   INJECTED handles are used (they are the same objects the sizing loop
-        %   mutates and passed to from_requirements). Returns the total fuel
-        %   weight (with reserve).
+        %COMPUTE_FUEL  Sizing-loop-compatible entry point. The aero and prop
+        %   arguments are accepted for signature compatibility but the INJECTED
+        %   handles are used. Returns the total fuel weight (with reserve).
             W_fuel = obj.total_fuel(W_TO);
         end
 

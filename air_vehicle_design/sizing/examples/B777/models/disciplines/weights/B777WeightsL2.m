@@ -2,16 +2,14 @@ classdef B777WeightsL2 < WeightsModelL2
 %B777WEIGHTSL2  Boeing 777-200LR Level-2 weight estimation: the metabook
 %   Chapter 7 component build-up (Algorithm 5, Example 7.1).
 %
-%   Inherits WeightsModelL2 -- the aircraft-agnostic Tier-2 enforcer whose whole
-%   purpose is exactly this build-up ("L2 is surface density x area for the
-%   structural groups, plus fractions of gross weight for landing gear,
-%   installed engine and all-else-empty"). Every abstract member is satisfied by
-%   a single delegation into the WeightsL2 static toolbox -- the SAME toolbox
-%   F16WeightsL2 uses -- so no equation is duplicated here. The only per-aircraft
-%   differences from the F-16 are the category (`jet_transport` -> Table 15.2
-%   transport densities + the 0.043 landing-gear fraction), the engine-weight
-%   model (Roskam Eqs. 7.13-7.19 vs the fighter's Raymer Eq. 10.10), and the
-%   absence of a strake term.
+%   Inherits WeightsModelL2 -- the aircraft-agnostic Tier-2 enforcer for this
+%   build-up (surface density x area for the structural groups, plus fractions of
+%   gross weight for landing gear, installed engine and all-else-empty). Every
+%   abstract member delegates to the WeightsL2 toolbox (same toolbox as
+%   F16WeightsL2). The per-aircraft differences from the F-16 are the
+%   `jet_transport` category (Table 15.2 transport densities + the 0.043
+%   landing-gear fraction), the Roskam engine model (Eqs. 7.13-7.19 vs the
+%   fighter's Raymer Eq. 10.10), and no strake term.
 %
 %   OEW = W_wings + W_tail.HT + W_tail.VT + W_fuselage + W_landing_gear
 %         + W_installed_engine + W_all_else_empty                [WeightsL2.OEW]
@@ -19,31 +17,21 @@ classdef B777WeightsL2 < WeightsModelL2
 %         + 0.043·W0 + 1.3·n·Wengine(T0) + 0.17·W0
 %
 %   Responds to all three sizing variables: W0 (gear + all-else fractions),
-%   S_ref (via the injected geom's exposed wing area), T0 (via the injected
-%   prop's thrust into the Roskam engine weight).
+%   S_ref (injected geom's exposed wing area), T0 (injected prop's thrust into
+%   the Roskam engine weight).
 %
-%   ============================================================================
 %   TWO METABOOK NOTES (docs/reference_extracts/metabook_data.md §7.2):
-%     * INSTALLED-ENGINE 1.3x (D8). Algorithm 5's pseudocode uses n*Wengine
-%       (uninstalled), but Table 7.1/7.3 apply the 1.3x (47,476 = 1.3·36,520)
-%       and the 323,778 total includes it. WeightsL2.weight_installed_engine
-%       applies the 1.3, per the worked example.
-%     * ENGINE THRUST (D9). Table 7.3 reproduces only at T0 = 89,000/engine, but
-%       the constraint/T-S diagrams use 220,000 total (110k/engine). This class
-%       feeds the SIZING prop.T_SL into the Roskam weight (USER decision
-%       2026-08-15), so the engine responds to the real thrust. At 220k the
-%       Roskam engine is ~10k heavier than Table 7.3, so OEW ~ 334k (+4% vs
-%       actual 320k -- the Roskam regression over-predicts the modern GE90), NOT
-%       Table 7.3's 323,778.
-%   ============================================================================
+%     * INSTALLED-ENGINE 1.3x (D8): Table 7.1/7.3 apply the 1.3x, so
+%       WeightsL2.weight_installed_engine applies it too.
+%     * ENGINE THRUST (D9): Table 7.3 reproduces at T0 = 89,000/engine, but the
+%       constraint/T-S diagrams use 220,000 total. This class feeds the SIZING
+%       prop.T_SL into the Roskam weight (USER decision), so OEW ~ 334k (+4% vs
+%       actual 320k, the Roskam regression over-predicts the GE90).
 %
-%   DEPENDENCY INJECTION. geom (B777GeomL2) supplies the EXPOSED areas + fuselage
-%   wetted area; prop (B777PropL1) supplies T_SL and n_engines. Never re-read
-%   from JSON. INPUT vs DERIVED: only W_TO/W_energy/payload/category are stored;
-%   every group/component weight and injected area is a Dependent getter that
-%   recomputes live (no cache, never stale under a sizing mutation) -- the same
-%   optimization-ready pattern as F16WeightsL2.
-%
+%   DEPENDENCY INJECTION: geom (B777GeomL2) supplies exposed areas + fuselage
+%   wetted area; prop (B777PropL1) supplies T_SL and n_engines. Only
+%   W_TO/W_energy/payload/category are stored; every group/component weight is a
+%   Dependent getter recomputed live (optimization-ready, as F16WeightsL2).
 %   CONSTRUCTOR: B777WeightsL2(json_path, geom, prop) -- all three REQUIRED.
 %
 %   Inheritance: WeightsBase -> WeightsModelL2 -> B777WeightsL2
@@ -138,9 +126,8 @@ classdef B777WeightsL2 < WeightsModelL2
         function v = get.S_wet_fus(obj), v = obj.geom.get_S_wet_fuselage(); end
 
         function v = get.W_en(obj)
-            % UNINSTALLED single-engine Roskam weight at the sizing per-engine
-            % thrust [metabook Eqs. 7.13-7.19]. The 1.3x installed factor is
-            % applied in W_installed_engine, not here (this is the BARE weight).
+            % UNINSTALLED single-engine Roskam weight at the per-engine thrust
+            % [metabook Eqs. 7.13-7.19]; the 1.3x is applied in W_installed_engine.
             v = WeightsL1.engine_weight_roskam(obj.prop.T_SL / obj.N_en);
         end
 
@@ -150,9 +137,8 @@ classdef B777WeightsL2 < WeightsModelL2
         function v = get.W_tail(obj),             v = WeightsL2.weight_tail(obj, obj.W_TO);     end
         function v = get.W_fuselage(obj),         v = WeightsL2.weight_fuselage(obj, obj.W_TO); end
         function v = get.W_installed_engine(obj), v = WeightsL2.weight_installed_engine(obj);   end
-        % Landing gear (0.043·W_TO) and all-else-empty (0.17·W_TO) GENUINELY
-        % scale with W_TO, so a read before W_TO is set must fail loudly, not
-        % return a silent NaN (mirrors F16WeightsL2.requireWTO).
+        % Landing gear and all-else-empty scale with W_TO, so a read before W_TO
+        % is set fails loudly (mirrors F16WeightsL2.requireWTO).
         function v = get.W_landing_gear(obj)
             v = WeightsL2.weight_landing_gear(obj, obj.requireWTO('W_landing_gear'));
         end

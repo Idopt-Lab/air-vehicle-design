@@ -31,10 +31,8 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL3.md
 
-    % ======================================================================= %
-    % INPUTS (3) + 2 injected objects -- plain mutable properties, set once
-    % by the constructor. Authoritative table: F16SubsystemsL3.md §2.
-    % ======================================================================= %
+    % INPUTS (3) + 2 injected objects -- plain mutable properties, set once by
+    % the constructor. Authoritative table: F16SubsystemsL3.md §2.
     properties
         fuel_type                 = 'JP-8'                              % [f16a_L3.json .subsystems.fuel.fuel_type]
         packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L3.json .subsystems.fuel.packaging_factor_category]
@@ -45,11 +43,9 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         fuel_weight_source  % (1,1) WeightsBase -- supplies W_energy (fuel sufficiency check) and OEW/W_TO (avionics W_empty)
     end
 
-    % ======================================================================= %
-    % DERIVED (9) -- same rationale as F16SubsystemsL2 (see that file's
-    % header): zero-extra-arg quantities that read only the inputs/injected
-    % collaborators above, so implemented as Dependent getters, not methods.
-    % ======================================================================= %
+    % DERIVED (9) -- same rationale as F16SubsystemsL2: zero-extra-arg
+    % quantities that read only the inputs/injected collaborators above,
+    % implemented as Dependent getters, not methods.
     properties (Dependent)
         avionics_weight_fraction
         avionics_density

@@ -2,40 +2,23 @@ classdef F16AeroL1 < AeroModelL1
 %F16AEROL1  F-16A Block 10 Level-1 aerodynamics student class.
 %
 %   Inherits AeroModelL1 (abstract enforcer). The drag polar is
-%   CD = CD0(M) + K1(M)*CL^2 + K2*CL (Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9), and
-%   CLmax is a Roskam type-based lookup. Every abstract method delegates to
-%   the AeroL1 static toolbox.
+%   CD = CD0(M) + K1(M)*CL^2 + K2*CL [Mattingly: Aircraft Engine Design, 2nd
+%   edition, Eq. 2.9], and CLmax is a Roskam type-based lookup. Every abstract
+%   method delegates to the AeroL1 static toolbox.
 %
 %   CD0(M): interpolated from the Mattingly Fig. 2.10 fighter "Current"
-%   type-curve (still geometry-free -- see cd0_curve_mach/value below).
+%   type-curve (geometry-free -- see cd0_curve_mach/value below).
 %
-%   K1(M): EQUATION-BASED, NOT A CURVE (changed 2026-07-29, user direction --
-%   see git history for the full diagnostic trail). Previously interpolated
-%   Mattingly's GENERIC Fig. 2.11 fighter type-curve (flat 0.18 subsonic),
-%   which was ~55% higher than Brandt's own calibrated F-16 K1=0.1160 and,
-%   because ThrustConstraint's induced-drag term scales with K1*n^2
-%   (ThrustConstraint.m compute_B), pulled design_study_01_L1's
-%   optimal_point() down to W/S=76.00 instead of Brandt's W/S=104.59 (the
-%   "Combat Subsonic" n=4.5 sustained-turn condition rose ~55% steeper than
-%   Brandt's own chart and became binding too soon). K1 is now computed by
-%   AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach), which
-%   reuses AeroL2's own Raymer equations (Eq. 12.48-12.50 subsonic, Eq. 12.51
-%   supersonic) fed the F-16's real wing AR/sweep (this class's AR/
-%   Lambda_LE_deg properties below) -- reproduces Brandt's calibrated K1 to
-%   within 0.7% at subsonic Mach (e_osw=0.9086, K1=0.1168 vs. Brandt's
-%   0.1160) essentially from first principles, and raises
-%   design_study_01_L1's WS_opt to 111.00 (T/W=0.7252), much closer to
-%   Brandt. See AeroL1.m's class header ("K1 -- EQUATION-BASED, NOT A CURVE")
-%   for the equations and the resulting transonic-NaN-band caveat (K1 is
-%   NaN for 0.95<=M<1.05 -- CD0 has no such gap).
+%   K1(M): EQUATION-BASED, NOT A CURVE. Computed by
+%   AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach), reusing
+%   AeroL2's Raymer equations (Eq. 12.48-12.50 subsonic, Eq. 12.51 supersonic)
+%   fed the F-16's real wing AR/sweep. K1 is NaN for 0.95<=M<1.05 (transonic
+%   band); CD0 has no such gap. See AeroL1.m's class header.
 %
-%   AR/Lambda_LE_deg ARE GENUINE SPEC DATA, NOT A GEOMETRY OBJECT: this class
-%   still takes NO geometry object (contrast F16AeroL2/L3, whose constructors
-%   require an injected geometry object) -- AR and Lambda_LE_deg are two
+%   AR/Lambda_LE_deg are genuine spec data, not a geometry object: this class
+%   takes NO geometry object (contrast F16AeroL2/L3). AR and Lambda_LE_deg are
 %   scalar wing-spec inputs read directly from the .aerodynamics JSON block
-%   (same real F-16 values as f16a_L2.json's .geometry.wing: AR=3.0,
-%   sweep_LE_deg=40.0), the same "Layer 2 wires in genuine spec data" pattern
-%   every other Tier-3 class uses, not derived/computed geometry.
+%   (same values as f16a_L2.json's .geometry.wing: AR=3.0, sweep_LE_deg=40.0).
 %
 %   Inheritance: AerodynamicsBase -> AeroModelL1 -> F16AeroL1
 %
@@ -45,20 +28,16 @@ classdef F16AeroL1 < AeroModelL1
 %     get_CLmax_TO     : 1.70  [Table 3.1 fighter TO mean]
 %     get_CLmax_L      : 2.10  [Table 3.1 fighter landing mean]
 %
-%   TABLE 3.1 THROUGHOUT (2026-07-25). Clean CLmax and the takeoff/landing
-%   increments all come from Roskam Table 3.1, so the totals equal that table's
-%   own fighter means. Previously the clean base was Table 3.3's 0.90 while the
-%   increments were Table 3.1 differences off a 1.50 base, giving totals
-%   (1.10/1.50) that belonged to neither table. Note the resulting L1->L2
-%   discontinuity is large and INTENTIONAL: 1.50 here vs. 0.913 at L2/L3
+%   Clean CLmax and the takeoff/landing increments all come from Roskam
+%   Table 3.1, so the totals equal that table's fighter means. The L1->L2
+%   discontinuity is large and intentional: 1.50 here vs. 0.913 at L2/L3
 %   (Raymer Eq. 12.15, geometry-based) -- see AeroL1.get_CLmax's header.
+%
+%   History and rationale: docs/decision_log.md
 
-    % ======================================================================= %
     % INPUTS -- aircraft-type / technology-curve spec data, plus AR/Lambda_LE_deg
-    % (genuine wing spec scalars, NOT an injected geometry object -- see class
-    % header). All from JSON; mutable. L1 owns NO geometry object, so there are
-    % no Dependent geometry getters here (contrast F16AeroL2/L3).
-    % ======================================================================= %
+    % (wing spec scalars, not an injected geometry object -- see class header).
+    % All from JSON; mutable.
     properties
         aircraft_category % string; canonical class flag, read from the single top-level key. Selects the Roskam CLmax row (translated to that table's own "fighter" name by AeroL1.to_CLmax_table_row) and the Mattingly fighter curve.
         design_type       % string; "uncambered" -> K2=0 (Mattingly Sec. 2.3.1)
@@ -82,20 +61,15 @@ classdef F16AeroL1 < AeroModelL1
         function obj = F16AeroL1(json_path)
         %F16AEROL1  Construct from a required unified L1 input JSON path
         %   (f16a_spec_path(1)); reads its .aerodynamics block (aircraft type,
-        %   camber class, technology-curve selector, the folded-in Mattingly
-        %   Fig. 2.10 CD0 curve table, and the real wing AR/Lambda_LE_deg used
-        %   to compute K1 -- see class header). No silent default: the path
-        %   must be supplied. L1 takes NO injected geometry object (contrast
-        %   F16AeroL2/L3) -- AR/Lambda_LE_deg are genuine spec scalars read
-        %   directly, same as every other Layer-2 aircraft-specific input.
+        %   camber class, technology-curve selector, the Mattingly Fig. 2.10
+        %   CD0 curve table, and the wing AR/Lambda_LE_deg used to compute K1).
+        %   No silent default: the path must be supplied.
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             J = jsondecode(fileread(json_path));
             A = J.aerodynamics;
-            % ONE canonical top-level category key (Phase 3, 2026-07-25): it was
-            % previously stored three times under two spellings, and the four
-            % readers did not accept the same vocabulary.
+            % ONE canonical top-level category key.
             obj.aircraft_category = string(J.aircraft_category);
 
             obj.design_type   = string(A.design_type);
@@ -167,16 +141,12 @@ classdef F16AeroL1 < AeroModelL1
         %GET_CONFIG_POLAR  Per-high-lift-config polar, built on the F-16 clean
         %   drag polar plus this class's config-distinguishing methods
         %   (get_CLmax_TO/_L, get_Delta_CD0_TO/_L) -- the AerodynamicsBase
-        %   contract the FAR-25 field-length/climb constraints read.
-        %
-        %   The clean CD0/K1 are Mach-dependent, but the six configs are
-        %   LOW-SPEED high-lift states, so they are evaluated at a nominal
-        %   takeoff/landing condition (sea level, M = 0.2). The F-16 sizes with
-        %   the MILITARY Takeoff/Landing constraints, not the FAR-25 field-
-        %   length path, so this method completes the base contract by reusing
-        %   the existing config deltas. F-16 aero models clean/takeoff/landing
-        %   (no separate gear-up/gear-down split), so both takeoff_* configs map
-        %   to the takeoff deltas and both landing_* plus approach to landing.
+        %   contract the FAR-25 field-length/climb constraints read. The six
+        %   configs are low-speed high-lift states, evaluated at a nominal
+        %   takeoff/landing condition (sea level, M = 0.2). F-16 aero models
+        %   clean/takeoff/landing (no gear-up/gear-down split), so both
+        %   takeoff_* configs map to the takeoff deltas and both landing_* plus
+        %   approach to landing.
             arguments
                 obj
                 config (1,1) string {mustBeMember(config, ...

@@ -34,12 +34,10 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %   M=1.60 -- see examples/F16A/inputs/f16a_requirements.md).
 %
 %   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting). The rating
-%   string names the engine power setting and is validated by the injected
-%   prop against the ratings its engine has: a jet fighter has "mil"
-%   (military/dry) and "AB" (afterburner); a transport has "cont" (max
-%   continuous), "TO"/"max" (takeoff). All ratings are on the one max-power
-%   T_SL basis, so a dry/"mil" condition (e.g. Cruise) stays comparable with an
-%   AB-flown condition on the same T_SL/W_TO diagram. See get_alpha.
+%   string is validated by the injected prop against the ratings its engine
+%   has (fighter "mil"/"AB"; transport "cont"/"TO"/"max"). All ratings share
+%   the one max-power T_SL basis, so a dry "mil" condition stays comparable
+%   with an AB condition on the same diagram. See get_alpha.
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Max Mach"
@@ -83,20 +81,11 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %   Master Equation assembled from this condition's A/B/C/D terms.
         %   WS may be scalar or array; TW is returned the same size.
         %
-        %   FAILS LOUDLY on a non-finite term. The A/B/C/D terms come from the
-        %   aero drag polar and the prop thrust lapse, either of which can
-        %   legitimately be non-finite -- AeroL2 returns NaN CD0/K1 across the
-        %   unmodeled transonic band by design, and a mis-injected discipline
-        %   object can too. A NaN required_TW is silently omitted from
-        %   ConstraintAnalysis's max() envelope, so an un-evaluable condition
-        %   would read as SATISFIED off a curve that does not exist. Erroring
-        %   here makes that a visible failure at the one place every
-        %   Master-Equation constraint funnels through.
-        %
-        %   The drag polar and thrust lapse are fetched once per call and
-        %   passed to the compute_* helpers; the fetch stays inside the call
-        %   (not cached across calls) so the constraint tracks the current
-        %   sizing-loop iteration and fidelity level.
+        %   Fails loudly on a non-finite term: a NaN required_TW is silently
+        %   dropped from ConstraintAnalysis's max() envelope, so an
+        %   un-evaluable condition would read as satisfied off a curve that
+        %   does not exist. The drag polar and thrust lapse are fetched fresh
+        %   each call so the constraint tracks the current iteration/fidelity.
             polar = obj.aero.drag_polar(obj.state);
             alpha = obj.get_alpha();
             q     = obj.state.q;
@@ -171,14 +160,10 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %REQUIREPOWERSETTING  Read a thrust condition's power_setting field and
         %   require that it is present. Used by the Master-Equation subclasses'
         %   fromCondition factories (and CeilingConstraint/InstantaneousTurn).
-        %
-        %   Errors rather than defaulting on a missing value: an unstated power
-        %   setting silently defaulting to "AB" is exactly the bug this
-        %   validator prevents. The rating STRING is NOT validated here against
-        %   a fixed set -- the injected propulsion object owns which ratings its
-        %   engine has (fighter "mil"/"AB"; transport "cont"/"TO"/"max") and
-        %   validates the string when thrust_lapse(state, rating) is called, so
-        %   a constraint stays engine-agnostic.
+        %   Errors rather than defaulting a missing value. The rating string is
+        %   NOT validated here: the injected prop owns which ratings its engine
+        %   has and validates the string in thrust_lapse, keeping the
+        %   constraint engine-agnostic.
             arguments
                 cond (1,1) struct
             end

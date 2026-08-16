@@ -2,52 +2,31 @@ classdef CeilingConstraint < Only_TbyW
 %CEILINGCONSTRAINT  Service-ceiling constraint (W/S-independent T/W floor,
 %   minimum-T/W form).
 %
-%   Generic Layer-1 constraint. Given a ceiling flight condition
-%   (AircraftState), a required residual climb gradient G at the ceiling, and
-%   the injected aero/prop discipline objects, it returns the minimum
-%   thrust-to-weight ratio that lets the aircraft reach the ceiling at SOME
-%   wing loading. It belongs to the Only_TbyW category: the requirement is a
-%   flat T/W floor, so required_TW returns this same TW_min at every W/S, and
-%   the aggregator reads it as a horizontal line.
+%   Generic Layer-1 constraint. Given a ceiling flight condition, a required
+%   residual climb gradient G, and the injected aero/prop objects, it returns
+%   the minimum T/W that reaches the ceiling at SOME wing loading. Only_TbyW
+%   category: a flat T/W floor, read as a horizontal line.
 %
-%   WHY THE MINIMUM FORM (and NOT ExcessPower). If only the ceiling ALTITUDE
-%   is specified (not a ceiling speed), the designer is free to fly the
-%   ceiling at the best speed -- i.e. at the wing loading that minimises the
-%   required T/W. Minimising the level-flight T/W = q*CD0/(W/S) +
-%   K1*(W/S)/q over the dynamic pressure q gives the optimum
-%   q = (W/S)*sqrt(1/(CD0*pi*AR*e)) [metabook Eq. 4.29] and the minimum
-%   T/W = 2*sqrt(CD0*K1) + G [metabook Eq. 4.30] -- a value INDEPENDENT of
-%   W/S. That is why the ceiling appears as a HORIZONTAL line on the
-%   constraint diagram (metabook Fig. 4.6). Modelling the ceiling instead as
-%   a fixed-speed ExcessPower point (the Mattingly master equation at one
-%   flight condition) gives the W/S-DEPENDENT U-curve q*CD0/(alpha*W/S) +
-%   ... , whose MINIMUM over W/S equals this same Eq. 4.30 value but which
-%   rises above it away from the optimum -- so it wrongly cuts into the
-%   feasible region at low and high W/S. Use this class, not ExcessPower, for
-%   a ceiling specified by altitude only. (The F-35's "ceiling" is a
-%   DIFFERENT requirement -- a fixed-speed climb at M1.6 -- which does map
-%   onto ExcessPower via Ps = G*V; see the F-35 constraint set.)
+%   Minimum form (not ExcessPower): if only the ceiling ALTITUDE is specified,
+%   the designer flies at the best speed. Minimising level-flight T/W over q
+%   [metabook Eq. 4.29] gives T/W = 2*sqrt(CD0*K1) + G [Eq. 4.30], independent
+%   of W/S -- hence a horizontal line (metabook Fig. 4.6). A fixed-speed
+%   ExcessPower point gives a W/S-dependent U-curve whose minimum equals this
+%   but rises away from the optimum, wrongly cutting the feasible region. Use
+%   ExcessPower only for a ceiling specified by altitude AND speed.
 %
-%   EQUATION [metabook docs/reference_extracts/metabook_data.md "§4.8
-%   Ceiling", Eq. 4.30 (minimum-T/W ceiling) with the Eq. 4.55 sea-level-
-%   static thrust-lapse conversion; worked Example 4.2, Eq. 4.56]:
+%   EQUATION [metabook_data.md "§4.8 Ceiling," Eq. 4.30 with the Eq. 4.55
+%   thrust-lapse conversion; worked Example 4.2, Eq. 4.56]:
 %
 %     T/W_altitude = 2*sqrt(CD0/(pi*AR*e)) + G          (4.30)
 %     T_SL/W_TO    = (1/alpha) * ( 2*sqrt(CD0*K1) + G )  (4.30 + 4.55)
 %
-%   with CD0, K1 from aero.drag_polar(state) at the ceiling condition
-%   (K1 = 1/(pi*AR*e), so 2*sqrt(CD0/(pi*AR*e)) = 2*sqrt(CD0*K1)); alpha the
-%   thrust lapse at that condition (per the power setting); and G the
-%   required residual climb gradient at the ceiling (small, e.g. 0.001, so
-%   the aircraft can still climb to the ceiling rather than only barely hold
-%   it). CD0/K1 and alpha are pulled fresh each call, so the constraint
-%   tracks the current sizing-loop iteration and fidelity level.
+%   CD0, K1 from aero.drag_polar(state) (K1 = 1/(pi*AR*e)); alpha the thrust
+%   lapse per the power setting; G the required residual gradient (small, e.g.
+%   0.001). All pulled fresh each call.
 %
-%   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting), exactly as
-%   MasterEquationConstraint: the injected prop validates the rating against
-%   its engine's ratings (fighter "mil"/"AB"; transport "cont"/"TO"/"max"), all
-%   on the one max-power T_SL basis. A transport ceiling is a max/continuous
-%   point ("max"); a fighter dry-power ceiling is "mil".
+%   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting), validated by
+%   the injected prop (fighter "mil"/"AB"; transport "cont"/"TO"/"max").
 
     properties (SetAccess = protected)
         name    % string -- condition label, e.g. "Ceiling"
@@ -85,11 +64,8 @@ classdef CeilingConstraint < Only_TbyW
         %   equation (metabook Eq. 4.30 + Eq. 4.55). W/S-independent --
         %   Only_TbyW.required_TW returns this at every W/S.
         %
-        %   FAILS LOUDLY on a non-finite result: the drag polar or thrust
-        %   lapse can be non-finite (a mis-injected discipline object, or an
-        %   unmodeled transonic band), and a NaN T/W floor is silently
-        %   dropped from the aggregator's envelope -- error here so an
-        %   un-evaluable ceiling constraint is a visible failure.
+        %   Fails loudly on a non-finite result: a NaN T/W floor is silently
+        %   dropped from the aggregator's envelope.
         %
         %   [metabook Eqs. 4.30/4.55; worked Ex. 4.2 Eq. 4.56.]
             polar = obj.aero.drag_polar(obj.state);
@@ -113,10 +89,8 @@ classdef CeilingConstraint < Only_TbyW
     methods (Access = protected)
 
         function alpha = get_alpha(obj)
-        %GET_ALPHA  Thrust lapse at this ceiling's power setting. The rating is
-        %   passed straight to the injected prop, which validates it against the
-        %   ratings its engine has (fighter "mil"/"AB"; transport
-        %   "cont"/"TO"/"max"). Mirrors MasterEquationConstraint.get_alpha.
+        %GET_ALPHA  Thrust lapse at this ceiling's power setting, validated by
+        %   the injected prop. Mirrors MasterEquationConstraint.get_alpha.
             alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
         end
 

@@ -2,93 +2,54 @@ classdef F16SandCL2 < SandCModelL2
 %F16SANDCL2  F-16A Block 10/15 Level-2 stability & control student class.
 %
 %   Inherits from SandCModelL2 (abstract enforcer). Computes ONLY the
-%   aircraft center-of-gravity x-station, x_cg -- per the original
-%   stability-and-control design's "DECIDED (Casey, 2026-08-03):
-%   F16SandCL2 is limited to the CG term only" note: F16GeomL2 exposes NO
-%   x-station properties at all, so none of Eqs. 16.4/16.5/16.7/16.8/16.9/
-%   16.11/16.12/16.13/16.14/16.15 are computable at this fidelity level --
-%   this is not a scope choice, it is what the injected geometry object can
-%   supply.
+%   aircraft center-of-gravity x-station, x_cg: F16GeomL2 exposes no x-station
+%   properties, so none of Eqs. 16.4-16.15 are computable at this fidelity.
 %
 %   METHOD:  x_cg = Sum(W_i * x_i) / Sum(W_i)  [SandCL2.weighted_cg]
 %   over the 10 WeightsL2-matched component groups (wing, horizontal_tail,
 %   vertical_tail, fuselage, landing_gear, installed_engine, subsystems_lump,
 %   strake, payload, fuel) in
 %   examples/F16A/inputs/f16a_L2.json .stability_control.component_x_stations
-%   .groups. Each group's x-STATION (cg_x_ft) is READ ONCE from the JSON at
-%   construction (static spec data, an engineering estimate re-aggregated
-%   from the legacy temp_Casey "Stability&Control" sheet -- see that JSON
-%   block's own _cg_x_ft_estimate_method note); each group's WEIGHT is read
-%   LIVE, on every call, from the injected F16WeightsL2 object, via
-%   group_weight's own switch (see that method's header for the exact
-%   weights-property mapping, matching the JSON's own "weights_property"
-%   documentation field name-for-name).
+%   .groups. Each group's x-station (cg_x_ft) is read once from the JSON at
+%   construction; each group's weight is read live from the injected
+%   F16WeightsL2 object (see group_weight for the weights-property mapping).
 %
-%   front_edge_x_ft is DELIBERATELY never read -- it is always null at L2
-%   (F16GeomL2 has no x-station properties to cite one from), and this class
-%   needs no cross-check field, only cg_x_ft, per the JSON's own
-%   _L2_has_no_front_edge_data note.
+%   front_edge_x_ft is never read -- always null at L2; this class needs only
+%   cg_x_ft.
 %
-%   ============================================================================
-%   DEPENDENCY INJECTION.  Mirrors F16GeomL2(json_path, prop)'s pattern: ONE
-%   required injected collaborator plus a required JSON path, no silent
-%   defaults on either.
-%     weights -- (1,1) F16WeightsL2 (CONCRETE, not the abstract WeightsBase/
-%                WeightsModelL2 enforcer tier). Typed concretely because
-%                W_strake and the W_tail.HT/W_tail.VT struct-field access this
-%                class reads are F16WeightsL2-specific -- W_strake is not
-%                part of ANY abstract weights contract (it is an F-16-only
-%                LERX term), so a WeightsModelL2 guard would not actually
-%                guarantee the members this class reads. The
-%                component_x_stations grouping itself is explicitly built
-%                "from THIS framework's own WeightsL2/WeightsL3 groups"
-%                (the original stability-and-control design's "Component-x-
-%                location buildup"), i.e. tied to this exact concrete class's shape,
-%                not a generic weights contract -- matching the launch
-%                instruction's own "Inject F16WeightsL2" (concrete) wording.
-%   ============================================================================
+%   DEPENDENCY INJECTION -- one required injected collaborator plus a required
+%   JSON path, no silent defaults:
+%     weights -- (1,1) F16WeightsL2 (CONCRETE). Typed concretely because
+%                W_strake and W_tail.HT/W_tail.VT are F16WeightsL2-specific,
+%                not on any abstract weights contract.
 %
-%   x_cg MUST PROPAGATE NaN GRACEFULLY for the 'fuel' group: W_energy is a
-%   mission-analysis STATE that reads NaN until the mission/sizing loop sets
-%   it (WeightsBase.m contract) -- reading it here is a PLAIN property read
-%   (never a computed/guarded getter), so it simply returns NaN, and ordinary
-%   IEEE arithmetic inside SandCL2.weighted_cg propagates that NaN into x_cg
-%   with no error. By contrast, several OTHER groups (landing_gear,
-%   subsystems_lump) genuinely need obj.weights.W_TO to already be set (they
-%   are W_TO-scaled fractions guarded by F16WeightsL2.requireWTO) -- reading
-%   x_cg before a candidate W_TO exists errors loudly through THAT existing
-%   guard, which is correct and expected (you cannot compute a CG without a
-%   candidate gross weight), and is a DIFFERENT situation from the fuel-NaN
-%   case this class is asked to handle gracefully.
+%   x_cg propagates NaN gracefully for the 'fuel' group: W_energy reads NaN
+%   until the mission/sizing loop sets it, and IEEE arithmetic inside
+%   SandCL2.weighted_cg propagates that NaN with no error. Other groups
+%   (landing_gear, subsystems_lump) need obj.weights.W_TO set first and error
+%   loudly through F16WeightsL2.requireWTO if it is not.
+%
+%   History and rationale: docs/decision_log.md
 %
 %   SOURCES:
 %     [readme_bsc.md] VnV/BrandtF16A/readme_bsc.md "CG closure" -- the
 %       weighted-average CG identity this class's one formula implements.
-%     Component weight/x-station data: the original stability-and-control
-%       design's "Component-x-location buildup" (re-aggregated from
-%       temp_Casey/inputs/F-16A Block 50.xlsx's "Stability&Control" sheet,
-%       22 rows, into this framework's own 10 WeightsL2/L3 groups).
+%     Component weight/x-station data: the "Component-x-location buildup"
+%       re-aggregated into this framework's own 10 WeightsL2/L3 groups.
 %
 %   Companion doc: examples/F16A/models/disciplines/sandc/F16SandCL2.md
 
-    % ======================================================================= %
     % Fixed group order -- matches f16a_L2.json
-    % .stability_control.component_x_stations.groups' own key order exactly
-    % (Casey, 2026-08-03). Hardcoded here rather than relying on JSON
-    % object-key iteration order so the mapping in group_weight is always
-    % unambiguous and order-stable.
-    % ======================================================================= %
+    % .stability_control.component_x_stations.groups key order. Hardcoded so
+    % the group_weight mapping is unambiguous and order-stable.
     properties (Constant)
         COMPONENT_GROUP_NAMES = {'wing', 'horizontal_tail', 'vertical_tail', ...
             'fuselage', 'landing_gear', 'installed_engine', 'subsystems_lump', ...
             'strake', 'payload', 'fuel'}
     end
 
-    % ======================================================================= %
-    % INPUTS -- set once by the constructor. component_cg_x_ft is static
-    % spec data (an engineering estimate, fidelity-independent between L2/L3
-    % per the JSON's own note) -- fine to read once, unlike the LIVE weights.
-    % ======================================================================= %
+    % INPUTS -- set once by the constructor. component_cg_x_ft is static spec
+    % data (read once); weights are read live.
     properties
         component_cg_x_ft (1,10) double   % ft  [f16a_L2.json .stability_control.component_x_stations.groups.*.cg_x_ft, COMPONENT_GROUP_NAMES order]
 
@@ -109,10 +70,7 @@ classdef F16SandCL2 < SandCModelL2
         function obj = F16SandCL2(json_path, weights)
         %F16SANDCL2  Construct from a required unified L2 input JSON path
         %   (f16a_spec_path(2); reads its .stability_control block) and a
-        %   required injected F16WeightsL2 object. NO silent default on
-        %   either argument -- a defaulted injection would silently re-freeze
-        %   weights data, the defect class this framework's DI convention
-        %   removes elsewhere (F16GeomL2.m / F16WeightsL2.m).
+        %   required injected F16WeightsL2 object. No silent default on either.
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
                 weights   (1,1) F16WeightsL2

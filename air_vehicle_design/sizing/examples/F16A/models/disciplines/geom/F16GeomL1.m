@@ -34,27 +34,16 @@ classdef F16GeomL1 < GeometryModelL1
         M_max             = 2.0              % double; design max Mach — drives get_AR_eq (Raymer 7th ed. Table 4.1)
         n_engines         = 1               % double; engine count [Brandt Main!B28; f16a_L1.json .geometry.engine.n_engines]. Not used by any L1 geometry regression — exposed only so mission analysis can read geom.n_engines by DI at every fidelity (mission takeoff warmup term). Matches F16GeomL3.n_engines.
 
-        %W_TO  Takeoff gross weight, lbf. A genuine INPUT at this fidelity
-        %   level: both L1 regressions (S_wet, L_fuselage) are functions of TOGW,
-        %   which cannot be known from geometry at L1. Set it before reading
-        %   S_wet/L_fuselage (the sizing loop mutates it between iterations);
-        %   NaN until then, and the Dependent getters below say so explicitly
-        %   rather than returning a plausible-looking number.
+        %W_TO  Takeoff gross weight, lbf. A genuine INPUT at L1: both regressions
+        %   (S_wet, L_fuselage) are functions of TOGW. Set it before reading
+        %   S_wet/L_fuselage; the sizing loop mutates it between iterations.
         W_TO              = NaN              % double; lbf
         % TODO (7/8/2026): Try finding another way of estimating S_ref, or show a workflow for students to use at L1.
     end
 
     % ======================================================================= %
-    % DERIVED — recomputed live from the inputs on every read (no cache, never
-    % stale), per the F16GeomL2 reference pattern (see CLAUDE.md).
-    %
-    % Both were plain properties initialised to 0 and commented "populated by
-    % get_S_wet(obj, W_TO)" — but get_S_wet only ever RETURNED a value, it never
-    % assigned, so both sat at 0 for the object's whole life. Since
-    % F16AeroL2/F16AeroL3 accept any GeometryBase, injecting an F16GeomL1
-    % constructed fine and then evaluated CD0 = Cfe*S_wet/S_ref = 0 — a silent
-    % zero parasite drag and an infinite L/D, with no warning. Converted to
-    % Dependent 2026-07-25.
+    % DERIVED — recomputed live from obj.W_TO on every read (no cache, never
+    % stale). Both are TOGW regressions.
     % ======================================================================= %
     properties (Dependent)
         S_wet          % ft^2  total wetted area  [Roskam Vol. I Table 3.5 regression on W_TO]
@@ -66,33 +55,22 @@ classdef F16GeomL1 < GeometryModelL1
         function obj = F16GeomL1(json_path, req_path)
         %F16GEOML1  Construct from a required unified L1 input JSON path
         %   (f16a_spec_path(1)) plus the requirements JSON path
-        %   (f16a_requirements_path()). No silent defaults: both must be
-        %   supplied. S_ref is not a JSON input (see class header) and stays the
-        %   pre-existing hardcoded literal.
-        %
-        %   WHY A SECOND PATH (Phase 4, 2026-07-25). M_max is a design
-        %   REQUIREMENT, not airframe spec data, and it existed in three places
-        %   at once. It now lives once in the requirements file as design_mach
-        %   [Brandt Main! aircraft.Mmax]. It is still consumed here -- it feeds
-        %   GeomL1.get_AR_eq (Raymer 7th ed. Table 4.1) -- so this is a
-        %   consolidation, not a removal. See f16a_requirements_path's header for
-        %   the requirements-vs-spec distinction.
+        %   (f16a_requirements_path()). No silent defaults. S_ref is not a JSON
+        %   input (see class header) and stays the hardcoded literal. M_max is a
+        %   design requirement (design_mach in the requirements file) and feeds
+        %   GeomL1.get_AR_eq (Raymer 7th ed. Table 4.1).
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
                 req_path  {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             J = jsondecode(fileread(json_path));
-            % ONE canonical top-level category key (Phase 3, 2026-07-25): it
-            % selects rows in several different discipline tables, so it belongs
-            % to no single block. It was previously stored three times under two
-            % spellings (.geometry / .aerodynamics / .weights) with nothing
-            % keeping them in sync.
+            % ONE canonical top-level category key: it selects rows in several
+            % discipline tables, so it belongs to no single block.
             obj.aircraft_category = string(J.aircraft_category);
             R = jsondecode(fileread(req_path));
             obj.M_max             = R.design_mach;
             obj.S_ref             = 300;
-            % n_engines: read from the spec when present (f16a_L1.json
-            % .geometry.engine.n_engines); left at the single-engine default
+            % n_engines: read from the spec when present; single-engine default
             % otherwise. Exposed for mission DI, not used by L1 geometry.
             if isfield(J, 'geometry') && isfield(J.geometry, 'engine') ...
                     && isfield(J.geometry.engine, 'n_engines')
@@ -139,10 +117,8 @@ classdef F16GeomL1 < GeometryModelL1
         function W_TO = requireWTO(obj, whatFor)
         %REQUIREWTO  Return obj.W_TO, erroring if it has not been set.
         %   Both L1 derived quantities are TOGW regressions, so reading either
-        %   before W_TO is known is a caller error, not a zero. Erroring here is
-        %   the whole point of the 2026-07-25 Dependent conversion: the old plain
-        %   properties returned 0, which propagated as a silent zero parasite
-        %   drag through any aero object this geometry was injected into.
+        %   before W_TO is known is a caller error, not a silent zero (which
+        %   would propagate as zero parasite drag into an injected aero object).
             W_TO = obj.W_TO;
             if ~isfinite(W_TO) || W_TO <= 0
                 error('F16GeomL1:WTONotSet', ...

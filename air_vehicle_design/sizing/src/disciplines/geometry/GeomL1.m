@@ -1,6 +1,5 @@
 classdef GeomL1
 %GEOML1  Level-1 geometry static toolbox: statistical regressions on TOGW.
-%
 %   Call as GeomL1.method(...); never instantiated, not in the inheritance
 %   chain. F16GeomL1 inherits GeometryModelL1 and delegates to these statics.
 %
@@ -9,12 +8,8 @@ classdef GeomL1
 %   [Raymer 7th ed. Table 6.5] control surfaces.
 %
 %   Only the jet-fighter rows of the Raymer tables are implemented; any other
-%   category errors rather than being guessed.
-%
-%   Tail sizing lives in the standalone tail_sizing discipline again
-%   (src/disciplines/tail_sizing/ -- TailSizingBase, TailL1/L2/L3,
-%   TailSizingModelL1/L2/L3, F16TailL1/L2/L3), not here (2026-08-03 absorption
-%   into Geometry reverted).
+%   category errors rather than being guessed. Tail sizing lives in the
+%   standalone tail_sizing discipline, not here.
 %
 %   Companion doc: src/disciplines/geometry/GeomL1.md
 
@@ -66,10 +61,8 @@ classdef GeomL1
             switch cat
                 case 'jet_fighter',    c = -0.1289; d = 0.7506;
                 case 'jet_bomber',     c =  0.1213; d = 0.7306;
-                % transport_jet d corrected 0.7351 -> 0.7531 (digit
-                % transposition) per disposition D3, metabook_data.md Eq. 4.9 /
-                % Eq. 4.42 (d = 0.7531; the 0.7351 value gave ~22,170 ft^2
-                % instead of the printed 28,291 ft^2). Sarojini, 2026-08-14.
+                % transport_jet d = 0.7531 per metabook_data.md Eq. 4.9 /
+                % Eq. 4.42; reproduces the printed 28,291 ft^2 (disposition D3).
                 case 'transport_jet',  c =  0.0199; d = 0.7531;
                 case 'business_jet',   c =  0.2263; d = 0.6977;
                 case 'military_cargo', c = -0.0866; d = 0.8099;
@@ -122,9 +115,8 @@ classdef GeomL1
         %   Elevator 0.30 is the all-moving-tail row value, not a hinged-elevator
         %   chord fraction.
         %
-        %   TODO: the table's jet-fighter row carries no aileron fraction, so
-        %   'aileron' errors rather than returning a guess. Guarded by
-        %   TestGeomL1.testTODO_AileronFractionNotAvailable.
+        %   TODO: the jet-fighter row has no aileron fraction, so 'aileron'
+        %   errors. Guarded by TestGeomL1.testTODO_AileronFractionNotAvailable.
             switch cat
                 case 'jet_fighter'
                     switch surface

@@ -3,9 +3,7 @@
 Level-2 stability & control static toolbox (`classdef SandCL2`, `methods (Static)` only). Called as
 `SandCL2.method(...)`; never instantiated and not in the inheritance chain. `F16SandCL2` inherits
 `SandCModelL2` and delegates here. `F16SandCL3` **also** calls `weighted_cg` directly for its own
-`x_cg` (fidelity-collapse rule — the equation is level-agnostic, so it lives here once, not
-duplicated on `SandCL3`; the exact cross-toolbox-reuse pattern already used elsewhere in this repo,
-e.g. `GeomL3.size_tail` → `GeomL1.size_tail`).
+`x_cg` — the equation is level-agnostic, so it lives here once, not duplicated on `SandCL3`.
 
 **L2 is the CG term only** — see `StabControlBase.md`/`SandCModelL2`'s own header for why every other
 Ch. 16 quantity is L3-ONLY, not a scope choice.
@@ -28,18 +26,16 @@ Ch. 16 quantity is L3-ONLY, not a scope choice.
 
 $$x_{cg} = \frac{\sum_i W_i x_i}{\sum_i W_i}$$
 
-## 4. NaN handling — deliberate, not an oversight
+## 4. NaN handling — deliberate
 
 `weighted_cg`'s `arguments` block validates `weights_vec`/`x_vec` with `mustBeReal` only — **no**
-`mustBeNonnegative`/`mustBePositive`. Those validators would *reject* NaN outright (e.g. `NaN >= 0`
-is `false`), which would turn the fuel group's pre-mission-analysis `W_energy = NaN` into a thrown
-error instead of the documented, graceful NaN propagation the original stability-and-control design
-requires. Ordinary IEEE arithmetic
+`mustBeNonnegative`/`mustBePositive`. Those validators would reject NaN outright (`NaN >= 0` is
+`false`), turning the fuel group's pre-mission-analysis `W_energy = NaN` into a thrown error instead
+of the graceful NaN propagation this design requires. IEEE arithmetic
 (`sum(weights_vec .* x_vec) / sum(weights_vec)`) does the rest with no special-case code.
 
-`weighted_cg` does guard one thing loudly: a length mismatch between `weights_vec` and `x_vec`
-(`SandCL2:sizeMismatch`) — that is a caller bug, not a "not yet available" signal, so it errors like
-any other programming mistake in this repo.
+`weighted_cg` does guard a length mismatch between `weights_vec` and `x_vec`
+(`SandCL2:sizeMismatch`) — a caller bug, so it errors.
 
 ## 5. Consumers
 

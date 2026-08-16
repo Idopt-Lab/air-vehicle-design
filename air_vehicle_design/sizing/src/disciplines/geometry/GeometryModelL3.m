@@ -1,23 +1,17 @@
 classdef (Abstract) GeometryModelL3 < GeometryBase
 %GEOMETRYMODELL3  Tier-2 abstract enforcer for Level-3 geometry.
+%   L3 is the physical / T.O. tier, consumed by L3 geometry, aerodynamics
+%   and weights. Divergences from L2 are intentional fidelity differences.
 %
-%   Inherits GeometryBase directly, not GeometryModelL2: each fidelity level
-%   satisfies the Tier-1 contract independently.
-%
-%   L3 is the physical / T.O. tier, consumed by L3 geometry, aerodynamics and
-%   weights. Divergences from L2 are intentional fidelity differences.
-%
-%   NAMING. AR_ht / lambda_ht / S_ht / S_vt mean FULL planform at both tiers;
-%   the exposed values carry an explicit _exposed_ infix. Members marked
-%   [DERIVED] below must be Dependent getters on the concrete class, never
-%   stored values.
+%   AR_ht / lambda_ht / S_ht / S_vt mean FULL planform at both tiers; the
+%   exposed values carry an explicit _exposed_ infix. Members marked
+%   [DERIVED] must be Dependent getters on the concrete class, never stored.
 %
 %   Authoritative spec: examples/F16A/models/disciplines/geom/F16GeomL3.md
 %   Toolbox companion:  src/disciplines/geometry/GeomL3.md
 
-
     % Abstract properties cannot have validation attributes in MATLAB.
-    % Size/type validation is enforced in the concrete class (F16GeomL3).
+    % The concrete class (F16GeomL3) enforces size/type.
 
     % ── Fuselage / whole aircraft ───────────────────────────────────────── %
     properties (Abstract)
@@ -99,9 +93,9 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
     end
 
     % ── Inlet + engine duct ─────────────────────────────────────────────── %
-    % T_AB_SLS_lb and the injected propulsion object are deliberately NOT here
-    % (engine, not airframe, data — see the class header). D_inlet/D_exit/
-    % L_duct are, because L3 aero reads them as D_comp(5) / l_ref_comp(5).
+    % T_AB_SLS_lb and the injected propulsion object are NOT here (engine, not
+    % airframe, data). D_inlet/D_exit/L_duct are: L3 aero reads them as
+    % D_comp(5) / l_ref_comp(5).
     properties (Abstract)
         L_duct         % Inlet-duct length (ft)                [INPUT]  14.0 [Brandt Main!F32]
         x_inlet        % Inlet-lip x-station (ft)              [INPUT]  15.0 [Brandt Main!F31] — NOT 14.0
@@ -113,12 +107,9 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
     end
 
     % ── Area-ruled Amax buildup — DERIVED intermediates ─────────────────── %
-    % These nine, plus L_engine and x_nacelle_aft declared with the duct above,
-    % are recomputed live from the inputs; todo.md 2026-07-25 Phase 2 §16.1
-    % verified every one is derivable, so none may be stored.
-    % Declared in the contract (rather than left as concrete-only locals)
-    % because they are also the Brandt comparison-report rows — Geom!F/G/B
-    % columns of the Geom!A5:I10 exposed-lifting-surface table.
+    % Recomputed live from the inputs; none may be stored. Declared in the
+    % contract because they are also Brandt comparison-report rows (Geom!F/G/B
+    % columns of the Geom!A5:I10 exposed-lifting-surface table).
     % Formulas + citations: GeomL3.compute_c_root_exposed and the class header.
     properties (Abstract)
         c_exp_root_wing % Wing exposed root chord (ft)   [DERIVED] 13.3564 [Brandt Geom!F7]
@@ -139,9 +130,8 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
     end
 
     methods (Abstract)
-        %GET_S_WET_WING  Wing wetted area (ft²). OFFICIAL formula at L3
-        %   (Decision 2, user 2026-07-25): Roskam Vol. II Eq. 12.1, variable
-        %   root/tip t/c. Brandt's uniform-t/c Geom!B13 form is a
+        %GET_S_WET_WING  Wing wetted area (ft²). Roskam Vol. II Eq. 12.1,
+        %   variable root/tip t/c. Brandt's uniform-t/c Geom!B13 form is a
         %   comparison-report alternate only.
         val = get_S_wet_wing(obj)
 
@@ -155,11 +145,10 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         val = get_S_wet_fuselage(obj)
 
         %GET_S_WET_DUCT  Inlet + engine-duct wetted area (ft²), frustum lateral
-        %   area [Raymer 6th ed. Sec. 7.3]. ADDED in Phase 2 (2026-07-25): L3
-        %   aero reads it as S_wet_comp(5).
+        %   area [Raymer 6th ed. Sec. 7.3]. L3 aero reads it as S_wet_comp(5).
         val = get_S_wet_duct(obj)
 
-        %GET_S_EXPOSED_WING  Passthrough accessor for the wing exposed area.
+        %GET_S_EXPOSED_WING  Wing exposed area (ft²) (passthrough).
         val = get_S_exposed_wing(obj)
     end
 end
