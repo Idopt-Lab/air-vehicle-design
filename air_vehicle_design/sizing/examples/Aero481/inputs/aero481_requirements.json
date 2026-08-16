@@ -1,0 +1,180 @@
+{
+  "_comment": "F-35 (Aero 481 Design01/A03 provenance) top-level design REQUIREMENTS -- what the aircraft must DO, fidelity-independent. Read the same way as f16a_requirements.json / b777_requirements.json. SCOPE GUARD: requirements only, never spec data (AR, S_ref, thrust, engine model stay in examples/Aero481/inputs/aero481_L1.json) and never discipline-owned quantities (CLmax, CD0, K1, K2, thrust-lapse alpha, TSFC come from the injected Aero481AeroL1 / Aero481PropL1 objects at run time; n_engines from the injected geom/prop object). Full docs + per-field citations + the _TODO roll-up: examples/Aero481/inputs/aero481_requirements.md.",
+  "_cite": "A481 = University of Michigan AEROSP 481 (Fall 2024) starter code (design PROVENANCE, not primary), docs/reference_extracts/aero481_data.md Part II; Roskam = Roskam Part I; metabook = docs/reference_extracts/metabook_data.md; Mattingly = Mattingly: Aircraft Engine Design 2nd ed.; disc = examples/Aero481/aero481_discrepancies.md (A1-A9). Constraint-class field names verified against src/constraints/*.m fromCondition readers.",
+
+  "cruise": {
+    "_src": "Cruise/dash reference condition [A481 Cruise.m; All.m:66,70] -- 35,000 ft, M 0.85 (cruise) / M 1.6 (dash). Consumed by the DCA mission cruise/cruise-back segments and the Cruise constraint.",
+    "altitude_ft": 35000,
+    "mach": 0.85
+  },
+
+  "design_mach": 1.6,
+  "_design_mach_src": "Design max/dash Mach = 1.6 [A481 Dash condition, All.m:70]. Feeds Aero481GeomL1.get_AR_eq (Raymer 7th ed. Table 4.1) and Aero481WeightsL1 Raymer Eq. 10.10 M^0.25 engine-weight path. _TODO -- UNCITED (student RFP value; published F-35A max Mach ~1.6 order-of-magnitude cross-check only).",
+
+  "constraints": {
+    "_comment": "The 12 F-35 constraint conditions mapping each Aero 481 +Constraints/All.m ACTIVE condition to an EXISTING framework ConstraintType (no new constraint class). oei = false throughout (single engine). Each object holds REQUIREMENT / CONDITION data ONLY: CLmax/CD0/K1/K2/CDx come from the injected Aero481AeroL1 object, thrust-lapse alpha and TSFC from the injected Aero481PropL1 object, n_engines from the injected geom/prop object. Condition name -> concrete class is chosen explicitly by Aero481ConstraintSet.constraint_map, mirroring F16ConstraintSet. See aero481_requirements.md sections 2-3.",
+    "_cite": "A481 = docs/reference_extracts/aero481_data.md Part II; A481 +Constraints/All.m (active constraint list); disc A3/A4/A6.",
+    "_note_dropped": "DROPPED vs the earlier 20-row set (user decision, A481 parity): (1) the six FAR-25 climb gradients (Climb 1-6 TO/TS/SS/EN/BA/BO) are TRANSPORT-certification gradients, not applicable to a fighter; (2) Takeoff + Landing were framework-only additions -- Aero 481 leaves both UNIMPLEMENTED (All.m:37 sets ConstraintStruct.TO = 0; Landing is a stub). The 12 rows below are exactly the ACTIVE Aero 481 constraints [A481 All.m].",
+    "_note_beta": "beta = W/W_TO at which the condition must be met -- a SPECIFIED REQUIREMENT INPUT, NOT a mission-analysis output. Cruise / Dash / Ceiling / Sustained-Turn / Instantaneous rows carry beta = 1.0 (takeoff weight -- Aero 481 uses takeoff W/S for these). The six SEP rows carry beta = 0.8285: Aero 481's SpecExcessPower.m ALONE evaluates at the 50%-internal-fuel COMBAT weight W_S_mw = W_S*(1+(1-ff))/2, with ff = 0.343 (the DCA fuel fraction) => (1+(1-0.343))/2 = 0.8285 [A481 SpecExcessPower.m:28]. Setting beta = 0.8285 reproduces that combat-weight basis in the framework Master Equation (beta multiplies W/S in the B/C/D terms). The framework carries the load factor n separately, so beta is the combat fraction only, NOT combat*n.",
+    "_note_power_setting": "power_setting: fighter 'mil' (0 % AB) or 'AB' (100 % AB), per the A481 condition. Takeoff always evaluates at full AB and carries no power_setting key; Landing is power-off and carries none.",
+    "_note_Ps_unit": "Ps_fps values are the raw A481 numbers read as ft/s: A481 passes Ps = Ft2M(200) etc., but SpecExcessPower.m uses Ps directly with V in m/s, so the ft value read as ft/s IS the framework value: 200 / 50 / 700 / 400 / 300 / 50 ft/s (SEP1 SL/alt, SEP2 SL/alt, SEP3 SL/alt). _TODO -- UNCITED (student RFP Ps requirement). See aero481_requirements.md section 3.2.",
+    "conditions": [
+      {
+        "name": "Cruise",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 35000,
+        "mach": 0.85,
+        "beta": 1.0,
+        "power_setting": "mil",
+        "_src": "LevelFlightConstraint (n = 1, Ps = 0 fixed by the class). [A481 Cruise.m; All.m:66]. Reads altitude_ft, mach, beta, power_setting."
+      },
+      {
+        "name": "Dash",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 35000,
+        "mach": 1.60,
+        "beta": 1.0,
+        "power_setting": "AB",
+        "_src": "LevelFlightConstraint. [A481 All.m:70]. Reads altitude_ft, mach, beta, power_setting."
+      },
+      {
+        "name": "Sustained Turn 1 (subsonic)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 35000,
+        "mach": 0.90,
+        "n": 2.0,
+        "beta": 1.0,
+        "power_setting": "AB",
+        "_src": "SustainedTurnConstraint (Ps = 0 fixed by the class). [A481 SustainedTurn.m; All.m:78]. Reads altitude_ft, mach, beta, n, power_setting."
+      },
+      {
+        "name": "Sustained Turn 2 (supersonic)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 35000,
+        "mach": 1.20,
+        "n": 2.0,
+        "beta": 1.0,
+        "power_setting": "AB",
+        "_src": "SustainedTurnConstraint. [A481 All.m:82]. Reads altitude_ft, mach, beta, n, power_setting."
+      },
+      {
+        "name": "SEP1 SL (1g, M0.9)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 0,
+        "mach": 0.90,
+        "n": 1.0,
+        "Ps_fps": 200,
+        "beta": 0.8285,
+        "power_setting": "mil",
+        "_src": "ExcessPowerConstraint (n = 1 fixed by the class). [A481 SpecExcessPower.m; All.m:93]. Reads altitude_ft, mach, beta, Ps_fps, power_setting. beta = 0.8285 = combat weight (see _note_beta) [A481 SpecExcessPower.m:28]. Ps_fps _TODO -- UNCITED (see _note_Ps_unit)."
+      },
+      {
+        "name": "SEP1 alt (1g, M0.9, 15 kft)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 15000,
+        "mach": 0.90,
+        "n": 1.0,
+        "Ps_fps": 50,
+        "beta": 0.8285,
+        "power_setting": "mil",
+        "_src": "ExcessPowerConstraint. [A481 All.m:94]. beta = 0.8285 = combat weight [A481 SpecExcessPower.m:28]. Ps_fps _TODO -- UNCITED."
+      },
+      {
+        "name": "SEP2 SL (1g, M0.9, max)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 0,
+        "mach": 0.90,
+        "n": 1.0,
+        "Ps_fps": 700,
+        "beta": 0.8285,
+        "power_setting": "AB",
+        "_src": "ExcessPowerConstraint. [A481 All.m:97]. beta = 0.8285 = combat weight [A481 SpecExcessPower.m:28]. Ps_fps _TODO -- UNCITED."
+      },
+      {
+        "name": "SEP2 alt (1g, M0.9, 15 kft)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 15000,
+        "mach": 0.90,
+        "n": 1.0,
+        "Ps_fps": 400,
+        "beta": 0.8285,
+        "power_setting": "AB",
+        "_src": "ExcessPowerConstraint. [A481 All.m:98]. beta = 0.8285 = combat weight [A481 SpecExcessPower.m:28]. Ps_fps _TODO -- UNCITED."
+      },
+      {
+        "name": "SEP3 SL (5g, M0.9)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 0,
+        "mach": 0.90,
+        "n": 5.0,
+        "Ps_fps": 300,
+        "beta": 0.8285,
+        "power_setting": "AB",
+        "_src": "ManeuveringExcessPowerConstraint (n > 1 AND Ps > 0). [A481 All.m:101]. Reads altitude_ft, mach, beta, n, Ps_fps, power_setting. beta = 0.8285 = combat weight [A481 SpecExcessPower.m:28]; n = 5 is applied separately by the master equation. Ps_fps _TODO -- UNCITED."
+      },
+      {
+        "name": "SEP3 alt (5g, M0.9, 15 kft)",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 15000,
+        "mach": 0.90,
+        "n": 5.0,
+        "Ps_fps": 50,
+        "beta": 0.8285,
+        "power_setting": "AB",
+        "_src": "ManeuveringExcessPowerConstraint. [A481 All.m:102]. beta = 0.8285 = combat weight [A481 SpecExcessPower.m:28]; n = 5 is applied separately by the master equation. Ps_fps _TODO -- UNCITED."
+      },
+      {
+        "name": "Instantaneous Turn",
+        "category": "Both_WbyS_TbyW",
+        "altitude_ft": 35000,
+        "mach": 1.60,
+        "turn_rate_dps": 18.0,
+        "power_setting": "AB",
+        "_src": "InstantaneousTurnConstraint. [A481 InstantaneousTurn.m; All.m:86]. Reads altitude_ft, mach, turn_rate_dps, power_setting. The A481 g = 9.087 typo (disc A3) is corrected to 32.174 ft/s^2 and a thrust lapse added by the existing class. turn_rate_dps 18 deg/s _TODO -- UNCITED (student RFP)."
+      },
+      {
+        "name": "Ceiling",
+        "category": "Only_TbyW",
+        "altitude_ft": 35000,
+        "mach": 1.60,
+        "G": 0.01745,
+        "power_setting": "AB",
+        "_src": "CeilingConstraint (W/S-independent T/W floor). [A481 Ceiling.m; All.m:74]. Reads altitude_ft, mach, G, power_setting. G = 1 deg = 0.01745 rad residual climb gradient (Ceiling.m = Cruise + G). _TODO -- UNCITED (student RFP residual-gradient value)."
+      },
+      {
+        "name": "Stall (approach)",
+        "category": "Only_WbyS",
+        "altitude_ft": 0,
+        "mach": 0.227,
+        "_src": "StallConstraint -- the W/S wall W/S_max = q_approach*CLmax at the approach state. NOT in Aero 481 (it left Landing/stall unimplemented -> the design space was unbounded on the small-wing side and the min-T/W optimum ran to the sweep edge). ADDED 2026-08-15 (user decision) as the physical small-wing limit so the design sits at a bounded corner. Approach 150 kt at SL = M0.227 (253 ft/s / 1116 ft/s). CLmax = aero.get_CLmax(state) = clean 1.8 [A481 Design01.m:59 CLmax.EN] -> W/S_max = q*1.8 ~ 137 psf. _TODO -- UNCITED: 150 kt is an assumed fighter approach speed (F-35A/C land ~145-160 kt); the framework StallConstraint uses the CLEAN CLmax (conservative clean-config stall wall) -- a flapped-approach wall (CLmax_landing 2.6) would sit higher (~198 psf, less binding)."
+      }
+    ]
+  },
+
+  "missions": {
+    "_comment": "Mission PROFILES: the ordered segment sequence -- a REQUIREMENT, fidelity-independent. Each segment carries the MINIMUM per-segment inputs: type, end flight condition (alt_ft/mach_end), and whichever of distance_nm / time_min / percent_ab applies. NO discipline-owned data (CLmax, CD0, K1/K2, thrust, TSFC from the injected aero/prop objects) and NO spec data. Every segment yields a fuel burn. See aero481_requirements.md section 5.",
+    "_cite": "dca = [A481 A03.m] DCA (defensive counter-air) mission; aero481_data.md Part II section II.8; Roskam = Roskam Part I Table 2.1 fighter fixed fractions (via MissionEquations.roskam_fixed_fraction); metabook Eq. 2.7 (Breguet range). disc A8.",
+    "_note_percent_ab": "percent_ab: afterburner setting 0-100 (0 = mil/dry, 100 = full AB). Omitted => 0 (dry). Selects/blends the prop TSFC: cT = cT_dry + (percent_ab/100)*(cT_AB - cT_dry).",
+    "_note_substitution": "SUBSTITUTION (disc A8): A03's uncited fixed fractions (ff1 = 0.995, ff2 = 0.99, ff3 = 0.96, ffdescent = 0.98) are REPLACED with the cited Roskam Part I Table 2.1 fighter row (startup/taxi/takeoff 0.990, climb 0.93 [mean of 0.90-0.96], descent 0.990, landing 0.995) via MissionEquations.roskam_fixed_fraction('fighter', ...). Physics segments (cruise-out/dash/CAP/cruise-back) stay Breguet. Landing (0.995) is ADDED (A03 has none; every segment burns fuel). Reserve = 0.05 [A03.m:91].",
+
+    "dca": {
+      "_description": "Defensive Counter-Air mission [A481 A03.m]: startup/takeoff/climb (Roskam fighter fixed fractions), cruise-out 300 nmi at 35 kft M0.85, dash 100 nmi at 35 kft M1.6 (full AB), CAP loiter 240 min, combat (2 maneuvers ~= 2x2 min), cruise-back 400 nmi, descent/landing (Roskam fighter). Reserve 0.05.",
+      "reserve_fuel_fraction": 0.05,
+      "_cite_reserve_fuel_fraction": "Reserve 0.05 [A481 A03.m:91]. _TODO if a primary basis is wanted.",
+      "segments": [
+        {"type": "startup", "name": "Startup"},
+        {"type": "takeoff", "name": "Takeoff", "alt_ft": 0, "mach_end": 0.20},
+        {"type": "climb",   "name": "Climb",   "alt_ft": 35000, "mach_end": 0.85},
+        {"type": "cruise",  "name": "Cruise-out", "alt_ft": 35000, "mach_end": 0.85, "distance_nm": 300},
+        {"type": "dash",    "name": "Dash",    "alt_ft": 35000, "mach_end": 1.60, "distance_nm": 100, "percent_ab": 100},
+        {"type": "loiter",  "name": "CAP",     "alt_ft": 35000, "mach_end": 0.85, "time_min": 240,
+          "_TODO_cap": "CAP loiter condition (alt_ft 35000 / mach_end 0.85) is a stand-in _TODO -- UNCITED: A03 assumes 35 kft for cruise/dash but does not pin the CAP alt/Mach. Duration 240 min (4 hr) [A03 E_CAP = 4*3600 s]. Guard with a labelled testTODO."},
+        {"type": "combat",  "name": "Combat",  "alt_ft": 35000, "mach_end": 0.85, "time_min": 4.0, "percent_ab": 100,
+          "_TODO_combat": "Combat = 2 maneuvers ~= 2x2 min = 4 min stand-in [A03 ff4 = 0.99*0.99]; L1 has no fixed-fraction combat row, so time_min is a stand-in. Combat time/condition _TODO -- UNCITED. Guard with a labelled testTODO."},
+        {"type": "cruise",  "name": "Cruise-back", "alt_ft": 35000, "mach_end": 0.85, "distance_nm": 400},
+        {"type": "descent", "name": "Descent"},
+        {"type": "landing", "name": "Landing", "alt_ft": 0, "mach_end": 0.0}
+      ]
+    }
+  }
+}

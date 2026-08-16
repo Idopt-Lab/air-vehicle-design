@@ -1,0 +1,83 @@
+{
+  "_comment": "F-35 (Aero 481 Design01/A03 provenance) Level-1 SPEC inputs -- what the aircraft IS. Read by Aero481GeomL1, Aero481AeroL1, Aero481PropL1, Aero481WeightsL1 (fighter L1, mirrors the F-16A L1 discipline constructors). Full docs + per-field citations: examples/Aero481/inputs/aero481_L1.md. SCOPE GUARD: spec data only (reference area, AR, thrust, engine model, config-polar table, OEW coefficients); requirements (constraints, missions, cruise/design Mach) live in examples/Aero481/inputs/aero481_requirements.json. aircraft_category sits at the top level, not inside a discipline block.",
+  "_cite": "A481 = University of Michigan AEROSP 481 (Fall 2024) starter code by Max Arnson (design PROVENANCE, not a primary source), docs/reference_extracts/aero481_data.md Part II; Raymer = Raymer 6th/7th ed.; Roskam = Roskam Part I / Vol. I; metabook = Martins/AE481 course notes (metabook), docs/reference_extracts/metabook_data.md; disc = examples/Aero481/aero481_discrepancies.md (A1-A9). _TODO -- UNCITED marks a stand-in carried faithfully from Design01 with no primary source; each is guarded by a labelled testTODO until a citation is pinned.",
+
+  "aircraft_category": "jet_fighter",
+  "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects the GeomL1 swet/lfus/AR_eq fighter rows (Roskam Vol. I Table 3.5 / Raymer 6th ed. Table 6.3 / Raymer 7th ed. Table 4.1), the Roskam CLmax row, the Raymer Table 12.3 Cfe row, the WeightsL1 fighter fraction rows (Raymer Table 15.2 / Sec. 7), and the mission fixed-fraction fighter row (Roskam Part I Table 2.1). Those tables name their categories differently, so each lookup translates this canonical value to its own printed row name -- do NOT rename a table row to match this key.",
+
+  "geometry": {
+    "_src": "AR [A481 Design01.m:49]; n_engines [A481 NEng=1; aero481_data.md Part I, single F135-PW-100]; M_max = design Mach [from aero481_requirements.json design_mach, feeds GeomL1.get_AR_eq, Raymer 7th ed. Table 4.1]; S_ref = published F-35A wing area stand-in [aero481_data.md Part I]. Derived quantities (S_wet = 10^-0.1289 * W_TO^0.7506 [Roskam Vol. I Table 3.5, jet_fighter, via GeomL1.lookup_swet]; L_fuselage = 0.93 * W_TO^0.39 [Raymer 6th ed. Table 6.3, jet_fighter]) are Dependent getters on W_TO, never stored here. See aero481_L1.md section 1.",
+    "_note_swet_rejection": "A481 Design01.m:33-36 sets Aircraft.Swet_Fxn = @(S) 4*S annotated 'I made this up' (uncited AND self-inconsistent -- A03.m:60-61 is unsure area-vs-weight). REJECTED (disc A1). The framework uses the cited Roskam Table 3.5 jet-fighter TOGW regression in GeomL1.lookup_swet -- so S_wet is a Dependent on W_TO, NOT a wing-area multiple and NOT a stored input. See aero481_L1.md section 1.4.",
+    "_note_S_ref": "S_ref is NOT fixed by Design01: Design01 fixes the DESIGN POINT (W/S = 92.17 psf, T/W = 1.2), and in the sizing loop S_ref = W_TO / (W/S) changes every iteration (a Dependent / sizing-loop quantity, not a static input). As a fixed spec stand-in for the constraint/T-S studies, the published F-35A S_ref = 460 ft^2 is carried here, marked _TODO -- UNCITED. The T-S study S-range 323-538 ft^2 matches Aero 481's 30-50 m^2 (T_S.m:23). See aero481_L1.md section 1.3.",
+    "AR": 4,
+    "_TODO_AR": "AR = 4 [A481 Design01.m:49] is a student value, carried faithfully to Design01. _TODO -- UNCITED: published F-35A AR ~= 2.66 (35 ft span, 460 ft^2: 35^2/460 = 2.66), flagged loudly in the comparison report as a fidelity/design gap, NOT silently overwritten (disc A5). Confirm the design AR.",
+    "n_engines": 1,
+    "S_ref": 460,
+    "_TODO_S_ref": "S_ref = 460 ft^2 is the published F-35A wing area stand-in [aero481_data.md Part I], NOT a Design01 input (Design01 fixes W/S = 92.17 psf, not S_ref). _TODO -- UNCITED as the design S_ref: the true design-point S_ref = W_TO / 92.17 is a sizing-loop output. Remove/replace when an RFP or design S_ref is pinned. See aero481_L1.md section 1.3.",
+    "Lambda_LE_deg": 0,
+    "_TODO_Lambda_LE_deg": "Wing leading-edge sweep. _TODO -- UNCITED (needs an F-35 planform document). Set to 0 (unset), which reproduces A481's sweep-free Oswald exactly (Raymer 6th ed. Eq. 12.48 low-sweep branch, e = 0.9344 at AR = 4, bit-identical to A481's Utility.Oswald -- disc A2). If a real F-35 Lambda_LE >= 30 deg is supplied, the framework applies the sweep-corrected Eq. 12.49 (A481 never does) and the report quantifies the delta.",
+    "L_fus_ft": 50.5,
+    "_L_fus_ft_src": "Published F-35A fuselage length [aero481_data.md Part I: 50.5 ft], carried as a FIXED tail-arm reference for the T-S diagram's tail-resize box (TSDiagram reads geom.L_fus before W_TO is set, so it must not require W_TO). Distinct from the W_TO-based L_fuselage regression (get_L_fus, Raymer 6th ed. Table 6.3). The tail areas the resize produces feed NOTHING in the L1 pure-fraction weights. _TODO -- UNCITED spec stand-in."
+  },
+
+  "aerodynamics": {
+    "_src": "Cfe [Raymer Table 12.3 Air Force fighter, via AeroL2.lookup_Cfe; matches A481 Cf = 0.0035 (Design01.m:73)]; AR [A481 Design01.m:49]; Lambda_LE_deg [F-35 wing sweep, _TODO -- unset/0 reproduces A481's sweep-free Oswald, disc A2]; e_clean [derived from AR/Lambda via Raymer Eq. 12.48, e = 0.9344 at AR = 4, = A481 Utility.Oswald]; config tables [A481 Design01.m:55-68, _TODO -- UNCITED 'thank you Ian']. K1 = 1/(pi*AR*e) computed live, K2 = 0 (uncambered-basis, no camber/CL_minD at L1). See aero481_L1.md section 2.",
+    "_note_config_tables": "CD0_config and CLmax_config are the Design01 config tables carried as spec inputs (disc: _TODO -- UNCITED). drag_polar uses the constant clean CD0 = 0.0236 directly (faithful to Design01, whose constraint set reads CD0.Clean). The approach row is DERIVED (Climb-6/BO mean rule [A481 Climb.m:63]): CD0 approach = mean(0.0586, 0.1086) = 0.0836; CLmax approach = 2.6 (= CLmax.BO). CD0 increments over clean: takeoff_flaps_gear_up 0.0150, takeoff_flaps_gear_down 0.0350, landing_flaps_gear_up 0.0650, landing_flaps_gear_down 0.0850. See aero481_L1.md section 2.1.",
+    "Cfe": 0.0035,
+    "swet_over_sref": 4,
+    "_swet_over_sref_src": "Aero 481 A03 mission drag uses CD0_clean = Cf*Swet/S with Swet=4*S [A481 Design01.m:36 Swet_Fxn, A03.m:60,65], so the clean-polar CD0 = Cf*(Swet/S) = 0.0035*4 = 0.014 (constant -- Swet=4*S makes the ratio S-independent). The framework drag_polar (used by the mission) uses THIS 0.014, faithful to A03. NOTE A481 INCONSISTENCY (disc A1b): the CONSTRAINT set instead reads the config-table CD0.Clean = 0.0236 [Design01.m:64] -- a DIFFERENT clean value; get_config_polar carries the config table for the constraints. _TODO -- UNCITED (Swet=4*S is A481's 'I made this up', kept here for A03 fidelity, not the rejected geometry Swet).",
+    "AR": 4,
+    "Lambda_LE_deg": 0,
+    "e_clean": 0.9344,
+    "_e_clean_src": "e = 1.78*(1 - 0.045*AR^0.68) - 0.64 = 0.9344 at AR = 4 [Raymer 6th ed. Eq. 12.48, low-sweep branch; bit-identical to A481 Utility.Oswald (Oswald.m), which cites a web calculator that IS Raymer Eq. 12.48 -- disc A2]. Derived from AR/Lambda_LE_deg; carried for readers, recomputed live by AeroL2.oswald_eff.",
+    "_TODO_config_tables": "CD0_config (clean 0.0236) and CLmax_config are _TODO -- UNCITED (A481 Design01 'thank you Ian' / student values). Guard with a labelled testTODO until a primary source is pinned.",
+    "CD0_config": {
+      "clean": 0.0236,
+      "takeoff_flaps_gear_up": 0.0386,
+      "takeoff_flaps_gear_down": 0.0586,
+      "landing_flaps_gear_up": 0.0886,
+      "landing_flaps_gear_down": 0.1086,
+      "approach": 0.0836
+    },
+    "CLmax_config": {
+      "clean": 1.8,
+      "takeoff_flaps_gear_up": 1.8,
+      "takeoff_flaps_gear_down": 2.0,
+      "landing_flaps_gear_up": 2.6,
+      "landing_flaps_gear_down": 2.6,
+      "approach": 2.6
+    }
+  },
+
+  "propulsion": {
+    "_src": "engine_type = low_bypass_turbofan_AB (F135-PW-100, aero481_data.md Part I; selects the PropL1 lapse exponent + TSFC handling); T_SL (AB/max) and T_SL_mil (dry/intermediate) [aero481_data.md Part I]; n_engines [A481 NEng=1; Part I]; lapse_exponent_m [metabook Eq. 10.9]; tsfc_* [A481 Design01.m:78-80]. See aero481_L1.md section 3.",
+    "_note_lapse": "lapse_exponent_m = 0 => alpha = sigma^0 = 1: NO altitude thrust lapse, FAITHFUL to Aero 481 (its +Constraints/* use installed thrust at altitude with no derating -- disc A6, USER decision 2026-08-15 to reproduce A481's constraint diagram + sizing). The mil-on-AB scale alpha_mil = (T_SL_mil/T_SL) = 0.6512 (28000/43000) still applies for the 'mil' rating (thrust setting, not altitude). Earlier this was 0.6 (framework sigma^0.6 convention); reverted to 0 so the F-35 example matches Aero 481.",
+    "engine_type": "low_bypass_turbofan_AB",
+    "T_SL": 43000,
+    "T_SL_mil": 28000,
+    "n_engines": 1,
+    "lapse_exponent_m": 0,
+    "_TODO_lapse_exponent_m": "lapse_exponent_m = 0 (no altitude lapse) reproduces Aero 481, which applies NO lapse (disc A6). This deviates from the framework sigma^m convention (B777/F16 use m=0.6). _TODO -- if the F-35 example is later held to the framework lapse convention rather than A481 fidelity, restore m=0.6.",
+    "tsfc_sls": 0.35,
+    "tsfc_cruise": 0.65,
+    "tsfc_dash": 1.70,
+    "_TODO_tsfc": "tsfc_sls 0.35 / tsfc_cruise 0.65 / tsfc_dash 1.70 (1/hr) [A481 Design01.m:78-80] are _TODO -- UNCITED (student values; Part I F135 dry deck ~0.886 is a DIFFERENT basis -- installed cruise). Guard with a labelled testTODO until primary F135 deck data is pinned."
+  },
+
+  "weights": {
+    "_src": "aircraft_category = jet_fighter (top level) selects the Raymer Table 15.2 fighter areal densities (wing 9.0, H-tail 4.0, V-tail 5.3 lb/ft^2) and the Sec. 7 fraction rows (landing gear 0.033, all-else-empty 0.17) -- ALL toolbox Constants read by aircraft_category, NOT JSON inputs. OEW coefficients [A481 Design01.m:26 Sainristil team, _TODO -- UNCITED]; W_payload_expendable [A481 WMissile]; W_payload_fixed [A481 WCrew]; design_mach [from aero481_requirements.json, Raymer Eq. 10.10 M^0.25 for the AB engine-weight path]. geom (dS_wing) and prop (T_SL) are injected (DI). See aero481_L1.md section 4.",
+    "_note_oew": "OEW build-up: OEW(W_TO) = OEW_frac(W_TO)*W_TO [A481 Sainristil, _TODO A7] + 9.0*dS_wing [Raymer Table 15.2 fighter] + 4.0*dS_ht + 5.3*dS_vt [Raymer Table 15.2 fighter, framework addition] + n_eng*dW_eng(T/n) [WeightsL1.engine_weight_roskam = MetaEngine, Roskam Eqs. 7.13-7.19; keeps the reverser term 0.034*T -- _TODO fighter has none, disc A9]. Framework alternative OEW fraction [Raymer Table 3.1 jet_fighter] 2.34*W_TO^-0.13 -- report shows both.",
+    "aircraft_category": "jet_fighter",
+    "oew_coeff_a": 0.882,
+    "oew_coeff_c": -0.055,
+    "_TODO_oew_coeffs": "OEW fraction We/W0 = 0.882 * W0[lbm]^-0.055 [A481 Design01.m:26, 'regression from Sainristil team']. _TODO -- UNCITED (student-team fit, no textbook citation; disc A7). Carried as the F-35 baseline OEW fraction faithful to Design01; guard with a labelled testTODO until a primary source is found or the Raymer Table 3.1 curve is adopted.",
+    "W_payload_expendable": 18000,
+    "_TODO_W_payload_expendable": "W_payload_expendable = 18,000 lbf [A481 WMissile = 18000 lbm, Design01.m:41-49, 'yields f35 payload']. _TODO -- UNCITED (student choice; published F-35A stores are an order-of-magnitude cross-check only, disc rollup). Guard with a labelled testTODO.",
+    "W_payload_fixed": 441,
+    "_TODO_W_payload_fixed": "W_payload_fixed = 441 lbf (= 200 kg crew) [A481 WCrew, Design01.m]. _TODO -- UNCITED (student choice). Guard with a labelled testTODO.",
+    "design_mach": 1.6,
+    "design_WS_psf": 92.17,
+    "design_TW": 1.2,
+    "_note_delta_baselines": "The A481 A02 OEW delta model (fraction + wing delta + engine delta) measures deviations from the DESIGN POINT: wing delta = rho_w*(S_ref - W_TO/design_WS_psf) [baseline S = the wing this weight wants at the design W/S -- self-scaling with W_TO, which is why A02 is STABLE]; engine delta = Weng_roskam(prop.T_SL) - Weng_roskam(design_TW*W_TO) [baseline = the design-T/W-implied thrust]. design_WS_psf = 92.17 (= 450 kgf/m^2) and design_TW = 1.2 are the A481 Design01 PointPerformance [Design01.m:20-21]. _TODO -- UNCITED (student design choices)."
+  }
+}
