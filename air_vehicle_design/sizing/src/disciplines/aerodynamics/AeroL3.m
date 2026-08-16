@@ -97,43 +97,6 @@ classdef AeroL3
             Re = AeroL2.compute_Re(state, l_ref);
         end
 
-        function Cf_lam = compute_Cf_lam(Re)
-        %COMPUTE_CF_LAM  Laminar skin-friction coefficient  (Raymer Eq. 12.26).
-            Cf_lam = AeroL3.Cf_laminar(Re);
-        end
-
-        function Cf_turb = compute_Cf_turb(Re, M)
-        %COMPUTE_CF_TURB  Turbulent skin-friction coefficient (Raymer Eq. 12.27).
-            Cf_turb = AeroL2.Cf_turbulent(Re, M);
-        end
-
-        function FF = compute_FF_surface(tc, x_c_max, Lambda_m_deg, M)
-        %COMPUTE_FF_SURFACE  Form factor for a lifting surface  (Raymer Eq. 12.30).
-            FF = AeroL3.FF_surface(tc, x_c_max, Lambda_m_deg, M);
-        end
-
-        function FF = compute_FF_fus(L_body, D_body)
-        %COMPUTE_FF_FUS  Form factor for a body/fuselage  (Raymer Eq. 12.31).
-            FF = AeroL3.FF_body(L_body, D_body);
-        end
-
-        function [Cf_lam_result, Cf_turb_result] = compute_Cf(R, M)
-        %COMPUTE_CF  Per-component Cf at Reynolds R and Mach M.
-        %   Returns [Cf_lam, Cf_turb] (Raymer Eq. 12.26 / 12.27).
-            Cf_lam_result  = AeroL3.Cf_laminar(R);
-            Cf_turb_result = AeroL2.Cf_turbulent(R, M);
-        end
-
-        function val = get_R_cutoff(obj, ref_length, M)
-        %GET_R_CUTOFF  Cutoff Reynolds for ref_length at Mach M; reads obj.k.
-        %   Raymer 6th ed. Eq. 12.28 (subsonic) / Eq. 12.29 (supersonic).
-            if M > 1
-                val = AeroL3.Re_cutoff_sup(ref_length, obj.k, M);
-            else
-                val = AeroL3.Re_cutoff_sub(ref_length, obj.k);
-            end
-        end
-
         function e = get_e_osw(obj)
         %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49); reads
         %   obj.AR and obj.Lambda_LE_deg (injected geometry).

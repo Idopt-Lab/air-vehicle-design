@@ -4,12 +4,10 @@ classdef PropL2
 %   Call as PropL2.method(...); never instantiated, not in the inheritance
 %   chain. F16PropL2 inherits PropulsionModelL2 and delegates to these statics.
 %
-%   Sources: [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.54a/b] thrust lapse; [Eq. 3.12 with
-%   3.55a/b] TSFC; [Eq. D.6] throttle ratio; [Raymer 6th ed. Sec. 10.3.2,
-%   Eq. 10.4-10.15] parametric engine sizing, EXCEPT Eq. 10.10
-%   (engine_weight_AB), confirmed 7th ed. per Sarojini -- see that method's
-%   own comment. Eq. 10.6/10.12 (engine_diam_nonAB/AB) remain an open
-%   6th-vs-7th-edition question, see their TODO(Sarojini) comments.
+%   Sources: [Mattingly Aircraft Engine Design 2nd ed. Eq. 2.54a/b] thrust
+%   lapse; [Eq. 3.12 + 3.55a/b] TSFC; [Eq. D.6] throttle ratio; [Raymer 6th
+%   ed. Sec. 10.3.2] afterburning engine sizing (Eq. 10.10 weight is 7th ed.,
+%   confirmed per Sarojini).
 %
 %   The C1/C2 TSFC coefficients are engine-class constants selected by
 %   engine_type inside lookup_TSFC_coeffs -- not class Constants and not in the
@@ -164,60 +162,10 @@ classdef PropL2
         end
 
         % ================================================================== %
-        % PARAMETRIC ENGINE SIZING — Raymer Eqs 10.4–10.15
+        % PARAMETRIC ENGINE SIZING — Raymer Eqs 10.10–10.15 (afterburning)
         %   Raymer, "Aircraft Design," 6th ed., §10.3.2, book p. 284
-        %   English units: T [lbf], M [—], BPR [—] → W [lb], L [ft], D [ft], SFC [1/hr]
-        %   Cruise reference condition: 36,000 ft, M = 0.9
+        %   English units: T [lbf], M [—], BPR [—] → W [lb], L [ft], SFC [1/hr]
         % ================================================================== %
-
-        % --- Nonafterburning engines (BPR 0 to ~6) -----------------------
-
-        function W = engine_weight_nonAB(T, BPR)
-        %ENGINE_WEIGHT_NONAB  Statistical engine weight, nonafterburning.  [Raymer Eq. 10.4]
-        %   W [lb] = 0.0847 · T^1.1 · exp(-0.045·BPR)
-        %   T = takeoff (SLS) thrust [lbf];  BPR = bypass ratio.
-            W = 0.0847 * T.^1.1 .* exp(-0.045 * BPR);
-        end
-
-        function L = engine_length_nonAB(T, M)
-        %ENGINE_LENGTH_NONAB  Statistical engine length, nonafterburning.  [Raymer Eq. 10.5]
-        %   L [ft] = 0.185 · T^0.4 · M^0.2
-        %   T = SLS thrust [lbf];  M = design Mach number.
-            L = 0.185 * T.^0.4 .* M.^0.2;
-        end
-
-        function D = engine_diam_nonAB(T, BPR)
-        %ENGINE_DIAM_NONAB  Statistical engine diameter, nonafterburning.
-        %   [Raymer Eq. 10.6]. D [ft] = 0.033 · T^0.5 · exp(0.04·BPR).
-        %   TODO(Sarojini): this module header cites the surrounding Eq.
-        %   10.4-10.15 block to "Raymer 6th ed.", but a recovered todo.md
-        %   decision (VnV/BrandtF16A/todo.md, 2026-07-24 Propulsion entry 3)
-        %   says this specific coefficient's equation number is 7th ed. This
-        %   repo has no 7th-ed. source to check. Confirm the edition against
-        %   your physical copy and correct whichever citation is wrong.
-            D = 0.033 * T.^0.5 .* exp(0.04 * BPR);
-            PropL2.warnIfImplausibleEngineDiameter(D, 'engine_diam_nonAB');
-        end
-
-        function SFC = SFC_max_nonAB(BPR)
-        %SFC_MAX_NONAB  Max-throttle SFC, nonafterburning.  [Raymer Eq. 10.7]
-        %   SFC [1/hr] = 0.67 · exp(-0.12·BPR)
-            SFC = 0.67 * exp(-0.12 * BPR);
-        end
-
-        function T_cr = thrust_cruise_nonAB(T, BPR)
-        %THRUST_CRUISE_NONAB  Cruise thrust, nonafterburning.  [Raymer Eq. 10.8]
-        %   T_cr [lb] = 0.60 · T^0.9 · exp(-0.02·BPR)
-        %   Cruise at 36,000 ft, M = 0.9.
-            T_cr = 0.60 * T.^0.9 .* exp(-0.02 * BPR);
-        end
-
-        function SFC = SFC_cruise_nonAB(BPR)
-        %SFC_CRUISE_NONAB  Cruise SFC, nonafterburning.  [Raymer Eq. 10.9]
-        %   SFC [1/hr] = 0.88 · exp(-0.05·BPR)
-        %   Cruise at 36,000 ft, M = 0.9.
-            SFC = 0.88 * exp(-0.05 * BPR);
-        end
 
         % --- Afterburning engines (BPR 0 to <1, M_max < 2.5) -------------
 
@@ -239,26 +187,10 @@ classdef PropL2
             L = 0.255 * T.^0.4 .* M.^0.2;
         end
 
-        function D = engine_diam_AB(T, BPR)
-        %ENGINE_DIAM_AB  Statistical engine diameter, afterburning.
-        %   [Raymer Eq. 10.12]. D [ft] = 0.024 · T^0.5 · exp(0.04·BPR).
-        %   TODO(Sarojini): see engine_diam_nonAB's TODO -- same 6th-vs-7th-
-        %   edition question for this coefficient.
-            D = 0.024 * T.^0.5 .* exp(0.04 * BPR);
-            PropL2.warnIfImplausibleEngineDiameter(D, 'engine_diam_AB');
-        end
-
         function SFC = SFC_max_AB(BPR)
         %SFC_MAX_AB  Max-throttle (AB) SFC, afterburning engine.  [Raymer Eq. 10.13]
         %   SFC [1/hr] = 2.1 · exp(-0.12·BPR)
             SFC = 2.1 * exp(-0.12 * BPR);
-        end
-
-        function T_cr = thrust_cruise_AB(T, BPR)
-        %THRUST_CRUISE_AB  Cruise thrust (non-AB), afterburning engine.  [Raymer Eq. 10.14]
-        %   T_cr [lb] = 2.4 · T^0.74 · exp(0.023·BPR)
-        %   Cruise at 36,000 ft, M = 0.9.
-            T_cr = 2.4 * T.^0.74 .* exp(0.023 * BPR);
         end
 
         function SFC = SFC_cruise_AB(BPR)
@@ -266,20 +198,6 @@ classdef PropL2
         %   SFC [1/hr] = 1.04 · exp(-0.186·BPR)
         %   Cruise at 36,000 ft, M = 0.9.
             SFC = 1.04 * exp(-0.186 * BPR);
-        end
-
-        function warnIfImplausibleEngineDiameter(D, callerName)
-        %WARNIFIMPLAUSIBLEENGINEDIAMETER  Sanity-check warning, not a hard
-        %   error: a fighter-class engine diameter belongs roughly in
-        %   [1, 8] ft. Added 2026-07-30 in place of dedicated unit tests for
-        %   engine_diam_nonAB/engine_diam_AB (per Casey: give a warning for
-        %   an anomalous value rather than test every input combination).
-            if ~isfinite(D) || D < 1 || D > 8
-                warning('PropL2:implausibleEngineDiameter', ...
-                    ['%s returned D = %.4f ft, outside the physically plausible ' ...
-                     '[1, 8] ft band for a fighter-class engine -- check the ' ...
-                     'input thrust and bypass ratio.'], callerName, D);
-            end
         end
 
     end
