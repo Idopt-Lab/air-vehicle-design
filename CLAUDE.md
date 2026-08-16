@@ -69,6 +69,40 @@ Target MATLAB version is R2022b+ — use `arguments` blocks and `mustBe*` valida
 
 ## Architecture of `sizing/`
 
+### Examples and the sizing loop — current state (2026-08-15)
+
+Three example aircraft now live under `examples/`, each with a full discipline
+stack + constraint/mission analysis + a sizing / T-S study:
+- **`examples/F16A/`** — F-16A, L1–L3, validated against `VnV/BrandtF16A`.
+- **`examples/B777/`** — Boeing 777-200LR, **L2** geometry (metabook Table 7.2
+  trapezoids → exposed areas) + **L2** Chapter-7 component-build-up weights
+  (Algorithm 5); closes W_TO ≈ 760k (−0.86% vs the real MTOW). Provenance: the
+  Martins metabook.
+- **`examples/Aero481/`** — the UMich AEROSP 481 Design01 fighter (a *student*
+  design based on the F-35, **not** the real jet — named for the design source,
+  like B777=metabook, F16=Brandt), **L1** throughout; reproduces Aero 481's A02
+  sizing (~62k). The 6 FAR-25 climbs + military takeoff/landing are dropped for a
+  fighter; a Stall (approach) W/S wall bounds the design.
+
+The sizing loop lives in **`src/sizing/`**: `SizingLoopL1.m` (single-state W_TO
+fixed point at the constraint optimum — Martins slide 6), `SizingLoopL2.m`
+((W_TO, T_SL) — slide 8), `TSDiagram.m` (fixed-cell MTOW per (T,S) + constraint
+curves — metabook §4.12, the Aero 481 A02/T_S analogue), and `SizingSteps.m`
+(the TOGW-update static). `ConstraintAnalysis.optimal_point_continuous()`
+(fmincon over `constraint_residual`) is the continuous design-point solver the
+loops call. An L1 geometry (e.g. `F16GeomL1`, `Aero481GeomL1`) drives
+`SizingLoopL1` (no tail resize); an L2 planform geometry is needed for
+`SizingLoopL2`/`TSDiagram`'s tail-resize box.
+
+**GeometryModelL2 and WeightsModelL2 are aircraft-AGNOSTIC (slimmed 2026-08-15).**
+GeometryModelL2 declares only the L2 core every aircraft supplies + cross-
+discipline consumers read (exposed wing/HT/VT areas, HT/VT reference areas, wing
+span, fuselage length + wetted area). The F-16's detailed drag-build-up geometry
+(per-surface t/c, sweeps, inlet duct, wave-drag `Amax`/`L_aircraft`) is now
+CONCRETE members on `F16GeomL2`, not an abstract obligation on every L2 geometry;
+`B777GeomL2` inherits the slim core. `WeightsModelL2` is likewise the agnostic
+component-build-up enforcer — both `F16WeightsL2` and `B777WeightsL2` inherit it.
+
 ### Core
 - `src/core/AircraftState.m` — immutable **value** class (not `handle`) representing ISA atmosphere at a given altitude/Mach. Built via MATLAB's `atmosisa`, converted to English units (lbf, ft, slug, ft/s, deg R). Carries `theta`/`delta`/`theta_0`/`delta_0` per Mattingly Eq. 2.52. Passed into most discipline methods as the flight-condition argument.
 - **`baseline/` was REMOVED (2026-08-04).** `F16Baseline.m`/`BrandtVariant.m`/`extract_brandt.m` are gone; every test and report now validates against `VnV/BrandtF16A` — either the ground-truth JSON (`GroundTruth/f16a_ground_truth.json`, `f16a_geometry.json`) or the live Brandt discipline classes (`BrandtConstraintAnalysis`/`BrandtAerodynamics`/`BrandtEngine`, wrapped for the constraint tests by `tests/constraints/brandt_constraint_reference.m`). Tests use `RelTol`/`AbsTol` tolerances (looser at L1, tighter at L3), not exact equality — exact agreement with Brandt is explicitly not the goal.

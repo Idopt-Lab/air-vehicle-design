@@ -20,8 +20,10 @@ Rewrite the AOE 4065 sizing framework from scratch using correct OOP, referenced
   fidelity level follows the three-tier pattern below (`AeroL1` → `AeroModelL1` → `F16AeroL1`, …).
 
 - **System-level orchestrators** receive discipline objects through their constructor (pure
-  composition), never subclassed. Built so far: `ConstraintAnalysis` (+ `F16ConstraintSet`). The
-  sizing loop and mission analysis (`SizingLoop*`, `MissionAnalysis*`) are not yet built.
+  composition), never subclassed. All built: `ConstraintAnalysis` (+ per-aircraft constraint
+  sets), `MissionAnalysisL1`/`L2`, and the sizing loop — `src/sizing/SizingLoopL1`/`L2` +
+  `TSDiagram` + `SizingSteps` (2026-08). See the CLAUDE.md "Examples and the sizing loop —
+  current state" note for the three example trees (F16A / B777 / Aero481) that drive them.
 
 Why: MATLAB abstract classes give compile-time contract enforcement. DI into orchestrators makes unit testing easy without deep inheritance chains.
 
@@ -184,7 +186,7 @@ Status reflects the code tree (this table historically went stale — trust `git
 | 5 | Weights (L1/L2/L3) | Done (Phase-4 redesign landed 2026-07-25: unified JSON + requirements file, geometry/propulsion DI, inputs-vs-`Dependent`) |
 | 6 | Constraint Analysis | Done (as-is is `src/constraints/` + `examples/F16A/inputs/f16a_requirements.md`) |
 | 7 | Mission Analysis | Done (`0b0dfb4`/`40dfdf2`/`9510bc3`) |
-| 8 | Sizing | Not started |
+| 8 | Sizing | Done (2026-08: `src/sizing/SizingLoopL1`/`L2` + `TSDiagram` + `SizingSteps`; `ConstraintAnalysis.optimal_point_continuous`; F16A Brandt-validation + B777 + Aero481 studies) |
 
 ---
 
