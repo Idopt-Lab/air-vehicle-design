@@ -127,7 +127,7 @@ Computed live 2026-07-26 at `W_TO` = 31,377 lbf.
 | Engine group | 3607.5273 | 3381.6984 | 4730.2300 | `Wt!B11` |
 | Systems / all-else | 5334.0900 | 4578.1340 | — | distributed |
 | Strake | 90.0000 | — (not modeled) | 90.0000 | `Wt!H9` |
-| **OEW** | **15754.648** | **15705.331** | **19980.7006** | **`Wt!B12`** |
+| **OEW** | **15754.648** | **15795.331** | **19980.7006** | **`Wt!B12`** |
 | L1 OEW | 19110.313 | — | — | — |
 
 Brandt's HT/VT rows use the **full** planform areas (108 / 60); the framework uses the **exposed**

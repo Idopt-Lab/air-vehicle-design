@@ -71,12 +71,12 @@ type is not on `AircraftState`).
 | Quantity | Function | Citation |
 |---|---|---|
 | Throttle ratio TR | `PropL2.compute_TR(T_t4_max_R, T_t4_SLS_R)` = `T_t4_max/T_t4_SLS` | Mattingly Eq. D.6 |
-| Engine W / L / D, SFC (non-AB) | `PropL2.engine_{weight,length,diam}_nonAB`, `SFC_{max,cruise}_nonAB`, `thrust_cruise_nonAB` | Raymer §10.3.2, Eq. 10.4–10.9 |
-| Engine W / L / D, SFC (AB) | `PropL2.engine_{weight,length,diam}_AB`, `SFC_{max,cruise}_AB`, `thrust_cruise_AB` | Raymer §10.3.2, Eq. 10.10–10.15 |
+| Engine W / L, SFC (AB) | `PropL2.engine_{weight,length}_AB`, `SFC_{max,cruise}_AB` | Raymer §10.3.2, Eq. 10.10/10.11/10.13/10.15 |
 
-`engine_weight_AB` = `0.0637·T^1.1·M^0.25·e^(−0.81·BPR)` (Eq. 10.10) is the **only** one of these
-that is wired: weights calls it through propulsion DI. The diameter coefficients 0.033 (Eq. 10.6) and
-0.024 (Eq. 10.12) are correct for imperial units (D in ft).
+`engine_weight_AB` = `0.0637·T^1.1·M^0.25·e^(−0.81·BPR)` (Eq. 10.10) is wired: weights calls it
+through propulsion DI. `engine_length_AB`, `SFC_max_AB`, `SFC_cruise_AB` are unit-tested but not yet
+wired. The unused non-afterburning family and the diameter / cruise-thrust regressions were removed
+(see `docs/decision_log.md`).
 
 ---
 

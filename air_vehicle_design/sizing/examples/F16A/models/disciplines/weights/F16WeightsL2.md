@@ -45,7 +45,7 @@ all four members L2 weights reads, so a wrong tier fails at **construction** rat
 | `design_mach` | 2.0 | From `f16a_requirements.json`. Feeds Raymer Eq. 10.10's `M^0.25` |
 | `geom`, `prop` | objects | injected collaborators |
 
-## 3. Derived (`Dependent`) — 12
+## 3. Derived (`Dependent`) — 13
 
 | Property | Source / formula | Value at `W_TO` = 31,377 |
 |---|---|---|
@@ -61,6 +61,7 @@ all four members L2 weights reads, so a wrong tier fails at **construction** rat
 | `W_landing_gear` | `0.033·W_TO` [AE481 metabook §7] | 1035.441 lbf |
 | `W_installed_engine` | `1.3·N_en·W_en` | 3607.527 lbf |
 | `W_all_else_empty` | `0.17·W_TO` | 5334.090 lbf |
+| `W_strake` | `k_strake·S_strake` [Brandt `Main!D18` / `Wt!H7`] | 90.00 lbf |
 
 **`W_en_brandt` is report-only and is never summed into `OEW`** — guarded by
 `TestWeightsL2.testBrandtEngineAlternateIsNeverSummedIntoOEW`. It doubles as a positive control on
@@ -103,8 +104,8 @@ surface-density table only, and the fractions are a separate unnumbered metabook
 
 | Quantity | Value |
 |---|---|
-| `OEW(31377)` | **15664.648 lbf** (−21.60 % vs Brandt `Wt!B12` 19980.70) |
-| `OEW(45000)` | 18430.117 lbf |
+| `OEW(31377)` | **15754.65 lbf** (−21.14 % vs Brandt `Wt!B12` 19980.70) |
+| `OEW(45000)` | 18520.12 lbf |
 
 Brandt uses 0.034 for the landing-gear fraction where the framework uses the metabook's 0.033;
 different models, reported side by side. Brandt's own psf coefficients (6.75 / 5.0 / 6.0 / 6.0) also
@@ -120,7 +121,7 @@ tier.
 
 | Item | Status |
 |---|---|
-| **Darshan → Krish, HIGH PRIORITY: cross-check L2 weights.** `OEW` comes out significantly lower than Brandt (15664.65 vs 19980.70, −21.60 %). Note ~2733.68 lbf of that gap is Brandt line items with no framework analog, but that leaves the rest unexplained | open |
+| **Darshan → Krish, HIGH PRIORITY: cross-check L2 weights.** `OEW` comes out significantly lower than Brandt (15754.65 vs 19980.70, −21.14 %). Note ~2733.68 lbf of that gap is Brandt line items with no framework analog, but that leaves the rest unexplained | open |
 | `WeightsL2.LG_fraction('general_aviation') = 0.057` is **uncited** — the metabook extract has no GA landing-gear row | todo §P4-7; in-code TODO |
 | `LG_fraction` carries **no `navy_fighter` row** despite the extract having one (0.045) | pinned as a known absence by `testLGFractionHasNoNavyFighterRow` |
 | `design_mach` = 2.0 is cited to Brandt; the T.O. operating limit is 2.05, −2.44 % apart. Sensitivity: `W_en` 2775.02 → 2792.20 (+0.62 %) | todo §P4-13 — user to confirm which is the design requirement |

@@ -54,7 +54,7 @@ The class formerly carried ~22 hardcoded geometry constants; all now arrive by D
 keys it under `.weights.horizontal_tail` because the *flag* describes the HT. Both facts need to stay
 visible at the DI site — it reads like a bug otherwise.
 
-## 3. Derived (`Dependent`) — 31
+## 3. Derived (`Dependent`) — 32
 
 **Geometry via DI (21)** — `S_w`, `AR_w`, `tc_root`, `lambda_w`, `Lambda_LE_w`, `S_csw`, `S_ht`,
 `F_w`, `B_h`, `S_vt`, `AR_vt`, `lambda_vt`, `Lambda_LE_vt`, `H_t`, `H_v`, `L_t`, `S_r`, `L_fus`,
@@ -68,7 +68,7 @@ visible at the DI site — it reads like a bug otherwise.
 | `S_ht` (Eq. 15.2 exposed area) | `geom.S_exposed_ht` = 51.1486 | `geom.S_ht` = 108 (full planform) |
 | `S_vt` (Eq. 15.3 exposed area) | `geom.S_exposed_vt` = 40.8897 | `geom.S_vt` = 60 (full planform) |
 
-**Propulsion DI and weight groups (10)**
+**Propulsion DI and weight groups (11)**
 
 | Property | Source / formula | Value at `W_TO` = 31,377 |
 |---|---|---|
@@ -82,6 +82,7 @@ visible at the DI site — it reads like a bug otherwise.
 | `W_fuselage` | Eq. 15.4 | 3674.197 lbf |
 | `W_installed_engine` | Eqs. 15.7–15.15 group total | 3381.698 lbf |
 | `W_subsystems` | Eqs. 15.16–15.24 group total | 4578.134 lbf |
+| `W_strake` | `k_strake·S_strake` [Brandt `Main!D18` / `Wt!H7`] | 90.00 lbf |
 
 **`W_subsystems` does NOT include the landing gear** — that is `weight_landing_gear(obj, W_TO)`.
 
@@ -123,7 +124,7 @@ the reason to reject it: a number that agrees because a factor is double-counted
 
 | Quantity | Value |
 |---|---|
-| `OEW(31377)` | **15705.331 lbf** (−21.40 % vs Brandt `Wt!B12` 19980.70) |
+| `OEW(31377)` | **15795.33 lbf** (−20.95 % vs Brandt `Wt!B12` 19980.70) |
 | landing-gear total | 1160.934 lbf |
 
 `SFC_mission` = 1.007116 sits +43.87 % above Brandt's `Main!C30` = 0.70 — accepted, because it is a

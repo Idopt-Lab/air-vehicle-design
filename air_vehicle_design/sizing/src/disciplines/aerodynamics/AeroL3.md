@@ -5,9 +5,8 @@ Level-3 aerodynamics static toolbox (`classdef AeroL3`, `methods (Static)` only)
 `AeroModelL3` and delegates here.
 
 L3 replaces L2's equivalent skin friction with a **per-component** Reynolds / skin-friction /
-form-factor buildup. The induced terms, the shared skin-friction primitives and the regime test stay
-in `AeroL2` as the single source of truth and are called from here; this toolbox owns only the
-buildup-specific pieces.
+form-factor buildup. The induced terms, shared skin-friction primitives and regime test stay in
+`AeroL2`; this toolbox owns only the buildup-specific pieces.
 
 **Component order everywhere: wing, HT, VT, fuselage, duct.**
 
@@ -17,7 +16,7 @@ buildup-specific pieces.
 
 | Layer | Members |
 |---|---|
-| High-level — take the concrete object | `drag_polar`, `get_CD0_buildup`, `get_K1`, `get_K2`, `get_e_osw`, `get_CL_alpha`, `compute_Re`, `compute_Cf`, `get_R_cutoff`, `compute_FF_surface`, `compute_FF_fus` |
+| High-level — take the concrete object | `drag_polar`, `get_CD0_buildup`, `get_K1`, `get_K2`, `get_e_osw`, `get_CL_alpha`, `compute_Re` |
 | Low-level — originate here | `Cf_laminar`, `Re_cutoff_sub`, `Re_cutoff_sup`, `FF_surface`, `FF_body` |
 
 ## 2. Equations
@@ -57,10 +56,9 @@ aircraft-specific and added by the concrete class's `get_CD0_buildup` override.
 
 ## 3. Domain guards
 
-`get_CD0_buildup` errors when `state.mach <= 0`. At zero Mach the Reynolds number is zero, the
-laminar $C_f$ is infinite and the form factor is zero, and their product is `NaN`. A `NaN` $C_{D_0}$
-makes every constraint comparison false, so the point would report *satisfied* rather than
-unevaluable. `Cf_laminar` likewise requires a positive Reynolds number.
+`get_CD0_buildup` errors when `state.mach <= 0`. At zero Mach the product of the terms is `NaN`, and
+a `NaN` $C_{D_0}$ makes every constraint comparison false, so the point would report *satisfied*
+rather than unevaluable. `Cf_laminar` likewise requires a positive Reynolds number.
 
 The transonic band is not modelled; see `AeroL2.md`.
 
