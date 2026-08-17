@@ -29,8 +29,9 @@ classdef F16GeomL1 < GeometryModelL1
     % INPUTS — mutable spec data (see the DERIVED block below).
     % ======================================================================= %
     properties
+        % TODO (8/13/2026): These should be dependency injections, not hardcoded properties.
         aircraft_category = "jet_fighter"    % string; drives GeomL1 table lookups
-        S_ref             = 300              % double; ft^2  [T.O. 1F-16A-1, Fig. 1-2]
+        S_ref             = 300              % double; ft^2  [T.O. 1F-16A-1, Fig. 1-2] % TODO (8/13/2026): This should not be hardcoded into the class.
         M_max             = 2.0              % double; design max Mach — drives get_AR_eq (Raymer 7th ed. Table 4.1)
         n_engines         = 1               % double; engine count [Brandt Main!B28; f16a_L1.json .geometry.engine.n_engines]. Not used by any L1 geometry regression — exposed only so mission analysis can read geom.n_engines by DI at every fidelity (mission takeoff warmup term). Matches F16GeomL3.n_engines.
 
@@ -46,6 +47,7 @@ classdef F16GeomL1 < GeometryModelL1
     % stale). Both are TOGW regressions.
     % ======================================================================= %
     properties (Dependent)
+        % TODO (8/13/2026): Unsure if these are actually dependency injections or just data storage.
         S_wet          % ft^2  total wetted area  [Roskam Vol. I Table 3.5 regression on W_TO]
         L_fuselage     % ft    fuselage length    [Raymer 6th ed. Table 6.3 regression on W_TO]
     end
@@ -86,10 +88,21 @@ classdef F16GeomL1 < GeometryModelL1
             val = GeomL1.get_S_wet_statistical(obj, W_TO);
         end
 
+        % TODO (8/13/20206): Duplicate method function, but needed to satisfy the enforcer.
         function val = get_S_wet_statistical(obj, W_TO)
             val = GeomL1.get_S_wet_statistical(obj, W_TO);
         end
 
+        % TODO (8/14/2026): I'm noticing a lot of steps between the initial function call and the final result being returned.
+        % This is concerning. Estimating the fuselage length via regression takes this path:
+        % F16GeomL1.get_L_fus -> GeomL1.get_L_fus -> GeomL1.compute_l_fus_regression -> GeomL1.lookup_lfus -> return to compute_l_fus_regression, compute the the l_fus, return it to the call source..
+        % In the legacy code, I believe I was able to bundle the table lookup AND the equation in the same function.
+        % Ideally, the path should be: F16GeomL1.get_L_fus, calls a table lookup for the coefficients, then calls another toolbox method to estimate the fuselage length.
+        % The function "compute_l_fus_regression" is what "get_L_fus" should look like. However, I'd make some changes. The psuedocode would look like this:
+        % function l_fus = compute_l_fus_regression(aircraft_category, W_TO)
+        %       [a, c] = GeomL1.lookup_l_fus_coeffs(aircraft_category)
+        %       l_fus = GeomL1.est_l_fus(a, c, W_TO)
+        % end
         function val = get_L_fus(obj, W_TO)
             val = GeomL1.get_L_fus(obj, W_TO);
         end
@@ -109,6 +122,16 @@ classdef F16GeomL1 < GeometryModelL1
         function v = get.L_fuselage(obj)
             v = obj.get_L_fus(obj.requireWTO('L_fuselage'));
         end
+
+        % % TODO (8/13/20206): Duplicate method function; remove.
+        % function v = get.S_wet(obj)
+        %     v = obj.get_S_wet(obj.requireWTO('S_wet'));
+        % end
+
+        % TODO (8/13/20206): Duplicate method function; remove.
+        % function v = get.L_fuselage(obj)
+        %     v = obj.get_L_fus(obj.requireWTO('L_fuselage'));
+        % end
 
     end
 
