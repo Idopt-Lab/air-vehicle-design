@@ -14,6 +14,9 @@ classdef SizingLoopL1 < handle
 %   but never called directly; the mission/constraint objects read it live.
 %   Nothing is cached (recompute-on-read).
 
+    % TODO (8/3/2026): Remember to remove extra documentation during final
+    % pass. Should store the decisions and rationalization in some kind of
+    % archive later. Include timestamp of comment creation.
     properties (SetAccess = private)
         aero    % (1,1) AerodynamicsBase
         prop    % (1,1) PropulsionBase

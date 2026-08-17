@@ -69,6 +69,14 @@ classdef (Abstract) SandCModelL3 < StabControlBase
           Cm_acw
      end
 
+     % TODO (8/4/2026): There should definitely be some properties here.
+     % Stored properties:
+     % M_cg
+     % Cm_c
+     % eta_h (eq 16.6, if possible)
+     % Cm_alpha
+     % X_np (x-location of the neutral point)
+     % SM (static margin)
      methods (Abstract)
 
           %DELTA_ALPHA_L0  Change in zero-lift angle of attack [deg] from a
