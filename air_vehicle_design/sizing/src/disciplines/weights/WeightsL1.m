@@ -20,6 +20,7 @@ classdef WeightsL1
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function oew = OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] via the Raymer Table 3.1 power law.
         %   [Raymer 6th ed. Table 3.1]  The L1 answer (Raymer central estimate,
@@ -28,6 +29,7 @@ classdef WeightsL1
             oew = WeightsL1.compute_We_fraction(obj, W_TO, obj.aircraft_category) * W_TO;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function frac = compute_We_fraction(obj, W_TO, aircraft_category)
         %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 6th ed. Table 3.1]
         %   aircraft_category defaults to obj.aircraft_category when omitted.
@@ -38,6 +40,7 @@ classdef WeightsL1
             frac = WeightsL1.We_fraction_power_law(c.Kvs, c.A, c.C, W_TO);
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W_E = compute_We_roskam(obj, W_TO)
         %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].  [Roskam Part I Eq. 2.16]
         %   A LOWER BOUND, not a central estimate — never summed into OEW.
