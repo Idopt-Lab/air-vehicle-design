@@ -71,7 +71,7 @@ classdef TestAero481Sizing < matlab.unittest.TestCase
             prop = Aero481PropL1(sp);
             geom = Aero481GeomL1(sp, rp);
             wts  = Aero481WeightsL1(sp, geom, prop);   % A02 delta model (3-arg): injects geom (S_ref) + prop (T_SL)
-            tail = Aero481TailL1();
+            tail = Aero481TailL1(geom);
             miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "dca");
             con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
                 Aero481ConstraintSet.constraint_map(), linspace(20, 200, 181));

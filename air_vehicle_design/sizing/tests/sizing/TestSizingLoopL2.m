@@ -55,7 +55,7 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
                 {ToyProducerConstraint("Toy Producer", ...
                     TestSizingLoopL2.A_TOY, TestSizingLoopL2.B_TOY)}, ...
                 20:5:160);
-            tail = FixedTailStub();
+            tail = FixedTailStub(geom);
             loop = SizingLoopL2(aero, prop, wts, geom, miss, con, tail);
         end
 
@@ -110,8 +110,7 @@ classdef TestSizingLoopL2 < matlab.unittest.TestCase
             %   S_vt ~= 0.07*30*32/22.0875 = 3.042 ft^2
             loop = TestSizingLoopL2.buildLoop();
             result = loop.run(1000, 100);
-            expected = loop.tail.size(result.S_ref, loop.geom.b_wing, ...
-                loop.geom.cbar_wing, loop.geom.L_fus);
+            expected = loop.tail.size();   % reads loop.geom live at the final S_ref
             fprintf('\n    S_ht=%.4f (hand ~6.375)  S_vt=%.4f (hand ~3.042)\n', ...
                 loop.geom.S_ht, loop.geom.S_vt);
             tc.verifyEqual(loop.geom.S_ht, expected.S_ht, 'RelTol', 1e-10, ...

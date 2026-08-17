@@ -113,8 +113,7 @@ classdef SizingLoopL2 < handle
                 %    box feeds the empty-weight and drag-polar boxes]. The
                 %    weights class reads geom's tail areas live, so OEW
                 %    below already reflects this iteration's tail.
-                tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, ...
-                    obj.geom.cbar_wing, obj.geom.L_fus);
+                tail_result = obj.tail.size();
                 obj.geom.S_ht = tail_result.S_ht;
                 obj.geom.S_vt = tail_result.S_vt;
 
@@ -195,8 +194,7 @@ classdef SizingLoopL2 < handle
             % final design-point solve and mission/OEW read so the result
             % and wts bookkeeping match the returned (W_TO, T_SL).
             obj.geom.S_ref = W0 / WS;
-            tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, ...
-                obj.geom.cbar_wing, obj.geom.L_fus);
+            tail_result = obj.tail.size();
             obj.geom.S_ht = tail_result.S_ht;
             obj.geom.S_vt = tail_result.S_vt;
             obj.prop.T_SL = T_SL;

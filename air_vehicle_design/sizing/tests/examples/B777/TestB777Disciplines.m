@@ -137,7 +137,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
             geom = B777GeomL2(sp);
             prop = B777PropL1(sp);
             aero = B777AeroL1(geom, sp);
-            tail = B777TailL1();
+            tail = B777TailL1(geom);
             wts  = B777WeightsL2(sp, geom, prop);
         end
     end
@@ -462,7 +462,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         % passed geometry, so it cannot fail on a shared coefficient error.
             [geom, ~, ~, tail] = TestB777Disciplines.buildStack(); %#ok<ASGLU>
             S_ref = geom.S_ref;  b = geom.b_wing;  cbar = geom.cbar_wing;  L_fus = geom.L_fus;
-            r = tail.size(S_ref, b, cbar, L_fus);
+            r = tail.size();
 
             L_arm       = tc.ARM_FRAC * L_fus;              % 0.525*209 = 109.725
             expected_ht = tc.C_HT * cbar  * S_ref / L_arm;  % ~909.75
@@ -479,7 +479,8 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         % A jet transport takes the UNCORRECTED base coefficients
         % (lookup_tail_volume_coeffs, NOT the RSS/all-moving corrected form):
         % c_HT = 1.0, c_VT = 0.09 [metabook Ch.8; Raymer Table 6.4 jet-transport].
-            tail = B777TailL1();
+            geom = B777GeomL2(b777_spec_path(1));
+            tail = B777TailL1(geom);
             tc.verifyEqual(tail.c_HT, tc.C_HT, 'AbsTol', 1e-12, ...
                 'c_HT must be the uncorrected 1.0 jet-transport value.');
             tc.verifyEqual(tail.c_VT, tc.C_VT, 'AbsTol', 1e-12, ...

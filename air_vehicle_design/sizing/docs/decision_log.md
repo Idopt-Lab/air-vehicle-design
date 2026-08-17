@@ -75,6 +75,24 @@ concrete on `F16GeomL2`, not an abstract obligation on every L2 geometry.
 `WeightsModelL2` is the agnostic component-build-up enforcer. `B777GeomL2` and
 `B777WeightsL2` inherit the slim cores.
 
+## 2026-08-17 — Tail L1 uses injected geometry; L2 is a stub
+
+L1 tail sizing (F16TailL1 / B777TailL1 / Aero481TailL1) now takes an injected
+geometry object at construction and reads S_ref / b_wing / cbar_wing / L_fus
+from it live in size(obj) -- the same DI style the sizing loops use.
+SizingLoopL2 and TSDiagram now call tail.size() (no scalar arguments). The
+TailL1 equation toolbox stays scalar (unchanged); only the concrete classes
+read the injected geometry.
+
+The injected geometry is typed GeometryBase (not GeometryModelL2): Aero481
+injects an L1 geometry (Aero481GeomL1, which provides b_wing/cbar_wing/L_fus as
+Dependents) and f16_brandt_stack injects a BrandtMissionGeomAdapter.
+
+L2 tail sizing is now a not-implemented stub: TailL2.size and F16TailL2.size
+throw 'TailL2:notImplemented'. The former Nicolai & Carichner L2 coefficient
+path was removed; L2 is reserved for a future higher-fidelity method with real,
+cited equations. Recover the old L2 equations from git if needed.
+
 ## 2026-08-16 — Tail sizing has no L3 tier
 
 Removed the never-implemented Level-3 tail-sizing stub (`TailL3`,

@@ -28,7 +28,7 @@ rp = aero481_requirements_path();
 aero = Aero481AeroL1(sp);
 prop = Aero481PropL1(sp);
 geom = Aero481GeomL1(sp, rp);
-tail = Aero481TailL1();
+tail = Aero481TailL1(geom);
 wts  = Aero481WeightsL1(sp, geom, prop);   % A481 A02 delta model -- injects geom (S_ref) + prop (T_SL)
 miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "dca");
 

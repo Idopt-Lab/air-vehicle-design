@@ -47,7 +47,7 @@ function [result, objs] = f16_sizing_L3(W_TO_guess, T_SL_guess)
     wts  = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, ...
         f16a_requirements_path(), "cap");
-    tail = F16TailL1();
+    tail = F16TailL1(geom);
 
     con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
         F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);

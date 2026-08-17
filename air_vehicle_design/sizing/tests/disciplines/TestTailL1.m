@@ -164,11 +164,13 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % ================================================================ %
 
         function testF16TailL1IsaTailSizingBase(tc)
-            tc.verifyTrue(isa(F16TailL1(), 'TailSizingBase'));
+            geom = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyTrue(isa(F16TailL1(geom), 'TailSizingBase'));
         end
 
         function testF16TailL1IsaTailSizingModelL1(tc)
-            tc.verifyTrue(isa(F16TailL1(), 'TailSizingModelL1'));
+            geom = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyTrue(isa(F16TailL1(geom), 'TailSizingModelL1'));
         end
 
         function testF16TailL1NetCoefficients(tc)
@@ -178,7 +180,8 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % independently hand-computed 0.315/0.063 (same numbers as
         % testCorrectionsBothAppliesF16NetValues, computed by hand there,
         % not read from the object under test).
-            obj = F16TailL1();
+            geom = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            obj = F16TailL1(geom);
             tc.verifyEqual(obj.c_HT, 0.315, 'AbsTol', 1e-12);
             tc.verifyEqual(obj.c_VT, 0.063, 'AbsTol', 1e-12);
         end
@@ -203,13 +206,8 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % (Cross-checked independently against the geometry-equations-
         % expert's reported ~48.43268/~25.67063 -- both derivations agree.)
             geom = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            S_ref = geom.S_ref;
-            b     = geom.b_wing;
-            cbar  = geom.cbar_wing;
-            L_fus = geom.L_fus;
-
-            obj    = F16TailL1();
-            result = obj.size(S_ref, b, cbar, L_fus);
+            obj    = F16TailL1(geom);
+            result = obj.size();
 
             expected_S_ht = 48.432683041;
             expected_S_vt = 25.670628183;
@@ -233,8 +231,8 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % Brandt; see examples/F16A/sanity_checks/tail_sizing_brandt_comparison.m for the
         % actual (non-pass/fail) comparison report.
             geom = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            obj    = F16TailL1();
-            result = obj.size(geom.S_ref, geom.b_wing, geom.cbar_wing, geom.L_fus);
+            obj    = F16TailL1(geom);
+            result = obj.size();
             brandt_S_ht = 108.0;   % [Brandt Main!C18]
             brandt_S_vt = 60.0;    % [Brandt Main!H18]
             fprintf(['\n    F16TailL1 vs Brandt (informational only): ' ...

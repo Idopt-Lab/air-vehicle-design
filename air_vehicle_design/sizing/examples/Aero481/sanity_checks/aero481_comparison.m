@@ -218,7 +218,7 @@ function results = aero481_comparison()
     %     A02(Design01, 43,000 lbf, {45,50,55} m^2) [A481 +Algorithms/A02.m].
     % --------------------------------------------------------------------- %
     geom  = Aero481GeomL1(sp, rp);
-    tail  = Aero481TailL1();
+    tail  = Aero481TailL1(geom);
     wts   = Aero481WeightsL1(sp, geom, prop);       % A02 delta model (geom + prop injected)
     miss  = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "dca");
     ca_ts = ConstraintAnalysis.from_requirements(aero, prop, rp, ...

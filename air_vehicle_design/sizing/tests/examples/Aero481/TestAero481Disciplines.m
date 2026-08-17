@@ -177,7 +177,7 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
             geom = Aero481GeomL1(sp, rp);
             prop = Aero481PropL1(sp);
             aero = Aero481AeroL1(sp);
-            tail = Aero481TailL1();
+            tail = Aero481TailL1(geom);
             wts  = Aero481WeightsL1(sp, geom, prop);   % A02 delta model (3-arg): injects geom (S_ref) + prop (T_SL)
         end
 
@@ -528,7 +528,8 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         % The F-35 takes the UNCORRECTED base jet-fighter coefficients
         % c_HT = 0.40, c_VT = 0.07 [Raymer 7th ed. Table 6.4] -- NOT the F-16's
         % RSS/all-moving-corrected form (see testTODO_TailRSSAllMovingFlags).
-            tail = Aero481TailL1();
+            geom = Aero481GeomL1(aero481_spec_path(1), aero481_requirements_path());
+            tail = Aero481TailL1(geom);
             tc.verifyEqual(tail.c_HT, tc.C_HT, 'AbsTol', 1e-12, ...
                 'c_HT must be the uncorrected 0.40 jet-fighter value [Raymer Table 6.4].');
             tc.verifyEqual(tail.c_VT, tc.C_VT, 'AbsTol', 1e-12, ...
@@ -541,15 +542,13 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         %   S_ht  = c_HT*cbar*S_ref/L_arm
         %   S_vt  = c_VT*b*S_ref/L_arm
         % Expected computed from INDEPENDENT literals c_HT=0.40, c_VT=0.07,
-        % ARM_FRAC=0.475 (NOT read from the tail object), so a shared-
-        % coefficient error cannot hide. S_ref=460, b=sqrt(4*460), cbar=S/b,
-        % L_fus = 51 ft (independent test scalar).
-            tail  = Aero481TailL1();
-            S_ref = tc.S_REF_BASE;
-            b     = sqrt(tc.AR_BASE * S_ref);   % sqrt(4*460) = 42.8952
-            cbar  = S_ref / b;                  % 10.7239
-            L_fus = 51;                         % independent test value
-            r = tail.size(S_ref, b, cbar, L_fus);
+        % ARM_FRAC=0.475 (NOT read from the tail object) times the injected
+        % geometry's own S_ref/b_wing/cbar_wing/L_fus, so a shared-coefficient
+        % error cannot hide.
+            geom  = Aero481GeomL1(aero481_spec_path(1), aero481_requirements_path());
+            tail  = Aero481TailL1(geom);
+            S_ref = geom.S_ref;  b = geom.b_wing;  cbar = geom.cbar_wing;  L_fus = geom.L_fus;
+            r = tail.size();
 
             L_arm       = tc.ARM_FRAC * L_fus;              % 0.475*51 = 24.225
             expected_ht = tc.C_HT * cbar * S_ref / L_arm;

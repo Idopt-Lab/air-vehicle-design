@@ -96,8 +96,7 @@ classdef TSDiagram < handle
 
             % Prescribe the (T, S) cell [Algorithm 2, step "prescribe"].
             obj.geom.S_ref = S_ref;
-            tail_result = obj.tail.size(obj.geom.S_ref, obj.geom.b_wing, ...
-                obj.geom.cbar_wing, obj.geom.L_fus);
+            tail_result = obj.tail.size();
             obj.geom.S_ht = tail_result.S_ht;
             obj.geom.S_vt = tail_result.S_vt;
             obj.prop.T_SL = T_SL;
