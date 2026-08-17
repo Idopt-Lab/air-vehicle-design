@@ -37,7 +37,10 @@ classdef AeroL1
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): This appears to be an artefact from when this class was a subclass of
+        % the Aerodynamics enforcer.
         function polar = drag_polar(obj, state)
+        % TODO (8/13/2026): I thought we were ditching the Mattingly K1 tabulation approach.
         %DRAG_POLAR  Assemble the L1 drag polar.  Returns struct(CD0, K1, K2).
         %   CD0(M) interpolated from the object's Mattingly Fig. 2.10 "Current"
         %   curve; K1 from the object's wing AR/Lambda_LE_deg via
@@ -49,6 +52,8 @@ classdef AeroL1
             polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
         end
 
+        % TODO (8/14/2026): Another artefact of the subclass era. No longer necessary; relocate to the F-16 example if
+        % it isn't already there.
         function CLmax = get_CLmax(obj)
             CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_category, "CL_max_clean");
         end
@@ -74,7 +79,7 @@ classdef AeroL1
             regime = AeroL2.flight_regime(M);
             switch regime
                 case "subsonic"
-                    e_osw = AeroL2.oswald_eff(AR, Lambda_LE_deg);
+                    e_osw = AeroL2.oswald_eff(AR, Lambda_LE_deg); % TODO (8/13/2026): AeroL1 should not be using AeroL2. Move
                     K1    = AeroL2.K1_subsonic(e_osw, AR);
                 case "supersonic"
                     K1 = AeroL2.K1_supersonic(M, AR, Lambda_LE_deg);
@@ -83,6 +88,7 @@ classdef AeroL1
             end
         end
 
+        % TODO (8/13/2026): Why are we interpolating a curve? This is a toolbox.
         function v = interp_curve(mach_pts, val_pts, M)
             arguments
                 mach_pts (1,:) double {mustBeReal}
@@ -128,7 +134,7 @@ classdef AeroL1
                 aircraft_category (1,1) string
             end
             switch aircraft_category
-                case {"jet_fighter", "fighter"}
+                case {"jet_fighter", "fighter"} % TODO (8/13/2026): Add remaining aircraft classifications.
                     rowName = "fighter";          % Roskam Vol. I Table 3.1's own name
                 otherwise
                     rowName = aircraft_category;  % pass through; the caller validates

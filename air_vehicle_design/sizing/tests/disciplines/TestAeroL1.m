@@ -315,6 +315,8 @@ classdef TestAeroL1 < matlab.unittest.TestCase
             tc.verifyTrue(isa(F16AeroL1(f16a_spec_path(1)), 'handle'));
         end
 
+        % TODO (8/13/2026): This should'bve been removed a long time ago,
+        % since I thought we were ditching the Mattingly K1 tabulation.
         % ================================================================== %
         % DELIBERATELY-FAILING TODO (missing/placeholder citation) -- see
         % header. Expected to be RED in run_all_tests until resolved.
