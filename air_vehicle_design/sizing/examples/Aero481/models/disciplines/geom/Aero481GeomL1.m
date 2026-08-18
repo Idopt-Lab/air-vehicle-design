@@ -50,7 +50,7 @@ classdef Aero481GeomL1 < GeometryModelL1
         %L_fus_ft  FIXED published fuselage length, ft -- the tail-arm reference
         %   the T-S diagram reads via L_fus BEFORE the weight closure sets W_TO,
         %   so it must NOT depend on W_TO. Distinct from the W_TO-based
-        %   L_fuselage regression (get_L_fus, Raymer 6th ed. Table 6.3).
+        %   L_fuselage regression (get_L_fus_statistical, Raymer 6th ed. Table 6.3).
         L_fus_ft          = 50.5          % double; ft; publ. F-35A fuselage length [aero481_data.md Part I]. _TODO -- UNCITED. FIXED tail-arm reference; NOT the W_TO regression.
 
         %S_ht, S_vt  Tail-area write-back slots, ft^2, for TSDiagram.converge_W0
@@ -74,6 +74,7 @@ classdef Aero481GeomL1 < GeometryModelL1
     properties (Dependent)
         S_wet          % ft^2  total wetted area  [Roskam Vol. I Table 3.5 jet_fighter regression on W_TO] -- REPLACES A481 Swet=4*S (A1)
         L_fuselage     % ft    fuselage length    [Raymer 6th ed. Table 6.3 jet_fighter regression on W_TO]
+        AR_eq          %       equivalent aspect ratio [Raymer 7th ed. Table 4.1, jet-fighter (dogfighter) row]
 
         % --- T-S-diagram tail-resize planform members ------------------------ %
         % Arguments TSDiagram.converge_W0 passes to obj.tail.size(...); none
@@ -90,7 +91,7 @@ classdef Aero481GeomL1 < GeometryModelL1
         %   plus the requirements JSON (aero481_requirements.json). No silent
         %   defaults. The .geometry block supplies AR, S_ref, Lambda_LE_deg,
         %   n_engines; the top-level aircraft_category selects discipline-table
-        %   rows; M_max is the requirements design_mach, feeding GeomL1.get_AR_eq
+        %   rows; M_max is the requirements design_mach, feeding GeomL1.compute_AR_eq
         %   (Raymer 7th ed. Table 4.1).
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
@@ -117,20 +118,27 @@ classdef Aero481GeomL1 < GeometryModelL1
             val = obj.S_ref;
         end
 
-        function val = get_S_wet(obj, W_TO)
-            val = GeomL1.get_S_wet_statistical(obj, W_TO);
+        % ================================================================== %
+        % Computations that call the GeomL1 toolbox
+        % ================================================================== %
+        function val = get_whole_aircraft_S_wet_statistical(obj, W_TO)
+            val = GeomL1.compute_s_wet_regression(obj.aircraft_category, W_TO);
         end
 
-        function val = get_S_wet_statistical(obj, W_TO)
-            val = GeomL1.get_S_wet_statistical(obj, W_TO);
-        end
-
-        function val = get_L_fus(obj, W_TO)
-            val = GeomL1.get_L_fus(obj, W_TO);
+        function val = get_L_fus_statistical(obj, W_TO)
+            val = GeomL1.compute_l_fus_regression(obj.aircraft_category, W_TO);
         end
 
         function val = get_AR_eq(obj)
-            val = GeomL1.get_AR_eq(obj);
+            val = GeomL1.compute_AR_eq(obj.aircraft_category, obj.M_max);
+        end
+
+        % ================================================================== %
+        % getters 
+        % ================================================================== %
+
+        function v = get.AR_eq(obj)
+            v = obj.get_AR_eq();
         end
 
         % ================================================================== %
@@ -142,7 +150,7 @@ classdef Aero481GeomL1 < GeometryModelL1
         end
 
         function v = get.L_fuselage(obj)
-            v = obj.get_L_fus(obj.requireWTO('L_fuselage'));
+            v = obj.get_L_fus_statistical(obj.requireWTO('L_fuselage'));
         end
 
         % ================================================================== %

@@ -225,7 +225,7 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         % L_fuselage = 0.93 * W_TO^0.39 [Raymer 6th ed. Table 6.3 jet_fighter].
             geom = Aero481GeomL1(aero481_spec_path(1), aero481_requirements_path());
             expected = 0.93 * tc.W_TO_TEST^0.39;              % hand formula
-            received = geom.get_L_fus(tc.W_TO_TEST);
+            received = geom.get_L_fus_statistical(tc.W_TO_TEST);
             fprintf('\n    L_fuselage(44000) = %.4f ft (hand %.4f)\n', received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 1e-3, ...
                 'L_fuselage must be the Raymer Table 6.3 jet-fighter TOGW regression.');

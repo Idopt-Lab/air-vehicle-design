@@ -13,7 +13,6 @@ There is no planform.
 
 | Layer | Members |
 |---|---|
-| High-level — take the concrete object | `get_S_wet_statistical`, `get_L_fus`, `get_AR_eq`, `get_control_surface_fraction` |
 | Low-level — scalars and strings only | `compute_*` |
 | Constants | `lookup_*`, one per `compute_*` |
 
@@ -21,10 +20,10 @@ There is no planform.
 
 | Method | Returns | Source |
 |---|---|---|
-| `get_S_wet_statistical(obj, W_TO)` | total wetted area [ft²] | Roskam Vol. I Table 3.5 |
-| `get_L_fus(obj, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
-| `get_AR_eq(obj)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
-| `get_control_surface_fraction(obj, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
+| `compute_s_wet_regression(aircraft_category, W_TO)` | total wetted area [ft²] | Roskam Vol. I Table 3.5 |
+| `compute_l_fus_regression(aircraft_category, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
+| `compute_AR_eq(aircraft_category, M_max)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
+| `lookup_control_surface_fraction(aircraft_category, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
 
 **Tail sizing is not here.** `size_tail`, `compute_tail_volume_coeffs`,
 `lookup_tail_volume_coeffs`, `compute_tail_arm`, `compute_S_HT`, and `compute_S_VT` live in

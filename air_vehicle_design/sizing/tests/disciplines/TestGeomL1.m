@@ -40,7 +40,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±30% of Brandt reference to cover known regression scatter.
             expected = tc.BRANDT_SWET;   % 1371.09 ft^2 [Brandt Geom!B19; f16a_ground_truth.json]
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            received = g.get_S_wet_statistical(tc.TOGW);
+            received = g.get_S_wet(tc.TOGW);
             fprintf('\n    S_wet_statistical: received = %.2f ft^2,  expected (Brandt) = %.2f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.30, ...
@@ -53,7 +53,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±20% of USAF TO reference value.
             expected = tc.TO_LFUS;   % 47.50 ft [T.O. 1F-16A-1; f16a_ground_truth.json]
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            received = g.get_L_fus(tc.TOGW);
+            received = g.get_L_fus_statistical(tc.TOGW);
             fprintf('\n    get_L_fus:         received = %.2f ft,    expected (TO) = %.2f ft\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.20, ...
@@ -65,7 +65,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Both calls should return bit-identical results.
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             via_base = g.get_S_wet(tc.TOGW);
-            via_impl = g.get_S_wet_statistical(tc.TOGW);
+            via_impl = g.get_whole_aircraft_S_wet_statistical(tc.TOGW);
             fprintf('\n    get_S_wet (base):  %.6f ft^2\n', via_base);
             fprintf('    get_S_wet_stat:    %.6f ft^2\n', via_impl);
             tc.verifyEqual(via_base, via_impl, 'AbsTol', 1e-10, ...
@@ -78,8 +78,8 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testSwetMonotonicallyIncreasing(tc)
         % Positive regression exponent d=0.7506 → heavier ⟹ more wetted area.
             g  = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            S1 = g.get_S_wet_statistical(tc.W_TO_2);   % W_TO = 20000 lbf
-            S2 = g.get_S_wet_statistical(tc.TOGW);     % W_TO = 31377 lbf
+            S1 = g.get_S_wet(tc.W_TO_2);   % W_TO = 20000 lbf
+            S2 = g.get_S_wet(tc.TOGW);     % W_TO = 31377 lbf
             fprintf('\n    S_wet at W_TO=20000: %.2f ft^2\n', S1);
             fprintf('    S_wet at W_TO=31377: %.2f ft^2  (should be larger)\n', S2);
             tc.verifyGreaterThan(S2, S1, ...
@@ -91,14 +91,14 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testUnknownCategoryThrows(tc)
             g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g.aircraft_category = "flying_car";
-            tc.verifyError(@() g.get_S_wet_statistical(tc.TOGW), ...
+            tc.verifyError(@() g.get_S_wet(tc.TOGW), ...
                 'GeomL1:unknownCategory');
         end
 
         function testUnknownCategoryLfusThrows(tc)
             g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g.aircraft_category = "flying_car";
-            tc.verifyError(@() g.get_L_fus(tc.TOGW), ...
+            tc.verifyError(@() g.get_L_fus_statistical(tc.TOGW), ...
                 'GeomL1:unknownCategory');
         end
 
@@ -174,14 +174,14 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testControlSurfaceFractionElevator(tc)
         % Raymer 7th ed. Table 6.5 "Jet fighter" row: C_e/c = 0.30
         % (all-moving-tail row value, not a hinged-elevator fraction).
-            received = GeomL1.compute_control_surface_fraction('jet_fighter', 'elevator');
+            received = GeomL1.lookup_control_surface_fraction('jet_fighter', 'elevator');
             fprintf('\n    elevator C_e/c: received = %.4f,  expected = 0.3000\n', received);
             tc.verifyEqual(received, 0.30, 'AbsTol', 1e-9);
         end
 
         function testControlSurfaceFractionRudder(tc)
         % Raymer 7th ed. Table 6.5 "Jet fighter" row: C_r/c = 0.33.
-            received = GeomL1.compute_control_surface_fraction('jet_fighter', 'rudder');
+            received = GeomL1.lookup_control_surface_fraction('jet_fighter', 'rudder');
             fprintf('\n    rudder C_r/c: received = %.4f,  expected = 0.3300\n', received);
             tc.verifyEqual(received, 0.33, 'AbsTol', 1e-9);
         end
@@ -190,13 +190,13 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % High-level get_control_surface_fraction(obj, surface) reads
         % obj.aircraft_category and delegates to the same lookup.
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            received = GeomL1.get_control_surface_fraction(g, 'elevator');
+            received = GeomL1.lookup_control_surface_fraction(g.aircraft_category, 'elevator');
             fprintf('\n    get_control_surface_fraction(elevator): received = %.4f\n', received);
             tc.verifyEqual(received, 0.30, 'AbsTol', 1e-9);
         end
 
         function testUnknownCategoryControlSurfaceThrows(tc)
-            tc.verifyError(@() GeomL1.compute_control_surface_fraction('flying_car', 'elevator'), ...
+            tc.verifyError(@() GeomL1.lookup_control_surface_fraction('flying_car', 'elevator'), ...
                 'GeomL1:unknownCategory');
         end
 
@@ -260,7 +260,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         %   obtain a cited aileron C_a/c value from Raymer 7th ed. Table 6.5
         %   (or an equivalent cited source) and add it to
         %   GeomL1.lookup_control_surface_fraction's 'jet_fighter' case.
-            val = GeomL1.compute_control_surface_fraction('jet_fighter', 'aileron');
+            val = GeomL1.lookup_control_surface_fraction('jet_fighter', 'aileron');
             tc.verifyGreaterThan(val, 0, ...
                 'Aileron chord fraction should be a positive number once Raymer Table 6.5 data is supplied.');
         end

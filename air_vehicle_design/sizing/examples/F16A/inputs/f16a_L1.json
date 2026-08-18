@@ -1,12 +1,11 @@
 {
-  "_comment": "F-16A Block 10/15 Level-1 inputs (type/statistical). Read by F16GeomL1, F16AeroL1, F16PropL1, F16WeightsL1. Full docs: F16GeomL1.md, AeroL1.md, F16PropL1.md, F16WeightsL1.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
+  "_comment": "F-16A Block 10/15 Level-1 inputs (type/statistical). Read by F16GeomL1, F16AeroL1, F16PropL1, F16WeightsL1. Full docs: F16GeomL1.md, AeroL1.md, F16PropL1.md, F16WeightsL1.md, docs/*_parameter_usage.md",
   "_cite": "Main!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly: Aircraft Engine Design, 2nd edition; todo = VnV/BrandtF16A/todo.md.",
 
   "aircraft_category": "jet_fighter",
   "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Roskam I Tbl 3.5 (S_wet) / Raymer Tbl 6.3 (L_fus) / Raymer 7th Tbl 4.1 (AR_eq) / Raymer Tbl 3.1 + Roskam I Tbl 2.15 (empty weight) / Roskam I Tbl 3.1 (CLmax) / Raymer Tbl 12.3 (Cfe) rows. Those tables name their categories differently (Roskam's CLmax table says 'fighter'), so each lookup translates this canonical value to its own table's row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key: the row name is what the textbook prints.",
 
   "geometry": {
-    "_note": "★ NO PLANFORM INPUTS AT L1. M_max = 2.0 was DELETED here (Phase 4, 2026-07-25): it was the THIRD copy of the design max Mach, which now lives once in examples/F16A/f16a_requirements.json as design_mach [Brandt Main! aircraft.Mmax; GroundTruth/f16a_geometry.json:9]. It is still CONSUMED -- F16GeomL1 feeds it to GeomL1.get_AR_eq (Raymer 7th Tbl 4.1, GeomL1.m:121-129) -- so this is a consolidation, not a removal. The repoint has LANDED: F16GeomL1(json_path, req_path) reads design_mach from the requirements file. todo 2026-07-25 Phase 4 §P4-14.",
     "engine": {
       "n_engines": 1,
       "_n_engines_src": "[Brandt Main!B28 = 1; GroundTruth/f16a_geometry.json .engine.n_engines]. Discrete engine count, exposed on F16GeomL1 (geom.n_engines) purely so mission analysis can read it by DI at every fidelity (it is consumed by the mission takeoff warmup fixed-fuel term, warmup_fuel_per_engine_lb * n_engines). Matches f16a_L3.json .geometry.engine.n_engines; not used by any L1 geometry regression."
@@ -54,27 +53,27 @@
   },
 
   "weights": {
-    "_src": "W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Regression coefficients are aircraft_category-selected toolbox Constants (Raymer Tbl 3.1 / Roskam I Tbl 2.15); edition/table drift: todo 2026-07-24 §3c. W_energy is NOT an input: internal fuel is a mission-analysis OUTPUT (Brandt Wt!B6 = W_TO - payload - OEW is back-calculated), set by the sizing loop.",
+    "_src": "W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores].",
     "W_payload_fixed": 700,
     "W_payload_expendable": 4400
   },
 
   "subsystems": {
-    "_note": "NOT YET IMPLEMENTED -- no F16SubsystemsL1 class exists yet (docs/subplans/09_subsystems.md, Casey-approved, scribe-complete 2026-07-31; io pass 2026-07-31). Tabulation-only inputs, no geometry (Nicolai & Carichner Ch. 8 style). Fuel-packaging-factor table (subplan item 1) is NOT usable at L1 (no geometric raw volume exists yet) -- it first applies at L2, see f16a_L2.json .subsystems.fuel.packaging_factor. No landing-gear block at L1 by design (subplan Fidelity split: a bay-volume estimate needs a fuselage envelope, which doesn't exist before GeomL2).",
+    "_note": "NOT YET IMPLEMENTED -- no F16SubsystemsL1 class exists yet",
 
     "fuel": {
       "fuel_type": "JP-8",
       "density_lb_per_gal": 6.7,
-      "_cite_fuel": "[Nicolai & Carichner, Table 8.6, p.210] JP-8 = 6.7 lb/gal (50 lb/ft3); docs/subplans/09_subsystems.md Equations & Citations §2. DECIDED (Casey, 2026-08-03): JP-8, not JP-4 -- T.O. 1F-16A-1 states the F-16's own internal fuel load AS JP-8 by default ('Total internal fuel ~= 6,950 lb (JP-8)... JP-4 ~= 5,650-5,930 lb', docs/reference_extracts/usaf_f16_data.md:86), i.e. JP-8 is the aircraft's primary/nominal fuel per its own flight manual, not an arbitrary pick off the generic Nicolai table. This also resolves the cross-discipline density mismatch the io agent flagged: f16a_L3.json's pre-existing weights.systems.V_t=940 gal already implies a JP-8-like density (~6.7 lb/gal), not JP-4's 6.5. The fuel-type -> density LOOKUP TABLE itself (JP-4 6.5 / JP-5 6.8 / JP-8 6.7 / Aviation gas 6.0 lb/gal) is a Nicolai Table 8.6 published constant and belongs in the future SubsystemsL1 toolbox code as a Constant, not duplicated here -- same JSON/code split as AeroL1.CLmax_table (only the selector, aircraft_category, lives in JSON; the full table lives in code)."
+      "_cite_fuel": "[Nicolai & Carichner, Table 8.6, p.210] JP-8 = 6.7 lb/gal (50 lb/ft3);"
     },
 
     "avionics": {
       "aircraft_category_table_row": "Fighters",
       "_aircraft_category_table_row_note": "Translates the top-level aircraft_category='jet_fighter' flag to [Raymer 6th ed., Ch. 11, Table 11.6 'Avionics Weights,' p.375]'s own printed row name 'Fighters' (range 0.03-0.08 of W_empty) -- same category-to-row-name translation pattern as AeroL1.to_CLmax_table_row; do not rename this row to match the top-level key. The full 8-row table belongs in the future SubsystemsL1 toolbox code, not duplicated here.",
       "weight_fraction": 0.055,
-      "_cite_weight_fraction": "[Raymer 6th ed., Ch. 11, Table 11.6, p.375] Fighters row = 0.03-0.08 x W_empty (docs/subplans/09_subsystems.md Equations & Citations §3). DECIDED (Casey, 2026-08-03): use the midpoint, 0.055. (Legacy code's 0.03, the low end of the same correct range, was the other option considered -- not used.)",
+      "_cite_weight_fraction": "[Raymer 6th ed., Ch. 11, Table 11.6, p.375] Fighters row = 0.03-0.08 x W_empty ",
       "density_lb_per_ft3": 37.5,
-      "_cite_density_lb_per_ft3": "[Raymer 6th ed., Ch. 11, p.375, prose immediately after Table 11.6]: 'volume can be estimated assuming that avionics has an average density of about 30-45 lb/ft3.' 37.5 = range midpoint. DECIDED fidelity split (Casey, 2026-07-31; docs/subplans/09_subsystems.md Equations & Citations §4): L1 stays on Raymer end-to-end (fraction + density from the same Table 11.6 page, no geometry needed); L2/L3 switch to Nicolai's flat 45 lb/ft3 -- see f16a_L2.json .subsystems.avionics."
+      "_cite_density_lb_per_ft3": "[Raymer 6th ed., Ch. 11, p.375, prose immediately after Table 11.6]: 'volume can be estimated assuming that avionics has an average density of about 30-45 lb/ft3.' 37.5 = range midpoint. "
     }
   }
 }

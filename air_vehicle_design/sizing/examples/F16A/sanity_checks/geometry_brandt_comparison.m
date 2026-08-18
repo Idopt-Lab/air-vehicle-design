@@ -88,7 +88,7 @@ g3 = F16GeomL3(f16a_spec_path(3), prop);
 
 % ── L1 statistical regression ──────────────────────────────────────────── %
 sw_l1   = g1.get_S_wet(W_TO);
-lfus_l1 = g1.get_L_fus(W_TO);
+lfus_l1 = g1.get_L_fus_statistical(W_TO);
 
 % ── Wing/HT/VT S_wet: two formula options each ─────────────────────────── %
 sw_wing_roskam = g2.get_S_wet_wing();                                        % OFFICIAL: Roskam Eq. 12.1
