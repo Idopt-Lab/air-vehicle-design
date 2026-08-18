@@ -116,3 +116,63 @@ No `VnV/BrandtF16A/todo.md` entries were logged for this pass — the B777 examp
 not Brandt-sourced, so the Brandt-internal-discrepancy rule does not apply. The metabook-internal
 discrepancies (D1, D2, D3, D5) are already logged in `metabook_data.md` "Known discrepancies" with
 user dispositions; this pass only consumes those dispositions, it does not add to them.
+
+---
+
+## D10 (2026-08-17) — toolbox-source the derivable L1 aero inputs
+
+**Problem.** `b777_L1.json` `.aerodynamics` HARDCODES values the shared aero toolboxes can already
+compute: `Cfe = 0.0026`, `e_clean = 0.85`, and the entire six-row `config_polars` table (CD0 / K1 /
+CLmax per config). This diverges from the F-16 convention: `F16AeroL1` hardcodes NO per-config number
+— it looks every ΔCD0 / e / CLmax up from `AeroL1.Delta_CD0` (Roskam Table 3.6) and
+`AeroL1.CLmax_table` (Roskam Table 3.1) through its private `roskam_*` helpers. The B777's hardcoded
+table is redundant with, and can drift from, those same toolbox Constants.
+
+**Resolution.** Route the derivable quantities through the shared toolboxes; `B777AeroL1` gains
+private lookup helpers mirroring `F16AeroL1`'s `roskam_*`. NO edit to `AeroL1.m` / `AeroL2.m` — both
+are read-only shared toolboxes; the B777 reads the SAME `AeroL1.Delta_CD0` Constant and the SAME
+`AeroL2.lookup_Cfe` / `AeroL2.CD0_from_Cf` statics.
+
+| Quantity | Was (JSON hardcode) | Now (derived) | Citation |
+|---|---|---|---|
+| `Cfe` | 0.0026 | `AeroL2.lookup_Cfe("civil_transport")` | [Raymer Table 12.3] |
+| `e_clean` + per-config e | 0.85 / 0.80 / 0.75 (via K1 rows) | UPPER bound of `AeroL1.Delta_CD0` e_osw column | [Roskam Table 3.6] |
+| per-config ΔCD0 | config_polars CD0 − clean CD0 | UPPER bound of `AeroL1.Delta_CD0` ΔCD0 column, 6→4 map | [Roskam Table 3.6] |
+| clean CD0 | 0.01597 (stored) | `AeroL2.CD0_from_Cf(Cfe, S_wet, S_ref)` live | [metabook Eq. 4.8 = Raymer Eq. 12.23] |
+| per-config CLmax | config_polars CLmax | the three `CLmax_*` overrides; approach = 0.85·landing | [Roskam Table 3.1] — USER |
+
+**The ONE design choice = UPPER bound of the Roskam Table 3.6 ranges.** `AeroL1.Delta_CD0` gives ΔCD0
+and e_osw as ranges. `F16AeroL1` reads the MEAN of each range; `B777AeroL1` reads the UPPER bound
+(metabook Example 4.2 convention). Both aircraft read the SAME toolbox Constant — the difference is
+the statistic B777's private helpers take, not a new table. Upper bounds: clean e = 0.85; takeoff
+ΔCD0 = 0.020 & e = 0.80; landing ΔCD0 = 0.075 & e = 0.75; gear ΔCD0 = 0.025. The 6→4 config map (six
+constraint configs onto four Roskam rows) adds the `landing_gear` upper bound (0.025) onto the flap
+row for gear-down configs; approach is the metabook Climb-6 mean of the two gear-down rows.
+
+**The `jet_transport → civil_transport` Cfe translation.** The canonical top-level
+`aircraft_category` is `jet_transport`, but `AeroL2.lookup_Cfe` prints its Raymer Table 12.3 row as
+`civil_transport`. `B777AeroL1` translates the canonical key to that row name (mirroring
+`AeroL1.to_CLmax_table_row`'s `jet_fighter → fighter`). Do NOT rename the table row — the row name is
+what Raymer Table 12.3 prints.
+
+**What STAYS an input.** The three physical CLmax values (`CLmax_clean = 0.9`, `CLmax_takeoff = 2.0`,
+`CLmax_landing = 2.6`) are a USER decision (2026-08-14) that deliberately deviates from the Roskam
+`transport_jet` table row, so they REMAIN genuine JSON inputs — the only surviving aero inputs.
+Approach CLmax derives as 0.85·`CLmax_landing`. These three keys already exist in the JSON but were
+read by no code; D10 makes them the live CLmax-override inputs.
+
+**Dead keys removed by the io phase.**
+- `aerodynamics.Cfe`, `aerodynamics.e_clean`, `aerodynamics.config_polars` (all now derived).
+- `propulsion.T_per_engine` (read by no `.m` file — grep-verified).
+- `weights.W0_baseline`, `weights.S_baseline`, `weights.T_baseline_per_engine` (deleted-`B777WeightsL1`
+  delta-model inputs, read by no `.m` file — grep-verified).
+
+**Residual concern (flagged, not smoothed).** The derived K1 differs from the removed `config_polars.K1`
+rows in the 4th–5th decimal: clean 0.03821 vs 0.03815, takeoff 0.04060 vs 0.04054, landing 0.04331 vs
+0.04324. Cause: the derived path uses the EXACT Table 3.6 upper-bound e (0.85 / 0.80 / 0.75); the
+removed rows used the metabook's rounded-up "e implied" (0.8515 / 0.8013 / 0.7513). The derived
+0.03821 is what the current `e_clean = 0.85` input ALREADY yields through `drag_polar` (documented in
+the class header), while `config_polars.clean.K1 = 0.03815` disagrees with that same input — so D10
+removes a PRE-EXISTING JSON inconsistency rather than introducing one. The shift is ≈ +0.16 % on K1,
+well inside the L1 constraint tolerances. CD0 reproduces exactly. Cross-reference: `inputs/b777_L1.md`
+§3 (esp. §3.1 as-built table and §3.5 K1 residual), `models/disciplines/aero/B777AeroL1.md` §2/§4.
