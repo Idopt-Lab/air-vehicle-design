@@ -29,6 +29,8 @@ classdef AeroL3
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
+        % if it hasn't been done already.
         function polar = drag_polar(obj, state)
         %DRAG_POLAR  L3 drag polar {CD0, K1, K2} at the flight state.
         %   CD0 from the component buildup (obj.get_CD0_buildup, dynamically
@@ -57,6 +59,8 @@ classdef AeroL3
             polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
         end
 
+        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
+        % if it hasn't been done already.
         function val = get_CD0_buildup(obj, state)
             M = state.mach;
             if ~(M > 0)
@@ -97,12 +101,16 @@ classdef AeroL3
             Re = AeroL2.compute_Re(state, l_ref);
         end
 
+        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
+        % if it hasn't been done already.
         function e = get_e_osw(obj)
         %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49); reads
         %   obj.AR and obj.Lambda_LE_deg (injected geometry).
             e = AeroL2.oswald_eff(obj.AR, obj.Lambda_LE_deg);
         end
 
+        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
+        % if it hasn't been done already.
         function val = get_K1(obj, M)
         %GET_K1  Induced-drag factor at Mach M (subsonic/supersonic branch).
             regime = AeroL2.flight_regime(M);
@@ -117,12 +125,16 @@ classdef AeroL3
             end
         end
 
+        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
+        % if it hasn't been done already.
         function val = get_K2(obj, K1_sub, M)
             CL_alpha_M = obj.get_CL_alpha(M);
             CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
             val        = AeroL2.K2_value(K1_sub, CL_minD, M);
         end
 
+        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
+        % if it hasn't been done already.
         function val = get_CL_alpha(obj, M)
             val = AeroL2.get_CL_alpha(obj, M);
         end

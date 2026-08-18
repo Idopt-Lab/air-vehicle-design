@@ -25,18 +25,23 @@ classdef PropL2
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, appears to be an artefact from when the toolboxes were subclasses
+        % of enforcers. This is no longer necessary, and should be moved to the F16 example class if
+        % if hasn't already.
         function alpha = get_thrust_lapse(obj, state)
         %GET_THRUST_LAPSE  AB/max lapse [Mattingly Eq. 2.54a].
         %   Used with T_SL (AB thrust) for constraint analysis and sizing.
             alpha = PropL2.thrust_lapse_AB(state.delta_0, state.theta_0, obj.TR);
         end
 
+        % TODO (8/14/2026): Same as with "get_thrust_lapse."
         function alpha = get_thrust_lapse_mil(obj, state)
         %GET_THRUST_LAPSE_MIL  Mil-power lapse [Mattingly Eq. 2.54b].
         %   Used with T_SL_mil for mil-power constraints.
             alpha = PropL2.thrust_lapse_mil(state.delta_0, state.theta_0, obj.TR);
         end
 
+        % TODO (8/14/2026): Same as with "get_thrust_lapse" and "get_thrust_lapse_mil."
         function alpha = get_thrust_lapse_AB(obj, state)
         %GET_THRUST_LAPSE_AB  Afterburner lapse [Mattingly Eq. 2.54a].
             alpha = PropL2.thrust_lapse_AB(state.delta_0, state.theta_0, obj.TR);
@@ -54,6 +59,7 @@ classdef PropL2
             end
         end
 
+        % TODO (8/14/2026): Artefact of enforcement.
         function c_t = get_TSFC(obj, state)
         %GET_TSFC  Uninstalled mil-power TSFC (default for Breguet range/endurance).
         %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
@@ -62,6 +68,7 @@ classdef PropL2
             c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
         end
 
+        % TODO (8/14/2026): Artefact of enforcment.
         function c_t = get_TSFC_mil(obj, state)
         %GET_TSFC_MIL  Uninstalled mil-power TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55a]
         %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
@@ -69,6 +76,7 @@ classdef PropL2
             c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
         end
 
+        % TODO (8/14/2026): Artefact of enforcement.
         function c_t = get_TSFC_AB(obj, state)
         %GET_TSFC_AB  Uninstalled afterburner TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55b]
         %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
@@ -85,6 +93,7 @@ classdef PropL2
         %   VnV/BrandtF16A/todo.md 2026-07-24 entry 4.
         % ------------------------------------------------------------------ %
 
+        % TODO (8/14/2026): Artefact of enforcement.
         function c_t = get_TSFC_installed(obj, state)
         %GET_TSFC_INSTALLED  Installed mil-power TSFC in 1/hr.
         %   = uninstalled mil TSFC × obj.TSFC_install_factor.
@@ -92,6 +101,7 @@ classdef PropL2
             c_t = PropL2.get_TSFC_mil(obj, state) * obj.TSFC_install_factor;
         end
 
+        % TODO (8/14/2026): Artefact of enforcement.
         function c_t = get_TSFC_AB_installed(obj, state)
         %GET_TSFC_AB_INSTALLED  Installed afterburner TSFC in 1/hr.
         %   = uninstalled AB TSFC × obj.TSFC_install_factor.

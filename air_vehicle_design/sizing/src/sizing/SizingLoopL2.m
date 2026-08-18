@@ -20,6 +20,9 @@ classdef SizingLoopL2 < handle
 %
 %   Flat orchestrator, not a discipline -- see SizingLoopL1.m's header.
 
+    % TODO (8/3/2026): You could move this section (72 - 100) (constructor and
+    % properties) into some sort of base enforcer class that is also accessible
+    % to subclasses. Apply this to SizingLoopL1, too.
     properties (SetAccess = private)
         aero    % (1,1) AerodynamicsBase
         prop    % (1,1) PropulsionBase
@@ -125,8 +128,11 @@ classdef SizingLoopL2 < handle
                 % 4. Re-solve the design point, warm-started at the
                 %    previous iterate [Slide 8: point-performance checks
                 %    each iteration]. Errors loudly if infeasible.
-                [WS, TW] = obj.con.optimal_point_continuous([WS, TW]);
-                T_SL_new = TW * W0;
+                [WS, TW] = obj.con.optimal_point_continuous([WS, TW]); % TODO (8/10/2026): Is this ACTUALLY recomputing the optimum point, or is it just checking if the  point is phyusically feasible? It doesn't seem like it's actually recomputing it!
+                % TODO (8/13/2026): Remember, if the S_ref is changing,
+                % then all the wing dimensions should change from that.
+                % Ensure that these updates are firing.
+                T_SL_new = TW * W0; % TODO (8/13/2026): This isn't even using the new T_SL, and this STILL BOTHERS ME.
                 if ~(isfinite(T_SL_new) && T_SL_new > 0)
                     error('SizingLoopL2:badThrust', ...
                         ['Constraint solve returned a non-physical thrust demand ', ...

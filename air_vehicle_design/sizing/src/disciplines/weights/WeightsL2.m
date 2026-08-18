@@ -20,6 +20,7 @@ classdef WeightsL2
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function oew = OEW(obj, W_TO)
             W_w   = WeightsL2.weight_wing(obj, W_TO);
             W_t   = WeightsL2.weight_tail(obj, W_TO);
@@ -30,11 +31,13 @@ classdef WeightsL2
             oew   = W_w + W_t.HT + W_t.VT + W_f + W_lg + W_ie + W_ale;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_wing(obj, ~)
             rho = WeightsL2.wing_unit_weight(obj.aircraft_category);
             W   = rho * obj.S_w;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_tail(obj, ~)
             rho_ht = WeightsL2.HT_unit_weight(obj.aircraft_category);
             rho_vt = WeightsL2.VT_unit_weight(obj.aircraft_category);
@@ -42,20 +45,24 @@ classdef WeightsL2
             W.VT = rho_vt * obj.S_vt;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_fuselage(obj, ~)
             rho = WeightsL2.fus_unit_weight(obj.aircraft_category);
             W   = rho * obj.S_wet_fus;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_landing_gear(obj, W_TO)
             f = WeightsL2.LG_fraction(obj.aircraft_category);
             W = f * W_TO;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_installed_engine(obj)
             W = 1.3 * obj.N_en * obj.W_en;
         end
 
+        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
         function W = weight_all_else_empty(~, W_TO)
             W = 0.17 * W_TO;
         end

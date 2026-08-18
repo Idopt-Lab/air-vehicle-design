@@ -21,6 +21,9 @@ classdef GeomL3
         % exception: it assembles the area-ruling statics further down.
         % ================================================================== %
 
+        % TODO (8/14/2026): Again, this wrapper isn't necessary. I expect the students/users to piece their
+        % design's necessary functions together themselves. Having this wrapper implicitly enforces certain design
+        % characteristics, when we must remain agnostic to design features. The individual components are fine.
         function val = get_S_wet(obj)
             val = GeomL3.get_S_wet_wing(obj) + GeomL3.get_S_wet_HT(obj) + ...
                   GeomL3.get_S_wet_VT(obj)   + GeomL3.get_S_wet_fuselage(obj) + ...
@@ -68,6 +71,8 @@ classdef GeomL3
         end
 
         % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+        % TODO (7/28/2026): This seems too specific in this form. I like the idea of having conic/cross sections, but it should be generic.
+        % Cross sections that the toolbox can focus on: fuselage & main wings.
         function val = get_Amax(obj)
             % Max cross-sectional area of the whole aircraft (fuselage + wings).
             [x, w, h] = GeomL3.denormalize_frames(obj.frames_normalized, ...
@@ -101,6 +106,15 @@ classdef GeomL3
         % other equation is reused from GeomL2 / GeometryBase.
         % ================================================================== %
 
+        % TODO (8/14/2026): We should have individual "compute" functions that compute
+        % the wetted areas of generic shapes of arbitrary dimensions.
+        % Decompose this into functions that compute the wetted/surface areas of these shapes. Syntax: Shape(arguments/dimensions)
+        % Cone(radius, length)
+        % Pyramid(face_side_length1, face_side_length2, face_side_length3, face_side_length4, height)
+        % Sphere(radius)
+        % Cylinder(radius, length)
+        % Oval(width, height, length)
+        % Note: The difference between this and L3 is that L3 SHOULD/WILL be more focused on cross-section and stations.
         function [x, w, h] = denormalize_frames(frames_normalized, L_fus, W_max, H_max)
             arguments
                 frames_normalized (:,3) double
@@ -143,6 +157,7 @@ classdef GeomL3
             val = c_root - (span_clipped/span_root_to_tip) * (c_root - c_tip);
         end
 
+        % TODO (8/14/2026): Include "lifting" in the name, to specifiy that this is for "lifting_surfaces."
         function A = compute_surface_cs_area(x, Xexp, c_exp_root, c_tip, ...
                                              G_hs_exp, sweep_LE_deg, tc)
         %COMPUTE_SURFACE_CS_AREA  Cross-section [ft^2] contributed by one
@@ -181,6 +196,7 @@ classdef GeomL3
                         .* (1 - cos(2*pi*xi(active))) / DIVISOR;
         end
 
+        % TODO (8/14/2026): Unsourced.
         function val = compute_engine_length(D_engine)
             arguments
                 D_engine (1,1) double {mustBePositive}
@@ -202,6 +218,8 @@ classdef GeomL3
         end
 
         % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+        % TODO (8/14/2026): Still seems too design-specific to be inside this toolbox. I don't like how it references Brandt, because
+        % I want the toolboxes to be independent from Brandt as much as possible.
         function val = compute_Amax_area_ruled(A_total_stations, n_engines, D_engine)
             arguments
                 A_total_stations (:,1) double
