@@ -17,7 +17,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 %     Lifting surfaces (uniform tc, official-alternate): Brandt F-16A
 %       workbook, Geom sheet, cell B13 -- S_wet = S_exposed*(1.977+0.52*tc)
 %     Lifting surfaces (variable root/tip tc, OFFICIAL as of 2026-07-22):
-%       Roskam, Airplane Design Vol. II, Eq. 12.1 (see compute_roskam_planform
+%       Roskam, Airplane Design Vol. II, Eq. 12.1 (see compute_S_wet_planform_roskam
 %       tests below) -- get_S_wet_wing/HT/VT delegate to this formula, not
 %       the uniform-tc one, per GeomL2.md's 2026-07-22 resolution.
 %     Fuselage (official): Roskam, Airplane Design Vol. II, Eq. 12.3
@@ -39,7 +39,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 %     Duct:      155.57 ft^2   (frustum degenerates to cylinder, D=D_nacelle=3.537 ft)
 %     Total:    1466.77 ft^2   (Brandt Main!L3 = 1371.09, +7.0%)
 %   NOTE: as of the 2026-07-22 merge, get_S_wet_wing/HT/VT are computed via
-%   compute_roskam_planform (Roskam Eq. 12.1), NOT compute_wet_planform
+%   compute_S_wet_planform_roskam (Roskam Eq. 12.1), NOT compute_S_wet_planform_raymer
 %   (Brandt's uniform-tc formula) -- the wing/HT/VT tests below still pass
 %   against Brandt's loose tolerances either way (both formulas agree to
 %   within a percent or two for this aircraft's thin, near-uniform sections).
@@ -91,7 +91,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % Difference is the equivalent-diameter approximation (~8%).
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = tc.BRANDT_FUS_HIGHFI;   % [Brandt Geom!D23; f16a_ground_truth.json]
-            received = g.get_S_wet_fuselage();
+            received = g.S_wet_fuselage;   % Mod (08/19/2026) (Claude)
             fprintf('\n    fuselage S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.1, ...
@@ -106,19 +106,20 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         %   HT/VT diverge because this framework's S_exposed_HT/VT inputs
         %   are close to but not identical to Brandt's own exposed-planform
         %   figures. NOTE (2026-07-22): get_S_wet_wing/HT/VT now compute via
-        %   compute_roskam_planform (Roskam Eq. 12.1, variable root/tip tc),
-        %   not compute_wet_planform (Brandt's uniform-tc formula) -- the
+        %   compute_S_wet_planform_roskam (Roskam Eq. 12.1, variable root/tip tc),
+        %   not compute_S_wet_planform_raymer (Brandt's uniform-tc formula) -- the
         %   loose tolerances below were set for the old formula's output but
         %   still comfortably bound the new formula's output too, since both
         %   formulas agree to within ~2% for this aircraft's thin sections.
 
         function testWingSwet(tc)
-        % Roskam Eq. 12.1 (compute_roskam_planform), S_exposed_wing≈196.23,
+        % Roskam Eq. 12.1 (compute_S_wet_planform_roskam), S_exposed_wing≈196.23,
         % tc_r=tc_t=0.04, lambda=0.2275 -> ≈396.38 ft^2.
         % Brandt:  392.020 ft^2  [Geom!B14] -- tight agreement (~1.1%).
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = tc.BRANDT_SWET_WING;   % [Brandt Geom!B14; f16a_ground_truth.json]
-            received = g.get_S_wet_wing();
+            % Mod (08/18/2026) (Claude) -- Option B: call the toolbox.
+            received = GeomL2.compute_S_wet_planform_roskam(g.S_exposed_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing);
             fprintf('\n    wing S_wet: received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.03, ...
@@ -126,12 +127,13 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         end
 
         function testHTSwet(tc)
-        % Roskam Eq. 12.1 (compute_roskam_planform), S_exposed_ht≈49.85,
+        % Roskam Eq. 12.1 (compute_S_wet_planform_roskam), S_exposed_ht≈49.85,
         % tc_r=0.060, tc_t=0.035, lambda=0.390 -> ≈101.39 ft^2.
         % Brandt:  99.585 ft^2  [Geom!B16] -- loose tolerance; see header note.
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = tc.BRANDT_SWET_HT;   % [Brandt Geom!B16; f16a_ground_truth.json]
-            received = g.get_S_wet_HT();
+            % Mod (08/18/2026) (Claude) -- Option B: call the toolbox.
+            received = GeomL2.compute_S_wet_planform_roskam(g.S_exposed_ht, g.tc_r_ht, g.tc_t_ht, g.lambda_ht);
             fprintf('\n    HT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.35, ...
@@ -139,12 +141,13 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         end
 
         function testVTSwet(tc)
-        % Roskam Eq. 12.1 (compute_roskam_planform), S_exposed_vt≈40.89,
+        % Roskam Eq. 12.1 (compute_S_wet_planform_roskam), S_exposed_vt≈40.89,
         % tc_r=0.053, tc_t=0.030, lambda=0.437 -> ≈83.14 ft^2.
         % Brandt:  81.689 ft^2  [Geom!B17] -- loose tolerance; see header note.
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             expected = tc.BRANDT_SWET_VT;   % [Brandt Geom!B17; f16a_ground_truth.json]
-            received = g.get_S_wet_VT();
+            % Mod (08/18/2026) (Claude) -- Option B: call the toolbox.
+            received = GeomL2.compute_S_wet_planform_roskam(g.S_exposed_vt, g.tc_r_vt, g.tc_t_vt, g.lambda_vt);
             fprintf('\n    VT S_wet:   received = %.4f ft^2,  Brandt = %.4f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.4, ...
@@ -180,9 +183,12 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % sum only four components (wing+HT+VT+fuselage) and failed once
         % the duct term was added to get_S_wet's own aggregation.
             g      = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            manual = g.get_S_wet_wing() + g.get_S_wet_HT() + ...
-                     g.get_S_wet_VT()  + g.get_S_wet_fuselage() + ...
-                     g.get_S_wet_duct();
+            % Mod (08/18/2026) (Claude) -- Option B: call the toolbox.
+            manual = GeomL2.compute_S_wet_planform_roskam(g.S_exposed_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing) + ...
+                     GeomL2.compute_S_wet_planform_roskam(g.S_exposed_ht, g.tc_r_ht, g.tc_t_ht, g.lambda_ht) + ...
+                     GeomL2.compute_S_wet_planform_roskam(g.S_exposed_vt, g.tc_r_vt, g.tc_t_vt, g.lambda_vt) + ...
+                     g.S_wet_fuselage + ...   % Mod (08/19/2026) (Claude)
+                     GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct);
             via_method = g.get_S_wet();
             fprintf('\n    get_S_wet():      %.6f ft^2\n', via_method);
             fprintf('    component sum:    %.6f ft^2\n', manual);
@@ -220,22 +226,22 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
             % (a) nonzero + consistent with the method immediately
             tc.verifyNotEqual(g.S_wet, 0, 'obj.S_wet must not be 0.');
-            tc.verifyNotEqual(g.S_wet_wing, 0, 'obj.S_wet_wing must not be 0.');
-            tc.verifyNotEqual(g.S_wet_ht, 0, 'obj.S_wet_ht must not be 0.');
-            tc.verifyNotEqual(g.S_wet_vt, 0, 'obj.S_wet_vt must not be 0.');
-            tc.verifyEqual(g.S_wet_wing, g.get_S_wet_wing(), 'AbsTol', 1e-9);
-            tc.verifyEqual(g.S_wet_ht, g.get_S_wet_HT(), 'AbsTol', 1e-9);
-            tc.verifyEqual(g.S_wet_vt, g.get_S_wet_VT(), 'AbsTol', 1e-9);
+            % Mod (08/18/2026) (Claude) -- Option B removed S_wet_wing/_ht/_vt.
+            %   The per-component checks now call the toolbox directly.
+            tc.verifyNotEqual(GeomL2.compute_S_wet_planform_roskam(g.S_exposed_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing), 0);
+            tc.verifyNotEqual(GeomL2.compute_S_wet_planform_roskam(g.S_exposed_ht, g.tc_r_ht, g.tc_t_ht, g.lambda_ht), 0);
+            tc.verifyNotEqual(GeomL2.compute_S_wet_planform_roskam(g.S_exposed_vt, g.tc_r_vt, g.tc_t_vt, g.lambda_vt), 0);
             tc.verifyEqual(g.S_wet, g.get_S_wet(), 'AbsTol', 1e-9);
             % (b) mutate an input -> every derived read must follow, no rebuild
             b0  = g.b_wing;
-            sw0 = g.S_wet_wing;
+            sw0 = GeomL2.compute_S_wet_planform_roskam(g.S_exposed_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing);   % Mod (08/18/2026) (Claude)
             st0 = g.S_wet;
             g.AR_wing = g.AR_wing + 1;   % optimizer-style in-place mutation
             tc.verifyEqual(g.b_wing, GeometryBase.compute_span(g.AR_wing, g.S_ref), 'AbsTol', 1e-9, ...
                 'b_wing must recompute live from the mutated AR_wing.');
             tc.verifyGreaterThan(g.b_wing, b0, 'larger AR -> larger span, live.');
-            tc.verifyNotEqual(g.S_wet_wing, sw0, 'S_wet_wing must change after AR_wing mutation.');
+            tc.verifyNotEqual(GeomL2.compute_S_wet_planform_roskam(g.S_exposed_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing), sw0, ...
+                'wing S_wet must change after AR_wing mutation.');   % Mod (08/18/2026) (Claude)
             tc.verifyNotEqual(g.S_wet, st0, 'total S_wet must change after AR_wing mutation.');
         end
 
@@ -245,7 +251,9 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % computed value with a frozen literal (the anti-pattern this whole
         % refactor removes).
             g = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            tc.verifyError(@() setfield(g, 'S_wet_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            % Mod (08/18/2026) (Claude) -- S_wet_wing is gone (Option B).
+            %   S_exposed_wing replaces it as the per-surface read-only check.
+            tc.verifyError(@() setfield(g, 'S_exposed_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'QC_sweep_wing', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'S_wet', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
@@ -452,7 +460,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
 
         % ================================================================== %
         % Roskam Eq. 12.1 variable root/tip tc lifting-surface formula
-        % (compute_roskam_planform, moved from former L3, now OFFICIAL for
+        % (compute_S_wet_planform_roskam, moved from former L3, now OFFICIAL for
         % get_S_wet_wing/HT/VT per GeomL2.md's 2026-07-22 resolution).
         % ================================================================== %
 
@@ -464,7 +472,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         %   Hand-computed: 2*100*(1+0.25*0.05*(1+1.666667*0.25)/1.25)
         %                = 202.8333333333 ft^2.
             expected = 202.8333333333;
-            received = GeomL2.compute_roskam_planform(100, 0.05, 0.03, 0.25);
+            received = GeomL2.compute_S_wet_planform_roskam(100, 0.05, 0.03, 0.25);
             fprintf('\n    roskam planform: received = %.10f ft^2,  hand-computed = %.10f ft^2\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
@@ -475,7 +483,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % tc_t=0 used to silently return Inf (division by tc_r/tc_t is the
         % formula's tc_r/tc_t term); now guarded by an arguments-block
         % mustBePositive constraint on tc_t, so this errors instead.
-            tc.verifyError(@() GeomL2.compute_roskam_planform(100, 0.05, 0, 0.25), ...
+            tc.verifyError(@() GeomL2.compute_S_wet_planform_roskam(100, 0.05, 0, 0.25), ...
                 'MATLAB:validators:mustBePositive');
         end
 
@@ -510,7 +518,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % are the F-16's genuine spec fuselage envelope (max_width=7.0 ft,
         % max_height=5.0 ft, L_fuse=46.5 ft -- f16a_L2.json's fuselage
         % block).
-            received = GeomL2.compute_s_wet_fus_brandt_lowfi(7.0, 5.0, 46.5);
+            received = F16GeomBrandtAlt.compute_s_wet_fus_brandt_lowfi(7.0, 5.0, 46.5);   % Mod (08/18/2026) (Claude)
             fprintf('\n    fus brandt low-fi: received = %.4f ft^2,  Brandt GT = %.4f ft^2\n', ...
                 received, tc.BRANDT_FUS_LOWFI);
             tc.verifyEqual(received, tc.BRANDT_FUS_LOWFI, 'RelTol', 1e-3, ...
@@ -522,7 +530,9 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % obj.W_max_fuselage/H_max_fuselage/L_fuselage from a real
         % F16GeomL2 instance and must match the low-level call above.
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            received = GeomL2.get_S_wet_fuselage_brandt_lowfi(g);
+            % Mod (08/18/2026) (Claude) -- the object-taking wrapper is gone.
+            received = F16GeomBrandtAlt.compute_s_wet_fus_brandt_lowfi( ...
+                           g.W_max_fuselage, g.H_max_fuselage, g.L_fuselage);
             fprintf(['\n    F16GeomL2 fus brandt low-fi (high-level): received = %.4f ft^2, ' ...
                 ' Brandt GT = %.4f ft^2\n'], received, tc.BRANDT_FUS_LOWFI);
             tc.verifyEqual(received, tc.BRANDT_FUS_LOWFI, 'RelTol', 1e-3, ...
@@ -541,12 +551,12 @@ classdef TestGeomL2 < matlab.unittest.TestCase
             gt_path     = fullfile(sizing_root, 'VnV', 'BrandtF16A', 'GroundTruth', 'f16a_geometry.json');
             J           = jsondecode(fileread(gt_path));
             frames      = J.fuselage.frames;
-            received    = GeomL2.compute_s_wet_fus_brandt_highfi( ...
+            received    = GeomL3.compute_s_wet_from_control_stations( ...   % Mod (08/19/2026) (Claude)
                 [frames.x_ft], [frames.z_chine_ft], [frames.z_ft], [frames.w_ft], [frames.h_ft]);
             fprintf('\n    fus brandt high-fi: received = %.4f ft^2,  Brandt GT = %.4f ft^2\n', ...
                 received, tc.BRANDT_FUS_HIGHFI);
             tc.verifyEqual(received, tc.BRANDT_FUS_HIGHFI, 'RelTol', 0.005, ...
-                'compute_s_wet_fus_brandt_highfi does not match Brandt Geom!D23 within 0.5%.');
+                'compute_s_wet_from_control_stations does not match Brandt Geom!D23 within 0.5%.');
         end
 
         % ================================================================== %
@@ -605,7 +615,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % return obj.S_exposed_wing unchanged (structural test, not a
         % formula check; moved from the former GeometryModelL3 contract).
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            received = g.get_S_exposed_wing();
+            received = g.S_exposed_wing;
             fprintf('\n    get_S_exposed_wing: received = %.6f,  obj.S_exposed_wing = %.6f\n', ...
                 received, g.S_exposed_wing);
             tc.verifyEqual(received, g.S_exposed_wing, 'AbsTol', 1e-12, ...
@@ -663,7 +673,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
         % different quantity. Loose bound is a same-order-of-magnitude
         % sanity check only (mirrors the former TestGeomL3's identical note).
             g        = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            received = g.get_S_wet_duct();
+            received = GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct);   % Mod (08/18/2026) (Claude)
             fprintf('\n    duct S_wet: received = %.4f ft^2,  Brandt nacelle = %.4f ft^2 (different definitions)\n', ...
                 received, tc.BRANDT_NACELLE_SWET);
             tc.verifyGreaterThan(received, 0, 'Duct S_wet must be positive.');
@@ -782,7 +792,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
                 'T_AB_SLS_lb must be the injected prop.T_SL, not a stored copy.');
             tc.verifyEqual(g.D_inlet, 3.5370222385, 'RelTol', 1e-9, ...
                 'D_inlet must be sqrt(23770/1900).');
-            tc.verifyEqual(g.get_S_wet_duct(), 155.5663631217, 'RelTol', 1e-9, ...
+            tc.verifyEqual(GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct), 155.5663631217, 'RelTol', 1e-9, ...
                 'Duct S_wet must be pi*D*L at D = sqrt(23770/1900).');
             cd0_0 = a.drag_polar(AircraftState(0, 0.5)).CD0;
 
@@ -793,7 +803,7 @@ classdef TestGeomL2 < matlab.unittest.TestCase
                 'D_inlet must track the mutated thrust: sqrt(30000/1900).');
             tc.verifyEqual(g.D_exit, g.D_inlet, 'AbsTol', 1e-12, ...
                 'The nacelle is a constant-diameter cylinder: D_exit == D_inlet.');
-            tc.verifyEqual(g.get_S_wet_duct(), 174.7679271407, 'RelTol', 1e-9, ...
+            tc.verifyEqual(GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct), 174.7679271407, 'RelTol', 1e-9, ...
                 'Duct S_wet must track the mutated nacelle diameter.');
             cd0_1 = a.drag_polar(AircraftState(0, 0.5)).CD0;
             % RelTol 1e-6: the expected delta is hand-arithmetic carried to 11

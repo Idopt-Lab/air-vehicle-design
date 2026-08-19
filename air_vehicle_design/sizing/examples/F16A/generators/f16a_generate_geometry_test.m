@@ -197,8 +197,8 @@ QC_sweep_wing = g2.QC_sweep_wing;   % Dependent -- no manual GeometryBase call n
 S_wet_wing_L2  = g2.S_wet_wing;
 S_wet_ht_L2    = g2.S_wet_ht;
 S_wet_vt_L2    = g2.S_wet_vt;
-S_wet_fus_L2   = g2.get_S_wet_fuselage();
-S_wet_duct     = g2.get_S_wet_duct();
+S_wet_fus_L2   = g2.S_wet_fuselage;   % Mod (08/19/2026) (Claude)
+S_wet_duct     = GeomL2.compute_s_wet_duct(g2.D_inlet, g2.D_exit, g2.L_duct);   % Mod (08/19/2026) (Claude)
 S_wet_L2_total = g2.S_wet;
 
 % ════════════════════════════════════════════════════════════════════════ %
@@ -208,7 +208,7 @@ S_wet_L2_total = g2.S_wet;
 %  INHERITED unchanged, exactly as GeomL3 reuses GeomL2's formulas.)
 % ════════════════════════════════════════════════════════════════════════ %
 
-g3 = F16GeomL3(f16a_spec_path(3), prop_L2);   % L3 pairs with F16PropL2 -- no L3 propulsion tier (locked decision)
+g3 = F16GeomL3(f16a_spec_path(3), prop_L2, f16a_requirements_path());   % L3 pairs with F16PropL2 -- no L3 propulsion tier (locked decision)
 
 g3.S_ref         = S_ref;
 g3.AR_wing       = AR_wing_L1;
@@ -238,8 +238,8 @@ S_vt_L3   = S_tail_L3.S_vt;
 S_wet_wing_L3  = g3.S_wet_wing;   % same formula, same inputs as g2's wing -- computed independently, happens to match
 S_wet_ht_L3    = g3.S_wet_ht;
 S_wet_vt_L3    = g3.S_wet_vt;
-S_wet_fus_L3   = g3.get_S_wet_fuselage();
-S_wet_duct_L3  = g3.get_S_wet_duct();
+S_wet_fus_L3   = GeomL2.compute_s_wet_fus_cyl(g3.D_fus, g3.L_fus);   % Mod (08/19/2026) (Claude)
+S_wet_duct_L3  = GeomL2.compute_s_wet_duct(g3.D_inlet, g3.D_exit, g3.L_duct);   % Mod (08/19/2026) (Claude)
 S_wet_L3_total = g3.S_wet;
 
 % ════════════════════════════════════════════════════════════════════════ %

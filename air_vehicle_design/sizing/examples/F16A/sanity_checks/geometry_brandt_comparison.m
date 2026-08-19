@@ -34,7 +34,7 @@ function T_all = geometry_brandt_comparison()
 %       prop = F16PropL2(f16a_spec_path(2));            % 1. no dependencies
 %       g1   = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
 %       g2   = F16GeomL2(f16a_spec_path(2), prop);      % 2. needs propulsion
-%       g3   = F16GeomL3(f16a_spec_path(3), prop);
+%       g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 %
 %   Why geometry needs propulsion: the nacelle diameter is sized from engine
 %   SLS thrust, so duct wetted area and CD0 depend on it. `T_AB_SLS_lb` is
@@ -80,7 +80,7 @@ W_TO = J_frames.mission.W_TO_lb;   % 31,377 lbf  [Brandt Main! mission W_TO_lb]
 prop = F16PropL2(f16a_spec_path(2));
 g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
 g2 = F16GeomL2(f16a_spec_path(2), prop);
-g3 = F16GeomL3(f16a_spec_path(3), prop);
+g3 = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 
 % ════════════════════════════════════════════════════════════════════════ %
 %  COMPUTE — run the actual toolbox code
@@ -91,22 +91,24 @@ sw_l1   = g1.get_S_wet(W_TO);
 lfus_l1 = g1.get_L_fus(W_TO);
 
 % ── Wing/HT/VT S_wet: two formula options each ─────────────────────────── %
-sw_wing_roskam = g2.get_S_wet_wing();                                        % OFFICIAL: Roskam Eq. 12.1
-sw_wing_brandt = GeomL2.compute_wet_planform(g2.S_exposed_wing, g2.tc_wing); % alternate: Brandt uniform-tc
-sw_ht_roskam   = g2.get_S_wet_HT();
-sw_ht_brandt   = GeomL2.compute_wet_planform(g2.S_exposed_ht, g2.tc_ht);
-sw_vt_roskam   = g2.get_S_wet_VT();
-sw_vt_brandt   = GeomL2.compute_wet_planform(g2.S_exposed_vt, g2.tc_vt);
+% Mod (08/18/2026) (Claude) -- Option B: call the toolbox, not the example class.
+sw_wing_roskam = GeomL2.compute_S_wet_planform_roskam(g2.S_exposed_wing, g2.tc_r_wing, g2.tc_t_wing, g2.lambda_wing); % OFFICIAL: Roskam Eq. 12.1
+sw_wing_brandt = GeomL2.compute_S_wet_planform_raymer(g2.S_exposed_wing, g2.tc_wing); % alternate: Brandt uniform-tc
+sw_ht_roskam   = GeomL2.compute_S_wet_planform_roskam(g2.S_exposed_ht, g2.tc_r_ht, g2.tc_t_ht, g2.lambda_ht);
+sw_ht_brandt   = GeomL2.compute_S_wet_planform_raymer(g2.S_exposed_ht, g2.tc_ht);
+sw_vt_roskam   = GeomL2.compute_S_wet_planform_roskam(g2.S_exposed_vt, g2.tc_r_vt, g2.tc_t_vt, g2.lambda_vt);
+sw_vt_brandt   = GeomL2.compute_S_wet_planform_raymer(g2.S_exposed_vt, g2.tc_vt);
 
 % ── Fuselage S_wet: three formula options ──────────────────────────────── %
-sw_fus_roskam = g2.get_S_wet_fuselage();                                                            % OFFICIAL: Roskam Eq. 12.3
-sw_fus_lowfi  = GeomL2.compute_s_wet_fus_brandt_lowfi(g2.W_max_fuselage, g2.H_max_fuselage, g2.L_fuselage);
+sw_fus_roskam = g2.S_wet_fuselage;   % Mod (08/19/2026) (Claude)                                                            % OFFICIAL: Roskam Eq. 12.3
+sw_fus_lowfi  = F16GeomBrandtAlt.compute_s_wet_fus_brandt_lowfi(g2.W_max_fuselage, g2.H_max_fuselage, g2.L_fuselage);
 fr            = J_frames.fuselage.frames;
-sw_fus_highfi = GeomL2.compute_s_wet_fus_brandt_highfi( ...
+% Mod (08/19/2026) (Claude) -- Casey renamed this and moved it to GeomL3.
+sw_fus_highfi = GeomL3.compute_s_wet_from_control_stations( ...
     [fr.x_ft], [fr.z_chine_ft], [fr.z_ft], [fr.w_ft], [fr.h_ft]);
 
 % ── Duct / nacelle ──────────────────────────────────────────────────────── %
-sw_duct    = g2.get_S_wet_duct();
+sw_duct    = GeomL2.compute_s_wet_duct(g2.D_inlet, g2.D_exit, g2.L_duct);   % Mod (08/18/2026) (Claude)
 D_nacelle  = g2.D_inlet;   % = D_exit, computed via sqrt(T_AB_SLS_lb/1900)
 
 % ── Exposed areas (full JSON-to-property pipeline) ─────────────────────── %
@@ -144,11 +146,12 @@ L_fus_computed = g2.L_fus;
 % L3 also uses Roskam Eq. 12.1 fed the T.O. root/tip t/c splits, where Brandt
 % uses one uniform t/c -- so its lifting-surface S_wet sits ~1.8% above his by
 % formula family alone, on top of any planform divergence.
-sw_wing_l3 = g3.get_S_wet_wing();
-sw_ht_l3   = g3.get_S_wet_HT();
-sw_vt_l3   = g3.get_S_wet_VT();
-sw_fus_l3  = g3.get_S_wet_fuselage();
-sw_duct_l3 = g3.get_S_wet_duct();
+sw_wing_l3 = g3.S_wet_wing;   % Mod (08/19/2026) (Claude)
+sw_ht_l3   = g3.S_wet_ht;   % Mod (08/19/2026) (Claude)
+sw_vt_l3   = g3.S_wet_vt;   % Mod (08/19/2026) (Claude)
+sw_fus_l3  = g3.get_S_wet_fuselage_stations();   % Mod (08/19/2026) (Claude)
+sw_fus_l3_roskam = GeomL2.compute_s_wet_fus_cyl(g3.D_fus, g3.L_fus);   % the superseded method, for the gap
+sw_duct_l3 = GeomL2.compute_s_wet_duct(g3.D_inlet, g3.D_exit, g3.L_duct);   % Mod (08/19/2026) (Claude)
 total_l3   = g3.get_S_wet();          % includes the duct (changed in Phase 2)
 exp_wing_l3 = g3.S_exposed_wing;
 exp_ht_l3   = g3.S_exposed_ht;        % 51.1486: +2.6% vs Brandt, from the 18.5 ft span
@@ -208,17 +211,17 @@ T = table();
 
 T = [T; srow('[WING / HT / VT WETTED AREA — TWO FORMULA OPTIONS EACH]')];
 T = [T; grow('Wing S_wet, Roskam Eq.12.1 [OFFICIAL] [ft^2]', 'L2', sw_wing_roskam, gt.lifting_surface_S_wet_ft2.wing.value, 'Brandt Geom!B14', '%.4f', 'get_S_wet_wing()')];
-T = [T; grow('Wing S_wet, Brandt uniform-tc [alt]  [ft^2]', 'L2', sw_wing_brandt, gt.lifting_surface_S_wet_ft2.wing.value, 'Brandt Geom!B14', '%.4f', 'compute_wet_planform() -- same formula Brandt uses, near-exact match expected')];
+T = [T; grow('Wing S_wet, Brandt uniform-tc [alt]  [ft^2]', 'L2', sw_wing_brandt, gt.lifting_surface_S_wet_ft2.wing.value, 'Brandt Geom!B14', '%.4f', 'compute_S_wet_planform_raymer() -- Mod (08/18/2026) (Claude): now branches to Raymer Eq. 7.11 (2.003*S_exp) because every F-16 surface has t/c < 0.05. Brandt used the Eq. 7.12 form outside its stated range, so a small gap is EXPECTED here, not an error.')];
 T = [T; grow('HT   S_wet, Roskam Eq.12.1 [OFFICIAL] [ft^2]', 'L2', sw_ht_roskam, gt.lifting_surface_S_wet_ft2.pitch_control_HT.value, 'Brandt Geom!B16', '%.4f', 'get_S_wet_HT()')];
-T = [T; grow('HT   S_wet, Brandt uniform-tc [alt]  [ft^2]', 'L2', sw_ht_brandt, gt.lifting_surface_S_wet_ft2.pitch_control_HT.value, 'Brandt Geom!B16', '%.4f', 'compute_wet_planform() -- same formula Brandt uses, near-exact match expected')];
+T = [T; grow('HT   S_wet, Brandt uniform-tc [alt]  [ft^2]', 'L2', sw_ht_brandt, gt.lifting_surface_S_wet_ft2.pitch_control_HT.value, 'Brandt Geom!B16', '%.4f', 'compute_S_wet_planform_raymer() -- Mod (08/18/2026) (Claude): now branches to Raymer Eq. 7.11 (2.003*S_exp) because every F-16 surface has t/c < 0.05. Brandt used the Eq. 7.12 form outside its stated range, so a small gap is EXPECTED here, not an error.')];
 T = [T; grow('VT   S_wet, Roskam Eq.12.1 [OFFICIAL] [ft^2]', 'L2', sw_vt_roskam, gt.lifting_surface_S_wet_ft2.vertical_tail.value, 'Brandt Geom!B17', '%.4f', 'get_S_wet_VT()')];
-T = [T; grow('VT   S_wet, Brandt uniform-tc [alt]  [ft^2]', 'L2', sw_vt_brandt, gt.lifting_surface_S_wet_ft2.vertical_tail.value, 'Brandt Geom!B17', '%.4f', 'compute_wet_planform() -- same formula Brandt uses, near-exact match expected')];
+T = [T; grow('VT   S_wet, Brandt uniform-tc [alt]  [ft^2]', 'L2', sw_vt_brandt, gt.lifting_surface_S_wet_ft2.vertical_tail.value, 'Brandt Geom!B17', '%.4f', 'compute_S_wet_planform_raymer() -- Mod (08/18/2026) (Claude): now branches to Raymer Eq. 7.11 (2.003*S_exp) because every F-16 surface has t/c < 0.05. Brandt used the Eq. 7.12 form outside its stated range, so a small gap is EXPECTED here, not an error.')];
 T = [T; grow('Strake S_wet -- NOT MODELED           [ft^2]', 'N/A', NaN, gt.lifting_surface_S_wet_ft2.strake.value, 'Brandt Geom!B15', '%.4f', 'No strake component exists in any geometry tier. DEFERRED, not overlooked: sub-step 2h proved the strake contributes exactly 0.000% to Amax (active only 12.0 < x < 21.551 ft, well forward of the governing station), so it was descoped from 2h and logged for its own step.')];
 
 T = [T; srow('[FUSELAGE WETTED AREA — THREE FORMULA OPTIONS]')];
 T = [T; grow('Fuselage S_wet, Roskam Eq.12.3 [OFFICIAL] [ft^2]', 'L2', sw_fus_roskam, gt.fuselage_S_wet.high_fi_ft2, 'Brandt Geom!D23', '%.4f', 'get_S_wet_fuselage() -- equivalent-diameter cylinder model; compared vs Brandt''s high-fi (closest formula family)')];
 T = [T; grow('Fuselage S_wet, Brandt low-fi [alt]   [ft^2]', 'L2', sw_fus_lowfi, gt.fuselage_S_wet.low_fi_ft2, 'Brandt Geom!B3', '%.4f', 'compute_s_wet_fus_brandt_lowfi() -- reproduces Brandt''s own "1/3-cone+2/3-cyl" formula')];
-T = [T; grow('Fuselage S_wet, Brandt high-fi [alt]  [ft^2]', 'L2', sw_fus_highfi, gt.fuselage_S_wet.high_fi_ft2, 'Brandt Geom!D23', '%.4f', 'compute_s_wet_fus_brandt_highfi() -- reproduces Brandt''s own frame-integration formula')];
+T = [T; grow('Fuselage S_wet, Brandt high-fi [alt]  [ft^2]', 'L2', sw_fus_highfi, gt.fuselage_S_wet.high_fi_ft2, 'Brandt Geom!D23', '%.4f', 'compute_s_wet_from_control_stations() -- reproduces Brandt''s own frame-integration formula')];   % Mod (08/19/2026) (Claude)
 
 T = [T; srow('[DUCT / NACELLE]')];
 T = [T; grow('Duct S_wet (inlet-to-exit frustum)     [ft^2]', 'L2', sw_duct, gt.nacelle.S_wet_ft2, 'Brandt Geom!B4 (nacelle)', '%.4f', 'DIFFERENT quantity: exposed inlet-to-exit frustum vs Brandt''s full-cylinder nacelle -- the %Diff is not a meaningful error measure here.', NaN, 'DEFINITIONAL')];
@@ -311,8 +314,10 @@ T = [T; grow('HT   S_wet, Roskam Eq.12.1 [ft^2]', 'L3', sw_ht_l3, gt.lifting_sur
      'and +2.6% exposed area (the 18.5 ft T.O. span taken as primary). Not one large error.'], NaN, 'BY DESIGN')];
 T = [T; grow('VT   S_wet, Roskam Eq.12.1 [ft^2]', 'L3', sw_vt_l3, gt.lifting_surface_S_wet_ft2.vertical_tail.value, 'Brandt Geom!B17', '%.4f', ...
     'VT exposed area is sweep-independent, so this differs from L2 only by formula family.', NaN, 'BY DESIGN')];
-T = [T; grow('Fuselage S_wet, Roskam Eq.12.3 [ft^2]', 'L3', sw_fus_l3, gt.fuselage_S_wet.high_fi_ft2, 'Brandt Geom!D23', '%.4f', ...
-    'L3 fuselage is 47.5 ft [T.O. 1F-16A-1] vs Brandt''s 46.5 -- a longer fuselage has more wetted area.', to_L_fus, 'BY DESIGN')];
+T = [T; grow('Fuselage S_wet, control stations [ft^2]', 'L3', sw_fus_l3, gt.fuselage_S_wet.high_fi_ft2, 'Brandt Geom!D23', '%.4f', ...
+    'Raymer Fig. 7.37 perimeter-vs-x integration on 21 stations. Same method as Brandt, so this row SHOULD agree closely.')];
+T = [T; grow('Fuselage S_wet, Roskam Eq.12.3 [superseded]', 'L3', sw_fus_l3_roskam, gt.fuselage_S_wet.high_fi_ft2, 'Brandt Geom!D23', '%.4f', ...
+    'L3 fuselage is 47.5 ft [T.O. 1F-16A-1] vs Brandt''s 46.5 -- a longer fuselage has more wetted area. Replaced by the row above 2026-08-19.', to_L_fus, 'BY DESIGN')];
 T = [T; grow('Duct S_wet [ft^2]', 'L3', sw_duct_l3, gt.nacelle.S_wet_ft2, 'Brandt Geom!B4 (nacelle)', '%.4f', ...
     'Same frustum model and same injected thrust as L2 -- identical to the L2 duct row.')];
 T = [T; grow('S_wet total, L3 (incl. duct) [ft^2]', 'L3', total_l3, gt.whole_aircraft_S_wet_ft2.corrected_total, 'readme_geom.md Sec 6.2 (corrected)', '%.2f', ...

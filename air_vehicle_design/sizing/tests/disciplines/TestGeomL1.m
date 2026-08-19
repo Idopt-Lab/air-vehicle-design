@@ -145,7 +145,9 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         %   computed via a plain a*M_max^C expression, not by calling
         %   GeomL1.compute_AR_eq).
             expected = 3.5186639569;
-            received = GeomL1.compute_AR_eq('jet_fighter', 2.0);
+            % Mod (08/17/2026) (Claude)
+            [a, C]   = GeomL1.lookup_AR_eq('jet_fighter');
+            received = GeomL1.compute_AR_eq(a, C, 2.0);
             fprintf('\n    AR_eq: received = %.10f,  hand-computed = %.10f\n', received, expected);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6, ...
                 'AR_eq does not match the hand-computed Raymer Table 4.1 dogfighter regression.');
@@ -165,7 +167,8 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testUnknownCategoryAREqThrows(tc)
         % Only the Raymer 7th ed. Table 4.1 "Jet fighter (dogfighter)" row
         % is implemented; any other category must error, not interpolate.
-            tc.verifyError(@() GeomL1.compute_AR_eq('flying_car', 2.0), ...
+            % Mod (08/17/2026) (Claude)
+            tc.verifyError(@() GeomL1.lookup_AR_eq('flying_car'), ...
                 'GeomL1:unknownCategory');
         end
 
@@ -174,29 +177,28 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testControlSurfaceFractionElevator(tc)
         % Raymer 7th ed. Table 6.5 "Jet fighter" row: C_e/c = 0.30
         % (all-moving-tail row value, not a hinged-elevator fraction).
-            received = GeomL1.compute_control_surface_fraction('jet_fighter', 'elevator');
+            % Mod (08/17/2026) (Claude)
+            received = GeomL1.lookup_control_surface_fraction('jet_fighter', 'elevator');
             fprintf('\n    elevator C_e/c: received = %.4f,  expected = 0.3000\n', received);
             tc.verifyEqual(received, 0.30, 'AbsTol', 1e-9);
         end
 
         function testControlSurfaceFractionRudder(tc)
         % Raymer 7th ed. Table 6.5 "Jet fighter" row: C_r/c = 0.33.
-            received = GeomL1.compute_control_surface_fraction('jet_fighter', 'rudder');
+            % Mod (08/17/2026) (Claude)
+            received = GeomL1.lookup_control_surface_fraction('jet_fighter', 'rudder');
             fprintf('\n    rudder C_r/c: received = %.4f,  expected = 0.3300\n', received);
             tc.verifyEqual(received, 0.33, 'AbsTol', 1e-9);
         end
 
-        function testGetControlSurfaceFractionObjectLevel(tc)
-        % High-level get_control_surface_fraction(obj, surface) reads
-        % obj.aircraft_category and delegates to the same lookup.
-            g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            received = GeomL1.get_control_surface_fraction(g, 'elevator');
-            fprintf('\n    get_control_surface_fraction(elevator): received = %.4f\n', received);
-            tc.verifyEqual(received, 0.30, 'AbsTol', 1e-9);
-        end
+        % Mod (08/17/2026) (Claude)
+        % testGetControlSurfaceFractionObjectLevel was here. It covered the
+        % removed object-level wrapper, and duplicated
+        % testControlSurfaceFractionElevator. See GeomL1.md.
 
         function testUnknownCategoryControlSurfaceThrows(tc)
-            tc.verifyError(@() GeomL1.compute_control_surface_fraction('flying_car', 'elevator'), ...
+            % Mod (08/17/2026) (Claude)
+            tc.verifyError(@() GeomL1.lookup_control_surface_fraction('flying_car', 'elevator'), ...
                 'GeomL1:unknownCategory');
         end
 
@@ -260,7 +262,8 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         %   obtain a cited aileron C_a/c value from Raymer 7th ed. Table 6.5
         %   (or an equivalent cited source) and add it to
         %   GeomL1.lookup_control_surface_fraction's 'jet_fighter' case.
-            val = GeomL1.compute_control_surface_fraction('jet_fighter', 'aileron');
+            % Mod (08/17/2026) (Claude)
+            val = GeomL1.lookup_control_surface_fraction('jet_fighter', 'aileron');
             tc.verifyGreaterThan(val, 0, ...
                 'Aileron chord fraction should be a positive number once Raymer Table 6.5 data is supplied.');
         end
