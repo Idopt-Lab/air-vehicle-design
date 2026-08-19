@@ -36,23 +36,20 @@ classdef TestAeroL3 < matlab.unittest.TestCase
 
     methods (Static, Access = private)
         function a = makeAero()
-        %MAKEAERO  A fresh F16AeroL3 with an injected F16GeomL2: aero constants
-        %   from the unified L3 JSON, geometry from the unified L2 JSON.
+        %MAKEAERO  A fresh F16AeroL3 with an injected F16GeomL3: aero constants
+        %   and geometry both from the unified L3 JSON.
         %   Constructors require explicit paths -- no defaults.
         %
-        %   GEOMETRY TIER, deliberate (2026-07-25): Phase 2 promoted GeomL3 to a
-        %   full L3 geometry tier, so an F16GeomL3 is now injectable here too
-        %   (testGeometryInjectionRejectsWrongTierAtConstruction proves it).
-        %   These tests keep the L2 geometry on purpose: every expected value in
-        %   this file is hand-computed either from a bare AeroL2/AeroL3 static
-        %   (geometry-independent) or from the L2 wing/fuselage envelope, and
-        %   the file's job is the AeroL3 FORMULAS, not the L3 planform. Switching
-        %   the injected tier is a comparison-report concern (the aerodynamics comparison report),
-        %   not a unit-test one.
-        %   PHASE-2 CONSTRUCTOR CHANGE: F16GeomL2 takes a REQUIRED injected
-        %   propulsion object -- the nacelle diameter is sqrt(T_AB_SLS/1900),
-        %   engine data rather than airframe data.
-            a = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+        %   Mod (08/19/2026) (Claude) -- TIER MATCHED. This used to inject an
+        %   F16GeomL2 on purpose, so that expected values could be hand-computed
+        %   off the L2 envelope. Casey's rule, 2026-08-19: a test must use the
+        %   properties of its own fidelity level. The F16AeroL3 guard is now
+        %   GeometryModelL3 only, so an L2 object no longer constructs.
+        %   Every geometry-derived expected value below is re-derived from the L3
+        %   planform. Formula-only expectations are unaffected.
+        %   The injected propulsion object is an F16PropL2: there is no L3
+        %   propulsion tier. It sizes the nacelle diameter, sqrt(T_AB_SLS/1900).
+            a = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), ...
                           f16a_spec_path(3));
         end
         function J = readAeroL3JSON()
@@ -186,23 +183,33 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % (W_max_fuselage=7.0 ft, H_max_fuselage=5.0 ft, overall
             % L_aircraft=47.65 ft) and the aero inputs (Lambda_LE=40 deg,
             % E_WD=2.2, S_ref=300 ft^2):
-            %   Amax = (pi/4)*W*H = (pi/4)*7*5 = 27.4889357 ft^2
+            % Mod (08/19/2026) (Claude) -- RE-DERIVED for the L3 geometry tier.
+            % makeAero injected an F16GeomL2, so Amax was the envelope ellipse
+            % (pi/4)*7*5 = 27.4889357 and the expected value was 0.0314046569.
+            % The tier is now matched, so Amax is the AREA-RULED buildup, from
+            % F16GeomL3.get_Amax.
+            %   Amax = 24.7036517 ft^2
             %          [standard elliptical-cross-section identity,
-            %           GeometryBase.compute_Amax_elliptical -- no equation
+            %           F16GeomL2.compute_Amax_elliptical -- no equation
             %           number exists; todo.md 2026-07-25 Phase 2 §4]
-            %   Amax/l   = 27.4889357/47.65 = 0.5768927
-            %   (Amax/l)^2                  = 0.3328052
-            %   (D/q)_SH = (9*pi/2)*0.3328052 = 14.1371669*0.3328052
-            %            = 4.7049220                                   [Eq. 12.44]
+            %   Amax/l   = 24.7036517/47.65 = 0.5184397
+            %   (Amax/l)^2                  = 0.2687797
+            %   (D/q)_SH = (9*pi/2)*0.2687797 = 14.1371669*0.2687797
+            %            = 3.7997838                                   [Eq. 12.44]
             %   (M-1.2)^0.57   = 0.3^0.57          = 0.5034532
             %   pi*40^0.77/100 = pi*17.1232498/100 = 0.5379428
             %   bracket = 1 - 0.386*0.5034532*(1-0.5379428) = 0.9102071  [Eq. 12.45]
-            %   CD_wave = 2.2*0.9102071*4.7049220/300 = 0.0314047
-            % (The old 0.0255006 value is +23.15% below this -- the shift is
+            %   CD_wave = 2.2*0.9102071*3.7997838/300 = 0.0253630
+            % WORTH RECORDING: the matched tier brings this term back close to
+            % Brandt. On his Amax = 25.110556 the same formula gives 0.0255006;
+            % the L2-injected value was +23.15 % on that, and this one is -0.54 %.
+            % The gap is now only Amax 24.7037 against 25.1106, which is the
+            % 47.5 ft physical fuselage against Brandt's 46.5. E_WD is untouched.
+            % (Historical note: the shift is
             % REPORTED, not absorbed by retuning E_WD; see F16GeomL3.md §4.)
             g        = TestAeroL3.makeAero();
             received = g.compute_CD0_wave(AircraftState(0, 1.5));
-            tc.verifyEqual(received, 0.0314046569, 'RelTol', 1e-4);
+            tc.verifyEqual(received, 0.0253629936, 'RelTol', 1e-4);
         end
 
         function testCD0WaveTracksFuselageEnvelopeLive(tc)
@@ -210,23 +217,31 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % a frozen 25.110556 aero input, so the Eq. 12.44 Sears-Haack term
             % could not respond to ANY fuselage change: mutating the geometry
             % envelope left CD0 bit-identical. It is now Dependent on
-            % geom.Amax = (pi/4)*W_max*H_max, so widening the fuselage must move
-            % both Amax and the supersonic CD0.
+            % geom.Amax, so widening the fuselage must move both Amax and the
+            % supersonic CD0.
+            %
+            % Mod (08/19/2026) (Claude) -- RE-DERIVED for the L3 geometry tier.
+            % The L2 envelope form (pi/4)*W*H is linear in W_max, so the old test
+            % expected exactly (8/7)^2 = 1.3061224. L3's Amax is the AREA-RULED
+            % buildup, where W_max scales only the FUSELAGE cross-sections through
+            % GeomL3.denormalize_frames; the wing, HT, VT and nacelle terms do not
+            % move, and the governing station can migrate. So the ratio is smaller
+            % and it is not a closed form.
             %   W_max 7.0 -> 8.0 ft, H_max 5.0:
-            %     Amax     = (pi/4)*8*5      = 31.4159265 ft^2
-            %     (Amax/l) = 31.4159265/47.65 = 0.6593060
-            %     (D/q)_SH = (9*pi/2)*0.4346843 = 6.1441843
-            %     CD_wave  = 2.2*0.9102071*6.1441843/300 = 0.0410183
-            %   i.e. exactly (8/7)^2 = 1.3061224 times the baseline 0.0314047,
-            %   since the term is linear in W_max^2.
+            %     Amax     = 24.7036517 -> 27.9417265 ft^2  (ratio 1.1310768)
+            %     (Amax/l) = 27.9417265/47.65 = 0.5863951
+            %     (D/q)_SH = (9*pi/2)*0.3438592 = 4.8611951
+            %     CD_wave  = 2.2*0.9102071*4.8611951/300 = 0.0324478
+            % The POSITIVE CONTROL is unchanged in substance: Amax and CD0 must
+            % both respond to an in-place fuselage mutation with no reconstruction.
             g     = TestAeroL3.makeAero();
             state = AircraftState(0, 1.5);
-            tc.verifyEqual(g.Amax_ft2, 27.4889357189, 'RelTol', 1e-9, ...
-                'Amax_ft2 must be the live geometry envelope (pi/4)*7*5, not Brandt''s 25.110556.');
+            tc.verifyEqual(g.Amax_ft2, 24.7036516658, 'RelTol', 1e-9, ...
+                'Amax_ft2 must be the live L3 area-ruled buildup, not the L2 envelope 27.4889.');
             g.geom.W_max_fuselage = 8.0;   % optimizer-style in-place mutation
-            tc.verifyEqual(g.Amax_ft2, 31.4159265359, 'RelTol', 1e-9, ...
+            tc.verifyEqual(g.Amax_ft2, 27.9417265387, 'RelTol', 1e-9, ...
                 'Amax_ft2 must track the mutated fuselage width with no reconstruction.');
-            tc.verifyEqual(g.compute_CD0_wave(state), 0.0410183274, 'RelTol', 1e-4, ...
+            tc.verifyEqual(g.compute_CD0_wave(state), 0.0324477567, 'RelTol', 1e-4, ...
                 'The Eq. 12.44 wave term must follow the fuselage envelope (previously a dead path).');
         end
 
@@ -239,16 +254,20 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % rename -- resolved AR_ht/lambda_ht to the EXPOSED planform where
             % Raymer Eq. 7.8 needs the FULL one, giving a wrong HT MAC, Reynolds
             % number and Eq. 12.30 form factor with no error and no warning. The
-            % guard is now mustBeA(geom, ["GeometryModelL2","GeometryModelL3"]),
-            % so a bad tier fails HERE.
+            % Mod (08/19/2026) (Claude) -- the guard is now
+            % mustBeA(geom, "GeometryModelL3"). L3 ONLY, which closes S-19: an L2
+            % object fed Amax 27.4889 instead of 24.7037 and S_wet_fuselage
+            % 730.30 instead of 677.93, both silently.
             g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             tc.verifyError(@() F16AeroL3(g1, f16a_spec_path(3)), ...
                 'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must be rejected at F16AeroL3 construction.');
-            % Positive control: both accepted tiers still construct.
-            tc.verifyClass(F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
-                f16a_spec_path(3)), 'F16AeroL3');
-            tc.verifyClass(F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
+            g2 = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            tc.verifyError(@() F16AeroL3(g2, f16a_spec_path(3)), ...
+                'MATLAB:validators:mustBeA', ...
+                'An L2 geometry object must be rejected: L3 aero needs L3 geometry.');
+            % Positive control: the matching tier constructs.
+            tc.verifyClass(F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), ...
                 f16a_spec_path(3)), 'F16AeroL3');
         end
 
@@ -412,7 +431,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % every > / < comparison in a constraint solve FALSE, so the point
             % was reported satisfied. AircraftState permits mach=0, so this must
             % error at the buildup.
-            a3 = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+            a3 = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), ...
                            f16a_spec_path(3));
             tc.verifyError(@() a3.drag_polar(AircraftState(0, 0)), ...
                 'AeroL3:machOutOfDomain', ...
@@ -430,7 +449,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
 
         function testCD0BuildupFiniteAtSmallPositiveMach(tc)
             % The guard must reject only M=0, not a legitimate low-speed point.
-            a3 = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
+            a3 = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), ...
                            f16a_spec_path(3));
             polar = a3.drag_polar(AircraftState(0, 0.1));
             tc.verifyTrue(isfinite(polar.CD0) && polar.CD0 > 0, ...
@@ -442,11 +461,19 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % Eq. 12.8's eta silently fell back to 0.95 while L2 -- the LOWER
             % fidelity level -- used the real NACA 64A204 slope (0.105/deg ->
             % eta = 6.016/(2*pi) = 0.957). Same wing, same airfoil, two answers.
-            % With identical injected geometry the two levels must now agree
-            % exactly: both are the same Raymer Eq. 12.6 evaluation.
-            g  = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
-            a2 = F16AeroL2(g, f16a_spec_path(2));
-            a3 = F16AeroL3(g, f16a_spec_path(3));
+            % Both levels must agree exactly: both are the same Raymer Eq. 12.6
+            % evaluation.
+            %
+            % Mod (08/19/2026) (Claude) -- TIER MATCHED. One F16GeomL2 used to be
+            % injected into both, which the narrowed F16AeroL3 guard now rejects.
+            % Each level takes its own tier instead. The comparison still holds
+            % exactly, because the WING inputs are identical at both tiers:
+            % S_ref 300, AR 3.0, taper 0.2275, LE sweep 40 deg. CL_alpha reads
+            % only those plus Mach and the airfoil, so the tier does not enter.
+            g2 = F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2)));
+            g3 = F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path());
+            a2 = F16AeroL2(g2, f16a_spec_path(2));
+            a3 = F16AeroL3(g3, f16a_spec_path(3));
             for M = [0, 0.6, 0.87]
                 tc.verifyEqual(a3.get_CL_alpha(M), a2.get_CL_alpha(M), 'RelTol', 1e-12, ...
                     sprintf(['L3 and L2 CL_alpha must agree at M=%.2f for identical ' ...

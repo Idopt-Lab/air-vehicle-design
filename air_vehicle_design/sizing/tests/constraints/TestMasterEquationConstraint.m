@@ -291,7 +291,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         end
 
         function testF16MaxMachDragPolarK2ZeroSupersonic(tc)
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
             polar = aero.drag_polar(state);
             aBr   = tc.ref.aero.run(1.60);
@@ -359,7 +359,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match
             % to Brandt's TW_opt (~0.7576): our textbook CD0/K1 buildup is
             % expected to differ from Brandt's flight-calibrated polar.
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 1.60);   % Max Mach: 36 kft, M=1.60
             obj   = LevelFlightConstraint("Max Mach", state, aero, prop, 0.8997);
@@ -396,7 +396,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         end
 
         function testF16MaxAltDragPolarSubsonic(tc)
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
             polar = aero.drag_polar(state);
             aBr   = tc.ref.aero.run(0.87);
@@ -452,7 +452,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Cruise).
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(50000, 0.87);   % Max Alt: 50 kft, M=0.87
             obj   = LevelFlightConstraint("Max Alt", state, aero, prop, 0.8997);
@@ -491,7 +491,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         end
 
         function testF16CombatSubDragPolarSubsonic(tc)
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
             polar = aero.drag_polar(state);
             aBr   = tc.ref.aero.run(0.87);
@@ -550,7 +550,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.87);   % Combat Turn 1: 20 kft, M=0.87
             obj   = SustainedTurnConstraint("Combat Turn 1", state, aero, prop, 0.8997, 4.5);   % n=4.5
@@ -590,7 +590,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % printed for reference, not asserted against, per this
             % framework's own linearized-theory K2=0 supersonic assumption
             % (AeroL1.K2_value).
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
             polar = aero.drag_polar(state);
             aBr   = tc.ref.aero.run(1.40);
@@ -653,7 +653,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 1.40);   % Combat Turn 2: 36 kft, M=1.40
             obj   = SustainedTurnConstraint("Combat Turn 2", state, aero, prop, 0.8997, 1.4);   % n=1.4
@@ -705,7 +705,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         end
 
         function testF16CruiseDragPolarSubsonic(tc)
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
             polar = aero.drag_polar(state);
             aBr   = tc.ref.aero.run(0.87);
@@ -769,7 +769,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % match to Brandt's TW_opt, though constructed with
             % powerSetting="mil" (see this section's header comment) so it's
             % now much closer than before this fix.
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 0.87);   % Cruise: 36 kft, M=0.87
             obj   = LevelFlightConstraint("Cruise", state, aero, prop, 0.8997, "mil");
@@ -809,7 +809,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
         end
 
         function testF16PsDragPolarSubsonic(tc)
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             polar = aero.drag_polar(state);
             aBr   = tc.ref.aero.run(0.87);
@@ -866,7 +866,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % Sanity check only, at Brandt's own optimal W/S -- not a match to
             % Brandt's TW_opt (see class note on CD0/K1 buildup-vs-flight-
             % calibration gap already documented at Max Mach/Max Alt/Cruise).
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             obj   = ExcessPowerConstraint("Excess Power", state, aero, prop, 0.8997, ...
@@ -887,7 +887,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
             % condition evaluated at Ps=0 (sustained level flight) -- i.e.
             % that ExcessPowerConstraint is actually using the nonzero Ps input,
             % not silently ignoring it.
-            aero  = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+            aero  = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
             prop  = F16PropL2(f16a_spec_path(2));
             state = AircraftState(10000, 0.87);   % Excess Power: 10 kft, M=0.87
             WS    = tc.ref.run.WS_opt;
@@ -919,7 +919,7 @@ classdef TestMasterEquationConstraint < matlab.unittest.TestCase
                     aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
                     prop = F16PropL2(f16a_spec_path(2));
                 case 'L3'
-                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
                     prop = F16PropL2(f16a_spec_path(2));
                 otherwise
                     error('TestMasterEquationConstraint:buildDisciplines:UnknownFidelity', ...

@@ -207,7 +207,7 @@ classdef TestStallConstraint < matlab.unittest.TestCase
                 case 'L2'
                     aero = F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(2));
                 case 'L3'
-                    aero = F16AeroL3(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), f16a_spec_path(3));
+                    aero = F16AeroL3(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), f16a_spec_path(3));
                 otherwise
                     error('TestStallConstraint:buildAero:UnknownFidelity', ...
                         'Unknown fidelity level "%s".', fidelityLevel);
