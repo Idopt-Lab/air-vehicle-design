@@ -2,8 +2,11 @@ classdef F16GeomL3 < GeometryModelL3
 %F16GEOML3  F-16A Block 10 Level-3 geometry student class.
 %
 %   Inherits from GeometryModelL3. Every abstract method delegates to a GeomL3
-%   static (which reuses the GeomL2 / GeometryBase statics; the only new formulas
-%   are GeometryBase.compute_Amax_elliptical and compute_nacelle_diameter).
+%   static (which reuses the GeomL2 / GeometryBase statics). L3 does NOT call
+%   F16GeomL2.compute_Amax_elliptical: that envelope ellipse is L2's Amax.
+%   L3 Amax is the area-ruled buildup in get_Amax.  Mod (08/19/2026) (Claude)
+%   D_inlet reads F16GeomL2.compute_nacelle_diameter -- an L3-to-L2 link, see
+%   the _TODO on get.D_inlet.
 %
 %   L3 is the HIGHER-fidelity PHYSICAL / T.O.-geometry tier consumed by L3
 %   geometry + aero + weights. Where a physical/T.O. value differs from Brandt,
@@ -18,7 +21,7 @@ classdef F16GeomL3 < GeometryModelL3
 %   (45) recompute on read (no stored copy, read-only). AR_ht, S_exposed_ht,
 %   S_exposed_vt, tc_ht and tc_vt are Dependent and must never be re-frozen.
 %
-%   Constructor: F16GeomL3(json_path, prop) — reads the .geometry block of the
+%   Constructor: F16GeomL3(json_path, prop, f16a_requirements_path()) — reads the .geometry block of the
 %   L3 JSON (f16a_spec_path(3)) plus a required injected propulsion object. No
 %   silent default. Sets only input properties.
 %
@@ -37,7 +40,7 @@ classdef F16GeomL3 < GeometryModelL3
 %   DECISION 2: the OFFICIAL L3 lifting-surface wetted-area formula is Roskam
 %   Vol. II Eq. 12.1 fed the T.O. root/tip t/c splits (as L2). Brandt's
 %   uniform-t/c Geom!B13 form stays reachable via
-%   GeomL2.compute_wet_planform(S_exposed, tc_ht|tc_vt) as a comparison-report
+%   GeomL2.compute_S_wet_planform_raymer(S_exposed, tc_ht|tc_vt) as a comparison-report
 %   alternate row only.
 %
 %   VERTICAL-TAIL SWEEP FORM: QC_sweep_vt/TE_sweep_vt use
@@ -116,6 +119,22 @@ classdef F16GeomL3 < GeometryModelL3
         lambda_exposed_vt = 0.437   % --    EXPOSED-planform taper, physical [TO/USAF]
         x_le_vt           = 36.0    % ft    VT root LE x-station aft of the nose [Brandt Main!H23 'X Location'] -- feeds Xexp_vt = 38.7283. Worth 0.000% of Amax today
 
+        % -- Body strake / LERX (chine) -------------------------------------- %
+        % Mod (08/19/2026) (Claude) -- strake added at Casey's request.
+        %   All values [Brandt Main!D18:D27], via GroundTruth/f16a_geometry.json.
+        %   taper = 0 is a genuine SHARP TIP. The TIP CHORD is zero; the tip
+        %   THICKNESS RATIO is not. NACA 0004 is a constant 4% section, so
+        %   tc_r_strake = tc_t_strake = 0.04 and Roskam Vol. II Eq. 12.1 applies
+        %   here exactly as it does to the wing, HT and VT.
+        S_strake          = 20.0    % ft^2  FULL reference planform area [Brandt Main!D18]
+        AR_strake         = 1.5     % --    aspect ratio          [Brandt Main!D19]
+        lambda_strake     = 0.0     % --    taper ratio, SHARP TIP [Brandt Main!D20]
+        LE_sweep_strake   = 74.0    % deg   LE sweep              [Brandt Main!D21]
+        tc_r_strake       = 0.04    % --    root t/c, NACA 0004   [Brandt Main!D22]
+        tc_t_strake       = 0.04    % --    tip  t/c, NACA 0004 constant section
+        x_le_strake       = 12.0    % ft    root LE x-station aft of the nose [Brandt Main!D23]
+        y_strake          = 2.0     % ft    root spanwise station [Brandt Main!D24]
+
         % -- Fuselage / whole aircraft --------------------------------------- %
         L_fus          = 47.5      % ft    fuselage length, PHYSICAL [TO 1F-16A-1] -- INTENTIONAL divergence from L2's 46.5 [Brandt Main!B32]. Feeds the fuselage Reynolds number, Roskam Eq. 12.3 and (via the normalized frame table) Amax; DISTINCT from L_aircraft
         W_max_fuselage = 7.0       % ft    max width             [Brandt Main!C32 / TO 1F-16A-1]
@@ -131,12 +150,24 @@ classdef F16GeomL3 < GeometryModelL3
         %    §4.2). ★ The affine-rescaling assumption is UNCITED -- see
         %    GeomL3.denormalize_frames.
         frames_normalized = zeros(0,3)
+
+        % Mod (08/19/2026) (Claude) -- read ONCE in the constructor, from
+        %   f16a_stations_path(). It was read on every S_wet call, and the
+        %   fileread + jsondecode was 91 % of that call's cost (6.8 ms of 7.5).
+        %   No constructor argument is needed: the path helper takes none.
+        fuselage_stations = struct([])   % control-station table [F16_geom_stations.json]
+        fuselage_station_ref = struct([]) % the fuselage the table was drawn for: L/W/H
         L_aircraft     = 47.65     % ft    OVERALL aircraft length; feeds ONLY the Raymer 6th ed. Eq. 12.44 Sears-Haack term as (Amax/l)^2. Not derivable in-model. Value is the published F-16A length 47 ft 7.75 in = 47.6458 ft (47.65 is +0.009%); CITATION NOT PINNED — no overall-length figure appears in sizing/ (Brandt Geom!B21 = 48.30 is a MAX-extent, a different quantity)
 
         % -- Inlet / duct (airframe side only) ------------------------------- %
         L_duct         = 14.0      % ft    inlet-duct length (inlet lip -> compressor face) -- a genuine AIRFRAME input [Brandt Main!F32, label Main!E32 = 'Compr Face'; readme_geom.md §3]
         x_inlet        = 15.0      % ft    inlet-lip x-station aft of the nose [Brandt Main!F31, label Main!E31 = 'Inlet(s):']. ★ TRAP: the read-only GroundTruth/f16a_geometry.json key inlet_x_ft = 14.0 is MISLABELLED (14.0 is Main!F32, the duct length, not an x-station). Use the live chain 15.0; do not "correct" this to 14.0
         n_engines      = 1         % --    number of engines [Brandt Main!B28]. Lives in GEOMETRY only because the Amax flow-through deduction needs it and no propulsion class exposes a count. If added propulsion-side, move to .propulsion and arrive by DI
+
+        % Mod (08/19/2026) (Claude)
+        M_max = 2.0    % --    design max Mach; SET FROM the requirements JSON
+                       %       (.design_mach). Feeds PropL2.engine_length_AB
+                       %       [Raymer 6th ed. Eq. 10.11]
 
         % -- Configuration --------------------------------------------------- %
         L_t            = 22.0      % ft    tail arm, wing 1/4-MAC -> HT 1/4-MAC [estimate; verify TO 1F-16A-1] -- derivable only if component apex-x inputs are added
@@ -176,7 +207,7 @@ classdef F16GeomL3 < GeometryModelL3
         tc_r_wing      % --    mirrors tc_wing (wing modeled uniform-tc) (weights' "tc_root")
         tc_t_wing      % --    mirrors tc_wing; see tc_r_wing
         S_exposed_wing % ft^2  GeomL2.compute_S_exposed_horizontal (weights' "S_w")
-        S_wet_wing     % ft^2  get_S_wet_wing() [Roskam Vol. II Eq. 12.1]
+        S_wet_wing     % ft^2  GeomL2.compute_S_wet_planform_roskam [Roskam Vol. II Eq. 12.1]
 
         % -- Horizontal tail (all of it from the S_ht + B_h pair) ------------ %
         AR_ht          % --    FULL aspect ratio = B_h^2/S_ht = 3.1690 (Decision 1); definitional
@@ -187,7 +218,7 @@ classdef F16GeomL3 < GeometryModelL3
         TE_sweep_ht    % deg   GeometryBase.convert_sweep(x=1.0)
         tc_ht          % --    uniform t/c = (tc_r_ht + tc_t_ht)/2 = 0.0475
         S_exposed_ht   % ft^2  GeomL2.compute_S_exposed_horizontal (weights' "S_ht")
-        S_wet_ht       % ft^2  get_S_wet_HT() [Roskam Vol. II Eq. 12.1]
+        S_wet_ht       % ft^2  GeomL2.compute_S_wet_planform_roskam [Roskam Vol. II Eq. 12.1]
 
         % -- Vertical tail --------------------------------------------------- %
         b_vt           % ft    sqrt(S_vt*AR_vt) -- full single-panel span, NOT halved [readme_geom.md §4.3]
@@ -197,18 +228,31 @@ classdef F16GeomL3 < GeometryModelL3
         TE_sweep_vt    % deg   GeometryBase.convert_sweep_panel(x=1.0)  -- SINGLE-PANEL 2/AR
         tc_vt          % --    uniform t/c = (tc_r_vt + tc_t_vt)/2 = 0.0415
         S_exposed_vt   % ft^2  GeomL2.compute_S_exposed_vertical (weights' "S_vt")
-        S_wet_vt       % ft^2  get_S_wet_VT() [Roskam Vol. II Eq. 12.1]
+        S_wet_vt       % ft^2  GeomL2.compute_S_wet_planform_roskam [Roskam Vol. II Eq. 12.1]
+
+        % -- Body strake / LERX -- Mod (08/19/2026) (Claude) ----------------- %
+        b_strake              % ft    full span, GeometryBase.compute_span
+        c_root_strake         % ft    root chord [Raymer 7th ed. Eq. 7.6]
+        c_tip_strake          % ft    tip chord  [Raymer 7th ed. Eq. 7.7] = 0, sharp tip
+        S_exposed_strake      % ft^2  exposed planform area; a BODY surface, so no fuselage clip
+        S_wet_strake          % ft^2  wetted area [Roskam Vol. II Eq. 12.1]
+        AR_exposed_strake     % --    mirrors AR_strake; the strake is unclipped
+        lambda_exposed_strake % --    mirrors lambda_strake; the strake is unclipped
+
+        % Mod (08/19/2026) (Claude)
+        S_wet_fuselage        % ft^2  control-station integration [Raymer 6th ed. Fig. 7.37]
+        S_wet_duct            % ft^2  frustum [Raymer 6th ed. Sec. 7.3]
 
         % -- Fuselage / whole aircraft --------------------------------------- %
         L_fuselage     % ft    mirrors L_fus (duplicate name kept for GeometryModelL2 contract parity)
         D_fus          % ft    (W_max+H_max)/2 equivalent diameter -- Roskam Eq. 12.3 term ONLY, NOT the weights depth
-        Amax           % ft^2  AREA-RULED whole-aircraft maximum, GeomL3.get_Amax [Brandt Geom!H26:H45 -> H47] -- NOT the envelope ellipse (that is L2's, and stays there)
+        Amax           % ft^2  AREA-RULED whole-aircraft maximum, obj.get_Amax [Brandt Geom!H26:H45 -> H47] -- NOT the envelope ellipse (that is L2's, and stays there)
 
         % -- Inlet / duct ---------------------------------------------------- %
         T_AB_SLS_lb    % lbf   = prop.T_SL (INJECTED) [Brandt Engn(s)!T_AB_SLS = Main!D29 = 23770]
-        D_inlet        % ft    GeometryBase.compute_nacelle_diameter(T_AB_SLS_lb) [Brandt Engn(s) D_nac; readme_geom.md §3]
+        D_inlet        % ft    F16GeomL2.compute_nacelle_diameter(T_AB_SLS_lb) [Brandt Engn(s) D_nac; readme_geom.md §3]
         D_exit         % ft    = D_inlet (Brandt models the nacelle as a constant-diameter cylinder)
-        L_engine       % ft    GeomL3.compute_engine_length(D_inlet) = 4.5*D [Brandt Geom!D475]
+        L_engine       % ft    PropL2.engine_length_AB(T_AB_SLS_lb, M_max) [Raymer 6th ed. Eq. 10.11]
         x_nacelle_aft  % ft    x_inlet + L_duct + L_engine [Brandt Geom!C484 = C482 + D475]
 
         % -- Area-ruled Amax intermediates (all derivable -- todo §16.1) ----- %
@@ -228,19 +272,28 @@ classdef F16GeomL3 < GeometryModelL3
 
     methods
 
-        function obj = F16GeomL3(json_path, prop)
+        function obj = F16GeomL3(json_path, prop, req_path)
         %F16GEOML3  Construct from a required unified L3 input JSON path
-        %   (f16a_spec_path(3), .geometry block) plus a required injected
-        %   propulsion object. No silent default. Sets only input properties.
+        %   (f16a_spec_path(3), .geometry block), a required injected propulsion
+        %   object, and the requirements JSON path (f16a_requirements_path()).
+        %   No silent defaults. Sets only input properties.
         %   prop.T_SL (SLS afterburning thrust) sizes the nacelle diameter. At
         %   the L3 rung pass an F16PropL2: there is no L3 propulsion tier.
+        %   Mod (08/19/2026) (Claude) -- req_path added. M_max is a design
+        %   requirement, so it comes from the requirements file, as in F16GeomL1.
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
                 prop      (1,1) PropulsionBase
+                req_path        {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             G = jsondecode(fileread(json_path)).geometry;
+            R = jsondecode(fileread(req_path));
 
-            obj.prop = prop;   % injected: supplies the Dependent T_AB_SLS_lb
+            obj.prop  = prop;        % injected: supplies the Dependent T_AB_SLS_lb
+            Fst = jsondecode(fileread(f16a_stations_path())).fuselage;   % Mod (08/19/2026) (Claude)
+            obj.fuselage_stations   = Fst.stations;
+            obj.fuselage_station_ref = Fst.reference;
+            obj.M_max = R.design_mach;
 
             % ---- wing -------------------------------------------------- %
             obj.S_ref         = G.wing.S_ft2;         % [Brandt Main!B18]
@@ -279,6 +332,21 @@ classdef F16GeomL3 < GeometryModelL3
             obj.lambda_exposed_vt = G.vertical_tail.taper_exposed;   % [TO/USAF, physical]
             obj.x_le_vt           = G.vertical_tail.x_le_ft;         % [Brandt Main!H23 'X Location']
 
+            % ---- body strake / LERX -- Mod (08/19/2026) (Claude) -------- %
+            %    AR_exposed_strake and lambda_exposed_strake are DERIVED, not
+            %    inputs: Brandt has no exposed strake AR or taper, because the
+            %    strake is a body surface and is not clipped. His exposed
+            %    half-span 2.7386 ft equals span_full/2 and his exposed area
+            %    20.0 ft^2 equals S_ft2 [GroundTruth Geom!9].
+            obj.S_strake          = G.strake.S_ft2;                  % [Brandt Main!D18]
+            obj.AR_strake         = G.strake.AR;                     % [Brandt Main!D19]
+            obj.lambda_strake     = G.strake.taper;                  % [Brandt Main!D20] sharp tip
+            obj.LE_sweep_strake   = G.strake.sweep_LE_deg;           % [Brandt Main!D21]
+            obj.tc_r_strake       = G.strake.tc_root;                % [Brandt Main!D22] NACA 0004
+            obj.tc_t_strake       = G.strake.tc_tip;                 % constant 4% section
+            obj.x_le_strake       = G.strake.x_le_ft;                % [Brandt Main!D23]
+            obj.y_strake          = G.strake.y_ft;                   % [Brandt Main!D24]
+
             % ---- fuselage / whole aircraft ----------------------------- %
             obj.L_fus          = G.fuselage.length_ft;     % 47.5 [TO 1F-16A-1]
             obj.W_max_fuselage = G.fuselage.max_width_ft;  % [Brandt Main!C32]
@@ -291,7 +359,7 @@ classdef F16GeomL3 < GeometryModelL3
             %      area-rule statics take.  The `frame` field is Brandt's 1..20
             %      index label -- traceability only, not a design value, so it
             %      is deliberately not stored.  NOTHING is rescaled here: the
-            %      denormalization is done live inside GeomL3.get_Amax, so an
+            %      denormalization is done live inside get_Amax, so an
             %      optimizer moving L_fus / W_max / H_max moves Amax.
             fr = G.fuselage.frames_normalized;             % [Brandt Main!A34:F53, normalized]
             obj.frames_normalized = [ [fr.x_over_L].', ...
@@ -318,39 +386,138 @@ classdef F16GeomL3 < GeometryModelL3
         % duct frustum, exposed-area clips) -- no formula lives here.
         % ================================================================ %
 
+        % TODO (8/19/2026)(Casey): Remember to replace this with something more relevant.
         function val = get_S_ref(obj)
             val = obj.S_ref;
         end
 
-        function val = get_S_wet(obj)
-        %GET_S_WET  Total wetted area (wing+HT+VT+fuselage+duct).  No W_TO
-        %   argument -- L3 has real planform geometry (mirrors F16GeomL2).
-            val = GeomL3.get_S_wet(obj);
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+        % TODO (7/28/2026): This seems too specific in this form. I like the idea of having conic/cross sections, but it should be generic.
+        % Cross sections that the toolbox can focus on: fuselage & main wings.
+        % TODO (8/19/2026): This seems too high-fidelity to be in L2.
+        % Note (8/19/2026)(casey): Moved from "GeomL3.m."
+        % Mod (08/19/2026) (Claude) -- the object-argument flag is answered: a
+        %   design class may read its own properties. It still calls six GeomL3
+        %   statics, which keep the citation gaps flagged in that file.
+        function val = get_Amax(obj)
+            % Max cross-sectional area of the whole aircraft (fuselage + wings).
+            [x, w, h] = GeomL3.denormalize_frames(obj.frames_normalized, ...
+                            obj.L_fus, obj.W_max_fuselage, obj.H_max_fuselage);
+
+            A_fuse = GeomL3.compute_frame_cs_area(w, h);
+
+            A_wing = GeomL3.compute_surface_cs_area(x, obj.Xexp_wing, ...
+                         obj.c_exp_root_wing, obj.c_tip_wing, ...
+                         obj.G_hs_exp_wing, obj.LE_sweep_wing, obj.tc_wing);
+
+            A_HT   = GeomL3.compute_surface_cs_area(x, obj.Xexp_ht, ...
+                         obj.c_exp_root_ht, obj.c_tip_ht, ...
+                         obj.G_hs_exp_ht, obj.LE_sweep_ht, obj.tc_ht);
+
+            A_VT   = GeomL3.compute_surface_cs_area(x, obj.Xexp_vt, ...
+                         obj.c_exp_root_vt, obj.c_tip_vt, ...
+                         obj.G_hs_exp_vt, obj.LE_sweep_vt, obj.tc_vt);
+
+            A_nac  = GeomL3.compute_nacelle_cs_area(x, obj.n_engines, ...
+                         obj.D_inlet, obj.x_inlet, obj.x_nacelle_aft);
+
+            val = GeomL3.compute_Amax_area_ruled( ...
+                      A_fuse + A_wing + A_HT + A_VT + A_nac, ...
+                      obj.n_engines, obj.D_inlet);
         end
 
-        function val = get_S_wet_wing(obj)
-            val = GeomL3.get_S_wet_wing(obj);
+        % Mod (08/19/2026) (Claude)
+        %   The old body called five GeomL3 statics that no longer exist, and
+        %   assigned to S_wet_wing/_ht/_vt/_fuselage/_duct. Three of those are
+        %   read-only Dependent, and two are not properties at all, so the
+        %   assignments could only error. Now it sums locals.
+        %
+        %   _TODO -- L3 CALLS L2. The fuselage and duct statics below live in
+        %   GeomL2, as do the three lifting-surface calls in the Dependent
+        %   getters, and the exposed-area clips at lines 400, 442 and 476. Eight
+        %   links in all. Casey retracted approval of the L3-to-L2 link on
+        %   2026-08-18, then chose on the same day to leave them and flag them.
+        %   Resolve in the gate-4b dependency sweep. Options on the table:
+        %   promote the shared identities to GeometryBase, or give GeomL3 its own
+        %   copies.
+        % _TODO (08/19/2026) (Claude) -- two contract problems, for the Models pass:
+        %   1. GeometryModelL3 does not declare this method abstract, so nothing
+        %      makes a subclass supply it. GeometryModelL3:133 says it should.
+        %   2. The name says "components", but it returns ONE total. The enforcer
+        %      assigns the result into the scalar S_wet.
+        % function val = get_design_S_wet_components(obj)
+        % %GET_DESIGN_S_WET_COMPONENTS  Total wetted area [ft^2] of this design.
+        % %   The F-16A sums six components: wing, strakes, HT, VT, fuselage and duct.
+        % %   Another design sums whatever components it has, so the choice of
+        % %   terms belongs to the design class, not to a toolbox or an enforcer.
+        % %   No W_TO argument -- L3 has real planform geometry.
+
+        %     S_wet_fuselage = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);          % [Roskam Vol. II Eq. 12.3]
+        %     % S_wet_fuselage = GeomL3.compute_S_wet_cylinder(obj.D_fus/2, obj.L_fus); % Uses the simple cylinder equation I have in L3.
+        %     S_wet_duct     = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct); % [Raymer 6th ed. Sec. 7.3]
+        %     S_wet_wing = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
+        %     S_wet_ht = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_ht, obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
+        %     S_wet_vt = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_vt, obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);
+        %     S_wet_strakes = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_strake, obj.tc_r_strake, obj.tc_t_strake, obj.lambda_strake);
+        %     val = S_wet_wing + S_wet_ht + S_wet_vt + S_wet_fuselage + S_wet_duct + S_wet_strakes;
+        % end
+
+
+        % Note (8/19/2026)(casey): This is an experiment testing the validity of using a conic-section-based wetted area estimation. It takes
+        % control station inputs, estimates the perimeter of each station, then computes the area underneath the curve formed by plotting
+        % each station's perimeter vs x-location along the longitudinal axis, measured from the nose.
+        % NOTE (8/19/2026)(CASEY): FOR SOME FUCKING REASON THIS WAS NEVER EVEN USED.
+        % GO UPDATE THE SIZING LOOP TO USE THIS WHEN ALL THE DISCIPLINES ARE STRAIGHTENED OUT.
+        function val = get_design_S_wet_components(obj)
+        %GET_DESIGN_S_WET_COMPONENTS  Total wetted area [ft^2] of this design.
+        %   The F-16A sums six components: wing, strakes, HT, VT, fuselage and duct.
+        %   Another design sums whatever components it has, so the choice of
+        %   terms belongs to the design class, not to a toolbox or an enforcer.
+        %   No W_TO argument -- L3 has real planform geometry.
+
+            % S_wet_fuselage = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);          % [Roskam Vol. II Eq. 12.3]
+            S_wet_fuselage = obj.get_S_wet_fuselage_stations; % Note (8/19/2026): This directly calls "get_S_wet_fuselage_stations" to reduce ambiguity to the human user. Don't modify.
+            S_wet_duct     = obj.S_wet_duct; % This calls the "getter" for S_wet_duct. GO SEE WHERE IT IS (ctrl + F for "get.S_wet_duct")
+            S_wet_wing = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
+            S_wet_ht = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_ht, obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
+            S_wet_vt = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_vt, obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);
+            S_wet_strakes = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_strake, obj.tc_r_strake, obj.tc_t_strake, obj.lambda_strake);
+            val = S_wet_wing + S_wet_ht + S_wet_vt + S_wet_fuselage + S_wet_duct + S_wet_strakes;
         end
 
-        function val = get_S_wet_HT(obj)
-            val = GeomL3.get_S_wet_HT(obj);
+        % Mod (08/19/2026) (Claude)
+        function val = get_S_wet_fuselage_stations(obj)   %#ok<MANU>
+        %GET_S_WET_FUSELAGE_STATIONS  Fuselage wetted area [ft^2] from control stations.
+        %   Perimeter at each station, then the area under the perimeter-vs-x
+        %   curve.  [Raymer 6th ed. Fig. 7.37, p. 206]
+        %   The nose has zero width, so its perimeter stays 0 and the curve
+        %   closes to a point.
+        %   Mod (08/19/2026) (Claude) -- no loop, no file read. The station table
+        %     comes from the constructor and the perimeter static is vectorized.
+        %
+        %   Mod (08/19/2026) (Claude) -- SCALED to the live fuselage. The table was
+        %     drawn for L = 46.5, W = 7.0, H = 5.0 ft (.fuselage.reference in the
+        %     JSON). Each dimension is scaled by its ratio to the live input, so
+        %     the wetted area tracks L_fus, W_max_fuselage and H_max_fuselage. It
+        %     was frozen at the drawn size before, which made an optimizer see no
+        %     drag change from stretching the fuselage. Same idea as
+        %     GeomL3.denormalize_frames, which Amax already uses.
+        %     D_fus is Dependent on W_max and H_max, so it follows too.
+            S = obj.fuselage_stations;
+            R = obj.fuselage_station_ref;
+            kx = obj.L_fus           / R.L_ft;
+            kw = obj.W_max_fuselage  / R.W_max_ft;
+            kh = obj.H_max_fuselage  / R.H_max_ft;
+
+            w = [S.width_ft].'  * kw;
+            m = w > 0;                       % the nose has no perimeter
+            P = zeros(numel(S), 1);
+            P(m) = GeomL3.compute_frame_perimeter(w(m), [S(m).height_ft].' * kh, ...
+                       [S(m).z_chine_ft].' * kh, ...
+                       ([S(m).z_top_ft].' + [S(m).z_bottom_ft].')/2 * kh);
+            val = GeomL3.compute_s_wet_from_perimeter_curve([S.x_ft].' * kx, P);
         end
 
-        function val = get_S_wet_VT(obj)
-            val = GeomL3.get_S_wet_VT(obj);
-        end
-
-        function val = get_S_wet_fuselage(obj)
-            val = GeomL3.get_S_wet_fuselage(obj);
-        end
-
-        function val = get_S_wet_duct(obj)
-            val = GeomL3.get_S_wet_duct(obj);
-        end
-
-        function val = get_S_exposed_wing(obj)
-            val = GeomL3.get_S_exposed_wing(obj);
-        end
 
         % ================================================================ %
         % DERIVED-property getters -- recompute live from the inputs on every
@@ -390,8 +557,10 @@ classdef F16GeomL3 < GeometryModelL3
             fw = obj.W_max_fuselage / 2;   % fuselage half-width [readme_geom.md §4.3]
             v  = GeomL2.compute_S_exposed_horizontal(obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, fw);
         end
+        % Mod (08/19/2026) (Claude) -- was obj.get_S_wet_wing(), now removed.
         function v = get.S_wet_wing(obj)
-            v = obj.get_S_wet_wing();
+            v = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_wing, ...
+                    obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);   % [Roskam Vol. II Eq. 12.1]
         end
 
         % ---- Horizontal tail -------------------------------------------- %
@@ -432,8 +601,10 @@ classdef F16GeomL3 < GeometryModelL3
             fw = obj.W_max_fuselage / 2;   % fuselage half-width [readme_geom.md §4.3]
             v  = GeomL2.compute_S_exposed_horizontal(obj.c_root_ht, obj.c_tip_ht, obj.b_ht/2, fw);
         end
+        % Mod (08/19/2026) (Claude) -- was obj.get_S_wet_HT(), now removed.
         function v = get.S_wet_ht(obj)
-            v = obj.get_S_wet_HT();
+            v = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_ht, ...
+                    obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);   % [Roskam Vol. II Eq. 12.1]
         end
 
         % ---- Vertical tail ---------------------------------------------- %
@@ -466,8 +637,50 @@ classdef F16GeomL3 < GeometryModelL3
             fh = obj.H_max_fuselage / 2;   % fuselage half-height [readme_geom.md §4.3]
             v  = GeomL2.compute_S_exposed_vertical(obj.S_vt, obj.AR_vt, obj.c_root_vt, obj.c_tip_vt, fh);
         end
+        % Mod (08/19/2026) (Claude) -- was obj.get_S_wet_VT(), now removed.
         function v = get.S_wet_vt(obj)
-            v = obj.get_S_wet_VT();
+            v = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_vt, ...
+                    obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);   % [Roskam Vol. II Eq. 12.1]
+        end
+
+        % ---- Body strake / LERX -- Mod (08/19/2026) (Claude) ------------- %
+        function v = get.b_strake(obj)
+            v = GeometryBase.compute_span(obj.AR_strake, obj.S_strake);
+        end
+        function v = get.c_root_strake(obj)
+            v = GeometryBase.compute_root_chord(obj.S_strake, obj.b_strake, obj.lambda_strake);
+        end
+        function v = get.c_tip_strake(obj)
+            v = GeometryBase.compute_tip_chord(obj.c_root_strake, obj.lambda_strake);
+        end
+        function v = get.S_exposed_strake(obj)
+            % A BODY surface: the fuselage does not cover it, so the clip station
+            % is zero. Brandt agrees -- his exposed strake area equals the full
+            % reference area, 20.0 ft^2 [GroundTruth Geom!9].
+            v = GeomL2.compute_S_exposed_horizontal(obj.c_root_strake, obj.c_tip_strake, ...
+                    obj.b_strake/2, 0);
+        end
+        function v = get.S_wet_strake(obj)
+            v = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_strake, ...
+                    obj.tc_r_strake, obj.tc_t_strake, obj.lambda_strake);   % [Roskam Vol. II Eq. 12.1]
+        end
+        function v = get.S_wet_duct(obj)
+            % Mod (08/19/2026) (Claude) -- exposed so F16AeroL3 reads a geometry
+            %   property instead of calling the GeomL2 toolbox itself.
+            v = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct);
+        end
+        function v = get.S_wet_fuselage(obj)
+            % Mod (08/19/2026) (Claude) -- the TIER's fuselage method. L2's own
+            %   S_wet_fuselage is Roskam Eq. 12.3 on (D_fus, L_fus). L3 uses the
+            %   control stations. So an injected geometry object carries its own
+            %   fidelity, and F16AeroL3 reads one name at both tiers.
+            v = obj.get_S_wet_fuselage_stations();
+        end
+        function v = get.AR_exposed_strake(obj)
+            v = obj.AR_strake;       % unclipped, so exposed == full
+        end
+        function v = get.lambda_exposed_strake(obj)
+            v = obj.lambda_strake;   % unclipped, so exposed == full
         end
 
         % ---- Fuselage / whole aircraft ---------------------------------- %
@@ -494,10 +707,11 @@ classdef F16GeomL3 < GeometryModelL3
             % flow-through divisor (GeomL3.compute_Amax_area_ruled). As-built
             % 24.7037 ft^2 (-1.62 % vs Brandt Geom!B20 = 25.1106, a physical
             % divergence from L3's 47.5 ft fuselage).
-            v = GeomL3.get_Amax(obj);
+            v = obj.get_Amax();   % Mod (08/19/2026) (Claude)
         end
 
         % ---- Inlet / duct ----------------------------------------------- %
+
         function v = get.T_AB_SLS_lb(obj)
             % INJECTED, not stored: the SLS afterburning thrust comes from the
             % propulsion object, so the nacelle diameter -> duct wetted area ->
@@ -506,18 +720,26 @@ classdef F16GeomL3 < GeometryModelL3
         end
         function v = get.D_inlet(obj)
             % Brandt nacelle sizing [Brandt Engn(s) D_nac; readme_geom.md §3].
-            v = GeometryBase.compute_nacelle_diameter(obj.T_AB_SLS_lb);
+            % Mod (08/19/2026) (Claude)
+            % _TODO (08/19/2026) (Claude): this calls INTO L2. Casey chose L2 as
+            %   the home on 2026-08-19. It is the L3-to-L2 link he retracted on
+            %   2026-08-18, so it needs his sign-off or a different home. The
+            %   value comes from engine SLS thrust, so F16PropL2 removes the link.
+            %   ANSWERED 2026-08-19 (Casey): signed off. The link stays.
+            v = F16GeomL2.compute_nacelle_diameter(obj.T_AB_SLS_lb);
         end
         function v = get.D_exit(obj)
             v = obj.D_inlet;   % constant-diameter cylinder nacelle -> frustum degenerates to pi*D*L
         end
         function v = get.L_engine(obj)
-            % 4.5 * D_engine = 15.9166 ft [Brandt Geom!D475].
-            v = GeomL3.compute_engine_length(obj.D_inlet);
+            % 0.255 * T^0.4 * M^0.2 = 16.4877 ft [Raymer 6th ed. Eq. 10.11].
+            % Mod (08/19/2026) (Claude) -- was Brandt's 4.5*D = 15.9166 ft.
+            v = PropL2.engine_length_AB(obj.T_AB_SLS_lb, obj.M_max);
         end
         function v = get.x_nacelle_aft(obj)
             % Aft limit of the nacelle cross-section = x_inlet + L_duct +
-            % L_engine = 44.9166 ft [Brandt live chain Geom!C480->C482->C484].
+            % L_engine = 45.4877 ft. Brandt's chain gives 44.9166
+            % [Geom!C480->C482->C484] on his 4.5*D engine length.
             % NOT BrandtGeometry.m's [14.0, 43.9166] (mislabelled inlet_x_ft).
             v = obj.x_inlet + obj.L_duct + obj.L_engine;
         end

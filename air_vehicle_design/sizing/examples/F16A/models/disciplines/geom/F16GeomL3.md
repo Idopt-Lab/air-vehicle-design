@@ -22,7 +22,8 @@ prop = F16PropL2(f16a_spec_path(2));
 g3   = F16GeomL3(f16a_spec_path(3), prop);
 ```
 
-`F16GeomL3(json_path, prop)` — both arguments required, no silent default. `json_path` supplies the
+`F16GeomL3(json_path, prop, req_path)` — every argument required, no silent default. `req_path` was
+added 2026-08-19 and supplies `M_max` from `.design_mach`. `json_path` supplies the
 `.geometry` block of `f16a_L3.json`; only `prop.T_SL` is read, and only to size the nacelle.
 
 ---

@@ -80,18 +80,21 @@ classdef F16GeomL1 < GeometryModelL1
             end
         end
 
+        % TODO (8/17/2026)(Casey): I'm unsure about obtaining S_ref at L1, without the sizing loop running at least once, unless it's an initial guess.
         function val = get_S_ref(obj)
             val = obj.S_ref;
         end
 
-        function val = get_S_wet(obj, W_TO)
-            val = GeomL1.get_S_wet_statistical(obj, W_TO);
+        function val = get_S_wet_statistical(obj, W_TO)
+            [c, d] = GeomL1.lookup_swet(obj.aircraft_category); % Looks up the coefficients (Roskam Vol I, Table 3.5)
+            val = GeomL1.compute_s_wet_regression(c, d, W_TO); % Computes the S_wet of the whole design (Roskam, Vol I, eq ???)
         end
 
         % TODO (8/13/20206): Duplicate method function, but needed to satisfy the enforcer.
-        function val = get_S_wet_statistical(obj, W_TO)
-            val = GeomL1.get_S_wet_statistical(obj, W_TO);
-        end
+        % Mod (08/17/2026) (Claude)
+        % function val = get_S_wet_statistical(obj, W_TO)
+        %     val = obj.get_S_wet(W_TO);
+        % end
 
         % TODO (8/14/2026): I'm noticing a lot of steps between the initial function call and the final result being returned.
         % This is concerning. Estimating the fuselage length via regression takes this path:
@@ -103,12 +106,19 @@ classdef F16GeomL1 < GeometryModelL1
         %       [a, c] = GeomL1.lookup_l_fus_coeffs(aircraft_category)
         %       l_fus = GeomL1.est_l_fus(a, c, W_TO)
         % end
+        % Mod (08/17/2026) (Claude)
         function val = get_L_fus(obj, W_TO)
-            val = GeomL1.get_L_fus(obj, W_TO);
+            [a, c] = GeomL1.lookup_lfus(obj.aircraft_category); % Looks up the coefficients (Raymer 6th ed., Table 6.3)
+            val = GeomL1.compute_l_fus_regression(a, c, W_TO);  % Computes the fuselage length (Raymer 6th ed., Table 6.3 power law)
         end
 
+        % TODO (8/17/2026)(Casey): This is a wrapper that should be calling an explicit method function
+        % from GeomL1 which should not be accepting "obj" as an argument. It should be accepting explicit
+        % variables as arguments.
+        % Mod (08/17/2026) (Claude)
         function val = get_AR_eq(obj)
-            val = GeomL1.get_AR_eq(obj);
+            [a, C] = GeomL1.lookup_AR_eq(obj.aircraft_category); % Looks up the coefficients (Raymer 7th ed., Table 4.1, dogfighter row)
+            val = GeomL1.compute_AR_eq(a, C, obj.M_max);         % Computes the equivalent aspect ratio from design Mach
         end
 
         % ================================================================== %
