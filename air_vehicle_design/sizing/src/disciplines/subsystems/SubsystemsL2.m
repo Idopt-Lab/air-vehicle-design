@@ -166,8 +166,9 @@ classdef SubsystemsL2
         %   areas [ft^2] of the fuselage envelope, feeding Raymer Eq. 7.14's
         %   A_top/A_side inputs. Elliptical footprints (length L, width W_max
         %   / height H_max): the lengthwise extension of
-        %   GeometryBase.compute_Amax_elliptical's (pi/4)*W*H assumption. No
+        %   F16GeomL2.compute_Amax_elliptical's (pi/4)*W*H assumption. No
         %   separate equation number; same citation status as that method.
+        %   Mod (08/19/2026) (Claude)
             arguments
                 L_fus (1,1) double {mustBePositive}
                 W_max (1,1) double {mustBePositive}

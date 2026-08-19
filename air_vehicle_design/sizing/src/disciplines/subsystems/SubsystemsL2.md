@@ -43,7 +43,7 @@ Fuel density and the avionics weight-fraction lookup are level-agnostic and are 
 $$V_{fus,raw} = \frac{3.4\,(A_{top}\,A_{side})}{4\,L}$$
 
 $A_{top}$/$A_{side}$ are this toolbox's own elliptical-envelope footprint estimate (no separate
-equation number — the natural lengthwise extension of `GeometryBase.compute_Amax_elliptical`'s
+equation number — the natural lengthwise extension of `F16GeomL2.compute_Amax_elliptical`'s
 existing $(\pi/4)WH$ cross-section-ellipse assumption to the top-view and side-view projections):
 
 $$A_{top} = \frac{\pi}{4} L_{fus} W_{max} \qquad A_{side} = \frac{\pi}{4} L_{fus} H_{max}$$
