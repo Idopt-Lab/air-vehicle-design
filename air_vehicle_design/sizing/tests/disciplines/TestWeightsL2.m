@@ -161,7 +161,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   all) still fails HERE, at construction.
             prop = TestWeightsL2.makeProp();
             g1   = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            g3   = F16GeomL3(f16a_spec_path(3), prop);
+            g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             tc.verifyError(@() F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g1, prop), ...
                 'MATLAB:validators:mustBeA', ...
                 'An L1 geometry object must still be rejected at construction.');
@@ -411,7 +411,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
                 'S_ht must NOT be geom.S_ht (the FULL 108 ft^2 planform).');
             tc.verifyNotEqual(w.S_vt, geom.S_vt, ...
                 'S_vt must NOT be geom.S_vt (the FULL 60 ft^2 planform).');
-            tc.verifyEqual(w.S_wet_fus, geom.get_S_wet_fuselage(), 'AbsTol', 1e-9, ...
+            tc.verifyEqual(w.S_wet_fus, geom.S_wet_fuselage, 'AbsTol', 1e-9, ...   % Mod (08/19/2026) (Claude)
                 'S_wet_fus must be geom.get_S_wet_fuselage() [Roskam Vol. II Eq. 12.3].');
             tc.verifyNotEqual(w.S_wet_fus, 750, ...
                 'S_wet_fus must no longer be the former stored 750 [estimate].');
@@ -463,6 +463,9 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         %   objects; 13 Dependent (12 + W_strake, added 2026-07-29). A count
         %   change means the split moved and the sweeps below no longer cover
         %   what they claim to.
+        %
+        %   Mod (08/19/2026) (Claude) -- stays 13. D_fus and L_fus were briefly
+        %   added, then removed: no consumer in this class.
             names = TestWeightsL2.dependentNames();
             tc.verifyEqual(numel(names), 13, ...
                 'F16WeightsL2 must declare exactly 13 Dependent properties.');

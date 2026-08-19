@@ -80,7 +80,15 @@ classdef F16WeightsL2 < WeightsModelL2
         S_w         % ft^2  EXPOSED wing planform area   = geom.S_exposed_wing (196.2261)
         S_ht        % ft^2  EXPOSED HT planform area      = geom.S_exposed_ht  (49.8473) — NOT geom.S_ht = 108 (FULL)
         S_vt        % ft^2  EXPOSED VT planform area      = geom.S_exposed_vt  (40.8897) — NOT geom.S_vt = 60 (FULL)
-        S_wet_fus   % ft^2  fuselage WETTED area          = geom.get_S_wet_fuselage() (730.3023)
+        S_wet_fus   % ft^2  fuselage WETTED area          = geom.S_wet_fuselage (730.3023)
+        % Mod (08/19/2026) (Claude) -- D_fus and L_fus were declared here, then
+        %   removed: Casey confirmed they have no consumer in this class. The
+        %   Raymer Table 15.2 fuselage term takes S_wet_fus, a WETTED area, not a
+        %   diameter and length. D_fus and L_fus are the Raymer Eq. 15.4 inputs
+        %   that L3 weights uses, and F16WeightsL3 already has its own pair.
+        %   Kept as a note because of finding S-30: on a WEIGHTS class D_fus means
+        %   the 5.0 ft structural DEPTH (geom.H_max_fuselage), NOT geometry's own
+        %   6.0 ft equivalent diameter. Wiring geom.D_fus is silent and 20% wrong.
 
         % -- Engine weight, by DI from the injected prop (2) --------------- %
         W_en        % lbf  OFFICIAL, UNINSTALLED [Raymer 7th ed. Eq. 10.10] = 2775.0210
@@ -168,6 +176,8 @@ classdef F16WeightsL2 < WeightsModelL2
         % DERIVED-property getters — recompute live on every read.
         % ================================================================== %
 
+        % TODO (8/19/2026)(Casey): By removing the wrappers in F16GeomL2, I've cut off these functions.
+        % They still require values to work. So I think the solution may be "dependency injection."
         % ---- Geometry, by DI (the exposed-vs-FULL name trap) -------------- %
         function v = get.S_w(obj)
             % Raymer Table 15.2 takes the EXPOSED planform area.
@@ -184,11 +194,10 @@ classdef F16WeightsL2 < WeightsModelL2
             v = obj.geom.S_exposed_vt;
         end
         function v = get.S_wet_fus(obj)
-            % Fuselage WETTED area [Roskam Vol. II Eq. 12.3] = 730.3023 ft^2.
-            % This term alone takes WETTED area; the three surfaces above take
-            % PLANFORM.
-            v = obj.geom.get_S_wet_fuselage();
+            % Gets the fuselage wetted area from  GeomL2.
+            v = obj.geom.S_wet_fuselage;
         end
+
 
         % ---- Engine weight, by DI ---------------------------------------- %
         function v = get.W_en(obj)
