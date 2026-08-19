@@ -551,12 +551,14 @@ vertical tail to damp) [Raymer, p. 88].
 
 | Configuration | Low wing | Mid wing | High wing |
 |---|---|---|---|
-| Unswept (civil) | 5 to 7 | 3 to 7 | −2 to 2 |
-| Subsonic swept wing | 0 to 5 | −5 to 0 | 0 to 2 |
-| Supersonic swept wing | −5 to −2 | −5 to 0 | (not given) |
+| Unswept (civil) | 5 to 7 | 2 to 4 | 0 to 2 |
+| Subsonic swept wing | 3 to 7 | −2 to 2 | −5 to −2 |
+| Supersonic swept wing | 0 to 5 | −5 to 0 | −5 to 0 |
 
-(Table reconstructed from the OCR'd column layout — values are in degrees. `[verify p. 89 — column/
-row alignment inferred from surrounding prose; original table columns may be ordered differently]`.)
+(Values are dihedral angle in degrees. **Corrected 2026-08-17** against a 380-dpi render of book
+p. 89 — the earlier transcription had every cell displaced, because the OCR text ran column-major
+and was reassembled row-wise. The table above is the printed layout: all nine cells are populated,
+and dihedral decreases as the wing moves from low to high and as sweep increases.)
 
 ## §4.14 Wing Vertical Location
 
@@ -922,8 +924,8 @@ can be set now [Raymer, p. 111]:
 
 (T-tail aircraft use a lower vertical-tail AR to reduce the weight penalty of carrying the
 horizontal tail on top; some GA horizontal tails use `λ=1.0` — untapered — to cut manufacturing
-cost.) `[verify p. 111 — column groupings reconstructed from OCR'd table; cross-check row/column
-alignment against the printed table before use]`
+cost.) *(Row/column alignment confirmed 2026-08-17 against a 380-dpi render of book p. 111; the
+earlier `[verify]` flag is cleared.)*
 
 Horizontal-tail LE sweep is usually set **~5° more than wing sweep** (makes the tail stall after the
 wing, and gives it a higher `M_crit` than the wing, avoiding elevator-effectiveness loss from tail

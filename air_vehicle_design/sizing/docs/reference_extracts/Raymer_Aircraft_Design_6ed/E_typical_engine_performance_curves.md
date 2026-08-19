@@ -148,7 +148,16 @@ beyond the sea-level panel above, as they repeat the same family shape at each a
 | Maximum engine diameter | 100 in. {254 cm} |
 | Overall pressure ratio | 30 |
 | Fan pressure ratio | 1.6 |
-| Bypass ratio | 8.0 [verify p. 991 — table cell renders as "80"; a bypass ratio of 8.0 is consistent with a high-bypass turbofan and with typical published values for this Raymer example engine, so 80 is read here as a lost decimal point] |
+| Bypass ratio | 8.0 (book misprint — see note) |
+
+**Book misprint, Table E.2 bypass ratio (checked 2026-08-18 against a 700-dpi render of book
+p. 991).** The page really does print **"80"**, with no decimal point; at that magnification the
+"1.6" in the row above shows its decimal point clearly, so this is a print error in the book, not
+an OCR artifact. The value is recorded here as **8.0**, because 80 is not physically possible for
+this engine: at 1,680 lb/s total airflow a bypass ratio of 80 leaves only 21 lb/s of core flow to
+make 50,000 lb of thrust, whereas a bypass ratio of 8.0 gives about 187 lb/s of core flow, which
+agrees with the quoted 30 overall pressure ratio, 1.6 fan pressure ratio and 100-in. fan diameter.
+Every other cell in Table E.2 was read off the same render and is correct as extracted.
 
 Installation assumptions: inlet total pressure ratio 0.97; power extraction 650 kW; high-pressure
 bleed airflow 2.0 lb/s; maximum-rated performance plotted with dashed lines (vs. solid for

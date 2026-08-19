@@ -41,8 +41,10 @@ percentile figure usually has enough adjustment range (seat/controls) to also fi
 ### Fig 9.2 — Typical fighter cockpit dimensions
 *[Raymer, Fig. 9.2, p. 264]* — Side-view diagram with called-out dimensions: head clearance radius
 10 in {25 cm}; overside-vision-related depth 15 in {38 cm}; 40° over-the-side vision angle; 3 in
-{8 cm} allowance "for longeron"; 17 in {43 cm} and 73 in {33 cm — likely an OCR-garbled value,
-`[verify p. 264]`}; 50 in {1.3 m}; 32 in {81 cm}; 8 in {20 cm}. Two key reference points: the **seat
+{8 cm} allowance "for longeron"; 17 in {43 cm} and 13 in {33 cm}; 50 in {1.3 m}; 32 in {81 cm};
+8 in {20 cm}. (Corrected 2026-08-18 against a 400-dpi render of book p. 264: the second dimension is
+**13 in. {33 cm}**, not "73 in" — the OCR read the printed 1 as a 7. 13 in = 33 cm converts
+correctly, 73 in does not.) Two key reference points: the **seat
 reference point** (where seat pan meets seat back — references floor height/leg room) and the
 **pilot's eye point** (references overnose angle, transparency grazing angle, and the 10-in head
 clearance radius). Typical seatback angle in this figure is 13°; up to 30° is flown (F-16) and up to
@@ -60,7 +62,8 @@ minimum-weather conditions (1200-ft {366-m} runway visual range) — higher appr
 larger angle. A full graphical method (Ref. [40]) needs the completed layout (exact eye position and
 main-gear location); for initial layout, an approximation:
 
-**Eq (9.1)** *[Raymer, Eq. (9.1), p. 265]*:
+**Eq (9.1)** *[Raymer, Eq. (9.1), p. 265]* (confirmed 2026-08-18 against a 350-dpi render of book
+p. 265):
 `α_overnose ≈ α_approach + 0.07·V_approach` (`V` in kt) `= α_approach + 0.04·V_approach` (`V` in km/hr)
 
 **Over-the-side vision**: 40° (from the pilot's eye, on centerline) is typical for fighters/attack
@@ -80,10 +83,10 @@ an instrument-panel reflection instead of the outside world) — minimum recomme
 
 **Escape systems**: Fig. 9.2's dimensions accommodate most military ejection seats. An ejection seat
 is required above `q ≈ 230 psf {11 kN/m²}` (≈260 kt {481 km/h} at sea level); near Mach 1 at sea level
-(`q > 1200 psf {58 kN/m²}` — note this is Raymer's own figure; the parallel Nicolai extract in this
-repo's reference set quotes `q ≈ 1480 psf` for the same "even an ejection seat is unsafe" threshold —
-treat both as order-of-magnitude citations from their respective sources, not identical values,
-`[verify p. 265]` if an exact cross-check is needed) even an ejection seat is unsafe, requiring an
+(`q > 1200 psf {58 kN/m²}`; confirmed 2026-08-18 against a 300-dpi render of book p. 265, which
+prints "dynamic pressure above 1200 {58 kN/m²}" — the parallel Nicolai extract in this repo's
+reference set quotes `q ≈ 1480 psf` for the same "even an ejection seat is unsafe" threshold, so the
+two sources genuinely differ; use each with its own citation) even an ejection seat is unsafe, requiring an
 encapsulated seat or separable crew capsule (heavy/complex — e.g. FB-111, prototype B-1A; the B-1A's
 four-seat capsule with instruments/some avionics weighed ≈9,000 lb {4,082 kg}).
 
@@ -105,17 +108,20 @@ beyond the definitions (numbers given in Table 9.1).
 |---|---|---|---|
 | Seat pitch, in {cm} | 38–40 {97–102} | 34–36 {86–91} | 30–32 {76–81} |
 | Seat width, in {cm} | 20–28 {51–71} | 17–22 {43–56} | 16–18 {41–46} |
-| Head room, in {cm} | >65 {165} | >65 {165} | ≈12 {30} — likely OCR-garbled, expect `>60 {152}`-scale `[verify p. 267]` |
-| Aisle width, in {cm} | 20–28 {51–71} | 18–20 {46–51} | >60 {152} — column alignment uncertain, `[verify p. 267]` |
-| Aisle height, in {cm} | >76 {193} | >76 {193} | ≤50 |
-| Passengers per cabin staff (intl/domestic) | 16–20 | 31–36 | 40–60 |
-| Passengers per lavatory (40×40 in {1×1 m}) | 10–20 | 40–60 | 0–1 {0–0.03} |
-| Galley volume/passenger, ft³ {m³} | 5–8 {0.14–0.23} | 1–2 {0.03–0.06} | (n/a — see previous row's value, likely mis-split by OCR) |
+| Head room, in {cm} | >65 {165} | >65 {165} | — (not given) |
+| Aisle width, in {cm} | 20–28 {51–71} | 18–20 {46–51} | ≥12 {30} |
+| Aisle height, in {cm} | >76 {193} | >76 {193} | >60 {152} |
+| Passengers per cabin staff (international-domestic) | 16–20 | 31–36 | ≤50 |
+| Passengers per lavatory (40×40 in {1×1 m}) | 10–20 | 40–60 | 40–60 |
+| Galley volume/passenger, ft³ {m³} | 5–8 {0.14–0.23} | 1–2 {0.03–0.06} | 0–1 {0–0.03} |
 
-(The High-Density/Small-Aircraft column's row-to-row alignment came through visibly scrambled in this
-OCR pass — the seat pitch/width figures are confident matches to the printed table, but the head
-room/aisle/staffing/lavatory/galley values in that column should be treated as `[verify p. 267]`
-pending a direct page-image check.) Real-world seating has drifted below even Table 9.1's economy
+(Corrected 2026-08-18 against a 320-dpi render of book p. 267. The whole High-Density/Small-Aircraft
+column below the Seat-width row had been shifted UP by one row in the earlier pass — the classic
+column-major OCR scramble. The printed column reads, top to bottom: 30–32 {76–81}, 16–18 {41–46},
+"—", ≥12 {30}, >60 {152}, ≤50, 40–60, 0–1 {0–0.03}. Every cell of all three columns has now been
+read off the page image. Note the book prints First-Class **aisle** width 20–28 in {51–71 cm},
+identical to its seat-width entry; that duplication is on the page as printed and is likely a book
+misprint, but it is transcribed here as it appears.) Real-world seating has drifted below even Table 9.1's economy
 numbers — actual measured airline economy seats run ≈31 in pitch × 17 in width {79×43 cm}; Raymer
 recommends designing to the table's larger figures anyway so airlines "can cram in more rows after
 they've bought the plane."
@@ -153,6 +159,12 @@ loading/unloading at austere bases (major airlift bases can instead use pallet l
 "outsized" cargo (M-60 tanks, helicopters, large trucks) — C-5 cargo bay 19×13.5×121 ft
 {5.8×4.1×36.9 m}, payload capacity 263,000 lb {119,295 kg}. The C-130 (front-line troop/supply
 delivery, no outsized-cargo capability) has a 10.3×9.2×41.5 ft {3.1×2.8×12.7 m} bay.
+
+(Unflagged spot-check, 2026-08-18: the whole §9.4 numeric set above — Fig. 9.4's 78 ft³ {2.2 m³} and
+158 ft³ {4.5 m³} container volumes, the 747/L-1011/DC-10/A-300 LD-3 counts and bulk volumes, the
+8.6-15.6 ft³ and 6-8 ft³ per-passenger cargo allowances, the 88×108 in pallet, the 4-5 ft and 13 ft
+floor heights, and both the C-5 and C-130 bay dimensions and the C-5 payload — was re-read off
+300-dpi renders of book pp. 268-269. All confirmed as printed.)
 
 ## §9.5 Weapons Carriage
 
@@ -232,7 +244,12 @@ avoid both the visibility and inlet-ingestion problems, at a weight/volume cost.
 
 ---
 
-*Chapter 9 complete (Eq. 9.1, Table 9.1, Figs 9.1–9.9). OCR garbling flagged: two dimension values on
-Fig. 9.2 (`[verify p. 264]`) and the High-Density/Small-Aircraft column of Table 9.1
-(`[verify p. 267]`) — both are minor scanned-table alignment issues, not equation-coefficient risks.
-Next: Chapter 10 — Propulsion and Fuel System Integration.*
+*Chapter 9 complete (Eq. 9.1, Table 9.1, Figs 9.1–9.9).*
+
+*Correctness sweep, 2026-08-18: no `[verify]` items remain. Corrected: the Fig. 9.2 dimension
+"73 in" (really 13 in. {33 cm}) and the entire High-Density/Small-Aircraft column of Table 9.1
+(shifted up one row). Confirmed against page renders: Eq. (9.1) both coefficients (0.07 kt / 0.04
+km/hr, p. 265), the 230-psf and 1200-psf ejection-seat thresholds (p. 265), and every other cell of
+Table 9.1 (p. 267).*
+
+*Next: Chapter 10 — Propulsion and Fuel System Integration.*

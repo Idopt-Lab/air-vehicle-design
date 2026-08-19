@@ -26,7 +26,7 @@ unit costs were $17.6M (F-15) vs $10.8M (F-16) — the F-15 looks like a 60%-mor
 its greater capability. In constant 1978 dollars: $18.8M (F-15) vs $8.2M (F-16) — the F-15 actually
 cost 130% more.
 
-Production **quantity/rate** also confounds comparisons via the learning-curve effect (§18.3.2) — a
+Production **quantity/rate** also confounds comparisons via the learning-curve effect (§18.4.1) — a
 new-production aircraft isn't comparable to one already built in the hundreds/thousands. Different
 **cost groupings** (flyaway vs program vs life-cycle cost) must not be cross-compared without knowing
 which grouping each number represents (§18.2).
@@ -92,7 +92,7 @@ empty weight; a better CER weight-basis than raw empty weight. The Air Force's d
 life-cycle cost model" (MLCCM) and RAND Corp CERs (below) are the standard tools; cost analysts
 routinely apply judgment-based fudge factors to bridge CER assumptions vs. the specific new design.
 
-### §18.3.1 RDT&E and Production Cost Attribution
+## §18.4 RDT&E and Production Costs
 
 RDT&E and production costs are often combined in CERs since they're historically hard to separate
 cleanly (e.g. long-lead production items like landing-gear forgings start before first flight; that
@@ -108,7 +108,7 @@ component weights by that baseline's $/lb or hr/lb (e.g. 50 hr/lb fuselage+subsy
 wings+tails as sample values) can beat a sophisticated CER built from dissimilar aircraft — especially
 useful for prototype/demonstrator (X-series) aircraft that production-based CERs estimate poorly.
 
-### §18.3.2 The Learning Curve
+### §18.4.1 The Learning Curve
 
 Production labor cost per unit falls as cumulative quantity rises (aka "experience curve"). Identified
 at Wright-Patterson AFB in the 1930s: costs fell up to 15% each quantity doubling → "85% learning
@@ -116,24 +116,41 @@ curve." Later data suggests aircraft production typically follows a 75–85% lea
 first unit to #1000, followed an 80% curve — nearly a perfect straight line on log-log paper). CERs
 represent this as production quantity raised to a (negative) statistical exponent.
 
-**Fig. 18.2 — Production learning curve** *[Raymer, Fig. 18.2, p. 694]* — production labor hr/aircraft
-vs production quantity Q (Qi=1), log-log-style axes (Q from 1 to 1000), family of curves labeled by
-exponent `x` = 0.926, 0.848, 0.678, 0.485, 0.263 (these `x` values correspond to different %-learning-
-curve slopes; smaller `x` = steeper learning, larger cost reduction per doubling). *(read from plot,
-each curve normalized to hours=1.0 at Q=1)*:
+**Fig. 18.2 — Production learning curve** *[Raymer, Fig. 18.2, p. 694]* — production labor hr per
+aircraft vs production quantity `Q`, for the case `Q₁ = 1`. The axes are **linear**, `Q` = 0–1000; the
+ordinate is labelled only at `H₁` and `.5×H₁`. Five curves are printed, each labelled with both its
+%-learning-curve and its exponent: 95% (`x`=.926), 90% (`x`=.848), 80% (`x`=.678), 70% (`x`=.485),
+60% (`x`=.263). The figure prints its own closed form:
 
-| Q | x=0.926 (~95% curve) | x=0.848 (~90% curve) | x=0.678 (~80% curve) | x=0.485 (~70% curve) | x=0.263 (~60% curve) |
+```
+H = H₁ · (Q/Q₁)^(x−1)        where   2^x = 2 · (% Learning curve / 100)
+```
+
+The exponent relation checks out exactly against every printed label: 95% → 2^x = 1.9 → x = 0.926;
+90% → 1.8 → 0.848; 80% → 1.6 → 0.678; 70% → 1.4 → 0.485; 60% → 1.2 → 0.263.
+
+`H/H₁` evaluated from that closed form (`Q₁ = 1`), which is what the curves plot:
+
+| Q | 95% (x=.926) | 90% (x=.848) | 80% (x=.678) | 70% (x=.485) | 60% (x=.263) |
 |---|---|---|---|---|---|
-| 1 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
-| 10 | ~0.84 | ~0.71 | ~0.48 | ~0.31 | ~0.15 |
-| 100 | ~0.71 | ~0.50 | ~0.23 | ~0.096 | ~0.021 |
-| 500 | ~0.65 | ~0.42 | ~0.16 | ~0.055 | ~0.0095 |
-| 1000 | ~0.62 | ~0.38 | ~0.13 | ~0.041 | ~0.0060 |
+| 1 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 10 | 0.843 | 0.705 | 0.476 | 0.306 | 0.183 |
+| 100 | 0.711 | 0.497 | 0.227 | 0.0933 | 0.0336 |
+| 200 | 0.676 | 0.447 | 0.182 | 0.0653 | 0.0201 |
+| 500 | 0.631 | 0.389 | 0.135 | 0.0407 | 0.0103 |
+| 1000 | 0.600 | 0.350 | 0.108 | 0.0285 | 0.0062 |
 
-(`hours(Q) = Q^(x−1)` normalized to unit hours at Q=1, per the standard log-linear learning-curve
-model — values are reconstructed from the model definition, since the OCR scan could not cleanly
-resolve fine gridlines; treat table as representative of the curve family shape, `[verify p.694]` for
-exact curve readings against the source figure.)
+(**Corrected 2026-08-18** against a 300/700-dpi render of book p. 694. The figure is fully legible at
+that resolution. Three errors were fixed: the axes are linear, not "log-log-style"; the previous table
+did not satisfy its own stated `Q^(x−1)` model — the 500- and 1000-unit columns were 18–45% high and
+the 60% column was wrong at Q=10 and Q=100 by factors of 1.2 and 1.6 — and the printed closed form and
+the `2^x` definition were not recorded at all. The table above is now computed exactly from the book's
+own printed equation, not eyeballed off the curves, which is the more accurate reading for a figure
+whose ordinate carries only two labelled gridlines.)
+
+**Book misprint noted**: the figure prints the ratio as `(Q₁/Q)^(x−1)`. With `x < 1` and `Q > Q₁` that
+form *increases* with quantity, which contradicts the decreasing curves plotted beside it. The
+dimensionally and physically correct form is `(Q/Q₁)^(x−1)`, used above.
 
 The learning-curve effect is more than shop-floor experience — it also reflects *expectation*:
 companies investing in efficient dedicated tooling/factories for an expected high-quantity program
@@ -143,7 +160,7 @@ manufacturing is flattening the learning curve (first unit ≈ as efficient as t
 production-line work still shows a real, if reduced, learning effect ("bugs" in the first few dozen
 units) — plus the expectation-driven tooling-investment effect persists.
 
-### §18.3.3 RAND DAPCA IV Model
+### §18.4.2 RAND DAPCA IV Model
 
 RAND's **DAPCA IV** ("Development and Procurement Costs of Aircraft" model) [133] is a general-purpose
 conceptual-design CER set — not the best for any single class, but reasonably good across fighters,
@@ -178,7 +195,8 @@ directly-estimated development-support, flight-test, and manufacturing-material 
 Engineering hours:  HE = 4.86 We^0.777 V^0.894 Q^0.163        {fps}
                         = 5.18 We^0.777 V^0.894 Q^0.163        {mks}          (18.1)
 
-Tooling hours:      HT = 5.99 We^0.777 V^0.696 Q^0.263         {fps, mks form same exponents}  (18.2)
+Tooling hours:      HT = 5.99 We^0.777 V^0.696 Q^0.263        {fps}
+                        = 7.22 We^0.777 V^0.696 Q^0.263        {mks}          (18.2)
 
 Mfg hours:          HM = 7.37 We^0.82 V^0.484 Q^0.641          {fps}
                         = 10.5 We^0.82 V^0.484 Q^0.641          {mks}         (18.3)
@@ -253,7 +271,7 @@ credit, but possibly usable for relative trade studies only).
 Predicted cost × "**investment cost factor**" (cost of money + contractor profit, proprietary,
 roughly 1.1–1.4) → customer purchase price. Initial spares add ~10–15% to purchase price.
 
-## §18.4 Operations and Maintenance Costs
+## §18.5 Operations and Maintenance Costs
 
 O&M/O&S cost breakdown (rough, highly variable in practice):
 
@@ -262,7 +280,7 @@ USAF manpower is maintenance).
 **Commercial** (many more flight hours/year): fuel ≈38%, crew salaries ≈24%, maintenance ≈25%,
 depreciation ≈12%, insurance ≈1%; landing fees add ~2% on top.
 
-### §18.4.1 Fuel and Oil Costs
+### §18.5.1 Fuel and Oil Costs
 
 Actual missions rarely burn all design-mission fuel (loiter/alternate-airport reserves usually land
 with fuel remaining). Estimate: typical mission profile → average fuel burn/hour × assumed yearly
@@ -285,7 +303,7 @@ fuel cost, usually ignored.
 (FH/YR/AC = flight hours per year per aircraft; Crew Ratio = aircrews per aircraft, military only;
 MMH/FH = maintenance man-hours per flight hour.)
 
-### §18.4.2 Crew Salaries
+### §18.5.2 Crew Salaries
 
 **Civil**: statistically based on yearly "block hours" — total in-use time from wheels-off-blocks at
 departure to wheels-on-blocks at arrival (taxi, ground hold, flight, holding, ATC delay, gate wait).
@@ -299,20 +317,24 @@ distance exceeds great-circle distance (airliners follow federal airways): +~2% 
 Crew cost per block hour, from Boeing data via [95] (2012 USD) [Raymer, Eq. (18.10)–(18.11), p. 701]:
 
 ```
-Two-man crew cost  = 70.4 Ve (Wo/10^5)^0.3 + 168.8      {fps}
-                    = 74.5 Ve (Wo/10^5)^0.3 + 168.8      {mks}                (18.10)
+Two-man crew cost   = 70.4 · ( Vc · W0/10⁵ )^0.3 + 168.8      {fps}
+                    = 74.5 · ( Vc · W0/10⁵ )^0.3 + 168.8      {mks}         (18.10)
 
-Three-man crew cost = 94.5 Ve (Wo/10^5)^0.3 + 237.2      {fps}
-                     = 100 Ve (Wo/10^5)^0.3 + 237.2      {mks}                (18.11)
+Three-man crew cost = 94.5 · ( Vc · W0/10⁵ )^0.3 + 237.2      {fps}
+                    =  100 · ( Vc · W0/10⁵ )^0.3 + 237.2      {mks}         (18.11)
 ```
-(`Ve` = cruise velocity [kt or km/h]; `Wo` = takeoff gross weight [lb or kg].) Real-world variation is
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 701: the 0.3 exponent applies to the
+whole product `Vc·W0/10⁵`, not to `W0/10⁵` alone — the previous form left `Vc` outside the power, which
+changes the result. The symbol is `Vc` (cruise velocity), not `Ve`. Coefficients 70.4 / 74.5 / 94.5 /
+100 and the additive 168.8 / 237.2 are all confirmed as printed. `Vc` = cruise velocity [kt or km/h];
+`W0` = takeoff gross weight [lb or kg]; output is 2012 dollars per **block** hour.) Real-world variation is
 huge — a legacy-carrier senior-captain-heavy 747 crew can cost up to 5× a low-fare-carrier crew.
 
 **Military**: crew cost = (aircraft count) × (crew/aircraft) × (crew ratio, Table 18.1, 1.1 fighters to
 3.5 heavily-used transports) × (avg cost/crew member). Absent better data, use the engineering wrap
 rate × 2080 hr/yr as a proxy for cost/crew-member.
 
-### §18.4.3 Maintenance Expenses
+### §18.5.3 Maintenance Expenses
 
 Unscheduled maintenance: (breakage frequency) × (avg repair cost). Scheduled maintenance: driven by
 flight hours (e.g. light-aircraft 100-hr inspections) or, for commercial aircraft, by cycles (flights)
@@ -327,29 +349,29 @@ per flight-hour and per-cycle [95] (2012 USD; `Ca` = aircraft cost less engine, 
 `Ne` = number of engines) [Raymer, Eq. (18.12)–(18.13), p. 702]:
 
 ```
-material cost/FH   = 3.3×10⁻⁶ Ca + 14.2 + (58×10⁻⁶ Ce − 26.1) Ne        {fps}
-material cost/cycle = 4.0×10⁻⁶ Ca + 9.3 + (7.5×10⁻⁶ Ce + 5.6) Ne         {mks form as printed;
-                                                                          `[verify p.702, Eq. 18.13
-                                                                          fps/mks unit split]` —
-                                                                          OCR did not cleanly
-                                                                          separate the two unit forms
-                                                                          for this equation}
+material cost / FH    = 3.3(Ca/10⁶) + 14.2 + [ 58(Ce/10⁶) − 26.1 ] Ne     (18.12)
+material cost / cycle = 4.0(Ca/10⁶) + 9.3  + [ 7.5(Ce/10⁶) + 5.6  ] Ne     (18.13)
 ```
+(**Resolved 2026-08-18** against a 300-dpi render of book p. 702. Both equations are fully legible and
+**neither has an fps/mks split** — they are single equations, output in 2012 dollars per flight hour and
+per cycle, with `Ca` and `Ce` in dollars. The previous `{fps}` / `{mks}` tags were invented; the
+coefficients themselves (3.3, 14.2, 58, 26.1, 4.0, 9.3, 7.5, 5.6) are all confirmed correct, and the
+signs on the two bracketed engine terms — minus in 18.12, plus in 18.13 — are as printed.)
 Total materials cost/year = (cost/FH × FH/yr) + (cost/cycle × cycles/yr), cycles/yr = total yearly
 block time / block time per flight.
 
-### §18.4.4 Depreciation
+### §18.5.4 Depreciation
 
 Straight-line: airframe depreciation/yr = (airframe cost − resale value)/(depreciation years) —
 airframe cost = total cost minus engine cost, since airframe and engines depreciate on different
 schedules (e.g. resale=10%, 12 yr depreciation → yearly = 0.9×(airframe cost)/12). Engine resale value
 usually neglected; engine depreciation/yr = (engine price)/4 yr (typical).
 
-### §18.4.5 Insurance
+### §18.5.5 Insurance
 
 Commercial insurance ≈ 1–3% of operating cost.
 
-## §18.5 Cost Measures of Merit (Military)
+## §18.6 Cost Measures of Merit (Military)
 
 Beyond raw cost, "cost-effectiveness" measures combine cost with mission value. For military
 aircraft the ultimate metric is war outcome (via campaign-simulation models comparing outcome-with-
@@ -360,9 +382,9 @@ beyond this book's scope). Trade studies vary these metrics against payload/turn
 costs too much, performance or range must be sacrificed (Chapter 19 discusses further); the designer's
 hope is that no competitor manages to satisfy all three (performance, range, cost) simultaneously.
 
-## §18.6 Aircraft and Airline Economics
+## §18.7 Aircraft and Airline Economics
 
-### §18.6.1 DOC and IOC
+### §18.7.1 DOC and IOC
 
 Airliner cost-effectiveness is purely economic: revenue must exceed operating cost by enough to beat
 alternative investments. **Direct operating cost (DOC)**: fuel, oil, crew, maintenance, depreciation,
@@ -379,7 +401,7 @@ in-depth airliner economics.
 **CASM** (cost per available seat-mile) = DOC+IOC combined, a standard airline financial metric —
 typical major-airline CASM ≈15¢ (≈4¢ labor, 5¢ fuel, rest "other"), varies widely by airline/year.
 
-### §18.6.2 Airline Revenue
+### §18.7.2 Airline Revenue
 
 Revenue ≈ ticket sales, roughly proportional to distance (higher per-mile for shorter trips); four
 fare classes (first/business/coach/excursion): first ≈2× coach, business ≈1.5× coach, excursion ≈
@@ -387,7 +409,7 @@ fare classes (first/business/coach/excursion): first ≈2× coach, business ≈1
 weighted-average fare ≈ coach fare. **Load factor** = seats sold / seats available (typically 60–70%);
 revenue/seat-mile ≈ (avg fare/mile, ≈ coach fare) × load factor.
 
-### §18.6.3 Break-Even Analysis
+### §18.7.3 Break-Even Analysis
 
 **Manufacturer break-even**: sales price = production cost + contribution margin (recovers RDT&E +
 cost-of-money + eventual profit); break-even unit count = (RDT&E + cost of money)/(contribution margin
@@ -399,7 +421,7 @@ the load factor at which passenger revenue exactly covers DOC (nothing left for 
 Total-cost break-even uses (DOC+IOC)/seat-mile; IOC/seat-mile = (airline's total yearly IOC)/(total
 yearly seat-miles flown), roughly ≈ DOC/seat-mile as a rough approximation.
 
-### §18.6.4 Investment Cost Analysis
+### §18.7.4 Investment Cost Analysis
 
 Airline purchase decision: net present value (NPV) of revenue-minus-cost over the aircraft's useful
 life vs. purchase price. **NPV** rests on time-value-of-money: money today is worth more than the same
@@ -428,9 +450,35 @@ p. 708 — no plotted data.*
 
 ---
 
-*Chapter 18 complete (§§18.1–18.6, Table 18.1, Figs 18.1–18.2, Eqs 18.1–18.15). Fig. 18.1 is a
-proportional-box schematic (no numeric axis, not digitized beyond its qualitative ranking); Fig. 18.2's
-learning-curve table values were reconstructed from the standard `hours(Q)=Q^(x-1)` learning-curve
-model definition rather than read pixel-by-pixel off the degraded OCR scan — flagged `[verify p.694]`.
-Eq. (18.13)'s fps/mks unit split was not cleanly resolved by OCR — flagged `[verify p.702]`. Next:
-Chapter 19 — Sizing and Trade Studies.*
+*Chapter 18 complete (§§18.1–18.7, Table 18.1, Figs 18.1–18.2, Eqs 18.1–18.15). Fig. 18.1 is a
+proportional-box schematic (no numeric axis, not digitized beyond its qualitative ranking).*
+
+*Correctness sweep, 2026-08-18: book pages 694, 696, 697, 698, 700, 701 and 702 were re-rendered at
+300–700 dpi and read as images, and the chapter's true section structure was taken from the printed
+table of contents (book p. xv) plus the printed section headings on pp. 693, 694, 699–706. All
+`[verify]` markers in this chapter are now resolved.*
+
+*Confirmed term by term against the page images — no change needed: the DAPCA IV coefficients and
+exponents in Eqs. 18.1, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8 and 18.9; the material fudge-factor table;
+the wrap rates (RE=115, RT=118, RQ=108, RM=98); the avionics $4000–$8000/lb and $9000–$18,000/kg
+ranges; the interior costs $3500/$1700/$850; the 1.2 and 0.9 overall adjustment factors; Table 18.1
+(every cell, including the three-branch military-transport crew ratio); and Eqs. 18.12/18.13's eight
+coefficients and both engine-term signs.*
+
+*Corrections applied: Eq. 18.2's mks coefficient (7.22) was missing entirely — the extract had claimed
+the fps and mks forms shared one coefficient. Eq. 18.10/18.11 had the 0.3 exponent applied to
+`W0/10⁵` alone, where the book applies it to the whole product `Vc·W0/10⁵`. Eq. 18.13 was tagged with a
+spurious `{fps}`/`{mks}` split that does not exist in the book. Fig. 18.2's learning-curve table was
+replaced with values computed from the figure's own printed closed form, and the axes are linear, not
+log-log. Book misprint recorded: Fig. 18.2 prints `(Q₁/Q)^(x−1)`, whose trend is opposite to the
+plotted curves; `(Q/Q₁)^(x−1)` is the correct form.*
+
+***Section-numbering correction (systematic).** The extract originally demoted the book's §18.4 RDT&E
+and Production Costs to a subsection §18.3.1, which shifted every later section down by one. The
+book's contents give §18.4 RDT&E and Production Costs (692), §18.5 Operations and Maintenance Costs
+(699), §18.6 Cost Measures of Merit (Military) (703), §18.7 Aircraft and Airline Economics (704), and
+the printed headings confirm §18.4.1 The Learning Curve (693), §18.4.2 RAND DAPCA IV Model (694),
+§18.5.2 Crew Salaries (700) and §18.5.3 Maintenance Expenses (701). All headings and cross-references
+in this file were renumbered to the book's scheme.*
+
+*Next: Chapter 19 — Sizing and Trade Studies.*

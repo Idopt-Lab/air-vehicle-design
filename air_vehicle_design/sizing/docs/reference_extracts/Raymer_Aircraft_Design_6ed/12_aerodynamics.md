@@ -480,7 +480,7 @@ Transonic/supersonic:  R_cutoff = 44.62·(ℓ/k)^1.053 · M^1.16            (12.
 *[Raymer, Eqs. (12.28)-(12.29), pp. 420-421]* — `k` = skin-roughness value (Table 12.5).
 
 ### Table 12.5 — Skin Roughness Value k
-*[Raymer, Table 12.5, p. 420]*
+*[Raymer, Table 12.5, p. 421]*
 
 | Surface | k (ft) | k (m) |
 |---|---|---|
@@ -488,12 +488,16 @@ Transonic/supersonic:  R_cutoff = 44.62·(ℓ/k)^1.053 · M^1.16            (12.
 | Smooth paint | 2.08×10⁻⁵ | 0.634×10⁻⁵ |
 | Production sheet metal | 1.33×10⁻⁵ | 0.405×10⁻⁵ |
 | Polished sheet metal | 0.50×10⁻⁵ | 0.152×10⁻⁵ |
-| Smooth molded composite | 0.17×10⁻⁵ | 0.052×10⁻⁵ |
+| Smooth molded composite | **0.17×10⁻⁵** (see note) | 0.052×10⁻⁵ |
 
-*[verify p. 420 — the "Smooth molded composite" k value's OCR digit run (`0.7 x 10-5` in the raw
-text) is inconsistent with its expected position as the smoothest/lowest-k row; corrected here to
-0.17×10⁻⁵ by pattern-matching the parallel metric-column value 0.052×10⁻⁵ back through the ft/m
-conversion factor (1 ft = 0.3048 m) — confirm against the printed page if precision matters.]*
+> **Note — "Smooth molded composite" `k, ft` is misprinted in the 6th edition.** A 500-dpi render
+> of book p. 421 shows the ft column printing **`0.7 × 10⁻⁵`**. That value contradicts its own
+> metric column: 0.7×10⁻⁵ ft is 0.213×10⁻⁵ m, not the printed 0.052×10⁻⁵ m. Every other row in
+> the table converts correctly at 1 ft = 0.3048 m, and inverting the metric value gives
+> 0.052×10⁻⁵ / 0.3048 = **0.171×10⁻⁵ ft**. The printed `0.7` is a dropped-digit misprint of
+> `0.17`. This table records **0.17×10⁻⁵**, which is also the value consistent with composite
+> being the smoothest surface listed. (Earlier flagged `[verify p. 420]`; resolved, and the page
+> citation corrected from 420 to 421.)
 
 ### §12.6.4 Component Form Factors and Adjustments
 
@@ -1067,8 +1071,11 @@ note ("Fig 12.32") actually meant; the true Fig. 12.32 (p. 439) is a rule-based 
 not a numeric data chart. Three prior `[verify]` flags from `raymer_data.md` are resolved above: Eq.
 (12.9) fuselage lift-factor exponent CONFIRMED (=2); Eq. (12.10) endplate coefficient CONFIRMED
 (=1.9); Eq. (12.11) winglet form CORRECTED (no separate k-factor — it is `A(1+h/b)^2`, squared, not
-`A(1+h/b)·k`). One new item flagged `[verify p. 420]`: the "smooth molded composite" roughness-k
-value in Table 12.5. Several supersonic normal-force-slope (Fig. 12.7) and low-AR max-lift (Figs.
+`A(1+h/b)·k`). The "smooth molded composite" roughness-`k` value in Table 12.5, previously flagged
+`[verify p. 420]`, is now **RESOLVED** (2026-08-17): the page is p. 421, not 420, and the printed
+ft value `0.7×10⁻⁵` is a dropped-digit misprint of `0.17×10⁻⁵` — proved by its own metric column,
+since every other row converts at 1 ft = 0.3048 m. See the note under Table 12.5.
+Several supersonic normal-force-slope (Fig. 12.7) and low-AR max-lift (Figs.
 12.12-12.16) nomograph families were not digitized to numeric tables — they are genuinely
 multi-parameter charts meant for direct graphical use, not simple curves; cite and consult the source
 figure directly when a low-AR or supersonic-leading-edge case is being implemented. Next: Chapter

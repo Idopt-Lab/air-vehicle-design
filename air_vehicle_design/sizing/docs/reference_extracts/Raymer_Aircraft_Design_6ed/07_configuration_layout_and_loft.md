@@ -10,6 +10,20 @@ design. All numbered equations, tables, and figures captured.
 
 ---
 
+> ✓ Section numbers corrected 2026-08-18 against the book's own table of contents (front matter,
+> p. xii) plus page renders of pp. 175, 182, 191, 192, 201, 206, 207. The earlier extract used a
+> made-up §7.3.1/§7.3.2/§7.3.3/§7.4.x/§7.5/§7.6/§7.7 tree. The printed chapter is:
+> 7.1 Introduction (165), 7.2 End Products of Configuration Layout (167), 7.3 Conic Lofting (175),
+> 7.4 Conic Fuselage Development (179), 7.5 Flat-Wrap Fuselage Lofting (185),
+> 7.6 Circle-to-Square Adapter (188), 7.7 Loft Verification via Buttock-Plane Cuts (189),
+> 7.8 Wing/Tail Layout and Loft (191), 7.9 Wetted-Area Determination (204),
+> 7.10 Volume Determination (206), 7.11 Use of CAD in Conceptual Design (207).
+> §7.8 subsections: 7.8.1 Reference Wing/Tail Layout, 7.8.2 Wing Location with Respect to the
+> Fuselage, 7.8.3 Wing/Tail Lofting, 7.8.4 Airfoil Linear Interpolation, 7.8.5 Airfoil Flat-Wrap
+> Interpolation, 7.8.6 Wing/Tail Cross-Section Layout, 7.8.7 Wing Fillets, 7.8.8 Winglet Design.
+> Note that the book's §7.6 (Circle-to-Square Adapter) has no separate heading in this extract — its
+> content sits inside the flat-wrap material below.
+
 ## §7.1 Introduction
 
 The design layout — drawing or CAD-file geometry — is the actual deliverable of conceptual design;
@@ -50,18 +64,26 @@ designer directly rather than handed off as a raw CAD file. Three additional des
 the wetted-area plot, the volume-distribution plot (both discussed later in this chapter), and
 fuel-volume plots (Chapter 10).
 
-### Fig 7.4 — Wetted-area plot (example)
-*[Raymer, Fig. 7.4, p. 170]* — Example output: cross-section perimeter (y-axis) vs. fuselage station
-(x-axis), area under the curve = wetted area. Component wetted-area totals given alongside for this
-example aircraft: Fuselage 70,344.8, Vert tail 26,165.3, Wing 102,636.7, Circular-arc canopy 9,071.4,
-Nacelle 25,462.9, Total 233,681.0 (units as printed, unlabeled in the source scan — likely in²;
-`[verify p. 170]`). Illustrative example values, not general design data.
+### Fig 7.4 — Wetted area plot (example)
+*[Raymer, Fig. 7.4, p. 171]* — Example output: cross-section perimeter (y-axis, 0–750+) vs. fuselage
+station (x-axis, 0–600), area under the curve = wetted area. Component surface totals given alongside
+for this example aircraft: Fuselage 70,344.8, Vert tail 26,165.3, Wing 102,636.7, Circular arc canopy
+9071.4, Nacelle 25,462.9, Total 233,681.0. Illustrative example values, not general design data.
 
-### Fig 7.5 — Volume-distribution plot (example)
-*[Raymer, Fig. 7.5, p. 170]* — Companion plot: cross-section area vs. fuselage station, area under
-curve = internal volume. Same example aircraft's component volumes: Fuselage 847,124.4, Vert tail
-42,903.5, Wing 287,005.5, Circular-arc canopy 46,014.0, Nacelle 95,149.8, Total 1,318,196.8 (units as
-printed, likely in³; `[verify p. 170]`).
+✓ Corrected 2026-08-18 against a 320-dpi render: the figure is on book **p. 171**, not p. 170
+(p. 170 carries Fig. 7.3, the FSW design layout). All six numbers confirmed digit-for-digit. The book
+prints no unit on the "Surface" column or on either axis; the companion layout drawing (Fig. 7.3)
+uses fuselage stations in inches over the same 0–600 range, so the values are consistent with in².
+That inference is the extractor's, not the book's.
+
+### Fig 7.5 — Volume distribution plot (example)
+*[Raymer, Fig. 7.5, p. 171]* — Companion plot: cross-section area (y-axis, 0–4000+) vs. fuselage
+station (x-axis, 0–600), area under curve = internal volume. Same example aircraft's component
+volumes: Fuselage 847,124.4, Vert tail 42,903.5, Wing 287,005.5, Circular arc canopy 46,014.0,
+Nacelle 95,149.8, Total 1,318,196.8.
+
+✓ Corrected 2026-08-18: page is **p. 171**, not p. 170. All six numbers confirmed. Units again
+unprinted in the book; consistent with in³ by the same station-axis argument.
 
 After iterative analysis/optimization/redraw, a far more detailed **inboard profile** drawing is
 prepared during preliminary design, showing actual "black box" locations, wire bundles, and cooling
@@ -148,7 +170,7 @@ Station 370 = squarish cross-section (room for gear or a low-wing attachment); S
 matching a round exhaust nozzle. No plotted numeric-trend data (worked construction example; station
 numbers are example inches along the fuselage, not general design data).
 
-## §7.3.1 Conic Shape Parameter
+## §7.4.3 Conic Shape Parameter
 
 Controlling shoulder-point location directly (rather than via a longitudinal control line) uses a
 shape parameter `p`. Point D is the midpoint of A-B; a special shoulder point E lies on line D-C:
@@ -203,7 +225,7 @@ plotted data (worked construction example).
 supersonic SAAB J-35 Draken (fuselage, nacelle, canopy, inlet duct, wing/tail lines definition). No
 plotted data.
 
-## §7.3.2 Flat-Wrap Fuselage Lofting
+## §7.5 Flat-Wrap Fuselage Lofting
 
 "Compound curvature" = surface curvature in every direction at a point (e.g. a ball); a surface curved
 in only one direction is "flat-wrapped" (e.g. a cylinder) and can be built by wrapping a flat sheet —
@@ -232,7 +254,7 @@ nozzle) built flat-wrap using interlocking V-shaped segments (flat square-sectio
 points touching the circle; conical circular-section sides taper to points touching the square's
 corners), connecting surfaces straight longitudinally. No plotted data.
 
-## §7.3.3 Loft Verification via Buttock-Plane Cuts
+## §7.7 Loft Verification via Buttock-Plane Cuts
 
 Borrowed from shipbuilding: hull "waterlines" (horizontal cuts) check longitudinal smoothness. For
 aircraft, vertical "buttock-plane" ("butt-plane") cuts — the intersection of the aircraft with planes
@@ -250,9 +272,9 @@ longitudinal lines confirm a smooth fuselage surface; the same construction can 
 sections. Most useful for highly irregular shapes (e.g. blended-wing-body forebodies like the B-1B).
 No plotted data.
 
-## §7.4 Wing/Tail Layout and Loft
+## §7.8 Wing/Tail Layout and Loft
 
-### §7.4.1 Reference Wing/Tail Layout
+### §7.8.1 Reference Wing/Tail Layout
 
 Chapter 4 sets aspect ratio `A`, taper ratio `λ`, sweep, dihedral, thickness, airfoil; Chapter 6 sets
 actual wing/tail/fuselage sizes from an initial `W0` estimate. From these, the reference (trapezoidal)
@@ -271,7 +293,12 @@ Eqs. 7.5-7.9.
 
 **Eq (7.8)** *[Raymer, Eq. (7.8), p. 192]* (MAC): `c̄ = (2/3)·Croot·(1+λ+λ²)/(1+λ)`
 
-**Eq (7.9)** *[Raymer, Eq. (7.9), p. 192]* (spanwise MAC location): `ȳ = (b/2)·(1+2λ)/(3·(1+λ))`
+**Eq (7.9)** *[Raymer, Eq. (7.9), p. 192]* (spanwise MAC location): `ȳ = (b/6)·(1+2λ)/(1+λ)`
+
+✓ Eqs. (7.5)–(7.9) confirmed 2026-08-18 against 320-dpi renders of book pp. 191–192. One change:
+Eq. (7.9) is printed as `(b/6)·((1+2λ)/(1+λ))`; the earlier extract wrote the algebraically
+identical `(b/2)·(1+2λ)/(3(1+λ))`, which is not the printed form. Eqs. (7.5)–(7.8) print exactly
+as given above.
 
 `c̄` is the chord at which subsonic pitching moment is invariant with angle of attack when measured
 about the point 25% aft of its leading edge. For a **vertical tail**, double the `ȳ` from Eq. (7.9)
@@ -287,14 +314,18 @@ may remove its historical cost penalty): span from Eq. (7.5) as usual, then
 **Eq (7.10a)** *[Raymer, Eq. (7.10a), p. 192]*: `Croot = 4S / (π·b)`
 
 **Eq (7.10b)** *[Raymer, Eq. (7.10b), p. 192]*: chord as a function of spanwise distance `y` from
-centerline (elliptical chord distribution; explicit form not fully legible in the OCR pass —
-`[verify p. 192]`, cross-check the printed equation directly).
+centerline (elliptical chord distribution):
+```
+C(y) = Croot * sqrt(1 - (y/(b/2))^2)
+```
+✓ Resolved 2026-08-18 against a 320-dpi render of book p. 192. The earlier extract left this
+equation blank because the OCR text layer dropped the radical; the printed form is the one above.
 
 For an elliptical wing, MAC = 84.9% of `Croot`, and `ȳ` = 52.9% of the semispan; total area =
 `(π/4)·b·Croot`. Elliptical-wing chords are commonly "slid" chordwise so the 25%-chord line is
 straight/unswept — doesn't affect these formulas, but shifts the 25%-MAC location slightly forward.
 
-### §7.4.2 Wing Location w.r.t. the Fuselage
+### §7.8.2 Wing Location with Respect to the Fuselage
 
 The wing is positioned so a chosen %MAC aligns with the aircraft c.g., as a first estimate toward the
 required stability. A pure flying wing is neutrally stable with c.g. at 25% MAC (pitching moment
@@ -306,7 +337,7 @@ surface's ≈15% MAC point (≈20-25% if unstable), then area-weight-average the
 locations for a combined (crude) estimate. Wing position and tail sizing are expected to be revised
 after Chapters 12-19 analysis.
 
-### §7.4.3 Wing/Tail Lofting
+### §7.8.3 Wing/Tail Lofting
 
 The actual exposed wing/tail (vs. the trapezoidal *reference* wing used for aerodynamic coefficients)
 begins at the fuselage side and reflects true dihedral-corrected area (dividing by `cos(dihedral)`)
@@ -347,7 +378,7 @@ curved, so a wing whose complex lofted surface would otherwise produce a curved 
 correction (illustrated: unrigged vs. rigged, with the mid-span airfoil section moved down to
 straighten section B-B). No plotted data.
 
-### §7.4.4 Airfoil Interpolation Methods
+### §7.8.4 Airfoil Linear Interpolation and §7.8.5 Airfoil Flat-Wrap Interpolation
 
 Wings are often defined by distinct root/tip airfoils (root for performance, tip for gentle stall, so
 the tip stalls after the root) plus incidence/twist, with intermediate sections interpolated.
@@ -376,7 +407,7 @@ depressed foam core, weakening the bond — a real potential in-flight-failure m
 *[Raymer, Fig. 7.31, p. 200]* — Same 6-step method as Fig. 7.30 but step 2 connects equal-slope points
 rather than equal-%-chord points. No plotted data.
 
-### §7.4.5 Wing/Tail Cross-Section Layout
+### §7.8.6 Wing/Tail Cross-Section Layout
 
 Once airfoils are drawn on the wing top view, a cross-section perpendicular to the aircraft centerline
 (needed to verify fuel tank/gear/spar fit) is built by drawing verticals at each airfoil's span
@@ -387,7 +418,7 @@ points relative to that plane; French curves fair the result. The same method wo
 ### Fig 7.32 — Wing/tail cross-section layout
 *[Raymer, Fig. 7.32, p. 200]* — Diagram of the construction just described. No plotted data.
 
-### §7.4.6 Wing Fillets
+### §7.8.7 Wing Fillets
 
 A wing fillet smooths the wing-fuselage juncture aerodynamically, usually a circular arc (radius
 ≈10% of root chord as a starting point, often increasing toward the rear to control separation;
@@ -401,7 +432,7 @@ adequate.
 *[Raymer, Fig. 7.33, p. 201]* — Diagram: fillet arc radius, leading-edge fillet, and an auxiliary
 fillet-radius control line for a longitudinally-varying radius. No plotted data.
 
-### §7.4.7 Winglet Design
+### §7.8.8 Winglet Design
 
 Winglets (Chapter 4: reduce induced drag, especially for high-span-loading wings, e.g. when a design
 is recertified to higher `W0` without extending span) work by generating an inward side force with a
@@ -432,7 +463,7 @@ attached piece). Caution: winglet mass sits aft/outboard of the wing elastic axi
 risk — needs aeroelastic analysis and possibly structural stiffening (a weight penalty that can offset
 the drag benefit).
 
-## §7.5 Wetted-Area Determination
+## §7.9 Wetted-Area Determination
 
 Wetted area `Swet` (total exposed surface — what would get wet if dipped in water) drives friction drag
 estimation.
@@ -467,14 +498,16 @@ than Eq. 7.13). Perimeter measurements exclude joined-component intersections (e
 junction — not wetted). No further plotted numeric data (method figure; example values are in Fig. 7.4
 above).
 
-## §7.6 Volume Determination
+## §7.10 Volume Determination
 
 Internal volume is a sanity check against statistical volume-vs-`W0` data for the aircraft class — a
 design with less-than-typical volume for its weight risks development/maintainability problems (often
 used by customer engineering groups to catch an over-optimistic layout). A more refined "net design
 volume" density check is in Chapter 19.
 
-**Eq (7.14)** *[Raymer, Eq. (7.14), p. 206]*: `Vol ≈ 3.4·(Atop·Aside) / (4·L)`
+**Eq (7.14)** *[Raymer, Eq. (7.14), p. 207]*: `Vol ≈ 3.4·(Atop·Aside) / (4·L)`
+(page citation corrected 2026-08-18 from p. 206 to p. 207; §7.10 *starts* on p. 206 but the equation
+prints at the top of p. 207. Form confirmed against the page image.)
 
 (`L` = fuselage length; the 3.4 factor assumes a cross-section shape intermediate between square and
 circular — same coefficient family as Eq. 7.13.)
@@ -485,7 +518,7 @@ circular — same coefficient family as Eq. 7.13.)
 supersonic wave-drag / transonic-drag-rise prediction (its shape directly sets supersonic drag —
 Chapter 12). No further plotted numeric data (method figure; example values in Fig. 7.5 above).
 
-## §7.7 Use of Computer-Aided Design (CAD) in Conceptual Design
+## §7.11 Use of Computer-Aided Design (CAD) in Conceptual Design
 
 Modern CAD gives powerful surfacing, rendering, and data management (some systems auto-generate
 hydraulic tubing/access-door geometry from a designer-specified path). Full digital product definition

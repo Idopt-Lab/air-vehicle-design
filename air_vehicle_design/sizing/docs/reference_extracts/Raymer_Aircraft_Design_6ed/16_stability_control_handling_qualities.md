@@ -146,18 +146,25 @@ from c.g. for prop aircraft) accounts for power-on effects.
 (per rad) vs Mach (0–3.0) bands for Transport (B-747, B-727), Business/GA, and Fighter-stable (F-4),
 *(read from plot)*:
 
-| Mach | Transport Cm_α | Business/GA Cm_α | Fighter (F-4) Cm_α |
+| Mach | Transport Cm_α | Business/GA Cm_α | Fighter-stable Cm_α |
 |---|---|---|---|
-| 0.3 | ~ −0.9 | ~ −0.5 | ~ −0.3 |
-| 0.8 | ~ −1.0 | ~ −0.55 | ~ −0.35 |
-| 1.0 | ~ −0.6 | ~ −0.35 | ~ −0.55 |
-| 1.5 | ~ −0.7 | — | ~ −1.1 |
-| 2.0 | ~ −0.8 | — | ~ −1.3 |
-| 3.0 | ~ −0.9 | — | ~ −1.4 |
+| 0 | −1.00 | −0.64 | −0.13 |
+| 0.5 | −1.09 | −0.74 | −0.16 |
+| 1.0 | −1.22 (curve ends) | −0.89 (curve ends) | −0.21 |
+| 1.2 | — | — | −0.22 (peak) |
+| 1.5 | — | — | −0.19 |
+| 2.0 | — | — | −0.12 |
+| 2.5 | — | — | −0.08 |
+| 3.0 | — | — | −0.065 |
 
-(Trends only — transport/GA curves fairly flat with a mild transonic dip; fighter curve shows a
-sharp transonic destabilization then rises again supersonically. `[verify p.593]` — exact digit values
-not fully legible in OCR scan; treat as order-of-magnitude targets only.)
+Plotted aircraft points (Mach, `Cm_α`): B-747 (0.84, −1.60), B-727 (0.84, −1.49), C-5 (0.71, −1.21),
+B-707 (0.82, −1.13), C-182 (0.21, −0.90), Learjet (0.62, −0.71), F-4 (0.90, −0.08), F-4 (1.93, −0.05).
+
+(**Corrected 2026-08-18** against a 320/500-dpi render of book p. 593. The previous table was wrong in
+every cell and, worse, had the fighter trend inverted: it showed the fighter curve growing to −1.4 at
+M=3.0. The printed figure shows the fighter curve peaking near M≈1.2 at about −0.22 and then becoming
+*less* stable, ≈ −0.065 at M=3.0. The transport and business/GA curves are plotted only to M≈1.0, not
+to M=3.0. Values are `Cm_α` per radian, read off the plot.)
 
 ### §16.3.3 Aerodynamic Center
 
@@ -269,41 +276,79 @@ tail α and adds nose-down fuselage moment; strongly modified by propwash.
 distance forward of the root quarter-chord point in root chords (families of height-above-chord-plane
 curves). *(read from plot, on-chord-plane curve)*:
 
-| Distance fwd (root chords) | ∂εu/∂α |
-|---|---|
-| 0.5 | ~1.7 |
-| 1.0 | ~1.0 |
-| 1.5 | ~0.6 |
-| 2.0 | ~0.35 |
-| 2.5 | ~0.2 |
+The abscissa runs right-to-left from 2.0 (far forward) to −0.8 (aft), and the four curves are aspect
+ratio `A` = 4, 6, 9, 12. The curves stop at the wing leading edge, 0.25 root chords ahead of the root
+quarter-chord point (the dashed vertical line); a small separate lobe aft of the quarter chord stays
+near zero.
 
-`∂ε/∂α` from **Fig. 16.12 — Downwash estimation (M=0)** *[Raymer, Fig. 16.12, p. 602]*, vs tail
-height/span-ish geometry parameter, families of AR = 6 and AR = 9. *(read from plot, mid-height
-curve)*:
+| Distance fwd (root chords) | A=4 | A=6 | A=9 | A=12 |
+|---|---|---|---|---|
+| 2.0 | ~0.06 | ~0.10 | ~0.13 | ~0.16 |
+| 1.6 | ~0.08 | ~0.12 | ~0.16 | ~0.19 |
+| 1.2 | ~0.11 | ~0.16 | ~0.21 | ~0.25 |
+| 0.8 | ~0.19 | ~0.26 | ~0.32 | ~0.37 |
+| 0.4 | ~0.36 | ~0.47 | ~0.56 | ~0.63 |
+| 0.25 (wing LE) | ~1.09 | ~1.17 | ~1.28 | ~1.40 |
 
-| Tail position param. | ∂ε/∂α (AR=6) | ∂ε/∂α (AR=9) |
+(**Corrected 2026-08-18** against a 500-dpi render of book p. 601. The previous table listed values
+2–5x too large at every station and extended the abscissa to 2.5, which the figure does not have; it
+also omitted the aspect-ratio families entirely.)
+
+`∂ε/∂α` from **Fig. 16.12 — Downwash estimation (M=0)** *[Raymer, Fig. 16.12, p. 602]*. This is a
+3x3 panel grid, **not** a single curve family: rows are taper ratio `λ` = 1, 0.33, 0.20; columns are
+`A` = 6, 9, 12. Each panel plots `dε/dα` (0.1–0.7) against `r = L_t/(b/2)` (0.25–1.0; the A=12 panels
+run to 1.25), with three curves for `m = Z_t/(b/2)` = 0, 0.1, 0.2. `L_t` is the tail arm and `Z_t`
+the tail height above the wing zero-lift line. *(read from plot, λ=1 row)*:
+
+| Panel (λ=1) | r=0.25 | r=1.0 |
 |---|---|---|
-| low | ~0.75 | ~0.68 |
-| mid | ~0.55 | ~0.50 |
-| high | ~0.30 | ~0.28 |
+| A=6, m=0 | ~0.46 | ~0.37 |
+| A=6, m=0.1 | ~0.44 | ~0.33 |
+| A=6, m=0.2 | ~0.40 | ~0.31 |
+| A=9, m=0 | ~0.37 | ~0.26 |
+| A=9, m=0.1 | ~0.33 | ~0.24 |
+| A=9, m=0.2 | ~0.30 | ~0.22 |
+| A=12, m=0 | ~0.265 | ~0.20 |
+| A=12, m=0.1 | ~0.225 | ~0.18 |
+| A=12, m=0.2 | ~0.20 | ~0.17 |
+
+The `λ` = 0.33 and 0.20 rows shift the whole family upward (up to ≈0.70 at the smallest `r` for A=6);
+read those panels directly from the figure.
+
+(**Corrected 2026-08-18** against a 300/600-dpi render of book p. 602. The previous table used
+"low / mid / high tail position param." rows and AR = 6/9 columns; no such axis exists in the figure,
+so those values were not readable off any part of the printed page.)
 
 Spanwise-averaged downwash at the tail is ~5% less than the on-axis value. Additional downwash from
 flap deflection: **Fig. 16.13 — Downwash increment due to flaps** *[Raymer, Fig. 16.13, p. 603]*,
-`(ΔεΔCL)·A / [b/(b/2)]` vs `0.5(hh/(b/2))` (`hh` = horizontal-tail height above wing), roughly linear,
-range −0.2 to 0.4 on the x-axis mapping to 0–15 on the y-axis *(read from plot)*: at `x=0` → ~2,
-`x=0.2` → ~7, `x=0.4` → ~13 (steep near-linear rise).
+ordinate `(Δε)·A·[b_f/(b/2)] / ΔC_L` vs abscissa `h_h/(b/2)` (`h_h` = horizontal-tail height above the
+wing), abscissa −0.2 to 0.5, ordinate 0 to 30, **two curves: Slotted and Plain flaps**. The ordinate
+*decreases* with tail height. *(read from plot)*:
 
-Transonic (M≈0.9): `∂ε/∂α` derivative increases 30–40%, then reduces at higher speed. Rough high-
-subsonic/supersonic approximations [Raymer, Eq. (16.21a)–(16.21b), p. 601]:
+| h_h/(b/2) | Slotted | Plain |
+|---|---|---|
+| 0 | ~28 | ~20 |
+| 0.1 | ~25 | ~17 |
+| 0.2 | ~22 | ~14 |
+| 0.3 | ~17.5 | ~12 |
+| 0.4 | ~14 | ~9.7 |
+| 0.45–0.5 | ~11.5 | ~9.3 |
+
+(**Corrected 2026-08-18** against a 500-dpi render of book p. 603. The previous entry had the trend
+inverted — it read a "steep near-linear rise" from ~2 to ~13 — and had the ordinate range as 0–15,
+the abscissa as `0.5(h_h/(b/2))`, and only one curve. All four of those are wrong.)
+
+Transonic (M≈0.9): `∂ε/∂α` derivative increases 30–40%, then reduces at higher speed. High-subsonic
+and supersonic approximations [Raymer, Eq. (16.21a)–(16.21b), **p. 600**]:
 
 ```
-Subsonic (approaching M=1):    ∂ε/∂α ≈ (∂ε/∂α)_(M=0) · [tabulated/estimated increase factor]
-Supersonic:                     ∂ε/∂α ≈ small residual value (downwash largely confined within Mach cone)
+Subsonic:     ∂ε/∂α = (∂ε/∂α|_M=0) · ( CL_α / CL_α|_M=0 )               (16.21a)
+Supersonic:   ∂ε/∂α = 1.62 · CL_α / (π A)                               (16.21b)
 ```
-(exact closed forms garbled in OCR — `[verify p.601, Eq. 16.21a/b]`; use Fig. 16.12 base value with the
-30–40% transonic bump as the practical rule.)
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 600: both closed forms are now the
+printed ones, and the page citation moved from p. 601 to p. 600.)
 
-Effective tail/wing α [Raymer, Eq. (16.22)–(16.24), p. 602]:
+Effective tail/wing α [Raymer, Eq. (16.22)–(16.24), **p. 601**]:
 
 ```
 Upwash:    ∂αu/∂α = 1 + ∂εu/∂α                                          (16.22)
@@ -375,33 +420,63 @@ normal-force coefficient** *[Raymer, Fig. 16.15, p. 605]* vs advance ratio `J=V/
 | 5 | 0.008 |
 
 `f(T)` (nonzero-thrust correction) from **Fig. 16.16 — Propeller normal-force factor**
-*[Raymer, Fig. 16.16, p. 606]* vs `J` (−0.5 to 2.5), roughly linear rise. *(read from plot)*:
+*[Raymer, Fig. 16.16, p. 606]* vs the thrust parameter **`T/(ρV²D²)`** (abscissa −0.5 to 2.5), a
+concave curve that rises steeply then flattens. *(read from plot)*:
 
-| J | f(T) |
+| T/(ρV²D²) | f(T) |
 |---|---|
-| -0.5 | ~0.78 |
-| 0 | ~0.90 |
-| 0.5 | ~1.05 |
-| 1.0 | ~1.25 |
-| 1.5 | ~1.50 |
-| 2.0 | ~1.75 |
-| 2.5 | ~2.00 |
+| −0.21 | ~0.80 (curve starts) |
+| 0 | ~0.95 |
+| 0.5 | ~1.33 |
+| 1.0 | ~1.61 |
+| 1.5 | ~1.79 |
+| 2.0 | ~1.91 |
+| 2.4 | ~2.00 |
+
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 606. The previous entry had the abscissa
+as advance ratio `J` — it is `T/(ρV²D²)` — and described the curve as a "roughly linear rise", which
+made every tabulated value wrong above `x=0.5`. **Book misprint noted**: the fifth abscissa tick on
+Fig. 16.16 is printed "1.52"; the tick spacing is uniform, so it is a misprint for 1.50, and 1.50 is
+used above.)
 
 A propeller aft of the c.g. is stabilizing (pusher advantage). Propwash also affects tail downwash
 [Raymer, Eq. (16.30), p. 606]:
 
 ```
-∂ε_prop/∂α = K1 + K2 · NB · (∂CN,blade/∂α) · (1/2B) · (∂αp/∂α)          (16.30)
+∂ε_p/∂α = K1 + K2 · NB · (∂CN,blade/∂α) · (∂αp/∂α)                      (16.30)
 ```
-(`K1`, `K2` from **Fig. 16.17 — Propeller downwash factors** *[Raymer, Fig. 16.17, p. 607]*, vs `J`
-(−0.5 to 2.5); OCR too degraded to reliably digitize curve values — `[verify p.607, Fig. 16.17]`, use
-figure directly.) Increased dynamic pressure at a tail in the propwash [Raymer, Eq. (16.31), p. 606]:
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 606: the previous form carried a
+spurious `(1/2B)` factor that is not in the printed equation.)
+
+`K1`, `K2` from **Fig. 16.17 — Propeller downwash factors (after NACA WR L-25)**
+*[Raymer, Fig. 16.17, p. 607]*, plotted against **`T/(ρV²D²)`** (abscissa −0.5 to 2.5), ordinate
+"Factors" 0 to 0.5. `K1` rises from 0 and the `K1`/`K2` curves cross at about
+`T/(ρV²D²)` ≈ 0.55, value ≈ 0.245. *(read from plot)*:
+
+| T/(ρV²D²) | K1 | K2 |
+|---|---|---|
+| −0.5 | — (K1 starts at 0) | ~0.246 |
+| 0 | 0 | ~0.246 |
+| 0.25 | ~0.13 | ~0.245 |
+| 0.50 | ~0.22 | ~0.243 |
+| 1.00 | ~0.36 | ~0.227 |
+| 1.50 | ~0.45 | ~0.212 |
+| 1.9 | ~0.51 (K1 curve ends) | ~0.195 |
+| 2.50 | — | ~0.16 |
+
+(**Confirmed and digitized 2026-08-18** against a 320/600-dpi render of book p. 607. The figure is
+fully legible at that resolution; the earlier "OCR too degraded" note was wrong, and so was the
+claimed abscissa — it is `T/(ρV²D²)`, not advance ratio `J`.)
+
+Increased dynamic pressure at a tail in the propwash [Raymer, Eq. (16.31), p. 606]:
 
 ```
-q_h/q = η_h [ 1 + (thrust-dependent increment term) ]                   (16.31)
+η_h = η_h(T=0) · [ 1 + T/(q · Ap) ]                                     (16.31)
 ```
-(`η_h ≈ 0.9` at zero thrust; reduce the added term proportionally if the tail is only partly immersed
-in the propwash; also usable for wing dynamic-pressure increase affecting flap pitching moment.)
+(**Corrected 2026-08-18**: the printed equation is now given in closed form instead of the previous
+"thrust-dependent increment term" placeholder. `η_h(T=0) ≈ 0.9`; `Ap` = propeller disk area. Reduce
+the added term proportionally if the tail is only partly immersed in the propwash; also usable for
+wing dynamic-pressure increase affecting flap pitching moment.)
 
 ### §16.3.10 Trim Analysis
 
@@ -419,18 +494,20 @@ CL_total = CL_α[α + iw] + η_h (Sh/Sw) CL_h                              (16.3
 `δe` lines; trim point = intersection with `Cm_cg=0` at each target `CL_total`. Sample tabulated
 points reproduced from the figure's calculation table *[Raymer, Fig. 16.18, p. 608]*:
 
-| α (deg) | δe | Cm_cg | CL_total |
-|---|---|---|---|
-| 0 | 0° | 0.033 | −0.07 |
-| 0 | −2° (approx, second col) | 0.018 | −0.05 |
-| 5 | 0° | 0.012 | 0.53 |
-| 5 | −2° (approx) | −0.004 | 0.54 |
-| 10 | 0° | −0.005 | 1.03 |
-| 10 | −2° (approx) | −0.021 | 1.04 |
-| 12 (approx) | 2° | 0.002 | 1.06 |
+| α (deg) | quantity | δE = −2° | δE = 0° | δE = +2° |
+|---|---|---|---|---|
+| 0 | Cm_cg | 0.033 | 0.018 | 0.002 |
+| 0 | CL_total | −0.07 | −0.05 | −0.03 |
+| 5 | Cm_cg | 0.012 | −0.004 | −0.02 |
+| 5 | CL_total | 0.53 | 0.54 | 0.56 |
+| 10 | Cm_cg | −0.005 | −0.021 | −0.038 |
+| 10 | CL_total | 1.03 | 1.04 | 1.06 |
 
-(Table digitization approximate — OCR scrambled the column/row alignment; treat as illustrative of
-method, not exact values. `[verify p.608, Fig. 16.18 table]`.)
+(Note on the figure: positive `δE` as defined produces an upload on the tail.)
+
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 608. The printed calculation table is
+fully legible. The previous version was column-scrambled: it attached the δE = −2° column's numbers to
+δE = 0°, invented an "α = 12 deg" row, and dropped the δE = +2° column, so no row matched the book.)
 
 Trimmed drag including trim-drag effects [Raymer, Eq. (16.34), p. 609]:
 
@@ -565,52 +642,69 @@ post-first-flight (F-100, B-25).
 
 ### §16.4.4 Wing Lateral-Directional Derivatives
 
-Wing yawing moment due to sideslip [Raymer, Eq. (16.44), p. 598], from [69]:
+Wing yawing moment due to sideslip [Raymer, Eq. (16.44), **p. 617**], from [69]:
 
 ```
-Cn_β,wing = CL² { (1/(4πA)) − [tanΛ/(πA(A+4cosΛ))]
-                  × [ A cosΛ − 2cosΛ − A²/(2 A + 4cosΛ)... ]
-                  + (6(x̄acw − x̄cg) sinΛ)/(A) }
+Cn_β,w = CL² { 1/(4πA)
+               − [ tanΛ / (πA(A + 4cosΛ)) ]
+                 × [ cosΛ − A/2 − A²/(8cosΛ) + 6(X̄acw − X̄cg)sinΛ / A ] }   (16.44)
 ```
-(equation garbled in OCR scan — `[verify p.598, Eq. 16.44]`; structure per [69] combines induced-drag
-asymmetry, sweep, and a.c.-to-c.g. offset terms.)
+(**Corrected 2026-08-18** against a 320-dpi render of book p. 617. The printed equation is fully
+legible. Two things were wrong before: the bracketed group was garbled — the correct terms are
+`cosΛ − A/2 − A²/(8cosΛ) + 6(X̄acw − X̄cg)sinΛ/A`, all *inside* the `tanΛ` product, not with the
+a.c.-offset term added outside — and the page citation was p. 598. §16.4.4 begins on p. 617.)
 
 Dihedral effect (`Cl_β`): for a straight wing ≈ 0.0002/deg dihedral (0.0115/rad); "1° effective
 dihedral" ≡ `Cl_β` of 0.0002/deg. Sweep contribution from **Fig. 16.21 — Dihedral effect of aspect
-ratio, taper ratio, and sweep** *[Raymer, Fig. 16.21, p. 599]*, `Cl_β/CL` (per rad) vs AR (0–8/9) for
-`Λ_c/4` = 0–55°, two taper-ratio panels (λ=0.5 and λ=0, interpolate/extrapolate for others).
+ratio, taper ratio, and sweep** *[Raymer, Fig. 16.21, **p. 617**]*, `Cl_β,wing/CL` (per rad) vs aspect
+ratio (0–8), **two taper-ratio panels: λ = 0.5 and λ = 1.0** (interpolate/extrapolate for others). The
+λ=0.5 panel carries `Λ_c/4` = 0, 10, 20, 30, 40, 45°; the λ=1.0 panel adds 50, 55, 60°.
 *(read from plot, λ=0.5 panel)*:
 
-| AR | Cl_β/CL (Λ=0°) | Cl_β/CL (Λ=30°) | Cl_β/CL (Λ=45°) |
-|---|---|---|---|
-| 2 | ~ −0.02 | ~ −0.08 | ~ −0.15 |
-| 4 | ~ −0.03 | ~ −0.13 | ~ −0.25 |
-| 6 | ~ −0.04 | ~ −0.20 | ~ −0.35 |
-| 8 | ~ −0.05 | ~ −0.27 | ~ −0.45 |
+| AR | Λ=0° | Λ=20° | Λ=30° | Λ=45° |
+|---|---|---|---|---|
+| 2 | ~ −0.09 | ~ −0.31 | ~ −0.41 | ~ −0.56 |
+| 4 | ~ −0.04 | ~ −0.19 | ~ −0.25 | ~ −0.35 |
+| 6 | ~ −0.03 | ~ −0.15 | ~ −0.20 | ~ −0.28 |
+| 8 | ~ −0.03 | ~ −0.12 | ~ −0.17 | ~ −0.24 |
 
-Multiply by wing `CL` for the final value. Geometric dihedral increment [Raymer, Eq. (16.45), p. 600],
-wing-vertical-placement increment [Raymer, Eq. (16.46), p. 600], summed [Raymer, Eq. (16.47), p. 600]:
+(**Corrected 2026-08-18** against a 320-dpi render of book p. 617. Three errors: the second panel is
+λ = 1.0, not λ = 0; the page citation was p. 599; and the previous values had the aspect-ratio trend
+inverted — the magnitude of `Cl_β/CL` *decreases* with increasing AR, it does not grow from −0.15 at
+AR=2 to −0.45 at AR=8.)
+
+Multiply by wing `CL` for the final value. Geometric dihedral increment [Raymer, Eq. (16.45), **p. 618**],
+wing-vertical-placement increment [Raymer, Eq. (16.46), **p. 618**], summed [Raymer, Eq. (16.47), **p. 618**]:
 
 ```
-(Cl_β)_Γ = −(CL_αwf/4)[2(1+2λ)/(3(1+λ))] Γ                              (16.45)
-Cl_β,wf = −1.2 √A · z̄wf(Df+Wf) / b²                                     (16.46)
-Cl_β = Cl_β(Fig.16.21)·CL + Cl_β,Γ + Cl_β,wf                            (16.47)
+(Cl_β)_Γ = −(CL_α·Γ/4)·[2(1+2λ)/(3(1+λ))]                               (16.45)
+Cl_β,wf = −1.2 · √A · Zwf(Df+Wf) / b²                                   (16.46)
+Cl_β,w = (Cl_β,wing/CL)·CL + (Cl_β)_Γ + Cl_β,wf                         (16.47)
 ```
-(`z̄wf` = wing height above fuselage centerline; `Df`,`Wf` = fuselage depth/width. All contributions
-negative except wing-placement term, which is positive/destabilizing for a low wing.)
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 618: in Eq. 16.45 the printed lift-curve
+slope is `CL_α`, not `CL_αwf`, and `Γ` multiplies it directly (in radians); page citations moved from
+p. 600 to p. 618. `Zwf` = wing height above fuselage centerline; `Df`, `Wf` = fuselage depth/width.
+All contributions negative except the wing-placement term, which is positive/destabilizing for a low
+wing.)
 
 Aileron control power via strip method: break the aileron-covered span into strips (Fig. 16.22), treat
-each as a flap [Eq. (16.17)], multiply by moment arm `Yi` from centerline [Raymer, Eq. (16.48), p. 601]:
+each as a flap [Eq. (16.17)], multiply by moment arm `Yi` from centerline [Raymer, Eq. (16.48), **p. 618**]:
 
 ```
-Cl_δa = (2/(Sw b)) Σ [ (∂Cl/∂δf)_strip · c_i · Yi · Δy_i ]              (16.48)
+Cl_δa = 2 Σ [ Kf · (∂CL/∂δf)' · Yi · Si · cos Λ_H.L. ] / (Sw · b)       (16.48)
 ```
-*[Raymer, Fig. 16.22, p. 601]* — planform sketch of aileron strip breakdown, no plotted data. Unsealed
-hinge gap: reduce ~15%. Yawing moment due to aileron deflection [Raymer, Eq. (16.49), p. 602]:
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 618: the previous form used
+`c_i · Yi · Δy_i` and omitted both the flap factor `Kf` and the `cos Λ_H.L.` hinge-line term. `Si` is
+the strip area and `Kf` and `(∂CL/∂δf)'` come from Figs. 16.6 and 16.7.)
+
+*[Raymer, Fig. 16.22, **p. 618**]* — planform sketch of aileron strip breakdown, no plotted data. Unsealed
+hinge gap: reduce ~15%. Yawing moment due to aileron deflection [Raymer, Eq. (16.49), **p. 618**]:
 
 ```
-Cn_δa ≈ f(CL) · Cl_δa      [empirical simplification of the [69] method]
+Cn_δa = −0.2 · CL · Cl_δa                                               (16.49)
 ```
+(**Corrected 2026-08-18**: the printed equation gives the explicit coefficient −0.2; the previous
+version wrote it as an unspecified `f(CL)`.)
 
 ### §16.4.5 Fuselage and Nacelle Lateral-Directional Derivatives
 
@@ -946,7 +1040,19 @@ rudder, and ailerons need revision.
 
 ---
 
-*Chapter 16 complete (§§16.1–16.8, Tables 16.1–16.2, Figs 16.1–16.32, Eqs 16.1–16.70). Several plotted
-figures (16.5, 16.17, 16.21 low-λ panel) were left as qualitative-only or partially digitized because
-the source scan's OCR/typography was too degraded to trust a fine digitization — flagged inline with
-`[verify p.NNN]`. Next: Chapter 17 — Performance and Flight Mechanics.*
+*Chapter 16 complete (§§16.1–16.8, Tables 16.1–16.2, Figs 16.1–16.32, Eqs 16.1–16.70).*
+
+*Correctness sweep, 2026-08-18: book pages 593, 600, 601, 602, 603, 606, 607, 608, 617 and 618 were
+re-rendered at 300–600 dpi and read as images. All `[verify]` markers in this chapter are now
+resolved. Corrections applied: Fig. 16.4 (fighter trend was inverted), Fig. 16.11 (values 2–5x too
+large, aspect-ratio families missing), Fig. 16.12 (the previous table's axes do not exist in the
+book), Fig. 16.13 (trend inverted, ordinate range and abscissa both wrong), Fig. 16.16 (abscissa is
+`T/(ρV²D²)`, not `J`), Fig. 16.17 (now digitized; abscissa also `T/(ρV²D²)`), Fig. 16.18 (calculation
+table was column-scrambled), Fig. 16.21 (aspect-ratio trend inverted; second panel is λ=1.0, not λ=0),
+and Eqs. 16.21a/b, 16.30, 16.31, 16.44, 16.45, 16.48, 16.49. Page-citation corrections: Eq. 16.21 is
+on p. 600 (was p. 601); Eqs. 16.22–16.24 on p. 601 (was p. 602); §16.4.4, Eq. 16.44 and Fig. 16.21 on
+p. 617 (was p. 598/599); Eqs. 16.45–16.49 and Fig. 16.22 on p. 618 (was p. 600–602). Fig. 16.5 is a
+genuine multi-parameter nomograph and is still, correctly, not digitized. Book misprint recorded:
+Fig. 16.16's fifth abscissa tick is printed "1.52" where the uniform tick spacing requires 1.50.*
+
+*Next: Chapter 17 — Performance and Flight Mechanics.*

@@ -12,14 +12,19 @@ carpet-plot optimization, and performance/cost analysis). The author explicitly 
 as at-most-a-"B" — incomplete relative to a full professional design effort, intended to show the
 *process*, not a finished, buildable aircraft ("Homebuilders: don't build this one either!").
 
-**OCR note:** the DR-1 example is reproduced in the book from the author's original *hand-written*
-design notes (deliberately, to show it is a fully by-hand process); the scan's OCR layer for this
-handwritten material is extremely unreliable (single garbled characters/values throughout). Numeric
-values below from the DR-1 example are given only where they could be read with reasonable
-confidence from the scan or cross-checked against the surrounding typed context (e.g. the AC-SIZE
-program printouts, which are typeset and OCR cleanly); uncertain values are flagged
-`[verify p. NNN]` or omitted rather than guessed. The DR-3 example is mostly typeset (RDS-Student
-program input/output listings) and OCR'd cleanly; its numbers are reproduced with higher confidence.
+**Source note (revised 2026-08-18).** The DR-1 example is reproduced in the book from the author's
+original *hand-written* design notes, deliberately, to show it is a fully by-hand process. The scan's
+**OCR text layer** for that handwriting is extremely unreliable, and an earlier version of this
+extract relied on it and inherited many errors. Those errors are now fixed: **the handwriting itself
+renders cleanly at 320 dpi**, and every page that had been flagged as unreadable has been re-read
+directly off the page image (pp. 869, 872, 881, 884, 886, 887, 891, 902, 903, 918, 919). Where the
+earlier text differed from the page, the difference and the correct value are recorded inline at
+that point in this file. The rule for this chapter going forward: **do not read this chapter from
+the OCR layer — render the page.**
+
+The DR-3 example is mostly typeset (RDS-Student program input/output listings) and OCRs cleanly, but
+two of its pages had also been mis-summarised and are now transcribed in full from renders
+(pp. 925 and 950).
 
 ---
 
@@ -48,35 +53,68 @@ wing loading needed to meet the no-flaps stall-speed requirement strongly biases
 optimum *downward* — the resulting wing has a normal span but an oversized (excess) chord to reach
 the required area.
 
-### DR-1 design requirements (from the design-sketch sheet)
+### DR-1 design requirements (hand-written requirements sheet)
 *[Raymer, p. 869]*
 
-- Single-seat aerobatic homebuilt; engine: Lycoming O-320-A2B, 150 hp {112 kW} at 2700 rpm, engine
-  weight 272 lb.
-- Design goal: performance between the Pitts S-1S and the Great Lakes biplane.
-- Fabrication: foam and fiberglass (moldless sandwich construction).
-- `Vmax` ≈ 150 kt; `Vstall` ≈ 50 kt; takeoff ground roll ≈ 1000 ft; roll rate ≥ 180 deg/s
-  `[verify p. 869]`; ceiling ≥ 15,000 ft.
-- Range ≈ 280 nm (with reserves), flown at `Vc` ≈ 115 kt.
-- `Wcrew` = 220 lb (includes chute/survival gear).
-- Handling qualities: slightly stable (like a light fighter); good spin recovery, upright and
-  inverted.
+*(Fully re-read and CORRECTED 2026-08-18 against a 320-dpi render of book p. 869. The
+hand-writing renders cleanly at that resolution; the OCR text layer for it does not, and the earlier
+extract of this page contained several errors, listed after the table.)*
 
-### Fig 24.1 — DR-1 design-requirements sketch sheet
-*[Raymer, Fig. 24.1 (unnumbered design sheet), p. 869]* — Hand-drawn three-view sketch with the
-requirements above annotated around it (span ≈ 30 ft, length ≈ 32 ft, height ≈ 7 ft, per the
-legible dimension callouts). No plotted numeric data beyond the requirement values listed above
-(hand sketch, largely illegible via OCR beyond the callouts already captured)
-`[verify p. 869, dimension callouts]`.
+**Engine:** Lycoming O-320-A2B (from the Citabria) — 150 hp at 2700 rpm, `C_bhp` = 0.5 (assumed),
+272 lb dry, 30 in long, 32 in wide, 23 in high.
+
+**Design goals:** rapid fabrication (foam and fiberglass); performance between the Pitts S-1S and
+the Great Lakes.
+
+| Requirement | Value |
+|---|---|
+| `Vmax` | ≥ 130 kt |
+| `Vstall` | ≤ 50 kt |
+| Takeoff | ≤ 1000 ft over 50 ft |
+| Rate of climb, S.L. | ≥ 1500 fpm |
+| Range | ≥ 280 nm (**no** reserves) at `Vcruise` = 115 kt |
+| Load factor `n` | +6 / -3 g |
+| `Wcrew` | 220 lb (includes parachute) |
+
+Optional open cockpit (this is the configuration used for the analysis).
+
+**Handling qualities:** slightly stable (like a fighter); good spin recovery, upright and inverted.
+
+**Mission profile** (hand sketch, four points): takeoff (0-1), climb (1-2), cruise 280 nm at
+`h` = 8000 ft and `Vcruise` = 115 kt (2-3), land (3-4).
+
+**What the earlier extract got wrong on this page:**
+- `Vmax` was given as "≈ 150 kt". The sheet says **≥ 130 kt**.
+- Range was given as "≈ 280 nm (with reserves)". The sheet says **no reserves**.
+- A requirement "roll rate ≥ 180 deg/s" was listed. **No roll-rate requirement appears on the
+  page.** The item in that position is the load factor, `n` = +6/-3 g.
+- A requirement "ceiling ≥ 15,000 ft" was listed. **No ceiling requirement appears on the page.**
+- The engine's `C_bhp` = 0.5 assumption and the "from Citabria" provenance were missing.
+- There is **no three-view sketch on p. 869**, and therefore no "span ≈ 30 ft, length ≈ 32 ft,
+  height ≈ 7 ft" dimension callouts. Those numbers were a misreading of the engine's own dimensions
+  (30 in long, 32 in wide, 23 in high). The only sketch on the page is the mission profile above.
 
 ### Wing geometry, tail geometry, and airfoil selection
-*[Raymer, pp. 872-873]*
+*[Raymer, p. 872]*
 
-Wing: AR and taper ratio selected from historical charts/tables (Chapter 4); quarter-chord sweep set
-to 0 (no sweep needed at this speed); dihedral ~3 deg. Airfoil: NACA 632-015 (root, thick enough to
-resist tip-first stall trends) transitioning to NACA 632-012 (tip); no washout (twist) used, to avoid
-compromising inverted-flight stall behavior. Horizontal tail: AR = 4; vertical tail: AR ≈ 1.8,
-taper ≈ 0.6 `[verify p. 872]`; both tail surfaces use a NACA 0012 section.
+*(Fully re-read and CORRECTED 2026-08-18 against a 320-dpi render of book p. 872. The whole page is
+one hand-written sheet, "WING GEOMETRY SELECTION (From Chapter 4 Charts & Tables)", and is legible.)*
+
+**Wing:** `A` = 6; `lambda` = 0.4; `Lambda_c/4` = 0; dihedral `Gamma` = 3 deg (0 deg effective).
+
+**Airfoil:** NACA 63₂-015 at the **TIP**, NACA 63₂-012 at the **ROOT** — the note on the sheet reads
+"Higher t/c at tip to prevent tip stall". **No twist**, to avoid inverted tip stall.
+
+**Horizontal tail:** `A` = 4; `lambda` = 0.4; NACA 0012.
+
+**Vertical tail:** `A` = 1.5; `lambda` = 0.4; NACA 0012.
+
+**What the earlier extract got wrong on this page:**
+- The airfoils were **swapped**: it put the thicker 63₂-015 at the root and the 63₂-012 at the tip.
+  The sheet does the opposite, and says why (higher t/c at the tip prevents tip stall).
+- The vertical tail was given as `A` ≈ 1.8, taper ≈ 0.6. The sheet says **`A` = 1.5, `lambda` = 0.4**.
+- The horizontal-tail taper ratio (0.4) was missing.
+- The page range "pp. 872-873" was wrong; all of this is on p. 872.
 
 ### Wing loading, stall, climb, and cruise sizing constraints
 *[Raymer, pp. 873-874]*
@@ -127,46 +165,211 @@ built up from the wetted/exposed-area-weighted airfoil data (`CLmax` ≈ 1.2 cle
 parasitic drag built up component-by-component (fuselage, wing, tails) assuming fully turbulent flow,
 each via the standard skin-friction-coefficient/form-factor/wetted-area method of Chapter 12
 (Eqs. 12.24-12.30), summed with a landing-gear increment and a cockpit/canopy frontal-area increment,
-plus leakage/protuberance and cooling-drag adjustments, to a **total zero-lift drag coefficient
-`CD0` ≈ 0.0277** (clean cruise configuration) `[verify p. 881, exact buildup terms]`; induced drag via
-Oswald efficiency `e` ≈ 0.87 and `K` ≈ 0.081 (Eq. 12.48-family). Propulsion: static/installed thrust
-and propeller efficiency vs. velocity were built up from Chapter 13's propeller charts/equations
-(`eta_p` ≈ 0.84 on-design, static thrust ≈ 750-790 lb range depending on assumed blade count/pitch
-schedule), with a slipstream/propwash correction applied to the drag buildup (~5% thrust reduction
-factor noted for the effective propwash-affected drag area) `[verify p. 884, exact correction value]`.
+plus leakage/protuberance adjustments (see the full transcribed buildup below); induced drag via
+Oswald efficiency `e` ≈ 0.87 and `K` ≈ 0.081 (Eq. 12.48-family).
+
+#### DR-1 thrust vs. velocity and the propwash correction
+*[Raymer, hand-written thrust-vs-velocity sheet, p. 884]*
+
+*(Corrected 2026-08-18 against a 320-dpi render of book p. 884. The earlier extract said
+"`eta_p` ≈ 0.84 on-design, static thrust ≈ 750-790 lb range depending on assumed blade count/pitch
+schedule". The page gives `eta_p` = **0.78** at cruise and a static thrust of **400 lb** (assumed) for
+the selected wood fixed-pitch propeller; the ~730 lb static figure on the plot belongs to the
+alternative variable-pitch metal propeller, which was not the one chosen.)*
+
+- Thrust equation as written on the sheet: `T` = 550(150)`eta_p` / `V`. The plot explicitly notes it
+  "does not include engine drags or propwash".
+- Two propellers are plotted. A **variable-pitch metal** propeller with `eta_p` from Fig. 13.9
+  (theoretical curve, faired down to a static value of about 730 lb). A **wood fixed-pitch**
+  propeller with `eta_p` = 0.78 times the fixed-pitch correction, drawn as an assumed 400 lb static
+  thrust faired into a calculated curve that peaks near 370 lb around 50-60 kt.
+- Cruise point: `eta_p` = **0.78** at about 115 kt, where the fixed-pitch curve crosses the
+  variable-pitch curve at roughly 340 lb.
+- **Correction for propwash drag effect**, washed area = 265 ft², via Eq. 13.20:
+  `eta_p_effective` = `eta_p`[1 - (1.558/(70/12)²)(0.004)(265)] = **0.95 `eta_p`**, so
+  `Thrust_actual` = 0.95 x `Thrust_calculated`.
+
+#### DR-1 parasite-drag buildup, transcribed in full
+*[Raymer, hand-written drag-buildup sheet, p. 881]*
+
+*(Transcribed 2026-08-18 from a 320-dpi render. The earlier extract summarised this page as a
+"total zero-lift drag coefficient `CD0` = 0.0277 (clean cruise configuration)". That is wrong on
+both counts: the page's own total is **0.0250**, and the configuration is the **open cockpit**, not a
+clean cruise configuration. Reference area is `S` = 118 ft².)*
+
+**Wing** — `l` = `c_bar` = 4.67 ft, average `t/c` = 13.5%:
+- Eq. 12.25: `R` = 5 x 10⁶. Eq. 12.28: `R_cutoff` = 16.46 x 10⁶.
+- Eq. 12.27: `Cf` = 0.0034.
+- Eq. 12.30: `FF` = [1 + (0.6/0.3)(0.135) + 100(0.135)⁴][1.34(0.15)^0.18] = **1.24**.
+- `Swet` = 202.3 ft². `Q` = 1 (using fillets).
+- `CD0_wing` = 0.0034 x 1.24 x 202.3 / 118 = **0.0071**.
+
+**Tails** (analysed together, because the mean chords and t/c are similar) — `l` = `c_bar_average`
+= 2.8 ft, `t/c` = 12%:
+- `R` = 3 x 10⁶, `R_cutoff` = 9.6 x 10⁶, `Cf` = 0.0037.
+- `Swet` = 48.6 + 12 = 60.6 ft².
+- `FF` = [1 + (0.6/0.3)(0.12) + 100(0.12)⁴][1.34(0.15)^0.18] = **1.20**.
+- `CD0_tails` = 0.0037 x 1.2 x 60.6 / 118 = 0.0023, **+10% for gaps = 0.0025**.
+
+**Gear drag** (Table 12.5):
+- Tire frontal area = 1.03 ft²; `D/q` = 1.03 x 0.13 = 0.134 ft².
+- Strut frontal area = 0.67 ft²; `D/q` = 0.67 x 0.05 = 0.033 ft².
+- Add 20% for interference: `CD0_gear` = 1.2(0.134 + 0.033) / 118 = **0.0020**.
+
+**Cockpit drag** (Chapter 12) — open cockpit:
+- Frontal area = 1.8 ft²; `CD0` = 1.8 x 0.5 / 118 = **0.0076**.
+
+**Total parasite drag:** the component sum (including the fuselage term carried over from the
+preceding page) is 0.0238; plus 5% for leaks and protuberances,
+`CD0` = 1.05(0.0238) = **0.0250** (aerobatic / open-cockpit configuration).
 
 ### Weights, stability and control, and spin recovery
 *[Raymer, pp. 885-892]*
 
-A component weight buildup (Cessna-method-style statistical equations, cross-checked against actual
-comparable-aircraft data) produced an itemized weight/CG table for fuselage, wing, horizontal tail,
-vertical tail, engine, landing gear, fuel system, flight controls, electrical, avionics, and
-furnishings, summing to an empty weight in the roughly 880-940 lb range (consistent with the sizing
-iterations above) with a most-aft empty-weight c.g. around 63-65 in. aft of the datum
-`[verify pp. 886-887, exact per-component values — handwritten table heavily OCR-garbled]`. Stability
+A component weight buildup produced an itemized weight/c.g. table, transcribed in full below.
+
+#### Weights by other methods
+*[Raymer, hand-written sheet, p. 886]*
+
+Cessna methods (Ref. 18):
+```
+W_wing = .047 * W0^.397 * S^.36  * n^.397 * A^1.712                                = 225 lb
+W_ht   = .055 * W0^.887 * Sh^.101 * Ah^.138 * t_root^-.223                         =  60 lb
+W_vt   = .108 * W0^.567 * Sv^.125 * Av^.482 * t_root^-.747 * (cos Lambda_c/4)^-.882 = 17.7 lb
+```
+Ref. 16 method:
+```
+W_fus (w/o nacelle) = 200 * [ (W0*n/1e5)^.286 * (L/10)^.857 * ((W+D)/10) * (Ve/100)^.338 ]^1.1 = 114 lb
+W_nacelle           = 2.5 * sqrt(Hp)                                                          =  31 lb
+```
+Comparison to actual data (Ref. 18): `W_electrical` = 40 lb;
+`W_gear` = (Wgear/W0)*W0 = 0.054(1200) = 64 lb (the 0.054 is the average of the C-180 and L-19A values).
+
+#### Weights adjustments and balance
+*[Raymer, hand-written weight statement, p. 887]*
+
+The sheet notes that foam-and-fiberglass sandwich homebuilts are lighter because of design
+differences, not because of composite construction, but applies the Table 15.4 factors anyway to
+estimate a per-component weight saving. Distances to datum are measured from the back of the spinner.
+
+| Component | Fudge factor | Adjusted weight, Ch. 15 / other methods (lb) | Selected weight (lb) | Distance to datum (in) |
+|---|---|---|---|---|
+| Fuselage | 0.90 | 104 / 128 | 130 | 115 |
+| Wing | 0.85 | 143 / 175 | 150 | 70 |
+| Hor. tail | 0.83 | 17 / 45 | 40 | 210 |
+| Vert. tail | 0.83 | 9 / 13 | 15 | 225 |
+| Engine | — | 452 / 380 | 380 | 16 |
+| Gear | 0.95 | 66 / 57 | 60 | 45 |
+| Fuel sys. | — | 22 | 22 | 50 |
+| Fl. controls | — | 13 | 15 | 80 |
+| Electrical | — | 73 / 40 | 40 | 40 |
+| Avionics | — | 9.5 | 10 | 60 |
+| Furnishings | — | 20 | 20 | 100 |
+| **Sum `We`** | | | **882** | **@ 59.5** |
+| Pilot and chute | | | 220 | 85 |
+| Fuel (available, if `W0` = 1200 lb) | | | 98 | 50 |
+| **Sum `W0`** | | | **1200** | **@ 63.3** |
+
+Most-aft c.g. is the no-fuel case: `We+pilot` = **1102 lb at 64.5 in**.
+
+*(Transcribed 2026-08-18 from 320-dpi renders of book pp. 886-887. The earlier extract gave the
+empty weight as "roughly 880-940 lb" and the most-aft c.g. as "around 63-65 in", and flagged the
+table as "heavily OCR-garbled". The OCR layer is garbled, but the handwriting is legible at 320 dpi:
+the exact values are `We` = 882 lb at 59.5 in, `W0` = 1200 lb at 63.3 in, and a most-aft no-fuel c.g.
+of 64.5 in.)*
+
+Stability
 and control analysis (Chapter 16 methods) found a power-off neutral point well aft of the most-aft
 c.g., giving a **static margin on the order of 12-18% MAC** (both stick-fixed and stick-free), judged
 appropriately stable for a "weekend pilot" aircraft (possibly too stable/sluggish for serious
 aerobatic competition, per the author's own note). A trim analysis (`Cm` vs. `CL` for a family of
-elevator deflections, Eq. 16.11-family) produced a trim plot; at the cruise `CL` ≈ 0.27 the required
-elevator deflection for trim was found to be a modest few degrees `[verify p. 891, exact trim-plot
-values]`. A spin-recovery check (Eq. 16.31-family, comparing rudder/vertical-tail area against the
+elevator deflections) produced a trim plot, transcribed below.
+
+#### DR-1 trim plot
+*[Raymer, hand-written trim sheet with an embedded Excel plot, p. 891]*
+
+Method as written on the sheet: vary `alpha` and `delta_e`, find `Cm_cg` and `CL_total`, then plot
+`Cm` vs. `CL` (done in Excel). Each cell below is `<Cm><Cl>`:
+
+| `alpha` (deg) | `delta_e` = 0 | -2 | -4 | -6 |
+|---|---|---|---|---|
+| 0 | <0.000><0.000> | <0.052><-.020> | <0.103><-.041> | <0.155><-.061> |
+| 2 | <-.029><0.185> | <0.023><0.165> | <0.075><0.144> | <0.126><0.124> |
+| 4 | <-.057><0.370> | <-.006><0.350> | <0.046><0.329> | <0.098><0.309> |
+| 6 | <-.086><0.555> | <-.034><0.535> | <0.017><0.515> | <0.069><0.494> |
+| 8 | <-.115><0.741> | <-.063><0.720> | <-.011><0.700> | <0.040><0.679> |
+| 10 | <-.143><0.926> | <-.092><0.905> | <-.040><0.885> | <0.012><0.864> |
+
+Trimmed where `Cm_cg` = 0 for level flight.
+
+**Cruise trim:** `q` = 35 lb/ft², so `CL` = (W/S)/`q` = 9.7/35 = **0.278**. At `CL` = 0.278 with
+`Cm_cg` = 0, `delta_e` = **-1.8 deg** (the circled point on the plot).
+
+**Trim via tail incidence only:** required `i_h` = -`delta_alpha_0L` = -(-0.8 `delta_e`)
+= -(-0.8)(-1.8 deg) = **-1.44 deg**.
+
+*(Transcribed 2026-08-18 from a 320-dpi render of book p. 891. The earlier extract gave cruise
+`CL` = "≈ 0.27" and the elevator deflection as "a modest few degrees"; the exact values are
+`CL` = 0.278 and `delta_e` = -1.8 deg.)* A spin-recovery check (Eq. 16.31-family, comparing rudder/vertical-tail area against the
 fuselage-length-based recovery criterion at both forward and most-aft c.g.) found no problem in either
 upright or inverted spins, with margin to spare on rudder area.
 
 ### Rate of climb, maximum speed, and turn performance
-*[Raymer, pp. 893-895]*
+*[Raymer, pp. 893-903]*
 
 Rate of climb was computed across a speed sweep at sea level and at 8000 ft (Eq. 17.17-family, using
-the thrust-minus-drag excess power at each speed), producing best-rate-of-climb speed/altitude curves;
-maximum level speed was found graphically by intersecting the thrust-available and drag curves at a
-given altitude (`Vmax` ≈ 130 kt at 8000 ft, per the plotted intersection) `[verify p. 902, exact
-intersection value]`. Sustained-turn performance was evaluated via the standard turn-rate/load-factor
-relations (Chapter 17) to determine an achievable sustained-`g` boundary at combat-representative
-speed/altitude, and cross-plotted against the climb and cruise constraints already established to
-confirm no unexpected lower bound was being placed on aspect ratio by maneuvering requirements at very
-low AR (the book notes only that induced drag would become excessive in maneuvers at very low AR,
-motivating the eventual aspect-ratio choice below) `[verify p. 903, exact turn-rate numbers]`.
+the thrust-minus-drag excess power at each speed), producing best-rate-of-climb speed/altitude curves.
+
+#### Maximum speed for each of the nine sizing-matrix cells
+*[Raymer, hand-written sheet, p. 902]*
+
+Requirement: `Vmax` >= 130 kt at 8000 ft. Quick method as written on the sheet: calculate drag at
+130 kt, use it to shift the previous drag curve up or down, then find the intersection with the
+thrust curve. The nine numbered results are the nine cells of the AR / W-S sizing matrix:
+
+| Cell | Drag at 130 kt (lb) | `Vmax` (kt) |
+|---|---|---|
+| 1 | 196 | 130 |
+| 2 | 157 | 136 |
+| 3 | 139 | 138 |
+| 4 | 211 | 127 |
+| 5 | 163 | 134 |
+| 6 | 139 | 138 |
+| 7 | 228 | 125 |
+| 8 | 172 | 133 |
+| 9 | 145 | 137 |
+
+The accompanying sketch plots thrust at 8000 ft (about 295 lb at low speed, falling to about 200 lb
+by 130 kt) against a baseline drag curve at 8000 ft, with the nine shifted drag lines crossing it
+between about 125 and 138 kt.
+
+*(Transcribed 2026-08-18 from a 320-dpi render of book p. 902. The earlier extract gave only
+"`Vmax` = 130 kt at 8000 ft, per the plotted intersection"; that is cell 1 of nine, and it is the
+requirement value, not a single computed answer.)*
+
+#### Sustained-turn requirement
+*[Raymer, hand-written sheet, p. 903]*
+
+The sheet states that crossplotting the stall, rate-of-climb and `Vmax` requirements onto the sizing
+graph gives **no lower limit on aspect ratio**, and that at very low aspect ratio the induced drag
+would become excessive during maneuvers, so a maneuvering requirement is needed. A new performance
+requirement is therefore defined on sustained turn:
+
+- `psi_dot` >= **30 deg/s sustained, at 100 kt, S.L.**
+- Eq. 17.51: `psi_dot` = 30 deg/s = 0.5236 rad/s = g·sqrt(n² - 1) / (100 x 1.689), so **`n` >= 2.92**.
+- `T` = 345 lb, from the graph.
+- Eq. 17.53: `n` = sqrt[ (34·pi·A·e / (W/S)) · (345/W - 34·`CD0`/(W/S)) ].
+- Stall check (a near-stall condition reduces `e`): `CL` = n(W/S)/`q` = **0.88** for the baseline and
+  **1.056** for `W/S` = 12.24, so the prior `e` estimates should be approximately correct.
+
+Using prior data, the nine sizing-matrix cells give: (1) `n` = 2.8, (2) 2.9, (3) 2.8, (4) 3.1,
+(5) 3.3, (6) 3.3, (7) 3.2, (8) 3.4, (9) 3.5. The sheet's own note: large values of `n` are incorrect
+because they imply `CL` > `CL_stall`, but they can still be used to crossplot for `n` = 2.92, which is
+below stall.
+
+*(Transcribed 2026-08-18 from a 320-dpi render of book p. 903. The earlier extract said only that
+"the book notes only that induced drag would become excessive in maneuvers at very low AR" and
+flagged the turn-rate numbers as unread. The full requirement and all nine load factors are above.)*
 
 ### Sizing matrix, aspect-ratio/wing-loading optimization, and final result
 *[Raymer, pp. 904-905]*
@@ -296,9 +499,36 @@ and forward), fuselage tanks (forward and aft of the wing box) sized from the dr
 and 83% (fuselage) usable-volume fractions respectively, summing (with the required design fuel
 weight ≈ 4780-4980 lb range across iterations) to a fuel-volume-driven internal-tank layout confirmed
 to fit within the drawn envelope. Landing gear: main-gear tire diameter/width and nose-gear
-sizing were estimated from the statistical tire-sizing equations of Chapter 11 based on the static
-per-strut load fractions (main gear carrying the bulk of `W0`, nose gear ≈ a smaller design-load
-fraction) `[verify p. 918-919, exact gear dimensions — heavily OCR-garbled]`.
+sizing were estimated from the statistical tire-sizing equations of Chapter 11.
+
+*(Resolved 2026-08-18 against 320-dpi renders of book pp. 918-919. The earlier note called the gear
+dimensions "heavily OCR-garbled". The OCR layer is garbled, but the handwriting itself renders
+cleanly at 320 dpi and the whole page is readable. The actual figures are below.)*
+
+**Engine sizing (p. 918, hand-written):**
+- `T` = (T/W)·`W0` = 0.98 × 16,480 = **16,150.4 lb (SLS)**.
+- Reference engine A.4-1, 100%-sized: `T` = 30,000 lb, `L` = 160 in, `D` = 44 in, `W` = 3,000 lb.
+- Scale factor `SF` = 16,150.4 / 30,000 = **0.538**.
+- Scaled, with a conventional nozzle: `L` = 160(0.538)^0.4 = **125 in**;
+  `D` = 44(0.538)^0.5 = **32 in**; `W` = 3000(0.538)^1.1 = **1,517 lb**.
+- A two-dimensional vectoring nozzle with thrust reversing is selected, to give pitch control at
+  supersonic speed (when the variable-dihedral tails are near-vertical) and to shorten the landing.
+  It needs a circle-to-square adapter, which lengthens the engine beyond the 125 in above.
+
+**Inlet capture-area sizing (p. 918, hand-written):**
+- From A.4-1 at M 1.8 / 30,000 ft, mass flow = 270 lbm/s; scaled: 0.538 × 270 = **145.3 lbm/s**.
+- From Fig. 10.17, `Ac`/mass-flow = 3.8 at M 1.8, so `Ac` = 3.8 × 145.3 = **552 in²**.
+
+**Landing gear (p. 918, hand-written)**, using the Chapter-11 statistical tire-sizing equations with
+a per-main-wheel load `Ww` = 0.9 × (16,480/2) = 7,416 lb:
+- Main: `D` = 1.59(7416)^0.302 = **23 in**; `W` = 0.098(7416)^0.467 = **6.3 in**.
+- Nose: `D` = **18 in**, `W` = **5 in** (80% of the main-gear tire).
+
+**Design-drawing callouts (p. 919, hand-drawn three-view, "DR-3 LIGHTWEIGHT FIGHTER, D. P. Raymer"):**
+`W0` = 16,480 lb; `Wf` = 4,779 lb; `Sw` = 294 ft²; `A` = 3.5; `lambda` = 0.25; `Lambda_LE` = 38 deg;
+`L` = 542 in; `Xcg` = 243; fuselage cross-section stations at 35, 118, 215, 275, 340 and 450; nose
+droop 12.5 deg; 2D nozzle; variable-dihedral tails; wing fuel and fuselage fuel bays and the ammo
+bay marked. The drawing carries no numeric landing-gear callouts — those are on p. 918, above.
 
 ### Wetted areas
 *[Raymer, p. 921]*
@@ -364,10 +594,46 @@ modern-fighter leading-edge-flap data.
 Misc `D/q` vs. Mach (missile, fps units): 0.12 ft² at M0-0.98, rising to 0.27-0.30 ft² by M1.1-2.0
 (read from the RDS input table). Cannon-port `D/q`: constant 0.2 ft² across M0-2.0.
 
-Sample RDS aerodynamic *results* (file `DR3.DAA`) at two conditions: at 30,000 ft/Mach 0.40, component
-Reynolds numbers ranged from ~5.9M (wing) to ~51.6M (fuselage), skin-friction coefficients ~0.0016-0.0032,
-form factors ~1.13-1.67; at 40,000 ft/Mach 1.60, Reynolds numbers ranged ~12.9M-138.4M with all form
-factors reduced to 1.000 (supersonic flow) `[verify pp. 924-925, exact per-component Cf values]`.
+Sample RDS aerodynamic *results* (file `DR3.DAA`), transcribed in full from book p. 925. The input
+block above is on p. 924; the results block is on p. 925 alone.
+
+*(Corrected 2026-08-18 against a 320-dpi render of book p. 925, which is a typeset program printout
+and fully legible. The earlier summary had two errors: it gave the smallest Reynolds number as
+"~5.9M (wing)", but 5.916 is the HORIZONTAL TAIL and the wing is 11.715; and it gave the
+skin-friction range as "~0.0016-0.0032", whereas the printout's Cf column is in units of 1e-4, so
+the M0.40 range is 0.0023-0.0033 and the M1.60 range is 0.0017-0.0024.)*
+
+**Altitude = 30,000 ft, Mach = 0.40**
+
+| Component | R# (10⁶) | Cf (10⁻⁴) | FF | S-wet (ft²) | Cdo (10⁻⁴) |
+|---|---|---|---|---|---|
+| Wing | 11.715 | 28.859 | 1.190 | 431.8 | 53.5 |
+| Horz tail | 5.916 | 32.235 | 1.202 | 184.8 | 25.8 |
+| Fuselage | 51.597 | 23.046 | 1.129 | 588.0 | 55.1 |
+| Cnpy/fair | 15.867 | 27.516 | 1.196 | 39.0 | 4.6 |
+| BL divrtr | 4.794 | 33.384 | 1.674 | 2.8 | 0.6 |
+| Misc D/q vs M | | | | | 4.327 |
+| Misc D/q vs M | | | | | 7.211 |
+| **Total parasite drag coefficient Cdo** | | | | | **151.131** |
+
+**Altitude = 40,000 ft, Mach = 1.60**
+
+| Component | R# (10⁶) | Cf (10⁻⁴) | FF | S-wet (ft²) | Cdo (10⁻⁴) |
+|---|---|---|---|---|---|
+| Wing | 31.421 | 20.520 | 1.000 | 431.8 | 31.9 |
+| Horz tail | 15.867 | 22.773 | 1.000 | 184.8 | 15.2 |
+| Fuselage | 138.393 | 16.590 | 1.000 | 588.0 | 35.2 |
+| Cnpy/fair | 42.559 | 19.618 | 1.000 | 39.0 | 2.8 |
+| BL divrtr | 12.860 | 23.535 | 1.000 | 2.8 | 0.2 |
+| Misc D/q vs | | | | | 10.636 |
+| Misc D/q vs | | | | | 7.211 |
+| Wave drag coefficient Cdw | | | | | 122.0 |
+| **Total parasite drag coefficient Cdo** | | | | | **225.126** |
+
+All form factors go to 1.000 in supersonic flow, as expected. The page also carries a
+parasite-drag-coefficient vs. Mach plot for six altitudes (0, 10k, 20k, 30k, 40k, 50k ft), with
+`Cdo` about 0.0135-0.0185 subsonic, peaking near 0.026-0.027 at M ~ 1.05-1.10, then falling to about
+0.0195-0.0205 by M 2.2.
 
 ### DR-3 weight statement (baseline, `W0` = 16,480 lb)
 *[Raymer, Fighter/Attack Group Weight Statement, pp. 934-935]*
@@ -416,18 +682,69 @@ factors reduced to 1.000 (supersonic flow) `[verify pp. 924-925, exact per-compo
 C.g. travel: empty c.g. = 23.8% MAC; loaded-no-fuel c.g. = 23.4% MAC; gross-weight c.g. = 23.1% MAC.
 
 ### Takeoff and landing performance (baseline)
-*[Raymer, pp. 949-950]*
+*[Raymer, RDS-Student TAKEOFF: DR3 / LANDING: DR3 printouts, p. 950]*
 
-At `W0` = 16,480 lb {7475.2 kg}: operating weight ratio `Wi/W0` = 1.000 at brake release; takeoff
-`T/W` = 0.980; start-of-takeoff thrust ≈ 16,150 lb {71.8 kN}; takeoff wing loading `W/S` ≈ 56.05 psf
-{273.68 kg/m²}; `Vstall` ≈ 99.8 kt {184.8 km/h}; `Vtakeoff` ≈ 109.8 kt {203.3 km/h}; climb `CD0` ≈ 0.0289,
-climb `K` ≈ 0.2609, climb `L/D` ≈ 3.07 (reflecting high-drag takeoff configuration with gear/flaps
-down), climb angle ≈ 44.97 deg [likely a mislabeled/garbled OCR value for a much shallower climb
-angle — flagged `[verify p. 949]`], `CL` ≈ 1.49. For landing, aircraft operating weight, `T/W` at
-rollout, landing `W/S`, `Vstall`/`Vtouchdown`, approach angle, and approach `CD0`/`CL`/`K`/`L/D` were
-similarly tabulated, with total landing distance components (approach, flare, free roll, braking)
-summed against the FAR Part 25-style landing-distance requirement `[verify p. 950, most performance
-figures on this page are OCR-illegible column headers without adjoining values]`.
+*(Fully re-read 2026-08-18 off a 320-dpi render of book p. 950. This page is a typeset program
+printout and is completely legible; the earlier extract's claim that "most performance figures on
+this page are OCR-illegible column headers without adjoining values" was wrong, and its page range
+"pp. 949-950" was wrong — p. 949 carries the range and cost carpet plots, and the whole takeoff and
+landing block sits on p. 950. Both are corrected below and the full printout is now transcribed.)*
+
+**TAKEOFF: DR3**
+
+| Quantity | Value |
+|---|---|
+| Aircraft operating weight `Wi` | 16,480.0 lb {7475.2 kg} |
+| Operating weight ratio `Wi/W0` | 1.000 |
+| Thrust-to-weight ratio `T/W` | 0.980 |
+| Thrust (start of takeoff) | 16,150.4 lb {71.8 kN} |
+| Takeoff wing loading `W/S` | 56.05 {273.68} |
+| `Vstall` | 99.80 kt {184.8 km/h} |
+| `Vtakeoff` | 109.8 kt {203.3 km/h} |
+| Climb angle | 44.97 deg |
+| Climb `CD0` | 0.0289 |
+| `CL` | 1.49 |
+| `K` | 0.2609 |
+| Climb `L/D` | 3.07 |
+| Ground roll distance | 538.2 {164.0} |
+| Rotate distance | 185.4 {56.5} |
+| Total ground roll distance | 723.6 {220.6} |
+| Transition distance | 761.6 {232.1} |
+| Climb distance | 0.0 {0.0} |
+| Total takeoff distance | 1485.2 {452.7} |
+| FAR Part 25 takeoff distance | 1707.9 {520.6} |
+
+The 44.97-deg climb angle was previously flagged as a probable garbled value. It is not: the page
+prints 44.97, and the number is consistent with the rest of its own block. With `T/W` = 0.980 and
+climb `L/D` = 3.07, sin(gamma) = T/W - 1/(L/D) = 0.980 - 0.326 = 0.654, i.e. gamma = 40.8 deg, which
+is the same steep angle to within the accuracy of this hand check. A lightweight supercruise fighter
+at full afterburner and low takeoff weight really does climb this steeply.
+
+**LANDING: DR3**
+
+| Quantity | Value |
+|---|---|
+| Aircraft operating weight `Wi` | 16,480.0 lb {7475.2 kg} |
+| Operating weight ratio `Wi/W0` | 1.000 |
+| Rollout thrust-to-weight ratio `T/W` | -0.392 |
+| Landing wing loading `W/S` | 56.05 {273.68} |
+| `Vstall` | 95.84 kt {177.5 km/h} |
+| `Vtouchdown` | 115.01 kt {213.0 km/h} |
+| Approach angle | -3.00 deg |
+| Approach `CD0` | 0.1124 |
+| `CL` | 1.62 |
+| `K` | 0.2724 |
+| Approach `L/D` | 2.53 |
+| Approach distance | 773.5 {235.8} |
+| Flare distance | 2733.1 {833.1} |
+| Free ground roll distance | 194.2 {59.2} |
+| Braking distance | 796.1 {242.7} |
+| Total ground roll distance | 990.4 {301.9} |
+| No-flare landing distance | 1944.5 {592.7} |
+| Total landing distance | 4497.0 {1370.7} |
+| FAR Part 25 landing distance | 7495.0 {2284.5} |
+
+(Distances are in feet, with metres in braces.)
 
 ### Range/weight trade study and carpet-plot optimization
 *[Raymer, pp. 948-957]*
@@ -493,10 +810,20 @@ design sheets, layout drawings, and RDS-Student software input/output listings r
 citable textbook figures in the usual sense — captured above as sketch/listing descriptions rather
 than formally numbered `Fig. 24.N` citations, since the source PDF's scan does not carry clean,
 individually numbered figure captions for this chapter's design-sheet and computer-printout pages).
-Substantial OCR difficulty was encountered in the DR-1 (hand-written) design-notes section
-(pp. 869-905) — numerous individual characters, subscripts, and handwritten numeric values could not
-be read reliably from the scan; values reproduced above from that section were retained only where
-legible or cross-checked against adjoining typeset (AC-SIZE program) output, and uncertain figures are
-flagged inline with `[verify p. NNN]`. The DR-3 section (pp. 905-958), being mostly typeset
-RDS-Student program listings, OCR'd far more cleanly and is reproduced with higher confidence
-throughout.*
+**Correctness sweep, 2026-08-18.** Every previously flagged item in this chapter was resolved
+against 320-dpi page renders; there are no open `[verify]` markers left. The flags had been raised
+on the assumption that the DR-1 hand-writing was unreadable. It is not: at 320 dpi the hand-writing
+is fully legible, and the flags turned out to be hiding real errors rather than genuine illegibility.
+The corrections are recorded inline at each point, and the largest were: `Vmax` >= 130 kt not
+"≈ 150 kt", and range with **no** reserves (p. 869); an invented "roll rate >= 180 deg/s" and an
+invented "ceiling >= 15,000 ft" requirement, neither of which is on the page, in place of the real
+load-factor requirement `n` = +6/-3 g (p. 869); an invented three-view sketch with span/length/height
+callouts that were really the engine's own 30 x 32 x 23 in dimensions (p. 869); root and tip airfoils
+**swapped**, and a vertical tail given as `A` = 1.8 / taper 0.6 instead of `A` = 1.5 / taper 0.4
+(p. 872); a total parasite `CD0` of 0.0277 "clean cruise" instead of the page's 0.0250 open-cockpit
+(p. 881); `eta_p` = 0.84 and 750-790 lb static thrust instead of 0.78 and 400 lb (p. 884); a
+skin-friction range off by a factor-of-10 unit error and the wing/horizontal-tail Reynolds numbers
+transposed (p. 925); and the takeoff/landing page cited as "pp. 949-950" and called illegible when it
+is a single fully legible page, p. 950 (p. 949 carries the trade-study carpet plots). The 44.97-deg
+takeoff climb angle on p. 950, previously flagged as probably garbled, is real and is internally
+consistent with that block's own `T/W` and `L/D`.*

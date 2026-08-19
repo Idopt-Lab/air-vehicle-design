@@ -288,22 +288,36 @@ A_wetted = b^2 / S_wetted = A / (S_wet/S_ref)
 ```
 
 **Fig. 3.5** — *Maximum lift-to-drag ratio trends*
-*[Raymer, Fig. 3.5, p. 39]*. `L/D_max` (0–20) vs Wetted Aspect Ratio `A_wetted = b²/S_wet = A/(S_wet/S_ref)`
-(0.2–2.4). Three labeled trend bands (subsonic) plus a separate poorly-correlated "Jets at Mach 1.15"
-band, with named real-aircraft data points *(read from plot)*:
+*[Raymer, Fig. 3.5, p. 39]*. `L/D_max` (y, 0–20, points reaching ~21) vs Wetted Aspect Ratio
+`A_wetted = b²/S_wet = A/(S_wet/S_ref)` (x, 0.2–2.4). Four labeled trend bands: three subsonic
+("Subsonic … Civil jets", "Military jets", "Retractable prop aircraft", "Fixed-gear prop aircraft" —
+four curves in all) plus a separate poorly-correlated "Jets at Mach 1.15" band. Named data points
+*(re-read from a 700-dpi zoom of the plot, 2026-08-18)*:
 
 | Band | Representative points (Wetted AR, `L/D_max`) |
 |---|---|
-| Civil jets | Lear (0.75, 12.7), F-106 (0.62, 12), Gulfstream (0.95, 14), B-747 (1.2, 17), DC-10 (1.25, 15.5), DC-8 (1.45, 19.5) |
-| Military jets | F-104 (0.4, 9.2), F-15 (0.65, 8.7), F-4 (0.68, 10.3), F-5 (0.72, 10.6), F-105 (0.62, 11), F-111 (0.85, 14), A-6 (1.35, 15), F-86D (1.0, 12.3), C-130 (1.65, 14), B-52 (2.1, 20.5) — plus Have Blue (0.4, 6.7) as an outlier below the band
-| Retractable-gear prop | Bonanza (1.35, 13.6), Cardinal (1.65, 14.5) |
-| Fixed-gear prop | Cherokee (1.3, 10), Skyhawk (1.4, 11.6), J-3 (1.35, 9.3) |
-| Jets at Mach 1.15 (poor correlation) | F-104 (0.4, 3.7), F-4 (0.65, 4.7), F-102 (0.65, 4.0), F-100 (0.95, 5.4) |
+| Civil jets | Lear (0.84, 13.1), Gulfstream (1.10, 15.5), B-747 (1.18, 17.3), DC-10 (1.22, 17.1), DC-8 (1.42, 19.5) |
+| Military jets | F-104 (0.43, 9.5), F-15 (0.63, 9.6), F-105 (0.67, 11.1), F-4 (0.70, 10.6), F-106 (0.72, 12.5), F-5 (0.82, 11.0), F-111 (0.96, 14.0), F-86D (1.03, 13.1), A-6 (1.36, 15.2), C-130 (1.59, 13.1), B-52 (2.15, 20.8) — plus Have Blue (0.48, 7.8) as an outlier below the band |
+| Retractable-gear prop | Bonanza (1.45, 13.7), Cardinal (1.70, 14.4) |
+| Fixed-gear prop | Cherokee (1.36, 10.4), Skyhawk (1.62, 11.8), J-3 (1.40, 9.7) |
+| Jets at Mach 1.15 (poor correlation) | F-104 (0.43, 3.5), F-102 (0.67, 4.7), F-4 (0.73, 4.0), F-100 (1.00, 5.3) |
 
-Trend lines can be extrapolated further right: Global Hawk (wetted AR 6.8) reaches `L/D_max` > 35;
-high-performance sailplanes (wetted AR up to 12) reach `L/D_max` of 50+. Also usable in linear form by
+> ✓ Table re-read 2026-08-18 off a 700-dpi zoom render of book p. 39. Several earlier readouts were
+> wrong by more than the plot's own resolution — most importantly **Gulfstream** (was 0.95, 14; the
+> label's leader line actually points to the point at 1.10, 15.5), **DC-10** (was 1.25, 15.5; it is
+> 1.22, **17.1**, just right of the B-747 and *above* the Gulfstream), **Have Blue** (was 0.4, 6.7),
+> **F-15** (was 0.65, 8.7), **F-5** (was 0.72, 10.6) and **Skyhawk** (was 1.4, 11.6). Note F-106 sits
+> in the civil-jet-side cluster on the chart but is a military aircraft; band assignment above follows
+> aircraft type, not which trend curve it happens to sit nearest. These are graphical readouts — treat
+> them as good to about ±0.03 in wetted AR and ±0.3 in `L/D_max`, and never as book-stated values.
+
+Trend lines can be extrapolated further right: Global Hawk (wetted AR 6.8) reaches `L/D_max` of over
+35; high-performance sailplanes (wetted AR as high as 12) see `L/D_max` of 50 or more (both stated in
+the p. 39 text). Page 40 adds two empirical extension points for the graph, **(5, 32)** and
+**(10, 45)**, from a number of sailplanes and high-aspect-ratio UAVs. Also usable in linear form by
 plotting vs `sqrt(A_wetted)` (an older, equivalent 1940s-era technique) — either format gives the same
-answer; Fig. 3.5's non-square-root form is stated as more physically direct.
+answer; Fig. 3.5's non-square-root form is stated as more relevant to the actual physics of drag.
+(The (5, 32) / (10, 45) extension points were missing from the earlier extract; added 2026-08-18.)
 
 **Eq (3.12)** *[Raymer, Eq. (3.12), p. 40]* — closed-form fit to the Fig. 3.5 trend, usable in place of
 reading the chart:
@@ -321,18 +335,23 @@ with `K_LD`:
 | High-aspect-ratio aircraft | 13 |
 | Sailplanes | 15 |
 
-> ⚠️ OCR note: the source text inserted a stray fragment "8 / 2" between the "civil jets" and
-> "military jets" rows that does not parse as any `K_LD` value or category — it does not match the
-> six-category, six-value pattern used consistently everywhere else in the book (and each value here
-> is independently well known/widely cited from this equation), so it has been treated as an OCR
-> scanning artifact and omitted. [verify p. 40] if an exact PDF check is desired.
+> ✓ The "8 / 2" fragment in the raw OCR text was an artifact and is correctly omitted: the printed
+> list has exactly the six categories/values shown above (confirmed 2026-08-18 against a 320-dpi
+> render of book p. 40).
 
 **Fig. 3.6** — *Wetted area ratios*
-*[Raymer, Fig. 3.6, p. 40]*. Silhouette gallery of aircraft (Avro Vulcan, Boeing 747, and others)
-spanning the design spectrum, each annotated with its approximate `S_wet/S_ref`, illustrating how to
-"eyeball" a wetted-area ratio from a new conceptual sketch by comparison. No plotted numeric
-curve — a reference silhouette/ratio gallery, not a chart to digitize pointwise. One footnote: ratio
-includes canard area where present.
+*[Raymer, Fig. 3.6, p. 40]*. Silhouette gallery: aircraft plan-view outlines placed on a single
+y-axis of `S_wet/S_ref` (scale 2 to 8, ticks at 2/4/6/8) with no x-axis, so each aircraft's ratio is
+read off its vertical position, not from a printed number beside it. Aircraft shown, from the top
+(highest ratio) down: **B-47** and **Boeing 747** near 7–7.5; **F-104** ≈5.5, **Beech Duchess** ≈5,
+**Beech Starship** ≈5; **F-4** ≈4.3, **Cessna Skylane RG** ≈4; **F-102** ≈3.3; **Avro Vulcan**
+≈2.9; **B-49** ≈2.1. Use it to "eyeball" a wetted-area ratio for a new conceptual sketch by
+comparison. Footnote on the axis label: the ratio includes canard area where present.
+
+✓ Corrected 2026-08-18 against a 320-dpi render of book p. 40. The earlier description said each
+silhouette was "annotated with its approximate `S_wet/S_ref`" — it is not; the ratio is encoded only
+by vertical position on the axis, which changes how the figure is read. Aircraft list added. The
+positional readouts above are graphical and approximate (±0.3).
 
 Practical procedure: choose aspect ratio directly (design variable, see Chapter 4); estimate
 `S_wet/S_ref` by eyeball comparison to Fig. 3.6; compute wetted aspect ratio via Eq. (3.11); read
@@ -481,15 +500,18 @@ Converged `W0 ≈ 42,372 lb`.
 Converged `W0 ≈ 80,217 lb`.
 
 **Fig. 3.12** — *Range trade*
-*[Raymer, Fig. 3.12, p. 49]*. `W0` (40,000–70,000+ lb) vs Range (1000–1600 n mi). Single rising curve
-through the three computed points *(read from plot / from Box 3.2 + Box 3.1 results)*:
+*[Raymer, Fig. 3.12, p. 49]*. `W0` (y, 40,000–80,000 lb) vs Range (x, 1000–2000 n mi). Single rising
+curve through the three computed points *(read from plot / from Box 3.2 + Box 3.1 results)*:
 (1000 n mi, 42,372 lb), (1500 n mi, 56,702 lb), (2000 n mi, 80,217 lb) — a steepening ("leverage")
 curve, `W0` growing faster than linearly with required range.
+(Axis ranges corrected 2026-08-18 against a 320-dpi render of book p. 49: the earlier text gave the
+x-axis as 1000–1600 n mi and the y-axis as 40,000–70,000+ lb; the printed axes are 1000–2000 and
+40,000–80,000.)
 
 ### Payload Trade
 Mission-segment fractions and fuel fraction unchanged; only the crew+payload numerator of Eq. (3.4)
-varies (given requirement: 10,000 lb avionics payload; trade points: 5000 and 15,000/20,000 lb — see
-note below on an apparent internal Box 3.3 labeling inconsistency).
+varies (given requirement: 10,000 lb avionics payload; trade points: 5000 and 15,000 lb — see the
+book-misprint note below).
 
 **Box 3.3 — Payload Trade** *[Raymer, Box 3.3, p. 49]*:
 
@@ -497,43 +519,48 @@ note below on an apparent internal Box 3.3 labeling inconsistency).
 
 | `W0` guess | `We/W0` | `We` | `W0` calc |
 |---|---|---|---|
-| 50,000 | 0.4361 | 21,803 | 14,397 |
-| 32,000 | 0.4499 | 14,397 [sic, see note] | — |
-| 33,000 | 0.4489 | 14,815 | — |
-| 33,300 | 0.4487 | 14,940 | — |
-| 33,320 | 0.4486 | 14,949 | — |
+| 50,000 | 0.4361 | 21,803 | 31,074 |
+| 32,000 | 0.4499 | 14,397 | 33,563 |
+| 33,000 | 0.4489 | 14,815 | 33,376 |
+| 33,300 | 0.4487 | 14,940 | 33,321 |
+| 33,320 | 0.4486 | 14,949 | 33,318 |
 
-Converged `W0 ≈ 33,320 lb` (labeled row "33,320" in the source table).
+Converged `W0 ≈ 33,318 lb`.
 
-> ⚠️ OCR/layout note: the raw OCR text for this sub-table's guess/result column pairing is visibly
-> scrambled (values `14,397 / 32,000 / 33,000 / 33,300 / 33,320` interleave ambiguously with the
-> `We` column) — the converged endpoint `W0 ≈ 33,320 lb` for 5000 lb payload is legible and internally
-> consistent (`5800/(1-0.3773-0.4486) ≈ 33,321`), but the intermediate-iteration row values above
-> should be treated as indicative, not verified digit-for-digit. [verify p. 49]
+> ✓ Corrected 2026-08-18 against a 320-dpi render of book p. 49. The earlier version of this
+> sub-table was column-scrambled: it put `14,397` (a `We` value) in the `W0` calc column of the first
+> row and left the remaining `W0` calc cells empty, and gave the converged answer as 33,320 lb (the
+> last *guess*, not the last *calculated* value). All 20 cells above are now read off the page image.
 
-*Payload labeled "15,000 lb" in the box heading* (numerator 15,000+800 = 15,800):
-`W0 = 15,800/(1-0.3773-We/W0)`.
+*Payload = 15,000 lb* (numerator 15,000+800 = 15,800): `W0 = 15,800/(1-0.3773-We/W0)`.
 
 | `W0` guess | `We/W0` | `We` | `W0` calc |
 |---|---|---|---|
-| 75,000 | 0.4239 | 31,790 | 84,651 (79,456 for 78,000 guess row, per source) |
+| 50,000 | 0.4361 | 21,803 | 84,651 |
+| 75,000 | 0.4239 | 31,790 | 79,456 |
 | 78,000 | 0.4227 | 32,971 | 78,994 |
 | 78,800 | 0.4224 | 33,285 | 78,875 |
 | 78,865 | 0.4224 | 33,311 | 78,866 |
 
 Converged `W0 ≈ 78,866 lb`.
 
-> ⚠️ Note: Box 3.3's second case is headed "Payload = 15,000 lb" in the OCR text, but Fig. 3.13's
-> x-axis (payload trade plot) spans roughly 5000–15,000 lb and the chapter's stated design payload is
-> 10,000 lb — the 20,000 lb case mentioned in the surrounding prose does not have a clearly separable
-> Box 3.3 sub-table in the OCR text (only two payload cases, 5000 and 15,000 lb, are distinguishable).
-> [verify p. 49] against the original book before treating "20,000 lb" as a third computed point.
+> ✓ Corrected 2026-08-18 against a 320-dpi render of book p. 49. The earlier version dropped the
+> first (50,000 guess) row entirely and therefore shifted the `W0` calc column up by one row.
+
+> ⚠️ Book inconsistency (not an OCR error): the prose on p. 48 says "Box 3.3 shows the sizing
+> calculations assuming payload weights of 5000 and 20,000 lb", but the printed Box 3.3 on p. 49 is
+> headed "Payload = 15,000 lb" and uses the numerator 15,800 = 15,000 + 800 crew. Fig. 3.13's x-axis
+> also stops at 15,000 lb. The box and the figure agree with each other, so the second trade point is
+> 15,000 lb and the p. 48 "20,000 lb" is a misprint. There is no third computed payload point.
 
 **Fig. 3.13** — *Payload trade*
-*[Raymer, Fig. 3.13, p. 50]*. `W0` (20,000–80,000 lb) vs Payload (5000–15,000 lb). Single rising curve
-through the computed points *(read from plot / from Box 3.3 + Box 3.1)*: (5000 lb, 33,320 lb),
-(10,000 lb, 56,702 lb), (15,000 lb, 78,866 lb) — again a "leverage" curve, `W0` rising
-faster than linearly with payload.
+*[Raymer, Fig. 3.13, p. 50]*. `W0` (y, 20,000–80,000 lb) vs Payload (x, 5000–15,000 lb). Single rising
+line through the computed points *(read from plot / from Box 3.3 + Box 3.1)*: (5000 lb, 33,318 lb),
+(10,000 lb, 56,702 lb), (15,000 lb, 78,866 lb). The printed curve is essentially straight, and the
+computed points confirm it (Δ`W0` = 23,384 lb for the first 5000 lb of payload, 22,164 lb for the
+second) — so `W0` grows a little *slower* than linearly with payload here, unlike the range trade of
+Fig. 3.12. (Corrected 2026-08-18 against a 320-dpi render of book p. 50: the earlier text called this
+a "leverage" curve rising faster than linearly.)
 
 ### Composite Material Trade
 Applying the 0.95 composite-material factor to the military cargo/bomber empty-weight equation:

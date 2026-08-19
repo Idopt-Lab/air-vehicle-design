@@ -10,7 +10,7 @@ preserved; narrative condensed.
 
 ---
 
-## §13.0 Aircraft Thrust — the Big Picture
+## §13.1 Aircraft Thrust — the Big Picture
 
 A generic propulsion system (propeller or short jet) is modeled as a "magic disk" of area `S`
 accelerating freestream air from `V0` to `V` (Fig. 13.1):
@@ -48,7 +48,7 @@ further numeric data beyond these percentages (case-study figure).
 The rest of the chapter presents rapid, conceptual-design-suitable installed-thrust estimation
 methods for both jets and propellers; Ref. [42] covers detailed jet-engine design/installation.
 
-## §13.1 Jet-Engine Thrust Considerations
+## §13.2 Jet-Engine Thrust Considerations
 
 A jet engine compresses inlet air, burns fuel in it, and expands the hot gas through a nozzle,
 extracting some energy via a turbine to drive the compressor (Fig. 13.3); an afterburner (downstream
@@ -97,7 +97,7 @@ dominate subsonic cruise, low-BPR turbofans dominate low supersonic, and pure tu
 preferred rpm) enable still-higher bypass ratios, up to the point where fan/duct/cowling drag and
 weight offset the gain — motivating open-rotor/prop-fan concepts (§13.5).
 
-## §13.2 Jet-Engine Installed Thrust
+## §13.3 Jet-Engine Installed Thrust
 
 Airframe designers use the engine company's own performance ("cycle") analysis rather than deriving
 it themselves (Ref. [42] covers cycle analysis); the engine company's assumptions (inlet efficiency,
@@ -106,7 +106,7 @@ bleed, power extraction, nozzle performance) tend to be optimistic and must be c
 (e.g., assume a 10-years-hence engine of similar BPR has 25% lower SFC, 30% less length/weight than an
 existing analog) is also common practice.
 
-## §13.3 Thrust-Drag Bookkeeping
+### Thrust-Drag Bookkeeping (unnumbered sub-heading of §13.3)
 
 Because thrust/drag interactions are complex, aircraft companies maintain a formal bookkeeping
 convention (generally: does the force change with throttle setting?) to ensure every force is counted
@@ -118,7 +118,7 @@ organization assumes a specific bookkeeping scheme (items here are treated as th
 though another scheme could equally treat them as drag). Ref. [67] reviews the topic in depth.
 Wind-tunnel testing compounds the bookkeeping challenge (separate powered/unpowered models).
 
-## §13.4 Installed Thrust Procedure
+### Installed Thrust Procedure (unnumbered sub-heading of §13.3)
 
 The "installed net propulsive force" (used in performance calculations) = manufacturer's uninstalled
 thrust, corrected for real installation effects (installed engine thrust), minus the propulsion
@@ -135,7 +135,7 @@ force." No further numeric data (procedural flow diagram).
 SFC is quoted against the manufacturer's *uninstalled* thrust — to get fuel usage, convert uninstalled
 SFC to fuel mass flow first, compute installed net propulsive force, then divide to get installed SFC.
 
-### §13.4.1 Thrust Installation Corrections
+#### Thrust Installation Corrections
 
 Inlet pressure recovery = total pressure at engine face ÷ freestream total pressure; subsonic engine
 data usually assumes perfect recovery (`p1/p0 = 1.0`). Supersonic military engines use `p1/p0 = 1.0`
@@ -194,7 +194,7 @@ performance, concern — good inlet/forebody-shaping practice avoids problems). 
 directly affects thrust but a non-manufacturer nozzle (vectoring, stealth) can usually be designed to
 match the original nozzle's efficiency (drag effects handled separately, §13.4.2).
 
-### §13.4.2 Installed Net Propulsive Force
+#### Installed Net Propulsive Force
 
 Three propulsion-related drags subtract from installed engine thrust: inlet drag (from an air-supply/
 demand mismatch — mass-flow ratio <1.0 requires spilling excess air before the inlet ["additive"/
@@ -235,7 +235,9 @@ then falls off supersonically, but the subsonic value can conservatively stand i
 negligible for a subsonic podded nacelle.
 
 ### Table 13.1 — Nozzle Incremental Drag
-*[Raymer, Table 13.1, p. 479]* — Subsonic `D/q ÷ Amax_fuselage`, cited to Ref. [16]:
+*[Raymer, Table 13.1, p. 479]* — Subsonic `D/q ÷ A_fuselage`, referenced to fuselage maximum
+cross-section area, cited to Ref. [16] (spot-checked and confirmed 2026-08-18 against a 320-dpi
+render of book p. 479 — all six rows):
 
 | Nozzle Type | Subsonic D/q ÷ A_fuselage |
 |---|---|
@@ -250,22 +252,27 @@ Throttle-dependent trim drag (from a thrust-line offset from the c.g. causing a 
 with throttle) is usually charged to propulsion in most bookkeeping schemes; ignorable in initial
 analysis unless the thrust line is substantially off the aircraft centerline.
 
-## §13.5 Part Power Operation
+## §13.4 Part Power Operation
 
 Turbojets/turbofans throttled below ~90% power see a more-than-proportional thrust drop relative to
 fuel-flow reduction (rising SFC); engine companies provide "part-power tables" (laborious to
 fully install-correct). A semi-empirical Mattingly approximation for part-power SFC:
 
 ```
-C/Cmax_dry = 0.1 + 0.24·(T/Tmax_dry) + 0.66/(T/Tmax_dry)^0.8
-             + 0.1·M·[1 − (T/Tmax_dry)]                                 (13.9)
+Let x = T / T_max_dry.
+
+C/C_max_dry = 0.1/x + 0.24/x^0.8 + 0.66·x^0.8 + 0.1·M·[ 1/x − x ]        (13.9)
 ```
-*[Raymer, Eq. (13.9), p. 479]* — cited to Mattingly (coauthor of Ref. [42]). At idle, thrust/fuel flow
+*[Raymer, Eq. (13.9), p. 479]* (corrected 2026-08-18 against a 320-dpi render of book p. 479. The
+earlier transcription read `0.1 + 0.24·x + 0.66/x^0.8 + 0.1·M·[1 − x]`: the first two terms had lost
+their `x` denominators, the third had the exponent inverted, and the Mach term's bracket was wrong.
+Sanity check on the corrected form: at full dry power, x = 1 and M = 0, so C/C_max_dry =
+0.1 + 0.24 + 0.66 = 1.00 exactly, as it must.) — cited to Mattingly (coauthor of Ref. [42]). At idle, thrust/fuel flow
 do not reach zero; if residual idle thrust/weight `T/W` equals `1/(L/D)`, the aircraft cannot descend
 (relevant to descent-performance planning). Absent manufacturer idle data, approximate idle SFC as
 1.5× max-dry SFC as a cap on the Eq. (13.9) result.
 
-## §13.6 Piston-Engine Overview
+## §13.5 Piston-Engine Overview
 
 Piston aircraft engines run the four-stroke Otto cycle (theory in Refs. [47,91,92]); power ∝ intake
 -manifold air mass flow, approximately `hp ≈ 620 × (air mass flow, lb/s)` {`power(kW) ≈ 1019 ×
@@ -273,14 +280,16 @@ Piston aircraft engines run the four-stroke Otto cycle (theory in Refs. [47,91,9
 flow; the classic Gagg & Ferrar (Wright Aeronautical, 1934) altitude-power correction:
 
 ```
-power = power_SL · [ (ρ/ρ0 − (1 − ρ/ρ0)) / 7.55 ]                        (13.10, form as printed)
+power = power_SL · ( ρ/ρ0 − (1 − ρ/ρ0)/7.55 )                            (13.10)
 ```
-*[Raymer, Eq. (13.10), p. 480]* — `ρ0` = sea-level standard density; indicates roughly half of SL
-power remains at 20,000 ft {6100 m}. *[verify p. 480]* — the printed OCR of this equation's exact
-bracketed form is somewhat garbled (`power = powerSL · [ (P − P/Po) / Po ]^7.55`-style fragments
-appear in different orders across the scanned text); the commonly cited Gagg-Ferrar form is
-`power/power_SL = 1.132·σ − 0.132` (σ = ρ/ρ0) — confirm the exact printed form against the page image
-before hard-coding a MATLAB implementation.
+*[Raymer, Eq. (13.10), p. 480]* — `ρ0` = sea-level standard-day air density; the book states the
+equation indicates **less than half** of sea-level power remains at 20,000 ft {6100 m}.
+
+(Corrected 2026-08-18 against a 320-dpi render of book p. 480. The earlier transcription put the
+whole bracket over 7.55, i.e. `[ρ/ρ0 − (1 − ρ/ρ0)]/7.55`; the printed equation divides only the
+SECOND term by 7.55. With σ = ρ/ρ0 the printed form expands to `power/power_SL = 1.1325·σ − 0.1325`,
+which is the standard Gagg-Ferrar relation, and at 20,000 ft (σ = 0.5328) gives 0.471 — consistent
+with the book's "less than half". The earlier form gave 0.15 at the same altitude, which is not.)
 
 Manifold pressure is normally atmospheric (forward-facing scoop can add a little at speed); larger
 boosts need a mechanically-driven **supercharger** (compression ∝ engine rpm) or exhaust-turbine
@@ -291,17 +300,20 @@ boost manifold pressure above sea-level value for extra power, at a structural w
 internal pressures). Manufacturer performance charts give power vs manifold pressure/altitude/rpm.
 
 ### Fig 13.10 — Effects of supercharging
-*[Raymer, Fig. 13.10, p. 481]* — Altitude (0-50,000 ft {0-10,668 m}) vs engine power (0-1000 bhp
-{0-600+ kW}) for a typical 1000-bhp engine, three curves (non-supercharged, supercharged,
-turbocharged): non-supercharged power falls roughly linearly with altitude from sea level;
-supercharged/turbocharged hold full rated power up to a critical altitude then fall off similarly
-above it. *(read from plot, approximate, turbocharged curve)*: full 1000 bhp maintained to ~20,000 ft,
-falling to ~600 bhp by 40,000 ft.
+*[Raymer, Fig. 13.10, p. 481]* — Altitude (0-50,000 ft {0-15,000 m}) vs engine power (0-1000 bhp
+{0-600+ kW}) for a typical 1000-bhp engine, **four** labeled curves: *unsupercharged*, *single-stage
+mechanical supercharger*, *two-stage mechanical supercharger*, and *turbo supercharger*.
+Unsupercharged power falls roughly linearly with altitude from sea level; each supercharged curve
+holds full rated power up to its own critical altitude, then falls off. *(read from plot,
+approximate, turbo-supercharger curve)*: full 1000 bhp maintained to ≈30,000 ft, ≈680 bhp at
+40,000 ft, ≈360 bhp at 50,000 ft.
+(Corrected 2026-08-18 against a 200-dpi render of book p. 481: the figure has four curves, not
+three, and the turbo curve's critical altitude reads ≈30,000 ft, not ≈20,000 ft.)
 
 Electric motors (Chapter 20) use the same downstream thrust methods as piston-props once motor power
 is known.
 
-## §13.7 Propeller Analysis
+## §13.6 Propeller Analysis
 
 A propeller converts power into *thrust power* (thrust × velocity), not directly into thrust (units
 aren't compatible). With ~20% typical loss, propeller efficiency `ηp` = thrust power ÷ engine power
@@ -316,24 +328,42 @@ parameters/coefficients (aircraft designers use manufacturer propeller charts bu
 Refs. [92,93]):
 
 ```
-Advance ratio:            J = V/(n·D)                                    (13.11)
-Power coefficient:        Cp = P/(ρ·n³·D⁵) = 550·bhp/(ρ·n³·D⁵)          (13.12)
-Thrust coefficient:       CT = T/(ρ·n²·D⁴)   [form implied by Eq. 13.17-13.18 usage]
-Speed-power coefficient:  Cs = ⁵√(V⁵·ρ/(P·n²))                          (13.13)
-Activity factor per blade: AF = (10⁵/16)·∫[root..R] c·r³ dr / D⁵          (13.14)
-  AF (straight-taper blade) = 10⁵·c_root/(16·D) · [0.25 − (1−λ)·0.2]     (13.15)
-Propeller efficiency:     ηp = (T·V)/P = (T·V)/(550·bhp)                (13.16)
-Thrust (forward flight):  T = P·ηp/V = 550·bhp·ηp/V                     (13.17)
-Thrust (static):          T = Cp·(CT/Cp)·550·bhp/(n·D)                  (13.18, form as printed)
+Advance ratio:             J  = V/(n·D)                                   (13.11)
+Power coefficient:         Cp = P/(ρ·n³·D⁵) = 550·bhp/(ρ·n³·D⁵)           (13.12)
+Thrust coefficient:        CT = T/(ρ·n²·D⁴)                               (13.13)
+Speed-power coefficient:   Cs = ⁵√( ρ·V⁵ / (P·n²) )                       (13.14)
+Activity factor per blade: AF = (10⁵/D⁵) · ∫[0.15R .. R] c·r³ dr          (13.15)
+  AF (straight-taper blade) = 10⁵·c_root/(16·D) · [0.25 − (1−λ)·0.2]      (13.15)
+Propeller efficiency:      ηp = (T·V)/P = (T·V)/(550·bhp)                 (13.16)
+Thrust (forward flight):   T  = P·ηp/V = 550·bhp·ηp/V                     (13.17)
+Thrust (static):           T  = (CT/Cp)·P/(n·D) = (CT/Cp)·550·bhp/(n·D)   (13.18)
 ```
 *[Raymer, Eqs. (13.11)-(13.18), pp. 482-483]* — `T` lb/{kN}, `V` ft/s/{m/s}, `P` ft-lb/s/{kW}, `bhp` =
-brake horsepower, `n` = rev/s, `D` = prop diameter ft/{m}, `c` = blade airfoil chord ft/{m}. Advance
-ratio ∝ forward speed ÷ rotational tip speed ("slip function"/"progression factor"); power/thrust
-coefficients are nondimensional analogs of CL; speed-power coefficient `Cs` is diameter-independent
-(useful cross-propeller-size comparison); activity factor measures blade-width power-absorption
-capacity, typically 90-200 (light aircraft ≈100, large turboprop ≈140). Eq. (13.16)'s `CT/Cp` ratio
-(via `J`) is used in Eq. (13.17)-(13.18) to get static thrust (V=0, where the efficiency-based Eq.
-13.17 form is invalid).
+brake horsepower, `n` = rotation speed rev/s, `D` = prop diameter ft/{m}, `c` = propeller airfoil
+chord ft/{m}. Advance ratio ∝ forward speed ÷ rotational tip speed ("slip function"/"progression
+factor"); power/thrust coefficients are nondimensional analogs of CL; speed-power coefficient `Cs` is
+diameter-independent (useful cross-propeller-size comparison); activity factor measures blade-width
+power-absorption capacity, typically 90-200 (light aircraft ≈100, large turboprop ≈140). Eq. (13.16)
+relates `ηp` to `J` and the `CT/Cp` ratio; that ratio is what Eq. (13.18) uses to get static thrust
+(V = 0, where the efficiency-based Eq. 13.17 form is invalid).
+
+(Corrected 2026-08-18 against a 320-dpi render of book pp. 482-483. Three errors were fixed. (a) The
+equation NUMBERS were off: the thrust coefficient is Eq. (13.13) in the book (it had been left
+unnumbered), so speed-power became (13.14) and activity factor (13.15) — the earlier extract had
+them one number low. (b) The integral form of the activity factor is `(10⁵/D⁵)·∫` over `0.15R..R`;
+the earlier version wrongly carried the 16 into the integral form and left the lower limit as
+"root". (c) Static thrust Eq. (13.18) is `(CT/Cp)·P/(nD)`; the earlier version had a spurious extra
+`Cp` factor in front.
+
+Two BOOK MISPRINTS on these pages, resolved here:
+1. Eq. (13.14) is printed as `c_S = V⁵ √(ρ/P n²)` — a plain square-root radical with V⁵ outside it.
+   That is dimensionally impossible. The book's own prose on p. 483 defines the speed-power
+   coefficient as "the advance ratio raised to the fifth power divided by the power coefficient",
+   and `J⁵/Cp = ρV⁵/(P·n²)`, so the intended relation is `Cs = ⁵√(ρV⁵/(P·n²))` — the printed "5" is
+   the radical INDEX, mis-set as an exponent on V. The fifth-root form is recorded above.
+2. The p. 483 prose says the `CT/Cp` ratio "is used in Eq. (13.17) to determine the thrust at static
+   conditions". Static thrust is Eq. (13.18); Eq. (13.17) is the forward-flight form and is the one
+   that fails at V = 0. The equations themselves are labeled correctly on the page.)
 
 ### Fig 13.11 — Static propeller thrust (after [93])
 *[Raymer, Fig. 13.11, p. 484]* — `CT` (0-4.0) vs `Cp` (0-0.35) for a typical 3-bladed propeller
@@ -367,7 +397,7 @@ plot, approximate)*: J/Jdesign=0.7→ratio≈0.60; 0.9→≈0.85; 1.0→≈1.0 (
 Fixed-pitch static thrust is lower than Fig. 13.11 estimates (high blade local α at low speed/high
 rpm); rough approximation: static thrust ≈1.6× the thrust at 100 kt.
 
-## §13.8 Piston-Prop Thrust Corrections
+## §13.7 Piston-Prop Thrust Corrections
 
 Three corrections to propeller efficiency: blockage, tip Mach, and scrubbing drag.
 
@@ -412,7 +442,7 @@ drag (oil cooler, air intake, exhaust pipes, etc.):
 velocity (ft/s/{m/s}), `σ` = ρ/ρ0. Real light-aircraft installations often run 2-3× these values;
 simpler practical rule: expertly-designed cooling ≈6% thrust reduction, mediocre design ≈8-10%.
 
-## §13.9 Turboprop Performance
+## §13.8 Turboprop Performance
 
 A turboprop drives a propeller via an exhaust turbine, retaining some residual jet thrust (up to ~20%
 of total). Engine power rating includes this residual thrust's power-equivalent: statically, residual
@@ -441,15 +471,22 @@ drags.
 
 ---
 
-*Chapter 13 complete (§§13.0-13.9 [Big-Picture Thrust Model, Jet-Engine Thrust Considerations,
-Installed Thrust, Thrust-Drag Bookkeeping, Installed Thrust Procedure, Part Power Operation,
-Piston-Engine Overview, Propeller Analysis, Piston-Prop Corrections, Turboprop Performance], Table
-13.1, Figs 13.1-13.14, Eqs. 13.1-13.23, "What We've Learned" summary). PDF index span used: 492-518
-(printed pp. 463-489; p. 490 at index 519 is blank/chapter-closing whitespace). One item flagged
-`[verify p. 480]`: Eq. (13.10)'s exact printed bracketed form for the Gagg-Ferrar altitude-power
-correction is ambiguous in the OCR pass — the commonly cited form `power/power_SL = 1.132·σ − 0.132`
-is noted as a cross-check pending confirmation against the page image. No other equations required
-`[verify]` flags; figures with genuine plotted numeric trends (inlet pressure recovery, inlet drag
-trend, propeller thrust/efficiency charts, supercharging effects) were digitized with representative
-read-from-plot points; pure photo/schematic/diagram figures were noted as such without digitization.
-Next: Chapter 14 — Structures and Loads.*
+*Chapter 13 complete (§§13.1-13.8 [Big-Picture Thrust Model, Jet-Engine Thrust Considerations,
+Jet-Engine Installed Thrust (with its unnumbered Thrust-Drag Bookkeeping and Installed Thrust
+Procedure sub-headings), Part Power Operation, Piston-Engine Overview, Propeller Analysis,
+Piston-Prop Corrections, Turboprop Performance], Table 13.1, Figs 13.1-13.14, Eqs. 13.1-13.23,
+"What We've Learned" summary). PDF index span used: 492-518 (printed pp. 463-489; p. 490 at index
+519 is blank/chapter-closing whitespace).*
+
+*Correctness sweep, 2026-08-18: no `[verify]` items remain. Corrected: Eq. (13.9) (all four terms
+were mis-transcribed); Eqs. (13.13)-(13.15) and (13.18) in the propeller set (equation numbering,
+the activity-factor integral, and a spurious `Cp` in static thrust), plus two book misprints
+recorded there; Eq. (13.10) (only the second
+term is divided by 7.55 — the earlier bracketing was wrong by a factor that made the 20,000-ft
+result 0.15 instead of 0.47); Fig. 13.10 (four curves, not three, and a ≈30,000-ft turbo critical
+altitude); and the chapter section numbering, which started at §13.0 and treated two unnumbered
+sub-headings as numbered sections, so every number from Part Power Operation onward was one too
+high. Figures with genuine plotted numeric trends were digitized with representative read-from-plot
+points; pure photo/schematic/diagram figures were noted as such without digitization.*
+
+*Next: Chapter 14 — Structures and Loads.*

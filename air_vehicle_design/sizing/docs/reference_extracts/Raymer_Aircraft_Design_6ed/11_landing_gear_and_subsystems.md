@@ -10,7 +10,7 @@ figures noted with "no plotted data."
 
 ---
 
-## §11.0 Introduction
+## §11.1 Introduction
 
 Landing-gear design is often the most troublesome part of a configuration layout: tires and shock
 struts must be sized correctly (and grow if the aircraft gets heavier), wheels must sit correctly in
@@ -24,7 +24,7 @@ assembly, tires/wheels, downlock and drag brace.
 axle-beam fold and compensating actuator, brake assembly, tires and wheels, downlock and drag-brace
 installation. No plotted data (reference diagram).
 
-## §11.1 Landing-Gear Arrangements
+## §11.2 Landing-Gear Arrangements
 
 Six common arrangements (Fig. 11.2): **single main** (sailplanes, wheel forward or aft of c.g. with a
 skid); **bicycle** (two main wheels fore/aft of c.g. plus wing outriggers — forces a flat takeoff/
@@ -73,7 +73,7 @@ Nosewheel load guidance: optimum nosewheel share of aircraft weight is about 8-1
 most-aft c.g. range) — above 20% implies the main gear sits too far aft, below 5% gives inadequate
 steering traction; tipback angle much over 25 deg risks nose-up "porpoising" on takeoff.
 
-## §11.2 Tire Sizing
+## §11.3 Tire Sizing
 
 The "wheel" is the metal rim; the "tire" is the rubber; "brake" is inside the wheel; "wheel" often
 colloquially means the whole assembly. Main tires typically carry ~90% of aircraft weight, nose
@@ -91,13 +91,21 @@ motorcycle).
 | Transport/bomber | 1.63 | 0.315 | 0.1043 | 0.480 |
 | Jet fighter/trainer | 1.59 | 0.302 | 0.0980 | 0.467 |
 
-Metric form, `Main wheel diameter or width (cm) = A · W_w^B` (`W_w` in appropriate metric weight
-unit): General aviation `A=5.1, B=0.349` (diam.), `A=2.3, B=0.216` (width); Business twin `A=8.3,
-B=0.251` (diam.), `A=3.5, B=0.480` (width); Transport/bomber `A=5.3, B=0.315` (diam.), `A=0.39,
-B=0.467` (width, `[verify p. 344]` — OCR gives a value that looks anomalously small relative to the
-other rows' width-A entries; digit legibility is poor at this position in the scan); Jet fighter/
-trainer `A=5.1, B=0.302` (diam.), `A=0.36, B=0.216` (width, `[verify p. 344]` — same legibility
-caveat).
+Metric form, `Main wheel diameter or width (cm) = A · W_w^B` (`W_w` = weight on wheel, kg):
+
+| Aircraft Type | Diameter A | Diameter B | Width A | Width B |
+|---|---|---|---|---|
+| General aviation | 5.1 | 0.349 | 2.3 | 0.312 |
+| Business twin | 8.3 | 0.251 | 3.5 | 0.216 |
+| Transport/bomber | 5.3 | 0.315 | 0.39 | 0.480 |
+| Jet fighter/trainer | 5.1 | 0.302 | 0.36 | 0.467 |
+
+(Corrected 2026-08-18 against a 600-dpi render of book p. 344. The earlier prose form had the
+metric `Width B` column displaced by one row — the classic column-major OCR scramble — printing
+0.216/0.480/0.467/0.216 instead of 0.312/0.216/0.480/0.467. The small metric width-`A` values 0.39
+and 0.36 are NOT an OCR error and NOT a book misprint: they are correct as printed. Check:
+`A_metric = 2.54 · A_British · 2.2046^B` gives 0.388 and 0.361, and the same check reproduces every
+other cell of both blocks to the printed 2 significant figures.)
 
 These estimate main tire size (main tires ≈90% of aircraft weight); increase diameter/width ~30% for
 rough/unpaved-runway operation. Nose tires ≈60-100% of main-tire size (bicycle/quadricycle front
@@ -106,20 +114,24 @@ selection for a real layout comes from a manufacturer's catalog, sized to the sm
 the calculated static+dynamic loads.
 
 ### Fig 11.6 — Wheel load geometry
-*[Raymer, Fig. 11.6, p. 344]* — Side-view free-body sketch defining `N_a` (aft-gear reaction), `N_f`
-(fwd/nose-gear reaction), wheelbase `B`, c.g. (most-fwd and most-aft), height `H` — the geometry
-behind Eqs. (11.1)-(11.4). No plotted data (schematic).
+*[Raymer, Fig. 11.6, p. 345]* — Side-view geometry sketch. `N_a` and `N_f` are the horizontal
+DISTANCES from the nose (forward) gear to the aft c.g. and to the forward c.g.; `M_a` and `M_f` are
+the horizontal distances from the main (aft) gear to the aft c.g. and to the forward c.g.; `B` is
+the wheelbase and `H` is the c.g. height above the ground. No plotted data (schematic).
+(Corrected 2026-08-18 against a 300-dpi render: the citation said p. 344, the figure is on p. 345,
+and `N_a`/`N_f` were described as gear REACTIONS — they are distances.)
 
 Static/dynamic wheel-load equations (`W` = aircraft weight, `B` = wheelbase, `M` = distance from
 nose gear to aft c.g., other symbols per Fig. 11.6):
 
 ```
-(Max Static Load)_main = W · Na/B                                    (11.1)
-(Max Static Load)_nose = W · Nf/B                                     (11.2)
-(Min Static Load)_nose = W · M/B                                      (11.3)
+(Max Static Load)_main = W · N_a/B                                    (11.1)
+(Max Static Load)_nose = W · M_f/B                                    (11.2)
+(Min Static Load)_nose = W · M_a/B                                    (11.3)
 (Dynamic Braking Load)_nose = 10·H·W / (g·B)                          (11.4)
 ```
-*[Raymer, Eqs. (11.1)-(11.4), p. 344]* — loads are divided by the number of main or nose tires to
+*[Raymer, Eqs. (11.1)-(11.4), p. 344]* (confirmed 2026-08-18 against a 600-dpi render of book
+p. 344; Eq. (11.2) previously read `W·N_f/B` and Eq. (11.3) `W·M/B` — both corrected) — loads are divided by the number of main or nose tires to
 get the per-tire load `W_w` used for tire selection. Eq. (11.4) assumes braking friction coefficient
 `µ = 0.3` (typical hard runway), i.e. a 10 ft/s² {3 m/s²} deceleration.
 
@@ -128,7 +140,7 @@ fraction) should be **< 0.20** (0.08 and 0.15 preferred) *[Raymer, p. 345]*. For
 7% margin to all wheel loads; add a further ~25% for design growth allowance.
 
 ### Table 11.2 — Tire Data
-*[Raymer, Table 11.2, pp. 345-347]* — Manufacturer statistical tire-book data by tire designation
+*[Raymer, Table 11.2, pp. 346-347]* — Manufacturer statistical tire-book data by tire designation
 (Type III — low-pressure, piston aircraft; Type VII — higher-pressure, most jets; Three-part-name —
 newest/highest-pressure, designated by outside diameter × width-rim diameter), each row giving rated
 static load (lb), inflation pressure (psi), max speed (kt or mph), tire width (in.), outside diameter
@@ -139,8 +151,10 @@ disjoint lines); representative entries recovered cleanly enough to cite:
 | Designation | Max Load (lb) | Max Pressure (psi) | Max Speed | Width (in.) | Outside Diam. (in.) | Rolling Radius (in.) | Wheel Diam. (in.) | Plies |
 |---|---|---|---|---|---|---|---|---|
 | 5.00-4 (Type III) | 1200 | 55 | 120 | 5.05 | 13.25 | 5.2 | 4.0 | 6 |
+| 5.00-4 (Type III) | 2200 | 95 | 120 | 5.05 | 13.25 | 5.2 | 4.0 | 12 |
 | 7.00-8 (Type III) | 2400 | 46 | 120 | 7.30 | 20.85 | 8.3 | 8.0 | 6 |
 | 8.50-10 (Type III) | 3250 | 41 | 120 | 9.05 | 26.30 | 10.4 | 10.0 | 6 |
+| 8.50-10 (Type III) | 4400 | 55 | 120 | 8.70 | 25.65 | 10.2 | 10.0 | 8 |
 | 9.50-16 (Type III) | 9250 | 90 | 160 | 9.70 | 33.35 | 13.9 | 16.0 | 10 |
 | 12.50-16 (Type III) | 12,800 | 75 | 160 | 12.75 | 38.45 | 15.6 | 16.0 | 12 |
 | 20.00-20 (Type III) | 46,500 | 125 | 174 kt | 20.10 | 56.00 | 22.1 | 20.0 | 26 |
@@ -160,10 +174,14 @@ disjoint lines); representative entries recovered cleanly enough to cite:
 | 47×18-18 (Three-part) | 43,700 | 175 | 195 kt | 17.9 | 46.9 | 19.2 | 18.0 | 30 |
 | 52×20.5-23 (Three-part) | 63,700 | 195 | 235 | 20.5 | 52.0 | 21.3 | 23.0 | 30 |
 
-`[verify p. 345-347]` — table transcription is representative, not necessarily row-complete; the
-scanned page's multi-column layout defeats a clean linear OCR extraction. Use directly against a
-current tire manufacturer's "tire book" (as the text itself recommends) for any load-critical
-sizing.
+(Confirmed and completed 2026-08-18 against 300-dpi renders of book pp. 346-347: every cell above
+was read off the page images. The table is now ROW-COMPLETE — all 23 printed rows (8 Type III,
+9 Type VII, 6 three-part-name) are present; the two 5.00-4 (12-ply) and 8.50-10 (8-ply) rows were
+missing before. The page citation was also wrong: the table runs pp. 346-347, not 345-347.
+Note the book prints the columns in the order Size / Speed / Max Load / Infl. psi / Max Width /
+Max Diameter / Rolling Radius / Wheel Diameter / Plies; the order above is re-arranged but the
+values track the correct headings.) Use a current tire manufacturer's "tire book" (as the text
+itself recommends) for any load-critical sizing.
 
 Selection rule: pick the smallest catalog tire whose rated static/dynamic load exceeds the
 calculated `W_w`. Dynamic overload allowance: **Type III tires** permitted 1.4× static rated load;
@@ -177,7 +195,8 @@ A tire's load capacity is essentially internal pressure × footprint (contact) a
 W_w = P · A_p                                                          (11.5)
 A_p = 2.3 · sqrt(w·d) · (d/2 - R_r)                                    (11.6)
 ```
-*[Raymer, Eqs. (11.5)-(11.6), p. 348]* — where `P` = inflation pressure, `A_p` = pavement contact
+*[Raymer, Eqs. (11.5)-(11.6), p. 348]* (confirmed 2026-08-18 against a 300-dpi render of book
+p. 348) — where `P` = inflation pressure, `A_p` = pavement contact
 ("footprint") area, `w` = tire width, `d` = tire outside diameter, `R_r` = rolling radius (tire
 radius under load, typically ⅔ of unloaded tire radius). Eq. (11.6) is cited to Ref. [62].
 
@@ -191,7 +210,8 @@ volume). Soft/rough-field operation similarly calls for lower pressure (larger t
 gives rough sizing guidance by surface.
 
 ### Table 11.3 — Recommended Tire Pressures
-*[Raymer, Table 11.3, p. 349]*
+*[Raymer, Table 11.3, p. 349]* (spot-checked and confirmed 2026-08-18 against a 300-dpi render of
+book p. 349 — all 10 rows, both pressure columns)
 
 | Surface | Max Pressure (psi) | Max Pressure (kPa) |
 |---|---|---|
@@ -239,9 +259,9 @@ tire sit tangent to the outer mold line; allow ~3-5% of tire width as running cl
 plus 1-2 in. {3-5 cm} for structure to the OML; a tire also grows ~2-3% in diameter and ~4% in width
 as it ages, which must be allowed for in wheel-well/retraction geometry.
 
-## §11.3 Shock Absorbers
+## §11.4 Shock Absorbers
 
-### §11.3.1 Shock-Absorber Types
+### §11.4.1 Shock-Absorber Types
 
 A shock absorber must provide both spring (force ∝ displacement) and damping (force ∝ velocity)
 function (Fig. 11.9): **rigid axle** (tires alone absorb shock — sailplanes, some homebuilts, WWI
@@ -274,7 +294,7 @@ reduced wheel-well height need, and (for the levered arrangement generally) easi
 (replace at the linkage without pulling the whole gear/wheel/brake assembly) — but the oleo cantilever
 weight advantage usually still wins absent a specific driving requirement.
 
-### §11.3.2 Stroke Determination
+### §11.4.2 Stroke Determination
 
 Rule of thumb: required stroke (in.) ≈ vertical touchdown velocity (ft/s). Typical required sink-
 speed capability: most aircraft 10 ft/s {3 m/s}; USAF trainers 13 ft/s {4 m/s}; STOL aircraft 15 ft/s
@@ -299,7 +319,8 @@ deflection (not lift), `S` = stroke. Tires deflect only to their rolling radius,
 `S_T = d/2 - R_r`.
 
 ### Table 11.4 — Shock-Absorber Efficiency
-*[Raymer, Table 11.4, p. 356]*
+*[Raymer, Table 11.4, p. 356]* (spot-checked and confirmed 2026-08-18 against a 300-dpi render of
+book p. 356)
 
 | Type | Efficiency η |
 |---|---|
@@ -326,7 +347,8 @@ assumed constant during touchdown; it governs how much load passes into the airf
 structural weight and ride comfort). Table 11.5 gives typical permitted values by aircraft class.
 
 ### Table 11.5 — Gear Load Factors
-*[Raymer, Table 11.5, p. 356]*
+*[Raymer, Table 11.5, p. 356]* (spot-checked and confirmed 2026-08-18 against a 300-dpi render of
+book p. 356)
 
 | Aircraft Type | N_gear |
 |---|---|
@@ -347,7 +369,7 @@ slightly larger than main-wheel stroke for ride smoothness while taxiing. If lev
 gear is used, the oleo/bungee/rubber-block stroke is the total stroke divided by the mechanical
 advantage (and its load is correspondingly multiplied by that mechanical advantage).
 
-### §11.3.3 Oleo Sizing
+### §11.4.3 Oleo Sizing
 
 Static position is typically ≈66% of the extended-to-compressed travel for most aircraft types (≈84%
 for large transports, ≈60% for general aviation). Total oleo length (stroke + fixed portion) ≈2.5×
@@ -360,12 +382,10 @@ kPa}`. External oleo diameter (piston diameter ×1.3 to account for the cylinder
 ```
 D_oleo = 1.3 · sqrt( 4·L_oleo / (π·P) )                                (11.13)
 ```
-*[Raymer, Eq. (11.13), p. 358]* — `L_oleo` = load on the oleo. (Form reconstructed from the stated
-"force = pressure × area, external diameter 30% greater than piston diameter" derivation; the OCR of
-the printed equation itself is garbled — `[verify p. 358]`, confirm exact bracketed form against the
-page image before hard-coding.)
+*[Raymer, Eq. (11.13), p. 358]* — `L_oleo` = load on the oleo. (Confirmed 2026-08-18 against a
+300-dpi render of book p. 358: the page prints exactly `D_oleo = 1.3 · sqrt(4·L_oleo / (P·π))`.)
 
-### §11.3.4 Solid-Spring Gear Sizing
+### §11.4.4 Solid-Spring Gear Sizing
 
 Fig. 11.11 shows the deflection geometry: total stroke from Eq. (11.12) is the *vertical* component
 of the gear-leg tip deflection; the wheel is mounted vertical at the *static* deflected position for
@@ -391,7 +411,7 @@ I = w·t³ / 12   (rectangular cross-section)                            (11.19)
 of elasticity, `l` = beam length, `θ` = deflection angle. Static deflection uses Eq. (11.18) with the
 static wheel load in place of `F_s`. Stress verification uses Chapter 14 methods.
 
-## §11.4 Castoring-Wheel Geometry
+## §11.5 Castoring-Wheel Geometry
 
 Free-castoring nose/tail wheels can develop "wheel shimmy" (rapid lateral oscillation that can tear
 the gear off). Prevented by rake angle and trail selection (Fig. 11.12), sometimes aided by a
@@ -406,7 +426,7 @@ statically unstable ("flop over" tendency), which the steering linkage must resi
 *[Raymer, Fig. 11.12, p. 360]* — Two side-view sketches: free-swivel (negative rake, trail shown) and
 steerable (positive rake, trail shown), rake angle labeled on both. No plotted data (schematic).
 
-## §11.5 Gear Retraction Geometry
+## §11.6 Gear Retraction Geometry
 
 Options for the retracted main-gear "home" (Fig. 11.13): in the wing, in the fuselage, in the
 wing-fuselage junction (all lowest drag, but structurally disruptive — wing stowage shrinks the wing
@@ -452,7 +472,7 @@ at some added complexity (F4U Corsair, F-14, F-35). A **"planing link"** changes
 -wheel-axis angle so wheels can tuck into the fuselage side when retracting inward from the wing
 (MiG-23). All add cost, weight, and failure points, and are avoided unless necessary.
 
-## §11.6 Seaplanes
+## §11.7 Seaplanes
 
 Historically important for early long-range/high-speed flight (water takeoff runs permitted high
 wing loading); today largely restricted to sport/bush/search-and-rescue aircraft, with recurring
@@ -491,13 +511,13 @@ Naval Ship Research and Development Center); very roughly, peak "hump speed" wat
 reach ≥20% of aircraft weight, and a rough takeoff-distance estimate can use an equivalent rolling
 -friction coefficient µ ≈ 0.10-0.15 in the Chapter 17 takeoff equations.
 
-## §11.7 Subsystems
+## §11.8 Subsystems
 
 Subsystems (hydraulic, electrical, pneumatic/ECS, auxiliary/emergency power, avionics) rarely drive
 the earliest design layout but must be accommodated as the design matures. Refs. [65] and [18] are
 recommended overviews.
 
-### §11.7.1 Hydraulics
+### §11.8.1 Hydraulics
 
 A simplified system (Fig. 11.17): fluid pumped to pressure, stored in an accumulator; opening a valve
 admits fluid to an actuator piston, moving a control surface (a second valve admits fluid to the
@@ -519,7 +539,7 @@ system with pressure lines throughout the aircraft (~80 kW electrical power need
 aircraft); likely slightly heavier than a next-gen conventional system but the whole unit is
 swappable with just electrical/signal disconnects, cutting maintenance time/cost.
 
-### §11.7.2 Electrical System
+### §11.8.2 Electrical System
 
 Provides power to avionics, hydraulics, ECS, lighting, etc.; consists of batteries, generators
 (usually AC, engine-mounted), transformer-rectifiers (AC→DC), controls, breakers, cables. Example
@@ -542,7 +562,7 @@ signal wiring is a candidate for wireless "Wireless Avionics Intra-Communication
 analogous to Internet-of-Things networking, though safety-critical (primary flight control)
 application awaits sufficient reliability.
 
-### §11.7.3 Pneumatic/ECS System
+### §11.8.3 Pneumatic/ECS System
 
 Provides compressed air (usually bled from engine compressors) for pressurization, environmental
 control, anti-icing, and sometimes engine starting. Bleed air is cooled via a heat exchanger using
@@ -551,7 +571,7 @@ cockpit pressurization and avionics cooling (this cooled-air loop is the "ECS");
 uses uncooled bleed air ducted to the wing leading edge, inlet cowls, windshield. Compressed air can
 also cross-start other engines after one is battery-started, or come from a ground cart.
 
-### §11.7.4 Auxiliary/Emergency Power
+### §11.8.4 Auxiliary/Emergency Power
 
 Large/high-speed aircraft depend entirely on hydraulics for flight control, so loss of hydraulic
 pressure (e.g. engine flame-out driving the pumps) requires backup. Three forms: **ram-air turbine
@@ -574,7 +594,7 @@ small firewall, work-stand accessible); military transports with fuselage gear p
 *[Raymer, Fig. 11.18, p. 371]* — Side-view sketch, APU in the tail with exhaust routed aft/upward
 through the fuselage. No plotted data (schematic).
 
-### §11.7.5 Accessory Drives
+### §11.8.5 Accessory Drives
 
 Many high-performance aircraft use an **airframe-mounted accessory drive (AMAD)** — a gearbox
 collecting all engine-driven accessories (hydraulic pumps, generators, starters, etc.), itself
@@ -586,7 +606,7 @@ required separately disconnecting every accessory for engine removal.
 *[Raymer, Fig. 11.19, p. 372]* — Cutaway/schematic of an AMAD gearbox with accessory mounting pads
 and driveshaft connection to the engine. No plotted data (schematic).
 
-### §11.7.6 Avionics
+### §11.8.6 Avionics
 
 Avionics ("aviation electronics") — radios, instruments, nav aids, flight computers, radar, IR
 sensors, etc. — has grown from a minor "bolt-on" afterthought to (for some military types) nearly a
@@ -650,11 +670,18 @@ for the gear" in the retracted position is often hard to find. Plan the gear ear
 
 ---
 
-*Chapter 11 complete (Introduction, §§11.1-11.7 [Arrangements, Tire Sizing, Shock Absorbers,
+*Chapter 11 complete (§§11.1-11.8 [Introduction, Arrangements, Tire Sizing, Shock Absorbers,
 Castoring-Wheel Geometry, Retraction Geometry, Seaplanes, Subsystems], Tables 11.1-11.6, Figs
 11.1-11.19, Eqs. 11.1-11.20, "What We've Learned" summary). PDF index span used: 366-407 (printed
 pp. 337-378); the "Intermission" section beginning at PDF index 408 (printed p. 379) belongs to the
-book's cross-chapter design-process interlude, not Chapter 11, and is excluded. Two `[verify]` items
-remain: Table 11.1's width coefficients for Transport/bomber and Jet fighter/trainer, and Eq. (11.13)'s
-exact bracketed form — both flagged inline above pending a cleaner scan pass. Next: Chapter 12 —
-Aerodynamics.*
+book's cross-chapter design-process interlude, not Chapter 11, and is excluded.*
+
+*Correctness sweep, 2026-08-18: no `[verify]` items remain. Table 11.1's metric block, Table 11.2
+(now row-complete), Eqs. (11.1)-(11.6) and Eq. (11.13) were all re-read off 300-600 dpi page
+renders. Corrections made: the metric width-`B` column of Table 11.1 (row-displaced), Eqs. (11.2)
+and (11.3) symbols, the Fig. 11.6 symbol definitions and its page citation (345, not 344), the
+Table 11.2 page citation (346-347, not 345-347) plus two missing rows, and the section numbering
+of the whole chapter, which was off by one (the book numbers Introduction as §11.1, so Tire Sizing
+is §11.3 and Subsystems is §11.8).*
+
+*Next: Chapter 12 — Aerodynamics.*

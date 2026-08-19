@@ -97,8 +97,9 @@ roughly halving the standard deviation vs. Table 3.1. Both are pre-layout statis
 | Twin turboprop | 0.37 | 0.09 | −0.06 | 0.08 | 0.08 | −0.05 | 0.30 |
 | Flying boat | 0 | 0.42 | −0.01 | 0.10 | 0.05 | −0.12 | 0.18 |
 
-(Both tables' values confirmed from direct page-image OCR of pp. 148–149, high confidence — not
-flagged `[verify]`.)
+(Both tables re-checked cell-by-cell 2026-08-18 against 320-dpi and 450-dpi renders of book
+pp. 148–149: all 28 Table 6.1 cells and all 63 Table 6.2 cells match. Note that `Kvs` applies only to
+Table 6.1 — the printed Table 6.2 equation has no `Kvs` factor, as shown above.)
 
 ### §6.3.4 Fuel Weight
 
@@ -282,8 +283,10 @@ existing aircraft, but only a starting point, not the final layout driver.
 | Jet transport | 0.67 | 0.43 |
 
 (Metric-unit coefficients `{a}` also given in the book alongside the fps values but omitted here —
-project uses English units throughout per CLAUDE.md.) Reconstructed from OCR text; category order
-and both coefficient lists matched 1:1 (13 rows each) with high confidence, not flagged `[verify]`.
+project uses English units throughout per CLAUDE.md. For reference, the printed metric `a` values in
+row order are 0.383, 0.316, 1.35, 1.28, 1.6, 0.366, 1.48, 0.169, 0.439, 0.333, 0.389, 0.104, 0.287.)
+All 13 rows and both fps coefficient columns confirmed 2026-08-18 against a 320-dpi render of book
+p. 157.
 
 If the cross-section isn't circular, use an equivalent diameter from cross-sectional area.
 
@@ -329,7 +332,8 @@ Given Table 6.4's typical coefficient values, tail areas follow:
 Moment arm is approximated at this stage as a percent of fuselage length (below).
 
 ### Table 6.4 — Tail Volume Coefficient Typical Values
-*[Raymer, Table 6.4, p. 160]* — confirmed via direct page-image OCR, high confidence.
+*[Raymer, Table 6.4, p. 160]* — all 22 cells and the footnote re-confirmed 2026-08-18 against a
+320-dpi render of book p. 160.
 
 | Aircraft type | Horizontal cHT | Vertical cVT |
 |---|---|---|
@@ -403,7 +407,7 @@ problem.
 ### Table 6.5 — Control Surface Sizing Guidelines
 *[Raymer, Table 6.5, p. 162]*
 
-| Aircraft | Elevator/Aileron `Cs/C` | Rudder `Cr/C` |
+| Aircraft | Elevator `Ce/C` | Rudder `Cr/C` |
 |---|---|---|
 | Fighter/attack | 0.30* | 0.30 |
 | Jet transport | 0.25† | 0.32 |
@@ -416,11 +420,11 @@ problem.
 *Supersonic aircraft usually use an all-moving tail without a separate elevator.
 †Often an all-moving tail plus a separate elevator.
 
-(Column header reconstructed from context: Raymer's Table 6.5 gives elevator/aileron and rudder
-chord fractions of the tail/wing chord — the OCR text-layer scrambled the column labeling; values
-themselves read cleanly and are given here in the row order the OCR preserved.
-`[verify p. 162]` if precise column semantics matter — cross-check column headers directly against
-the printed table before hard-coding.)
+✓ Corrected 2026-08-18 against a 320-dpi render of book p. 162. The printed column headers are
+"Elevator `Ce/C`" and "Rudder `Cr/C`" — both are chord fractions of the *tail* chord, and neither
+column covers ailerons. The earlier heading "Elevator/Aileron `Cs/C`" was a reconstruction and was
+wrong. All 14 numeric cells and both footnotes read cleanly off the page image and match the values
+above.
 
 Control surfaces are typically tapered at the same taper ratio as their parent wing/tail surface, to
 hold constant %-chord and permit straight-tapered (not curved) spars (Fig. 6.4). Ailerons/flaps are

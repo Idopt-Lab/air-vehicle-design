@@ -11,7 +11,7 @@ narrative condensed.
 
 ---
 
-## §14.0 Introduction
+## §14.1 Introduction
 
 Conceptual designers rarely perform detailed structural analysis themselves (a large company's
 structures group does that) but do set the overall structural arrangement (wing box, major frames,
@@ -23,7 +23,7 @@ shrunk the classical "Loads Group," but errors here still directly cause overwei
 Classical (largely superseded by FEM, §14.11) methods are presented for vocabulary and as a sanity
 check on FEM results.
 
-## §14.1 Loads Categories
+## §14.2 Loads Categories
 
 ### Table 14.1 — Aircraft Loads
 *[Raymer, Table 14.1, p. 493]* — Four categories, each with example load types:
@@ -52,9 +52,9 @@ intermediate fuselage/inboard wing buckling and fuel-pressure notes. No plotted 
 zone: positive/negative maneuver, positive/negative dynamic gust, landing and braking, taxi/jacking/
 towing, yaw maneuver and lateral gust. No plotted numeric data (reference load-map diagram).
 
-## §14.2 Air Loads
+## §14.3 Air Loads
 
-### §14.2.1 Maneuver Loads
+### §14.3.1 Maneuver Loads
 
 Load factor `n` = maneuvering acceleration as a multiple of `g` (32.2 ft/s² = 9.8 m/s²). (Historical
 note: the Wright Flyer was designed to Wilbur's stated "sustain about five times my weight," ≈5-g
@@ -62,7 +62,8 @@ ultimate ≈3.33-g limit — comparable to modern GA practice.) At low speed, ma
 by CLmax; at high speed, by an arbitrary design value (Table 14.2).
 
 ### Table 14.2 — Typical Limit Load Factors
-*[Raymer, Table 14.2, p. 495]*
+*[Raymer, Table 14.2, p. 495]* (spot-checked and confirmed 2026-08-18 against a 300-dpi render of
+book p. 495 — all eight rows, both columns)
 
 | Aircraft Type | n_positive | n_negative |
 |---|---|---|
@@ -100,15 +101,15 @@ Ve = V_actual · sqrt(ρ/ρ0)                                              (14.1
 ```
 *[Raymer, Eq. (14.1), p. 497]*.
 
-### §14.2.2 Gust Loads
+### §14.3.2 Gust Loads
 
 Gust loads can exceed worst-case maneuver loads (transport near thunderstorms/clear-air turbulence:
 −1.5 to +3.5g or more). An upward gust of velocity `U` (Fig. 14.5) changes angle of attack, lift, and
 load factor:
 
 ```
-Δα ≈ U/V                                                                (14.2)
-ΔL = (1/2)·ρ·V·S·(CLα·U)                                                (14.3)
+Δα = atan(U/V) ≈ U/V                                                     (14.2)
+ΔL = (1/2)·ρ·V²·S·(CLα·Δα) = (1/2)·ρ·V·S·CLα·U                            (14.3)
 Δn = ΔL/W = ρ·U·V·CLα / (2·W/S)                                         (14.4)
 ```
 *[Raymer, Eqs. (14.2)-(14.4), pp. 497-498]* — assumes instant, whole-aircraft gust encounter
@@ -116,14 +117,18 @@ load factor:
 alleviation factor `K` is applied to the derived design gust velocity `Ude`:
 
 ```
-Subsonic:    K = 0.88·µ / (5.3 + µ)                                     (14.5)
-Supersonic:  K = µ^1.03 / (6.95 + µ^1.03)                               (14.6)
-Mass ratio:  µ = 2·(W/S) / (ρ·g·c̄·CLα)                                  (14.7-14.8, combined)
+Gust velocity:  U = K · Ude                                              (14.5)
+Subsonic:       K = 0.88·µ / (5.3 + µ)                                   (14.6)
+Supersonic:     K = µ^1.03 / (6.95 + µ^1.03)                              (14.7)
+Mass ratio:     µ = 2·(W/S) / (ρ·g·c̄·CLα)                                (14.8)
 ```
-*[Raymer, Eqs. (14.5)-(14.8), p. 498]* — cited to Ref. [94]; smaller/lighter aircraft encounter a gust
+*[Raymer, Eqs. (14.5)-(14.8), p. 498]* (**equation numbers corrected** 2026-08-18 against a 300-dpi
+render of book p. 498: Eq. (14.5) is `U = K·Ude`, which the earlier extract omitted entirely, so the
+subsonic `K`, supersonic `K` and mass-ratio expressions had each been given a number one too low.
+Eqs. (14.2)-(14.3) were also completed to the printed form on the same render.) — cited to Ref. [94]; smaller/lighter aircraft encounter a gust
 "more rapidly," hence the mass-ratio dependence. `Ude` is itself back-derived from flight-test
 acceleration data (hence "derived equivalent gust velocity"). Historical standard vertical `Ude` = 30
-ft/s {9.1 m/s} (± , giving ≈3g positive for most aircraft) up to cruise speed, dropping linearly to 15
+ft/s {9.1 m/s} (positive and negative, giving ≈3g positive for most aircraft) up to cruise speed, dropping linearly to 15
 ft/s {4.6 m/s} at dive speed, for normal/utility/aerobatic civil types; transport-category `Ude` is
 altitude-dependent (Fig. 14.6).
 
@@ -149,7 +154,7 @@ Remember: structural design load is 1.5× this combined limit envelope. This sim
 complete than large-company power-spectral-density gust methods (Ref. [96]) but is a solid
 introduction/initial-analysis tool.
 
-### §14.2.3 Air Loads on Lifting Surfaces
+### §14.3.3 Air Loads on Lifting Surfaces
 
 Compute actual load distributions only at the V-n diagram's critical speeds (high-AOA, max-q, and any
 gust-critical speed). First find trimmed tail lift (Chapter 16 methods, or a simplified moment
@@ -201,7 +206,7 @@ data directly, Fig. 14.11).
 several angles of attack (including α = −7 deg). No further plotted numeric data (illustrative
 pressure-distribution figure).
 
-### §14.2.4 Airloads Due to Control Deflection
+### §14.3.4 Airloads Due to Control Deflection
 
 Elevator deflection changes α/load factor; rudder deflection can impose large yaw loads; any control
 deflection adds direct load on its surface (and the adjacent fixed structure). **Maneuver speed
@@ -209,15 +214,19 @@ deflection adds direct load on its surface (and the adjacent fixed structure). *
 (usually below max level cruise speed `VH`):
 
 ```
-Vp = Vs · sqrt(Kp · n_limit)                                             (14.12, form as printed)
-Kp = 0.15 + 5400/(W + 3300)                                             (14.13)
+Vp = Vs + Kp·(VL − Vs)                                                   (14.12)
+Kp = 0.15 + 5400/(W + 3300)                                              (14.13)
 ```
-*[Raymer, Eqs. (14.12)-(14.13), p. 504]* — `W` in lb (convert kg × 2.2 first if using SI); `Vs` = stall
-speed with high-lift devices deployed; clamp `Kp` to [0.5, 1.0] (GA aircraft typically ≤0.9). Note:
-Eq. (14.12) as printed in the OCR pass shows only `Kp` isolated with a following expression that did
-not fully resolve — the standard form (also used elsewhere in the literature) is `Vp = Vs·sqrt(n_limit
-· Kp)`; `[verify p. 504]` the exact bracketed relationship between `Vp`, `Vs`, `n`, and `Kp` against
-the printed page if implementing directly.
+*[Raymer, Eqs. (14.12)-(14.13), p. 504]* — `W` in lb (convert kg × 2.2 first if using SI); `Vs` =
+stall speed with high-lift devices deployed; `VL` = maximum level cruise speed; velocities in ft/s or
+m/s; clamp `Kp` to [0.5, 1.0] (GA aircraft typically ≤0.9).
+
+(**CORRECTED** 2026-08-18 against a 320-dpi render of book p. 504. This was the most serious error
+found in the chapter. Eq. (14.12) is a linear interpolation between stall speed and maximum level
+cruise speed, `Vp = Vs + Kp·(VL − Vs)` — the load factor `n` does not appear in it at all. The
+earlier transcription's `Vp = Vs·sqrt(Kp·n_limit)` is a different equation from a different source
+and must not be used for Eq. (14.12). Note also that the book calls the maximum level cruise speed
+`VL` here, not `VH`.)
 
 At `Vp`, a Chapter-16 control analysis gives the α/sideslip from max control deflection, hence the
 resulting airload. Maximum-aileron-deflection-at-max-load-factor ("rolling pull-up") is frequently
@@ -232,7 +241,7 @@ aileron 67 lb {0.3 kN}; wheel-controlled — elevator 200 lb {0.9 kN}, aileron 5
 at maneuver speed based on normal-force coefficients `Cn` (spanwise load ∝ chord): horizontal tail
 `Cn` = −0.55 (down) / +0.35 (up); vertical tail `Cn` = 0.45.
 
-## §14.3 Inertial Loads
+## §14.4 Inertial Loads
 
 `F = m·a` (Newton) applied to every mass item at the aircraft's load factor `n` (weight × n) —
 including the wing structure's own weight, which adds torsional load beyond the aerodynamic torsion.
@@ -242,7 +251,7 @@ acceleration / g, from a gust/elevator snap/nose-wheel impact). Vibration/flutte
 acceleration case beyond this book's scope — proper design should avoid flutter and minimize
 vibration.
 
-## §14.4 Powerplant Loads
+## §14.5 Powerplant Loads
 
 Engine mounts must withstand thrust, stopped/windmilling drag, vertical weight×load-factor, a lateral
 load ≈1/3 of the vertical design load, and gyroscopic loads from rotating machinery/propeller at max
@@ -254,7 +263,7 @@ pressure); "hammershock" (forward-propagating pressure surge from a compressor s
 (oscillating shock bounce) are especially severe transient cases that can overstress structure/cause
 thrust loss.
 
-## §14.5 Landing-Gear Loads
+## §14.6 Landing-Gear Loads
 
 Vertical gear load factor is a *design choice* (e.g. `Ngear = 3`, Chapter 11 Table 11.5) used with the
 worst-case sink rate to size shock-strut stroke; structural analysis then assumes the gear limits
@@ -268,7 +277,7 @@ weight fraction) is applied as an inertial reaction throughout the airframe. Gea
 usually based on airloads plus an assumed 2-g turn; taxi/turning loads matter mainly for detail design
 of the gear/supporting structure.
 
-## §14.6 Structures Fundamentals
+## §14.7 Structures Fundamentals
 
 Timoshenko's *Strength of Materials* (1930) [Ref. 99]: external load displaces a body's molecules
 until internal ("stress") forces balance the external load — the resulting deformation is "strain."
@@ -334,7 +343,15 @@ G = E / (2·(1+µ))                                                       (14.19
 *[Raymer, Eqs. (14.17)-(14.19), pp. 512-513]* — Eq. (14.19) relates `G` to `E` via Poisson's ratio
 [Ref. 99].
 
-## §14.7 Material Selection
+## §14.8 Material Selection — and §14.9 Material Properties
+
+*(Numbering note, 2026-08-18: the book splits this material into TWO numbered sections, §14.8
+"Material Selection" (the selection criteria and trade-offs) and §14.9 "Material Properties" (the
+per-material subsections §14.9.1 Wood through §14.9.9 Material Property Tables). The earlier extract
+merged them into a single section, which is why every later section number was one too low. Verified
+against the book's chapter-14 table of contents and against the printed section badges "14.9.9
+Material Property Tables" (p. 527), "14.10.1 Properties of Sections" (p. 527), "14.10.2 Tension" and
+"14.10.3 Compression" (p. 535), and "14.10.7 Torsion" (p. 550).)*
 
 Selection criteria beyond strength/stiffness/density: fracture toughness (energy to fracture, ≈area
 under σ-ε curve — ductile materials absorb more), fatigue (cyclic-load failure well below ultimate
@@ -377,7 +394,7 @@ inner skin), and wing skins (graphite composite, Al/fiberglass leading edge). No
 (illustrative material-callout diagrams); noted as typical of modern fighter design practice, with the
 caveat that composite (rather than metallic) honeycomb panels might now be preferred.
 
-### §14.7.1 Wood
+### §14.9.1 Wood
 
 Early primary structural material (Wright Brothers used spruce); good strength/weight, easy to
 fabricate/repair, directionally anisotropic like a composite (good natural bending-beam spar
@@ -386,7 +403,7 @@ glue, cure under pressure, varied ply orientation). Disadvantages: moisture sens
 susceptibility, requires climate control and craftsman-level skill (natural material variability).
 Today mainly homebuilt/low-volume niche use, increasingly displaced there too by composites.
 
-### §14.7.2 Aluminum
+### §14.9.2 Aluminum
 
 Still the dominant aircraft material: excellent strength/weight, formable, moderate cost, corrosion
 -resistant. Most common alloy: **2024** ("duralumin," 93.5% Al, 4.4% Cu, 1.5% Mn, 0.6% Mg). High
@@ -395,7 +412,7 @@ improve corrosion resistance/strength). Stronger tempers are generally more brit
 -lithium** alloys approach composite weight savings with standard aluminum fabrication techniques
 (Eurofighter Typhoon wing/tail leading edges).
 
-### §14.7.3 Steel
+### §14.9.3 Steel
 
 Early advance: welded mild-steel-tube fuselages (Fokker) replaced maintenance-heavy wire-braced wood
 (Sopwith Camel). Today used where high strength/fatigue resistance or high temperature is needed
@@ -409,7 +426,7 @@ coarse grain, ductile, weak (eases machining); air cooling ("normalizing") → s
 very brittle, needs tempering (reheat ≈1000°F {538°C}, 1+ hour) to regain ductility. Steel costs
 roughly 1/6 of aluminum and is easy to fabricate.
 
-### §14.7.4 Titanium
+### §14.9.4 Titanium
 
 Better strength/weight and stiffness than aluminum, near-steel temperature capability, corrosion
 resistant — but hard to form (>1000°F {538°C}, high forming stress) and embrittled by impurities
@@ -423,21 +440,21 @@ bonding (SPF/DB)**: titanium "flows" into a mold shape under heat/pressure while
 diffusion-bonding separate pieces into seamless joints — cost and complex-part-forming benefits
 (Eurofighter canards use SPF/DB titanium instead of originally-planned composites, for producibility).
 
-### §14.7.5 Magnesium
+### §14.9.5 Magnesium
 
 Good strength/weight, high-temperature tolerant, easily cast/forged/machined (engine mounts, wheels,
 hinges, brackets, fuel tanks, even wings historically) — but corrosion-prone (needs protective finish)
 and **flammable**. Mil-Specs discourage use except for significant weight savings; avoid in
 hard-to-inspect areas or where the finish erodes (leading edges, engine exhaust exposure).
 
-### §14.7.6 High-Temperature Nickel Alloys
+### §14.9.6 High-Temperature Nickel Alloys
 
 Inconel, Rene 41, Hastelloy: hypersonic/reentry-suitable (Inconel: X-15; Rene 41: intended for X-20
 Dynasoar; nickel-alloy honeycomb: F-117 stealth nozzles; Hastelloy: mainly engine parts). Substantially
 heavier than aluminum/titanium and hard to form — the Space Shuttle instead used an aluminum structure
 with heat-protective tiles (lighter, but with well-known tile-maintenance issues).
 
-### §14.7.7 Composites
+### §14.9.7 Composites
 
 The biggest structural revolution since all-aluminum construction: direct graphite-epoxy substitution
 for aluminum typically saves ~25% weight. F-22/F-18E-F ≈25% composite by structural weight; F-35
@@ -496,7 +513,7 @@ coupon testing (Refs. [105,106] give composite introductions). **"Ten-percent ru
 quick strength approximation for 0°/90°/±45° ply layups: sum (plies × per-ply strength), but multiply
 non-load-direction plies by 0.10; crude, initial-sizing only, never for final design.
 
-### §14.7.8 Sandwich Construction
+### §14.9.8 Sandwich Construction
 
 Two face sheets bonded to and separated by a core (Fig. 14.26) — not strictly a "material" but
 structurally important. Face sheets: aluminum, fiberglass-epoxy, or graphite-epoxy typically; core:
@@ -510,86 +527,135 @@ detail in Ref. [108].
 *[Raymer, Fig. 14.26, p. 526]* — Cutaway sketch of two face sheets bonded to a honeycomb/foam core.
 No plotted data (schematic).
 
-### §14.7.9 Material Property Tables
+### §14.9.9 Material Property Tables
 
 ### Table 14.3 — Typical Metal Properties (Room Temperature)
-*[Raymer, Table 14.3, pp. 528-529]* — Density (lb/in³), temperature limit (°F), `Ftu` (ksi), `Fty`
-(ksi, where given), `E` (10⁶ psi), `G` (10⁶ psi), comments, for: aircraft steel (5Cr-Mo-V), low-carbon
-steel (AISI 1025), low-alloy steel (D6AC wrought), chrom-moly steel (AISI 4130, sheet/plate/tubing and
-wrought forms), stainless steel (AM-350), stainless (PH15-7 Mo sheet/plate), aluminum 2017, clad 2024
-(sheet/plate and extrusions), 6061-T6, clad 7178-T6 (sheet/plate and extrusions), clad 7075-T6 (sheet,
-forgings, extrusions), magnesium (HK31A, HM21A), titanium (Ti-6Al-4V, Ti-13V-11Cr-3Al), and
-high-temperature nickel alloys (Inconel X-750, Rene 41, Hastelloy B). Representative rows:
+*[Raymer, Table 14.3, pp. 528-529]* — Columns exactly as printed: Density (lb/in.3), Temp Limits
+(deg F), `Ftu` (10^3 psi), `Fty` (10^3 psi), `Fcy` (10^3 psi), `Fsu` (10^3 psi), `E` (10^6 psi), `G`
+(10^6 psi), Comments.
 
-| Material | Density (lb/in³) | Temp limit (°F) | Ftu (ksi) | E (10⁶ psi) | G (10⁶ psi) | Comment |
-|---|---|---|---|---|---|---|
-| Aircraft steel (5Cr-Mo-V) | 0.281 | 1000 | 260 | 30 | 11 | Heat treat to 1850°F |
-| Low carbon steel (AISI 1025) | 0.284 | 900 | 55 | 29 | 11 | Shop use only today |
-| Chrom-moly steel (AISI 4130), wrought | 0.283 | 900 | 180 | 29 | 11 | Widely used, weldable |
-| Stainless (AM-350) | 0.282 | 600 | 190 | 29 | 11 | B-70 honeycomb material |
-| Clad 2024 (sheet/plate) | 0.100 | 250 | 61 | 10.7 | 4.0 | Widely used |
-| 6061-T6 | 0.098 | 250 | 42 | 10.0 | 3.8 | Affordable (homebuilts) |
-| Clad 7075-T6 (sheet) | 0.101 | 250 | 74-81 | 10.4 | 3.9 | High strength, not weldable, common in high-speed aircraft |
-| Magnesium HK31A | 0.0674 | 700 | 34 | 6.5 | 2.4 | — |
-| Titanium Ti-6Al-4V | 0.160 | 750 | 160 | 16.0 | 6.2 | SR-71 titanium |
-| Titanium Ti-13V-11Cr-3Al | 0.174 | 600-1000 | 170 | 15.5 | — | X-20, very difficult to form |
-| Inconel X-750 | 0.300 | 1200-1800 | 100-190 | 31.0 | 11.0 | Engine parts / X-15 |
+**Row-complete transcription** (re-read cell by cell off 320-dpi renders of book pp. 528 and 529,
+2026-08-18):
 
-*[verify pp. 528-529]* — this table's original OCR is heavily column-scrambled (values print in a
-single reflowed run disconnected from row labels); the entries above were reconstructed by matching
-plausible property clusters to named alloys and cross-checked against commonly published values for
-the same alloys, but should be re-verified against the printed page or a materials handbook (e.g. Ref.
-[100]) before use in load-critical MATLAB calculations. Not transcribed row-complete.
+| Material | Density (lb/in3) | Temp limit (F) | Ftu (ksi) | Fty (ksi) | Fcy (ksi) | Fsu (ksi) | E (10^6 psi) | G (10^6 psi) | Comments |
+|---|---|---|---|---|---|---|---|---|---|
+| **Steel** | | | | | | | | | |
+| Aircraft steel (5 Cr-Mo-V) | 0.281 | 1000 | 260 | 220 | 240 | 155 | 30 | 11 | Heat treat to 1850 F |
+| Low carbon steel (AISI 1025) | 0.284 | 900 | 55 | 36 | 36 | 35 | 29 | 11 | Shop use only today |
+| Low alloy steel (D6AC, wrought) | 0.283 | 1000 | 220 | 190 | 198 | 132 | 29 | 11 | — |
+| **Chrom-moly steel (AISI 4130)** | | | | | | | | | |
+| sheet/plate/tubing | 0.283 | 900 | 90 | 70 | 70 | 54 | 29 | 11 | Widely used |
+| wrought | 0.283 | 900 | 180 | 163 | 173 | 108 | 29 | 11 | — |
+| Stainless steel (AM-350) | 0.282 | 800 | 185 | 150 | 158 | 120 | 29 | 11 | Good corrosion resistance |
+| Stainless (PH 15-7 Mo, sheet/plate) | 0.277 | 600 | 190 | 170 | 179 | 123 | 29 | 11 | B-70 honeycomb material |
+| **Aluminum** | | | | | | | | | |
+| Aluminum-2017 | 0.101 | 250 | 55 | 32 | 32 | 33 | 10.4 | 3.95 | — |
+| Clad 2024 (24 st), sheet/plate | 0.100 | 250 | 61 | 45 | 37 | 37 | 10.7 | 4.0 | Widely used, weldable |
+| Clad 2024, extrusions | 0.100 | 250 | 70 | 52 | 49 | 34 | 10.8 | 4.1 | (same brace) |
+| 6061 T6 | 0.098 | 250 | 42 | 35 | 35 | 30 | 10.0 | 4.0 | Affordable (homebuilts) |
+| Clad 7178-T6 (78 st), sheet/plate | 0.102 | 250 | 80 | 71 | 71 | 48 | 10.3 | 3.9 | High strength, not weldable, subject to stress corrosion |
+| Clad 7178-T6, extrusions | 0.102 | 250 | 84 | 76 | 75 | 42 | 10.4 | 4.0 | (same brace) |
+| Clad 7075-T6, sheet | 0.101 | 250 | 72 | 64 | 63 | 43 | 10.3 | 3.9 | High strength, not weldable, common in high-speed aircraft |
+| Clad 7075-T6, forgings | 0.101 | 250 | 74 | 63 | 66 | 43 | 10.0 | 3.8 | (same brace) |
+| Clad 7075-T6, extrusions | 0.101 | 250 | 81 | 72 | 72 | 42 | 10.4 | 4.0 | (same brace) |
+| **Magnesium** | | | | | | | | | |
+| Magnesium HK 31A | 0.0674 | 700 | 34 | 24 | 22 | 23 | 6.5 | 2.4 | High-temp & strength, subject to corrosion |
+| Magnesium HM 21A | 0.0640 | 800 | 30 | 21 | 17 | 19 | 6.5 | 2.4 | (same brace) |
+| **Titanium** | | | | | | | | | |
+| Titanium Ti-6Al-4V | 0.160 | 750 | 160 | 145 | 154 | 100 | 16.0 | 6.2 | B-70 |
+| Titanium Ti-13V-11Cr-3Al | 0.174 | 600-1000 | 170 | 160 | 162 | 105 | 15.5 | — | SR-71 titanium |
+| **High-temperature nickel alloys** | | | | | | | | | |
+| Inconel X-750 | 0.300 | 1000-1500 | 155 | 100 | 100 | 101 | 31.0 | 11.0 | X-15 |
+| Rene 41 | 0.298 | 1200-1800 | 168 | 127 | 135 | 107 | 31.6 | 12.1 | X-20, very difficult to form |
+| Hastelloy B | 0.334 | 1400 | 100 | 45 | — | — | 30.8 | — | Engine parts |
+
+(Corrected 2026-08-18. The earlier extract was badly scrambled, as suspected: it carried only 11 of
+the 23 printed rows, had lost the `Fty`/`Fcy`/`Fsu` columns entirely, and had at least four
+misattributed cells. AM-350 was given 190 ksi and the "B-70 honeycomb material" comment that in fact
+belong to PH 15-7 Mo; AISI 4130 wrought had picked up "Widely used, weldable" from two other rows;
+6061-T6's `G` was 3.8 instead of 4.0; Ti-6Al-4V was labeled "SR-71 titanium" and Ti-13V-11Cr-3Al
+"X-20, very difficult to form" when the page prints "B-70" and "SR-71 titanium" respectively; and
+Inconel X-750 had 1200-1800 F / 100-190 ksi / "Engine parts / X-15" instead of 1000-1500 F / 155 ksi
+/ "X-15". The table above is now the complete printed table.)
 
 ### Table 14.4 — Wood Properties (ANC-5)
-*[Raymer, Table 14.4, p. 530]* — Density (lb/in³) and allowable stress values (ksi range) for ash,
-birch, African mahogany, Douglas fir, western pine, and spruce. Representative:
+*[Raymer, Table 14.4, p. 530]* — Columns exactly as printed: Density (lb/in.3); then **parallel to
+grain** `Ftu`, `Fty`, `Fcu`, `Fcy` (all 10^3 psi); then **perpendicular to grain** `Fcu` (10^3 psi);
+then **parallel to grain** shear `Fs` (10^3 psi); then `E` (10^6 psi).
 
-| Wood | Density (lb/in³) | Approx. allowable range (ksi) |
-|---|---|---|
-| Ash | 0.024 | 2.3-14.8 |
-| Birch | 0.026 | 1.6-15.5 |
-| African mahogany | 0.019 | 1.4-10.8 |
-| Douglas fir | 0.020 | 1.3-11.5 |
-| Western pine | 0.016 | 0.8-9.3 |
-| Spruce | 0.016 | 0.7-9.4 |
+**Row-complete transcription** (re-read cell by cell off a 320-dpi render of book p. 530,
+2026-08-18):
 
-`[verify p. 530]` — table column headers (bending/compression-parallel/compression-perpendicular/
-shear allowable stresses, specific gravity) did not survive OCR cleanly; values above are density plus
-the printed numeric range per species, not attributed to specific named columns — consult ANC-5 or
-the printed page directly for the full breakdown.
+| Wood | Density (lb/in3) | Ftu par (ksi) | Fty par (ksi) | Fcu par (ksi) | Fcy par (ksi) | Fcu perp (ksi) | Fs par (ksi) | E (10^6 psi) |
+|---|---|---|---|---|---|---|---|---|
+| Ash | 0.024 | 14.8 | 8.9 | 7.0 | 5.3 | 2.3 | 1.4 | 1.46 |
+| Birch | 0.026 | 15.5 | 9.5 | 7.3 | 5.5 | 1.6 | 1.3 | 1.78 |
+| African mahogany | 0.019 | 10.8 | 7.9 | 5.7 | 4.3 | 1.4 | 1.0 | 1.28 |
+| Douglas fir | 0.020 | 11.5 | 8.0 | 7.0 | 5.6 | 1.3 | 0.8 | 1.70 |
+| Western pine | 0.016 | 9.3 | 6.0 | 5.3 | 4.2 | 0.8 | 0.6 | 1.31 |
+| Spruce | 0.016 | 9.4 | 6.2 | 5.0 | 4.0 | 0.8 | 0.7 | 1.30 |
+
+(Corrected 2026-08-18. The earlier extract gave only a density and an unattributed "approximate
+allowable range" per species, formed by pairing the smallest and largest numbers on each row — e.g.
+Ash "2.3-14.8", which mixed the perpendicular-to-grain compression allowable with the
+parallel-to-grain tension ultimate. Every column is now named and attributed off the page image, and
+no `E` value was present in the earlier version at all.)
 
 ### Table 14.5 — Typical Composite Material Properties (Room Temperature)
-*[Raymer, Table 14.5, p. 531]* — For high-strength graphite-epoxy, high-modulus graphite-epoxy,
-boron-epoxy, graphite-polyimide, S-fiberglass-epoxy, E-fiberglass-epoxy, and aramid-epoxy: ultimate
-tensile/compressive strength (longitudinal/transverse, ksi), interlaminar shear strength `Fsu`(LT), `E`
-(10⁶ psi, longitudinal/transverse), `G` (10⁶ psi), density (lb/in³), max temperature (°F), and moisture
-absorption (%). Representative (longitudinal tension ultimate, `E_L`):
+*[Raymer, Table 14.5, p. 531]* — Printed as TWO stacked blocks sharing one Material column.
+Block 1 columns: Fiber Orientation (deg), Fiber % Volume, Density (lb/in.3), Temp Limit (deg F),
+`Ftu`(L), `Ftu`(T), `Fcu`(L), `Fcu`(T) (all 10^3 psi). Block 2 columns: `Fsu`(LT), `Fisu` (10^3 psi),
+`etu`(L), `etu`(T) (in./in.), `Et`(L), `Et`(T), `Ec`(L), `Ec`(T), `G`(LT) (all 10^6 psi).
+Table footnote: `L` = longitudinal direction; `T` = transverse direction; `Fisu` = interlaminate
+shear stress (ultimate); `t` = tension; `c` = compression.
 
-| Material | Ftu-L (ksi) | E_L (10⁶ psi) | Density (lb/in³) | Max temp (°F) |
-|---|---|---|---|---|
-| High-strength graphite-epoxy | ~200 | ~21.0 | 0.056 | 350 |
-| High-modulus graphite-epoxy | ~110 | ~25.0 | 0.056 | 350 |
-| Boron-epoxy | ~195 | ~30 | 0.073 | 350 |
-| Graphite-polyimide | ~204 | ~30 | 0.058 | 350 |
-| S-fiberglass-epoxy | ~219 | ~7.7 | 0.071 | 350 |
-| E-fiberglass-epoxy | ~105 | ~4.23 | 0.074 | 350 |
-| Aramid-epoxy | ~200 | ~11 | 0.052 | 350 |
+**Row-complete transcription** (re-read cell by cell off a 320-dpi render of book p. 531,
+2026-08-18). Block 1:
 
-`[verify p. 531]` — like Table 14.3, this table's OCR is heavily scrambled by column reflow; values
-above are a best-effort reconstruction of representative longitudinal tensile strength/modulus per
-material and should be confirmed against the printed page or manufacturer datasheets before
-load-critical use.
+| Material | Fiber orient. (deg) | Fiber % vol. | Density (lb/in3) | Temp limit (F) | Ftu(L) ksi | Ftu(T) ksi | Fcu(L) ksi | Fcu(T) ksi |
+|---|---|---|---|---|---|---|---|---|
+| High-strength graphite-epoxy | 0 | 60 | 0.056 | 350 | 180.0 | 8.0 | 180.0 | 30.0 |
+| High-strength graphite-epoxy | +/-45 | 60 | 0.056 | 350 | 23.2 | 23.2 | 23.9 | 23.9 |
+| High-modulus graphite-epoxy | 0 | 60 | 0.056 | 350 | 110.0 | 4.0 | 100 | 20 |
+| High-modulus graphite-epoxy | +/-45 | 60 | 0.058 | 350 | 16.9 | 16.9 | 18 | 18 |
+| Boron-epoxy | 0 | 50 | 0.073 | 350 | 195 | 10.4 | 353 | 40 |
+| Graphite-polyimide | 0 | — | — | — | 204 | 4.85 | 111 | 18.5 |
+| S-fiberglass-epoxy | 0 | — | 0.074 | 350 | 219 | 7.4 | 73.9 | 22.4 |
+| E-fiberglass-epoxy | 0 | 45 | 0.071 | 350 | 105 | 10.2 | 69 | 33 |
+| Aramid-epoxy | 0 | 60 | 0.052 | 350 | 200 | 4.3 | 40 | 20 |
 
-## §14.8 Structural-Analysis Fundamentals
+Block 2 (same row order):
 
-### §14.8.1 Properties of Sections
+| Material | Fsu(LT) ksi | Fisu ksi | etu(L) | etu(T) | Et(L) 10^6psi | Et(T) 10^6psi | Ec(L) 10^6psi | Ec(T) 10^6psi | G(LT) 10^6psi |
+|---|---|---|---|---|---|---|---|---|---|
+| High-strength graphite-epoxy, 0 | 12 | 13 | 0.0087 | 0.0048 | 21.00 | 1.70 | 21.00 | 1.70 | 0.65 |
+| High-strength graphite-epoxy, +/-45 | 65.5 | — | 0.022 | 0.022 | 2.34 | 2.34 | 2.34 | 2.34 | 5.52 |
+| High-modulus graphite-epoxy, 0 | 9.0 | 10 | 0.0046 | 0.0025 | 25.00 | 1.70 | 25.00 | 1.70 | 0.65 |
+| High-modulus graphite-epoxy, +/-45 | 43.2 | — | 0.012 | 0.012 | 2.38 | 2.38 | 2.38 | 2.38 | 6.46 |
+| Boron-epoxy | 15.3 | 13 | 0.0065 | 0.004 | 30 | 2.7 | 30 | 2.7 | 0.70 |
+| Graphite-polyimide | 8.5 | — | — | 0.0036 | 20 | 1.35 | 17.4 | 1.4 | 0.84 |
+| S-fiberglass-epoxy | — | 11 | — | — | 7.70 | 2.70 | 6.80 | 2.5 | — |
+| E-fiberglass-epoxy | 7.9 | — | 0.025 | 0.019 | 4.23 | 1.82 | 4.43 | 1.8 | 0.51 |
+| Aramid-epoxy | 9 | — | 0.018 | 0.006 | 11 | 0.8 | 11 | 0.8 | 0.3 |
+
+(Corrected 2026-08-18. The earlier extract listed one "representative" row per material and got
+several cells wrong: it invented a "moisture absorption (%)" column that does not exist (the printed
+column is Fiber % Volume); it swapped the S-fiberglass and E-fiberglass densities (0.074 and 0.071,
+not 0.071 and 0.074); it gave high-strength graphite-epoxy `Ftu`(L) as ~200 instead of 180.0 and
+graphite-polyimide `E_L` as ~30 instead of 20; and it omitted the +/-45 laminate rows, which are
+distinct printed rows, not variants. Every cell above is now read off the page image.)
+
+## §14.10 Structural-Analysis Fundamentals
+
+### §14.10.1 Properties of Sections
 
 ```
 xc = (∫ x·dA) / A                                                       (14.21)
 yc = (∫ y·dA) / A                                                       (14.22)
 ```
-*[Raymer, Eqs. (14.21)-(14.22), p. 532]* — centroid coordinates (Fig. 14.27); a symmetric section's
+*[Raymer, Eqs. (14.21)-(14.22), p. 532]* (confirmed 2026-08-18 against a 200-dpi render of book
+p. 532; the book prints them in discrete-sum form, `Xc = sum(x_i dA_i)/A` and `Yc = sum(y_i dA_i)/A`,
+which is equivalent to the integral form written here) — centroid coordinates (Fig. 14.27); a symmetric section's
 centroid lies on its symmetry axis/axes. Any axis through the centroid is a "centroidal axis"; a
 symmetry axis is always centroidal.
 
@@ -634,7 +700,7 @@ section.
 *[Raymer, Eq. (14.28), p. 534]* — radius of gyration, used in column-buckling analysis (§14.9); also
 usable to back out `I` from Table 14.6's `ρ` values.
 
-### §14.8.2 Tension
+### §14.10.2 Tension
 
 ```
 σ = P/A                                                                 (14.29)
@@ -644,7 +710,7 @@ rivet/bolt holes, or along a diagonal "zipper" line of holes if that net area is
 perpendicular section). Limit-load stress should not exceed yield stress (metals) or the
 ultimate-strain-based allowable divided by the safety factor (composites, typically 1.5 as well).
 
-### §14.9 Compression
+### §14.10.3 Compression
 
 Same Eq. (14.29) form, but only valid as a *limit* criterion for short/laterally-constrained parts
 (fittings, spar caps, sandwich face sheets) — long unconstrained members ("columns"/"struts") are
@@ -655,7 +721,7 @@ cross-section area (fasteners carry compression).
 **Slenderness ratio** (governs buckling mode):
 
 ```
-Slenderness ratio = Le/ρ                                                (14.30)
+Slenderness ratio = Le/ρ = Le / sqrt(I/A)                               (14.30)
 ```
 *[Raymer, Eq. (14.30), p. 535]* — `Le` = effective length, from end-constraint type (Fig. 14.28):
 perfectly rigid `Le=0.5L`; welded ends `Le=0.71L`; riveted/bolted `Le=0.82L`.
@@ -713,7 +779,7 @@ one side clamped/one free with simply-supported ends (mid); one side free, one s
 supported (lowest, asymptoting to 0.385 at large a/b per the figure's own callout). *(read from plot,
 approximate, clamped-sides-and-ends curve)*: a/b=1→K≈6.5; a/b=2→K≈4.2; a/b=3→K≈4.5; a/b=4→K≈4.0.
 
-### §14.10 Truss Analysis
+### §14.10.4 Truss Analysis
 
 An ideal truss: weightless struts, frictionless pin joints, loads only at pins, no applied moments —
 members carry pure tension/compression ("primary truss loads"); mid-strut attachment loads must be
@@ -757,7 +823,7 @@ separate 2-D side/top-view trusses and summed (valid only within the elastic ran
 trusses need the 3-equation/3-unknown method-of-joints form (simultaneous equations, e.g. via
 computer) or selected-point moment summation (Ref. [95] covers space structures in detail).
 
-### §14.11 Beam Shear and Bending
+### §14.10.5 Beam Shear and Bending
 
 Two-step: (1) find shear/bending-moment distributions, (2) find the resulting stresses.
 
@@ -834,7 +900,7 @@ Fshear_buckle = K·E·(t/b)²                                              (14.3
 *[Raymer, Fig. 14.39, p. 547]* — `K` (0-16) vs `a/b` (0-10) for simply-supported edges. *(read from
 plot, approximate)*: a/b=1→K≈10; a/b=2→K≈6.5; a/b=4→K≈5.5; a/b=6→K≈5.3; a/b=10→K≈5.2 (asymptoting).
 
-### §14.12 Braced-Wing Analysis
+### §14.10.6 Braced-Wing Analysis
 
 A strut-braced wing greatly reduces bending moment vs a cantilevered wing, but the strut's spanwise
 compression component `P` can increase bending moment up to ~33% if properly accounted for (vs
@@ -862,7 +928,7 @@ are typically set ≈40 deg up from horizontal (front view) — too flat increas
 pull-off loads and inboard wing compression (buckling risk); too steep leaves more wing cantilevered
 (heavier); too horizontal makes for a very long, high-drag strut close to the wing.
 
-## §14.13 Torsion
+### §14.10.7 Torsion
 
 ### Fig 14.41 — Solid circular shaft in torsion
 *[Raymer, Fig. 14.41, p. 550]* — Shaft under applied torque `T`, twisting through angle `φ` over
@@ -909,7 +975,7 @@ For solid rectangular sections (thickness `t`, width `b`):
 to an effective total width. Multi-celled wing-box torsion analysis is beyond this book's scope (see
 Ref. [108]).
 
-## §14.14 Finite Element Structural Analysis
+## §14.11 Finite Element Structural Analysis
 
 Classical handbook/nomogram structural analysis (as above) is now largely superseded by finite element
 method (FEM/FEA) software, ubiquitous even to homebuilders. FEM breaks the structure into small
@@ -992,19 +1058,31 @@ answers later in the design process.
 
 ---
 
-*Chapter 14 complete (Introduction, §§14.1-14.14 [Loads Categories, Air Loads, Inertial Loads,
+*Chapter 14 complete (§§14.1-14.11 [Introduction, Loads Categories, Air Loads, Inertial Loads,
 Powerplant Loads, Landing-Gear Loads, Structures Fundamentals, Material Selection, Material
-Properties, Structural-Analysis Fundamentals, Compression, Truss Analysis, Beam Shear and Bending,
-Braced-Wing Analysis, Torsion, Finite Element Structural Analysis], Tables 14.1-14.7, Figs
-14.1-14.46, Eqs. 14.1-14.68, "What We've Learned" summary). PDF index span used: 520-586 (printed
-pp. 491-557; p. 558 at index 587 is blank/chapter-closing whitespace). Two items flagged
-`[verify]`: Eq. (14.12)'s exact bracketed relationship between `Vp`, `Vs`, `n`, and `Kp` (p. 504,
-OCR ambiguous — standard form `Vp = Vs·sqrt(n_limit·Kp)` proposed pending page-image confirmation);
-Tables 14.3 and 14.5's material-property values (pp. 528-529, 531) were heavily column-scrambled in
-the OCR pass and are reconstructed representative entries, not verified row-complete transcriptions —
-flag for re-verification against a materials handbook before load-critical use. Table 14.4 (p. 530)
-similarly could not be cleanly attributed to named property columns. Figures with genuine numeric
-plot content (V-n diagrams' construction logic, gust-velocity-vs-altitude, buckling-coefficient
-charts, skin-temperature-vs-Mach) were digitized with representative read-from-plot points; pure
-material-callout/schematic/photo figures were noted without digitization. Next: Chapter 15 —
-Weights.*
+Properties, Structural-Analysis Fundamentals, Finite Element Structural Analysis], Tables 14.1-14.7,
+Figs 14.1-14.46, Eqs. 14.1-14.68, "What We've Learned" summary). PDF index span used: 520-586
+(printed pp. 491-557; p. 558 at index 587 is blank/chapter-closing whitespace).*
+
+*Correctness sweep, 2026-08-18: no `[verify]` items remain. Corrections made:*
+- *Eq. (14.12) — the whole equation was wrong. It is `Vp = Vs + Kp*(VL - Vs)`, a linear
+  interpolation with no load factor in it, not `Vs*sqrt(Kp*n_limit)`.*
+- *Tables 14.3, 14.4 and 14.5 — all three were re-read cell by cell off page renders and are now
+  row- and column-complete. Table 14.3 had lost three whole property columns and had four
+  misattributed cells; Table 14.4 had no named columns at all; Table 14.5 had an invented column,
+  two swapped densities, and two wrong values.*
+- *Section numbering — the extract had started the chapter at §14.0 and had merged the book's §14.8
+  "Material Selection" and §14.9 "Material Properties" into one section, so every number from
+  Structures Fundamentals onward was wrong. All headings now match the printed badges and the
+  chapter table of contents.*
+- *Eqs. (14.2)-(14.5) — Eq. (14.5) (`U = K*Ude`) had been dropped, which pushed the gust-alleviation
+  and mass-ratio equation numbers one low; Eqs. (14.2) and (14.3) completed to the printed form.*
+- *Eqs. (14.21)-(14.22) and (14.30) — notation completed (discrete-sum form; `Le/rho =
+  Le/sqrt(I/A)`).*
+
+*Figures with genuine numeric plot content (V-n diagrams' construction logic,
+gust-velocity-vs-altitude, buckling-coefficient charts, skin-temperature-vs-Mach) were digitized with
+representative read-from-plot points; pure material-callout/schematic/photo figures were noted
+without digitization.*
+
+*Next: Chapter 15 — Weights.*

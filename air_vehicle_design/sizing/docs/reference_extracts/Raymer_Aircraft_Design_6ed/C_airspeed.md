@@ -31,19 +31,19 @@ True airspeed from equivalent airspeed and the local-to-sea-level density ratio:
 TAS = EAS / sqrt(rho / rho_0)
 ```
 
-Equivalent airspeed from calibrated airspeed, correcting for compressibility using the impact
-pressure ratio `qc` (referenced to sea-level pressure `P_0` for the CAS side of the relation, and
-to local static pressure `P` for the EAS side):
+Equivalent airspeed from calibrated airspeed, correcting for compressibility. `qc` is the impact
+pressure, `P` the local static pressure and `P_0` the sea-level static pressure:
 
 ```
-EAS = CAS * sqrt{ [(qc/P_0 + 1)^0.286 - 1] / [(qc/P + 1)^0.286 - 1] }
+EAS = CAS * sqrt(P/P_0) * [ ((qc/P   + 1)^0.286 - 1)
+                          / ((qc/P_0 + 1)^0.286 - 1) ]^0.5
 ```
 
-*[verify p. 969 — this ratio-of-brackets form is reconstructed from a partially garbled OCR text
-layer; the bracket contents and the 0.286 (= 2/7) exponent are legible and consistent with the
-standard compressible-Pitot relation below, but the exact arrangement of the two bracketed terms
-could not be fully confirmed against the scanned page and should be checked against the original
-before use.]*
+*(Corrected 2026-08-18 against a 300-dpi render of book p. 969. The earlier extract was
+reconstructed from a garbled OCR text layer and had two errors: it dropped the leading
+`sqrt(P/P_0)` factor, and it inverted the bracketed ratio, putting the `P_0` term in the numerator.
+The corrected form reproduces the book's own worked example below: at 15,000 ft with M = 0.428 it
+gives EAS/CAS = 0.9902, and the book prints EAS = 213 kt against CAS = 215 kt, i.e. 0.9907.)*
 
 where the impact pressure `qc` (compressible Rayleigh-Pitot relation) is:
 

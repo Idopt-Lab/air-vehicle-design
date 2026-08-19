@@ -216,27 +216,30 @@ baseline (typically ±20%), independently size + performance-analyze each combin
 matrix").
 
 **Fig. 19.1 — Sizing matrix (worked example, small fighter)** *[Raymer, Fig. 19.1, p. 719]* — 3×3
-matrix of T/W (0.9, 1.0, 1.1) × W/S (50, 60, 70 psf / 244, 293, 342 kg/m²), each cell giving sized
-`Wo`, specific excess power `Ps` (at Mach 0.9, 30 kft, 5g), takeoff distance `sTO`, and acceleration
-time `a` (Mach 0.9→1.5). Requirements: `Ps ≥ 0` at Mach 0.9/30 kft/5g; `sTO ≤ 500 ft`;
-acceleration ≤50 s. *(full data table reproduced from the figure)*:
+matrix of T/W (1.1, 1.0, 0.9 down the rows) × W/S (50, 60, 70 lb/ft² across the columns), each cell
+giving sized `W0`, specific excess power `Ps` (at M0.9, 30k ft, 5g), takeoff distance `Sto`, and
+acceleration time `a` (M0.9→M1.5). Requirements as printed under the matrix: `Ps ≥ 0` at M0.9,
+30k ft {9144 m}, 5g's; `Sto ≤ 500 ft` {152 m}; `a` 50 s from M0.9 to M1.5. *(full data table, read
+cell by cell off the figure)*:
 
-| Cell (T/W, W/S) | Wo (lb) | Ps (fps) | sTO (ft) | accel (s) |
+| Cell (T/W, W/S) | W0 (lb) | Ps (fps) | Sto (ft) | a (s) |
 |---|---|---|---|---|
 | 1 (1.1, 50) | 56,000 | 700 | 340 | 46 |
-| 2 (1.1, 60) | 49,000 | 330 | 430 | 39 |
-| 3 (1.1, 70) | 46,000 | 30 | 660 | 42 |
+| 2 (1.1, 60) | 49,000 | 330 | 430 | 42 |
+| 3 (1.1, 70) | 46,000 | 30 | 660 | 39 |
 | 4 (1.0, 50) | 48,500 | 430 | 450 | 50.5 |
-| 5 (1.0, 60) ["resized baseline"] | 43,700 | 30 | 595 | 45 |
-| 6 (1.0, 70) | 42,000 | −190 | 800 | 47 |
+| 5 (1.0, 60) ["Resized baseline"] | 43,700 | 30 | 595 | 47 |
+| 6 (1.0, 70) | 42,000 | −190 | 800 | 45 |
 | 7 (0.9, 50) | 44,000 | 140 | 670 | 56 |
 | 8 (0.9, 60) | 39,000 | −230 | 810 | 53 |
-| 9 (0.9, 70) | 36,000 | −320 | 1010 | 51 |
+| 9 (0.9, 70) | 36,000 | −320 | 1070 | 51 |
 
-(Note: OCR cell/label alignment reconstructed from the figure's printed layout — `[verify p.719,
-Fig. 19.1]` for exact number-to-cell mapping if used quantitatively; values are internally consistent
-with the trends discussed in the prose, e.g. cell 5 = "resized baseline," cell 3 heaviest but meets
-everything, cells 4/7/8/9 lighter but deficient in some requirement.)
+(**Corrected 2026-08-18** against a 320-dpi render of book p. 719. The printed matrix is fully legible.
+Three errors: the acceleration times of cells 2 and 3 were transposed (42 / 39, not 39 / 42), the
+acceleration times of cells 5 and 6 were transposed (47 / 45, not 45 / 47), and cell 9's takeoff
+distance is **1070 ft, not 1010 ft**. All nine `W0`, `Ps` and the other seven `Sto` values are
+confirmed exactly as printed. The mks wing loadings 244/293/342 kg/m² quoted before do not appear in
+Fig. 19.1 — they appear in the Fig. 19.5 discussion on p. 723 — so they are dropped here.)
 
 As-drawn baseline (cell 5) meets everything except takeoff distance; cell 3 exceeds all requirements
 but is heaviest; cells 4, 7, 8, 9 are lighter but each misses some requirement. Question: what
@@ -249,25 +252,36 @@ separately the exact-W/S-for-each-requirement points are read off the `Ps`/`sTO`
 No further numeric table — this is a graphical-interpolation step, not new data.
 
 **Fig. 19.3 — Sizing matrix plot (continued)** *[Raymer, Fig. 19.3, p. 721]* — the W/S–T/W points for
-constant-`Wo` increments (from Fig. 19.2) transferred to a T/W-vs-W/S graph and connected into
-constant-takeoff-weight contour lines (T/W axis 0.9–1.10, W/S axis 45–75, contours labeled 40K/45K
-lb). *(read from plot, approximate contour shape)*:
+constant-`W0` increments (from Fig. 19.2) transferred to a T/W-vs-W/S graph and connected into
+constant-takeoff-weight contour lines. Axes: T/W 0.90–1.10, W/S 45–75. **Five** contours are printed,
+labelled at both ends: `W0` = 55K, 50K, 45K, 40K, 35K lb. Each contour rises steeply to the right —
+holding weight constant means buying more W/S with more T/W. W/S read at each T/W gridline
+*(read from plot)*:
 
-| W/S | T/W on 40K-lb contour | T/W on 45K-lb contour |
-|---|---|---|
-| 50 | ~0.93 | ~1.02 |
-| 60 | ~0.97 | ~1.05 |
-| 70 | ~1.02 | ~1.09 |
+| T/W | 55K | 50K | 45K | 40K | 35K |
+|---|---|---|---|---|---|
+| 0.90 | — | — | ~47 | ~57 | ~71 |
+| 0.95 | — | ~45 | ~50 | ~62 | — |
+| 1.00 | — | ~48 | ~54 | ~72 | — |
+| 1.05 | ~48 | ~52 | ~61 | — | — |
+| 1.10 | ~52 | ~57 | ~71 | — | — |
 
-(Illustrative digitization of the worked example's constant-weight contours; the qualitative
-takeaway — weight contours slope upward with W/S — matters more than the exact numbers.)
+(**Corrected 2026-08-18** against a 320-dpi render of book p. 721. The previous table listed only two
+contours (40K and 45K) and gave T/W values against W/S = 50/60/70 that do not lie on the printed
+curves at all — e.g. the 40K contour does not reach W/S = 50 anywhere in the plotted range; it starts
+at W/S ≈ 57 at T/W = 0.90.)
 
 **Fig. 19.4 — Sizing matrix plot (concluded)** *[Raymer, Fig. 19.4, p. 722]* — the same T/W-vs-W/S
 axes now overlaid with the **constraint lines** (W/S, T/W combinations exactly meeting each
-performance requirement — takeoff distance, `Ps`, acceleration), each shaded on the infeasible side.
-The optimum (lightest feasible combination) is found by inspection, typically at a two-constraint
-intersection. No separate numeric table (constraint-line intersection is read graphically off the
-constructed figure).
+performance requirement), each hatched on the infeasible side. The three printed constraint labels are
+`S_takeoff = 500 ft`, `Ps = 0 @ m.9, 30,000 ft, 5g's`, and `Acceleration m.9 to m.1.5 in 50 s`. The
+optimum is marked on the figure "Lowest weight aircraft", at the crossing of the takeoff-distance and
+acceleration constraint lines: **W/S ≈ 54 lb/ft², T/W ≈ 0.98**, sitting just inside the 45K-lb weight
+contour (sized `W0` ≈ 44,000 lb). *(read from plot; the same optimum appears as the open circle in
+Fig. 19.6.)*
+
+(**Added 2026-08-18** from a 320-dpi render of book p. 722. The figure does carry a readable numeric
+answer — the marked optimum — which the previous entry omitted by asserting there was nothing to read.)
 
 For better accuracy, industry practice uses 5×5 or larger sizing matrices (more work, finer
 resolution) instead of this 3×3 teaching example.
@@ -310,7 +324,7 @@ fundamental it's often not even labeled as one).
 |---|---|---|
 | T/W and W/S | Range/payload/passengers | Dead weight |
 | AR, Λ (aspect ratio, sweep) | Loiter time | CD0 |
-| t/c, Λ | Speed | K |
+| t/c, λ (thickness ratio, taper ratio) | Speed | K |
 | Airfoil shape and camber | Turn-rate, Ps, nmax | CD,wave |
 | High-lift devices | Runway length | CLmax |
 | Fuselage fineness ratio | Time-to-climb | Thrust |
@@ -438,16 +452,23 @@ buys." A simple CAIV study parametrically varies mission range, computes sized t
 acquisition cost) for each, and reads off the affordable range for the customer's cost ceiling.
 
 **Fig. 19.7 — Cost-driven range trade** *[Raymer, Fig. 19.7, p. 731]* — purchase price ($26,000–
-$32,000, thousands, i.e. $26M–$32M) vs range (300–700, presumably nmi), roughly-linear rising curve.
-*(read from plot)*:
+$32,000 on an axis labelled "Purchase price, k$", i.e. $26M–$32M) vs range (300–700), an essentially
+straight rising line. The figure carries its own worked read-off: a horizontal line at $30,000k meets
+the curve and drops to a range of about **480**. *(read from plot)*:
 
-| Range | Purchase price ($M) |
+| Range | Purchase price (k$) |
 |---|---|
-| 300 | ~27.0 |
-| 400 | ~28.0 |
-| 500 | ~29.3 |
-| 600 | ~30.5 |
-| 700 | ~31.7 |
+| 300 | ~28,580 |
+| 400 | ~29,380 |
+| ~480 | 30,000 (the figure's own annotated read-off) |
+| 500 | ~30,170 |
+| 600 | ~30,970 |
+| 700 | ~31,760 |
+
+(**Corrected 2026-08-18** against a 320-dpi render of book p. 731. The previous table was ~1,600k low
+at range 300 and, more tellingly, put $30M at range ≈ 520 — which contradicts the figure's own printed
+$30,000k ↔ range-480 construction lines. The curve starts at about 28,580 k$ at range 300, not
+27,000.)
 
 CAIV extends this logic through the entire design/development cycle: every change (fix or new
 capability) is cost-assessed against the ceiling; management, engineering, and the customer all
@@ -469,8 +490,26 @@ plotted data.*
 
 ---
 
-*Chapter 19 complete (§§19.1–19.5, Table 19.1, Figs 19.1–19.7, Eqs 19.1–19.14). The Fig. 19.1 sizing-
-matrix cell/label alignment and the Fig. 19.3/19.7 curve readings were reconstructed from a
-significantly OCR-degraded scan — flagged inline with `[verify p.NNN]` where precision is uncertain;
-the underlying method and qualitative trends are unambiguous from the surrounding prose. This
-completes the four-chapter Raymer extraction batch (Chapters 16–19).*
+*Chapter 19 complete (§§19.1–19.5, Table 19.1, Figs 19.1–19.7, Eqs 19.1–19.14).*
+
+*Correctness sweep, 2026-08-18: book pages 719, 721, 722, 723, 724 and 731 were re-rendered at 320 dpi
+and read as images. All `[verify]` markers in this chapter are now resolved. The section numbering was
+checked against the printed headings and needs no change (§19.4.3 Carpet Plot on p. 722, §19.5 Trade
+Studies and §19.5.1 Trade Study Categories on p. 724).*
+
+*Confirmed against the page images — no change needed: all nine `W0` values and all nine `Ps` values of
+the Fig. 19.1 sizing matrix; the three printed requirement lines under it; the prose reading that cell
+5 is the resized baseline, cell 3 meets everything but is heaviest, and cells 4/7/8/9 are lighter but
+deficient; the Fig. 19.5 three-panel carpet build-up including the 244/293/342 kg/m² wing loadings; and
+Table 19.1 (every entry except one symbol).*
+
+*Corrections applied: Fig. 19.1 — the acceleration times of cells 2/3 and of cells 5/6 were each
+transposed, and cell 9's takeoff distance is 1070 ft, not 1010 ft. Fig. 19.3 — the contour table listed
+two of the five printed contours and its T/W values did not lie on the printed curves; replaced with
+W/S read at each T/W gridline for all five contours. Fig. 19.4 — the marked optimum (W/S ≈ 54,
+T/W ≈ 0.98, `W0` ≈ 44,000 lb, at the takeoff-distance ∩ acceleration crossing) was previously recorded
+as "no numeric data". Fig. 19.7 — the price curve was ~1,600 k$ low at range 300 and disagreed with the
+figure's own $30,000k ↔ range-480 construction lines. Table 19.1 — the third design-trade entry is
+`t/c, λ` (taper ratio), not `t/c, Λ` (sweep). No book misprints were found in this chapter.*
+
+*This completes the four-chapter Raymer extraction batch (Chapters 16–19).*

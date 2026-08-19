@@ -206,7 +206,8 @@ To make risk arguments objective rather than self-serving ("our concept is low r
 define the **Technology Readiness Level (TRL)** scale [Raymer, p. 18–19]:
 
 ### TRL scale
-*[Raymer, p. 19–20]*
+*[Raymer, p. 19–20]* — all nine rows confirmed word-for-word 2026-08-18 against 320-dpi renders of
+book pp. 19–20 (TRL 1–7 print on p. 19, TRL 8–9 continue on p. 20).
 
 | TRL | Description |
 |---|---|
@@ -221,7 +222,7 @@ define the **Technology Readiness Level (TRL)** scale [Raymer, p. 18–19]:
 | 9 | Actual system proven through successful mission operations |
 
 ### Fig. 2.4 — Aircraft conceptual design process
-*[Raymer, Fig. 2.4, p. 19]* — Flow diagram: **Design requirements** + **Technology availability**
+*[Raymer, Fig. 2.4, p. 19]* (box-by-box confirmed 2026-08-18 against a 320-dpi render) — Flow diagram: **Design requirements** + **Technology availability**
 → **Concept sketch** (fed also by "new concept ideas," with a feedback loop for "requirements
 trade-offs") → **First-guess sizing** → **Initial layout** → **Initial analysis** (aerodynamics,
 weights, propulsion) → **Sizing & performance optimization** → **Revised layout** → **Analysis**
@@ -232,9 +233,11 @@ diagram, no plotted numeric data.
 The conceptual effort itself usually starts with a **conceptual sketch** (Fig. 2.5) — the "back of
 a napkin" drawing giving a rough sense of the design: approximate wing/tail geometry, fuselage
 shape, and internal locations of major components (engine, cockpit, payload/passenger compartment,
-landing gear, fuel tanks) [Raymer, p. 19]. The sketch supports estimating aerodynamics and weight
+landing gear, fuel tanks) [Raymer, p. 20]. The sketch supports estimating aerodynamics and weight
 fractions by analogy to prior designs, feeding a first-cut total/fuel weight estimate via "sizing"
-(the sketch may be skippable if the new design closely resembles an existing one) [Raymer, p. 19].
+(the sketch may be skippable if the new design closely resembles an existing one) [Raymer, p. 20].
+(Both page citations corrected 2026-08-18 from p. 19 to p. 20 — this prose prints on p. 20,
+alongside Fig. 2.5.)
 
 ### Fig. 2.5 — Initial sketch
 *[Raymer, Fig. 2.5, p. 20]* — Freehand conceptual sketch labeled "Supercruise lightweight fighter,"
@@ -247,11 +250,18 @@ engines/inlet ducts, fuel tanks, cockpit, major avionics), with enough cross-sec
 verify everything fits [Raymer, p. 19–20]. On a drafting table this is drawn at a convenient scale
 (1/10, 1/20, 1/40, 1/100); on CAD it's normally done full-scale numerically [Raymer, p. 21].
 
-### Fig. 2.6 — [initial three-view design layout]
-*[Raymer, Fig. 2.6, p. 20]* — Detailed three-view (plan/side/front) layout drawing with internal
-component cross-sections. OCR could not recover a caption line or aircraft type for this figure
-(page text is mostly rendering-garbled). Illustrative layout drawing, no plotted data. `[verify p.
-20 — figure caption/aircraft identity not recoverable from OCR text layer]`
+### Fig. 2.6 — Configuration layout
+*[Raymer, Fig. 2.6, p. 21]* — Detailed three-view (plan/side/front) layout drawing with internal
+component cross-sections and hand-lettered notes. Illustrative layout drawing, no plotted data.
+
+✓ Resolved 2026-08-18 against a 320-dpi render. Three fixes: the figure is on book **p. 21**, not
+p. 20 (p. 20 carries Fig. 2.5, "Initial sketch"); the printed caption is simply **"Configuration
+layout."**; and the drawing carries **no aircraft type name** — so there is nothing to recover, and
+the earlier `[verify]` flag was chasing a label the book never prints. The subject is a twin-boom,
+canard, single-pusher-propeller design; its legible notes read "COMPOSITE WING BOX", "CONSTANT CROSS
+SECTION", "CONSTANT CHORD WING AND CANARD SWEPT FORWARD 22 deg FOR ELLIPTICAL LIFT DISTRIBUTION",
+"OUTER WING AND CANARD PANELS ARE GEOMETRICALLY IDENTICAL EXCEPT FOR SCALE", "FUEL", "3-MAN CREW"
+and "12 deg STATIC TAIL DOWN GROUND ANGLE". Stations run 0–1347 (inches).
 
 This initial layout is analyzed to check whether it can really fly the mission implied by the
 first-order sizing: actual aerodynamics, weights, and installed propulsion characteristics feed a

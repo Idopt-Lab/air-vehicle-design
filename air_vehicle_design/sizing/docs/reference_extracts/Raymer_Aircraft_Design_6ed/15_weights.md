@@ -117,26 +117,39 @@ at 90 lb by a later, more detailed method would be suspicious against a ≈2.5 l
 thumb).
 
 ### Table 15.2 — Approximate Empty Weight Buildup
-*[Raymer, Table 15.2, p. 568]* — Weight ratios/multipliers and approximate c.g. location by aircraft
-class (General Aviation, Fighters, Transport & Bomber):
+*[Raymer, Table 15.2, p. 568]* — the printed column order is **Fighters, Transport & Bomber,
+General Aviation**, each with an fps and a metric sub-column. The first four rows are areal
+densities; the last four are weight ratios (note the sub-header change mid-table).
 
-| Component | GA (multiplier basis) | Fighters | Transport & Bomber | Multiplier | Approx. Location |
+| Component | Fighters lb/ft² | Fighters kg/m² | Transport & Bomber lb/ft² | T&B kg/m² | GA lb/ft² | GA kg/m² | Multiplier | Approximate Location |
+|---|---|---|---|---|---|---|---|---|
+| Wing | 9 | 44 | 10 | 49 | 2.5 | 12 | `S_exposed planform` | 40% MAC |
+| Horizontal tail | 4 | 20 | 5.5 | 27 | 2 | 10 | `S_exposed planform` | 40% MAC |
+| Vertical tail | 5.3 | 26 | 5.5 | 27 | 2 | 10 | `S_exposed planform` | 40% MAC |
+| Fuselage | 4.8 | 23 | 5 | 24 | 1.4 | 7 | `S_wetted area` | 40–50% length |
+
+| Component (**Weight Ratio**) | Fighters | Transport & Bomber | General Aviation | Multiplier | Approximate Location |
 |---|---|---|---|---|---|
-| Wing | 2.5 lb/ft² | 9 lb/ft² | 10 lb/ft² | Sexposed planform | 40% MAC |
-| Horizontal tail | 2 lb/ft² | 4 lb/ft² | 5.3 lb/ft² | Sexposed planform | 40% MAC |
-| Vertical tail | 2 lb/ft² | 4.8 lb/ft² | 4.8-5.5 lb/ft² | Sexposed planform | 40% MAC |
-| Fuselage | 1.4 lb/ft² | 2.5-5.5 lb/ft² | ~5-7 lb/ft² | Swetted area | 40-50% length |
-| Landing gear* | 0.057 W0 | 0.033 W0 | 0.043 W0 | TOGW | centroid |
-| Landing gear — Navy | — | 0.045 W0 | — | TOGW | centroid |
-| Installed engine | 1.4× | 1.3× | 1.3× | Engine weight | centroid |
-| "All-else empty" | 0.1 W0 | 0.17 W0 | 0.17-0.27 W0 | TOGW | 40-50% length |
+| Landing gear* | 0.033 | 0.043 | 0.057 | TOGW | centroid |
+| Landing gear — Navy | 0.045 | — | — | TOGW | centroid |
+| Installed engine | 1.3 | 1.3 | 1.4 | Engine weight | centroid |
+| "All-else empty" | 0.17 | 0.17 | 0.1 | TOGW | 40–50% length |
 
-*15% to nose gear, 85% to main gear; reduce gear weight by 0.014·W0 if fixed gear.* `[verify pp.
-567-568]` — this table's OCR is significantly column-scrambled (as with several Chapter 14 tables);
-the reconstruction above groups plausible values per column/class from the raw digit stream and cross
--checks against the general shape of commonly published versions of this table, but individual cell
-placement (especially the Transport & Bomber column, and whether some values belong to Fighters vs.
-Transport rows) should be re-verified against the printed page before precision use.
+\*15% to nose gear, 85% to main gear; reduce gear weight by 0.014·`W_0` if fixed gear.
+
+> **Corrected 2026-08-17** against a 380-dpi render of book p. 568. The earlier transcription had
+> the **column order reversed** (it led with General Aviation and labelled the remaining two
+> columns Fighters and Transport, which put nearly every value under the wrong class), and it
+> invented two ranges that the book does not print:
+> - Landing gear reads **Fighters 0.033, Transport 0.043, GA 0.057** — the earlier table had these
+>   as GA 0.057, Fighters 0.033, Transport 0.043, i.e. rotated by one class.
+> - Vertical tail is **5.3 (Fighters), 5.5 (T&B), 2 (GA)**; the earlier "4.8" and "4.8–5.5" do not
+>   appear in that row at all (4.8 is the *Fuselage* Fighters value).
+> - Fuselage is **4.8 / 5 / 1.4**; the earlier "2.5–5.5" and "~5–7" ranges were invented.
+> - "All-else empty" is **0.17 / 0.17 / 0.1**; the earlier "0.17–0.27" was invented.
+>
+> The metric (kg/m²) sub-columns were absent entirely and are now included. The `[verify pp.
+> 567-568]` flag is cleared.
 
 ### Fig 15.2 — Weight budget
 *[Raymer, Fig. 15.2, p. 569]* — Horizontal bar chart, `W/W0` (0-0.15) for a sample new general
@@ -168,39 +181,52 @@ first edition).
 ### Table 15.3 — Miscellaneous Weights (Approximate)
 *[Raymer, Table 15.3, p. 571]*
 
-| Component | Weight (lb) |
-|---|---|
-| Harpoon (AGM-84) missile | 1200 |
-| Phoenix (AIM-54A) missile | 1000 |
-| Sparrow (AIM-7) missile | 500 |
-| Sidewinder (AIM-9) missile | 200 |
-| Pylon and launcher | 0.12·W_missile |
-| M61 gun | 250 |
-| Gun (general) | 550 |
-| 940 rds ammunition | 190 |
-| Commercial passenger (incl. carry-on) | 180-190* |
-| Seats — flight deck | 60 |
-| Seats — passenger | 32 |
-| Seats — troop | 11 |
-| Instruments (altimeter, airspeed, accelerometer, ROC, clock, compass, turn & bank, Mach, tach, manifold pressure, etc.) | 1-2 each |
-| Gyro horizon, directional gyro | 4-6 each |
-| Heads-up display | 40 |
-| Lavatories — long-range aircraft | 1.11·Npax^1.11* [form: coefficient·N^exp, printed as "1.11 Npax"-style] |
-| Lavatories — short-range aircraft | 0.31·N^... (smaller coefficient) |
-| Lavatories — business/executive | 3.90·N^... |
-| Arresting gear — Air Force | 0.002·Wdg |
-| Arresting gear — Navy | 0.008·Wdg |
-| Catapult gear — Navy carrier-based | 0.003·Wdg |
-| Folding wing — Navy carrier-based | 0.06·W_wing |
+| Component | Weight, lb | Weight, kg* |
+|---|---|---|
+| **Missiles** | | |
+| &nbsp;&nbsp;Harpoon (AGM-84) | 1200 | 544 |
+| &nbsp;&nbsp;Phoenix (AIM-54 A) | 1000 | 454 |
+| &nbsp;&nbsp;Sparrow (AIM-7) | 500 | 227 |
+| &nbsp;&nbsp;Sidewinder (AIM-9) | 200 | 91 |
+| &nbsp;&nbsp;Pylon and launcher | 0.12·W_missile | — |
+| **M61 Gun** | | |
+| &nbsp;&nbsp;Gun | 250 | 113 |
+| &nbsp;&nbsp;940 rds ammunition | 550 | 250 |
+| Commercial aircraft passenger (includes carry-on) | 190 | 86 |
+| **Seats** | | |
+| &nbsp;&nbsp;Flight deck | 60 | 27 |
+| &nbsp;&nbsp;Passenger | 32 | 15 |
+| &nbsp;&nbsp;Troop | 11 | 5 |
+| **Instruments** | | |
+| &nbsp;&nbsp;Altimeter, airspeed, accelerometer, rate of climb, clock, compass, turn & bank, Mach, tachometer, manifold pressure, etc. | 1–2 each | 0.5–1 |
+| &nbsp;&nbsp;Gyro horizon, directional gyro | 4–6 each | 2–3 |
+| &nbsp;&nbsp;Heads-up display | 40 | 18 |
+| **Lavatories** | | |
+| &nbsp;&nbsp;Long-range aircraft | 1.11·N_Pass^1.33 | 0.5·N_Pass^1.33 |
+| &nbsp;&nbsp;Short-range aircraft | 0.31·N_Pass^1.33 | 0.14·N_Pass^1.33 |
+| &nbsp;&nbsp;Business/executive aircraft | 3.90·N_Pass^1.33 | 1.76·N_Pass^1.33 |
+| **Arresting gear** | | |
+| &nbsp;&nbsp;Air Force-type | 0.002·W_dg | — |
+| &nbsp;&nbsp;Navy-type | 0.008·W_dg | — |
+| **Catapult gear** | | |
+| &nbsp;&nbsp;Navy carrier-based | 0.003·W_dg | — |
+| **Folding wing** | | |
+| &nbsp;&nbsp;Navy carrier-based | 0.06·W_wing | — |
 
-*[verify p. 571]* — this table's OCR (like Table 15.2) suffered severe column/row scrambling,
-especially in the lavatory-weight-formula row (printed fragments `1.11 N√a?`, `0.31 N√a?`, `3.90 N√a?`
-did not resolve to a clean formula) and the "commercial aircraft passenger" weight (a single value,
-not two). Do **not** use the lavatory-row entries above as authoritative — they are placeholders
-reflecting the unresolved OCR; consult the printed page directly for these specific rows before any
-implementation. The missile weights, gun/ammunition weights, seat weights, instrument weights, and
-arresting-gear/catapult/folding-wing `Wdg`-fraction rows are higher-confidence (cleaner OCR, consistent
-digit runs) and can be used with normal caution.
+*Mass equivalent of weight.
+
+> **Corrected 2026-08-17** against a 340-dpi render of book p. 571. The earlier transcription had
+> three substantive defects, all now fixed:
+> - **The M61 Gun block was scrambled.** "M61 Gun" is a *group heading*, not a 250-lb line item.
+>   Under it, the gun is 250 lb and **940 rds of ammunition is 550 lb**. The earlier table listed
+>   ammunition as 190 lb — which is actually the *commercial passenger* weight from the next row —
+>   and invented a "Gun (general) 550" row that does not exist.
+> - **Commercial aircraft passenger is a single value, 190 lb {86 kg}**, not the range "180–190".
+> - **The lavatory exponent is 1.33, not 1.11**, in all three rows. (1.11 is the long-range
+>   *coefficient*; the earlier entry had duplicated it into the exponent slot.)
+>
+> The kg column was absent from the earlier transcription entirely and is now included. The
+> `[verify p. 571]` flag is cleared — every cell above was read directly off the page image.
 
 ## §15.3 Statistical Weight Equations
 
@@ -217,7 +243,7 @@ Wwing = 0.0103·Kdw·Kvs·(Wdg·Nz)^0.5·Sw^0.622·A^0.785·(t/c)root^-0.4
 Whorizontal_tail = 3.316·(1+Fw/Bh)^-2.0·((Wdg·Nz)/1000)^0.260·Sht^0.806  (15.2)
 
 Wvertical_tail = 0.452·Krht·(1+Ht/Hv)^0.5·(Wdg·Nz)^0.488·Svt^0.718·M^0.341
-                 · Lt^-1.0·(1+Sr/Svt)^0.348·A^0.223
+                 · Lt^-1.0·(1+Sr/Svt)^0.348·Avt^0.223
                  · (1+λ)^0.25·(cosΛvt)^-0.323                            (15.3)
 
 Wfuselage = 0.499·Kdwf·Wdg^0.35·Nz^0.25·L^0.5·D^0.849·W^0.685            (15.4)
@@ -266,13 +292,38 @@ Wair_conditioning_and_anti-ice = 201.6·[(Wuav+200·Nc)/1000]^0.735        (15.2
 
 Whandling_gear = 3.2×10^-4·Wdg                                          (15.24)
 ```
-*[Raymer, Eqs. (15.1)-(15.24), pp. 572-573]* — Fig. 15.3 (inlet duct geometry: split-duct sketch,
-`Kd=2.75` callout, inlet-front-face labeling) supplies `Kd`/`Ls` for Eq. (15.10).
+*[Raymer, Eqs. (15.1)-(15.24), pp. 572-573]* — Fig. 15.3 supplies `Kd`/`Ls` for Eq. (15.10).
 
-### Fig 15.3 — Inlet duct geometry
-*[Raymer, Fig. 15.3, p. 574]* — Split-duct inlet sketch: duct length `Ls` (single duct), engine
-front face, `Kd = 2.75` callout for a split-duct configuration. No further plotted numeric data
-(definitional diagram for Eq. 15.10's `Kd`/`Ls` inputs).
+> **Note on Eq. (15.1), the `(t/c)root` exponent — a probable misprint in the 6th edition.**
+> A 600-dpi render of book p. 572 shows the term printed as `(t/c)root` with **no exponent**,
+> i.e. `... A^0.785 (t/c)root × (1+λ)^0.05 ...`. That reading cannot be right: taken literally, a
+> thinner wing would come out *lighter* (a root `t/c` of 0.04 would multiply the wing weight by
+> 0.04), which inverts the physics the equation exists to capture. The standard and dimensionally
+> sensible form of this equation, used in the other editions and in every secondary source, is
+> `(t/c)root^-0.4`. This file records **`^-0.4`**, and the project's `WeightsL3.wing` uses
+> `tc_root.^(-0.4)` — both are correct. Do not "fix" either to match the printed page.
+
+### Fig 15.3 — Inlet duct geometry and duct-shape factor `Kd`
+*[Raymer, Fig. 15.3, p. 574]* — Supplies the `Kd` (duct shape factor) and `Ls` (single-duct
+length) inputs to Eq. (15.10). The figure gives `Kd` for four inlet-duct cross-section shapes,
+plus a split-duct sketch defining `Ls` (single-duct run) against `Ld` (inlet front face to engine
+front face):
+
+| Duct cross-section shape (aspect ratio shown on the sketch) | `Kd` |
+|---|---|
+| Circular (1.0 × 1.0) | 1.0 |
+| Half-circle / D-shape, flat side | 1.31 |
+| Ellipse, 1.5 × 1.0 | 1.68 |
+| Rounded-bottom square (U-shape) | 2.2 |
+| Ellipse, 2.0 × 1.0 | 2.6 |
+| Square | 2.75 |
+| Kidney / waisted, 3.2 × 1.0 | 3.43 |
+
+*(Corrected 2026-08-17: the figure spans the full height of book p. 574 and carries **seven**
+shapes. An earlier note here listed only the four in the upper block; the 1.68, 2.6 and 3.43
+shapes in the lower block were missed. `Kd` rises with duct flatness/elongation.)*
+
+Per Eq. (15.10)'s accompanying text, if `Ls/Ld` is less than 0.25, use 0.25 for that ratio.
 
 ### §15.3.2 Cargo/Transport Weights (British Units, Results in Pounds)
 
@@ -285,57 +336,76 @@ Whorizontal_tail = 0.0379·Kuht·(1+Fw/Bh)^-0.25·Wdg^0.639·Nz^0.10
                    · A^0.166·(1+Se/Sht)^0.1                             (15.26)
 
 Wvertical_tail = 0.0026·(1+Ht/Hv)^0.225·Wdg^0.556·Nz^0.536·Lt^-0.5
-                 · Sw^0.5·Kz^0.875·(cosΛvt)^-1·A^0.35·(t/c)root^-0.5     (15.27)
+                 · Svt^0.5·Kz^0.875·(cosΛvt)^-1·Av^0.35·(t/c)root^-0.5   (15.27)
 
 Wfuselage = 0.3280·Kdoor·KLg·(Wdg·Nz)^0.5·L^0.25·Sf^0.302
-            · (1+Kws)^0.4·(L/D)^0.10                                    (15.28)
-   [Kws = 0.75·((1+2λ)/(1+λ))·(Bw/L)·tanΛ]
+            · (1+Kws)^0.04·(L/D)^0.10                                   (15.28)
+   [Kws = 0.75·((1+2λ)/(1+λ))·(Bw/L)·tanΛ — corrects for the effect of wing
+    geometry, especially sweep, on fuselage weight]
 
 Wmain_landing_gear = 0.0106·Kmp·Wl^0.888·Nl^0.25·Lm^0.4·Nmw^0.321
                      · Nmss^-0.5·Vstall^0.1                             (15.29)
 
 Wnose_landing_gear = 0.032·Knp·Wl^0.646·Nl^0.2·Ln^0.5·Nnw^0.45           (15.30)
+
+Wnacelle_group = 0.6724·Kng·NLt^0.10·Nw^0.294·Nz^0.119·Wec^0.611
+                 · Nen^0.984·Sn^0.224                                    (15.31)
    (includes air induction and pylon)
 
-Wengine_controls = 5.0·Nen + 0.80·Lec·Nen                                (15.31)
+Wengine_controls = 5.0·Nen + 0.80·Lec                                    (15.32)
 
-Wstarter_pneumatic = 49.19·[(Nen·We/1000)]^0.541                        (15.32)
-   [as printed: 49.19·(AT·We/1000)^0.541 — see verify note]
+Wstarter_pneumatic = 49.19·((Nen·Wen)/1000)^0.541                       (15.33)
 
-Wfuel_system = 2.405·Vt^0.606·(1+Vi/Vt)^-1.0·(1+Vp/Vt)·Nt^0.5            (15.33)
+Wfuel_system = 2.405·Vt^0.606·(1+Vi/Vt)^-1.0·(1+Vp/Vt)·Nt^0.5            (15.34)
 
-Wflight_controls = 145.9·Nf^0.554·(1+Nm/Nf)^-1.0·Scs^0.20·(Iyaw×10^-6)^0.07  (15.34)
+Wflight_controls = 145.9·Nf^0.554·(1+Nm/Nf)^-1.0
+                   · Scs^0.20·(Iyaw×10^-6)^0.07                          (15.35)
 
-WAPU_installed = 2.2·WAPU_uninstalled                                    (15.35)
+WAPU_installed = 2.2·WAPU_uninstalled                                    (15.36)
 
-Winstruments = 4.509·Kr·Ktp·Nc^2.541·Neng^0.5·(Lf+Bw)^0.5               (15.36)
+Winstruments = 4.509·Kr·Ktp·Nc^0.541·Nen·(Lf+Bw)^0.5                    (15.37)
 
-Whydraulics = 0.2673·Nf·(Lf+Bw)^0.937                                    (15.37)
+Whydraulics = 0.2673·Nf·(Lf+Bw)^0.937                                    (15.38)
 
-Welectrical = 7.291·Rkva^0.782·La^0.346·Ngen^0.10                       (15.38)
+Welectrical = 7.291·Rkva^0.782·La^0.346·Ngen^0.10                       (15.39)
 
-Wavionics = 1.73·Wuav^0.983                                             (15.39)
+Wavionics = 1.73·Wuav^0.983                                             (15.40)
 
-Wfurnishings = 0.0577·Nc^0.1·Wc^0.393·Vpr^0.75                          (15.40)
+Wfurnishings = 0.0577·Nc^0.1·Wc^0.393·Sf^0.75                           (15.41)
    (does not include cargo handling gear or seats)
 
-Wair_conditioning = 62.36·Nc^0.25·(Vpr/1000)^0.604·Wuav^0.10             (15.41)
+Wair_conditioning = 62.36·Np^0.25·(Vpr/1000)^0.604·Wuav^0.10             (15.42)
 
-Wanti-ice = 0.002·Wdg                                                   (15.42)
+Wanti-ice = 0.002·Wdg                                                   (15.43)
 
-Whandling_gear = 3.0×10^-4·Wdg                                          (15.43)
+Whandling_gear = 3.0×10^-4·Wdg                                          (15.44)
 
-Wmilitary_cargo_handling_system = 2.4×(cargo floor area, ft²)            (15.44)
+Wmilitary_cargo_handling_system = 2.4×(cargo floor area, ft²)            (15.45)
 ```
-*[Raymer, Eqs. (15.25)-(15.44), pp. 574-575]* `[verify pp. 574-575]` — the cargo/transport equation
-set's OCR is noticeably rougher than the fighter/attack set rendered from page images above; several
-exponents (particularly Eq. 15.27's `Kz^0.875`/`(t/c)root^-0.5` tail, Eq. 15.29's landing-gear
-exponent grouping, Eq. 15.32's starter-weight bracketed argument, and Eq. 15.36/15.38's electrical/
-instrument groupings) are transcribed as best-effort reconstructions from a single non-re-rendered OCR
-pass and were **not** cross-checked against page images (time did not permit rendering pp. 574-575 at
-the same fidelity as the fighter/attack pages) — flag these for a follow-up verification pass before
-relying on them for load-critical MATLAB implementation; this is lower project priority since the
-repo's active weights work targets the F-16A (fighter/attack) class.
+*[Raymer, Eqs. (15.25)-(15.45), pp. 574-575]*
+
+> **Corrected 2026-08-17** against 340–520 dpi renders of book pp. 574–575. The earlier
+> transcription was a single un-rendered OCR pass and carried several defects:
+> - **The set runs to Eq. (15.45), not (15.44), and the numbering was shifted by one from Eq.
+>   (15.31) onward** — the **nacelle group** equation (15.31) had been omitted entirely, and its
+>   "(includes air induction and pylon)" note was left stranded on the nose-landing-gear equation.
+>   Every subsequent equation number was therefore one low.
+> - Eq. (15.27): `Sw^0.5` → **`Svt^0.5`** (vertical-tail area, not wing area) and `A^0.35` →
+>   **`Av^0.35`** (vertical-tail aspect ratio).
+> - Eq. (15.28): `(1+Kws)^0.4` → **`^0.04`**.
+> - Eq. (15.32) engine controls: `5.0·Nen + 0.80·Lec·Nen` → **`5.0·Nen + 0.80·Lec`** (no second
+>   `Nen`).
+> - Eq. (15.33) starter: the bracketed argument is **`(Nen·Wen)/1000`**; the earlier note's
+>   speculative "`AT·We`" reading is wrong.
+> - Eq. (15.37) instruments: `Nc^2.541` → **`Nc^0.541`** (a 2-vs-0 OCR slip that inflated the
+>   exponent by five-fold), and `Neng^0.5` → **`Nen`** (first power, no exponent).
+> - Eq. (15.41) furnishings: `Vpr^0.75` → **`Sf^0.75`** (fuselage wetted area, not pressurized
+>   volume).
+> - Eq. (15.42) air conditioning: `Nc^0.25` → **`Np^0.25`** (number of personnel).
+>
+> Note that **Eq. (15.25) prints `(t/c)root^-0.4` explicitly**, which independently corroborates
+> that the missing exponent on the same term in Eq. (15.1) is a printing error — see the note under
+> the fighter/attack equation block above. The `[verify pp. 574-575]` flag is cleared.
 
 ### §15.3.3 General Aviation Weights (British Units, Results in Pounds)
 
@@ -552,10 +622,12 @@ Every fighter/attack-equation `[verify]` flag carried by the project's prior `ra
 (its lines ~117-145) was checked directly against 300-dpi renders of the printed pages (pp. 572-573)
 during this extraction. Results:
 
-- **Eq. 15.1 (Wing)**: `(1+λ)^0.05·(cosΛ)^-1.0·Scsw^0.04` — **CONFIRMED** exactly as flagged. (The
-  `(t/c)root` exponent, `-0.4`, was not fully legible at the line-wrap in the rendered image but is
-  stated here at high confidence, matching the well-documented published form of this equation;
-  flagged `[verify p. 572]` for a final visual confirmation if exactness is critical.)
+- **Eq. 15.1 (Wing)**: `(1+λ)^0.05·(cosΛ)^-1.0·Scsw^0.04` — **CONFIRMED** exactly as flagged.
+  The `(t/c)root` exponent was re-checked on 2026-08-17 at 600 dpi and the earlier hedge is now
+  settled, though not in the direction expected: **the 6th edition prints `(t/c)root` with no
+  exponent at all.** That printing is a misprint — taken literally it makes a thinner wing lighter,
+  inverting the physics — so this file records the standard `-0.4`, which is also what
+  `WeightsL3.wing` uses. See the note under the equation block. No `[verify]` remains.
 - **Eq. 15.2 (Horizontal tail)**: `W = 3.316·(1+Fw/Bh)^-2.0·((Wdg·Nz)/1000)^0.260·Sht^0.806` —
   **CONFIRMED** exactly as flagged.
 - **Eq. 15.3 (Vertical tail)**: **CORRECTED**. The old extract's tentative `(cosΛvt)^(-1.0)` is
