@@ -15,90 +15,17 @@ classdef GeomL3
 
     methods (Static)
 
-        % ================================================================== %
-        % HIGH-LEVEL: take the object, return the result. Each selects a reused
-        % GeomL2 low-level static — no new formula here. get_Amax is the
-        % exception: it assembles the area-ruling statics further down.
-        % ================================================================== %
-
-        % TODO (8/14/2026): Again, this wrapper isn't necessary. I expect the students/users to piece their
-        % design's necessary functions together themselves. Having this wrapper implicitly enforces certain design
-        % characteristics, when we must remain agnostic to design features. The individual components are fine.
-        function val = get_S_wet(obj)
-            val = GeomL3.get_S_wet_wing(obj) + GeomL3.get_S_wet_HT(obj) + ...
-                  GeomL3.get_S_wet_VT(obj)   + GeomL3.get_S_wet_fuselage(obj) + ...
-                  GeomL3.get_S_wet_duct(obj);
-        end
-
-        function val = get_S_wet_wing(obj)
-        %GET_S_WET_WING  Wing wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
-        %   The wing is modelled uniform-t/c, so Eq. 12.1 degenerates to its
-        %   equal-t/c special case here.
-            val = GeomL2.compute_roskam_planform(obj.S_exposed_wing, ...
-                      obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
-        end
-
-        function val = get_S_wet_HT(obj)
-        %GET_S_WET_HT  Horizontal-tail wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
-        %   Fed the T.O. 1F-16A-1 Sec. I biconvex root/tip t/c splits.
-            val = GeomL2.compute_roskam_planform(obj.S_exposed_ht, ...
-                      obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
-        end
-
-        function val = get_S_wet_VT(obj)
-        %GET_S_WET_VT  Vertical-tail wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
-        %   Fed the T.O. 1F-16A-1 Sec. I biconvex root/tip t/c splits.
-            val = GeomL2.compute_roskam_planform(obj.S_exposed_vt, ...
-                      obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);
-        end
-
-        function val = get_S_wet_fuselage(obj)
-        %GET_S_WET_FUSELAGE  Fuselage wetted area [ft^2].  [Roskam Vol. II Eq. 12.3]
-        %   D_fus is the equivalent diameter (W+H)/2, not the max depth.
-            val = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);
-        end
-
-        function val = get_S_wet_duct(obj)
-        %GET_S_WET_DUCT  Inlet + duct wetted area [ft^2].  [Raymer 6th ed. Sec. 7.3]
-        %   D_inlet == D_exit here, so the frustum degenerates to a cylinder.
-            val = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct);
-        end
-
-        function val = get_S_exposed_wing(obj)
-        %GET_S_EXPOSED_WING  Wing exposed area [ft^2] (passthrough; the
-        %   Dependent getter does the compute).
-            val = obj.S_exposed_wing;
-        end
-
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        % TODO (7/28/2026): This seems too specific in this form. I like the idea of having conic/cross sections, but it should be generic.
-        % Cross sections that the toolbox can focus on: fuselage & main wings.
-        function val = get_Amax(obj)
-            % Max cross-sectional area of the whole aircraft (fuselage + wings).
-            [x, w, h] = GeomL3.denormalize_frames(obj.frames_normalized, ...
-                            obj.L_fus, obj.W_max_fuselage, obj.H_max_fuselage);
-
-            A_fuse = GeomL3.compute_frame_cs_area(w, h);
-
-            A_wing = GeomL3.compute_surface_cs_area(x, obj.Xexp_wing, ...
-                         obj.c_exp_root_wing, obj.c_tip_wing, ...
-                         obj.G_hs_exp_wing, obj.LE_sweep_wing, obj.tc_wing);
-
-            A_HT   = GeomL3.compute_surface_cs_area(x, obj.Xexp_ht, ...
-                         obj.c_exp_root_ht, obj.c_tip_ht, ...
-                         obj.G_hs_exp_ht, obj.LE_sweep_ht, obj.tc_ht);
-
-            A_VT   = GeomL3.compute_surface_cs_area(x, obj.Xexp_vt, ...
-                         obj.c_exp_root_vt, obj.c_tip_vt, ...
-                         obj.G_hs_exp_vt, obj.LE_sweep_vt, obj.tc_vt);
-
-            A_nac  = GeomL3.compute_nacelle_cs_area(x, obj.n_engines, ...
-                         obj.D_inlet, obj.x_inlet, obj.x_nacelle_aft);
-
-            val = GeomL3.compute_Amax_area_ruled( ...
-                      A_fuse + A_wing + A_HT + A_VT + A_nac, ...
-                      obj.n_engines, obj.D_inlet);
-        end
+        % REMOVED 2026-08-19 -> examples/F16A/models/disciplines/geom/F16GeomL3.m
+        % Mod (08/19/2026) (Claude)
+        %   get_Amax(obj) moved to the F-16 example, Casey's decision. It took a
+        %   design object and read about 20 fields, so it broke the toolbox rule.
+        %   The equation is unchanged, so Amax still reads 24.7036516658 ft^2.
+        %   Its helpers stay here. Its TODOs, verbatim:
+        %     % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+        %     % TODO (7/28/2026): This seems too specific in this form. I like the idea of having conic/cross sections, but it should be generic.
+        %     % Cross sections that the toolbox can focus on: fuselage & main wings.
+        %     % TODO (8/19/2026): This seems too high-fidelity to be in L2.
+        %   The first TODO is now done.
 
         % ================================================================== %
         % LOW-LEVEL: pure math on scalars/vectors, no object. These area-ruled
@@ -106,16 +33,13 @@ classdef GeomL3
         % other equation is reused from GeomL2 / GeometryBase.
         % ================================================================== %
 
-        % TODO (8/14/2026): We should have individual "compute" functions that compute
-        % the wetted areas of generic shapes of arbitrary dimensions.
-        % Decompose this into functions that compute the wetted/surface areas of these shapes. Syntax: Shape(arguments/dimensions)
-        % Cone(radius, length)
-        % Pyramid(face_side_length1, face_side_length2, face_side_length3, face_side_length4, height)
-        % Sphere(radius)
-        % Cylinder(radius, length)
-        % Oval(width, height, length)
-        % Note: The difference between this and L3 is that L3 SHOULD/WILL be more focused on cross-section and stations.
+        % Mod (08/19/2026) (Claude) -- the uncited flag is withdrawn. This is unit
+        %   scaling: a fraction times a reference length gives a length. No
+        %   citation needed. One assumption to know: the shape stretches affinely,
+        %   so the normalized table must stay valid at a new fuselage size.
         function [x, w, h] = denormalize_frames(frames_normalized, L_fus, W_max, H_max)
+        %DENORMALIZE_FRAMES  Station table [ft] from a normalized table.
+        %   Columns are x/L, w/W_max, h/H_max.
             arguments
                 frames_normalized (:,3) double
                 L_fus             (1,1) double {mustBePositive}
@@ -127,7 +51,18 @@ classdef GeomL3
             h = frames_normalized(:,3) * H_max;
         end
 
+        % Mod (08/19/2026) (Claude) -- the math is generic, the SHAPE is not.
+        %   Integrating cos(pi/2*t) over the quarter outline gives exactly
+        %   A = (2/pi)*w*h. So the arithmetic needs no citation, but the cosine
+        %   cross-section does: it is Brandt's model. An ellipse would give
+        %   (pi/4)*w*h, so the cosine section is about 19 % smaller.
+        %   [Brandt F-16A.xls, Geom frame model]
+        %   _TODO -- I_cos = 0.63137515 is Brandt's 6-point trapezoid of the same
+        %   integral. The exact value is 2/pi = 0.63661977, so every frame area
+        %   reads 0.82 % low. compute_frame_cs_area_exact below holds the exact
+        %   form and has NO CONSUMER. Pick one at the next Amax review.
         function A = compute_frame_cs_area(w, h)
+        %COMPUTE_FRAME_CS_AREA  Cross-section area [ft^2] of one cosine frame.
             arguments
                 w (:,1) double {mustBeNonnegative}
                 h (:,1) double {mustBeNonnegative}
@@ -138,6 +73,8 @@ classdef GeomL3
             A     = w .* h * I_cos;
         end
 
+        % _TODO (08/19/2026) (Claude) -- NO CONSUMER. The exact 2/pi form. See
+        %   the note on compute_frame_cs_area above.
         function A = compute_frame_cs_area_exact(w, h)
             arguments
                 w (:,1) double {mustBeNonnegative}
@@ -172,6 +109,14 @@ classdef GeomL3
         %
         %   TODO: the cosine area-distribution model is Brandt's own
         %   construction with no textbook source in this repo (todo.md Phase 2).
+        %   Mod (08/19/2026) (Claude) -- searched for a substitute. None exists.
+        %   Two parts, and only one needs a source:
+        %     y_span = min(G_hs_exp, (x-Xexp)/tan_sweep) is plain planform
+        %       geometry, so it needs no citation.
+        %     (1 - cos(2*pi*xi)) is a shaping function, not geometry. Raymer
+        %       Fig. 7.38, p. 207 wants a station-area table, but he expects the
+        %       designer to MEASURE each area off the layout. He gives no formula
+        %       for a lifting surface. So this factor stays Brandt's.
             arguments
                 x            (:,1) double
                 Xexp         (1,1) double
@@ -196,8 +141,19 @@ classdef GeomL3
                         .* (1 - cos(2*pi*xi(active))) / DIVISOR;
         end
 
-        % TODO (8/14/2026): Unsourced.
+        % TODO (8/14/2026): Unsourced/uncited.
+        % Mod (08/19/2026) (Claude) -- the source is Brandt, as Casey thought:
+        %   4.5 * 3.5370 = 15.9166 ft [Brandt F-16A.xls, Geom!D475]. It is a
+        %   fineness-ratio rule of thumb, not a textbook equation.
+        % Mod (08/19/2026) (Claude) -- SUPERSEDED, NO CONSUMER. Casey chose
+        %   Raymer's statistical form, which already sits in the propulsion
+        %   toolbox: PropL2.engine_length_AB(T, M) = 0.255*T^0.4*M^0.2
+        %   [Raymer 6th ed. Eq. 10.11]. F16GeomL3.get.L_engine now calls that.
+        %   Eq. 10.1 (L = L_nominal*SF^0.4) was the other option; it needs a
+        %   nominal engine's length and thrust, which this repo does not hold.
+        %   This function stays as the record of Brandt's value, 15.9166 ft.
         function val = compute_engine_length(D_engine)
+        %COMPUTE_ENGINE_LENGTH  Engine length [ft] at a fixed fineness ratio.
             arguments
                 D_engine (1,1) double {mustBePositive}
             end
@@ -230,6 +186,120 @@ classdef GeomL3
             val = max(A_total_stations) ...
                   - n_engines * pi * D_engine^2 / INLET_FLOW_THROUGH_DIVISOR;
         end
+
+
+        % Mod (08/19/2026) (Claude)
+        function val = compute_s_wet_from_perimeter_curve(x, P)
+        %COMPUTE_S_WET_FROM_PERIMETER_CURVE  Wetted area [ft^2] under a perimeter curve.
+        %   [Raymer 6th ed. Fig. 7.37, p. 206; Fig. 7.4, p. 171]
+        %   x is the longitudinal station. P is the cross-section perimeter at
+        %   each station. The area under the curve is the wetted area.
+        %   Raymer uses it for any component: fuselage, wing, tail, canopy,
+        %   nacelle. It holds no shape model, so the caller supplies P from
+        %   whatever cross-section it has.
+        %   Leave joined intersections out of P. A wing-to-fuselage joint is not
+        %   wetted.
+            arguments
+                x double {mustBeVector}
+                P double {mustBeVector, mustBeNonnegative}
+            end
+            if numel(x) ~= numel(P)
+                error('GeomL3:perimeterCurveLengthMismatch', ...
+                    'x and P must be the same length; got %d and %d.', ...
+                    numel(x), numel(P));
+            end
+            val = trapz(x, P);
+        end
+
+        % Mod (08/19/2026) (Claude)
+        % Note (8/19/2026)(Casey): Moved from L2 to L3 because L3 no longer deals in simple shapes.
+        function val = compute_s_wet_from_control_stations(frame_x, frame_zchine, frame_z, frame_w, frame_h)
+        %COMPUTE_S_WET_FROM_CONTROL_STATIONS  Wetted area [ft^2] from a station table.
+        %   Inputs are per-station vectors (station x, chine z, centreline z,
+        %   width, height), one entry per station. It builds the perimeter at
+        %   each station with compute_frame_perimeter, then integrates with
+        %   compute_s_wet_from_perimeter_curve.
+        %   The leading (0, 0) station closes the nose to a point. A component
+        %   that does not close to a point needs a different first station.
+        %   F-16A value: 677.9260 ft^2 [Brandt F-16A.xls, Geom!D23].
+            arguments
+                frame_x      double {mustBeVector}
+                frame_zchine double {mustBeVector}
+                frame_z      double {mustBeVector}
+                frame_w      double {mustBeVector, mustBePositive}
+                frame_h      double {mustBeVector, mustBePositive}
+            end
+            nf = numel(frame_x);
+            if ~isequal(nf, numel(frame_zchine), numel(frame_z), numel(frame_w), numel(frame_h))
+                error('GeomL3:frameVectorLengthMismatch', ...
+                    ['frame_x/frame_zchine/frame_z/frame_w/frame_h must all be ' ...
+                     'the same length (one entry per fuselage frame); got %d, ' ...
+                     '%d, %d, %d, %d.'], nf, numel(frame_zchine), numel(frame_z), ...
+                    numel(frame_w), numel(frame_h));
+            end
+            P = zeros(1, nf);
+            for i = 1:nf
+                P(i) = GeomL3.compute_frame_perimeter(frame_w(i), frame_h(i), ...
+                           frame_zchine(i), frame_z(i));
+            end
+
+            val = GeomL3.compute_s_wet_from_perimeter_curve( ...
+                      [0, reshape(frame_x, 1, [])], [0, P]);
+        end
+
+        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+        % TODO (7/28/2026): This seems too high-fidelity to be in L2. Also, there's areference to "chines," which
+        % are design-specific, and therefore don't belong inside this toolbox.
+        % Mod (08/18/2026) (Claude) -- moved from GeomL2, unchanged. Both TODOs
+        %   are now done: this is the F-16 example, not a toolbox.
+        % Mod (08/19/2026) (Claude)
+        function P = compute_frame_perimeter(w, h, z_chine, z_center)
+        %COMPUTE_FRAME_PERIMETER  Perimeter [ft] of one station under the chine
+        %   cosine cross-section model.  [Brandt F-16A.xls, Geom frame model]
+        %   Sampled at 6 points per quarter. The left side is symmetric, so the
+        %   full perimeter is twice the right-half path length.
+        %
+        %   NO CHINE: set z_chine = z_center. Note what that gives. The outline
+        %   has y linear in t and z cosine in t, so it is NOT an ellipse. For a
+        %   round section of diameter D it returns 17.5275 against the true
+        %   pi*D = 18.8496, which is 7.01 % low. More sample points do not close
+        %   the gap: the curve converges to 17.5643, still 6.8 % low. So this
+        %   model suits a chined body. A round or oval body needs an ellipse
+        %   perimeter instead.
+        %   _TODO (08/19/2026) (Claude): the cosine section model has no textbook
+        %   source in docs/reference_extracts/. Only the integrator above is cited.
+        %   Mod (08/19/2026) (Claude) -- VECTORIZED. It takes one station or a
+        %   whole column of them, and returns one P per station. A scalar call
+        %   behaves exactly as before.
+            arguments
+                w        double {mustBePositive,  mustBeVector}
+                h        double {mustBePositive,  mustBeVector}
+                z_chine  double {mustBeVector}
+                z_center double {mustBeVector}
+            end
+            w = w(:); h = h(:); z_chine = z_chine(:); z_center = z_center(:);
+            if ~isscalar(unique([numel(w), numel(h), numel(z_chine), numel(z_center)]))
+                error('GeomL3:stationVectorLengthMismatch', ...
+                    'w, h, z_chine and z_center must be the same length; got %d, %d, %d, %d.', ...
+                    numel(w), numel(h), numel(z_chine), numel(z_center));
+            end
+            n_pts = 6;
+            z_top = z_center + h / 2;
+            z_bot = z_center - h / 2;
+
+            t    = linspace(0, 1, n_pts);          % 1 x n_pts, broadcast over rows
+            y    = (w / 2) .* t;
+            z_up = z_chine + (z_top - z_chine) .* cos(pi/2 * t);
+            z_dn = z_chine + (z_bot - z_chine) .* cos(pi/2 * t);
+
+            % Right-side path: top-center -> right-chine -> bottom-center.
+            y_path = [y,    fliplr(y(:, 1:end-1))];
+            z_path = [z_up, fliplr(z_dn(:, 1:end-1))];
+
+            ds = sqrt(diff(y_path, 1, 2).^2 + diff(z_path, 1, 2).^2);
+            P  = 2 * sum(ds, 2);   % full perimeter (left side symmetric)
+        end
+
 
     end
 end

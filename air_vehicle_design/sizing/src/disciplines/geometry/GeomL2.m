@@ -9,103 +9,51 @@ classdef GeomL2
 %   report, not the default path.
 %
 %   Companion doc: src/disciplines/geometry/GeomL2.md
+%
+%   _TODO (08/19/2026) (Claude) -- two open citation gaps at the freeze:
+%     1. Roskam Vol. II is not scraped, so Eq. 12.1 and Eq. 12.3 above are
+%        UNVERIFIED. The only Vol. II extract is a method summary, no equations.
+%     2. compute_S_exposed_horizontal and _vertical cite Brandt only. Both are
+%        plain trapezoid clipping, so a textbook pin should exist. Casey marked
+%        both "Don't touch" on 2026-08-18, so the code stays as it is.
 
     methods (Static)
-
-        % ================================================================== %
-        % HIGH-LEVEL: take the student object, return the result.
-        % ================================================================== %
-
-        % TODO (8/14/2026): This feels unnecessary for a number of reasons. Firstly, not all designs will have a tail, so implicitly enforcing this at the toolbox level
-        % is going to cause problems in the future. Secondly, how would a tailless design override the component summation? That is, how would they tell the program
-        % that their design is tailless? This wrapper should be removed. The student classes will be expected to sum their components as they see fit, and are expected
-        % to show some autonomous decision-making.
-        function val = get_S_wet(obj)
-        %GET_S_WET  Total wetted area [ft^2]: wing + HT + VT + fuselage + duct.
-        %   Takes no W_TO argument (contrast L1). The duct is included
-        %   unconditionally; a class with no duct sets D_inlet = D_exit =
-        %   L_duct = 0, which warns and gives 0 (see compute_s_wet_duct).
-            val = GeomL2.get_S_wet_wing(obj)     + GeomL2.get_S_wet_HT(obj) + ...
-                  GeomL2.get_S_wet_VT(obj)        + GeomL2.get_S_wet_fuselage(obj) + ...
-                  GeomL2.get_S_wet_duct(obj);
-        end
-
-        % TODO (8/14/2026): Don't need this wrapper.
-        function val = get_S_wet_wing(obj)
-        %GET_S_WET_WING  Wing wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
-            val = GeomL2.compute_roskam_planform(obj.S_exposed_wing, ...
-                      obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
-        end
-
-        % TODO (8/14/2026): Don't need this wrapper.
-        function val = get_S_wet_HT(obj)
-        %GET_S_WET_HT  Horizontal-tail wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
-            val = GeomL2.compute_roskam_planform(obj.S_exposed_ht, ...
-                      obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
-        end
-
-        % TODO (8/14/2026): Don't need this wrapper.
-        function val = get_S_wet_VT(obj)
-        %GET_S_WET_VT  Vertical-tail wetted area [ft^2].  [Roskam Vol. II Eq. 12.1]
-            val = GeomL2.compute_roskam_planform(obj.S_exposed_vt, ...
-                      obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);
-        end
-
-        % TODO (8/14/2026): Don't need this wrapper.
-        function val = get_S_wet_fuselage(obj)
-        %GET_S_WET_FUSELAGE  Fuselage wetted area [ft^2].  [Roskam Vol. II Eq. 12.3]
-        %   Brandt's low-fi and high-fi alternates are available as named methods.
-            val = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);
-        end
-
-        % TODO (8/14/2026): Don't need this wrapper.
-        function val = get_S_wet_duct(obj)
-        %GET_S_WET_DUCT  Inlet + duct wetted area [ft^2].  [Raymer 6th ed. Sec. 7.3]
-            val = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct);
-        end
-
-        % TODO (8/14/2026): Don't need this wrapper.
-        function val = get_S_exposed_wing(obj)
-        %GET_S_EXPOSED_WING  Wing exposed planform area [ft^2] (passthrough).
-            val = obj.S_exposed_wing;
-        end
-
-        % TODO (8/14/2026): I think the idea is fine, but we should decompose this into individual "compute" functions that compute
-        % the wetted areas of generic shapes of arbitrary dimensions.
-        % Decompose this into functions that compute the wetted/surface areas of these shapes. Syntax: Shape(arguments/dimensions)
-        % Cone(radius, length)
-        % Pyramid(face_side_length1, face_side_length2, face_side_length3, face_side_length4, height)
-        % Sphere(radius)
-        % Cylinder(radius, length)
-        % Oval(width, height, length)
-        % Note: Should this idea be in L3? Yes. Don't add it here in L2.
-        function val = get_S_wet_fuselage_brandt_lowfi(obj)
-        %GET_S_WET_FUSELAGE_BRANDT_LOWFI  Brandt "1/3-cone+2/3-cylinder" fuselage
-        %   S_wet, reading obj.W_max_fuselage/H_max_fuselage/L_fuselage.
-            val = GeomL2.compute_s_wet_fus_brandt_lowfi(obj.W_max_fuselage, ...
-                      obj.H_max_fuselage, obj.L_fuselage);
-        end
 
         % ================================================================== %
         % LOW-LEVEL: pure math — take only scalars/arrays, no object access.
         % ================================================================== %
 
-        % TODO (8/14/2026): Try to find a non-Brandt version of this equation, one that
-        % estimates the wetted planform area of a lifting surface like a wing. Roskam may have something.
-        % Since Roskam has it, this Brandt form should be removed from the toolbox.
-        function val = compute_wet_planform(S_exp, tc)
-        %COMPUTE_WET_PLANFORM  Lifting-surface wetted area [ft^2], uniform t/c.
-        %   [Brandt F-16A.xls, Geom!B13]. Alternate to compute_roskam_planform.
+        % Note (8/18/2026)(Casey): This is a RAYMER equation that BRANDT uses.
+        function val = compute_S_wet_planform_raymer(S_exp, tc)
+        %COMPUTE_S_WET_PLANFORM_RAYMER  Lifting-surface wetted area [ft^2], uniform t/c.
+        %   t/c < 0.05:  S_wet = 2.003 * S_exp             [Raymer 6th ed. Eq. 7.11]
+        %   t/c >= 0.05: S_wet = S_exp*(1.977 + 0.52*t/c)  [Raymer 6th ed. Eq. 7.12]
+        %   A paper-thin surface gives 2*S_exp. Thickness raises the area.
+        %   Alternate to compute_S_wet_planform_roskam, which takes a root/tip t/c pair.
+        %
+        %   Mod (08/18/2026) (Claude)
+        %   ALL THREE F-16 SURFACES TAKE THE Eq. 7.11 BRANCH: wing t/c 0.0400,
+        %   HT 0.0475, VT 0.0415. Brandt applied the Eq. 7.12 form to all three,
+        %   outside its stated t/c > 0.05 range. So this static no longer
+        %   reproduces Brandt exactly. Expected gaps: wing +0.26%, HT +0.065%,
+        %   VT +0.22%. The comparison report names each gap.
             arguments
                 S_exp (1,1) double {mustBePositive}
                 tc    (1,1) double {mustBePositive}
             end
-            val = S_exp * (1.977 + 0.52 * tc);
+
+            if tc<0.05
+                val = 2.003*S_exp; % Raymer, 6th ed, 7.11
+            elseif tc>=0.05
+                val = S_exp * (1.977 + 0.52 * tc); % Raymer, 6th ed, 7.12
+            else
+                error("GeomL2, compute_S_wet_planform_raymer: tc not accepted.")
+            end
         end
 
         % TODO (8/14/2026): This answers my previous question.
-        function val = compute_roskam_planform(S_exp, tc_r, tc_t, lambda)
-        %COMPUTE_ROSKAM_PLANFORM  Lifting-surface wetted area [ft^2], variable
+        function val = compute_S_wet_planform_roskam(S_exp, tc_r, tc_t, lambda)
+        %COMPUTE_S_WET_PLANFORM_ROSKAM  Lifting-surface wetted area [ft^2], variable
         %   root/tip t/c.  [Roskam Vol. II Eq. 12.1]
         %   Validators guard the tc_t and (1+lambda) denominators.
             arguments
@@ -141,87 +89,28 @@ classdef GeomL2
         end
 
         % TODO (8/14/2026): Do not include Brandt in the toolbox.
-        function val = compute_s_wet_fus_brandt_lowfi(max_width, max_height, L_fuse)
-        %COMPUTE_S_WET_FUS_BRANDT_LOWFI  Fuselage wetted area [ft^2], Brandt's
-        %   "1/3-cone + 2/3-cylinder" approximation.  [Brandt F-16A.xls, Geom!B3]
-            arguments
-                max_width  (1,1) double {mustBePositive}
-                max_height (1,1) double {mustBePositive}
-                L_fuse     (1,1) double {mustBePositive}
-            end
-            D_avg = (max_width + max_height) / 2;
-            val   = (5/6) * pi * D_avg * L_fuse;
-        end
+        % ------------------------------------------------------------------ %
+        % MOVED OUT 2026-08-18 -> examples/F16A/models/disciplines/geom/
+        %                          F16GeomBrandtAlt.m
+        % Mod (08/18/2026) (Claude)
+        %   Three Brandt-only statics left this toolbox: compute_s_wet_fus_brandt_lowfi,
+        %   compute_s_wet_fus_brandt_highfi, compute_frame_perimeter. Brandt verifies
+        %   the framework; he does not supply its equations. compute_frame_perimeter
+        %   also models an F-16 "chine", which is design-specific.
+        %   Their TODOs travelled with them, verbatim. Equations unchanged, so no
+        %   number moves. Reason recorded in GeomL2.md.
+        % Mod (08/19/2026) (Claude)
+        %   Casey then moved two of the three on to the GeomL3 toolbox:
+        %   compute_s_wet_from_control_stations (renamed from
+        %   compute_s_wet_fus_brandt_highfi) and compute_frame_perimeter. The
+        %   chine stays a parameter, so a design with no chine sets z_chine =
+        %   z_center. See GeomL3.md. Only compute_s_wet_fus_brandt_lowfi is
+        %   still in the F-16 example.
+        %   The official fuselage method stays here: compute_s_wet_fus_cyl,
+        %   [Roskam Vol. II Eq. 12.3].
+        % ------------------------------------------------------------------ %
 
-        % TODO (8/14/2026): This seems way too high fidelity to be in L2.
-        function val = compute_s_wet_fus_brandt_highfi(frame_x, frame_zchine, frame_z, frame_w, frame_h)
-        %COMPUTE_S_WET_FUS_BRANDT_HIGHFI  Fuselage wetted area [ft^2] by trapezoidal
-        %   integration of per-frame perimeters.  [Brandt F-16A.xls, Geom!D23]
-        %   Inputs are per-frame vectors (station x, chine z, centreline z,
-        %   width, height), one entry per frame.
-            arguments
-                frame_x      double {mustBeVector}
-                frame_zchine double {mustBeVector}
-                frame_z      double {mustBeVector}
-                frame_w      double {mustBeVector, mustBePositive}
-                frame_h      double {mustBeVector, mustBePositive}
-            end
-            nf = numel(frame_x);
-            if ~isequal(nf, numel(frame_zchine), numel(frame_z), numel(frame_w), numel(frame_h))
-                error('GeomL2:frameVectorLengthMismatch', ...
-                    ['frame_x/frame_zchine/frame_z/frame_w/frame_h must all be ' ...
-                     'the same length (one entry per fuselage frame); got %d, ' ...
-                     '%d, %d, %d, %d.'], nf, numel(frame_zchine), numel(frame_z), ...
-                    numel(frame_w), numel(frame_h));
-            end
-            P  = zeros(1, nf);
-            for i = 1:nf
-                P(i) = GeomL2.compute_frame_perimeter(frame_w(i), frame_h(i), ...
-                           frame_zchine(i), frame_z(i));
-            end
-
-            x_all = [0, reshape(frame_x, 1, [])];
-            P_all = [0, P];
-
-            dS = zeros(1, numel(x_all) - 1);
-            for k = 1:(numel(x_all) - 1)
-                dS(k) = (P_all(k) + P_all(k+1)) / 2 * (x_all(k+1) - x_all(k));
-            end
-            val = sum(dS);
-        end
-
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        % TODO (7/28/2026): This seems too high-fidelity to be in L2. Also, there's areference to "chines," which
-        % are design-specific, and therefore don't belong inside this toolbox.
-        function P = compute_frame_perimeter(w, h, z_chine, z_center)
-        %COMPUTE_FRAME_PERIMETER  Perimeter [ft] of one fuselage frame under the
-        %   cosine cross-section model.  [Brandt F-16A.xls, Geom frame model]
-        %   Sampled at 6 points per quarter; the full perimeter is twice the
-        %   right-half path length.
-            arguments
-                w       (1,1) double {mustBePositive}
-                h       (1,1) double {mustBePositive}
-                z_chine (1,1) double
-                z_center (1,1) double
-            end
-            n_pts = 6;
-            hw    = w / 2;
-            z_top = z_center + h / 2;
-            z_bot = z_center - h / 2;
-
-            t    = linspace(0, 1, n_pts);
-            y    = t * hw;
-            z_up = z_chine + (z_top - z_chine) * cos(pi/2 * t);
-            z_dn = z_chine + (z_bot - z_chine) * cos(pi/2 * t);
-
-            % Right-side path: top-center -> right-chine -> bottom-center.
-            y_path = [y,    fliplr(y(1:end-1))];
-            z_path = [z_up, fliplr(z_dn(1:end-1))];
-
-            ds = sqrt(diff(y_path).^2 + diff(z_path).^2);
-            P  = 2 * sum(ds);   % full perimeter (left side symmetric)
-        end
-
+        % TODO (8/18/2026)(Casey): This is acceptable. Don't touch.
         function val = compute_s_wet_duct(D_inlet, D_exit, L_duct)
         %COMPUTE_S_WET_DUCT  Duct wetted area [ft^2] as a right circular frustum.
         %   [Raymer 6th ed. Sec. 7.3]. Degenerates to a cylinder when
@@ -245,6 +134,7 @@ classdef GeomL2
             val = pi * (r1 + r2) * sqrt((r2 - r1)^2 + L_duct^2);
         end
 
+        % TODO (8/18/2026)(Casey): This is acceptable. Don't touch.
         function val = compute_S_exposed_horizontal(c_root, c_tip, hs, fw)
         %COMPUTE_S_EXPOSED_HORIZONTAL  Exposed planform area [ft^2] of a mirrored
         %   horizontal surface, clipped at the fuselage HALF-WIDTH.
@@ -260,6 +150,7 @@ classdef GeomL2
             val        = (c_exp_root + c_tip)/2 * hs_exp * 2;
         end
 
+        % TODO (8/18/2026)(Casey): This is acceptable. Don't touch.
         function val = compute_S_exposed_vertical(S, AR, c_root, c_tip, fh)
         %COMPUTE_S_EXPOSED_VERTICAL  Exposed planform area [ft^2] of the vertical
         %   tail, clipped at the fuselage HALF-HEIGHT, single panel (no mirroring).
@@ -276,6 +167,57 @@ classdef GeomL2
             span_exp   = b_vt - fh;
             val        = (c_exp_root + c_tip)/2 * span_exp;
         end
+
+        % ================================================================== %
+        % PURE GEOMETRY CALCULATIONS
+        % ================================================================== %
+
+        % TODO (8/14/2026): We should have individual "compute" functions that compute
+        % the wetted areas of generic shapes of arbitrary dimensions.
+        % Decompose this into functions that compute the wetted/surface areas of these shapes. Syntax: Shape(arguments/dimensions)
+        % Cone(radius, length)
+        % Pyramid(face_side_length1, face_side_length2, face_side_length3, face_side_length4, height)
+        % Sphere(radius)
+        % Cylinder(radius, length)
+        % Oval(width, height, length)
+        % Note: The difference between this and L3 is that L3 SHOULD/WILL be more focused on cross-section and stations.
+        % Note (8/19/2026): This should go back into L2.
+
+        % _TODO (08/19/2026) (Claude) -- NO CONSUMER. Only a commented-out line in
+        %   F16GeomL3.get_design_S_wet_components names it. Both shape statics
+        %   below return the CLOSED body, so they count the attachment face. A
+        %   caller must subtract it, as Casey's own comment says.
+        function val = compute_S_wet_cylinder(r, L)
+            % Casey Chamberlain
+            % Computes the wetted area of a circular cylinder of radius "r" and length "L."
+            % Args: 
+            %   r = radius (ft)
+            %   L = length (ft)
+            % Returns:
+            %   val = wetted area (ft^2)
+
+            % Now compute the wetted area (will need to subtract area of attachment face)
+            val = 2*pi*r^2 + L*2*pi*r;
+        end
+
+        % _TODO (08/19/2026) (Claude) -- NO CONSUMER. See the note above.
+        function val = compute_S_wet_cone(r, L)
+            % Casey Chamberlain
+            % Computes the wetted area of a circular cone of 
+            % radius "r" and length "L."
+            % Args:
+            %   r = radius (ft)
+            %   L = length (ft)
+            % Returns:
+            %   val = wetted area (ft^2)
+
+            % Need slant height, "S."
+            s = sqrt(r^2 + L^2);
+
+            % Now compute the wetted area (will need to subtract area of attachment face)
+            val = pi*r^2 + pi*r*s;
+        end
+
 
     end
 end

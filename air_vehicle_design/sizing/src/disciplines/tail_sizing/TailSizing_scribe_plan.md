@@ -268,7 +268,7 @@ Because `S_exposed_ht`/`S_wet_ht`/`S_exposed_vt`/`S_wet_vt` (and downstream, aer
 weights' `obj.S_ht`/`obj.S_vt` reads for Raymer Eq. 15.2/15.3) are all `Dependent` properties on the
 `GeometryModelL2`/`GeometryModelL3` concrete classes that recompute live from `obj.S_ht`/`obj.S_vt`
 on every read (verified against `GeomL2.m`'s `compute_S_exposed_horizontal`/`compute_S_exposed_vertical`/
-`compute_roskam_planform` chain and `AeroL2.get_CD0`'s `obj.S_wet` read), the moment the caller writes
+`compute_S_wet_planform_roskam` chain and `AeroL2.get_CD0`'s `obj.S_wet` read), the moment the caller writes
 `tail_result.S_ht`/`S_vt` into the geometry object, every downstream consumer automatically reflects
 the new area. No direct call from `TailL2`/`TailL3` into `GeomL2`/`GeomL3`'s statics is needed, and
 none is implemented. This finding — worked through in the original plan's §5.2 — is what makes the

@@ -129,26 +129,44 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         S_cs           % Total control-surface area (ft²)      [INPUT]  weights' "S_cs"
     end
 
-    methods (Abstract)
-        %GET_S_WET_WING  Wing wetted area (ft²). Roskam Vol. II Eq. 12.1,
-        %   variable root/tip t/c. Brandt's uniform-t/c Geom!B13 form is a
-        %   comparison-report alternate only.
-        val = get_S_wet_wing(obj)
+    % Note (8/19/2026)(Casey): Commented out because of the concrete method function, below, which supercedes the name of the base enforcer.
+    % Sublcasses of GeometryModelL3 should now be required to have a method function called "get_design_S_wet_components." Remember to include 
+    % a documentation comment that explicitly states expectations regarding its usage.
+    % methods (Abstract)
+    %     %GET_S_WET_WING  Wing wetted area (ft²). Roskam Vol. II Eq. 12.1,
+    %     %   variable root/tip t/c. Brandt's uniform-t/c Geom!B13 form is a
+    %     %   comparison-report alternate only.
+    %     val = get_S_wet_wing(obj)
 
-        %GET_S_WET_HT  Horizontal-tail wetted area (ft²). Roskam Eq. 12.1.
-        val = get_S_wet_HT(obj)
+    %     %GET_S_WET_HT  Horizontal-tail wetted area (ft²). Roskam Eq. 12.1.
+    %     val = get_S_wet_HT(obj)
 
-        %GET_S_WET_VT  Vertical-tail wetted area (ft²). Roskam Eq. 12.1.
-        val = get_S_wet_VT(obj)
+    %     %GET_S_WET_VT  Vertical-tail wetted area (ft²). Roskam Eq. 12.1.
+    %     val = get_S_wet_VT(obj)
 
-        %GET_S_WET_FUSELAGE  Fuselage wetted area (ft²). Roskam Eq. 12.3.
-        val = get_S_wet_fuselage(obj)
+    %     %GET_S_WET_FUSELAGE  Fuselage wetted area (ft²). Roskam Eq. 12.3.
+    %     val = get_S_wet_fuselage(obj)
 
-        %GET_S_WET_DUCT  Inlet + engine-duct wetted area (ft²), frustum lateral
-        %   area [Raymer 6th ed. Sec. 7.3]. L3 aero reads it as S_wet_comp(5).
-        val = get_S_wet_duct(obj)
+    %     %GET_S_WET_DUCT  Inlet + engine-duct wetted area (ft²), frustum lateral
+    %     %   area [Raymer 6th ed. Sec. 7.3]. L3 aero reads it as S_wet_comp(5).
+    %     val = get_S_wet_duct(obj)
 
-        %GET_S_EXPOSED_WING  Wing exposed area (ft²) (passthrough).
-        val = get_S_exposed_wing(obj)
+    %     %GET_S_EXPOSED_WING  Wing exposed area (ft²) (passthrough).
+    %     val = get_S_exposed_wing(obj)
+    % end
+
+        methods
+        % See if you can merge both the fuselage and exposed wing wetted functions.
+        % TODO (8/19/2026)(Casey): Add documentation explicitly stating intended usage and expectations.
+        function val = get_S_wet(obj)
+            val = obj.get_design_S_wet_components();
+        end
+
+        % TODO (8/19/2026)(Casey): There should be a method function for the control surfaces.
+        % (Placeholder) Basically, size the mechanisms that enable control authority for your design.
+        % Wasn't "control sizing" a different discipline?
+        function val = get_control_surfaces(obj)
+            val = obj.get_design_control_mechanisms();
+        end
     end
 end

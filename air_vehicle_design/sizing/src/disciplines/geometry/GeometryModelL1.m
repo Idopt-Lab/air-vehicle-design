@@ -17,4 +17,12 @@ classdef (Abstract) GeometryModelL1 < GeometryBase
         %GET_L_FUS  Fuselage length [ft] from W_TO [lbf]. Raymer regression.
         val = get_L_fus(obj, W_TO)
     end
+
+    % This enforces that subclasses should use "get_S_wet_statistical" instead
+    % of "get_S_wet."
+    methods
+        function val = get_S_wet(obj, W_TO)
+            val = obj.get_S_wet_statistical(W_TO);
+        end
+    end
 end

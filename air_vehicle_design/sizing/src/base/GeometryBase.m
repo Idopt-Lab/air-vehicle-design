@@ -8,6 +8,31 @@ classdef (Abstract) GeometryBase < handle
 %   The GeomLN static toolboxes are NOT in this chain.
 %
 %   Companion doc: src/base/GeometryBase.md
+%
+%   REMOVED IN THIS PASS
+%   Mod (08/19/2026) (Claude)
+%   compute_nacelle_diameter(T_AB_SLS_lb) moved to the F-16 example, at
+%   examples/F16A/models/disciplines/geom/F16GeomL2.m. The equation is
+%   unchanged, so no number moves. Its TODOs travelled with it, verbatim:
+%     % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+%     % TODO: the 1900 divisor is hardcoded and silently assumes an
+%     %   afterburning engine -- Brandt uses 1900 only when T_dry ~= T_AB, and
+%     %   2000 otherwise (todo.md 2026-07-25 Phase 2 §18).
+%   Reason: the equation is Brandt's, and the divisor is an F-16 convention.
+%   Recorded in GeometryBase.md.
+%
+%   compute_Amax_elliptical(W_max, H_max) moved to the F-16 example, at
+%   examples/F16A/models/disciplines/geom/F16GeomL2.m (Casey, 2026-08-19). The
+%   equation is unchanged, so no number moves. Its TODOs travelled with it,
+%   verbatim:
+%     % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
+%     %   TODO: standard elliptical-cross-section identity with no known
+%     %   textbook equation number. Pin a citation or accept the
+%     %   standard-identity status in writing (todo.md 2026-07-25 Phase 2 §4).
+%   Reason: F16GeomL2.get.Amax is the ONLY caller in the repo. L3 does not call
+%   it -- L3 Amax is the area-ruled buildup -- and no other L2 geometry declares
+%   Amax at all. Gate 4 argued the opposite and was wrong. Recorded in
+%   GeometryBase.md.
 
 properties (Abstract)
     S_ref   % ft^2 — wing reference area
@@ -100,37 +125,6 @@ end
             end
             tan_Lambda_x = tand(Lambda_LE_deg) - (2/AR) * x * (1 - lambda) / (1 + lambda);
             Lambda_x_deg = atand(tan_Lambda_x);
-        end
-
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        function val = compute_Amax_elliptical(W_max, H_max)
-        %COMPUTE_AMAX_ELLIPTICAL  Max cross-section of an equivalent elliptical
-        %   fuselage [ft^2]. Feeds the Sears-Haack term [Raymer 6th ed. Eq. 12.44].
-        %   Low-fidelity fuselage-only form used at L2; L3 uses a whole-aircraft
-        %   area-ruled Amax (GeomL3.get_Amax).
-        %
-        %   TODO: standard elliptical-cross-section identity with no known
-        %   textbook equation number. Pin a citation or accept the
-        %   standard-identity status in writing (todo.md 2026-07-25 Phase 2 §4).
-            arguments
-                W_max (1,1) double {mustBePositive}
-                H_max (1,1) double {mustBePositive}
-            end
-            val = (pi/4) * W_max * H_max;
-        end
-
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        function val = compute_nacelle_diameter(T_AB_SLS_lb)
-        %COMPUTE_NACELLE_DIAMETER  Engine/nacelle diameter [ft] from SLS
-        %   afterburning thrust.  [Brandt F-16A.xls, Engn(s) tab, D_engine]
-        %
-        %   TODO: the 1900 divisor is hardcoded and silently assumes an
-        %   afterburning engine — Brandt uses 1900 only when T_dry ~= T_AB, and
-        %   2000 otherwise (todo.md 2026-07-25 Phase 2 §18).
-            arguments
-                T_AB_SLS_lb (1,1) double {mustBePositive}
-            end
-            val = sqrt(T_AB_SLS_lb / 1900);
         end
 
     end
