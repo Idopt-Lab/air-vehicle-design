@@ -409,7 +409,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             % Positive control: both accepted tiers still construct.
             tc.verifyClass(F16AeroL2(F16GeomL2(f16a_spec_path(2), F16PropL2(f16a_spec_path(2))), ...
                 f16a_spec_path(2)), 'F16AeroL2');
-            tc.verifyClass(F16AeroL2(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
+            tc.verifyClass(F16AeroL2(F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path()), ...   % Mod (08/19/2026) (Claude)
                 f16a_spec_path(2)), 'F16AeroL2');
         end
 

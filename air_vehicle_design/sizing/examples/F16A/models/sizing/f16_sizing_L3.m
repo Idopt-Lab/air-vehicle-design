@@ -42,7 +42,7 @@ function [result, objs] = f16_sizing_L3(W_TO_guess, T_SL_guess)
     % L3 geometry injects it, L3 aero injects geometry, L3 weights injects
     % both; L2 mission fidelity over the L3 discipline stack.
     prop = F16PropL2(f16a_spec_path(2));
-    geom = F16GeomL3(f16a_spec_path(3), prop);
+    geom = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
     aero = F16AeroL3(geom, f16a_spec_path(3));
     wts  = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, ...

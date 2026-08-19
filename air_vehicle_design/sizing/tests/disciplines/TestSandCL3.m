@@ -847,7 +847,7 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         %   [Raymer 6th ed. Table 6.5, F-16 all-moving stabilator] is the
         %   ONLY entry F16SandCL3.Delta_alpha_L0 reads off this object.
             prop = F16PropL2(f16a_spec_path(2));
-            g3   = F16GeomL3(f16a_spec_path(3), prop);
+            g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO     = 31377;    % Brandt F-16A TOGW [readme_wt.md]
             w3.W_energy = 6294;     % legacy Fuel1+2+3 = 2098*3, same anchor as TestSandCL2

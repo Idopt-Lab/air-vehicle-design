@@ -19,7 +19,7 @@
 % F16PropL2 (no L3 propulsion tier) and injects prop into geometry, whose
 % nacelle diameter sizes the duct wetted area and hence CD0.
 prop = F16PropL2(f16a_spec_path(2));
-geom = F16GeomL3(f16a_spec_path(3), prop);
+geom = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 aero = F16AeroL3(geom, f16a_spec_path(3));
 
 ca = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...

@@ -32,7 +32,7 @@ function T_all = aerodynamics_brandt_comparison()
 %       a1   = F16AeroL1(f16a_spec_path(1));          % L1 is geometry-FREE
 %       prop = F16PropL2(f16a_spec_path(2));
 %       g2   = F16GeomL2(f16a_spec_path(2), prop);
-%       g3   = F16GeomL3(f16a_spec_path(3), prop);
+%       g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 %       a2   = F16AeroL2(g2, f16a_spec_path(2));
 %       a3   = F16AeroL3(g3, f16a_spec_path(3));      % NOTE: g3, not g2
 %
@@ -100,7 +100,7 @@ brandt_k1a = @(M) ap(nearestIdx(ap_mach, M)).k1;    % nearest tabulated k1
 a1   = F16AeroL1(f16a_spec_path(1));
 prop = F16PropL2(f16a_spec_path(2));
 g2   = F16GeomL2(f16a_spec_path(2), prop);
-g3   = F16GeomL3(f16a_spec_path(3), prop);
+g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 a2 = F16AeroL2(g2, f16a_spec_path(2));
 a3 = F16AeroL3(g3, f16a_spec_path(3));
 

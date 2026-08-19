@@ -108,7 +108,7 @@ lg2 = F16LandingGearL2(f16a_spec_path(2), w2);
 r2_fuel_check = s2.fuel_volume_check();
 
 % ── L3: refined geometry-derived ─────────────────────────────────────── %
-g3 = F16GeomL3(f16a_spec_path(3), prop2);   % no L3 propulsion tier -- F16PropL2 is reused
+g3 = F16GeomL3(f16a_spec_path(3), prop2, f16a_requirements_path());   % no L3 propulsion tier -- F16PropL2 is reused
 w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop2);
 w3.W_TO     = W_TO_brandt;
 w3.W_energy = W_fuel_brandt;

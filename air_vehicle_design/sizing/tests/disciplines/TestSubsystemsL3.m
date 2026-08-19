@@ -448,7 +448,7 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         %   to plausible sizing-loop STATE values (not Brandt-derived
         %   "expected" outputs -- see TestSubsystemsL2.makeGeomAndWeights).
             prop = F16PropL2(f16a_spec_path(2));   % no L3 propulsion tier exists
-            g3   = F16GeomL3(f16a_spec_path(3), prop);
+            g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO     = 31377;
             w3.W_energy = 6296.30;

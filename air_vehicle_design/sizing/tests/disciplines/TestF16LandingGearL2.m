@@ -213,7 +213,7 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
             tc.verifyError(@() lg2.bay_volume(), 'F16LandingGearL2:bayVolumeNotAvailable', ...
                 'TODO (documented gap, EXPECTED to error): no gear bay-volume packaging formula in this repo.');
 
-            g3 = F16GeomL3(f16a_spec_path(3), prop);
+            g3 = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO = 31377;
             lg3 = F16LandingGearL3(f16a_spec_path(3), w3);

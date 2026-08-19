@@ -593,7 +593,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             [~, w2] = TestSubsystemsL2.makeGeomAndWeights();
             g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             prop = F16PropL2(f16a_spec_path(2));
-            g3 = F16GeomL3(f16a_spec_path(3), prop);
+            g3 = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 
             expectedErrId = 'MATLAB:validation:UnableToConvert';
             try
