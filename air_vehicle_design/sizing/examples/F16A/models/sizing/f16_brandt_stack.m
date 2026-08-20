@@ -76,7 +76,7 @@ function objs = f16_brandt_stack()
     % less than half the actual F-16A's 108 / 60 ft^2 [Brandt
     % Main!C18/H18]. A tail-sizing-discipline gap, documented in
     % f16_sizing_brandt_L2.m's header and sizing_brandt_comparison.m.
-    tail = F16TailL1();
+    tail = F16TailL1(geom);
 
     objs = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, ...
         'miss', miss, 'con', con, 'tail', tail);

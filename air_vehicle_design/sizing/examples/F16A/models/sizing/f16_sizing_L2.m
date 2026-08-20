@@ -26,10 +26,9 @@ function [result, objs] = f16_sizing_L2(W_TO_guess, T_SL_guess)
 %   that).
 %
 %   TAIL SIZING: F16TailL1 (Raymer 7th ed. Table 6.4 volume-coefficient
-%   method, corrected 0.315/0.063, tail arm 0.475*L_fus; no-arg
-%   constructor). SizingLoopL2.run() calls tail.size(S_ref, b_wing,
-%   cbar_wing, L_fus) every iteration and writes the result into
-%   geom.S_ht/S_vt, which the weights class reads live.
+%   method, corrected 0.315/0.063, tail arm 0.475*L_fus; constructed with the
+%   injected geom). SizingLoopL2.run() calls tail.size() every iteration and
+%   writes the result into geom.S_ht/S_vt, which the weights class reads live.
 %
 %   Default guesses 30,000 / 20,000 lbf are deliberately off Brandt's
 %   31,377 / 23,770 lbf targets, so a passing convergence check
@@ -54,7 +53,7 @@ function [result, objs] = f16_sizing_L2(W_TO_guess, T_SL_guess)
     wts  = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), geom, prop);
     miss = MissionAnalysisL2.from_requirements(aero, prop, geom, ...
         f16a_requirements_path(), "cap");
-    tail = F16TailL1();
+    tail = F16TailL1(geom);
 
     con = ConstraintAnalysis.from_requirements(aero, prop, f16a_requirements_path(), ...
         F16ConstraintSet.constraint_map(), PointPerformanceBase.WS_RANGE_BRANDT);

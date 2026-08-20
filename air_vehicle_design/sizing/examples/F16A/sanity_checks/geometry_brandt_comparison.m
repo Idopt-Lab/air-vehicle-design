@@ -88,7 +88,7 @@ g3 = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 
 % ── L1 statistical regression ──────────────────────────────────────────── %
 sw_l1   = g1.get_S_wet(W_TO);
-lfus_l1 = g1.get_L_fus(W_TO);
+lfus_l1 = g1.get_L_fus_statistical(W_TO);
 
 % ── Wing/HT/VT S_wet: two formula options each ─────────────────────────── %
 % Mod (08/18/2026) (Claude) -- Option B: call the toolbox, not the example class.

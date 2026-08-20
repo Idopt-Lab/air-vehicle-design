@@ -29,26 +29,28 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
 %              = 0.030875 * 9538.46154 = 294.500 lbf/ft^2.
 %
 %   CLIMB 1 (takeoff, FAR 25.111) [metabook Eq. 4.24/4.25; Ex. 4.2 Eq. 4.49]
-%     config = takeoff_flaps_gear_up: CD0 = 0.03597, K1 = 0.04054 [JSON polar];
+%     config = takeoff_flaps_gear_up: CD0 = 0.03597 (= clean 0.01597 + Roskam
+%     Table 3.6 takeoff_flaps upper-bound Delta 0.020); K1 = 0.04060 =
+%     1/(pi*9.8*0.80), e = 0.80 the Roskam Table 3.6 takeoff_flaps upper bound
+%     (D10, toolbox-derived -- NOT a JSON polar).
 %     CLmax = 2.0 (PHYSICAL B777 config value -- the printed Eq. 4.49 uses
 %     CLmax = 2.2 in the takeoff slot; the D1 discrepancy). G = 0.012, ks = 1.2,
 %     oei = true (N = 2 -> f_oei = 2), hot_day = true (f_hot = 1/0.8),
 %     max_continuous = false, weight_ratio = 1.0.
 %       tw_climb = ks^2/CLmax * CD0 + CLmax/ks^2 * K1 + G
-%                = (1.44/2.0)*0.03597 + (2.0/1.44)*0.04054 + 0.012
-%                = 0.72*0.03597 + 1.3888889*0.04054 + 0.012
-%                = 0.0258984 + 0.0563056 + 0.012 = 0.0942040
-%       TW_min   = f_hot*f_oei * tw_climb = 1.25*2 * 0.0942040
-%                = 2.5*0.0942040 = 0.235510
+%                = (1.44/2.0)*0.0359732 + (2.0/1.44)*0.0406008 + 0.012
+%                = 0.0259007 + 0.0563899 + 0.012 = 0.0942906
+%       TW_min   = f_hot*f_oei * tw_climb = 1.25*2 * 0.0942906
+%                = 2.5*0.0942906 = 0.2357266
 %     The printed Eq. 4.49 gives 0.243700 with CLmax = 2.2; the D1 gap is why
-%     the CLmax-2.0 value asserted here (0.235510) differs -- documented, not
+%     the CLmax-2.0 value asserted here (0.2357266) differs -- documented, not
 %     an error.
 
     properties (Constant)
         % Independent hand-computed expecteds (see block above).
         TFL_TW_142_45   = 142.45 / 608     % Takeoff Field Length required_TW(142.45)
         LFL_WS_MAX      = 294.500          % Landing Field Length WS_max
-        CLIMB1_TW_CL20  = 0.2355157        % Climb 1 TW_min with PHYSICAL CLmax = 2.0 (the config K1 is re-derived from e = 1/(pi*AR*K1_printed), a round-trip that shifts the printed 0.04054 by ~1e-5; asserted to RelTol 1e-4)
+        CLIMB1_TW_CL20  = 0.2357266        % Climb 1 TW_min with PHYSICAL CLmax = 2.0 and the D10 toolbox-derived takeoff_flaps K1 = 1/(pi*9.8*0.80) = 0.040601 (e = 0.80, Roskam Table 3.6 upper bound); independent closed-form (see block above), asserted to RelTol 1e-4
         CLIMB1_TW_CL22  = 0.243700         % printed Eq. 4.49 value (CLmax = 2.2); NOT asserted
     end
 
@@ -161,8 +163,8 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
 
         function testClimb1TWWithPhysicalCLmax20(tc)
         % Climb 1 (Eq. 4.49) TW_min with the B777's PHYSICAL config CLmax = 2.0.
-        %   tw_climb = 1.44/2.0*0.03597 + 2.0/1.44*0.04054 + 0.012 = 0.0942040
-        %   TW_min   = (1/0.8)*(N/(N-1))*tw_climb = 1.25*2*0.0942040 = 0.235510
+        %   tw_climb = 1.44/2.0*0.0359732 + 2.0/1.44*0.0406008 + 0.012 = 0.0942906
+        %   TW_min   = (1/0.8)*(N/(N-1))*tw_climb = 1.25*2*0.0942906 = 0.2357266
         % The printed Eq. 4.49 gives 0.243700 with CLmax = 2.2 (the D1 gap):
         % since the aero object reports the physical 2.0, the CLmax-2.0 value is
         % the correct expected here. This asserts the 2.0 value and documents
@@ -176,7 +178,7 @@ classdef TestB777ConstraintSet < matlab.unittest.TestCase
                 'Eq.4.49 CLmax=2.2: %.6f -- D1 gap)\n'], ...
                 received, tc.CLIMB1_TW_CL20, tc.CLIMB1_TW_CL22);
             tc.verifyEqual(received, tc.CLIMB1_TW_CL20, 'RelTol', 1e-4, ...
-                ['Climb 1 TW_min must be the CLmax=2.0 value 0.235510 (the B777 ', ...
+                ['Climb 1 TW_min must be the CLmax=2.0 value 0.2357266 (the B777 ', ...
                  'physical config CLmax), which differs from the printed 2.2-based ', ...
                  'Eq. 4.49 = 0.243700 by the documented D1 gap.']);
             % W/S-independence (Only_TbyW): same floor at any wing loading.

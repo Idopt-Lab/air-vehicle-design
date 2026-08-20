@@ -31,7 +31,7 @@ function results = b777_metabook_comparison()
     geom = B777GeomL2(sp);
     prop = B777PropL1(sp);
     aero = B777AeroL1(geom, sp);
-    tail = B777TailL1();
+    tail = B777TailL1(geom);
     wts  = B777WeightsL2(sp, geom, prop);
 
     fprintf('\n================ B777 vs METABOOK Example 4.2 (informational) ================\n');

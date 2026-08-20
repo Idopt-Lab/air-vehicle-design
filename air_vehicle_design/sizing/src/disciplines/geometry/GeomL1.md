@@ -17,52 +17,17 @@ the row, then feeds the equation.
 
 | Layer | Members |
 |---|---|
-| Equations — scalars only | `compute_s_wet_regression`, `compute_l_fus_regression`, `compute_AR_eq` |
-| Tables — category string in, coefficients out | `lookup_swet`, `lookup_lfus`, `lookup_AR_eq`, `lookup_control_surface_fraction` |
-
-The design class holds the two steps, so the path is visible where it is used:
-
-```matlab
-function val = get_S_wet(obj, W_TO)
-    [c, d] = GeomL1.lookup_swet(obj.aircraft_category);
-    val    = GeomL1.compute_s_wet_regression(c, d, W_TO);
-end
-```
-
-`lookup_control_surface_fraction` has no `compute_*` partner. A chord fraction is read from the
-table, not computed from it, so the lookup is the whole answer.
-
-## 1a. Removed 2026-08-17
-
-Five statics took an aircraft object. A toolbox must not know how a design names its own
-properties: a user may call their wingspan `obj.sneepsnorp` and pass it in the wingspan slot.
-An object-taking static makes one spelling mandatory for every aircraft. Removing them also
-makes each static testable from literals, with no JSON and no constructor.
-
-| Removed | Replaced by |
-|---|---|
-| `get_S_wet_statistical(obj, W_TO)` | `lookup_swet` + `compute_s_wet_regression`, joined in the design class |
-| `get_L_fus(obj, W_TO)` | `lookup_lfus` + `compute_l_fus_regression` |
-| `get_AR_eq(obj)` | `lookup_AR_eq` + `compute_AR_eq(a, C, M_max)` |
-| `get_control_surface_fraction(obj, surface)` | `lookup_control_surface_fraction(cat, surface)` |
-| `compute_control_surface_fraction` | `lookup_control_surface_fraction`. It was a pure pass-through. |
-
-`compute_AR_eq` also stopped calling `lookup_AR_eq` for the caller. It now takes `(a, C, M_max)`.
-
-Call sites updated: `F16GeomL1`, `Aero481GeomL1`, `TestGeomL1`. `TestGeomL1`'s
-`testGetControlSurfaceFractionObjectLevel` was deleted: it covered only the removed wrapper and
-duplicated `testControlSurfaceFractionElevator`'s assertion of 0.30.
-
-The change is numerically inert. The equations and coefficients did not change.
+| Low-level — scalars and strings only | `compute_*` |
+| Constants | `lookup_*`, one per `compute_*` |
 
 ## 2. Methods
 
 | Method | Returns | Source |
 |---|---|---|
-| `compute_s_wet_regression(c, d, W_TO)` | total wetted area [ft²] | Roskam Vol. I Eq. 3.22, p. 122 |
-| `compute_l_fus_regression(a, c, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
-| `compute_AR_eq(a, C, M_max)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
-| `lookup_control_surface_fraction(cat, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
+| `compute_s_wet_regression(aircraft_category, W_TO)` | total wetted area [ft²] | Roskam Vol. I Table 3.5 |
+| `compute_l_fus_regression(aircraft_category, W_TO)` | fuselage length [ft] | Raymer 6th ed. Table 6.3 |
+| `compute_AR_eq(aircraft_category, M_max)` | equivalent aspect ratio | Raymer 7th ed. Table 4.1 |
+| `lookup_control_surface_fraction(aircraft_category, surface)` | chord fraction $C/c$ | Raymer 7th ed. Table 6.5 |
 
 **Tail sizing is not here.** `size_tail`, `compute_tail_volume_coeffs`,
 `lookup_tail_volume_coeffs`, `compute_tail_arm`, `compute_S_HT`, and `compute_S_VT` live in

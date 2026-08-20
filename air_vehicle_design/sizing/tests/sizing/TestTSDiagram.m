@@ -65,7 +65,7 @@ classdef TestTSDiagram < matlab.unittest.TestCase
             geom.S_ref = 300;            % pre-scan placeholder; every call overwrites it
             miss = FixedMissionStub();   % default fuel_fraction = 0.15
             con  = ConstraintAnalysis(constraints, 20:5:160);
-            tail = FixedTailStub();
+            tail = FixedTailStub(geom);
             ts   = TSDiagram(aero, prop, wts, geom, miss, con, tail);
         end
 
@@ -161,7 +161,7 @@ classdef TestTSDiagram < matlab.unittest.TestCase
             wts  = SRefGatedWeightsStub(geom, 50);
             miss = FixedMissionStub();
             con  = ConstraintAnalysis({producer}, 20:5:160);
-            tail = FixedTailStub();
+            tail = FixedTailStub(geom);
             ts   = TSDiagram(aero, prop, wts, geom, miss, con, tail);
 
             fg = ts.fuel_grid([500, 700], [32, 100]);

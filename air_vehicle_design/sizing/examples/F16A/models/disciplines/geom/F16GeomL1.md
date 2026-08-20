@@ -23,9 +23,7 @@ g1 = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
 | `json_path` | `f16a_L1.json` → the one canonical top-level `aircraft_category` |
 | `req_path` | `f16a_requirements.json` → `design_mach`, which becomes `M_max` |
 
-`M_max` is a design **requirement**, not airframe spec data. It previously existed in three places;
-`f16a_L1.json .geometry.M_max` was deleted and the requirements file is now its single source — a
-consolidation, not a removal, since `M_max` still drives `get_AR_eq`.
+`M_max` is a design **requirement**, not airframe spec data. It drives `get_AR_eq`.
 
 `S_ref` is not a JSON input; it stays a hardcoded literal.
 
@@ -46,12 +44,12 @@ consolidation, not a removal, since `M_max` still drives `get_AR_eq`.
 |---|---|---|
 | `S_wet` | total wetted area from `W_TO` | Roskam Vol. I, Table 3.5 |
 | `L_fuselage` | fuselage length from `W_TO` | Raymer 6th ed., Table 6.3 |
+| `AR_eq` | equivalent aspect ratio from `M_max` | Raymer 7th ed. Table 4.1 |
+| `c_e` | elevator chord ratio | Raymer 7th ed. Table 6.5 |
+| `c_r` | rudder chord ratio | Raymer 7th ed. Table 6.5 |
 
-Both **error** (via the private `requireWTO`) while `W_TO` is unset, rather than returning a
-placeholder. They were plain properties frozen at `0` and commented "populated by
-`get_S_wet(obj, W_TO)`" — but `get_S_wet` only ever *returned* a value, never assigned, so both sat
-at `0` for the object's whole life. Injecting an `F16GeomL1` into `F16AeroL2`/`L3` then produced
-`CD0 = Cfe·0/S_ref = 0` — silent zero parasite drag and infinite L/D, with no warning.
+`S_wet` and `L_fuselage` **error** (via the private `requireWTO`) while `W_TO` is unset, rather than 
+returning a placeholder. 
 
 ---
 
@@ -59,10 +57,12 @@ at `0` for the object's whole life. Injecting an `F16GeomL1` into `F16AeroL2`/`L
 
 | Method | Delegates to | Source |
 |---|---|---|
-| `get_S_ref(obj)` | property accessor | — |
-| `get_S_wet(obj, W_TO)` / `get_S_wet_statistical(obj, W_TO)` | `GeomL1.get_S_wet_statistical` | Roskam Vol. I, Table 3.5 |
-| `get_L_fus(obj, W_TO)` | `GeomL1.get_L_fus` | Raymer 6th ed., Table 6.3 |
-| `get_AR_eq(obj)` | `GeomL1.get_AR_eq` | Raymer 7th ed., Table 4.1, dogfighter row |
+| `get_S_ref(obj)` -- property getter |  |  |
+| `get_whole_aircraft_S_wet_statistical(obj, W_TO)` | `GeomL1.compute_s_wet_regression` | Roskam Vol. I, Table 3.5 |
+| `get_L_fus_statistical(obj, W_TO)` | `GeomL1.compute_l_fus_regression` | Raymer 6th ed., Table 6.3 |
+| `get_AR_eq(obj)` | `GeomL1.compute_AR_eq` | Raymer 7th ed., Table 4.1, dogfighter row |
+| `get_c_e(obj)` | `GeomL1.lookup_control_surface_fraction` | Raymer 7th ed., Table 6.5 |
+| `get_c_r(obj)` | `GeomL1.lookup_control_surface_fraction` | Raymer 7th ed., Table 6.5 |
 
 ### As-built values
 
@@ -73,6 +73,8 @@ At `W_TO` = 31,377 lbf:
 | `S_wet` | 1763.0171 ft² |
 | `L_fuselage` | 52.742584 ft |
 | `get_AR_eq` | 3.518664 |
+| `c_e` | 0.3 |
+| `c_r` | 0.33 |
 
 ---
 

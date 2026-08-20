@@ -27,71 +27,25 @@
     }
   },
   "aerodynamics": {
-    "_src": "Cfe [Raymer Table 12.3 civil transport; metabook Eq. 4.43]; e_clean [metabook Table 4.2 clean; \u00a74.11]. Config-polar table = the printed five metabook polars (metabook \u00a74.11, five-polar table) + the derived approach row (\u00a73.3); each row's K1 = 1/(pi*AR*e) with AR = 9.8, K2 = 0 (uncambered-basis high-lift polars). CLmax per config [Roskam Table 3.1; metabook \u00a74.11]. See b777_L1.md \u00a73.",
-    "_note": "PHYSICAL CLmax carried: 2.0 both takeoff configs, 2.6 both landing configs, 0.9 clean, 2.21 approach (= 0.85*2.6) [USER decision 2026-08-14]. This reproduces the takeoff/landing FIELD-LENGTH constraints (Eqs. 4.46/4.48). The metabook-internal D1 deviation (printed climb Eqs. 4.49-4.51 use CLmax = 2.2 in the takeoff-config slot) is annotated by the comparison report, NOT forced into this config table. approach row (CD0 = mean(0.06097, 0.11597) = 0.08847, CLmax = 0.85*2.6 = 2.21, K1 = landing-flaps 0.04324) is DERIVED from the takeoff/landing gear-down rows [metabook \u00a74.11 Climb 6 note]; see b777_L1.md \u00a73.3.",
-    "Cfe": 0.0026,
-    "e_clean": 0.85,
-    "config_polars": {
-      "clean": {
-        "CD0": 0.01597,
-        "K1": 0.03815,
-        "K2": 0.0,
-        "CLmax": 0.9
-      },
-      "takeoff_flaps_gear_up": {
-        "CD0": 0.03597,
-        "K1": 0.04054,
-        "K2": 0.0,
-        "CLmax": 2.0
-      },
-      "takeoff_flaps_gear_down": {
-        "CD0": 0.06097,
-        "K1": 0.04054,
-        "K2": 0.0,
-        "CLmax": 2.0
-      },
-      "landing_flaps_gear_up": {
-        "CD0": 0.09097,
-        "K1": 0.04324,
-        "K2": 0.0,
-        "CLmax": 2.6
-      },
-      "landing_flaps_gear_down": {
-        "CD0": 0.11597,
-        "K1": 0.04324,
-        "K2": 0.0,
-        "CLmax": 2.6
-      },
-      "approach": {
-        "CD0": 0.08847,
-        "K1": 0.04324,
-        "K2": 0.0,
-        "CLmax": 2.21
-      }
-    },
+    "_src": "CLmax overrides only [Roskam Table 3.1; USER decision 2026-08-14]: physical CLmax clean/takeoff/landing. Cfe/e/\u0394CD0/CD0 are DERIVED by B777AeroL1 (D10, not JSON): Cfe = AeroL2.lookup_Cfe(civil_transport) [Raymer Table 12.3 = 0.0026]; e and \u0394CD0 = AeroL1.Delta_CD0 upper bound [Roskam Table 3.6]; CD0 = AeroL2.CD0_from_Cf [metabook Eq. 4.8]. approach CLmax = 0.85*landing (derived). See b777_L1.md \u00a73 and B777_decisions.md D10.",
+    "_note": "The three physical CLmax values are the ONLY inputs in this block -- a USER decision (2026-08-14) that deliberately deviates from the Roskam transport_jet table row, so they are carried; B777AeroL1 reads them as the live CLmax overrides (clean, both takeoff, both landing; approach = 0.85*CLmax_landing). Everything else is toolbox-DERIVED, not stored: Cfe from AeroL2.lookup_Cfe(civil_transport) [Raymer Table 12.3]; clean/per-config e and per-config \u0394CD0 from the UPPER bound of AeroL1.Delta_CD0 [Roskam Table 3.6] via the 6->4 config map; clean CD0 from AeroL2.CD0_from_Cf [metabook Eq. 4.8 = Raymer Eq. 12.23]. This mirrors F16AeroL1, which hardcodes no per-config number. See b777_L1.md \u00a73 and B777_decisions.md D10.",
     "CLmax_clean": 0.9,
     "CLmax_takeoff": 2.0,
     "CLmax_landing": 2.6
   },
   "propulsion": {
     "_src": "engine_type [metabook \u00a74.11; selects the PropL1 lapse exponent + TSFC row]; n_engines [metabook \u00a74.11, 2x GE90-110B]; T_SL total [metabook Fig. 4.7 caption, 'Actual 777-200LR (T = 220000 lb and S = 4605 ft2)']; lapse_exponent_m [metabook Ex 4.2 Eqs. 4.55-4.57, USER decision 2026-08-14]. TSFC is a METHOD not a stored number: c = (0.4 + 0.45*M)*sqrt(theta) [1/hr] [metabook Eq. 10.11 = Mattingly 1996 Eq. 1.36a], theta from AircraftState. See b777_L1.md \u00a74.",
-    "_note": "T_SL = 220000 lbf (total, 2x GE90-110B) is CITED to the metabook. The per-engine -110B rating is a stand-in _TODO (see below). lapse_exponent_m = 0.6 is the metabook Example 4.2 generic Eq. 10.9 fit; alpha = sigma^m with sigma = rho/rho_SL from the AircraftState (ISA density, NOT the metabook's printed off-ISA ratios).",
+    "_note": "T_SL = 220000 lbf (total, 2x GE90-110B) is CITED to the metabook. lapse_exponent_m = 0.6 is the metabook Example 4.2 generic Eq. 10.9 fit; alpha = sigma^m with sigma = rho/rho_SL from the AircraftState (ISA density, NOT the metabook's printed off-ISA ratios).",
     "engine_type": "high_bypass_turbofan",
     "n_engines": 2,
     "T_SL": 220000.0,
     "lapse_exponent_m": 0.6,
     "tsfc_cruise": 0.52,
-    "_src_tsfc_cruise": "Cruise TSFC 0.52 1/hr [metabook Table 10.1, GE90 cruise-partial-power rows at 40000 ft ~0.50-0.54]. Used instead of the generic Mattingly Eq. 10.11 form (~0.675 at M0.84/40kft, a ~30% overestimate that makes the max-range mission fuel exceed capacity so converge_W0 diverges). A metabook-DATA value (the engine's own deck), NOT backfilled from the sizing answer. See B777PropL1.get_TSFC.",
-    "T_per_engine": 110000.0,
-    "_TODO_T_per_engine": "T_per_engine = 110000 lbf is a stand-in for the GE90-110B rating -- consistency check 2*110000 = 220000 matches the cited total, but the specific -110B rating is not pinned. The metabook GE90 Table 10.1 prints the GE90 SLS range 76000 lb (777-200) to 115000 lb (777-300ER), which brackets 110000 but does not pin the -110B. Primary source needed: a GE / Boeing engine rating document. Remove this key when pinned. See b777_L1.md \u00a74.1."
+    "_src_tsfc_cruise": "Cruise TSFC 0.52 1/hr [metabook Table 10.1, GE90 cruise-partial-power rows at 40000 ft ~0.50-0.54]. Used instead of the generic Mattingly Eq. 10.11 form (~0.675 at M0.84/40kft, a ~30% overestimate that makes the max-range mission fuel exceed capacity so converge_W0 diverges). A metabook-DATA value (the engine's own deck), NOT backfilled from the sizing answer. See B777PropL1.get_TSFC."
   },
   "weights": {
-    "_src": "aircraft_category = jet_transport (top level) selects the Raymer Table 3.1 We/W0 row (A = 1.02, C = -0.06, Kvs = 1.00), the Raymer Table 15.2 transport/bomber areal densities (wing 10, H-tail 5.5, V-tail 5.5, fuselage 5.0 lb/ft2), and the fraction rows (landing gear 0.043, all-else-empty 0.17) -- ALL toolbox Constants read by aircraft_category, NOT JSON inputs [WeightsL1.lookup_coeffs; metabook_data.md Ch. 7]. Baseline design-point spec (delta-weight model, metabook \u00a74.12 Algorithm 2): W0_baseline, S_baseline [metabook Table 4.3 / Fig. 4.7], T_baseline_per_engine [see _TODO]. See b777_L1.md \u00a75.",
-    "_note": "This block carries ONLY the baseline design-point spec inputs for the L2 delta-weight model We = (We/W0)*W0 + Dens_wing*(S - S_baseline) + [Weng(T0) - Weng(T0_baseline)] [metabook Algorithm 2]. The We/W0 coefficients, areal densities, fraction rows and engine-weight regression coefficients (Roskam Eqs. 7.13-7.19) are toolbox Constants selected by aircraft_category, matching the F-16A L2 weights convention -- not duplicated here.",
-    "W0_baseline": 766800.0,
-    "S_baseline": 4605.0,
-    "T_baseline_per_engine": 110000.0,
-    "_TODO_T_baseline_per_engine": "T_baseline_per_engine = 110000 lbf is the same stand-in as .propulsion.T_per_engine -- the GE90-110B per-engine rating, not pinned. Baseline total T = 220000 lbf (110000/engine) is cited to the metabook (Fig. 4.7 caption); the per-engine split is the _TODO. Remove this key when the per-engine rating is pinned. See b777_L1.md \u00a74.1 / \u00a75.3.",
+    "_src": "aircraft_category = jet_transport (top level) selects the Raymer Table 3.1 We/W0 row (A = 1.02, C = -0.06, Kvs = 1.00), the Raymer Table 15.2 transport/bomber areal densities (wing 10, H-tail 5.5, V-tail 5.5, fuselage 5.0 lb/ft2), the landing-gear/all-else fraction rows (0.043, 0.17), and the Roskam engine-weight regression coefficients (Eqs. 7.13-7.19) -- ALL toolbox Constants read by aircraft_category, NOT JSON inputs [WeightsL1.lookup_coeffs; metabook_data.md Ch. 7]. The only weights JSON input is W_payload. See b777_L1.md \u00a75.",
+    "_note": "B777WeightsL2 is the metabook Chapter 7 component build-up (Algorithm 5): OEW = 1.3*n*Wengine(T0) + 10*S_exp_wing + 5.5*S_exp_ht + 5.5*S_exp_vt + 5*S_wet_fus + 0.043*W0 + 0.17*W0, responding live to W0, exposed wing area (S_ref) and per-engine thrust T0. Its coefficients (Raymer Table 15.2 areal densities, landing-gear/all-else fractions, Roskam engine Eqs. 7.13-7.19) are toolbox Constants selected by the top-level aircraft_category, matching the F-16A L2 weights convention -- not duplicated here. The component build-up needs no empty-weight fraction and no delta-model baseline, so this block carries only W_payload.",
     "W_payload": 78821,
     "_src_W_payload": "Fixed carried weight (crew + passengers) = (14 crew + 314 passengers) x 109 kg = 328 x 109 = 35,752 kg = 78,821 lbf [metabook Example 2.1 requirements: 14 crew and 314 passengers, each 109 kg]. This is the Wcrew + Wpayload numerator of metabook Eq. 2.2; the 777-200LR carries no expendable/belly cargo at this long-range point. With this payload the metabook L1 closure sizes near the actual 777-200LR (MTOW 766,800 lbf, OEW 320,000 lbf); see sanity_checks/b777_metabook_comparison.m."
   }

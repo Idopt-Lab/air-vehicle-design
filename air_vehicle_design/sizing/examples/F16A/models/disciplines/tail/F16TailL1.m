@@ -1,27 +1,25 @@
 classdef F16TailL1 < TailSizingModelL1
 %F16TAILL1  F-16A Level-1 (volume-coefficient) tail sizing.
 %
-%   Inherits TailSizingModelL1 (abstract enforcer). size(...) is a single
-%   delegation into the TailL1 static toolbox -- no equations are
-%   duplicated here.
+%   Inherits TailSizingModelL1. size(obj) reads the injected geometry and
+%   delegates to the TailL1 static toolbox -- no equations are duplicated here.
 %
-%   Wires in the F-16's net, corrected jet-fighter tail-volume coefficients:
+%   Net, corrected jet-fighter tail-volume coefficients:
 %     c_HT = 0.40 * (1-0.10) * (1-0.125) = 0.315
 %     c_VT = 0.07 * (1-0.10)             = 0.063
-%   [Raymer 7th ed. Table 6.4, "Jet fighter" row (base 0.40/0.07), corrected
-%   for relaxed static stability (-10% on both, F-16 is RSS by design) and an
-%   all-moving stabilator (-12.5% on c_HT) -- see
-%   TailL1.compute_tail_volume_coeffs]. Tail moment arm L_HT=L_VT=0.475*L_fus
-%   [same source, aft-mounted single-engine text rule; 0.475 is the midpoint
-%   of the stated 0.45-0.50 range].
+%   [Raymer 7th ed. Table 6.4 "Jet fighter" row (base 0.40/0.07), corrected for
+%   relaxed static stability (-10% on both) and an all-moving stabilator
+%   (-12.5% on c_HT) -- see TailL1.compute_tail_volume_coeffs]. Tail moment arm
+%   L_HT=L_VT=0.475*L_fus [same source, aft-mounted single-engine text rule;
+%   0.475 is the midpoint of the stated 0.45-0.50 range].
 %
-%   No geometry object is injected at L1: GeometryModelL1 has no planform
-%   (only a W_TO regression), so the caller supplies S_ref/b/cbar/L_fus as raw
-%   scalars -- see TailSizingBase.m.
+%   Geometry (S_ref, b_wing, cbar_wing, L_fus) is read live from the injected,
+%   read-only geometry collaborator, so size(obj) tracks the sizing loop's
+%   mutations with no cached copy.
 %
-%   Constructor takes no arguments: the F-16's category (jet_fighter) and both
-%   correction flags (RSS=true, all-moving-tail=true) are F-16 spec facts,
-%   baked in here rather than read from JSON.
+%   CONSTRUCTOR: F16TailL1(geom) -- geom required (a GeometryBase), no silent
+%   default. category (jet_fighter) and both correction flags (RSS, all-moving
+%   tail) are F-16 spec facts, baked in.
 %
 %   History and rationale: docs/decision_log.md
 
@@ -30,25 +28,29 @@ classdef F16TailL1 < TailSizingModelL1
         c_VT (1,1) double   % net vertical-tail volume coefficient   [Raymer 7th ed. Table 6.4 + text corrections] = 0.063
     end
 
+    properties
+        geom   % (1,1) GeometryBase -- injected, read-only; supplies S_ref/b_wing/cbar_wing/L_fus by DI
+    end
+
     methods
 
-        function obj = F16TailL1()
-        %F16TAILL1  Construct with the F-16's category/correction flags
-        %   baked in: aircraft_category='jet_fighter', has_rss=true,
-        %   has_all_moving_tail=true.
+        function obj = F16TailL1(geom)
+        %F16TAILL1  Construct with a required injected geometry object and the
+        %   F-16's category/correction flags baked in (jet_fighter, RSS=true,
+        %   all-moving-tail=true).
+            arguments
+                geom (1,1) GeometryBase
+            end
+            obj.geom = geom;
             [obj.c_HT, obj.c_VT] = TailL1.compute_tail_volume_coeffs('jet_fighter', true, true);
         end
 
-        function result = size(obj, S_ref, b, cbar, L_fus)
+        function result = size(obj)
         %SIZE  Horizontal- and vertical-tail reference areas [ft^2].
-        %   [Raymer 7th ed. Table 6.4 + text]  See TailSizingBase.m for the
-        %   contract; TailL1.size for the formula.
-        %
-        %   S_ref  -- wing reference area, ft^2
-        %   b      -- wing span, ft
-        %   cbar   -- wing mean aerodynamic chord, ft
-        %   L_fus  -- fuselage length, ft
-            result = TailL1.size(obj, S_ref, b, cbar, L_fus);
+        %   [Raymer 7th ed. Table 6.4 + text]  Reads obj.geom live; returns
+        %   struct('S_ht', S_ht, 'S_vt', S_vt). See TailL1.size for the formula.
+            result = TailL1.size(obj, obj.geom.S_ref, obj.geom.b_wing, ...
+                                 obj.geom.cbar_wing, obj.geom.L_fus);
         end
 
     end

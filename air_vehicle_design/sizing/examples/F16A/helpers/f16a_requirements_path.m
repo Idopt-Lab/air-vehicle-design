@@ -21,7 +21,7 @@ function p = f16a_requirements_path()
 %
 %   Consumers: F16WeightsL2/L3 (cruise condition for the SFC dependency
 %   injection; design_mach for the Raymer Eq. 10.10 engine weight) and
-%   F16GeomL1 (design_mach -> GeomL1.get_AR_eq, Raymer 7th ed. Table 4.1).
+%   F16GeomL1 (design_mach -> GeomL1.compute_AR_eq, Raymer 7th ed. Table 4.1).
     here = fileparts(mfilename('fullpath'));
     p = fullfile(here, '..', 'inputs', 'f16a_requirements.json');
 end

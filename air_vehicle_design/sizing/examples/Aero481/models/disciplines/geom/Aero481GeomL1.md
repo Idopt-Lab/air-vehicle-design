@@ -72,28 +72,6 @@ and read-only. They never appear in the JSON.
 
 ---
 
-## 4. Methods
-
-| Method | Delegates to | Source |
-|---|---|---|
-| `get_S_ref(obj)` | property accessor | -- |
-| `get_S_wet(obj, W_TO)` / `get_S_wet_statistical(obj, W_TO)` | `GeomL1.get_S_wet_statistical` | Roskam Vol. I, Table 3.5 |
-| `get_L_fus(obj, W_TO)` | `GeomL1.get_L_fus` | Raymer 6th ed., Table 6.3 |
-| `get_AR_eq(obj)` | `GeomL1.get_AR_eq` | Raymer 7th ed., Table 4.1, dogfighter row |
-
-The `GeomL1` statics delegated to, with their exact citations:
-
-- `GeomL1.get_S_wet_statistical(obj, W_TO)` -> `compute_s_wet_regression` -> `lookup_swet('jet_fighter')`:
-  `S_wet = 10^c * W_TO^d`, `c = -0.1289`, `d = 0.7506` -- **[Roskam Vol. I Table 3.5]**.
-- `GeomL1.get_L_fus(obj, W_TO)` -> `compute_l_fus_regression` -> `lookup_lfus('jet_fighter')`:
-  `L_fuselage = a * W_TO^C`, `a = 0.93`, `C = 0.39` -- **[Raymer 6th ed. Table 6.3]**.
-- `GeomL1.get_AR_eq(obj)` -> `compute_AR_eq` -> `lookup_AR_eq('jet_fighter')`:
-  `AR_eq = a * M_max^C`, `a = 5.416`, `C = -0.6222` -- **[Raymer 7th ed. Table 4.1, jet-fighter
-  (dogfighter) row]**.
-
-No new equation is written in this class: every derived quantity is a delegation to an existing cited
-`GeomL1` static.
-
 ### As-built values
 
 There is no single validated TOGW for the F-35 at L1 (the design point is `W/S = 92.17 psf`,
@@ -112,7 +90,7 @@ depend on `W_TO`, so it needs no set TOGW.
 
 ---
 
-## 5. The `Swet = 4*S` rejection (discrepancy A1)
+## 4. The `Swet = 4*S` rejection (discrepancy A1)
 
 `[A481 Design01.m:33-36]`:
 
@@ -130,7 +108,7 @@ framework uses the cited Roskam Table 3.5 jet-fighter TOGW regression in `GeomL1
 
 ---
 
-## 6. `_TODO -- UNCITED` items (each needs a labelled `testTODO` guard)
+## 5. `_TODO -- UNCITED` items (each needs a labelled `testTODO` guard)
 
 | Item | Value | Stand-in / discrepancy | Needs |
 |---|---|---|---|
@@ -139,14 +117,14 @@ framework uses the cited Roskam Table 3.5 jet-fighter TOGW regression in `GeomL1
 | `Lambda_LE_deg` | 0 deg | unset/0 = A481's sweep-free Oswald (A2) | F-35 planform document |
 | `L_fus_ft` | 50.5 ft | published F-35A fuselage length stand-in `[aero481_data.md Part I]` (fixed tail-arm reference for the T-S diagram; see section 7) | primary fuselage-length citation or T.O./spec value |
 
-### 6.1 The `AR = 4` `_TODO` (A5)
+### 5.1 The `AR = 4` `_TODO` (A5)
 
 `AR = 4` `[A481 Design01.m:49]` is a student value, carried faithfully to Design01. The published
 F-35A AR is approximately 2.66 (35 ft span, 460 ft^2: 35^2/460 = 2.66). The comparison report flags
 this loudly as a fidelity/design gap; it is NOT silently overwritten. Confirm the design AR before
 pinning.
 
-### 6.2 `S_ref` stand-in decision (1.3)
+### 5.2 `S_ref` stand-in decision (1.3)
 
 Design01 fixes the DESIGN POINT (`W/S` = 92.17 psf, `T/W` = 1.2), **not** `S_ref` directly. In the
 sizing loop `S_ref = W_TO / (W/S)` changes every iteration -- a sizing-loop output, not a static
@@ -155,7 +133,7 @@ number without inventing a `W_TO`. **Decision: carry the published F-35A `S_ref 
 fixed spec stand-in, marked `_TODO -- UNCITED`.** The T-S study S-range 323-538 ft^2 matches Aero
 481's 30-50 m^2 (`T_S.m:23`). Remove/replace `S_ref` when an RFP or a design `S_ref` is pinned.
 
-### 6.3 `Lambda_LE_deg` (A2)
+### 5.3 `Lambda_LE_deg` (A2)
 
 Wing leading-edge sweep is `_TODO -- UNCITED` (needs an F-35 planform document). It is 0 (unset),
 which reproduces A481's sweep-free Oswald exactly (`AeroL2.oswald_eff` low-sweep branch, Raymer 6th
@@ -164,7 +142,7 @@ is consumed by `Aero481AeroL1` (Oswald efficiency / `K1`), not by any L1 geometr
 
 ---
 
-## 7. T-S-diagram tail-resize members (`b_wing`, `cbar_wing`, `L_fus`, `S_ht`, `S_vt`)
+## 6. T-S-diagram tail-resize members (`b_wing`, `cbar_wing`, `L_fus`, `S_ht`, `S_vt`)
 
 These members exist so the framework T-S diagram (`src/sizing/TSDiagram.m`) can drive this class.
 `TSDiagram.converge_W0` prescribes each `(T, S)` cell and, **before** the weight closure sets
@@ -190,7 +168,7 @@ and settable `S_ht`/`S_vt`. Two properties of this box drive the design:
   they exist ONLY so the T-S diagram can prescribe the cell. They default `NaN` until the resize
   writes them, and nothing downstream reads them at this fidelity.
 
-### 7.1 `L_fus` (fixed) vs. `L_fuselage` (regression) -- two distinct lengths, on purpose
+### 6.1 `L_fus` (fixed) vs. `L_fuselage` (regression) -- two distinct lengths, on purpose
 
 There are now two fuselage-length quantities on this class, and they are **not** the same number:
 

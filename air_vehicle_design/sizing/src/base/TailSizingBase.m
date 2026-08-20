@@ -13,9 +13,9 @@ classdef (Abstract) TailSizingBase < handle
 %   Inheritance: TailSizingBase -> TailSizingModelLN (abstract) -> F16TailLN.
 %   The TailLN static toolboxes are not in this chain.
 %
-%   The abstract size() below uses the widest signature: L1 has no planform
-%   and takes S_ref/b/cbar/L_fus as scalars; L2/L3 take an injected geometry
-%   collaborator and implement size(obj).
+%   Every level takes an injected geometry collaborator at construction and
+%   implements size(obj), reading S_ref/b_wing/cbar_wing/L_fus from it live.
+%   L1 is the volume-coefficient method; L2 is a not-implemented stub.
 %
 %   Companion doc: src/base/TailSizingBase.md
 
@@ -25,7 +25,7 @@ classdef (Abstract) TailSizingBase < handle
         %   Returns struct('S_ht', S_ht, 'S_vt', S_vt) -- lowercase field
         %   names, matching GeometryBase-derived classes' own S_ht/S_vt
         %   property casing (e.g. F16GeomL2.S_ht/S_vt).
-        result = size(obj, S_ref, b, cbar, L_fus)
+        result = size(obj)
 
     end
 

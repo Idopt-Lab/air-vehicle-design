@@ -10,12 +10,23 @@ classdef (Abstract) GeometryModelL1 < GeometryBase
     end
 
     methods (Abstract)
-        %GET_S_WET_STATISTICAL  Total wetted area [ft^2] from W_TO [lbf].
+        % Total wetted area [ft^2] from W_TO [lbf].
         %   Roskam statistical regression.
-        val = get_S_wet_statistical(obj, W_TO)
+        % At Geometry L1, the level of fidelity expected is
+        % - Whole aircraft S_wet computed
+        % - Using statistical regressions
+        % User is expected to implement the statistical regression for
+        % their aircraft
+        val = get_whole_aircraft_S_wet_statistical(obj, W_TO)
 
-        %GET_L_FUS  Fuselage length [ft] from W_TO [lbf]. Raymer regression.
-        val = get_L_fus(obj, W_TO)
+        % Fuselage length [ft] from W_TO [lbf]. Raymer regression.
+        val = get_L_fus_statistical(obj, W_TO)
+    end
+
+    methods
+        function val = get_S_wet(obj, W_TO)
+            val = obj.get_whole_aircraft_S_wet_statistical(W_TO);
+        end
     end
 
     % This enforces that subclasses should use "get_S_wet_statistical" instead

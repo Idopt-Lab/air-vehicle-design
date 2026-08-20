@@ -69,7 +69,7 @@ classdef TestB777Sizing < matlab.unittest.TestCase
             geom = B777GeomL2(sp);                    % L2 real-planform geometry
             prop = B777PropL1(sp);
             aero = B777AeroL1(geom, sp);
-            tail = B777TailL1();
+            tail = B777TailL1(geom);
             wts  = B777WeightsL2(sp, geom, prop);     % L2 component build-up weights
             miss = MissionAnalysisL1.from_requirements(aero, prop, geom, rp, "long_range");
             con  = ConstraintAnalysis.from_requirements(aero, prop, rp, ...
