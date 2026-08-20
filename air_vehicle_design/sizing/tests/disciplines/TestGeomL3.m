@@ -699,7 +699,13 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         %   area respond to L_fus / W_max_fuselage / H_max_fuselage at all.
         %   [Raymer 6th ed. Fig. 7.37, p. 206]: perimeter at each station, then the
         %   area under the perimeter-vs-x curve. Brandt's own figure for the same
-        %   method is 676.3289 [Geom!D23], so this reads +0.24 % on him.
+        %   method is 676.3289 [Geom!D23]. UNSCALED, this reproduces him to
+        %   +0.24 %. SCALED to the L3 fuselage it reads +2.39 %, because L3 uses
+        %   the physical L_fus = 47.5 ft and Brandt drew the table for 46.5.
+        %   That gap is the fidelity difference, not an error, and Brandt's
+        %   figure is NOT the expected value below.
+        %   Mod (08/20/2026) (Claude) -- the old line quoted +0.24 % for the
+        %   scaled value, which was the unscaled figure. Corrected.
         %   Stations: examples/F16A/inputs/F16_geom_stations.json.
         % The four-component airframe-only sum would be 1276.0564010812, so the
         % explicit not-equal check below fails loudly if the duct term is ever

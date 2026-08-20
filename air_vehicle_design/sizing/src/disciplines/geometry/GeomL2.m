@@ -17,6 +17,7 @@ classdef GeomL2
 %        plain trapezoid clipping, so a textbook pin should exist. Casey marked
 %        both "Don't touch" on 2026-08-18, so the code stays as it is.
 
+% Note (8/20/2026)(Casey): I'm not seeing a function to size the control mechanisms. Add that.
     methods (Static)
 
         % ================================================================== %
@@ -168,6 +169,11 @@ classdef GeomL2
             val        = (c_exp_root + c_tip)/2 * span_exp;
         end
 
+        % Note (8/20/2026)(casey): I cannot find a statistical method of estimating control surface
+        % sizes in Ramyer, Nicolai, or Roskam. However, Nicolai has a sophisticated way of 
+        % sizing those things, but it's dependent on purely geometry, which means it's best suited for L3.
+        % My current best option is to leave it out of L2, and implement the high-fidelity version in GeomL3.
+
         % ================================================================== %
         % PURE GEOMETRY CALCULATIONS
         % ================================================================== %
@@ -217,7 +223,6 @@ classdef GeomL2
             % Now compute the wetted area (will need to subtract area of attachment face)
             val = pi*r^2 + pi*r*s;
         end
-
 
     end
 end

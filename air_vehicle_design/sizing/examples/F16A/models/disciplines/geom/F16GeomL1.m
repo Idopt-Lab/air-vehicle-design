@@ -97,11 +97,11 @@ classdef F16GeomL1 < GeometryModelL1
         % ================================================================== %
         % Computations that call the GeomL1 toolbox
         % ================================================================== %
-        function val = get_whole_aircraft_S_wet_statistical(obj, W_TO)
+        function val = get_design_S_wet_categorical(obj, W_TO)
             val = GeomL1.compute_s_wet_regression(obj.aircraft_category, W_TO);
         end
 
-        function val = get_L_fus_statistical(obj, W_TO)
+        function val = get_L_fus_categorical(obj, W_TO)
             val = GeomL1.compute_l_fus_regression(obj.aircraft_category, W_TO);
         end
 
@@ -109,12 +109,11 @@ classdef F16GeomL1 < GeometryModelL1
             val = GeomL1.compute_AR_eq(obj.aircraft_category, obj.M_max);
         end
 
-        function val = get_c_e(obj)
-            val = GeomL1.lookup_control_surface_fraction(obj.aircraft_category, "elevator");
-        end
-
-        function val = get_c_r(obj)
-            val = GeomL1.lookup_control_surface_fraction(obj.aircraft_category, "rudder");
+        % Note (8/20/2026)(Casey): This isn't used in the sizing loop.
+        % Grouped them because it's easier to track.
+        function [val1, val2] = get_control_effectors_size(obj)
+            val1 = GeomL1.lookup_control_surface_fraction(obj.aircraft_category, "elevator");
+            val2 = GeomL1.lookup_control_surface_fraction(obj.aircraft_category, "rudder");
         end
 
         % ================================================================== %
@@ -125,12 +124,14 @@ classdef F16GeomL1 < GeometryModelL1
             v = obj.get_AR_eq();
         end
 
-        function v = get.c_e(obj)
-            v = obj.get_c_e();
+        % Note (8/20/2026)(Casey): Getter for "elevator" size.
+        function v1 = get.c_e(obj)
+            [v1, v2] = obj.get_control_effectors_size();
         end
 
-        function v = get.c_r(obj)
-            v = obj.get_c_r();
+        % Note (8/20/2026)(Casey): Getter for "rudder" size.
+        function v2 = get.c_r(obj)
+            [v1, v2] = obj.get_control_effectors_size();
         end
 
         % ================================================================== %
@@ -142,7 +143,7 @@ classdef F16GeomL1 < GeometryModelL1
         end
 
         function v = get.L_fuselage(obj)
-            v = obj.get_L_fus_statistical(obj.requireWTO('L_fuselage'));
+            v = obj.get_L_fus_categorical(obj.requireWTO('L_fuselage'));
         end        
 
         % ================================================================== %

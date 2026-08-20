@@ -225,9 +225,7 @@ classdef F16GeomL2 < GeometryModelL2
         %   geometry. Call as obj.get_S_wet() with zero arguments.
             % val = GeomL2.get_S_wet(obj);
 
-            % TODO (8/18/2026)(Casey): Currently, the L2 sizing loop gives a fuel weight of 6.3k lbf. This 
-            % is different from the previous merge. I'm pretty sure the problem is that the 
-            % geometry values aren't being updated correctly, so it's just reiterating over the same
+
             % S_wet every time. Gotta fix that.
             % Get S_wet of each component
             % S_wet of the main wings
@@ -248,6 +246,10 @@ classdef F16GeomL2 < GeometryModelL2
             val = S_wet;
         end
 
+        function val = get_control_effectors_size(obj)
+            
+        end
+
         % Note (8/18/2026)(Casey): Does this include the nose? If not, we must add a method for estimating the wetted area of conical cylinders.
         % function val = get_S_wet_fuselage(obj)
         %     val = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);
@@ -258,9 +260,9 @@ classdef F16GeomL2 < GeometryModelL2
         % end
 
         % Note (8/18/2026)(Casey): Required due to enforcer contract.
-        % function val = get_S_exposed_wing(obj)
-        %     val = GeomL2.compute_S_exposed_horizontal(obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, obj.W_max_fuselage/2);
-        % end
+        function val = get_S_exposed_wing(obj)
+            val = GeomL2.compute_S_exposed_horizontal(obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, obj.W_max_fuselage/2);
+        end
 
         % ================================================================== %
         % DERIVED-property getters — recompute live from the inputs on every read.
