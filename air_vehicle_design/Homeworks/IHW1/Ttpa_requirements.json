@@ -1,0 +1,21 @@
+{
+  "_comment": "TestTwinPropellorAircraft top-level design REQUIREMENTS -- what the aircraft must DO, fidelity-independent. Same schema and same scope guard as examples/F16A/jsons/f16a_requirements.json: requirements only, never spec data (aspect ratio, CLmax, CD0, engine data stay in nta_L1.json), and never a discipline-owned quantity (CLmax, CD0, Oswald e, propeller efficiency and the altitude power lapse all come from the injected aero/prop objects at run time).",
+
+  "missions": {
+    "segments": [
+      {"type": "startup", "name": "Startup"},
+      {"type": "taxi",    "name": "Taxi"},
+      {"type": "takeoff", "name": "Takeoff", "alt_ft": 0},
+      {"type": "climb",   "name": "Climb",   "alt_ft": 8000},
+      {"type": "cruise",  "name": "Cruise",  "alt_ft": 8000, "distance_nm": 1200},
+      {"type": "descent", "name": "Descent", "alt_ft": 0},
+      {"type": "climb",   "name": "Climb",   "alt_ft": 4000 },
+      {"type": "loiter",  "name": "Loiter",  "alt_ft": 4000,  "ktas_end":120,"time_min": 45.0},
+      {"type": "descent", "name": "Descent", "alt_ft": 0 },
+      {"type": "landing", "name": "Landing", "alt_ft": 0 },
+      {"type": "taxi",    "name": "Taxi"},
+      {"type": "shutdown","name": "Shutdown"}
+      ]
+    
+  }
+}
