@@ -3,7 +3,7 @@
 F-16A Block 10/15 Level-3 aerodynamics: the Raymer Eq. 12.24 component drag build-up plus the F-16's
 own supersonic wave-drag term. `classdef F16AeroL3 < AeroModelL3`; most methods delegate to the
 `AeroL3` static toolbox, while `get_CD0_buildup`/`drag_polar` add wave drag on top. The class also
-carries a full high-lift suite (TE flaperon + LE slat + landing gear).
+carries a full high-lift suite (TE flaperon + LE flap + landing gear).
 
 **Component order everywhere: wing, HT, VT, fuselage, duct.**
 
@@ -47,8 +47,8 @@ Plain mutable `properties` — aero constants only, from the JSON. **No geometry
 | `CD0_LandP` | 0.0010 | leakage & protuberance allowance [Raymer §12.5] |
 | `Dq_gun_port` / `Dq_hook_USAF` | 0.20 / 0.10 ft² | misc drag areas [Raymer Table 12.7] |
 
-`properties (Constant)` additionally hold the flaperon estimates (as `F16AeroL2`), the LE-slat
-estimates (`hld_LE`, `c_slat_over_c`, `eta_slat_in/out`, `F_slat`, `delta_slat_*`, `k_slat`) and the
+`properties (Constant)` additionally hold the flaperon estimates (as `F16AeroL2`), the LE-flap
+estimates (`hld_LE`, `c_lef_over_c`, `eta_lef_in/out`, `F_lef`, `delta_lef_*`, `k_lef`) and the
 landing-gear buildup inputs (`Dq_wheels`, `Dq_strut_*`, `strut_ref_length`, wheel/leg counts)
 [Raymer Table 12.6].
 
@@ -82,7 +82,7 @@ not respond to. That block is deleted and both are `Dependent`.
 | Build-up + wave drag | `get_CD0_buildup` (overrides the generic Eq. 12.24 sum to add `compute_CD0_wave` for M ≥ 1.2) | Raymer Eq. 12.24, 12.44/12.45 |
 | Accessors | `get_K1`, `get_K2`, `get_CL_alpha`, `get_e_osw`, `get_e_osw_brandt`, `compute_Re` | Raymer Eq. 12.50/12.51, 12.6, 12.48/12.49, 12.25 |
 | TE flap | `Delta_CD0_flap`, `Delta_CDi_flap`, `Delta_CLmax_flap`, `compute_S_flapped_ratio` | Raymer Eq. 12.61/12.62, Table 12.2 + Eq. 12.21 |
-| LE slat | `Delta_CD0_slat`, `Delta_CDi_slat`, `Delta_CLmax_slat` | Eq. 12.61/12.62 *form* — Raymer gives no separate LE citation |
+| LE flap | `Delta_CD0_lef`, `Delta_CDi_lef`, `Delta_CLmax_lef` | Eq. 12.61/12.62 *form* — Raymer gives no separate LE citation |
 | Landing gear | `compute_Delta_CD0_geardown` | Raymer Table 12.6 |
 | Assembled | `get_Delta_{e_osw,CD0,CLmax,CDi}_{TO,L}`, `get_CLmax_{TO,L}` | — |
 
@@ -114,6 +114,6 @@ unchanged — no retune was applied.
 | Surface-roughness table is Raymer 12.4/12.5, not 12.2 (citation drift) | `TestAeroL3.testTODO_RoughnessTableCitation` |
 | `alpha_L0`, `cl_max_2D`, `cl_alpha_2D` unverified (shared with L2) | `TestAeroL2.testTODO_{AlphaL0,ClMax2D,ClAlpha2D}Unverified` |
 | `strut_ref_length` = 0.3 ft is an estimate | in-code TODO |
-| Flaperon and slat estimates unverified against T.O. 1F-16A-1 | in-code TODO |
+| Flaperon and LEF estimates unverified against T.O. 1F-16A-1 | in-code TODO |
 | `L_aircraft` = 47.65 ft is traceable to no in-repo document | `TestGeomL3.testTODO_OverallLengthCitationNotPinned`; todo §6 |
 | `Amax`'s frame-rescaling assumption and its `π·D²/5` deduction are uncited | todo §4b, §5 |

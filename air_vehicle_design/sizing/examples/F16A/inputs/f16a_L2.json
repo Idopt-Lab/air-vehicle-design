@@ -19,8 +19,7 @@
   },
 
   "aerodynamics": {
-    "_src": "e_method 'official' [Raymer Eq. 12.48/12.49]; airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]; wave_drag_factor_E_WD [Brandt F-16A.xls Aero tab Sears-Haack wave-drag term, same source/value as f16a_L3.json]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
-    "e_method": "official",
+    "_src": "airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]; wave_drag_factor_E_WD [Brandt F-16A.xls Aero tab Sears-Haack wave-drag term, same source/value as f16a_L3.json]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
     "airfoil": {
       "name": "NACA 64A204",
       "airfoiltype": "cambered",
