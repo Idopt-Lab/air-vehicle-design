@@ -226,16 +226,21 @@ of range, even modest RCS reduction matters operationally a lot. RCS varies huge
 ("spikes" — typically perpendicular to LE/TE, perpendicular to flat sides, and directly off nose/tail
 due to inlets/nozzles/radome).
 
-### Fig 8.16 — B-70 RCS in polar coordinates (real data)
-*[Raymer, Fig. 8.16, p. 235]* — Polar plot, RCS (m², log scale 1,000–100,000 shown, spanning ~4
-orders of magnitude across azimuth) with a dashed "reduction with RAM" inner curve. Described
-qualitatively in-text: huge broadside spikes from the flat nacelle sides, and a problematic
-lower-magnitude spike near the nose from the low-sweep canard leading edges. *(Not digitized to a
-point table — the printed axis calibration and curve trace are not legible enough in this OCR pass
-to extract reliable numeric values beyond the qualitative description already given; treat any
-specific number as `[verify p. 235]` if needed.)*
+### Fig 8.16 — Radar cross section in polar coordinates (B-70, real data)
+*[Raymer, Fig. 8.16, p. 235]* — Polar plot of RCS in square meters on four labelled log decade rings:
+**100, 1000, 10,000 and 100,000 m²** (innermost to outermost), with a hatched "Reduction with RAM"
+inner lobe over the nose/forward sector. A B-70 planform sits at the centre. In-text: huge spikes to
+the sides, perpendicular to the big flat nacelle sides, plus substantial spikes just off the nose,
+perpendicular to the low-sweep canard leading edges.
 
-Representative quoted RCS figures (Ref. [28], [29]): B-52 ≈100 m² (20 dBsm); stealth-treated B-1B ≈1
+✓ Corrected 2026-08-18 against a 320-dpi render of book p. 235. Two fixes: the printed caption is
+"Radar cross section in polar coordinates" (it does not name the B-70 — that comes from the text),
+and the ring calibration starts at 100 m², not 1000 m². The curve itself is still not digitized to a
+point table — the trace is a hand-drawn spiked lobe with no azimuth grid labels, so pointwise
+readout is not defensible. Use the qualitative description and the quoted signature levels below.
+
+Representative quoted RCS figures (Ref. [28], [29]) — all confirmed 2026-08-18 against a 320-dpi
+render of book p. 235: B-52 ≈100 m² (20 dBsm); stealth-treated B-1B ≈1
 m² (0 dBsm); Lockheed A-12 ≈0.014 m² (−8 dBsm); nonstealth fighters nose-on ≈10 m² (10 dBsm);
 MiG 1.42 demonstrator ≈0.1 m² (−10 dBsm, per MiG); primary-stealth-objective designs typically
 0.01–0.1 m² (−20 to −10 dBsm). RCS also depends on threat-radar frequency/polarization.
@@ -371,7 +376,9 @@ component area × probability that a hit on it kills the aircraft, direction-dep
 probability components (~1.0) include crew compartment, single engine, unprotected fuel, and weapons.
 
 ### Fig 8.24 — Sample vulnerable-area calculation
-*[Raymer, Fig. 8.24, p. 248]* — Worked numeric example table:
+*[Raymer, Fig. 8.24, p. 248]* — Worked numeric example table (all 12 cells and the total confirmed
+2026-08-18 against a 320-dpi render of book p. 248; the printed caption is "Vulnerable-area
+calculation" and the figure states the viewing angle as azimuth 40 deg, elevation 30 deg):
 
 | Component | Presented area (ft²) | Pk given hit | Vulnerable area (ft²) |
 |---|---|---|---|
@@ -529,4 +536,9 @@ blocking anything else) avoids this class of problem.
 calc, Fig. 8.24], one qualitative polar RCS chart [Fig. 8.16, not digitized — printed axis/curve
 values not legible enough in this OCR pass for reliable point extraction]). No OCR-garbled
 coefficients requiring `[verify]` flags — this chapter contains no numeric formulas to garble.
+(Re-checked 2026-08-18: a full-text search of book pp. 213–261 finds no "(8.n)" equation number and
+no "Table 8.n", so the "no numbered equations, no tables" claim is correct.)
+
+> ⚠️ Book misprint noted on p. 235: the B-70 cruise altitude is printed as "almost 80,000 ft
+> {24,300 mg}". The metric conversion unit should be **m** (24,300 m ≈ 79,700 ft), not mg.
 Next: Chapter 9 — Crew Station, Passengers, and Payload.*

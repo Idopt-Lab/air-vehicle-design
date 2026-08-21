@@ -22,30 +22,49 @@ Defined in §10.3.2 and implemented in `PropL2` as static low-level methods.
 ### Nonafterburning engines (BPR 0 to ~6, subsonic)
 
 ```
-W        = 0.0847 · T^1.1 · exp(-0.045·BPR)   [lb]         (10.4)
+W        = 0.084  · T^1.1 · exp(-0.045·BPR)   [lb]         (10.4)  [6th ed.; see note]
 L        = 0.185  · T^0.4 · M^0.2              [ft]         (10.5)
-D        = 0.033  · T^0.5 · exp( 0.04·BPR)    [ft] [verify] (10.6)
+D        = 0.033  · T^0.5 · exp( 0.04·BPR)    [ft]         (10.6)  [CONFIRMED]
 SFC_max  = 0.67   · exp(-0.12·BPR)             [1/hr]       (10.7)
-T_cruise = 0.60   · T^0.9 · exp(-0.02·BPR)    [lb]         (10.8)
+T_cruise = 0.60   · T^0.9 · exp(+0.02·BPR)    [lb]         (10.8)  [SIGN CORRECTED]
 SFC_cr   = 0.88   · exp(-0.05·BPR)             [1/hr]       (10.9)
 ```
 
-> ⚠️ Eq. 10.6: OCR reads 0.033 for D coefficient; metric-unit cross-check suggests ~0.034. Verify on book p. 284.
+> ✅ **Corrected 2026-08-17** against a 320-dpi render of book p. 284 (this part of the PDF is
+> cleanly typeset, not scanned, so the reading is unambiguous):
+> - **Eq. 10.8 exponent sign was wrong here** — it is `exp(+0.02·BPR)`, not `exp(-0.02·BPR)`.
+>   No project code reads Eq. 10.8 (`PropL2` implements only the afterburning set), so this is a
+>   documentation-only fix.
+> - **Eq. 10.6 `[verify]` flag cleared** — the page prints **0.033**. The "metric cross-check
+>   suggests ~0.034" note was itself wrong and has been removed.
+> - **Eq. 10.4 coefficient**: the 6th ed. prints **0.084**, not 0.0847. See the edition note under
+>   the afterburning block below.
 
 ### Afterburning engines (BPR 0 to <1, M_max < 2.5)
 
 ```
-W        = 0.0637 · T^1.1 · M^0.25 · exp(-0.81·BPR)  [lb]         (10.10)
+W        = 0.063  · T^1.1 · M^0.25 · exp(-0.81·BPR)  [lb]         (10.10) [6th ed.; see note]
 L        = 0.255  · T^0.4 · M^0.2                     [ft]         (10.11)
-D        = 0.024  · T^0.5 · exp( 0.04·BPR)            [ft] [verify] (10.12)
+D        = 0.024  · T^0.5 · exp( 0.04·BPR)            [ft]         (10.12) [CONFIRMED]
 SFC_maxAB= 2.1    · exp(-0.12·BPR)                    [1/hr]       (10.13)
 T_cruise = 2.4    · T^0.74· exp( 0.023·BPR)           [lb]         (10.14)
 SFC_cr   = 1.04   · exp(-0.186·BPR)                   [1/hr]       (10.15)
 ```
 
-> ⚠️ Eq. 10.12: OCR reads 0.024 for D coefficient; metric cross-check suggests ~0.0256. Verify on book p. 284.
+> ✅ **Eq. 10.12 `[verify]` flag cleared 2026-08-17** — the page prints **0.024**. The "metric
+> cross-check suggests ~0.0256" note was itself wrong and has been removed.
 
-Coefficients verified via cross-check with the metric equivalents (book p. 284) using conversion factor 1 lbf = 4.448 N, 1 ft = 0.3048 m, 1 lb = 0.4536 kg.
+> ⚠️ **EDITION NOTE — Eqs. 10.4 and 10.10 weight coefficients.** The **6th edition** (the edition
+> this file is titled for, and the PDF the project holds) prints `0.084` and `0.063`. This file
+> previously listed `0.0847` and `0.0637`, which are **7th edition** values, not OCR noise.
+> `src/disciplines/propulsion/PropL2.m` intentionally uses the 7th-ed. `0.0637` for Eq. 10.10 and
+> cites it as such; its header records that a person holding the 7th edition confirmed that value
+> on 2026-07-30. **Both are right for their own edition — do not "correct" `PropL2` to 0.063.**
+> When citing either equation, state which edition you mean.
+
+Metric equivalents on book p. 284 (`14.7`, `0.49`, `0.15`, `19`, `0.35`, `25` nonAB; `11.1`,
+`0.68`, `0.11`, `60`, `0.59`, `30` AB) were read off the same page image and are consistent with
+the fps coefficients above.
 
 ---
 

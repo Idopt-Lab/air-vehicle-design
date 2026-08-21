@@ -109,12 +109,13 @@ Calculated from the U.S. Standard Atmosphere, 1976.
 
 | Altitude (km) | Temperature T (°K) | Pressure P (N/m²) | Density ρ (kg/m³) | Speed of Sound a (m/s) | Dynamic Viscosity μ (kg/m·s) | Kinematic Viscosity ν (m²/s) |
 |---|---|---|---|---|---|---|
+| -0.5 | 291.4 | 107480.0 | 1.28490 | 342.2 | 1.81E-05 | 1.40E-05 |
 | 0.0 | 288.2 | 101330.0 | 1.22500 | 340.3 | 1.79E-05 | 1.46E-05 |
 | 0.5 | 284.9 | 95461.0 | 1.16730 | 338.4 | 1.77E-05 | 1.52E-05 |
 | 1.0 | 281.7 | 89876.0 | 1.11170 | 336.4 | 1.76E-05 | 1.58E-05 |
 | 1.5 | 278.4 | 84560.0 | 1.05810 | 334.5 | 1.74E-05 | 1.65E-05 |
-| 2.0 | 275.2 | 79501.0 | 1.00660 | 332.5 | 1.73E-05 | 1.81E-05 [verify p. 966] |
-| 2.5 | 271.9 | 74692.0 | 0.95695 | 330.6 | 1.71E-05 [verify p. 966] | 1.79E-05 |
+| 2.0 | 275.2 | 79501.0 | 1.00660 | 332.5 | 1.73E-05 | 1.71E-05 |
+| 2.5 | 271.9 | 74692.0 | 0.95695 | 330.6 | 1.71E-05 | 1.79E-05 |
 | 3.0 | 268.7 | 70121.0 | 0.90925 | 328.6 | 1.69E-05 | 1.86E-05 |
 | 3.5 | 265.4 | 65780.0 | 0.86340 | 326.6 | 1.68E-05 | 1.94E-05 |
 | 4.0 | 262.2 | 61660.0 | 0.81935 | 324.6 | 1.66E-05 | 2.03E-05 |
@@ -129,7 +130,7 @@ Calculated from the U.S. Standard Atmosphere, 1976.
 | 8.5 | 233.0 | 33154.0 | 0.49576 | 306.0 | 1.51E-05 | 3.05E-05 |
 | 9.0 | 229.7 | 30801.0 | 0.46706 | 303.9 | 1.49E-05 | 3.20E-05 |
 | 9.5 | 226.5 | 28585.0 | 0.43966 | 301.7 | 1.48E-05 | 3.36E-05 |
-| 100 | 223.3 | 26500.0 | 0.41351 | 299.5 | 1.46E-05 | 3.53E-05 |
+| 10.0 | 223.3 | 26500.0 | 0.41351 | 299.5 | 1.46E-05 | 3.53E-05 |
 | 10.5 | 220.0 | 24540.0 | 0.38857 | 297.4 | 1.44E-05 | 3.71E-05 |
 | 11.0 | 216.8 | 22700.0 | 0.36480 | 295.2 | 1.42E-05 | 3.90E-05 |
 | 11.5 | 216.7 | 20985.0 | 0.33743 | 295.1 | 1.42E-05 | 4.21E-05 |
@@ -144,7 +145,7 @@ Calculated from the U.S. Standard Atmosphere, 1976.
 | 16.0 | 216.7 | 10353.0 | 0.16647 | 295.1 | 1.42E-05 | 8.54E-05 |
 | 16.5 | 216.7 | 9571.8 | 0.15391 | 295.1 | 1.42E-05 | 9.24E-05 |
 | 17.0 | 216.7 | 8849.7 | 0.14230 | 295.1 | 1.42E-05 | 9.99E-05 |
-| 17.5 | 216.71 | 8182.3 | 0.13157 | 295.1 | 1.42E-05 | 1.08E-04 |
+| 17.5 | 216.7 | 8182.3 | 0.13157 | 295.1 | 1.42E-05 | 1.08E-04 |
 | 18.0 | 216.7 | 7565.2 | 0.12165 | 295.1 | 1.42E-05 | 1.17E-04 |
 | 18.5 | 216.7 | 6994.8 | 0.11247 | 295.1 | 1.42E-05 | 1.26E-04 |
 | 19.0 | 216.7 | 6467.5 | 0.10400 | 295.1 | 1.42E-05 | 1.37E-04 |
@@ -158,13 +159,13 @@ Calculated from the U.S. Standard Atmosphere, 1976.
 | 32.0 | 228.5 | 889.1 | 0.01356 | 303.0 | 1.49E-05 | 1.10E-03 |
 | 34.0 | 233.7 | 663.4 | 0.00989 | 306.5 | 1.51E-05 | 1.53E-03 |
 | 36.0 | 239.3 | 498.5 | 0.00726 | 310.1 | 1.54E-05 | 2.13E-03 |
-| 38.0 | 244.8 | 377.1 | 0.00537 | 313.7 | 1.57E-05 | 293E-03 |
+| 38.0 | 244.8 | 377.1 | 0.00537 | 313.7 | 1.57E-05 | 2.93E-03 |
 | 40.0 | 250.4 | 287.1 | 0.00400 | 317.2 | 1.60E-05 | 4.01E-03 |
 | 42.0 | 255.9 | 220.0 | 0.00299 | 320.7 | 1.63E-05 | 5.44E-03 |
 | 44.0 | 261.4 | 169.5 | 0.00226 | 324.1 | 1.66E-05 | 7.34E-03 |
 | 46.0 | 266.9 | 131.3 | 0.00171 | 327.5 | 1.69E-05 | 9.83E-03 |
 | 48.0 | 270.7 | 102.3 | 0.00132 | 329.8 | 1.70E-05 | 1.29E-02 |
-| 50.0 | 270.7 | 79.78 | 0.00103 | 329.8 | 1.70E-05 [verify p. 967] | 1.66E-02 |
+| 50.0 | 270.7 | 79.78 | 0.00103 | 329.8 | 1.70E-05 | 1.66E-02 |
 | 52.0 | 269.0 | 62.22 | 8.06E-04 | 328.8 | 1.70E-05 | 2.10E-02 |
 | 54.0 | 263.5 | 48.34 | 6.39E-04 | 325.4 | 1.67E-05 | 2.61E-02 |
 | 56.0 | 258.0 | 37.36 | 5.04E-04 | 322.0 | 1.64E-05 | 3.25E-02 |
@@ -186,12 +187,27 @@ Calculated from the U.S. Standard Atmosphere, 1976.
 
 Calculated from the U.S. Standard Atmosphere, 1976.
 
-Two values in Table B.2 have unclear OCR source characters that were resolved by
-interpolation against the smooth trend of neighboring rows (flagged inline above): the
-dynamic-viscosity entries at 2.5 km and 50.0 km. Two further values were confidently
-corrected from an unambiguous single-character OCR misread (pressure at 60.0 km, printed
-"2i.96" for 21.96; kinematic viscosity at 86.0 km, printed with the decimal point dropped as
-"180E+00" for 1.80E+00).
+**Verification note (checked 2026-08-18 against 300-dpi renders of book pp. 963-967).**
+Both tables were re-read cell-by-cell off the page images. Table B.1 (pp. 963-965) agrees
+digit-for-digit in all seven columns for all 74 rows; no changes were needed. Table B.2
+(pp. 966-967) needed these corrections, all now applied:
+
+- **Missing first row restored:** Table B.2 starts at -0.5 km (291.4 / 107,480.0 / 1.28490 /
+  342.2 / 1.81E-05 / 1.40E-05). The earlier extract began at 0.0 km and dropped this row.
+- **Kinematic viscosity at 2.0 km:** the page prints **1.71E-05**. The earlier extract had
+  1.81E-05, which broke the smooth 1.65 / 1.71 / 1.79 trend.
+- **Dynamic viscosity at 2.5 km (1.71E-05) and at 50.0 km (1.70E-05):** both were previously
+  filled in by interpolation. Both are now read directly off the page and both are correct.
+- **Altitude at 10.0 km:** the earlier extract printed "100" (lost decimal point).
+- **Temperature at 17.5 km:** the page prints 216.7, not 216.71.
+- **Kinematic viscosity at 38.0 km:** the page prints 2.93E-03; the earlier extract had
+  "293E-03" (lost decimal point).
+
+Two book-page print artifacts were also checked and are recorded as read:
+- Pressure at 60.0 km prints as "2I.96" on p. 967 (a stray overstrike on the 1). The value is
+  **21.96**, which the neighbouring rows (28.72 above, 16.69 below) confirm.
+- Kinematic viscosity at 86.0 km prints as "1,80E+00" on p. 967 (a comma set for a decimal
+  point). The value is **1.80E+00**.
 
 ---
 

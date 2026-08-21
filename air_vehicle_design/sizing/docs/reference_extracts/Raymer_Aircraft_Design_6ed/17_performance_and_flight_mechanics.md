@@ -62,7 +62,7 @@ L = W = q S CL                                                          (17.9)
 V = sqrt( 2(W/S) / (ρ CL) )                                             (17.10)
 ```
 
-### §17.2.1 Minimum Thrust Required
+### §17.2.1 Minimum Thrust Required for Level Flight
 
 `T/W = 1/(L/D)` in level flight [Raymer, Eq. (17.11), p. 640]:
 
@@ -84,7 +84,7 @@ p. 640]:
 Dmin = qS(CD0 + CD0) = qS·2·CD0                                         (17.15)
 ```
 
-### §17.2.2 Minimum Power Required
+### §17.2.2 Minimum Power Required for Level Flight
 
 Power = drag × velocity [Raymer, Eq. (17.16)–(17.17), p. 641]:
 
@@ -129,7 +129,7 @@ piston-prop 2000-HP available line (flat) and jet-thrust-power-available curve (
 (No absolute units given in the source scan; figure is illustrative, not a numeric design chart —
 treat as a schematic, not digitized further.)
 
-## §17.3 Range
+### §17.2.4 Range
 
 Instantaneous range and Breguet range equation [Raymer, Eq. (17.22)–(17.23), p. 643]:
 
@@ -142,31 +142,35 @@ Constant-`CL` cruise as the aircraft lightens requires reducing dynamic pressure
 → climbing → the **cruise-climb** profile (max range), approximated in practice by ATC-compatible
 "stair-step" climbs, broken into shorter constant-altitude mission segments each analyzed via Breguet.
 
-### §17.3.1 Range Optimization — Jet
+### §17.2.5 Range Optimization — Jet
 
 "Range parameter" `(V/C)(L/D)`; for subsonic jets `C` ≈ independent of velocity, so [Raymer,
 Eq. (17.24)–(17.27), p. 644]:
 
 ```
-(V/C)(L/D) = (V/C)· CL/(CD0 + K CL²)     [CL = 2W/(ρV²S)]               (17.24)
-Vbest-range = sqrt( (2/ρ)(W/S) sqrt(K/(3CD0)) )                          (17.25)
-   [note: Eq. (17.25) as printed matches the min-power velocity form; per text this is
-   31.6% faster than Vmin-thrust — `[verify p.645, Eq. 17.25]`, OCR renders it identically
-   to Eq. (17.19) but the text states a different multiplier]
-CDbest-range = CD0 + CD0/3 = 1.33·CD0                                    (17.27)
+(V/C)(L/D) = (V/C)·CL/(CD0 + K CL²)
+           = (2W/(ρVS)) / [ C·CD0 + 4KW²C/(ρ²V⁴S²) ]                     (17.24)
+Vbest-range  = sqrt( (2W/(ρS)) · sqrt(3K/CD0) )                          (17.25)
+CLbest-range = sqrt( CD0/(3K) )                                         (17.26)
+Dbest-range  = qS · ( CD0 + CD0/3 )      [ = 1.33 · qS·CD0 ]              (17.27)
 ```
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 645. Eq. 17.25's inner radical is
+`sqrt(3K/CD0)`, **not** `sqrt(K/(3CD0))` — the previous version had the ratio inverted, which is why
+it looked identical to the min-power form Eq. 17.19. The printed form is self-consistent with the
+text: Eq. 17.25 / Eq. 17.13 = 3^(1/4) = 1.316, which is the 31.6% the book states. Eq. 17.26 was
+missing entirely, and Eq. 17.27 is a **drag**, `D = qS(CD0 + CD0/3)`, not a drag coefficient.)
 
 Best-range `CD` (1.33×`CD0`) is lower than best-`L/D` `CD` (2×`CD0`), but best-range flies 31.6%
 faster (higher q) so actual drag at best-range speed is ~1.154× the min-drag value, giving
 `L/D`(best-range) = 0.866 × `(L/D)max` (matches the Chapter 5 result cited without proof there).
 
-### §17.3.2 Range Optimization — Prop
+### §17.2.6 Range Optimization — Prop
 
 Substituting the propeller thrust relation into Eq. (17.23) removes the velocity dependence, so prop
 range is maximized simply at the velocity/`CL` for max `L/D` (Eqs. 17.13–17.14) [Raymer, Eq. (17.28),
 p. 645].
 
-## §17.4 Loiter Endurance
+### §17.2.7 Loiter Endurance
 
 Instantaneous and integrated endurance [Raymer, Eq. (17.29)–(17.30), p. 646]:
 
@@ -175,10 +179,10 @@ dE/dW = −1/(C T) = −(L/D)/(C W)                                         (17.
 E = ∫ (1/C)(L/D) dW/W   ≈ (1/C)(L/D) ln(Wi/Wf)   [approx if C,L/D const]  (17.30)
 ```
 
-### §17.4.1 Loiter — Jet
+### §17.2.8 Loiter Optimization — Jet
 Only `L/D` varies with velocity ⇒ jet loiter is maximized at max `L/D` (Eqs. 17.13–17.14).
 
-### §17.4.2 Loiter — Prop
+### §17.2.9 Loiter Optimization — Prop
 Substituting the prop relation introduces a velocity term [Raymer, Eq. (17.31)–(17.33), p. 647]:
 
 ```
@@ -189,7 +193,7 @@ Maximizing w.r.t. V leads back to the **same** velocity as minimum power require
 best-prop-loiter `CL`/drag are identical to the min-power values (Eqs. 17.20–17.21): fly at 76% of
 best-`L/D` velocity, `L/D` = 86.6% of max.
 
-### §17.4.3 Relationship Between Loiter and Cruise
+### §17.2.10 Relationship Between Loiter and Cruise
 
 Empirical shortcut for estimating equivalent loiter time from known range/cruise speed [125]
 [Raymer, Eq. (17.34), p. 647]:
@@ -198,7 +202,7 @@ Empirical shortcut for estimating equivalent loiter time from known range/cruise
 Eloiter = 1.14 (Rcruise / Vcruise)                                       (17.34)
 ```
 
-### §17.4.4 Effects of Wind on Cruise and Loiter
+### §17.2.11 Effects of Wind on Cruise and Loiter
 
 A 10%-lower groundspeed headwind ⇒ 10% less range for the same fuel; for range *requirements*, scale
 the required cruise range in the mission-segment weight-fraction equation by
@@ -216,9 +220,9 @@ Fly faster into a headwind, slower with a tailwind, for best range — typically
 adjustment, gaining a few percent range vs the no-wind optimum. Wind has no effect on loiter
 optimum airspeed (barring being blown backward).
 
-## §17.5 Steady Climbing and Descending Flight
+## §17.3 Steady Climbing and Descending Flight
 
-### §17.5.1 Climb Equations of Motion
+### §17.3.1 Climb Equations of Motion
 
 Setting Eqs. (17.6)–(17.7) with `γ≠0` to zero gives steady climb [Raymer, Eq. (17.36)–(17.39), p. 649]:
 
@@ -236,14 +240,14 @@ V = sqrt( 2(W/S)cosγ / (ρ CL) )                                          (17.4
 T/W = cosγ/(L/D) + sinγ ≈ 1/(L/D) + Vv/V                                (17.41)
 ```
 
-### §17.5.2 Graphical Method for Best Angle/Rate of Climb
+### §17.3.2 Graphical Method for Best Angle/Rate of Climb
 
 Best rate of climb = peak of the `Vv`-vs-`V` curve; best angle of climb = point of tangency from the
 origin (max `Vv/VH`) — see Fig. 17.4 for graphical construction.
 *[Raymer, Fig. 17.4, p. 650]* — `Vv` vs `VH=V` curve with the tangent-line construction marked "Best
 rate of climb" at the peak. No numeric data (generic sketch).
 
-### §17.5.3 Best Angle and Rate of Climb — Jet
+### §17.3.3 Best Angle and Rate of Climb — Jet
 
 Thrust ≈ constant with V ⇒ best climb *angle* velocity = best-`L/D` velocity (Eq. 17.13). Best climb
 *rate*: maximize Eq. (17.39) [Raymer, Eq. (17.42)–(17.43), p. 651]:
@@ -257,7 +261,7 @@ significantly raises the best-climb-rate velocity — can be ~2× the min-power 
 typical for jets (B-70: 583 kt / 1080 km/h). This gives only the best rate at a *given* altitude, not
 the full minimum-time-to-climb profile (needs the specific-excess-power method, §17.6).
 
-### §17.5.4 Best Angle and Rate of Climb — Prop
+### §17.3.4 Best Angle and Rate of Climb — Prop
 
 [Raymer, Eq. (17.44), p. 651]:
 
@@ -275,7 +279,7 @@ Vv = (550 bhp ηp)/W − DV/W                                              (17.4
 ```
 = (power available − power required)/weight ⇒ occurs at the min-power-required velocity (Eq. 17.19).
 
-### §17.5.5 Time to Climb and Fuel to Climb
+### §17.3.5 Time to Climb and Fuel to Climb
 
 [Raymer, Eq. (17.46)–(17.47), p. 652]:
 
@@ -300,7 +304,7 @@ Integrated time and fuel for a short segment (<5000 ft / 1500 m, so weight chang
 ```
 (Can be iterated: recompute `Vv` at reduced weight after subtracting `ΔWf`.)
 
-## §17.6 Level Turning Flight
+## §17.4 Level Turning Flight
 
 Turn geometry: total wing lift = `nW`; horizontal lift component = `W√(n²−1)` (Fig. 17.5 — schematic,
 no plotted data) *[Raymer, Fig. 17.5, p. 654]*. Turn rate [Raymer, Eq. (17.52), p. 653]:
@@ -309,7 +313,7 @@ no plotted data) *[Raymer, Fig. 17.5, p. 654]*. Turn rate [Raymer, Eq. (17.52), 
 ψ̇ = (radial accel)/V = [W√(n²−1)/(W/g)] / V = g√(n²−1)/V   [rad/s; ×57.3 for deg/s]  (17.52)
 ```
 
-### §17.6.1 Instantaneous Turn Rate
+### §17.4.1 Instantaneous Turn Rate
 
 If velocity may bleed off, `n` is limited only by `CLmax` or structure — **Fig. 17.6 — Turn rate and
 corner speed** *[Raymer, Fig. 17.6, p. 654]*, turn rate (deg/s) vs velocity (100–700 kt), stall-limit
@@ -330,7 +334,7 @@ one-altitude data)*:
 (Sample-data chart per the source caption; treat as illustrative order-of-magnitude, not aircraft-
 specific.) In a turning dogfight, both pilots try to reach their own corner speed fastest.
 
-### §17.6.2 Sustained Turn Rate
+### §17.4.2 Sustained Turn Rate
 
 No altitude/speed loss ⇒ T=D, L=nW [Raymer, Eq. (17.53)–(17.54), p. 655]:
 
@@ -349,7 +353,7 @@ Fig. 17.6 also shows the sustained-turn-rate envelope, derived by applying Eq. (
 sustained load factors available at each flight condition (same figure as above; no separate
 digitization).
 
-### §17.6.3 Turn Rate with Vectored Thrust
+### §17.4.3 Turn Rate with Vectored Thrust
 
 Harrier-style vectoring adds thrust-component-driven load factor. Level turn with vectored thrust
 [Raymer, Eq. (17.56)–(17.58), p. 655]:
@@ -374,9 +378,9 @@ T.E. Vectoring for turn augmentation requires nozzles near the c.g. (Harrier) �
 create an unbalanceable pitching moment unless paired with a large canard (F-15 STOL/Maneuver
 demonstrator, an early Lockheed JSF concept) to provide the opposing nose-up moment.
 
-## §17.7 Gliding Flight
+## §17.5 Gliding Flight
 
-### §17.7.1 Straight Gliding Flight
+### §17.5.1 Straight Gliding Flight
 
 Zero-thrust climb equations [Raymer, Eq. (17.62)–(17.64), p. 657]:
 
@@ -426,7 +430,7 @@ figure)*:
 
 (Schematic teaching figure, not aircraft-specific — not usable as quantitative sizing input.)
 
-### §17.7.2 Turning Gliding Flight
+### §17.5.2 Turning Gliding Flight
 
 Banked glide [Raymer, Eq. (17.75), p. 658]:
 
@@ -462,9 +466,9 @@ Vinner = Vcg[1 − (b/2R)cosφ]                                            (17.8
 radius, bank-shortened span `(b/2)cosφ`). No plotted data (geometry diagram). Normally corrected with
 aileron, but near stall at even moderate bank this can trigger a one-wing stall → spin.
 
-## §17.8 Energy-Maneuverability Methods
+## §17.6 Energy-Maneuverability Methods
 
-### §17.8.1 Energy Equations
+### §17.6.1 Energy Equations
 
 Fighter combat exploits potential/kinetic energy exchange (e.g. the "high-speed yo-yo": pull up,
 trade KE for PE and slow for a tighter turn, then roll/dive to trade PE back for speed). First
@@ -498,7 +502,7 @@ thrust axis not aligned to the flight path [Raymer, Eq. (17.90), p. 662]:
 Ps = V{ T cos(α+φT)/W − qCD0/(W/S) − n²K[W − T sin(α+φT)]/(W q S) }      (17.90)
 ```
 
-### §17.8.2 Ps Plots
+### §17.6.2 Ps Plots
 
 Fighter design specs are commonly expressed as "must-meet" `Ps` points (e.g. `Ps=0` at n=5, Mach 0.9,
 30,000 ft). **Fig. 17.9 — Ps vs Mach number and load factor** *[Raymer, Fig. 17.9, p. 663]* — `Ps`
@@ -537,7 +541,7 @@ beyond the trend). **Fig. 17.12 — Ps contours, constant load factor** *[Raymer
 — altitude vs Mach, `Ps` iso-lines for n=5 (typical); the n=1 version is used for climb-rate/ceiling
 and minimum-time-to-climb (below). No universal numeric table (aircraft-specific design chart).
 
-### §17.8.3 Minimum Time-to-Climb Trajectory
+### §17.6.3 Minimum Time-to-Climb Trajectory
 
 `he` is purely geometric (Eq. 17.85), independent of any specific aircraft — e.g. Mach 0.9 at
 30,000 ft ⇒ `he` = 42,447 ft for any aircraft. **Fig. 17.13 — Lines of constant energy height**
@@ -575,7 +579,7 @@ Actual climb time via numerical integration [Raymer, Eq. (17.93), p. 667]:
 ```
 (time along constant-`he` legs is usually negligible for first-order analysis.)
 
-### §17.8.4 Minimum Fuel-to-Climb Trajectory
+### §17.6.4 Minimum Fuel-to-Climb Trajectory
 
 Fuel-specific energy `fs` [Raymer, Eq. (17.94)–(17.96), p. 668]:
 
@@ -586,12 +590,12 @@ Wf(1→2) ≈ Δhe / (fs)average                                             (17
 ```
 
 Minimized fuel-to-climb passes through points where `fs` contours are tangent to `he` contours
-(analogous construction to §17.8.3). **Fig. 17.16 — Minimum fuel to climb** *[Raymer, Fig. 17.16,
+(analogous construction to §17.6.3). **Fig. 17.16 — Minimum fuel to climb** *[Raymer, Fig. 17.16,
 p. 668]* — altitude vs Mach, `fs` contour family plus a line of constant `dhe/dWf`; example objectives
 Mach 0.9 at 45,000 ft (cruise) and Mach 2.0 at 45,000 ft (supersonic). No numeric table (same
 qualitative-construction character as Fig. 17.15).
 
-### §17.8.5 Energy Method for Mission-Segment Weight Fraction
+### §17.6.5 Energy Method for Mission-Segment Weight Fraction
 
 Mission-segment weight fraction for a climb/acceleration (energy-height increase) [Raymer,
 Eq. (17.97), p. 669]:
@@ -601,7 +605,7 @@ Wi/Wi-1 = exp[ −C Δhe / (V(1 − D/T)) ] = exp[ −C Δhe / (V{1 − 1/[(T/W)
 ```
 (A *decrease* in `he` cannot literally refund fuel — a negative `Δhe` should not be plugged in.)
 
-## §17.9 Operating Envelope
+## §17.7 Operating Envelope
 
 "Operating/flight envelope" = altitude-velocity combinations the aircraft is designed to attain and
 withstand; "level-flight operating envelope" additionally requires steady level flight capability.
@@ -630,21 +634,24 @@ and an inlet-duct max-pressure line (different slope than the `q` line) and a sk
 pressure and duct total-pressure relations [Raymer, Eq. (17.98)–(17.99), p. 670]:
 
 ```
-q = (1/2) ρ∞ V∞²                                                        (17.98)
-P0 = Pstatic (1 + 0.2M²)^3.5   [≈ "0.7 Pstatic M²" simplified form as printed]  (17.99)
+q = (1/2) ρ∞ V∞² = 0.7 · Pstatic · M²                                     (17.98)
+P_T0 = Pstatic · [1 + 0.2 M²]^3.5                                        (17.99)
 ```
+(**Confirmed / corrected 2026-08-18** against a 300-dpi render of book p. 670. The exponent 3.5 in
+Eq. 17.99 is correct as printed. The `0.7 Pstatic M²` form was misattached to Eq. 17.99; it is the
+second equality of Eq. 17.98. Typical fighter `q` limit as printed: 1800–2200 psf {86–105 kN/m²}.)
 (Duct total pressure = freestream total pressure × pressure recovery (Chapter 13); solved again for
 static pressure at the duct-face Mach (~0.4–0.5) — can reach ~3× the outside dynamic pressure as
 wall pressure.)
 
-## §17.10 Takeoff Analysis
+## §17.8 Takeoff Analysis
 
 Chapter 5 gave the empirical takeoff-distance chart; this section breaks takeoff into segments for
 more detailed analysis. **Fig. 17.18 — Takeoff analysis** *[Raymer, Fig. 17.18, p. 671]* — ground
 roll (`SG`), rotation (`SR`), transition/circular-arc climb-in (`STR`), and climb-to-obstacle (`SC`)
 segments; no plotted data (definition sketch).
 
-### §17.10.1 Ground Roll
+### §17.8.1 Ground Roll
 
 Acceleration [Raymer, Eq. (17.100), p. 672]:
 
@@ -655,19 +662,24 @@ a = (g/W)[T − D − μ(W−L)]
 
 **Table 17.1 — Ground Rolling Resistance** *[Raymer, Table 17.1, p. 672]*
 
-| Surface | μ (rolling) | μ (braking, implied by later §17.11 note) |
-|---|---|---|
-| Dry concrete/asphalt | 0.02 | 0.3–0.5 |
-| Wet concrete/asphalt | 0.02 | 0.15–0.3 |
-| Icy concrete/asphalt | 0.02 | 0.06–0.10 |
-| Hard turf | 0.04 | — |
-| Firm dirt | 0.05 | — |
-| Soft turf | 0.07 | — |
-| Wet grass | 0.08 | — |
+(Column heading in the book: "μ — Typical Values", split into "Rolling (Brakes Off)" and "Brakes On".)
 
-(Table columns/values partially reconstructed from garbled OCR ordering — `[verify p.672, Table
-17.1]`; rolling-resistance figures given have reasonable confidence, braking figures are cross-
-referenced from the §17.11 prose values 0.3/0.5 rather than read directly from this table.)
+| Surface | μ Rolling (brakes off) | μ Brakes on |
+|---|---|---|
+| Dry concrete/asphalt | 0.03–0.05 | 0.3–0.5 |
+| Wet concrete/asphalt | 0.05 | 0.15–0.3 |
+| Icy concrete/asphalt | 0.02 | 0.06–0.10 |
+| Hard turf | 0.05 | 0.4 |
+| Firm dirt | 0.04 | 0.3 |
+| Soft turf | 0.07 | 0.2 |
+| Wet grass | 0.08 | 0.2 |
+
+(Prose value on the same page: a typical μ for rolling resistance on a hard runway is 0.03.)
+
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 672. The printed table is fully legible.
+Five of the seven rolling-resistance values were wrong — the previous version repeated 0.02 for all
+three concrete/asphalt rows and swapped hard turf with firm dirt — and the four turf/dirt braking
+values were left blank when the book prints 0.4, 0.3, 0.2, 0.2.)
 
 Ground-roll integration trick (integrate w.r.t. `V²`) [Raymer, Eq. (17.101), p. 672]:
 
@@ -679,7 +691,8 @@ Takeoff speed ≥ 1.1× stall speed (flaps in takeoff position; landing-gear geo
 α/`CL`). Closed-form ground-roll integral [Raymer, Eq. (17.102)–(17.104), p. 673]:
 
 ```
-SG = (1/(2gKA)) ln[(KT + KA V²)/KT]     [integrated Vi→Vf form]           (17.102)
+SG = (1/(2g)) ∫_Vi^Vf d(V²)/(KT + KA V²)
+   = (1/(2gKA)) · ln[ (KT + KA Vf²) / (KT + KA Vi²) ]                    (17.102)
 KT = (T/W) − μ                                                          (17.103)
 KA = (ρ/(2(W/S)))(μ CL − CD0 − K CL²)                                    (17.104)
 ```
@@ -689,7 +702,7 @@ break into shorter segments each with its own 70%-point average thrust; `K` can 
 effect (Chapter 12). Rotation time ≈ 3 s for large aircraft (`SR ≈ 3·VTO`) or ≈1 s for small aircraft
 (`SR ≈ VTO`), acceleration assumed negligible over that interval.
 
-### §17.10.2 Transition
+### §17.8.2 Transition
 
 Approximated as a circular arc; average velocity ≈1.15 `Vstall` (from 1.1→1.2 `Vstall`); average `CL`
 ≈ 0.9 `CLmax`(takeoff flaps). Load factor during transition [Raymer, Eq. (17.105)–(17.107), p. 674]:
@@ -711,7 +724,7 @@ hTR = R(1 − cosγclimb)                                                  (17.1
 If the obstacle is cleared before transition ends [Raymer, Eq. (17.111), p. 674] (uses obstacle
 height directly in an `R`-based geometric relation rather than Eq. 17.110).
 
-### §17.10.3 Climb
+### §17.8.3 Climb
 
 Horizontal distance during the climb-to-obstacle segment [Raymer, Eq. (17.112), p. 674]:
 
@@ -721,25 +734,29 @@ SC = (hobstacle − hTR) / tanγclimb                                      (17.1
 (35 ft / 10.7 m obstacle for commercial, 50 ft / 15.24 m for military/small civil; `SC=0` if the
 obstacle was cleared during transition.)
 
-### §17.10.4 Balanced Field Length
+### §17.8.4 Balanced Field Length
 
 Total takeoff distance (with obstacle clearance) assuming an engine failure at decision speed `V1`
 (brake-vs-continue distances equal). Detailed method [40] [Raymer, Eq. (17.113)–(17.115), p. 675]:
 
 ```
-BFL = 0.863/(1+2.3G) · [ (W/S)/(σ g CLclimb) + hobstacle ]
-      · [ 1/(T/W − U) + 2.7 ] + (655/√σ)                                (17.113)
+BFL = 0.863/(1+2.3G) · [ (W/S)/(ρ g CLclimb) + hobstacle ]
+      · [ 1/(Tav/W − U) + 2.7 ] + ( 655 / √(ρ/ρSL) )                     (17.113)
 
-Jet:   Tav = 0.75 Ttakeoff,static [(5+BPR)/(4+BPR)]                      (17.114)
-Prop:  Tav = 375 bhp ηp [(Ne Dp²)/bhp]^(1/3)                            (17.115)
+Jet:   Tav = 0.75 Ttakeoff,static · [(5+BPR)/(4+BPR)]                    (17.114)
+Prop:  Tav = 5.75 · bhp · [ (ρ/ρSL) Ne Dp² / bhp ]^(1/3)                 (17.115)
 ```
+(**Corrected 2026-08-18** against a 300-dpi render of book p. 675. Eq. 17.115's coefficient is
+**5.75, not 375**; it has no propeller-efficiency factor `ηp`, and the density ratio `ρ/ρSL` sits
+inside the cube-root bracket. In Eq. 17.113 the thrust-to-weight in the second bracket is `Tav/W`,
+not `T/W`, and the first bracket's denominator is `ρ g CLclimb` (ρ, not σ).)
 where `BFL` = balanced field length (ft); `G = γclimb − γmin` (`γmin` = 0.024/0.027/0.030 for
 2/3/4-engine, one engine out); `γclimb = sin⁻¹[(T−D)/W]` at climb speed (1.2`Vstall`), one engine
 out; `CLclimb` = `CL` at climb speed; `hobstacle` = 35/50 ft; `U = 0.01 CLmax + 0.02` (takeoff-flap
 position); `BPR` = bypass ratio; `bhp`, `Ne`, `Dp` = engine brake HP, engine count, prop diameter.
 
 More accurate: integrate takeoff roll with engine failure assumed at a trial `V1`, compare with a
-braking-distance analysis at that `V1` (§17.11), iterating `V1` until continue-distance
+braking-distance analysis at that `V1` (§17.9), iterating `V1` until continue-distance
 (+35 ft obstacle) = brake-to-stop distance. Assume 1 s pilot recognition delay before braking; no
 reverse thrust credit allowed for BFL. Takeoff speed for BFL minimization may run 20–40% above
 minimum takeoff speed (to keep positive one-engine-out climb capability, avoiding the high
@@ -747,21 +764,21 @@ drag-due-to-lift near minimum speed). FAR 25 aircraft must also meet the worse o
 all-engines-operating obstacle-clearance distance ("FAR takeoff field length"); FAR 23 aircraft are
 exempt from this double check.
 
-## §17.11 Landing Analysis
+## §17.9 Landing Analysis
 
 **Fig. 17.19 — Landing analysis** *[Raymer, Fig. 17.19, p. 676]* — approach (`Sa`), flare (`SF`),
 free-roll, and braking-roll segments, mirroring the takeoff breakdown; no plotted data. Landing
 weight (design-specified, ranges from takeoff weight to ~85% of it — not end-of-mission weight, since
 an emergency-return landing can't require fuel-dumping first).
 
-### §17.11.1 Approach
+### §17.9.1 Approach
 
 Obstacle clearance over 50 ft (15.24 m); approach speed `Va` = 1.3`Vstall` (1.2`Vstall` military).
 Steepest approach angle from Eq. (17.108) with idle thrust, full flaps. Commercial approach angle
 ≤3° (0.052 rad, may need more than idle thrust). Approach distance via Eq. (17.112) using flare
 height `hf`.
 
-### §17.11.2 Flare
+### §17.9.2 Flare
 
 Reverse of takeoff transition (circular arc); touchdown speed `VTD` = 1.15`Vstall` (1.1`Vstall`
 military); average flare velocity = 1.23`Vstall` (1.15`Vstall` military); flare-arc radius via
@@ -769,7 +786,7 @@ Eq. (17.107) with this average velocity and `n=1.2`; flare height/horizontal dis
 Eqs. (17.110)/(17.109). Deceleration energy during flare is neglected (pilot typically pulls all
 remaining approach power at flare initiation).
 
-### §17.11.3 Ground Roll
+### §17.9.3 Ground Roll
 
 Free-roll distance = `VTD` × assumed delay (1–3 s) before braking. Braking distance uses the same
 Eq. (17.102) form, `Vi=VTD`, `Vf=0`, thrust term = idle thrust (or reverse thrust if equipped — jets:
@@ -782,13 +799,13 @@ Braking `μ` ≈ 0.5 (civil) / 0.3 (military) on hard runway (Table 17.1 for oth
 requires ×1.666 on the total (approach+flare+ground-roll) distance for commercial "FAR field length"
 (pilot-technique margin).
 
-### §17.11.4 Effect of Wind on Takeoff & Landing
+### §17.9.4 Effect of Wind on Takeoff & Landing
 
 Rough approximation: for each segment, compute the square-root-averaged velocity (0.29×initial +
 0.71×final), then scale that segment's distance by `V̄/(V̄ + Vwind)`. A full time-domain 3-DOF sim is
 recommended for accuracy. (Downwind takeoff/landing dramatically increases all distances — avoid.)
 
-### §17.11.5 Unpowered Landings
+### §17.9.5 Unpowered Landings
 
 Airliner-type approach uses moderate power to hold ≤3° approach angle; zero-thrust/high-drag descent
 (engine flameout, sailplane, reentry-vehicle-like configurations) can force a very steep approach —
@@ -797,7 +814,7 @@ risking running out of airspeed before touchdown during the flare (must hold a s
 Fix requires improving `L/D` (bigger wing, higher AR, longer fuselage fineness) — diving to build
 speed first doesn't help, since it only steepens the approach angle further.
 
-## §17.12 Other Fighter Performance Measures of Merit
+## §17.10 Other Fighter Performance Measures of Merit
 
 Standard metrics (turn rate, corner speed, load factor, `Ps`) miss important discriminators: (1) they
 address steady-state ability, not the continuous-state-change character of real dogfights (yo-yo:
@@ -821,7 +838,7 @@ poor," "aircraft C – bad (roll reversal, goes negative)." No plotted numeric d
 aeroelastic/adverse-yaw/aileron-separation roll-rate loss at high α — see Chapter 16 §16.6 aileron
 reversal). [129] catalogs further alternative fighter metrics.
 
-### §17.12.1 Supermaneuver and Poststall Maneuver
+### §17.10.1 Supermaneuver and Poststall Maneuver
 
 Poststall maneuver (PSM) / "supermaneuver" (proven on the X-31, and the YF-22's 60°-α demo) lets a
 fighter point its nose faster via thrust-induced + dynamic turning at high α. A rocket in vacuum
@@ -866,9 +883,29 @@ performance requirements, and later serve as constraints for aircraft optimizati
 
 ---
 
-*Chapter 17 complete (§§17.1–17.12, Table 17.1, Figs 17.1–17.26, Eqs 17.1–17.115). Several figures
+*Chapter 17 complete (§§17.1–17.10, Table 17.1, Figs 17.1–17.26, Eqs 17.1–17.115). Several figures
 (17.2, 17.6, 17.7, 17.9–17.17, 17.20–17.26) are schematic/illustrative "typical values" or pure
 kinematic-construction charts rather than aircraft-specific numeric design data; these were digitized
-only where the source explicitly labeled sample data, and flagged qualitative otherwise. One equation
-(17.25/Eq. 17.99) had OCR-degraded exponents/coefficients — flagged inline with `[verify p.NNN]`.
-Next: Chapter 18 — Cost Analysis.*
+only where the source explicitly labeled sample data, and flagged qualitative otherwise.*
+
+*Correctness sweep, 2026-08-18: book pages 644, 645, 670, 672, 673 and 675 were re-rendered at 300 dpi
+and read as images, and the chapter's true section structure was taken from the printed table of
+contents (book pp. xiv–xv). All `[verify]` markers in this chapter are now resolved. Corrections
+applied: Eq. 17.25 (inner radical was inverted — it is `sqrt(3K/CD0)`), Eq. 17.26 (was missing),
+Eq. 17.27 (is a drag, not a drag coefficient), Eq. 17.98/17.99 (the `0.7·Pstatic·M²` form belongs to
+17.98, and the 3.5 exponent in 17.99 is confirmed), Eq. 17.102 (general Vi→Vf form), Eq. 17.113
+(`Tav/W`, and `ρ` not `σ`), Eq. 17.115 (coefficient is **5.75, not 375**; no `ηp`; density ratio inside
+the bracket), and Table 17.1 (five of seven rolling values wrong; four braking values were blank).*
+
+***Section-numbering correction (systematic).** The extract originally used its own outline, which
+promoted "Range" and "Loiter Endurance" to top-level sections §17.3 and §17.4 and thereby shifted
+every later section by +2 (e.g. Takeoff Analysis was cited as §17.10). The book's contents pages give
+§17.1 Introduction and Equations of Motion (637), §17.2 Steady Level Flight (639), §17.3 Steady
+Climbing and Descending Flight (649), §17.4 Level Turning Flight (653), §17.5 Gliding Flight (657),
+§17.6 Energy-Maneuverability Methods (661), §17.7 Operating Envelope (669), §17.8 Takeoff Analysis
+(671), §17.9 Landing Analysis (676), §17.10 Other Fighter Performance Measures of Merit (679). Range
+and Loiter are subsections §17.2.4–§17.2.11, confirmed against the printed headings on book pp. 643–
+648 ("17.2.5 Range Optimization—Jet" is printed on p. 644, "17.8.1 Ground Roll" on p. 672). All
+headings and cross-references in this file were renumbered to the book's scheme.*
+
+*Next: Chapter 18 — Cost Analysis.*

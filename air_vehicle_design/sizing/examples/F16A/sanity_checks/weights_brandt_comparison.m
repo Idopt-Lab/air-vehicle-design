@@ -34,7 +34,7 @@ function T_all = weights_brandt_comparison()
 %
 %       prop = F16PropL2(f16a_spec_path(2));
 %       g2   = F16GeomL2(f16a_spec_path(2), prop);
-%       g3   = F16GeomL3(f16a_spec_path(3), prop);
+%       g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 %       w1   = F16WeightsL1(f16a_spec_path(1));                                  % injects NOTHING
 %       w2   = F16WeightsL2(f16a_spec_path(2), f16a_requirements_path(), g2, prop);
 %       w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
@@ -109,7 +109,7 @@ ALT_OEW = sm.OEW.corrections_xls;   % 19,148.08
 % there is no L3 propulsion tier, so the L3 rung's engine data is an L2 object.
 prop = F16PropL2(f16a_spec_path(2));
 g2   = F16GeomL2(f16a_spec_path(2), prop);
-g3   = F16GeomL3(f16a_spec_path(3), prop);
+g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 req  = f16a_requirements_path();
 
 w1 = F16WeightsL1(f16a_spec_path(1));
@@ -595,6 +595,6 @@ function w = makeL3(req, prop)
 %   Fresh objects so that mutating one input for a sensitivity row cannot leak
 %   into any other row -- F16GeomL3 and F16PropL2 are handle classes.
     w = F16WeightsL3(f16a_spec_path(3), req, ...
-                     F16GeomL3(f16a_spec_path(3), prop), prop);
+                     F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path()), prop);
 end
 

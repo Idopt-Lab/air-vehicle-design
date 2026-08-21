@@ -14,6 +14,21 @@ classdef (Abstract) AerodynamicsBase < handle
 %
 %   Companion doc: src/base/AerodynamicsBase.md
 
+% Note (8/21/2026)(Casey): The aerodynamic base doesn't enforce any particular properties,
+% but it should. These properties seem equally fitted for this class, and the "aircraft state"
+% class. Which would be better? Ask Sarojini.
+% properties (Abstract)
+%     e_osw
+%     K1_sub
+%     K1_sup
+%     K2_sub
+%     K2_sup
+%     CL
+%     CD
+%     CD0
+% end
+
+
     methods (Abstract)
 
         %DRAG_POLAR  Drag polar at the given flight state.
@@ -22,6 +37,10 @@ classdef (Abstract) AerodynamicsBase < handle
 
         %GET_CLMAX  Maximum usable lift coefficient at the given flight state.
         CLmax = get_CLmax(obj, state)
+
+        % Note (8/20/2026)(Casey): I think this should take a state, if it's relevant.
+        %GET_CD0    zero-lift drag coefficient (should this take a state?)
+        % CD0 = get_CD0(obj)
 
     end
 

@@ -163,25 +163,46 @@ methods of Chapter 17; time-stepping simulation gives a better answer).
 ### Table 22.2 — Data for Heavenly Bodies (after [150])
 *[Raymer, Table 22.2, p. 813]*
 
-| Body | Mean Distance from Sun (Mkm) | Period of Revolution | Diameter (km) | Relative Mass (Earth=1.0) | Specific Gravity (water=1) | Surface Gravity (m/s²) | Escape Velocity (m/s) |
+| Name | Orbit Radius (mil st. miles) | Period of Revolution About Sun | Mean Diameter (km) | Relative Mass (Earth = 1.0) | Specific Gravity (1 = water) | Acceleration of Gravity at Surface (m/s²) | Escape Velocity at Surface (m/s) |
 |---|---|---|---|---|---|---|---|
-| Sun | - | - | 1,393,000 | 332,000 | 1.41 | 273.4 | 616,000 |
-| Mercury | 57.9 | 87.97 days | 4990 | 0.053 | 5.30 | 3.60 | 4200 |
-| Venus | 108.2 | 224.7 days | 12,200 | 0.815 | 4.95 | 8.50 | 10,300 |
-| Earth | 149.6 | 365.256 days | 12,755 | 1.00 | 5.52 | 9.806 | 11,179 |
-| Mars | 227.9 | 686.98 days | 6760 | 0.107 | 3.95 | 3.749 | 5000 |
-| Jupiter | 778.3 | 11.86 yr | 142,800 | 318.4 | 1.33 | 26.0 | 61,000 |
-| Saturn | 1427 | 29.46 yr | 120,660 | 95.2 | 0.69 | 13.7 | 36,600 |
-| Uranus | 2871 | 84.0 yr | 51,120 | 14.5 | 1.56 | 9.39 | 21,900 |
-| Neptune | 4497 | 164.8 yr | 49,530 | 17.2 | 2.27 | 14.9 | 25,000 |
-| Pluto | 5906 | 248.4 yr | ~2370 | 0.0022 | ~1.8 | ~0.66 | ~1200 |
-| Moon | 0.238 (from Earth) | 27.3 days | 3475 | 0.012 | 3.34 | 1.58 | 2380 |
+| Sun | — | — | 1,393,000 | 332,000 | 1.41 | 273.4 | 616,000 |
+| Moon | 0.238 | 27.3 days | 3475 | 0.012 | 3.34 | 1.58 | 2380 |
+| Mercury | 35.96 | 87.97 days | 4990 | 0.053 | 5.30 | 3.60 | 4200 |
+| Venus | 67.20 | 224.7 days | 12,200 | 0.815 | 4.95 | 8.50 | 10,300 |
+| Earth | 92.90 | 365.256 days | 12,755 | 1.00 | 5.52 | 9.806 | 11,179 |
+| Mars | 141.6 | 686.98 days | 6760 | 0.107 | 3.95 | 3.749 | 5000 |
+| Jupiter | 483.3 | 11.86 yr | 14,000 | 318.4 | 1.33 | 26.0 | 61,000 |
+| Saturn | 886.2 | 29.46 yr | 125,000 | 95.2 | 0.69 | 13.7 | 36,600 |
+| Uranus | 1783 | 84.0 yr | 47,600 | 14.5 | 1.56 | 9.39 | 21,900 |
+| Neptune | 2794 | 164.8 yr | 44,700 | 17.2 | 2.27 | 14.9 | 25,000 |
+| Pluto | 3670 | 248.4 yr | 14,000 | 0.90 | 4.00 | 7.62 | 10,000 |
 
-*(Table reproduced as printed; the OCR for the outermost-column planet-data cells was heavily
-garbled by the scan's multi-column layout — Pluto/Moon escape-velocity and mass-ratio figures above
-are approximate reconstructions from context and standard reference values, flagged
-`[verify p. 813]`. Mean-distance-from-sun values (in millions of km) filled in from standard
-astronomical data since the OCR text for that column was unreadable.)*
+**Corrected 2026-08-18 against 300-dpi and 700-dpi renders of book p. 813.** The earlier extract of
+this table was substantially wrong and is fully replaced above. What was wrong:
+
+- **The second column was mislabelled and its values were invented.** The book's column is
+  **"Orbit Radius, (mil st. miles)"** — millions of STATUTE MILES. The earlier extract relabelled it
+  "Mean Distance from Sun (Mkm)" and filled it with modern astronomical values in millions of km
+  (57.9, 108.2, 149.6, …). None of those numbers appear on the page. The book's own numbers are
+  35.96, 67.20, 92.90, … , which are the same distances in millions of statute miles.
+- **The row order was changed.** The book prints Sun, **Moon**, Mercury, Venus, Earth, Mars, Jupiter,
+  Saturn, Uranus, Neptune, Pluto. The Moon is the second row, not the last.
+- **Five outer-planet / Pluto cells were replaced with modern reference values.** The book prints
+  Jupiter mean diameter 14,000; Saturn 125,000; Uranus 47,600; Neptune 44,700; and the whole Pluto
+  row as 14,000 / 0.90 / 4.00 / 7.62 / 10,000. The earlier extract had 142,800 / 120,660 / 51,120 /
+  49,530 and a Pluto row of ~2370 / 0.0022 / ~1.8 / ~0.66 / ~1200. Everything is now as printed.
+
+**Book misprints in Table 22.2.** Two cells of the printed table are physically wrong and are kept
+as printed above, with this note rather than a silent fix:
+- **Jupiter mean diameter, 14,000 km.** Jupiter's diameter is about 142,800 km. The printed value is
+  internally inconsistent with the same row's relative mass of 318.4 and specific gravity of 1.33,
+  which together imply a diameter near 143,000 km. The digits appear to have been truncated.
+- **The whole Pluto row.** A mean diameter of 14,000 km with a relative mass of 0.90 and a surface
+  gravity of 7.62 m/s² describes a near-Earth-sized body, not Pluto (about 2370 km, 0.0022 Earth
+  masses, 0.62 m/s²). The row also repeats Jupiter's misprinted 14,000. Treat the Pluto row as
+  unusable.
+Do not use this table as a source of planetary data; it is reproduced here only because Raymer's
+Hohmann-transfer discussion (Table 22.3) refers back to it.
 
 To travel between orbital radii (planet-to-planet, or Earth-orbit-to-Moon), the minimum-fuel
 strategy is the **Hohmann transfer orbit** — an elliptical orbit exactly tangent to the starting and
@@ -550,8 +571,6 @@ revised for each regime.
 
 *Chapter 22 complete (§§22.1-22.4.4, Tables 22.1-22.3, Figs 22.1-22.6, Eqs 22.1-22.18). No numbered
 in-chapter reference list (footnote citations refer to the book's consolidated bibliography, not
-reproduced here). Table 22.2's outer columns (planet mean-distance-from-sun, and the Moon/Pluto
-rows) suffered heavy OCR garbling from the source scan's multi-column layout; the reconstructed
-values are flagged `[verify p. 813]` in the table note above and should be checked against a
-primary source (e.g. NASA planetary fact sheets) before being relied upon for anything beyond
-qualitative reference.*
+reproduced here). Table 22.2 was re-read cell-by-cell off a 300-dpi render of book p. 813 on
+2026-08-18 and corrected; see the note under that table for what was wrong and for the two book
+misprints (Jupiter mean diameter, and the whole Pluto row) that are kept as printed.*

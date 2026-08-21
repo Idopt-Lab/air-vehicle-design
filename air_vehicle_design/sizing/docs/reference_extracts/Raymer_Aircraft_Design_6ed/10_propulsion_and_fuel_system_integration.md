@@ -188,23 +188,34 @@ recommended for full jet-engine-design theory/practice.
 **Cross-check against the older `reference_extracts/raymer_data.md` extract**, which OCR'd this same
 section previously with lower confidence:
 
-| Eq. | Old `raymer_data.md` reading | This re-extraction (page-image confirmed) | Agreement |
+| Eq. | Old `raymer_data.md` reading | This re-extraction (6th ed. page-image confirmed) | Agreement |
 |---|---|---|---|
-| 10.4 (W, nonAB) | `0.0847·T^1.1·e^(-0.045BPR)` | `0.084·T^1.1·e^(-0.045BPR)` | Essentially identical — trivial rounding difference (0.0847 vs 0.084), not a real discrepancy; the printed page clearly shows **0.084**. |
+| 10.4 (W, nonAB) | `0.0847·T^1.1·e^(-0.045BPR)` | `0.084·T^1.1·e^(-0.045BPR)` | **Differs.** The 6th ed. prints **0.084**. See the edition note below — 0.0847 is not a rounding of 0.084. |
 | 10.5 (L, nonAB) | `0.185·T^0.4·M^0.2` | same | Exact match. |
-| 10.6 (D, nonAB) | `0.033·...`, flagged `[verify]` suggesting ~0.034 | `0.033·T^0.5·e^(0.04·BPR)` | **Resolved**: the page image clearly prints **0.033**. The old extract's own printed value (0.033) was correct; its "metric cross-check suggests ~0.034" annotation was an unnecessary/incorrect second-guess — no change needed. |
-| 10.7–10.9 (nonAB) | matches | matches | Exact match. |
-| 10.10 (W, AB) | `0.0637·T^1.1·M^0.25·e^(-0.81BPR)` | `0.063·T^1.1·M^0.25·e^(-0.81·BPR)` | Essentially identical — trivial rounding difference, page clearly shows **0.063**. |
+| 10.6 (D, nonAB) | `0.033·...`, flagged `[verify]` suggesting ~0.034 | `0.033·T^0.5·e^(0.04·BPR)` | **Resolved**: the page image clearly prints **0.033**. The old extract's own printed value was correct; its "metric cross-check suggests ~0.034" annotation was an incorrect second-guess. |
+| 10.7 (SFC, nonAB) | `0.67·e^(-0.12BPR)` | same | Exact match. |
+| 10.8 (T_cruise, nonAB) | `0.60·T^0.9·exp(**-**0.02·BPR)` | `0.60·T^0.9·e^(**+**0.02·BPR)` | **Differs — sign error in the old file.** The 6th ed. prints the exponent as **positive**. A sign flip is not an edition refinement; this is an OCR error in `raymer_data.md`. Not used by any project code (see below). |
+| 10.9 (SFC_cr, nonAB) | `0.88·e^(-0.05BPR)` | same | Exact match. |
+| 10.10 (W, AB) | `0.0637·T^1.1·M^0.25·e^(-0.81BPR)` | `0.063·T^1.1·M^0.25·e^(-0.81·BPR)` | **Differs.** The 6th ed. prints **0.063**. See the edition note below. |
 | 10.11 (L, AB) | `0.255·T^0.4·M^0.2` | same | Exact match. |
-| 10.12 (D, AB) | `0.024·...`, flagged `[verify]` suggesting ~0.0256 | `0.024·T^0.5·e^(0.04·BPR)` | **Resolved**: the page image clearly prints **0.024**. As with Eq. 10.6, the old extract's printed value was already correct; the "verify" flag and suggested correction were unwarranted. |
+| 10.12 (D, AB) | `0.024·...`, flagged `[verify]` suggesting ~0.0256 | `0.024·T^0.5·e^(0.04·BPR)` | **Resolved**: the page image clearly prints **0.024**. As with Eq. 10.6, the old value was already correct and the "verify" annotation was unwarranted. |
 | 10.13–10.15 (AB) | matches | matches | Exact match. |
 
-**Net conclusion**: no actual coefficient errors existed in either extract. The two apparent
-"discrepancies" the old `raymer_data.md` flagged for Eqs. 10.6/10.12 (D coefficients) were false
-alarms — its own OCR'd values (0.033, 0.024) were correct all along; only its self-doubting
-"metric cross-check" annotations were wrong. This re-extraction confirms the project's existing
-`PropL2` static methods (if implemented from the old extract's printed coefficients) are already
-using the correct constants.
+**Edition note (important).** Eqs. 10.4 and 10.10 differ from the old extract in the third
+significant figure (0.084 vs 0.0847; 0.063 vs 0.0637). These are **edition differences, not OCR
+errors**. This file records the **6th edition** values, which is what the page image above shows.
+The project's `src/disciplines/propulsion/PropL2.m` deliberately uses the **7th edition** value
+`0.0637` for Eq. 10.10, and its header records that a person holding the 7th edition confirmed that
+value on 2026-07-30. Both are correct for their own edition. Do **not** "fix" `PropL2` to 0.063 on
+the strength of this file — check which edition the calling code cites first.
+
+**Net conclusion.** Two of the old extract's `[verify]` flags (Eqs. 10.6, 10.12 D-coefficients)
+were false alarms and are cleared. One genuine defect was found in the old file: the **Eq. 10.8
+exponent sign**. Eq. 10.8 is the nonafterburning cruise-thrust model; the project implements only
+the afterburning set (Eqs. 10.10–10.15) in `PropL2`, so no shipped code reads Eq. 10.8 and no code
+change follows from this correction. The 6th-ed. values for Eqs. 10.6/10.12 (`0.033`, `0.024`) are
+now confirmed from the page image, which bears on the still-open engine-diameter TODO recorded in
+`PropL2.m`'s header.
 
 ### §10.3.3 Inlet Geometry
 
@@ -588,19 +599,34 @@ stay ≤**700 fps {213 m/s}** during takeoff. Apply the speed limit through Eqs.
 out the allowable diameter.
 
 **Eq (10.23)** *[Raymer, Eq. (10.23), p. 311]* — statistical diameter-vs-power estimate:
-`D = K_prop · (Power)^(exponent)`, coefficients by blade count (method modified from Ref. [47]):
 
-| Number of blades | Exponent | K (fps: hp→ft) | K (mks: kW→m) |
-|---|---|---|---|
-| 2 | (exponent not isolated in this OCR pass — see coefficient table below) | 1.7 | 0.56 |
-| 3 | " | 1.6 | 0.52 |
-| 4+ | " | 1.5 | 0.49 |
+```
+D = K_p · ⁴√(Power)                                                      (10.23)
+```
 
-`[verify p. 312]` — the printed table gives a single shared exponent per row alongside these `K`
-values, but the OCR scan of this specific cell did not cleanly separate the exponent from the `K`
-column; use the printed table directly (p. 312) before implementing Eq. (10.23) in code. The smaller
-of the tip-speed-limited diameter and the Eq. (10.23) statistical diameter should be used for initial
-layout.
+That is, `D = K_p · Power^0.25` — a **fourth root**, the same for every blade count. Only `K_p`
+varies with blade count *[Raymer, unnumbered table, p. 312]*:
+
+| No. Blades | `K_p` (British) | `K_p` (Metric) |
+|---|---|---|
+| 2 | 1.7 | 0.56 |
+| 3 | 1.6 | 0.52 |
+| 4+ | 1.5 | 0.49 |
+| **Power units** | hp | kW |
+| **Diameter units** | ft | m |
+
+Method modified from Ref. [47], with thanks to D. Gerren for the aircraft data collection used to
+update these equations [Raymer, p. 312 table footnote].
+
+> **Resolved 2026-08-17** against 600-dpi renders of book pp. 311–312. The earlier
+> `[verify p. 312]` flag rested on a false premise: it assumed the p. 312 table carried "a single
+> shared exponent per row" that the OCR had merged into the `K` column. It does not — the printed
+> table has exactly three columns (No. Blades, British `K_p`, Metric `K_p`) plus two unit rows, and
+> **the exponent lives in Eq. (10.23) itself as a fourth root**, applying to all blade counts. The
+> `K_p` values were already correct.
+
+The smaller of the tip-speed-limited diameter and the Eq. (10.23) statistical diameter should be
+used for initial layout [Raymer, p. 311].
 
 Fixed-pitch propellers lose effective AoA (and thus thrust) as speed rises (a "cruise prop" or "climb
 prop," depending which regime is favored); variable-pitch designs (controllable-pitch: pilot-set via a
@@ -716,35 +742,66 @@ size.
 *[Raymer, Table 10.3, p. 320]* — form: `X_scaled = X_actual · SF^(exponent)`, `SF = power_scaled /
 power_actual` (developed by the author from Ref. [1] data):
 
-| Parameter | Piston exponent | Turboprop exponent |
-|---|---|---|
-| Weight | 0.78 | 0.809 |
-| Length | 0.424 | 0.310 |
-| Diameter | (width/height vary insignificantly within ±50% power) | 0.130 |
+The printed table has **four** engine columns — three piston types plus turboprop:
 
-`[verify p. 320]` — this OCR pass could not fully disambiguate every cell of the printed table
-(specifically whether a "Diameter" row exists distinctly for piston engines, or whether that row is
-turboprop-only with piston width/height simply noted as roughly power-invariant); use the printed
-table directly if implementing this scaling law.
+| `X` | Opposed | In-line | Radial | Turboprop |
+|---|---|---|---|---|
+| Weight | 0.78 | 0.78 | 0.809 | 0.803 |
+| Length | 0.424 | **0.424** (printed 4.24 — misprint, see note) | 0.310 | **0.373** (printed 3.730 — misprint, see note) |
+| Diameter | —* | —* | 0.130 | 0.120 |
+
+\*Width and height vary insignificantly within +50% power.
+
+`X_scaled = X_actual · SF^†`, where † `SF = power_scaled / power_actual` [Raymer, Table 10.3
+footnotes, p. 320].
+
+> **Corrected 2026-08-17** against 700-dpi renders of book pp. 320–321. Two defects:
+>
+> 1. **The earlier transcription collapsed four engine columns into two** and relabelled the
+>    *Radial* column as *Turboprop*. Every "Turboprop" exponent it listed (0.809, 0.310, 0.130) is
+>    in fact the Radial column; the true turboprop exponents are 0.803, 0.373, 0.120.
+> 2. **Two printed Length exponents are book misprints.** The page really prints `4.24` (In-line)
+>    and `3.730` (Turboprop). Both are decimal-point slips: as scaling exponents they are absurd —
+>    an exponent of 4.24 means doubling power lengthens the engine roughly 19-fold. **Table 10.4 on
+>    the facing page gives the same exponents correctly as `0.424` and `0.373`**, which settles it
+>    without inference. The corrected values are recorded above with the printed values noted.
 
 ### Table 10.4 — Piston and Turboprop Statistical Models
 *[Raymer, Table 10.4, p. 321]* — form: `X = a·(power)^b` (fps: hp→ft/lb; mks: kW→m/kg), by engine
 class:
 
-| Parameter | Piston (fps a, b) | Turboprop (fps a, b) |
-|---|---|---|
-| Weight | 5.47, 0.780 | 4.90, 0.809 |
-| Length | 0.32, 0.424 | 0.52, 0.310 |
-| Diameter | — | 0.35, 0.373 |
-| Width | 2.6–2.8 ft (range, not a power law) | 1.7, 0.130 |
-| Height | 1.8–2.1 ft (range) | 0.8, 0.120 |
-| Typical propeller rpm | 2770 | 2300 |
-| Applicable bhp range | 60–500 | 200–2000 |
+The printed table has **four** engine column-groups, each with its own `a` and `b`, and **two**
+row-blocks (British and Metric).
 
-(Metric coefficients are also given in the source table alongside these fps values but omitted here
-per this project's English-units convention; see p. 321 directly if metric coefficients are needed.)
-`[verify p. 321]` — table cell alignment in this OCR pass is only moderately confident for the
-Width/Height rows; cross-check the printed table before hard-coding.
+**British: `X = a·(bhp)^b`, result in [lb or ft]**
+
+| Engine parameter `X` | Opposed `a` | Opposed `b` | In-line `a` | In-line `b` | Radial `a` | Radial `b` | Turboprop `a` | Turboprop `b` |
+|---|---|---|---|---|---|---|---|---|
+| Weight | 5.47 | 0.780 | 5.22 | 0.780 | 4.90 | 0.809 | 1.67 | 0.803 |
+| Length | 0.32 | 0.424 | 0.49 | 0.424 | 0.52 | 0.310 | 0.35 | 0.373 |
+| Diameter | Width 2.6–2.8 ft; Height 1.8–2.1 ft | | Width 1.4–1.6 ft; Height 2–2.2 ft | | 1.7 | 0.130 | 0.8 | 0.120 |
+| Typical propeller, rpm | 2770 | | 2770 | | 2300 | | (not given) | |
+| Applicable bhp range | 60–500 | | 100–300 | | 200–2000 | | 400–5000 | |
+
+**Metric: `X = a·(power)^b`, power in kW, result in [kg or m]**
+
+| Engine parameter `X` | Opposed `a` | Opposed `b` | In-line `a` | In-line `b` | Radial `a` | Radial `b` | Turboprop `a` | Turboprop `b` |
+|---|---|---|---|---|---|---|---|---|
+| Weight | 3.12 | 0.780 | 2.98 | 0.780 | 2.82 | 0.809 | 0.96 | 0.803 |
+| Length | 0.11 | 0.424 | 0.17 | 0.424 | 0.174 | 0.310 | 0.12 | 0.373 |
+| Diameter | Width 0.8–0.9; Height 0.6–0.7 | | Width 0.4–0.5; Height 0.6–0.7 | | 0.54 | 0.130 | 0.25 | 0.120 |
+| Typical propeller, rpm | 2770 | | 2770 | | 2300 | | (not given) | |
+| Applicable power range, kW | 45–370 | | 75–225 | | 150–1500 | | 300–3728 | |
+
+> **Corrected 2026-08-17** against a 340-dpi render of book p. 321. The earlier transcription was a
+> wholesale column collapse: it reduced four engine groups to two ("Piston" and "Turboprop") and
+> then filled the "Turboprop" column with values belonging to *other* columns and *other rows*.
+> Specifically, its Turboprop entries `4.90, 0.809` and `0.52, 0.310` are the **Radial** Weight and
+> Length; its Turboprop "Diameter `0.35, 0.373`" is actually the **Turboprop Length**; its Turboprop
+> "Width `1.7, 0.130`" is the **Radial Diameter**; its Turboprop "Height `0.8, 0.120`" is the
+> **Turboprop Diameter**; its Turboprop rpm 2300 is **Radial** (the turboprop cell is blank); and
+> its Turboprop bhp range 200–2000 is **Radial** (turboprop is 400–5000). The Metric block was
+> omitted entirely and is now included. The `[verify p. 321]` flag is cleared.
 
 ### §10.5.1 Piston-Engine Installation
 
@@ -763,15 +820,23 @@ keeping cooling massflow as small as efficiently possible. Typical need: ≈1 lb
 per 100 hp {≈0.6 kg/s per 100 kW}. Optimization studies favor slowing intake air to **30–70%** of
 flight speed (climb speed is usually the worst/sizing case):
 
-**Eq (10.25)** *[Raymer, Eq. (10.25), p. 322]*: `A_cooling = bhp / (2.2·V_climb)` {ft²} (`bhp` in hp,
-`V_climb` in ft/s)
+**Eq (10.25)** *[Raymer, Eq. (10.25), p. 320]*: `A_cooling = bhp / (2.2·V_climb)` {ft²}
 
-**Eq (10.26)** *[Raymer, Eq. (10.26), p. 322]*: `A_cooling = bhp / (55·V_climb)` {m²} (`bhp` in kW,
-`V_climb` in m/s)
+**Eq (10.26)** *[Raymer, Eq. (10.26), p. 320]*: `A_cooling = P / (58·V_climb)` {m²}
 
-`[verify p. 322]` — the "55" mks coefficient in this OCR pass is a low-confidence read (garbled
-digits); cross-check directly against the printed page before implementing Eq. (10.26) — the fps
-form, Eq. (10.25), read cleanly.
+Power is in horsepower (Eq. 10.25) or kilowatts (Eq. 10.26); `V_climb` is climb speed in ft/s or
+m/s respectively, and is usually the critical condition for cooling [Raymer, p. 320].
+
+> **Corrected 2026-08-17** against a 340-dpi render of book p. 320. The mks coefficient is **58**,
+> not the flagged low-confidence "55". Both equations sit on **p. 320**, not p. 322 as previously
+> cited (p. 322 holds Fig. 10.27, the installation diagrams). The `[verify p. 322]` flag is cleared.
+
+On exit area: despite an old rule of thumb that the exit should be 30% larger than the intake, more
+recent analysis favors an exit slightly *smaller* than the intake. Raymer suggests designing to
+`A_exit/A_inlet = 0.8` for preliminary layout, with adjustable cowl flaps that open to a ratio of 2
+or more. The cooling airflow always adjusts to the exit area, so the intake area need not vary. If
+a variable exit is undesirable, start 30% larger than the intake and reduce it during flight test
+while watching cylinder-head temperatures [Raymer, p. 320].
 
 An older rule of thumb (exit area 30% larger than intake) has reportedly been superseded — a slightly
 *smaller* exit than intake (ratio `A_exit/A_inlet ≈ 0.8`) plus adjustable cowl flaps opening to a
@@ -830,27 +895,46 @@ Water contamination (denser than fuel, sinks to tank drains — checked via a cl
 sample) and dissolved-water freezing at altitude (can block fuel lines — addressed with fuel heaters)
 are both operational hazards worth layout awareness (drain placement).
 
-### Table 10.5 — Average Fuel Densities [Ref. 172 — printed as such in the source]
-*[Raymer, Table 10.5, p. 326]* — lb/gal {kg/L} at −18°C / 15°C / 38°C (approximate, per OCR — column
-temperature headers partially garbled, `[verify p. 326]` for exact header values), by fuel type:
+### Table 10.5 — Average Fuel Densities in (lb/gal) or [kg/liter]
+*[Raymer, Table 10.5, p. 327]* — based on data from Ref. [172]. The table has **four**
+temperature points, each printed as an fps/metric pair, and **two** row-blocks (per-gallon and
+per-cubic-foot). The 59°F {15°C} pair is set in bold in the book as the standard reference
+condition.
 
-| Fuel | lb/gal (approx., mid-range) | lb/ft³ (approx.) |
-|---|---|---|
-| AvGas | ≈6.0–6.1 | ≈44.9–45.8 |
-| Jet A-1 | ≈6.6–6.9 | ≈49–51.6 |
-| JP-4/Jet B | ≈6.2–6.5 | ≈46–48.8 |
-| JP-5 | ≈6.65–7.0 | ≈49.8–52.2 |
-| JP-8/Jet A | ≈6.6–6.9 | ≈49.4–51.9 |
-| JP-10 | ≈7.7–8.0 | ≈57.7–60.1 |
+**Block 1 — lb/gal or {kg/liter}**
 
-`[verify p. 326]` — this table's temperature-column structure (three temperatures × lb/gal and
-lb/ft³ sub-columns) OCR'd with significant row/column scrambling; the values above are collapsed to
-an approximate range spanning the printed −18°C/15°C/38°C variation rather than resolved per-exact-
-temperature. **For actual implementation, re-derive this table from a direct page-image render of
-p. 326** rather than relying on the ranges given here — density varies meaningfully with temperature
-(the book recommends design to the 15°C column with a 3–5% volume margin for thermal expansion/
-contraction) and getting the wrong column would bias fuel-volume sizing. Conversion note used to build
-the ft³ figures: 7.48 gal = 1 ft³.
+| Fuel | 0°F | {−18°C} | 32°F | {0°C} | **59°F** | **{15°C}** | 100°F | {38°C} |
+|---|---|---|---|---|---|---|---|---|
+| AvGas | 6.13 | 0.734 | 6.01 | 0.720 | **5.93** | **0.710** | 5.78 | 0.692 |
+| JET A-1 | 6.89 | 0.826 | 6.78 | 0.813 | **6.70** | **0.803** | 6.57 | 0.787 |
+| JP-4/JET B | 6.52 | 0.781 | 6.40 | 0.767 | **6.32** | **0.757** | 6.17 | 0.739 |
+| JP-5 | 6.98 | 0.836 | 6.87 | 0.823 | **6.78** | **0.813** | 6.65 | 0.797 |
+| JP-8/JET A | 6.94 | 0.832 | 6.83 | 0.819 | **6.74** | **0.808** | 6.61 | 0.792 |
+| JP-10 | 8.03 | 0.962 | 7.94 | 0.951 | **7.85** | **0.941** | 7.71 | 0.924 |
+
+**Block 2 — lb/ft³ or {kg/m³}**
+
+| Fuel | 0°F | {−18°C} | 32°F | {0°C} | **59°F** | **{15°C}** | 100°F | {38°C} |
+|---|---|---|---|---|---|---|---|---|
+| AvGas | 45.8 | 734 | 44.9 | 720 | **44.3** | **710** | 43.2 | 692 |
+| JET A-1 | 51.6 | 826 | 50.8 | 813 | **50.1** | **803** | 49.1 | 787 |
+| JP-4/JET B | 48.8 | 781 | 47.9 | 767 | **47.3** | **757** | 46.1 | 739 |
+| JP-5 | 52.2 | 836 | 51.4 | 823 | **50.8** | **813** | 49.8 | 797 |
+| JP-8/JET A | 51.9 | 832 | 51.1 | 819 | **50.4** | **808** | 49.4 | 792 |
+| JP-10 | 60.1 | 962 | 59.4 | 951 | **58.7** | **941** | 57.7 | 924 |
+
+Block 2 is Block 1 converted for layout purposes using 7.48 gallons = 1 ft³; in metric, 1000 liters
+= 1 m³ [Raymer, p. 326].
+
+> **Corrected 2026-08-17** against 600-dpi renders. Three defects:
+> - **The table is on p. 327**, not p. 326 (p. 326 is the prose that introduces it). Citation fixed.
+> - **There are four temperature points (0°F, 32°F, 59°F, 100°F), not three.** The earlier note
+>   assumed −18/15/38 °C only, missing the 0°C {32°F} column entirely.
+> - **The values were collapsed into approximate ranges** rather than resolved per temperature.
+>   Every cell of both blocks is now transcribed exactly. Internal check: 6.13 lb/gal × 7.48
+>   = 45.9 ≈ 45.8 lb/ft³, and 0.734 kg/L × 1000 = 734 kg/m³, so the two blocks are consistent.
+>
+> The `[verify p. 326]` flag is cleared.
 
 Fuel-volume determination: compute required tank volume from mission-sizing fuel weight ÷ selected
 fuel density (15°C reference, +3–5% volume margin for thermal effects — cold underground-storage fuel
@@ -1000,11 +1084,19 @@ to 55%. The study was judged "interesting" but not pursued given its political c
 *Chapter 10 complete (Eqs 10.1–10.26, Tables 10.1–10.5, Figs 10.1–10.31). Two data-bearing design
 charts digitized directly from page-image OCR (Fig. 10.17 capture-area sizing; Fig. 10.19 boundary-
 layer bleed area); categorical (non-curve) charts Fig. 10.2 and Fig. 10.13 described qualitatively
-rather than digitized, since they show applicability regions, not continuous trend data. OCR garbling
-flagged: Table 10.1's exact exponent/K-value cell split for Eq. (10.23)'s propeller-diameter table
-(p. 312); Table 10.3's piston-engine diameter row (p. 320); Table 10.4's Width/Height row alignment
-(p. 321); Eq. (10.26)'s mks cooling-area coefficient (p. 322); Table 10.5's exact temperature-column
-structure (p. 326) — all flagged inline with `[verify p. NNN]` rather than guessed. The §10.3.2
+rather than digitized, since they show applicability regions, not continuous trend data.
+
+**All five OCR flags in this chapter were resolved on 2026-08-17** against 340–700 dpi page-image
+renders; none remain. In summary: Eq. (10.23)'s "missing exponent" never existed — the exponent is
+a fourth root in the equation itself (p. 311), and the p. 312 table carries only `K_p` by blade
+count. Tables 10.3 (p. 320) and 10.4 (p. 321) had both been collapsed from **four** engine columns
+(Opposed / In-line / Radial / Turboprop) down to two, with Radial data mislabelled as Turboprop
+throughout; both are now transcribed in full, and Table 10.4's Metric block — previously omitted —
+is included. Table 10.3 additionally carries two genuine **book misprints** in its Length row
+(`4.24` and `3.730`, decimal-point slips for `0.424` and `0.373`), proven by Table 10.4 on the
+facing page giving the same exponents correctly. Eq. (10.26)'s mks coefficient is **58** (not the
+suspected 55), and Eqs. (10.25)/(10.26) are on p. 320, not p. 322. Table 10.5 is on **p. 327** and
+has **four** temperature points, not three; every cell of both its blocks is now transcribed. The §10.3.2
 parametric engine-sizing equations (Eqs. 10.4–10.15) were re-extracted from a direct 300-dpi page-
 image render and found to fully agree with the existing `reference_extracts/raymer_data.md` extract's
 printed coefficients; that older file's own `[verify]`-flagged self-doubt about the D-coefficients in

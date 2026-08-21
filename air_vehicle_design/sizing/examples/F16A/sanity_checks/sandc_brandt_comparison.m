@@ -95,7 +95,7 @@ w2.W_energy = W_fuel_brandt;
 s2 = F16SandCL2(f16a_spec_path(2), w2);
 
 % ── L3: full Ch. 16 buildup ──────────────────────────────────────────── %
-g3 = F16GeomL3(f16a_spec_path(3), prop);   % no L3 propulsion tier -- F16PropL2 is reused
+g3 = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());   % no L3 propulsion tier -- F16PropL2 is reused
 w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
 w3.W_TO     = W_TO_brandt;
 w3.W_energy = W_fuel_brandt;

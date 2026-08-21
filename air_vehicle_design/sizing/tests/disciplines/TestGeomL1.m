@@ -53,7 +53,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         % Assert within ±20% of USAF TO reference value.
             expected = tc.TO_LFUS;   % 47.50 ft [T.O. 1F-16A-1; f16a_ground_truth.json]
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
-            received = g.get_L_fus_statistical(tc.TOGW);
+            received = g.get_L_fus_categorical(tc.TOGW);
             fprintf('\n    get_L_fus:         received = %.2f ft,    expected (TO) = %.2f ft\n', ...
                 received, expected);
             tc.verifyEqual(received, expected, 'RelTol', 0.20, ...
@@ -61,15 +61,15 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         end
 
         function testGetSwetCallsStatistical(tc)
-        % Structural: get_S_wet(W_TO) must delegate to get_S_wet_statistical(W_TO).
+        % Structural: get_S_wet(W_TO) must delegate to get_design_S_wet_categorical(W_TO).
         % Both calls should return bit-identical results.
             g        = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             via_base = g.get_S_wet(tc.TOGW);
-            via_impl = g.get_whole_aircraft_S_wet_statistical(tc.TOGW);
+            via_impl = g.get_design_S_wet_categorical(tc.TOGW);
             fprintf('\n    get_S_wet (base):  %.6f ft^2\n', via_base);
             fprintf('    get_S_wet_stat:    %.6f ft^2\n', via_impl);
             tc.verifyEqual(via_base, via_impl, 'AbsTol', 1e-10, ...
-                'get_S_wet does not delegate to get_S_wet_statistical.');
+                'get_S_wet does not delegate to get_design_S_wet_categorical.');
         end
 
         % --- Physical reasonableness -------------------------------------
@@ -98,7 +98,7 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testUnknownCategoryLfusThrows(tc)
             g = F16GeomL1(f16a_spec_path(1), f16a_requirements_path());
             g.aircraft_category = "flying_car";
-            tc.verifyError(@() g.get_L_fus_statistical(tc.TOGW), ...
+            tc.verifyError(@() g.get_L_fus_categorical(tc.TOGW), ...
                 'GeomL1:unknownCategory');
         end
 
@@ -165,7 +165,8 @@ classdef TestGeomL1 < matlab.unittest.TestCase
         function testUnknownCategoryAREqThrows(tc)
         % Only the Raymer 7th ed. Table 4.1 "Jet fighter (dogfighter)" row
         % is implemented; any other category must error, not interpolate.
-            tc.verifyError(@() GeomL1.compute_AR_eq('flying_car', 2.0), ...
+            % Mod (08/17/2026) (Claude)
+            tc.verifyError(@() GeomL1.lookup_AR_eq('flying_car'), ...
                 'GeomL1:unknownCategory');
         end
 

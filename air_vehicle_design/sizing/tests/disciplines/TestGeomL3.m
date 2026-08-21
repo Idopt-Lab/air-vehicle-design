@@ -19,7 +19,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
 %   ==========================================================================
 %   WHAT PHASE 2 CHANGED, and which test guards it
 %   ==========================================================================
-%   1. CONSTRUCTOR: F16GeomL3(json_path, prop). A propulsion object is a
+%   1. CONSTRUCTOR: F16GeomL3(json_path, prop, f16a_requirements_path()). A propulsion object is a
 %      REQUIRED injected argument -- the nacelle diameter, and hence duct wetted
 %      area and CD0, is sized from engine SLS thrust (sqrt(T_AB_SLS/1900)),
 %      which is engine data, not airframe data.
@@ -110,7 +110,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         %   propulsion object required since Phase 2. At the L3 rung that object
         %   is an F16PropL2: there is NO L3 propulsion tier (locked decision
         %   2026-07-25), so L2 propulsion serves the L3 rung.
-            g = F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)));
+            g = F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2)), f16a_requirements_path());   % Mod (08/19/2026) (Claude)
         end
 
         function G = readGeomJSON(level)
@@ -146,6 +146,10 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % path-only call must therefore error.
             tc.verifyError(@() F16GeomL3(f16a_spec_path(3)), 'MATLAB:minrhs', ...
                 'F16GeomL3 must require an injected propulsion object (no silent default).');
+            % Mod (08/19/2026) (Claude) -- req_path is required too, for M_max.
+            tc.verifyError(@() F16GeomL3(f16a_spec_path(3), F16PropL2(f16a_spec_path(2))), ...
+                'MATLAB:minrhs', ...
+                'F16GeomL3 must require the requirements JSON path (no silent default).');
             tc.verifyClass(TestGeomL3.makeGeom(), 'F16GeomL3');
         end
 
@@ -186,7 +190,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
                 received, 196.2260692464);
             tc.verifyEqual(received, 196.2260692464, 'RelTol', 1e-9, ...
                 'F16GeomL3.S_exposed_wing does not match the hand-computed fuselage clip.');
-            tc.verifyEqual(g.get_S_exposed_wing(), received, 'AbsTol', 1e-12, ...
+            tc.verifyEqual(g.S_exposed_wing, received, 'AbsTol', 1e-12, ...
                 'get_S_exposed_wing must passthrough the Dependent value unchanged.');
         end
 
@@ -650,48 +654,80 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % own inputs, so the alternate would match them BY CONSTRUCTION. Those
         % percentages belong to the comparison report, never to an assertion.
             g = TestGeomL3.makeGeom();
-            tc.verifyEqual(g.get_S_wet_wing(),     396.3766598778, 'RelTol', 1e-9, ...
+            tc.verifyEqual(g.S_wet_wing,     396.3766598778, 'RelTol', 1e-9, ...
                 'Wing S_wet must be Roskam Eq. 12.1 on the hand-computed exposed area.');
-            tc.verifyEqual(g.get_S_wet_HT(),       104.0348823470, 'RelTol', 1e-9, ...
+            tc.verifyEqual(g.S_wet_ht,       104.0348823470, 'RelTol', 1e-9, ...
                 'HT S_wet must be Roskam Eq. 12.1 on the option-B exposed area.');
-            tc.verifyEqual(g.get_S_wet_VT(),        83.1398277675, 'RelTol', 1e-9, ...
+            tc.verifyEqual(g.S_wet_vt,        83.1398277675, 'RelTol', 1e-9, ...
                 'VT S_wet must be Roskam Eq. 12.1 on the hand-computed exposed area.');
-            tc.verifyEqual(g.get_S_wet_fuselage(), 749.1336817716, 'RelTol', 1e-9, ...
+            tc.verifyEqual(GeomL2.compute_s_wet_fus_cyl(g.D_fus, g.L_fus), 749.1336817716, 'RelTol', 1e-9, ...
                 'Fuselage S_wet must be Roskam Eq. 12.3 at D_fus = 6.0, L_fus = 47.5.');
-            tc.verifyEqual(g.get_S_wet_duct(),     155.5663631217, 'RelTol', 1e-9, ...
+            tc.verifyEqual(GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct),     155.5663631217, 'RelTol', 1e-9, ...
                 'Duct S_wet must be the Raymer Sec. 7.3 frustum, degenerate to pi*D*L.');
             % The Dependent properties must agree with the methods exactly.
-            tc.verifyEqual(g.S_wet_wing, g.get_S_wet_wing(), 'AbsTol', 1e-12);
-            tc.verifyEqual(g.S_wet_ht,   g.get_S_wet_HT(),   'AbsTol', 1e-12);
-            tc.verifyEqual(g.S_wet_vt,   g.get_S_wet_VT(),   'AbsTol', 1e-12);
+            % Mod (08/19/2026) (Claude) -- the get_S_wet_* methods were removed.
+            tc.verifyEqual(g.S_wet_wing, GeomL2.compute_S_wet_planform_roskam(g.S_exposed_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing), 'AbsTol', 1e-12);
+            tc.verifyEqual(g.S_wet_ht,   GeomL2.compute_S_wet_planform_roskam(g.S_exposed_ht,   g.tc_r_ht,   g.tc_t_ht,   g.lambda_ht),   'AbsTol', 1e-12);
+            tc.verifyEqual(g.S_wet_vt,   GeomL2.compute_S_wet_planform_roskam(g.S_exposed_vt,   g.tc_r_vt,   g.tc_t_vt,   g.lambda_vt),   'AbsTol', 1e-12);
         end
 
+        % Mod (08/19/2026) (Claude) -- RE-BASELINED for the strake.
+        %   F16GeomL3 gained the body strake / LERX on 2026-08-19 [Brandt
+        %   Main!D18:D27]. Its wetted area is 40.4000 ft^2 by Roskam Vol. II
+        %   Eq. 12.1, so every total below rises by that amount:
+        %     1488.2514148856 -> 1528.6514148856
+        %     1507.4529789046 -> 1547.8529789046
+        %   This is a real component that was missing, so the change is a fix,
+        %   not a regression. Brandt's own strake figure is 39.956 [Geom!B15];
+        %   the gap is Eq. 12.1 against his uniform-t/c form.
         function testTotalSwetIncludesDuct(tc)
         % SCOPE CHANGE in Phase 2: GeomL3's total was airframe-only
         % (wing+HT+VT+fuselage) because the tier had no duct geometry. It now
         % carries L_duct and the propulsion-injected nacelle diameter, so the
         % duct is the FIFTH component, matching GeomL2.
         %   396.3766598778 + 104.0348823470 + 83.1398277675
-        %     + 749.1336817716 + 155.5663631217 = 1488.2514148856 ft^2
-        % The four-component airframe-only sum would be 1332.6850517639, so the
+        %     + 692.5050310889 + 155.5663631217 + 40.4000000000 = 1472.0227642029 ft^2
+        %   The last term is the body strake / LERX, added 2026-08-19.
+        %
+        %   Mod (08/19/2026) (Claude) -- re-baselined 1528.6514148856 ->
+        %   1472.0227642029. The FUSELAGE term changed method, at Casey's request.
+        %   Roskam Vol. II Eq. 12.3 on (D_fus, L_fus) gave 749.1336817716; the
+        %   control-station integration gives 692.5050310889, which is -7.56 %.
+        %   The station table is SCALED to the live fuselage: it was drawn for
+        %   L = 46.5 ft, and L3 uses 47.5, so x stretches by 47.5/46.5 = 1.0215.
+        %   Unscaled it read 677.9259778028. The scaling is what makes the wetted
+        %   area respond to L_fus / W_max_fuselage / H_max_fuselage at all.
+        %   [Raymer 6th ed. Fig. 7.37, p. 206]: perimeter at each station, then the
+        %   area under the perimeter-vs-x curve. Brandt's own figure for the same
+        %   method is 676.3289 [Geom!D23]. UNSCALED, this reproduces him to
+        %   +0.24 %. SCALED to the L3 fuselage it reads +2.39 %, because L3 uses
+        %   the physical L_fus = 47.5 ft and Brandt drew the table for 46.5.
+        %   That gap is the fidelity difference, not an error, and Brandt's
+        %   figure is NOT the expected value below.
+        %   Mod (08/20/2026) (Claude) -- the old line quoted +0.24 % for the
+        %   scaled value, which was the unscaled figure. Corrected.
+        %   Stations: examples/F16A/inputs/F16_geom_stations.json.
+        % The four-component airframe-only sum would be 1276.0564010812, so the
         % explicit not-equal check below fails loudly if the duct term is ever
         % dropped again.
             g = TestGeomL3.makeGeom();
-            sw_w = g.get_S_wet_wing(); sw_h = g.get_S_wet_HT();
-            sw_v = g.get_S_wet_VT();   sw_f = g.get_S_wet_fuselage();
-            sw_d = g.get_S_wet_duct();
+            % Mod (08/19/2026) (Claude) -- the get_S_wet_* methods were removed.
+            sw_w = g.S_wet_wing; sw_h = g.S_wet_ht;
+            sw_v = g.S_wet_vt;   sw_f = g.get_S_wet_fuselage_stations();   % Mod (08/19/2026) (Claude)
+            sw_d = GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct);
+            sw_s = g.S_wet_strake;   % Mod (08/19/2026) (Claude) -- SIXTH component
             tc.verifyGreaterThan(sw_w, 0); tc.verifyGreaterThan(sw_h, 0);
             tc.verifyGreaterThan(sw_v, 0); tc.verifyGreaterThan(sw_f, 0);
-            tc.verifyGreaterThan(sw_d, 0);
+            tc.verifyGreaterThan(sw_d, 0); tc.verifyGreaterThan(sw_s, 0);
             fprintf('\n    total S_wet: received = %.7f ft^2,  hand-computed = %.7f ft^2\n', ...
-                g.get_S_wet(), 1488.2514148856);
-            tc.verifyEqual(g.get_S_wet(), 1488.2514148856, 'RelTol', 1e-9, ...
+                g.get_S_wet(), 1472.0227642029);
+            tc.verifyEqual(g.get_S_wet(), 1472.0227642029, 'RelTol', 1e-9, ...
                 'Total S_wet must be the hand-computed five-component sum (duct included).');
-            tc.verifyEqual(g.get_S_wet(), sw_w + sw_h + sw_v + sw_f + sw_d, 'AbsTol', 1e-9, ...
-                'get_S_wet must equal the sum of its FIVE components (wing+HT+VT+fuselage+duct).');
+            tc.verifyEqual(g.get_S_wet(), sw_w + sw_h + sw_v + sw_f + sw_d + sw_s, 'AbsTol', 1e-9, ...
+                'get_S_wet must equal the sum of its SIX components (wing+HT+VT+fuselage+duct+strake).');
             tc.verifyEqual(g.S_wet, g.get_S_wet(), 'AbsTol', 1e-12, ...
                 'Dependent S_wet must match get_S_wet().');
-            tc.verifyGreaterThan(abs(g.get_S_wet() - (sw_w + sw_h + sw_v + sw_f)), 100, ...
+            tc.verifyGreaterThan(abs(g.get_S_wet() - (sw_w + sw_h + sw_v + sw_f + sw_s)), 100, ...
                 'get_S_wet has reverted to the pre-Phase-2 airframe-only (no duct) sum.');
         end
 
@@ -713,9 +749,12 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         %   duct S_wet = pi*D*L_duct, L_duct = 14 ft  [Raymer Sec. 7.3]
         %     -> 155.5663631217 ft^2  and  174.7679271407 ft^2
         %   total S_wet (other four components unchanged at
-        %     396.3766598778 + 104.0348823470 + 83.1398277675 + 749.1336817716
-        %     = 1332.6850517639):
-        %     -> 1488.2514148856 ft^2  and  1507.4529789046 ft^2
+        %     396.3766598778 + 104.0348823470 + 83.1398277675 + 692.5050310889
+        %     + 40.4000000000 = 1316.4564010812):
+        %     -> 1472.0227642029 ft^2  and  1491.2243282219 ft^2
+        %   Mod (08/19/2026) (Claude) -- re-baselined with the control-station
+        %   fuselage. The strake term is now named in the sum above; it was
+        %   present but unlisted before.
         %   With an aero object injected, CD0 = Cfe*S_wet/S_ref
         %   [Raymer 6th ed. Eq. 12.23] is linear in S_wet, so at Cfe = 0.0035
         %   [Raymer Table 12.3] and S_ref = 300:
@@ -724,7 +763,7 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         % RelTol 1e-6 on that delta bounds round-off in the 11-significant-digit
         % hand arithmetic above and nothing looser.
             p = F16PropL2(f16a_spec_path(2));
-            g = F16GeomL3(f16a_spec_path(3), p);
+            g = F16GeomL3(f16a_spec_path(3), p, f16a_requirements_path());
             a = F16AeroL2(g, f16a_spec_path(2));   % L2 aero: CD0 = Cfe*S_wet/S_ref
 
             tc.verifyEqual(g.T_AB_SLS_lb, p.T_SL, 'AbsTol', 1e-12, ...
@@ -732,8 +771,8 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             tc.verifyEqual(g.D_inlet, 3.5370222385,   'RelTol', 1e-9);
             tc.verifyEqual(g.D_exit,  g.D_inlet,      'AbsTol', 1e-12, ...
                 'The nacelle is a constant-diameter cylinder: D_exit == D_inlet.');
-            tc.verifyEqual(g.get_S_wet_duct(), 155.5663631217, 'RelTol', 1e-9);
-            tc.verifyEqual(g.get_S_wet(),     1488.2514148856, 'RelTol', 1e-9);
+            tc.verifyEqual(GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct), 155.5663631217, 'RelTol', 1e-9);
+            tc.verifyEqual(g.get_S_wet(),     1472.0227642029, 'RelTol', 1e-9);
             cd0_0 = a.drag_polar(AircraftState(0, 0.5)).CD0;
 
             p.T_SL = 30000;   % in-place engine mutation, no reconstruction
@@ -741,9 +780,9 @@ classdef TestGeomL3 < matlab.unittest.TestCase
             tc.verifyEqual(g.T_AB_SLS_lb, 30000, 'AbsTol', 1e-12);
             tc.verifyEqual(g.D_inlet, 3.9735970712, 'RelTol', 1e-9, ...
                 'D_inlet must track the mutated thrust: sqrt(30000/1900).');
-            tc.verifyEqual(g.get_S_wet_duct(), 174.7679271407, 'RelTol', 1e-9, ...
+            tc.verifyEqual(GeomL2.compute_s_wet_duct(g.D_inlet, g.D_exit, g.L_duct), 174.7679271407, 'RelTol', 1e-9, ...
                 'Duct S_wet must track the mutated nacelle diameter.');
-            tc.verifyEqual(g.get_S_wet(),     1507.4529789046, 'RelTol', 1e-9, ...
+            tc.verifyEqual(g.get_S_wet(),     1491.2243282219, 'RelTol', 1e-9, ...
                 'Total S_wet must track the mutated nacelle diameter.');
             cd0_1 = a.drag_polar(AircraftState(0, 0.5)).CD0;
             tc.verifyEqual(cd0_1 - cd0_0, 2.2401824689e-4, 'RelTol', 1e-6, ...

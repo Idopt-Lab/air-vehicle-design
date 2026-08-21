@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mermaid viewer - pan and zoom</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --txt:#c9d1d9; --dim:#8b949e; --acc:#33cc33; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt);
+               font:13px/1.5 "Segoe UI", system-ui, sans-serif; }
+  body { display:flex; flex-direction:column; }
+  header { flex:0 0 auto; padding:8px 12px; background:var(--panel);
+           border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:center;
+           flex-wrap:wrap; }
+  header b { color:var(--acc); font-weight:600; }
+  #name { color:var(--dim); font-family:Consolas, monospace; }
+  button, label.btn { background:#21262d; color:var(--txt); border:1px solid var(--line);
+           border-radius:5px; padding:4px 10px; cursor:pointer; font-size:12px; }
+  button:hover, label.btn:hover { border-color:var(--acc); color:var(--acc); }
+  input[type=file] { display:none; }
+  #stage { flex:1 1 auto; position:relative; overflow:hidden; }
+  #stage svg { width:100%; height:100%; display:block; }
+  #drop { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          text-align:center; color:var(--dim); pointer-events:none; padding:30px; }
+  #drop.hide { display:none; }
+  #drop code { color:var(--acc); }
+  #drop.over { background:rgba(51,204,51,.07); border:2px dashed var(--acc); }
+  #err { position:absolute; left:12px; right:12px; bottom:12px; background:#2d1418;
+         border:1px solid #ff4040; color:#ff9b9b; padding:8px 10px; border-radius:5px;
+         font-family:Consolas, monospace; white-space:pre-wrap; display:none; }
+  kbd { background:#21262d; border:1px solid var(--line); border-radius:3px; padding:0 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <b>Mermaid viewer</b>
+  <label class="btn">Open .md<input id="pick" type="file" accept=".md,.markdown,.mmd,.txt"></label>
+  <button id="fit">Fit</button>
+  <button id="reset">Reset</button>
+  <button id="in">+</button>
+  <button id="out">&minus;</button>
+  <span id="name"></span>
+</header>
+
+<div id="stage">
+  <div id="drop">
+    <div>
+      <p><b>Drag a chart file here</b>, or use <code>Open .md</code>.</p>
+      <p>Wheel or pinch to zoom. Drag to pan.
+         <kbd>+</kbd> <kbd>-</kbd> zoom, <kbd>0</kbd> reset, <kbd>f</kbd> fit.</p>
+      <p>Reads the first <code>```mermaid</code> block in the file.<br>
+         Served over http you may also use <code>viewer.html?file=Claude-made/Second_Pass/Geometry/F16AGeom1_mermaid.md</code>.</p>
+    </div>
+  </div>
+  <div id="err"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js"></script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+// useMaxWidth:false gives the SVG a real width, which svg-pan-zoom needs.
+mermaid.initialize({
+  startOnLoad: false, theme: 'dark', securityLevel: 'loose',
+  maxTextSize: 500000, maxEdges: 2000,
+  flowchart: { useMaxWidth: false, htmlLabels: true }
+});
+
+const stage = document.getElementById('stage');
+const drop  = document.getElementById('drop');
+const errEl = document.getElementById('err');
+const nameEl= document.getElementById('name');
+let pz = null;
+
+const fail = m => { errEl.style.display = 'block'; errEl.textContent = m; };
+const clearFail = () => { errEl.style.display = 'none'; errEl.textContent = ''; };
+
+function extract(text) {
+  const m = text.match(/```mermaid\s*\n([\s\S]*?)\n```/);
+  if (!m) throw new Error('No ```mermaid block found in that file.');
+  return m[1];
+}
+
+async function render(src, label) {
+  clearFail();
+  if (pz) { pz.destroy(); pz = null; }
+  stage.querySelectorAll('svg').forEach(n => n.remove());
+  const { svg } = await mermaid.render('chart_' + Date.now(), src);
+  const holder = document.createElement('div');
+  holder.innerHTML = svg;
+  const el = holder.firstElementChild;
+  el.style.maxWidth = 'none';           // mermaid sets this; it fights pan-zoom
+  el.removeAttribute('width');
+  el.removeAttribute('height');
+  stage.appendChild(el);
+  pz = svgPanZoom(el, {
+    zoomEnabled: true, panEnabled: true, controlIconsEnabled: false,
+    fit: true, center: true, minZoom: 0.05, maxZoom: 40, zoomScaleSensitivity: 0.25,
+    dblClickZoomEnabled: true, mouseWheelZoomEnabled: true
+  });
+  drop.classList.add('hide');
+  nameEl.textContent = label;
+}
+
+async function loadFile(file) {
+  try { await render(extract(await file.text()), file.name); }
+  catch (e) { fail(e.message); }
+}
+
+document.getElementById('pick').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+['dragenter','dragover'].forEach(t => stage.addEventListener(t, e => {
+  e.preventDefault(); drop.classList.remove('hide'); drop.classList.add('over');
+}));
+['dragleave','drop'].forEach(t => stage.addEventListener(t, e => {
+  e.preventDefault(); drop.classList.remove('over');
+}));
+stage.addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f); else drop.classList.remove('hide');
+});
+
+document.getElementById('fit')  .onclick = () => pz && (pz.fit(), pz.center());
+document.getElementById('reset').onclick = () => pz && pz.reset();
+document.getElementById('in')   .onclick = () => pz && pz.zoomIn();
+document.getElementById('out')  .onclick = () => pz && pz.zoomOut();
+addEventListener('keydown', e => {
+  if (!pz || e.target.tagName === 'INPUT') return;
+  if (e.key === '+' || e.key === '=') pz.zoomIn();
+  else if (e.key === '-')             pz.zoomOut();
+  else if (e.key === '0')             pz.reset();
+  else if (e.key === 'f')           { pz.fit(); pz.center(); }
+});
+
+// ?file=... works when this page is SERVED over http. Under file:// the browser
+// blocks the fetch, so drag-and-drop is the path there.
+const q = new URLSearchParams(location.search).get('file');
+if (q) {
+  fetch(q).then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.text(); })
+          .then(t => render(extract(t), q))
+          .catch(e => fail('Could not load ' + q + '\n' + e.message +
+                 '\nUnder file:// the browser blocks fetch. Drag the .md in instead, or serve the folder:\n' +
+                 '  python -m http.server 8000   then open  http://localhost:8000/docs/Mermaid_Diagrams/viewer.html?file=...'));
+}
+</script>
+</body>
+</html>

@@ -55,7 +55,7 @@ function results = f16_sizing_attribution()
     fGeom2 = F16GeomL2(s2, fProp2);
     fAero2 = F16AeroL2(fGeom2, s2);
     fWts2  = F16WeightsL2(s2, req, fGeom2, fProp2);
-    fGeom3 = F16GeomL3(s3, fProp2);
+    fGeom3 = F16GeomL3(s3, fProp2, f16a_requirements_path());
     fAero3 = F16AeroL3(fGeom3, s3);
     fWts3  = F16WeightsL3(s3, req, fGeom3, fProp2);
 

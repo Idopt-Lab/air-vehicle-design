@@ -416,13 +416,13 @@ quieter, lower-drag, and cannot injure ground personnel, but consumes more power
 than a conventional tail rotor.
 
 ### Fig 21.12 — Helicopter cyclic and collective controls
-*[Raymer, Fig. 21.12, p. 787]* — Schematic of swashplate/pitch-rod mechanism. No plotted data.
+*[Raymer, Fig. 21.12, p. 788]* — Schematic of swashplate/pitch-rod mechanism. No plotted data.
 
 ### Fig 21.13 — Rotor-blade flapping
-*[Raymer, Fig. 21.13, p. 787]* — Schematic of the flapping hinge and blade motion. No plotted data.
+*[Raymer, Fig. 21.13, p. 788]* — Schematic of the flapping hinge and blade motion. No plotted data.
 
 ### Fig 21.14 — Antitorque devices
-*[Raymer, Fig. 21.14, p. 788]* — Schematics: tail rotor, shrouded tail rotor, lateral thruster,
+*[Raymer, Fig. 21.14, p. 789]* — Schematics: tail rotor, shrouded tail rotor, lateral thruster,
 NOTAR downwash-slot arrangement. No plotted data.
 
 **The helicopter speed limit.** The advancing blade's airspeed = helicopter speed + rotational tip
@@ -465,11 +465,11 @@ with penalties:
   STOL aircraft.
 
 ### Fig 21.15 — High-speed helicopters and prop VTOLs
-*[Raymer, Fig. 21.15, p. 789]* — Schematic gallery: tilt rotor, advancing blade, tilt wing, stopped
+*[Raymer, Fig. 21.15, p. 791]* — Schematic gallery: tilt rotor, advancing blade, tilt wing, stopped
 rotor (X-wing). No plotted data.
 
 ### §21.3.3 Helicopter Design Parameters and Blade Airfoil Selection
-*[Raymer, p. 791]*
+*[Raymer, p. 793]*
 
 Two dominant design parameters, analogous to T/W and W/S for fixed-wing aircraft: **power loading**
 (W/P, same definition/reverse-connotation as for propeller aircraft — higher value means relatively
@@ -482,7 +482,7 @@ loading). No reliable statistical speed-vs-power-loading correlation exists for 
 Table 5.4 for fixed-wing aircraft) — the author notes significant data scatter in both tables below.
 
 ### Table 21.1 — Helicopter Power Loadings
-*[Raymer, Table 21.1, p. 791]*
+*[Raymer, Table 21.1, p. 793]*
 
 | Aircraft Type | W/P (lb/hp) | W/P (kg/kW) |
 |---|---|---|
@@ -493,7 +493,7 @@ Table 5.4 for fixed-wing aircraft) — the author notes significant data scatter
 | Tilt wing (propeller) | ~3.4 | ~2.1 |
 
 ### Table 21.2 — Helicopter Disk Loadings
-*[Raymer, Table 21.2, p. 792]* (low speed = below 150 kt / 280 km/h)
+*[Raymer, Table 21.2, p. 794]* (low speed = below 150 kt / 280 km/h)
 
 | Aircraft Type | W/S (lb/ft²) | W/S (kg/m²) |
 |---|---|---|
@@ -516,7 +516,7 @@ Blades must be mass-balanced along the span so the c.g. sits at the airfoil aero
 blade airfoil is also thick enough for structural depth and simple to manufacture.
 
 ### §21.3.4 Momentum Theory for Hover and Vertical Climb
-*[Raymer, p. 793]*
+*[Raymer, p. 795]*
 
 The forward-flight propeller-efficiency method (Chapter 13) breaks down at zero airspeed, so hover
 requires a dedicated momentum-theory treatment. In hover (Fig. 21.16), the rotor (disk area S)
@@ -524,43 +524,44 @@ induces a velocity: `V0` (far above the rotor) = 0, `Vi` (at the disk), `V2` (in
 Equating the power inherent in induced velocity at the disk with the increase in downwash kinetic
 energy:
 
-**Eq (21.1)** *[Raymer, Eq. (21.1), p. 793]*:
+**Eq (21.1)** *[Raymer, Eq. (21.1), p. 795]*:
 ```
-T = m_dot * V = (rho*Vi*S)(Vi - V0) = rho*Vi*S*Vi
-```
-
-**Eq (21.2)** — Power at station 1 *[Raymer, Eq. (21.2), p. 794]*:
-```
-P = T*Vi = rho*Vi^2*S*Vi
+T = m_dot * dV = (rho*V1*S)*(V2 - V0) = rho*V1*S*V2
 ```
 
-**Eq (21.3)** — Power via downwash kinetic energy at station 2 *[Raymer, Eq. (21.3), p. 794]*:
+**Eq (21.2)** — Power at station 1 *[Raymer, Eq. (21.2), p. 795]*:
 ```
-P = d(KE)/dt = (1/2)*m_dot*V2^2 = (1/2)*rho*Vi*S*V2^2
+P = T*V = rho*V1^2*S*V2
+```
+
+**Eq (21.3)** — Power via downwash kinetic energy at station 2 *[Raymer, Eq. (21.3), p. 796]*:
+```
+P = d(KE)/dt = d(0.5*m_dot*V^2) = 0.5*rho*V1*S*V2^2
 ```
 
 Equating (21.2) and (21.3):
 
-**Eq (21.4)-(21.7)** *[Raymer, Eqs. (21.4)-(21.7), p. 794]*:
+**Eq (21.4)-(21.7)** *[Raymer, Eqs. (21.4)-(21.7), p. 796]*:
 ```
-rho*Vi^2*S = (1/2)*rho*Vi*S*V2^2   ->   Vi = V2/2
-T = 2*rho*Vi^2*S
-Vi = sqrt((T/S)/(2*rho))
+rho*V1^2*S*V2 = 0.5*rho*V1*S*V2^2      (21.4)
+V1 = V2/2                              (21.5)
+T = 2*rho*V1^2*S                       (21.6)
+V1 = sqrt((T/S)/(2*rho))               (21.7)
 ```
 i.e. induced velocity at the disk is half the downwash velocity, and thrust disk loading `T/S`
 determines the induced velocity.
 
-**Eq (21.8)** — Ideal (induced) power *[Raymer, Eq. (21.8), p. 794]*:
+**Eq (21.8)** — Ideal (induced) power *[Raymer, Eq. (21.8), p. 796]*:
 ```
-P = T*Vi = T*sqrt((T/S)/(2*rho))
+P = T*V1 = T*sqrt((T/S)/(2*rho))
 ```
 
-**Eq (21.9)** — Ideal thrust from power and disk loading *[Raymer, Eq. (21.9), p. 794]*:
+**Eq (21.9)** — Ideal thrust from power and disk loading *[Raymer, Eq. (21.9), p. 796]*:
 ```
-T_ideal = (550*hp) * sqrt(2*rho/(W/S))
+T_ideal = P*sqrt(2*rho/(W/S)) = 550*hp*sqrt(2*rho/(W/S))
 ```
-(assumes thrust disk loading `T/S` = weight disk loading `W/S`; actually `T/S ≈ 1.03*(W/S)` to
-account for ~3% downwash force on the fuselage.)
+(assumes thrust disk loading `T/S` = weight disk loading `W/S`; actually `T/S = 1.03*(W/S)` to
+account for the ~3% downwash force on the fuselage.)
 
 Momentum theory assumes uniform disk inflow and instantaneous "magical" energy transfer, ignoring
 profile drag, tip losses, and residual rotational velocity. Real losses: ~6% nonuniform inflow, up to
@@ -568,23 +569,30 @@ profile drag, tip losses, and residual rotational velocity. Real losses: ~6% non
 **≤83% of theoretical ideal thrust**. An empirical **measure of merit** `M` (typically 0.6-0.8;
 not to be confused with Mach number) corrects for this:
 
-**Eq (21.10)** *[Raymer, Eq. (21.10), p. 795]*:
+**Eq (21.10)** — Measure of merit *[Raymer, Eq. (21.10), p. 797]*:
 ```
 M = P_ideal / P_actual
 ```
+Typically `M` = 0.6 to 0.8. (Do not confuse the measure of merit `M` with Mach number.)
 
-**Eq (21.11)** — Actual hover power required (fps units, hp) *[Raymer, Eq. (21.11), p. 795]*:
+**Eq (21.11)** — Actual hover power required *[Raymer, Eq. (21.11), p. 797]*:
 ```
-hp_actual = (T / (550*M)) * sqrt((T/S)/(2*rho))
+P_actual = (T/M) * sqrt((T/S)/(2*rho))
 ```
 
-**Eq (21.12)/(21.13)** — Total power including tail rotor and mechanical losses
-*[Raymer, Eqs. (21.12)-(21.13), p. 795]*:
+**Eq (21.12)** — The same, in British (fps) units, giving horsepower
+*[Raymer, Eq. (21.12), p. 797]*:
+```
+hp_actual = (T/(550*M)) * sqrt((T/S)/(2*rho))      {fps}
+```
+
+**Eq (21.13)** — Total power including tail rotor and mechanical losses
+*[Raymer, Eq. (21.13), p. 797]*:
 ```
 P_total = (P_rotor + P_tail_rotor) / eta_mechanical
         = P_rotor * (1 + P_tail_rotor/P_rotor) / eta_mechanical
 ```
-where `eta_mechanical ≈ 0.97` and `P_tail_rotor/P_rotor ≈ 0.14` to `0.22`.
+where `eta_mechanical = 0.97` and `P_tail_rotor/P_rotor` = 0.14 to 0.22.
 
 **Ground effect** benefits helicopters as it does fixed-wing aircraft (Chapter 12): constraining the
 downwash raises efficiency, cutting required hover power. At half the rotor diameter above ground,
@@ -596,9 +604,10 @@ pessimistic — repeating the Eqs. (21.1)-(21.8) derivation with `V0` = climb sp
 *additional* power to climb is only **half** the potential-energy-rate, i.e. ≈ (1/2)*W*Vc, added to
 the hover power.
 
-**Eq (21.14)** — Hover or vertical climb power *[Raymer, Eq. (21.14), p. 796]*:
+**Eq (21.14)** — Hover or vertical climb power *[Raymer, Eq. (21.14), p. 798]*:
 ```
-P_climb = [ sqrt(f*W*(W/S)/2) / M + W*Vclimb/2 ] * (1 + P_tail_rotor/P_rotor) / eta_mechanical
+P_climb = [ (f*W/M) * sqrt((f*W/S)/(2*rho)) + W*Vclimb/2 ]
+        * [ (1 + P_tail_rotor/P_rotor) / eta_mechanical ]
 ```
 where `W` = helicopter weight, `S` = rotor disk area, `M` = measure of merit, `Vclimb` = climb speed
 (0 for hover), `f` = downwash-on-fuselage adjustment (typically 1.03). In fps units, divide by 550
@@ -630,7 +639,7 @@ frontal area) are preferred. The rotor also supplies forward propulsion, analyza
 propeller with empirical efficiency `eta_p` = **0.6 to 0.85** applied to Eq. (13.17).
 
 ### Table 21.3 — Helicopter Drag Data
-*[Raymer, Table 21.3, p. 797]*
+*[Raymer, Table 21.3, p. 799]*
 
 | Component | D/q |
 |---|---|
@@ -644,14 +653,14 @@ propeller with empirical efficiency `eta_p` = **0.6 to 0.85** applied to Eq. (13
 
 Setting rotor thrust (Eq. 13.17) equal to drag (Eq. 12.4) and solving for power:
 
-**Eq (21.15)** — Level forward flight power *[Raymer, Eq. (21.15), p. 797]*:
+**Eq (21.15)** — Level forward flight power *[Raymer, Eq. (21.15), p. 799]*:
 ```
 P_level = (V/eta_p) * [ q*(D/q) + W^2/(4*e*q*S) ] * (1 + P_tail_rotor/P_rotor) / eta_mechanical
 ```
 (`S` = rotor disk area; the rotor-disk aspect ratio `4/pi` is already folded into the induced-drag
 term.)
 
-**Eq (21.16)** — Climbing forward flight power *[Raymer, Eq. (21.16), p. 798]*:
+**Eq (21.16)** — Climbing forward flight power *[Raymer, Eq. (21.16), p. 800]*:
 ```
 P_climb = (V/eta_p) * [ q*(D/q) + W^2/(4*e*q*S) + W*sin(gamma) ] * (1 + P_tail_rotor/P_rotor) / eta_mechanical
 ```
@@ -704,18 +713,18 @@ term. Loiter uses the same method, integrating specific loiter (time per unit fu
 specific range.
 
 ### §21.3.8 Helicopter Initial Sizing
-*[Raymer, p. 800]*
+*[Raymer, p. 802]*
 
 Uses the general aircraft sizing equation (Eq. 3.4), repeated as Eq. (21.17), but the "fuel
 fraction" comes not from a Breguet mission-segment fraction but from the **known-time fuel-burn**
 equation (Eq. 19.6), modified to use power specific fuel consumption and helicopter power loading:
 
-**Eq (21.17)** *[Raymer, Eq. (21.17), p. 800]*:
+**Eq (21.17)** *[Raymer, Eq. (21.17), p. 802]*:
 ```
 W0 = (Wcrew + Wpayload) / (1 - (Wf/W0) - (We/W0))
 ```
 
-**Eq (21.18)** *[Raymer, Eq. (21.18), p. 800]*:
+**Eq (21.18)** *[Raymer, Eq. (21.18), p. 802]*:
 ```
 Wi/Wi-1 = 1 - (Cpower * t) / (W/P)
 ```
@@ -730,7 +739,7 @@ takeoff weight (no such trend is statistically supported for helicopters, unlike
 case.
 
 ### Table 21.4 — Helicopter Empty Weight Fractions
-*[Raymer, Table 21.4, p. 801]*
+*[Raymer, Table 21.4, p. 803]*
 
 | Aircraft Type | Typical We/W0 |
 |---|---|
@@ -741,7 +750,7 @@ case.
 | Tilt rotor | 0.55-0.7 |
 
 ### §21.3.9 Helicopter Design Process
-*[Raymer, p. 801]*
+*[Raymer, p. 803]*
 
 Broadly parallels the fixed-wing design process (Intermission between Chapters 11-12) but with key
 differences. Design requirements must additionally include allowable autorotation descent speed and
@@ -752,7 +761,7 @@ configuration layout — will typically run a rotor-optimization program (solidi
 airfoil, twist, disk loading, required power) *before* developing the actual design layout.
 
 ### What We've Learned
-*[Raymer, p. 802]*
+*[Raymer, p. 804]*
 
 Vertical flight is difficult and imposes major design compromises, but is worth it for the right
 missions. Helicopters are more efficient than jet VTOL for vertical flight but cannot match jet (or
@@ -762,7 +771,26 @@ tilt-rotor) forward speed.
 
 *Chapter 21 complete (§§21.1-21.3.9, Tables 21.1-21.4, Figs 21.1-21.17, Eqs 21.1-21.18). No numbered
 in-chapter reference list (footnote citations refer to the book's consolidated bibliography, not
-reproduced here). No OCR-garbled equation coefficients encountered; a few OCR-mangled Greek/variable
-glyphs in the source scan (`Ȼ`, `ʓ`, stray accented characters in Eqs. 21.9-21.16) were resolved by
-cross-checking against the surrounding derivation logic and standard momentum-theory notation —
-flagged here in case of residual transcription ambiguity `[verify pp. 794-798]`.*
+reproduced here). 
+
+**Verification note (checked 2026-08-18 against 260-dpi renders of book pp. 788-804).** The
+momentum-theory block was re-read off the page images. Three classes of error were found and are
+now fixed:
+
+1. **Page citations were shifted.** Every citation from Fig. 21.12 to the end of the chapter pointed
+   1-2 pages too early. The verified folios are: Fig. 21.12 and Fig. 21.13 p. 788; Fig. 21.14
+   p. 789; Fig. 21.15 p. 791; §21.3.3 + Tables 21.1 p. 793 and 21.2 p. 794; §21.3.4 + Eqs. 21.1-21.2
+   p. 795; Eqs. 21.3-21.9 + Fig. 21.16 p. 796; Eqs. 21.10-21.13 p. 797; Eq. 21.14 p. 798; §21.3.5 +
+   Eq. 21.15 + Table 21.3 p. 799; Eq. 21.16 + §21.3.6 p. 800; §21.3.7 p. 801; §21.3.8 + Eqs.
+   21.17-21.18 p. 802; Table 21.4 + §21.3.9 p. 803; What We've Learned p. 804.
+2. **Equation numbering was off by one from 21.11.** The book prints Eq. 21.11 as the general-units
+   actual-power form and Eq. 21.12 as the fps horsepower form; the earlier extract had dropped
+   Eq. 21.11 and labelled the fps form "21.11", then merged Eq. 21.13 under a "21.12/21.13" heading.
+   All four are now given separately with the book's own numbers.
+3. **Four equations were mis-transcribed.** Eq. 21.1 ended `rho*V1*S*V1` and used `(V1 - V0)`; the
+   book prints `(rho*V1*S)(V2 - V0) = rho*V1*S*V2`. Eq. 21.2 ended `rho*V1^2*S*V1`; the book prints
+   `rho*V1^2*S*V2`. Eq. 21.4 dropped the `V2` on the left-hand side. Eq. 21.14's first term read
+   `sqrt(f*W*(W/S)/2)/M`, which drops the density and mis-places `f`; the book prints
+   `(fW/M)*sqrt((fW/S)/(2*rho))`. The Greek-glyph ambiguity flagged earlier is resolved: the
+   variables are `V0`, `V1`, `V2`, `rho`, `eta_mechanical`, `eta_p`, `sigma` and `gamma`, all legible
+   at 260 dpi. Eqs. 21.15 and 21.16 were already correct as extracted.*

@@ -17,4 +17,8 @@ classdef (Abstract) PropulsionModelL1 < PropulsionBase
 
     end
 
+    methods
+        
+    end
+
 end

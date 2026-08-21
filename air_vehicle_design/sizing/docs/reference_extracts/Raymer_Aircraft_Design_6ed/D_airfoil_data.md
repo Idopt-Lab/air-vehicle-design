@@ -141,9 +141,14 @@ L.E. radius: 2.48. Slope of radius through L.E.: 0.20.
 
 ## NACA 23015
 
-*[Raymer, Appendix D, p. 975]* — stations and ordinates in percent airfoil chord. (Station 0 not
-printed explicitly in the source table; included below at ordinate 0 per standard NACA convention
-— [verify p. 975].)
+*[Raymer, Appendix D, p. 975]* — stations and ordinates in percent airfoil chord.
+
+*(Checked 2026-08-18 against a 300-dpi render of book p. 975. The earlier note claimed station 0
+was not printed. That is wrong: station 0 IS printed, as `0 | — | 0` — the lower ordinate is 0 and
+the upper ordinate is an em-dash, the same convention the book uses for the final `100 | — | 0`
+row. It is written as 0 below, which is the physically correct value at the leading-edge point.
+Every other cell of this table matches the page digit-for-digit, including L.E. radius 2.48 and
+slope of radius through L.E. 0.305.)*
 
 | Station | Upper Ordinate | Lower Ordinate |
 |---|---|---|
@@ -233,7 +238,7 @@ sections).
 | 24.669 | 9.315 |
 | 29.742 | 9.900 |
 | 34.825 | 10.279 |
-| 39.916 [verify p. 977 — OCR printed "30.916," inconsistent with the monotonic station sequence between 34.825 and 45.019] | 10.467 |
+| 39.916 (book misprint — see note) | 10.467 |
 | 45.019 | 10.438 |
 | 50.153 | 10.131 |
 | 55.263 | 9.512 |
@@ -280,19 +285,24 @@ sections).
 
 L.E. radius: 1.498. Slope of radius through L.E.: 0.233.
 
+**Book misprint, upper-surface station between 34.825 and 45.019 (checked 2026-08-18 against a
+300-dpi render of book p. 977).** The page itself prints **"30.916"**; this is an error in the book,
+not an OCR slip. The correct value is **39.916**. NACA 6-series upper and lower stations of this
+table are complementary in each row (29.742 + 30.258 = 60.0; 34.825 + 35.175 = 70.0), and this
+row's lower station is 40.084, so the upper station must be 80.0 - 40.084 = 39.916. 30.916 would
+also break the monotonic station sequence. Every other cell of both surfaces matches the page.
+
 *Figure not digitized: [Raymer, Fig. D (NACA 65(216)-415, a=0.5, aerodynamic characteristics,
 24-in. chord), p. 985] — same panel layout.*
 
 ## NLF(1)-0215F (natural-laminar-flow section)
 
 *[Raymer, Appendix D, p. 978]* — airfoil coordinate table, `δ_f = 0°`, chord `c = 60.960 cm
-(24.000 in.)`. Non-dimensional `x/c`, `y/c` coordinates (not percent chord, unlike the NACA
-sections above). The source page lists four numeric columns per row with no printed column
-headers; based on the standard NLF-section coordinate-table convention (and cross-checked against
-the monotonically increasing station values in each pair), the columns are read as (upper `x/c`,
-upper `y/c`, lower `x/c`, lower `y/c`):
+(24.000 in.)`. Non-dimensional `X/C`, `Z/C` coordinates (not percent chord, unlike the NACA
+sections above). The page prints a two-level header: "Upper Surface" over (X/C, Z/C) and "Lower
+Surface" over (X/C, Z/C):
 
-| Upper x/c | Upper y/c | Lower x/c | Lower y/c |
+| Upper X/C | Upper Z/C | Lower X/C | Lower Z/C |
 |---|---|---|---|
 | 0.00240 | 0.00917 | 0.00000 | -0.00006 |
 | 0.00909 | 0.01947 | 0.00245 | -0.00704 |
@@ -323,14 +333,18 @@ upper `y/c`, lower `x/c`, lower `y/c`):
 | 0.93044 | 0.02428 | 0.98504 | 0.00323 |
 | 0.95409 | 0.01737 | 0.99630 | 0.00086 |
 | 0.97285 | 0.01082 | 1.00000 | 0.00000 |
-| 0.98710 | 0.00507 | 0.99658 | 0.00126 |
+| 0.98710 | 0.00507 | — | — |
+| 0.99658 | 0.00126 | — | — |
 | 1.00000 | 0.00000 | — | — |
 
-*[verify p. 978 — the four-column grouping above is a best-effort reconstruction of a coordinate
-table whose column headers were lost in OCR; the underlying numeric values themselves are legible
-and are transcribed exactly as printed, but the upper/lower assignment for the final 1–2 rows is
-uncertain since the two columns run out at slightly different row counts (30 upper pairs vs. 29
-lower pairs read from the source).]*
+*(Checked 2026-08-18 against a 300-dpi render of book p. 978. The column headers were NOT lost in
+the book — the page prints them as a two-level header: "Upper Surface" (X/C, Z/C) and "Lower
+Surface" (X/C, Z/C). The four-column grouping reconstructed earlier is therefore correct, and every
+numeric value matches the page. One row-alignment error was found and is now fixed: the upper
+surface has 32 rows and the lower surface 29, and the earlier extract had pushed the last upper
+pair, 0.99658 / 0.00126, into the lower-surface columns of the second-to-last row. The lower surface
+really ends at 0.99630 / 0.00086 then 1.00000 / 0.00000; the upper surface continues on for three
+more rows. The book labels the ordinate `Z/C`, not `y/c`.)*
 
 *Figure not digitized: [Raymer, Fig. D (NACA 0006 airfoil section characteristics at R = 3.0, 6.0,
 9.0 ×10⁶ and M = 0.10, plus NLF(1)-0215F airfoil shape sketch), pp. 985–986] — strip-chart lift/

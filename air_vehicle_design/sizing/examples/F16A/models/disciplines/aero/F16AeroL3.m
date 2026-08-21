@@ -107,6 +107,18 @@ classdef F16AeroL3 < AeroModelL3
         tc_comp           % —     per-component thickness ratio<- geom (mean root/tip for HT/VT)
         Lambda_m_comp     % deg   per-component max-thickness-line sweep <- geom (convert_sweep at x_c_max)
 
+        % Mod (08/19/2026) (Claude)
+        % Mod (08/19/2026) (Claude) -- the five S_wet_comp terms are now DI reads
+        %   off the injected F16GeomL3, not GeomL2 toolbox calls made here.
+        S_wet_wing        % ft^2  <- geom.S_wet_wing  [Roskam Vol. II Eq. 12.1]
+        S_wet_ht          % ft^2  <- geom.S_wet_ht    [Roskam Vol. II Eq. 12.1]
+        S_wet_vt          % ft^2  <- geom.S_wet_vt    [Roskam Vol. II Eq. 12.1]
+        S_wet_strake      % ft^2  <- geom.S_wet_strake [Roskam Vol. II Eq. 12.1]
+        S_wet_duct        % ft^2  <- geom.S_wet_duct  [Raymer 6th ed. Sec. 7.3]
+        S_wet_fuselage    % ft^2  fuselage wetted area, BY THE TIER'S OWN METHOD.
+                          %       L2 geometry -> Roskam Vol. II Eq. 12.3.
+                          %       L3 geometry -> control stations, Raymer Fig. 7.37.
+
         %AMAX_FT2, L_AIRCRAFT_FT  Whole-aircraft wave-drag geometry, read live
         %   from the injected geometry object so the Sears-Haack term responds
         %   to a fuselage change.
@@ -126,12 +138,13 @@ classdef F16AeroL3 < AeroModelL3
         %   geometry (incl. per-component arrays) is produced live by the
         %   Dependent getters from obj.geom.
             arguments
-                % GeometryBase is too weak a guard (only S_ref/S_wet), while
-                % this class reads ~20 members off obj.geom -- a wrong tier
-                % would construct cleanly then die mid-run. Narrowed so a bad
-                % tier fails at construction; both L2 and L3 geometry satisfy
-                % the contract.
-                geom      (1,1) {mustBeA(geom, ["GeometryModelL2", "GeometryModelL3"])}
+                % Mod (08/19/2026) (Claude) -- L3 ONLY. This closes finding S-19.
+                % An L2 geometry used to construct cleanly here and then feed
+                % two silently wrong numbers: Amax became the envelope ellipse
+                % 27.4889 instead of the area-ruled 24.7037, which inflates wave
+                % drag by about 23 %, and S_wet_fuselage became Roskam Eq. 12.3
+                % (730.30) instead of the control-station value (677.93).
+                geom      (1,1) {mustBeA(geom, "GeometryModelL3")}
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
             end
             obj.geom = geom;
@@ -144,16 +157,20 @@ classdef F16AeroL3 < AeroModelL3
             obj.cl_alpha_2D = J.airfoil.cl_alpha_per_deg * 180/pi;   % deg -> rad, same conversion as F16AeroL2
 
             % Per-component constants (order: wing, HT, VT, fuselage, duct).
+            % Mod (08/19/2026) (Claude) -- SIX components. The strake sits
+            % 4th, matching the S_wet_comp order.
             obj.x_c_max_comp = [J.x_c_max.wing, J.x_c_max.horizontal_tail, ...
-                                J.x_c_max.vertical_tail, J.x_c_max.fuselage, J.x_c_max.duct];
+                                J.x_c_max.vertical_tail, J.x_c_max.strake, ...
+                                J.x_c_max.fuselage, J.x_c_max.duct];
             obj.Q_comp       = [J.interference_factor_Q.wing, J.interference_factor_Q.horizontal_tail, ...
-                                J.interference_factor_Q.vertical_tail, J.interference_factor_Q.fuselage, ...
-                                J.interference_factor_Q.duct];
+                                J.interference_factor_Q.vertical_tail, J.interference_factor_Q.strake, ...
+                                J.interference_factor_Q.fuselage, J.interference_factor_Q.duct];
             obj.f_lam_comp   = [J.laminar_fraction_f_lam.wing, J.laminar_fraction_f_lam.horizontal_tail, ...
-                                J.laminar_fraction_f_lam.vertical_tail, J.laminar_fraction_f_lam.fuselage, ...
-                                J.laminar_fraction_f_lam.duct];
+                                J.laminar_fraction_f_lam.vertical_tail, J.laminar_fraction_f_lam.strake, ...
+                                J.laminar_fraction_f_lam.fuselage, J.laminar_fraction_f_lam.duct];
             obj.is_body_comp = logical([J.is_body.wing, J.is_body.horizontal_tail, ...
-                                J.is_body.vertical_tail, J.is_body.fuselage, J.is_body.duct]);
+                                J.is_body.vertical_tail, J.is_body.strake, ...
+                                J.is_body.fuselage, J.is_body.duct]);
             obj.k            = J.surface_roughness_k_ft.wing;   % uniform roughness
             obj.E_WD         = J.wave_drag_factor_E_WD;
             % Amax_ft2 / L_aircraft_ft are Dependent on obj.geom, not read here.
@@ -170,9 +187,33 @@ classdef F16AeroL3 < AeroModelL3
         function v = get.taper(obj);         v = obj.geom.lambda_wing;   end
 
         % ---- Dependent per-component geometry arrays (live from obj.geom) -- %
+        % Mod (08/19/2026) (Claude)
+        %   g.get_S_wet_fuselage() and g.get_S_wet_duct() were removed from the
+        %   geometry class, so this reads the toolbox directly. D_fus is the
+        %   equivalent diameter (W+H)/2, NOT the max width -- passing the width
+        %   reads about 12.8% high.
+        %
+        %   _TODO -- S-19 in first_pass_findings.md is still open. The
+        %   constructor accepts GeometryModelL2 OR GeometryModelL3. With an L2
+        %   object, Amax silently becomes the envelope ellipse (27.4889) instead
+        %   of the area-ruled buildup (24.7037), which inflates wave drag by
+        %   about 23% with no warning. Resolve in the gate-4b sweep.
         function v = get.S_wet_comp(obj)
-            g = obj.geom;
-            v = [g.S_wet_wing, g.S_wet_ht, g.S_wet_vt, g.get_S_wet_fuselage(), g.get_S_wet_duct()];
+            % Mod (08/19/2026) (Claude) -- every term is a DI read off the
+            % injected F16GeomL3. This class no longer calls a GeomL2 static, so
+            % each number carries the geometry tier's own method.
+            %
+            % Mod (08/19/2026) (Claude) -- the STRAKE is now the 6th component.
+            % Its four aero constants were added to f16a_L3.json; see the
+            % _strake_src key under each block for the citation. Before this the
+            % buildup omitted 40.4000 ft^2, about 2.8 % of wetted area, so that
+            % area produced no skin friction.
+            v = [obj.S_wet_wing, ...  % [Roskam Vol. II Eq. 12.1]
+                 obj.S_wet_ht,   ...
+                 obj.S_wet_vt,   ...
+                 obj.S_wet_strake, ...
+                 obj.S_wet_fuselage, ...                                                                         % Mod (08/19/2026) (Claude) -- the tier's own method
+                 obj.S_wet_duct];                                      % [Raymer 6th ed. Sec. 7.3]
         end
         function v = get.l_ref_comp(obj)
             % Reference length per component: wing/HT/VT MAC (Raymer Eq. 7.8),
@@ -180,19 +221,21 @@ classdef F16AeroL3 < AeroModelL3
             % object directly, so it is recomputed from the injected root chord
             % and taper via the shared GeometryBase.compute_mac static.
             g = obj.geom;
-            mac_ht = GeometryBase.compute_mac(g.c_root_ht, g.lambda_ht);
-            mac_vt = GeometryBase.compute_mac(g.c_root_vt, g.lambda_vt);
-            v = [g.cbar_wing, mac_ht, mac_vt, g.L_fus, g.L_duct];
+            mac_ht  = GeometryBase.compute_mac(g.c_root_ht, g.lambda_ht);
+            mac_vt  = GeometryBase.compute_mac(g.c_root_vt, g.lambda_vt);
+            mac_str = GeometryBase.compute_mac(g.c_root_strake, g.lambda_strake);   % Mod (08/19/2026) (Claude)
+            v = [g.cbar_wing, mac_ht, mac_vt, mac_str, g.L_fus, g.L_duct];
         end
         function v = get.D_comp(obj)
             g = obj.geom;
-            v = [0, 0, 0, g.D_fus, g.D_inlet];
+            v = [0, 0, 0, 0, g.D_fus, g.D_inlet];   % Mod (08/19/2026) (Claude) -- strake 4th, a surface
         end
         function v = get.tc_comp(obj)
             % Wing modeled uniform-tc; HT/VT use the mean of the injected
             % root/tip t/c pair; bodies use 0 (they take the body form factor).
             g = obj.geom;
-            v = [g.tc_wing, (g.tc_r_ht + g.tc_t_ht)/2, (g.tc_r_vt + g.tc_t_vt)/2, 0, 0];
+            v = [g.tc_wing, (g.tc_r_ht + g.tc_t_ht)/2, (g.tc_r_vt + g.tc_t_vt)/2, ...
+                 (g.tc_r_strake + g.tc_t_strake)/2, 0, 0];   % Mod (08/19/2026) (Claude)
         end
         function v = get.Lambda_m_comp(obj)
             % Max-thickness-line sweep per surface: convert the injected LE
@@ -205,7 +248,10 @@ classdef F16AeroL3 < AeroModelL3
             wing = GeometryBase.convert_sweep(g.LE_sweep_wing, g.AR_wing, g.lambda_wing, obj.x_c_max_comp(1));
             ht   = GeometryBase.convert_sweep(g.LE_sweep_ht,   g.AR_ht,   g.lambda_ht,   obj.x_c_max_comp(2));
             vt   = GeometryBase.convert_sweep_panel(g.LE_sweep_vt, g.AR_vt, g.lambda_vt, obj.x_c_max_comp(3));
-            v = [wing, ht, vt, 0, 0];
+            % Mod (08/19/2026) (Claude) -- the strake is a MIRRORED pair, so it
+            % takes convert_sweep 4/AR form, like the wing and HT.
+            str  = GeometryBase.convert_sweep(g.LE_sweep_strake, g.AR_strake, g.lambda_strake, obj.x_c_max_comp(4));
+            v = [wing, ht, vt, str, 0, 0];
         end
         function v = get.CD0_misc(obj)
             v = (obj.Dq_gun_port + obj.Dq_hook_USAF) / obj.S_ref;   % [Raymer Table 12.7]
@@ -232,6 +278,7 @@ classdef F16AeroL3 < AeroModelL3
         end
 
         % ---- Core contract (base) ----------------------------------------- %
+        % TODO (8/19/2026)(Casey): So the drag polar shouldn't be in the toolbox.
         function polar = drag_polar(obj, state)
         %DRAG_POLAR  L3 component buildup + F-16 supersonic wave drag.
         %   Delegates the regime handling and K1/K2 to AeroL3.drag_polar, which
@@ -441,6 +488,26 @@ classdef F16AeroL3 < AeroModelL3
                     CD0 = clean.CD0 + obj.get_Delta_CD0_L(ref);  CLmax = obj.get_CLmax_L();
             end
             cfg = struct('CD0', CD0, 'K1', clean.K1, 'K2', clean.K2, 'CLmax', CLmax);
+        end
+
+        % Mod (08/19/2026) (Claude) -- one DI read each, no toolbox call here.
+        function v = get.S_wet_wing(obj)
+            v = obj.geom.S_wet_wing;
+        end
+        function v = get.S_wet_ht(obj)
+            v = obj.geom.S_wet_ht;
+        end
+        function v = get.S_wet_vt(obj)
+            v = obj.geom.S_wet_vt;
+        end
+        function v = get.S_wet_strake(obj)
+            v = obj.geom.S_wet_strake;
+        end
+        function v = get.S_wet_duct(obj)
+            v = obj.geom.S_wet_duct;
+        end
+        function v = get.S_wet_fuselage(obj)
+            v = obj.geom.S_wet_fuselage;
         end
 
     end

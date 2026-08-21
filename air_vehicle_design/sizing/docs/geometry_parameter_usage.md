@@ -29,7 +29,7 @@ Aerodynamics L1 and weights L1 are geometry-free.
 
 | Direction | Mechanism | What crosses |
 |---|---|---|
-| propulsion → geometry | `F16GeomL2(json_path, prop)` / `F16GeomL3(json_path, prop)`, both arguments required | exactly one number: `prop.T_SL` = 23,770 lbf. `T_AB_SLS_lb` is `Dependent` on it, so `D_inlet` → duct `S_wet` → `CD0` tracks a thrust change instead of a frozen copy |
+| propulsion → geometry | `F16GeomL2(json_path, prop)` / `F16GeomL3(json_path, prop, req_path)`, every argument required | exactly one number: `prop.T_SL` = 23,770 lbf. `T_AB_SLS_lb` is `Dependent` on it, so `D_inlet` → duct `S_wet` → `CD0` tracks a thrust change instead of a frozen copy |
 | geometry → aerodynamics | `F16AeroL2(geom, json_path)` / `F16AeroL3(geom, json_path)`; guard `mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])` | every geometric quantity aero uses; nothing geometric is stored on an aero class |
 | geometry → weights | `F16WeightsL2(json_path, req_path, geom, prop)` requires `GeometryModelL2`; `F16WeightsL3(…)` requires `GeometryModelL3` | 21 `Dependent` getters on `F16WeightsL3` read `obj.geom.*`; the former hardcoded geometry constants are gone |
 | geometry → propulsion | none | — |
@@ -81,7 +81,7 @@ an explicit `_exposed_` infix (`AR_exposed_ht`, `lambda_exposed_vt`, …). The w
 | nacelle diameter | `D_inlet` | `sqrt(T_AB_SLS/1900)` | `[Brandt Geom!C475; Engn(s)!L22 = 1900]` |
 | engine length | `L_engine` | `4.5·D` | `[Brandt Geom!D475]` |
 | max cross-section, **L2** | `compute_Amax_elliptical(W, H)` | `(π/4)·W·H` — fuselage envelope, low-fidelity form | `readme_geom.md` §7 |
-| max cross-section, **L3** | `GeomL3.get_Amax` | `MAX` over 20 rescaled frame stations of (fuselage + wing + HT + VT + nacelle) less `n_engines·πD²/5` | `[Brandt Geom!H26:H45 → H47 → B20]` |
+| max cross-section, **L3** | `F16GeomL3.get_Amax` (moved from `GeomL3` 2026-08-19) | `MAX` over 20 rescaled frame stations of (fuselage + wing + HT + VT + nacelle) less `n_engines·πD²/5` | `[Brandt Geom!H26:H45 → H47 → B20]` |
 
 `Amax` is tier-split deliberately. Raymer Eq. 12.44's Sears-Haack term wants a whole-aircraft
 area-ruled value; the envelope ellipse is fuselage-only. Injecting an L2 geometry into `F16AeroL3`

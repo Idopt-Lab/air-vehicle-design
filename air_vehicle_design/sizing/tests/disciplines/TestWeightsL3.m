@@ -1065,7 +1065,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   ! geom is F16GeomL3 (the full L3 geometry tier) and prop is
         %   F16PropL2 -- there is no L3 propulsion tier.
             prop = TestWeightsL3.makeProp();
-            geom = F16GeomL3(f16a_spec_path(3), prop);
+            geom = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w    = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), geom, prop);
         end
 

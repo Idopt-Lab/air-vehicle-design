@@ -95,16 +95,97 @@ classdef GeomL1
         %   Elevator 0.30 is the all-moving-tail row value, not a hinged-elevator
         %   chord fraction.
         %
+        %   A chord fraction is READ from the table, not computed from it, so
+        %   this lookup is the whole answer -- there is no compute_* partner and
+        %   a design class calls it directly.
+        %
         %   TODO: the jet-fighter row has no aileron fraction, so 'aileron'
         %   errors. Guarded by TestGeomL1.testTODO_AileronFractionNotAvailable.
             switch aircraft_category
+                case 'jet_attack'
+                    switch surface
+                        case 'elevator', val = 0.30;
+                        case 'rudder', val = 0.30;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                            otherwise
+                                error('GeomL1:unknownControlSurface', ...
+                                'Unknown control surface.')
+                    end
                 case 'jet_fighter'
                     switch surface
                         case 'elevator', val = 0.30;
                         case 'rudder',   val = 0.33;
                         case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                        otherwise
                             error('GeomL1:unknownControlSurface', ...
-                                'Aileron chord fraction is not available in Raymer 7th ed. Table 6.5 jet-fighter row — not implemented, not guessed.');
+                                'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
+                    end
+                case 'jet_transport'
+                    switch surface
+                        case 'elevator', val = 0.25;
+                        case 'rudder',   val = 0.32;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                        otherwise
+                            error('GeomL1:unknownControlSurface', ...
+                                'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
+                    end
+                case 'jet_trainer'
+                    switch surface
+                        case 'elevator', val = 0.35;
+                        case 'rudder',   val = 0.35;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                        otherwise
+                            error('GeomL1:unknownControlSurface', ...
+                                'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
+                    end
+                case 'business_jet'
+                    switch surface
+                        case 'elevator', val = 0.32;
+                        case 'rudder',   val = 0.30;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                        otherwise
+                            error('GeomL1:unknownControlSurface', ...
+                                'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
+                    end
+                case 'general_aviation_single_engine'
+                    switch surface
+                        case 'elevator', val = 0.45;
+                        case 'rudder',   val = 0.40;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                        otherwise
+                            error('GeomL1:unknownControlSurface', ...
+                                'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
+                    end
+                case 'general_aviation_twin_engine'
+                    switch surface
+                        case 'elevator', val = 0.36;
+                        case 'rudder',   val = 0.46;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
+                        otherwise
+                            error('GeomL1:unknownControlSurface', ...
+                                'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
+                    end
+                case 'sailplane'
+                    switch surface
+                        case 'elevator', val = 0.43;
+                        case 'rudder',   val = 0.40;
+                        case 'aileron'
+                                error('GeomL1:unknownControlSurface', ...
+                                'Aileron chord fraction unavailable in Raymer 6/7th edition, Table 6.5.')
                         otherwise
                             error('GeomL1:unknownControlSurface', ...
                                 'Unknown control surface "%s". Add it to GeomL1.lookup_control_surface_fraction.', surface);
@@ -114,6 +195,5 @@ classdef GeomL1
                         'Unknown aircraft_category "%s" for control-surface fractions — only the Raymer 7th ed. Table 6.5 jet-fighter row is implemented.', aircraft_category);
             end
         end
-
     end
 end

@@ -62,7 +62,7 @@ classdef TestF16LandingGearL3 < matlab.unittest.TestCase
             w2.W_TO = 25000;
             lg2 = F16LandingGearL2(f16a_spec_path(2), w2);
 
-            g3 = F16GeomL3(f16a_spec_path(3), prop);
+            g3 = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w3 = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO = 25000;
             lg3 = F16LandingGearL3(f16a_spec_path(3), w3);
@@ -88,7 +88,7 @@ classdef TestF16LandingGearL3 < matlab.unittest.TestCase
         % F16LandingGearL3.m's header), so a caller can distinguish which
         % class's gap fired.
             prop = F16PropL2(f16a_spec_path(2));
-            g3   = F16GeomL3(f16a_spec_path(3), prop);
+            g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             % w3.W_TO left at its NaN default -- deliberately not set.
             lg = F16LandingGearL3(f16a_spec_path(3), w3);
@@ -134,7 +134,7 @@ classdef TestF16LandingGearL3 < matlab.unittest.TestCase
         %MAKELG  Real F16LandingGearL3 wired to a real F16WeightsL3, with
         %   W_TO set to the given plausible sizing-loop STATE value.
             prop = F16PropL2(f16a_spec_path(2));
-            g3   = F16GeomL3(f16a_spec_path(3), prop);
+            g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
             w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
             w3.W_TO = W_TO;
             lg = F16LandingGearL3(f16a_spec_path(3), w3);

@@ -1,0 +1,888 @@
+{
+  "_comment": "F-16A Block 10/15 geometry STATION COORDINATES, extracted from Brandt's 3-view drawing tables. Units: ft throughout. x runs aft from the nose. y is spanwise, z is vertical. Read this file's _note keys before use: the fuselage and nacelle blocks are true cross-section stations, but the lifting-surface blocks are PLANFORM OUTLINES and carry no thickness.",
+  "_source": "VnV/BrandtF16A/GroundTruth/Brandt F-16A - corrections.xls, sheet 'Geom', read 2026-08-19 with MATLAB readcell.",
+  "_extracted_by": "Claude, 2026-08-19",
+  "_scope_note": {
+    "cross_section_stations": "fuselage, nacelle. Each row gives width and height at a station.",
+    "planform_outlines": "wing, pitch_ctrl, strake, vert_tail, aileron_elevon, le_flap, te_flap. Each row is a planform CORNER, not a section. There is NO thickness here, so these alone cannot give a wetted area. Take t/c from examples/F16A/inputs/f16a_L3.json, or from the workbook's 'Wing Airfoil' / 'Stab Airfoil' sheets.",
+    "area_distribution": "The per-component cross-sectional area at 20 stations. This is what Raymer 6th ed. Fig. 7.38, p. 207 integrates for volume, and what the area-ruled Amax uses."
+  },
+  "_convention_notes": {
+    "y_sign": "NOT consistent in the workbook. wing and pitch_ctrl put y_left NEGATIVE. strake, aileron_elevon, le_flap and te_flap put y_left POSITIVE. Copied verbatim.",
+    "z_sign_fuselage": "z_bottom > z_top numerically, so height = z_bottom - z_top. The centreline is the mean of the two, and it equals .fuselage.frames[].z_ft in f16a_geometry.json.",
+    "vert_tail_top_view": "Degenerate: every y is 0, because the fin is one panel on the centreline. Its shape is in x_side_ft / z_side_ft.",
+    "repeated_apex": "Each planform outline closes back on its apex, so 'Apex' appears twice."
+  },
+  "fuselage": {
+    "_cells": "Geom!K47:R109 (label K47 'Fuselage:', headers row 48)",
+    "_note": "21 stations. Station 0 is the nose, a point. The other 20 match f16a_geometry.json .fuselage.frames exactly in x, width and height (checked to 1e-9, 2026-08-19). z_chine_ft is merged in from f16a_geometry.json .fuselage.frames, because the 3-view block has no chine column. Every value is 0.0, so the F-16A section is symmetric about its centreline under this model.",
+    "reference": {
+      "_src": "The fuselage this station table was drawn for [f16a_geometry.json .fuselage; Brandt Main!B32, Main!D31:F31].",
+      "_note": "Scale by RATIO to these three values, never by the table's own extents. Five stations are TALLER than H_max_ft (max 7.5 ft at x = 15, the chin-inlet region), so H_max_ft is a nominal envelope, not the table maximum. ADDED 2026-08-19 so the wetted area tracks L_fus, W_max_fuselage and H_max_fuselage instead of being frozen at the drawn size.",
+      "L_ft": 46.5,
+      "W_max_ft": 7.0,
+      "H_max_ft": 5.0
+    },
+    "stations": [
+      {
+        "x_ft": 0.0,
+        "y_left_ft": 0.0,
+        "y_right_ft": 0.0,
+        "z_top_ft": 0.0,
+        "z_bottom_ft": 0.0,
+        "z_chine_ft": 0.0,
+        "width_ft": 0.0,
+        "height_ft": 0.0
+      },
+      {
+        "x_ft": 2.425,
+        "y_left_ft": -1,
+        "y_right_ft": 1,
+        "z_top_ft": -0.55,
+        "z_bottom_ft": 0.95,
+        "z_chine_ft": 0.0,
+        "width_ft": 2,
+        "height_ft": 1.5
+      },
+      {
+        "x_ft": 5,
+        "y_left_ft": -1.6,
+        "y_right_ft": 1.6,
+        "z_top_ft": -0.6000000000000001,
+        "z_bottom_ft": 1.6,
+        "z_chine_ft": 0.0,
+        "width_ft": 3.2,
+        "height_ft": 2.2
+      },
+      {
+        "x_ft": 9,
+        "y_left_ft": -1.8,
+        "y_right_ft": 1.8,
+        "z_top_ft": -0.7,
+        "z_bottom_ft": 2.3,
+        "z_chine_ft": 0.0,
+        "width_ft": 3.6,
+        "height_ft": 3
+      },
+      {
+        "x_ft": 12,
+        "y_left_ft": -2.1,
+        "y_right_ft": 2.1,
+        "z_top_ft": -0.7,
+        "z_bottom_ft": 4.3,
+        "z_chine_ft": 0.0,
+        "width_ft": 4.2,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 13.5,
+        "y_left_ft": -2.2,
+        "y_right_ft": 2.2,
+        "z_top_ft": -1,
+        "z_bottom_ft": 5,
+        "z_chine_ft": 0.0,
+        "width_ft": 4.4,
+        "height_ft": 6
+      },
+      {
+        "x_ft": 15,
+        "y_left_ft": -2,
+        "y_right_ft": 2,
+        "z_top_ft": -2.35,
+        "z_bottom_ft": 5.15,
+        "z_chine_ft": 0.0,
+        "width_ft": 4,
+        "height_ft": 7.5
+      },
+      {
+        "x_ft": 16.975,
+        "y_left_ft": -2.25,
+        "y_right_ft": 2.25,
+        "z_top_ft": -2.3,
+        "z_bottom_ft": 4.7,
+        "z_chine_ft": 0.0,
+        "width_ft": 4.5,
+        "height_ft": 7
+      },
+      {
+        "x_ft": 20,
+        "y_left_ft": -3,
+        "y_right_ft": 3,
+        "z_top_ft": -2.4,
+        "z_bottom_ft": 3.6,
+        "z_chine_ft": 0.0,
+        "width_ft": 6,
+        "height_ft": 6
+      },
+      {
+        "x_ft": 21.825,
+        "y_left_ft": -3.25,
+        "y_right_ft": 3.25,
+        "z_top_ft": -2.45,
+        "z_bottom_ft": 3.05,
+        "z_chine_ft": 0.0,
+        "width_ft": 6.5,
+        "height_ft": 5.5
+      },
+      {
+        "x_ft": 24.25,
+        "y_left_ft": -3.25,
+        "y_right_ft": 3.25,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 6.5,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 26.675,
+        "y_left_ft": -2.75,
+        "y_right_ft": 2.75,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 5.5,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 29.1,
+        "y_left_ft": -2.75,
+        "y_right_ft": 2.75,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 5.5,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 31.525,
+        "y_left_ft": -3.25,
+        "y_right_ft": 3.25,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 6.5,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 33.95,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 36.375,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 38.8,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -2.5,
+        "z_bottom_ft": 2.5,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 5
+      },
+      {
+        "x_ft": 41.225,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -2.25,
+        "z_bottom_ft": 2.25,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 4.5
+      },
+      {
+        "x_ft": 43.65,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -2,
+        "z_bottom_ft": 2,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 4
+      },
+      {
+        "x_ft": 46.075,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -2,
+        "z_bottom_ft": 2,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 4
+      },
+      {
+        "x_ft": 46.5,
+        "y_left_ft": -3.5,
+        "y_right_ft": 3.5,
+        "z_top_ft": -1.835,
+        "z_bottom_ft": 1.835,
+        "z_chine_ft": 0.0,
+        "width_ft": 7,
+        "height_ft": 3.67
+      }
+    ]
+  },
+  "nacelle": {
+    "_cells": "frames Geom!B479:H484; outline Geom!K125:T141",
+    "_note": "ONE engine. The workbook draws a left and a right nacelle with identical numbers, so only one set is kept. The duct sits 1.5 ft below the centreline at x = 15 and 22, then on the centreline from x = 29 aft.",
+    "n_engines": 1,
+    "frames": [
+      {
+        "frame": 1,
+        "x_ft": 15,
+        "z_center_ft": -1.5,
+        "width_ft": 3.537022238520628,
+        "height_ft": 1.768511119260314
+      },
+      {
+        "frame": 2,
+        "x_ft": 22,
+        "z_center_ft": -1.5,
+        "width_ft": 3.537022238520628,
+        "height_ft": 1.768511119260314
+      },
+      {
+        "frame": 3,
+        "x_ft": 29,
+        "z_center_ft": 0,
+        "width_ft": 3.537022238520628,
+        "height_ft": 3.537022238520628
+      },
+      {
+        "frame": 4,
+        "x_ft": 36.95830003667142,
+        "z_center_ft": 0,
+        "width_ft": 3.537022238520628,
+        "height_ft": 3.537022238520628
+      },
+      {
+        "frame": 5,
+        "x_ft": 44.91660007334283,
+        "z_center_ft": 0,
+        "width_ft": 3.537022238520628,
+        "height_ft": 3.537022238520628
+      }
+    ],
+    "outline": [
+      {
+        "x_ft": 15,
+        "y_left_ft": -1.768511119260314,
+        "y_right_ft": 1.768511119260314,
+        "z_top_ft": -2.384255559630157,
+        "z_bottom_ft": -0.615744440369843
+      },
+      {
+        "x_ft": 22,
+        "y_left_ft": -1.768511119260314,
+        "y_right_ft": 1.768511119260314,
+        "z_top_ft": -2.384255559630157,
+        "z_bottom_ft": -0.615744440369843
+      },
+      {
+        "x_ft": 29,
+        "y_left_ft": -1.768511119260314,
+        "y_right_ft": 1.768511119260314,
+        "z_top_ft": -1.768511119260314,
+        "z_bottom_ft": 1.768511119260314
+      },
+      {
+        "x_ft": 36.95830003667142,
+        "y_left_ft": -1.768511119260314,
+        "y_right_ft": 1.768511119260314,
+        "z_top_ft": -1.768511119260314,
+        "z_bottom_ft": 1.768511119260314
+      },
+      {
+        "x_ft": 44.91660007334283,
+        "y_left_ft": -1.768511119260314,
+        "y_right_ft": 1.768511119260314,
+        "z_top_ft": -1.768511119260314,
+        "z_bottom_ft": 1.768511119260314
+      }
+    ]
+  },
+  "wing": {
+    "_cells": "Geom!K36:R44",
+    "_note": "Trapezoid corners plus the two quarter-chord points. 1/4-chord sweep 32.1832 deg, TE sweep -0.000243 deg [Geom!L45, N45].",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 17.785833333333333,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 17.785833333333333,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip LE",
+        "x_ft": 30.37232764933863,
+        "y_left_ft": -15,
+        "y_right_ft": 15,
+        "x_side_ft": 30.37232764933863,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip TE",
+        "x_ft": 34.07904862693537,
+        "y_left_ft": -15,
+        "y_right_ft": 15,
+        "x_side_ft": 34.07904862693537,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Centerline TE",
+        "x_ft": 34.07911235573659,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 34.07911235573659,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Apex",
+        "x_ft": 17.785833333333333,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 17.785833333333333,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Root 1/4 Chord",
+        "x_ft": 21.859153088934146,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 21.859153088934146,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Tip 1/4 Chord",
+        "x_ft": 31.299007893737816,
+        "y_left_ft": -15,
+        "y_right_ft": 15,
+        "x_side_ft": 31.299007893737816,
+        "z_side_ft": 0
+      }
+    ]
+  },
+  "pitch_ctrl": {
+    "_cells": "Geom!K111:R121",
+    "_note": "All-moving stabilator. z_side_ft is non-zero, so this surface has anhedral (-10 deg [f16a_geometry.json .pitch_ctrl]).",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 36,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 36,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip LE",
+        "x_ft": 43.551896589603174,
+        "y_left_ft": -9,
+        "y_right_ft": 9,
+        "x_side_ft": 43.551896589603174,
+        "z_side_ft": -1.586942826376185
+      },
+      {
+        "point": "Wingtip TE",
+        "x_ft": 45.77592917616122,
+        "y_left_ft": -9,
+        "y_right_ft": 9,
+        "x_side_ft": 45.77592917616122,
+        "z_side_ft": -1.586942826376185
+      },
+      {
+        "point": "Centerline TE",
+        "x_ft": 45.775967413441954,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 45.775967413441954,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Apex",
+        "x_ft": 38.44399185336049,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 38.44399185336049,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Root 1/4 Chord",
+        "x_ft": 38.44399185336049,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 38.44399185336049,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Tip 1/4 Chord",
+        "x_ft": 44.10790473624269,
+        "y_left_ft": -9,
+        "y_right_ft": 9,
+        "x_side_ft": 44.10790473624269,
+        "z_side_ft": -1.586942826376185
+      }
+    ]
+  },
+  "strake": {
+    "_cells": "Geom!K150:R156",
+    "_note": "Sharp tip: Wingtip LE and Wingtip TE share one x, so the tip chord is 0. A BODY surface, so its exposed area equals its full reference area, 20.0 ft^2.",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 12,
+        "y_left_ft": 2,
+        "y_right_ft": -2,
+        "x_side_ft": 12,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip LE",
+        "x_ft": 21.550677791304995,
+        "y_left_ft": 4.738612787525831,
+        "y_right_ft": -4.738612787525831,
+        "x_side_ft": 21.550677791304995,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip TE",
+        "x_ft": 21.550677791304995,
+        "y_left_ft": 4.738612787525831,
+        "y_right_ft": -4.738612787525831,
+        "x_side_ft": 21.550677791304995,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Inboard TE",
+        "x_ft": 19.302967433402216,
+        "y_left_ft": 2,
+        "y_right_ft": -2,
+        "x_side_ft": 19.302967433402216,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Apex",
+        "x_ft": 12,
+        "y_left_ft": 2,
+        "y_right_ft": -2,
+        "x_side_ft": 12,
+        "z_side_ft": 0
+      }
+    ]
+  },
+  "vert_tail": {
+    "_cells": "Geom!K161:T167",
+    "_note": "Single panel. Read the side view. Tip z 9.7980 ft is the fin span.",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 36,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 36,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Tip LE",
+        "x_ft": 44.22146375896758,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 44.22146375896758,
+        "z_side_ft": 9.797958971132712
+      },
+      {
+        "point": "Tip TE",
+        "x_ft": 48.30394666360621,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 48.30394666360621,
+        "z_side_ft": 9.797958971132712
+      },
+      {
+        "point": "Root TE",
+        "x_ft": 44.16496580927726,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 44.16496580927726,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Apex",
+        "x_ft": 36,
+        "y_left_ft": 0,
+        "y_right_ft": 0,
+        "x_side_ft": 36,
+        "z_side_ft": 0
+      }
+    ]
+  },
+  "aileron_elevon": {
+    "_cells": "Geom!K172:R178",
+    "_note": "Half span 7.7460, root chord 2.0166, tip chord 1.0818 ft [Geom!L179:L181]. The F-16 uses flaperons, so this surface and te_flap are the SAME surface and carry identical points.",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 32.062549732238665,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": 32.062549732238665,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip LE",
+        "x_ft": 32.997225731063644,
+        "y_left_ft": 11.245966692414834,
+        "y_right_ft": -11.245966692414834,
+        "x_side_ft": 32.997225731063644,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip TE",
+        "x_ft": 34.07906465458527,
+        "y_left_ft": 11.245966692414834,
+        "y_right_ft": -11.245966692414834,
+        "x_side_ft": 34.07906465458527,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Inboard TE",
+        "x_ft": 34.07909748568297,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": 34.07909748568297,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Apex",
+        "x_ft": 32.062549732238665,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": 32.062549732238665,
+        "z_side_ft": 0
+      }
+    ]
+  },
+  "le_flap": {
+    "_cells": "Geom!K184:R190",
+    "_note": "Half span 8.1317, root chord 1.3105, tip chord 1.3105 ft [Geom!L191:L193].",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 20.722682042453812,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": 20.722682042453812,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip LE",
+        "x_ft": 30.37232780099253,
+        "y_left_ft": 15,
+        "y_right_ft": -15,
+        "x_side_ft": 30.37232780099253,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Wingtip TE",
+        "x_ft": 31.68285157060507,
+        "y_left_ft": 15,
+        "y_right_ft": -15,
+        "x_side_ft": 31.68285157060507,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Inboard TE",
+        "x_ft": 22.033205812066353,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": 22.033205812066353,
+        "z_side_ft": 0
+      },
+      {
+        "point": "Apex",
+        "x_ft": 20.722682042453812,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": 20.722682042453812,
+        "z_side_ft": 0
+      }
+    ]
+  },
+  "te_flap": {
+    "_cells": "Geom!K196:N202",
+    "_note": "Top view only in the workbook. That is not a gap: the F-16 flaperon means te_flap is the same surface as aileron_elevon, whose side view is present.",
+    "points": [
+      {
+        "point": "Apex",
+        "x_ft": 32.062549732238665,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": null,
+        "z_side_ft": null
+      },
+      {
+        "point": "Wingtip LE",
+        "x_ft": 32.997225731063644,
+        "y_left_ft": 11.245966692414834,
+        "y_right_ft": -11.245966692414834,
+        "x_side_ft": null,
+        "z_side_ft": null
+      },
+      {
+        "point": "Wingtip TE",
+        "x_ft": 34.07906465458527,
+        "y_left_ft": 11.245966692414834,
+        "y_right_ft": -11.245966692414834,
+        "x_side_ft": null,
+        "z_side_ft": null
+      },
+      {
+        "point": "Inboard TE",
+        "x_ft": 34.07909748568297,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": null,
+        "z_side_ft": null
+      },
+      {
+        "point": "Apex",
+        "x_ft": 32.062549732238665,
+        "y_left_ft": 3.5,
+        "y_right_ft": -3.5,
+        "x_side_ft": null,
+        "z_side_ft": null
+      }
+    ]
+  },
+  "area_distribution": {
+    "_cells": "Geom!S25:AG45 (totals row 47)",
+    "_note": "Cross-sectional area per component at 20 stations, plus the fuselage wetted-area increment. The component sum less the engine flow-through gives Brandt's Amax = 25.1106 ft^2 at x = 29.1 ft [Geom!H47 = B20].",
+    "rows": [
+      {
+        "x_ft": 1.2125,
+        "A_fuselage_ft2": 1.8941254667625174,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 6.278083445075988
+      },
+      {
+        "x_ft": 3.7125,
+        "A_fuselage_ft2": 4.444881095336041,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 17.13855105043554
+      },
+      {
+        "x_ft": 7,
+        "A_fuselage_ft2": 6.8188516803450625,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 36.1679426779158
+      },
+      {
+        "x_ft": 10.5,
+        "A_fuselage_ft2": 13.258878267337622,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 36.37789033306932
+      },
+      {
+        "x_ft": 12.75,
+        "A_fuselage_ft2": 16.668304107510153,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0.19072620317463773,
+        "S_wet_fuselage_ft2": 22.806706666945693
+      },
+      {
+        "x_ft": 14.25,
+        "A_fuselage_ft2": 18.941254667625174,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0.5023860760429638,
+        "S_wet_fuselage_ft2": 25.333119784493533
+      },
+      {
+        "x_ft": 15.9875,
+        "A_fuselage_ft2": 19.88831740100643,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0.5442458582558688,
+        "S_wet_fuselage_ft2": 34.57861511748691
+      },
+      {
+        "x_ft": 18.4875,
+        "A_fuselage_ft2": 22.729505601150212,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0.0039244732360446555,
+        "S_wet_fuselage_ft2": 52.85393562653301
+      },
+      {
+        "x_ft": 20.9125,
+        "A_fuselage_ft2": 22.57166181225334,
+        "A_wing_ft2": 0.05893705798222619,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 32.092113275785664
+      },
+      {
+        "x_ft": 23.0375,
+        "A_fuselage_ft2": 20.519692556593935,
+        "A_wing_ft2": 1.5614049443552434,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 41.76267480330503
+      },
+      {
+        "x_ft": 25.4625,
+        "A_fuselage_ft2": 17.362816778656413,
+        "A_wing_ft2": 4.701843881157143,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 39.05417140755205
+      },
+      {
+        "x_ft": 27.887500000000003,
+        "A_fuselage_ft2": 17.362816778656413,
+        "A_wing_ft2": 5.782533415476416,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 37.19219758870798
+      },
+      {
+        "x_ft": 30.3125,
+        "A_fuselage_ft2": 20.519692556593935,
+        "A_wing_ft2": 2.508046651439097,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 39.05417140755199
+      },
+      {
+        "x_ft": 32.7375,
+        "A_fuselage_ft2": 22.098130445562703,
+        "A_wing_ft2": 0.0072414453893227615,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 41.885097653229586
+      },
+      {
+        "x_ft": 35.1625,
+        "A_fuselage_ft2": 22.098130445562703,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 42.85405008006286
+      },
+      {
+        "x_ft": 37.5875,
+        "A_fuselage_ft2": 22.098130445562703,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0.017256746361274403,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 42.85405008006286
+      },
+      {
+        "x_ft": 40.0125,
+        "A_fuselage_ft2": 19.88831740100643,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0.7447432025329163,
+        "A_vert_tail_ft2": 1.1251235429340571,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 42.10537899334284
+      },
+      {
+        "x_ft": 42.4375,
+        "A_fuselage_ft2": 17.678504356450162,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 1.368922125012569,
+        "A_vert_tail_ft2": 2.909583313171033,
+        "A_nacelle_ft2": 9.825767368421053,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 40.65581901860724
+      },
+      {
+        "x_ft": 44.8625,
+        "A_fuselage_ft2": 17.678504356450162,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 1.3129210210095432,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 39.95493013059204
+      },
+      {
+        "x_ft": 46.2875,
+        "A_fuselage_ft2": 4.634293642012292,
+        "A_wing_ft2": 0,
+        "A_pitch_ctrl_ft2": 0,
+        "A_vert_tail_ft2": 0.9091485075691873,
+        "A_nacelle_ft2": 0,
+        "A_strake_ft2": 0,
+        "S_wet_fuselage_ft2": 5.329433504252435
+      }
+    ]
+  },
+  "totals": {
+    "S_wet_fuselage_ft2": 676.3289326450083,
+    "volume_ft3": 1106.3061481110065,
+    "x_centroid_ft": 26.13356776989343,
+    "Amax_net_of_inlet_ft2": 25.11055621202756,
+    "nacelle_A_max_ft2": 9.825767368421053,
+    "nacelle_diameter_ft": 3.537022238520628,
+    "nacelle_length_ft": 15.916600073342826,
+    "_cells": "Geom!S47, T47, U47, H47, B475, C475, D475"
+  }
+}
