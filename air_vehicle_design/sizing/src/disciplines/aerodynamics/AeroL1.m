@@ -32,31 +32,7 @@ classdef AeroL1
      end
 
     methods (Static)
-
-        % ================================================================== %
-        % HIGH-LEVEL: take the student object, return the result.
-        % ================================================================== %
-
-        % TODO (8/14/2026): This appears to be an artefact from when this class was a subclass of
-        % the Aerodynamics enforcer.
-        function polar = drag_polar(obj, state)
-        % TODO (8/13/2026): I thought we were ditching the Mattingly K1 tabulation approach.
-        %DRAG_POLAR  Assemble the L1 drag polar.  Returns struct(CD0, K1, K2).
-        %   CD0(M) interpolated from the object's Mattingly Fig. 2.10 "Current"
-        %   curve; K1 from the object's wing AR/Lambda_LE_deg via
-        %   k1_from_geometry [Raymer Eq. 12.48-12.50/12.51]; K2 = 0 for the
-        %   uncambered fighter. [Mattingly Eq. 2.9]
-            cd0 = AeroL1.interp_curve(obj.cd0_curve_mach, obj.cd0_curve_value, state.mach);
-            k1  = AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach);
-            k2  = AeroL1.mattingly_K2(obj.design_type);
-            polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
-        end
-
-        % TODO (8/14/2026): Another artefact of the subclass era. No longer necessary; relocate to the F-16 example if
-        % it isn't already there.
-        function CLmax = get_CLmax(obj)
-            CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_category, "CL_max_clean");
-        end
+        
 
         % ================================================================== %
         % LOW-LEVEL: pure math -- scalars/arrays only, no object access.
@@ -89,6 +65,9 @@ classdef AeroL1
         end
 
         % TODO (8/13/2026): Why are we interpolating a curve? This is a toolbox.
+        % note (8/20/2026)(Casey): This curve can be interpolated to give the CD0 for a design.
+        % Is it categorical? I'm not sure.
+        % Where does it even get its data from?
         function v = interp_curve(mach_pts, val_pts, M)
             arguments
                 mach_pts (1,:) double {mustBeReal}

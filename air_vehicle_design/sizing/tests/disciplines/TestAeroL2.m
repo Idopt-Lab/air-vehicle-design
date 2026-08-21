@@ -382,7 +382,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             a = TestAeroL2.makeAero();
             tc.verifyError(@() setfield(a, 'AR_wing', 5),       'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(a, 'S_wet', 1371),      'MATLAB:class:noSetMethod'); %#ok<SFLD>
-            tc.verifyError(@() setfield(a, 'Lambda_c4_deg', 37),'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(a, 'QC_sweep_wing', 37),'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
         function testGeometryInjectionRejectsWrongTierAtConstruction(tc)

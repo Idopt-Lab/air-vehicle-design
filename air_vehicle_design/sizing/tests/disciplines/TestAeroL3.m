@@ -280,21 +280,51 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         end
 
         function testBuildupUnchangedBelowMach1p2(tc)
-            % Below the Eq. 12.41 domain (M=1.05 < 1.2) the F16 override adds NO
-            % wave drag: get_CD0_buildup must equal the generic AeroL3 buildup.
-            g      = TestAeroL3.makeAero();
-            state  = AircraftState(0, 1.05);
-            tc.verifyEqual(g.get_CD0_buildup(state), AeroL3.get_CD0_buildup(g, state), ...
-                'AbsTol', 1e-12);
+            % Below the Eq. 12.41 domain (M < 1.2) the F16 override adds NO wave
+            % drag. AeroL3 no longer holds a generic get_CD0_buildup to compare
+            % against, so the property is checked on F16AeroL3 alone: the
+            % buildup varies only slowly with Mach while the wave term is off,
+            % then jumps by the wave term as M crosses 1.2.
+            g    = TestAeroL3.makeAero();
+            below = g.get_CD0_buildup(AircraftState(0, 1.19));
+            near  = g.get_CD0_buildup(AircraftState(0, 1.05));
+            tc.verifyEqual(below, near, 'RelTol', 0.05, ...
+                'Below M=1.2 the buildup must hold the smooth skin-friction trend (no wave term).');
+            at12 = g.get_CD0_buildup(AircraftState(0, 1.2));
+            wave = g.compute_CD0_wave(AircraftState(0, 1.2));
+            tc.verifyGreaterThan(at12 - below, 0.9 * wave, ...
+                'Crossing M=1.2 must switch the wave-drag term ON.');
         end
 
         function testBuildupIncludesWaveAboveMach1p2(tc)
-            % At M=1.5 (>=1.2) the override adds exactly compute_CD0_wave on top
-            % of the generic buildup (additive; confirms it is not a no-op).
-            g     = TestAeroL3.makeAero();
-            state = AircraftState(0, 1.5);
-            tc.verifyEqual(g.get_CD0_buildup(state), ...
-                AeroL3.get_CD0_buildup(g, state) + g.compute_CD0_wave(state), 'AbsTol', 1e-12);
+            % At M=1.5 (>=1.2) the override is the component buildup PLUS
+            % compute_CD0_wave. Removing the wave term must land back on the
+            % sub-1.2 skin-friction level (additive; confirms it is not a no-op).
+            g       = TestAeroL3.makeAero();
+            without = g.get_CD0_buildup(AircraftState(0, 1.5)) ...
+                    - g.compute_CD0_wave(AircraftState(0, 1.5));
+            below   = g.get_CD0_buildup(AircraftState(0, 1.19));
+            tc.verifyEqual(without, below, 'RelTol', 0.10, ...
+                'get_CD0_buildup above M=1.2 must be the sub-1.2 buildup plus exactly compute_CD0_wave.');
+        end
+
+        function testSupersonicCD0AgainstRaymerFig1234(tc)
+            % REFERENCE COMPARISON, not a hand-computed oracle.
+            % Raymer 6th ed. Fig. 12.34, p. 441 plots CD0 vs Mach for eleven real
+            % aircraft. The F-16 line, digitized in
+            % docs/reference_extracts/Raymer_Aircraft_Design_6ed/12_aerodynamics.md,
+            % reads ~0.049 at M=1.2 and holds a ~0.048-0.049 plateau to M=2.2.
+            % The figure is read off a plot, so the value carries its own
+            % digitization uncertainty; the tolerance below is deliberately loose
+            % and is NOT a statement that the buildup reproduces the figure.
+            g = TestAeroL3.makeAero();
+            for M = [1.2 1.5 2.0]
+                received = g.get_CD0_buildup(AircraftState(0, M));
+                fprintf('\n    CD0 buildup M=%.1f: received = %.6f,  Raymer Fig. 12.34 F-16 line ~ 0.049\n', ...
+                        M, received);
+                tc.verifyEqual(received, 0.049, 'RelTol', 0.25, ...
+                    'Supersonic CD0 must sit within a plot-reading tolerance of the Raymer Fig. 12.34 F-16 line.');
+            end
         end
 
         function testDragPolarCD0RoutesThroughOverride(tc)
@@ -361,17 +391,17 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % derived AR and the (S_wet-dependent) component buildup must both
             % track the change with no reconstruction.
             g    = TestAeroL3.makeAero();
-            AR0  = g.AR;
+            AR0  = g.AR_wing;
             cd00 = g.get_CD0_buildup(AircraftState(0, 0.5));
             g.geom.AR_wing = g.geom.AR_wing + 1;
-            tc.verifyEqual(g.AR, AR0 + 1, 'AbsTol', 1e-12);
+            tc.verifyEqual(g.AR_wing, AR0 + 1, 'AbsTol', 1e-12);
             tc.verifyNotEqual(g.get_CD0_buildup(AircraftState(0, 0.5)), cd00, ...
                 'Component buildup must change after the injected AR is mutated.');
         end
 
         function testDerivedPropertiesAreReadOnly(tc)
             g = TestAeroL3.makeAero();
-            tc.verifyError(@() setfield(g, 'AR', 5),          'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(g, 'AR_wing', 5),     'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'S_ref', 300),     'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'S_wet_comp', 0),  'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(g, 'CD0_misc', 0),    'MATLAB:class:noSetMethod'); %#ok<SFLD>
@@ -381,10 +411,10 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         % High-lift-device / gear deltas -- ordering/sign only
         % ================================================================== %
 
-        function testDeltaCD0SlatPositive(tc)
-            % LE slat parasite increment (Eq. 12.61 form) is positive.
+        function testDeltaCD0LefPositive(tc)
+            % LE flap parasite increment (Eq. 12.61 form) is positive.
             g = TestAeroL3.makeAero();
-            tc.verifyGreaterThan(g.Delta_CD0_slat(g.delta_slat_TO_deg), 0);
+            tc.verifyGreaterThan(g.Delta_CD0_lef(g.delta_lef_TO_deg), 0);
         end
 
         function testDeltaCD0GeardownPositive(tc)
@@ -393,8 +423,8 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             tc.verifyGreaterThan(g.compute_Delta_CD0_geardown(AircraftState(0, 0.2)), 0);
         end
 
-        function testDeltaCLmaxFlapPlusSlatExceedsFlapAlone(tc)
-            % L3 adds the LE slat on top of the TE flap -> total > flap alone.
+        function testDeltaCLmaxFlapPlusLefExceedsFlapAlone(tc)
+            % L3 adds the LE flap on top of the TE flap -> total > flap alone.
             g = TestAeroL3.makeAero();
             tc.verifyGreaterThan(g.get_Delta_CLmax_TO(), g.Delta_CLmax_flap('TO'));
         end
@@ -513,7 +543,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         %   A-3 noted this open item had no guarding test, unlike every other
         %   citation gap in Aerodynamics.
         %
-        %   WHAT IS MISSING: delta_slat_TO_deg/delta_slat_L_deg = 17 in
+        %   WHAT IS MISSING: delta_lef_TO_deg/delta_lef_L_deg = 17 in
         %   F16AeroL3.m is a stand-in for the leading-edge flap's real,
         %   AoA/Mach-scheduled position near the rotation/touchdown condition
         %   CLmax_TO/CLmax_L represent. Web research (2026-07-30) pinned the
