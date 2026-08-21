@@ -1,35 +1,54 @@
-classdef TtpaProp 
+classdef TtpaProp < PropulsionBase2
 
     properties
-
-        engine_type = 'Piston Propeller'
-        segment = 'Cruise'
-        C_bhp = 0.4
-               
-    end
-
-    properties (Dependent)
-
+        P_SL
         eta_p
+        engine_type = 'Piston Propeller'
     end
 
     methods
-        function eta_p = get.eta_p(obj)
 
-            switch obj.segment
-                case "Cruise"
-                    eta_p = 0.82;
+        %% Thrust Available
+        function T = available_thrust(obj, state, rating)
 
-                case "Loiter"
-                    eta_p = 0.72;
-                otherwise
-                    error('eta_p unknown for inputted segment')
+            P = obj.power_available(state, rating);
 
-            end
+            T = obj.eta_p * P / state.V;
+
+        end
+
+        %% Fuel Mass Flow
+        function mdot_f = fuel_flow(obj, state, rating)
+
+            P = obj.power_available(state, rating);
+            BSFC = obj.get_BSFC(state);
+
+            mdot_f = BSFC * P;
+
+        end
+
+        %% Power Available
+        function P = power_available(obj, state, rating)
+
+            alpha = obj.power_lapse(state, rating);
+
+            P = alpha * obj.P_SL;
+
+        end
+
+        %% BSFC
+        function BSFC = get_BSFC(obj, state)
+
+            % Calculate BSFC from engine operating condition.
+            %
+            % BSFC units should be consistent with P. For example:
+            %   BSFC [lbm/(hp*hr)] with P [hp]
+            %   gives mdot_f [lbm/hr].
+
+            BSFC = 0.4; 
 
         end
 
     end
-
 
 end

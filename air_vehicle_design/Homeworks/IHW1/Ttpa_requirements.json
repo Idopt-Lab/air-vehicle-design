@@ -1,21 +1,91 @@
 {
-  "_comment": "TestTwinPropellorAircraft top-level design REQUIREMENTS -- what the aircraft must DO, fidelity-independent. Same schema and same scope guard as examples/F16A/jsons/f16a_requirements.json: requirements only, never spec data (aspect ratio, CLmax, CD0, engine data stay in nta_L1.json), and never a discipline-owned quantity (CLmax, CD0, Oswald e, propeller efficiency and the altitude power lapse all come from the injected aero/prop objects at run time).",
+  "_comment": "Test Twin Propeller Aircraft - Top-level design REQUIREMENTS: what the aircraft must DO or what the preliminary design is required to assume. This file is read by MissionProfileReader and the sizing/constraint framework. Requirements are fidelity-independent and must not contain discipline-owned quantities such as CLmax, CD0, K, thrust lapse, TSFC, BSFC, or propeller efficiency. Aircraft/specification data belongs in the appropriate aircraft input/model files.",
+  "_cite": "metabook = AE481 metabook worked Example 4.2, docs/reference_extracts/metabook_data.md; Roskam Table 3.1 etc. are the primary tables the metabook names. Constraint-class field names verified against src/constraints/{TakeoffFieldLengthConstraint, LandingFieldLengthConstraint, ClimbGradientConstraint, ExcessPowerConstraint, LevelFlightConstraint}.m.",
+
+  "geometry": {
+    "_comment": "Preliminary geometry requirements/design assumptions. These are consumed by the sizing framework and are not owned by the geometry discipline model.",
+    "AR": 8,
+    "_src_AR": "Preliminary wing aspect-ratio requirement/design assumption."
+  },
+
+  "cruise": {
+    "_src": "Cruise condition [metabook §4.11 Eq. 4.57] -- 8000 ft, KTAS >= 200. Consumed by the mission long-range cruise segment and the Cruise constraint.",
+    "altitude_ft": 8000,
+    "ktas": 200
+  },
+
+  "design_range_nmi": 1200,
+
+  "_src_design_range_nmi": "Design mission range 1,200 nmi. Fixed payload assumes single pilot crew and 5 additional passengers assumed to be 200 lb each. Not consumed directly by the constraint analysis; recorded so the requirement set is complete.",
 
   "missions": {
-    "segments": [
-      {"type": "startup", "name": "Startup"},
-      {"type": "taxi",    "name": "Taxi"},
-      {"type": "takeoff", "name": "Takeoff", "alt_ft": 0},
-      {"type": "climb",   "name": "Climb",   "alt_ft": 8000},
-      {"type": "cruise",  "name": "Cruise",  "alt_ft": 8000, "distance_nm": 1200},
-      {"type": "descent", "name": "Descent", "alt_ft": 0},
-      {"type": "climb",   "name": "Climb",   "alt_ft": 4000 },
-      {"type": "loiter",  "name": "Loiter",  "alt_ft": 4000,  "ktas_end":120,"time_min": 45.0},
-      {"type": "descent", "name": "Descent", "alt_ft": 0 },
-      {"type": "landing", "name": "Landing", "alt_ft": 0 },
-      {"type": "taxi",    "name": "Taxi"},
-      {"type": "shutdown","name": "Shutdown"}
-      ]
-    
+    "_comment": "Mission PROFILES: the ordered segment sequence each mission flies. This is a fidelity-independent requirement. Each segment carries requirement data only; discipline-owned quantities such as CLmax, CD0, K, propeller efficiency, BSFC, and engine power come from the injected discipline models.",
+    "_cite": "Mission-profile structure adapted from the existing aircraft requirements framework.",
+
+    "std_mission": {
+      "_description": "Startup/taxi/takeoff (folded historical 0.970), climb (0.984), cruise 1,200 nmi (Breguet Eq. 2.7), 45-min loiter (Breguet endurance Eq. 2.16), descent (0.992), landing/taxi/shutdown (0.992). The 6% reserve_fuel_fraction [Eq. 2.17] (trapped fuel + additional reserve) is applied ON TOP of the full mission by MissionAnalysisBase -- it is separate from the 45-min design loiter above, so there is no double-count. Every physics/historical segment yields a fuel burn.",
+
+      "reserve_fuel_fraction": 0.06,
+
+      "_cite_reserve_fuel_fraction": "Wf/W0 = (1 - W_final/W0)*1.06 [metabook Eq. 2.17] -- the 6% covers reserve and trapped fuel. See the mission requirements documentation.",
+
+      "segments": [
+        {
+          "type": "startup",
+          "name": "Startup"
+        },
+        {
+          "type": "taxi",
+          "name": "Taxi"
+        },
+        {
+          "type": "takeoff",
+          "name": "Takeoff",
+          "alt_ft": 0
+        },
+        {
+          "type": "climb",
+          "name": "Climb",
+          "alt_ft": 8000
+        },
+        {
+          "type": "cruise",
+          "name": "Cruise",
+          "alt_ft": 8000,
+          "ktas_end": 200,
+          "distance_nm": 1200
+        },
+        {
+          "type": "descent",
+          "name": "Descent",
+          "alt_ft": 0
+        },
+        {
+          "type": "climb",
+          "name": "Climb",
+          "alt_ft": 4000
+        },
+        {
+          "type": "loiter",
+          "name": "Loiter",
+          "alt_ft": 4000,
+          "ktas_end": 120,
+          "time_min": 45
+        },
+        {
+          "type": "descent",
+          "name": "Descent",
+          "alt_ft": 0
+        },
+        {
+          "type": "landing",
+          "name": "Landing",
+          "alt_ft": 0
+        }
+      ],
+
+      "_src_cruise_distance_nm": "Cruise range = 1,200 nmi [mission requirement]. Cruise KTAS 200 and altitude 8,000 ft. See Ttpa_requirements.md §5.2.",
+      "_src_loiter": "45-minute design loiter at 4,000 ft and 120 KTAS. The 6% reserve_fuel_fraction (Eq. 2.17, trapped fuel + additional reserve) still applies ON TOP of the full mission."
+    }
   }
 }
