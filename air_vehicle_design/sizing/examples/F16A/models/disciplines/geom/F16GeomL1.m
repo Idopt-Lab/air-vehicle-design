@@ -34,10 +34,6 @@ classdef F16GeomL1 < GeometryModelL1
         S_ref             = 300              % double; ft^2  [T.O. 1F-16A-1, Fig. 1-2]
         M_max             = 2.0              % double; design max Mach — drives get_AR_eq (Raymer 7th ed. Table 4.1)
         n_engines         = 1               % double; engine count [Brandt Main!B28; f16a_L1.json .geometry.engine.n_engines]. Not used by any L1 geometry regression — exposed only so mission analysis can read geom.n_engines by DI at every fidelity (mission takeoff warmup term). Matches F16GeomL3.n_engines.
-
-        %W_TO  Takeoff gross weight, lbf. A genuine INPUT at L1: both regressions
-        %   (S_wet, L_fuselage) are functions of TOGW. Set it before reading
-        %   S_wet/L_fuselage; the sizing loop mutates it between iterations.
         W_TO              = NaN              % double; lbf
         
     end

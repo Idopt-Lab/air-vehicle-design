@@ -6,7 +6,6 @@ classdef (Abstract) GeometryModelL1 < GeometryBase
     % Abstract properties cannot have validation attributes. The first
     % concrete class (GeomL1) enforces size/type.
     properties (Abstract)
-        % L_fus % Not all designs will have this, but you can set it to "0" if you don't have it.
     end
 
     methods (Abstract)
@@ -18,9 +17,6 @@ classdef (Abstract) GeometryModelL1 < GeometryBase
         % User is expected to implement the statistical regression for
         % their aircraft
         val = get_design_S_wet_categorical(obj, W_TO)
-
-        % % Fuselage length [ft] from W_TO [lbf]. Raymer regression.
-        % val = get_L_fus_statistical(obj, W_TO)
 
         %GET_S_REF  Planform reference area of the primary lifting surface [ft^2].
         %   User may provide their own method of computing S_ref or use the toolbox's method if it exists.
