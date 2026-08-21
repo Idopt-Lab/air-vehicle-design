@@ -39,7 +39,7 @@ classdef (Abstract) GeometryModelL2 < GeometryBase
         % (Placeholder) Basically, size the mechanisms that enable control authority for your design.
         % Wasn't "control sizing" a different discipline?
         % Note (8/20/2026)(Casey): I'm pretty sure control effector sizing was moved to L1 and L2.
-        val = get_control_effectors_size(obj)
+        % val = get_control_effectors_size(obj)
     end
 
     methods

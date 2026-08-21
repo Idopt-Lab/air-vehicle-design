@@ -27,7 +27,7 @@ classdef (Abstract) GeometryModelL1 < GeometryBase
         val = get_S_ref(obj)
         
         % Note (8/20/2026)(Casey): I'm pretty sure control effector sizing was moved to L1 and L2 (done).
-        val = get_control_effectors_size(obj)
+        % val = get_control_effectors_size(obj)
     end
 
 
