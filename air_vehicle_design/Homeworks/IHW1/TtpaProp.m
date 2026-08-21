@@ -2,8 +2,7 @@ classdef TtpaProp < PropulsionBase2
 
     properties
         P_SL
-        eta_p
-        engine_type = 'Piston Propeller'
+        engine_type = "Piston Propeller"
     end
 
     methods
@@ -12,20 +11,23 @@ classdef TtpaProp < PropulsionBase2
         function T = available_thrust(obj, state, rating)
 
             P = obj.power_available(state, rating);
+            eta_p = obj.compute_eta_p(state);
 
-            T = obj.eta_p * P / state.V;
+            T = eta_p * P * 550 / state.V;
 
         end
+
 
         %% Fuel Mass Flow
         function mdot_f = fuel_flow(obj, state, rating)
 
             P = obj.power_available(state, rating);
-            BSFC = obj.get_BSFC(state);
+            C_bhp = obj.C_bhp(state);
 
-            mdot_f = BSFC * P;
+            mdot_f = C_bhp * P;
 
         end
+
 
         %% Power Available
         function P = power_available(obj, state, rating)
@@ -36,16 +38,34 @@ classdef TtpaProp < PropulsionBase2
 
         end
 
+
         %% BSFC
-        function BSFC = get_BSFC(obj, state)
+        function C_bhp = C_bhp(obj, state)
 
-            % Calculate BSFC from engine operating condition.
-            %
-            % BSFC units should be consistent with P. For example:
-            %   BSFC [lbm/(hp*hr)] with P [hp]
-            %   gives mdot_f [lbm/hr].
+            % Preliminary piston-engine BSFC [lbm/(hp*hr)]
 
-            BSFC = 0.4; 
+            C_bhp = 0.4;
+
+        end
+
+
+        %% Propeller Efficiency
+        function eta_p = compute_eta_p(obj, state)
+
+            switch lower(string(state.seg_type))
+
+                case "loiter"
+                    eta_p = 0.72;
+
+                case "cruise"
+                    eta_p = 0.82;
+
+                otherwise
+                    error('TtpaProp:UndefinedSegment', ...
+                        'Propeller efficiency is not defined for segment "%s".', ...
+                        string(state.seg_type));
+
+            end
 
         end
 
