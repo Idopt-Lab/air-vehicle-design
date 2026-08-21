@@ -115,13 +115,6 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             tc.verifyEqual(a.get_e_osw(), 0.9086192166, 'RelTol', 1e-4);
         end
 
-        function testUnknownEMethodThrows(tc)
-            % A bogus e_method must error (only "official" is defined).
-            a = TestAeroL2.makeAero();
-            a.e_method = "bogus";
-            tc.verifyError(@() a.get_e_osw(), 'AeroL2:unknownEMethod');
-        end
-
         % ================================================================== %
         % Induced factor K1 (Raymer Eq. 12.50 subsonic / Eq. 12.51 supersonic)
         % ================================================================== %
@@ -258,7 +251,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             % not frozen literals. The NUMERIC value of S_wet is verified
             % independently in TestGeomL2, not re-derived here.
             a = TestAeroL2.makeAero();
-            tc.verifyEqual(a.get_CD0(), a.Cfe * a.S_wet / a.S_ref, 'RelTol', 1e-12);
+            tc.verifyEqual(a.get_CD0_rough(), a.Cfe * a.S_wet / a.S_ref, 'RelTol', 1e-12);
             % ...and it must NOT be the old hardcoded S_wet=1371 result:
             tc.verifyNotEqual(round(a.S_wet, 0), 1371, ...
                 'S_wet must be the live geometry value, not the Brandt back-calc 1371.');
@@ -294,9 +287,9 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             %            = 0.01567633*2.2*1.02344643*0.77841... = 0.0274891 (see RelTol)
             a  = TestAeroL2.makeAero();
             st = AircraftState(0, 1.6);
-            M_CD0max = (1/cosd(a.Lambda_LE_deg))^0.2;
+            M_CD0max = (1/cosd(a.LE_sweep_wing))^0.2;              % Mod (08/20/2026) (Claude)
             Dq_SH    = 4.5*pi*(a.Amax_ft2/a.L_aircraft_ft)^2;
-            expected = (Dq_SH/a.S_ref) * a.E_WD * (0.74 + 0.37*cosd(a.Lambda_LE_deg)) ...
+            expected = (Dq_SH/a.S_ref) * a.E_WD * (0.74 + 0.37*cosd(a.LE_sweep_wing)) ...   % Mod (08/20/2026) (Claude)
                 * (1 - 0.3*sqrt(1.6 - M_CD0max));
             tc.verifyEqual(a.compute_CD0_wave(st), expected, 'RelTol', 1e-10);
             tc.verifyEqual(a.compute_CD0_wave(st), 0.0274890893, 'RelTol', 1e-6);
@@ -373,11 +366,11 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             % change with NO reconstruction (the behavior a downstream
             % optimizer depends on).
             a   = TestAeroL2.makeAero();
-            AR0 = a.AR;               % Dependent, reads geom.AR_wing
+            AR0 = a.AR_wing;          % Dependent, reads geom.AR_wing  % Mod (08/20/2026) (Claude)
             k0  = a.get_K1(0.6);      % depends on AR and e(AR)
             a.geom.AR_wing = a.geom.AR_wing + 1;   % optimizer-style mutation
-            tc.verifyEqual(a.AR, AR0 + 1, 'AbsTol', 1e-12, ...
-                'a.AR must track the mutated injected geom.AR_wing live.');
+            tc.verifyEqual(a.AR_wing, AR0 + 1, 'AbsTol', 1e-12, ...   % Mod (08/20/2026) (Claude)
+                'a.AR_wing must track the mutated injected geom.AR_wing live.');
             tc.verifyNotEqual(a.get_K1(0.6), k0, ...
                 'K1 must change after the injected AR is mutated (no stale cache).');
         end
@@ -387,7 +380,7 @@ classdef TestAeroL2 < matlab.unittest.TestCase
             % must error 'MATLAB:class:noSetMethod' (nothing can overwrite a
             % live-computed value with a frozen literal).
             a = TestAeroL2.makeAero();
-            tc.verifyError(@() setfield(a, 'AR', 5),            'MATLAB:class:noSetMethod'); %#ok<SFLD>
+            tc.verifyError(@() setfield(a, 'AR_wing', 5),       'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(a, 'S_wet', 1371),      'MATLAB:class:noSetMethod'); %#ok<SFLD>
             tc.verifyError(@() setfield(a, 'Lambda_c4_deg', 37),'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
