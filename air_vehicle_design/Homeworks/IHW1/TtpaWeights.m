@@ -9,11 +9,8 @@ classdef TtpaWeights < WeightsBase
 
     methods
         function oew = OEW(obj, W_TO)
-            % Weight fraction
-            we = 0.911 * W_TO^0.947;
-
-            % OEW
-            oew = we * W_TO;
+            % Empty Weight
+            oew = 0.911 * W_TO^0.947;
         end
     end
 end

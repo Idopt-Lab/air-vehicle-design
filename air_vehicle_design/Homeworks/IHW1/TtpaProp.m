@@ -1,56 +1,48 @@
 classdef TtpaProp < PropulsionBase2
+%TTPAPROP  Preliminary piston-propeller propulsion model.
+%
+%   Provides shaft-power availability, brake-specific fuel consumption,
+%   and propeller efficiency for the preliminary TTPA aircraft model.
 
     properties
-        P_SL
         engine_type = "Piston Propeller"
+        P_SL
     end
 
     methods
 
-        %% Thrust Available
-        function T = available_thrust(obj, state, rating)
-
-            P = obj.power_available(state, rating);
-            eta_p = obj.compute_eta_p(state);
-
-            T = eta_p * P * 550 / state.V;
-
-        end
-
-
-        %% Fuel Mass Flow
-        function mdot_f = fuel_flow(obj, state, rating)
-
-            P = obj.power_available(state, rating);
-            C_bhp = obj.C_bhp(state);
-
-            mdot_f = C_bhp * P;
-
-        end
-
-
         %% Power Available
         function P = power_available(obj, state, rating)
+            %POWER_AVAILABLE  Returns available shaft power [hp].
+            %
+            %   Applies the propulsion power lapse factor to the
+            %   sea-level rated shaft power. Propeller efficiency is
+            %   not included; this function returns engine shaft power.
 
-            alpha = obj.power_lapse(state, rating);
-
-            P = alpha * obj.P_SL;
+            % alpha = obj.power_lapse(state, rating);
+            % 
+            % P = alpha * obj.P_SL;
 
         end
 
 
         %% BSFC
         function C_bhp = C_bhp(obj, state)
-
-            % Preliminary piston-engine BSFC [lbm/(hp*hr)]
+            %C_BHP  Returns brake-specific fuel consumption [lbm/(hp*hr)].
+            %
+            %   Uses a preliminary constant BSFC appropriate for the
+            %   piston engine model.
 
             C_bhp = 0.4;
-
         end
 
 
         %% Propeller Efficiency
-        function eta_p = compute_eta_p(obj, state)
+        function eta_p = prop_eff(obj, state)
+            %PROP_EFF  Returns propeller efficiency [-].
+            %
+            %   Efficiency is selected based on the current mission
+            %   segment.
 
             switch lower(string(state.seg_type))
 
