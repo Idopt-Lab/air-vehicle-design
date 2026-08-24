@@ -38,7 +38,7 @@ end
 %% Segment Functions 
 % Takeoff
 function [W_out, fuel_used, WF] = segment_takeoff(W_in, obj, seg_no)
-    state = update_state(seg_no, obj.miss);
+    miss_seg = get_miss_seg(seg_no, obj.miss);
     % Includes Startup, Taxi and Takeoff
     WF = 0.984; % Roskam Part 1 Table 2.2
     [fuel_used, W_out] = simple_WF(WF, W_in);
@@ -46,42 +46,44 @@ end
 
 % Climb
 function [W_out, fuel_used, WF] = segment_climb(W_in, obj, seg_no)
-    state = update_state(seg_no, obj.miss);
+    miss_seg = get_miss_seg(seg_no, obj.miss);
     WF = 0.990; % Roskam Part 1 Table 2.2
     [fuel_used, W_out] = simple_WF(WF, W_in);
 end
 
 % Cruise
 function [W_out, fuel_used, WF] = segment_cruise(W_in, obj, seg_no)
-    state = update_state(seg_no, obj.miss);
-    range = state.dist*1.15077945; % nm -> mi
-    eta_p = obj.prop.prop_eff(state);
+    state = [];
+    miss_seg = get_miss_seg(seg_no, obj.miss);
+    range = miss_seg.dist*1.15077945; % nm -> mi
+    eta_p = obj.prop.prop_eff(state, miss_seg);
     WF = exp(-range*obj.prop.C_bhp/(375*eta_p*obj.aero.LD_max)); % Distance must be in MILES
     [fuel_used, W_out] = simple_WF(WF, W_in);
 end
 
 % Descent
 function [W_out, fuel_used, WF] = segment_descent(W_in, obj, seg_no)
-    state = update_state(seg_no, obj.miss);
+    miss_seg = get_miss_seg(seg_no, obj.miss);
     WF = 0.992; % Roskam Part 1 Table 2.2
     [fuel_used, W_out] = simple_WF(WF, W_in);
 end
 
 % Loiter
 function [W_out, fuel_used, WF] = segment_loiter(W_in, obj, seg_no)
-    state = update_state(seg_no, obj.miss);
+    miss_seg = get_miss_seg(seg_no, obj.miss);
+    state = [];
     % -- VERIFY THAT INPUTS MATCH UNITS -- %
-    time = state.time_min/60; %min -> hr 
-    V = ktas2ft_s(state.ktas);
+    time = miss_seg.time_min/60; %min -> hr 
+    V = ktas2ft_s(miss_seg.ktas);
     LD = 0.866 * obj.aero.LD_max;
-    eta_p = obj.prop.prop_eff(state);
+    eta_p = obj.prop.prop_eff(state, miss_seg);
     WF = exp(-time*V*obj.prop.C_bhp/(LD*550*eta_p)); % Velocity must be in ft/s and time in Hrs
     [fuel_used, W_out] = simple_WF(WF, W_in);
 end
 
 % Landing
 function [W_out, fuel_used, WF] = segment_landing(W_in, obj, seg_no)
-    state = update_state(seg_no, obj.miss);
+    miss_seg = get_miss_seg(seg_no, obj.miss);
     % Includes: Landing, Taxi and Shutdown
     WF = 0.992; % Roskam Part 1 Table 2.2
     [fuel_used, W_out] = simple_WF(WF, W_in);

@@ -23,10 +23,10 @@ classdef (Abstract) PropulsionBase2 < handle
 
     methods (Abstract)
 
-        % POWER_AVAILABLE
+        % POWER_LAPSE
         %   Returns available shaft power [hp] for the given aircraft
         %   state and propulsion rating.
-        P = power_available(obj, state, rating)
+        alpha = power_lapse(obj, state, rating)
 
         % C_BHP
         %   Returns brake-specific fuel consumption [lbm/(hp*hr)]
