@@ -1,19 +1,22 @@
 # F16GeomL2: input-to-output data flow (second pass)
 
 This chart shows the data path for `F16GeomL2`, the Level 2 (L2) geometry class,
-**as the code stands after the toolbox trim of 2026-08-17 to 2026-08-19**. The
-first-pass chart is kept unchanged at
+**as the code stands on 2026-08-24**. The first-pass chart is kept unchanged at
 `Claude-made/First_Pass/Geom/F16AGeom2_mermaid.md`.
 
-**Verified complete.** Every function in `F16GeomL2.m` (36, including the
+**Verified complete.** Every function in `F16GeomL2.m` (41, including the
 constructor and the two statics) and every static in `GeomL2.m` (8) has a node.
 Values live:
 
     S_wet          = 1466.7730567344 ft^2
+    S_wet_wing     =  396.3766598778 ft^2
+    S_wet_ht       =  101.3878862291 ft^2
+    S_wet_vt       =   83.1398277675 ft^2
+    S_wet_fuselage =  730.3023197382 ft^2
+    S_wet_duct     =  155.5663631217 ft^2
     Amax           =   27.4889357189 ft^2
     D_fus          =    6.0000000000 ft
     D_inlet        =    3.5370222385 ft
-    S_wet_fuselage =  730.3023197382 ft^2
 
 ## Viewing this chart with pan and zoom
 
@@ -24,15 +27,25 @@ it. Wheel or pinch zooms, drag pans, and `f` fits.
 The viewer reads the first ```` ```mermaid ```` block straight out of this file, so
 there is no second copy of the diagram to keep in step.
 
+## What changed since the last version of this chart, 2026-08-24
+
+| Was | Now |
+| --- | --- |
+| `S_wet_wing`, `S_wet_ht` and `S_wet_vt` were deleted at gate 2 (Option B), so the chart had no per-surface node and consumers called the toolbox directly | **Reversed.** All three are `Dependent` properties again, plus a new `S_wet_duct`. Each getter calls a `GeomL2` static with explicit arguments, so the toolbox still takes no design object. Four new magenta nodes: `SWW`, `SWH`, `SWV`, `SWD` |
+| `get_S_exposed_wing(obj)`, the abstract-contract method, had no node | Drawn as `GSEW`. It is a real second call site into `compute_S_exposed_horizontal` |
+| A `get_control_effectors_size` stub sat on the class with an empty body | Commented out on the class AND on `GeometryModelL2`, so nothing demands it. Still not drawn, and now that is correct rather than an omission |
+| Four stacked `linkStyle` blocks, each overriding the last | Collapsed to one block. Only the last was ever applied |
+| The "Open defect, in the enforcer" section described `get_control_surfaces` calling `get_design_control_mechanisms` | Neither method is in `GeometryModelL2.m` any more. Section replaced by the real open item, below |
+| Toolbox notes pointed at `% TODO` lines in `GeomL2.m` | Those source TODOs were removed on 2026-08-24. Every one is now recorded in `GeomL2.md` §5 and `F16GeomL2.md` §5 |
+
 ## What changed since the first pass
 
 | First pass | Now |
 | --- | --- |
 | `GeomL2` held `get_S_wet` and five `get_S_wet_*` object-taking wrappers, so the TOOLBOX decided that every aircraft has a wing, an HT, a VT, a fuselage and a duct | All gone. `F16GeomL2.get_design_S_wet_components` owns the component sum, so the DESIGN class decides which components its aircraft has. A tailless design can now say so |
-| `S_wet_wing`, `S_wet_ht` and `S_wet_vt` were `Dependent` properties with getters | Deleted, at Casey's direction (Option B, 2026-08-18). Consumers call `GeomL2.compute_S_wet_planform_roskam` with explicit arguments |
 | `compute_wet_planform` was cited to Brandt | Re-cited to **Raymer 6th ed. Eq. 7.12**, which it matches verbatim, and renamed `compute_S_wet_planform_raymer`. `compute_roskam_planform` became `compute_S_wet_planform_roskam`. Raymer **Eq. 7.11**'s `t/c < 0.05` branch was added |
 | `get_S_wet_fuselage` passed `W_max_fuselage` where Roskam Eq. 12.3 takes `D_fus` | **Real bug, fixed.** 7.0 ft max WIDTH where the equation wants the 6.0 ft equivalent diameter. Fuselage `S_wet` read 12.776 % high and the total 6.361 % high, so drag, fuel and weight rose with it. The equation existed TWICE, inline and in the getter, so the fix had to be made twice |
-| Three Brandt-only statics sat in the toolbox | Moved to `F16GeomBrandtAlt` in the F-16 example. Brandt stays a verification source, not a supplier of framework equations |
+| Three Brandt-only statics sat in the toolbox | Moved to `F16GeomBrandtAlt` in the F-16 example, then two moved on to `GeomL3`. Brandt stays a verification source, not a supplier of framework equations |
 | `compute_nacelle_diameter` and `compute_Amax_elliptical` were `GeometryBase` statics | Both moved to `F16GeomL2`'s own `methods (Static)` block, at Casey's direction. `F16GeomL2` is the only caller of each |
 | `GeometryBase` held MAC-station and tail-arm statics, and `F16GeomL2` held `x_mac_le_wing` / `x_c4_*` / `L_HT` / `L_VT` getters | Gone from both before this pass. Moment arms are the tail-sizing discipline's business now, so they are absent from this chart |
 
@@ -45,11 +58,10 @@ the end of the list:
 - Constructor cyan. Every other function green. A function with no toolbox call
   is yellow dashed, sits at the end of its row, and wires to a
   `no toolbox call` marker.
-- **One marker is left.** Four were needed while every no-call getter wired to one;
-  now that injectors are exempt, only `get_S_ref` reaches a marker. The exempt
-  getters are `get.tc_r_wing`, `get.tc_t_wing`, `get.tc_ht`, `get.tc_vt`,
-  `get.b_vt`, `get.D_fus`, `get.L_fuselage`, `get.T_AB_SLS_lb` and `get.D_exit`:
-  nine short derived reads, each magenta, none of them a finding.
+- **One marker is left.** Only `get_S_ref` reaches it, because injectors are
+  exempt. The exempt getters are `get.tc_r_wing`, `get.tc_t_wing`, `get.tc_ht`,
+  `get.tc_vt`, `get.b_vt`, `get.D_fus`, `get.L_fuselage`, `get.T_AB_SLS_lb` and
+  `get.D_exit`: nine short derived reads, each magenta, none of them a finding.
 - A black node with a red dashed border marks NO UPSTREAM CALL: a static of a
   toolbox THIS CLASS CALLS that `F16GeomL2` itself never calls. It does not mean
   "unreachable from here" in general, or every unrelated file would qualify. A
@@ -64,7 +76,9 @@ the end of the list:
   functions. Where an enforcer sits in the middle of a real call path, the edge is
   drawn straight through it and the hop is recorded in the notes instead of as a
   box. The affected paths are named under "Enforcer hops not drawn" below.
-- Every edge takes the colour and dash of the node it POINTS AT.
+- Every edge takes the COLOUR of the node it points at, and it is DASHED when it
+  leaves a relay getter (`get.T_AB_SLS_lb`, `get.D_exit`, `get.L_fuselage`,
+  `get.tc_r_wing`, `get.tc_t_wing`).
 - An edge into a toolbox is labeled with the calling function's name and the
   actual arguments at that call site.
 - `F16GeomL2` takes an INJECTED propulsion object. The nacelle diameter is sized
@@ -101,6 +115,7 @@ flowchart LR
             W7["get.S_exposed_wing<br/>in: c_root_wing, c_tip_wing, b_wing, W_max_fuselage<br/>out: S_exposed_wing"]
             W8["get.tc_r_wing<br/>in: tc_wing<br/>out: tc_r_wing"]
             W9["get.tc_t_wing<br/>in: tc_wing<br/>out: tc_t_wing"]
+            SWW["get.S_wet_wing<br/>in: S_exposed_wing, tc_r_wing, tc_t_wing, lambda_wing<br/>out: S_wet_wing"]
         end
 
         subgraph HT["Horizontal tail"]
@@ -111,6 +126,7 @@ flowchart LR
             H5["get.TE_sweep_ht<br/>in: LE_sweep_ht, AR_ht, lambda_ht<br/>out: TE_sweep_ht"]
             H6["get.S_exposed_ht<br/>in: c_root_ht, c_tip_ht, b_ht, W_max_fuselage<br/>out: S_exposed_ht"]
             H7["get.tc_ht<br/>in: tc_r_ht, tc_t_ht<br/>out: tc_ht"]
+            SWH["get.S_wet_ht<br/>in: S_exposed_ht, tc_r_ht, tc_t_ht, lambda_ht<br/>out: S_wet_ht"]
         end
 
         subgraph VT["Vertical tail"]
@@ -121,6 +137,7 @@ flowchart LR
             V5["get.S_exposed_vt<br/>in: S_vt, AR_vt, c_root_vt, c_tip_vt, H_max_fuselage<br/>out: S_exposed_vt"]
             V6["get.b_vt<br/>in: S_vt, AR_vt<br/>out: b_vt"]
             V7["get.tc_vt<br/>in: tc_r_vt, tc_t_vt<br/>out: tc_vt"]
+            SWV["get.S_wet_vt<br/>in: S_exposed_vt, tc_r_vt, tc_t_vt, lambda_vt<br/>out: S_wet_vt"]
         end
 
         subgraph FUS["Fuselage"]
@@ -134,6 +151,7 @@ flowchart LR
             E1["get.D_inlet<br/>in: T_AB_SLS_lb<br/>out: D_inlet"]
             E2["get.T_AB_SLS_lb<br/>in: prop.T_SL<br/>out: T_AB_SLS_lb"]
             E3["get.D_exit<br/>in: D_inlet<br/>out: D_exit"]
+            SWD["get.S_wet_duct<br/>in: D_inlet, D_exit, L_duct<br/>out: S_wet_duct"]
         end
 
         subgraph STAT["F16GeomL2 statics"]
@@ -143,6 +161,7 @@ flowchart LR
 
         AGG["get_design_S_wet_components(obj)<br/>in: exposed areas, t/c, taper, D_fus, L_fus,<br/>D_inlet, D_exit, L_duct<br/>out: S_wet total"]
         PSW["get.S_wet<br/>in: obj<br/>out: S_wet"]
+        GSEW["get_S_exposed_wing(obj)<br/>in: c_root_wing, c_tip_wing, b_wing, W_max_fuselage<br/>out: S_exposed_wing<br/>abstract-contract method"]
         GSR["get_S_ref(obj)<br/>in: obj.S_ref<br/>out: S_ref"]
     end
 
@@ -272,44 +291,36 @@ flowchart LR
     PROP -->|"prop.T_SL"| E2
     E1 -->|"D_inlet"| E3
 
+    W7 -->|"S_exposed_wing"| SWW
+    W8 -.->|"tc_r_wing"| SWW
+    W9 -.->|"tc_t_wing"| SWW
+    CTOR -->|"lambda_wing"| SWW
+    SWW -->|"get.S_wet_wing: obj.S_exposed_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing"| G3
 
+    H6 -->|"S_exposed_ht"| SWH
+    CTOR -->|"tc_r_ht, tc_t_ht, lambda_ht"| SWH
+    SWH -->|"get.S_wet_ht: obj.S_exposed_ht, obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht"| G3
 
+    V5 -->|"S_exposed_vt"| SWV
+    CTOR -->|"tc_r_vt, tc_t_vt, lambda_vt"| SWV
+    SWV -->|"get.S_wet_vt: obj.S_exposed_vt, obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt"| G3
 
+    E1 -->|"D_inlet"| SWD
+    E3 -.->|"D_exit"| SWD
+    CTOR -->|"L_duct"| SWD
+    SWD -->|"get.S_wet_duct: obj.D_inlet, obj.D_exit, obj.L_duct"| G5
 
-
-
-
-
-    linkStyle 0,1,2,3,4,5 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,80,81,82,83,84,85,86,89,90 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 87,88 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:4 3
-
-
-    linkStyle 0,1,2,3,4,5 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 52 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 44,45,46,47,48,49,50,51,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 6,8,10,12,13,14,18,19,21,23,24,25,29,31,33,34,35,36,39,41,42,80,81,82,83,84,85,86 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 7,9,11,15,16,17,20,22,26,27,28,30,32,37,38,40,43,89,90 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 87 stroke:#ffe100,color:#ffe100,stroke-width:2px
-    linkStyle 88 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
-
-
-    linkStyle 0,1,2,3,4,5 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 44,47,48,49,50,52,53,54,55,56,57,58,59,60,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 45,46,51,61 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 6,7,8,9,10,11,12,13,14,15,16,17,18,19,21,22,23,24,25,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,80,81,82,83,84,85,86,89,90 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 20,26,43 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 87 stroke:#ffe100,color:#ffe100,stroke-width:2px
-    linkStyle 88 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
-
-    class D1,D2,D3 deadWork
+    W1 -->|"b_wing/2"| GSEW
+    W2 -->|"c_root_wing"| GSEW
+    W3 -->|"c_tip_wing"| GSEW
+    CTOR -->|"W_max_fuselage/2"| GSEW
+    GSEW -->|"get_S_exposed_wing: obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, obj.W_max_fuselage/2"| G1
 
     linkStyle 0,1,2,3,4,5 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 44,47,48,49,50,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79 stroke:#33cc33,color:#33cc33,stroke-width:2px
+    linkStyle 44,47,48,49,50,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,95,98,101,105,106,107,108,109,110 stroke:#33cc33,color:#33cc33,stroke-width:2px
     linkStyle 45,46,51 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,80,81,82,83,84,85,86,89,90 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 43 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
+    linkStyle 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,80,81,82,83,84,85,86,89,90,91,94,96,97,99,100,102,104 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
+    linkStyle 43,92,93,103 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
     linkStyle 87 stroke:#ffe100,color:#ffe100,stroke-width:2px
     linkStyle 88 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
 
@@ -320,24 +331,41 @@ flowchart LR
     classDef passthroughRelay fill:#000000,stroke:#ffe100,stroke-width:2px,color:#ffe100,stroke-dasharray: 5 4
     classDef deadWork fill:#000000,stroke:#ff4040,stroke-width:3px,color:#ff4040
     class CTOR ctorWork
-    class AGG,G1,G2,G3,G4,G5,S1,S2,TB1,TB2,TB3,TB4,TB5,TB6 funcWork
-    class E1,F1,F2,F3,H1,H2,H3,H4,H5,H6,H7,PSW,V1,V2,V3,V4,V5,V6,V7,W1,W2,W3,W4,W5,W6,W7 injectorWork
+    class AGG,GSEW,G1,G2,G3,G4,G5,S1,S2,TB1,TB2,TB3,TB4,TB5,TB6 funcWork
+    class E1,F1,F2,F3,H1,H2,H3,H4,H5,H6,H7,PSW,SWD,SWH,SWV,SWW,V1,V2,V3,V4,V5,V6,V7,W1,W2,W3,W4,W5,W6,W7 injectorWork
     class E2,E3,F4,W8,W9 injectorRelay
     class GSR,NCF passthroughRelay
     class D1,D2,D3 deadWork
 ```
 
-## The three things this chart is meant to make obvious
+## The four things this chart is meant to make obvious
 
 1. **`get_design_S_wet_components` is the only place that decides what this
    aircraft is made of.** Five arrows leave it, one per component. The toolbox
    no longer holds that decision.
-2. **`D_fus` feeds the fuselage wetted area, and `W_max_fuselage` does not.**
+2. **The per-surface areas are readable two ways, and both reach the same
+   static.** `SWW`, `SWH` and `SWV` each call `G3`, and `AGG` calls `G3` three
+   more times. Six arrows into one node. The equation still has one home; only
+   the number of call sites went up.
+3. **`D_fus` feeds the fuselage wetted area, and `W_max_fuselage` does not.**
    `get.D_fus` averages width and height; only its output reaches `G4`. This is
    the bug fixed at gate 2, drawn so the wrong path is not available.
-3. **The propulsion object reaches the drag chain.** `prop.T_SL` to
+4. **The propulsion object reaches the drag chain.** `prop.T_SL` to
    `T_AB_SLS_lb` to `D_inlet` to `S_wet_duct`, so a thrust change moves CD0
    instead of leaving a frozen copy behind.
+
+## Two nodes into `G1`, and that is a duplicate
+
+`W7` (`get.S_exposed_wing`) and `GSEW` (`get_S_exposed_wing`) both hold the same
+four-argument call into `compute_S_exposed_horizontal`. The getter computes the
+fuselage half-width into a local `fw` first; the method inlines
+`obj.W_max_fuselage/2`. Same numbers, 196.2260692464 ft² either way.
+
+**This is the shape that produced the `W_max_fuselage` bug at gate 2**: one
+equation written in two places, so a fix has to be made twice. The cheap
+correction is to make the getter delegate, `v = obj.get_S_exposed_wing()`, which
+is what `get.S_wet` already does with `get_design_S_wet_components`. Not changed
+here, because it is a code edit and this pass is the chart.
 
 ## Field-by-field notes
 
@@ -349,7 +377,9 @@ flowchart LR
 | `D_fus` | `(W_max_fuselage + H_max_fuselage)/2` = 6.0 ft | The equivalent diameter Roskam Eq. 12.3 takes. Distinct from `W_max_fuselage` = 7.0 ft. On a WEIGHTS class `D_fus` means the 5.0 ft structural depth instead, which is finding S-30. |
 | `L_aircraft` | `.geometry.fuselage.overall_length_ft` | Feeds only the wave-drag term as `(Amax/l)^2`. DISTINCT from `L_fus`. Its citation is not pinned: no overall-length figure appears anywhere in `sizing/`. |
 | `Amax` | `get.Amax` -> `F16GeomL2.compute_Amax_elliptical` | 27.4889357189 ft². The fuselage-envelope ellipse. L3 uses a whole-aircraft area-ruled `Amax` of 24.7036516658 instead. The two tiers are DELIBERATELY different; using the envelope at L3 was a real bug. |
+| `S_wet_wing`, `S_wet_ht`, `S_wet_vt`, `S_wet_duct` | Four `Dependent` getters, restored 2026-08-24 | 396.3766598778, 101.3878862291, 83.1398277675, 155.5663631217 ft². Each getter calls the toolbox with explicit arguments, so restoring them did not put a design object back into the toolbox. |
 | `T_AB_SLS_lb` | `prop.T_SL`, injected | Not a geometry input at either level. |
+| `S_ail`, `S_elev`, `S_rud` | Plain `NaN` properties, not `Dependent` | This object's own inputs give no closed form, so `ControlSurfaceSizer` writes them after the sizing loop converges. Not functions, so no node. |
 | `mainwheel_S_front`, `nosewheel_S_front` | `properties (Constant)` | Wheel frontal areas, both marked `-- unused`. Constants, not functions, so no node. Nothing in geometry or aero reads either one. |
 | `S_wet` | `get.S_wet` -> `get_design_S_wet_components` | 1466.7730567344 ft². Changes on every sizing iteration, from 1190.3053 down to 1079.4305 over 16 iterations, so nothing is frozen. |
 
@@ -357,21 +387,26 @@ flowchart LR
 
 | Static | Status |
 | --- | --- |
-| `compute_S_wet_planform_roskam` | The live planform form. Its `Roskam Vol. II Eq. 12.1` citation is **UNVERIFIED**: the only Vol. II extract in the repo is a 49-line method summary with no equations. Flagged in the `GeomL2.m` header. |
-| `compute_s_wet_fus_cyl` | Same UNVERIFIED status for `Roskam Vol. II Eq. 12.3`. |
-| `compute_S_exposed_horizontal`, `compute_S_exposed_vertical` | Plain trapezoid clipping. Cite Brandt only, with no textbook pin. Both marked `% TODO (8/18/2026)(Casey): This is acceptable. Don't touch.` so the rename and signature change proposed at gate 2 are cancelled. |
-| `compute_S_wet_planform_raymer` | Raymer 6th ed. Eq. 7.12, with the Eq. 7.11 branch for `t/c < 0.05`. **No call from `F16GeomL2`.** The comparison report calls it as Brandt's uniform-t/c alternate. |
-| `compute_S_wet_cylinder`, `compute_S_wet_cone` | **No consumer anywhere.** Both also count the attachment face, which a wetted area should not. Flagged, not deleted: no cited equation loses its home in this pass. |
-| `F16GeomBrandtAlt.compute_s_wet_fus_brandt_lowfi` | **Not in this chart, and not a finding.** It left `GeomL2` on 2026-08-18, so it is no longer a static of a toolbox this class calls. Its callers are `geometry_brandt_comparison.m:104` and `TestGeomL2:521`, both outside this chart's scope. The first-pass chart drew it because it still lived in `GeomL2` then. |
+| `compute_S_wet_planform_roskam` | The live planform form, and the busiest static in the toolbox at 41 call sites repo-wide. Its `Roskam Vol. II Eq. 12.1` citation is **UNVERIFIED**: the only Vol. II extract in the repo is a 49-line method summary with no equations. Recorded in `GeomL2.md` §5. |
+| `compute_s_wet_fus_cyl` | Same UNVERIFIED status for `Roskam Vol. II Eq. 12.3`. 9 call sites. |
+| `compute_S_exposed_horizontal`, `compute_S_exposed_vertical` | Plain trapezoid clipping. Cite Brandt only, with no textbook pin. Casey marked both "This is acceptable. Don't touch." on 2026-08-18, so the rename and the signature change proposed at gate 2 are cancelled. |
+| `compute_S_wet_planform_raymer` | Raymer 6th ed. Eq. 7.12, with the Eq. 7.11 branch for `t/c < 0.05`. **No call from `F16GeomL2`.** The comparison report calls it as the uniform-t/c alternate. All three F-16 surfaces sit below `t/c` 0.05, so each takes the Eq. 7.11 branch. |
+| `compute_S_wet_cylinder`, `compute_S_wet_cone` | **No consumer anywhere.** Both also count the attachment face, which a wetted area should not. They are the start of a generic-shape set: cone, pyramid, sphere, cylinder, oval. Flagged, not deleted: no cited equation loses its home in this pass. |
+| `F16GeomBrandtAlt.compute_s_wet_fus_brandt_lowfi` | **Not in this chart, and not a finding.** It left `GeomL2` on 2026-08-18, so it is no longer a static of a toolbox this class calls. Its callers are `geometry_brandt_comparison.m` and `TestGeomL2`, both outside this chart's scope. |
 | `compute_nacelle_diameter` | Brandt's `sqrt(T/1900)`. Casey accepted the Brandt content on the record: he could find no substitute in Raymer, Nicolai or Roskam. **A reference scan for a substitute is OWED.** The 1900 divisor silently assumes an afterburning engine; Brandt uses 2000 otherwise. |
 | `compute_Amax_elliptical` | `(pi/4)*W*H`. No textbook equation number could be pinned, so it carries the same standard-identity status as `convert_sweep`. Moved here on 2026-08-19 because `get.Amax` is its only caller. |
 
-## Open defect, in the enforcer
+## Open item, in the enforcer
 
-`GeometryModelL2.get_control_surfaces(obj)` calls
-`obj.get_design_control_mechanisms()`. **No concrete class defines that method**,
-so calling `get_control_surfaces` errors. `GeometryModelL3` has the identical
-pair. Nothing calls either one today, so no test catches it.
+`GeometryModelL2` declares exactly one abstract method, `get_S_exposed_wing`, and
+two abstract properties, `b_wing` and `S_exposed_wing`. Its one concrete method,
+`get_S_wet`, forwards to `get_design_S_wet_components`, **which is not declared
+abstract**. So a concrete L2 geometry that omits that method still constructs, and
+fails later at the call.
+
+`get_control_effectors_size` is commented out on the enforcer and on
+`F16GeomL2`, so no contract demands it and nothing calls it. See
+`GeometryModelL2.md` §5.
 
 Not fixed here: the `*Model*` enforcers were ruled off-limits on 2026-08-18. It is
 NOT drawn, because no enforcer node appears in this chart; it is recorded here so
@@ -394,5 +429,5 @@ not drawn.
 | Tier 2, abstract | `src/disciplines/geometry/GeometryModelL2.m` |
 | Tier 1, base | `src/base/GeometryBase.m` |
 | Toolbox | `src/disciplines/geometry/GeomL2.m` |
-| Companion docs | `src/disciplines/geometry/GeomL2.md`, `src/base/GeometryBase.md` |
+| Companion docs | `examples/F16A/models/disciplines/geom/F16GeomL2.md`, `src/disciplines/geometry/GeomL2.md`, `src/disciplines/geometry/GeometryModelL2.md`, `src/base/GeometryBase.md` |
 | Input JSON | `examples/F16A/inputs/f16a_L2.json` |

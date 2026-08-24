@@ -104,7 +104,6 @@ classdef F16GeomL2 < GeometryModelL2
     % ======================================================================= %
     properties (Dependent)
         S_wet          % ft^2  total wetted area (wing+HT+VT+fuselage+duct)
-        S_wet_fuselage % ft^2  wetted area of the fuselage
 
         % ── Wing ──────────────────────────────────────────────────────────── %
         b_wing         % ft    GeometryBase.compute_span(AR_wing, S_ref)
@@ -116,8 +115,7 @@ classdef F16GeomL2 < GeometryModelL2
         tc_r_wing      % —     mirrors tc_wing (wing modeled uniform-tc; no root/tip split available from Brandt)
         tc_t_wing      % —     mirrors tc_wing; see tc_r_wing
         S_exposed_wing % ft^2  GeomL2.compute_S_exposed_horizontal
-        % Mod (08/18/2026) (Claude) -- S_wet_wing removed. Call
-        %   GeomL2.compute_S_wet_planform_roskam(S_exposed_wing, tc_r_wing, tc_t_wing, lambda_wing).
+        S_wet_wing
 
         % ── Horizontal tail ─────────────────────────────────────────────── %
         b_ht           % ft    GeometryBase.compute_span(AR_ht, S_ht)
@@ -127,7 +125,7 @@ classdef F16GeomL2 < GeometryModelL2
         TE_sweep_ht    % deg   GeometryBase.convert_sweep(x=1.0)
         tc_ht          % —     uniform HT t/c = (tc_r_ht+tc_t_ht)/2 = 0.0475 (root/tip mean; the split is the single t/c basis)
         S_exposed_ht   % ft^2  GeomL2.compute_S_exposed_horizontal
-        % Mod (08/18/2026) (Claude) -- S_wet_ht removed. See S_wet_wing above.
+        S_wet_ht
 
         % ── Vertical tail ───────────────────────────────────────────────── %
         b_vt           % ft    sqrt(S_vt*AR_vt) — full single-panel span, not halved [readme_geom.md Sec. 4.3]
@@ -137,17 +135,19 @@ classdef F16GeomL2 < GeometryModelL2
         TE_sweep_vt    % deg   GeometryBase.convert_sweep_panel(x=1.0)  — SINGLE-PANEL (2/AR)
         tc_vt          % —     uniform VT t/c = (tc_r_vt+tc_t_vt)/2 = 0.0415 (root/tip mean; the split is the single t/c basis)
         S_exposed_vt   % ft^2  GeomL2.compute_S_exposed_vertical
-        % Mod (08/18/2026) (Claude) -- S_wet_vt removed. See S_wet_wing above.
+        S_wet_vt
 
         % ── Fuselage / whole aircraft ─────────────────────────────────────── %
         L_fuselage     % ft    mirrors L_fus (duplicate name required by the GeometryModelL2 abstract contract)
         D_fus          % ft    (W_max_fuselage+H_max_fuselage)/2 — JUDGMENT CALL (Brandt low-fi D_avg convention as the equivalent diameter fed to the official Roskam Eq. 12.3 fuselage S_wet formula; the L2 .geometry block has no D_fus field)
         Amax           % ft^2  F16GeomL2.compute_Amax_elliptical(W_max, H_max) = (pi/4)*W*H — standard elliptical identity, NO equation number (todo 2026-07-25 Phase 2 §4); Raymer Eq. 12.44 input
+        S_wet_fuselage
 
         % ── Inlet + engine duct ───────────────────────────────────────────── %
         T_AB_SLS_lb    % lbf   = prop.T_SL (INJECTED, no longer a stored copy) [Brandt Engn(s)!T_AB_SLS = Main!D29 = 23770]
         D_inlet        % ft    F16GeomL2.compute_nacelle_diameter(T_AB_SLS_lb) = sqrt(T/1900) [Brandt Engn(s) tab, D_nac; readme_geom.md Sec. 3]
         D_exit         % ft    = D_inlet (Brandt models the nacelle as a constant-diameter cylinder)
+        S_wet_duct
     end
 
     methods
@@ -214,8 +214,6 @@ classdef F16GeomL2 < GeometryModelL2
         % current inputs.
         % ================================================================== %
 
-        % TODO (8/18/2026)(Casey): This still doesn't mutate the argument.
-        % Idea: Repurpose this into a wrapper that recomputes the main wing's geometry.
         function val = get_S_ref(obj)
             val = obj.S_ref;
         end
@@ -223,15 +221,11 @@ classdef F16GeomL2 < GeometryModelL2
         function val = get_design_S_wet_components(obj)
         %GET_S_WET  Total wetted area. No W_TO argument -- L2 has real planform
         %   geometry. Call as obj.get_S_wet() with zero arguments.
-            % val = GeomL2.get_S_wet(obj);
-
 
             % S_wet every time. Gotta fix that.
             % Get S_wet of each component
             % S_wet of the main wings
             S_wet_wing = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
-            % % S_wet of strakes (these aren't in L2, leaving this here so I don't forget about it)
-            % S_wet_strakes = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_strake, obj.tc_r_strake, obj.tc_t_strake, obj.lambda_strake);
             % S_wet of tail (horizontal)
             S_wet_ht = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_ht, obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
             % S_wet of tail (vertical)
@@ -245,19 +239,6 @@ classdef F16GeomL2 < GeometryModelL2
             % Return the final value.
             val = S_wet;
         end
-
-        function val = get_control_effectors_size(obj)
-            
-        end
-
-        % Note (8/18/2026)(Casey): Does this include the nose? If not, we must add a method for estimating the wetted area of conical cylinders.
-        % function val = get_S_wet_fuselage(obj)
-        %     val = GeomL2.compute_s_wet_fus_cyl(obj.D_fus, obj.L_fus);
-        % end
-
-        % function val = get_S_wet_duct(obj)
-        %     val = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct);
-        % end
 
         % Note (8/18/2026)(Casey): Required due to enforcer contract.
         function val = get_S_exposed_wing(obj)
@@ -297,11 +278,9 @@ classdef F16GeomL2 < GeometryModelL2
             fw = obj.W_max_fuselage / 2;   % fuselage half-width [readme_geom.md Sec. 4.3]
             v  = GeomL2.compute_S_exposed_horizontal(obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, fw);
         end
-        % Mod (08/18/2026) (Claude)
-        %   get.S_wet_wing deleted, with get.S_wet_ht and get.S_wet_vt. Each
-        %   called a removed method. Consumers now call
-        %   GeomL2.compute_S_wet_planform_roskam with explicit arguments. Reason in
-        %   GeomL2.md.
+        function v = get.S_wet_wing(obj)
+            v =GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
+        end
 
         % ---- Horizontal tail ---------------------------------------------- %
         function v = get.b_ht(obj)
@@ -329,7 +308,9 @@ classdef F16GeomL2 < GeometryModelL2
             fw = obj.W_max_fuselage / 2;
             v  = GeomL2.compute_S_exposed_horizontal(obj.c_root_ht, obj.c_tip_ht, obj.b_ht/2, fw);
         end
-        % Mod (08/18/2026) (Claude) -- get.S_wet_ht deleted. See get.S_wet_wing.
+        function v = get.S_wet_ht(obj)
+            v = GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_ht, obj.tc_r_ht, obj.tc_t_ht, obj.lambda_ht);
+        end
 
         % ---- Vertical tail ------------------------------------------------ %
         function v = get.b_vt(obj)
@@ -358,11 +339,11 @@ classdef F16GeomL2 < GeometryModelL2
             fh = obj.H_max_fuselage / 2;   % fuselage half-height [readme_geom.md Sec. 4.3]
             v  = GeomL2.compute_S_exposed_vertical(obj.S_vt, obj.AR_vt, obj.c_root_vt, obj.c_tip_vt, fh);
         end
-        % Mod (08/18/2026) (Claude) -- get.S_wet_vt deleted. See get.S_wet_wing.
+        function v = get.S_wet_vt(obj)
+            v =GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_vt, obj.tc_r_vt, obj.tc_t_vt, obj.lambda_vt);
+        end
 
         % ---- Fuselage / whole aircraft ------------------------------------ %
-        % TODO (8/18/2026)(Casey): A requirement of the abstract contracts, but why doesn't it mutate
-        % the input?
         function v = get.L_fuselage(obj)
             v = obj.L_fus;   % mirrors L_fus (duplicate name required by the abstract contract)
         end
@@ -378,7 +359,6 @@ classdef F16GeomL2 < GeometryModelL2
             % as (Amax/L_aircraft)^2. The formula has NO pinnable equation number
             % (standard elliptical-cross-section identity; STANDING OPEN item).
             % See compute_Amax_elliptical below for the citation note.
-            % Mod (08/19/2026) (Claude)
             v = F16GeomL2.compute_Amax_elliptical(obj.W_max_fuselage, obj.H_max_fuselage);
         end
         function v = get.S_wet_fuselage(obj)
@@ -394,13 +374,15 @@ classdef F16GeomL2 < GeometryModelL2
         end
         function v = get.D_inlet(obj)
             % Brandt nacelle sizing [Engn(s) tab D_nac; readme_geom.md Sec. 3].
-            % Mod (08/19/2026) (Claude)
             v = F16GeomL2.compute_nacelle_diameter(obj.T_AB_SLS_lb);
         end
         function v = get.D_exit(obj)
             v = obj.D_inlet;   % constant-diameter cylinder nacelle -> frustum degenerates to pi*D*L
         end
-
+        function v = get.S_wet_duct(obj)
+            v = GeomL2.compute_s_wet_duct(obj.D_inlet, obj.D_exit, obj.L_duct);
+        end
+        
         % ---- Total -------------------------------------------------------- %
         function v = get.S_wet(obj)
             v = obj.get_design_S_wet_components();
@@ -409,25 +391,16 @@ classdef F16GeomL2 < GeometryModelL2
 
     methods (Static)
 
-        % TODO (8/19/2026)(Casey): This should be in F16GeomL2 because it's specific to the F16.
-        % This appears to use a Brandt equation. While I want to avoid using his work as much as possible in 
-        % THIS part of the code, this is an exception because it's necessary and I cannot find any substitutes from Raymer, Nicolai, or Roskam. 
-        % Need to do a scan with Claude, later.
         function val = compute_nacelle_diameter(T_AB_SLS_lb)
         %COMPUTE_NACELLE_DIAMETER  Engine/nacelle diameter [ft] from SLS
         %   afterburning thrust.  [Brandt F-16A.xls, Engn(s) tab, D_engine]
-        %
-        %   TODO: the 1900 divisor is hardcoded and silently assumes an
-        %   afterburning engine -- Brandt uses 1900 only when T_dry ~= T_AB, and
-        %   2000 otherwise (todo.md 2026-07-25 Phase 2 §18).
+        %   The 1900 divisor assumes an afterburning engine. See F16GeomL2.md Sec. 5.
             arguments
                 T_AB_SLS_lb (1,1) double {mustBePositive}
             end
             val = sqrt(T_AB_SLS_lb / 1900);
         end
 
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        % Note (8/19/2026): TODO from 7/28/2026 is complete.
         function val = compute_Amax_elliptical(W_max, H_max)
         %COMPUTE_AMAX_ELLIPTICAL  Max cross-section of an equivalent elliptical
         %   fuselage [ft^2]. Feeds the Sears-Haack term [Raymer 6th ed. Eq. 12.44].
@@ -438,11 +411,7 @@ classdef F16GeomL2 < GeometryModelL2
         %   number could be pinned against the references in this repo. Same
         %   status as GeometryBase.convert_sweep. It holds no Brandt content and
         %   no F-16 number, but F16GeomL2.get.Amax is its only caller, so it
-        %   lives here.  Mod (08/19/2026) (Claude)
-        %
-        %   TODO: standard elliptical-cross-section identity with no known
-        %   textbook equation number. Pin a citation or accept the
-        %   standard-identity status in writing (todo.md 2026-07-25 Phase 2 §4).
+        %   lives here.
             arguments
                 W_max (1,1) double {mustBePositive}
                 H_max (1,1) double {mustBePositive}
