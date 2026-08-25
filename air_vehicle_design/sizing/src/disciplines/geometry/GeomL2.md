@@ -32,88 +32,6 @@ properties and passes them in. The toolbox never learns how a design names thing
 
 Eight statics. Six have consumers. **Two have none.** See §5.
 
-## 1a. Changes of 2026-08-18
-
-**The object-taking wrappers are gone.** `get_S_wet`, `get_S_wet_wing/_HT/_VT`,
-`get_S_wet_fuselage`, `get_S_wet_duct`, `get_S_exposed_wing` and
-`get_S_wet_fuselage_brandt_lowfi` each took a design object, read its properties, and called one
-low-level static. They are commented out in the source, and their TODOs stay.
-
-A toolbox must not know how a design names its own properties. A user can call their wingspan
-`obj.sneepsnorp` and pass it in the wingspan slot. An object-taking static makes one spelling
-necessary for every aircraft.
-
-**`compute_S_wet_planform_raymer` is Raymer.** The citation said
-`[Brandt F-16A.xls, Geom!B13]`. `S_exp*(1.977 + 0.52*t/c)` is Raymer 6th ed. Eq. 7.12 word for word.
-Brandt copied Raymer. The citation now names Raymer. The equation did not change, so no number moved.
-
-**The Eq. 7.11 branch is now in the code.** An earlier version of this doc said the second Raymer
-form was not used. That is no longer true. The static now selects between the two forms:
-
-    t/c <  0.05:  S_wet = 2.003 * S_exp                [Raymer 6th ed. Eq. 7.11]
-    t/c >= 0.05:  S_wet = S_exp * (1.977 + 0.52*t/c)   [Raymer 6th ed. Eq. 7.12]
-
-All three F-16 surfaces sit below 0.05 (wing 0.0400, HT 0.0475, VT 0.0415), so each one now takes the
-Eq. 7.11 branch. The three Brandt-alternate rows moved: wing +0.260 %, HT +0.065 %, VT +0.221 %.
-Casey wrote the branch and approved the move.
-
-The two forms meet exactly at `t/c = 0.05`, because `1.977 + 0.52*0.05 = 2.003`. So the branch is
-continuous, and no step appears at the threshold.
-
-**Three Brandt-only statics moved out**, to
-`examples/F16A/models/disciplines/geom/F16GeomBrandtAlt.m`:
-
-| Moved | Was cited |
-|---|---|
-| `compute_s_wet_fus_brandt_lowfi` | Brandt `Geom!B3` |
-| `compute_s_wet_fus_brandt_highfi` | Brandt `Geom!D23` |
-| `compute_frame_perimeter` | Brandt frame model |
-
-**Update 2026-08-19.** Casey moved the last two on to the `GeomL3` toolbox, and renamed the second to
-`compute_s_wet_from_control_stations`. The integrator has a real citation there (Raymer 6th ed.
-Fig. 7.37, p. 206), and the chine is a parameter, so a design with no chine sets
-`z_chine = z_center`. See `GeomL3.md`. Only `compute_s_wet_fus_brandt_lowfi` stays in the F-16
-example.
-
-Brandt verifies the framework. He does not supply its equations. `compute_frame_perimeter` also
-models a chine, which is an F-16 shape feature, so it cannot be aircraft-agnostic. The equations did
-not change, so every number holds. Only the comparison report and two tests call them.
-
-**`F16GeomL2` lost three Dependent properties**: `S_wet_wing`, `S_wet_ht` and `S_wet_vt`, with their
-getters. Each getter called a removed method.
-
-**Reversed 2026-08-24.** Casey put the three back, and added `S_wet_duct`. Each getter now calls the
-toolbox with explicit arguments, which is the alternative that was open on 2026-08-18. So a consumer
-may read `g2.S_wet_wing` again, and the toolbox still takes no design object. That is why the
-call-site counts in §1 went up.
-
-`get_S_exposed_wing` STAYS on `F16GeomL2`. It is the one method `GeometryModelL2` still declares
-abstract, so the class cannot be built without it. `get_S_wet_fuselage` is no longer part of that
-contract: the enforcer now declares only `get_S_exposed_wing`, plus the abstract properties `b_wing`
-and `S_exposed_wing`.
-
-**One bug fixed on the way.** `get_S_wet_fuselage` passed `W_max_fuselage`, 7.0 ft, the maximum
-WIDTH. Roskam Eq. 12.3 takes the equivalent diameter `D_fus`, 6.0 ft. Fuselage `S_wet` read 12.776 %
-high, and total `S_wet` 6.361 % high, so drag, fuel and `W_TO` all rose with it. The argument is now
-`D_fus`. L2 `W_TO` returns to 23087.2 lbf.
-
-The equation was written twice, once inline in `get_S_wet` and once in `get_S_wet_fuselage`, so the
-one fix had to be made twice. That is why a formula needs one home.
-
-**Two statics were left alone.** Casey marked `compute_S_exposed_horizontal` and
-`compute_S_exposed_vertical` "This is acceptable. Don't touch." on 2026-08-18. So the approved rename
-of `hs`, `fw` and `fh`, and the change of `compute_S_exposed_vertical` to take a span in place of `S`
-and `AR`, are both dropped.
-
-### Still open
-
-- **Roskam Vol. II is not scraped.** So `compute_S_wet_planform_roskam` (Eq. 12.1) and
-  `compute_s_wet_fus_cyl` (Eq. 12.3) keep unverified citations. `roskam_vol2_data.md` is a 49-line
-  method summary with no equations. Worse, it numbers Eq. 12.3 as `CD0 = f/S`, not fuselage `S_wet`.
-  Confirm both numbers when Vol. II arrives.
-- **`compute_S_exposed_horizontal` and `_vertical` still cite Brandt.** Both are plain trapezoid
-  clipping, so a textbook source should exist. Marked "Don't touch", so the citation stays open.
-
 ## 2. Methods
 
 Every member is a `Static`. None takes a design object.
@@ -188,6 +106,16 @@ The two Brandt fuselage forms and the frame-perimeter model are no longer here. 
 - `compute_S_wet_planform_roskam` needs $(t/c)_t$ more than zero, which guards the ratio, and
   $\lambda$ not less than zero, which guards $1 + \lambda$.
 - `compute_S_wet_planform_raymer`'s two branches meet at $t/c = 0.05$, so the function is continuous.
+  All three F-16 surfaces sit below 0.05, so each takes the Eq. 7.11 branch.
+- **`compute_s_wet_fus_cyl` takes `D_fus`, the equivalent diameter, NOT `W_max_fuselage`.** On the
+  F-16 those are 6.0 ft and 7.0 ft. Passing the width reads fuselage `S_wet` 12.776 % high and the
+  total 6.361 % high, and drag, fuel and `W_TO` all rise with it.
+- **A toolbox static never takes a design object.** It takes scalars or arrays, and the design class
+  reads its own properties and passes them in. A static that reads `obj.aircraft_category` makes one
+  spelling necessary for every aircraft that ever uses the toolbox.
+- **Brandt verifies the framework. He does not supply its equations.** A Brandt-only static belongs
+  in the aircraft example, not here. `compute_S_wet_planform_raymer` stays because
+  `S_exp*(1.977 + 0.52*t/c)` is Raymer Eq. 7.12 word for word; Brandt copied Raymer.
 
 ### As-built values
 
