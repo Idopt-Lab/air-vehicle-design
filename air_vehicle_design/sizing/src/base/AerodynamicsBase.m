@@ -40,7 +40,11 @@ classdef (Abstract) AerodynamicsBase < handle
 
         % Note (8/20/2026)(Casey): I think this should take a state, if it's relevant.
         %GET_CD0    zero-lift drag coefficient (should this take a state?)
-        % CD0 = get_CD0(obj)
+        CD0 = get_CD0(obj)
+        % Arguments:
+        %   L1: obj, state -> design_object, state.Mach_number
+        %   L2: obj -> design_object (not a function of Mach number)
+        %   L3: obj, state -> design_object (the components), state.Mach_number (CD0 is now a function of Mach number)
 
     end
 
