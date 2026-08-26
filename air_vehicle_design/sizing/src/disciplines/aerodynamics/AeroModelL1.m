@@ -13,7 +13,7 @@ end
 % This makes it so that subclasses of AeroModelL1 have to use the "rough" version of the CD0 estimation.
 % "Rough," for now, unless it's changed to the Mattingly CD0 curve.
 methods 
-    function val = get_CD0(obj, state)
+    function val = get_CD0(obj, state) % At this point, CD0 is not a function of aerodynamic state.
         val = obj.get_CD0_rough(state);
     end
 end

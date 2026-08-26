@@ -112,7 +112,22 @@ classdef Aero481AeroL1 < AeroModelL1
         end
 
         % ---- Core contract (base) ----------------------------------------- %
-        function polar = drag_polar(obj, ~)
+        function val = get_CD0_rough(obj, ~)
+        %GET_CD0_ROUGH  Clean MISSION parasite drag, satisfying AeroModelL1's
+        %   abstract contract. CD0 = Cfe*swet_over_sref = 0.0035*4 = 0.014,
+        %   CONSTANT [A481 A03.m:60,65; Design01.m:36 Swet=4*S; metabook
+        %   Eq. 4.8 = Raymer 6th ed. Eq. 12.23]. The state is unused: L1 here
+        %   has no Mach or altitude dependence. Swet/S = 4 is S-independent,
+        %   so this CD0 does not track S.
+        %   This is the MISSION clean CD0 (0.014). It INTENTIONALLY differs
+        %   from get_config_polar("clean").CD0 (0.0236), disc A1b -- do NOT
+        %   reconcile the two.
+            val = obj.Cfe * obj.swet_over_sref;
+            % Note (8/26/2026)(Casey): This should be using the lookup/interpolation method, 
+            % but I don't want to touch it since this was Sarojini's work.
+        end
+
+        function polar = drag_polar(obj, state)
         %DRAG_POLAR  CLEAN drag polar -- the A03 MISSION clean drag. state
         %   unused at L1 (no Mach/altitude dependence).
         %     CD0 = Cfe*swet_over_sref = 0.0035*4 = 0.014  (CONSTANT)
@@ -124,7 +139,7 @@ classdef Aero481AeroL1 < AeroModelL1
         %   At AR = 4, Lambda_LE_deg = 0: CD0 = 0.014, K1 = 0.085165, L/D_max =
         %   14.48. This MISSION CD0 (0.014) INTENTIONALLY differs from
         %   get_config_polar("clean").CD0 (0.0236), disc A1b -- do NOT reconcile.
-            CD0 = obj.Cfe * obj.swet_over_sref;                    % [A481 A03.m:60,65; metabook Eq. 4.8 = Raymer Eq. 12.23]
+            CD0 = obj.get_CD0_rough(state);                        % one home for the equation; see get_CD0_rough above
             e   = AeroL2.oswald_eff(obj.AR, obj.Lambda_LE_deg);    % [Raymer Eq. 12.48/12.49]
             K1  = AeroL2.K1_subsonic(e, obj.AR);                   % [Raymer Eq. 12.50]
             polar = struct('CD0', CD0, 'K1', K1, 'K2', 0);

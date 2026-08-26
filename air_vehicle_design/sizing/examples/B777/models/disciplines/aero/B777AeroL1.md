@@ -1,8 +1,8 @@
 # B777AeroL1
 
 Boeing 777-200LR Level-1 aerodynamics — the metabook Example 4.2 tier. `classdef B777AeroL1 <
-AeroModelL1`. `AeroModelL1` adds no abstract members beyond `AerodynamicsBase`'s `drag_polar` /
-`get_CLmax`.
+AeroModelL1`. `AeroModelL1` declares `get_CD0_rough(obj, state)` abstract and supplies a concrete
+`get_CD0(obj, state)` that forwards to it.
 
 **L1 is the geometry-COUPLED metabook drag polar.** Unlike `F16AeroL1` — which is geometry-FREE
 (Roskam-table CD0/CLmax type curves) — `B777AeroL1` INJECTS a geometry object so its clean CD0 tracks
@@ -113,7 +113,8 @@ because `geom.S_wet = S_wet_rest + 2·S_ref`; `K1` tracks `AR`.
 
 | Method | Delegates to / does | Source |
 |---|---|---|
-| `drag_polar(~)` | CLEAN polar `{CD0, K1, K2=0}`, tracking `S` live. `CD0 = AeroL2.CD0_from_Cf(Cfe, S_wet, S_ref)`; `K1 = 1/(π·AR·e_clean)`; `K2 = 0` (uncambered-basis metabook polar). `state` unused at L1 (no Mach/altitude dependence in the clean polar) | [metabook Eq. 4.8/4.58; Eq. 2.10] |
+| `get_CD0_rough(~)` | clean parasite drag, `AeroL2.CD0_from_Cf(Cfe, S_wet, S_ref)`. Satisfies the `AeroModelL1` contract. `state` unused (no Mach/altitude dependence); `S_wet` is read live, so CD0 tracks `S` | [metabook Eq. 4.8/4.58 = Raymer Eq. 12.23] |
+| `drag_polar(state)` | CLEAN polar `{CD0, K1, K2=0}`, tracking `S` live. `CD0 = get_CD0_rough(state)`; `K1 = 1/(π·AR·e_clean)`; `K2 = 0` (uncambered-basis metabook polar) | [metabook Eq. 4.8/4.58; Eq. 2.10] |
 | `get_CLmax(~)` | clean max lift = `CLmax_config("clean")` = 0.9. `state` unused (config-independent clean value) | [Roskam Table 3.1; metabook §4.11] |
 | `get_config_polar(config)` | `struct(CD0, K1, K2, CLmax)` for a named high-lift config — overrides the `AerodynamicsBase.get_config_polar` contract. Tracks BOTH `S` and `AR` live: `CD0 = CD0_clean_live + Delta_CD0_config(config)`; `K1 = 1/(π·AR_live·e_config(config))`; `CLmax = CLmax_config(config)` | [metabook §4.11; Eq. 2.10; Roskam Table 3.1] |
 | `get_CLmax_TO()` | takeoff-config max lift = `CLmax_config("takeoff_flaps_gear_down")` = 2.0 | [Roskam Table 3.1] |
