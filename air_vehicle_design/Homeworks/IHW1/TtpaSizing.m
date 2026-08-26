@@ -9,9 +9,9 @@ clear; clc; close all
 % Load inputs
 json_path = fullfile("Ttpa_requirements.json");
 aero = TtpaAero(json_path);
-geom = TtpaGeom;
-prop = TtpaProp;
-wts  = TtpaWeights;
+geom = TtpaGeom();
+prop = TtpaProp();
+wts  = TtpaWeights();
 miss = MissionProfileReader.read_profile(json_path,'std_mission');
 
 obj = struct('aero', aero, 'prop', prop, 'wts', wts, 'geom', geom, 'miss', miss);

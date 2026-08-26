@@ -12,7 +12,7 @@ classdef TtpaProp < PropulsionBase2
     methods
 
         %% Power Available
-        function P = power_available(obj, state, rating)
+        function P = power_lapse(obj, state, rating)
             %POWER_AVAILABLE  Returns available shaft power [hp].
             %
             %   Applies the propulsion power lapse factor to the
@@ -38,13 +38,13 @@ classdef TtpaProp < PropulsionBase2
 
 
         %% Propeller Efficiency
-        function eta_p = prop_eff(obj, state)
+        function eta_p = prop_eff(obj, state, miss_seg)
             %PROP_EFF  Returns propeller efficiency [-].
             %
             %   Efficiency is selected based on the current mission
             %   segment.
 
-            switch lower(string(state.seg_type))
+            switch lower(string(miss_seg.type))
 
                 case "loiter"
                     eta_p = 0.72;
@@ -55,7 +55,7 @@ classdef TtpaProp < PropulsionBase2
                 otherwise
                     error('TtpaProp:UndefinedSegment', ...
                         'Propeller efficiency is not defined for segment "%s".', ...
-                        string(state.seg_type));
+                        string(miss_seg.type));
 
             end
 
