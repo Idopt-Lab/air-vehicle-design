@@ -281,16 +281,16 @@ classdef TestAeroL3 < matlab.unittest.TestCase
 
         function testBuildupUnchangedBelowMach1p2(tc)
             % Below the Eq. 12.41 domain (M < 1.2) the F16 override adds NO wave
-            % drag. AeroL3 no longer holds a generic get_CD0_buildup to compare
+            % drag. AeroL3 no longer holds a generic get_CD0_component_buildup to compare
             % against, so the property is checked on F16AeroL3 alone: the
             % buildup varies only slowly with Mach while the wave term is off,
             % then jumps by the wave term as M crosses 1.2.
             g    = TestAeroL3.makeAero();
-            below = g.get_CD0_buildup(AircraftState(0, 1.19));
-            near  = g.get_CD0_buildup(AircraftState(0, 1.05));
+            below = g.get_CD0_component_buildup(AircraftState(0, 1.19));
+            near  = g.get_CD0_component_buildup(AircraftState(0, 1.05));
             tc.verifyEqual(below, near, 'RelTol', 0.05, ...
                 'Below M=1.2 the buildup must hold the smooth skin-friction trend (no wave term).');
-            at12 = g.get_CD0_buildup(AircraftState(0, 1.2));
+            at12 = g.get_CD0_component_buildup(AircraftState(0, 1.2));
             wave = g.compute_CD0_wave(AircraftState(0, 1.2));
             tc.verifyGreaterThan(at12 - below, 0.9 * wave, ...
                 'Crossing M=1.2 must switch the wave-drag term ON.');
@@ -301,11 +301,11 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % compute_CD0_wave. Removing the wave term must land back on the
             % sub-1.2 skin-friction level (additive; confirms it is not a no-op).
             g       = TestAeroL3.makeAero();
-            without = g.get_CD0_buildup(AircraftState(0, 1.5)) ...
+            without = g.get_CD0_component_buildup(AircraftState(0, 1.5)) ...
                     - g.compute_CD0_wave(AircraftState(0, 1.5));
-            below   = g.get_CD0_buildup(AircraftState(0, 1.19));
+            below   = g.get_CD0_component_buildup(AircraftState(0, 1.19));
             tc.verifyEqual(without, below, 'RelTol', 0.10, ...
-                'get_CD0_buildup above M=1.2 must be the sub-1.2 buildup plus exactly compute_CD0_wave.');
+                'get_CD0_component_buildup above M=1.2 must be the sub-1.2 buildup plus exactly compute_CD0_wave.');
         end
 
         function testSupersonicCD0AgainstRaymerFig1234(tc)
@@ -319,7 +319,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % and is NOT a statement that the buildup reproduces the figure.
             g = TestAeroL3.makeAero();
             for M = [1.2 1.5 2.0]
-                received = g.get_CD0_buildup(AircraftState(0, M));
+                received = g.get_CD0_component_buildup(AircraftState(0, M));
                 fprintf('\n    CD0 buildup M=%.1f: received = %.6f,  Raymer Fig. 12.34 F-16 line ~ 0.049\n', ...
                         M, received);
                 tc.verifyEqual(received, 0.049, 'RelTol', 0.25, ...
@@ -328,12 +328,12 @@ classdef TestAeroL3 < matlab.unittest.TestCase
         end
 
         function testDragPolarCD0RoutesThroughOverride(tc)
-            % drag_polar's CD0 must flow through the instance's get_CD0_buildup
+            % drag_polar's CD0 must flow through the instance's get_CD0_component_buildup
             % (dynamic dispatch), so it INCLUDES the F16 wave-drag term at M=1.5
             % -- regression guard for the override-vs-static dispatch bug.
             g     = TestAeroL3.makeAero();
             state = AircraftState(0, 1.5);
-            tc.verifyEqual(g.drag_polar(state).CD0, g.get_CD0_buildup(state), 'AbsTol', 1e-12);
+            tc.verifyEqual(g.drag_polar(state).CD0, g.get_CD0_component_buildup(state), 'AbsTol', 1e-12);
         end
 
         % ================================================================== %
@@ -346,7 +346,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % [0.005, 0.05] -- a sanity guard, not a fit to any ground truth
             % (the component model omits gaps/fillets/excrescences).
             g   = TestAeroL3.makeAero();
-            cd0 = g.get_CD0_buildup(AircraftState(0, 0.5));
+            cd0 = g.get_CD0_component_buildup(AircraftState(0, 0.5));
             tc.verifyGreaterThan(cd0, 0.005);
             tc.verifyLessThan(cd0, 0.05);
         end
@@ -392,10 +392,10 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % track the change with no reconstruction.
             g    = TestAeroL3.makeAero();
             AR0  = g.AR_wing;
-            cd00 = g.get_CD0_buildup(AircraftState(0, 0.5));
+            cd00 = g.get_CD0_component_buildup(AircraftState(0, 0.5));
             g.geom.AR_wing = g.geom.AR_wing + 1;
             tc.verifyEqual(g.AR_wing, AR0 + 1, 'AbsTol', 1e-12);
-            tc.verifyNotEqual(g.get_CD0_buildup(AircraftState(0, 0.5)), cd00, ...
+            tc.verifyNotEqual(g.get_CD0_component_buildup(AircraftState(0, 0.5)), cd00, ...
                 'Component buildup must change after the injected AR is mutated.');
         end
 

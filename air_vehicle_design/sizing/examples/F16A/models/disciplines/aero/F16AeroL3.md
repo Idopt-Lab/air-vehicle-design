@@ -2,10 +2,10 @@
 
 F-16A Block 10/15 Level-3 aerodynamics: the Raymer Eq. 12.24 component drag build-up plus the F-16's
 own supersonic wave-drag term. `classdef F16AeroL3 < AeroModelL3`; most methods delegate to the
-`AeroL3` static toolbox, while `get_CD0_buildup`/`drag_polar` add wave drag on top. The class also
-carries a full high-lift suite (TE flaperon + LE flap + landing gear).
+`AeroL3` static toolbox, while `get_CD0_component_buildup`/`drag_polar` add wave drag on top. The
+class also carries a full high-lift suite (TE flaperon + LE flap + landing gear).
 
-**Component order everywhere: wing, HT, VT, fuselage, duct.**
+**Component order everywhere: wing, HT, VT, strake, fuselage, duct.**
 
 ---
 
@@ -19,10 +19,9 @@ a3   = F16AeroL3(F16GeomL3(f16a_spec_path(3), prop), f16a_spec_path(3));
 `F16AeroL3(geom, json_path)` — both arguments required, no silent default. `json_path` supplies the
 `.aerodynamics` block of `f16a_L3.json`.
 
-`geom` is guarded by `mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])`, not the old
-`GeometryBase` — that declares four members while this class reads ~20 off `obj.geom`, so a wrong
-tier used to construct cleanly and then die mid-run inside `get.S_wet_comp`, or worse resolve members
-whose *meaning* differed. Both tiers satisfy the contract, but they are **not interchangeable here**:
+`geom` is guarded by `mustBeA(geom, ["GeometryModelL2","GeometryModelL3"])`. `GeometryBase` would
+be too loose: it declares four members while this class reads about 20 off `obj.geom`. Both tiers
+satisfy the guard, but they are **not interchangeable here**:
 `Amax` is tier-specific by design, so injecting an `F16GeomL2` substitutes a fuselage-only
 cross-section into Eq. 12.44 and inflates `CD0_wave` ~23 % with no error.
 
@@ -37,7 +36,7 @@ Plain mutable `properties` — aero constants only, from the JSON. **No geometry
 | `geom` | `F16GeomL3` | injected geometry object |
 | `alpha_L0` | deg | zero-lift AOA → `CL_minD` → `K2` [NACA 64A204] |
 | `cl_max_2D` | 1.20 | feeds Eq. 12.15; matches L2 |
-| `cl_alpha_2D` | 1/rad | 2-D lift slope → the Eq. 12.8 `η` term. Without it `AeroL2.get_CL_alpha` fell back to `η = 0.95`, leaving L3 *less* informed than L2 on the same airfoil |
+| `cl_alpha_2D` | 1/rad | 2-D lift slope → the Eq. 12.8 `η` term. `AeroL2.CL_alpha` falls back to `η = 0.95` without it |
 | `x_c_max_comp` | `[0.4 0.35 0.35 0 0]` | chordwise max-thickness station (0 for bodies) [Raymer Table 12.6] |
 | `Q_comp` | `[1 1.05 1.05 1 1]` | interference factor [Raymer Table 12.6] |
 | `f_lam_comp` | per component | laminar-flow fraction |
@@ -58,8 +57,9 @@ Read live from `obj.geom` on every read — no stored copy, read-only.
 
 | Property | Source |
 |---|---|
-| `S_ref`, `AR`, `Lambda_LE_deg`, `Lambda_c4_deg`, `taper` | scalar wing geometry (`Lambda_c4_deg` = `geom.QC_sweep_wing`) |
-| `S_wet_comp` | per-component wetted area (Roskam Eq. 12.1 surfaces / 12.3 fuselage / frustum duct) |
+| `S_ref`, `AR_wing`, `LE_sweep_wing`, `QC_sweep_wing`, `lambda_wing` | scalar wing geometry, each read straight off `obj.geom` |
+| `S_wet_wing`, `S_wet_ht`, `S_wet_vt`, `S_wet_strake`, `S_wet_fuselage`, `S_wet_duct` | the six component wetted areas, each read live |
+| `S_wet_comp` | the six gathered in component order (Roskam Eq. 12.1 surfaces / station integration for the fuselage / frustum duct) |
 | `l_ref_comp` | per-component MAC or length (`cbar_wing`, HT/VT MAC via `compute_mac`, `L_fus`, `L_duct`) |
 | `D_comp` | body diameters (0 for surfaces; `D_fus`, `D_inlet`) |
 | `tc_comp` | thickness ratio (mean root/tip for HT/VT; 0 for bodies) |
@@ -68,10 +68,6 @@ Read live from `obj.geom` on every read — no stored copy, read-only.
 | `L_aircraft_ft` | `geom.L_aircraft` = 47.65 ft. Distinct from the fuselage `L_fus` used for the component Re and `FF_body` — do not conflate the two length scales |
 | `CD0_misc` | `(Dq_gun_port + Dq_hook_USAF)/S_ref` [Raymer Table 12.7] |
 
-`Amax_ft2` and `L_aircraft_ft` were plain inputs fed from a `.aerodynamics.wave_drag` JSON block
-holding Brandt *geometry outputs* (25.110556 / 48.303947) — frozen numbers the Sears-Haack term could
-not respond to. That block is deleted and both are `Dependent`.
-
 ---
 
 ## 4. Methods
@@ -79,15 +75,17 @@ not respond to. That block is deleted and both are `Dependent`.
 | Group | Methods | Source |
 |---|---|---|
 | Contract | `drag_polar(state)`, `get_CLmax(state)` | `AeroL3.drag_polar`; Raymer Eq. 12.15 via `AeroL2.CLmax_clean` |
-| Build-up + wave drag | `get_CD0_buildup` (overrides the generic Eq. 12.24 sum to add `compute_CD0_wave` for M ≥ 1.2) | Raymer Eq. 12.24, 12.44/12.45 |
-| Accessors | `get_K1`, `get_K2`, `get_CL_alpha`, `get_e_osw`, `get_e_osw_brandt`, `compute_Re` | Raymer Eq. 12.50/12.51, 12.6, 12.48/12.49, 12.25 |
+| Build-up + wave drag | `CD0_buildup` (the Eq. 12.24 sum plus `CD0_misc` and `CD0_LandP`), `get_CD0_component_buildup` (adds `compute_CD0_wave` for M ≥ 1.2), `compute_CD0_wave` | Raymer Eq. 12.24, 12.44/12.45 |
+| Misc / leakage | `get_CD0_misc`, `get_CD0_LandP` | declared abstract by `AeroModelL3`; both are empty stubs, so either returns an unassigned output if called |
+| Accessors | `get_K1`, `get_K2`, `get_CL_alpha`, `get_CL_minD`, `get_e_osw`, `compute_Re` | Raymer Eq. 12.50/12.51, 12.6, 12.48/12.49, 12.25 |
+| Config | `get_config_polar(config)` | six config strings routed through the TO/landing deltas |
 | TE flap | `Delta_CD0_flap`, `Delta_CDi_flap`, `Delta_CLmax_flap`, `compute_S_flapped_ratio` | Raymer Eq. 12.61/12.62, Table 12.2 + Eq. 12.21 |
 | LE flap | `Delta_CD0_lef`, `Delta_CDi_lef`, `Delta_CLmax_lef` | Eq. 12.61/12.62 *form* — Raymer gives no separate LE citation |
 | Landing gear | `compute_Delta_CD0_geardown` | Raymer Table 12.6 |
 | Assembled | `get_Delta_{e_osw,CD0,CLmax,CDi}_{TO,L}`, `get_CLmax_{TO,L}` | — |
 
-`get_CL_alpha` delegates to `AeroL2.get_CL_alpha(obj, M)`, so L2 and L3 return the same slope for
-identical injected geometry.
+`get_CL_alpha` delegates to `AeroL2.CL_alpha`, so L2 and L3 return the same slope for identical
+injected geometry. `roskam_e_osw` is private.
 
 ### As-built values
 
@@ -95,14 +93,14 @@ At 36,000 ft with `F16GeomL3` injected:
 
 | Quantity | M 0.87 | M 1.6 |
 |---|---|---|
-| `CD0` | 0.016169 | 0.038816 |
+| `CD0` | 0.016119 | 0.038808 |
 | `CLmax` | 0.914058 | — |
 | `CL_alpha` @ M 0 | 3.0364651 | — |
 
 Wave drag applies only for M ≥ 1.2 (Eq. 12.41's own domain); there is **no transonic fairing** for
-1.0 < M < 1.2. `get_CD0_buildup` errors when `state.mach <= 0` rather than returning NaN. With the
-area-ruled `Amax`, `CD0_wave` sits −0.54 % from the Brandt-referenced term with `E_WD` = 2.2
-unchanged — no retune was applied.
+1.0 < M < 1.2. `CD0_buildup` errors when `state.mach <= 0` rather than returning NaN. On the
+area-ruled `Amax`, `CD0_wave` is 0.0253630 at M 1.5, −0.54 % from the Brandt-referenced term at
+`E_WD` = 2.2.
 
 ---
 

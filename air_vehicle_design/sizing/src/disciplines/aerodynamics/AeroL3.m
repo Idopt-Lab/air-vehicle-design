@@ -18,7 +18,7 @@ classdef AeroL3
 %   [Eq. 12.31] body form factor.
 %
 %   Supersonic wave drag [Raymer 6th ed. Eq. 12.41, M >= 1.2] is added by the
-%   concrete class's get_CD0_buildup override, being aircraft-specific. The
+%   concrete class's get_CD0_component_buildup override, being aircraft-specific. The
 %   transonic band is not modelled.
 %
 %   Companion doc: src/disciplines/aerodynamics/AeroL3.md
@@ -28,6 +28,7 @@ classdef AeroL3
 
         function Re = compute_Re(state, l_ref)
         %COMPUTE_RE  Re = rho*V*l/mu  (Raymer Eq. 12.25). Shared L2 primitive.
+        % Re-using L2 because it's the same exact equation.
             Re = AeroL2.compute_Re(state, l_ref);
         end
 
@@ -46,6 +47,7 @@ classdef AeroL3
         end
 
         function Cf = Cf_laminar(Re)
+            % Source: Raymer, 6th edition, equation 12.26
             arguments
                 Re (1,1) double {mustBePositive}
             end
@@ -66,6 +68,8 @@ classdef AeroL3
         end
 
         function FF = FF_body(L_body, D_body)
+            % Source: Raymer, 6th edition, Eq. 12.31
+            % Valid for fuselage and smooth canopies.
             arguments
                 L_body (1,1) double {mustBePositive}
                 D_body (1,1) double {mustBePositive}
@@ -76,6 +80,18 @@ classdef AeroL3
             else
                 FF = 1 + 5/f^1.5 + f/400;
             end
+        end
+
+        function CD0_component = compute_CD0_misc_CD_pi(CD_pi, frontal_area, S_ref)
+            % Source: Raymer, 6th edition, Table 12.6
+            % Valid for generic physical objects, given a frontal area and a known "CD_pi" value (from table 12.6)
+            CD0_component = CD_pi*frontal_area/S_ref;
+        end
+
+        function CD0_component = compute_CD0_misc_DQ(D_q, S_ref)
+            % Source: Raymer, 6th edition, Table 12.7
+            % Valid for general physical objects, given their D_q and a known S_ref.
+            CD0_component = D_q/S_ref;
         end
 
     end
