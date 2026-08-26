@@ -1,6 +1,8 @@
 # F16AeroL1
 
-F-16A Block 10/15 Level-1 aerodynamics. `classdef F16AeroL1 < AeroModelL1`.
+F-16A Block 10/15 Level-1 aerodynamics. `classdef F16AeroL1 < AeroModelL1`. `AeroModelL1`
+declares `get_CD0_rough(obj, state)` abstract and supplies a concrete `get_CD0(obj, state)` that
+forwards to it.
 
 **No injected geometry object**, unlike `F16AeroL2` and `L3`. `CD0(M)` is the Mattingly Fig. 2.10
 fighter "Current" type-curve. **`K1(M)` is equation-based**: `AeroL1.k1_from_geometry` evaluates
@@ -38,7 +40,7 @@ None. This class owns no geometry, so it has no `Dependent` getters.
 |---|---|---|
 | `drag_polar(state)` | assembles `struct(CD0, K1, K2)` | Mattingly 2nd ed. Eq. 2.9 |
 | `get_CD0_rough(state)` | `AeroL1.interp_curve` on the CD0 curve | Mattingly Fig. 2.10 |
-| `get_CLmax(obj, ~)` | `AeroL1.roskam_CLmax_value(category, "CL_max_clean")` | Roskam Vol. I Table 3.1 |
+| `get_CLmax(~)` | `AeroL1.roskam_CLmax_value(category, "CL_max_clean")` | Roskam Vol. I Table 3.1 |
 | `get_Delta_CLmax_{TO,L}` | Table 3.1 column difference against clean | Roskam Table 3.1 |
 | `get_CLmax_{TO,L}` | clean plus the matching increment | Roskam Table 3.1 |
 | `get_Delta_e_osw_{TO,L}` | `e(flaps) - e(clean)` | Roskam Table 3.6 |
@@ -46,8 +48,7 @@ None. This class owns no geometry, so it has no `Dependent` getters.
 | `get_config_polar(config)` | 6 config strings, 3 distinct results | — |
 | private `roskam_CLmax`, `roskam_e_osw`, `roskam_Delta_CD0` | read the `AeroL1` constant tables | — |
 
-`get_CLmax` keeps an ignored `state` slot to match the `AerodynamicsBase` contract. Dropping it once
-broke 59 tests.
+`get_CLmax` keeps an ignored `state` slot to match the `AerodynamicsBase` contract.
 
 `roskam_CLmax` delegates to the same `AeroL1.roskam_CLmax_value` that `get_CLmax` uses, so the clean
 base and the increments come from one table.

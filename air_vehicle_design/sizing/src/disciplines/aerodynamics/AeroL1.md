@@ -21,8 +21,6 @@ No static takes a design object. Each takes scalars, strings or arrays.
 | `CLmax_table` | Roskam Vol. I Table 3.1, p. 91 | all 12 printed rows, verified: 36 ranges, zero mismatches |
 | `Delta_CD0` | Roskam Vol. I Table 3.6, p. 126 | all 4 printed rows |
 
-`drag_polar(obj, state)` and `get_CLmax(obj)` moved to `F16AeroL1`.
-
 ### Statics
 
 | Static | Signature | Returns | Source |
@@ -37,7 +35,7 @@ No static takes a design object. Each takes scalars, strings or arrays.
 `build_CLmax_table` and `build_DeltaCD0_table`. Three normalize a caller's spelling:
 `normalize_DeltaCD0_quantity`, `normalize_flapconfig` and `normalize_CL_condition`. See §5.
 
-## 3. Equations
+## 2. Equations
 
 **Drag polar** [Mattingly 2nd ed. Eq. 2.9]:
 
@@ -60,7 +58,7 @@ Fig. 2.10 curve, which has no transonic pole. `K1(M)` is an equation: `k1_from_g
 
 $$C_{L_{max}} = \operatorname{mean}\big(\text{Table 3.1 column for the type}\big)$$
 
-## 4. Formula choices and guards
+## 3. Formula choices and guards
 
 - **One table throughout.** `roskam_CLmax_value` reads Table 3.1, the same table the increments are
   differenced from. Mixing in another table gives totals belonging to neither.
@@ -84,6 +82,9 @@ $$C_{L_{max}} = \operatorname{mean}\big(\text{Table 3.1 column for the type}\big
   `jet_fighter` and `jet_transport` are the keys the input JSONs carry.
   `B777AeroL1.cfe_from_category` does the same translation for Raymer Table 12.3's `civil_transport`.
 
+  **`military_bomber` is not accepted.** `GeomL1.lookup_swet` uses that key, so a spec carrying it
+  resolves in geometry and then raises `AeroL1:unknownAircraftType` here.
+
 - **Roskam has NO sailplane row.** Its 12 categories are all powered, so `sailplane` errors. Correct:
   inventing a row would be worse.
 - **The transonic band returns `NaN`, deliberately.** Eq. 12.51's pole near M = 1 makes
@@ -96,7 +97,6 @@ $$C_{L_{max}} = \operatorname{mean}\big(\text{Table 3.1 column for the type}\big
   prints, because gear down does not change span efficiency. A caller must not average it in.
 ### As-built values
 
-Verified 2026-08-25.
 
 | Call | Value |
 |---|---|
@@ -128,7 +128,7 @@ The high-lift increments are therefore 0.20 and 0.60, both differences inside Ta
 | Raymer Eq. 12.15 | **0.914058** | geometry: `0.9*Clmax_2D*cos(QC_sweep)`, `F16AeroL2` and `L3` |
 | Nicolai Table 9.1, F-16C | **1.70** at AR 3.20 | one measured aircraft, devices DEPLOYED. Reference only; no code holds this table |
 
-Verified live: L1 gives 1.500000, L2 and L3 both give 0.914058 at `QC_sweep_wing` 32.183178 deg.
+L1 gives 1.500000; L2 and L3 both give 0.914058 at `QC_sweep_wing` 32.183178 deg.
 
 The L1 to L2 step is the largest in the fidelity ladder, and it is intentional: a class mean against
 a geometry estimate.
@@ -139,12 +139,12 @@ That also supports the note in `aerodynamics_brandt_comparison.m`, which records
 0.984 as well under the whole-aircraft value because no LEX or strake vortex lift is modelled. The
 F-16C differs from the Block 10/15 F-16A, so treat it as an approximate check.
 
-## 5. To-dos
+## 4. To-dos
 
 | Item | Guard |
 |---|---|
 | **Mattingly Fig. 2.10 is not in this repo.** The `CD0` curve block in `f16a_L1.json` is seeded from 5 AAF worked-example points and marked `_placeholder` | `TestAeroL1.testTODO_MattinglyCurvesArePlaceholder` |
 | **`k1_from_geometry` calls INTO `AeroL2`**, four times: `flight_regime`, `oswald_eff`, `K1_subsonic`, `K1_supersonic`. An L1 toolbox reaching up a tier is the wrong direction. The proposal on the table is to promote all four into `AerodynamicsBase`, the Tier-1 home for cross-level utilities | `% TODO (8/13/2026)` in the source |
 | **The three `normalize_*` private helpers are unreachable.** `normalize_DeltaCD0_quantity`, `normalize_flapconfig` and `normalize_CL_condition` are `Access = private`, and nothing inside the class calls them, so no caller can reach them at all. They were written for a table-query interface that does not exist | this doc |
-| **There is no categorical CLEAN CLmax lookup, and that is deliberate.** No book in `docs/reference_extracts/` prints one. Roskam Table 3.1's clean column is a class RANGE. Raymer gives an equation, Eq. 12.15, not a table. Nicolai Table 9.1 is per-aircraft and flapped. **Do not add one from unsourced numbers**: that is what was removed | this doc |
+| **There is no categorical CLEAN CLmax lookup, and that is deliberate.** No book in `docs/reference_extracts/` prints one. Roskam Table 3.1's clean column is a class RANGE. Raymer gives an equation, Eq. 12.15, not a table. Nicolai Table 9.1 is per-aircraft and flapped. **Do not add one from unsourced numbers** | this doc |
 | `interp_curve` puts generic interpolation in a discipline toolbox. It is not aerodynamics, and any discipline could want it | this doc |
