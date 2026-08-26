@@ -20,7 +20,6 @@ subgraph AEROl1["AEROL1 TOOLBOX"]
             MATTINGLY_K2["mattingly_k2"]
             TO_CLMAX_TABLE_ROW["to_CLmax_table_row"]
             ROSKAM_CLMAX_VALUE["roskam_CLmax_value"]
-            LOOKUP_CLMAX["lookup_CLmax"]
     end
 end
 

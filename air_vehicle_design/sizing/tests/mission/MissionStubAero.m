@@ -28,6 +28,9 @@ classdef MissionStubAero < AerodynamicsBase
         function CLmax = get_CLmax(obj, ~)
             CLmax = obj.CLmax_;
         end
+        function v = get_CD0(obj, ~)
+            v = obj.CD0_;   % Mach-independent, as the stub polar is
+        end
         function v = get_CLmax_TO(obj)
             v = obj.CLmax_TO_;
         end

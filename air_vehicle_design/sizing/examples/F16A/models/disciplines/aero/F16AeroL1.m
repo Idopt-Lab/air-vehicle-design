@@ -83,11 +83,7 @@ classdef F16AeroL1 < AeroModelL1
             obj.Lambda_LE_deg = A.Lambda_LE_deg;
         end
 
-        % TODO (8/14/2026): This appears to be an artefact from when this class was a subclass of
-        % the Aerodynamics enforcer.
-        % Note (8/20/2026): Move done (manually)
         function polar = drag_polar(obj, state)
-        % TODO (8/13/2026): I thought we were ditching the Mattingly K1 tabulation approach.
         %DRAG_POLAR  Assemble the L1 drag polar.  Returns struct(CD0, K1, K2).
         %   CD0(M) interpolated from the object's Mattingly Fig. 2.10 "Current"
         %   curve; K1 from the object's wing AR/Lambda_LE_deg via
@@ -105,10 +101,6 @@ classdef F16AeroL1 < AeroModelL1
             val = AeroL1.interp_curve(obj.cd0_curve_mach, obj.cd0_curve_value, state.mach);
         end
 
-        % TODO (8/14/2026): Another artefact of the subclass era. No longer necessary; relocate to the F-16 example if
-        % it isn't already there.
-        % Note (8/20/2026): Move done (manually)
-        % Mod (08/20/2026) (Claude)
         function CLmax = get_CLmax(obj, ~)
         %GET_CLMAX  Clean CLmax [Roskam Vol. I Table 3.1, fighter row].
         %   The state is unused: L1 CLmax is a table read, not a function of

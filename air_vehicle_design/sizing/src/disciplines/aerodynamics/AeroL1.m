@@ -2,8 +2,7 @@ classdef AeroL1
 %AEROL1  Level-1 aerodynamics static toolbox: aircraft type only, no geometry.
 %   Call as AeroL1.method(...); never instantiated, not in the inheritance
 %   chain. F16AeroL1 inherits AeroModelL1 and delegates to these statics.
-%   High-level statics take the concrete object; low-level statics take only
-%   scalars and arrays.
+%   No static takes a design object. Each takes scalars, strings or arrays.
 %
 %   Drag polar [Mattingly: Aircraft Engine Design, 2nd edition Eq. 2.9]. CD0(M)
 %   interpolated from the fighter "Current" type-curve [Mattingly Fig. 2.10].
@@ -64,10 +63,7 @@ classdef AeroL1
             end
         end
 
-        % TODO (8/13/2026): Why are we interpolating a curve? This is a toolbox.
-        % note (8/20/2026)(Casey): This curve can be interpolated to give the CD0 for a design.
-        % Is it categorical? I'm not sure.
-        % Where does it even get its data from?
+    
         function v = interp_curve(mach_pts, val_pts, M)
             arguments
                 mach_pts (1,:) double {mustBeReal}
@@ -109,14 +105,40 @@ classdef AeroL1
         end
 
         function rowName = to_CLmax_table_row(aircraft_category)
+        %TO_CLMAX_TABLE_ROW  Canonical category -> the row name Roskam prints.
+        %   [Roskam Vol. I Table 3.1, p. 91]. The row name is the textbook's, so
+        %   do NOT rename a row to match a key. Each printed name also maps to
+        %   itself, so either spelling works.
+        %   Roskam has no sailplane row, so "sailplane" passes through and
+        %   roskam_CLmax_value then reports the known rows.
             arguments
                 aircraft_category (1,1) string
             end
             switch aircraft_category
-                case {"jet_fighter", "fighter"} % TODO (8/13/2026): Add remaining aircraft classifications.
-                    rowName = "fighter";          % Roskam Vol. I Table 3.1's own name
+                case {"jet_fighter", "navy_fighter", "fighter"}
+                    rowName = "fighter";
+                case {"jet_transport", "civil_transport", "transport_jet"}
+                    rowName = "transport_jet";
+                case {"military_cargo", "jet_bomber", "bomber", ...
+                      "military_patrol", "mil_patrol_bomb_transport"}
+                    rowName = "mil_patrol_bomb_transport";
+                case {"general_aviation_single", "light_aircraft_single", ...
+                      "single_engine_propeller"}
+                    rowName = "single_engine_propeller";
+                case {"general_aviation_twin", "light_aircraft_twin", ...
+                      "twin_engine_propeller"}
+                    rowName = "twin_engine_propeller";
+                case {"regional_turboprop", "regional_tbp"}
+                    rowName = "regional_tbp";
+                case {"jet_seaplane", "prop_seaplane", "flying_boat", ...
+                      "amphibious", "flying_boat_amphibious_float"}
+                    rowName = "flying_boat_amphibious_float";
+                case {"supersonic_transport", "supersonic_cruise"}
+                    rowName = "supersonic_cruise";
+                case {"homebuilt", "agricultural", "business_jet", "military_trainer"}
+                    rowName = aircraft_category;   % printed name already
                 otherwise
-                    rowName = aircraft_category;  % pass through; the caller validates
+                    rowName = aircraft_category;   % pass through; the caller validates
             end
         end
 
@@ -135,22 +157,6 @@ classdef AeroL1
                      strjoin(cellstr(T.AircraftType), ', '));
             end
             CLmax = mean(row.(column){1});
-        end
-
-        function CLmax = lookup_CLmax(aircraft_type)
-            switch string(aircraft_type)
-                case {"fighter", "jet_fighter"}, CLmax = 0.90;
-                case "military_cargo",           CLmax = 1.20;
-                case "transport_jet",            CLmax = 1.30;
-                case "business_jet",             CLmax = 1.10;
-                case "general_aviation_single",  CLmax = 1.30;
-                case "general_aviation_twin",    CLmax = 1.20;
-                case "sailplane",                CLmax = 1.40;
-                otherwise
-                    error('AeroL1:unknownCategory', ...
-                        'Unknown aircraft_type "%s". Add it to AeroL1.lookup_CLmax.', ...
-                        aircraft_type);
-            end
         end
 
     end

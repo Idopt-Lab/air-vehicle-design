@@ -83,8 +83,9 @@ M ≥ `MACH_SUPERSONIC_MIN` = 1.05, clear of it.
 | L2/L3 TO / landing | `get_CLmax_{TO,L}` | clean + HLD Δ | Raymer Table 12.2 + Eq. 12.21 |
 
 **One table at L1.** The TO/landing increments are Table 3.1 *differences*, so the clean base must be
-Table 3.1 too. `AeroL1.lookup_CLmax` still implements Table 3.3 (fighter 0.90) as a standalone
-documented utility and is unit-tested, but it is deliberately **not** wired into `get_CLmax`.
+Table 3.1 too. There is no categorical clean-CLmax lookup: Roskam Table 3.1 gives class RANGES,
+Raymer gives Eq. 12.15 rather than a table, and Nicolai Table 9.1 is per-aircraft and flapped. No
+code holds any of them as a categorical clean lookup.
 
 Eq. 12.15 is a plain swept-wing relation: it ignores the F-16's LEX/strake vortex lift, so L2/L3
 underpredict the ~1.6 real whole-aircraft value.

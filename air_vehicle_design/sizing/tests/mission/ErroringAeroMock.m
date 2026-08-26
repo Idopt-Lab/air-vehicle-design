@@ -35,6 +35,11 @@ classdef ErroringAeroMock < AerodynamicsBase
                 'aero_obj.get_CLmax was called -- a FixedFractionSegment must NEVER call the aero discipline object.');
         end
 
+        function v = get_CD0(~, ~)
+            error('ErroringAeroMock:calledAtL1', ...
+                'aero_obj.get_CD0 was called -- a FixedFractionSegment must NEVER call the aero discipline object.');
+        end
+
     end
 
 end

@@ -18,7 +18,6 @@ classdef TestAeroL1 < matlab.unittest.TestCase
 %                    (TO 1.70 / landing 2.10; the increments are Table 3.1
 %                    differences, so the clean base is Table 3.1 too --
 %                    2026-07-25. Table 3.3's 0.90 is still reachable through
-%                    the standalone AeroL1.lookup_CLmax, tested below, but is
 %                    no longer what get_CLmax returns. See AeroL1.md.)
 %
 %   These are TRUE unit tests: every "expected" value is HAND-COMPUTED from the
@@ -208,20 +207,6 @@ classdef TestAeroL1 < matlab.unittest.TestCase
                 'CLmax_L must equal the Roskam Table 3.1 fighter landing mean.');
         end
 
-        function testLookupCLmaxTable33StillAvailable(tc)
-            % AeroL1.lookup_CLmax (Roskam Table 3.3) is retained as a standalone
-            % utility -- 0.90 for a fighter -- but is deliberately NOT the
-            % get_CLmax path any more. Both spellings resolve.
-            tc.verifyEqual(AeroL1.lookup_CLmax("fighter"), 0.90, 'AbsTol', 1e-12);
-            tc.verifyEqual(AeroL1.lookup_CLmax("jet_fighter"), 0.90, 'AbsTol', 1e-12);
-        end
-
-        function testLookupCLmaxUnknownTypeThrows(tc)
-            % Unknown aircraft_type must throw (guard against silent defaults).
-            tc.verifyError(@() AeroL1.lookup_CLmax("dirigible"), ...
-                'AeroL1:unknownCategory');
-        end
-
         function testCanonicalCategoryResolvesToTheTablesOwnRowName(tc)
             % PHASE 3 (2026-07-25). Roskam's CLmax table prints its fighter row
             % as "fighter", while every other table in the framework (Roskam
@@ -252,6 +237,7 @@ classdef TestAeroL1 < matlab.unittest.TestCase
             tc.verifyError(@() AeroL1.roskam_CLmax_value("dirigible", "CL_max_TO"), ...
                 'AeroL1:unknownAircraftType');
         end
+
 
         % ================================================================== %
         % High-lift-device / gear deltas (Roskam Vol. I Tables 3.1 / 3.6).
