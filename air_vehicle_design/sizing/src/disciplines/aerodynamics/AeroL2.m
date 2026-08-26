@@ -32,9 +32,8 @@ classdef AeroL2
         % HIGH-LEVEL: take the student object, return the result.
         % ================================================================== %
 
-
-
-        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
+        % Note (8/25/2026)(Casey): This is kept here since HLDs are so common that
+        % they should be accounted for.
         function val = compute_Delta_CL_max_values(Delta_cl_max, S_flapped, S_ref, Lambda_HL_deg)
         %COMPUTE_DELTA_CL_MAX_VALUES  Wing CLmax increment from a deployed HLD.
         %   0.9 * Delta_cl_max * (S_flapped/S_ref) * cos(Lambda_HL)
@@ -42,7 +41,8 @@ classdef AeroL2
             val = 0.9 * Delta_cl_max * (S_flapped / S_ref) * cosd(Lambda_HL_deg);
         end
 
-        % TODO (8/14/2026): Tagged "artefact of subclass era. Relocate to F-16 example if it hasn't been already."
+        % Note (8/25/2026)(Casey): This is kept here since HLDs are so common that
+        % they should be accounted for.
         function val = lookup_Delta_cl_max_values(liftdevice, config, cp_c)
             switch liftdevice
                 case {'plain','split'},          base = 0.9;
@@ -217,7 +217,7 @@ classdef AeroL2
             CLmax = 0.9 * cl_max_2D * cosd(Lambda_c4_deg);
         end
 
-        % TODO (8/14/2026): I feel like this should go in some sort of utility class, but hold off on that, for now.
+        % Note (8/25/2026)(Casey): This could go in some kind of utility class.
         function mu = dyn_viscosity(T_atm_R)
         %DYN_VISCOSITY  Sutherland's law, English units (Raymer 6th ed. Sec. 12.3.1).
         %   Returns mu in slug/(ft*s).  mu_ref=3.737e-7 at T_ref=518.67 R,
@@ -228,7 +228,6 @@ classdef AeroL2
             mu     = mu_ref * (T_atm_R/T_ref)^1.5 * (T_ref+C_suth)/(T_atm_R+C_suth);
         end
 
-        % TODO (8/14/2026): Where is this used?
         function Re = compute_Re(state, l_ref)
         %COMPUTE_RE  Re = rho*V*l/mu  (Raymer 6th ed. Eq. 12.25).
         %   Shared with the L3 component buildup.
@@ -236,7 +235,6 @@ classdef AeroL2
             Re = state.rho * state.V * l_ref / mu;
         end
 
-        % TODO (8/14/2026): It appears that some of the component-level drag buildup has bled into L2.
         function Cf = Cf_turbulent(Re, M)
         %CF_TURBULENT  Compressible turbulent flat-plate Cf.
         %   Cf = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Raymer 6th ed. Eq. 12.27.

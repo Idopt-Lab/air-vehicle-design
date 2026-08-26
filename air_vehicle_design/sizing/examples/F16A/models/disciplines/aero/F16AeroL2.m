@@ -43,8 +43,6 @@ classdef F16AeroL2 < AeroModelL2
         %   Raymer Table 12.3 Cfe row -- see the Dependent Cfe below.
         aircraft_category
 
-        e_osw % Oswald span efficiency factor
-
         % Airfoil section data (NACA 64A204) -- from JSON airfoil block.
         airfoil_name
         airfoiltype       % "cambered"/"uncambered"; a nonzero alpha_L0 -> K2 != 0
@@ -79,9 +77,12 @@ classdef F16AeroL2 < AeroModelL2
         %   supplies only the category that selects it, not the value.
         Cfe
 
+        %E_OSW  Oswald span efficiency (Raymer Eq. 12.48/12.49). Dependent, so
+        %   a mutated AR_wing or LE_sweep_wing moves it.
+        e_osw
+
         S_ref             % ft^2  wing reference area          <- geom.S_ref
         S_wet             % ft^2  total wetted area            <- geom.S_wet
-        % Mod (08/20/2026) (Claude) -- named as the geometry object names them.
         AR_wing           % —     wing aspect ratio            <- geom.AR_wing
         LE_sweep_wing     % deg   wing leading-edge sweep      <- geom.LE_sweep_wing
         QC_sweep_wing     % deg   wing quarter-chord sweep     <- geom.QC_sweep_wing (~32.2)
@@ -129,10 +130,12 @@ classdef F16AeroL2 < AeroModelL2
             % JSON gives the 2-D lift slope per degree; Raymer Eq. 12.8 uses 1/rad.
             obj.cl_alpha_2D  = af.cl_alpha_per_deg * 180/pi;
             obj.E_WD         = A.wave_drag_factor_E_WD;
-            obj.e_osw = get_e_osw(obj);
         end
 
         % ---- Dependent geometry getters (live from obj.geom) -------------- %
+        function v = get.e_osw(obj)
+            v = obj.get_e_osw();   % one home for the equation
+        end
         function v = get.Cfe(obj)
             % Raymer Table 12.3 row selected by the canonical category.
             v = AeroL2.lookup_Cfe(obj.aircraft_category);
@@ -140,7 +143,6 @@ classdef F16AeroL2 < AeroModelL2
 
         function v = get.S_ref(obj);         v = obj.geom.S_ref;         end
         function v = get.S_wet(obj);         v = obj.geom.S_wet;         end
-        % Mod (08/20/2026) (Claude)
         function v = get.AR_wing(obj);       v = obj.geom.AR_wing;       end
         function v = get.LE_sweep_wing(obj); v = obj.geom.LE_sweep_wing; end
 
@@ -228,9 +230,9 @@ classdef F16AeroL2 < AeroModelL2
         %   narrow sliver between MACH_SUPERSONIC_MIN (1.05) and M_CD0max
         %   (1.0547 for the F-16's 40 deg LE sweep).
             M = state.mach;
-            M_CD0max = (1 / cosd(obj.LE_sweep_wing))^0.2;                        % Mod (08/20/2026) (Claude)
+            M_CD0max = (1 / cosd(obj.LE_sweep_wing))^0.2;                         
             Dq_SH = 4.5*pi * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
-            val = (Dq_SH / obj.S_ref) * obj.E_WD * (0.74 + 0.37*cosd(obj.LE_sweep_wing)) ...   % Mod (08/20/2026) (Claude)
+            val = (Dq_SH / obj.S_ref) * obj.E_WD * (0.74 + 0.37*cosd(obj.LE_sweep_wing)) ...
                 * (1 - 0.3*sqrt(max(0, M - M_CD0max)));
         end
 
