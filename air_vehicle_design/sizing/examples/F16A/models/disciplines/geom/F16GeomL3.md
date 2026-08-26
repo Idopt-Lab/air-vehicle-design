@@ -5,14 +5,11 @@ GeometryModelL3`. L3 geometry, aerodynamics and weights all read it.
 Where a physical or T.O. value differs from Brandt's, L3 uses the physical one. Those L2 to L3
 divergences are **intentional fidelity differences, not errors**. See §4.
 
-Every planform equation is a reused `GeometryBase` or `GeomL2` static. The formulas that originate in
-`GeomL3` are the area-rule block (`denormalize_frames`, `compute_frame_cs_area`,
-`compute_lifting_surface_cs_area`, `compute_nacelle_cs_area`, `compute_Amax_area_ruled`) and the
-control-station wetted-area pair (`compute_frame_perimeter`, `compute_s_wet_from_perimeter_curve`).
-`compute_c_root_exposed` is Raymer's [Eqs. 14.9-14.10, p. 502].
+Every planform equation is a reused `GeometryBase` or `GeomL2` static. `GeomL3` originates only the
+area-rule block and the control-station wetted-area pair.
 
-**There is no L3 propulsion tier.** `F16PropL2` serves the L3 rung. Label any L3 propulsion number as
-such.
+**There is no L3 propulsion tier.** `F16PropL2` serves the L3 rung; label any L3 propulsion number
+as such.
 
 ---
 
@@ -31,14 +28,13 @@ g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 | `prop` | `prop (1,1) PropulsionBase`. Only `prop.T_SL` is read, to size the nacelle |
 | `req_path` | `f16a_requirements.json`. Gives `design_mach`, which becomes `M_max` |
 
-`M_max` is a design **requirement**, not spec data, so it comes from a separate file, as in
-`F16GeomL1`. It feeds the Raymer Eq. 10.11 engine length.
+`M_max` is a requirement, not spec data, so it comes from a separate file. It feeds Raymer Eq. 10.11.
 
 The constructor also reads a **fourth file with no argument**: `f16a_stations_path()` supplies
 `fuselage_stations` and `fuselage_station_ref`.
 
-Nothing is rescaled here. The frame table stays normalized, and `get_Amax` denormalizes it live, so
-an optimizer that moves `L_fus`, `W_max_fuselage` or `H_max_fuselage` moves `Amax`.
+Nothing is rescaled here. `get_Amax` denormalizes the frame table live, so an optimizer moving
+`L_fus`, `W_max_fuselage` or `H_max_fuselage` moves `Amax`.
 
 ---
 
@@ -61,15 +57,14 @@ an optimizer that moves `L_fus`, `W_max_fuselage` or `H_max_fuselage` moves `Ama
 | Injected (1) | `prop` | not numeric spec data |
 | Control areas (3) | `S_ail`, `S_elev`, `S_rud` | all `NaN`. Not `Dependent`: this object's inputs give no closed form. `ControlSurfaceSizer` writes them after the sizing loop converges |
 
-There is **no `T_AB_SLS_lb` input**. It is `Dependent` on `prop.T_SL`, because engine thrust is engine
-data.
+No `T_AB_SLS_lb` input: it is `Dependent` on `prop.T_SL`.
 
-The exposed-planform members carry an explicit `_exposed_` infix, so `AR_ht`, `lambda_ht`, `S_ht` and
-`S_vt` mean **full planform at both tiers**. An earlier revision gave the same names two meanings,
-which fed exposed values into full-planform equations.
+The `_exposed_` infix means `AR_ht`, `lambda_ht`, `S_ht` and `S_vt` are **full planform at both
+tiers**. An earlier revision gave the same names two meanings, feeding exposed values into
+full-planform equations.
 
-`AR_exposed_strake` and `lambda_exposed_strake` are **derived, not inputs**. A strake is a body
-surface, and the fuselage does not clip it, so the exposed planform equals the full planform.
+`AR_exposed_strake` and `lambda_exposed_strake` are **derived**: the fuselage does not clip a body
+surface, so exposed equals full.
 
 ---
 
@@ -89,14 +84,12 @@ surface, and the fuselage does not clip it, so the exposed planform equals the f
 **The whole HT planform derives from the `S_ht` + `B_h` pair.** `AR_ht` = `B_h²/S_ht` = 3.1689815. It
 must never be stored at L3.
 
-VT sweeps use `convert_sweep_panel` (2/AR), the single-panel form. Wing, HT and strake use the
-mirrored `convert_sweep` (4/AR).
+VT sweeps use `convert_sweep_panel` (2/AR); wing, HT and strake use the mirrored `convert_sweep`
+(4/AR).
 
-Lifting-surface `S_wet` uses Roskam Vol. II Eq. 12.1, fed the T.O. root/tip t/c splits. This is the
-same official formula as L2. Brandt's uniform-t/c form stays a comparison-report alternate.
-
-**The fuselage is the one place where L3 leaves L2's formula family.** `S_wet_fuselage` comes from
-`get_S_wet_fuselage_stations`, the control-station integration, not from Roskam Eq. 12.3.
+Lifting-surface `S_wet` is Roskam Vol. II Eq. 12.1 on the T.O. root/tip t/c splits, as at L2.
+**The fuselage is the one place L3 leaves L2's formula family**: `S_wet_fuselage` comes from
+`get_S_wet_fuselage_stations`, not Roskam Eq. 12.3.
 
 ---
 
@@ -134,24 +127,20 @@ different quantity, not an agreement check.
 
 ### `Amax`, the area-ruled buildup
 
-L3 computes the **whole-aircraft** maximum cross-section that Raymer Eq. 12.44's Sears-Haack term
-wants: the `MAX` over the 20 rescaled frame stations of fuselage + wing + HT + VT + nacelle sections,
-less `n_engines·π·D²/5` `[Brandt Geom!H26:H45 -> H47 -> B20]`.
+The `MAX` over the 20 rescaled frame stations of fuselage + wing + HT + VT + nacelle, less
+`n_engines·π·D²/5` `[Brandt Geom!H26:H45 -> H47 -> B20]`. This is what Raymer Eq. 12.44's
+Sears-Haack term wants.
 
-L2 keeps the fuselage-envelope ellipse `(π/4)·W·H`, which `readme_geom.md` §7 calls the low-fidelity
-form. **Do not unify these.** The envelope form at L3 is a fidelity inversion, and it was a real bug:
-it puts a fuselage-only quantity where a whole-aircraft one belongs, and inflates `CD0_wave` by about
-23 %.
+L2 keeps the fuselage-envelope ellipse `(π/4)·W·H`. **Do not unify these**: the envelope form at L3
+is a fidelity inversion and was a real bug, inflating `CD0_wave` by about 23 %.
 
-**Round-trip control.** Set `L_fus` back to 46.5 and L3 gives 25.110534, which reproduces Brandt's
-`Geom!B20` to −0.0001 %. This proves the method instead of fitting it, so the −1.62 % gap belongs to
-the 47.5 ft fuselage, not to the model. With the area-ruled value, `CD0_wave` sits −0.54 % from the
-Brandt-referenced term, and `E_WD` = 2.2 needs no retune.
+**Round-trip control.** With `L_fus` back at 46.5, L3 gives 25.110534, reproducing Brandt's `Geom!B20`
+to −0.0001 %. That proves the method rather than fitting it, so the −1.62 % gap belongs to the 47.5 ft
+fuselage. `CD0_wave` then sits −0.54 % from the Brandt term with `E_WD` = 2.2 untouched.
 
-`Amax` is deliberately **non-linear** in `W_max_fuselage`: 7 to 8 ft gives a ratio of 1.131077, not
-8/7, because a wider fuselage grows every frame section and also eats more exposed wing root.
-`S_ht`, `B_h`, `S_vt` and `tc_ht` move it 0.000 %. That is a true geometric fact, because the tail
-sections start aft of the governing station. It is not a dead input.
+`Amax` is deliberately **non-linear** in `W_max_fuselage`: 7 to 8 ft gives 1.131077, not 8/7, because
+a wider fuselage grows every frame section and eats more exposed wing root. `S_ht`, `B_h`, `S_vt` and
+`tc_ht` move it 0.000 %, because the tail sections start aft of the governing station.
 
 ---
 
@@ -166,23 +155,16 @@ Four, and no more. Every other member is a `Dependent` getter.
 | `get_design_S_wet_components(obj)` | sums six components and returns the total |
 | `get_S_wet_fuselage_stations(obj)` | fuselage wetted area from the station table [Raymer 6th ed. Fig. 7.37, p. 206] |
 
-`get_Amax` takes a design object and reads about 20 fields. That is allowed, because a design class
-may read its own properties. It broke the rule only while it lived in the toolbox.
+`get_Amax` reads about 20 fields off the design object. Allowed: a design class may read its own
+properties. It broke the rule only while it lived in the toolbox.
 
 `get_design_S_wet_components` returns one scalar, so its name is wider than its output. It reads
-`get_S_wet_fuselage_stations` directly, not through `get.S_wet_fuselage`, to keep the path plain for
-a human reader.
+`get_S_wet_fuselage_stations` directly rather than through `get.S_wet_fuselage`.
 
-**`GeometryModelL3` declares NO abstract methods.** The whole block is commented out. It holds two
-concrete bridges:
+**`GeometryModelL3` declares NO abstract methods**; the block is commented out. One concrete bridge:
 
-| Bridge | Forwards to | State |
-|---|---|---|
-| `get_S_wet(obj)` | `get_design_S_wet_components()` | works |
-| `get_control_surfaces(obj)` | `get_design_control_mechanisms()` | **errors.** No concrete class defines that method |
-
-So `get_design_S_wet_components` is necessary but not enforced. A class that omits it constructs, then
-fails at the call.
+`get_S_wet(obj)` forwards to `get_design_S_wet_components()`, which is **not declared abstract**. A
+class that omits it constructs, then fails at the call.
 
 ---
 

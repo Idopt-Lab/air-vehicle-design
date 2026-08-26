@@ -149,10 +149,6 @@ classdef F16GeomL3 < GeometryModelL3
         %    GeomL3.denormalize_frames.
         frames_normalized = zeros(0,3)
 
-        % Mod (08/19/2026) (Claude) -- read ONCE in the constructor, from
-        %   f16a_stations_path(). It was read on every S_wet call, and the
-        %   fileread + jsondecode was 91 % of that call's cost (6.8 ms of 7.5).
-        %   No constructor argument is needed: the path helper takes none.
         fuselage_stations = struct([])   % control-station table [F16_geom_stations.json]
         fuselage_station_ref = struct([]) % the fuselage the table was drawn for: L/W/H
         L_aircraft     = 47.65     % ft    OVERALL aircraft length; feeds ONLY the Raymer 6th ed. Eq. 12.44 Sears-Haack term as (Amax/l)^2. Not derivable in-model. Value is the published F-16A length 47 ft 7.75 in = 47.6458 ft (47.65 is +0.009%); CITATION NOT PINNED — no overall-length figure appears in sizing/ (Brandt Geom!B21 = 48.30 is a MAX-extent, a different quantity)
@@ -277,8 +273,6 @@ classdef F16GeomL3 < GeometryModelL3
         %   No silent defaults. Sets only input properties.
         %   prop.T_SL (SLS afterburning thrust) sizes the nacelle diameter. At
         %   the L3 rung pass an F16PropL2: there is no L3 propulsion tier.
-        %   Mod (08/19/2026) (Claude) -- req_path added. M_max is a design
-        %   requirement, so it comes from the requirements file, as in F16GeomL1.
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
                 prop      (1,1) PropulsionBase
@@ -303,8 +297,6 @@ classdef F16GeomL3 < GeometryModelL3
             obj.x_apex_wing   = G.wing.x_apex_ft;     % [Brandt Main!B23 'X Location']
 
             % ---- horizontal tail (FULL planform + physical exposed set) - %
-            %      No AR key by design: S_ft2 + span_ft fix the planform and
-            %      AR_ht is Dependent (Decision 1, F16GeomL3.md §4).
             obj.S_ht              = G.horizontal_tail.S_ft2;         % [Brandt Main!C18]
             obj.B_h               = G.horizontal_tail.span_ft;       % [USAF 3-view] PRIMARY span
             obj.lambda_ht         = G.horizontal_tail.taper;         % [Brandt Main!C20]
@@ -331,11 +323,6 @@ classdef F16GeomL3 < GeometryModelL3
             obj.x_le_vt           = G.vertical_tail.x_le_ft;         % [Brandt Main!H23 'X Location']
 
             % ---- body strake / LERX -------- %
-            %    AR_exposed_strake and lambda_exposed_strake are DERIVED, not
-            %    inputs: Brandt has no exposed strake AR or taper, because the
-            %    strake is a body surface and is not clipped. His exposed
-            %    half-span 2.7386 ft equals span_full/2 and his exposed area
-            %    20.0 ft^2 equals S_ft2 [GroundTruth Geom!9].
             obj.S_strake          = G.strake.S_ft2;                  % [Brandt Main!D18]
             obj.AR_strake         = G.strake.AR;                     % [Brandt Main!D19]
             obj.lambda_strake     = G.strake.taper;                  % [Brandt Main!D20] sharp tip
