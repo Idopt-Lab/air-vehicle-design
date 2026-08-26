@@ -274,9 +274,9 @@ classdef F16GeomL2 < GeometryModelL2
         function v = get.tc_t_wing(obj)
             v = obj.tc_wing;   % wing modeled uniform-tc; mirrors tc_wing
         end
+        % Mod (08/26/2026) (Claude)
         function v = get.S_exposed_wing(obj)
-            fw = obj.W_max_fuselage / 2;   % fuselage half-width [readme_geom.md Sec. 4.3]
-            v  = GeomL2.compute_S_exposed_horizontal(obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, fw);
+            v = obj.get_S_exposed_wing();   % one home for the equation
         end
         function v = get.S_wet_wing(obj)
             v =GeomL2.compute_S_wet_planform_roskam(obj.S_exposed_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);

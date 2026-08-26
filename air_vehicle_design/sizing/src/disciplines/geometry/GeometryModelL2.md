@@ -62,7 +62,7 @@ concrete class.
 
 | Item | Guard |
 |---|---|
-| **No abstract method sizes the control effectors.** `get_control_effectors_size` is commented out here and on `F16GeomL2`, so nothing demands it and nothing calls it. Control-effector sizing sits at L1 and L2, and `ControlSurfaceSizer` does the work with chord fractions. The block is that no statistical L2 method exists in Raymer, Nicolai or Roskam; the Nicolai Ch. 23 criteria method waits for L3 | this doc |
+| **No abstract method sizes the control effectors.** `get_control_effectors_size` is commented out here and on `F16GeomL2`, so the contract does not demand it. Control-effector sizing sits at L1 and L2, and `ControlSurfaceSizer` does the work with chord fractions. The block is that no statistical L2 method exists in Raymer, Nicolai or Roskam; the Nicolai Ch. 23 criteria method waits for L3 | this doc |
 | **`get_design_S_wet_components` is not declared abstract**, but the concrete `get_S_wet` above calls it. A class that omits it fails at the call, not at construction | this doc |
 | The name `get_design_S_wet_components` says components, and it returns one total | this doc |
 | `L_fuselage` is commented out of the abstract set, so the tail arm has no enforced source at L2. `F16GeomL2` still supplies it | this doc |
