@@ -48,26 +48,51 @@ classdef GeomL1
         function [c, d] = lookup_swet(aircraft_category)
         %LOOKUP_SWET  [Roskam Vol. I Table 3.5]
             switch aircraft_category
-                case 'jet_fighter',    c = -0.1289; d = 0.7506;
-                case 'jet_bomber',     c =  0.1213; d = 0.7306;
-                % transport_jet d = 0.7531 per metabook_data.md Eq. 4.9 /
-                % Eq. 4.42; reproduces the printed 28,291 ft^2 (disposition D3).
-                case 'transport_jet',  c =  0.0199; d = 0.7531;
+                case 'homebuilt',      c = 1.2362; d = 0.4319;
+                case 'single_engine_prop', c = 1.0892; d = 0.5147;
+                case 'twin_engine_prop', c = 0.8635; d = 0.5632;
+                case 'agricultural',    c = 1.0447; d = 0.5326;
                 case 'business_jet',   c =  0.2263; d = 0.6977;
-                case 'military_cargo', c = -0.0866; d = 0.8099;
+                case 'regional_turboprop', c = -0.0866; d = 0.8099;
+                case 'transport_jet',  c =  0.0199; d = 0.7531;
+                case 'military_trainer', c = 0.8565; d = 0.5423;
+                case 'jet_fighter',    c = -0.1289; d = 0.7506;
+                case 'military_patrol', c = 0.1628; d = 0.7316;
+                case 'military_bomber',c =  0.1628; d = 0.7316;
+                case 'military_cargo', c = 0.1628; d = 0.7316;
+                case 'flying_boats', c = 0.6295; d = 0.6708;
+                case 'amphibious', c = 0.6295; d = 0.6708;
+                case 'floating', c = 0.6295; d = 0.6708;
+                case 'supersonic_cruise', c = -1.1868; d = 0.9609;
                 otherwise
                     error('GeomL1:unknownCategory', ...
                         'Unknown aircraft_category "%s". Add it to GeomL1.lookup_swet.', aircraft_category);
             end
         end
 
+        % Mod (08/26/2026) (Claude)
         function [a, C] = lookup_lfus(aircraft_category)
-        %LOOKUP_LFUS  [Raymer 6th ed. Table 6.3]; ft from lbf.
+        %LOOKUP_LFUS  [Raymer 6th ed. Table 6.3, p. 157]; ft from lbf.
+        %   All 13 printed rows, in the book's own order. The coefficients are
+        %   the fps pair only: the book also prints metric coefficients in
+        %   braces, and those are NOT carried here.
             switch aircraft_category
-                case 'jet_fighter',    a = 0.93; C = 0.39;
-                case 'jet_trainer',    a = 0.79; C = 0.41;
-                case 'transport_jet',  a = 0.67; C = 0.43;
-                case 'military_cargo', a = 0.23; C = 0.50;
+                case 'sailplane_unpowered',            a = 0.86; C = 0.48;
+                case 'sailplane_powered',              a = 0.71; C = 0.48;
+                case 'homebuilt_metal_wood',           a = 3.68; C = 0.23;
+                case 'homebuilt_composite',            a = 3.50; C = 0.23;
+                case 'general_aviation_single_engine', a = 4.37; C = 0.23;
+                case 'general_aviation_twin_engine',   a = 0.86; C = 0.42;
+                case 'agricultural',                   a = 4.04; C = 0.23;
+                case 'twin_turboprop',                 a = 0.37; C = 0.51;
+                case 'flying_boat',                    a = 1.05; C = 0.40;
+                case 'jet_trainer',                    a = 0.79; C = 0.41;
+                case 'jet_fighter',                    a = 0.93; C = 0.39;
+                % Raymer prints ONE row, 'Military cargo/bomber', so both
+                % categories read it -- as they do in lookup_swet's row 10.
+                case 'military_cargo',                 a = 0.23; C = 0.50;
+                case 'military_bomber',                a = 0.23; C = 0.50;
+                case 'transport_jet',                  a = 0.67; C = 0.43;
                 otherwise
                     error('GeomL1:unknownCategory', ...
                         'Unknown aircraft_category "%s". Add it to GeomL1.lookup_lfus.', aircraft_category);

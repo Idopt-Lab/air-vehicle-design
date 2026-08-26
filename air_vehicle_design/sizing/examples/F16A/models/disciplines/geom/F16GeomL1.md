@@ -93,7 +93,7 @@ and a new L1 geometry writes one method, not two.
 
 ### As-built values
 
-Verified 2026-08-21. **No value has changed.**
+Verified 2026-08-21.
 
 At `W_TO` = 31,377 lbf:
 
@@ -116,6 +116,5 @@ With `W_TO` unset, `S_wet` raises `F16GeomL1:WTONotSet`, as designed.
 |---|---|
 | `S_ref` cannot come from geometry alone at L1. It is a literal. Find a better L1 workflow, or a student-facing way to derive it | in-code TODO |
 | The L1 aileron chord fraction is not available. Raymer Table 6.5 has no aileron column. **Raymer Fig. 6.3 does**, and the extract holds its six digitized points, so this gap is closable | `TestGeomL1.testTODO_AileronFractionNotAvailable` |
-| `GeomL1.lookup_swet`: the `military_cargo` row holds the coefficients of Roskam's Regional Turboprops row. The `jet_bomber` pair matches no printed row and no reference extract. No current example uses either row | `GeomL1.md` §4a |
-| Eight of the twelve rows of Roskam Table 3.5 are absent from `lookup_swet`. `lookup_AR_eq` and `lookup_control_surface_fraction` are also partial | out of scope for this pass |
+| Eight of the twelve rows of Roskam Table 3.5 are absent from `lookup_swet`, and `lookup_AR_eq` holds only the jet-fighter row | out of scope for this pass |
 | `get_control_effectors_size` declares one output on the enforcer and returns two on the class | — |
