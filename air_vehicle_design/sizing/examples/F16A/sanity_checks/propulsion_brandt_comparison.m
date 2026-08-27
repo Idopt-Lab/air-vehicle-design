@@ -131,7 +131,7 @@ T = [T; srow('[THRUST LAPSE alpha -- L1 density-only sigma^m vs Brandt alpha_AB 
 for k = 1:numel(cc)
     c    = cc(k);
     st   = AircraftState(c.alt_ft, c.mach);
-    a_l1 = p1.get_thrust_lapse(st);
+    a_l1 = p1.get_thrust_lapse_categorical(st, "AB");   % Mod (08/26/2026) (Claude)
     note = ['L1 alpha=sigma^0.6 has NO Mach term and no AB/mil split, so it is compared against ' ...
             'alpha_AB (AT). Degrades badly at extreme altitude (max_alt) and supersonic Mach -- not a bug, an L1 limitation.'];
     T = [T; prow(sprintf('alpha_L1 @ %s (%dft M%.2f)', c.condition, c.alt_ft, c.mach), ...

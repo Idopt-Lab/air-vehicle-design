@@ -353,17 +353,17 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
             st = AircraftState(40000, 0.84);
             sigma    = st.rho / tc.RHO_SL;
             expected = sigma ^ tc.LAPSE_M;
-            received = prop.thrust_lapse(st, "max");
+            received = prop.get_thrust_lapse(st, "max");
             fprintf('\n    thrust_lapse(40kft, M0.84, "max"): received = %.8f,  sigma^0.6 = %.8f (sigma=%.6f)\n', ...
                 received, expected, sigma);
             tc.verifyEqual(received, expected, 'RelTol', 1e-4, ...
                 'thrust_lapse("max") must be (rho/rho_SL)^0.6 [metabook Eq. 10.9].');
-            % get_thrust_lapse alias agrees; the transport rating set is
+            % get_thrust_lapse_base agrees; the transport rating set is
             % {cont, TO, max}: "TO"=="max" (full takeoff), "cont" the 0.94 derate.
-            tc.verifyEqual(prop.get_thrust_lapse(st), received, 'AbsTol', 1e-12);
-            tc.verifyEqual(prop.thrust_lapse(st, "TO"), received, 'AbsTol', 1e-12, ...
+            tc.verifyEqual(prop.get_thrust_lapse_base(st), received, 'AbsTol', 1e-12);
+            tc.verifyEqual(prop.get_thrust_lapse(st, "TO"), received, 'AbsTol', 1e-12, ...
                 '"TO" and "max" are both full takeoff thrust for a transport.');
-            tc.verifyEqual(prop.thrust_lapse(st, "cont"), 0.94 * received, 'RelTol', 1e-12, ...
+            tc.verifyEqual(prop.get_thrust_lapse(st, "cont"), 0.94 * received, 'RelTol', 1e-12, ...
                 '"cont" (max continuous) is 0.94x takeoff thrust [metabook Eq. 4.25].');
         end
 

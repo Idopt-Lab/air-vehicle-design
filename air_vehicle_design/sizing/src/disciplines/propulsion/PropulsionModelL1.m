@@ -9,16 +9,24 @@ classdef (Abstract) PropulsionModelL1 < PropulsionBase
 
     methods (Abstract)
 
-        %GET_THRUST_LAPSE  Density-ratio lapse.  [Martins AE481 metabook Eq. 10.9]
-        alpha = get_thrust_lapse(obj, state)
-
-        %LOOKUP_TSFC  Categorical TSFC [1/hr].  [Raymer 6th ed. Table 3.3]
         c_t = lookup_TSFC(obj, state)
+
+        %GET_THRUST_LAPSE_CATEGORICAL  Density-ratio lapse at a power rating.
+        %   [Martins AE481 metabook Eq. 10.9]
+        alpha = get_thrust_lapse_categorical(obj, state, rating)
 
     end
 
     methods
-        
+        function v = get_thrust_lapse(obj, state, rating)
+        %GET_THRUST_LAPSE  PropulsionBase name; forwards to the L1 method.
+            v = obj.get_thrust_lapse_categorical(state, rating);
+        end
+
+        function v = get_TSFC(obj, state)
+            v = obj.lookup_TSFC(state);
+        end
+
     end
 
 end

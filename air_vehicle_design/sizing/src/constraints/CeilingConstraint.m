@@ -25,7 +25,7 @@ classdef CeilingConstraint < Only_TbyW
 %   lapse per the power setting; G the required residual gradient (small, e.g.
 %   0.001). All pulled fresh each call.
 %
-%   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting), validated by
+%   POWER SETTING. alpha = prop.get_thrust_lapse(state, powerSetting), validated by
 %   the injected prop (fighter "mil"/"AB"; transport "cont"/"TO"/"max").
 
     properties (SetAccess = protected)
@@ -91,7 +91,7 @@ classdef CeilingConstraint < Only_TbyW
         function alpha = get_alpha(obj)
         %GET_ALPHA  Thrust lapse at this ceiling's power setting, validated by
         %   the injected prop. Mirrors MasterEquationConstraint.get_alpha.
-            alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
+            alpha = obj.prop.get_thrust_lapse(obj.state, obj.powerSetting);
         end
 
     end

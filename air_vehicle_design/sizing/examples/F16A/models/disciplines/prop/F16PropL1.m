@@ -56,30 +56,26 @@ classdef F16PropL1 < PropulsionModelL1
             v = obj.T_SL;   % wet/AB SLS thrust IS T_SL by the PropulsionBase convention
         end
 
-        function alpha = thrust_lapse(obj, state, rating)
-        %THRUST_LAPSE  L1 density-ratio lapse alpha = sigma^m [Eq. 10.9].
-        %   L1 has NO mil/AB split (a single density-ratio law), so both the
-        %   "mil" and "AB" ratings return the same lapse; the rating is still
-        %   required and validated so a caller cannot silently pass a setting
-        %   the F-16 engine does not have.
+        % Note (8/27/2026)(Casey): Different aircraft have different
+        % loiter Machs; using it as a gate is bad design. Use mission 
+        % requirements instead.
+        function c_t = lookup_TSFC(obj, state)
+            tbl = PropL1.lookup_TSFC_table(obj.engine_type);
+            if state.mach < 0.4
+                c_t = tbl.loiter;
+            else
+                c_t = tbl.cruise;
+            end
+        end
+
+        function alpha = get_thrust_lapse_categorical(obj, state, rating)
             arguments
                 obj
                 state  (1,1) AircraftState
                 rating (1,1) string {mustBeMember(rating, ["mil","AB"])}
             end
-            alpha = PropL1.get_thrust_lapse(obj, state);
-        end
-
-        function c_t = get_TSFC(obj, state)
-            c_t = PropL1.get_TSFC(obj, state);
-        end
-
-        function alpha = get_thrust_lapse(obj, state)
-            alpha = PropL1.get_thrust_lapse(obj, state);
-        end
-
-        function c_t = lookup_TSFC(obj, state)
-            c_t = PropL1.get_TSFC(obj, state);
+            m = PropL1.lookup_lapse_exponent(obj.engine_type);
+            alpha = PropL1.sigma_lapse(state.rho, m);
         end
 
     end

@@ -31,22 +31,18 @@ Property every concrete class must define:
 
 Methods every concrete class must implement:
 
-| Method | Returns | Used by |
+| Method | Arguments | Outputs |
 |---|---|---|
-| `thrust_lapse(obj, state, rating)` | `α = T_at_rating(alt, M)/T_SL`, scalar in [0, 1], on the one max-power `T_SL` basis | constraint analysis, the sizing loop, mission `select_alpha` |
-| `get_TSFC(obj, state)` | mil-power TSFC, `lbf_fuel/(hr·lbf_thrust)` | the future Breguet-range mission analysis; weights L3 reads it at the cruise condition |
+| `get_thrust_lapse` | design object, aircraft state, thrust rating | alpha, scalar in [0, 1] on the max-power `T_SL` basis |
+| `get_TSFC` | design object, aircraft state | mil-power TSFC, `lbf_fuel/(hr·lbf_thrust)` |
 
-**`TSFC` is not an abstract property**, deliberately. It was one until 2026-07-25 and was removed:
-TSFC is a function of the flight state, not a stored scalar, so there was nothing meaningful for a
-concrete class to put in it. `F16PropL1` satisfied it with a self-labelled "PLACEHOLDER:
-abstract-contract artifact" `TSFC = 0` while the real value came from `get_TSFC(obj, state)` — so any
-consumer trusting the documented property contract read **0** instead of a TSFC. The abstract
-*method* is the contract.
+`get_thrust_lapse` is read by constraint analysis, the sizing loop and mission `select_alpha`.
+`get_TSFC` is read by the mission analysis and by weights L3 at the cruise condition.
 
 ## 3. Thrust rating
 
-`thrust_lapse` takes a `rating` string naming the engine power setting; each concrete class
-validates it against the ratings its engine actually has:
+`get_thrust_lapse` takes a `rating` string naming the engine power setting; each concrete
+class validates it against the ratings its engine actually has:
 
 | Aircraft class | Ratings | Meaning |
 |---|---|---|
@@ -55,11 +51,10 @@ validates it against the ratings its engine actually has:
 
 All ratings are expressed on the **one max-power `T_SL` basis** (`α = T_at_rating(alt,M) / T_SL`,
 with `T_SL` the max/AB SLS thrust), so every rating lands on the same `T_SL/W_TO` constraint-diagram
-axis — a dry/`"mil"` fighter condition (e.g. Cruise) stays comparable with an AB-flown one. This
-replaces the former `thrust_lapse_mil_on_AB_scale` utility: `thrust_lapse(state, "mil")` now returns
-`T_mil(alt,M)/T_SL_AB`. `F16PropL1`'s density-only lapse cannot distinguish power settings, so its
-`"mil"` and `"AB"` return the same value; `F16PropL2` returns the real
-`α_mil·(T_SL_mil/T_SL_wet)` for `"mil"`.
+axis — a dry/`"mil"` fighter condition (e.g. Cruise) stays comparable with an AB-flown one. So
+`get_thrust_lapse(state, "mil")` returns `T_mil(alt,M)/T_SL_AB`. `F16PropL1`'s density-only
+lapse cannot distinguish power settings, so its `"mil"` and `"AB"` return the same value;
+`F16PropL2` returns the real `α_mil·(T_SL_mil/T_SL_wet)` for `"mil"`.
 
 The reason this exists: a dry-power point-performance condition (cruise is flown at 0 % AB) has to
 be expressed on the same `T_SL_AB / W_TO` axis as the AB-flown conditions, or the constraint diagram
@@ -69,7 +64,7 @@ mixes two thrust scales.
 
 Applied at every fidelity level:
 
-- **`thrust_lapse` is always on the AB/max basis.** `T_SL` is the afterburning sea-level static
+- **`get_thrust_lapse` is always on the AB/max basis.** `T_SL` is the afterburning sea-level static
   thrust; `α` is dimensionless and normalized to it. Mil-power lapse is a separate accessor.
 - **TSFC is always mil-power and always 1/hr** (`lbf_fuel/(hr·lbf_thrust)`). Concrete classes expose
   `compute_TSFC_AB` separately where an afterburning value is needed.

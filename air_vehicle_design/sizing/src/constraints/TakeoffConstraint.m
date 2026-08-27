@@ -143,7 +143,7 @@ classdef TakeoffConstraint < Both_WbyS_TbyW
         function alpha = get_alpha(obj)
         %GET_ALPHA  Thrust lapse at full takeoff power ("AB"). Takeoff is
         %   always flown at full power, so the rating is fixed here.
-            alpha = obj.prop.thrust_lapse(obj.state, "AB");
+            alpha = obj.prop.get_thrust_lapse(obj.state, "AB");
         end
 
     end

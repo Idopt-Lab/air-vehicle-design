@@ -117,7 +117,7 @@ classdef InstantaneousTurnConstraint < Both_WbyS_TbyW
         %GET_ALPHA  Thrust lapse at this condition's power setting, validated by
         %   the injected prop. Same logic as MasterEquationConstraint.get_alpha
         %   (this class is a Both_WbyS_TbyW sibling, not a child, of it).
-            alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
+            alpha = obj.prop.get_thrust_lapse(obj.state, obj.powerSetting);
         end
 
     end

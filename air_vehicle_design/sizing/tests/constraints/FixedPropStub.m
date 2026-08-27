@@ -4,7 +4,7 @@ classdef FixedPropStub < PropulsionBase
 %   Mirrors FixedAeroStub.m's rationale: TakeoffConstraint/ThrustConstraint
 %   don't take a raw alpha number -- their constructor takes a
 %   PropulsionBase discipline object and internally calls
-%   obj.thrust_lapse(state). A test reproducing Brandt's own point-
+%   obj.get_thrust_lapse(state). A test reproducing Brandt's own point-
 %   performance value (e.g. Takeoff) needs to feed it Brandt's own fixed
 %   alpha_AB, not drive it through a real F16PropLN model.
 %
@@ -28,7 +28,7 @@ classdef FixedPropStub < PropulsionBase
             obj.alpha = alpha;
         end
 
-        function a = thrust_lapse(obj, ~, ~)
+        function a = get_thrust_lapse(obj, ~, ~)
             a = obj.alpha;
         end
 

@@ -357,8 +357,8 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         % sea-level and a high-altitude state to confirm the exponent is 0
         % (a nonzero m would make the 40 kft value clearly < 1).
             [~, prop] = TestAero481Disciplines.buildStack(); %#ok<ASGLU>
-            ab_sl = prop.thrust_lapse(AircraftState(0, 0.05),  "AB");
-            ab_hi = prop.thrust_lapse(AircraftState(40000, 0.85), "AB");
+            ab_sl = prop.get_thrust_lapse(AircraftState(0, 0.05),  "AB");
+            ab_hi = prop.get_thrust_lapse(AircraftState(40000, 0.85), "AB");
             fprintf('\n    thrust_lapse("AB"): SL = %.12f,  40kft = %.12f (both 1.0)\n', ...
                 ab_sl, ab_hi);
             tc.verifyEqual(ab_sl, 1.0, 'AbsTol', 1e-12, ...
@@ -376,8 +376,8 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
             [~, prop] = TestAero481Disciplines.buildStack(); %#ok<ASGLU>
             expected = tc.T_SL_MIL / tc.T_SL_AB;         % 0.6511628
             st  = AircraftState(40000, 0.85);            % altitude != SL
-            mil = prop.thrust_lapse(st, "mil");
-            ab  = prop.thrust_lapse(st, "AB");
+            mil = prop.get_thrust_lapse(st, "mil");
+            ab  = prop.get_thrust_lapse(st, "AB");
             fprintf('\n    mil/AB = %.12f (hand 28000/43000 = %.12f);  mil abs = %.12f\n', ...
                 mil/ab, expected, mil);
             tc.verifyEqual(mil/ab, expected, 'RelTol', 1e-9, ...
@@ -419,7 +419,7 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         % thrust_lapse validates the fighter rating set ["mil","AB"] -- a
         % transport rating ("cont"/"max"/"TO") the F135 does not carry errors.
             [~, prop] = TestAero481Disciplines.buildStack(); %#ok<ASGLU>
-            tc.verifyError(@() prop.thrust_lapse(AircraftState(0, 0.05), "cont"), ...
+            tc.verifyError(@() prop.get_thrust_lapse(AircraftState(0, 0.05), "cont"), ...
                 'MATLAB:validators:mustBeMember');
         end
 

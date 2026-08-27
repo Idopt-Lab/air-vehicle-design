@@ -45,7 +45,7 @@ for k = 1:nC
     a_AB_b(k)  = brandt.thrust_AB(alt(k), mach(k))  / brandt.T_sl_AB;
     a_mil_b(k) = brandt.thrust_dry(alt(k), mach(k)) / brandt.T_sl_dry;
 
-    a_L1(k)    = p1.get_thrust_lapse(st);           % [Martins Eq. 10.9]
+    a_L1(k)    = p1.get_thrust_lapse_categorical(st, "AB");  % [Martins Eq. 10.9] Mod (08/26/2026) (Claude)
     T_L1(k)    = p1.T_SL * a_L1(k);
     TSFC_L1(k) = p1.get_TSFC(st);                   % [Raymer Table 3.3]
 

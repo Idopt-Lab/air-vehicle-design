@@ -9,9 +9,9 @@ classdef (Abstract) PropulsionBase < handle
 %
 %   Propulsion is L1/L2 only; F16PropL2 also serves the L3 rung.
 %
-%   THRUST RATING. thrust_lapse takes a rating string naming the engine power
-%   setting; each concrete class validates it against the ratings its engine
-%   has:
+%   THRUST RATING. get_thrust_lapse takes a rating string naming the engine
+%   power setting; each concrete class validates it against the ratings its
+%   engine has:
 %     - jet fighter (afterburning): "mil" (military/dry) and "AB" (afterburner)
 %     - transport (no afterburner):  "cont" (max continuous), "TO"/"max" (takeoff)
 %   All ratings use the one max-power T_SL basis (lapse =
@@ -22,15 +22,16 @@ classdef (Abstract) PropulsionBase < handle
 
     properties (Abstract)
         T_SL    % lbf — sea-level static (max/AB) thrust
+        % TSFC_unagumented    % lbf/hour -- thruss-specific fuel consumption, non-afterburning/non-turbo/only-dry.
     end
 
     methods (Abstract)
 
-        %THRUST_LAPSE  alpha = T_at_rating(alt,M)/T_SL at the given power rating.
+        %GET_THRUST_LAPSE  alpha = T_at_rating(alt,M)/T_SL at the given rating.
         %   state — AircraftState. rating — engine power-setting string the
         %   concrete class validates (fighter "mil"/"AB"; transport
         %   "cont"/"TO"/"max"). Returns scalar alpha in [0, 1].
-        alpha = thrust_lapse(obj, state, rating)
+        alpha = get_thrust_lapse(obj, state, rating)
 
         %GET_TSFC  Mil-power thrust-specific fuel consumption [1/hr].
         %   For AB TSFC call compute_TSFC_AB on the concrete class.

@@ -33,7 +33,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
 %   condition (e.g. F-16 Max Mach: beta=0.8997, n=1.0, Ps=0 at 36,000 ft /
 %   M=1.60 -- see examples/F16A/inputs/f16a_requirements.md).
 %
-%   POWER SETTING. alpha = prop.thrust_lapse(state, powerSetting). The rating
+%   POWER SETTING. alpha = prop.get_thrust_lapse(state, powerSetting). The rating
 %   string is validated by the injected prop against the ratings its engine
 %   has (fighter "mil"/"AB"; transport "cont"/"TO"/"max"). All ratings share
 %   the one max-power T_SL basis, so a dry "mil" condition stays comparable
@@ -149,7 +149,7 @@ classdef (Abstract) MasterEquationConstraint < Both_WbyS_TbyW
         %   transport "cont"/"TO"/"max") and returns the lapse on the max-power
         %   T_SL basis -- see PropulsionBase.thrust_lapse. This is why Cruise
         %   uses "mil" (a fighter dry-power point stays on the AB T_SL axis).
-            alpha = obj.prop.thrust_lapse(obj.state, obj.powerSetting);
+            alpha = obj.prop.get_thrust_lapse(obj.state, obj.powerSetting);
         end
 
     end

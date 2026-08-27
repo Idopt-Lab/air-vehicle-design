@@ -106,8 +106,8 @@ classdef BrandtPropAdapter < PropulsionBase
             eng.inp.engine.T_AB_SLS_lb  = eng.T_sl_AB;
         end
 
-        function alpha = thrust_lapse(obj, state, rating)
-        %THRUST_LAPSE  Thrust lapse on the AB T_SL scale at the given rating.
+        function alpha = get_thrust_lapse(obj, state, rating)
+        %GET_THRUST_LAPSE  Thrust lapse on the AB T_SL scale at the given rating.
         %   "AB"  -> full-AB lapse T_AB/T_sl_AB: Brandt eng.run(alt,M,1.0)
         %            .alpha_AB_ref (pct_AB = 100 %).
         %   "mil" -> mil/dry lapse on the AB T_SL scale T_mil/T_sl_AB: Brandt
