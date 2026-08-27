@@ -31,7 +31,7 @@ classdef (Abstract) PropulsionBase < handle
         %   state — AircraftState. rating — engine power-setting string the
         %   concrete class validates (fighter "mil"/"AB"; transport
         %   "cont"/"TO"/"max"). Returns scalar alpha in [0, 1].
-        alpha = get_thrust_lapse(obj, state, rating)
+        alpha = get_thrust_lapse(obj, state)
 
         %GET_TSFC  Mil-power thrust-specific fuel consumption [1/hr].
         %   For AB TSFC call compute_TSFC_AB on the concrete class.

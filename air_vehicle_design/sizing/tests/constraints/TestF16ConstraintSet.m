@@ -177,8 +177,8 @@ classdef TestF16ConstraintSet < matlab.unittest.TestCase
             cruise_AB = LevelFlightConstraint(cruise.name, cruise.state, aero, prop, ...
                 cruise.beta, "AB");
 
-            alpha_mil = prop.thrust_lapse(cruise.state, "mil");
-            alpha_AB  = prop.thrust_lapse(cruise.state, "AB");
+            alpha_mil = prop.get_thrust_lapse(cruise.state, "mil");
+            alpha_AB  = prop.get_thrust_lapse(cruise.state, "AB");
             tc.verifyLessThan(alpha_mil, alpha_AB, ...
                 'Sanity: the mil-on-AB-scale lapse must be below the AB lapse.');
 

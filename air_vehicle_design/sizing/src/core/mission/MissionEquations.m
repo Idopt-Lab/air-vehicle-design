@@ -79,7 +79,8 @@ classdef MissionEquations
 
         function tf = has_ab_model(prop)
         %HAS_AB_MODEL  True if the prop exposes any afterburner TSFC method.
-            tf = ismethod(prop, 'compute_TSFC_AB_installed') ...
+            tf = ismethod(prop, 'get_TSFC_installed') ...
+                || ismethod(prop, 'compute_TSFC_AB_installed') ...
                 || ismethod(prop, 'compute_TSFC_AB');
         end
 
@@ -177,16 +178,20 @@ classdef MissionEquations
     methods (Static, Access = private)
 
         function cT = dry_tsfc(prop, state)
-            if ismethod(prop, 'compute_TSFC_installed')
-                cT = prop.compute_TSFC_installed(state);
+            if ismethod(prop, 'get_TSFC_installed')
+                cT = prop.get_TSFC_installed(state, "mil");
+            elseif ismethod(prop, 'compute_TSFC_installed')
+                cT = prop.compute_TSFC_installed(state);   % BrandtPropAdapter
             else
                 cT = prop.get_TSFC(state);
             end
         end
 
         function cT = ab_tsfc(prop, state, cT_dry_fallback)
-            if ismethod(prop, 'compute_TSFC_AB_installed')
-                cT = prop.compute_TSFC_AB_installed(state);
+            if ismethod(prop, 'get_TSFC_installed')
+                cT = prop.get_TSFC_installed(state, "AB");
+            elseif ismethod(prop, 'compute_TSFC_AB_installed')
+                cT = prop.compute_TSFC_AB_installed(state);   % BrandtPropAdapter
             elseif ismethod(prop, 'compute_TSFC_AB')
                 cT = prop.compute_TSFC_AB(state);
             else

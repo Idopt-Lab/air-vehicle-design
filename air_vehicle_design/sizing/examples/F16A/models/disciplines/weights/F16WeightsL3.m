@@ -182,7 +182,7 @@ classdef F16WeightsL3 < WeightsModelL3
 
         % -- Newly derived by settled decisions 4 and 2 (2) ------------------ %
         W_l          % lbf  landing design gross weight = 0.95 · W_TO [Eqs. 15.5/15.6]. ★ The 0.95 has NO repo citation — §P4-16
-        SFC_mission  % 1/hr mission SFC = prop.get_TSFC(AircraftState(cruise)) = 1.007116 [Eq. 15.16]
+        SFC_mission  % 1/hr installed mission SFC = prop.get_TSFC(AircraftState(cruise), "mil") = 1.087685 [Eq. 15.16]
 
         % -- Group totals (5) — closes finding #12's NaN placeholders -------- %
         W_wings            % lbf  [Eq. 15.1]         = 2396.77 at W_TO = 31377
@@ -452,11 +452,12 @@ classdef F16WeightsL3 < WeightsModelL3
         end
         function v = get.SFC_mission(obj)
             % Mission SFC for Eq. 15.16, evaluated at the requirements cruise
-            % condition (36,000 ft / M 0.87) on the injected engine = 1.007116
-            % 1/hr (MIL dry, uninstalled). Weights builds the AircraftState
-            % itself; no state is injected. +43.87 % above Brandt's Main!C30 =
-            % 0.70, accepted (real cruise point + uninstalled basis).
-            v = obj.prop.get_TSFC(AircraftState(obj.cruise_altitude_ft, obj.cruise_mach));
+            % condition (36,000 ft / M 0.87) on the injected engine = 1.087685
+            % 1/hr (MIL dry, INSTALLED -- at L2 get_TSFC applies the 1.08 factor
+            % [Brandt Miss!C25]). Weights builds the AircraftState itself; no
+            % state is injected. +55.38 % above Brandt's Main!C30 = 0.70,
+            % accepted (real cruise point vs Brandt's single stored SLS value).
+            v = obj.prop.get_TSFC(AircraftState(obj.cruise_altitude_ft, obj.cruise_mach), "mil");
         end
 
         % ---- Landing weight ---------------------------------------------- %

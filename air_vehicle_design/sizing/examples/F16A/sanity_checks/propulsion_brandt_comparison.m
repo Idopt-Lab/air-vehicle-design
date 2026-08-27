@@ -119,7 +119,7 @@ T = [T; srow('[THRUST LAPSE alpha_AB -- L2 Mattingly Eq.2.54a vs Brandt alpha_AB
 for k = 1:numel(cc)
     c     = cc(k);
     st    = AircraftState(c.alt_ft, c.mach);
-    a_fw  = p2.compute_thrust_lapse_AB(st);
+    a_fw  = p2.get_thrust_lapse(st, "AB");
     other = sprintf('AU(eff on T_AB)=%.4f; AS(dry)=%.4f', c.alpha_eff_on_TAB, c.alpha_dry);
     note  = matt_vs_brandt_note(st.theta_0);
     T = [T; prow(sprintf('alpha_AB @ %s (%dft M%.2f, %d%%AB)', c.condition, c.alt_ft, c.mach, c.pct_AB), ...
@@ -144,7 +144,7 @@ idx_cruise = find(strcmp({cc.condition}, 'cruise'), 1);
 if ~isempty(idx_cruise)
     c     = cc(idx_cruise);
     st    = AircraftState(c.alt_ft, c.mach);
-    a_mil = p2.thrust_lapse(st, "mil");
+    a_mil = p2.get_thrust_lapse(st, "mil");
     note  = ['Cruise is flown 0% AB (dry). Framework alpha_mil = 0.6*delta_0 renormalized to the AB axis ' ...
              '(x T_SL_mil/T_SL_wet). Brandt AU = AS*(T_dry/T_AB). Mattingly has no below-TR Mach term; expected high.'];
     T = [T; prow(sprintf('alpha_mil-on-AB @ cruise (%dft M%.2f)', c.alt_ft, c.mach), ...
@@ -157,10 +157,11 @@ T = [T; srow('[TSFC -- L2 Mattingly Eq.3.55 (uninstalled & installed x1.08) vs B
 st_sls_mil = AircraftState(0, 0.001);   % SLS static, M~0 (mil basis)
 st_sls_ab  = AircraftState(0, 0.4);     % SLS, M=0.4 (Brandt AB reference basis)
 
-tsfc_mil_un  = p2.compute_TSFC_mil(st_sls_mil);
-tsfc_mil_in  = p2.compute_TSFC_installed(st_sls_mil);
-tsfc_ab_un   = p2.compute_TSFC_AB(st_sls_ab);
-tsfc_ab_in   = p2.compute_TSFC_AB_installed(st_sls_ab);
+cTS          = PropL2.lookup_TSFC_coeffs(p2.engine_type);
+tsfc_mil_un  = PropL2.TSFC_mil(cTS.C1_mil, cTS.C2_mil, st_sls_mil.mach, st_sls_mil.theta);
+tsfc_mil_in  = p2.get_TSFC_installed(st_sls_mil, "mil");
+tsfc_ab_un   = PropL2.TSFC_AB(cTS.C1_AB, cTS.C2_AB, st_sls_ab.mach, st_sls_ab.theta);
+tsfc_ab_in   = p2.get_TSFC_installed(st_sls_ab, "AB");
 
 T = [T; prow('TSFC mil SLS(M~0), UNINSTALLED (L2)', 'L2', tsfc_mil_un, brandt_TSFC_mil, ...
     'Mattingly Eq.3.55a C1_mil=0.90', 'Brandt Engn!TSFC_mil (installed)', '%.4f', ...
