@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "matlab_repo": {
+      "type": "stdio",
+      "command": "C:/Users/sdarshan/.matlab/agentic-toolkits/bin/matlab-mcp-server.exe",
+      "args": [
+        "--matlab-session-mode=new",
+        "--matlab-root=C:/Program Files/MATLAB/R2026a",
+        "--initial-working-folder=C:/Users/sdarshan/Documents/Code/Teaching/air-vehicle-design",
+        "--extension-file=C:/Users/sdarshan/.matlab/agentic-toolkits/simulink/tools/tools.json"
+      ],
+      "env": {}
+    }
+  }
+}
