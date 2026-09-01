@@ -135,7 +135,7 @@ function results = b777_metabook_comparison()
     % 4. TSFC gap [metabook Eq. 10.11 vs Table 10.1 deck].
     % --------------------------------------------------------------------- %
     st_cruise = AircraftState(40000, 0.84);
-    tsfc_1011 = PropL1.tsfc_mattingly_hibpr(st_cruise);   % generic Eq. 10.11
+    tsfc_1011 = PropL1.tsfc_mattingly_hibpr_raw(st_cruise.mach, st_cruise.theta);   % generic Eq. 10.11
     tsfc_deck = prop.get_TSFC(st_cruise);                 % 0.52 [Table 10.1]
     rows{end+1} = crow('TSFC', 'cruise TSFC [1/hr]', tsfc_deck, tsfc_1011, ...
         'metabook Table 10.1 vs Eq. 10.11', ...

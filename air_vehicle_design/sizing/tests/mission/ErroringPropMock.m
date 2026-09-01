@@ -14,9 +14,9 @@ classdef ErroringPropMock < PropulsionBase
 
     methods
 
-        function alpha = thrust_lapse(~, ~, ~)
+        function alpha = get_thrust_lapse(~, ~, ~)
             error('ErroringPropMock:calledAtL1', ...
-                'prop_obj.thrust_lapse was called -- a FixedFractionSegment must NEVER call the propulsion discipline object.');
+                'prop_obj.get_thrust_lapse was called -- a FixedFractionSegment must NEVER call the propulsion discipline object.');
         end
 
         function c_t = get_TSFC(~, ~)

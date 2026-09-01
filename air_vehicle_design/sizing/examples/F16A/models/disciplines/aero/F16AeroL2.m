@@ -43,8 +43,6 @@ classdef F16AeroL2 < AeroModelL2
         %   Raymer Table 12.3 Cfe row -- see the Dependent Cfe below.
         aircraft_category
 
-        e_method          % Oswald-e selector; "official" -> Raymer Eq. 12.48/12.49
-
         % Airfoil section data (NACA 64A204) -- from JSON airfoil block.
         airfoil_name
         airfoiltype       % "cambered"/"uncambered"; a nonzero alpha_L0 -> K2 != 0
@@ -79,12 +77,16 @@ classdef F16AeroL2 < AeroModelL2
         %   supplies only the category that selects it, not the value.
         Cfe
 
+        %E_OSW  Oswald span efficiency (Raymer Eq. 12.48/12.49). Dependent, so
+        %   a mutated AR_wing or LE_sweep_wing moves it.
+        e_osw
+
         S_ref             % ft^2  wing reference area          <- geom.S_ref
         S_wet             % ft^2  total wetted area            <- geom.S_wet
-        AR                % —     wing aspect ratio            <- geom.AR_wing
-        Lambda_LE_deg     % deg   wing leading-edge sweep      <- geom.LE_sweep_wing
-        Lambda_c4_deg     % deg   wing quarter-chord sweep     <- geom.QC_sweep_wing (~32.2)
-        taper             % —     wing taper ratio             <- geom.lambda_wing
+        AR_wing           % —     wing aspect ratio            <- geom.AR_wing
+        LE_sweep_wing     % deg   wing leading-edge sweep      <- geom.LE_sweep_wing
+        QC_sweep_wing     % deg   wing quarter-chord sweep     <- geom.QC_sweep_wing (~32.2)
+        lambda_wing       % —     wing taper ratio             <- geom.lambda_wing
         L_char            % ft    characteristic length for the aircraft-level
                           %       supersonic Reynolds number   <- geom.L_fus
 
@@ -119,7 +121,6 @@ classdef F16AeroL2 < AeroModelL2
             % ONE canonical top-level category key -- selects rows in several
             % discipline tables, so not aerodynamics' property to own.
             obj.aircraft_category = string(J.aircraft_category);
-            obj.e_method = string(A.e_method);
             af = A.airfoil;
             obj.airfoil_name = string(af.name);
             obj.airfoiltype  = string(af.airfoiltype);
@@ -132,6 +133,9 @@ classdef F16AeroL2 < AeroModelL2
         end
 
         % ---- Dependent geometry getters (live from obj.geom) -------------- %
+        function v = get.e_osw(obj)
+            v = obj.get_e_osw();   % one home for the equation
+        end
         function v = get.Cfe(obj)
             % Raymer Table 12.3 row selected by the canonical category.
             v = AeroL2.lookup_Cfe(obj.aircraft_category);
@@ -139,10 +143,11 @@ classdef F16AeroL2 < AeroModelL2
 
         function v = get.S_ref(obj);         v = obj.geom.S_ref;         end
         function v = get.S_wet(obj);         v = obj.geom.S_wet;         end
-        function v = get.AR(obj);            v = obj.geom.AR_wing;       end
-        function v = get.Lambda_LE_deg(obj); v = obj.geom.LE_sweep_wing; end
-        function v = get.Lambda_c4_deg(obj); v = obj.geom.QC_sweep_wing; end
-        function v = get.taper(obj);         v = obj.geom.lambda_wing;   end
+        function v = get.AR_wing(obj);       v = obj.geom.AR_wing;       end
+        function v = get.LE_sweep_wing(obj); v = obj.geom.LE_sweep_wing; end
+
+        function v = get.QC_sweep_wing(obj); v = obj.geom.QC_sweep_wing; end
+        function v = get.lambda_wing(obj);         v = obj.geom.lambda_wing;   end
         function v = get.L_char(obj);        v = obj.geom.L_fus;         end
         function v = get.Amax_ft2(obj);      v = obj.geom.Amax;          end
         function v = get.L_aircraft_ft(obj); v = obj.geom.L_aircraft;    end
@@ -159,12 +164,52 @@ classdef F16AeroL2 < AeroModelL2
             M = state.mach;
             regime = AeroL2.flight_regime(M);
             if regime == "supersonic"
-                cd0 = AeroL2.get_CD0(obj) + obj.compute_CD0_wave(state);
-                k1  = AeroL2.K1_supersonic(M, obj.AR, obj.Lambda_LE_deg);
-                polar = struct('CD0', cd0, 'K1', k1, 'K2', 0);
+                cd0 = obj.get_CD0_rough() + obj.compute_CD0_wave(state);
+                k1  = obj.get_K1(M);
+                k2 = obj.get_K2(k1, M);
+            elseif regime=="transonic"
+                warning('AeroL2:transonicNotModeled', ...
+                        ['L2 drag polar is not modeled in the transonic band ' ...
+                         '(%.2f < M=%.4f < %.2f): the Raymer Eq. 12.51 supersonic ' ...
+                         'K1 is singular near M=1. Returning NaN.'], ...
+                        AeroL2.MACH_SUBSONIC_MAX, M, AeroL2.MACH_SUPERSONIC_MIN);
+                    cd0 = NaN;
+                    k1 = NaN;
+                    k2 = NaN;
             else
-                polar = AeroL2.drag_polar(obj, state);
+                cd0 = obj.get_CD0_rough();
+                % e_osw   = AeroL2.oswald_eff(obj.AR_wing, obj.LE_sweep_wing);
+                k1  = obj.get_K1(M);
+                k2  = obj.get_K2(k1, M);
             end
+            polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
+
+        end
+
+        function val = get_K1(obj, M)
+        %GET_K1  Induced-drag factor at Mach M (subsonic or supersonic branch).
+        %   Transonic band errors (use drag_polar for the NaN signal).
+            regime = AeroL2.flight_regime(M);
+            switch regime
+                case "subsonic"
+                    val = AeroL2.K1_subsonic(obj.e_osw, obj.AR_wing);
+                case "supersonic"
+                    val = AeroL2.K1_supersonic(M, obj.AR_wing, obj.LE_sweep_wing);
+                otherwise
+                    error('AeroL2:transonicNotModeled', ...
+                        'K1 not modeled in the transonic band (M=%.4f).', M);
+            end
+        end
+
+        % Note (8/21/2026)(Casey): Is this even used? Consider its removal.
+        function val = get_CD0_supersonic(obj, state)
+            Re  = AeroL2.compute_Re(state, obj.L_char);
+            Cf  = AeroL2.Cf_turbulent(Re, state.mach);
+            val = AeroL2.CD0_from_Cf(Cf, obj.S_wet, obj.S_ref);
+        end
+
+        function val = get_CD0_rough(obj)
+            val = AeroL2.CD0_from_Cf(obj.Cfe, obj.S_wet, obj.S_ref);
         end
 
         function val = compute_CD0_wave(obj, state)
@@ -185,42 +230,45 @@ classdef F16AeroL2 < AeroModelL2
         %   narrow sliver between MACH_SUPERSONIC_MIN (1.05) and M_CD0max
         %   (1.0547 for the F-16's 40 deg LE sweep).
             M = state.mach;
-            M_CD0max = (1 / cosd(obj.Lambda_LE_deg))^0.2;
+            M_CD0max = (1 / cosd(obj.LE_sweep_wing))^0.2;                         
             Dq_SH = 4.5*pi * (obj.Amax_ft2 / obj.L_aircraft_ft)^2;
-            val = (Dq_SH / obj.S_ref) * obj.E_WD * (0.74 + 0.37*cosd(obj.Lambda_LE_deg)) ...
+            val = (Dq_SH / obj.S_ref) * obj.E_WD * (0.74 + 0.37*cosd(obj.LE_sweep_wing)) ...
                 * (1 - 0.3*sqrt(max(0, M - M_CD0max)));
         end
 
         function CLmax = get_CLmax(obj, ~)
-            CLmax = AeroL2.get_CLmax(obj);
+            CLmax = AeroL2.CLmax_clean(obj.cl_max_2D, obj.QC_sweep_wing);
         end
 
         % ---- Auxiliary accessors (used by the comparison reports, etc.) ------ %
         function e = get_e_osw(obj)
         %GET_E_OSW  OFFICIAL Oswald efficiency (Raymer Eq. 12.48/12.49).
-            e = AeroL2.get_e_osw(obj);
+            e = AeroL2.oswald_eff(obj.AR_wing, obj.LE_sweep_wing);
         end
 
-        function e = get_e_osw_brandt(obj)
-        %GET_E_OSW_BRANDT  Brandt Aero!G12 alternate (comparison report ONLY).
-            e = AeroL2.oswald_eff_brandt(obj.AR, obj.Lambda_LE_deg);
-        end
-
-        function val = get_K1(obj, M)
-            val = AeroL2.get_K1(obj, M);
-        end
 
         function val = get_K2(obj, K1_sub, M)
-            val = AeroL2.get_K2(obj, K1_sub, M);
-        end
-
-        function val = get_CD0(obj)
-        %GET_CD0  Subsonic clean CD0 = Cfe*(S_wet/S_ref)  [Raymer Eq. 12.23].
-            val = AeroL2.get_CD0(obj);
+        %GET_K2  Polar-offset term (Convention A).
+        %   Subsonic: CL_minD = CL_alpha(M)*(-deg2rad(alpha_L0)/2) (see
+        %   compute_CL_minD), then K2 = -2*K1_sub*CL_minD [Brandt Aero!G17].
+        %   Nonzero for the F-16's cambered NACA 64A204 (design_CL=0.2).
+        %   M>=1: K2=0.
+            CL_alpha_M = obj.get_CL_alpha(M);
+            CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
+            val        = AeroL2.K2_value(K1_sub, CL_minD, M);
         end
 
         function val = get_CL_alpha(obj, M)
-            val = AeroL2.get_CL_alpha(obj, M);
+            if ~isprop(obj, 'cl_alpha_2D') || isempty(obj.cl_alpha_2D)
+                error('AeroL2:missingClAlpha2D', ...
+                    ['%s must define a non-empty cl_alpha_2D [1/rad] to use ', ...
+                     'get_CL_alpha (Raymer Eq. 12.8 eta term). Read it from the ', ...
+                     'input JSON''s .aerodynamics.airfoil.cl_alpha_per_deg ', ...
+                     '(x 180/pi), or call AeroL2.CL_alpha directly with an empty ', ...
+                     'slope to opt into the eta = 0.95 default deliberately.'], ...
+                    class(obj));
+            end
+            val = AeroL2.CL_alpha(obj.AR_wing, obj.QC_sweep_wing, M, [], [], [], obj.cl_alpha_2D);
         end
 
         % ================================================================ %
@@ -241,22 +289,22 @@ classdef F16AeroL2 < AeroModelL2
         %DELTA_CD0_FLAP  Raymer 6th ed. Eq. 12.61 (Sec. 12.6.5). Plain flap
         %   F_flap=0.0144.  S_flapped ratio from live wing taper.
             F_flap = 0.0144;
-            S_flapped_ratio = obj.compute_S_flapped_ratio(obj.eta_flap_out, obj.eta_flap_in, obj.taper);
+            S_flapped_ratio = obj.compute_S_flapped_ratio(obj.eta_flap_out, obj.eta_flap_in, obj.lambda_wing);
             val = F_flap * obj.c_flap_over_c * S_flapped_ratio * (delta_flap_deg - 10);
         end
 
         function val = Delta_CDi_flap(obj, Delta_CL_flap)
         %DELTA_CDI_FLAP  Raymer 6th ed. Eq. 12.62.  Lambda is the wing
-        %   quarter-chord sweep (read live via obj.Lambda_c4_deg).
-            val = obj.k_f_flap * Delta_CL_flap^2 * cosd(obj.Lambda_c4_deg);
+        %   quarter-chord sweep (read live via obj.QC_sweep_wing).
+            val = obj.k_f_flap * Delta_CL_flap^2 * cosd(obj.QC_sweep_wing);
         end
 
         function val = Delta_CLmax_flap(obj, config)
         %DELTA_CLMAX_FLAP  Raymer 6th ed. Table 12.2 + Eq. 12.21.  config 'TO'/'L'.
-            S_flapped_ratio = obj.compute_S_flapped_ratio(obj.eta_flap_out, obj.eta_flap_in, obj.taper);
+            S_flapped_ratio = obj.compute_S_flapped_ratio(obj.eta_flap_out, obj.eta_flap_in, obj.lambda_wing);
             S_flapped       = S_flapped_ratio * obj.S_ref;
             Delta_cl_max    = AeroL2.lookup_Delta_cl_max_values(obj.hld_TE, config, obj.c_flap_over_c);
-            val = AeroL2.compute_Delta_CL_max_values(Delta_cl_max, S_flapped, obj.S_ref, obj.Lambda_c4_deg);
+            val = AeroL2.compute_Delta_CL_max_values(Delta_cl_max, S_flapped, obj.S_ref, obj.QC_sweep_wing);
         end
 
         function val = get_Delta_e_osw_TO(obj)

@@ -69,6 +69,10 @@ classdef FixedAeroStub < AerodynamicsBase
             polar = struct('CD0', obj.CD0, 'K1', obj.K1, 'K2', obj.K2);
         end
 
+        function v = get_CD0(obj, ~)
+            v = obj.CD0;   % the fixed value the constructor was given
+        end
+
         function CLmax = get_CLmax(obj, ~)
             CLmax = obj.CLmax;
         end

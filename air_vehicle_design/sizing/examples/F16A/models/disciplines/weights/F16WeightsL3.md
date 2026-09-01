@@ -25,7 +25,7 @@ w3   = F16WeightsL3(f16a_spec_path(3), f16a_requirements_path(), g3, prop);
 | `geom` | `GeometryModelL3` | 21 geometry quantities (§3) |
 | `prop` | `PropulsionBase` | `T_max`, `W_en`, `SFC_mission` |
 
-The class formerly carried ~22 hardcoded geometry constants; all now arrive by DI. L3 builds its own
+Every geometry number arrives by DI; none is stored here. L3 builds its own
 `AircraftState` from the cruise inputs — no `AircraftState` is injected.
 
 ---
@@ -76,12 +76,12 @@ visible at the DI site — it reads like a bug otherwise.
 | `W_en` | `PropL2.engine_weight_AB(...)` — **UNINSTALLED** [Raymer Eq. 10.10] | 2775.021 lbf |
 | `W_en_brandt` | `0.199·prop.T_SL` — report-only, never summed | 4730.230 lbf |
 | `W_l` | `0.95·W_TO`, feeding Eqs. 15.5/15.6 | 29808.15 lbf |
-| `SFC_mission` | `prop.get_TSFC(AircraftState(cruise))` | 1.007116 1/hr |
+| `SFC_mission` | `prop.get_TSFC(AircraftState(cruise), "mil")` | 1.087685 1/hr, installed |
 | `W_wings` | Eq. 15.1 | 2396.767 lbf |
 | `W_tail` | Eqs. 15.2 / 15.3 (struct `.HT`, `.VT`) | 200.541 / 313.060 lbf |
 | `W_fuselage` | Eq. 15.4 | 3674.197 lbf |
 | `W_installed_engine` | Eqs. 15.7–15.15 group total | 3381.698 lbf |
-| `W_subsystems` | Eqs. 15.16–15.24 group total | 4578.134 lbf |
+| `W_subsystems` | Eqs. 15.16–15.24 group total | 4586.327 lbf |
 | `W_strake` | `k_strake·S_strake` [Brandt `Main!D18` / `Wt!H7`] | 90.00 lbf |
 
 **`W_subsystems` does NOT include the landing gear** — that is `weight_landing_gear(obj, W_TO)`.
@@ -117,19 +117,20 @@ item — mounts, firewall, section, induction, tailpipe, cooling, oil, controls,
 exactly what `×1.3` lumps into one factor, and Raymer's nomenclature for Eq. 15.9's `W_en` is the dry
 engine weight *each*.
 
-The `×1.3` variant agrees **better** with Brandt (16546.06 vs 15705.33 against 19980.70). That was
+The `×1.3` variant agrees **better** with Brandt (16644.25 vs 15803.52 against 19980.70). That was
 the reason to reject it: a number that agrees because a factor is double-counted is not agreement.
 
 ### As-built values
 
 | Quantity | Value |
 |---|---|
-| `OEW(31377)` | **15795.33 lbf** (−20.95 % vs Brandt `Wt!B12` 19980.70) |
+| `OEW(31377)` | **15803.52 lbf** (−20.91 % vs Brandt `Wt!B12` 19980.70) |
 | landing-gear total | 1160.934 lbf |
 
-`SFC_mission` = 1.007116 sits +43.87 % above Brandt's `Main!C30` = 0.70 — accepted, because it is a
-live DI read at the cruise condition rather than a stored constant. Its test asserts the *identity
-against the injected object*, deliberately not the literal value.
+`SFC_mission` = 1.087685 sits +55.38 % above Brandt's `Main!C30` = 0.70 — accepted, because it is a
+live DI read at the cruise condition rather than a stored constant. Both are installed values, so
+the gap is the cruise point against Brandt's single stored SLS number. Its test asserts the
+*identity against the injected object*, deliberately not the literal value.
 
 Brandt carries nacelle, strake, other-structure and armament-support line items with no framework
 analog — about 2733.68 lbf, 13.68 % of `Wt!B12`. The OEW-vs-Brandt agreement check lives in
@@ -141,7 +142,7 @@ analog — about 2733.68 lbf, 13.68 % of `Wt!B12`. The OEW-vs-Brandt agreement c
 
 | Item | Guard |
 |---|---|
-| **Darshan → Krish, HIGH PRIORITY: cross-check L3 weights.** `OEW` comes out significantly lower than Brandt (15705.33 vs 19980.70, −21.40 %). ~2733.68 lbf is Brandt line items with no framework analog; the rest is unexplained, and the unverified exponents below are the first place to look | open |
+| **Darshan → Krish, HIGH PRIORITY: cross-check L3 weights.** `OEW` comes out significantly lower than Brandt (15803.52 vs 19980.70, −20.91 %). ~2733.68 lbf is Brandt line items with no framework analog; the rest is unexplained, and the unverified exponents below are the first place to look | open |
 | **All 62 §15.3.1 exponents are unverified against the printed book** — tallied 2 CONFLICT / 8 FROM-CODE / 26 VERIFY / 26 IMAGE-ONLY in `WeightsL3.m`'s header (corrected 2026-07-30 by a direct recount of the recovered `todo.md` checklist table; the previous 9/24/27/5 figures summed to 67, not the table's actual 62 rows). The two CONFLICTs keep their **code** values: Eq. 15.13 `N_en^1.023` (extract says 1.078), Eq. 15.3 `cos(Λ_vt)^−0.323` (extract says −1.0). Do not change a value to make the guard green | `TestWeightsL3.testTODO_Raymer1531ExponentsNotBookVerified` — deliberately red; todo §3a |
 | `K_d = 0` silently zeroes the 227.54 lbf air-induction term (`0^0.182 = 0`) — no error, no warning, not even NaN; `OEW` would read 15477.79. **Left unguarded by decision**, and no guard test was added (that would be a false green). Corollary: if `K_d = 0` is legal, `K_d` cannot be Raymer's multiplicative base, so the exponent/placement is itself suspect | todo §P4-11 — visible only as a sensitivity row in the comparison report |
 | The `0.95` in `W_l = 0.95·W_TO` has **no citation**. Brandt's implied ratio is 20680.70/31377 = 0.6591, but the two are definitionally different quantities | todo §P4-16 |

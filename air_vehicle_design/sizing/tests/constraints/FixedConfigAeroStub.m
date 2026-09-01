@@ -99,6 +99,13 @@ classdef FixedConfigAeroStub < AerodynamicsBase
             CLmax = obj.CLmax_clean;
         end
 
+        % Mod (08/26/2026) (Claude)
+        function v = get_CD0(obj, ~)
+        %GET_CD0  Clean CD0, state-independent. Satisfies the
+        %   AerodynamicsBase abstract contract.
+            v = obj.CD0_clean;
+        end
+
         % --- The bridge contract HighLiftConfigBridge.polar forwards to -----
 
         function cfg = get_config_polar(obj, config)

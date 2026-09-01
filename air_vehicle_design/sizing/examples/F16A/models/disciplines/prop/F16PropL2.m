@@ -109,7 +109,7 @@ classdef F16PropL2 < PropulsionModelL2
         end
 
         % ---- Thrust lapse (Mattingly Eq. 2.54) ---------------------------- %
-        function alpha = thrust_lapse(obj, state, rating)
+        function alpha = get_thrust_lapse_parametric(obj, state, rating)
         %THRUST_LAPSE  Mattingly thrust lapse at the given rating [Eq. 2.54].
         %   "AB"  -> full afterburner lapse T_AB/T_SL_AB.
         %   "mil" -> military/dry lapse on the AB T_SL scale (T_mil/T_SL_AB,
@@ -121,44 +121,35 @@ classdef F16PropL2 < PropulsionModelL2
                 rating (1,1) string {mustBeMember(rating, ["mil","AB"])}
             end
             if rating == "mil"
-                alpha = PropL2.get_thrust_lapse_mil_on_AB_scale(obj, state);
+                alpha = PropL2.compute_thrust_lapse_mil(state.delta_0, state.theta_0, obj.TR);
+                T_current = obj.T_SL_mil;
+            elseif rating == "AB"
+                alpha = PropL2.compute_thrust_lapse_AB(state.delta_0, state.theta_0, obj.TR);
+                T_current = obj.T_SL;
             else
-                alpha = PropL2.get_thrust_lapse(obj, state);
+                error("F16PropL2:thrust_lapse. Couldn't identify thrust augmentation type. \n Accepts only 'mil' or 'AB'.");
             end
-        end
-
-        function alpha = compute_thrust_lapse_mil(obj, state)
-            alpha = PropL2.get_thrust_lapse_mil(obj, state);
-        end
-
-        function alpha = compute_thrust_lapse_AB(obj, state)
-            alpha = PropL2.get_thrust_lapse_AB(obj, state);
-        end
-
-        % ---- TSFC — uninstalled (Mattingly Eq. 3.12 + 3.55) --------------- %
-        function c_t = get_TSFC(obj, state)
-            c_t = PropL2.get_TSFC(obj, state);
-        end
-
-        function c_t = compute_TSFC_mil(obj, state)
-            c_t = PropL2.get_TSFC_mil(obj, state);
-        end
-
-        function c_t = compute_TSFC_AB(obj, state)
-            c_t = PropL2.get_TSFC_AB(obj, state);
+            alpha = PropL2.compute_normalized_thrust_lapse(alpha, T_current, obj.T_SL);
         end
 
         % ---- TSFC — installed (uninstalled × TSFC_install_factor) --------- %
-        function c_t = compute_TSFC_installed(obj, state)
+        function c_t = get_TSFC_installed(obj, state, rating)
         %COMPUTE_TSFC_INSTALLED  Installed mil-power TSFC in 1/hr.
         %   [Mattingly Eq. 3.12 + 3.55a; install factor Brandt Miss!C25]
-            c_t = PropL2.get_TSFC_installed(obj, state);
-        end
-
-        function c_t = compute_TSFC_AB_installed(obj, state)
-        %COMPUTE_TSFC_AB_INSTALLED  Installed afterburner TSFC in 1/hr.
-        %   [Mattingly Eq. 3.12 + 3.55b; install factor Brandt Miss!C25]
-            c_t = PropL2.get_TSFC_AB_installed(obj, state);
+        
+        % Get the TSFC coefficients, first.
+            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
+            % Now compute the c_t.
+            if rating == "mil"
+                c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
+            elseif rating == "AB"
+                c_t = PropL2.TSFC_AB(c.C1_AB, c.C2_AB, state.mach, state.theta);
+            else
+                error("F16PropL2:get_TSFC_installed. Couldn't identify throttle state. Accepted states: 'mil' or 'AB'.");
+            end
+            % Apply the install factor.
+            % c_t = c_t * obj.TSFC_install_factor;
+            c_t = PropL2.compute_TSFC_installed(c_t, obj.TSFC_install_factor);
         end
 
     end

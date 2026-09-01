@@ -102,8 +102,9 @@ classdef Aero481PropL1 < PropulsionModelL1
         % PropulsionBase / PropulsionModelL1 contract.
         % ================================================================== %
 
-        function alpha = thrust_lapse(obj, state, rating)
-        %THRUST_LAPSE  Density-ratio lapse at the given fighter power rating.
+        % Mod (08/26/2026) (Claude)
+        function alpha = get_thrust_lapse_categorical(obj, state, rating)
+        %GET_THRUST_LAPSE_CATEGORICAL  Density-ratio lapse at a fighter rating.
         %   alpha = sigma^m, sigma = rho/rho_SL, m = obj.lapse_exponent_m
         %   [metabook Eq. 10.9, via PropL1.sigma_lapse].
         %     "AB":  alpha = sigma^m -- full AB/max scale.
@@ -125,10 +126,11 @@ classdef Aero481PropL1 < PropulsionModelL1
             end
         end
 
-        function alpha = get_thrust_lapse(obj, state)
-        %GET_THRUST_LAPSE  PropulsionModelL1 contract: the base (AB/max)
-        %   density-ratio lapse sigma^m, no mil renormalization
-        %   [metabook Eq. 10.9].
+        % Mod (08/26/2026) (Claude)
+        function alpha = get_thrust_lapse_base(obj, state)
+        %GET_THRUST_LAPSE_BASE  The undERated (AB/max) density-ratio lapse
+        %   sigma^m, with no mil renormalization [metabook Eq. 10.9]. Not part
+        %   of any contract; kept because it is a distinct quantity.
             alpha = PropL1.sigma_lapse(state.rho, obj.lapse_exponent_m);
         end
 
@@ -148,8 +150,9 @@ classdef Aero481PropL1 < PropulsionModelL1
             end
         end
 
+        % Mod (08/26/2026) (Claude)
         function c_t = lookup_TSFC(obj, state)
-        %LOOKUP_TSFC  PropulsionModelL1 contract alias for get_TSFC.
+        %LOOKUP_TSFC  Alias for get_TSFC. Not a contract method.
             c_t = obj.get_TSFC(state);
         end
 

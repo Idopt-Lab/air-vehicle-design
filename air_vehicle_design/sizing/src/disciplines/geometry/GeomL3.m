@@ -3,40 +3,18 @@ classdef GeomL3
 %   Call as GeomL3.method(...); never instantiated, not in the inheritance
 %   chain. F16GeomL3 inherits GeometryModelL3 and delegates to these statics.
 %
-%   Most equations are reused from GeomL2 and GeometryBase; L3 differs by the
-%   physical/T.O. inputs it is fed, not by the formulas. The only formulas
-%   originating here are the area-ruled Amax buildup and its helpers
-%   compute_c_root_exposed and compute_engine_length.
-%
-%   Official lifting-surface wetted area: [Roskam Vol. II Eq. 12.1], fed the
-%   T.O. root/tip t/c splits.
+%   This toolbox shifts into raw geometry derived from control stations. It's able to 
+%   compute areas of cross-sections and wetted surfaces using control station geometry
+%   given by the user.
 %
 %   Companion doc: src/disciplines/geometry/GeomL3.md
 
     methods (Static)
 
-        % REMOVED 2026-08-19 -> examples/F16A/models/disciplines/geom/F16GeomL3.m
-        % Mod (08/19/2026) (Claude)
-        %   get_Amax(obj) moved to the F-16 example, Casey's decision. It took a
-        %   design object and read about 20 fields, so it broke the toolbox rule.
-        %   The equation is unchanged, so Amax still reads 24.7036516658 ft^2.
-        %   Its helpers stay here. Its TODOs, verbatim:
-        %     % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        %     % TODO (7/28/2026): This seems too specific in this form. I like the idea of having conic/cross sections, but it should be generic.
-        %     % Cross sections that the toolbox can focus on: fuselage & main wings.
-        %     % TODO (8/19/2026): This seems too high-fidelity to be in L2.
-        %   The first TODO is now done.
-
         % ================================================================== %
-        % LOW-LEVEL: pure math on scalars/vectors, no object. These area-ruled
-        % Amax formulas are the only ones originating in this toolbox; every
-        % other equation is reused from GeomL2 / GeometryBase.
+        % LOW-LEVEL: pure math on scalars/vectors, no object.
         % ================================================================== %
 
-        % Mod (08/19/2026) (Claude) -- the uncited flag is withdrawn. This is unit
-        %   scaling: a fraction times a reference length gives a length. No
-        %   citation needed. One assumption to know: the shape stretches affinely,
-        %   so the normalized table must stay valid at a new fuselage size.
         function [x, w, h] = denormalize_frames(frames_normalized, L_fus, W_max, H_max)
         %DENORMALIZE_FRAMES  Station table [ft] from a normalized table.
         %   Columns are x/L, w/W_max, h/H_max.
@@ -51,18 +29,12 @@ classdef GeomL3
             h = frames_normalized(:,3) * H_max;
         end
 
-        % Mod (08/19/2026) (Claude) -- the math is generic, the SHAPE is not.
-        %   Integrating cos(pi/2*t) over the quarter outline gives exactly
-        %   A = (2/pi)*w*h. So the arithmetic needs no citation, but the cosine
-        %   cross-section does: it is Brandt's model. An ellipse would give
-        %   (pi/4)*w*h, so the cosine section is about 19 % smaller.
-        %   [Brandt F-16A.xls, Geom frame model]
-        %   _TODO -- I_cos = 0.63137515 is Brandt's 6-point trapezoid of the same
-        %   integral. The exact value is 2/pi = 0.63661977, so every frame area
-        %   reads 0.82 % low. compute_frame_cs_area_exact below holds the exact
-        %   form and has NO CONSUMER. Pick one at the next Amax review.
+
         function A = compute_frame_cs_area(w, h)
         %COMPUTE_FRAME_CS_AREA  Cross-section area [ft^2] of one cosine frame.
+        % The mathematics require no citation because this is derived from geometry, not
+        % any specific textbook or intellectual property.
+        % I_cos is borrowed from Brandt's 6-point trapezoid integral.
             arguments
                 w (:,1) double {mustBeNonnegative}
                 h (:,1) double {mustBeNonnegative}
@@ -73,8 +45,6 @@ classdef GeomL3
             A     = w .* h * I_cos;
         end
 
-        % _TODO (08/19/2026) (Claude) -- NO CONSUMER. The exact 2/pi form. See
-        %   the note on compute_frame_cs_area above.
         function A = compute_frame_cs_area_exact(w, h)
             arguments
                 w (:,1) double {mustBeNonnegative}
@@ -95,28 +65,13 @@ classdef GeomL3
         end
 
         % TODO (8/14/2026): Include "lifting" in the name, to specifiy that this is for "lifting_surfaces."
-        function A = compute_surface_cs_area(x, Xexp, c_exp_root, c_tip, ...
+        function A = compute_lifting_surface_cs_area(x, Xexp, c_exp_root, c_tip, ...
                                              G_hs_exp, sweep_LE_deg, tc)
         %COMPUTE_SURFACE_CS_AREA  Cross-section [ft^2] contributed by one
         %   lifting surface at each station, under Brandt's cosine
         %   area-distribution model.  [Brandt F-16A.xls, Geom!Y/AA/AC 26:45]
         %   Xexp is the exposed-root leading-edge station; G_hs_exp the
         %   exposed half-span (mirrored) or full span (VT).
-        %
-        %   Two Brandt spreadsheet bugs are NOT replicated (each worth 0.000 %
-        %   of Amax): the VT column's wing-tip-chord copy-paste and the strake
-        %   column's divisor.
-        %
-        %   TODO: the cosine area-distribution model is Brandt's own
-        %   construction with no textbook source in this repo (todo.md Phase 2).
-        %   Mod (08/19/2026) (Claude) -- searched for a substitute. None exists.
-        %   Two parts, and only one needs a source:
-        %     y_span = min(G_hs_exp, (x-Xexp)/tan_sweep) is plain planform
-        %       geometry, so it needs no citation.
-        %     (1 - cos(2*pi*xi)) is a shaping function, not geometry. Raymer
-        %       Fig. 7.38, p. 207 wants a station-area table, but he expects the
-        %       designer to MEASURE each area off the layout. He gives no formula
-        %       for a lifting surface. So this factor stays Brandt's.
             arguments
                 x            (:,1) double
                 Xexp         (1,1) double
@@ -141,19 +96,8 @@ classdef GeomL3
                         .* (1 - cos(2*pi*xi(active))) / DIVISOR;
         end
 
-        % TODO (8/14/2026): Unsourced/uncited.
-        % Mod (08/19/2026) (Claude) -- the source is Brandt, as Casey thought:
-        %   4.5 * 3.5370 = 15.9166 ft [Brandt F-16A.xls, Geom!D475]. It is a
-        %   fineness-ratio rule of thumb, not a textbook equation.
-        % Mod (08/19/2026) (Claude) -- SUPERSEDED, NO CONSUMER. Casey chose
-        %   Raymer's statistical form, which already sits in the propulsion
-        %   toolbox: PropL2.engine_length_AB(T, M) = 0.255*T^0.4*M^0.2
-        %   [Raymer 6th ed. Eq. 10.11]. F16GeomL3.get.L_engine now calls that.
-        %   Eq. 10.1 (L = L_nominal*SF^0.4) was the other option; it needs a
-        %   nominal engine's length and thrust, which this repo does not hold.
-        %   This function stays as the record of Brandt's value, 15.9166 ft.
         function val = compute_engine_length(D_engine)
-        %COMPUTE_ENGINE_LENGTH  Engine length [ft] at a fixed fineness ratio.
+        %COMPUTE_ENGINE_LENGTH  Engine length [ft] at a fixed fineness ratio. [Brandt F-16A.xls, Geom!D475]
             arguments
                 D_engine (1,1) double {mustBePositive}
             end
@@ -173,7 +117,6 @@ classdef GeomL3
             A(x >= x_start & x <= x_end) = n_engines * pi * D_engine^2 / 4;
         end
 
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
         % TODO (8/14/2026): Still seems too design-specific to be inside this toolbox. I don't like how it references Brandt, because
         % I want the toolboxes to be independent from Brandt as much as possible.
         function val = compute_Amax_area_ruled(A_total_stations, n_engines, D_engine)
@@ -187,8 +130,6 @@ classdef GeomL3
                   - n_engines * pi * D_engine^2 / INLET_FLOW_THROUGH_DIVISOR;
         end
 
-
-        % Mod (08/19/2026) (Claude)
         function val = compute_s_wet_from_perimeter_curve(x, P)
         %COMPUTE_S_WET_FROM_PERIMETER_CURVE  Wetted area [ft^2] under a perimeter curve.
         %   [Raymer 6th ed. Fig. 7.37, p. 206; Fig. 7.4, p. 171]
@@ -211,7 +152,6 @@ classdef GeomL3
             val = trapz(x, P);
         end
 
-        % Mod (08/19/2026) (Claude)
         % Note (8/19/2026)(Casey): Moved from L2 to L3 because L3 no longer deals in simple shapes.
         function val = compute_s_wet_from_control_stations(frame_x, frame_zchine, frame_z, frame_w, frame_h)
         %COMPUTE_S_WET_FROM_CONTROL_STATIONS  Wetted area [ft^2] from a station table.
@@ -247,12 +187,7 @@ classdef GeomL3
                       [0, reshape(frame_x, 1, [])], [0, P]);
         end
 
-        % TODO (7/28/2026): This seems too specific to be inside this toolbox. Relocate this to the F-16 example.
-        % TODO (7/28/2026): This seems too high-fidelity to be in L2. Also, there's areference to "chines," which
-        % are design-specific, and therefore don't belong inside this toolbox.
-        % Mod (08/18/2026) (Claude) -- moved from GeomL2, unchanged. Both TODOs
-        %   are now done: this is the F-16 example, not a toolbox.
-        % Mod (08/19/2026) (Claude)
+
         function P = compute_frame_perimeter(w, h, z_chine, z_center)
         %COMPUTE_FRAME_PERIMETER  Perimeter [ft] of one station under the chine
         %   cosine cross-section model.  [Brandt F-16A.xls, Geom frame model]
@@ -268,9 +203,6 @@ classdef GeomL3
         %   perimeter instead.
         %   _TODO (08/19/2026) (Claude): the cosine section model has no textbook
         %   source in docs/reference_extracts/. Only the integrator above is cited.
-        %   Mod (08/19/2026) (Claude) -- VECTORIZED. It takes one station or a
-        %   whole column of them, and returns one P per station. A scalar call
-        %   behaves exactly as before.
             arguments
                 w        double {mustBePositive,  mustBeVector}
                 h        double {mustBePositive,  mustBeVector}

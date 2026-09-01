@@ -76,6 +76,13 @@ classdef BrandtAeroAdapter < AerodynamicsBase
             polar = struct('CD0', r.CD0, 'K1', r.K1, 'K2', 0);
         end
 
+        % Mod (08/26/2026) (Claude)
+        function val = get_CD0(obj, state)
+        %GET_CD0  Brandt parasite drag at the flight state's Mach.
+        %   Mach-dependent, as drag_polar above is, so the state is used.
+            val = obj.brandtAero.run(state.mach).CD0;
+        end
+
         function CLmax = get_CLmax(obj, ~)
         %GET_CLMAX  Clean (unflapped) maximum lift coefficient.
         %   Returns BrandtAerodynamics.CLmax_clean (Aero!H25). Mach-

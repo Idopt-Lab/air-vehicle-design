@@ -84,11 +84,29 @@ classdef F16AeroL1 < AeroModelL1
         end
 
         function polar = drag_polar(obj, state)
-            polar = AeroL1.drag_polar(obj, state);
+        %DRAG_POLAR  Assemble the L1 drag polar.  Returns struct(CD0, K1, K2).
+        %   CD0(M) interpolated from the object's Mattingly Fig. 2.10 "Current"
+        %   curve; K1 from the object's wing AR/Lambda_LE_deg via
+        %   k1_from_geometry [Raymer Eq. 12.48-12.50/12.51]; K2 = 0 for the
+        %   uncambered fighter. [Mattingly Eq. 2.9]
+            cd0 = get_CD0_rough(obj, state);
+            k1  = AeroL1.k1_from_geometry(obj.AR, obj.Lambda_LE_deg, state.mach);
+            k2  = AeroL1.mattingly_K2(obj.design_type);
+            polar = struct('CD0', cd0, 'K1', k1, 'K2', k2);
+        end
+
+        function val = get_CD0_rough(obj, state)
+            % Note (8/20/2026)(Casey): Interpolate a CD0 curve based on the Mach number.
+            % Check the data source.
+            val = AeroL1.interp_curve(obj.cd0_curve_mach, obj.cd0_curve_value, state.mach);
         end
 
         function CLmax = get_CLmax(obj, ~)
-            CLmax = AeroL1.get_CLmax(obj);
+        %GET_CLMAX  Clean CLmax [Roskam Vol. I Table 3.1, fighter row].
+        %   The state is unused: L1 CLmax is a table read, not a function of
+        %   Mach. The slot stays to match AerodynamicsBase's contract, which
+        %   every caller uses.
+            CLmax = AeroL1.roskam_CLmax_value(obj.aircraft_category, "CL_max_clean");
         end
 
         % ================================================================ %

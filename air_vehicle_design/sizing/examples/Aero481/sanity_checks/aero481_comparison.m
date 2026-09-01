@@ -186,8 +186,8 @@ function results = aero481_comparison()
     mil_scale = prop.T_SL_mil / prop.T_SL;           % 28000/43000 = 0.6512
     for alt = [0 15000 35000]
         st = AircraftState(alt, 0.90);
-        alpha_AB  = prop.thrust_lapse(st, "AB");
-        alpha_mil = prop.thrust_lapse(st, "mil");
+        alpha_AB  = prop.get_thrust_lapse(st, "AB");
+        alpha_mil = prop.get_thrust_lapse(st, "mil");
         rows{end+1} = crow('A6 thrust lapse', sprintf('alt %d ft: alpha_AB', alt), ...
             alpha_AB, 1.0, 'framework metabook Eq. 10.9 vs A481 (none)', ...
             sprintf('A6: lapse OFF (sigma^%.2f = 1); matches A481', m_lapse));

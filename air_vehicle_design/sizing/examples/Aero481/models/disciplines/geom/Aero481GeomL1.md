@@ -58,8 +58,8 @@ Unlike `F16GeomL1` (where `S_ref` is a hardcoded literal), the F-35's `S_ref` **
 
 | Property | Computes | Citation |
 |---|---|---|
-| `S_wet` | total wetted area from `W_TO` | **[Roskam Vol. I, Table 3.5, jet_fighter]** via `GeomL1.lookup_swet` -- REPLACES `Swet=4*S` (section 1.4) |
-| `L_fuselage` | fuselage length from `W_TO` | **[Raymer 6th ed., Table 6.3, jet_fighter]** via `GeomL1.lookup_lfus` |
+| `S_wet` | total wetted area from `W_TO` | **[Roskam Vol. I, Table 3.5, jet_fighter]** via `GeomL1.compute_s_wet_regression` -- REPLACES `Swet=4*S` (section 1.4) |
+| `L_fuselage` | fuselage length from `W_TO` | **[Raymer 6th ed., Table 6.3, jet_fighter]** via `GeomL1.compute_l_fus_regression` |
 | `b_wing` | `sqrt(AR*S_ref)` (span) | definitional `AR = b^2/S_ref` via `GeometryBase.compute_span`; W_TO-free (see section 7) |
 | `cbar_wing` | `S_ref/b_wing` (standard mean chord) | definitional; W_TO-free (see section 7) |
 | `L_fus` | `= L_fus_ft` (fixed published length) | fixed tail-arm reference; **NOT** the `L_fuselage` regression; W_TO-free (see section 7) |
@@ -69,6 +69,9 @@ placeholder. An unset `S_wet` would otherwise propagate as `CD0 = Cfe*S_wet/S_re
 parasite drag and infinite L/D -- through any aero object this geometry is injected into. `S_wet` and
 `L_fuselage` are **derived**, not JSON inputs: they are `Dependent` getters on `W_TO`, recomputed live
 and read-only. They never appear in the JSON.
+
+`S_wet` is produced by `get_design_S_wet_categorical(obj, W_TO)`, the name `GeometryModelL1`
+declares abstract; that enforcer's concrete `get_S_wet` forwards there.
 
 ---
 
@@ -102,7 +105,7 @@ Aircraft.Swet_Fxn = @ (S) 4*S;
 
 Uncited AND self-inconsistent (`A03.m:60-61` feeds it wing area `S`, with a commented alternative to
 feed `MTOW` -- the author was unsure whether it is a function of area or weight). **REJECTED.** The
-framework uses the cited Roskam Table 3.5 jet-fighter TOGW regression in `GeomL1.lookup_swet`, so
+framework uses the cited Roskam Table 3.5 jet-fighter TOGW regression in `GeomL1.compute_s_wet_regression`, so
 `S_wet` is a `Dependent` on `W_TO`, NOT a wing-area multiple and NOT a stored JSON input. There is no
 `Swet = 4*S` anywhere in the F-35 classes.
 
@@ -175,11 +178,11 @@ There are now two fuselage-length quantities on this class, and they are **not**
 | Member | Value / formula | `W_TO`? | Role |
 |---|---|---|---|
 | `L_fus` | `= L_fus_ft = 50.5 ft` (fixed published length) | no | T-S-diagram tail-arm reference, read before `W_TO` is set |
-| `L_fuselage` | `0.93*W_TO^0.39` `[Raymer 6th ed. Table 6.3]` via `GeomL1.get_L_fus` | yes | the `GeometryModelL1` contract regression quantity, unchanged |
+| `L_fuselage` | `0.93*W_TO^0.39` `[Raymer 6th ed. Table 6.3]` via `GeomL1.compute_l_fus_regression` | yes | the `GeometryModelL1` contract regression quantity |
 
 `L_fus` is a fixed spec input because the T-S diagram needs a stable tail arm before any TOGW
 iterate exists. `L_fuselage` remains the `W_TO`-driven statistical regression the `GeometryModelL1`
-contract defines, and `get_L_fus(obj, W_TO)` is untouched. Keeping both means the fixed tail-arm
+contract defines, read through `get_L_fus_statistical(obj, W_TO)`. Keeping both means the fixed tail-arm
 reference and the statistical fuselage length never silently overwrite one another.
 `L_fus_ft = 50.5 ft` is `_TODO -- UNCITED` (a published stand-in from `aero481_data.md` Part I; see
 section 6).

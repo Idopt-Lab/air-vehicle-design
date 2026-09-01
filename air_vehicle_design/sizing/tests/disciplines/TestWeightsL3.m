@@ -193,19 +193,21 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %
 %   Eq. 15.16 FUEL SYSTEM = 7.45*V_t^0.47*(1+V_i/V_t)^-0.095*(1+V_p/V_t)
 %                            *N_t^0.066*N_en^0.052*((T*SFC)/1000)^0.249
-%     SFC = prop.get_TSFC(AircraftState(36000, 0.87)) -- a propulsion DI, so it
-%     is NOT asserted as a literal here (see testSFCMissionIsDIAtCruiseCondition);
-%     the hand value below uses its live magnitude 1.007116 1/hr purely to
-%     evaluate Eq. 15.16's own arithmetic.
+%     SFC = prop.get_TSFC(AircraftState(36000, 0.87), "mil") -- a propulsion DI,
+%     so it is NOT asserted as a literal here (see
+%     testSFCMissionIsDIAtCruiseCondition); the hand value below uses its live
+%     magnitude 1.087685 1/hr purely to evaluate Eq. 15.16's own arithmetic.
+%     That is the INSTALLED value: at L2 get_TSFC applies the 1.08 factor
+%     [Brandt Miss!C25], so 1.007116 uninstalled x 1.08 = 1.087685.
 %     940^0.47 = exp(0.47*6.84587988) = exp(3.21756354) = 24.965377
 %     (1+500/940) = 1.53191489 ; ^-0.095 = exp(-0.095*0.42651840)
 %       = exp(-0.04051925) = 0.9602907
 %     (1+0/940) = 1
 %     3^0.066 = exp(0.066*1.09861229) = exp(0.07250841) = 1.0752026
-%     (23770*1.007116)/1000 = 23.939147 ; ^0.249 = exp(0.249*3.17551510)
-%       = exp(0.79060326) = 2.2046362
+%     (23770*1.087685)/1000 = 25.854273 ; ^0.249 = exp(0.249*3.25247588)
+%       = exp(0.80986649) = 2.2476079
 %     7.45*24.965377 = 185.992058 ; *0.9602907 = 178.60645 ; *1.0752026
-%       = 192.03618 ; *2.2046362 = 423.366 lbf
+%       = 192.03618 ; *2.2476079 = 431.658 lbf
 %   Eq. 15.17 FLIGHT CONTROLS = 36.28*M^0.003*S_cs^0.489*N_s^0.484*N_c^0.127
 %     2.0^0.003 = exp(0.00207944) = 1.0020816
 %     190^0.489 = exp(0.489*5.24702407) = exp(2.56579477) = 13.011039
@@ -232,14 +234,14 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %     1.7^0.735 = exp(0.735*0.53062825) = exp(0.39001176) = 1.4769981
 %     201.6*1.4769981 = 297.7628 lbf
 %   Eq. 15.24 HANDLING = 3.2e-4*W_dg = 3.2e-4*31377 = 10.04064 lbf exactly
-%     -> SYSTEMS GROUP TOTAL = 423.366 + 925.283 + 228.16737 + 108.39429
-%          + 422.007 + 1945.418 + 217.6 + 297.7628 + 10.04064 = 4578.039 lbf
+%     -> SYSTEMS GROUP TOTAL = 431.658 + 925.283 + 228.16737 + 108.39429
+%          + 422.007 + 1945.418 + 217.6 + 297.7628 + 10.04064 = 4586.327 lbf
 %
 %   OEW(31377) = wing + HT + VT + fuselage + LG.main + LG.nose
 %                + engine group + systems group + strake
 %              = 2396.944 + 200.5104 + 313.0505 + 3674.18 + 989.843
-%                + 170.9044 + 3381.6847 + 4578.039 + 90.00
-%              = 15795.156 lbf
+%                + 170.9044 + 3381.6847 + 4586.327 + 90.00
+%              = 15803.444 lbf
 %
 %   Strake (ADDED 2026-07-29): k_strake * S_strake = 4.5 * 20 = 90.00 lbf
 %   exact [Brandt Main!D18 / Wt!H7]. See F16WeightsL3.m's S_strake/k_strake
@@ -499,7 +501,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             % Header derivations, Eqs. 15.16-15.24.
             w = TestWeightsL3.makeW3();
             W = w.weight_systems(31377);
-            tc.verifyEqual(W.fuel_sys,    423.366,   'RelTol', 1e-3, 'Eq. 15.16 fuel system.');
+            tc.verifyEqual(W.fuel_sys,    431.658,   'RelTol', 1e-3, 'Eq. 15.16 fuel system.');
             tc.verifyEqual(W.flight_ctrl, 925.283,   'RelTol', 1e-3, 'Eq. 15.17 flight controls.');
             tc.verifyEqual(W.instruments, 228.16737, 'RelTol', 1e-3, 'Eq. 15.18 instruments.');
             tc.verifyEqual(W.hydraulics,  108.39429, 'RelTol', 1e-3, 'Eq. 15.19 hydraulics.');
@@ -515,8 +517,8 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testSystemsGroupTotalHandComputed(tc)
             w = TestWeightsL3.makeW3();
             W = w.weight_systems(31377);
-            tc.verifyEqual(W.total, 4578.039, 'RelTol', 1e-3, ...
-                'Systems group total must be 4578.039 lbf (Eqs. 15.16-15.24).');
+            tc.verifyEqual(W.total, 4586.327, 'RelTol', 1e-3, ...
+                'Systems group total must be 4586.327 lbf (Eqs. 15.16-15.24).');
         end
 
         function testSystemsGroupContainsNoLandingGearTerm(tc)
@@ -549,7 +551,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   NOT as the literal 1.007116, which would freeze a propulsion output
         %   into a weights unit test.
             [w, ~, prop] = TestWeightsL3.makeW3();
-            expected = prop.get_TSFC(AircraftState(w.cruise_altitude_ft, w.cruise_mach));
+            expected = prop.get_TSFC(AircraftState(w.cruise_altitude_ft, w.cruise_mach), "mil");
             tc.verifyEqual(w.SFC_mission, expected, 'AbsTol', 1e-12, ...
                 'SFC_mission must be prop.get_TSFC at the requirements cruise state.');
             sfc_at_M087   = w.SFC_mission;
@@ -675,8 +677,8 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testOEWHandComputed(tc)
         %TESTOEWHANDCOMPUTED  Header total -- replaces the removed +-40 % gate.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.OEW(31377), 15795.156, 'RelTol', 1e-3, ...
-                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15795.156 lbf.');
+            tc.verifyEqual(w.OEW(31377), 15803.444, 'RelTol', 1e-3, ...
+                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15803.444 lbf.');
         end
 
         function testStrakeWeightHandComputed(tc)
@@ -724,7 +726,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %TESTOEWWORKSWITHWTOUNSET  OEW is a pure function of its argument.
             w = TestWeightsL3.makeW3();
             tc.verifyTrue(isnan(w.W_TO), 'obj.W_TO must be NaN until set.');
-            tc.verifyEqual(w.OEW(31377), 15795.156, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.OEW(31377), 15803.444, 'RelTol', 1e-3, ...
                 'OEW must be computable with obj.W_TO unset.');
         end
 

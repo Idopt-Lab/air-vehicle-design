@@ -189,7 +189,17 @@ classdef B777AeroL1 < AeroModelL1
         function v = get.AR(obj);    v = obj.geom.AR;    end
 
         % ---- Core contract (base) ----------------------------------------- %
-        function polar = drag_polar(obj, ~)
+        function val = get_CD0_rough(obj, ~)
+        %GET_CD0_ROUGH  Clean parasite drag, satisfying AeroModelL1's abstract
+        %   contract. CD0 = Cfe*(S_wet/S_ref) [metabook Eq. 4.8/4.58 = Raymer
+        %   6th ed. Eq. 12.23], via AeroL2.CD0_from_Cf. The state is unused:
+        %   the metabook clean polar has no Mach or altitude dependence.
+        %   S_wet is read live off the injected geometry, so CD0 TRACKS S.
+        %   At baseline S = 4605, S_wet = 28291: CD0 ~ 0.01597.
+            val = AeroL2.CD0_from_Cf(obj.Cfe, obj.S_wet, obj.S_ref);
+        end
+
+        function polar = drag_polar(obj, state)
         %DRAG_POLAR  CLEAN drag polar, tracking S live. state is unused at L1
         %   (no Mach/altitude dependence in the metabook clean polar), hence ~.
         %     CD0 = Cfe*(S_wet/S_ref)   [metabook Eq. 4.8/4.58, via
@@ -197,7 +207,7 @@ classdef B777AeroL1 < AeroModelL1
         %     K1  = 1/(pi*AR*e_clean)   [metabook Eq. 2.10]
         %     K2  = 0                   (uncambered-basis metabook polar)
         %   At baseline S=4605, AR=9.8: CD0 ~ 0.01597, K1 ~ 0.03821.
-            CD0 = AeroL2.CD0_from_Cf(obj.Cfe, obj.S_wet, obj.S_ref);
+            CD0 = obj.get_CD0_rough(state);   % one home for the equation
             K1  = 1 / (pi * obj.AR * obj.e_clean);
             polar = struct('CD0', CD0, 'K1', K1, 'K2', 0);
         end

@@ -15,12 +15,7 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
 
     % ── Fuselage / whole aircraft ───────────────────────────────────────── %
     properties (Abstract)
-        L_fus             % Fuselage length (ft)               [INPUT]  47.5, physical
-        L_fuselage        % Mirrors L_fus (GeometryModelL2 contract parity) [DERIVED]
-        W_max_fuselage    % Maximum fuselage width (ft)        [INPUT]
-        H_max_fuselage    % Maximum fuselage DEPTH (ft)        [INPUT]  weights' "D_fus"
-        frames_normalized % (N,3) NORMALIZED frame table       [INPUT]  cols [x/L, w/W_max, h/H_max]
-        D_fus             % Equivalent diameter (W+H)/2 (ft)   [DERIVED] Roskam Eq. 12.3 term only
+        frames_normalized % (N,3) NORMALIZED frame table       [INPUT]  cols [x/Length_of_aircraft, w/Width_max_fuselage, h/Height_max_fuselage]
         Amax              % Max cross-sectional area (ft²)     [DERIVED] AREA-RULED buildup; Raymer Eq. 12.44
         L_aircraft        % Overall aircraft length (ft)       [INPUT]  Raymer Eq. 12.44 only; NOT L_fus
     end
@@ -45,53 +40,6 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
         S_wet_wing     % Wing wetted area (ft²)                [DERIVED] Roskam Eq. 12.1
     end
 
-    % ── Horizontal tail — FULL planform from the S_ht + B_h pair ────────── %
-    properties (Abstract)
-        S_ht              % FULL reference planform area (ft²)  [INPUT]  108; same meaning as L2
-        B_h               % HT full span (ft)                   [INPUT]  18.5, PRIMARY (Decision 1)
-        lambda_ht         % FULL-planform taper ratio           [INPUT]  0.2275
-        LE_sweep_ht       % HT LE sweep (deg)                   [INPUT]  40
-        tc_r_ht           % HT root t/c                         [INPUT]  0.060 [T.O. Sec. I]
-        tc_t_ht           % HT tip  t/c                         [INPUT]  0.035 [T.O. Sec. I]
-        F_w               % Fuselage width at HT (ft)           [INPUT]  weights' "F_w"
-        AR_exposed_ht     % HT EXPOSED aspect ratio             [INPUT]  2.114; weights' "AR_ht"
-        lambda_exposed_ht % HT EXPOSED taper ratio              [INPUT]  0.390; weights' "lambda_ht"
-        x_le_ht           % HT root LE x-station (ft)           [INPUT]  36.0 [Brandt Main!C23]
-        AR_ht             % FULL aspect ratio = B_h²/S_ht       [DERIVED] 3.1690 (Decision 1)
-        b_ht              % HT span (ft), mirrors B_h           [DERIVED]
-        c_root_ht         % HT root chord (ft)                  [DERIVED] Raymer Eq. 7.6
-        c_tip_ht          % HT tip chord (ft)                   [DERIVED] Raymer Eq. 7.7
-        QC_sweep_ht       % HT Λ_c/4 (deg)                      [DERIVED] convert_sweep(x=0.25)
-        TE_sweep_ht       % HT Λ_TE (deg)                       [DERIVED] convert_sweep(x=1.0)
-        tc_ht             % HT uniform t/c = (tc_r+tc_t)/2      [DERIVED] 0.0475
-        S_exposed_ht      % Exposed HT planform area (ft²)      [DERIVED] 51.1486; weights' "S_ht"
-        S_wet_ht          % HT wetted area (ft²)                [DERIVED] Roskam Eq. 12.1
-    end
-
-    % ── Vertical tail — FULL planform, single panel ─────────────────────── %
-    properties (Abstract)
-        S_vt              % FULL reference planform area (ft²)  [INPUT]  60; same meaning as L2
-        AR_vt             % FULL aspect ratio (single panel)    [INPUT]  1.6
-        lambda_vt         % FULL-planform taper ratio           [INPUT]  0.5
-        LE_sweep_vt       % VT LE sweep (deg)                   [INPUT]  47.5, physical; weights' "Lambda_LE_vt"
-        tc_r_vt           % VT root t/c                         [INPUT]  0.053 [T.O. Sec. I]
-        tc_t_vt           % VT tip  t/c                         [INPUT]  0.030 [T.O. Sec. I]
-        S_r               % VT rudder area (ft²)                [INPUT]  weights' "S_r"
-        H_t               % HT height above fuselage CL (ft)    [INPUT]  weights' "H_t"
-        H_v               % VT height / nonzero denominator (ft)[INPUT]  weights' "H_v"
-        AR_exposed_vt     % VT EXPOSED aspect ratio             [INPUT]  1.294; weights' "AR_vt"
-        lambda_exposed_vt % VT EXPOSED taper ratio              [INPUT]  0.437; weights' "lambda_vt"
-        x_le_vt           % VT root LE x-station (ft)           [INPUT]  36.0 [Brandt Main!H23]
-        b_vt              % VT span (ft), full single panel     [DERIVED] sqrt(S_vt*AR_vt), NOT halved
-        c_root_vt         % VT root chord (ft)                  [DERIVED] Raymer Eq. 7.6
-        c_tip_vt          % VT tip chord (ft)                   [DERIVED] Raymer Eq. 7.7
-        QC_sweep_vt       % VT Λ_c/4 (deg)                      [DERIVED] convert_sweep_PANEL(x=0.25)
-        TE_sweep_vt       % VT Λ_TE (deg)                       [DERIVED] convert_sweep_PANEL(x=1.0)
-        tc_vt             % VT uniform t/c = (tc_r+tc_t)/2      [DERIVED] 0.0415
-        S_exposed_vt      % Exposed VT planform area (ft²)      [DERIVED] 40.8897; weights' "S_vt"
-        S_wet_vt          % VT wetted area (ft²)                [DERIVED] Roskam Eq. 12.1
-    end
-
     % ── Inlet + engine duct ─────────────────────────────────────────────── %
     % T_AB_SLS_lb and the injected propulsion object are NOT here (engine, not
     % airframe, data). D_inlet/D_exit/L_duct are: L3 aero reads them as
@@ -113,47 +61,14 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
     % Formulas + citations: GeomL3.compute_c_root_exposed and the class header.
     properties (Abstract)
         c_exp_root_wing % Wing exposed root chord (ft)   [DERIVED] 13.3564 [Brandt Geom!F7]
-        c_exp_root_ht   % HT exposed root chord (ft)     [DERIVED] 6.7315  [cf. Geom!F8 = 6.8391]
-        c_exp_root_vt   % VT exposed root chord (ft)     [DERIVED] 7.1233  [Brandt Geom!F10]
         G_hs_exp_wing   % Wing exposed half-span (ft)    [DERIVED] 11.5    [Brandt Geom!G7]
-        G_hs_exp_ht     % HT exposed half-span (ft)      [DERIVED] 5.75    [cf. Geom!G8 = 5.5]
-        G_hs_exp_vt     % VT exposed span (ft), 1 panel  [DERIVED] 7.2980  [Brandt Geom!G10]
         Xexp_wing       % Wing exposed-root LE x (ft)    [DERIVED] 20.7226 [Brandt Geom!B7]
-        Xexp_ht         % HT exposed-root LE x (ft)      [DERIVED] 38.9368 [Brandt Geom!B8]
-        Xexp_vt         % VT exposed-root LE x (ft)      [DERIVED] 38.7283 [cf. Geom!B10 = 38.0978]
     end
 
     % ── Configuration ──────────────────────────────────────────────────── %
     properties (Abstract)
-        L_t            % Tail arm, wing ¼-MAC → HT ¼-MAC (ft)  [INPUT]  weights' "L_t"
-        S_cs           % Total control-surface area (ft²)      [INPUT]  weights' "S_cs"
+        S_cs           % Total control-effectors area (ft²)      [INPUT]  weights' "S_cs"
     end
-
-    % Note (8/19/2026)(Casey): Commented out because of the concrete method function, below, which supercedes the name of the base enforcer.
-    % Sublcasses of GeometryModelL3 should now be required to have a method function called "get_design_S_wet_components." Remember to include 
-    % a documentation comment that explicitly states expectations regarding its usage.
-    % methods (Abstract)
-    %     %GET_S_WET_WING  Wing wetted area (ft²). Roskam Vol. II Eq. 12.1,
-    %     %   variable root/tip t/c. Brandt's uniform-t/c Geom!B13 form is a
-    %     %   comparison-report alternate only.
-    %     val = get_S_wet_wing(obj)
-
-    %     %GET_S_WET_HT  Horizontal-tail wetted area (ft²). Roskam Eq. 12.1.
-    %     val = get_S_wet_HT(obj)
-
-    %     %GET_S_WET_VT  Vertical-tail wetted area (ft²). Roskam Eq. 12.1.
-    %     val = get_S_wet_VT(obj)
-
-    %     %GET_S_WET_FUSELAGE  Fuselage wetted area (ft²). Roskam Eq. 12.3.
-    %     val = get_S_wet_fuselage(obj)
-
-    %     %GET_S_WET_DUCT  Inlet + engine-duct wetted area (ft²), frustum lateral
-    %     %   area [Raymer 6th ed. Sec. 7.3]. L3 aero reads it as S_wet_comp(5).
-    %     val = get_S_wet_duct(obj)
-
-    %     %GET_S_EXPOSED_WING  Wing exposed area (ft²) (passthrough).
-    %     val = get_S_exposed_wing(obj)
-    % end
 
         methods
         % See if you can merge both the fuselage and exposed wing wetted functions.
@@ -164,9 +79,9 @@ classdef (Abstract) GeometryModelL3 < GeometryBase
 
         % TODO (8/19/2026)(Casey): There should be a method function for the control surfaces.
         % (Placeholder) Basically, size the mechanisms that enable control authority for your design.
-        % Wasn't "control sizing" a different discipline?
-        function val = get_control_surfaces(obj)
-            val = obj.get_design_control_mechanisms();
-        end
+        % This remains inactive until a suitable replacement is found.
+        % function val = get_control_surfaces(obj)
+        %     val = obj.get_design_control_mechanisms();
+        % end
     end
 end

@@ -31,20 +31,21 @@ feed `F16GeomL1` / `F16AeroL1`.
 
 | Property | Value | Note |
 |---|---|---|
-| `T_SL_wet` | 23770 lbf | ≡ `T_SL`. Kept because call sites read the wet/AB name explicitly. It was a stored input duplicating `T_SL` in both the class and the JSON — two independently-settable copies of one quantity, so an optimizer changing `T_SL` left `T_SL_wet` stale. They can no longer diverge |
-
-There is **no stored `TSFC` property**. It briefly existed as a `TSFC = 0` placeholder satisfying a
-`PropulsionBase` abstract property; that declaration was removed because TSFC is state-dependent.
-Call `get_TSFC(obj, state)`.
+| `T_SL` | 23770 lbf | ≡ `T_SL_wet`. Kept because call sites read the wet/AB name explicitly. It was a stored input duplicating `T_SL` in both the class and the JSON — two independently-settable copies of one quantity, so an optimizer changing `T_SL` left `T_SL_wet` stale. They can no longer diverge |
 
 ---
 
 ## 4. Methods
 
-| Method | Delegates to | Formula | Source |
-|---|---|---|---|
-| `thrust_lapse(state)` / `get_thrust_lapse` | `PropL1.get_thrust_lapse` → `sigma_lapse(ρ, m)` | `α = σ^m`, `σ = ρ/ρ_SL`, `m = 0.6` for a turbofan | Martins AE481 metabook Eq. 10.9 (Eq. 10.7 for the exponent by type) |
-| `get_TSFC(state)` / `lookup_TSFC` | `PropL1.get_TSFC` | M < 0.4 → 0.70 (loiter); M ≥ 0.4 → 0.80 (cruise) | Raymer 6th ed. Table 3.3, low-bypass turbofan |
+| Method | Arguments | Outputs |
+|---|---|---|
+| `F16PropL1` (constructor) | input json path | F16 Propulsion object |
+| `get.T_SL_wet` (getter) | design object | T_SL (static sea-level thrust) |
+| `lookup_TSFC` | design object, aircraft state | thrust-specific fuel consumption [1/hr] | 
+| `get_thrust_lapse_categorical` | design object, aircraft state, thrust rating (AB/no-AB) | alpha |
+
+`rating` is validated against `["mil","AB"]`, but L1 has no mil/AB split, so both return the same
+`σ^m`.
 
 `ρ_SL` = 0.002377 slug/ft³ [Mattingly App. B].
 
@@ -52,7 +53,7 @@ Call `get_TSFC(obj, state)`.
 
 | Quantity | Value |
 |---|---|
-| `thrust_lapse(36 kft, M 0.87)` | 0.48374118 |
+| `get_thrust_lapse_categorical(36 kft, M 0.87, "AB")` | 0.48374118 |
 | `get_TSFC(36 kft, M 0.87)` | 0.80 1/hr |
 
 ---

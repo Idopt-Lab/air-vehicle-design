@@ -41,8 +41,8 @@ classdef FixedConfigPropStub < PropulsionBase
             obj.TSFC      = TSFC;
         end
 
-        function a = thrust_lapse(obj, ~, ~)
-        %THRUST_LAPSE  Constant lapse, state- and rating-independent (accepts
+        function a = get_thrust_lapse(obj, ~, ~)
+        %GET_THRUST_LAPSE  Constant lapse, state- and rating-independent (accepts
         %   any rating and returns the constructor-supplied alpha).
             a = obj.alpha;
         end

@@ -1,9 +1,19 @@
 # F16GeomL3: input-to-output data flow (second pass)
 
 This chart shows the data path for `F16GeomL3`, the Level 3 (L3) geometry class,
-**as the code stands after the toolbox trim of 2026-08-17 to 2026-08-19**. The
-first-pass chart is kept unchanged at
+**as the code stands on 2026-08-25**. The first-pass chart is kept unchanged at
 `Claude-made/First_Pass/Geom/F16AGeom3_mermaid.md`.
+
+**Verified complete.** Every function in `F16GeomL3.m` (59, including the
+constructor) has a node, and every static in `GeomL3.m` (11) has one. Values live:
+
+    S_wet          = 1472.0227642029 ft^2   Amax      = 24.7036516658 ft^2
+      wing         =  396.3766598778          D_inlet   =  3.5370222385 ft
+      HT           =  104.0348823470          L_engine  = 16.4876155512 ft
+      VT           =   83.1398277675          AR_ht     =  3.1689814815 (derived)
+      strake       =   40.4000000000
+      fuselage     =  692.5050310889
+      duct         =  155.5663631217
 
 L3 is the higher-fidelity PHYSICAL / T.O.-geometry tier, consumed by L3 geometry,
 aerodynamics and weights. Where a physical or T.O. 1F-16A-1 value differs from
@@ -18,6 +28,25 @@ it. Wheel or pinch zooms, drag pans, and `f` fits.
 
 The viewer reads the first ```` ```mermaid ```` block straight out of this file, so
 there is no second copy of the diagram to keep in step.
+
+## What changed since the last version of this chart, 2026-08-25
+
+| Was | Now |
+| --- | --- |
+| `GeometryModelL3` declared about 70 abstract properties across five blocks, including the whole HT and VT sets and most of the fuselage set | **Slimmed to 30, in five blocks**: the frame table plus `Amax` and `L_aircraft`; the 16-member wing set; the 7-member duct set; the 3 wing area-rule intermediates; and `S_cs`. Every HT and VT member is gone, and so are `L_fus`, `L_fuselage`, `W_max_fuselage`, `H_max_fuselage`, `D_fus`, `L_t`, and the HT/VT halves of the area-rule set. They stay CONCRETE on `F16GeomL3` |
+| `get_control_surfaces` on the enforcer called `get_design_control_mechanisms`, which no concrete class defined, so any call errored | **Removed.** The enforcer now holds one concrete method, `get_S_wet`. The broken bridge is gone, so the chart's open-defect note is closed |
+| `GL3` was `compute_surface_cs_area` | Renamed `compute_lifting_surface_cs_area`, closing Casey's `% TODO (8/14/2026)`, which asked for "lifting" in the name. The rename was lost once to a stash and redone |
+| `GL3`'s label read "Brandt area-distribution model, UNCITED" | It has a source, just not a textbook one: Brandt `Geom!Y/AA/AC 26:45`. Only the `(1 - cos(2*pi*xi))` shaping factor lacks a textbook substitute |
+| `GL4` `compute_nacelle_cs_area` carried no citation | The circle-area identity, `n*pi*D^2/4`. Same standard-identity status as `compute_Amax_elliptical` |
+| `GL5` `compute_Amax_area_ruled` was labeled only "Raymer Eq. 12.44 input" | The flow-through DEDUCTION is cited: Nicolai and Carichner p. 219 state that cross-sectional area does not include engine airflow area, and Fig. 8.16 labels both stacks "less airflow area". Only the `/5` magnitude stays Brandt's |
+| `GL6` `compute_c_root_exposed` had no citation, and no doc header in the source | **Raymer 6th ed. Eqs. 14.9-14.10, p. 502**, the combined trapezoidal-chord form `c(y) = c_root*(1 - (1-lambda)*2y/b)`. It returns a chord LENGTH, not an area |
+| "21 live `GeomL2.` call sites remain in `F16GeomL3`" | **14.** The old count included seven trailing comments on property declarations, which are not calls |
+| Four stacked `linkStyle` blocks, each overriding the last | Collapsed to one block. Only the last was ever applied |
+
+**Node counts are unchanged**, and that is worth saying plainly: 59 functions on `F16GeomL3` and 11
+statics on `GeomL3`, exactly as before. The enforcer slimming moved obligations, not code. Every
+property it stopped demanding is still a concrete `Dependent` getter on `F16GeomL3`, so no node
+appeared or disappeared and no number moved.
 
 ## What changed since the first pass
 
@@ -52,7 +81,9 @@ method functions that are actively used, so drawing one into an unused static wo
 assert a flow that does not happen. Those nodes stand alone inside the toolbox box,
 and the fact is written in the label.
 
-**The Tier-2 enforcer is NOT drawn.** `get.S_wet` is shown calling
+**The Tier-2 enforcer is NOT drawn**, and after the 2026-08-25 slimming it holds
+very little: 30 abstract properties in five blocks, no abstract methods, and one
+concrete method. `get.S_wet` is shown calling
 `get_design_S_wet_components` directly. The real path takes one hop through
 `GeometryModelL3.get_S_wet(obj)`, a concrete bridge that forwards to it. The
 bridge holds no equation and adds no data, so it is recorded here rather than
@@ -176,10 +207,10 @@ flowchart LR
     subgraph TG3["GeomL3 toolbox (static methods)"]
         GL1["denormalize_frames(frames_normalized, L_fus, W_max, H_max)<br/>out: x, w, h<br/>unit scaling, needs no citation"]
         GL2["compute_frame_cs_area(w, h)<br/>out: A_fuse<br/>Brandt 6-point cosine section"]
-        GL3["compute_surface_cs_area(x, Xexp, c_exp_root, c_tip, ...)<br/>out: A_surface<br/>Brandt area-distribution model, UNCITED"]
-        GL4["compute_nacelle_cs_area(x, n_engines, D_engine, x_start, x_end)<br/>out: A_nacelle"]
-        GL5["compute_Amax_area_ruled(A_total_stations, n_engines, D_engine)<br/>out: Amax<br/>Raymer 6th ed. Eq. 12.44 input"]
-        GL6["compute_c_root_exposed(c_root, c_tip, span_root_to_tip, span_clipped)<br/>out: c_exp_root"]
+        GL3["compute_lifting_surface_cs_area(x, Xexp, c_exp_root, c_tip, ...)<br/>out: A_surface<br/>Brandt Geom!Y/AA/AC 26:45, no textbook source"]
+        GL4["compute_nacelle_cs_area(x, n_engines, D_engine, x_start, x_end)<br/>out: A_nacelle<br/>circle-area identity, no equation number"]
+        GL5["compute_Amax_area_ruled(A_total_stations, n_engines, D_engine)<br/>out: Amax<br/>Nicolai p. 219 for the deduction, /5 is Brandt's"]
+        GL6["compute_c_root_exposed(c_root, c_tip, span_root_to_tip, span_clipped)<br/>out: c_exp_root, a LENGTH not an area<br/>Raymer 6th ed. Eqs. 14.9-14.10, p. 502"]
         GL7["compute_frame_perimeter(w, h, z_chine, z_center)<br/>out: P per station<br/>Brandt cosine section, UNCITED"]
         GL8["compute_s_wet_from_perimeter_curve(x, P)<br/>out: S_wet<br/>Raymer 6th ed. Fig. 7.37, p. 206"]
         DE1["compute_frame_cs_area_exact(w, h)<br/>no call from F16GeomL3"]
@@ -372,30 +403,6 @@ flowchart LR
 
     linkStyle 0,1,2,3 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
     linkStyle 58,75,76,77,78,79,80,81,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,84,135,136,137,138,139,140,141,142,143,144,145,148,149,150,151,152,153,154,155,156,157,158 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 146,147 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:4 3
-
-
-    linkStyle 0,1,2,3 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 58,75,91 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 76,77,78,79,80,81,82,83,85,86,87,88,89,90,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 4,6,8,10,11,12,16,20,22,24,25,27,32,34,36,38,39,40,41,44,46,47,49,51,55,57,62,65,135,136,137,138,139,140,141,142,143,144,145,150,153,156,157,158 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 5,7,9,13,14,15,17,18,19,21,23,26,28,29,30,31,33,35,37,42,43,45,48,50,52,53,54,56,59,60,61,63,64,66,67,68,69,70,71,72,73,74,84,148,149,151,152,154,155 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 146 stroke:#ffe100,color:#ffe100,stroke-width:2px
-    linkStyle 147 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
-
-
-    linkStyle 0,1,2,3 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 58,75,76,77,78,79,80,81,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 4,5,6,7,8,9,10,11,12,13,14,15,16,17,20,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,59,62,63,65,66,67,68,69,70,71,72,73,74,84,135,136,137,138,139,140,141,142,143,144,145,148,149,150,151,152,153,155,156,157,158 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 18,19,21,29,60,61,64,154 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 146 stroke:#ffe100,color:#ffe100,stroke-width:2px
-    linkStyle 147 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
-
-    class DE1,DE2,DE3 deadWork
-
-    linkStyle 0,1,2,3 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 58,75,76,77,78,79,80,81,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134 stroke:#33cc33,color:#33cc33,stroke-width:2px
     linkStyle 4,5,6,7,8,9,10,11,12,13,14,15,16,17,20,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,59,62,63,65,66,67,68,69,70,71,72,73,74,84,135,136,137,138,139,140,141,142,143,144,145,148,149,150,151,152,153,155,156,157,158 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
     linkStyle 18,19,21,29,60,61,64,154 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
     linkStyle 146 stroke:#ffe100,color:#ffe100,stroke-width:2px
@@ -470,15 +477,21 @@ which silently fed exposed values into full-planform equations.
 | `denormalize_frames` | UNCITED, and it needs no citation: it is unit scaling. The flag was withdrawn after checking the references. |
 | `compute_frame_cs_area` | Its `I_cos` = 0.63137515 is Brandt's 6-point trapezoid of an integral whose exact value is `2/pi` = 0.63661977, so it reads 0.82 % low. The cosine SECTION is Brandt's and is 19 % smaller than an ellipse, so the shape keeps its citation. |
 | `compute_frame_cs_area_exact` | Holds the exact `2/pi` form and has NO CONSUMER. Pick one of the two at the next `Amax` review. |
-| `compute_surface_cs_area` | Its `(1 - cos(2*pi*xi))` model has no textbook substitute. Raymer Fig. 7.38 expects MEASURED areas, not a formula. |
-| `compute_Amax_area_ruled` | The `/5` engine flow-through divisor is bare and uncited. The station extraction reproduces Brandt's `Amax` to six figures, which supports it but does not source it. |
+| `compute_lifting_surface_cs_area` | Its `(1 - cos(2*pi*xi))` model has no textbook substitute. Raymer Fig. 7.38 expects MEASURED areas, not a formula. The `y_span` half is plain planform geometry and needs no citation. Renamed from `compute_surface_cs_area`. |
+| `compute_Amax_area_ruled` | The `/5` engine flow-through divisor is bare and uncited. The station extraction reproduces Brandt's `Amax` to six figures, which supports it but does not source it. The DEDUCTION itself is now cited to Nicolai and Carichner p. 219; Nicolai Ch. 15 gives capture-area ratio `A_inf/A_c` as the way to set the magnitude. |
+| `compute_c_root_exposed` | CLOSED 2026-08-24. Cited to Raymer 6th ed. Eqs. 14.9-14.10, p. 502. Note the return is a chord LENGTH in ft, not an area; the companion doc said area for a while. |
+| `compute_nacelle_cs_area` | CLOSED 2026-08-24. The circle-area identity, so it needs no equation number. Recorded in the source instead of left as a flag. |
 | `compute_engine_length` | Brandt's `4.5*D`. SUPERSEDED by Raymer Eq. 10.11 and NO CONSUMER. Kept as the record, per the flag-do-not-delete rule. |
 | `compute_frame_perimeter` | The cosine section model is Brandt's and uncited. Measured behaviour worth knowing: setting `z_chine` = 0 to model a round section gives 17.5275 against a true circle's 18.8496, which is 7.01 % low, converging to 17.5643. So it is not a general round-section perimeter. |
 | `compute_s_wet_from_control_stations` | The older whole-table form. Report and test only; `F16GeomL3` uses the two-static path instead. |
 
 ## Open items carried out of the geometry stage
 
-- **21 live `GeomL2.` call sites remain in `F16GeomL3`.** Casey deferred this on
+- **14 live `GeomL2.` call sites remain in `F16GeomL3`**: 8 into
+  `compute_S_wet_planform_roskam`, 3 into `compute_S_exposed_horizontal`, and one
+  each into `compute_S_exposed_vertical`, `compute_s_wet_duct` and
+  `F16GeomL2.compute_nacelle_diameter`. An earlier count of 21 included seven
+  trailing comments on property declarations. Casey deferred this on
   2026-08-19: *"Item C will be worked on later, since I have to verify other
   parts of the disciplines and then link them correctly."* The options on the
   table are to promote the shared identities to `GeometryBase`, to give `GeomL3`
@@ -491,10 +504,11 @@ which silently fed exposed values into full-planform equations.
   every one, because Raymer Eq. 12.24 needs per-component terms. What has no
   consumer at L3 is the TOTAL. Casey's own note in the source says to update the
   sizing loop when all the disciplines are straightened out.
-- **`GeometryModelL3.get_control_surfaces`** calls
-  `get_design_control_mechanisms`, which no concrete class defines, so calling it
-  errors. `GeometryModelL2` has the identical pair. Not fixed: the enforcers were
-  ruled off-limits on 2026-08-18.
+- **`get_design_S_wet_components` is not declared abstract**, but the enforcer's
+  concrete `get_S_wet` calls it. So a concrete L3 geometry that omits that method
+  still constructs, and fails later at the call. `GeometryModelL2` has the same
+  gap. `GeometryModelL3` declares NO abstract methods at all: the whole block is
+  commented out, and `get_S_wet` is its one concrete member.
 
 ## Source files
 

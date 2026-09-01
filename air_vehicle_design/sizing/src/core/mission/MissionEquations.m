@@ -79,7 +79,8 @@ classdef MissionEquations
 
         function tf = has_ab_model(prop)
         %HAS_AB_MODEL  True if the prop exposes any afterburner TSFC method.
-            tf = ismethod(prop, 'compute_TSFC_AB_installed') ...
+            tf = ismethod(prop, 'get_TSFC_installed') ...
+                || ismethod(prop, 'compute_TSFC_AB_installed') ...
                 || ismethod(prop, 'compute_TSFC_AB');
         end
 
@@ -156,19 +157,19 @@ classdef MissionEquations
         %   at a flight state and AB setting, blended by percent_ab:
         %     alpha = alpha_mil + (percent_ab/100) * (alpha_AB - alpha_mil)
         %   [Brandt Miss-tab run(alt,M,pct/100).alpha_AB_ref blend]. alpha_mil is
-        %   prop.thrust_lapse(state,"mil") (mil power on the AB scale), alpha_AB
-        %   is prop.thrust_lapse(state,"AB") (full AB). T_available = T_SL * alpha
+        %   prop.get_thrust_lapse(state,"mil") (mil power on the AB scale), alpha_AB
+        %   is prop.get_thrust_lapse(state,"AB") (full AB). T_available = T_SL * alpha
         %   (no *n_engines -- T_SL is already the total AB thrust and alpha is
         %   total-normalized). Only the afterburning ClimbSegment/CombatSegment
         %   (fighter L2/L3 missions) call this, so the "mil"/"AB" ratings are the
         %   right vocabulary; transports fly the L1 fixed-fraction mission, which
         %   never reaches this path.
-            a_mil = prop.thrust_lapse(state, "mil");
+            a_mil = prop.get_thrust_lapse(state, "mil");
             if percent_ab <= 0
                 a = a_mil;
                 return
             end
-            a_ab = prop.thrust_lapse(state, "AB");
+            a_ab = prop.get_thrust_lapse(state, "AB");
             a = a_mil + (percent_ab / 100) * (a_ab - a_mil);
         end
 
@@ -177,16 +178,20 @@ classdef MissionEquations
     methods (Static, Access = private)
 
         function cT = dry_tsfc(prop, state)
-            if ismethod(prop, 'compute_TSFC_installed')
-                cT = prop.compute_TSFC_installed(state);
+            if ismethod(prop, 'get_TSFC_installed')
+                cT = prop.get_TSFC_installed(state, "mil");
+            elseif ismethod(prop, 'compute_TSFC_installed')
+                cT = prop.compute_TSFC_installed(state);   % BrandtPropAdapter
             else
                 cT = prop.get_TSFC(state);
             end
         end
 
         function cT = ab_tsfc(prop, state, cT_dry_fallback)
-            if ismethod(prop, 'compute_TSFC_AB_installed')
-                cT = prop.compute_TSFC_AB_installed(state);
+            if ismethod(prop, 'get_TSFC_installed')
+                cT = prop.get_TSFC_installed(state, "AB");
+            elseif ismethod(prop, 'compute_TSFC_AB_installed')
+                cT = prop.compute_TSFC_AB_installed(state);   % BrandtPropAdapter
             elseif ismethod(prop, 'compute_TSFC_AB')
                 cT = prop.compute_TSFC_AB(state);
             else

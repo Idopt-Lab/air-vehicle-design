@@ -28,16 +28,10 @@ classdef (Abstract) GeometryModelL2 < GeometryBase
 
     methods (Abstract) 
         % (commented out because not all designs have this)
-        %GET_S_WET_FUSELAGE  Fuselage wetted area [ft^2]. Read by the L2
-        %   weights fuselage term.
-        % val = get_S_wet_fuselage(obj)
 
         %GET_S_EXPOSED_WING  Wing exposed area [ft^2] (passthrough).
         val = get_S_exposed_wing(obj)
 
-        % TODO (8/19/2026)(Casey): There should be a method function for the control surfaces.
-        % (Placeholder) Basically, size the mechanisms that enable control authority for your design.
-        % Wasn't "control sizing" a different discipline?
         % Note (8/20/2026)(Casey): I'm pretty sure control effector sizing was moved to L1 and L2.
         % val = get_control_effectors_size(obj)
     end

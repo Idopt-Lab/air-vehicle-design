@@ -21,69 +21,6 @@ classdef PropL2
 
     methods (Static)
 
-        % ================================================================== %
-        % HIGH-LEVEL: take the student object, return the result.
-        % ================================================================== %
-
-        % TODO (8/14/2026): Again, appears to be an artefact from when the toolboxes were subclasses
-        % of enforcers. This is no longer necessary, and should be moved to the F16 example class if
-        % if hasn't already.
-        function alpha = get_thrust_lapse(obj, state)
-        %GET_THRUST_LAPSE  AB/max lapse [Mattingly Eq. 2.54a].
-        %   Used with T_SL (AB thrust) for constraint analysis and sizing.
-            alpha = PropL2.thrust_lapse_AB(state.delta_0, state.theta_0, obj.TR);
-        end
-
-        % TODO (8/14/2026): Same as with "get_thrust_lapse."
-        function alpha = get_thrust_lapse_mil(obj, state)
-        %GET_THRUST_LAPSE_MIL  Mil-power lapse [Mattingly Eq. 2.54b].
-        %   Used with T_SL_mil for mil-power constraints.
-            alpha = PropL2.thrust_lapse_mil(state.delta_0, state.theta_0, obj.TR);
-        end
-
-        % TODO (8/14/2026): Same as with "get_thrust_lapse" and "get_thrust_lapse_mil."
-        function alpha = get_thrust_lapse_AB(obj, state)
-        %GET_THRUST_LAPSE_AB  Afterburner lapse [Mattingly Eq. 2.54a].
-            alpha = PropL2.thrust_lapse_AB(state.delta_0, state.theta_0, obj.TR);
-        end
-
-        function alpha = get_thrust_lapse_mil_on_AB_scale(obj, state)
-            alpha_mil = PropL2.thrust_lapse_mil(state.delta_0, state.theta_0, obj.TR);
-            alpha = alpha_mil * (obj.T_SL_mil / obj.T_SL_wet);
-            if ~isfinite(alpha) || alpha < 0 || alpha > 1.5
-                warning('PropL2:anomalousThrustLapse', ...
-                    ['get_thrust_lapse_mil_on_AB_scale returned %.4f, outside the ' ...
-                     'physically plausible (0, 1.5] band for a mil-power lapse ' ...
-                     'renormalized onto the AB thrust scale -- check the flight ' ...
-                     'condition and T_SL_mil/T_SL_wet inputs.'], alpha);
-            end
-        end
-
-        % TODO (8/14/2026): Artefact of enforcement.
-        function c_t = get_TSFC(obj, state)
-        %GET_TSFC  Uninstalled mil-power TSFC (default for Breguet range/endurance).
-        %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
-        %   [Mattingly Eq. 3.12 + 3.55a]
-            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
-            c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
-        end
-
-        % TODO (8/14/2026): Artefact of enforcment.
-        function c_t = get_TSFC_mil(obj, state)
-        %GET_TSFC_MIL  Uninstalled mil-power TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55a]
-        %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
-            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
-            c_t = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
-        end
-
-        % TODO (8/14/2026): Artefact of enforcement.
-        function c_t = get_TSFC_AB(obj, state)
-        %GET_TSFC_AB  Uninstalled afterburner TSFC in 1/hr.  [Mattingly Eq. 3.12 + 3.55b]
-        %   Coefficients selected by obj.engine_type via lookup_TSFC_coeffs.
-            c = PropL2.lookup_TSFC_coeffs(obj.engine_type);
-            c_t = PropL2.TSFC_AB(c.C1_AB, c.C2_AB, state.mach, state.theta);
-        end
-
         % ------------------------------------------------------------------ %
         % Installed TSFC = uninstalled TSFC × installation factor.
         %   [installation factor Brandt Miss!C25; installed = uninstalled × 1.08]
@@ -93,20 +30,10 @@ classdef PropL2
         %   VnV/BrandtF16A/todo.md 2026-07-24 entry 4.
         % ------------------------------------------------------------------ %
 
-        % TODO (8/14/2026): Artefact of enforcement.
-        function c_t = get_TSFC_installed(obj, state)
-        %GET_TSFC_INSTALLED  Installed mil-power TSFC in 1/hr.
-        %   = uninstalled mil TSFC × obj.TSFC_install_factor.
-        %   [Mattingly Eq. 3.12 + 3.55a; install factor Brandt Miss!C25]
-            c_t = PropL2.get_TSFC_mil(obj, state) * obj.TSFC_install_factor;
-        end
-
-        % TODO (8/14/2026): Artefact of enforcement.
-        function c_t = get_TSFC_AB_installed(obj, state)
-        %GET_TSFC_AB_INSTALLED  Installed afterburner TSFC in 1/hr.
-        %   = uninstalled AB TSFC × obj.TSFC_install_factor.
-        %   [Mattingly Eq. 3.12 + 3.55b; install factor Brandt Miss!C25]
-            c_t = PropL2.get_TSFC_AB(obj, state) * obj.TSFC_install_factor;
+        % This uses Brandt's installation factor, TSFC * installation factor.
+        % Source: Brandt Miss!C25.
+        function c_t = compute_TSFC_installed(c_t, install_factor)
+            c_t = c_t * install_factor;
         end
 
         % ================================================================== %
@@ -115,7 +42,7 @@ classdef PropL2
 
         % --- Mattingly thrust lapse ----------------------------------------
 
-        function alpha = thrust_lapse_AB(delta_0, theta_0, TR)
+        function alpha = compute_thrust_lapse_AB(delta_0, theta_0, TR)
         %THRUST_LAPSE_AB  Low-BPR mixed turbofan AB lapse.  [Mattingly Eq. 2.54a]
         %   δ₀, θ₀ — total pressure/temperature ratios (from AircraftState).
         %   TR — throttle ratio.  Returns α_AB = T_AB(alt,M) / T_AB_SL.
@@ -126,7 +53,7 @@ classdef PropL2
             end
         end
 
-        function alpha = thrust_lapse_mil(delta_0, theta_0, TR)
+        function alpha = compute_thrust_lapse_mil(delta_0, theta_0, TR)
         %THRUST_LAPSE_MIL  Low-BPR mixed turbofan mil lapse.  [Mattingly Eq. 2.54b]
         %   Returns α_mil = T_mil(alt,M) / T_mil_SL.
             if theta_0 <= TR
@@ -134,6 +61,10 @@ classdef PropL2
             else
                 alpha = 0.6 * delta_0 * (1 - 3.8*(theta_0 - TR)/theta_0);
             end
+        end
+
+        function alpha = compute_normalized_thrust_lapse(alpha, T_current, T_SL_max)
+            alpha = alpha*T_current/T_SL_max;
         end
 
         % --- Mattingly TSFC -----------------------------------------------

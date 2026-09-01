@@ -121,7 +121,13 @@ classdef Aero481GeomL1 < GeometryModelL1
         % ================================================================== %
         % Computations that call the GeomL1 toolbox
         % ================================================================== %
-        function val = get_whole_aircraft_S_wet_statistical(obj, W_TO)
+        % Mod (08/26/2026) (Claude)
+        function val = get_design_S_wet_categorical(obj, W_TO)
+        %GET_DESIGN_S_WET_CATEGORICAL  Whole-aircraft wetted area [ft^2] from
+        %   TOGW [Roskam Vol. I Eq. 3.22 / Table 3.5, jet_fighter row]. This is
+        %   the name GeometryModelL1 declares abstract, and its concrete
+        %   get_S_wet forwards here. Was get_whole_aircraft_S_wet_statistical,
+        %   which matched no contract and had no callers.
             val = GeomL1.compute_s_wet_regression(obj.aircraft_category, W_TO);
         end
 

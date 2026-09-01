@@ -1,7 +1,8 @@
 # Aero481AeroL1
 
 F-35A Level-1 aerodynamics — the Aero 481 Design01 tier. `classdef Aero481AeroL1 < AeroModelL1`.
-`AeroModelL1` adds no abstract members beyond `AerodynamicsBase`'s `drag_polar` / `get_CLmax`.
+`AeroModelL1` declares `get_CD0_rough(obj, state)` abstract and supplies a concrete
+`get_CD0(obj, state)` that forwards to it.
 
 **Design provenance:** University of Michigan AEROSP 481 (Fall 2024) Design01 starter code
 (`docs/reference_extracts/aero481_data.md` Part II). Design provenance is not a primary source; every
@@ -101,7 +102,8 @@ verbatim from the JSON via the private `struct_to_dict` helper.
 
 | Method | Does | Source |
 |---|---|---|
-| `drag_polar(~)` | CLEAN MISSION polar `{CD0, K1, K2=0}`. `CD0 = Cfe·swet_over_sref = 0.0035·4 = 0.014` (CONSTANT); `e = AeroL2.oswald_eff(AR, Lambda_LE_deg)`; `K1 = AeroL2.K1_subsonic(e, AR) = 1/(π·AR·e)`; `K2 = 0`. `state` unused (no Mach/altitude dependence). **Read by the MISSION** — intentionally 0.014, NOT the config-table 0.0236 (disc A1b) | CD0 [A481 A03.m:60,65; metabook Eq. 4.8 = Raymer Eq. 12.23]; e [Raymer Eq. 12.48/12.49]; K1 [Raymer Eq. 12.50]; K2 Convention A [Mattingly AED 2nd ed. Eq. 2.9] |
+| `get_CD0_rough(~)` | clean MISSION parasite drag, `Cfe·swet_over_sref = 0.0035·4 = 0.014` (CONSTANT). Satisfies the `AeroModelL1` contract. `state` unused (no Mach/altitude dependence); `Swet/S = 4` is `S`-independent, so CD0 does NOT track `S` | [A481 A03.m:60,65; metabook Eq. 4.8 = Raymer Eq. 12.23] |
+| `drag_polar(state)` | CLEAN MISSION polar `{CD0, K1, K2=0}`. `CD0 = get_CD0_rough(state)`; `e = AeroL2.oswald_eff(AR, Lambda_LE_deg)`; `K1 = AeroL2.K1_subsonic(e, AR) = 1/(π·AR·e)`; `K2 = 0`. **Read by the MISSION**, intentionally 0.014, NOT the config-table 0.0236 (disc A1b) | e [Raymer Eq. 12.48/12.49]; K1 [Raymer Eq. 12.50]; K2 Convention A [Mattingly AED 2nd ed. Eq. 2.9] |
 | `get_CLmax(~)` | clean (en-route) max lift = `CLmax_config("clean")` = 1.8 | [A481 Design01.m:59 `CLmax.EN`] |
 | `get_config_polar(config)` | `struct(CD0, K1, K2, CLmax)` per config — overrides the `AerodynamicsBase` contract. `CD0 = CD0_config(config)`; `K1 =` live clean K1; `K2 = 0`; `CLmax = CLmax_config(config)`. All six configs share the same live clean K1 (Design01 does not vary induced drag by config). **Read by the CONSTRAINTS** — the `"clean"` row is 0.0236 (config table), intentionally != `drag_polar`'s 0.014 (disc A1b) | CD0/CLmax [A481 Design01.m:55-68]; K1 [Raymer Eq. 12.50] |
 | `get_CLmax_TO()` | takeoff-config max lift = `CLmax_config("takeoff_flaps_gear_down")` = 2.0 | [A481 `CLmax.TO`/`.TS`] |

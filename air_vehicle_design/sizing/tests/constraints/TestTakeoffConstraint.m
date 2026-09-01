@@ -104,7 +104,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
             CLmax_TO = aero.get_CLmax_TO();
             CD0_TO   = aero.drag_polar(state).CD0 + aero.get_Delta_CD0_TO();
-            alpha    = prop.thrust_lapse(state, "AB");
+            alpha    = prop.get_thrust_lapse(state, "AB");
             rho      = state.rho;
             g        = 32.174;
 
@@ -146,7 +146,7 @@ classdef TestTakeoffConstraint < matlab.unittest.TestCase
 
             % Drive the actual production code path (TakeoffConstraint.required_TW,
             % which internally calls aero.get_CLmax_TO()/(aero.drag_polar(state).CD0
-            % + aero.get_Delta_CD0_TO()) and prop.thrust_lapse(state)) via
+            % + aero.get_Delta_CD0_TO()) and prop.get_thrust_lapse(state)) via
             % fixed-value aero/prop stubs carrying Brandt's own already-
             % flapped numbers directly (FixedAeroStub's
             % get_CLmax_TO/get_Delta_CD0_TO just echo the constructor's

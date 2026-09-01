@@ -73,14 +73,14 @@ classdef TestPropL2 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % LOW-LEVEL: thrust_lapse_AB / thrust_lapse_mil  (Mattingly Eq. 2.54)
+        % LOW-LEVEL: compute_thrust_lapse_AB / _mil  (Mattingly Eq. 2.54)
         % Synthetic inputs + hand arithmetic — no atmosphere, no Brandt value.
         % ================================================================== %
 
         function testLapseABBelowTRReturnsDelta0(tc)
             % θ₀ ≤ TR branch: α_AB = δ₀ exactly. [Mattingly Eq. 2.54a]
             % Synthetic δ₀=0.5, θ₀=0.8, TR=1.0 → expected 0.5.
-            tc.verifyEqual(PropL2.thrust_lapse_AB(0.5, 0.8, 1.0), 0.5, ...
+            tc.verifyEqual(PropL2.compute_thrust_lapse_AB(0.5, 0.8, 1.0), 0.5, ...
                 'AbsTol', tc.TOL_EXACT, 'Below-TR AB lapse must equal δ₀.');
         end
 
@@ -88,14 +88,14 @@ classdef TestPropL2 < matlab.unittest.TestCase
             % θ₀ > TR branch, hand-evaluated with the published coeff 3.5:
             %   α_AB = 0.9·(1 − 3.5·(1.2−1.0)/1.2) = 0.9·0.4166667 = 0.375
             % [Mattingly Eq. 2.54a]. A wrong 3.5 or wrong branch is caught.
-            tc.verifyEqual(PropL2.thrust_lapse_AB(0.9, 1.2, 1.0), 0.375, ...
+            tc.verifyEqual(PropL2.compute_thrust_lapse_AB(0.9, 1.2, 1.0), 0.375, ...
                 'AbsTol', 1e-12, 'Above-TR AB lapse must equal δ₀(1−3.5(θ₀−TR)/θ₀).');
         end
 
         function testLapseMilBelowTRReturns06Delta0(tc)
             % θ₀ ≤ TR branch: α_mil = 0.6·δ₀. [Mattingly Eq. 2.54b]
             % Synthetic δ₀=0.5, θ₀=0.8, TR=1.0 → 0.6·0.5 = 0.30.
-            tc.verifyEqual(PropL2.thrust_lapse_mil(0.5, 0.8, 1.0), 0.30, ...
+            tc.verifyEqual(PropL2.compute_thrust_lapse_mil(0.5, 0.8, 1.0), 0.30, ...
                 'AbsTol', tc.TOL_EXACT, 'Below-TR mil lapse must equal 0.6·δ₀.');
         end
 
@@ -109,7 +109,7 @@ classdef TestPropL2 < matlab.unittest.TestCase
             TR_part12 = 1.07;   M = 1.5;
             theta_0 = 0.7940 * (1 + 0.2*M^2);
             delta_0 = 0.2975 * (1 + 0.2*M^2)^3.5;
-            received = PropL2.thrust_lapse_mil(delta_0, theta_0, TR_part12);
+            received = PropL2.compute_thrust_lapse_mil(delta_0, theta_0, TR_part12);
             tc.verifyEqual(received, 0.4792, 'AbsTol', 1e-3, ...
                 'Must match Mattingly Part-12 worked example 0.4792 ± 0.001.');
         end
@@ -119,7 +119,7 @@ classdef TestPropL2 < matlab.unittest.TestCase
             % M=0 (non-ISA): θ₀ = 1.0796, δ₀ = 0.9298 [Part-12], TR = 1.07.
             %   α_mil = 0.6·0.9298·(1 − 3.8·(1.0796−1.07)/1.0796) = 0.5390
             % Published result: 0.5390. AbsTol 1e-3.
-            received = PropL2.thrust_lapse_mil(0.9298, 1.0796, 1.07);
+            received = PropL2.compute_thrust_lapse_mil(0.9298, 1.0796, 1.07);
             tc.verifyEqual(received, 0.5390, 'AbsTol', 1e-3, ...
                 'Must match Mattingly Part-12 worked example 0.5390 ± 0.001.');
         end
@@ -196,42 +196,53 @@ classdef TestPropL2 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testGetTSFCAtSLS(tc)
-            % The PublicBase get_TSFC at ~SLS static (M~0, θ~1) must approach
-            % the Mattingly mil coefficient C1_mil = 0.90 1/hr [Eq. 3.55a]. The
-            % tiny M=0.01 adds C2·M = 0.003, so AbsTol 0.01 covers the ram term.
+            % get_TSFC at ~SLS static (M~0, θ~1) must approach the Mattingly mil
+            % coefficient C1_mil = 0.90 1/hr [Eq. 3.55a] times the 1.08 install
+            % factor [Brandt Miss!C25], because get_TSFC routes to the INSTALLED
+            % value. 0.90*1.08 = 0.972. The tiny M=0.01 adds C2·M*1.08 = 0.0032,
+            % so AbsTol 0.01 covers the ram term.
             g = F16PropL2(f16a_spec_path(2));
-            tc.verifyEqual(g.get_TSFC(AircraftState(0, 0.01)), 0.90, 'AbsTol', 0.01);
+            tc.verifyEqual(g.get_TSFC(AircraftState(0, 0.01), "mil"), 0.972, ...
+                'AbsTol', 0.01);
         end
 
-        function testGetTSFCDelegatesToComputeMil(tc)
-            % Interface consistency: get_TSFC (Breguet default) == compute_TSFC_mil.
+        function testGetTSFCDelegatesToInstalled(tc)
+            % Bridge guard: the PropulsionBase name get_TSFC reaches the L2 method
+            % get_TSFC_installed through PropulsionModelL2, so both must agree at
+            % either rating.
             g = F16PropL2(f16a_spec_path(2));
             state = AircraftState(0, 0.5);
-            tc.verifyEqual(g.get_TSFC(state), g.compute_TSFC_mil(state), ...
+            tc.verifyEqual(g.get_TSFC(state, "mil"), g.get_TSFC_installed(state, "mil"), ...
+                'AbsTol', tc.TOL_EXACT);
+            tc.verifyEqual(g.get_TSFC(state, "AB"), g.get_TSFC_installed(state, "AB"), ...
                 'AbsTol', tc.TOL_EXACT);
         end
 
-        function testThrustLapseDelegatesToComputeAB(tc)
-            % Interface consistency: thrust_lapse (PropulsionBase API, AB basis)
-            % == compute_thrust_lapse_AB.
+        function testThrustLapseDelegatesToParametric(tc)
+            % Bridge guard: the PropulsionBase name get_thrust_lapse reaches the L2
+            % method get_thrust_lapse_parametric through PropulsionModelL2, so both
+            % must agree at either rating.
             g = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.7);
-            tc.verifyEqual(g.thrust_lapse(state, "AB"), g.compute_thrust_lapse_AB(state), ...
-                'AbsTol', tc.TOL_EXACT);
+            tc.verifyEqual(g.get_thrust_lapse(state, "AB"), ...
+                g.get_thrust_lapse_parametric(state, "AB"), 'AbsTol', tc.TOL_EXACT);
+            tc.verifyEqual(g.get_thrust_lapse(state, "mil"), ...
+                g.get_thrust_lapse_parametric(state, "mil"), 'AbsTol', tc.TOL_EXACT);
         end
 
         function testThrustLapseDecreasesWithAltitude(tc)
             % Qualitative: AB lapse falls with altitude at fixed Mach.
             g = F16PropL2(f16a_spec_path(2));
-            tc.verifyGreaterThan(g.thrust_lapse(AircraftState(0, 0.87), "AB"), ...
-                g.thrust_lapse(AircraftState(36000, 0.87), "AB"));
+            tc.verifyGreaterThan(g.get_thrust_lapse(AircraftState(0, 0.87), "AB"), ...
+                g.get_thrust_lapse(AircraftState(36000, 0.87), "AB"));
         end
 
         function testStudentClassTSFCABExceedsMil(tc)
             % Qualitative, through the student-class API.
             g = F16PropL2(f16a_spec_path(2));
             state = AircraftState(36000, 0.87);
-            tc.verifyGreaterThan(g.compute_TSFC_AB(state), g.compute_TSFC_mil(state));
+            tc.verifyGreaterThan(g.get_TSFC_installed(state, "AB"), ...
+                g.get_TSFC_installed(state, "mil"));
         end
 
         function testTSFCInstalledIsMilTimes108(tc)
@@ -241,23 +252,27 @@ classdef TestPropL2 < matlab.unittest.TestCase
             % 0.70 — VnV/BrandtF16A/todo.md 2026-07-24 entry 4).
             g = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
-            tc.verifyEqual(g.compute_TSFC_installed(state), ...
-                g.compute_TSFC_mil(state) * 1.08, 'RelTol', 1e-12);
+            c  = PropL2.lookup_TSFC_coeffs(g.engine_type);
+            un = PropL2.TSFC_mil(c.C1_mil, c.C2_mil, state.mach, state.theta);
+            tc.verifyEqual(g.get_TSFC_installed(state, "mil"), un * 1.08, ...
+                'RelTol', 1e-12);
         end
 
         function testTSFCABInstalledIsABTimes108(tc)
             % Installed AB TSFC = uninstalled AB × 1.08 [factor Brandt Miss!C25].
             g = F16PropL2(f16a_spec_path(2));
             state = AircraftState(20000, 0.6);
-            tc.verifyEqual(g.compute_TSFC_AB_installed(state), ...
-                g.compute_TSFC_AB(state) * 1.08, 'RelTol', 1e-12);
+            c  = PropL2.lookup_TSFC_coeffs(g.engine_type);
+            un = PropL2.TSFC_AB(c.C1_AB, c.C2_AB, state.mach, state.theta);
+            tc.verifyEqual(g.get_TSFC_installed(state, "AB"), un * 1.08, ...
+                'RelTol', 1e-12);
         end
 
         function testUnknownEngineTypeThrows(tc)
             % A mutated (unknown) engine_type must error through get_TSFC.
             g = F16PropL2(f16a_spec_path(2));
             g.engine_type = "ramjet";
-            tc.verifyError(@() g.get_TSFC(AircraftState(0, 0.5)), ...
+            tc.verifyError(@() g.get_TSFC(AircraftState(0, 0.5), "mil"), ...
                 'PropL2:unknownEngineType');
         end
 

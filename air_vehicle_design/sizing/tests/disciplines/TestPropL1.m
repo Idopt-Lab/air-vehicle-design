@@ -171,7 +171,9 @@ classdef TestPropL1 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % HIGH-LEVEL: F16PropL1.get_thrust_lapse / thrust_lapse
+        % Mod (08/26/2026) (Claude)
+        % HIGH-LEVEL: F16PropL1.get_thrust_lapse_categorical, reached either
+        % directly or through the PropulsionModelL1 get_thrust_lapse bridge.
         % ================================================================== %
 
         function testThrustLapseSeaLevelIsMachIndependent(tc)
@@ -179,8 +181,8 @@ classdef TestPropL1 < matlab.unittest.TestCase
             % Mach. Independent fact (σ=1 → 1); also confirms the L1 model
             % carries no Mach correction.
             g = F16PropL1(f16a_spec_path(1));
-            a_lo = g.get_thrust_lapse(AircraftState(0, 0.3));
-            a_hi = g.get_thrust_lapse(AircraftState(0, 0.9));
+            a_lo = g.get_thrust_lapse_categorical(AircraftState(0, 0.3), "AB");
+            a_hi = g.get_thrust_lapse_categorical(AircraftState(0, 0.9), "AB");
             tc.verifyEqual(a_lo, 1.0, 'AbsTol', 1e-4, 'α must be ~1 at SLS (σ=1).');
             tc.verifyEqual(a_hi, 1.0, 'AbsTol', 1e-4);
             tc.verifyEqual(a_lo, a_hi, 'AbsTol', 1e-12, ...
@@ -198,7 +200,7 @@ classdef TestPropL1 < matlab.unittest.TestCase
             % AbsTol of 0.01 covers atmosisa-vs-table σ round-off
             % (~0.3% in σ → ~0.2% in α) plus the table's 4-digit rounding.
             g = F16PropL1(f16a_spec_path(1));
-            received = g.get_thrust_lapse(AircraftState(36000, 0.87));
+            received = g.get_thrust_lapse_categorical(AircraftState(36000, 0.87), "AB");
             tc.verifyEqual(received, 0.4828, 'AbsTol', 0.01, ...
                 'α at 36 kft must match σ^0.6 with σ from the published ISA table.');
         end
@@ -206,23 +208,26 @@ classdef TestPropL1 < matlab.unittest.TestCase
         function testThrustLapseDecreasesWithAltitude(tc)
             % Monotonic: σ falls with altitude, so α must fall. [Martins Eq. 10.9]
             g = F16PropL1(f16a_spec_path(1));
-            tc.verifyGreaterThan(g.get_thrust_lapse(AircraftState(0, 0.5)), ...
-                g.get_thrust_lapse(AircraftState(36000, 0.5)), ...
+            tc.verifyGreaterThan(g.get_thrust_lapse_categorical(AircraftState(0, 0.5), "AB"), ...
+                g.get_thrust_lapse_categorical(AircraftState(36000, 0.5), "AB"), ...
                 'Thrust lapse must decrease with altitude.');
         end
 
         function testThrustLapseEntryPointsAgree(tc)
-            % Interface consistency: the PropulsionBase API method
-            % thrust_lapse and the L1-specific get_thrust_lapse are two public
-            % entry points that must return the identical value.
+            % Interface consistency: the PropulsionBase name
+            % get_thrust_lapse reaches the L1 method
+            % get_thrust_lapse_categorical through the PropulsionModelL1
+            % bridge, so both must return the identical value.
             g = F16PropL1(f16a_spec_path(1));
             state = AircraftState(20000, 0.7);
-            tc.verifyEqual(g.thrust_lapse(state, "AB"), g.get_thrust_lapse(state), ...
-                'AbsTol', tc.TOL_EXACT, 'thrust_lapse and get_thrust_lapse must agree.');
+            tc.verifyEqual(g.get_thrust_lapse(state, "AB"), ...
+                g.get_thrust_lapse_categorical(state, "AB"), ...
+                'AbsTol', tc.TOL_EXACT, 'The bridge must not change the value.');
         end
 
         % ================================================================== %
-        % HIGH-LEVEL: F16PropL1.get_TSFC / lookup_TSFC (Mach segment logic)
+        % Mod (08/26/2026) (Claude)
+        % HIGH-LEVEL: F16PropL1.get_TSFC (Mach segment logic)
         % ================================================================== %
 
         function testGetTSFCCruiseSegment(tc)
@@ -239,20 +244,12 @@ classdef TestPropL1 < matlab.unittest.TestCase
                 'AbsTol', tc.TOL_EXACT, 'M<0.4 must return loiter TSFC 0.70 1/hr.');
         end
 
-        function testGetTSFCEntryPointsAgree(tc)
-            % Interface consistency: get_TSFC and lookup_TSFC must agree.
-            g = F16PropL1(f16a_spec_path(1));
-            state = AircraftState(0, 0.5);
-            tc.verifyEqual(g.get_TSFC(state), g.lookup_TSFC(state), ...
-                'AbsTol', tc.TOL_EXACT);
-        end
-
         function testUnknownEngineTypeThrows(tc)
             % A mutated (unknown) engine_type must error rather than silently
             % returning a wrong TSFC.
             g = F16PropL1(f16a_spec_path(1));
             g.engine_type = "ramjet";
-            tc.verifyError(@() g.lookup_TSFC(AircraftState(0, 0.5)), ...
+            tc.verifyError(@() g.get_TSFC(AircraftState(0, 0.5)), ...
                 'PropL1:unknownEngineType');
         end
 

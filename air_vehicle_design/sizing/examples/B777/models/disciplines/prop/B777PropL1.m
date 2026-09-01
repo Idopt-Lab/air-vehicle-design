@@ -64,8 +64,9 @@ classdef B777PropL1 < PropulsionModelL1
         % PropulsionBase / PropulsionModelL1 contract -- single delegations.
         % ================================================================== %
 
-        function alpha = thrust_lapse(obj, state, rating)
-        %THRUST_LAPSE  Density-ratio lapse at the given transport rating.
+        % Mod (08/26/2026) (Claude)
+        function alpha = get_thrust_lapse_categorical(obj, state, rating)
+        %GET_THRUST_LAPSE_CATEGORICAL  Density-ratio lapse at a transport rating.
         %   "TO"/"max": alpha = sigma^m, sigma = rho/rho_SL [metabook Eqs.
         %   4.55/10.9]. "cont": 0.94 * sigma^m (max-continuous) [metabook
         %   Eq. 4.25]. Transport rating set "cont"/"TO"/"max" (no afterburner).
@@ -84,9 +85,10 @@ classdef B777PropL1 < PropulsionModelL1
             end
         end
 
-        function alpha = get_thrust_lapse(obj, state)
-        %GET_THRUST_LAPSE  PropulsionModelL1 contract: the base (max/takeoff)
-        %   density-ratio lapse sigma^m, no rating derate.
+        % Mod (08/26/2026) (Claude)
+        function alpha = get_thrust_lapse_base(obj, state)
+        %GET_THRUST_LAPSE_BASE  The base (max/takeoff) density-ratio lapse
+        %   sigma^m, with no rating derate. Not part of any contract.
             alpha = PropL1.sigma_lapse(state.rho, obj.lapse_exponent_m);
         end
 
@@ -100,7 +102,7 @@ classdef B777PropL1 < PropulsionModelL1
         end
 
         function c_t = lookup_TSFC(obj, state)
-        %LOOKUP_TSFC  PropulsionModelL1 contract alias for get_TSFC.
+        %LOOKUP_TSFC  Alias for get_TSFC. Not a contract method.
             c_t = obj.get_TSFC(state);
         end
 

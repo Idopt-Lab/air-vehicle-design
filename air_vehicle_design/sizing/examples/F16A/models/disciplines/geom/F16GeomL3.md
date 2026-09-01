@@ -1,17 +1,15 @@
 # F16GeomL3
+F-16A Block 10/15 Level-3 geometry, the **physical / T.O. 1F-16A-1 tier**. `classdef F16GeomL3 <
+GeometryModelL3`. L3 geometry, aerodynamics and weights all read it.
 
-F-16A Block 10/15 Level-3 geometry — the **physical / T.O. 1F-16A-1 tier**. `classdef F16GeomL3 <
-GeometryModelL3`; consumed by L3 geometry, aerodynamics **and** weights.
+Where a physical or T.O. value differs from Brandt's, L3 uses the physical one. Those L2 to L3
+divergences are **intentional fidelity differences, not errors**. See §4.
 
-Where a physical or T.O. value differs from Brandt's, L3 uses the physical one. Those L2↔L3
-divergences are **intentional fidelity differences, not errors** (§4). Every planform and wetted-area
-equation is a reused `GeometryBase`/`GeomL2` static; the only formulas originating in `GeomL3` are
-the area-ruling block (`denormalize_frames`, `compute_frame_cs_area`, `compute_surface_cs_area`,
-`compute_nacelle_cs_area`, `compute_Amax_area_ruled`), `compute_c_root_exposed` and
-`compute_engine_length`.
+Every planform equation is a reused `GeometryBase` or `GeomL2` static. `GeomL3` originates only the
+area-rule block and the control-station wetted-area pair.
 
-**There is no L3 propulsion tier** — `F16PropL2` serves the L3 rung and must be labelled as such
-wherever an L3 propulsion number is reported.
+**There is no L3 propulsion tier.** `F16PropL2` serves the L3 rung; label any L3 propulsion number
+as such.
 
 ---
 
@@ -19,113 +17,154 @@ wherever an L3 propulsion number is reported.
 
 ```matlab
 prop = F16PropL2(f16a_spec_path(2));
-g3   = F16GeomL3(f16a_spec_path(3), prop);
+g3   = F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path());
 ```
 
-`F16GeomL3(json_path, prop, req_path)` — every argument required, no silent default. `req_path` was
-added 2026-08-19 and supplies `M_max` from `.design_mach`. `json_path` supplies the
-`.geometry` block of `f16a_L3.json`; only `prop.T_SL` is read, and only to size the nacelle.
+`F16GeomL3(json_path, prop, req_path)`. All three arguments are necessary. There is no default.
+
+| Argument | Supplies |
+|---|---|
+| `json_path` | `f16a_L3.json` `.geometry` block |
+| `prop` | `prop (1,1) PropulsionBase`. Only `prop.T_SL` is read, to size the nacelle |
+| `req_path` | `f16a_requirements.json`. Gives `design_mach`, which becomes `M_max` |
+
+`M_max` is a requirement, not spec data, so it comes from a separate file. It feeds Raymer Eq. 10.11.
+
+The constructor also reads a **fourth file with no argument**: `f16a_stations_path()` supplies
+`fuselage_stations` and `fuselage_station_ref`.
+
+Nothing is rescaled here. `get_Amax` denormalizes the frame table live, so an optimizer moving
+`L_fus`, `W_max_fuselage` or `H_max_fuselage` moves `Amax`.
 
 ---
 
 ## 2. Inputs
 
-**38 numeric + the 20×3 normalized frame table (60 numbers) + 1 injected object.** Plain mutable
-`properties`, set once by the constructor.
+**54 plain mutable properties**: 47 numeric scalars, 3 tables, 1 injected object, 3 `NaN` slots.
 
-| Group | Properties | Notes |
+| Group | Properties | Values and notes |
 |---|---|---|
-| Wing | `S_ref` 300, `AR_wing` 3.0, `lambda_wing` 0.2275, `LE_sweep_wing` 40°, `tc_wing` 0.04, `S_csw`, `x_apex_wing` 17.786 ft | `S_csw` is an `[estimate]`; `x_apex_wing` `[Brandt Main!B23]` |
-| HT | `S_ht` 108 (**full**), `B_h` 18.5 ft (**primary**), `lambda_ht` 0.2275, `LE_sweep_ht` 40°, `tc_r_ht` 0.060 / `tc_t_ht` 0.035, `F_w`, `AR_exposed_ht` 2.114, `lambda_exposed_ht` 0.39, `x_le_ht` 36.0 ft | **`AR_ht` is NOT an input** — it is derived from the `S_ht` + `B_h` pair |
-| VT | `S_vt` 60 (**full**), `AR_vt` 1.6, `lambda_vt` 0.5, `LE_sweep_vt` **47.5°**, `tc_r_vt` 0.053 / `tc_t_vt` 0.030, `S_r`, `H_t`, `H_v`, `AR_exposed_vt` 1.294, `lambda_exposed_vt` 0.437, `x_le_vt` 36.0 ft | LE sweep is the T.O. value, not Brandt's 40° |
-| Fuselage | `L_fus` **47.5 ft**, `W_max_fuselage` 7.0, `H_max_fuselage` 5.0, `frames_normalized` (20×3) | frames are `[Brandt Main!A34:F53]` ÷ his own envelope (46.5 / 7.0 / 5.0) |
-| Whole aircraft | `L_aircraft` 47.65 ft, `L_t` 22.0 | `L_t` is an `[estimate]`, still not derivable |
-| Duct / engine | `L_duct` 14.0, `x_inlet` **15.0 ft**, `n_engines` 1 | `x_inlet` is `[Main!F31]`, **not** 14.0 — that is the duct length |
-| Control surfaces | `S_cs` 190 | `[estimate]` |
-| Injected | `prop` | not numeric spec data |
+| Wing (7) | `S_ref`, `AR_wing`, `lambda_wing`, `LE_sweep_wing`, `tc_wing`, `S_csw`, `x_apex_wing` | 300 ft², 3.0, 0.2275, 40°, 0.04, 68.03 ft², 17.786 ft. `S_csw` is an `[estimate]` |
+| HT (10) | `S_ht`, `B_h`, `lambda_ht`, `LE_sweep_ht`, `tc_r_ht`, `tc_t_ht`, `F_w`, `AR_exposed_ht`, `lambda_exposed_ht`, `x_le_ht` | 108 ft² (**full**), 18.5 ft (**primary span**), 0.2275, 40°, 0.060 / 0.035, `F_w`, 2.114, 0.390, 36.0 ft. **`AR_ht` is NOT an input**; `S_ht` + `B_h` fix the planform |
+| VT (12) | `S_vt`, `AR_vt`, `lambda_vt`, `LE_sweep_vt`, `tc_r_vt`, `tc_t_vt`, `S_r`, `H_t`, `H_v`, `AR_exposed_vt`, `lambda_exposed_vt`, `x_le_vt` | 60 ft² (**full**), 1.6, 0.5, **47.5°**, 0.053 / 0.030, 11.65 ft², `H_t`, `H_v`, 1.294, 0.437, 36.0 ft. The LE sweep is the T.O. value, not Brandt's 40° |
+| Strake, LERX (8) | `S_strake`, `AR_strake`, `lambda_strake`, `LE_sweep_strake`, `tc_r_strake`, `tc_t_strake`, `x_le_strake`, `y_strake` | `[Brandt Main!D18:D24]`. `lambda_strake` gives a sharp tip. The section is a constant 4 % NACA 0004 |
+| Fuselage (3) | `L_fus`, `W_max_fuselage`, `H_max_fuselage` | **47.5 ft**, 7.0, 5.0 |
+| Tables (3) | `frames_normalized` (20x3), `fuselage_stations` (21x1), `fuselage_station_ref` | frames are `[Brandt Main!A34:F53]` over his own 46.5 / 7.0 / 5.0 envelope. Stations come from `F16_geom_stations.json` |
+| Whole aircraft (1) | `L_aircraft` | 47.65 ft. Feeds only the Eq. 12.44 `(Amax/l)²` term. It is **not** `L_fus`. The citation is not pinned. See §6 |
+| Duct (3) | `L_duct`, `x_inlet`, `n_engines` | 14.0 ft, **15.0 ft**, 1. `x_inlet` is 15.0, not 14.0; 14.0 is the duct length |
+| Requirement (1) | `M_max` | 2.0, from `.design_mach` |
+| Configuration (2) | `L_t`, `S_cs` | 22.0 ft, 190 ft². Both `[estimate]` |
+| Injected (1) | `prop` | not numeric spec data |
+| Control areas (3) | `S_ail`, `S_elev`, `S_rud` | all `NaN`. Not `Dependent`: this object's inputs give no closed form. `ControlSurfaceSizer` writes them after the sizing loop converges |
 
-The exposed-planform members carry an explicit `_exposed_` infix so that `AR_ht` / `lambda_ht` /
-`S_ht` / `S_vt` mean **full planform at both tiers**. An earlier revision had the same names meaning
-different things on the two tiers, which silently fed exposed values into full-planform equations.
+No `T_AB_SLS_lb` input: it is `Dependent` on `prop.T_SL`.
 
-Frames are stored **normalized** so `Amax` responds to the fuselage envelope. Stored raw, `Amax`
-responded to `W_max_fuselage` with the *wrong sign* and to `H_max_fuselage` not at all.
+The `_exposed_` infix means `AR_ht`, `lambda_ht`, `S_ht` and `S_vt` are **full planform at both
+tiers**. An earlier revision gave the same names two meanings, feeding exposed values into
+full-planform equations.
 
-## 3. Derived (`Dependent`) — 45
+`AR_exposed_strake` and `lambda_exposed_strake` are **derived**: the fuselage does not clip a body
+surface, so exposed equals full.
+
+---
+
+## 3. Derived (`Dependent`): 54
 
 | Group | Properties |
 |---|---|
-| Wing | `b_wing`, `c_root_wing`, `c_tip_wing`, `cbar_wing`, `QC_sweep_wing`, `TE_sweep_wing`, `tc_r_wing`, `tc_t_wing`, `S_exposed_wing`, `S_wet_wing` |
-| HT | **`AR_ht`**, `b_ht`, `c_root_ht`, `c_tip_ht`, `QC_sweep_ht`, `TE_sweep_ht`, `tc_ht`, `S_exposed_ht`, `S_wet_ht` |
-| VT | `b_vt`, `c_root_vt`, `c_tip_vt`, `QC_sweep_vt`, `TE_sweep_vt`, `tc_vt`, `S_exposed_vt`, `S_wet_vt` |
-| Fuselage | `L_fuselage`, `D_fus`, `Amax` |
-| Duct / engine | `T_AB_SLS_lb`, `D_inlet`, `D_exit`, `L_engine`, `x_nacelle_aft` |
-| Area-rule intermediates | `c_exp_root_{wing,ht,vt}`, `G_hs_exp_{wing,ht,vt}`, `Xexp_{wing,ht,vt}` |
-| Total | `S_wet` |
+| Wing (10) | `b_wing`, `c_root_wing`, `c_tip_wing`, `cbar_wing`, `QC_sweep_wing`, `TE_sweep_wing`, `tc_r_wing`, `tc_t_wing`, `S_exposed_wing`, `S_wet_wing` |
+| HT (9) | **`AR_ht`**, `b_ht`, `c_root_ht`, `c_tip_ht`, `QC_sweep_ht`, `TE_sweep_ht`, `tc_ht`, `S_exposed_ht`, `S_wet_ht` |
+| VT (8) | `b_vt`, `c_root_vt`, `c_tip_vt`, `QC_sweep_vt`, `TE_sweep_vt`, `tc_vt`, `S_exposed_vt`, `S_wet_vt` |
+| Strake (7) | `b_strake`, `c_root_strake`, `c_tip_strake`, `S_exposed_strake`, `S_wet_strake`, `AR_exposed_strake`, `lambda_exposed_strake` |
+| Fuselage (4) | `L_fuselage`, `D_fus`, `Amax`, `S_wet_fuselage` |
+| Duct (6) | `T_AB_SLS_lb`, `D_inlet`, `D_exit`, `S_wet_duct`, `L_engine`, `x_nacelle_aft` |
+| Area-rule (9) | `c_exp_root_{wing,ht,vt}`, `G_hs_exp_{wing,ht,vt}`, `Xexp_{wing,ht,vt}` |
+| Total (1) | `S_wet` |
 
-**The whole HT planform derives from the `S_ht` + `B_h` input pair.** `AR_ht` = `B_h²/S_ht` =
-3.1689815 is derived and must never be stored at L3. VT sweeps use `convert_sweep_panel` (2/AR), the
-single-panel form; wing and HT use the mirrored `convert_sweep` (4/AR).
+**The whole HT planform derives from the `S_ht` + `B_h` pair.** `AR_ht` = `B_h²/S_ht` = 3.1689815. It
+must never be stored at L3.
 
-Lifting-surface `S_wet` uses Roskam Vol. II Eq. 12.1 fed the T.O. root/tip t/c splits — the same
-official formula as L2. Brandt's uniform-t/c form is kept only as a comparison-report alternate row.
+VT sweeps use `convert_sweep_panel` (2/AR); wing, HT and strake use the mirrored `convert_sweep`
+(4/AR).
+
+Lifting-surface `S_wet` is Roskam Vol. II Eq. 12.1 on the T.O. root/tip t/c splits, as at L2.
+**The fuselage is the one place L3 leaves L2's formula family**: `S_wet_fuselage` comes from
+`get_S_wet_fuselage_stations`, not Roskam Eq. 12.3.
 
 ---
 
 ## 4. As-built values, and the by-design divergences
 
-`BY DESIGN` = intentional L2↔L3 fidelity divergence. `definitional` = a different quantity, not an
-agreement check.
+Verified 2026-08-25. `BY DESIGN` = an intentional L2 to L3 fidelity divergence. `definitional` = a
+different quantity, not an agreement check.
 
 | Quantity | L2 | L3 | Brandt | |
 |---|---|---|---|---|
-| `S_exposed_wing` | 196.22607 | 196.22607 | `Geom!H7` 196.22607 | agreement |
-| `S_exposed_ht` | 49.847251 | **51.148643** | `Geom!H8` 49.84725 | **BY DESIGN** (+2.61 %) |
-| `S_exposed_vt` | 40.889669 | 40.889669 | `Geom!H10` 40.88967 | agreement — cannot diverge (the exposed-area formula has no sweep term), a genuine positive control |
+| `S_exposed_wing` | 196.2260692 | 196.2260692 | `Geom!H7` 196.22607 | agreement |
+| `S_exposed_ht` | 49.8472505 | **51.1486434** | `Geom!H8` 49.84725 | **BY DESIGN** (+2.61 %) |
+| `S_exposed_vt` | 40.8896688 | 40.8896688 | `Geom!H10` 40.88967 | agreement. It cannot diverge, because the exposed-area formula has no sweep term. A genuine positive control |
 | HT span | `b_ht` 18.0 derived | **`B_h` 18.5 input** | 18.0 | **BY DESIGN** (+2.78 %) |
 | `AR_ht` | 3.0 input | **3.1689815 derived** | `Main!C19` 3.0 | **BY DESIGN** (+5.63 %) |
 | `c_root_ht` / `c_tip_ht` | 9.7759674 / 2.2240326 | **9.5117521 / 2.1639236** | — | **BY DESIGN** |
-| `QC_sweep_ht` / `TE_sweep_ht` | 32.183178 / −0.00024285 | **32.639955 / 2.5616932** | `Main!C27` TE ≈ 0 | **BY DESIGN** — the derived AR aft-sweeps the L3 trailing edge |
-| `LE_sweep_vt` | 40° | **47.5°** | `Main!H21` 40 | **BY DESIGN** (T.O. value) |
-| `QC_sweep_vt` / `TE_sweep_vt` | 36.313393 / 22.900799 | **44.629262 / 34.00525** | `Main!H27` TE = 0 literal | **BY DESIGN** |
-| `S_wet_ht` | 101.38789 | **104.03488** | `Geom!B16` 99.58484 | **BY DESIGN** |
-| `S_wet_wing` / `S_wet_vt` | 396.37666 / 83.139828 | same | `Geom!B14`/`B17` 392.02044 / 81.68938 | definitional (formula family) |
-| `L_fus` | 46.5 | **47.5** | `Main!B32` 46.5 | **BY DESIGN** (+2.15 %) |
-| fuselage `S_wet` | 730.30232 | **749.13368** | `Geom!B3` 730.422 | **BY DESIGN** |
-| duct `S_wet` | 155.56636 | 155.56636 | `Geom!B4` 41.515 (nacelle) | definitional |
-| total `S_wet` | 1466.7731 | **1488.2514** | 1331.134 corrected | definitional — Brandt's total carries strake/nacelle terms with no framework analog |
-| `D_inlet` / `L_engine` | 3.5370222 / — | 3.5370222 / 15.9166 | `Geom!C475`/`D475` | agreement (positive control on the propulsion DI) |
-| **`Amax`** | **27.488936** (envelope ellipse) | **24.703652** (area-ruled) | `Geom!B20` 25.110556 | L2 definitional; L3 **BY DESIGN** (−1.62 %) |
-| `L_aircraft` | 47.65 | 47.65 | `Geom!B21` 48.303947 | definitional — spec dimension vs a `MAX()` extent |
+| `QC_sweep_ht` / `TE_sweep_ht` | 32.183178 / −0.0002429 | **32.6399548 / 2.5616932** | `Main!C27` TE ≈ 0 | **BY DESIGN**. The derived AR aft-sweeps the L3 trailing edge |
+| `LE_sweep_vt` | 40° | **47.5°** | `Main!H21` 40 | **BY DESIGN**, the T.O. value |
+| `QC_sweep_vt` / `TE_sweep_vt` | 36.313393 / 22.900799 | **44.6292623 / 34.0052497** | `Main!H27` TE = 0 literal | **BY DESIGN** |
+| `S_wet_wing` | 396.3766599 | 396.3766599 | `Geom!B14` 392.02044 | definitional, formula family |
+| `S_wet_ht` | 101.3878862 | **104.0348823** | `Geom!B16` 99.58484 | **BY DESIGN** |
+| `S_wet_vt` | 83.1398278 | 83.1398278 | `Geom!B17` 81.68938 | definitional |
+| `S_wet_strake` | not modelled at L2 | **40.4000000** | `Geom!B15` 39.95600 | +1.11 % |
+| `S_exposed_strake` | not modelled at L2 | **20.0000000** | `Geom!H9` 20.00000 | exact |
+| `b_strake` / `c_root_strake` / `c_tip_strake` | not modelled at L2 | 5.4772256 / 7.3029674 / 0.0000000 | 5.4772 / 7.3030 / 0.0000 | exact |
+| fuselage `S_wet` | 730.3023197 | **692.5050311** | `Geom!B3` 730.422 | **BY DESIGN**, the station integration. was 749.1336818, −7.56 %, 2026-08-24 |
+| duct `S_wet` | 155.5663631 | 155.5663631 | `Geom!B4` 41.515 nacelle | definitional |
+| **total `S_wet`** | 1466.7730567 | **1472.0227642** | 1331.134 corrected | definitional. Brandt's total carries terms with no framework analogue. was 1528.6514149, −3.70 %, 2026-08-24 |
+| `D_inlet` | 3.5370222 | 3.5370222 | `Geom!C475` | agreement, a positive control on the propulsion injection |
+| `L_engine` | — | **16.4876156** | `Geom!D475` 15.9166 | **BY DESIGN**, Raymer Eq. 10.11. was 15.9166, +3.59 %, 2026-08-19 |
+| `x_nacelle_aft` | — | 45.4876156 | 44.9166 | follows `L_engine`. was 44.9166, +1.27 %, 2026-08-19 |
+| `D_fus` / `L_fuselage` | 6.0 / 46.5 | 6.0 / **47.5** | `Main!B32` 46.5 | **BY DESIGN** (+2.15 %) |
+| **`Amax`** | **27.4889357** envelope ellipse | **24.7036517** area-ruled | `Geom!B20` 25.110556 | L2 definitional; L3 **BY DESIGN** (−1.62 %) |
+| `L_aircraft` | 47.65 | 47.65 | `Geom!B21` 48.303947 | definitional. A spec dimension against a `MAX()` extent |
 
-### `Amax` — the area-ruled buildup
+### `Amax`, the area-ruled buildup
 
-L3 computes the **whole-aircraft** maximum cross-section that Raymer Eq. 12.44's Sears-Haack term
-actually wants: the `MAX` over the 20 rescaled frame stations of
-(fuselage + wing + HT + VT + nacelle sections) less `n_engines·π·D²/5`
-`[Brandt Geom!H26:H45 → H47 → B20]`.
+The `MAX` over the 20 rescaled frame stations of fuselage + wing + HT + VT + nacelle, less
+`n_engines·π·D²/5` `[Brandt Geom!H26:H45 -> H47 -> B20]`. This is what Raymer Eq. 12.44's
+Sears-Haack term wants.
 
-L2 keeps the fuselage-envelope ellipse `(π/4)·W·H`, which `readme_geom.md` §7 classifies as the
-low-fidelity form. **Do not unify these** — using the envelope form at L3 is a fidelity inversion and
-was a real bug: it substitutes a fuselage-only quantity for a whole-aircraft one and inflates
-`CD0_wave` ~23 %.
+L2 keeps the fuselage-envelope ellipse `(π/4)·W·H`. **Do not unify these**: the envelope form at L3
+is a fidelity inversion and was a real bug, inflating `CD0_wave` by about 23 %.
 
-**Round-trip control:** set `L_fus` back to 46.5 and L3 returns 25.110534, reproducing Brandt's
-`Geom!B20` to −0.0001 %. This proves the method rather than fitting it, and it is why the −1.62 % gap
-is attributable to the 47.5 ft fuselage rather than to the model. With the area-ruled value
-`CD0_wave` sits −0.54 % from the Brandt-referenced term and **`E_WD` = 2.2 needs no retune**.
+**Round-trip control.** With `L_fus` back at 46.5, L3 gives 25.110534, reproducing Brandt's `Geom!B20`
+to −0.0001 %. That proves the method rather than fitting it, so the −1.62 % gap belongs to the 47.5 ft
+fuselage. `CD0_wave` then sits −0.54 % from the Brandt term with `E_WD` = 2.2 untouched.
 
-`Amax` is deliberately **non-linear** in `W_max_fuselage`: stepping 7 → 8 ft gives a ratio of
-1.131077, not 8/7, because a wider fuselage grows every frame section *and* eats more exposed wing
-root. `S_ht` / `B_h` / `S_vt` / `tc_ht` move it 0.000 % — a true geometric fact (the tail sections
-start aft of the governing station), not a dead input.
+`Amax` is deliberately **non-linear** in `W_max_fuselage`: 7 to 8 ft gives 1.131077, not 8/7, because
+a wider fuselage grows every frame section and eats more exposed wing root. `S_ht`, `B_h`, `S_vt` and
+`tc_ht` move it 0.000 %, because the tail sections start aft of the governing station.
 
 ---
 
 ## 5. Methods
 
-`get_S_ref`, `get_S_wet`, `get_S_wet_wing`, `get_S_wet_HT`, `get_S_wet_VT`, `get_S_wet_fuselage`,
-`get_S_wet_duct`, `get_S_exposed_wing` — one-line delegations into `GeomL3`.
+Four, and no more. Every other member is a `Dependent` getter.
+
+| Method | Does |
+|---|---|
+| `get_S_ref(obj)` | returns `obj.S_ref` |
+| `get_Amax(obj)` | the area-rule assembly. Calls five `GeomL3` statics |
+| `get_design_S_wet_components(obj)` | sums six components and returns the total |
+| `get_S_wet_fuselage_stations(obj)` | fuselage wetted area from the station table [Raymer 6th ed. Fig. 7.37, p. 206] |
+
+`get_Amax` reads about 20 fields off the design object. Allowed: a design class may read its own
+properties. It broke the rule only while it lived in the toolbox.
+
+`get_design_S_wet_components` returns one scalar, so its name is wider than its output. It reads
+`get_S_wet_fuselage_stations` directly rather than through `get.S_wet_fuselage`.
+
+**`GeometryModelL3` declares NO abstract methods**; the block is commented out. One concrete bridge:
+
+`get_S_wet(obj)` forwards to `get_design_S_wet_components()`, which is **not declared abstract**. A
+class that omits it constructs, then fails at the call.
 
 ---
 
@@ -133,16 +172,18 @@ start aft of the governing station), not a dead input.
 
 | Item | Status |
 |---|---|
-| `L_aircraft` = 47.65 ft is unsourced in-repo. The *value* is user-approved; the *provenance* is open. Brandt's 48.304 is an extent, not a comparable spec length | `TestGeomL3.testTODO_OverallLengthCitationNotPinned`; todo §6 |
-| The L3 `Amax` affine frame-rescaling assumption and Brandt's cosine area-distribution model trace to no reference extract here. The one lead, Roskam Part VI, is not in this repo | todo §4b |
-| The `/5` flow-through divisor is a bare literal with no justification anywhere in the workbook, while `readme_geom.md` §4.5 uses `π·D²/4` for the same nacelle. `/4` would give `Amax` = 22.738503 (−7.95 %) and make `Amax` thrust-insensitive | todo §5 |
-| Frame-area discretization: Brandt's 6-point cosine sampling was taken (`I_cos` = 0.63137515 vs 2/π = 0.63661977, 0.824 % low). `compute_frame_cs_area_exact` is a one-line switch worth +0.759 % — **confirm or switch** | todo §20 |
-| Mixed provenance of the full-planform tails: `S_ht` = 108 and `AR_vt`/`lambda_vt` are Brandt's, carried next to T.O. LE sweeps and a T.O./USAF `B_h`. Obtain T.O. full-planform values | todo §3 |
-| `n_engines` sits in `.geometry` only because nothing on the propulsion side exposes an engine count — should migrate to `.propulsion` + DI, as `T_AB_SLS_lb` did | todo §22 |
-| Strake deferred: two comparison rows stay "NOT MODELED" (`S_wet` 39.956 `[Geom!B15]`, exposed area 20.0 `[Geom!H9]`). Cost is 7 new inputs plus a "root fully outside the fuselage" special case | todo §23 |
-| `L_t` 22.0, `S_cs` 190, `S_csw` 68.03, `S_r` 11.65, `H_t`, `H_v` remain `[estimate]` inputs. `L_t` is not derivable — the apex x-stations are inputs now, but the MAC y-station is not | todo GeomL3 §6 |
-| Nacelle x-range and the `1900` magic number: the live chain is `[15.0, 44.9166]` while `readme_geom.md` §4.5 uses `[14.0, 43.9166]`. `compute_nacelle_diameter` hardcodes 1900, silently assuming an afterburning engine | todo §18 |
-| The same fuselage depth is keyed `max_height_ft` at L2 but `max_depth_ft` at L3 — same value, same citation, a live trap for shared JSON-reading code | todo §15 |
-| `readme_geom.md` §7's low-fidelity `Amax` row has no cell backing and says "cylindrical" (28.2743) where L2 computes the elliptical 27.4889 | todo §19 |
-| The comparison report's `Divergence` column shipped as two-state (`BY DESIGN` / blank), so "definitional" cannot be expressed and both `Amax` rows read `BY DESIGN`. `geometry_brandt_comparison.m` also computes `L_aircraft_l2` and never uses it | — |
-| Informational, no action: Brandt `Main!H27` VT TE sweep is a literal 0, inconsistent with his own VT planform — recorded so nobody reverts the 22.90° fix | todo §9 |
+| `L_aircraft` 47.65 ft has no in-repo source. The **value** is approved; the **provenance** is open. Brandt's 48.304 is a `MAX()` extent, not a comparable spec length | `TestGeomL3.testTODO_OverallLengthCitationNotPinned` |
+| The affine frame-rescaling assumption and Brandt's cosine area-distribution model trace to no reference extract here. The one lead, Roskam Part VI, is not in this repo | `GeomL3.md` §5 |
+| The `/5` flow-through divisor is a bare literal. The **deduction** is cited (Nicolai and Carichner p. 219 say cross-sectional area leaves out engine airflow area), but not the magnitude. `readme_geom.md` §4.5 uses `π·D²/4` for the same nacelle, which would give `Amax` = 22.738503 (−7.95 %) and make `Amax` thrust-insensitive | `GeomL3.md` §5 |
+| Frame-area discretization: Brandt's 6-point cosine sampling was kept. `I_cos` = 0.63137515 against the exact `2/π` = 0.63661977, so 0.824 % low. `compute_frame_cs_area_exact` is a one-line switch worth +0.759 % on `Amax`. **Confirm or switch** | `GeomL3.md` §5 |
+| Mixed provenance in the full-planform tails: `S_ht` = 108 and `AR_vt` / `lambda_vt` are Brandt's, sitting next to T.O. LE sweeps and a T.O. `B_h`. Get T.O. full-planform values | this doc |
+| `n_engines` sits in `.geometry` only because nothing on the propulsion side exposes an engine count. It should move to `.propulsion` and arrive by injection, as `T_AB_SLS_lb` did | this doc |
+| `L_t` 22.0, `S_cs` 190, `S_csw` 68.03, `S_r` 11.65, `H_t` and `H_v` are still `[estimate]`. `L_t` is not derivable: the apex x-stations are inputs, but the MAC y-station is not | `GeomL3.md` §5 |
+| The nacelle x-range is `[15.0, 45.4876]`, while `readme_geom.md` §4.5 uses `[14.0, 43.9166]`. The §4.5 inlet station is mislabelled | this doc |
+| `compute_nacelle_diameter` hardcodes 1900, which assumes an afterburning engine. Approved as an exception on 2026-08-19, because Raymer, Nicolai and Roskam give no substitute. **A reference scan is owed** | `F16GeomL2.md` §5 |
+| The same fuselage depth is keyed `max_height_ft` at L2 and `max_depth_ft` at L3. Same value, same citation, a live trap for shared JSON-reading code | this doc |
+| `readme_geom.md` §7's low-fidelity `Amax` row has no cell backing, and it says "cylindrical" 28.2743 where L2 computes the elliptical 27.4889 | this doc |
+| `S_ail`, `S_elev` and `S_rud` stay `NaN` until `ControlSurfaceSizer` writes them. Nothing enforces that order. `S_elev` is 0 for the F-16 anyway: it has an all-moving stabilator | this doc |
+| `get_control_surfaces` on `GeometryModelL3` calls a method no class defines. The enforcers were ruled off-limits on 2026-08-18, so it is reported, not fixed | §5 |
+| Informational, no action: Brandt `Main!H27` VT TE sweep is a literal 0, which disagrees with his own VT planform. Recorded so nobody reverts the 22.90° fix | this doc |
+ction: Brandt `Main!H27` VT TE sweep is a literal 0, inconsistent with his own VT planform — recorded so nobody reverts the 22.90° fix | todo §9 |

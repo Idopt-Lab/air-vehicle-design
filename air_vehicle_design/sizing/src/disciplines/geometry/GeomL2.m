@@ -9,13 +9,6 @@ classdef GeomL2
 %   report, not the default path.
 %
 %   Companion doc: src/disciplines/geometry/GeomL2.md
-%
-%   _TODO (08/19/2026) (Claude) -- two open citation gaps at the freeze:
-%     1. Roskam Vol. II is not scraped, so Eq. 12.1 and Eq. 12.3 above are
-%        UNVERIFIED. The only Vol. II extract is a method summary, no equations.
-%     2. compute_S_exposed_horizontal and _vertical cite Brandt only. Both are
-%        plain trapezoid clipping, so a textbook pin should exist. Casey marked
-%        both "Don't touch" on 2026-08-18, so the code stays as it is.
 
 % Note (8/20/2026)(Casey): I'm not seeing a function to size the control mechanisms. Add that.
     methods (Static)
@@ -32,7 +25,6 @@ classdef GeomL2
         %   A paper-thin surface gives 2*S_exp. Thickness raises the area.
         %   Alternate to compute_S_wet_planform_roskam, which takes a root/tip t/c pair.
         %
-        %   Mod (08/18/2026) (Claude)
         %   ALL THREE F-16 SURFACES TAKE THE Eq. 7.11 BRANCH: wing t/c 0.0400,
         %   HT 0.0475, VT 0.0415. Brandt applied the Eq. 7.12 form to all three,
         %   outside its stated t/c > 0.05 range. So this static no longer
@@ -52,7 +44,6 @@ classdef GeomL2
             end
         end
 
-        % TODO (8/14/2026): This answers my previous question.
         function val = compute_S_wet_planform_roskam(S_exp, tc_r, tc_t, lambda)
         %COMPUTE_S_WET_PLANFORM_ROSKAM  Lifting-surface wetted area [ft^2], variable
         %   root/tip t/c.  [Roskam Vol. II Eq. 12.1]
@@ -89,18 +80,14 @@ classdef GeomL2
                   * (1 + 1/lambda_f^2);
         end
 
-        % TODO (8/14/2026): Do not include Brandt in the toolbox.
         % ------------------------------------------------------------------ %
         % MOVED OUT 2026-08-18 -> examples/F16A/models/disciplines/geom/
         %                          F16GeomBrandtAlt.m
-        % Mod (08/18/2026) (Claude)
         %   Three Brandt-only statics left this toolbox: compute_s_wet_fus_brandt_lowfi,
         %   compute_s_wet_fus_brandt_highfi, compute_frame_perimeter. Brandt verifies
         %   the framework; he does not supply its equations. compute_frame_perimeter
         %   also models an F-16 "chine", which is design-specific.
-        %   Their TODOs travelled with them, verbatim. Equations unchanged, so no
-        %   number moves. Reason recorded in GeomL2.md.
-        % Mod (08/19/2026) (Claude)
+        %   Equations unchanged, so no number moves. Reason recorded in GeomL2.md.
         %   Casey then moved two of the three on to the GeomL3 toolbox:
         %   compute_s_wet_from_control_stations (renamed from
         %   compute_s_wet_fus_brandt_highfi) and compute_frame_perimeter. The
@@ -111,7 +98,7 @@ classdef GeomL2
         %   [Roskam Vol. II Eq. 12.3].
         % ------------------------------------------------------------------ %
 
-        % TODO (8/18/2026)(Casey): This is acceptable. Don't touch.
+        % Note (8/24/2026)(Casey): This is acceptable. Don't touch.
         function val = compute_s_wet_duct(D_inlet, D_exit, L_duct)
         %COMPUTE_S_WET_DUCT  Duct wetted area [ft^2] as a right circular frustum.
         %   [Raymer 6th ed. Sec. 7.3]. Degenerates to a cylinder when
@@ -135,7 +122,7 @@ classdef GeomL2
             val = pi * (r1 + r2) * sqrt((r2 - r1)^2 + L_duct^2);
         end
 
-        % TODO (8/18/2026)(Casey): This is acceptable. Don't touch.
+        % Note (8/24/2026)(Casey): This is acceptable. Don't touch.
         function val = compute_S_exposed_horizontal(c_root, c_tip, hs, fw)
         %COMPUTE_S_EXPOSED_HORIZONTAL  Exposed planform area [ft^2] of a mirrored
         %   horizontal surface, clipped at the fuselage HALF-WIDTH.
@@ -151,7 +138,7 @@ classdef GeomL2
             val        = (c_exp_root + c_tip)/2 * hs_exp * 2;
         end
 
-        % TODO (8/18/2026)(Casey): This is acceptable. Don't touch.
+        % Note (8/24/2026)(Casey): This is acceptable. Don't touch.
         function val = compute_S_exposed_vertical(S, AR, c_root, c_tip, fh)
         %COMPUTE_S_EXPOSED_VERTICAL  Exposed planform area [ft^2] of the vertical
         %   tail, clipped at the fuselage HALF-HEIGHT, single panel (no mirroring).
@@ -178,21 +165,9 @@ classdef GeomL2
         % PURE GEOMETRY CALCULATIONS
         % ================================================================== %
 
-        % TODO (8/14/2026): We should have individual "compute" functions that compute
-        % the wetted areas of generic shapes of arbitrary dimensions.
-        % Decompose this into functions that compute the wetted/surface areas of these shapes. Syntax: Shape(arguments/dimensions)
-        % Cone(radius, length)
-        % Pyramid(face_side_length1, face_side_length2, face_side_length3, face_side_length4, height)
-        % Sphere(radius)
-        % Cylinder(radius, length)
-        % Oval(width, height, length)
-        % Note: The difference between this and L3 is that L3 SHOULD/WILL be more focused on cross-section and stations.
-        % Note (8/19/2026): This should go back into L2.
-
-        % _TODO (08/19/2026) (Claude) -- NO CONSUMER. Only a commented-out line in
-        %   F16GeomL3.get_design_S_wet_components names it. Both shape statics
-        %   below return the CLOSED body, so they count the attachment face. A
-        %   caller must subtract it, as Casey's own comment says.
+        % Generic-shape set. L3 works in cross-sections and stations instead.
+        % Both statics below return the CLOSED body, so they count the
+        % attachment face. A caller must subtract it. See GeomL2.md Sec. 5.
         function val = compute_S_wet_cylinder(r, L)
             % Casey Chamberlain
             % Computes the wetted area of a circular cylinder of radius "r" and length "L."
@@ -206,7 +181,6 @@ classdef GeomL2
             val = 2*pi*r^2 + L*2*pi*r;
         end
 
-        % _TODO (08/19/2026) (Claude) -- NO CONSUMER. See the note above.
         function val = compute_S_wet_cone(r, L)
             % Casey Chamberlain
             % Computes the wetted area of a circular cone of 
