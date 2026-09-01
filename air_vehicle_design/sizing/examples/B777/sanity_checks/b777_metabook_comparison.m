@@ -151,7 +151,7 @@ function results = b777_metabook_comparison()
     ts = TSDiagram(aero, prop, wts, geom, miss, con, tail);
     W0_conv = ts.converge_W0(220000, 4605);
     % After converge_W0 the stack sits at the converged cell state.
-    OEW_conv  = wts.OEW(W0_conv);
+    OEW_conv  = wts.get_OEW(W0_conv);
     [Wf_conv, ~] = miss.total_fuel(W0_conv);
     WS_conv = W0_conv / geom.S_ref;
     TW_conv = 220000 / W0_conv;

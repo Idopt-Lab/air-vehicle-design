@@ -142,7 +142,7 @@ classdef SizingLoopL2 < handle
                 % 5. Mission fuel + empty weight at the current W0, then
                 %    WeightsBase bookkeeping.
                 [W_fuel, ~] = obj.miss.total_fuel(W0);
-                W_OEW = obj.wts.OEW(W0);
+                W_OEW = obj.wts.get_OEW(W0);
                 obj.wts.W_TO     = W0;
                 obj.wts.W_energy = W_fuel;
 
@@ -206,7 +206,7 @@ classdef SizingLoopL2 < handle
             obj.prop.T_SL = T_SL;
             [WS, TW] = obj.con.optimal_point_continuous([WS, TW]);
             [W_fuel, ~] = obj.miss.total_fuel(W0);
-            W_OEW = obj.wts.OEW(W0);
+            W_OEW = obj.wts.get_OEW(W0);
             obj.wts.W_TO     = W0;
             obj.wts.W_energy = W_fuel;
 

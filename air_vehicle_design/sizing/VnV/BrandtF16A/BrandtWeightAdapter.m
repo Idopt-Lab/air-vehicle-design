@@ -78,7 +78,7 @@ classdef BrandtWeightAdapter < WeightsBase
             obj.W_payload_expendable = brandtWt.inp.weight.exp_payload_lb;   % Brandt Main!O17 = 4,400 lbf
         end
 
-        function oew = OEW(obj, W_TO)
+        function oew = get_OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at a candidate W_TO [Brandt Wt!B12].
         %   Recomputes on every call (WeightsBase contract): no caching, and
         %   every W_TO-dependent term is evaluated at the PASSED W_TO.

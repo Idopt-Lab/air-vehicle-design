@@ -19,8 +19,8 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
 %   STRUCT standing in for "obj" where the toolbox method only reads
 %   properties (no method calls) -- dot-indexing a struct field behaves
 %   identically to a real object property read. Where a method calls
-%   obj.fuel_weight_source.OEW(...), the struct's field holds an anonymous
-%   function handle (struct.OEW = @(w) ...; struct.OEW(x) invokes it) so no
+%   obj.fuel_weight_source.get_OEW(...), the struct's field holds an anonymous
+%   function handle (struct.get_OEW = @(w) ...; struct.get_OEW(x) invokes it) so no
 %   real WeightsBase-typed object is needed for those cases either.
 %
 %   Sources: fuselage-internal raw volume [Raymer 6th ed. Eq. 7.14]; wing-
@@ -297,12 +297,12 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
 
         function testAvionicsWeightAndVolumeHandComputed(tc)
         % avionics_weight = fraction * W_empty, W_empty read via
-        % obj.fuel_weight_source.OEW(obj.fuel_weight_source.W_TO) --
+        % obj.fuel_weight_source.get_OEW(obj.fuel_weight_source.W_TO) --
         % mocked with a struct field holding an anonymous function handle.
         %   fraction (Fighters) = 0.055; W_empty (mocked) = 12000
         %   -> W_avionics = 660 lbf exactly; Vol = 660/45 = 14.6666666667 ft^3.
             obj.avionics_table_row = 'Fighters';
-            obj.fuel_weight_source = struct('W_TO', 20000, 'OEW', @(~) 12000);
+            obj.fuel_weight_source = struct('W_TO', 20000, 'get_OEW', @(~) 12000);
             received_weight = SubsystemsL2.avionics_weight(obj);
             expected_weight = 660;
             fprintf('  [L2] testAvionicsWeightAndVolumeHandComputed: weight expected=%.6g, received=%.6g\n', expected_weight, received_weight);
@@ -366,7 +366,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
                                'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
             obj.packaging_factor_category = 'Integral tank — shallow fuselage';
             obj.avionics_table_row        = 'Fighters';
-            obj.fuel_weight_source        = struct('W_TO', 20000, 'OEW', @(~) 12000);
+            obj.fuel_weight_source        = struct('W_TO', 20000, 'get_OEW', @(~) 12000);
 
             fus_term = SubsystemsL2.fuselage_usable_fuel_volume(obj);
             wing_term = SubsystemsL2.wing_fuel_volume(obj);

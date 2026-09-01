@@ -43,7 +43,7 @@ classdef SRefGatedWeightsStub < WeightsBase
             obj.S_ref_limit = S_ref_limit;
         end
 
-        function oew = OEW(obj, W_TO)
+        function oew = get_OEW(obj, W_TO)
         %OEW  0.60*W_TO while geom.S_ref <= S_ref_limit, else 0.95*W_TO
         %   (see class header for the resulting feasible/infeasible split).
             if obj.geom.S_ref <= obj.S_ref_limit

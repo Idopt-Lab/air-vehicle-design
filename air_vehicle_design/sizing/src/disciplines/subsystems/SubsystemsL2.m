@@ -40,9 +40,9 @@ classdef SubsystemsL2
 
         function val = avionics_weight(obj)
         %AVIONICS_WEIGHT  fraction * W_empty [lbf]. W_empty =
-        %   fuel_weight_source.OEW(fuel_weight_source.W_TO); zero extra args.
+        %   fuel_weight_source.get_OEW(fuel_weight_source.W_TO); zero extra args.
             ws = obj.fuel_weight_source;
-            W_empty = ws.OEW(ws.W_TO);
+            W_empty = ws.get_OEW(ws.W_TO);
             val = SubsystemsL2.avionics_weight_fraction(obj) * W_empty;
         end
 

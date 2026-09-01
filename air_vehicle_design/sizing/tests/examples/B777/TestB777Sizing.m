@@ -124,7 +124,7 @@ classdef TestB777Sizing < matlab.unittest.TestCase
             W0 = ts.converge_W0(tc.T_DESIGN, tc.S_DESIGN);
             tc.assertTrue(isfinite(W0), 'The design cell must converge before sanity checks.');
 
-            OEW      = ts.wts.OEW(W0);
+            OEW      = ts.wts.get_OEW(W0);
             [W_fuel, ~] = ts.miss.total_fuel(W0);
             pay_frac = tc.W_PAYLOAD / W0;
             WS       = W0 / tc.S_DESIGN;

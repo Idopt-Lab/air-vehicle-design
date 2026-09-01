@@ -1,18 +1,17 @@
 classdef F16WeightsL1 < WeightsModelL1
 %F16WEIGHTSL1  F-16A Block 10/15 Level-1 weight estimation student class.
 %
-%   Inherits from WeightsModelL1. Every abstract method delegates to a WeightsL1
-%   static. L1 is two statistical regressions on takeoff gross weight:
-%     (1) Raymer Table 3.1 power law:  We/Wto = K_vs · A · W_TO^C
-%         Central estimate; OEW delegates to this. jet_fighter A=2.34, C=-0.13,
-%         K_vs=1.00. [Raymer 6th ed. Table 3.1]
-%     (2) Roskam Eq. 2.16 log-log:     W_E_min = 10^((log10(W_TO)-A)/B)
-%         MINIMUM achievable W_E — a lower bound, never summed into OEW.
-%         jet_fighter A=0.5091, B=0.9505. [Roskam Part I Eq. 2.16 + Table 2.15]
+%   Inherits from WeightsModelL1. Its one abstract method delegates to the
+%   WeightsL1 static toolbox. OEW is the Raymer empty-weight-FRACTION power law
+%   on takeoff gross weight, multiplied out:
+%     We/Wto = K_vs * A * W_TO^C,  jet_fighter A=2.34, C=-0.13, K_vs=1.00
+%     [Raymer 6th ed. Table 3.1]
+%   The Roskam Eq. 2.16 log-log minimum empty weight stays available in the
+%   toolbox, as an independent lower bound, but this class does not use it.
 %
-%   Constructor: F16WeightsL1(json_path) — required unified L1 JSON
+%   Constructor: F16WeightsL1(json_path), the required unified L1 JSON
 %   (f16a_spec_path(1)), no silent default. L1 has 5 inputs, 0 Dependent, and no
-%   dependency injection; OEW/compute_We_* stay methods that take W_TO per call.
+%   dependency injection; get_OEW stays a method that takes W_TO per call.
 %
 %   History and rationale: docs/decision_log.md
 %
@@ -25,7 +24,7 @@ classdef F16WeightsL1 < WeightsModelL1
     % INPUTS (5) — mutable spec data. Citations: F16WeightsL1.md §2.
     % ======================================================================= %
     properties
-        aircraft_category = 'jet_fighter'  % selects the Raymer Tbl 3.1 row and the Roskam Tbl 2.15 row [f16a_L1.json top-level aircraft_category — ONE canonical class flag per aircraft]
+        aircraft_category = 'jet_fighter'  % selects the Raymer Tbl 3.1 row [f16a_L1.json top-level aircraft_category — ONE canonical class flag per aircraft]
 
         % ----- WeightsBase abstract properties -----
         W_TO               = NaN   % lbf  candidate gross takeoff weight; STATE, mutated by the sizing loop [WeightsBase contract]
@@ -57,25 +56,35 @@ classdef F16WeightsL1 < WeightsModelL1
         % into the WeightsL1 static toolbox, which holds the cited equations.
         % ================================================================== %
 
-        function oew = OEW(obj, W_TO)
-        %OEW  Operating empty weight [lbf].  [Raymer 6th ed. Table 3.1]
-            oew = WeightsL1.OEW(obj, W_TO);
+        function oew = get_OEW_categorical(obj, W_TO)
+        %GET_OEW_CATEGORICAL  Operating empty weight [lbf].
+        %   [Raymer 6th ed. Table 3.1]  The power law gives a FRACTION, so the
+        %   weight is that fraction times gross weight.
+            % c   = WeightsL1.lookup_We_roskam_coeffs(obj.aircraft_category);
+            % oew = WeightsL1.compute_We_roskam(c.A, c.B, W_TO);
+            % K_vs is a DESIGN value, not a table value, so the caller supplies
+            % it. The F-16A is fixed-sweep: K_vs = 1.00 [metabook_data.md:20-22].
+            c        = WeightsL1.lookup_raymer_We_frac_coeffs(obj.aircraft_category);
+            OEW_frac = WeightsL1.compute_We_frac_raymer(1.00, c.A, c.C, W_TO);
+            oew      = OEW_frac * W_TO;
         end
 
-        function frac = compute_We_fraction(obj, W_TO, aircraft_category)
-        %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 6th ed. Table 3.1]
-        %   The optional third argument overrides obj.aircraft_category.
-            if nargin < 3
-                aircraft_category = obj.aircraft_category;
-            end
-            frac = WeightsL1.compute_We_fraction(obj, W_TO, aircraft_category);
-        end
+        % Note (9/1/2026)(Casey): This serves no purpose.
+        % function frac = compute_We_fraction(obj, W_TO, aircraft_category)
+        % %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 6th ed. Table 3.1]
+        % %   The optional third argument overrides obj.aircraft_category.
+        %     if nargin < 3
+        %         aircraft_category = obj.aircraft_category;
+        %     end
+        %     frac = WeightsL1.compute_We_fraction(obj, W_TO, aircraft_category);
+        % end
 
-        function W_E = compute_We_roskam(obj, W_TO)
-        %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].  [Roskam Part I Eq. 2.16]
-        %   A LOWER BOUND, not an OEW estimate.
-            W_E = WeightsL1.compute_We_roskam(obj, W_TO);
-        end
+        % Note (9/1/2026)(Casey): This serves no purpose.
+        % function W_E = compute_We_roskam(obj, W_TO)
+        % %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].  [Roskam Part I Eq. 2.16]
+        % %   A LOWER BOUND, not an OEW estimate.
+        %     W_E = WeightsL1.compute_We_roskam(obj, W_TO);
+        % end
 
     end
 

@@ -4,9 +4,11 @@ classdef WeightsL1
 %   Call as WeightsL1.method(...); never instantiated. F16WeightsL1 inherits
 %   WeightsModelL1 and delegates here.
 %
-%   Central estimate: [Raymer 6th ed. Table 3.1] empty-weight-fraction power
-%   law. Independent lower bound: [Roskam Part I Eq. 2.16 with Table 2.15].
-%   Both take only W_TO. Both coefficient sets are secondary-source extracts.
+%   Two regressions, both on W_TO alone. The design class picks one:
+%     [Raymer 6th ed. Table 3.1] empty-weight FRACTION power law.
+%     [Roskam Part I Eq. 2.16 with Table 2.15] empty WEIGHT, which Roskam
+%     presents as the minimum achievable value.
+%   Both coefficient sets are secondary-source extracts.
 %
 %   TODO: the original step-5 design cites Raymer Table 6.1 for the same power
 %   law, but Table 6.1's coefficients are NOT present in this repo -- the code
@@ -16,39 +18,8 @@ classdef WeightsL1
 
     methods (Static)
 
-        % ================================================================== %
-        % HIGH-LEVEL: take the student object, return the result.
-        % ================================================================== %
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function oew = OEW(obj, W_TO)
-        %OEW  Operating empty weight [lbf] via the Raymer Table 3.1 power law.
-        %   [Raymer 6th ed. Table 3.1]  The L1 answer (Raymer central estimate,
-        %   not the Roskam lower bound).
-        %   W_TO — candidate gross weight [lbf].
-            oew = WeightsL1.compute_We_fraction(obj, W_TO, obj.aircraft_category) * W_TO;
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function frac = compute_We_fraction(obj, W_TO, aircraft_category)
-        %COMPUTE_WE_FRACTION  Empty-weight fraction We/Wto.  [Raymer 6th ed. Table 3.1]
-        %   aircraft_category defaults to obj.aircraft_category when omitted.
-            if nargin < 3
-                aircraft_category = obj.aircraft_category;
-            end
-            c = WeightsL1.lookup_coeffs(aircraft_category);
-            frac = WeightsL1.We_fraction_power_law(c.Kvs, c.A, c.C, W_TO);
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W_E = compute_We_roskam(obj, W_TO)
-        %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].  [Roskam Part I Eq. 2.16]
-        %   A LOWER BOUND, not a central estimate — never summed into OEW.
-        %   Uses obj.aircraft_category to look up the Roskam Table 2.15 row.
-            c = WeightsL1.lookup_roskam_coeffs(obj.aircraft_category);
-            W_E = WeightsL1.We_roskam(c.A, c.B, W_TO);
-        end
-
+        % TODO (9/1/2026)(Casey): Not sure about this. Clarify if this is for jet engines.
+        % Regardless, this seems better for the statistical methods (L2).
         function W = engine_weight_roskam(T0_lbf)
         %ENGINE_WEIGHT_ROSKAM  Total installed-engine dry weight [lbf] from SLS
         %   thrust, via the Roskam multi-term regression.
@@ -78,7 +49,7 @@ classdef WeightsL1
         % LOW-LEVEL: pure math — scalars only.
         % ================================================================== %
 
-        function frac = We_fraction_power_law(Kvs, A, C, W_TO)
+        function frac = compute_We_frac_raymer(Kvs, A, C, W_TO)
         %WE_FRACTION_POWER_LAW  We/Wto = K_vs · A · W_TO^C.
         %   [Raymer 6th ed. Table 3.1; metabook_data.md:20-26]
         %   Kvs  — variable-sweep factor: 1.04 (VS) or 1.00 (fixed) [metabook_data.md:20-22].
@@ -87,7 +58,7 @@ classdef WeightsL1
             frac = Kvs .* A .* W_TO .^ C;
         end
 
-        function W_E = We_roskam(A, B, W_TO)
+        function W_E = compute_We_roskam(A, B, W_TO)
         %WE_ROSKAM  Roskam log-log minimum empty weight [lbf].
         %   [Roskam Part I Eq. 2.16, book p.47 / PDF p.59; roskam_vol1_data.md:47]
         %   Extract form:  W_E = inv.log10{ (log10(W_TO) − A) / B }
@@ -96,7 +67,9 @@ classdef WeightsL1
             W_E = 10 .^ ( (log10(W_TO) - A) ./ B );
         end
 
-        function c = lookup_coeffs(aircraft_category)
+        % Note (9/1/2026)(Casey): Kvs does not come from a table, it comes from the design.
+        % Kvs should not be tabulated.
+        function c = lookup_raymer_We_frac_coeffs(aircraft_category)
         %LOOKUP_COEFFS  Return (Kvs, A, C) constants for Raymer Table 3.1.
         %   aircraft_category — char/string (e.g. 'jet_fighter').
         %   Rows transcribed from docs/reference_extracts/metabook_data.md (the
@@ -109,13 +82,13 @@ classdef WeightsL1
         %   (A = 1.67, C = -0.16, metabook_data.md:25) — no consumer.
             switch lower(aircraft_category)
                 case 'jet_fighter'
-                    c = struct('A', 2.34, 'C', -0.13, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:22]
+                    c = struct('A', 2.34, 'C', -0.13); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:22]
                 case 'military_cargo_bomber'
-                    c = struct('A', 0.93, 'C', -0.07, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:23]
+                    c = struct('A', 0.93, 'C', -0.07); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:23]
                 case 'jet_transport'
-                    c = struct('A', 1.02, 'C', -0.06, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:24]
+                    c = struct('A', 1.02, 'C', -0.06); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:24]
                 case 'jet_trainer'
-                    c = struct('A', 1.59, 'C', -0.10, 'Kvs', 1.00); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:26]
+                    c = struct('A', 1.59, 'C', -0.10); % [Raymer 6th ed. Tbl 3.1; metabook_data.md:26]
                 otherwise
                     error('WeightsL1:UnknownCategory', ...
                           'Unknown aircraft_category "%s". Add row to lookup_coeffs.', ...
@@ -123,7 +96,7 @@ classdef WeightsL1
             end
         end
 
-        function c = lookup_roskam_coeffs(aircraft_category)
+        function c = lookup_We_roskam_coeffs(aircraft_category)
         %LOOKUP_ROSKAM_COEFFS  Return (A, B) constants for Roskam Table 2.15.
         %   [Roskam Part I Table 2.15, book p.47 / PDF p.59]
         %   Five rows transcribed from

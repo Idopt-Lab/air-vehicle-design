@@ -4,7 +4,8 @@ classdef Aero481WeightsL1 < WeightsModelL1
 %   Inherits WeightsModelL1 (abstract enforcer). Every equation body reuses a
 %   shared src/ static -- no equation is re-derived here.
 %
-%   OEW = the Aero 481 A02 empty-weight DELTA model [+Algorithms/A02.m:37-63]:
+%   get_OEW_categorical = the Aero 481 A02 empty-weight DELTA model
+%   [+Algorithms/A02.m:37-63]:
 %   the Sainristil empty-weight FRACTION plus two DELTA terms measuring how far
 %   the current design sits from the fixed A481 design point (W/S = 92.17 psf,
 %   T/W = 1.2):
@@ -33,8 +34,9 @@ classdef Aero481WeightsL1 < WeightsModelL1
 %   [Roskam Part I Eq. 2.16 + Table 2.15] jet_fighter log-log MINIMUM empty
 %   weight -- a lower bound, never summed into OEW.
 %
-%   OEW(W_TO) etc. stay METHODS taking W_TO (recompute per call, read geom.S_ref
-%   and prop.T_SL LIVE, no cache). CONSTRUCTOR:
+%   get_OEW_categorical etc. stay METHODS taking W_TO (recompute per call, read
+%   geom.S_ref and prop.T_SL LIVE, no cache). WeightsBase declares get_OEW;
+%   WeightsModelL1 bridges it onto get_OEW_categorical. CONSTRUCTOR:
 %   Aero481WeightsL1(json_path, geom, prop) -- three args, all required.
 %
 %   Inheritance: WeightsBase -> WeightsModelL1 -> Aero481WeightsL1
@@ -114,8 +116,8 @@ classdef Aero481WeightsL1 < WeightsModelL1
         % WeightsModelL1 / WeightsBase abstract contract.
         % ================================================================== %
 
-        function oew = OEW(obj, W_TO)
-        %OEW  Operating empty weight [lbf] -- the Aero 481 A02 delta model.
+        function oew = get_OEW_categorical(obj, W_TO)
+        %GET_OEW_CATEGORICAL  Operating empty weight [lbf] -- the A02 delta model.
         %   [A481 +Algorithms/A02.m:37-63]
         %
         %     OEW(W_TO) = We_frac(W_TO)*W_TO                         [FRACTION]
@@ -157,9 +159,11 @@ classdef Aero481WeightsL1 < WeightsModelL1
         %COMPUTE_WE_FRACTION  Sainristil empty-weight fraction We/W0 [--].
         %   We/W0 = oew_coeff_a * W0[lbm]^oew_coeff_c = 0.882 * W0^-0.055, the
         %   FRACTION term of the A02 model. Delegates to
-        %   WeightsL1.We_fraction_power_law (Kvs = 1). _TODO -- UNCITED (A7).
+        %   WeightsL1.compute_We_frac_raymer, which is the bare Kvs*A*W^C power
+        %   law; here it carries SAINRISTIL coefficients, not Raymer's, and
+        %   Kvs = 1. _TODO -- UNCITED (A7).
         %   [A481 Design01.m:26]
-            frac = WeightsL1.We_fraction_power_law(1.0, obj.oew_coeff_a, obj.oew_coeff_c, W_TO);
+            frac = WeightsL1.compute_We_frac_raymer(1.0, obj.oew_coeff_a, obj.oew_coeff_c, W_TO);
         end
 
         function frac = compute_We_fraction_raymer(obj, W_TO, aircraft_category)
@@ -171,13 +175,15 @@ classdef Aero481WeightsL1 < WeightsModelL1
             if nargin < 3
                 aircraft_category = obj.aircraft_category;
             end
-            frac = WeightsL1.compute_We_fraction(obj, W_TO, aircraft_category);
+            c    = WeightsL1.lookup_raymer_We_frac_coeffs(aircraft_category);
+            frac = WeightsL1.compute_We_frac_raymer(1.00, c.A, c.C, W_TO);
         end
 
         function W_E = compute_We_roskam(obj, W_TO)
         %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].  [Roskam Part I Eq. 2.16]
         %   jet_fighter log-log lower bound -- never summed into OEW.
-            W_E = WeightsL1.compute_We_roskam(obj, W_TO);
+            c   = WeightsL1.lookup_We_roskam_coeffs(obj.aircraft_category);
+            W_E = WeightsL1.compute_We_roskam(c.A, c.B, W_TO);
         end
 
     end

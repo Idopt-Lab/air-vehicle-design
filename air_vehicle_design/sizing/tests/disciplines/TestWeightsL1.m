@@ -3,10 +3,11 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %
 %   Tests: WeightsL1 (static toolbox) + F16WeightsL1 (student class).
 %
-%   TWO L1 METHODS tested here:
-%     (1) Raymer 6th ed. Table 3.1 power law -- central estimate
-%         (We/Wto = Kvs * A * W_TO^C).  OEW delegates to this one.
-%     (2) Roskam Part I Eq. 2.16 log-log   -- MINIMUM achievable W_E bound.
+%   TWO L1 REGRESSIONS live in the WeightsL1 toolbox. Both are tested here:
+%     (1) Raymer 6th ed. Table 3.1 power law (We/Wto = Kvs * A * W_TO^C).
+%         get_OEW delegates to this one, then multiplies by W_TO.
+%     (2) Roskam Part I Eq. 2.16 log-log, the MINIMUM achievable W_E.
+%         Toolbox only -- F16WeightsL1 does not call it.
 %
 %   CONSTRUCTOR (Phase 4, 2026-07-25): F16WeightsL1(json_path), json_path
 %   REQUIRED -- f16a_spec_path(1).  L1 reads no requirements file and injects
@@ -62,6 +63,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %         We/Wto = 1.00 * 2.34 * 0.26027944 = 0.60905389
 %         OEW    = 0.60905389 * 31377
 %                = 18826.2 + 282.393 + 1.6909 = 19110.284 lbf
+%       This IS the F-16A L1 OEW: get_OEW delegates to Table 3.1.
 %
 %   (B) Roskam Table 2.15 jet-fighter row, transcribed from
 %       docs/reference_extracts/roskam_vol1_data.md:57
@@ -74,6 +76,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 %                       = exp(0.45) * exp(-0.00059659)
 %                       = 1.56831219 * 0.99940359 = 1.56737656
 %         W_E_min = 1.56737656e4 = 15673.77 lbf
+%       An independent LOWER BOUND. No F-16A class uses it as its OEW.
 %
 %   TOLERANCE RATIONALE. The two hand values above carry ~7 significant
 %   figures through 2-3 chained exp/ln series evaluations, so their own
@@ -128,7 +131,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 
         function testWeFractionIsLessThanOne(tc)
             % Sanity: no aircraft can have empty weight >= takeoff weight.
-            frac = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 31377);
+            frac = WeightsL1.compute_We_frac_raymer(1.00, 2.34, -0.13, 31377);
             tc.verifyLessThan(frac, 1.0, ...
                 'We/Wto fraction must be < 1 for all physical designs.');
         end
@@ -136,8 +139,8 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         function testWeFractionDecreasesWithWTO(tc)
             % For C<0, fraction falls as W_TO grows (heavier aircraft are
             % proportionally lighter).
-            frac_small = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 10000);
-            frac_large = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 50000);
+            frac_small = WeightsL1.compute_We_frac_raymer(1.00, 2.34, -0.13, 10000);
+            frac_large = WeightsL1.compute_We_frac_raymer(1.00, 2.34, -0.13, 50000);
             tc.verifyGreaterThan(frac_small, frac_large, ...
                 'Jet-fighter fraction must decrease with W_TO (C = -0.13 < 0).');
         end
@@ -146,8 +149,8 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         %TESTWEFRACTIONPOWERLAWHANDCOMPUTED  Header derivation (A), the formula.
         %   Expected 0.60905389 is the hand arithmetic in the class header,
         %   evaluated from the metabook_data.md:22 constants -- not by calling
-        %   We_fraction_power_law and not from a ground-truth file.
-            frac = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 31377);
+        %   compute_We_frac_raymer and not from a ground-truth file.
+            frac = WeightsL1.compute_We_frac_raymer(1.00, 2.34, -0.13, 31377);
             tc.verifyEqual(frac, 0.60905389, 'RelTol', 1e-5, ...
                 ['We/Wto must equal 1.00*2.34*31377^(-0.13) = 0.60905389 ' ...
                  '[Raymer 6th ed. Tbl 3.1; metabook_data.md:22].']);
@@ -155,7 +158,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 
         function testWeRoskamHandComputed(tc)
         %TESTWEROSKAMHANDCOMPUTED  Header derivation (B), the formula.
-            W_E = WeightsL1.We_roskam(0.5091, 0.9505, 31377);
+            W_E = WeightsL1.compute_We_roskam(0.5091, 0.9505, 31377);
             tc.verifyEqual(W_E, 15673.77, 'RelTol', 1e-5, ...
                 ['Roskam Eq. 2.16 min W_E at W_TO=31377 must equal ' ...
                  '10^((log10(31377)-0.5091)/0.9505) = 15673.77 lbf ' ...
@@ -174,8 +177,8 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
             % Roskam gives a MINIMUM bound; Raymer Table 3.1 gives a higher
             % central estimate. Property of the two formulas, no external
             % expected value involved.
-            W_roskam = WeightsL1.We_roskam(0.5091, 0.9505, 31377);
-            W_raymer = WeightsL1.We_fraction_power_law(1.00, 2.34, -0.13, 31377) * 31377;
+            W_roskam = WeightsL1.compute_We_roskam(0.5091, 0.9505, 31377);
+            W_raymer = WeightsL1.compute_We_frac_raymer(1.00, 2.34, -0.13, 31377) * 31377;
             tc.verifyLessThan(W_roskam, W_raymer, ...
                 'Roskam L1 min W_E must be below Raymer L1 central estimate.');
         end
@@ -190,14 +193,14 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
 
         function testOEWLessThanWTO(tc)
             g = TestWeightsL1.makeW1();
-            oew = g.OEW(31377);
+            oew = g.get_OEW(31377);
             tc.verifyLessThan(oew, 31377, ...
                 'OEW must be less than W_TO for any physical design.');
         end
 
         function testOEWGreaterThanZero(tc)
             g = TestWeightsL1.makeW1();
-            oew = g.OEW(31377);
+            oew = g.get_OEW(31377);
             tc.verifyGreaterThan(oew, 0, 'OEW must be positive.');
         end
 
@@ -208,19 +211,32 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         %   evidence: an internal check against the cited formula and the
         %   extract's own coefficients, with no external target.
             g = TestWeightsL1.makeW1();
-            tc.verifyEqual(g.OEW(31377), 19110.284, 'RelTol', 1e-5, ...
+            tc.verifyEqual(g.get_OEW(31377), 19110.284, 'RelTol', 1e-5, ...
                 ['L1 OEW(31377) must equal (1.00*2.34*31377^-0.13)*31377 = ' ...
                  '19110.284 lbf [Raymer 6th ed. Tbl 3.1; metabook_data.md:22].']);
         end
 
-        function testRoskamBoundHandComputed(tc)
-        %TESTROSKAMBOUNDHANDCOMPUTED  Header derivation (B) via the class.
-        %   Replaces the removed testRoskamMinBoundBelowBrandt, which compared
-        %   the bound against the mis-cited 19,148.
-            g = TestWeightsL1.makeW1();
-            tc.verifyEqual(g.compute_We_roskam(31377), 15673.77, 'RelTol', 1e-5, ...
-                ['L1 Roskam minimum W_E(31377) must equal 15673.77 lbf ' ...
-                 '[Roskam Part I Eq. 2.16 + Tbl 2.15; roskam_vol1_data.md:47,:57].']);
+        function testOEWEqualsFractionTimesWTO(tc)
+        %TESTOEWEQUALSFRACTIONTIMESWTO  Internal identity, no external value.
+        %   get_OEW must be exactly the Table 3.1 fraction times W_TO. Replaces
+        %   the removed testWeFractionMatchesOEW, which asked the same question
+        %   through the deleted class-level compute_We_fraction method.
+            g     = TestWeightsL1.makeW1();
+            W_TO  = 31377;
+            c     = WeightsL1.lookup_raymer_We_frac_coeffs('jet_fighter');
+            frac  = WeightsL1.compute_We_frac_raymer(1.00, c.A, c.C, W_TO);
+            tc.verifyEqual(g.get_OEW(W_TO), frac * W_TO, 'AbsTol', 1e-9, ...
+                'OEW must equal the Raymer Table 3.1 fraction times W_TO exactly.');
+        end
+
+        function testKvsScalesTheFractionLinearly(tc)
+        %TESTKVSSCALESTHEFRACTIONLINEARLY  K_vs is a caller-supplied multiplier.
+        %   It is a DESIGN value (1.00 fixed sweep, 1.04 variable sweep), not a
+        %   Table 3.1 constant, so it is not tabulated. Its only job is to scale
+        %   the fraction. [metabook_data.md:20-22]
+            tc.verifyEqual(WeightsL1.compute_We_frac_raymer(1.04, 2.34, -0.13, 31377), ...
+                1.04 * WeightsL1.compute_We_frac_raymer(1.00, 2.34, -0.13, 31377), ...
+                'RelTol', 1e-12, 'K_vs must scale the fraction linearly.');
         end
 
         function testOEWIsPureFunctionOfItsArgument(tc)
@@ -232,29 +248,10 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
             g = TestWeightsL1.makeW1();
             tc.verifyTrue(isnan(g.W_TO), ...
                 'obj.W_TO must be NaN until the sizing loop sets it.');
-            tc.verifyEqual(g.OEW(31377), 19110.284, 'RelTol', 1e-5, ...
+            tc.verifyEqual(g.get_OEW(31377), 19110.284, 'RelTol', 1e-5, ...
                 'OEW must work with obj.W_TO unset -- it is a pure function of its argument.');
-            tc.verifyNotEqual(g.OEW(62754), g.OEW(31377), ...
+            tc.verifyNotEqual(g.get_OEW(62754), g.get_OEW(31377), ...
                 'OEW must respond to its argument.');
-        end
-
-        function testWeFractionMatchesOEW(tc)
-            % Internal-consistency identity: frac * W_TO == OEW.
-            g = TestWeightsL1.makeW1();
-            W_TO     = 31377;
-            expected = g.compute_We_fraction(W_TO) * W_TO;
-            tc.verifyEqual(g.OEW(W_TO), expected, 'AbsTol', 1e-9, ...
-                'OEW must equal compute_We_fraction * W_TO exactly.');
-        end
-
-        function testComputeWeFractionWithExplicitCategory(tc)
-            % compute_We_fraction(W_TO, category) overrides obj.aircraft_category.
-            g = TestWeightsL1.makeW1();
-            W_TO = 31377;
-            frac_fighter   = g.compute_We_fraction(W_TO, 'jet_fighter');
-            frac_transport = g.compute_We_fraction(W_TO, 'jet_transport');
-            tc.verifyNotEqual(frac_fighter, frac_transport, ...
-                'Explicit aircraft_category argument must change the fraction.');
         end
 
         function testJetFighterCategorySetCorrectly(tc)
@@ -300,31 +297,32 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         function testLookupJetFighterCoeffs(tc)
             % Expecteds transcribed from metabook_data.md:22 (the AE481
             % metabook's copy of Raymer Table 3.1), not from the code.
-            c = WeightsL1.lookup_coeffs('jet_fighter');
+            c = WeightsL1.lookup_raymer_We_frac_coeffs('jet_fighter');
             tc.verifyEqual(c.A,   2.34,  'AbsTol', 1e-6, ...
                 'jet_fighter A must be 2.34 [metabook_data.md:22].');
             tc.verifyEqual(c.C,  -0.13,  'AbsTol', 1e-6, ...
                 'jet_fighter C must be -0.13 [metabook_data.md:22].');
-            tc.verifyEqual(c.Kvs, 1.00,  'AbsTol', 1e-6, ...
-                'jet_fighter Kvs must be 1.00 (fixed sweep) [metabook_data.md:22].');
+            tc.verifyFalse(isfield(c, 'Kvs'), ...
+                ['K_vs must NOT be tabulated: it is a design value, not a ' ...
+                 'Table 3.1 constant. The caller supplies it.']);
         end
 
         function testLookupOtherCategoryCoeffs(tc)
             % The other three coded rows, transcribed from metabook_data.md:23
             % (military cargo/bomber), :24 (jet transport), :26 (jet trainer).
-            c_mcb = WeightsL1.lookup_coeffs('military_cargo_bomber');
+            c_mcb = WeightsL1.lookup_raymer_We_frac_coeffs('military_cargo_bomber');
             tc.verifyEqual([c_mcb.A c_mcb.C], [0.93 -0.07], 'AbsTol', 1e-6, ...
                 'military_cargo_bomber must be A=0.93, C=-0.07 [metabook_data.md:23].');
-            c_jt = WeightsL1.lookup_coeffs('jet_transport');
+            c_jt = WeightsL1.lookup_raymer_We_frac_coeffs('jet_transport');
             tc.verifyEqual([c_jt.A c_jt.C], [1.02 -0.06], 'AbsTol', 1e-6, ...
                 'jet_transport must be A=1.02, C=-0.06 [metabook_data.md:24].');
-            c_tr = WeightsL1.lookup_coeffs('jet_trainer');
+            c_tr = WeightsL1.lookup_raymer_We_frac_coeffs('jet_trainer');
             tc.verifyEqual([c_tr.A c_tr.C], [1.59 -0.10], 'AbsTol', 1e-6, ...
                 'jet_trainer must be A=1.59, C=-0.10 [metabook_data.md:26].');
         end
 
         function testLookupUnknownCategoryErrors(tc)
-            tc.verifyError(@() WeightsL1.lookup_coeffs('spaceship'), ...
+            tc.verifyError(@() WeightsL1.lookup_raymer_We_frac_coeffs('spaceship'), ...
                 'WeightsL1:UnknownCategory', ...
                 'Unknown category must throw WeightsL1:UnknownCategory.');
         end
@@ -338,7 +336,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
     methods (Test)
 
         function testLookupRoskamJetFighterCoeffs(tc)
-            c = WeightsL1.lookup_roskam_coeffs('jet_fighter');
+            c = WeightsL1.lookup_We_roskam_coeffs('jet_fighter');
             tc.verifyEqual(c.A, 0.5091, 'AbsTol', 1e-6, ...
                 'jet_fighter Roskam A must be 0.5091 [roskam_vol1_data.md:57].');
             tc.verifyEqual(c.B, 0.9505, 'AbsTol', 1e-6, ...
@@ -346,7 +344,7 @@ classdef TestWeightsL1 < matlab.unittest.TestCase
         end
 
         function testLookupRoskamUnknownCategoryErrors(tc)
-            tc.verifyError(@() WeightsL1.lookup_roskam_coeffs('spaceship'), ...
+            tc.verifyError(@() WeightsL1.lookup_We_roskam_coeffs('spaceship'), ...
                 'WeightsL1:UnknownRoskamCategory', ...
                 'Unknown Roskam category must throw WeightsL1:UnknownRoskamCategory.');
         end

@@ -94,7 +94,7 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
         function testOEWGroundTruth(tc)
         % Hand calc (1): OEW(31,377) = 19,980.70 lbf [Brandt Wt!B12].
             [~, ~, wA, ~] = tc.buildStack_();
-            oew = wA.OEW(tc.W_TO_GT);
+            oew = wA.get_OEW(tc.W_TO_GT);
             tc.verifyEqual(oew, tc.OEW_GT, 'RelTol', 1e-3, ...
                 'OEW(31377) must reproduce Brandt Wt!B12 (pi-vs-3.1516 nacelle deviation ~0.016 %).');
         end
@@ -114,12 +114,12 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
             state = AircraftState(30000, 0.9);
 
             S_wet0 = gA.get_S_wet();
-            oew0   = wA.OEW(tc.W_TO_GT);
+            oew0   = wA.get_OEW(tc.W_TO_GT);
             polar0 = aA.drag_polar(state);
 
             gA.S_ref = 330;
             S_wet1 = gA.get_S_wet();
-            oew1   = wA.OEW(tc.W_TO_GT);
+            oew1   = wA.get_OEW(tc.W_TO_GT);
             polar1 = aA.drag_polar(state);
 
             tc.verifyEqual(gA.S_ref, 330, 'S_ref must read back the mutated value.');
@@ -133,7 +133,7 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
             gA.S_ref = 300;
             tc.verifyEqual(gA.get_S_wet(), S_wet0, 'RelTol', 1e-10, ...
                 'S_wet must return to the original after restoring S_ref (pure recompute).');
-            tc.verifyEqual(wA.OEW(tc.W_TO_GT), oew0, 'RelTol', 1e-10, ...
+            tc.verifyEqual(wA.get_OEW(tc.W_TO_GT), oew0, 'RelTol', 1e-10, ...
                 'OEW must return to the original after restoring S_ref (pure recompute).');
             polar2 = aA.drag_polar(state);
             tc.verifyEqual(polar2.CD0, polar0.CD0, 'RelTol', 1e-10, ...
@@ -145,7 +145,7 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
             [~, pA, wA, ~] = tc.buildStack_();
             states = {AircraftState(30000, 0.9), AircraftState(0, 0.4)};
 
-            oew1 = wA.OEW(tc.W_TO_GT);
+            oew1 = wA.get_OEW(tc.W_TO_GT);
             alpha_AB0  = cellfun(@(s) pA.get_thrust_lapse(s, "AB"), states);
             alpha_mil0 = cellfun(@(s) pA.get_thrust_lapse(s, "mil"), states);
 
@@ -164,7 +164,7 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
             tc.verifyEqual(alpha_mil1, alpha_mil0, 'RelTol', 1e-12, ...
                 'Mil-on-AB thrust lapse must be invariant under the ratio-preserving rubber scale.');
 
-            oew2 = wA.OEW(tc.W_TO_GT);
+            oew2 = wA.get_OEW(tc.W_TO_GT);
             tc.verifyEqual(oew2 - oew1, tc.DOEW_THRUST, 'RelTol', 1e-9, ...
                 'dOEW must equal 0.199*dT exactly (Wt!B11; inlet-duct chain fixed by wiring, see header (3)).');
         end
@@ -173,9 +173,9 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
         % Hand calc (4): S_ht 108 -> 120, dOEW = 6.0*12*1.3 = 93.6 lbf.
             [gA, ~, wA, ~] = tc.buildStack_();
 
-            oew0 = wA.OEW(tc.W_TO_GT);
+            oew0 = wA.get_OEW(tc.W_TO_GT);
             gA.S_ht = 120;
-            oew1 = wA.OEW(tc.W_TO_GT);
+            oew1 = wA.get_OEW(tc.W_TO_GT);
 
             tc.verifyEqual(gA.S_ht, 120, 'S_ht must read back the mutated value.');
             tc.verifyGreaterThan(oew1, oew0, ...
@@ -184,7 +184,7 @@ classdef TestBrandtAdapterMutation < matlab.unittest.TestCase
                 'dOEW must equal k_pitch*dS*(1+0.30) = 93.6 lbf (Wt!E9 + Wt!B29).');
 
             gA.S_ht = 108;
-            tc.verifyEqual(wA.OEW(tc.W_TO_GT), oew0, 'RelTol', 1e-10, ...
+            tc.verifyEqual(wA.get_OEW(tc.W_TO_GT), oew0, 'RelTol', 1e-10, ...
                 'OEW must return to the original after restoring S_ht (pure recompute).');
         end
 

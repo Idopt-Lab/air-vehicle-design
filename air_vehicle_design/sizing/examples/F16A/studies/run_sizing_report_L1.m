@@ -96,7 +96,7 @@ title(sprintf('F-16A Level 1 Sizing Convergence (S_{ref} = W_{TO}/(W/S)_{opt}, (
 %% High-level weight breakdown
 % L1 has no component (wing/tail/fuselage/...) weight model -- OEW is a
 % single Table 3.1 empty-weight-fraction regression on W_TO
-% (F16WeightsL1.OEW). The breakdown below is therefore at the same
+% (F16WeightsL1.get_OEW). The breakdown below is therefore at the same
 % granularity as the legacy L1 example script: OEW vs. mission fuel vs.
 % fixed/expendable payload (objs.wts's own WeightsBase-contract properties).
 

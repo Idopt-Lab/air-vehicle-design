@@ -48,7 +48,7 @@ W_TO = ts.converge_W0(T_design, S_design);   % [metabook Algorithm 2 = A481 A02 
 
 % converge_W0 left geom/prop/wts at this cell's state, so OEW and mission fuel
 % are consistent with the returned W_TO. Read them back directly.
-W_OEW  = wts.OEW(W_TO);
+W_OEW  = wts.get_OEW(W_TO);
 [W_fuel, ~] = miss.total_fuel(W_TO);
 WS     = W_TO / S_design;      % actual wing loading at the sized weight [psf]
 TW     = T_design / W_TO;      % ACTUAL thrust-to-weight (~0.70, not 1.2)

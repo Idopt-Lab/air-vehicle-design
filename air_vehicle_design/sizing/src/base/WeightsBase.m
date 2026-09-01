@@ -31,7 +31,8 @@ classdef (Abstract) WeightsBase < handle
         %   it recomputes on every call and cannot go stale. Concrete classes
         %   must never cache it, and every W_TO-dependent term inside must be
         %   evaluated at the PASSED W_TO, not at obj.W_TO.
-        oew = OEW(obj, W_TO)
+        oew = get_OEW(obj, W_TO)
+        % TODO (9/1/2026)(Casey): Change "oew" -> "get_oew"
 
     end
 

@@ -407,7 +407,7 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
                      + 5.5 *geom.S_exposed_vt ...        % V-tail   [Table 7.1]
                      + 5.0 *geom.S_wet_fus ...           % fuselage [Table 7.1]
                      + 0.043*W0 + 0.17*W0;               % gear + all-else [Table 7.1]
-            received = wts.OEW(W0);
+            received = wts.get_OEW(W0);
             fprintf('\n    OEW(766800) build-up: received=%.1f  hand=%.1f (~%d; %+.1f%% vs actual 320000)\n', ...
                 received, expected, tc.OEW_L2_BASELINE, 100*(received-320000)/320000);
             tc.verifyEqual(received, expected, 'RelTol', 1e-9, ...
@@ -421,9 +421,9 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         % EXPOSED wing area, so the wing weight (10 lb/ft^2 [Table 7.1]) rises.
         % Independent increment: exactly 10 * (exposed(5000) - exposed(4605)).
             [geom, ~, ~, ~, wts] = TestB777Disciplines.buildStack();
-            oew_0 = wts.OEW(tc.W0_BASELINE);  exp_0 = geom.S_exposed_wing;
+            oew_0 = wts.get_OEW(tc.W0_BASELINE);  exp_0 = geom.S_exposed_wing;
             geom.S_ref = 5000;                          % in-place mutation
-            oew_1 = wts.OEW(tc.W0_BASELINE);  exp_1 = geom.S_exposed_wing;
+            oew_1 = wts.get_OEW(tc.W0_BASELINE);  exp_1 = geom.S_exposed_wing;
             fprintf('\n    OEW S_ref 4605->5000: %.1f -> %.1f (delta %+.1f; 10*dExposed = %.1f)\n', ...
                 oew_0, oew_1, oew_1 - oew_0, 10*(exp_1 - exp_0));
             tc.verifyGreaterThan(oew_1, oew_0, 'OEW must rise with wing area.');
@@ -435,9 +435,9 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         % The component build-up responds to T0: growing prop.T_SL grows the
         % Roskam installed-engine weight, so OEW rises (the T0 sizing coupling).
             [~, prop, ~, ~, wts] = TestB777Disciplines.buildStack();
-            oew_0 = wts.OEW(tc.W0_BASELINE);
+            oew_0 = wts.get_OEW(tc.W0_BASELINE);
             prop.T_SL = prop.T_SL * 1.2;                % +20% thrust, in-place
-            oew_1 = wts.OEW(tc.W0_BASELINE);
+            oew_1 = wts.get_OEW(tc.W0_BASELINE);
             fprintf('\n    OEW T_SL +20%%: %.1f -> %.1f (delta %+.1f)\n', oew_0, oew_1, oew_1 - oew_0);
             tc.verifyGreaterThan(oew_1, oew_0, ...
                 'OEW must rise with T_SL (heavier Roskam engine).');
@@ -446,8 +446,8 @@ classdef TestB777Disciplines < matlab.unittest.TestCase
         function testOEWRejectsNonPositiveWTO(tc)
         % OEW's arguments block guards W_TO (mustBePositive, mustBeFinite).
             [~, ~, ~, ~, wts] = TestB777Disciplines.buildStack();
-            tc.verifyError(@() wts.OEW(-5), 'MATLAB:validators:mustBePositive');
-            tc.verifyError(@() wts.OEW(Inf), 'MATLAB:validators:mustBeFinite');
+            tc.verifyError(@() wts.get_OEW(-5), 'MATLAB:validators:mustBePositive');
+            tc.verifyError(@() wts.get_OEW(Inf), 'MATLAB:validators:mustBeFinite');
         end
 
         % ---- TAIL -------------------------------------------------------- %

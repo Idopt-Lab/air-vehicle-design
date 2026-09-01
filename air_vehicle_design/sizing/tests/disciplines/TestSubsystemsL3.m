@@ -118,7 +118,7 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
 
         function testAvionicsWeightAndVolumeAgreeWithL2(tc)
             obj.avionics_table_row = 'Fighters';
-            obj.fuel_weight_source = struct('W_TO', 20000, 'OEW', @(~) 12000);
+            obj.fuel_weight_source = struct('W_TO', 20000, 'get_OEW', @(~) 12000);
             received_weight = SubsystemsL3.avionics_weight(obj);
             expected_weight = 660;
             fprintf('  [L3] testAvionicsWeightAndVolumeAgreeWithL2: weight expected=%.6g, received=%.6g\n', expected_weight, received_weight);
@@ -199,7 +199,7 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
                                'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
             obj.packaging_factor_category = 'Integral tank — shallow fuselage';
             obj.avionics_table_row        = 'Fighters';
-            obj.fuel_weight_source        = struct('W_TO', 20000, 'OEW', @(~) 12000);
+            obj.fuel_weight_source        = struct('W_TO', 20000, 'get_OEW', @(~) 12000);
 
             fus_term  = SubsystemsL3.fuselage_usable_fuel_volume(obj);   % 3.57*0.80 = 2.856
             wing_term = SubsystemsL3.wing_fuel_volume(obj);              % 11.34

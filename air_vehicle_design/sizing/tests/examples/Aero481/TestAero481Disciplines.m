@@ -450,7 +450,7 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
                 eng_term  = TestAero481Disciplines.weng_roskam(T_SL) ...
                           - TestAero481Disciplines.weng_roskam(tc.DESIGN_TW * W0);
                 expected  = frac_term + wing_term + eng_term;
-                received  = wts.OEW(W0);
+                received  = wts.get_OEW(W0);
                 fprintf(['\n    OEW(%.0f) = %.2f  (hand %.2f = frac %.2f + wing %.2f ', ...
                     '+ eng %.2f)\n'], W0, received, expected, frac_term, wing_term, eng_term);
                 tc.verifyEqual(received, expected, 'RelTol', 1e-9, ...
@@ -471,7 +471,7 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
             eng_delta = TestAero481Disciplines.weng_roskam(T_SL) ...
                       - TestAero481Disciplines.weng_roskam(tc.DESIGN_TW * W0);
             bare  = wts.compute_We_fraction(W0) * W0;   % Sainristil fraction * W0
-            oew   = wts.OEW(W0);
+            oew   = wts.get_OEW(W0);
             fprintf(['\n    W0=%.0f: engine delta = %+.1f  (design thrust %.0f > T_SL %.0f);  ', ...
                 'OEW = %.1f (bare frac*W0 = %.1f);  eff frac = %.4f (bare %.4f)\n'], ...
                 W0, eng_delta, tc.DESIGN_TW*W0, T_SL, oew, bare, oew/W0, ...
@@ -518,8 +518,8 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         function testOEWRejectsNonPositiveWTO(tc)
         % OEW's arguments block guards W_TO (mustBePositive, mustBeFinite).
             [~, ~, ~, ~, wts] = TestAero481Disciplines.buildStack();
-            tc.verifyError(@() wts.OEW(-5),  'MATLAB:validators:mustBePositive');
-            tc.verifyError(@() wts.OEW(Inf), 'MATLAB:validators:mustBeFinite');
+            tc.verifyError(@() wts.get_OEW(-5),  'MATLAB:validators:mustBePositive');
+            tc.verifyError(@() wts.get_OEW(Inf), 'MATLAB:validators:mustBeFinite');
         end
 
         % ---- TAIL -------------------------------------------------------- %

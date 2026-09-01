@@ -20,7 +20,7 @@ classdef FixedWeightsStub < WeightsBase
 
     methods
 
-        function oew = OEW(obj, W_TO)
+        function oew = get_OEW(obj, W_TO)
             oew = obj.oew_fraction * W_TO;
         end
 

@@ -47,11 +47,14 @@ dead and are deleted, not re-pointed.
 
 | Quantity | Function | Formula | Citation |
 |---|---|---|---|
-| OEW (central estimate) | `WeightsL1.OEW` → `We_fraction_power_law(K_vs, A, C, W_TO)` | `OEW = (K_vs·A·W_TO^C)·W_TO` | Raymer Table 3.1 (jet fighter A = 2.34, C = −0.13, K_vs = 1.00) |
-| `W_E` (minimum bound) | `WeightsL1.compute_We_roskam` → `We_roskam(A, B, W_TO)` | `W_E = 10^((log₁₀W_TO − A)/B)` | Roskam Part I Eq. 2.16 + Table 2.15 (jet fighter A = 0.5091, B = 0.9505) |
+| OEW | `F16WeightsL1.get_OEW_categorical` → `WeightsL1.compute_We_frac_raymer(K_vs, A, C, W_TO)` | `OEW = (K_vs·A·W_TO^C)·W_TO` | Raymer Table 3.1 (jet fighter A = 2.34, C = −0.13, K_vs = 1.00) |
+| `W_E` (minimum bound) | `WeightsL1.compute_We_roskam(A, B, W_TO)` | `W_E = 10^((log₁₀W_TO − A)/B)` | Roskam Part I Eq. 2.16 + Table 2.15 (jet fighter A = 0.5091, B = 0.9505) |
 
-All four `lookup_coeffs` rows and all five `lookup_roskam_coeffs` rows match their repo extracts
-exactly. Both extracts are secondary/OCR sources, not the books.
+The Roskam row is toolbox-only: no F-16A class uses it as an OEW. Roskam presents Eq. 2.16 as the
+MINIMUM achievable empty weight, so it is a lower bound, not a competing estimate.
+
+All four `lookup_raymer_We_frac_coeffs` rows and all five `lookup_We_roskam_coeffs` rows match their
+repo extracts exactly. Both extracts are secondary/OCR sources, not the books.
 
 ### L2 — surface density × area, plus fractions
 

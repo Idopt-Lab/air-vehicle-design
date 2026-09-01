@@ -11,16 +11,15 @@ classdef (Abstract) WeightsModelL1 < WeightsBase
 
     methods (Abstract)
 
-        %COMPUTE_WE_FRACTION  OEW/W_TO fraction.  [Raymer 6th ed. Table 3.1]
-        %   aircraft_category is optional; defaults to obj.aircraft_category.
-        OEW_frac = compute_We_fraction(obj, W_TO, aircraft_category)
+        %GET_OEW  OEW
+        OEW = get_OEW_categorical(obj, W_TO)
 
-        %COMPUTE_WE_ROSKAM  Minimum empty weight [lbf].
-        %   [Roskam Part I Eq. 2.16 with Table 2.15]
-        %   A LOWER BOUND: an actual OEW should exceed it, and it must never be
-        %   reported as an OEW estimate.
-        W_E = compute_We_roskam(obj, W_TO)
+    end
 
+    methods
+        function v = get_OEW(obj, W_TO)
+            v = obj.get_OEW_categorical(W_TO);
+        end
     end
 
 end

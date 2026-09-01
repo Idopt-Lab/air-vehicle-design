@@ -13,7 +13,7 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
 %                           (Raymer fuselage term).
 %     fuel_weight_source -- (1,1) WeightsBase. Supplies the required fuel
 %                           weight for fuel_volume_check (obj.W_energy) and
-%                           W_empty for the avionics term (obj.OEW(obj.W_TO)).
+%                           W_empty for the avionics term (obj.get_OEW(obj.W_TO)).
 %
 %   Every quantity below the injected collaborators is derived: recomputed
 %   live on every read, never cached (CLAUDE.md optimization-ready pattern).
@@ -42,7 +42,7 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
     % ======================================================================= %
     properties (Abstract)
         %AVIONICS_WEIGHT  fraction * W_empty [lbf], W_empty =
-        %   fuel_weight_source.OEW(fuel_weight_source.W_TO); zero extra args.
+        %   fuel_weight_source.get_OEW(fuel_weight_source.W_TO); zero extra args.
         avionics_weight
 
         %AVIONICS_VOLUME  avionics_weight / avionics_density [ft^3]. MUST be

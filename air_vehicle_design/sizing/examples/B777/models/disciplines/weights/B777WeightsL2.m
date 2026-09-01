@@ -99,7 +99,7 @@ classdef B777WeightsL2 < WeightsModelL2
         % static toolbox (the same equations F16WeightsL2 uses).
         % ================================================================== %
 
-        function oew = OEW(obj, W_TO)
+        function oew = get_OEW(obj, W_TO)
         %OEW  Component build-up at the PASSED W_TO [metabook §7.2 Algorithm 5].
         %   Every W_TO-scaling term (landing gear, all-else) is recomputed inside
         %   WeightsL2.OEW at this argument, not read off obj.W_TO.

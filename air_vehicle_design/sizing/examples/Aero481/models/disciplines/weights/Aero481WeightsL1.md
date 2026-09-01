@@ -90,19 +90,28 @@ sizing loop.
 
 ## 3. Derived
 
-**None stored.** `OEW`, `compute_We_fraction`, `compute_We_fraction_raymer` and `compute_We_roskam`
-are all **methods taking `W_TO`**, not properties: each recomputes per call and cannot go stale.
-`OEW` additionally reads `geom.get_S_ref()` and `prop.T_SL` LIVE, so the wing/engine deltas always
-reflect the current injected geometry/propulsion state.
+**None stored.** `get_OEW_categorical`, `compute_We_fraction`, `compute_We_fraction_raymer` and
+`compute_We_roskam` are all **methods taking `W_TO`**, not properties: each recomputes per call and
+cannot go stale. `get_OEW_categorical` additionally reads `geom.get_S_ref()` and `prop.T_SL` LIVE, so
+the wing/engine deltas always reflect the current injected geometry/propulsion state.
 
 ---
 
 ## 4. Methods -- the OEW build-up
 
-`OEW(W_TO)` is a method (takes `W_TO`, recomputes per call, reads `geom`/`prop` live, never cached):
+| Method | Arguments | Outputs |
+|---|---|---|
+| `get_OEW_categorical` | `W_TO` | OEW [lbf], the A02 delta model |
+| `get_OEW` | `W_TO` | OEW [lbf], the `WeightsModelL1` bridge onto `get_OEW_categorical` |
+| `compute_We_fraction` | `W_TO` | Sainristil We/W0 fraction |
+| `compute_We_fraction_raymer` | `W_TO`, `aircraft_category` (optional) | Raymer We/W0 fraction |
+| `compute_We_roskam` | `W_TO` | minimum W_E [lbf] |
+
+`get_OEW_categorical` takes `W_TO`, recomputes per call, reads `geom`/`prop` live, never caches:
 
 ```
-OEW(W_TO) = compute_We_fraction(W_TO) * W_TO                        [FRACTION]
+get_OEW_categorical(W_TO)
+          = compute_We_fraction(W_TO) * W_TO                        [FRACTION]
           + rho_w * ( geom.get_S_ref() - W_TO / design_WS_psf )     [WING  delta]
           + ( engine_weight_roskam( prop.T_SL )
             - engine_weight_roskam( design_TW * W_TO ) )            [ENGINE delta]
@@ -110,7 +119,7 @@ OEW(W_TO) = compute_We_fraction(W_TO) * W_TO                        [FRACTION]
 
 | Term | Formula | Reuses (src/ static) | Citation |
 |---|---|---|---|
-| FRACTION | `0.882*W0^-0.055 * W0` | `WeightsL1.We_fraction_power_law` (Kvs = 1) | A481 Design01.m:26 Sainristil (`_TODO -- UNCITED`, A7) |
+| FRACTION | `0.882*W0^-0.055 * W0` | `WeightsL1.compute_We_frac_raymer` (Kvs = 1) | A481 Design01.m:26 Sainristil (`_TODO -- UNCITED`, A7) |
 | WING delta | `rho_w*(S_ref - W_TO/design_WS_psf)`, `rho_w = 9` | `WeightsL2.wing_unit_weight` | A481 A02.m:37-63; Raymer 6th ed. Table 15.2 (`rho_w`) |
 | ENGINE delta | `Weng(T_SL) - Weng(design_TW*W_TO)`, single engine | `WeightsL1.engine_weight_roskam` | A481 A02.m:37-63; Roskam Eqs. 7.13-7.19 (`Weng`) |
 
@@ -121,8 +130,9 @@ an engine count** -- the actual and baseline engines are each ONE whole `engine_
 
 - **`compute_We_fraction`** -- the Sainristil curve `We/W0 = 0.882*W0^-0.055`, the FRACTION term of the
   A02 model and the class's official/design-baseline answer. A power law of exactly the
-  `WeightsL1.We_fraction_power_law(Kvs, A, C, W_TO)` shape, so it reuses that shared low-level static
-  with `Kvs = 1`. The coefficient basis is `W0` in **lbm**, numerically equal to lbf at standard
+  `WeightsL1.compute_We_frac_raymer(Kvs, A, C, W_TO)` shape, so it reuses that shared low-level
+  static with `Kvs = 1`. That static is NAMED for Raymer but is the bare `Kvs*A*W^C` form; here it
+  carries Sainristil coefficients. The coefficient basis is `W0` in **lbm**, numerically equal to lbf at standard
   gravity, so `W_TO[lbf]` passes straight through (no conversion factor).
 - **`compute_We_fraction_raymer`** -- the framework-cited `[Raymer 6th ed. Table 3.1 jet_fighter]`
   curve `We/W0 = 2.34*W0^-0.13`. **Not** the design baseline -- exposed only so the comparison report
@@ -131,8 +141,9 @@ an engine count** -- the actual and baseline engines are each ONE whole `engine_
 ### Roskam lower bound
 
 `compute_We_roskam` is the `[Roskam Part I Eq. 2.16 + Table 2.15]` jet_fighter log-log **minimum**
-empty weight -- an independent lower bound, **never summed into OEW**. Carried only to satisfy the
-`WeightsModelL1` contract.
+empty weight -- an independent lower bound, **never summed into OEW**. It reads its Table 2.15 row
+with `WeightsL1.lookup_We_roskam_coeffs`, then evaluates `WeightsL1.compute_We_roskam(A, B, W_TO)`.
+`WeightsModelL1` no longer declares it abstract; the class keeps it for the comparison report.
 
 ---
 

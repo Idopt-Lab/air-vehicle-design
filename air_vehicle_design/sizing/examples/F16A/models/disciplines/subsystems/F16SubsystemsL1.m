@@ -10,7 +10,7 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
 %   own following-paragraph density-range average, ~37.5 lb/ft^3]. No
 %   geometry, no injected collaborators -- methods that need an external
 %   weight (W_empty, a required fuel weight) take it as an explicit
-%   argument, exactly as F16WeightsL1.OEW(obj, W_TO) does.
+%   argument, exactly as F16WeightsL1.get_OEW(obj, W_TO) does.
 %
 %   No fuel-tank packaging factor is applied here (not usable at L1 -- no
 %   geometric raw volume exists yet) and there is no landing-gear

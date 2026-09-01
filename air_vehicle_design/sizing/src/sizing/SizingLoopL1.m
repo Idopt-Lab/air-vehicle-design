@@ -102,7 +102,7 @@ classdef SizingLoopL1 < handle
                 obj.prop.T_SL = TW * W0;
 
                 [W_fuel, ~] = obj.miss.total_fuel(W0);
-                W_OEW = obj.wts.OEW(W0);
+                W_OEW = obj.wts.get_OEW(W0);
 
                 % WeightsBase bookkeeping (sizing-loop state properties).
                 obj.wts.W_TO     = W0;
@@ -157,7 +157,7 @@ classdef SizingLoopL1 < handle
             end
             obj.prop.T_SL = TW * W0;
             [W_fuel, ~] = obj.miss.total_fuel(W0);
-            W_OEW = obj.wts.OEW(W0);
+            W_OEW = obj.wts.get_OEW(W0);
             obj.wts.W_TO     = W0;
             obj.wts.W_energy = W_fuel;
 

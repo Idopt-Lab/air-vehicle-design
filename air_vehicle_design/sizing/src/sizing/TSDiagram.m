@@ -554,7 +554,7 @@ classdef TSDiagram < handle
                 blew_up = false;
                 try
                     [W_fuel, ~] = obj.miss.total_fuel(W0);
-                    W_OEW = obj.wts.OEW(W0);
+                    W_OEW = obj.wts.get_OEW(W0);
                     if ~(isfinite(W_fuel) && isfinite(W_OEW))
                         blew_up = true;
                     end
