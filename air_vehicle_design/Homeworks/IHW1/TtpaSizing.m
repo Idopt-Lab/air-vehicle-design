@@ -25,7 +25,7 @@ disp('% -- Disciplines Loaded Successfully -- %')
 % Initial Weight Guesses based on RFP and Market Analysis
 W_TO = 5000;  % Vehicle Weight
 
-[W_TO_final, beta, results_table, fuel_fraction,...
+[W_TO_final, results_table, fuel_fraction,...
 empty_weight_fraction, empty_weight, fuel_burned, segment_weight, segment_wf]...
     = missionAnalysis(obj, W_TO, opts);
 
@@ -35,7 +35,7 @@ fprintf('Final Takeoff Gross Weight (W_TO): %.2f lbs\n', W_TO_final);
 disp(results_table);
 
 %% Function: Main Mission Analysis
-function [W_TO_final, beta, results_table, fuel_fraction,...
+function [W_TO_final, results_table, fuel_fraction,...
     empty_weight_fraction, empty_weight, fuel_burned, segment_weight, segment_wf]...
     = missionAnalysis(obj, W_TO, opts)
     
@@ -67,7 +67,6 @@ function [W_TO_final, beta, results_table, fuel_fraction,...
         % disp(fuel_burned)
     end
 
-    beta = 1 - (sum(fuel_burned(ii,:)) / (2 * W_TO));
     W_TO_final = W_TO;
     results_table = array2table(results, 'VariableNames', {'W_TO', 'Empty_weight', 'Fuel_weight', 'Empty_weight_fraction','Fuel_fraction', 'WTO_new', 'Difference', 'Percent_Diff'});
 end
