@@ -195,10 +195,10 @@ OEW(W_TO) = We_frac(W_TO)·W_TO                        [FRACTION — A481 Sainri
 |---|---|---|
 | FRACTION `We_frac·W_TO` | `We_frac = 0.882·W_TO^-0.055` | `[A481 Design01.m:26]`; `_TODO — UNCITED` (A7). Framework alternative `[Raymer Table 3.1 jet_fighter]` `2.34·W_TO^-0.13` — report shows both |
 | WING delta `rho_w·(S_ref - W_TO/design_WS_psf)` | `rho_w = 9.0 lb/ft²` (44 kg/m²); baseline area `W_TO/92.17` (self-scaling); `S_ref` LIVE from geom | **[Raymer 6th ed. Table 15.2 fighter; metabook_data.md:483]** — matches A481 A02's `WingDensity=44 kg/m²`. `design_WS_psf=92.17` from the `.weights` block |
-| ENGINE delta `Weng(T_SL) - Weng(design_TW·W_TO)` | `Weng = WeightsL1.engine_weight_roskam`; baseline thrust `1.2·W_TO` (self-scaling); n_eng=1 (no count division); `T_SL` LIVE from prop | **[Roskam Eqs. 7.13-7.19]** = `Utility.MetaEngine` (identical 5-term form). `design_TW=1.2` from the `.weights` block. KEEPS reverser term `W_rev=0.034·T` — `_TODO` fighter has none (A9) |
+| ENGINE delta `Weng(T_SL) - Weng(design_TW·W_TO)` | `Weng = WeightsL2.jet_engine_weight_roskam`; baseline thrust `1.2·W_TO` (self-scaling); n_eng=1 (no count division); `T_SL` LIVE from prop | **[Roskam Eqs. 7.13-7.19]** = `Utility.MetaEngine` (identical 5-term form). `design_TW=1.2` from the `.weights` block. KEEPS reverser term `W_rev=0.034·T` — `_TODO` fighter has none (A9) |
 
 **The A481 vs framework engine-weight match:** `MetaEngine.m` and
-`WeightsL1.engine_weight_roskam` compute the SAME dry/oil/rev/control/start terms — the F-35
+`WeightsL2.jet_engine_weight_roskam` compute the SAME dry/oil/rev/control/start terms — the F-35
 wires to the shared framework static, it does not re-derive it. **The A481 vs framework wing
 density match:** A481 A02 uses 44 kg/m² = the Raymer Table 15.2 fighter 9 lb/ft². Both are
 genuine reuse, not coincidence.

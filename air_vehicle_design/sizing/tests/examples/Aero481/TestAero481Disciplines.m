@@ -184,7 +184,7 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         function W = weng_roskam(T)
         %WENG_ROSKAM  INDEPENDENT single-engine dry weight [lbf] from SLS thrust,
         %   the 5-term Roskam regression [Roskam Eqs. 7.13-7.19] -- transcribed
-        %   here by hand (NOT read from WeightsL1.engine_weight_roskam), so the
+        %   here by hand (NOT read from WeightsL2.jet_engine_weight_roskam), so the
         %   A02 engine-delta expected cannot share a coefficient error with the
         %   class under test. Same formula validated in
         %   TestB777Disciplines.testOEWComponentBuildup.
@@ -645,11 +645,11 @@ classdef TestAero481Disciplines < matlab.unittest.TestCase
         end
 
         function testTODO_ReverserTermForFighter(tc)
-        % A9: WeightsL1.engine_weight_roskam KEEPS the thrust-reverser term
+        % A9: WeightsL2.jet_engine_weight_roskam KEEPS the thrust-reverser term
         % (0.034*T) for MetaEngine parity -- but a fighter (F135) has NO
         % reverser, so the F-35 engine delta over-counts by that term.
             tc.verifyFail(['TODO(citation A9): the engine-weight delta in ', ...
-                'Aero481WeightsL1 (via WeightsL1.engine_weight_roskam) KEEPS the ', ...
+                'Aero481WeightsL1 (via WeightsL2.jet_engine_weight_roskam) KEEPS the ', ...
                 'thrust-reverser term W_rev = 0.034*T [Roskam Eq. 7.15] for ', ...
                 'MetaEngine parity, but a fighter (F135) has no reverser. Add a ', ...
                 'fighter no-reverser engine-weight variant (or cite retaining ', ...

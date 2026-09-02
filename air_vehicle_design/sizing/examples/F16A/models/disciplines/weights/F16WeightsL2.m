@@ -147,7 +147,7 @@ classdef F16WeightsL2 < WeightsModelL2
         % reads the Dependent properties above live.
         % ================================================================== %
 
-        function oew = OEW(obj, W_TO)
+        function oew = get_OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
         %   [Raymer 6th ed. Table 15.2 + AE481 metabook Sec. 7] + the strake term
         %   (Brandt Main!D18/Wt!H7). Every W_TO-scaling term (landing gear,

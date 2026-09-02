@@ -12,8 +12,8 @@ classdef Aero481WeightsL1 < WeightsModelL1
 %
 %     OEW(W_TO) = We_frac(W_TO) * W_TO                              [FRACTION]
 %               + rho_w * ( geom.S_ref - W_TO / design_WS_psf )    [WING  delta]
-%               + ( engine_weight_roskam( prop.T_SL )
-%                 - engine_weight_roskam( design_TW * W_TO ) )      [ENGINE delta]
+%               + ( jet_engine_weight_roskam( prop.T_SL )
+%                 - jet_engine_weight_roskam( design_TW * W_TO ) )      [ENGINE delta]
 %
 %   where
 %     We_frac(W_TO) = 0.882 * W_TO[lbm]^-0.055  [A481 Design01.m:26 Sainristil]
@@ -128,7 +128,7 @@ classdef Aero481WeightsL1 < WeightsModelL1
         %            = 9 lbf/ft^2 jet_fighter [Raymer 6th ed. Table 15.2]
         %   S_ref  = geom.get_S_ref()   [ft^2, read LIVE]
         %   T_SL   = prop.T_SL          [lbf, read LIVE]
-        %   Weng   = WeightsL1.engine_weight_roskam  [Roskam Eqs. 7.13-7.19]
+        %   Weng   = WeightsL2.jet_engine_weight_roskam  [Roskam Eqs. 7.13-7.19]
         %   Single engine (n = 1): the engine delta has no division by an engine
         %   count. Every W_TO-dependent term uses the PASSED W_TO.
             arguments
@@ -146,11 +146,11 @@ classdef Aero481WeightsL1 < WeightsModelL1
 
             % ENGINE delta -- actual installed engine minus the design-T/W engine.
             % Single engine, no division by count.
-            % [A481 A02.m:37-63; Roskam Eqs. 7.13-7.19 via engine_weight_roskam]
+            % [A481 A02.m:37-63; Roskam Eqs. 7.13-7.19 via jet_engine_weight_roskam]
             T_SL         = obj.prop.T_SL;                        % live
             T_baseline   = obj.design_TW * W_TO;
-            engine_delta = WeightsL1.engine_weight_roskam(T_SL) ...
-                         - WeightsL1.engine_weight_roskam(T_baseline);
+            engine_delta = WeightsL2.jet_engine_weight_roskam(T_SL) ...
+                         - WeightsL2.jet_engine_weight_roskam(T_baseline);
 
             oew = oew_fraction + wing_delta + engine_delta;
         end

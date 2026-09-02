@@ -8,8 +8,8 @@ the design class reads its own coefficient row and passes the numbers.
 no engine data, so an L1 weights class injects nothing.
 
 Consumers: `F16WeightsL1` (Raymer fraction) and `Aero481WeightsL1` (the same power law carrying
-Sainristil coefficients, plus `engine_weight_roskam` for its A02 engine delta). `B777WeightsL2`
-also calls `engine_weight_roskam`.
+Sainristil coefficients). `jet_engine_weight_roskam` moved to `WeightsL2` on 2026-09-02: it is a
+thrust-based statistical correlation, not a categorical lookup.
 
 ---
 
@@ -21,7 +21,6 @@ also calls `engine_weight_roskam`.
 | `compute_We_roskam` | `A`, `B`, `W_TO` | $W_E$ [lbf] | Roskam Part I Eq. 2.16 |
 | `lookup_raymer_We_frac_coeffs` | `aircraft_category` | struct `A`, `C` | Raymer 6th ed. Table 3.1 |
 | `lookup_We_roskam_coeffs` | `aircraft_category` | struct `A`, `B` | Roskam Part I Table 2.15 |
-| `engine_weight_roskam` | `T0_lbf` | one engine total [lbf] | Roskam Eqs. 7.13-7.19 |
 
 ## 2. Equations
 

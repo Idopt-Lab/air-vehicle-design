@@ -128,7 +128,7 @@ classdef B777WeightsL2 < WeightsModelL2
         function v = get.W_en(obj)
             % UNINSTALLED single-engine Roskam weight at the per-engine thrust
             % [metabook Eqs. 7.13-7.19]; the 1.3x is applied in W_installed_engine.
-            v = WeightsL1.engine_weight_roskam(obj.prop.T_SL / obj.N_en);
+            v = WeightsL2.jet_engine_weight_roskam(obj.prop.T_SL / obj.N_en);
         end
 
         % Structural groups + engine are pure area·density / thrust correlations

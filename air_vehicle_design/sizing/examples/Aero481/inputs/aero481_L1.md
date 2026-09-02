@@ -218,7 +218,7 @@ OEW(W_TO) = We_frac(W_TO)*W_TO                        [FRACTION -- A481 Sainrist
 |---|---|---|
 | FRACTION `We_frac(W_TO)*W_TO` | `We_frac = 0.882 * W_TO^-0.055` | `[A481 Design01.m:26]`; **`_TODO -- UNCITED`** (A7). Framework alternative **[Raymer Table 3.1 jet_fighter]** `2.34 * W_TO^-0.13` -- report shows both |
 | WING delta `rho_w*(S_ref - W_TO/design_WS_psf)` | `rho_w = 9.0 lb/ft^2` (44 kg/m^2); baseline area `W_TO/92.17` (self-scaling) | **[Raymer 6th ed. Table 15.2 fighter]** = A481 A02 `WingDensity = 44 kg/m^2` (toolbox Constant, not a JSON input). `S_ref` read LIVE from the injected geom; `design_WS_psf = 92.17` from the `.weights` block |
-| ENGINE delta `Weng(T_SL) - Weng(design_TW*W_TO)` | `Weng = WeightsL1.engine_weight_roskam`; baseline thrust `1.2*W_TO` (self-scaling); n_eng = 1 (no count division) | **[Roskam Eqs. 7.13-7.19]** = `Utility.MetaEngine`. `T_SL` read LIVE from the injected prop; `design_TW = 1.2` from the `.weights` block. Keeps the reverser term `W_rev = 0.034*T` -- **`_TODO`** a fighter has none (A9) |
+| ENGINE delta `Weng(T_SL) - Weng(design_TW*W_TO)` | `Weng = WeightsL2.jet_engine_weight_roskam`; baseline thrust `1.2*W_TO` (self-scaling); n_eng = 1 (no count division) | **[Roskam Eqs. 7.13-7.19]** = `Utility.MetaEngine`. `T_SL` read LIVE from the injected prop; `design_TW = 1.2` from the `.weights` block. Keeps the reverser term `W_rev = 0.034*T` -- **`_TODO`** a fighter has none (A9) |
 
 Both delta baselines scale WITH `W_TO`, so each delta stays bounded and OEW never runs away in
 the sizing loop (see `Aero481WeightsL1.m` header). The wing areal density and the engine-weight
@@ -231,7 +231,7 @@ inputs (same convention as the F-16A L2 weights class). Only the OEW coefficient
 - `oew_coeff_a` / `oew_coeff_c` (0.882 / -0.055) -- Sainristil-team fit, no textbook citation (A7).
 - `W_payload_expendable` (18,000 lbf) -- A481 "yields f35 payload" student choice.
 - `W_payload_fixed` (441 lbf) -- 200 kg crew, student choice.
-- reverser term in `engine_weight_roskam` -- kept for MetaEngine parity, `_TODO` fighter-no-reverser
+- reverser term in `jet_engine_weight_roskam` -- kept for MetaEngine parity, `_TODO` fighter-no-reverser
   variant deferred (A9) -- a code note, not a JSON input.
 
 ---

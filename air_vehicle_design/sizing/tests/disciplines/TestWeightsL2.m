@@ -662,6 +662,57 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
                  '(locked decision, user 2026-07-24). Two different models.']);
         end
 
+        function testTurbopropEngineWeightHandComputed(tc)
+        %TESTTURBOPROPENGINEWEIGHTHANDCOMPUTED  Roskam Eq. 7.20, hand-evaluated.
+        %   W = P^0.9306 * 10^-0.1205, P in shp [metabook_data.md:615].
+        %   At P = 1000 BOTH factors are powers of ten, so the whole thing is
+        %   one exponent and no multiply is needed. Hand arithmetic done in
+        %   this comment, NOT by calling the code under test:
+        %     1000^0.9306 = 10^(3*0.9306)              = 10^2.7918
+        %     W           = 10^(2.7918 - 0.1205)       = 10^2.6713
+        %     0.6713*ln(10) = 0.6713*2.302585093       = 1.545725374
+        %     exp(1.545725374) = e^1.5 * e^0.045725374
+        %                      = 4.481689070 * 1.046786895
+        %                      = 4.691372767
+        %     W = 4.691372767e2                        = 469.1373 lbf
+        %   RelTol 1e-6 covers the truncation of the single exp series above.
+            tc.verifyEqual(WeightsL2.turboprop_engine_weight_roskam(1000), ...
+                469.1373, 'RelTol', 1e-6, ...
+                ['Turboprop engine weight at 1000 shp must equal ' ...
+                 '10^(3*0.9306 - 0.1205) = 469.1373 lbf ' ...
+                 '[Roskam Part V Eq. 7.20; metabook_data.md:615].']);
+        end
+
+        function testTurbopropEngineWeightIsAPowerLaw(tc)
+        %TESTTURBOPROPENGINEWEIGHTISAPOWERLAW  Scaling property, no fixed value.
+        %   A pure power law must satisfy W(k*P)/W(P) = k^0.9306 for any k.
+        %   Exponent < 1, so weight per shp FALLS as the engine grows.
+            W1 = WeightsL2.turboprop_engine_weight_roskam(500);
+            W2 = WeightsL2.turboprop_engine_weight_roskam(2000);
+            tc.verifyEqual(W2 / W1, 4^0.9306, 'RelTol', 1e-12, ...
+                'Eq. 7.20 must scale as P^0.9306.');
+            tc.verifyLessThan(W2 / 2000, W1 / 500, ...
+                'Weight per shp must fall with engine size (exponent < 1).');
+        end
+
+        function testTurbopropAndJetFormsAreDistinct(tc)
+        %TESTTURBOPROPANDJETFORMSAREDISTINCT  Records the engine-type split.
+        %   Eq. 7.20 takes SHAFT POWER; Eqs. 7.13-7.19 take THRUST and add a
+        %   thrust-reverser term a propeller aircraft does not have. The two
+        %   are separate correlations in the source, so a caller must pick by
+        %   engine type. Guarded so the split reads as a decision.
+        %   [metabook_data.md:607-615; WeightsL2.md "Engine-type applicability"]
+            tc.verifyNotEqual(WeightsL2.turboprop_engine_weight_roskam(1000), ...
+                WeightsL2.jet_engine_weight_roskam(1000), ...
+                'The turboprop and jet forms must not coincide at equal numeric input.');
+            tc.verifyError(@() WeightsL2.turboprop_engine_weight_roskam(-1), ...
+                'MATLAB:validators:mustBePositive', ...
+                'Shaft power must be positive.');
+            tc.verifyError(@() WeightsL2.turboprop_engine_weight_roskam(0), ...
+                'MATLAB:validators:mustBePositive', ...
+                'Shaft power must be positive.');
+        end
+
         function testLGFractionHasNoNavyFighterRow(tc)
         %TESTLGFRACTIONHASNONAVYFIGHTERROW  Records an absence as a decision.
         %   metabook_data.md:331 carries a Navy-fighter row (0.045 * W0) that

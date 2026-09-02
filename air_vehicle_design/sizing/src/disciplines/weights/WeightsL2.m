@@ -72,6 +72,59 @@ classdef WeightsL2
         % alternate. Pure scalars in, scalar out.
         % ================================================================== %
 
+        function W = jet_engine_weight_roskam(T0_lbf)
+        %JET_ENGINE_WEIGHT_ROSKAM  Uninstalled weight [lbf] of ONE jet engine
+        %   from its SLS thrust, via the Roskam multi-term regression.
+        %   TURBOJET / TURBOFAN ONLY -- see the applicability note above.
+        %   Turboprops take turboprop_engine_weight_roskam instead.
+        %   [Roskam Airplane Design Part V, Eqs. 7.13-7.19, via
+        %    docs/reference_extracts/metabook_data.md:607-612. Part V is NOT in
+        %    the repo, so these coefficients are secondary-source only.]
+        %
+        %     Weng_dry     = 0.521 * T0^0.9                 (7.13)
+        %     Weng_oil     = 0.082 * T0^0.65                (7.14)
+        %     Weng_rev     = 0.034 * T0   [thrust reverser] (7.15)
+        %     Weng_control = 0.26  * T0^0.5                 (7.16)
+        %     Weng_start   = 9.33  * (Weng_dry/1000)^1.078  (7.18)
+        %     Wengine_total = sum of the above              (7.19)
+        %
+        %   Turboprops take a different equation entirely:
+        %     Weng = P^0.9306 * 10^-0.1205, P in shp        (7.20)
+        %
+        %   T0_lbf -- max SLS thrust per engine [lbf]. Returns the total weight
+        %   of ONE engine [lbf]. No Eq. 7.17 term is listed; sum is Eq. 7.19.
+            arguments
+                T0_lbf (1,1) double {mustBePositive}
+            end
+            W_dry     = 0.521 * T0_lbf.^0.9;
+            W_oil     = 0.082 * T0_lbf.^0.65;
+            W_rev     = 0.034 * T0_lbf;
+            W_control = 0.26  * T0_lbf.^0.5;
+            W_start   = 9.33  * (W_dry / 1000).^1.078;
+            W = W_dry + W_oil + W_rev + W_control + W_start;
+        end
+
+        function W = turboprop_engine_weight_roskam(P_shp)
+        %TURBOPROP_ENGINE_WEIGHT_ROSKAM  Uninstalled weight [lbf] of ONE
+        %   turboprop engine from its rated shaft power.
+        %   ARGS:
+        %       P_shp = Shaft horsepower (hp)
+        %   RETURNS:
+        %       W = Engine weight (lbf)
+        %   CITATION:
+        %       Roskam Airplane Design Part V, Eq. 7.20
+        %
+        %   P_shp -- rated shaft power per engine [shp]. ONE engine's weight.
+        %   Unlike the jet form this is a SINGLE term, so it carries no oil,
+        %   controls or starter contribution. Do not compare the two totals
+        %   term-by-term. _TODO -- does Eq. 7.20 include the propeller and
+        %   gearbox? The extract does not say, and Part V is not in the repo.
+            arguments
+                P_shp (1,1) double {mustBePositive}
+            end
+            W = P_shp.^0.9306 .* 10.^-0.1205;
+        end
+
         function rho = wing_unit_weight(aircraft_category)
         %WING_UNIT_WEIGHT  Wing structural surface density [lbf/ft^2].
         %   [Raymer 6th ed. Table 15.2; metabook_data.md:321 — all three rows]

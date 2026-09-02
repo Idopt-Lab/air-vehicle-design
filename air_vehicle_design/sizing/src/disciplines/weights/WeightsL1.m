@@ -18,33 +18,6 @@ classdef WeightsL1
 
     methods (Static)
 
-        % TODO (9/1/2026)(Casey): Not sure about this. Clarify if this is for jet engines.
-        % Regardless, this seems better for the statistical methods (L2).
-        function W = engine_weight_roskam(T0_lbf)
-        %ENGINE_WEIGHT_ROSKAM  Total installed-engine dry weight [lbf] from SLS
-        %   thrust, via the Roskam multi-term regression.
-        %   [Roskam, metabook_data.md lines 538-550, Eqs. 7.13-7.19]
-        %
-        %     Weng_dry     = 0.521 * T0^0.9                 (7.13)
-        %     Weng_oil     = 0.082 * T0^0.65                (7.14)
-        %     Weng_rev     = 0.034 * T0   [thrust reverser] (7.15)
-        %     Weng_control = 0.26  * T0^0.5                 (7.16)
-        %     Weng_start   = 9.33  * (Weng_dry/1000)^1.078  (7.18)
-        %     Wengine_total = sum of the above              (7.19)
-        %
-        %   T0_lbf -- max SLS thrust per engine [lbf]. Returns the total weight
-        %   of ONE engine [lbf]. No Eq. 7.17 term is listed; sum is Eq. 7.19.
-            arguments
-                T0_lbf (1,1) double {mustBePositive}
-            end
-            W_dry     = 0.521 * T0_lbf.^0.9;
-            W_oil     = 0.082 * T0_lbf.^0.65;
-            W_rev     = 0.034 * T0_lbf;
-            W_control = 0.26  * T0_lbf.^0.5;
-            W_start   = 9.33  * (W_dry / 1000).^1.078;
-            W = W_dry + W_oil + W_rev + W_control + W_start;
-        end
-
         % ================================================================== %
         % LOW-LEVEL: pure math — scalars only.
         % ================================================================== %

@@ -37,7 +37,7 @@ Table 7.3 — the
 per-engine thrust `T0 = prop.T_SL/n` comes from the injected prop. The Table
 7.1 areal densities and fractions are read from the `WeightsL2`/`WeightsL1`
 toolbox statics (`wing_unit_weight` 10, `HT/VT_unit_weight` 5.5,
-`fus_unit_weight` 5, `LG_fraction` 0.043, `engine_weight_roskam`).
+`fus_unit_weight` 5, `LG_fraction` 0.043, `jet_engine_weight_roskam`).
 
 ## 2. Responds to all three sizing variables
 

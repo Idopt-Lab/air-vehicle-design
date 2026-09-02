@@ -145,9 +145,9 @@ Code\`. Cross-references to `metabook_data.md` D4 (which already logged three of
 
 - Source: `[A481 MetaEngine.m:7]` — `W_rev = 0.034·Thrust` (thrust-reverser weight), summed
   into the engine weight. A fighter (F135) has no thrust reverser.
-- Finding: the shared `WeightsL1.engine_weight_roskam` keeps this term for parity with
+- Finding: the shared `WeightsL2.jet_engine_weight_roskam` keeps this term for parity with
   MetaEngine (and with the B777 path, which legitimately has reversers).
-- Cross-ref: `WeightsL1.engine_weight_roskam` header already flags Eq. 7.15 as the reverser
+- Cross-ref: `WeightsL2.jet_engine_weight_roskam` header already flags Eq. 7.15 as the reverser
   term; `B777WeightsL2.md` uses it legitimately.
 - **PROPOSED disposition:** keep the term for MetaEngine parity (the F-35 uses the SAME shared
   static), marked `_TODO` — a fighter-specific no-reverser variant is deferred. Quantify the

@@ -114,7 +114,7 @@ MTOW/S ≈ 143 psf (Part I) — Design01 sizes a LIGHTER-loaded wing; flag loudl
 | Regression | A481 form | Framework decision | Primary re-cite |
 |---|---|---|---|
 | OEW fraction | `We/W0 = 0.882·W0[lbm]^-0.055` [Design01.m:26, "Sainristil team"] | keep as fighter OEW-fraction | `_TODO — UNCITED` (Sainristil-team fit; Raymer Table 3.1 `jet_fighter` A=2.34/C=-0.13 is the cited framework alternative, quantify delta in report) |
-| Engine weight | `Utility.MetaEngine(T)` [MetaEngine.m] | shared `WeightsL1.engine_weight_roskam(T0)` | **[Roskam Airplane Design Part V, Eqs. 7.13-7.19]** — identical 5-term form (dry 0.521·T^0.9 / oil 0.082·T^0.65 / rev 0.034·T / control 0.26·T^0.5 / start 9.33·(W_dry/1000)^1.078); metabook_data.md Eqs. 7.13-7.19. NOTE: keeps the thrust-reverser term (0.034·T) — a fighter has no reverser; `_TODO` |
+| Engine weight | `Utility.MetaEngine(T)` [MetaEngine.m] | shared `WeightsL2.jet_engine_weight_roskam(T0)` | **[Roskam Airplane Design Part V, Eqs. 7.13-7.19]** — identical 5-term form (dry 0.521·T^0.9 / oil 0.082·T^0.65 / rev 0.034·T / control 0.26·T^0.5 / start 9.33·(W_dry/1000)^1.078); metabook_data.md Eqs. 7.13-7.19. NOTE: keeps the thrust-reverser term (0.034·T) — a fighter has no reverser; `_TODO` |
 | Wetted area | `Swet = 4·S` [Design01.m:36, **"I made this up"**] | **REJECTED** → cited Roskam fighter regression | **[Roskam Vol. I Table 3.5, jet_fighter]** `Swet = 10^-0.1289·W_TO^0.7506` via `GeomL1.lookup_swet('jet_fighter')` — see §II.9 rejection note |
 
 ## II.3 Design decisions / payload [A481 +Designs/Design01.m:41-49]

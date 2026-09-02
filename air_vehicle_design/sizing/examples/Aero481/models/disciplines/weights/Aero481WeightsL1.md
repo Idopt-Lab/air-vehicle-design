@@ -12,8 +12,8 @@ way B777 = metabook and F-16 = Brandt.
 ```
 OEW(W_TO) = We_frac(W_TO) * W_TO                              [FRACTION -- Sainristil]
           + rho_w * ( geom.S_ref - W_TO / design_WS_psf )    [WING   delta]
-          + ( engine_weight_roskam( prop.T_SL )
-            - engine_weight_roskam( design_TW * W_TO ) )      [ENGINE delta -- single engine]
+          + ( jet_engine_weight_roskam( prop.T_SL )
+            - jet_engine_weight_roskam( design_TW * W_TO ) )      [ENGINE delta -- single engine]
 ```
 
 Design provenance is the University of Michigan AEROSP 481 (Fall 2024) starter code by Max Arnson
@@ -113,18 +113,18 @@ the wing/engine deltas always reflect the current injected geometry/propulsion s
 get_OEW_categorical(W_TO)
           = compute_We_fraction(W_TO) * W_TO                        [FRACTION]
           + rho_w * ( geom.get_S_ref() - W_TO / design_WS_psf )     [WING  delta]
-          + ( engine_weight_roskam( prop.T_SL )
-            - engine_weight_roskam( design_TW * W_TO ) )            [ENGINE delta]
+          + ( jet_engine_weight_roskam( prop.T_SL )
+            - jet_engine_weight_roskam( design_TW * W_TO ) )            [ENGINE delta]
 ```
 
 | Term | Formula | Reuses (src/ static) | Citation |
 |---|---|---|---|
 | FRACTION | `0.882*W0^-0.055 * W0` | `WeightsL1.compute_We_frac_raymer` (Kvs = 1) | A481 Design01.m:26 Sainristil (`_TODO -- UNCITED`, A7) |
 | WING delta | `rho_w*(S_ref - W_TO/design_WS_psf)`, `rho_w = 9` | `WeightsL2.wing_unit_weight` | A481 A02.m:37-63; Raymer 6th ed. Table 15.2 (`rho_w`) |
-| ENGINE delta | `Weng(T_SL) - Weng(design_TW*W_TO)`, single engine | `WeightsL1.engine_weight_roskam` | A481 A02.m:37-63; Roskam Eqs. 7.13-7.19 (`Weng`) |
+| ENGINE delta | `Weng(T_SL) - Weng(design_TW*W_TO)`, single engine | `WeightsL2.jet_engine_weight_roskam` | A481 A02.m:37-63; Roskam Eqs. 7.13-7.19 (`Weng`) |
 
 The single-engine assumption (`n = 1`, `[A481 NEng = 1]`) means the engine delta has **no division by
-an engine count** -- the actual and baseline engines are each ONE whole `engine_weight_roskam` value.
+an engine count** -- the actual and baseline engines are each ONE whole `jet_engine_weight_roskam` value.
 
 ### Two OEW fractions -- baseline vs framework-cited alternative
 
@@ -151,7 +151,7 @@ with `WeightsL1.lookup_We_roskam_coeffs`, then evaluates `WeightsL1.compute_We_r
 
 At the F-35 design point the ENGINE delta is strongly **NEGATIVE**. The real F135 (`prop.T_SL =
 43,000 lbf`) is far below the design-T/W-implied thrust `design_TW*W_TO` (~74,880 lbf at `W_TO ~ 62k`),
-so `engine_weight_roskam(43000) - engine_weight_roskam(74880) < 0` -- a large negative engine credit.
+so `jet_engine_weight_roskam(43000) - jet_engine_weight_roskam(74880) < 0` -- a large negative engine credit.
 That credit pulls the EFFECTIVE OEW fraction from the bare Sainristil ~0.486 down to ~0.37, which is
 exactly why Aero 481 converges the F-35 to ~62,400 lb rather than a much heavier point.
 
@@ -166,9 +166,9 @@ At the design point **`W_TO = 62,400 lbf`, `S_ref = 538 ft^2`, `T_SL = 43,000 lb
 | `rho_w` (`WeightsL2.wing_unit_weight`) | 9.0 lbf/ft^2 | Raymer Table 15.2 jet_fighter |
 | wing baseline area = `W_TO/design_WS_psf` | 677.01 ft^2 | self-scaling with W_TO |
 | WING delta = `9*(538 - 677.01)` | -1,251.1 lbf | S_ref below the design-W/S area |
-| `engine_weight_roskam(43000)` | ~9,375.7 lbf | actual F135 |
+| `jet_engine_weight_roskam(43000)` | ~9,375.7 lbf | actual F135 |
 | baseline thrust = `design_TW*W_TO` | 74,880 lbf | self-scaling with W_TO |
-| `engine_weight_roskam(74880)` | ~15,560 lbf | design-T/W engine |
+| `jet_engine_weight_roskam(74880)` | ~15,560 lbf | design-T/W engine |
 | ENGINE delta | ~-6,185 lbf | strongly NEGATIVE (F135 far below design thrust) |
 | **`OEW(62400)`** | **~22,546 lbf** | FRACTION + WING delta + ENGINE delta |
 | effective OEW fraction = OEW / W_TO | **~0.361** | ~0.37, pulled DOWN from ~0.486 by the engine credit |
@@ -188,4 +188,4 @@ build-up identity, the hand power-law value, the sign of the engine delta at the
 | -- | `design_WS_psf = 92.17` / `design_TW = 1.2` (A481 design point) | inputs, wing/engine delta baselines | student design choices, `_TODO -- UNCITED` |
 | -- | `W_payload_expendable = 18000` (missiles) | input | student choice, `_TODO -- UNCITED` |
 | -- | `W_payload_fixed = 441` (200 kg crew) | input | student choice, `_TODO -- UNCITED` |
-| A9 | thrust-reverser term `0.034*T` kept in `WeightsL1.engine_weight_roskam` | shared static, used by BOTH engine-delta evaluations | labelled `testTODO_ReverserTermForFighter` -- a shared-static caveat; the reverser term cancels almost exactly in the delta (it appears in both `Weng(T_SL)` and `Weng(design_TW*W_TO)`), but it over-counts each absolute engine weight |
+| A9 | thrust-reverser term `0.034*T` kept in `WeightsL2.jet_engine_weight_roskam` | shared static, used by BOTH engine-delta evaluations | labelled `testTODO_ReverserTermForFighter` -- a shared-static caveat; the reverser term cancels almost exactly in the delta (it appears in both `Weng(T_SL)` and `Weng(design_TW*W_TO)`), but it over-counts each absolute engine weight |
