@@ -284,7 +284,7 @@ classdef F16WeightsL3 < WeightsModelL3
         % equations and reads the Dependent properties above live.
         % ================================================================== %
 
-        function oew = OEW(obj, W_TO)
+        function oew = get_OEW(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
         %   [Raymer 6th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10] + the strake
         %   term (Brandt Main!D18/Wt!H7). W_strake is pure area x density, added

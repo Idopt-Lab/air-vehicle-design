@@ -117,19 +117,20 @@ w2 = F16WeightsL2(f16a_spec_path(2), req, g2, prop);
 w3 = F16WeightsL3(f16a_spec_path(3), req, g3, prop);
 
 % ── L1: the two statistical regressions ─────────────────────────────────── %
-oew_l1_raymer = w1.OEW(W_TO);                  % Raymer Tbl 3.1 power law
+oew_l1_raymer = w1.get_OEW(W_TO);                  % Raymer Tbl 3.1 power law
 oew_l1_roskam = w1.compute_We_roskam(W_TO);    % Roskam Eq. 2.16 MIN bound
 
 % ── L2: Table 15.2 psf buildup + metabook Sec. 7 fractions ─────────────── %
-l2_wing = w2.weight_wing(W_TO);
-l2_tail = w2.weight_tail(W_TO);
-l2_fus  = w2.weight_fuselage(W_TO);
-l2_lg   = w2.weight_landing_gear(W_TO);
-l2_ie   = WeightsL2.weight_installed_engine(w2);   % Eq. 10.10 x 1.3 (L2-only)
-l2_ale  = WeightsL2.weight_all_else_empty(w2, W_TO);
+cat2    = w2.aircraft_category;
+l2_wing = WeightsL2.compute_weight_wing(cat2, w2.S_exposed_planform_wing);
+l2_tail = w2.W_tail;
+l2_fus  = WeightsL2.compute_weight_fuselage(cat2, w2.S_wet_fus);
+l2_lg   = WeightsL2.compute_weight_landing_gear(cat2, W_TO);
+l2_ie   = WeightsL2.compute_weight_installed_engine(cat2, w2.N_en, w2.W_en);   % Eq. 10.10 x 1.3 (L2-only)
+l2_ale  = WeightsL2.compute_weight_all_else_empty(cat2, W_TO);
 l2_str  = l2_wing + l2_tail.HT + l2_tail.VT + l2_fus;   % structural subtotal
 l2_strake = w2.W_strake;               % added 2026-07-29 -- k_strake*S_strake
-oew_l2  = w2.OEW(W_TO);
+oew_l2  = w2.get_OEW(W_TO);
 
 % Engine-weight OPTIONS. Each gets its own row (Sec. G.4 sec. 4).
 W_en_uninstalled = w2.W_en;         % Raymer Eq. 10.10, OFFICIAL at L3

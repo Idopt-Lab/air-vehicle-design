@@ -206,7 +206,7 @@ classdef F16WeightsL2 < WeightsModelL2
         % psf) and carry no W_TO dependence, so they are NOT guarded on W_TO;
         % only the genuinely W_TO-dependent getters below use requireWTO.
         function v = get.W_wings(obj)
-            v = WeightsL2.weight_wing(obj, obj.W_TO);
+            v = WeightsL2.compute_weight_wing(obj.aircraft_category, obj.S_exposed_planform_wing);
         end
         function v = get.W_tail(obj)
             v = struct( ...
@@ -214,22 +214,22 @@ classdef F16WeightsL2 < WeightsModelL2
                 'VT', WeightsL2.compute_weight_VT(obj.aircraft_category, obj.S_exposed_planform_vt));
         end
         function v = get.W_fuselage(obj)
-            v = WeightsL2.weight_fuselage(obj, obj.W_TO);
+            v = WeightsL2.compute_weight_fuselage(obj.aircraft_category, obj.S_wet_fus);
         end
         function v = get.W_landing_gear(obj)
             % Genuinely W_TO-dependent (0.033·W_TO).
-            v = WeightsL2.weight_landing_gear(obj, obj.requireWTO('W_landing_gear'));
+            v = WeightsL2.compute_weight_landing_gear(obj.aircraft_category, obj.requireWTO('W_landing_gear'), false);
         end
         function v = get.W_installed_engine(obj)
             % 1.3 · N_en · W_en = 3607.5273 lbf [AE481 metabook Sec. 7,
             % metabook_data.md:333]. The ×1.3 is L2-ONLY: L3 sums Raymer's
             % installation items individually.
-            v = WeightsL2.weight_installed_engine(obj);
+            v = WeightsL2.compute_weight_installed_engine(obj.aircraft_category, obj.N_en, obj.W_en, false);
         end
         function v = get.W_all_else_empty(obj)
             % 0.17 · obj.W_TO [AE481 metabook Sec. 7, metabook_data.md:334],
             % recomputed live on every read.
-            v = WeightsL2.weight_all_else_empty(obj, obj.requireWTO('W_all_else_empty'));
+            v = WeightsL2.compute_weight_all_else_empty(obj.aircraft_category, obj.requireWTO('W_all_else_empty'), false);
         end
 
         function v = get.W_strake(obj)
