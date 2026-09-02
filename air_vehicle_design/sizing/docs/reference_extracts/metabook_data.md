@@ -487,6 +487,14 @@ Cl = integral_0^1 (Cp_lower - Cp_upper) d(x/c)                 (6.9)
 
 ### Fraction-Based Weight Estimates
 
+> **PARTIAL TRANSCRIPTION.** These are the fraction sub-tables of Raymer 6th ed.
+> Table 15.2, the same table as the per-area densities above. The metabook prints
+> them without a general-aviation column, and gives installed-engine and
+> all-else-empty as single uncategorised values. The BOOK carries the full grid
+> (GA landing gear 0.057, installed engine 1.4, all-else empty 0.1 -- Casey,
+> 2026-09-02). Cite Raymer Table 15.2 for these, not this extract. Do not treat
+> a value missing here as uncited.
+
 | Component             | Fraction of W0      |
 |-----------------------|---------------------|
 | Landing gear (fighter) | 0.033 * W0         |

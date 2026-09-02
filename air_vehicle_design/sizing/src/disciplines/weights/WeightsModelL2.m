@@ -9,9 +9,6 @@ classdef (Abstract) WeightsModelL2 < WeightsBase
 
     properties (Abstract)
         W_wings            % DERIVED [lbf]
-        W_landing_gear     % DERIVED [lbf]
-        W_tail             % DERIVED struct(HT, VT) [lbf]
-        W_fuselage         % DERIVED [lbf]
         W_installed_engine % DERIVED [lbf]
         W_all_else_empty   % DERIVED [lbf]
     end
@@ -20,21 +17,19 @@ classdef (Abstract) WeightsModelL2 < WeightsBase
 
         %WEIGHT_WING  [Raymer 6th ed. Table 15.2]
         %   W_TO is accepted for API consistency but does not enter the formula.
-        W = weight_wing(obj, W_TO)
+        W = get_wing_weight(obj, S_wing_exposed)
 
-        %WEIGHT_TAIL  Struct with fields HT and VT.  [Raymer 6th ed. Table 15.2]
-        %   W_TO is accepted for API consistency but does not enter the formula.
-        W = weight_tail(obj, W_TO)
+        % Get the operational empty weight via buildup of major component weights.
+        % Includes main wings, tail, fuselage, landing gear, installed engine, and "all-else empty".
+        % Users are expected to prune irrelevant models from their design.
+        W = get_OEW_major_component_buildup(obj, W_TO, S_wing_exposed)
 
-        %WEIGHT_FUSELAGE  On WETTED area.  [Raymer 6th ed. Table 15.2]
-        %   W_TO is accepted for API consistency but does not enter the formula.
-        W = weight_fuselage(obj, W_TO)
+    end
 
-        %WEIGHT_LANDING_GEAR  [AE481 metabook Sec. 7]
-        %   Must be evaluated at the PASSED W_TO: this term genuinely scales
-        %   with gross weight.
-        W = weight_landing_gear(obj, W_TO)
-
+    methods
+        function v = get_OEW(obj, W_TO)
+            v = obj.get_OEW_major_component_buildup(W_TO);
+        end
     end
 
 end

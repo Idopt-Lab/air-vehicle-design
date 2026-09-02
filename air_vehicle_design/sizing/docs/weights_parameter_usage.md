@@ -65,7 +65,7 @@ repo extracts exactly. Both extracts are secondary/OCR sources, not the books.
 | Fuselage | `WeightsL2.weight_fuselage` | `ρ_fus·S_wet_fus` | 4.8 lb/ft² | Raymer Table 15.2 |
 | Landing gear | `WeightsL2.weight_landing_gear` | `f_lg·W_TO` | 0.033 | AE481 metabook §7, "Fraction-Based Weight Estimates" |
 | Installed engine | `WeightsL2.weight_installed_engine` | `1.3·N_en·W_en` | 1.3 | AE481 metabook §7 |
-| All-else-empty | `WeightsL2.weight_all_else_empty` | `0.17·W_TO` | 0.17 | AE481 metabook §7 |
+| All-else-empty | `WeightsL2.lookup_weight_ratio(cat, "all_else_empty")` | `0.17·W_TO` | 0.17 fighter/transport, 0.1 GA | Raymer 6th ed. Table 15.2 (fraction sub-table) |
 
 The three fractions are **not** Raymer Table 15.2 — in the repo extract that table is the psf
 surface-density table only, and the fractions are a separate unnumbered metabook table. Brandt uses
@@ -167,6 +167,6 @@ sanity minimum, the fraction identity, and per-equation hand-computed values.
 | The `0.95` in `W_l = 0.95·W_TO` has no citation | todo §P4-16 — needs a cited landing-weight fraction |
 | `K_d = 0` silently zeroes the 227.54 lbf air-induction term (`0^0.182 = 0`) — no error, no warning, not even NaN | **unguarded by decision**; todo §P4-11. Visible only as a sensitivity row in the comparison report. If `K_d = 0` is legal, `K_d` cannot be Raymer's multiplicative base, so the exponent/placement is itself suspect |
 | `design_mach` = 2.0 cited to Brandt; the T.O. limit is 2.05 | todo §P4-13 — user to confirm which is the design requirement |
-| `WeightsL2.LG_fraction` has an uncited `general_aviation` 0.057 row and no `navy_fighter` 0.045 row | todo §P4-7; the absence is pinned by `testLGFractionHasNoNavyFighterRow` |
+| `WeightsL2.lookup_LG_fraction` — **P4-7 CLOSED 2026-09-02 (Casey)**: 0.057 GA and 0.045 Navy are both printed in Raymer Table 15.2. Navy is now reachable through the `isNavy` flag; `testLGFractionHasNoNavyFighterRow` pins the superseded absence and needs retiring |
 | The 6.7 lb/gal fuel density behind `V_t` = 940 is cited nowhere in `sizing/` | todo §P4-5b — `V_t` stays an input so the uncited constant never enters an equation |
 | `L_d` / `D_e` have cited geometry analogs that are deliberately not wired | todo §P4-4; both are sensitivity rows in the comparison report |

@@ -297,16 +297,13 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
 
         function testStrakeWeightHandComputed(tc)
         %TESTSTRAKEWEIGHTHANDCOMPUTED  Header row (12). ADDED 2026-07-29.
-        %   k_strake * S_strake = 4.5 * 20 = 90.00 lbf exactly [Brandt
-        %   Main!D18 / Wt!H7]. No W_TO dependence -- pure area x density,
-        %   same pattern as the other structural groups.
+        %   Wing density x the exposed strake area, 9.0 * 20 = 180.00 lbf.
+        %   The area is INJECTED from geometry; no W_TO dependence.
             w = TestWeightsL2.makeW2();
-            tc.verifyEqual(w.W_strake, 90.00, 'AbsTol', 1e-9, ...
-                'W_strake must be k_strake * S_strake = 4.5 * 20 = 90.00 lbf.');
-            tc.verifyEqual(w.S_strake, 20.0, 'AbsTol', 1e-9, ...
-                'S_strake must be read from f16a_L2.json as 20.0 ft^2 [Brandt Main!D18].');
-            tc.verifyEqual(w.k_strake, 4.5, 'AbsTol', 1e-9, ...
-                'k_strake must be read from f16a_L2.json as 4.5 lbf/ft^2 [Brandt Wt!H7].');
+            tc.verifyEqual(w.W_strake, 180.00, 'AbsTol', 1e-9, ...
+                'W_strake must be 9.0 * 20 = 180.00 lbf [Raymer 6th ed. Tbl 15.2].');
+            tc.verifyEqual(w.S_exposed_planform_strakes, 20.0, 'AbsTol', 1e-9, ...
+                'Strake area must come from geom.S_exposed_strake [Brandt Main!D18].');
         end
 
         function testOEWEqualsSumOfItsComponents(tc)
@@ -531,14 +528,14 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
             w.W_TO = 31377;
 
             % (a) geometry DI: S_ref up -> exposed wing area up -> W_wings up.
-            S_w_before  = w.S_w;
+            S_w_before  = w.S_exposed_planform_wing;
             W_w_before  = w.W_wings;
             geom.S_ref  = geom.S_ref + 50;
-            tc.verifyGreaterThan(w.S_w, S_w_before, ...
+            tc.verifyGreaterThan(w.S_exposed_planform_wing, S_w_before, ...
                 'S_w must track geom.S_ref live (geometry DI).');
             tc.verifyGreaterThan(w.W_wings, W_w_before, ...
                 'W_wings must track the geometry change live -- no cached copy.');
-            tc.verifyEqual(w.W_wings, 9.0 * w.S_w, 'AbsTol', 1e-9, ...
+            tc.verifyEqual(w.W_wings, 9.0 * w.S_exposed_planform_wing, 'AbsTol', 1e-9, ...
                 'W_wings must stay 9.0 * S_w after mutation.');
 
             % (b) propulsion DI: thrust up -> Eq. 10.10 W_en up -> installed up.
@@ -649,15 +646,17 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
         function testLGFractionCitedRows(tc)
         %TESTLGFRACTIONCITEDROWS  Only the two rows the extract supports.
         %   metabook_data.md:330 fighter 0.033, :332 transport 0.043. The coded
-        %   general_aviation 0.057 row is deliberately NOT asserted: the extract
-        %   has no GA landing-gear row, so the value has no in-repo source
-        %   (todo Sec. P4-7, open). Asserting 0.057 would manufacture a green
-        %   over a missing citation.
-            tc.verifyEqual(WeightsL2.LG_fraction('jet_fighter'), 0.033, ...
+        %   TODO Sec. P4-7: CLOSED 9/2/2026 (Casey). The GA row 0.057 IS
+        %   printed in Raymer Table 15.2; metabook_data.md merely transcribes
+        %   the sub-tables without a GA column. The value has a book source,
+        %   so it is asserted below like the other two.
+            tc.verifyEqual(WeightsL2.compute_weight_landing_gear('general_aviation', 1), 0.057, ...
+                'AbsTol', 1e-9, 'general_aviation LG fraction must be 0.057 [Raymer 6th ed. Tbl 15.2].');
+            tc.verifyEqual(WeightsL2.compute_weight_landing_gear('jet_fighter', 1), 0.033, ...
                 'AbsTol', 1e-9, 'jet_fighter LG fraction must be 0.033 [metabook_data.md:330].');
-            tc.verifyEqual(WeightsL2.LG_fraction('jet_transport'), 0.043, ...
+            tc.verifyEqual(WeightsL2.compute_weight_landing_gear('jet_transport', 1), 0.043, ...
                 'AbsTol', 1e-9, 'jet_transport LG fraction must be 0.043 [metabook_data.md:332].');
-            tc.verifyNotEqual(WeightsL2.LG_fraction('jet_fighter'), 0.034, ...
+            tc.verifyNotEqual(WeightsL2.compute_weight_landing_gear('jet_fighter', 1), 0.034, ...
                 ['The framework uses the metabook 0.033, NOT Brandt Wt!F23 = 0.034 ' ...
                  '(locked decision, user 2026-07-24). Two different models.']);
         end
@@ -713,15 +712,35 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
                 'Shaft power must be positive.');
         end
 
-        function testLGFractionHasNoNavyFighterRow(tc)
-        %TESTLGFRACTIONHASNONAVYFIGHTERROW  Records an absence as a decision.
-        %   metabook_data.md:331 carries a Navy-fighter row (0.045 * W0) that
-        %   the lookup deliberately does not add -- no consumer exists, and
-        %   adding it would be a feature beyond this phase. Asserted so the
-        %   absence reads as a decision rather than an oversight (todo P4-7).
-            tc.verifyError(@() WeightsL2.LG_fraction('navy_fighter'), ...
-                'WeightsL2:UnknownCategory', ...
-                'navy_fighter is deliberately not a coded LG_fraction row (todo Sec. P4-7).');
+        function testLGFractionNavyFlag(tc)
+        %TESTLGFRACTIONNAVYFLAG  The Navy carrier-gear row, behind a flag.
+        %   SUPERSEDES testLGFractionHasNoNavyFighterRow, which asserted that
+        %   navy_fighter was deliberately NOT a coded row (todo P4-7). Two
+        %   things changed on 2026-09-02: Casey added the isNavy flag, and
+        %   confirmed 0.045 is printed in Raymer Table 15.2. So the value is
+        %   now reachable on purpose, and the old absence is history.
+        %   [Raymer 6th ed. Table 15.2, fraction sub-table]
+            tc.verifyEqual(WeightsL2.compute_weight_landing_gear('jet_fighter', 1, true), ...
+                0.045, 'AbsTol', 1e-9, ...
+                'Navy fighter LG fraction must be 0.045 [Raymer 6th ed. Tbl 15.2].');
+            tc.verifyEqual(WeightsL2.compute_weight_landing_gear('jet_fighter', 1, false), ...
+                0.033, 'AbsTol', 1e-9, ...
+                'isNavy must default-off to the 0.033 non-Navy value.');
+            tc.verifyEqual(WeightsL2.compute_weight_landing_gear('jet_fighter', 1), ...
+                WeightsL2.compute_weight_landing_gear('jet_fighter', 1, false), ...
+                'AbsTol', 1e-12, 'isNavy must default to false.');
+        end
+
+        function testLGFractionNavyOnlyForFighters(tc)
+        %TESTLGFRACTIONNAVYONLYFORFIGHTERS  The book scopes Navy to fighters.
+        %   Table 15.2 prints a Navy landing-gear value for fighters only, so a
+        %   Navy request on a transport must ERROR rather than borrow 0.045.
+            tc.verifyError(@() WeightsL2.compute_weight_landing_gear('jet_transport', 1, true), ...
+                'WeightsL2:UncitedCell', ...
+                'A Navy transport has no printed value; it must not borrow the fighter number.');
+            tc.verifyError(@() WeightsL2.compute_weight_landing_gear('general_aviation', 1, true), ...
+                'WeightsL2:UncitedCell', ...
+                'A Navy GA aircraft has no printed value.');
         end
 
         function testLookupUnknownCategoryErrors(tc)
@@ -734,7 +753,7 @@ classdef TestWeightsL2 < matlab.unittest.TestCase
                 'WeightsL2:UnknownCategory', 'VT_unit_weight must reject unknown categories.');
             tc.verifyError(@() WeightsL2.fus_unit_weight('spaceship'), ...
                 'WeightsL2:UnknownCategory', 'fus_unit_weight must reject unknown categories.');
-            tc.verifyError(@() WeightsL2.LG_fraction('spaceship'), ...
+            tc.verifyError(@() WeightsL2.compute_weight_landing_gear('spaceship', 1), ...
                 'WeightsL2:UnknownCategory', 'LG_fraction must reject unknown categories.');
         end
 

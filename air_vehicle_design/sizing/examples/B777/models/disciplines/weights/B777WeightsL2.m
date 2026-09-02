@@ -12,7 +12,7 @@ classdef B777WeightsL2 < WeightsModelL2
 %   fighter's Raymer Eq. 10.10), and no strake term.
 %
 %   OEW = W_wings + W_tail.HT + W_tail.VT + W_fuselage + W_landing_gear
-%         + W_installed_engine + W_all_else_empty                [WeightsL2.OEW]
+%         + W_installed_engine + W_all_else_empty
 %       = 10·S_exp_wing + 5.5·S_exp_ht + 5.5·S_exp_vt + 5·S_wet_fus
 %         + 0.043·W0 + 1.3·n·Wengine(T0) + 0.17·W0
 %
@@ -22,7 +22,7 @@ classdef B777WeightsL2 < WeightsModelL2
 %
 %   TWO METABOOK NOTES (docs/reference_extracts/metabook_data.md §7.2):
 %     * INSTALLED-ENGINE 1.3x (D8): Table 7.1/7.3 apply the 1.3x, so
-%       WeightsL2.weight_installed_engine applies it too.
+%       WeightsL2.compute_weight_installed_engine applies it too.
 %     * ENGINE THRUST (D9): Table 7.3 reproduces at T0 = 89,000/engine, but the
 %       constraint/T-S diagrams use 220,000 total. This class feeds the SIZING
 %       prop.T_SL into the Roskam weight (USER decision), so OEW ~ 334k (+4% vs
@@ -99,21 +99,35 @@ classdef B777WeightsL2 < WeightsModelL2
         % static toolbox (the same equations F16WeightsL2 uses).
         % ================================================================== %
 
-        function oew = get_OEW(obj, W_TO)
+        function oew = get_OEW_major_component_buildup(obj, W_TO)
         %OEW  Component build-up at the PASSED W_TO [metabook §7.2 Algorithm 5].
-        %   Every W_TO-scaling term (landing gear, all-else) is recomputed inside
-        %   WeightsL2.OEW at this argument, not read off obj.W_TO.
+        %   Landing gear and all-else scale with the PASSED W_TO, not obj.W_TO.
+        %   No strake term: the 777 has none.
             arguments
                 obj
                 W_TO (1,1) double {mustBePositive, mustBeFinite}
             end
-            oew = WeightsL2.OEW(obj, W_TO);
+            cat = obj.aircraft_category;
+            tail = obj.weight_tail(W_TO);
+            oew = obj.get_wing_weight(W_TO) + tail.HT + tail.VT ...
+                + obj.weight_fuselage(W_TO) + obj.weight_landing_gear(W_TO) ...
+                + WeightsL2.compute_weight_installed_engine(cat, obj.N_en, obj.W_en) ...
+                + WeightsL2.compute_weight_all_else_empty(cat, W_TO);
         end
 
-        function W = weight_wing(obj, W_TO),        W = WeightsL2.weight_wing(obj, W_TO);        end
-        function W = weight_tail(obj, W_TO),        W = WeightsL2.weight_tail(obj, W_TO);        end
-        function W = weight_fuselage(obj, W_TO),    W = WeightsL2.weight_fuselage(obj, W_TO);    end
-        function W = weight_landing_gear(obj, W_TO),W = WeightsL2.weight_landing_gear(obj, W_TO);end
+        function W = get_wing_weight(obj, ~)
+            W = WeightsL2.compute_weight_wing(obj.aircraft_category, obj.S_w);
+        end
+        function W = weight_tail(obj, ~)
+            W = struct('HT', WeightsL2.compute_weight_HT(obj.aircraft_category, obj.S_ht), ...
+                       'VT', WeightsL2.compute_weight_VT(obj.aircraft_category, obj.S_vt));
+        end
+        function W = weight_fuselage(obj, ~)
+            W = WeightsL2.compute_weight_fuselage(obj.aircraft_category, obj.S_wet_fus);
+        end
+        function W = weight_landing_gear(obj, W_TO)
+            W = WeightsL2.compute_weight_landing_gear(obj.aircraft_category, W_TO);
+        end
 
         % ================================================================== %
         % DERIVED getters -- recompute live on every read.
@@ -131,19 +145,23 @@ classdef B777WeightsL2 < WeightsModelL2
             v = WeightsL2.jet_engine_weight_roskam(obj.prop.T_SL / obj.N_en);
         end
 
-        % Structural groups + engine are pure area·density / thrust correlations
-        % (no W_TO dependence); the toolbox methods declare their W_TO arg as `~`.
-        function v = get.W_wings(obj),            v = WeightsL2.weight_wing(obj, obj.W_TO);     end
-        function v = get.W_tail(obj),             v = WeightsL2.weight_tail(obj, obj.W_TO);     end
-        function v = get.W_fuselage(obj),         v = WeightsL2.weight_fuselage(obj, obj.W_TO); end
-        function v = get.W_installed_engine(obj), v = WeightsL2.weight_installed_engine(obj);   end
+        % Structural groups + engine carry no W_TO dependence.
+        function v = get.W_wings(obj),     v = obj.get_wing_weight([]);   end
+        function v = get.W_tail(obj),      v = obj.weight_tail([]);       end
+        function v = get.W_fuselage(obj),  v = obj.weight_fuselage([]);   end
+        function v = get.W_installed_engine(obj)
+            v = WeightsL2.compute_weight_installed_engine( ...
+                    obj.aircraft_category, obj.N_en, obj.W_en);
+        end
         % Landing gear and all-else-empty scale with W_TO, so a read before W_TO
         % is set fails loudly (mirrors F16WeightsL2.requireWTO).
         function v = get.W_landing_gear(obj)
-            v = WeightsL2.weight_landing_gear(obj, obj.requireWTO('W_landing_gear'));
+            v = WeightsL2.compute_weight_landing_gear( ...
+                    obj.aircraft_category, obj.requireWTO('W_landing_gear'));
         end
         function v = get.W_all_else_empty(obj)
-            v = WeightsL2.weight_all_else_empty(obj, obj.requireWTO('W_all_else_empty'));
+            v = WeightsL2.compute_weight_all_else_empty( ...
+                    obj.aircraft_category, obj.requireWTO('W_all_else_empty'));
         end
 
     end

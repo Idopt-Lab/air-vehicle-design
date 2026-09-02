@@ -69,6 +69,9 @@ classdef F16GeomL2 < GeometryModelL2
         tc_r_vt        = 0.053     % —     [TO Sec I; biconvex root ~5.3%]. The T.O. root/tip split is the single t/c basis; Dependent tc_vt is this pair's mean
         tc_t_vt        = 0.030     % —     [TO Sec I; biconvex tip ~3.0%]
 
+        % ── Body strake / LERX ───────────────────────────────────────────── %
+        S_strake       = 20.0      % ft^2  reference planform area [Brandt Main!D18]
+
         % ── Fuselage (equivalent cylindrical midsection) ─────────────────── %
         L_fus          = 46.5      % ft    [Brandt Main!B32]
         W_max_fuselage = 7.0       % ft    [Brandt Main!C32]
@@ -114,6 +117,7 @@ classdef F16GeomL2 < GeometryModelL2
         TE_sweep_wing  % deg   GeometryBase.convert_sweep(x=1.0)
         tc_r_wing      % —     mirrors tc_wing (wing modeled uniform-tc; no root/tip split available from Brandt)
         tc_t_wing      % —     mirrors tc_wing; see tc_r_wing
+        S_exposed_strake % ft^2  a BODY surface, so no fuselage clip: equals S_strake
         S_exposed_wing % ft^2  GeomL2.compute_S_exposed_horizontal
         S_wet_wing
 
@@ -191,6 +195,7 @@ classdef F16GeomL2 < GeometryModelL2
             obj.tc_t_vt     = J.vertical_tail.tc_tip;
 
             % ---- fuselage / whole aircraft ------------------------------- %
+            obj.S_strake       = J.strake.S_ft2;           % [Brandt Main!D18]
             obj.L_fus          = J.fuselage.length_ft;     % [Brandt Main!B32]
             obj.W_max_fuselage = J.fuselage.max_width_ft;  % [Brandt Main!C32]
             obj.H_max_fuselage = J.fuselage.max_height_ft; % [Brandt Main!D32]
@@ -275,6 +280,12 @@ classdef F16GeomL2 < GeometryModelL2
             v = obj.tc_wing;   % wing modeled uniform-tc; mirrors tc_wing
         end
         % Mod (08/26/2026) (Claude)
+        function v = get.S_exposed_strake(obj)
+            % A BODY surface: the fuselage does not cover it, so exposed equals
+            % reference. Brandt agrees, 20.0 ft^2 [GroundTruth Geom!9].
+            v = obj.S_strake;
+        end
+
         function v = get.S_exposed_wing(obj)
             v = obj.get_S_exposed_wing();   % one home for the equation
         end

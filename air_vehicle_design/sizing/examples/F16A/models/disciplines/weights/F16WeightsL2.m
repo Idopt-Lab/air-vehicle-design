@@ -14,9 +14,7 @@ classdef F16WeightsL2 < WeightsModelL2
 %   OEW = W_wings + W_tail.HT + W_tail.VT + W_fuselage + W_landing_gear
 %         + W_installed_engine + W_all_else_empty + W_strake
 %
-%   The strake (LERX) term is k_strake·S_strake = 90.00 lbf [Brandt Main!D18 /
-%   Wt!H7]; see the S_strake/k_strake property comment for the cross-model borrow
-%   (Raymer Table 15.2 has no strake row).
+%   The strake (LERX) takes the WING density on geom.S_exposed_strake.
 %
 %   Inputs are mutable spec/requirement data; Dependent getters recompute on
 %   read (no stored copy, read-only). 7 inputs + 2 injected objects; 13 Dependent.
@@ -26,7 +24,7 @@ classdef F16WeightsL2 < WeightsModelL2
 %       json_path — f16a_spec_path(2): aircraft_category + .weights.
 %       req_path  — f16a_requirements_path(): design_mach.
 %       geom      — GeometryModelL2 or GeometryModelL3 (both declare the four
-%                   members read: S_exposed_wing/_ht/_vt, get_S_wet_fuselage).
+%                   members read: S_exposed_planform_wing/_ht/_vt, get_S_wet_fuselage).
 %       prop      — PropulsionBase; supplies T_SL and bypass_ratio.
 %
 %   History and rationale: docs/decision_log.md
@@ -63,8 +61,6 @@ classdef F16WeightsL2 < WeightsModelL2
         %   Raymer Table 15.2 has no strake row, so Brandt's own coefficient is
         %   the only source; it is a genuine input in his worksheet, not a
         %   back-calculated output. History and rationale: docs/decision_log.md
-        S_strake  % ft^2   strake planform reference area   [Brandt Main!D18]
-        k_strake  % lbf/ft^2  strake structural surface density [Brandt Wt!H7]
 
         % ----- Injected collaborators (NOT numeric spec data) -----
         geom   % (1,1) GeometryModelL2 OR GeometryModelL3 — supplies the four EXPOSED/WETTED areas below by DI
@@ -77,31 +73,24 @@ classdef F16WeightsL2 < WeightsModelL2
     % ======================================================================= %
     properties (Dependent)
         % -- Geometry, by DI from the injected geom (4) -------------------- %
-        S_w         % ft^2  EXPOSED wing planform area   = geom.S_exposed_wing (196.2261)
-        S_ht        % ft^2  EXPOSED HT planform area      = geom.S_exposed_ht  (49.8473) — NOT geom.S_ht = 108 (FULL)
-        S_vt        % ft^2  EXPOSED VT planform area      = geom.S_exposed_vt  (40.8897) — NOT geom.S_vt = 60 (FULL)
+        S_exposed_planform_wing         % ft^2  EXPOSED wing planform area   = geom.S_exposed_planform_wing (196.2261)
+        S_exposed_planform_ht        % ft^2  EXPOSED HT planform area      = geom.S_exposed_planform_ht  (49.8473) — NOT geom.S_exposed_planform_ht = 108 (FULL)
+        S_exposed_planform_vt        % ft^2  EXPOSED VT planform area      = geom.S_exposed_planform_vt  (40.8897) — NOT geom.S_exposed_planform_vt = 60 (FULL)
         S_wet_fus   % ft^2  fuselage WETTED area          = geom.S_wet_fuselage (730.3023)
-        % Mod (08/19/2026) (Claude) -- D_fus and L_fus were declared here, then
-        %   removed: Casey confirmed they have no consumer in this class. The
-        %   Raymer Table 15.2 fuselage term takes S_wet_fus, a WETTED area, not a
-        %   diameter and length. D_fus and L_fus are the Raymer Eq. 15.4 inputs
-        %   that L3 weights uses, and F16WeightsL3 already has its own pair.
-        %   Kept as a note because of finding S-30: on a WEIGHTS class D_fus means
-        %   the 5.0 ft structural DEPTH (geom.H_max_fuselage), NOT geometry's own
-        %   6.0 ft equivalent diameter. Wiring geom.D_fus is silent and 20% wrong.
+        S_exposed_planform_strakes % ft^2  EXPOSED strake planform = geom.S_exposed_strake (20.0)
 
         % -- Engine weight, by DI from the injected prop (2) --------------- %
         W_en        % lbf  OFFICIAL, UNINSTALLED [Raymer 7th ed. Eq. 10.10] = 2775.0210
         W_en_brandt % lbf  ALTERNATE, already installed [Brandt Wt!B11] = 4730.2300 — comparison report only, NEVER summed into OEW
 
         % -- Component / group weights (6) — WeightsModelL2's abstract set -- %
-        W_wings            % lbf  [Raymer 6th ed. Tbl 15.2]  9.0 · S_w        = 1766.03
+        W_wings            % lbf  [Raymer 6th ed. Tbl 15.2]  9.0 · S_exposed_planform_wing        = 1766.03
         W_tail             % struct(HT, VT) lbf [Tbl 15.2]  4.0·S_ht / 5.3·S_vt = 199.39 / 216.72
         W_fuselage         % lbf  [Raymer 6th ed. Tbl 15.2]  4.8 · S_wet_fus  = 3505.45
         W_landing_gear     % lbf  [AE481 metabook Sec. 7]    0.033 · W_TO     = 1035.44 at 31377
         W_installed_engine % lbf  [AE481 metabook Sec. 7]    1.3 · N_en · W_en = 3607.53
         W_all_else_empty   % lbf  [AE481 metabook Sec. 7]    0.17 · W_TO      = 5334.09 at 31377 / 7650.00 at 45000
-        W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00 (see S_strake/k_strake property comment)
+        W_strake           % lbf  [Raymer 6th ed. Tbl 15.2]  9.0 · S_exposed_planform_strakes = 180.00
     end
 
     methods
@@ -111,7 +100,7 @@ classdef F16WeightsL2 < WeightsModelL2
         %   JSON path, injected L2/L3 geometry object and injected propulsion
         %   object. No silent default. Sets only input properties.
         %
-        %   geom reads S_exposed_wing/_ht/_vt and get_S_wet_fuselage(); prop
+        %   geom reads S_exposed_planform_wing/_ht/_vt and get_S_wet_fuselage(); prop
         %   reads T_SL and bypass_ratio for Raymer Eq. 10.10.
             arguments
                 json_path       {mustBeTextScalar, mustBeNonzeroLengthText}
@@ -130,8 +119,6 @@ classdef F16WeightsL2 < WeightsModelL2
             obj.N_en                 = J.weights.N_en;                  % [T.O. 1F-16A-1 Sec. I]
             obj.W_payload_fixed      = J.weights.W_payload_fixed;       % [Brandt Wt!B4]
             obj.W_payload_expendable = J.weights.W_payload_expendable;  % [Brandt Wt!B5]
-            obj.S_strake             = J.weights.S_strake_ft2;          % [Brandt Main!D18]
-            obj.k_strake             = J.weights.k_strake_psf;          % [Brandt Wt!H7]
 
             % ---- requirements (f16a_requirements.json) ------------------- %
             %      Cited to BRANDT, not to the T.O. — see the property comment.
@@ -147,54 +134,51 @@ classdef F16WeightsL2 < WeightsModelL2
         % reads the Dependent properties above live.
         % ================================================================== %
 
-        function oew = get_OEW(obj, W_TO)
+        function OEW = get_OEW_major_component_buildup(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
-        %   [Raymer 6th ed. Table 15.2 + AE481 metabook Sec. 7] + the strake term
-        %   (Brandt Main!D18/Wt!H7). Every W_TO-scaling term (landing gear,
-        %   all-else-empty) is recomputed inside WeightsL2.OEW at this argument,
-        %   not read off obj.W_TO. W_strake is pure area x density, added on top.
-            oew = WeightsL2.OEW(obj, W_TO) + obj.W_strake;
+        %   [Raymer 6th ed. Table 15.2] plus obj.W_strake, which is F-16
+        %   specific and so stays out of the toolbox.
+            % S_exposed_planform_wing/S_exposed_planform_ht/S_exposed_planform_vt are EXPOSED areas, S_wet_fus is WETTED; the
+            % getters below read them from the injected geometry.
+            W_wing = obj.get_wing_weight(obj.S_exposed_planform_wing);
+            W_HT = WeightsL2.compute_weight_HT(obj.aircraft_category, obj.S_exposed_planform_ht);
+            W_VT = WeightsL2.compute_weight_VT(obj.aircraft_category, obj.S_exposed_planform_vt);
+            W_fuselage = WeightsL2.compute_weight_fuselage(obj.aircraft_category, obj.S_wet_fus);
+            W_LG = WeightsL2.compute_weight_landing_gear(obj.aircraft_category, W_TO, false);
+            W_engine_installed = WeightsL2.compute_weight_installed_engine(obj.aircraft_category, obj.N_en, obj.W_en, false);
+            W_all_else_empty = WeightsL2.compute_weight_all_else_empty(obj.aircraft_category, W_TO, false);
+            W_strake = WeightsL2.compute_weight_wing(obj.aircraft_category, obj.S_exposed_planform_strakes);
+
+            OEW = W_wing + W_HT + W_VT + W_fuselage + W_LG + W_engine_installed ...
+                + W_all_else_empty + W_strake;
         end
 
-        function W = weight_wing(obj, W_TO)
-            W = WeightsL2.weight_wing(obj, W_TO);
-        end
-
-        function W = weight_tail(obj, W_TO)
-            W = WeightsL2.weight_tail(obj, W_TO);
-        end
-
-        function W = weight_fuselage(obj, W_TO)
-            W = WeightsL2.weight_fuselage(obj, W_TO);
-        end
-
-        function W = weight_landing_gear(obj, W_TO)
-            W = WeightsL2.weight_landing_gear(obj, W_TO);
+        function W = get_wing_weight(obj, S_w_exposed)
+            W = WeightsL2.compute_weight_wing(obj.aircraft_category, S_w_exposed);
         end
 
         % ================================================================== %
-        % DERIVED-property getters — recompute live on every read.
+        % DERIVED-property getters
         % ================================================================== %
 
         % TODO (8/19/2026)(Casey): By removing the wrappers in F16GeomL2, I've cut off these functions.
         % They still require values to work. So I think the solution may be "dependency injection."
         % ---- Geometry, by DI (the exposed-vs-FULL name trap) -------------- %
-        function v = get.S_w(obj)
-            % Raymer Table 15.2 takes the EXPOSED planform area.
+        % Raymer Table 15.2 takes EXPOSED planform areas, so never geom.S_ht
+        % or geom.S_vt, which are the FULL references.
+        function v = get.S_exposed_planform_wing(obj)
             v = obj.geom.S_exposed_wing;
         end
-        function v = get.S_ht(obj)
-            % ★ NAME TRAP: geom.S_exposed_ht (49.8473), NOT geom.S_ht = 108.
-            % Raymer Table 15.2 wants the EXPOSED planform; wiring geom.S_ht is
-            % silent — no error, a plausible wrong number.
+        function v = get.S_exposed_planform_ht(obj)
             v = obj.geom.S_exposed_ht;
         end
-        function v = get.S_vt(obj)
-            % ★ NAME TRAP: geom.S_exposed_vt (40.8897), NOT geom.S_vt = 60.
+        function v = get.S_exposed_planform_vt(obj)
             v = obj.geom.S_exposed_vt;
         end
+        function v = get.S_exposed_planform_strakes(obj)
+            v = obj.geom.S_exposed_strake;
+        end
         function v = get.S_wet_fus(obj)
-            % Gets the fuselage wetted area from  GeomL2.
             v = obj.geom.S_wet_fuselage;
         end
 
@@ -225,7 +209,9 @@ classdef F16WeightsL2 < WeightsModelL2
             v = WeightsL2.weight_wing(obj, obj.W_TO);
         end
         function v = get.W_tail(obj)
-            v = WeightsL2.weight_tail(obj, obj.W_TO);
+            v = struct( ...
+                'HT', WeightsL2.compute_weight_HT(obj.aircraft_category, obj.S_exposed_planform_ht), ...
+                'VT', WeightsL2.compute_weight_VT(obj.aircraft_category, obj.S_exposed_planform_vt));
         end
         function v = get.W_fuselage(obj)
             v = WeightsL2.weight_fuselage(obj, obj.W_TO);
@@ -247,9 +233,8 @@ classdef F16WeightsL2 < WeightsModelL2
         end
 
         function v = get.W_strake(obj)
-            % k_strake * S_strake = 4.5 * 20 = 90.00 lbf [Brandt Wt!H9 = 4.5*20].
-            % Pure area x density, no W_TO dependence.
-            v = obj.k_strake * obj.S_strake;
+            % Area x density, no W_TO dependence.
+            v = WeightsL2.compute_weight_wing(obj.aircraft_category, obj.S_exposed_planform_strakes);
         end
 
     end

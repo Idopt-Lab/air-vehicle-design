@@ -4,7 +4,8 @@ F-16A Block 10/15 Level-2 weights. `classdef F16WeightsL2 < WeightsModelL2`; eve
 a one-line delegation into the `WeightsL2` static toolbox.
 
 **L2 is surface-density × area plus fractions:** structural groups use Raymer Table 15.2 psf
-coefficients on real areas; engine and all-else use the AE481 metabook §7 fractions.
+coefficients on real areas; engine and all-else use the fraction sub-tables of the same
+Raymer Table 15.2.
 
 ---
 
@@ -122,7 +123,7 @@ tier.
 | Item | Status |
 |---|---|
 | **Darshan → Krish, HIGH PRIORITY: cross-check L2 weights.** `OEW` comes out significantly lower than Brandt (15754.65 vs 19980.70, −21.14 %). Note ~2733.68 lbf of that gap is Brandt line items with no framework analog, but that leaves the rest unexplained | open |
-| `WeightsL2.LG_fraction('general_aviation') = 0.057` is **uncited** — the metabook extract has no GA landing-gear row | todo §P4-7; in-code TODO |
+| `WeightsL2.lookup_LG_fraction('general_aviation') = 0.057` — **CLOSED 2026-09-02 (Casey)**: printed in Raymer Table 15.2; the metabook extract merely omits the GA column | todo §P4-7, closed |
 | `LG_fraction` carries **no `navy_fighter` row** despite the extract having one (0.045) | pinned as a known absence by `testLGFractionHasNoNavyFighterRow` |
 | `design_mach` = 2.0 is cited to Brandt; the T.O. operating limit is 2.05, −2.44 % apart. Sensitivity: `W_en` 2775.02 → 2792.20 (+0.62 %) | todo §P4-13 — user to confirm which is the design requirement |
 | The metabook is a secondary source citing Raymer, not Raymer itself | in-code `⚠ verify` markers |

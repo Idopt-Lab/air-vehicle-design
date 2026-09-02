@@ -1,23 +1,52 @@
 {
   "_comment": "F-16A Block 10/15 Level-2 inputs. Read by F16GeomL2, F16AeroL2, F16PropL2, F16WeightsL2. Full docs: F16GeomL2.md, F16AeroL2.md, F16PropL2.md, F16WeightsL2.md, docs/*_parameter_usage.md; open items in VnV/BrandtF16A/todo.md.",
   "_cite": "Main!/Engn(s)!/Miss!/Wt! = Brandt-F16-A.xls tabs; TO = T.O. 1F-16A-1; Raymer = Raymer 6th ed.; Mattingly = Mattingly: Aircraft Engine Design, 2nd edition; todo = VnV/BrandtF16A/todo.md.",
-
   "aircraft_category": "jet_fighter",
   "_aircraft_category_src": "ONE canonical class flag for every discipline. Selects Raymer Tbl 12.3 (Cfe) / Raymer Tbl 15.2 + AE481 fractions (L2 weights) / Raymer 15.3.1 Fighter-Attack build-up (L3 weights) rows. Source tables name their categories differently, so each lookup translates this canonical value to its own row name -- see AeroL1.to_CLmax_table_row. Do NOT rename a table row to match this key.",
-
   "geometry": {
     "_src": "Surface geometry = Brandt Main tab, column B (wing) / C (horizontal_tail) / H (vertical_tail), rows 18 = S_ft2, 19 = AR, 20 = taper, 21 = sweep_LE_deg, 22 = NACA 4-digit (last 2 digits = t/c %; wing B22 = 1404 -> 4%, corroborated TO Fig. 1-2 NACA 64A204). tc_root, tc_tip [TO Sec. I biconvex]. fuselage length_ft, max_width_ft, max_height_ft [Main!B32/C32/D32]. engine duct_length_ft [Main!F32, label E32 'Compr Face'].",
     "_note": "Row map also in F16GeomL2.md / F16GeomL3.md §2. Derived quantities are Dependent getters; engine SLS thrust arrives by DI from .propulsion.T_SL.",
-    "wing":            {"S_ft2": 300.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_ratio": 0.04},
-    "horizontal_tail": {"S_ft2": 108.0, "AR": 3.0, "taper": 0.2275, "sweep_LE_deg": 40.0, "tc_root": 0.060, "tc_tip": 0.035},
-    "vertical_tail":   {"S_ft2": 60.0,  "AR": 1.6, "taper": 0.5,    "sweep_LE_deg": 40.0, "tc_root": 0.053, "tc_tip": 0.030},
-    "fuselage":        {"length_ft": 46.5, "max_width_ft": 7.0, "max_height_ft": 5.0},
-    "engine":          {"duct_length_ft": 14.0, "n_engines": 1},
+    "wing": {
+      "S_ft2": 300.0,
+      "AR": 3.0,
+      "taper": 0.2275,
+      "sweep_LE_deg": 40.0,
+      "tc_ratio": 0.04
+    },
+    "horizontal_tail": {
+      "S_ft2": 108.0,
+      "AR": 3.0,
+      "taper": 0.2275,
+      "sweep_LE_deg": 40.0,
+      "tc_root": 0.06,
+      "tc_tip": 0.035
+    },
+    "vertical_tail": {
+      "S_ft2": 60.0,
+      "AR": 1.6,
+      "taper": 0.5,
+      "sweep_LE_deg": 40.0,
+      "tc_root": 0.053,
+      "tc_tip": 0.03
+    },
+    "fuselage": {
+      "length_ft": 46.5,
+      "max_width_ft": 7.0,
+      "max_height_ft": 5.0
+    },
+    "engine": {
+      "duct_length_ft": 14.0,
+      "n_engines": 1
+    },
     "overall_length_ft": 47.65,
     "_overall_length_ft_src": "L_aircraft, ft; feeds only the Raymer Eq. 12.44 (Amax/l)^2 term. Published F-16A length 47 ft 7.75 in = 47.6458 ft. Distinct from fuselage.length_ft.",
-    "_TODO_overall_length_ft": "overall_length_ft = 47.65 is traceable to no document in this repo; remove this key when pinned to a primary source. todo 2026-07-25 Phase 2 §6; Geom!B21 does not pin it (F16GeomL3.md §2)."
+    "_TODO_overall_length_ft": "overall_length_ft = 47.65 is traceable to no document in this repo; remove this key when pinned to a primary source. todo 2026-07-25 Phase 2 §6; Geom!B21 does not pin it (F16GeomL3.md §2).",
+    "strake": {
+      "_src": "Body strake / LERX (chine) reference planform area [Brandt F-16A.xls Main!D18]. ADDED 2026-09-02: the area is a GEOMETRIC value, so it belongs here, not in .weights. L2 needs only the area; the L3 block carries the full planform.",
+      "_exposed_note": "A BODY surface, not clipped by the fuselage, so the exposed area equals the reference area, 20.0 ft^2 [GroundTruth/f16a_ground_truth.json lifting_surface_exposed_areas.strake, Geom!9].",
+      "S_ft2": 20.0
+    }
   },
-
   "aerodynamics": {
     "_src": "airfoil name [TO Fig. 1-2]; airfoiltype, design_CL [NACA 64A204 section data]; alpha_L0_deg, cl_max_2D, cl_alpha_per_deg [unpinned, see _TODO keys]; wave_drag_factor_E_WD [Brandt F-16A.xls Aero tab Sears-Haack wave-drag term, same source/value as f16a_L3.json]. Cfe is NOT an input: it is the aircraft_category-selected Raymer Tbl 12.3 row (AeroL2.lookup_Cfe), a published table constant rather than a design variable.",
     "airfoil": {
@@ -25,7 +54,7 @@
       "airfoiltype": "cambered",
       "design_CL": 0.2,
       "alpha_L0_deg": -1.33,
-      "cl_max_2D": 1.20,
+      "cl_max_2D": 1.2,
       "cl_alpha_per_deg": 0.105,
       "_cite_alpha_L0_deg": "-1.33 deg, from a compiled NACA 64A204 airfoil data summary (web-sourced 2026-07-30, corroborated by two independent searches). Caveat carried forward honestly: true 64A201-64A204 wind-tunnel data is scarce in the public literature; secondary sources (including this one) commonly estimate the 64A20X family from NACA 64A210 data. Not a primary NACA report. Was previously an unpinned -1.01 guarded by testTODO_AlphaL0Unverified (2026-07-25 Phase 3); replaced 2026-07-30.",
       "_TODO_cl_max_2D": "cl_max_2D = 1.20 (Abbott & von Doenhoff) conflicts with NTRS-19870017427's 1.0; remove when reconciled. Guard: TestAeroL2.testTODO_ClMax2DUnverified.",
@@ -35,43 +64,35 @@
     "_TODO_wave_drag_factor_E_WD": "E_WD = 2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or accepted as a calibration knob. Same value/status as f16a_L3.json's identical key. Guard: TestAeroL2.testTODO_EWDCalibrationInput.",
     "_amax_via_DI": "Amax and L_aircraft are NOT aero inputs: both arrive by DI from the injected L2 geometry object (Amax a Dependent, FUSELAGE-ENVELOPE ellipse at L2, distinct from L3's area-ruled buildup; L_aircraft = .geometry.overall_length_ft)."
   },
-
   "propulsion": {
     "_src": "engine_type [F100-PW-200 class; selects the PropL2 Mattingly Eq. 3.55a/b TSFC coefficients]; engine_model [descriptor]; T_SL AB SLS lbf [Engn(s)!T_AB_SLS = Main!D29; TO Sec. I]; T_SL_mil, dry SLS lbf [Engn(s)!T_mil_SLS = Main!C29]; T_t4_max_F [Mattingly Tbl C.4, F100-PW-100]; TSFC_install_factor [Miss!C25 = Main!C25]; bypass_ratio [F100-PW-200 class; pinned to Nicolai & Carichner Table 14.3 F100-PW-100 -- see _cite_bypass_ratio key]",
     "_note": "Installed = uninstalled x 1.08. Brandt's stored SLS TSFCs (0.70 mil / 2.20 AB) are ALREADY installed -- do not double-apply [todo 2026-07-24 §4]. TR [Mattingly Eq. D.6] and T_SL_wet (= T_SL) are derived.",
     "engine_type": "low_bypass_turbofan_AB",
     "engine_model": "F100-PW-200",
-    "T_SL":     23770.0,
+    "T_SL": 23770.0,
     "T_SL_mil": 15000.0,
     "T_t4_max_F": 2566.0,
     "TSFC_install_factor": 1.08,
     "bypass_ratio": 0.71,
     "_cite_bypass_ratio": "Nicolai & Carichner Table 14.3, F100-PW-100 (direct predecessor of the F100-PW-200 this model otherwise uses); docs/reference_extracts/14_propulsion_fundamentals.md:581. Pinned 2026-07-30; was previously an unresolved _TODO_bypass_ratio marker (todo 2026-07-25 Phase 3)."
   },
-
   "weights": {
     "_src": "N_en [TO]; W_payload_fixed [Wt tab: crew + fixed equipment]; W_payload_expendable [Wt tab: stores]. Raymer Tbl 15.2 psf densities and the AE481 metabook §7 fractions are aircraft_category-selected toolbox Constants. S_strake_ft2/k_strake_psf [Brandt F-16A.xls Main!D18 / Wt!H7 -- Raymer Tbl 15.2 has NO strake/LERX category, so Brandt's own genuine INPUT assumption for this one component is the only available source; see F16WeightsL2.m's W_strake getter for the cross-model-borrow rationale].",
     "_note": "Exposed and fuselage wetted areas are injected live from F16GeomL2, not stored here. LG fraction 0.033 vs Brandt 0.034: todo 2026-07-24 §3c item 2. design_mach (Raymer Eq. 10.10 M^0.25) is NOT here either -- it is a REQUIREMENT, read from examples/F16A/f16a_requirements.json. NOT inputs: W_en (engine weight is computed from Raymer Eq. 10.10 using the injected prop object's T_SL and bypass_ratio, then x1.3 installed -- the x1.3 applies at L2 ONLY, F16WeightsL2.md §4) and W_energy (internal fuel is a mission-analysis output; Brandt Wt!B6 is back-calculated as W_TO - payload - OEW).",
     "N_en": 1,
     "W_payload_fixed": 700,
-    "W_payload_expendable": 4400,
-    "S_strake_ft2": 20.0,
-    "k_strake_psf": 4.5,
-    "_strake_src": "S_strake_ft2 = strake planform reference area [Brandt Main!D18 = 20 ft^2]; k_strake_psf = strake structural surface density [Brandt Wt!H7 = 4.5 lbf/ft^2]. W_strake = k_strake_psf * S_strake_ft2 = 90.00 lbf (added 2026-07-29 -- was previously an unmodeled ~13.7%-of-OEW gap, see examples/F16A/mds/weights_brandt_comparison.md section 5)."
+    "W_payload_expendable": 4400
   },
-
   "subsystems": {
     "_note": "NOT YET IMPLEMENTED -- no F16SubsystemsL2/F16LandingGearL2 class exists yet (docs/subplans/09_subsystems.md, Casey-approved, scribe-complete 2026-07-31; io pass 2026-07-31). Geometry-derived inputs: Raymer Eq. 7.14 fuselage volume off GeomL2's envelope-ellipse A_top/A_side, Roskam Eq. 6.2/6.3 wing volume, Nicolai Ch. 8 packaging/density tables, Raymer Ch. 11 landing-gear statistics. Universal textbook-equation coefficients (Raymer Eq. 7.14's 3.4 factor; Roskam Eq. 6.2's 0.54 coefficient and its own tau_w=(t/c)_tip/(t/c)_root definition, Eq. 6.3) are NOT duplicated here -- they belong in the future SubsystemsL2 toolbox code as equation constants, same code/JSON split already used for Raymer Eq. 12.48-12.51's coefficients in AeroL2. Full citation detail: docs/subplans/09_subsystems.md Equations & Citations §5-9c.",
-
     "fuel": {
       "fuel_type": "JP-8",
       "density_lb_per_gal": 6.7,
       "_cite_fuel": "Same selection/citation as f16a_L1.json .subsystems.fuel -- [Nicolai & Carichner, Table 8.6, p.210]; DECIDED (Casey, 2026-08-03): JP-8, not JP-4, per T.O. 1F-16A-1's own stated nominal internal-fuel type; see f16a_L1.json's _cite_fuel for the full note.",
       "packaging_factor_category": "Integral tank — shallow fuselage",
-      "packaging_factor": 0.80,
+      "packaging_factor": 0.8,
       "_cite_packaging_factor": "[Nicolai & Carichner, p.210, unnumbered 'Fuel Tank Packaging Factors' table] (docs/subplans/09_subsystems.md Equations & Citations §1) -- 'Integral tank — shallow fuselage' row = 0.80. CORRECTED (2026-08-03, re-scanned all the reference-extract files including the newly-completed Nicolai Ch. 12/18-24 scrape per Casey's request -- no source anywhere states the F-16's actual tank construction type, so which of the table's five rows applies remains a judgment call, same as before). What changed: the io agent's original pick was 'Integral tank -- wing' (0.75), but this factor multiplies the FUSELAGE raw volume (Raymer Eq. 7.14 output) per subplan Eq. §5b, not the wing volume -- a fuselage-category row is the correct match regardless of which fuselage row (shallow vs deep) is picked. 'Shallow fuselage' (0.80) was chosen over 'deep fuselage' (0.85) as more representative of a slender fighter fuselage (F-16 max height 5.0 ft vs. length 46.5 ft) than a bomber/transport's deeper cross-section, but Nicolai gives no numerical shallow/deep threshold -- EXPLICIT JUDGMENT CALL, flag if 'deep fuselage' (0.85) is preferred instead. The full table belongs in the future SubsystemsL2 toolbox code as a Constant (same split as AeroL1.CLmax_table); this key only records which row is selected. Roskam's wing-volume formula (Eq. 6.2/6.3) already yields a usable volume and is NOT multiplied by a second packaging factor."
     },
-
     "avionics": {
       "density_lb_per_ft3": 45.0,
       "_cite_density_lb_per_ft3": "[Nicolai & Carichner, §8.1.11, p.210] flat average avionics density, 45 lb/ft3. DECIDED fidelity split (Casey, 2026-07-31; docs/subplans/09_subsystems.md Equations & Citations §4): L2/L3 switch from L1's Raymer-derived 37.5 lb/ft3 to Nicolai's flat 45, consistent with L2+ already pulling fuel-packaging factors from the same Nicolai Ch. 8 section.",
@@ -79,57 +100,101 @@
       "weight_fraction": 0.055,
       "_cite_weight_fraction": "Same selection/citation as f16a_L1.json .subsystems.avionics.weight_fraction -- [Raymer Table 11.6, p.375] Fighters 0.03-0.08. DECIDED (Casey, 2026-08-03): midpoint, 0.055."
     },
-
     "landing_gear": {
       "_note": "F16LandingGearL2 -- F-16-only, no abstract Base tier (docs/subplans/09_subsystems.md Files to Create). Consumes W_TO (already a plain STATE property on F16WeightsL2) to get the per-wheel load W_w for Raymer's statistical tire-sizing formula.",
-      "gear_load_split": {"main_pct": 90, "nose_pct": 10},
+      "gear_load_split": {
+        "main_pct": 90,
+        "nose_pct": 10
+      },
       "_cite_gear_load_split": "[Raymer 6th ed. Ch. 11, p.344, prose]: 'the main tires carry about 90% of the total aircraft weight ... Nose tires carry only about 10% of the static load.' DECIDED default (Casey, 2026-07-31; docs/subplans/09_subsystems.md Equations & Citations §8). The Brandt-workbook-derived alternate split (26.7% main / 73.3% nose, computed by BrandtBalanceStabControl.m off the uncross-checked f16a_geometry.json gear block) is deliberately NOT wired in -- standing, non-blocking discrepancy logged at VnV/BrandtF16A/todo.md, 2026-07-31 entry 'Subsystems deep-dive, Phase A ... gear block provenance and implied gear-load-split'. Comparison data: VnV/BrandtF16A/GroundTruth/f16a_subsystems_ground_truth.json.",
       "tire_sizing": {
         "aircraft_category_table_row": "Jet fighter/trainer",
         "diameter_coeff_A": 1.59,
         "diameter_coeff_B": 0.302,
-        "width_coeff_A": 0.0980,
+        "width_coeff_A": 0.098,
         "width_coeff_B": 0.467,
         "_cite_tire_sizing": "[Raymer 6th ed., Ch. 11, Table 11.1 'Statistical Tire Sizing,' p.344] Jet fighter/trainer row: D_main[in] = diameter_coeff_A * W_w^diameter_coeff_B, Width_main[in] = width_coeff_A * W_w^width_coeff_B, W_w = static load on one main wheel [lb] (docs/subplans/09_subsystems.md Equations & Citations §9/§9b). The table's other three rows (General aviation A=1.51/B=0.349, Business twin A=2.69/B=0.251, Transport/bomber A=1.63/B=0.315, plus their width coefficients) belong in the future F16LandingGearL2 toolbox code as the full Table 11.1 Constant (same JSON/code split as AeroL1.CLmax_table); this key only records the F-16's own applicable row."
       },
-      "nose_tire_fraction_of_main": 0.80,
+      "nose_tire_fraction_of_main": 0.8,
       "_cite_nose_tire_fraction_of_main": "[Raymer 6th ed., Ch. 11, Table 11.1 page, prose]: nose tire assumed 60-100% of main-tire size, no F-16-specific point value given (docs/subplans/09_subsystems.md Equations & Citations §9c). DECIDED (Casey, 2026-08-03): use the range midpoint, 0.80 -- the subplan itself calls this 'a designer's choice within a stated range, not a citable point value.' Comparison-report data point: VnV/BrandtF16A/GroundTruth/f16a_subsystems_ground_truth.json's landing_gear_tire_diameter block gives d_nose_ft=1.5 / d_main_ft=2.0, i.e. ratio 0.75 -- close to, but not verification of, this 0.80 pick (that block carries two open provenance/load-split caveats of its own)."
     },
-
     "_TODO_battery_specific_volume": "GAP -- no citable BATTERY VOLUMETRIC energy density (kWh/ft3, kWh/L, or an equivalent pack density in lb/ft3) exists anywhere in this repo for the battery-electric fuel-volume-check alternative path. Only GRAVIMETRIC specific energy is cited: [Nicolai & Carichner, Table 14.2, p.363] batteries 0.27 kWh/lb (Li-S projected 0.336 kWh/lb by 2015); a generic 0.35-1.55 kWh/kg design-space bound (Mokotoff et al.), also gravimetric, was previously on record but its source digest is no longer in-repo. Ships as a documented-gap marker, matching TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo's convention (the CLAUDE.md-permitted citation-gap exception) -- NOT a blocker to implementing the liquid-fuel volume path. docs/subplans/09_subsystems.md Equations & Citations §7 (re-confirmed still open by Casey, 2026-08-03, after re-scanning the reference-extract files in docs/reference_extracts/). Remove this key (and add a cited 'battery' sub-block) only when the user supplies a genuine volumetric energy/pack density.",
-
     "_TODO_gear_bay_volume_packaging": "GAP -- no textbook bay-volume (tire+strut stowage) packaging formula was found anywhere in this repo. Raymer's landing-gear chapter (Ch. 11) covers tire/strut/shock-absorber SIZE, not a bay-VOLUME packaging estimate the way Nicolai's Ch. 8 fuel/avionics sections give one; a geometric-envelope assumption (e.g. tire footprint x a retraction-clearance multiplier) would need either a citation or an explicit 'engineering judgment, uncited' label, neither of which is settled. docs/subplans/09_subsystems.md Equations & Citations §11. This means the landing-gear contribution to the Subsystems internal-volume total (Objectives §3) is not yet computable -- tire/strut SIZE (see .landing_gear.tire_sizing above) is unaffected. Remove this key (and add the packaging-formula inputs it would need) only when a source, or an explicitly-labeled uncited assumption, is supplied."
   },
-
   "stability_control": {
     "_note": "NOT YET IMPLEMENTED -- no F16SandCL2 class exists yet (docs/subplans/10_stability_control.md, Casey-approved 2026-08-03; io pass 2026-08-03). Longitudinal static stability ONLY, steady level flight -- NO L1 TIER: per docs/subplans/10_stability_control.md's 'Per-equation fidelity resolution' table, all nine of Casey's Raymer 6th ed. Ch. 16 equations resolved to L2/L3 (none to L1), so no f16a_L1.json .stability_control block was created this pass. Universal Ch. 16/16.16-16.18 equation coefficients (Delta x_ac(M) piecewise terms 0.26/0.4/2.5/0.112/0.004; elevator-deflection polynomial 1.576/-3.458/2.882) are NOT duplicated here -- they belong in the future SandCL2/L3 toolbox code as Constants, matching the existing code/JSON split used by AeroL1.CLmax_table and SubsystemsL1's packaging-factor table. Full citation detail: docs/subplans/10_stability_control.md 'Equations & Citations'.",
     "_geometry_x_station_gap": "DECIDED (Casey, 2026-08-03): F16SandCL2 is limited to the CG (x_cg) term ONLY -- see docs/subplans/10_stability_control.md's 'DECIDED: F16SandCL2 is limited to the CG term only' note for the full rationale. F16GeomL2 exposes NO x-station properties at all (confirmed by reading examples/F16A/F16GeomL2.m directly -- only F16GeomL3 has x_apex_wing/x_le_ht/x_le_vt/x_inlet/L_t), so Eqs. 16.4/16.5/16.7/16.8/16.9/16.11/16.12 and 16.13/16.14/16.15 are NOT implemented at L2 at all -- they are L3-ONLY. F16SandCL2 computes only x_cg = Sum(W_i*x_i)/Sum(W_i) over component_x_stations below (using each group's cg_x_ft), with W_i read live by DI from F16WeightsL2 -- no geometry x-stations needed for that term.",
-
     "component_x_stations": {
       "_note": "DECIDED (Casey, 2026-08-03): built from THIS framework's own WeightsL2/WeightsL3 groups, not the legacy temp_Casey component list -- supersedes this key's earlier 22-row 'component_x_locations' draft (io pass, 2026-08-03), which sourced the legacy sheet directly. Grouped to match F16WeightsL2's own 7 Dependent weight groups (W_wings, W_tail.HT, W_tail.VT, W_fuselage, W_landing_gear, W_installed_engine, W_all_else_empty, W_strake) plus the top-level weights.W_payload_fixed/W_payload_expendable and mission-output W_energy (fuel) -- 10 groups total, WEIGHTS read live by DI from F16WeightsL2, never duplicated here.",
       "_two_station_types_per_group": "Casey's instruction (2026-08-03): track BOTH a front_edge_x_ft (the group's geometric leading-edge/apex station, citable to Geometry where it exists) AND a cg_x_ft (an estimated weight-centroid station, since a component's MASS does not sit at its front edge) for every group, as redundant/cross-checkable data, not a single blended number. front_edge_x_ft is NOT itself the CG -- it is kept only as an independent, geometry-citable reference point a future check can compare cg_x_ft against (e.g. cg_x_ft should always be aft of front_edge_x_ft for a part with positive length).",
       "_L2_has_no_front_edge_data": "F16GeomL2 exposes NO x-station properties at all (see the block-level _geometry_x_station_gap note above) -- every front_edge_x_ft below is 'N/A (no L2 geometry x-station)' at this fidelity level. This does not block F16SandCL2's CG-only computation (per the DECIDED note above, F16SandCL2 never reads front_edge_x_ft), it only means the redundant cross-check field is unavailable at L2 -- see f16a_L3.json for the same table WITH real front_edge_x_ft values, since F16GeomL3 has the needed properties.",
       "_cg_x_ft_estimate_method": "cg_x_ft is an ENGINEERING ESTIMATE, not an independent citation -- computed by mapping the legacy temp_Casey 'Stability&Control' sheet's 22 fine-grained components (docs/subplans/10_stability_control.md 'Ground Truth', live-workbook read, 2026-08-03) into these 10 coarser weight groups and taking each group's OWN weighted-average x-station (Sum(w_i*x_i)/Sum(w_i) over the legacy rows folded into that group) -- i.e. real, live-read component data, re-aggregated to this framework's own grouping, not re-derived from Geometry offsets (which would need an equally uncited LE-to-centroid offset fraction per group anyway -- see the coordinator's prior turn explaining why a purely-Geometry-derived cg_x_ft isn't actually more 'citable' than this). Cross-check: summing all 10 groups' weights below gives 31,368 lbf, within 9 lbf (0.03%) of Brandt's own W_TO=31,377 lbf -- a strong sign the underlying legacy data is a complete, physically real breakdown, even though the GROUPING here is this framework's own, not the legacy sheet's.",
       "groups": {
-        "wing":              {"weights_property": "W_wings",            "front_edge_x_ft": null, "cg_x_ft": 27.28,  "_cg_source": "legacy row 2 (Wing) directly, single-row group"},
-        "horizontal_tail":   {"weights_property": "W_tail.HT",          "front_edge_x_ft": null, "cg_x_ft": 41.0,   "_cg_source": "legacy row 4 (HT) directly, single-row group"},
-        "vertical_tail":     {"weights_property": "W_tail.VT",          "front_edge_x_ft": null, "cg_x_ft": 40.0,   "_cg_source": "legacy row 5 (VT) directly, single-row group"},
-        "fuselage":          {"weights_property": "W_fuselage",         "front_edge_x_ft": null, "cg_x_ft": 26.0,   "_cg_source": "legacy row 3 (Fuselage) directly, single-row group"},
-        "landing_gear":      {"weights_property": "W_landing_gear",     "front_edge_x_ft": null, "cg_x_ft": 26.0,   "_cg_source": "legacy row 9 (Gear) directly, single-row group"},
-        "installed_engine":  {"weights_property": "W_installed_engine", "front_edge_x_ft": null, "cg_x_ft": 31.45,  "_cg_source": "legacy rows 8 (Engine, 4730@33) + 6 (Nacelles, 186@29) + 10 (Inlet duct, 728@22), weighted avg = (4730*33+186*29+728*22)/5644 = 31.4529"},
-        "subsystems_lump":   {"weights_property": "W_all_else_empty",   "front_edge_x_ft": null, "cg_x_ft": 21.11,  "_cg_source": "legacy rows 11 Controls(472@27) + 12 Electrical(533@33) + 13 Hydraulics(367@33) + 14 ECS(360@27) + 15 Other(2016@20) + 16 Avionics(2541@15) + 17 Armaments(440@26), weighted avg = 142039/6729 = 21.1083"},
-        "strake":            {"weights_property": "W_strake",           "front_edge_x_ft": null, "cg_x_ft": 17.0,   "_cg_source": "legacy row 7 (Strakes) directly, single-row group"},
-        "payload":           {"weights_property": "weights.W_payload_fixed + weights.W_payload_expendable (top-level .weights block, NOT this block)", "front_edge_x_ft": null, "cg_x_ft": 24.63, "_cg_source": "legacy rows 18 Fixed Payload(700@16) + 19 Exp Payload 1(2200@26) + 20 Exp Payload 2(2200@26), weighted avg = 125600/5100 = 24.6275. Cross-check: 700+2200+2200=5100 matches weights.W_payload_fixed(700)+weights.W_payload_expendable(4400)=5100 exactly."},
-        "fuel":              {"weights_property": "W_energy (mission-analysis STATE, NaN until the sizing loop sets it -- see WeightsBase.md)", "front_edge_x_ft": null, "cg_x_ft": 26.0, "_cg_source": "legacy rows 21 Fuel 1(2098@24) + 22 Fuel 2(2098@26) + 23 Fuel 3(2098@28), weighted avg = 2098*(24+26+28)/6294 = 26.0 exactly (symmetric about 26)"}
+        "wing": {
+          "weights_property": "W_wings",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 27.28,
+          "_cg_source": "legacy row 2 (Wing) directly, single-row group"
+        },
+        "horizontal_tail": {
+          "weights_property": "W_tail.HT",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 41.0,
+          "_cg_source": "legacy row 4 (HT) directly, single-row group"
+        },
+        "vertical_tail": {
+          "weights_property": "W_tail.VT",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 40.0,
+          "_cg_source": "legacy row 5 (VT) directly, single-row group"
+        },
+        "fuselage": {
+          "weights_property": "W_fuselage",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 26.0,
+          "_cg_source": "legacy row 3 (Fuselage) directly, single-row group"
+        },
+        "landing_gear": {
+          "weights_property": "W_landing_gear",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 26.0,
+          "_cg_source": "legacy row 9 (Gear) directly, single-row group"
+        },
+        "installed_engine": {
+          "weights_property": "W_installed_engine",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 31.45,
+          "_cg_source": "legacy rows 8 (Engine, 4730@33) + 6 (Nacelles, 186@29) + 10 (Inlet duct, 728@22), weighted avg = (4730*33+186*29+728*22)/5644 = 31.4529"
+        },
+        "subsystems_lump": {
+          "weights_property": "W_all_else_empty",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 21.11,
+          "_cg_source": "legacy rows 11 Controls(472@27) + 12 Electrical(533@33) + 13 Hydraulics(367@33) + 14 ECS(360@27) + 15 Other(2016@20) + 16 Avionics(2541@15) + 17 Armaments(440@26), weighted avg = 142039/6729 = 21.1083"
+        },
+        "strake": {
+          "weights_property": "W_strake",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 17.0,
+          "_cg_source": "legacy row 7 (Strakes) directly, single-row group"
+        },
+        "payload": {
+          "weights_property": "weights.W_payload_fixed + weights.W_payload_expendable (top-level .weights block, NOT this block)",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 24.63,
+          "_cg_source": "legacy rows 18 Fixed Payload(700@16) + 19 Exp Payload 1(2200@26) + 20 Exp Payload 2(2200@26), weighted avg = 125600/5100 = 24.6275. Cross-check: 700+2200+2200=5100 matches weights.W_payload_fixed(700)+weights.W_payload_expendable(4400)=5100 exactly."
+        },
+        "fuel": {
+          "weights_property": "W_energy (mission-analysis STATE, NaN until the sizing loop sets it -- see WeightsBase.md)",
+          "front_edge_x_ft": null,
+          "cg_x_ft": 26.0,
+          "_cg_source": "legacy rows 21 Fuel 1(2098@24) + 22 Fuel 2(2098@26) + 23 Fuel 3(2098@28), weighted avg = 2098*(24+26+28)/6294 = 26.0 exactly (symmetric about 26)"
+        }
       }
     },
-
     "_reuse_c_elev_frac": "c_e/c (elevator chord ratio, for the Eq. 16.16/16.18 elevator-deflection sub-formula) is NOT a new S&C input. UPDATED 2026-08-10: it does NOT live on F16GeomL2 -- the 2026-08-06 tail/control-surface re-extraction (commit 06c1db9) moved it back onto the standalone ControlSurfaceSizer collaborator (equals 0, F-16 all-moving stabilator, no separate elevator; Raymer 6th ed. Table 6.5, Fighter/attack row footnote 'Supersonic usually all-moving tail without separate elevator'), reversing the absorption-into-Geometry this note originally described. F16SandCL2 does not currently implement Delta_alpha_L0 at all; a future implementation should inject ControlSurfaceSizer and read obj.ctrl.c_elev_frac by DI (the pattern F16SandCL3 uses -- see F16SandCL3.m's DI section), not obj.geom.c_elev_frac. NOTE for the implementation phase: c_elev_frac=0 makes the Eq. 16.16/16.18 elevator-deflection sub-formula for Delta alpha_L0 evaluate to 0 identically for the F-16 -- worth flagging in case that changes how much of Eq. 16.15's scope is actually exercised for this airframe.",
-
     "_TODO_x_p": "GAP -- x_p (thrust x-location, needed for the F_p*(x_cg-x_p) terms in Eqs. 16.4/16.5/16.7/16.9) is not exposed as a clean input anywhere in this repo. Checked examples/F16A/F16PropL2.m directly: it exposes engine_type, T_SL, T_SL_mil, T_t4_max_F, TSFC_install_factor, bypass_ratio, TR -- no x-location property at all. F16GeomL3 (NOT F16GeomL2, which has no x-stations at all -- see _geometry_x_station_gap above) has x_inlet, L_duct, L_engine, and the Dependent x_nacelle_aft (= x_inlet + L_duct + L_engine, the nozzle-exit station) which COULD serve as a DI-reused proxy for x_p if the implementation phase chooses to source it from Geometry rather than Propulsion -- but that is an implementation-level decision, not io's to make. Legacy SandCLevel3.m hardcodes Xbar_p=33.775 'temporarily' (a documented bug in docs/subplans/10_stability_control.md's Legacy Bugs table) -- do not port that literal. No new JSON key added; flagged as an open input gap, most acute at L2 (zero x-stations available at all here).",
-
     "_TODO_i_w_i_h": "GAP -- i_w/i_h (wing/horizontal-tail incidence angles, for Eqs. 16.13/16.14) are not exposed anywhere in Geometry. Checked examples/F16A/F16GeomL2.m and F16GeomL3.m directly (grepped for 'incidence'/'i_w'/'i_h'): no such property exists at either level. docs/subplans/10_stability_control.md itself flags this as ambiguous ('if treated as a geometry input rather than an S&C-local constant') and does not resolve it. No citable F-16 incidence value was found in any Scribe-approved source this pass -- NOT invented here. Needs a decision: add i_w/i_h as new Geometry inputs (its own scribe/io pass) or as new S&C-local inputs here, once a cited value is available.",
-
     "_no_JSON_for_thrust_correction_terms": "Per explicit launch instruction: F_p_alpha, Delta alpha_h/Delta alpha, and Delta alpha_p/Delta alpha (the legacy neutral-point thrust-correction terms) have NO JSON keys anywhere in this file, and none should be added -- docs/subplans/10_stability_control.md's own web cross-check found NO thrust term in the confirmed Eq. 16.9 formula, and Casey's separate note about a '2% reduction per unit prop-to-CG distance, normalized by MAC' correction is unresolved implementation-level territory, not an io decision."
   }
 }

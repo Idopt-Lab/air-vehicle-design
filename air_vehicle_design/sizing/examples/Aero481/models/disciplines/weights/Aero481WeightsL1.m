@@ -58,7 +58,7 @@ classdef Aero481WeightsL1 < WeightsModelL1
     % inside OEW. Citations table: companion .md section 2.
     % ======================================================================= %
     properties
-        aircraft_category = 'jet_fighter'  % selects the Raymer Table 15.2 wing areal density (WeightsL2.wing_unit_weight), the Raymer Table 3.1 jet_fighter fraction row, and the Roskam Table 2.15 row [aero481_L1.json top-level -- ONE canonical class flag per aircraft]
+        aircraft_category = 'jet_fighter'  % selects the Raymer Table 15.2 wing areal density (WeightsL2.compute_weight_wing), the Raymer Table 3.1 jet_fighter fraction row, and the Roskam Table 2.15 row [aero481_L1.json top-level -- ONE canonical class flag per aircraft]
 
         %OEW_COEFF_A, OEW_COEFF_C  Sainristil OEW-fraction power-law coefficients:
         %   We/W0 = oew_coeff_a * W0[lbm]^oew_coeff_c = 0.882 * W0^-0.055
@@ -124,7 +124,7 @@ classdef Aero481WeightsL1 < WeightsModelL1
         %               + rho_w*( S_ref - W_TO/design_WS_psf )       [WING  delta]
         %               + ( Weng(T_SL) - Weng(design_TW*W_TO) )      [ENGINE delta]
         %
-        %   rho_w  = WeightsL2.wing_unit_weight(aircraft_category)
+        %   rho_w  = via WeightsL2.compute_weight_wing (Table 15.2 wing density)
         %            = 9 lbf/ft^2 jet_fighter [Raymer 6th ed. Table 15.2]
         %   S_ref  = geom.get_S_ref()   [ft^2, read LIVE]
         %   T_SL   = prop.T_SL          [lbf, read LIVE]
@@ -140,9 +140,9 @@ classdef Aero481WeightsL1 < WeightsModelL1
 
             % WING delta -- rho_w * (actual S_ref - design-W/S baseline area).
             % [A481 A02.m:37-63; Raymer 6th ed. Table 15.2 rho_w = 9]
-            rho_w        = WeightsL2.wing_unit_weight(obj.aircraft_category);
             S_ref        = obj.geom.get_S_ref();                 % live
-            wing_delta   = rho_w * (S_ref - W_TO / obj.design_WS_psf);
+            wing_delta   = WeightsL2.compute_weight_wing(obj.aircraft_category, ...
+                               S_ref - W_TO / obj.design_WS_psf);
 
             % ENGINE delta -- actual installed engine minus the design-T/W engine.
             % Single engine, no division by count.

@@ -104,7 +104,7 @@ installed engine 3607.53, all-else 5334.09 → **OEW 15664.65 lbf**.
 
 | Item | Status |
 |---|---|
-| `LG_fraction('general_aviation') = 0.057` is **uncited** — the extract's fraction table has no GA landing-gear row | todo.md Phase 4 §P4-7 |
+| `lookup_LG_fraction('general_aviation') = 0.057` — **CLOSED 2026-09-02 (Casey)**: printed in Raymer Table 15.2. It read as uncited only because `metabook_data.md` transcribes the fraction sub-tables without a GA column | todo.md Phase 4 §P4-7, closed |
 | `LG_fraction` has **no `navy_fighter` row** despite the extract carrying one (0.045) | pinned as a known absence by `TestWeightsL2.testLGFractionHasNoNavyFighterRow` |
 
 ---
