@@ -112,10 +112,10 @@ title(sprintf('F-16A Level 2 Sizing Convergence (final (W/S)_{opt} = %.2f lbf/ft
 % computed, broken out by component.
 
 W_TO_final = result.W_TO;
-W_wing  = objs.wts.weight_wing(W_TO_final);
-W_tail  = objs.wts.weight_tail(W_TO_final);       % struct(HT, VT)
-W_fus   = objs.wts.weight_fuselage(W_TO_final);
-W_lg    = objs.wts.weight_landing_gear(W_TO_final);
+W_wing  = objs.wts.W_wings;
+W_tail  = objs.wts.W_tail;                         % struct(HT, VT)
+W_fus   = objs.wts.W_fuselage;
+W_lg    = objs.wts.W_landing_gear;
 W_eng   = objs.wts.W_installed_engine;             % Dependent, reads live obj.W_TO/prop.T_SL
 W_else  = objs.wts.W_all_else_empty;                % Dependent, 0.17*W_TO
 
@@ -137,7 +137,8 @@ grid on; ylabel('Weight [lbf]'); xtickangle(30);
 title('F-16A Level 2 Component-Level Weight Breakdown');
 
 fprintf('\n  Check: sum(components) - OEW(W_TO_final) = %.4f lbf (should be ~0)\n', ...
-    (W_wing + W_tail.HT + W_tail.VT + W_fus + W_lg + W_eng + W_else) - objs.wts.OEW(W_TO_final));
+    (W_wing + W_tail.HT + W_tail.VT + W_fus + W_lg + W_eng + W_else + objs.wts.W_strake) ...
+     - objs.wts.get_OEW(W_TO_final));
 
 %% Mission fuel + key drivers by segment
 % MissionAnalysisL2's master-equation legs call the injected aero/prop, so the
@@ -181,4 +182,4 @@ fprintf('\nInternal fuel-volume check: not modeled at L2 (no V_t/V_i/V_p on F16W
 %% Final summary
 fprintf('\n=== F-16A Level 2 Final Summary ===\n');
 fprintf('  W_TO = %.1f lbf, OEW = %.1f lbf, W_fuel = %.1f lbf, S_ref = %.2f ft^2, T_SL = %.1f lbf\n', ...
-    result.W_TO, objs.wts.OEW(W_TO_final), result.history(end).W_fuel, result.S_ref, result.T_SL);
+    result.W_TO, objs.wts.get_OEW(W_TO_final), result.history(end).W_fuel, result.S_ref, result.T_SL);
