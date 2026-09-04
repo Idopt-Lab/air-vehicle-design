@@ -68,7 +68,9 @@ classdef (Abstract) MissionAnalysisBase < handle
         %   marks it up by the reserve fuel fraction [Roskam Part I Eq. 2.14/2.15]:
         %     W_fuel = raw_burn * (1 + reserve_fuel_fraction).
         %   breakdown carries per-segment names/fuel/W_after plus each segment's
-        %   debug struct (L/D, TSFC, ...) for the comparison report.
+        %   debug struct (L/D, TSFC, ...) for the comparison report, and
+        %   W_landing: the weight ENTERING the landing segment, which is the
+        %   landing design gross weight [Raymer 6th ed. p. 579].
             arguments
                 obj
                 W_TO (1,1) double {mustBePositive}
@@ -83,8 +85,12 @@ classdef (Abstract) MissionAnalysisBase < handle
 
             W = W_TO;
             raw_burn = 0;
+            W_landing = NaN;
             for i = 1:n
                 seg  = obj.segments{i};
+                if seg.segment_type == "landing"
+                    W_landing = W;
+                end
                 fuel = seg.step(W, ctx);
                 W    = seg.W_after;
                 raw_burn = raw_burn + fuel;
@@ -105,6 +111,7 @@ classdef (Abstract) MissionAnalysisBase < handle
                 'reserve_fuel_fraction', obj.reserve_fuel_fraction, ...
                 'W_fuel_with_reserve',   W_fuel, ...
                 'W_TO',                  W_TO, ...
+                'W_landing',             W_landing, ...
                 'debug',                 {seg_debug});
         end
 

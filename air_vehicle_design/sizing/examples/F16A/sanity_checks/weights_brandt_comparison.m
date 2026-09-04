@@ -118,7 +118,12 @@ w3 = F16WeightsL3(f16a_spec_path(3), req, g3, prop);
 
 % ── L1: the two statistical regressions ─────────────────────────────────── %
 oew_l1_raymer = w1.get_OEW(W_TO);                  % Raymer Tbl 3.1 power law
-oew_l1_roskam = w1.compute_We_roskam(W_TO);    % Roskam Eq. 2.16 MIN bound
+c1 = WeightsL1.lookup_We_roskam_coeffs(w1.aircraft_category);
+oew_l1_roskam = WeightsL1.compute_We_roskam(c1.A, c1.B, W_TO);  % Roskam Eq. 2.16 MIN bound
+
+% The Raymer power law returns a FRACTION; the OEW row above is frac*W_TO.
+cR = WeightsL1.lookup_raymer_We_frac_coeffs(w1.aircraft_category);
+oew_l1_frac = WeightsL1.compute_We_frac_raymer(1.00, cR.A, cR.C, W_TO);  % K_vs = 1: fixed sweep
 
 % ── L2: Table 15.2 psf buildup + metabook Sec. 7 fractions ─────────────── %
 cat2    = w2.aircraft_category;
@@ -141,36 +146,38 @@ oew_l2_brandt_en = oew_l2 - W_en_installed + W_en_brandt;   % alternate
 oew_l2_rejected  = oew_l2 - W_en_installed + W_en_brandt_x13; % REJECTED
 
 % ── L3: Raymer Sec. 15.3.1 component buildup ───────────────────────────── %
-l3_wing = w3.weight_wing(W_TO);
-l3_tail = w3.weight_tail(W_TO);
-l3_fus  = w3.weight_fuselage(W_TO);
-l3_lg   = w3.weight_landing_gear(W_TO);
-l3_eng  = w3.weight_engine_section(W_TO);
-l3_sys  = w3.weight_systems(W_TO);
-l3_str  = l3_wing + l3_tail.HT + l3_tail.VT + l3_fus;
-l3_strake = w3.W_strake;               % added 2026-07-29 -- k_strake*S_strake
-oew_l3  = w3.OEW(W_TO);
-l3_lg_total = l3_lg.main + l3_lg.nose;
-
 w3.W_TO      = W_TO;                 % so the W_TO-dependent Dependents read
-l3_W_l       = w3.W_l;               % 0.95 * W_TO (settled decision 4)
+l3_W_l       = w3.W_l;               % 0.95*W_TO SEED: no mission runs here
+
+l3_wing = w3.get_weight_wing(W_TO);
+l3_tail = struct('HT', w3.get_weight_HT(W_TO), 'VT', w3.get_weight_VT(W_TO));
+l3_fus  = w3.get_weight_fuselage(W_TO);
+l3_lg   = l3_gear(w3, l3_W_l);
+l3_eng  = l3_engine(w3);
+l3_sys  = l3_systems(w3);
+l3_str  = l3_wing + l3_tail.HT + l3_tail.VT + l3_fus;
+l3_strake_brandt = w3.W_strake;      % k_strake*S_strake, NOT summed into OEW
+l3_strake = w3.get_weight_strake(W_TO);            % Eq. 15.1 on strake geometry
+l3_misc = w3.get_weight_misc(W_TO);  % Eqs. 15.22/15.24 + Table 15.3
+oew_l3  = w3.get_OEW(W_TO);
+l3_lg_total = l3_lg.main + l3_lg.nose;
 l3_sfc       = w3.SFC_mission;       % prop.get_TSFC at the requirements cruise
 
 % The REJECTED L3 "x1.3" variant, reported once so decision 1 stays auditable.
 % Reconstructed from the two places W_en enters the engine group: the dry-engine
 % line (linear) and Eq. 15.9's W_en^0.717 -- not by editing the class.
-sec_uninst = WeightsL3.engine_section(W_en_uninstalled,       w3.N_en, w3.N_z);
-sec_x13    = WeightsL3.engine_section(1.3*W_en_uninstalled,   w3.N_en, w3.N_z);
+sec_uninst = WeightsL3.compute_engine_section_weight(W_en_uninstalled,     w3.N_en, w3.N_z);
+sec_x13    = WeightsL3.compute_engine_section_weight(1.3*W_en_uninstalled, w3.N_en, w3.N_z);
 oew_l3_rejected = oew_l3 + 0.3 * W_en_uninstalled * w3.N_en + (sec_x13 - sec_uninst);
 
 % ── Sensitivity variants for the items STILL OPEN after the six decisions ── %
 % Each is a fresh object with ONE input changed, so the deltas are independent.
-wA = makeL3(req, prop);  wA.L_d = g3.L_duct;        oew_Ld    = wA.OEW(W_TO);
-ind_Ld = wA.weight_engine_section(W_TO).induction;
-wB = makeL3(req, prop);  wB.D_e = g3.D_exit;        oew_De    = wB.OEW(W_TO);
-wC = makeL3(req, prop);  wC.design_mach = 2.05;     oew_M205  = wC.OEW(W_TO);
-wD = makeL3(req, prop);  wD.K_d = 0;                oew_Kd0   = wD.OEW(W_TO);
-ind_Kd0 = wD.weight_engine_section(W_TO).induction;
+wA = makeL3(req, prop);  wA.L_d = g3.L_duct;        oew_Ld    = wA.get_OEW(W_TO);
+ind_Ld = l3_engine(wA).induction;
+wB = makeL3(req, prop);  wB.D_e = g3.D_exit;        oew_De    = wB.get_OEW(W_TO);
+wC = makeL3(req, prop);  wC.design_mach = 2.05;     oew_M205  = wC.get_OEW(W_TO);
+wD = makeL3(req, prop);  wD.K_d = 0;                oew_Kd0   = wD.get_OEW(W_TO);
+ind_Kd0 = l3_engine(wD).induction;
 ind_base = l3_eng.induction;
 
 % ── The NOT-MODELED gap tally ──────────────────────────────────────────── %
@@ -206,7 +213,7 @@ T = [T; grow('OEW, Roskam Eq. 2.16 MINIMUM bound [lbf]', 'L1', oew_l1_roskam, sm
      'central estimate. Any real OEW must sit ABOVE it, so a negative %Diff is the CORRECT ' ...
      'result and its magnitude is not an error measure. Never summed into OEW.'], ALT_OEW, 'DEFINITIONAL')];
 
-T = [T; grow('Empty-weight fraction We/W_TO [-]', 'L1', w1.compute_We_fraction(W_TO), sm.OEW.value/W_TO, SRC_OEW, '%.4f', ...
+T = [T; grow('Empty-weight fraction We/W_TO [-]', 'L1', oew_l1_frac, sm.OEW.value/W_TO, SRC_OEW, '%.4f', ...
     ['The quantity L1 actually estimates -- the Raymer Tbl 3.1 power law returns a FRACTION, and the ' ...
      'OEW row above is that fraction times W_TO. Reported separately because the fraction is what ' ...
      'the sizing loop will iterate on, and because comparing fractions removes the W_TO basis from ' ...
@@ -467,7 +474,7 @@ T = [T; grow('SFC_mission [prop.get_TSFC @ 36 kft / M 0.87] [1/hr]', 'L3', l3_sf
      '"duplicates" 0.70 was FALSE: it returns 0.70 at no condition (todo Sec. P4-15).'], ...
      NaN, 'DEFINITIONAL')];
 
-T = [T; grow('W_l landing design gross weight [0.95*W_TO] [lbf]', 'L3', l3_W_l, sm.landing_weight.value, 'Brandt Wt!B41 (=SUM(B16:B32))', '%.2f', ...
+T = [T; grow('W_l landing design gross weight [0.95*W_TO seed] [lbf]', 'L3', l3_W_l, sm.landing_weight.value, 'Brandt Wt!B41 (=SUM(B16:B32))', '%.2f', ...
     ['+44.1 %, and the two are DEFINITIONALLY different quantities: a design landing-weight rule ' ...
      'of thumb vs a back-calculated subtotal of Brandt''s OWN weight statement. Brandt''s exact ' ...
      'decomposition is W_TO - fuel - expendable stores = 31377.000000 - 6296.299422 - 4400 = ' ...
@@ -599,3 +606,37 @@ function w = makeL3(req, prop)
                      F16GeomL3(f16a_spec_path(3), prop, f16a_requirements_path()), prop);
 end
 
+
+function g = l3_gear(w, W_l)
+%L3_GEAR  Eqs. 15.5/15.6 split, which get_weight_landing_gear sums. L_m/L_n
+%   are FEET; the equations take INCHES.
+    g.main = WeightsL3.compute_main_gear_weight(W_l, w.N_l, 12*w.L_m, w.K_cb, w.K_tpg);
+    g.nose = WeightsL3.compute_nose_gear_weight(W_l, w.N_l, 12*w.L_n, w.N_nw);
+end
+
+function e = l3_engine(w)
+%L3_ENGINE  Per-item view of the engine group get_weight_engine sums.
+    e.engine    = w.N_en * w.W_en;
+    e.mounts    = WeightsL3.compute_engine_mounts_weight(w.N_en, w.T_max, w.N_z);
+    e.firewall  = WeightsL3.compute_firewall_weight(w.S_fw);
+    e.section   = WeightsL3.compute_engine_section_weight(w.W_en, w.N_en, w.N_z);
+    e.induction = WeightsL3.compute_air_induction_weight(w.K_vg, w.L_d, w.K_d, w.N_en, w.L_s, w.D_e);
+    e.tailpipe  = WeightsL3.compute_tailpipe_weight(w.D_e, w.L_tp, w.N_en);
+    e.cooling   = WeightsL3.compute_engine_cooling_weight(w.D_e, w.L_sh, w.N_en);
+    e.oil       = WeightsL3.compute_oil_cooling_weight(w.N_en);
+    e.controls  = WeightsL3.compute_engine_controls_weight(w.N_en, w.L_ec);
+    e.starter   = WeightsL3.compute_starter_weight(w.T_max, w.N_en);
+    e.total     = w.get_weight_engine();
+end
+
+function y = l3_systems(w)
+%L3_SYSTEMS  Per-item view of the systems group get_weight_subsystems sums.
+    y.fuel_sys     = WeightsL3.compute_fuel_system_weight(w.V_t, w.V_i, w.V_p, w.N_t, w.N_en, w.T_max, w.SFC_mission);
+    y.flight_ctrl  = WeightsL3.compute_flight_controls_weight(w.design_mach, w.S_cs, w.N_s, w.N_c);
+    y.instruments  = WeightsL3.compute_instruments_weight(w.N_en, w.N_t, w.N_ci);
+    y.hydraulics   = WeightsL3.compute_hydraulics_weight(w.K_vsh, w.N_u);
+    y.electrical   = WeightsL3.compute_electrical_weight(w.K_mc, w.R_kva, w.N_c, w.L_a, w.N_gen);
+    y.avionics     = WeightsL3.compute_avionics_weight(w.W_uav);
+    y.ac_antiice   = WeightsL3.compute_ac_antiice_weight(w.W_uav, w.N_c);
+    y.total        = w.get_weight_subsystems();
+end

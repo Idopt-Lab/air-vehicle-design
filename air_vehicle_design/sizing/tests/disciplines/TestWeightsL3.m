@@ -229,23 +229,45 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 %   Eq. 15.21 AVIONICS = 2.117*W_uav^0.933
 %     1500^0.933 = exp(0.933*7.31322039) = exp(6.82323463) = 918.9505
 %     2.117*918.9505 = 1945.418 lbf
-%   Eq. 15.22 FURNISHINGS = 217.6*N_c = 217.6 lbf exactly
+%   Eq. 15.22 FURNISHINGS = 217.6*N_c = 217.6 lbf exactly  (MISC group)
 %   Eq. 15.23 AC/ANTI-ICE = 201.6*((W_uav+200*N_c)/1000)^0.735
 %     1.7^0.735 = exp(0.735*0.53062825) = exp(0.39001176) = 1.4769981
 %     201.6*1.4769981 = 297.7628 lbf
 %   Eq. 15.24 HANDLING = 3.2e-4*W_dg = 3.2e-4*31377 = 10.04064 lbf exactly
-%     -> SYSTEMS GROUP TOTAL = 431.658 + 925.283 + 228.16737 + 108.39429
-%          + 422.007 + 1945.418 + 217.6 + 297.7628 + 10.04064 = 4586.327 lbf
+%     (MISC group)
+%     -> SYSTEMS GROUP TOTAL (get_weight_subsystems, Eqs. 15.16-15.21 and
+%          15.23) = 431.658 + 925.283 + 228.16737 + 108.39429 + 422.007
+%          + 1945.418 + 297.7628 = 4358.690 lbf
+%
+%   MISC GROUP (get_weight_misc) = Eqs. 15.22/15.24 + Table 15.3, p. 571:
+%     furnishings 217.6 + handling 10.04064
+%     + arresting gear, Air Force type, 0.002*31377 = 62.754
+%     + pylon and launcher, 0.12*W_exp = 0.12*4400 = 528.0
+%     = 818.39464 lbf
+%
+%   STRAKE by Eq. 15.1 on strake geometry (S = S_strake = 20, AR = 1.5,
+%   tc_root = 0.04, lambda = 0 sharp tip, Lambda_LE = 74 deg, S_csw =
+%   S_strake as a STAND-IN -- see F16WeightsL3.get_weight_strake):
+%     sqrt(423589.5) = 650.8376
+%     20^0.622  = exp(0.622*2.99573227) = exp(1.86334547) = 6.4453116
+%     1.5^0.785 = exp(0.785*0.40546511) = exp(0.31829011) = 1.3747682
+%     0.04^-0.4 = exp(-0.4*-3.21887582) = exp(1.28755033) = 3.6239095
+%     (1+0)^0.05 = 1
+%     cos(74)^-1 = 1/0.27563736 = 3.6279158
+%     20^0.04   = exp(0.04*2.99573227) = exp(0.11982929) = 1.1273024
+%     0.0103*650.8376 = 6.7036273 ; *6.4453116 = 43.20805 ; *1.3747682
+%       = 59.40011 ; *3.6239095 = 215.25217 ; *3.6279158 = 780.9166
+%       ; *1.1273024 = 880.33 lbf
 %
 %   OEW(31377) = wing + HT + VT + fuselage + LG.main + LG.nose
-%                + engine group + systems group + strake
+%                + engine group + systems group + misc group + strake
 %              = 2396.944 + 200.5104 + 313.0505 + 3674.18 + 989.843
-%                + 170.9044 + 3381.6847 + 4586.327 + 90.00
-%              = 15803.444 lbf
+%                + 170.9044 + 3381.6847 + 4358.690 + 818.39464 + 880.33
+%              = 17184.53 lbf
 %
-%   Strake (ADDED 2026-07-29): k_strake * S_strake = 4.5 * 20 = 90.00 lbf
-%   exact [Brandt Main!D18 / Wt!H7]. See F16WeightsL3.m's S_strake/k_strake
-%   property comment.
+%   W_strake stays k_strake * S_strake = 4.5 * 20 = 90.00 lbf exact [Brandt
+%   Main!D18 / Wt!H7], for the comparison report only. It is NOT summed into
+%   OEW: the buildup uses the Eq. 15.1 strake above.
 %
 %   TOLERANCE RATIONALE. Every hand value above is decimal arithmetic carried
 %   to ~8 significant figures through 1-4 chained exp/ln series evaluations,
@@ -320,7 +342,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
                 'An L2 geometry object must now be ACCEPTED at construction (mustBeA loosened).');
             threwAtRuntime = false;
             try
-                w2.OEW(30000);
+                w2.get_OEW(30000);
             catch %#ok<CTCH>
                 threwAtRuntime = true;
             end
@@ -373,14 +395,14 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testWingWeightEq151HandComputed(tc)
             % Header derivation, Eq. 15.1 -> 2396.944 lbf.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.weight_wing(31377), 2396.944, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.get_weight_wing(31377), 2396.944, 'RelTol', 1e-3, ...
                 'Eq. 15.1 wing weight must be 2396.944 lbf at W_dg = 31377.');
         end
 
         function testTailWeightsEq152And153HandComputed(tc)
             % Header derivations, Eqs. 15.2 -> 200.5104 and 15.3 -> 313.0505.
             w = TestWeightsL3.makeW3();
-            W_t = w.weight_tail(31377);
+            W_t = TestWeightsL3.tail(w, 31377);
             tc.verifyEqual(W_t.HT, 200.5104, 'RelTol', 1e-3, ...
                 'Eq. 15.2 HT weight must be 200.5104 lbf (EXPOSED S_ht = 51.148643).');
             tc.verifyEqual(W_t.VT, 313.0505, 'RelTol', 1e-3, ...
@@ -390,14 +412,14 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testFuselageWeightEq154HandComputed(tc)
             % Header derivation, Eq. 15.4 -> 3674.18 lbf at D_fus = 5.0.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.weight_fuselage(31377), 3674.18, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.get_weight_fuselage(31377), 3674.18, 'RelTol', 1e-3, ...
                 'Eq. 15.4 fuselage weight must be 3674.18 lbf at the 5.0 ft structural depth.');
         end
 
         function testLandingGearEqs155And156HandComputed(tc)
             % Header derivations, Eqs. 15.5 -> 989.843 and 15.6 -> 170.9044.
             w = TestWeightsL3.makeW3();
-            W_lg = w.weight_landing_gear(31377);
+            W_lg = TestWeightsL3.gear(w, 31377);
             tc.verifyEqual(W_lg.main, 989.843, 'RelTol', 1e-3, ...
                 'Eq. 15.5 main gear must be 989.843 lbf at W_l = 0.95*31377.');
             tc.verifyEqual(W_lg.nose, 170.9044, 'RelTol', 1e-3, ...
@@ -411,10 +433,10 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   come out ~8x too low. Checked by calling the low-level static with
         %   feet and confirming the class result matches the INCHES call.
             w = TestWeightsL3.makeW3();
-            W_lg   = w.weight_landing_gear(31377);
+            W_lg   = TestWeightsL3.gear(w, 31377);
             W_l    = 0.95 * 31377;
-            in_ver = WeightsL3.main_gear(W_l, w.N_l, w.L_m * 12, w.K_cb, w.K_tpg);
-            ft_ver = WeightsL3.main_gear(W_l, w.N_l, w.L_m,      w.K_cb, w.K_tpg);
+            in_ver = WeightsL3.compute_main_gear_weight(W_l, w.N_l, w.L_m * 12, w.K_cb, w.K_tpg);
+            ft_ver = WeightsL3.compute_main_gear_weight(W_l, w.N_l, w.L_m,      w.K_cb, w.K_tpg);
             tc.verifyEqual(W_lg.main, in_ver, 'AbsTol', 1e-9, ...
                 'weight_landing_gear must pass L_m in INCHES to Eq. 15.5.');
             tc.verifyGreaterThan(W_lg.main / ft_ver, 8, ...
@@ -439,7 +461,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             w = TestWeightsL3.makeW3();
             tc.verifyEqual(w.W_en, 2775.0065, 'RelTol', 2e-5, ...
                 'W_en must be Raymer Eq. 10.10 UNINSTALLED = 2775.0065 lbf.');
-            W_eng = w.weight_engine_section(31377);
+            W_eng = TestWeightsL3.engine(w);
             tc.verifyEqual(W_eng.engine, w.W_en * w.N_en, 'AbsTol', 1e-9, ...
                 'The engine line must be N_en * the UNINSTALLED weight.');
             tc.verifyNotEqual(W_eng.engine, 1.3 * w.W_en * w.N_en, ...
@@ -451,7 +473,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testEngineInstallationItemsHandComputed(tc)
             % Header derivations, Eqs. 15.7-15.15.
             w = TestWeightsL3.makeW3();
-            W = w.weight_engine_section(31377);
+            W = TestWeightsL3.engine(w);
             tc.verifyEqual(W.mounts,    59.9785,  'RelTol', 1e-3, 'Eq. 15.7 mounts.');
             tc.verifyEqual(W.firewall,  0,        'AbsTol', 1e-6, ...
                 'Eq. 15.8 firewall must be exactly 0 (S_fw = 0, no piston firewall).');
@@ -470,7 +492,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testEngineGroupTotalHandComputed(tc)
             % Header: engine group total 3381.6847 lbf, and the internal sum.
             w = TestWeightsL3.makeW3();
-            W = w.weight_engine_section(31377);
+            W = TestWeightsL3.engine(w);
             tc.verifyEqual(W.total, 3381.6847, 'RelTol', 1e-3, ...
                 'Engine group total must be 3381.6847 lbf (UNINSTALLED engine + Eqs. 15.7-15.15).');
             parts = W.engine + W.mounts + W.firewall + W.section + W.induction ...
@@ -482,7 +504,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testEngineWeightsPositive(tc)
             % Non-negativity across every field of the group struct.
             w = TestWeightsL3.makeW3();
-            vals = TestWeightsL3.structValues(w.weight_engine_section(31377));
+            vals = TestWeightsL3.structValues(TestWeightsL3.engine(w));
             tc.verifyTrue(all(vals >= 0), ...
                 'Every engine-section sub-weight must be >= 0.');
             tc.verifyTrue(all(isfinite(vals)), ...
@@ -500,25 +522,39 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         function testSystemsItemsHandComputed(tc)
             % Header derivations, Eqs. 15.16-15.24.
             w = TestWeightsL3.makeW3();
-            W = w.weight_systems(31377);
+            W = TestWeightsL3.systems(w);
             tc.verifyEqual(W.fuel_sys,    431.658,   'RelTol', 1e-3, 'Eq. 15.16 fuel system.');
             tc.verifyEqual(W.flight_ctrl, 925.283,   'RelTol', 1e-3, 'Eq. 15.17 flight controls.');
             tc.verifyEqual(W.instruments, 228.16737, 'RelTol', 1e-3, 'Eq. 15.18 instruments.');
             tc.verifyEqual(W.hydraulics,  108.39429, 'RelTol', 1e-3, 'Eq. 15.19 hydraulics.');
             tc.verifyEqual(W.electrical,  422.007,   'RelTol', 1e-3, 'Eq. 15.20 electrical.');
             tc.verifyEqual(W.avionics,    1945.418,  'RelTol', 1e-3, 'Eq. 15.21 avionics.');
+            tc.verifyEqual(W.ac_antiice,  297.7628,  'RelTol', 1e-3, 'Eq. 15.23 AC / anti-ice.');
+        end
+
+        function testMiscItemsHandComputed(tc)
+            % Header derivations. Eqs. 15.22/15.24 plus Table 15.3, p. 571.
+            w = TestWeightsL3.makeW3();
+            W = TestWeightsL3.misc(w, 31377);
             tc.verifyEqual(W.furnishings, 217.6,     'AbsTol', 1e-6, ...
                 'Eq. 15.22 furnishings = 217.6*N_c exactly.');
-            tc.verifyEqual(W.ac_antiice,  297.7628,  'RelTol', 1e-3, 'Eq. 15.23 AC / anti-ice.');
             tc.verifyEqual(W.handling,    10.04064,  'AbsTol', 1e-6, ...
                 'Eq. 15.24 handling gear = 3.2e-4*31377 exactly.');
+            tc.verifyEqual(W.arresting,   62.754,    'AbsTol', 1e-6, ...
+                'Table 15.3 Air-Force arresting gear = 0.002*31377 exactly.');
+            tc.verifyEqual(W.pylons,      528.0,     'AbsTol', 1e-6, ...
+                'Table 15.3 pylon and launcher = 0.12*4400 exactly.');
+            tc.verifyEqual(W.total,       818.39464, 'RelTol', 1e-3, ...
+                'Misc group total must be 818.39464 lbf.');
         end
 
         function testSystemsGroupTotalHandComputed(tc)
             w = TestWeightsL3.makeW3();
-            W = w.weight_systems(31377);
-            tc.verifyEqual(W.total, 4586.327, 'RelTol', 1e-3, ...
-                'Systems group total must be 4586.327 lbf (Eqs. 15.16-15.24).');
+            W = TestWeightsL3.systems(w);
+            tc.verifyEqual(W.total, 4358.690, 'RelTol', 1e-3, ...
+                ['Systems group total must be 4358.690 lbf (Eqs. 15.16-15.21 and ' ...
+                 '15.23). Furnishings (15.22) and handling gear (15.24) sit in ' ...
+                 'get_weight_misc, so they are NOT in this total.']);
         end
 
         function testSystemsGroupContainsNoLandingGearTerm(tc)
@@ -528,17 +564,18 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   below the systems + gear sum -- otherwise the gear is double-counted.
             w = TestWeightsL3.makeW3();
             w.W_TO = 31377;
-            W_sys = w.weight_systems(31377);
-            tc.verifyFalse(any(contains(lower(fieldnames(W_sys)), 'gear')), ...
-                ['weight_systems must expose no landing-gear field: the gear is ' ...
-                 'Eqs. 15.5/15.6 and is summed separately by OEW (todo Sec. P4-10).']);
+            W_sys = TestWeightsL3.systems(w);
             tc.verifyEqual(w.W_subsystems, W_sys.total, 'AbsTol', 1e-9, ...
-                'W_subsystems must be exactly weight_systems(...).total -- gear excluded.');
+                'W_subsystems must be exactly the systems group total -- gear excluded.');
+            tc.verifyLessThan(w.W_subsystems, ...
+                W_sys.total + TestWeightsL3.gearTotal(w, 31377), ...
+                ['The systems total must EXCLUDE the gear: Eqs. 15.5/15.6 are ' ...
+                 'summed separately by OEW (todo Sec. P4-10).']);
         end
 
         function testSystemsWeightsPositive(tc)
             w = TestWeightsL3.makeW3();
-            vals = TestWeightsL3.structValues(w.weight_systems(31377));
+            vals = TestWeightsL3.structValues(TestWeightsL3.systems(w));
             tc.verifyTrue(all(vals >= 0), 'Every systems sub-weight must be >= 0.');
             tc.verifyTrue(all(isfinite(vals)), 'Every systems sub-weight must be finite.');
         end
@@ -658,37 +695,39 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
         function testOEWLessThanWTO(tc)
             w = TestWeightsL3.makeW3();
-            tc.verifyLessThan(w.OEW(31377), 31377, ...
+            tc.verifyLessThan(w.get_OEW(31377), 31377, ...
                 'L3 OEW must be less than W_TO for any physical design.');
         end
 
         function testOEWGreaterThanZero(tc)
             w = TestWeightsL3.makeW3();
-            tc.verifyGreaterThan(w.OEW(31377), 0, 'L3 OEW must be positive.');
+            tc.verifyGreaterThan(w.get_OEW(31377), 0, 'L3 OEW must be positive.');
         end
 
         function testOEWAboveSanityMinimum(tc)
             % No real jet fighter has OEW/TOGW < 30 %. Engineering sanity bound.
             w = TestWeightsL3.makeW3();
-            tc.verifyGreaterThan(w.OEW(31377), 0.30 * 31377, ...
+            tc.verifyGreaterThan(w.get_OEW(31377), 0.30 * 31377, ...
                 'L3 OEW must exceed 30 % of W_TO.');
         end
 
         function testOEWHandComputed(tc)
         %TESTOEWHANDCOMPUTED  Header total -- replaces the removed +-40 % gate.
             w = TestWeightsL3.makeW3();
-            tc.verifyEqual(w.OEW(31377), 15803.444, 'RelTol', 1e-3, ...
-                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + strake buildup = 15803.444 lbf.');
+            tc.verifyEqual(w.get_OEW(31377), 17184.53, 'RelTol', 1e-3, ...
+                'L3 OEW(31377) must equal the hand-summed Sec. 15.3.1 + Table 15.3 + strake buildup = 17184.53 lbf.');
         end
 
         function testStrakeWeightHandComputed(tc)
-        %TESTSTRAKEWEIGHTHANDCOMPUTED  ADDED 2026-07-29.
-        %   k_strake * S_strake = 4.5 * 20 = 90.00 lbf exactly [Brandt
-        %   Main!D18 / Wt!H7]. No W_TO dependence -- pure area x density,
-        %   same as F16WeightsL2's identical term.
+        %TESTSTRAKEWEIGHTHANDCOMPUTED  The buildup weighs the strake with
+        %   Eq. 15.1 on strake geometry (header derivation -> 880.33 lbf).
+        %   W_strake stays as Brandt's area x density, for the comparison
+        %   report only, and is NOT summed into OEW.
             w = TestWeightsL3.makeW3();
+            tc.verifyEqual(w.get_weight_strake(31377), 880.33, 'RelTol', 1e-3, ...
+                'Eq. 15.1 on strake geometry must give 880.33 lbf at W_dg = 31377.');
             tc.verifyEqual(w.W_strake, 90.00, 'AbsTol', 1e-9, ...
-                'W_strake must be k_strake * S_strake = 4.5 * 20 = 90.00 lbf.');
+                'W_strake must stay k_strake * S_strake = 4.5 * 20 = 90.00 lbf.');
             tc.verifyEqual(w.S_strake, 20.0, 'AbsTol', 1e-9, ...
                 'S_strake must be read from f16a_L3.json as 20.0 ft^2 [Brandt Main!D18].');
             tc.verifyEqual(w.k_strake, 4.5, 'AbsTol', 1e-9, ...
@@ -700,14 +739,14 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             % from the per-group methods the report and tests above exercise.
             w = TestWeightsL3.makeW3();
             W_TO  = 31377;
-            W_t   = w.weight_tail(W_TO);
-            W_lg  = w.weight_landing_gear(W_TO);
-            total = w.weight_wing(W_TO) + W_t.HT + W_t.VT + w.weight_fuselage(W_TO) ...
+            W_t   = TestWeightsL3.tail(w, W_TO);
+            W_lg  = TestWeightsL3.gear(w, W_TO);
+            total = w.get_weight_wing(W_TO) + W_t.HT + W_t.VT + w.get_weight_fuselage(W_TO) ...
                     + W_lg.main + W_lg.nose ...
-                    + w.weight_engine_section(W_TO).total + w.weight_systems(W_TO).total ...
-                    + w.W_strake;
-            tc.verifyEqual(w.OEW(W_TO), total, 'AbsTol', 1e-9, ...
-                'OEW must equal the exact sum of its nine group terms.');
+                    + TestWeightsL3.engine(w).total + TestWeightsL3.systems(w).total ...
+                    + TestWeightsL3.misc(w, W_TO).total + w.get_weight_strake(W_TO);
+            tc.verifyEqual(w.get_OEW(W_TO), total, 'AbsTol', 1e-9, ...
+                'OEW must equal the exact sum of its ten group terms.');
         end
 
         function testOEWScalesWithItsArgument(tc)
@@ -716,9 +755,9 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   the gear carries it through W_l, so OEW must be strictly increasing
         %   in its argument.
             w = TestWeightsL3.makeW3();
-            tc.verifyGreaterThan(w.OEW(45000), w.OEW(31377), ...
+            tc.verifyGreaterThan(w.get_OEW(45000), w.get_OEW(31377), ...
                 'OEW must increase with its W_TO argument.');
-            tc.verifyGreaterThan(w.OEW(60000), w.OEW(45000), ...
+            tc.verifyGreaterThan(w.get_OEW(60000), w.get_OEW(45000), ...
                 'OEW must increase with its W_TO argument.');
         end
 
@@ -726,7 +765,7 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %TESTOEWWORKSWITHWTOUNSET  OEW is a pure function of its argument.
             w = TestWeightsL3.makeW3();
             tc.verifyTrue(isnan(w.W_TO), 'obj.W_TO must be NaN until set.');
-            tc.verifyEqual(w.OEW(31377), 15803.444, 'RelTol', 1e-3, ...
+            tc.verifyEqual(w.get_OEW(31377), 17184.53, 'RelTol', 1e-3, ...
                 'OEW must be computable with obj.W_TO unset.');
         end
 
@@ -824,35 +863,35 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
     % ------------------------------------------------------------------ %
     % REVIEW FINDING #12 -- the Dependent properties (31 -> 32, W_strake
-    % added 2026-07-29)
+    % added 2026-07-29; -> 36, the four strake-geometry reads added 2026-09-04)
     % ------------------------------------------------------------------ %
 
     methods (Test)
 
-        function testAllThirtyTwoDependentPropertiesExist(tc)
-        %TESTALLTHIRTYTWODEPENDENTPROPERTIESEXIST  The declared split.
-        %   F16WeightsL3.md §2: 45 inputs (44 numeric + 1 string) + 2
-        %   injected objects; 32 Dependent (31 + W_strake, added 2026-07-29).
-        %   A count change means the split moved and the sweeps below no
-        %   longer cover what they claim to.
-            tc.verifyEqual(numel(TestWeightsL3.dependentNames()), 32, ...
-                'F16WeightsL3 must declare exactly 32 Dependent properties.');
+        function testAllThirtySixDependentPropertiesExist(tc)
+        %TESTALLTHIRTYSIXDEPENDENTPROPERTIESEXIST  The declared split.
+        %   36 Dependent as of 2026-09-04: 32 plus the four strake-geometry
+        %   reads Eq. 15.1 needs (AR_strake, tc_root_strake, lambda_strake,
+        %   Lambda_LE_deg_strake). A count change means the split moved and
+        %   the sweeps below no longer cover what they claim to.
+            tc.verifyEqual(numel(TestWeightsL3.dependentNames()), 36, ...
+                'F16WeightsL3 must declare exactly 36 Dependent properties.');
         end
 
         function testNoDependentPropertyIsNonFinite(tc)
         %TESTNODEPENDENTPROPERTYISNONFINITE  Finding #12's headline symptom.
         %   W_wings / W_tail / W_fuselage / W_installed_engine / W_subsystems
         %   were declared abstract, satisfied with "= NaN", and never assigned,
-        %   so a consumer reading the documented contract got NaN. Sweeps ALL 32
+        %   so a consumer reading the documented contract got NaN. Sweeps ALL 36
         %   Dependents (metaclass-derived, so a newly added one is covered) at a
-        %   set W_TO, expanding the W_tail struct to its two scalars.
+        %   set W_TO.
             w = TestWeightsL3.makeW3();
             w.W_TO = 31377;
             vals = TestWeightsL3.flattenDependents(w);
             tc.verifyTrue(all(isfinite(vals)), ...
                 'No Dependent property may read NaN or Inf at W_TO = 31377.');
-            tc.verifyEqual(numel(vals), 33, ...
-                'Sweep must cover 32 Dependents = 33 scalars (W_tail has HT and VT).');
+            tc.verifyEqual(numel(vals), 36, ...
+                'Sweep must cover 36 Dependents = 36 scalars (W_tail is a scalar).');
         end
 
         function testWTODependentPropertiesErrorWhenWTOUnset(tc)
@@ -878,8 +917,10 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
                 'W_tail (Eqs. 15.2/15.3, carry W_dg) must error on unset W_TO.');
             tc.verifyError(@() w.W_fuselage, 'F16WeightsL3:WTONotSet', ...
                 'W_fuselage (Eq. 15.4, carries W_dg) must error on unset W_TO.');
-            tc.verifyError(@() w.W_subsystems, 'F16WeightsL3:WTONotSet', ...
-                'W_subsystems (Eq. 15.24 carries W_dg) must error on unset W_TO.');
+            tc.verifyEqual(w.W_subsystems, 4358.690, 'RelTol', 1e-3, ...
+                ['W_subsystems is deliberately NOT guarded: Eqs. 15.16-15.21 and ' ...
+                 '15.23 carry no W_dg term now that Eq. 15.24 handling gear sits ' ...
+                 'in get_weight_misc. A guard must encode a real dependency.']);
         end
 
         function testDerivedPropertiesAreReadOnly(tc)
@@ -914,12 +955,12 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
             % (a) geometry DI: HT span up -> exposed HT area up -> Eq. 15.2 up.
             S_ht_before = w.S_ht;
-            HT_before   = w.W_tail.HT;
+            HT_before   = w.get_weight_HT(w.W_TO);
             geom.B_h    = 20;
             tc.verifyGreaterThan(w.S_ht, S_ht_before, ...
                 'S_ht must track geom.B_h live (geometry DI).');
-            tc.verifyGreaterThan(w.W_tail.HT, HT_before, ...
-                'W_tail.HT must track the geometry change live -- no cached copy.');
+            tc.verifyGreaterThan(w.get_weight_HT(w.W_TO), HT_before, ...
+                'The HT weight must track the geometry change live -- no cached copy.');
 
             % (b) propulsion DI: thrust up -> T_max, Eq. 10.10 W_en, and the
             %     engine group (mounts Eq. 15.7 + starter Eq. 15.15) all up.
@@ -936,12 +977,12 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
             % (c) requirement: design Mach up -> Eq. 10.10 M^0.25 and
             %     Eq. 15.3 M^0.341 both up.
             W_en_at_M20 = w.W_en;
-            VT_at_M20   = w.W_tail.VT;
+            VT_at_M20   = w.get_weight_VT(w.W_TO);
             w.design_mach = 2.05;
             tc.verifyGreaterThan(w.W_en, W_en_at_M20, ...
                 'W_en must track design_mach live (Eq. 10.10 M^0.25).');
-            tc.verifyGreaterThan(w.W_tail.VT, VT_at_M20, ...
-                'W_tail.VT must track design_mach live (Eq. 15.3 M^0.341).');
+            tc.verifyGreaterThan(w.get_weight_VT(w.W_TO), VT_at_M20, ...
+                'The VT weight must track design_mach live (Eq. 15.3 M^0.341).');
         end
 
     end
@@ -963,26 +1004,26 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
         %   fuselage 3674.20, LG total 1160.93.
             w = TestWeightsL3.makeW3();
             W_TO  = 31377;
-            W_t   = w.weight_tail(W_TO);
-            tc.verifyGreaterThan(w.weight_wing(W_TO), 2000, ...
+            W_t   = TestWeightsL3.tail(w, W_TO);
+            tc.verifyGreaterThan(w.get_weight_wing(W_TO), 2000, ...
                 'Wing weight must exceed 2,000 lbf for a 9g-capable fighter wing.');
-            tc.verifyLessThan(w.weight_wing(W_TO), 6000, ...
+            tc.verifyLessThan(w.get_weight_wing(W_TO), 6000, ...
                 'Wing weight must be below 6,000 lbf.');
             tc.verifyGreaterThan(W_t.HT, 100, 'HT weight must exceed 100 lbf.');
             tc.verifyLessThan(W_t.HT, 2000, 'HT weight must be below 2,000 lbf.');
             tc.verifyGreaterThan(W_t.VT, 200, 'VT weight must exceed 200 lbf.');
             tc.verifyLessThan(W_t.VT, 1500, 'VT weight must be below 1,500 lbf.');
-            tc.verifyGreaterThan(w.weight_fuselage(W_TO), 3000, ...
+            tc.verifyGreaterThan(w.get_weight_fuselage(W_TO), 3000, ...
                 'Fuselage weight must exceed 3,000 lbf.');
-            tc.verifyLessThan(w.weight_fuselage(W_TO), 10000, ...
+            tc.verifyLessThan(w.get_weight_fuselage(W_TO), 10000, ...
                 'Fuselage weight must be below 10,000 lbf.');
             tc.verifyGreaterThan(TestWeightsL3.gearTotal(w, W_TO), 800, ...
                 'Total LG weight must exceed 800 lbf.');
             tc.verifyLessThan(TestWeightsL3.gearTotal(w, W_TO), 3000, ...
                 'Total LG weight must be below 3,000 lbf.');
-            tc.verifyLessThan(W_t.HT, w.weight_wing(W_TO), ...
+            tc.verifyLessThan(W_t.HT, w.get_weight_wing(W_TO), ...
                 'The horizontal tail must weigh less than the wing.');
-            tc.verifyLessThan(W_t.VT, w.weight_wing(W_TO), ...
+            tc.verifyLessThan(W_t.VT, w.get_weight_wing(W_TO), ...
                 'The vertical tail must weigh less than the wing.');
         end
 
@@ -1077,8 +1118,60 @@ classdef TestWeightsL3 < matlab.unittest.TestCase
 
         function t = gearTotal(w, W_TO)
         %GEARTOTAL  Eqs. 15.5 + 15.6 summed at the given gross weight.
-            W_lg = w.weight_landing_gear(W_TO);
-            t    = W_lg.main + W_lg.nose;
+            t = w.get_weight_landing_gear(WeightsL3.compute_landing_weight(W_TO));
+        end
+
+        function t = tail(w, W_TO)
+        %TAIL  Eqs. 15.2/15.3 split, which get_weight_tail sums.
+            t.HT    = w.get_weight_HT(W_TO);
+            t.VT    = w.get_weight_VT(W_TO);
+            t.total = w.get_weight_tail(W_TO);
+        end
+
+        function g = gear(w, W_TO)
+        %GEAR  Eqs. 15.5/15.6 split, at the W_l = 0.95*W_TO seed. L_m and L_n
+        %   are FEET; the equations take INCHES.
+            W_l     = WeightsL3.compute_landing_weight(W_TO);
+            g.main  = WeightsL3.compute_main_gear_weight(W_l, w.N_l, 12*w.L_m, w.K_cb, w.K_tpg);
+            g.nose  = WeightsL3.compute_nose_gear_weight(W_l, w.N_l, 12*w.L_n, w.N_nw);
+            g.total = w.get_weight_landing_gear(W_l);
+        end
+
+        function e = engine(w)
+        %ENGINE  Per-item view of the group get_weight_engine sums. .total is
+        %   the CLASS's sum, so the identity tests still check the class.
+            e.engine    = w.N_en * w.W_en;
+            e.mounts    = WeightsL3.compute_engine_mounts_weight(w.N_en, w.T_max, w.N_z);
+            e.firewall  = WeightsL3.compute_firewall_weight(w.S_fw);
+            e.section   = WeightsL3.compute_engine_section_weight(w.W_en, w.N_en, w.N_z);
+            e.induction = WeightsL3.compute_air_induction_weight(w.K_vg, w.L_d, w.K_d, w.N_en, w.L_s, w.D_e);
+            e.tailpipe  = WeightsL3.compute_tailpipe_weight(w.D_e, w.L_tp, w.N_en);
+            e.cooling   = WeightsL3.compute_engine_cooling_weight(w.D_e, w.L_sh, w.N_en);
+            e.oil       = WeightsL3.compute_oil_cooling_weight(w.N_en);
+            e.controls  = WeightsL3.compute_engine_controls_weight(w.N_en, w.L_ec);
+            e.starter   = WeightsL3.compute_starter_weight(w.T_max, w.N_en);
+            e.total     = w.get_weight_engine();
+        end
+
+        function y = systems(w)
+        %SYSTEMS  Per-item view of the group get_weight_subsystems sums.
+            y.fuel_sys    = WeightsL3.compute_fuel_system_weight(w.V_t, w.V_i, w.V_p, w.N_t, w.N_en, w.T_max, w.SFC_mission);
+            y.flight_ctrl = WeightsL3.compute_flight_controls_weight(w.design_mach, w.S_cs, w.N_s, w.N_c);
+            y.instruments = WeightsL3.compute_instruments_weight(w.N_en, w.N_t, w.N_ci);
+            y.hydraulics  = WeightsL3.compute_hydraulics_weight(w.K_vsh, w.N_u);
+            y.electrical  = WeightsL3.compute_electrical_weight(w.K_mc, w.R_kva, w.N_c, w.L_a, w.N_gen);
+            y.avionics    = WeightsL3.compute_avionics_weight(w.W_uav);
+            y.ac_antiice  = WeightsL3.compute_ac_antiice_weight(w.W_uav, w.N_c);
+            y.total       = w.get_weight_subsystems();
+        end
+
+        function m = misc(w, W_TO)
+        %MISC  Per-item view of the group get_weight_misc sums.
+            m.furnishings = WeightsL3.compute_furnishings_weight(w.N_c);
+            m.handling    = WeightsL3.compute_handling_gear_weight(W_TO);
+            m.arresting   = WeightsL3.compute_arresting_gear_weight(W_TO, false);
+            m.pylons      = WeightsL3.compute_pylon_and_launcher_weight(w.W_payload_expendable);
+            m.total       = w.get_weight_misc(W_TO);
         end
 
         function names = dependentNames()

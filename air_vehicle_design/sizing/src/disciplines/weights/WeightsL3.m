@@ -29,104 +29,21 @@ classdef WeightsL3
     methods (Static)
 
         % ================================================================== %
-        % HIGH-LEVEL
-        % ================================================================== %
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function oew = OEW(obj, W_TO)
-            W_str  = WeightsL3.weight_wing(obj, W_TO);
-            W_tail = WeightsL3.weight_tail(obj, W_TO);
-            W_fus  = WeightsL3.weight_fuselage(obj, W_TO);
-            W_lg   = WeightsL3.weight_landing_gear(obj, W_TO);
-            W_eng  = WeightsL3.weight_engine_section(obj, W_TO);
-            W_sys  = WeightsL3.weight_systems(obj, W_TO);
-            oew = W_str + W_tail.HT + W_tail.VT + W_fus + ...
-                  W_lg.main + W_lg.nose + W_eng.total + W_sys.total;
-        end
-
-        % ------------------------------------------------------------------ %
-        % Structural group
-        % ------------------------------------------------------------------ %
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W = weight_wing(obj, W_TO)
-            W = WeightsL3.wing(W_TO, obj.N_z, obj.S_w, obj.AR_w, obj.tc_root, ...
-                               obj.lambda_w, obj.Lambda_LE_w, obj.S_csw, ...
-                               obj.K_dw, obj.K_vs);
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W_tail = weight_tail(obj, W_TO)
-            W_tail.HT = WeightsL3.horizontal_tail(W_TO, obj.N_z, obj.S_ht, ...
-                                                   obj.F_w, obj.B_h);
-            W_tail.VT = WeightsL3.vertical_tail(W_TO, obj.N_z, obj.S_vt, ...
-                                                 obj.K_rht, obj.H_t, obj.H_v, ...
-                                                 obj.design_mach, obj.L_t, obj.S_r, ...
-                                                 obj.AR_vt, obj.lambda_vt, obj.Lambda_LE_vt);
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W = weight_fuselage(obj, W_TO)
-            W = WeightsL3.fuselage(W_TO, obj.N_z, obj.L_fus, obj.D_fus, ...
-                                   obj.W_fus, obj.K_dwf);
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W_lg = weight_landing_gear(obj, W_TO)
-            L_m_in = obj.L_m * 12;
-            L_n_in = obj.L_n * 12;
-            W_l    = WeightsL3.landing_weight(W_TO);
-            W_lg.main = WeightsL3.main_gear(W_l, obj.N_l, L_m_in, ...
-                                             obj.K_cb, obj.K_tpg);
-            W_lg.nose = WeightsL3.nose_gear(W_l, obj.N_l, L_n_in, obj.N_nw);
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W = weight_engine_section(obj, ~)
-            W.engine   = obj.W_en * obj.N_en; % dry/UNINSTALLED engine weight [Raymer 7th ed. Eq. 10.10 via the concrete class; NOT a §15.3.1 equation]
-            W.mounts   = WeightsL3.engine_mounts(obj.N_en, obj.T_max, obj.N_z);
-            W.firewall = WeightsL3.firewall(obj.S_fw); % jets set S_fw = 0; Eq. 15.8 then returns 0 (no piston firewall)
-            W.section  = WeightsL3.engine_section(obj.W_en, obj.N_en, obj.N_z);
-            W.induction = WeightsL3.air_induction(obj.K_vg, obj.L_d, obj.K_d, ...
-                                                    obj.N_en, obj.L_s, obj.D_e);
-            W.tailpipe = WeightsL3.tailpipe(obj.D_e, obj.L_tp, obj.N_en);
-            W.cooling  = WeightsL3.engine_cooling(obj.D_e, obj.L_sh, obj.N_en);
-            W.oil      = WeightsL3.oil_cooling(obj.N_en);
-            W.controls = WeightsL3.engine_controls(obj.N_en, obj.L_ec);
-            W.starter  = WeightsL3.starter(obj.T_max, obj.N_en);
-            W.total    = W.engine + W.mounts + W.firewall + W.section + W.induction + ...
-                         W.tailpipe + W.cooling + W.oil + W.controls + W.starter;
-        end
-
-        % TODO (8/14/2026): Again, looks like an artefact from when this was a subclass of an enforcer. Relocate to F-16 example if that wasn't done already.
-        function W = weight_systems(obj, W_TO)
-            W.fuel_sys     = WeightsL3.fuel_system(obj.V_t, obj.V_i, obj.V_p, ...
-                                                     obj.N_t, obj.N_en, ...
-                                                     obj.T_max, obj.SFC_mission);
-            W.flight_ctrl  = WeightsL3.flight_controls(obj.design_mach, obj.S_cs, ...
-                                                         obj.N_s, obj.N_c);
-            W.instruments  = WeightsL3.instruments(obj.N_en, obj.N_t, obj.N_ci);
-            W.hydraulics   = WeightsL3.hydraulics(obj.K_vsh, obj.N_u);
-            W.electrical   = WeightsL3.electrical(obj.K_mc, obj.R_kva, obj.N_c, ...
-                                                    obj.L_a, obj.N_gen);
-            W.avionics     = WeightsL3.avionics(obj.W_uav);
-            W.furnishings  = WeightsL3.furnishings(obj.N_c);
-            W.ac_antiice   = WeightsL3.ac_antiice(obj.W_uav, obj.N_c);
-            W.handling     = WeightsL3.handling_gear(W_TO);
-            W.total = W.fuel_sys + W.flight_ctrl + W.instruments + W.hydraulics + ...
-                      W.electrical + W.avionics + W.furnishings + W.ac_antiice + W.handling;
-        end
-
-        % ================================================================== %
         % LOW-LEVEL — individual Raymer §15.3.1 equations, plus the one
         % landing-weight rule that has no textbook source.
         % ================================================================== %
 
-        function W_l = landing_weight(W_TO)
+        % TODO (9/4/2026)(Casey): Every equation below this comment is from Raymer, 6th edition,
+        % sec 15.3.1; these equations are relevant to fighter/attack aircraft.
+        % ADD SEC 15.3.2 & 15.3.3.
+
+        % TODO (9/4/2026)(Casey): This is NOT a component weight.
+        function W_l = compute_landing_weight(W_TO)
             W_l = 0.95 * W_TO;
         end
 
-        function W = wing(W_dg, N_z, S_w, AR, tc_root, lambda, Lambda_LE_deg, S_csw, K_dw, K_vs)
+        function W = compute_wing_weight(W_dg, N_z, S_w, AR, tc_root, lambda, Lambda_LE_deg, S_csw, K_dw, K_vs)
+            % Source: Eq 15.1, Raymer 6th ed.
             W = 0.0103 * K_dw * K_vs ...
                 * (W_dg * N_z).^0.5 ...
                 * S_w.^0.622 ...
@@ -137,13 +54,15 @@ classdef WeightsL3
                 * S_csw.^0.04;
         end
 
-        function W = horizontal_tail(W_dg, N_z, S_ht, F_w, B_h)
+        function W = compute_horizontal_tail_weight(W_dg, N_z, S_ht, F_w, B_h)
+            % Source: Eq 15.2, Raymer 6th ed.
             W = 3.316 * (1 + F_w/B_h).^(-2.0) ...
                 * ((W_dg .* N_z) / 1000).^0.260 ...
                 * S_ht.^0.806;
         end
 
-        function W = vertical_tail(W_dg, N_z, S_vt, K_rht, H_t, H_v, M, L_t, S_r, AR_vt, lambda_vt, Lambda_LE_vt_deg)
+        function W = compute_vertical_tail_weight(W_dg, N_z, S_vt, K_rht, H_t, H_v, M, L_t, S_r, AR_vt, lambda_vt, Lambda_LE_vt_deg)
+            % Source: Eq 15.3, Raymer 6th ed.
             W = 0.452 * K_rht ...
                 * (1 + H_t/H_v).^0.5 ...
                 * (W_dg .* N_z).^0.488 ...
@@ -156,7 +75,8 @@ classdef WeightsL3
                 * cosd(Lambda_LE_vt_deg).^(-0.323);
         end
 
-        function W = fuselage(W_dg, N_z, L_fus, D_fus, W_fus, K_dwf)
+        function W = compute_fuselage_weight(W_dg, N_z, L_fus, D_fus, W_fus, K_dwf)
+            % Source: Eq 15.4, Raymer 6th ed.
             W = 0.499 * K_dwf ...
                 * W_dg.^0.35 ...
                 * N_z.^0.25 ...
@@ -165,52 +85,64 @@ classdef WeightsL3
                 * W_fus.^0.685;
         end
 
-        function W = main_gear(W_l, N_l, L_m, K_cb, K_tpg)
+        function W = compute_main_gear_weight(W_l, N_l, L_m, K_cb, K_tpg)
+            % Source: Eq 15.5, Raymer 6th ed.
             W = K_cb * K_tpg * (W_l * N_l).^0.25 .* L_m.^0.973;
         end
 
-        function W = nose_gear(W_l, N_l, L_n, N_nw)
+        function W = compute_nose_gear_weight(W_l, N_l, L_n, N_nw)
+            % Source: Eq 15.6, Raymer 6th ed.
             W = (W_l .* N_l).^0.290 .* L_n.^0.5 .* N_nw.^0.525;
         end
 
-        function W = engine_mounts(N_en, T, N_z)
+        function W = compute_engine_mounts_weight(N_en, T, N_z)
+            % Source: Eq 15.7, Raymer 6th ed.
             W = 0.013 * N_en.^0.795 .* T.^0.579 .* N_z;
         end
 
-        function W = firewall(S_fw)
+        function W = compute_firewall_weight(S_fw)
+            % Source: Eq 15.8, Raymer 6th ed.
             W = 1.13 * S_fw;
         end
 
-        function W = engine_section(W_en, N_en, N_z)
+        function W = compute_engine_section_weight(W_en, N_en, N_z)
+            % Source: Eq 15.9, Raymer 6th ed.
             W = 0.01 * W_en.^0.717 .* N_en .* N_z;
         end
 
-        function W = air_induction(K_vg, L_d, K_d, N_en, L_s, D_e)
+        function W = compute_air_induction_weight(K_vg, L_d, K_d, N_en, L_s, D_e)
+            % Source: Eq 15.10, Raymer 6th ed.
             W = 13.29 * K_vg .* L_d.^0.643 .* K_d.^0.182 ...
                 .* N_en.^1.498 .* (L_s./L_d).^(-0.373) .* D_e;
         end
 
-        function W = tailpipe(D_e, L_tp, N_en)
+        function W = compute_tailpipe_weight(D_e, L_tp, N_en)
+            % Source: Eq 15.11, Raymer 6th ed.
             W = 3.5 * D_e .* L_tp .* N_en;
         end
 
-        function W = engine_cooling(D_e, L_sh, N_en)
+        function W = compute_engine_cooling_weight(D_e, L_sh, N_en)
+            % Source: Eq 15.12, Raymer 6th ed
             W = 4.55 * D_e .* L_sh .* N_en;
         end
 
-        function W = oil_cooling(N_en)
+        function W = compute_oil_cooling_weight(N_en)
+            % Source: Eq 15.13, Raymer 6th ed.
             W = 37.82 * N_en.^1.023;
         end
 
-        function W = engine_controls(N_en, L_ec)
+        function W = compute_engine_controls_weight(N_en, L_ec)
+            % Source: Eq 15.14, Raymer 6th ed
             W = 10.5 * N_en.^(1.008) .* L_ec.^(0.222);
         end
 
-        function W = starter(T, N_en)
+        function W = compute_starter_weight(T, N_en)
+            % Source: Eq 15.15, Raymer 6th ed
             W = 0.025 * T.^0.760 .* N_en.^0.72;
         end
 
-        function W = fuel_system(V_t, V_i, V_p, N_t, N_en, T, SFC)
+        function W = compute_fuel_system_weight(V_t, V_i, V_p, N_t, N_en, T, SFC)
+            % Source: Eq 15.16, Raymer 6th ed.
             W = 7.45 * V_t.^0.47 ...
                 .* (1 + V_i./V_t).^(-0.095) ...
                 .* (1 + V_p./V_t) ...
@@ -219,36 +151,66 @@ classdef WeightsL3
                 .* ((T .* SFC) / 1000).^0.249;
         end
 
-        function W = flight_controls(M, S_cs, N_s, N_c)
+        function W = compute_flight_controls_weight(M, S_cs, N_s, N_c)
+            % Source: Eq 15.17, Raymer 6th ed.
             W = 36.28 * M.^0.003 .* S_cs.^0.489 .* N_s.^0.484 .* N_c.^0.127;
         end
 
-        function W = instruments(N_en, N_t, N_ci)
+        function W = compute_instruments_weight(N_en, N_t, N_ci)
+            % Source: Eq 15.18, Raymer 6th ed.
             W = 8.0 + 36.37 * N_en.^0.676 .* N_t.^0.237 + 26.4 * (1 + N_ci).^1.356;
         end
 
-        function W = hydraulics(K_vsh, N_u)
+        function W = compute_hydraulics_weight(K_vsh, N_u)
+            % Source: Eq 15.19, Raymer 6th ed.
             W = 37.23 * K_vsh .* N_u.^0.664;
         end
 
-        function W = electrical(K_mc, R_kva, N_c, L_a, N_gen)
+        function W = compute_electrical_weight(K_mc, R_kva, N_c, L_a, N_gen)
+            % Source: Eq 15.20, Raymer 6th ed.
             W = 172.2 * K_mc .* R_kva.^0.152 .* N_c.^0.10 .* L_a.^0.10 .* N_gen.^0.091;
         end
 
-        function W = avionics(W_uav)
+        % Note (9/4/2026)(Casey): Why is "W_uav" an argument?
+        % Weight of the uav? This is only relevant to UAVs.
+        % W_uav = Weight of "Uninstalled AVionics".
+        function W = compute_avionics_weight(W_uav)
+            % Source: Eq 15.21, Raymer 6th ed.
             W = 2.117 * W_uav.^0.933;
         end
 
-        function W = furnishings(N_c)
+        function W = compute_furnishings_weight(N_c)
+            % Source: Eq 15.22, Raymer 6th ed.
             W = 217.6 * N_c;
         end
 
-        function W = ac_antiice(W_uav, N_c)
+        function W = compute_ac_antiice_weight(W_uav, N_c)
+            % Source: Eq 15.23, Raymer 6th ed.
             W = 201.6 * ((W_uav + 200 * N_c) / 1000).^0.735;
         end
 
-        function W = handling_gear(W_TO)
+        function W = compute_handling_gear_weight(W_TO)
+            % Source: Eq 15.24, Raymer 6th ed.
             W = 3.2e-4 * W_TO;
+        end
+
+        function W = compute_arresting_gear_weight(W_dg, isNavy)
+            arguments
+                W_dg   (1,1) double {mustBePositive}
+                isNavy (1,1) logical = false % false = default value.
+            end
+
+            % Source: Table 15.3, Raymer 6th ed.
+            if isNavy
+                W = 0.008 * W_dg;
+            else
+                W = 0.002 * W_dg;
+            end
+        end
+
+        function W = compute_pylon_and_launcher_weight(W_missile)
+            % Source: Table 15.3, Raymer 6th ed., p. 571 (Missiles block).
+            W = 0.12*W_missile;
         end
 
     end

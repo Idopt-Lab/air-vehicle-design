@@ -61,10 +61,10 @@ function results = f16_sizing_attribution()
 
     % ---- (1) Weights: OEW at the common W_TO ----------------------------- %
     OEW = struct();
-    OEW.brandt = bWts.OEW(W_ref);        % expect 19,980.70 [Wt!B12]
-    OEW.L1     = fWts1.OEW(W_ref);
-    OEW.L2     = fWts2.OEW(W_ref);
-    OEW.L3     = fWts3.OEW(W_ref);
+    OEW.brandt = bWts.get_OEW(W_ref);    % expect 19,980.70 [Wt!B12]
+    OEW.L1     = fWts1.get_OEW(W_ref);
+    OEW.L2     = fWts2.get_OEW(W_ref);
+    OEW.L3     = fWts3.get_OEW(W_ref);
 
     % ---- (2) Mission fuel at the common point, aero x prop pairings ------ %
     % Mixed pairs are valid AT THIS POINT because both geometries carry the

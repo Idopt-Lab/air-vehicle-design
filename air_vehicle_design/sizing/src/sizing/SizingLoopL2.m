@@ -141,7 +141,8 @@ classdef SizingLoopL2 < handle
 
                 % 5. Mission fuel + empty weight at the current W0, then
                 %    WeightsBase bookkeeping.
-                [W_fuel, ~] = obj.miss.total_fuel(W0);
+                [W_fuel, breakdown] = obj.miss.total_fuel(W0);
+                obj.push_landing_weight(breakdown);
                 W_OEW = obj.wts.get_OEW(W0);
                 obj.wts.W_TO     = W0;
                 obj.wts.W_energy = W_fuel;
@@ -205,7 +206,8 @@ classdef SizingLoopL2 < handle
             obj.geom.S_vt = tail_result.S_vt;
             obj.prop.T_SL = T_SL;
             [WS, TW] = obj.con.optimal_point_continuous([WS, TW]);
-            [W_fuel, ~] = obj.miss.total_fuel(W0);
+            [W_fuel, breakdown] = obj.miss.total_fuel(W0);
+            obj.push_landing_weight(breakdown);
             W_OEW = obj.wts.get_OEW(W0);
             obj.wts.W_TO     = W0;
             obj.wts.W_energy = W_fuel;
@@ -223,6 +225,19 @@ classdef SizingLoopL2 < handle
                 'n_iter',    iter, ...
                 'converged', converged, ...
                 'history',   history);
+        end
+
+    end
+
+    methods (Access = private)
+
+        function push_landing_weight(obj, breakdown)
+        %PUSH_LANDING_WEIGHT  Report the mission landing-segment weight to the
+        %   weights object. Only an L3 buildup declares W_landing: the landing
+        %   design gross weight of Raymer Eqs. 15.5/15.6 [6th ed. p. 579].
+            if isprop(obj.wts, 'W_landing')
+                obj.wts.W_landing = breakdown.W_landing;
+            end
         end
 
     end

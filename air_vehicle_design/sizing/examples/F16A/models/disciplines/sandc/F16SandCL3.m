@@ -316,27 +316,25 @@ classdef F16SandCL3 < SandCModelL3
         %   f16a_L3.json .stability_control.component_x_stations.groups.*
         %   .weights_property field-for-field:
         %     wing              -> W_wings
-        %     horizontal_tail   -> W_tail.HT
-        %     vertical_tail     -> W_tail.VT
+        %     horizontal_tail   -> get_weight_HT(W_TO)
+        %     vertical_tail     -> get_weight_VT(W_TO)
         %     fuselage          -> W_fuselage
-        %     landing_gear      -> weight_landing_gear(W_TO).main + .nose  (METHOD at L3, not a property -- needs weights.W_TO set)
+        %     landing_gear      -> get_weight_landing_gear(W_l)          (METHOD at L3, not a property -- needs weights.W_TO set)
         %     installed_engine  -> W_installed_engine
         %     subsystems_lump   -> W_subsystems                            (needs weights.W_TO set)
-        %     strake            -> W_strake
+        %     strake            -> get_weight_strake(W_TO)
         %     payload           -> W_payload_fixed + W_payload_expendable
         %     fuel              -> W_energy                                (mission-analysis STATE; NaN pre-mission -- propagates gracefully)
             wts = obj.weights;
             switch name
                 case 'wing',             val = wts.W_wings;
-                case 'horizontal_tail',  val = wts.W_tail.HT;
-                case 'vertical_tail',    val = wts.W_tail.VT;
+                case 'horizontal_tail',  val = wts.get_weight_HT(wts.W_TO);
+                case 'vertical_tail',    val = wts.get_weight_VT(wts.W_TO);
                 case 'fuselage',         val = wts.W_fuselage;
-                case 'landing_gear'
-                    lg  = wts.weight_landing_gear(wts.W_TO);
-                    val = lg.main + lg.nose;
+                case 'landing_gear',     val = wts.get_weight_landing_gear(wts.W_l);
                 case 'installed_engine', val = wts.W_installed_engine;
                 case 'subsystems_lump',  val = wts.W_subsystems;
-                case 'strake',           val = wts.W_strake;
+                case 'strake',           val = wts.get_weight_strake(wts.W_TO);
                 case 'payload',          val = wts.W_payload_fixed + wts.W_payload_expendable;
                 case 'fuel',             val = wts.W_energy;
                 otherwise

@@ -8,7 +8,7 @@ classdef F16WeightsL3 < WeightsModelL3
 %   of a vendor dry weight).
 %
 %   OEW = wing + HT + VT + fuselage + LG.main + LG.nose
-%         + engine-group.total + systems-group.total + W_strake
+%         + engine-group.total + systems-group.total + misc-group + W_strake
 %
 %   The strake (LERX) term is k_strake·S_strake = 90.00 lbf [Brandt Main!D18 /
 %   Wt!H7]; see the S_strake/k_strake property comment for the cross-model borrow
@@ -91,8 +91,13 @@ classdef F16WeightsL3 < WeightsModelL3
         % ================================================================== %
         %  LANDING GEAR INPUTS  (W_l is DERIVED — see the Dependent block)
         % ================================================================== %
+        W_landing = NaN % lbf  gross weight ENTERING the mission landing
+        %               segment, the landing design gross weight W_l
+        %               [Raymer 6th ed. p. 579]. The sizing loop writes it
+        %               from the mission breakdown. While it is NaN, W_l
+        %               falls back to the 0.95 x W_TO seed.
         N_l   = 2.67  % --  landing load factor  [standard military; verify T.O. §5 — estimate, unpinned]
-        L_m   = 5.5   % ft  main-gear extended strut length [estimate, unpinned]. Converted to INCHES (x12) inside WeightsL3.weight_landing_gear per Raymer Eq. 15.5 nomenclature
+        L_m   = 5.5   % ft  main-gear extended strut length [estimate, unpinned]. Converted to INCHES (x12) at the call site in get_weight_landing_gear per Raymer Eq. 15.5 nomenclature
         L_n   = 3.5   % ft  nose-gear extended strut length [estimate, unpinned]; same inch conversion (Eq. 15.6)
         K_cb  = 1.0   % --  not carrier-based    [Raymer 6th ed. §15.3.1, Eq. 15.5 flag]
         K_tpg = 1.0   % --  not kneeling gear    [Raymer 6th ed. §15.3.1, Eq. 15.5 flag]
@@ -174,6 +179,10 @@ classdef F16WeightsL3 < WeightsModelL3
         D_fus        % ft   max fuselage structural DEPTH [Eq. 15.4] = geom.H_max_fuselage (5.0) — ★ NOT geom.D_fus = 6.0
         W_fus        % ft   max fuselage width          [Eq. 15.4] = geom.W_max_fuselage (7.0)
         S_cs         % ft^2 total control-surface area  [Eq. 15.17] = geom.S_cs (190)
+        AR_strake            % --   strake aspect ratio  [Eq. 15.1] = geom.AR_strake (1.5)
+        tc_root_strake       % --   strake root t/c      [Eq. 15.1] = geom.tc_r_strake (0.04)
+        lambda_strake        % --   strake taper ratio   [Eq. 15.1] = geom.lambda_strake (0, sharp tip)
+        Lambda_LE_deg_strake % deg  strake LE sweep      [Eq. 15.1] = geom.LE_sweep_strake (74)
 
         % -- Propulsion, by DI from prop (1) + computed engine weights (2) --- %
         T_max        % lbf  SLS afterburning thrust = prop.T_SL (23770) [Brandt Engn(s)!T_AB_SLS = Main!D29]; feeds Eqs. 15.7, 15.15, 15.16
@@ -181,16 +190,16 @@ classdef F16WeightsL3 < WeightsModelL3
         W_en_brandt  % lbf  ALTERNATE, already installed [Brandt Wt!B11] = 4730.2300 — comparison report only, NEVER summed
 
         % -- Newly derived by settled decisions 4 and 2 (2) ------------------ %
-        W_l          % lbf  landing design gross weight = 0.95 · W_TO [Eqs. 15.5/15.6]. ★ The 0.95 has NO repo citation — §P4-16
+        W_l          % lbf  landing design gross weight [Eqs. 15.5/15.6; Raymer 6th ed. p. 579] = W_landing from the mission, else the 0.95 · W_TO seed. ★ The 0.95 has NO repo citation — §P4-16
         SFC_mission  % 1/hr installed mission SFC = prop.get_TSFC(AircraftState(cruise), "mil") = 1.087685 [Eq. 15.16]
 
         % -- Group totals (5) — closes finding #12's NaN placeholders -------- %
         W_wings            % lbf  [Eq. 15.1]         = 2396.77 at W_TO = 31377
         W_tail             % struct(HT, VT) lbf [Eqs. 15.2-15.3] = 200.54 / 313.06
         W_fuselage         % lbf  [Eq. 15.4]         = 3674.20
-        W_installed_engine % lbf  engine group total = 3381.70 (dry engine + Eqs. 15.7-15.15)
+        W_installed_engine % lbf  engine group total = 3381.70 (dry engine Eq. 10.10 + Eqs. 15.7-15.15)
         W_subsystems       % lbf  systems group total = 4578.13 (Eqs. 15.16-15.24). ! Does NOT include the landing gear — see WeightsModelL3
-        W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00 (see S_strake/k_strake property comment)
+        W_strake           % lbf  [Brandt Main!D18 / Wt!H7]  k_strake · S_strake = 90.00 — comparison report only, NOT summed into OEW (the buildup uses get_weight_strake)
     end
 
     methods
@@ -284,38 +293,117 @@ classdef F16WeightsL3 < WeightsModelL3
         % equations and reads the Dependent properties above live.
         % ================================================================== %
 
-        function oew = get_OEW(obj, W_TO)
+        function oew = get_OEW_component_buildup(obj, W_TO)
         %OEW  Operating empty weight [lbf] at the PASSED W_TO.
-        %   [Raymer 6th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10] + the strake
-        %   term (Brandt Main!D18/Wt!H7). W_strake is pure area x density, added
-        %   on top.
-            oew = WeightsL3.OEW(obj, W_TO) + obj.W_strake;
+        %   [Raymer 6th ed. §15.3.1 Eqs. 15.1-15.24 + Eq. 10.10] + the strake,
+        %   weighed by Eq. 15.1 on strake geometry.
+
+            W_wings = obj.get_weight_wing(W_TO);
+            W_strake = obj.get_weight_strake(W_TO);
+            W_tail = obj.get_weight_tail(W_TO);
+            W_fus = obj.get_weight_fuselage(W_TO);
+            W_LG = obj.get_weight_landing_gear(obj.landing_weight(W_TO));
+            W_engine = obj.get_weight_engine();
+            W_systems = obj.get_weight_subsystems();
+            W_misc = obj.get_weight_misc(W_TO);
+
+            oew = W_wings + W_tail + W_fus + W_LG + W_engine + W_systems ...
+                + W_misc + W_strake;
         end
 
-        function W = weight_wing(obj, W_TO)
-            W = WeightsL3.weight_wing(obj, W_TO);
+        function W = get_weight_wing(obj, W_TO)
+            W = WeightsL3.compute_wing_weight(W_TO, obj.N_z, obj.S_w, obj.AR_w, obj.tc_root, obj.lambda_w, obj.Lambda_LE_w, obj.S_csw, obj.K_dw, obj.K_vs);
         end
 
-        function W = weight_tail(obj, W_TO)
-            W = WeightsL3.weight_tail(obj, W_TO);
+        function W = get_weight_tail(obj, W_TO)
+            W = obj.get_weight_HT(W_TO) + obj.get_weight_VT(W_TO);
         end
 
-        function W = weight_fuselage(obj, W_TO)
-            W = WeightsL3.weight_fuselage(obj, W_TO);
+        function W = get_weight_HT(obj, W_TO)
+            W = WeightsL3.compute_horizontal_tail_weight(W_TO, obj.N_z, obj.S_ht, obj.F_w, obj.B_h);
         end
 
-        function W = weight_landing_gear(obj, W_TO)
+        function W = get_weight_VT(obj, W_TO)
+            W = WeightsL3.compute_vertical_tail_weight(W_TO, obj.N_z, obj.S_vt, obj.K_rht, obj.H_t, obj.H_v, obj.design_mach, obj.L_t, obj.S_r, obj.AR_vt, obj.lambda_vt, obj.Lambda_LE_vt);
+        end
+
+        function W = get_weight_fuselage(obj, W_TO)
+            W = WeightsL3.compute_fuselage_weight(W_TO, obj.N_z, obj.L_fus, obj.D_fus, obj.W_fus, obj.K_dwf);
+        end
+
+        function W = get_weight_landing_gear(obj, W_l)
         %WEIGHT_LANDING_GEAR  Main + nose gear [lbf].  [Raymer Eqs. 15.5-15.6]
-        %   W_TO is required.
-            W = WeightsL3.weight_landing_gear(obj, W_TO);
+        %   W_l = landing design gross weight (lbf).
+            % L_m and L_n are stored in FEET; Eqs. 15.5 and 15.6 take INCHES.
+            % The old object-taking wrapper converted; the compute_* statics do
+            % not, so the caller must.
+            W_main_gear = WeightsL3.compute_main_gear_weight(W_l, obj.N_l, 12*obj.L_m, obj.K_cb, obj.K_tpg);
+            W_nose_gear = WeightsL3.compute_nose_gear_weight(W_l, obj.N_l, 12*obj.L_n, obj.N_nw);
+            W = W_main_gear + W_nose_gear;
         end
 
-        function W = weight_engine_section(obj, W_TO)
-            W = WeightsL3.weight_engine_section(obj, W_TO);
+        function W = get_weight_engine(obj)
+        %GET_WEIGHT_ENGINE  Propulsion group [lbf].
+        %   [Raymer 6th ed. Eqs. 15.7-15.15 + 7th ed. Eq. 10.10]
+        %   The dry engine is UNINSTALLED: Eqs. 15.7-15.15 ARE the
+        %   installation, so a lumped x1.3 would double-count them.
+            W_dry_engine = obj.N_en * obj.W_en;
+            W_engine_mounts = WeightsL3.compute_engine_mounts_weight(obj.N_en, obj.T_max, obj.N_z);
+            W_firewall = WeightsL3.compute_firewall_weight(obj.S_fw);
+            W_engine_section = WeightsL3.compute_engine_section_weight(obj.W_en, obj.N_en, obj.N_z);
+            W_air_induction = WeightsL3.compute_air_induction_weight(obj.K_vg, obj.L_d, obj.K_d, obj.N_en, obj.L_s, obj.D_e);
+            W_engine_cooling = WeightsL3.compute_engine_cooling_weight(obj.D_e, obj.L_sh, obj.N_en);
+            W_oil_cooling = WeightsL3.compute_oil_cooling_weight(obj.N_en);
+            W_engine_controls = WeightsL3.compute_engine_controls_weight(obj.N_en, obj.L_ec);
+            W_starter = WeightsL3.compute_starter_weight(obj.T_max, obj.N_en);
+            W_tailpipe = WeightsL3.compute_tailpipe_weight(obj.D_e, obj.L_tp, obj.N_en);
+
+            W = W_dry_engine + W_engine_mounts + W_firewall + W_engine_section ...
+            + W_air_induction + W_engine_cooling + W_oil_cooling ...
+             + W_engine_controls + W_starter + W_tailpipe;
         end
 
-        function W = weight_systems(obj, W_TO)
-            W = WeightsL3.weight_systems(obj, W_TO);
+        function W = get_weight_subsystems(obj)
+        %GET_WEIGHT_SUBSYSTEMS  Systems group [lbf].
+        %   [Raymer 6th ed. Eqs. 15.16-15.21 and 15.23]
+        %   No landing-gear term: the buildup adds the gear separately.
+            W_fuel_system = WeightsL3.compute_fuel_system_weight(obj.V_t, obj.V_i, obj.V_p, obj.N_t, obj.N_en, obj.T_max, obj.SFC_mission);
+            W_flight_controls = WeightsL3.compute_flight_controls_weight(obj.design_mach, obj.S_cs, obj.N_s, obj.N_c);
+            W_instruments = WeightsL3.compute_instruments_weight(obj.N_en, obj.N_t, obj.N_ci);
+            W_hydraulics = WeightsL3.compute_hydraulics_weight(obj.K_vsh, obj.N_u);
+            W_electrical = WeightsL3.compute_electrical_weight(obj.K_mc, obj.R_kva, obj.N_c, obj.L_a, obj.N_gen);
+            W_avionics = WeightsL3.compute_avionics_weight(obj.W_uav);
+            W_ac_antiice = WeightsL3.compute_ac_antiice_weight(obj.W_uav, obj.N_c);
+
+            W = W_fuel_system + W_flight_controls + W_instruments ...
+                + W_hydraulics + W_electrical + W_avionics + W_ac_antiice;
+        end
+
+        function W = get_weight_strake(obj, W_TO)
+        %GET_WEIGHT_STRAKE  Strake (LERX) weight [lbf] by Eq. 15.1 on strake
+        %   geometry. §15.3.1 has no strake equation.
+        %   ★ Eq. 15.1's S_csw slot takes obj.S_strake as a STAND-IN: the strake
+        %   carries no control surface, and S_csw = 0 makes S_csw^0.04 zero the
+        %   whole term. No source for this substitution -- flagged, not settled.
+            W = WeightsL3.compute_wing_weight(W_TO, obj.N_z, obj.S_strake, ...
+                    obj.AR_strake, obj.tc_root_strake, obj.lambda_strake, ...
+                    obj.Lambda_LE_deg_strake, obj.S_strake, obj.K_dw, obj.K_vs);
+        end
+
+        function W = get_weight_misc(obj, W_TO)
+        %GET_WEIGHT_MISC Anything not explicitly covered in the above functions.
+        %  Furnishings + handling gear + arresting gear + pylons + launcher [lbf].
+        %   [Raymer 6th ed. Eqs. 15.22 and 15.24; Table 15.3 p. 571 for the
+        %   arresting-gear and pylon fractions]
+        %   ★ Table 15.3 prints 0.12 x W_missile in its MISSILES block. The
+        %   F-16A's 4400 lbf expendable payload is a mixed store load, so the
+        %   fraction is EXTRAPOLATED off missiles. Brandt applies 0.10 to the
+        %   same payload (Wt!B31 = 440 lbf), so this term reads 528 lbf.
+            W_furnishings = WeightsL3.compute_furnishings_weight(obj.N_c);
+            W_handling_gear = WeightsL3.compute_handling_gear_weight(W_TO);
+            W_arresting_gear = WeightsL3.compute_arresting_gear_weight(W_TO, false);
+            W_pylons_and_launchers = WeightsL3.compute_pylon_and_launcher_weight(obj.W_payload_expendable);
+            W = W_furnishings + W_handling_gear + W_arresting_gear + W_pylons_and_launchers;
         end
 
         % ================================================================== %
@@ -443,6 +531,7 @@ classdef F16WeightsL3 < WeightsModelL3
             % lumps, so applying both would double-count. x1.3 belongs at L2 only.
             v = PropL2.engine_weight_AB(obj.prop.T_SL, obj.design_mach, obj.prop.bypass_ratio);
         end
+        % TODO (9/4/2026)(Casey): Replace Brandt's engine weight with something from Raymer.
         function v = get.W_en_brandt(obj)
             % ALTERNATE, comparison report ONLY — never summed into OEW.
             % 0.199·T_AB = 4730.2300 lbf [Brandt Wt!B11; the 0.199 literal is
@@ -462,33 +551,46 @@ classdef F16WeightsL3 < WeightsModelL3
 
         % ---- Landing weight ---------------------------------------------- %
         function v = get.W_l(obj)
-            % Landing design gross weight for Eqs. 15.5/15.6 = 0.95 · obj.W_TO.
+            % Landing design gross weight for Eqs. 15.5/15.6
+            % [Raymer 6th ed. p. 579]. The mission landing segment is the
+            % source. Until it runs, the 0.95 x W_TO seed applies.
             % ★ The 0.95 factor has NO citation in this repo (user-supplied).
-            % The equation and missing-citation record live on
-            % WeightsL3.landing_weight; this getter only supplies obj.W_TO.
-            v = WeightsL3.landing_weight(obj.requireWTO('W_l'));
+            v = obj.landing_weight(obj.requireWTO('W_l'));
         end
 
         % ---- Group totals ------------------------------------------------ %
         function v = get.W_wings(obj)
-            v = WeightsL3.weight_wing(obj, obj.requireWTO('W_wings'));
+            v = obj.get_weight_wing(obj.requireWTO('W_wings'));
         end
         function v = get.W_tail(obj)
-            v = WeightsL3.weight_tail(obj, obj.requireWTO('W_tail'));
+            v = obj.get_weight_tail(obj.requireWTO('W_tail'));
         end
         function v = get.W_fuselage(obj)
-            v = WeightsL3.weight_fuselage(obj, obj.requireWTO('W_fuselage'));
+            v = obj.get_weight_fuselage(obj.requireWTO('W_fuselage'));
         end
         function v = get.W_installed_engine(obj)
             % Engine GROUP total: dry engine (Eq. 10.10, uninstalled) + Eqs.
             % 15.7-15.15, built item by item. NOT guarded on W_TO: the group is
             % built from thrust and component geometry, never from gross weight.
-            v = WeightsL3.weight_engine_section(obj, obj.W_TO).total;
+            v = obj.get_weight_engine();
         end
         function v = get.W_subsystems(obj)
             % Systems GROUP total, Eqs. 15.16-15.24. Contains NO landing-gear
             % term; OEW adds the gear separately (WeightsModelL3).
-            v = WeightsL3.weight_systems(obj, obj.requireWTO('W_subsystems')).total;
+            v = obj.get_weight_subsystems();
+        end
+
+        function v = get.AR_strake(obj)
+            v = obj.geom.AR_strake;            % [Brandt Main!D19]
+        end
+        function v = get.tc_root_strake(obj)
+            v = obj.geom.tc_r_strake;          % NACA 0004 [Brandt Main!D22]
+        end
+        function v = get.lambda_strake(obj)
+            v = obj.geom.lambda_strake;        % sharp tip [Brandt Main!D20]
+        end
+        function v = get.Lambda_LE_deg_strake(obj)
+            v = obj.geom.LE_sweep_strake;      % [Brandt Main!D21]
         end
 
         function v = get.W_strake(obj)
@@ -500,6 +602,17 @@ classdef F16WeightsL3 < WeightsModelL3
     end
 
     methods (Access = private)
+
+        function W_l = landing_weight(obj, W_TO)
+        %LANDING_WEIGHT  Landing design gross weight [lbf], from the mission
+        %   landing segment if the sizing loop has reported one, else the
+        %   0.95 x W_TO seed [Raymer 6th ed. p. 579].
+            if isfinite(obj.W_landing) && obj.W_landing > 0
+                W_l = obj.W_landing;                           % mission value
+            else
+                W_l = WeightsL3.compute_landing_weight(W_TO);  % seed
+            end
+        end
 
         function W_TO = requireWTO(obj, whatFor)
         %REQUIREWTO  Return obj.W_TO, erroring if it has not been set.

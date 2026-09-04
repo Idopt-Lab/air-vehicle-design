@@ -228,7 +228,7 @@ g3.B_h   = b_ht_L3;
 % 4 before 2026-08-11, when the trailing L_fus became the pair of real tail
 % moment arms g3 now computes -- TailSizingBase.m header), not
 % self-mutating, so g3.S_ht/S_vt are written back explicitly here.
-tail      = F16TailL1();
+tail      = F16TailL1(g3);   % geometry is INJECTED (constructor requires it)
 S_tail_L3 = tail.size(g3.S_ref, g3.b_wing, g3.cbar_wing, g3.L_HT, g3.L_VT);
 g3.S_ht   = S_tail_L3.S_ht;
 g3.S_vt   = S_tail_L3.S_vt;

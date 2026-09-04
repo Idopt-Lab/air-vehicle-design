@@ -107,27 +107,34 @@ title(sprintf('F-16A Level 3 Sizing Convergence (final (W/S)_{opt} = %.2f lbf/ft
 
 %% Detailed component / subsystem weight breakdown
 % Calls F16WeightsL3's own group- and subcomponent-weight methods at the
-% converged W_TO -- these are the exact terms WeightsL3.OEW sums (see that
-% toolbox's OEW method); nothing here is a new equation, just re-reading
-% what OEW already computed, broken out down to the individual Raymer
-% Sec. 15.3.1 line items (Eqs. 15.7-15.24).
+% converged W_TO -- these are the exact terms get_OEW_component_buildup
+% sums; nothing here is a new equation, just re-reading what OEW already
+% computed, broken out down to the individual Raymer Sec. 15.3.1 line
+% items (Eqs. 15.7-15.24) plus Table 15.3.
 
 W_TO_final = result.W_TO;
-W_wing = objs.wts.weight_wing(W_TO_final);
-W_tail = objs.wts.weight_tail(W_TO_final);              % struct(HT, VT)
-W_fus  = objs.wts.weight_fuselage(W_TO_final);
-W_lg   = objs.wts.weight_landing_gear(W_TO_final);       % struct(main, nose)
-W_eng  = objs.wts.weight_engine_section(W_TO_final);     % struct(engine,mounts,firewall,section,induction,tailpipe,cooling,oil,controls,starter,total)
-W_sys  = objs.wts.weight_systems(W_TO_final);            % struct(fuel_sys,flight_ctrl,instruments,hydraulics,electrical,avionics,furnishings,ac_antiice,handling,total)
+w   = objs.wts;
+W_l = w.W_l;                      % mission landing weight [Raymer 6th ed. p. 579]
+
+W_wing = w.get_weight_wing(W_TO_final);
+W_ht   = w.get_weight_HT(W_TO_final);
+W_vt   = w.get_weight_VT(W_TO_final);
+W_fus  = w.get_weight_fuselage(W_TO_final);
+W_mg   = WeightsL3.compute_main_gear_weight(W_l, w.N_l, 12*w.L_m, w.K_cb, w.K_tpg);
+W_ng   = WeightsL3.compute_nose_gear_weight(W_l, w.N_l, 12*w.L_n, w.N_nw);
+W_eng  = w.get_weight_engine();
+W_sys  = w.get_weight_subsystems();
+W_misc = w.get_weight_misc(W_TO_final);
+W_strk = w.get_weight_strake(W_TO_final);
 
 % ---- Group-level breakdown (same granularity as the L2 report) -------- %
 groupLabelList = {'Wing', 'Horizontal Tail', 'Vertical Tail', 'Fuselage', ...
-    'Main Gear', 'Nose Gear', 'Engine Group', 'Systems Group', 'Mission Fuel', ...
-    'Fixed Payload', 'Expendable Payload'};
+    'Main Gear', 'Nose Gear', 'Engine Group', 'Systems Group', 'Misc Group', ...
+    'Strake', 'Mission Fuel', 'Fixed Payload', 'Expendable Payload'};
 groupLabels = categorical(groupLabelList, groupLabelList, 'Ordinal', true);
-groupValues = [W_wing, W_tail.HT, W_tail.VT, W_fus, W_lg.main, W_lg.nose, ...
-    W_eng.total, W_sys.total, result.history(end).W_fuel, ...
-    objs.wts.W_payload_fixed, objs.wts.W_payload_expendable];
+groupValues = [W_wing, W_ht, W_vt, W_fus, W_mg, W_ng, W_eng, W_sys, W_misc, ...
+    W_strk, result.history(end).W_fuel, ...
+    w.W_payload_fixed, w.W_payload_expendable];
 
 groupTable = table(groupLabels(:), groupValues(:), 'VariableNames', {'Component', 'Weight_lbf'});
 disp('Level 3 group-level weight breakdown:');
@@ -139,28 +146,47 @@ grid on; ylabel('Weight [lbf]'); xtickangle(30);
 title('F-16A Level 3 Group-Level Weight Breakdown');
 
 fprintf('\n  Check: sum(groups) - OEW(W_TO_final) = %.4f lbf (should be ~0)\n', ...
-    (W_wing + W_tail.HT + W_tail.VT + W_fus + W_lg.main + W_lg.nose + W_eng.total + W_sys.total) ...
-    - objs.wts.OEW(W_TO_final));
+    sum(groupValues(1:10)) - w.get_OEW(W_TO_final));
 
-% ---- Detailed subcomponent breakdown (engine section + systems) -------- %
+% ---- Detailed subcomponent breakdown ---------------------------------- %
+% Every Sec. 15.3.1 line item the three group methods sum, re-read from the
+% WeightsL3 toolbox with the same object properties those methods pass.
 detailLabelList = {'Engine (dry)', 'Engine Mounts', 'Firewall', 'Engine Section', ...
     'Air Induction', 'Tailpipe', 'Engine Cooling', 'Oil Cooling', 'Engine Controls', 'Starter', ...
     'Fuel System', 'Flight Controls', 'Instruments', 'Hydraulics', 'Electrical', ...
-    'Avionics', 'Furnishings', 'AC & Anti-Ice', 'Handling Gear'};
+    'Avionics', 'AC & Anti-Ice', 'Furnishings', 'Handling Gear', ...
+    'Arresting Gear', 'Pylons & Launchers'};
 detailLabels = categorical(detailLabelList, detailLabelList, 'Ordinal', true);
-detailValues = [W_eng.engine, W_eng.mounts, W_eng.firewall, W_eng.section, W_eng.induction, ...
-    W_eng.tailpipe, W_eng.cooling, W_eng.oil, W_eng.controls, W_eng.starter, ...
-    W_sys.fuel_sys, W_sys.flight_ctrl, W_sys.instruments, W_sys.hydraulics, W_sys.electrical, ...
-    W_sys.avionics, W_sys.furnishings, W_sys.ac_antiice, W_sys.handling];
+detailValues = [w.N_en * w.W_en, ...
+    WeightsL3.compute_engine_mounts_weight(w.N_en, w.T_max, w.N_z), ...
+    WeightsL3.compute_firewall_weight(w.S_fw), ...
+    WeightsL3.compute_engine_section_weight(w.W_en, w.N_en, w.N_z), ...
+    WeightsL3.compute_air_induction_weight(w.K_vg, w.L_d, w.K_d, w.N_en, w.L_s, w.D_e), ...
+    WeightsL3.compute_tailpipe_weight(w.D_e, w.L_tp, w.N_en), ...
+    WeightsL3.compute_engine_cooling_weight(w.D_e, w.L_sh, w.N_en), ...
+    WeightsL3.compute_oil_cooling_weight(w.N_en), ...
+    WeightsL3.compute_engine_controls_weight(w.N_en, w.L_ec), ...
+    WeightsL3.compute_starter_weight(w.T_max, w.N_en), ...
+    WeightsL3.compute_fuel_system_weight(w.V_t, w.V_i, w.V_p, w.N_t, w.N_en, w.T_max, w.SFC_mission), ...
+    WeightsL3.compute_flight_controls_weight(w.design_mach, w.S_cs, w.N_s, w.N_c), ...
+    WeightsL3.compute_instruments_weight(w.N_en, w.N_t, w.N_ci), ...
+    WeightsL3.compute_hydraulics_weight(w.K_vsh, w.N_u), ...
+    WeightsL3.compute_electrical_weight(w.K_mc, w.R_kva, w.N_c, w.L_a, w.N_gen), ...
+    WeightsL3.compute_avionics_weight(w.W_uav), ...
+    WeightsL3.compute_ac_antiice_weight(w.W_uav, w.N_c), ...
+    WeightsL3.compute_furnishings_weight(w.N_c), ...
+    WeightsL3.compute_handling_gear_weight(W_TO_final), ...
+    WeightsL3.compute_arresting_gear_weight(W_TO_final, false), ...
+    WeightsL3.compute_pylon_and_launcher_weight(w.W_payload_expendable)];
 
 detailTable = table(detailLabels(:), detailValues(:), 'VariableNames', {'Subcomponent', 'Weight_lbf'});
-disp('Level 3 detailed engine-section / systems subcomponent breakdown:');
+disp('Level 3 detailed engine-section / systems / misc subcomponent breakdown:');
 disp(detailTable);
 
 figure('Name', 'L3 Detailed Subcomponent Weight Breakdown', 'Position', [100 100 1500 700]);
 bar(detailLabels, detailValues);
 grid on; ylabel('Weight [lbf]'); xtickangle(45);
-title('F-16A Level 3 Detailed Engine-Section / Systems Subcomponent Weight Breakdown');
+title('F-16A Level 3 Detailed Engine-Section / Systems / Misc Subcomponent Weight Breakdown');
 
 %% Mission fuel + key drivers by segment
 % MissionAnalysisL2 (the mission fidelity paired with the L3 discipline stack --
@@ -212,9 +238,9 @@ grid on; ylabel('L/D'); title('F-16A Level 3 L/D by Mission Segment (component b
 
 FUEL_DENSITY_LB_PER_GAL = 6.7;   % [F16WeightsL3.m V_t comment; open provenance, todo P4-5b]
 
-V_t = objs.wts.V_t;
-V_i = objs.wts.V_i;
-V_p = objs.wts.V_p;
+V_t = w.V_t;
+V_i = w.V_i;
+V_p = w.V_p;
 W_fuel_final = result.history(end).W_fuel;
 V_required_gal = W_fuel_final / FUEL_DENSITY_LB_PER_GAL;
 margin_pct = 100 * (V_t - V_required_gal) / V_required_gal;
@@ -235,4 +261,4 @@ end
 %% Final summary
 fprintf('\n=== F-16A Level 3 Final Summary ===\n');
 fprintf('  W_TO = %.1f lbf, OEW = %.1f lbf, W_fuel = %.1f lbf, S_ref = %.2f ft^2, T_SL = %.1f lbf\n', ...
-    result.W_TO, objs.wts.OEW(W_TO_final), W_fuel_final, result.S_ref, result.T_SL);
+    result.W_TO, w.get_OEW(W_TO_final), W_fuel_final, result.S_ref, result.T_SL);

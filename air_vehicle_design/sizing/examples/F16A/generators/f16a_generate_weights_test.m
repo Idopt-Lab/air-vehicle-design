@@ -28,17 +28,23 @@ w2.W_TO = W_TO;
 w3.W_TO = W_TO;
 
 % ── run every tier at the cascaded gross weight ────────────────────────── %
-oew        = [w1.OEW(W_TO), w2.OEW(W_TO), w3.OEW(W_TO)];
-oew_roskam = w1.compute_We_roskam(W_TO);    % [Roskam Eq. 2.16] MINIMUM bound
+oew        = [w1.get_OEW(W_TO), w2.get_OEW(W_TO), w3.get_OEW(W_TO)];
+c1         = WeightsL1.lookup_We_roskam_coeffs(w1.aircraft_category);
+oew_roskam = WeightsL1.compute_We_roskam(c1.A, c1.B, W_TO);  % [Roskam Eq. 2.16] MINIMUM bound
 
-tail2 = w2.weight_tail(W_TO);
-tail3 = w3.weight_tail(W_TO);
-lg3   = w3.weight_landing_gear(W_TO);
-eng3  = w3.weight_engine_section(W_TO);
-sys3  = w3.weight_systems(W_TO);
+tail2 = w2.W_tail;
+tail3 = struct('HT', w3.get_weight_HT(W_TO), 'VT', w3.get_weight_VT(W_TO));
+W_l3  = WeightsL3.compute_landing_weight(W_TO);
+lg3   = struct( ...
+    'main', WeightsL3.compute_main_gear_weight(W_l3, w3.N_l, 12*w3.L_m, w3.K_cb, w3.K_tpg), ...
+    'nose', WeightsL3.compute_nose_gear_weight(W_l3, w3.N_l, 12*w3.L_n, w3.N_nw));
+eng3  = struct('induction', ...
+    WeightsL3.compute_air_induction_weight(w3.K_vg, w3.L_d, w3.K_d, w3.N_en, w3.L_s, w3.D_e));
+sys3  = struct('flight_ctrl', ...
+    WeightsL3.compute_flight_controls_weight(w3.design_mach, w3.S_cs, w3.N_s, w3.N_c));
 
-wing2 = w2.weight_wing(W_TO);   fus2 = w2.weight_fuselage(W_TO);
-wing3 = w3.weight_wing(W_TO);   fus3 = w3.weight_fuselage(W_TO);
+wing2 = w2.W_wings;            fus2 = w2.W_fuselage;
+wing3 = w3.get_weight_wing(W_TO);   fus3 = w3.get_weight_fuselage(W_TO);
 str2  = wing2 + fus2 + tail2.HT + tail2.VT;
 str3  = wing3 + fus3 + tail3.HT + tail3.VT;
 
@@ -88,7 +94,7 @@ T = [T; cmp('Inlet duct', 'lbf', lvl{3}, eng3.induction, brandt.W_inlet_duct_lb,
     'Raymer Eq. 15.10 on duct geometry against Brandt''s 3.9 x nacelle weight, a basis the framework does not have.')];
 
 T = [T; ComparisonReport.section('SYSTEMS -- Brandt Wt!B23:B31, his own W_TO fractions')];
-T = [T; cmp('Landing gear', 'lbf', lvl{2}, w2.weight_landing_gear(W_TO), brandt.W_gear_lb, '%.2f', 'Brandt Wt!B23', ...
+T = [T; cmp('Landing gear', 'lbf', lvl{2}, w2.W_landing_gear, brandt.W_gear_lb, '%.2f', 'Brandt Wt!B23', ...
     'SAME MODEL FAMILY, different coefficient: 0.033*W_TO [metabook Sec. 7] against Brandt''s 0.034*W_TO.')];
 T = [T; cmp('Landing gear', 'lbf', lvl{3}, lg3.main + lg3.nose, brandt.W_gear_lb, '%.2f', 'Brandt Wt!B23', ...
     'Raymer Eqs. 15.5 + 15.6 strut sizing on W_l = 0.95*W_TO. Brandt carries one gear line, so only this total compares.')];

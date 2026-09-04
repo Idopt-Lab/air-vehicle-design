@@ -42,7 +42,7 @@ b1    = GeometryBase.compute_span(G.AR_wing, G.S_ref);
 cbar1 = GeometryBase.compute_mac(GeometryBase.compute_root_chord(G.S_ref, b1, G.lambda_wing), G.lambda_wing);
 arm1  = TailL1.compute_tail_arm(G.L1.L_fuselage);
 
-t1 = F16TailL1();        % Raymer Table 6.4, RSS and all-moving corrections
+t1 = F16TailL1(g2);      % Raymer Table 6.4, RSS and all-moving corrections
 t2 = F16TailL2(g2);      % Nicolai Table 11.6, the F-16 row
 
 x_cg2 = TailL2.compute_x_cg_initial(g2.x_mac_le_wing, g2.cbar_wing);
@@ -153,7 +153,12 @@ wt_src = { ...
     'Raymer Table 15.2 surface density on the EXPOSED planform. Two differences at once: the area convention and the sized area itself.', ...
     'Raymer Eqs. 15.2/15.3 on the exposed planform set. Same two differences as the L2 row.'};
 for i = 1:2
-    tw = wts{i}.weight_tail(W_TO);
+    if i == 1
+        tw = wts{i}.W_tail;                                  % L2: a struct property
+    else
+        tw = struct('HT', wts{i}.get_weight_HT(W_TO), ...    % L3: two methods
+                    'VT', wts{i}.get_weight_VT(W_TO));
+    end
     T = [T; cmp('W_HT', 'lbf', lvl{i+1}, tw.HT, gt.W_HT_b, '%.2f', 'Brandt Wt!E9', wt_src{i})]; %#ok<AGROW>
     T = [T; cmp('W_VT', 'lbf', lvl{i+1}, tw.VT, gt.W_VT_b, '%.2f', 'Brandt Wt!F9', wt_src{i})]; %#ok<AGROW>
 end
