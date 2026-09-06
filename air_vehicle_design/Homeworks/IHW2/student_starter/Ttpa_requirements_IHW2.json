@@ -1,0 +1,238 @@
+{
+  "_comment": "Test Twin Propeller Aircraft (TTPA) requirements for IHW2, the constraint (matching) analysis. This file REPLACES Ttpa_requirements.json for IHW2: read this one and only this one. It repeats the geometry and mission blocks of IHW1 unchanged, so your IHW1 mission analysis runs against it without any edit, and it adds three things the constraint analysis needs: the aerodynamic data of each high-lift configuration, the propulsion data of each power rating, and the constraint conditions themselves.",
+
+  "_how_to_read": "In MATLAB: J = jsondecode(fileread(json_path)). Every block below then becomes a field of J, for example J.aerodynamics.CLmax_takeoff. Keys that start with an underscore are documentation and are never read by code (jsondecode renames them to x_comment, x_src and so on; ignore them).",
+
+  "_who_reads_what": "geometry -> TtpaAero constructor. aerodynamics -> TtpaAero constructor. propulsion -> TtpaProp constructor. constraints.conditions -> ConstraintSetImporter.read_conditions, then get_con. constraints.wing_loading_range_psf / wing_loading_points / design_point -> the TtpaConstraintAnalysis driver script. missions -> MissionProfileReader.read_profile, then get_miss_seg (unchanged from IHW1).",
+
+  "geometry": {
+    "_comment": "Carried over from IHW1 unchanged. Read by the TtpaAero constructor as J.geometry.AR. The aspect ratio sets the Oswald efficiency and the induced-drag factor, and the constraint analysis uses it again to turn the wing area into a span.",
+    "AR": 8,
+    "_src_AR": "Preliminary wing aspect-ratio requirement/design assumption."
+  },
+
+  "aerodynamics": {
+    "_comment": "NEW IN IHW2. Read by the TtpaAero constructor as J.aerodynamics.<key>. In IHW1 the clean CD0 was a literal inside the class and CLmax was not modelled at all. The constraint analysis needs the drag polar and the maximum lift coefficient of THREE different airplane configurations, so every one of those numbers now lives here, in one place.",
+
+    "_how_the_configuration_polar_is_built": "CD0_config = CD0_clean + the flap increment + the gear increment (+ the stopped-propeller increment in the engine-out climb). e_config = e_clean + the flap increment, where e_clean is still computed from the aspect ratio inside TtpaAero. K1_config = 1/(pi*AR*e_config). CLmax_config is read directly from the three CLmax keys below.",
+
+    "CD0_clean": 0.028,
+    "_src_CD0_clean": "Clean (cruise) zero-lift drag coefficient. Same value that was hardcoded in the IHW1 TtpaAero; it now comes from this file so that there is exactly one place to change it.",
+
+    "CLmax_clean": 1.5,
+    "CLmax_takeoff": 1.8,
+    "CLmax_landing": 2.2,
+    "_src_CLmax": "Roskam Part I, Table 3.1 (twin-engine propeller-driven, FAR 23): clean 1.2-1.8, takeoff 1.4-2.0, landing 1.6-2.6. Mid-range values assumed for the TTPA. Pull the one that matches the configuration of the condition you are evaluating: clean for the engine-out climb, takeoff for the takeoff ground roll and the all-engines climb, landing for the landing ground roll and the balked landing.",
+
+    "CL_stall_margin": 0.2,
+    "_src_CL_stall_margin": "Roskam Part I, Sec. 3.3. The steepest climb is flown near CLmax, which is unsafe because the airplane is then close to the stall, so the climb lift coefficient is taken 0.2 below the CLmax of that configuration. Apply it inside get_config_polar so that no constraint function can forget it.",
+
+    "delta_CD0_flaps_takeoff": 0.015,
+    "delta_CD0_flaps_landing": 0.065,
+    "delta_CD0_gear_down": 0.020,
+    "_src_delta_CD0": "Roskam Part I, Table 3.6, zero-lift drag increments: takeoff flaps 0.010-0.020, landing flaps 0.055-0.075, landing gear extended 0.015-0.025. Mid-range values assumed. The gear increment adds on top of the flap increment when the gear is down.",
+
+    "delta_e_flaps_takeoff": -0.05,
+    "delta_e_flaps_landing": -0.10,
+    "_src_delta_e": "Roskam Part I, Table 3.6, Oswald-efficiency increments: about -0.05 with takeoff flaps and about -0.10 with landing flaps. Extending the gear does not change e.",
+
+    "delta_CD0_propeller_stopped": 0.005,
+    "_src_delta_CD0_propeller_stopped": "Roskam Part I, Sec. 3.3: drag increment of the stopped propeller of the failed engine. Add it only when the condition sets propeller_stopped, which is the one-engine-inoperative climb."
+  },
+
+  "propulsion": {
+    "_comment": "NEW IN IHW2 (except the values marked carried over). Read by the TtpaProp constructor as J.propulsion.<key>. In IHW1 the BSFC and the two propeller efficiencies were literals inside the class; they move here so that TtpaProp has one source for every number, and the three new keys the constraint analysis needs are added alongside them.",
+
+    "n_engines": 2,
+    "_src_n_engines": "NEW. Twin-engine airplane. In the one-engine-inoperative climb only 1 of the 2 engines is running, so the available power is divided by this number.",
+
+    "BSFC_lb_per_hp_hr": 0.4,
+    "_src_BSFC": "Carried over from IHW1. Preliminary brake-specific fuel consumption of the piston engine, used by the cruise and loiter mission segments.",
+
+    "eta_p_cruise": 0.82,
+    "eta_p_loiter": 0.72,
+    "_src_eta_p_mission": "Carried over from IHW1. Propeller efficiencies of the cruise and loiter mission segments.",
+
+    "eta_p_climb": 0.80,
+    "_src_eta_p_climb": "NEW. Propeller efficiency in a climb. The climb-gradient constraint needs it, and the mission analysis never did, because IHW1 modelled climb with a fixed weight fraction.",
+
+    "P_TO_over_P_max_continuous": 1.1,
+    "_src_P_TO_over_P_max_continuous": "NEW. Roskam Part I, Sec. 3.3: for a typical piston engine the takeoff power is about 1.1 times the maximum continuous power. The all-engines climb must be flown at maximum continuous power, so the power available there is the takeoff power divided by this number."
+  },
+
+  "design_range_nmi": 1200,
+  "_src_design_range_nmi": "Design mission range 1,200 nmi. Fixed payload assumes single pilot crew and 5 additional passengers assumed to be 200 lb each.",
+
+  "constraints": {
+
+    "_comment": "NEW IN IHW2. The requirements the matching diagram is built from. Read the conditions with ConstraintSetImporter.read_conditions(json_path), which returns a 1x6 struct array in the order below; get_con then pulls one of them out. Each condition holds REQUIREMENT data only: where the airplane is, in what configuration, at what weight and power, and what it must achieve there. No CLmax, no CD0, no propeller efficiency and no power lapse appears here - all of those come from your TtpaAero and TtpaProp objects at run time.",
+
+    "_note_missing_keys": "The six conditions do not all carry the same keys: a field-length condition has distance_ft, a climb condition has G, the cruise condition has ktas and power_index. Where a key is absent the importer leaves an empty value ([]), so read the optional keys through a helper that returns a default. The defaults are beta = 1.0, power_setting = 1.0, config = clean, and false for the three logical flags.",
+
+    "_note_beta": "beta = W_condition / W_TO, the weight at which the condition must be met, referred to takeoff weight. It is a SPECIFIED REQUIREMENT INPUT, not an output of your mission analysis. beta = 0.975 is the weight after startup, taxi, takeoff and the initial climb: Roskam Part I Table 2.2 gives 0.984 for startup/taxi/takeoff and 0.990 for climb, and 0.984 x 0.990 = 0.974, which is the same pair of fractions your IHW1 run_mission applies. It represents an airplane that loses an engine or returns to the field soon after takeoff.",
+
+    "_note_power_setting": "power_setting is the throttle fraction of the rated power at that condition (1.0 = full power). The altitude power lapse, the maximum-continuous derate and the one-engine-inoperative split are NOT stored here: your TtpaProp applies them from n_engines, P_TO_over_P_max_continuous and the flags on the condition.",
+
+    "_note_config": "config names the flap and landing-gear position. The five names your get_config_polar must accept are clean, takeoff_flaps_gear_up, takeoff_flaps_gear_down, landing_flaps_gear_up and landing_flaps_gear_down. They are the names the framework uses in AerodynamicsBase.get_config_polar.",
+
+    "wing_loading_range_psf": [15, 50],
+    "wing_loading_points": 500,
+    "_src_wing_loading_range_psf": "Wing-loading sweep of the matching diagram, lbf/ft^2, and the number of points on it. Read by the driver script, not by any constraint function: every constraint function receives the sweep as its first argument.",
+
+    "design_point": {
+      "_comment": "The design point SELECTED from the matching diagram. It is a design decision, not a result. The analysis finds the corner of the feasible region, which is the smallest engine the requirements permit and which sits exactly on two constraints with no margin at all; the designer then backs away from that corner. Read by the driver script.",
+      "wing_loading_psf": 40,
+      "power_loading_lb_per_hp": 9.25,
+      "_src": "Design point read off the matching diagram, kept clear of the least-engine corner as a factor of safety on the preliminary sizing."
+    },
+
+    "conditions": [
+
+      {
+        "name": "Takeoff",
+        "type": "takeoff",
+        "altitude_ft": 0,
+        "distance_ft": 1500,
+        "config": "takeoff_flaps_gear_down",
+        "beta": 1.0,
+        "_src": "Takeoff ground roll of 1,500 ft at sea level, and the climb to 50 ft above the takeoff surface of 14 CFR 23.2115. Sized with the FAR 23 takeoff parameter, Roskam Part I Sec. 3.1: S_TGR = 4.9 TOP23 + 0.009 TOP23^2, with TOP23 = (W/S)(W/P) / (sigma CLmax_TO). beta = 1.0 because takeoff happens at takeoff weight by definition."
+      },
+
+      {
+        "name": "Landing",
+        "type": "landing",
+        "altitude_ft": 0,
+        "distance_ft": 1500,
+        "config": "landing_flaps_gear_down",
+        "beta": 0.975,
+        "_src": "Landing ground roll of 1,500 ft at sea level after a 50-ft obstacle, 14 CFR 23.2130. Sized with Roskam Part I Sec. 3.2: S_LGR = 0.265 Vs_L^2, with S_LGR in ft and Vs_L in kt. This condition limits the wing loading only; it does not constrain the power loading."
+      },
+
+      {
+        "name": "Climb AEO",
+        "type": "climb_gradient",
+        "altitude_ft": 0,
+        "G": 0.083,
+        "config": "takeoff_flaps_gear_up",
+        "oei": false,
+        "max_continuous": true,
+        "power_setting": 1.0,
+        "beta": 1.0,
+        "_src": "14 CFR 23.2120 (Part 23 Level 2, low speed), all engines operating: minimum climb gradient of 8.3 % with the landing gear retracted, the flaps in the takeoff position and both engines at maximum continuous power. max_continuous = true is what makes your TtpaProp divide the available power by P_TO_over_P_max_continuous."
+      },
+
+      {
+        "name": "Climb OEI",
+        "type": "climb_gradient",
+        "altitude_ft": 5000,
+        "G": 0.015,
+        "config": "clean",
+        "oei": true,
+        "propeller_stopped": true,
+        "max_continuous": false,
+        "power_setting": 1.0,
+        "beta": 0.975,
+        "_src": "14 CFR 23.2120 (Part 23 Level 2, low speed), one engine inoperative: minimum climb gradient of 1.5 % at 5,000 ft with the landing gear and the flaps retracted and the remaining engine at takeoff power. oei = true divides the available power by n_engines; propeller_stopped = true adds the stopped-propeller drag increment of the failed engine."
+      },
+
+      {
+        "name": "Climb BL",
+        "type": "climb_gradient",
+        "altitude_ft": 0,
+        "G": 0.030,
+        "config": "landing_flaps_gear_down",
+        "oei": false,
+        "max_continuous": false,
+        "power_setting": 1.0,
+        "beta": 0.975,
+        "_src": "14 CFR 23.2120 (Part 23 Level 2, low speed), balked landing: minimum climb gradient of 3.0 % with the landing gear extended, the flaps in the landing position and both engines at takeoff power."
+      },
+
+      {
+        "name": "Cruise Speed",
+        "type": "cruise_speed",
+        "altitude_ft": 8000,
+        "ktas": 200,
+        "power_index": 1.4,
+        "power_setting": 0.8,
+        "_src": "Minimum cruise speed of 200 KTAS at 8,000 ft. Sized with the power index of Roskam Part I Sec. 3.6, Ip = [ (W/S) / (sigma (W/P)) ]^(1/3), read from Fig. 3.28 at 200 kt as Ip = 1.4. The cruise power of a propeller-driven airplane is set to 80 % of the rated power, which is power_setting. No beta is given because the cruise weight cancels: it divides the wing loading and the power loading by the same factor. ktas is the requirement this condition came from and is carried for reporting; the analysis itself uses power_index."
+      }
+
+    ]
+  },
+
+  "missions": {
+
+    "_comment": "Carried over from IHW1 unchanged, so that your mission analysis runs against this file with no edit. Read with MissionProfileReader.read_profile(json_path, 'std_mission'), then one segment at a time with get_miss_seg. The constraint analysis needs the takeoff gross weight your mission analysis converges to.",
+
+    "std_mission": {
+
+      "_description": "Standard design mission consisting of startup, taxi, takeoff, climb, cruise, descent, loiter, descent, and landing.",
+
+      "reserve_fuel_fraction": 0.06,
+
+      "_cite_reserve_fuel_fraction": "6% reserve/trapped-fuel allowance applied on top of the complete mission.",
+
+      "segments": [
+
+        {
+          "type": "takeoff",
+          "name": "Takeoff",
+          "alt_ft": 0
+        },
+
+        {
+          "type": "climb",
+          "name": "Climb",
+          "alt_ft": 8000
+        },
+
+        {
+          "type": "cruise",
+          "name": "Cruise",
+          "alt_ft": 8000,
+          "ktas": 200,
+          "distance_nm": 1200
+        },
+
+        {
+          "type": "descent",
+          "name": "Descent",
+          "alt_ft": 0
+        },
+
+        {
+          "type": "climb",
+          "name": "Climb",
+          "alt_ft": 4000
+        },
+
+        {
+          "type": "loiter",
+          "name": "Loiter",
+          "alt_ft": 4000,
+          "ktas": 120,
+          "time_min": 45
+        },
+
+        {
+          "type": "descent",
+          "name": "Descent",
+          "alt_ft": 0
+        },
+
+        {
+          "type": "landing",
+          "name": "Landing",
+          "alt_ft": 0
+        }
+
+      ],
+
+      "_src_cruise": "Cruise requirement: 1,200 nmi at 8,000 ft and 200 KTAS.",
+
+      "_src_loiter": "45-minute design loiter at 4,000 ft and 120 KTAS. Reserve fuel is applied separately on top of the full mission."
+
+    }
+  }
+}
