@@ -1,18 +1,8 @@
-# IHW2 starter pack — Constraint Analysis
+# IHW2  — Constraint Analysis
 
 **AOE 4065 · Test Twin Propeller Aircraft (TTPA)**
 
-Put every file of this folder in ONE working folder and set MATLAB's Current Folder to
-it. Everything then runs with no `addpath`.
-
-> **Do not put your IHW1 folder on the path at the same time.** Both folders hold a file
-> called `TtpaAero.m` and a file called `TtpaProp.m`, and MATLAB would silently use
-> whichever one it finds first. Work in this folder only. The IHW2 versions of those two
-> classes are the ones you extend here.
-
----
-
-## What is given (do not modify)
+Given
 
 | File | What it does |
 | --- | --- |
