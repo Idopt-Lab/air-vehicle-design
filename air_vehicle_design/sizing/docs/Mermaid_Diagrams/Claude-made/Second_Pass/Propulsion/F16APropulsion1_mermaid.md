@@ -22,10 +22,23 @@ there is no second copy of the diagram to keep in step.
 - EVERY arrow carries a label naming the exact value it moves.
 - There is no "Inputs" block. The constructor's outgoing arrows carry the
   field names.
-- The constructor is cyan. Every other function is green. Yellow dashed marks
-  a getter that calls nothing.
-- Every edge takes the color of the node it POINTS AT.
-- There are NO red nodes. Every static `F16PropL1` reaches is live.
+- **Colour says what kind of member a node is; dash says whether the value was
+  worked on.** A box whose body reads a stored field and returns it is a pure
+  relay, so it is dashed, and so is every line leaving it. A box that evaluates
+  an equation, reads a table, or combines its inputs is solid.
+- **A line's colour comes from the node it POINTS AT; its dash comes from the
+  node it LEAVES.** A file source node is not a method, so it takes the dash of
+  the constructor it feeds.
+- **Constructor cyan. Every other function green. An INJECTOR, meaning any
+  `get.<name>` property getter, is MAGENTA**, so a derived read is identifiable
+  at a glance. Magenta beats every other node colour, and an injector is EXEMPT
+  from the `no toolbox call` marker, because for a getter that is the normal
+  case.
+- ONE RED NODE. `tsfc_mattingly_hibpr_raw` is a `PropL1` static that
+  `F16PropL1` never calls, so it is NO UPSTREAM CALL: black fill, red dashed
+  border, and NO CONNECTOR, because drawing one would assert a flow that does
+  not happen. It is live and correct, and `b777_metabook_comparison` reaches
+  it. Every other static this class names is called.
 - The METHOD PAIRS ARE GONE. The first pass showed `thrust_lapse` beside
   `get_thrust_lapse` and `get_TSFC` beside `lookup_TSFC`, because two
   contracts named the same quantity twice. `PropulsionModelL1` now supplies a
@@ -65,7 +78,7 @@ flowchart TD
         T1["lookup_lapse_exponent(engine_type)<br/>exponent m per engine class"]
         T2["sigma_lapse(rho, m)<br/>alpha = (rho/rho_SL)^m"]
         T3["lookup_TSFC_table(engine_type)<br/>Raymer 6th ed. Table 3.3"]
-        T4["tsfc_mattingly_hibpr_raw(M, theta)<br/>Mattingly high-BPR TSFC"]
+        T4["tsfc_mattingly_hibpr_raw(M, theta)<br/>NO UPSTREAM CALL at L1<br/>Mattingly high-BPR TSFC"]
     end
 
     J -->|"propulsion: engine_type = low_bypass_turbofan_AB,<br/>T_SL = 23770 lbf"| CTOR
@@ -83,15 +96,18 @@ flowchart TD
     M4 -->|"lookup_TSFC_table: engine_type"| T3
 
     linkStyle 0 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 1 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:4 3
+    linkStyle 1 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
     linkStyle 2,3,4,5,6,7,8,9,10 stroke:#33cc33,color:#33cc33,stroke-width:2px
 
-    classDef ctor fill:#000000,stroke:#00e5ff,stroke-width:3px,color:#00e5ff
-    classDef func fill:#000000,stroke:#33cc33,stroke-width:2px,color:#33cc33
-    classDef passthrough fill:#000000,stroke:#ffe100,stroke-width:2px,color:#ffe100,stroke-dasharray: 4 3
-    class CTOR ctor
-    class M1,M2,M3,M4,T1,T2,T3,T4 func
-    class D1 passthrough
+    classDef ctorWork fill:#000000,stroke:#00e5ff,stroke-width:3px,color:#00e5ff
+    classDef funcWork fill:#000000,stroke:#33cc33,stroke-width:2px,color:#33cc33
+    classDef injectorWork fill:#000000,stroke:#ff44cc,stroke-width:3px,color:#ff44cc
+    classDef injectorRelay fill:#000000,stroke:#ff44cc,stroke-width:3px,color:#ff44cc,stroke-dasharray: 5 4
+    classDef deadWork fill:#000000,stroke:#ff4040,stroke-width:3px,color:#ff4040
+    class CTOR ctorWork
+    class M1,M2,M3,M4,T1,T2,T3 funcWork
+    class D1 injectorRelay
+    class T4 deadWork
 ```
 
 ## Field-by-field notes
