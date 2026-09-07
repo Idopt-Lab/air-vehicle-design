@@ -92,9 +92,9 @@ W_avionics_brandt = gt_weights.engine_and_systems.avionics.value;   % 2541.54 [B
 
 % ── L1: tabulation only ──────────────────────────────────────────────── %
 s1 = F16SubsystemsL1(f16a_spec_path(1));
-r1_internal_volume = s1.internal_volume(OEW_brandt);
-r1_avionics_volume = s1.avionics_volume(OEW_brandt);
-r1_avionics_weight  = s1.avionics_weight(OEW_brandt);
+r1_internal_volume = s1.get_internal_volume(OEW_brandt);   % Mod (09/07/2026) (Claude)
+r1_avionics_volume = s1.get_avionics_volume(OEW_brandt);   % Mod (09/07/2026) (Claude)
+r1_avionics_weight  = s1.get_avionics_weight(OEW_brandt);  % Mod (09/07/2026) (Claude)
 r1_fuel_check       = s1.fuel_volume_check(W_fuel_brandt);
 
 % ── L2: geometry-derived ─────────────────────────────────────────────── %

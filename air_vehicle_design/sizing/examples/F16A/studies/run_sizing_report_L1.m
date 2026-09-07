@@ -12,8 +12,8 @@
 %   Mach/altitude (diagnostic -- MissionAnalysisL1 uses the injected aero drag
 %   polar on its Breguet cruise/dash/loiter/combat legs; the fixed-fraction
 %   startup/taxi/takeoff/climb/landing legs use Roskam fractions instead)
-% * A note on why no internal fuel-volume check is available at this
-%   fidelity level
+% * Subsystems (F16SubsystemsL1): avionics weight, and the fuel/avionics
+%   volume breakdown
 %
 % NOTE ON FILE FORMAT: this file is authored as a plain .m script with
 % Live-Editor-compatible "%%" section breaks (same convention MATLAB uses
@@ -36,6 +36,11 @@
 
 W_TO_guess = 30000;
 [result, objs] = f16_sizing_L1(W_TO_guess);
+
+% Mod (09/07/2026) (Claude)
+% f16_sizing_L1 builds no subsystems object, so make one from the same L1
+% spec file. L1 subsystems is a tabulation tier: no geometry, no collaborators.
+subs = F16SubsystemsL1(f16a_spec_path(1));
 
 % (WS_opt, TW_opt) = the constraint-diagram-optimal wing-loading/thrust-
 % ratio SizingLoopL1.run() solves ONCE (before iterating, via
@@ -103,14 +108,23 @@ title(sprintf('F-16A Level 1 Sizing Convergence (S_{ref} = W_{TO}/(W/S)_{opt}, (
 OEW_final  = result.history(end).W_OEW;
 Fuel_final = result.history(end).W_fuel;
 
-weightLabelList = {'OEW', 'Mission Fuel', 'Fixed Payload', 'Expendable Payload'};
+% Avionics weight is a FRACTION OF OEW [Raymer Table 11.6]. Its bar is a
+% subset of the OEW bar, not a fifth item to add to it.
+% Mod (09/07/2026) (Claude)
+W_avionics = subs.get_avionics_weight(OEW_final);
+
+weightLabelList = {'OEW', 'Mission Fuel', 'Fixed Payload', 'Expendable Payload', 'Avionics (in OEW)'};
 weightLabels = categorical(weightLabelList, weightLabelList, 'Ordinal', true);
-weightValues = [OEW_final, Fuel_final, objs.wts.W_payload_fixed, objs.wts.W_payload_expendable];
+weightValues = [OEW_final, Fuel_final, objs.wts.W_payload_fixed, ...
+    objs.wts.W_payload_expendable, W_avionics];
 
 figure('Name', 'L1 Weight Breakdown');
 bar(weightLabels, weightValues);
 grid on; ylabel('Weight [lbf]');
 title('F-16A Level 1 Weight Breakdown (OEW is a single Table 3.1 regression, not a component buildup)');
+
+fprintf('\nAvionics weight = %.1f lbf = %.4f of OEW %.1f lbf [Raymer 6th ed. Table 11.6, row ''%s'']\n', ...
+    W_avionics, subs.avionics_weight_fraction, OEW_final, subs.avionics_table_row);
 
 %% Mission fuel burned by segment
 % MissionAnalysisL1.total_fuel returns the per-segment breakdown (names,
@@ -154,14 +168,37 @@ figure('Name', 'L1 L/D by Mission Segment');
 bar(categorical(seg_names(:), seg_names(:), 'Ordinal', true), LD(:));
 grid on; ylabel('L/D'); title('F-16A Level 1 L/D by Mission Segment (from the mission fuel closure)');
 
-%% Internal fuel-volume check
-% NOT MODELED AT L1: F16WeightsL1 carries no fuel-tank-volume inputs (no
-% V_t/V_i/V_p) -- those only exist on F16WeightsL3 (see
-% run_sizing_report_L3.m). L1's weight model is a single empty-weight
-% regression with no internal-geometry/volume representation at all.
-fprintf('\nInternal fuel-volume check: not modeled at L1 (no V_t/V_i/V_p on F16WeightsL1; see F16WeightsL3 at L3).\n');
+%% Volume breakdown (fuel required, avionics)
+% F16SubsystemsL1 converts a weight to a volume with its cited densities:
+% fuel [Nicolai & Carichner Table 8.6] and avionics [Raymer 6th ed. Ch.11
+% p.375]. AVAILABLE volume is honestly 0 at L1 -- the tier has no fuselage
+% or fuel-bay geometry -- so the check reports the volume NEEDED, never
+% whether the airframe holds it. That needs L2/L3 geometry.
+% Mod (09/07/2026) (Claude)
+
+fuel_check   = subs.fuel_volume_check(Fuel_final);
+vol_avionics = subs.get_avionics_volume(OEW_final);
+
+volLabelList = {'Fuel Required', 'Avionics'};
+volLabels = categorical(volLabelList, volLabelList, 'Ordinal', true);
+volValues = [fuel_check.required_vol_ft3, vol_avionics];
+
+figure('Name', 'L1 Volume Breakdown');
+bar(volLabels, volValues);
+grid on; ylabel('Volume [ft^3]');
+title('F-16A Level 1 Volume Breakdown (required volumes; L1 has no available-volume geometry)');
+
+fprintf('\nRequired fuel volume  = %.2f ft^3 (%.1f lbf at %.1f lb/ft^3, %s)\n', ...
+    fuel_check.required_vol_ft3, Fuel_final, subs.fuel_density, subs.fuel_type);
+fprintf('Avionics volume       = %.2f ft^3 (%.1f lbf at %.1f lb/ft^3)\n', ...
+    vol_avionics, W_avionics, subs.avionics_density);
+fprintf('Available fuel volume = %.2f ft^3 -- no fuel-bay geometry at L1, so sufficient = %d\n', ...
+    fuel_check.available_vol_ft3, fuel_check.sufficient);
 
 %% Final summary
 fprintf('\n=== F-16A Level 1 Final Summary ===\n');
 fprintf('  W_TO = %.1f lbf, OEW = %.1f lbf, W_fuel = %.1f lbf, S_ref = %.2f ft^2, T_SL = %.1f lbf\n', ...
     result.W_TO, OEW_final, Fuel_final, result.S_ref, result.T_SL);
+% Mod (09/07/2026) (Claude)
+fprintf('  W_avionics = %.1f lbf, V_avionics = %.2f ft^3, V_fuel required = %.2f ft^3\n', ...
+    W_avionics, vol_avionics, fuel_check.required_vol_ft3);

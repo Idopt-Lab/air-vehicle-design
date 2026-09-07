@@ -63,55 +63,62 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
         end
 
         % ================================================================== %
-        % Methods required by the abstract contract that take a genuine
-        % external argument -- each a single delegation into the SubsystemsL1
-        % static toolbox.
+        % Methods required by the abstract contract
         % ================================================================== %
 
-        function val = avionics_weight(obj, W_empty)
-            val = SubsystemsL1.avionics_weight(obj, W_empty);
+        function val = get_avionics_weight_categorical(obj, W_empty)
+            range = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
+            avi_WF = mean(range);
+            val = SubsystemsL1.compute_avionics_weight(avi_WF, W_empty);
         end
 
-        function val = avionics_volume(obj, W_empty)
-            val = SubsystemsL1.avionics_volume(obj, W_empty);
+        function vol_avionics = get_avionics_volume_categorical(obj, W_empty)
+            W_avionics = obj.get_avionics_weight_categorical(W_empty);
+            vol_avionics = SubsystemsL1.compute_avionics_volume(W_avionics);
         end
 
         function val = fuel_volume_from_weight(obj, fuel_weight_lb)
-            val = SubsystemsL1.fuel_volume_from_weight(obj, fuel_weight_lb);
+        %FUEL_VOLUME_FROM_WEIGHT  No packaging factor: L1 has no raw volume.
+            val = SubsystemsBase.weight_to_volume(fuel_weight_lb, obj.fuel_density);
         end
 
-        function val = internal_volume(obj, W_empty)
-            val = SubsystemsL1.internal_volume(obj, W_empty);
+        function val = get_internal_volume(obj, W_empty)
+        %GET_INTERNAL_VOLUME  Avionics volume only: no fuel or gear bay at L1.
+            val = obj.get_avionics_volume_categorical(W_empty);
         end
 
         function result = fuel_volume_check(obj, required_weight_lb)
-            result = SubsystemsL1.fuel_volume_check(obj, required_weight_lb);
+        %FUEL_VOLUME_CHECK  Available is honestly 0: L1 has no fuel-bay geometry.
+            required_vol = obj.fuel_volume_from_weight(required_weight_lb);
+            result = struct('available_vol_ft3', 0, ...
+                            'required_vol_ft3',  required_vol, ...
+                            'sufficient',        required_vol <= 0);
         end
 
         % ================================================================== %
-        % DERIVED-property getters required by the abstract contract -- each a
-        % single delegation into the SubsystemsL1 static toolbox, recomputed
-        % live on every read.
+        % DERIVED-property getters required by the abstract contract --
+        % recomputed live on every read.
+        % Mod (09/07/2026) (Claude)
         % ================================================================== %
 
         function val = get.avionics_weight_fraction(obj)
-            val = SubsystemsL1.avionics_weight_fraction(obj);
+            val = mean(SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row));
         end
 
         function val = get.avionics_density(obj)
-            val = SubsystemsL1.avionics_density(obj);
+            val = SubsystemsL1.AVIONICS_DENSITY;
         end
 
         function val = get.fuel_density(obj)
-            val = SubsystemsL1.fuel_density(obj);
+            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
         end
 
-        function val = get.fuselage_raw_volume(obj)
-            val = SubsystemsL1.fuselage_raw_volume(obj);
+        function val = get.fuselage_raw_volume(obj) %#ok<MANU>
+            val = 0;   % L1 has no fuselage geometry
         end
 
-        function val = get.fuel_volume(obj)
-            val = SubsystemsL1.fuel_volume(obj);
+        function val = get.fuel_volume(obj) %#ok<MANU>
+            val = 0;   % L1 has no fuel-bay geometry
         end
 
     end

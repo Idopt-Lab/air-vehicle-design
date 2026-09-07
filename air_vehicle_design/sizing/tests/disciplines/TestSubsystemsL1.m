@@ -16,12 +16,10 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 %
 %   L1 is tabulation-only (Fidelity split): no geometry, no fuel-tank
 %   packaging factor, no landing-gear counterpart.
-%   Methods needing an external weight (W_empty, a required fuel weight)
-%   take it as an explicit argument rather than reading an injected object,
-%   so most high-level toolbox calls below use a lightweight STRUCT standing
-%   in for "obj" (dot-indexing into a plain struct works identically to a
-%   real object field read, and keeps these tests independent of any
-%   production Tier-3 class's JSON-reading machinery).
+%   No SubsystemsL1 static takes a design object any more, so every toolbox
+%   test below calls with LITERALS. A test that needs a design object's own
+%   wiring builds a real F16SubsystemsL1 instead of a stand-in struct.
+%   Mod (09/07/2026) (Claude)
 %
 %   Sources: fuel-type density / packaging factors [Nicolai & Carichner
 %   Ch.8, p.210]; avionics weight fraction [Raymer 6th ed. Table 11.6,
@@ -46,22 +44,22 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testLookupFuelDensityAllFourTypes(tc)
         % [Nicolai & Carichner Table 8.6, p.210] lb/ft^3 by type.
-            received = SubsystemsL1.lookup_fuel_density('JP-4');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-4');
             expected = 48.6;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_fuel_density('JP-5');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-5');
             expected = 51.1;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (JP-5): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_fuel_density('JP-8');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-8');
             expected = 50.0;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_fuel_density('Aviation gas');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('Aviation gas');
             expected = 44.9;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (Aviation gas): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -70,7 +68,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testLookupFuelDensityUnknownTypeErrors(tc)
             expectedErrId = 'SubsystemsL1:unknownFuelType';
             try
-                SubsystemsL1.lookup_fuel_density('Diesel');
+                SubsystemsBase.lookup_fuel_density_lb_per_ft_3('Diesel');
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -79,28 +77,28 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             end
             fprintf('  [L1] testLookupFuelDensityUnknownTypeErrors: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL1.lookup_fuel_density('Diesel'), ...
+            tc.verifyError(@() SubsystemsBase.lookup_fuel_density_lb_per_ft_3('Diesel'), ...
                 expectedErrId);
         end
 
         function testLookupFuelDensityLbPerGalAllFourTypes(tc)
         % [Nicolai & Carichner Table 8.6, p.210] lb/gal by type.
-            received = SubsystemsL1.lookup_fuel_density_lb_per_gal('JP-4');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('JP-4');
             expected = 6.5;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_fuel_density_lb_per_gal('JP-5');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('JP-5');
             expected = 6.8;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (JP-5): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_fuel_density_lb_per_gal('JP-8');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('JP-8');
             expected = 6.7;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_fuel_density_lb_per_gal('Aviation gas');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('Aviation gas');
             expected = 6.0;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (Aviation gas): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -109,7 +107,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testLookupFuelDensityLbPerGalUnknownTypeErrors(tc)
             expectedErrId = 'SubsystemsL1:unknownFuelType';
             try
-                SubsystemsL1.lookup_fuel_density_lb_per_gal('Diesel');
+                SubsystemsBase.lookup_fuel_density_lb_per_gal('Diesel');
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -118,7 +116,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             end
             fprintf('  [L1] testLookupFuelDensityLbPerGalUnknownTypeErrors: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL1.lookup_fuel_density_lb_per_gal('Diesel'), ...
+            tc.verifyError(@() SubsystemsBase.lookup_fuel_density_lb_per_gal('Diesel'), ...
                 expectedErrId);
         end
 
@@ -160,27 +158,29 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testLookupAvionicsWeightFractionIsRangeMidpoint(tc)
         % DECIDED (Casey, 2026-08-03): the row's own range midpoint, not the
-        % legacy code's low-end 0.03. Hand-computed midpoints:
+        % legacy code's low-end 0.03. The toolbox returns the RANGE and the
+        % caller takes the midpoint. Mod (09/07/2026) (Claude)
+        % Hand-computed midpoints:
         %   Fighters:      (0.03+0.08)/2 = 0.055
         %   Jet transport: (0.01+0.02)/2 = 0.015
         %   Business jet:  (0.04+0.05)/2 = 0.045
-            received = SubsystemsL1.lookup_avionics_weight_fraction('Fighters');
+            received = mean(SubsystemsL1.lookup_avionics_weight_fraction_range('Fighters'));
             expected = 0.055;
             fprintf('  [L1] testLookupAvionicsWeightFractionIsRangeMidpoint (Fighters): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_avionics_weight_fraction('Jet transport');
+            received = mean(SubsystemsL1.lookup_avionics_weight_fraction_range('Jet transport'));
             expected = 0.015;
             fprintf('  [L1] testLookupAvionicsWeightFractionIsRangeMidpoint (Jet transport): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsL1.lookup_avionics_weight_fraction('Business jet');
+            received = mean(SubsystemsL1.lookup_avionics_weight_fraction_range('Business jet'));
             expected = 0.045;
             fprintf('  [L1] testLookupAvionicsWeightFractionIsRangeMidpoint (Business jet): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
             % Regression guard: must NOT have regressed to the legacy low-end pick.
-            received = SubsystemsL1.lookup_avionics_weight_fraction('Fighters');
+            received = mean(SubsystemsL1.lookup_avionics_weight_fraction_range('Fighters'));
             notExpected = 0.03;
             fprintf('  [L1] testLookupAvionicsWeightFractionIsRangeMidpoint (regression guard, Fighters): notExpected=%.6g, received=%.6g\n', notExpected, received);
             tc.verifyNotEqual(received, notExpected, ...
@@ -194,8 +194,10 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % ================================================================== %
 
         function testAvionicsWeightFractionHighLevel(tc)
-            obj = struct('avionics_table_row', 'Fighters');
-            received = SubsystemsL1.avionics_weight_fraction(obj);
+        % The design class joins lookup and midpoint, so assert its wiring:
+        % the JSON's 'Fighters' row must give the Table 11.6 midpoint.
+        % Mod (09/07/2026) (Claude)
+            received = F16SubsystemsL1(f16a_spec_path(1)).avionics_weight_fraction;
             expected = 0.055;
             fprintf('  [L1] testAvionicsWeightFractionHighLevel: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -205,8 +207,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % [Raymer 6th ed. Ch.11 p.375 prose]: "about 30-45 lb/ft^3" -> mean = 37.5.
         % Distinct from L2/L3's flat Nicolai 45 -- this is the fidelity-split
         % guard.
-            obj = struct();   % avionics_density(obj) does not read obj at L1
-            received = SubsystemsL1.avionics_density(obj);
+            received = SubsystemsL1.AVIONICS_DENSITY;   % Mod (09/07/2026) (Claude)
             expected = 37.5;
             fprintf('  [L1] testAvionicsDensityL1IsRaymerRangeAverage: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -221,8 +222,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % W_avionics = fraction * W_empty. Fighters fraction = 0.055.
         %   W_empty = 10,000 lb (independently chosen, NOT the F-16's own
         %   OEW) -> 0.055*10000 = 550 lbf exactly.
-            obj = struct('avionics_table_row', 'Fighters');
-            received = SubsystemsL1.avionics_weight(obj, 10000);
+            received = SubsystemsL1.compute_avionics_weight(0.055, 10000);   % Mod (09/07/2026) (Claude)
             expected = 550;
             fprintf('  [L1] testAvionicsWeightHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -230,22 +230,23 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testAvionicsVolumeHandComputed(tc)
         % Vol = W_avionics / density = 550 / 37.5 = 14.6666666667 ft^3 (= 44/3).
-            obj = struct('avionics_table_row', 'Fighters');
             expected = 44/3;
-            received = SubsystemsL1.avionics_volume(obj, 10000);
+            received = SubsystemsL1.compute_avionics_volume(550);   % Mod (09/07/2026) (Claude)
             fprintf('  [L1] testAvionicsVolumeHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         function testFuelDensityHighLevel(tc)
-            obj = struct('fuel_type', 'JP-8');
-            received = SubsystemsL1.fuel_density(obj);
+        % Design-class wiring: fuel_type selects the Table 8.6 row.
+        % Mod (09/07/2026) (Claude)
+            obj = F16SubsystemsL1(f16a_spec_path(1));
+            received = obj.fuel_density;
             expected = 50.0;
             fprintf('  [L1] testFuelDensityHighLevel (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
             obj.fuel_type = 'JP-4';
-            received = SubsystemsL1.fuel_density(obj);
+            received = obj.fuel_density;
             expected = 48.6;
             fprintf('  [L1] testFuelDensityHighLevel (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -257,25 +258,26 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         %   JP-8: 500 / 50.0  = 10.0 ft^3 exactly.
         %   JP-4: 486 / 48.6  = 10.0 ft^3 exactly (chosen so both cases give
         %   a clean round number, independent of each other).
-            obj = struct('fuel_type', 'JP-8');
-            received = SubsystemsL1.fuel_volume_from_weight(obj, 500);
+            obj = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            received = obj.fuel_volume_from_weight(500);
             expected = 10.0;
             fprintf('  [L1] testFuelVolumeFromWeightHandComputed (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
             obj.fuel_type = 'JP-4';
-            received = SubsystemsL1.fuel_volume_from_weight(obj, 486);
+            received = obj.fuel_volume_from_weight(486);
             expected = 10.0;
             fprintf('  [L1] testFuelVolumeFromWeightHandComputed (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         function testInternalVolumeL1EqualsAvionicsVolumeOnly(tc)
-        % L1 has no fuel-bay/gear-bay geometry -- internal_volume() must be
-        % EXACTLY the avionics term, no more, no less (Fidelity split).
-            obj = struct('avionics_table_row', 'Fighters');
-            received = SubsystemsL1.internal_volume(obj, 10000);
-            expected = SubsystemsL1.avionics_volume(obj, 10000);
+        % L1 has no fuel-bay/gear-bay geometry -- get_internal_volume() must
+        % be EXACTLY the avionics term, no more, no less (Fidelity split).
+        % Mod (09/07/2026) (Claude)
+            obj = F16SubsystemsL1(f16a_spec_path(1));
+            received = obj.get_internal_volume(10000);
+            expected = obj.get_avionics_volume(10000);
             fprintf('  [L1] testInternalVolumeL1EqualsAvionicsVolumeOnly: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
@@ -284,8 +286,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % No fuel-bay geometry exists at L1 -- 'available' must be reported
         % as 0, not guessed, while 'required' is still computed so a caller
         % can see how much volume WOULD be needed.
-            obj    = struct('fuel_type', 'JP-8');
-            result = SubsystemsL1.fuel_volume_check(obj, 500);
+            obj    = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            result = obj.fuel_volume_check(500);
 
             received = result.available_vol_ft3;
             expected = 0;
@@ -303,8 +305,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         end
 
         function testFuelVolumeCheckL1TrivialSufficientAtZeroRequired(tc)
-            obj    = struct('fuel_type', 'JP-8');
-            result = SubsystemsL1.fuel_volume_check(obj, 0);
+            obj    = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            result = obj.fuel_volume_check(0);
             fprintf('  [L1] testFuelVolumeCheckL1TrivialSufficientAtZeroRequired (sufficient): expected=true, received=%s\n', mat2str(result.sufficient));
             tc.verifyTrue(result.sufficient, ...
                 'Zero required fuel is the one case L1''s zero-available check can honestly call sufficient.');
@@ -314,8 +316,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % No fuselage geometry exists at L1 (SubsystemsBase.m header note,
         % 2026-08-03) -- 0, not guessed. Declared on SubsystemsBase so every
         % fidelity level provides this member.
-            obj = struct();   % fuselage_raw_volume(obj) does not read obj at L1
-            received = SubsystemsL1.fuselage_raw_volume(obj);
+            obj = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            received = obj.fuselage_raw_volume;
             expected = 0;
             fprintf('  [L1] testFuselageRawVolumeL1IsHonestlyZero: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -325,8 +327,8 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % No fuel-bay geometry exists at L1 -- same rationale as
         % fuselage_raw_volume. Must equal fuel_volume_check's own
         % available_vol_ft3 answer (also 0 at L1).
-            obj = struct();
-            received = SubsystemsL1.fuel_volume(obj);
+            obj = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            received = obj.fuel_volume;
             expected = 0;
             fprintf('  [L1] testFuelVolumeL1IsHonestlyZero: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);

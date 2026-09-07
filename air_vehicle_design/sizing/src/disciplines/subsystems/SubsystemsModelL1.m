@@ -23,12 +23,22 @@ classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
     methods (Abstract)
 
         %AVIONICS_WEIGHT  W_avionics = fraction * W_empty [lbf].
-        val = avionics_weight(obj, W_empty)
+        val = get_avionics_weight_categorical(obj, W_empty)
 
         %AVIONICS_VOLUME  W_avionics / avionics_density [ft^3]. MUST be
         %   summed into internal_volume() -- see SubsystemsBase header.
-        val = avionics_volume(obj, W_empty)
+        val = get_avionics_volume_categorical(obj, W_empty)
 
+    end
+
+    methods
+        function v = get_avionics_weight(obj, W_empty)
+            v = obj.get_avionics_weight_categorical(W_empty);
+        end
+
+        function v = get_avionics_volume(obj, W_empty)
+            v = obj.get_avionics_volume_categorical(W_empty);
+        end
     end
 
 end
