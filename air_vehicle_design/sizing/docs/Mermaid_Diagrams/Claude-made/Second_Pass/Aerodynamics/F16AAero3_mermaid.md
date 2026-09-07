@@ -10,14 +10,32 @@ M 1.2.
 L3 stores no geometry number. Six wetted areas, five reference lengths and the
 whole planform are read live off the injected geometry object.
 
+## Viewing this chart with pan and zoom
+
+Mermaid inside a `.md` renders at a fixed size, so a wide chart is hard to read
+in a plain preview. Open `docs/Mermaid_Diagrams/viewer.html` and drag this file
+onto it. Wheel or pinch zooms, drag pans, and `f` fits.
+
+The viewer reads the first mermaid fenced block straight out of this file, so
+there is no second copy of the diagram to keep in step.
+
 **Read this first.**
 - The chart runs LEFT TO RIGHT.
 - EVERY arrow carries a label naming the exact value it moves.
 - There is no "Inputs" block. The constructor's outgoing arrows carry the field
   names.
-- The constructor is cyan. Every other function is green. Yellow dashed marks a
-  getter or method that calls nothing. RED means calling it ERRORS.
-- Every edge takes the color of the node it POINTS AT.
+- **Colour says what kind of member a node is; dash says whether the value was
+  worked on.** A box whose body reads a stored field and returns it is a pure
+  relay, so it is dashed, and so is every line leaving it. A box that evaluates
+  an equation, reads a table, or combines its inputs is solid.
+- **A line's colour comes from the node it POINTS AT; its dash comes from the
+  node it LEAVES.** A file source node is not a method, so it takes the dash of
+  the constructor it feeds.
+- **Constructor cyan. Every other function green. An INJECTOR, meaning any
+  `get.<name>` property getter, is MAGENTA**, so a derived read is identifiable
+  at a glance. Magenta beats every other node colour, and an injector is EXEMPT
+  from the `no toolbox call` marker, because for a getter that is the normal
+  case. RED means calling it ERRORS.
 - THERE ARE TWO RED NODES, and they are the headline. `get_CD0_LandP` and
   `get_CD0_misc` are EMPTY function bodies. They satisfy the `AeroModelL3`
   abstract contract and assign no output, so calling either raises "Output
@@ -57,22 +75,32 @@ flowchart LR
 
         CTOR["Constructor<br/>F16AeroL3(geom, json_path)<br/>in: geom, json_path<br/>out: airfoil block, per-component constants,<br/>k, E_WD, CD0_LandP, Dq areas,<br/>stored geom handle"]
 
-        subgraph DERG["Derived reads (no computation)"]
-            R1["get.S_ref<br/>in: geom<br/>out: 300.0 ft^2"]
-            R2["get.AR_wing, get.LE_sweep_wing, get.QC_sweep_wing, get.lambda_wing<br/>in: geom<br/>out: planform scalars"]
+        subgraph DERG["Injected planform (pure relays)"]
+            R1["get.S_ref<br/>in: geom.S_ref<br/>out: S_ref"]
+            RA["get.AR_wing<br/>in: geom.AR_wing<br/>out: AR_wing"]
+            RL["get.LE_sweep_wing<br/>in: geom.LE_sweep_wing<br/>out: LE_sweep_wing"]
+            RQ["get.QC_sweep_wing<br/>in: geom.QC_sweep_wing<br/>out: QC_sweep_wing"]
+            RT["get.lambda_wing<br/>in: geom.lambda_wing<br/>out: lambda_wing"]
         end
 
-        subgraph DERS["Per-surface wetted areas"]
-            A1["get.S_wet_wing, get.S_wet_ht, get.S_wet_vt<br/>in: geom<br/>out: three surface wetted areas"]
-            A2["get.S_wet_strake, get.S_wet_duct, get.S_wet_fuselage<br/>in: geom<br/>out: strake, duct and body wetted areas"]
+        subgraph DERS["Per-surface wetted areas (pure relays)"]
+            A1["get.S_wet_wing<br/>in: geom.S_wet_wing<br/>out: S_wet_wing"]
+            A2["get.S_wet_ht<br/>in: geom.S_wet_ht<br/>out: S_wet_ht"]
+            A3["get.S_wet_vt<br/>in: geom.S_wet_vt<br/>out: S_wet_vt"]
+            A4["get.S_wet_strake<br/>in: geom.S_wet_strake<br/>out: S_wet_strake"]
+            A5["get.S_wet_duct<br/>in: geom.S_wet_duct<br/>out: S_wet_duct"]
+            A6["get.S_wet_fuselage<br/>in: geom.S_wet_fuselage<br/>out: S_wet_fuselage"]
         end
 
         subgraph DERC["Derived component arrays"]
             B1["get.S_wet_comp<br/>in: the six surface getters<br/>out: 6-vector, sum 1472.0228 ft^2"]
             B2["get.l_ref_comp<br/>in: geom<br/>out: 6-vector of reference lengths"]
-            B3["get.D_comp, get.tc_comp, get.Lambda_m_comp<br/>in: geom, tc inputs<br/>out: 6-vectors"]
+            B3["get.D_comp<br/>in: geom.D_fus, geom.D_inlet<br/>out: 6-vector of component diameters"]
+            B6["get.tc_comp<br/>in: geom tc inputs<br/>out: 6-vector of component t/c"]
+            B7["get.Lambda_m_comp<br/>in: geom sweeps<br/>out: 6-vector of max-thickness sweeps"]
             B4["get.CD0_misc<br/>in: Dq_gun_port, Dq_hook_USAF, S_ref<br/>out: miscellaneous CD0"]
-            B5["get.Amax_ft2, get.L_aircraft_ft<br/>in: geom<br/>out: 24.7037 ft^2 area-ruled, 47.65 ft"]
+            B5["get.Amax_ft2<br/>in: geom<br/>out: area-ruled Amax"]
+            B8["get.L_aircraft_ft<br/>in: geom.L_aircraft<br/>out: L_aircraft_ft"]
         end
 
         subgraph POLAR["Drag polar"]
@@ -154,26 +182,43 @@ flowchart LR
     GEOM -->|"geom"| CTOR
 
     GEOM -->|"geom.S_ref"| R1
-    GEOM -->|"geom.AR_wing, LE_sweep_wing, QC_sweep_wing, lambda_wing"| R2
-    GEOM -->|"geom.S_wet_wing, S_wet_ht, S_wet_vt"| A1
-    GEOM -->|"geom.S_wet_strake, S_wet_duct, S_wet_fuselage"| A2
+    GEOM -->|"geom.AR_wing"| RA
+    GEOM -->|"geom.LE_sweep_wing"| RL
+    GEOM -->|"geom.QC_sweep_wing"| RQ
+    GEOM -->|"geom.lambda_wing"| RT
+    GEOM -->|"geom.S_wet_wing"| A1
+    GEOM -->|"geom.S_wet_ht"| A2
+    GEOM -->|"geom.S_wet_vt"| A3
+    GEOM -->|"geom.S_wet_strake"| A4
+    GEOM -->|"geom.S_wet_duct"| A5
+    GEOM -->|"geom.S_wet_fuselage"| A6
 
-    A1 -->|"three surface wetted areas"| B1
-    A2 -->|"strake, duct and body wetted areas"| B1
+    A1 -->|"S_wet_wing"| B1
+    A2 -->|"S_wet_ht"| B1
+    A3 -->|"S_wet_vt"| B1
+    A4 -->|"S_wet_strake"| B1
+    A5 -->|"S_wet_duct"| B1
+    A6 -->|"S_wet_fuselage"| B1
     GEOM -->|"component reference lengths"| B2
-    GEOM -->|"component diameters, t/c, max-thickness sweeps"| B3
+    GEOM -->|"geom.D_fus, geom.D_inlet"| B3
+    GEOM -->|"component t/c inputs"| B6
+    GEOM -->|"component max-thickness sweeps"| B7
     CTOR -->|"Dq_gun_port, Dq_hook_USAF"| B4
     R1 -->|"S_ref"| B4
-    GEOM -->|"geom.Amax, geom.L_aircraft"| B5
+    GEOM -->|"geom.Amax"| B5
+    GEOM -->|"geom.L_aircraft"| B8
+    RT -->|"lambda_wing"| B2
     B2 -->|"compute_mac: c_root, lambda"| Z1
-    B3 -->|"convert_sweep, convert_sweep_panel"| Z2
+    B7 -->|"convert_sweep, convert_sweep_panel"| Z2
 
     ST -->|"state"| P1
     P1 -->|"drag_polar: state, dynamic dispatch"| P2
     P2 -->|"get_CD0_component_buildup: state"| P3
     B1 -->|"S_wet_comp"| P3
     B2 -->|"l_ref_comp"| P3
-    B3 -->|"D_comp, tc_comp, Lambda_m_comp"| P3
+    B3 -->|"D_comp"| P3
+    B6 -->|"tc_comp"| P3
+    B7 -->|"Lambda_m_comp"| P3
     B4 -->|"CD0_misc"| P3
     CTOR -->|"CD0_LandP, k, Q_comp, f_lam_comp, is_body_comp"| P3
     R1 -->|"S_ref"| P3
@@ -187,16 +232,19 @@ flowchart LR
     P3 -->|"compute_Re: state, l_ref"| W10
     P3 -->|"compute_CD0_wave: state, above M 1.2"| P4
     ST -->|"state"| P4
-    B5 -->|"Amax_ft2, L_aircraft_ft"| P4
+    B5 -->|"Amax_ft2"| P4
+    B8 -->|"L_aircraft_ft"| P4
     CTOR -->|"E_WD"| P4
     P4 -->|"flight_regime: state.mach"| W2
 
-    R2 -->|"AR_wing, LE_sweep_wing"| P10
+    RA -->|"AR_wing"| P10
+    RL -->|"LE_sweep_wing"| P10
     P10 -->|"oswald_eff: AR_wing, LE_sweep_wing"| W1
     P1 -->|"drag_polar: M"| P6
     P1 -->|"drag_polar: K1_sub, M"| P7
     P10 -->|"e_osw"| P6
-    R2 -->|"AR_wing, LE_sweep_wing"| P6
+    RA -->|"AR_wing"| P6
+    RL -->|"LE_sweep_wing"| P6
     P6 -->|"flight_regime: M"| W2
     P6 -->|"K1_subsonic, K1_supersonic"| W3
     P7 -->|"K2_value: CL_minD, K1"| W4
@@ -204,11 +252,12 @@ flowchart LR
     P9 -->|"compute_CL_minD: alpha_L0, CL_alpha"| W5
     P9 -->|"get_CL_minD: M"| P8
     CTOR -->|"alpha_L0, cl_alpha_2D"| P8
-    R2 -->|"AR_wing, QC_sweep_wing"| P8
+    RA -->|"AR_wing"| P8
+    RQ -->|"QC_sweep_wing"| P8
     P8 -->|"CL_alpha: AR_wing, QC_sweep_wing, M, cl_alpha_2D"| W6
 
     CTOR -->|"cl_max_2D"| C1
-    R2 -->|"QC_sweep_wing"| C1
+    RQ -->|"QC_sweep_wing"| C1
     C1 -->|"CLmax_clean: cl_max_2D, QC_sweep_wing"| W7
 
     CTOR -->|"eta_out, eta_in, lambda_taper"| F1
@@ -240,18 +289,23 @@ flowchart LR
     X1 -.->|"get_CD0_LandP: empty body"| X2
 
     linkStyle 0,1 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 2,3 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:4 3
-    linkStyle 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 79 stroke:#ff4040,color:#ff4040,stroke-width:2px,stroke-dasharray:5 5
+    linkStyle 2,3,4,5,6,7,8,9,10,11,12,19,20,21,22,23,25,26 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
+    linkStyle 13,14,15,16,17,18,24,27 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
+    linkStyle 30,31,32,33,38,39,41,42,43,44,45,46,47,48,49,50,51,53,54,57,58,59,60,63,64,65,66,67,68,69,72,73,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99 stroke:#33cc33,color:#33cc33,stroke-width:2px
+    linkStyle 28,29,34,35,36,37,40,52,55,56,61,62,70,71,74 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
+    linkStyle 100 stroke:#ff4040,color:#ff4040,stroke-width:2px
 
     classDef dead fill:#000000,stroke:#ff4040,stroke-width:3px,color:#ff4040,stroke-dasharray: 6 4
-    classDef ctor fill:#000000,stroke:#00e5ff,stroke-width:3px,color:#00e5ff
-    classDef func fill:#000000,stroke:#33cc33,stroke-width:2px,color:#33cc33
-    classDef passthrough fill:#000000,stroke:#ffe100,stroke-width:2px,color:#ffe100,stroke-dasharray: 4 3
-    class CTOR ctor
-    class A1,A2,B1,B2,B3,B4,B5,P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,C1,F1,F2,F3,F4,F5,F6,S1,S2,S3,S4,S5,S6,V1,T1,T2,T3,T4,T5,W1,W2,W3,W4,W5,W6,W7,W8,W9,W10,Z1,Z2,U1 func
-    class R1,R2 passthrough
-    class X1,X2 dead
+    classDef ctorWork fill:#000000,stroke:#00e5ff,stroke-width:3px,color:#00e5ff
+    classDef funcWork fill:#000000,stroke:#33cc33,stroke-width:2px,color:#33cc33
+    classDef injectorWork fill:#000000,stroke:#ff44cc,stroke-width:3px,color:#ff44cc
+    classDef injectorRelay fill:#000000,stroke:#ff44cc,stroke-width:3px,color:#ff44cc,stroke-dasharray: 5 4
+    classDef deadWork fill:#000000,stroke:#ff4040,stroke-width:3px,color:#ff4040
+    class CTOR ctorWork
+    class P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,C1,F1,F2,F3,F4,F5,F6,S1,S2,S3,S4,S5,S6,V1,T1,T2,T3,T4,T5,W1,W2,W3,W4,W5,W6,W7,W8,W9,W10,Z1,Z2,U1 funcWork
+    class B1,B4,B5 injectorWork
+    class R1,RA,RL,RQ,RT,A1,A2,A3,A4,A5,A6,B2,B3,B6,B7,B8 injectorRelay
+    class X1,X2 deadWork
 ```
 
 ## Field-by-field notes
