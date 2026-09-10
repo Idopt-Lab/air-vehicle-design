@@ -74,12 +74,13 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
 
         function vol_avionics = get_avionics_volume_categorical(obj, W_empty)
             W_avionics = obj.get_avionics_weight_categorical(W_empty);
-            vol_avionics = SubsystemsL1.compute_avionics_volume(W_avionics);
+            vol_avionics = SubsystemsBase.compute_avionics_volume(W_avionics, SubsystemsL1.AVIONICS_DENSITY);
         end
 
         function val = fuel_volume_from_weight(obj, fuel_weight_lb)
         %FUEL_VOLUME_FROM_WEIGHT  No packaging factor: L1 has no raw volume.
-            val = SubsystemsBase.weight_to_volume(fuel_weight_lb, obj.fuel_density);
+            fuel_density = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
+            val = fuel_weight_lb/fuel_density;
         end
 
         function val = get_internal_volume(obj, W_empty)

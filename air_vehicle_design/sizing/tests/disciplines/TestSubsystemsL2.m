@@ -14,8 +14,8 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
 %   objects to check the DI plumbing and the optimization-ready property
 %   design, not to re-derive a formula).
 %
-%   Low-level statics (compute_raymer_fuselage_volume, compute_wing_fuel_volume,
-%   compute_envelope_projected_areas, lookup_packaging_factor) take a plain
+%   Low-level statics (compute_fuselage_volume_raymer, compute_wing_fuel_volume_roskam,
+%   compute_envelope_projected_areas, lookup_packaging_factor_nicolai) take a plain
 %   STRUCT standing in for "obj" where the toolbox method only reads
 %   properties (no method calls) -- dot-indexing a struct field behaves
 %   identically to a real object property read. Where a method calls
@@ -49,7 +49,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         function testComputeRaymerFuselageVolumeHandComputed(tc)
         % [Raymer 6th ed. Eq. 7.14]  V = 3.4*(A_top*A_side)/(4*L).
         %   A_top=100, A_side=50, L=20 -> 3.4*5000/80 = 212.5 ft^3 exactly.
-            received = SubsystemsL2.compute_raymer_fuselage_volume(100, 50, 20);
+            received = SubsystemsL2.compute_fuselage_volume_raymer(100, 50, 20);
             expected = 212.5;
             fprintf('  [L2] testComputeRaymerFuselageVolumeHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -58,7 +58,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         function testComputeRaymerFuselageVolumeGuardsPositivity(tc)
             expectedErrId = 'MATLAB:validators:mustBePositive';
             try
-                SubsystemsL2.compute_raymer_fuselage_volume(0, 50, 20);
+                SubsystemsL2.compute_fuselage_volume_raymer(0, 50, 20);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -67,12 +67,12 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             end
             fprintf('  [L2] testComputeRaymerFuselageVolumeGuardsPositivity (A_top=0): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.compute_raymer_fuselage_volume(0, 50, 20), ...
+            tc.verifyError(@() SubsystemsL2.compute_fuselage_volume_raymer(0, 50, 20), ...
                 'MATLAB:validators:mustBePositive');
 
             expectedErrId = 'MATLAB:validators:mustBePositive';
             try
-                SubsystemsL2.compute_raymer_fuselage_volume(100, 50, 0);
+                SubsystemsL2.compute_fuselage_volume_raymer(100, 50, 0);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -81,7 +81,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             end
             fprintf('  [L2] testComputeRaymerFuselageVolumeGuardsPositivity (L=0): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.compute_raymer_fuselage_volume(100, 50, 0), ...
+            tc.verifyError(@() SubsystemsL2.compute_fuselage_volume_raymer(100, 50, 0), ...
                 'MATLAB:validators:mustBePositive');
         end
 
@@ -103,7 +103,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   0.54*(100^2/20)*0.05 = 0.54*500*0.05 = 13.5
         %   fraction = (1+0.25+0.25^2)/(1.25)^2 = 1.3125/1.5625 = 0.84 exactly
         %   V = 13.5*0.84 = 11.34 ft^3 exactly.
-            received = SubsystemsL2.compute_wing_fuel_volume(100, 20, 0.05, 0.05, 0.25);
+            received = SubsystemsL2.compute_wing_fuel_volume_roskam(100, 20, 0.05, 0.05, 0.25);
             expected = 11.34;
             fprintf('  [L2] testComputeWingFuelVolumeUniformTc: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -117,7 +117,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   den = 1.4^2 = 1.96;  fraction = 1.24/1.96 = 31/49
         %   V = 38.88*31/49 = 1205.28/49 = 24.5975510204 ft^3.
             expected = 1205.28/49;
-            received = SubsystemsL2.compute_wing_fuel_volume(150, 25, 0.08, 0.02, 0.4);
+            received = SubsystemsL2.compute_wing_fuel_volume_roskam(150, 25, 0.08, 0.02, 0.4);
             fprintf('  [L2] testComputeWingFuelVolumeVariableTc: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-6);
         end
@@ -135,12 +135,12 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   fraction = 2.44/1.96 = 61/49
         %   V = 9.72*61/49 = 592.92/49 = (243/25)*(61/49) = 14823/1225 = 12.1004081633 ft^3.
             expected_swapped = 14823/1225;
-            received_swapped = SubsystemsL2.compute_wing_fuel_volume(150, 25, 0.02, 0.08, 0.4);
+            received_swapped = SubsystemsL2.compute_wing_fuel_volume_roskam(150, 25, 0.02, 0.08, 0.4);
             fprintf('  [L2] testComputeWingFuelVolumeTauConventionIsTipOverRoot: expected_swapped=%.6g, received_swapped=%.6g\n', expected_swapped, received_swapped);
             tc.verifyEqual(received_swapped, expected_swapped, 'AbsTol', 1e-6);
 
             % The un-swapped (root=0.08, tip=0.02) case from the test above:
-            received_unswapped = SubsystemsL2.compute_wing_fuel_volume(150, 25, 0.08, 0.02, 0.4);
+            received_unswapped = SubsystemsL2.compute_wing_fuel_volume_roskam(150, 25, 0.08, 0.02, 0.4);
             fprintf('  [L2] testComputeWingFuelVolumeTauConventionIsTipOverRoot: swapped=%.6g must differ from unswapped=%.6g\n', received_swapped, received_unswapped);
             tc.verifyNotEqual(received_swapped, received_unswapped, ...
                 ['Swapping tc_r/tc_t must change the result (tau_w = tip/root is direction-' ...
@@ -151,7 +151,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         function testComputeWingFuelVolumeGuardsPositivity(tc)
             expectedErrId = 'MATLAB:validators:mustBePositive';
             try
-                SubsystemsL2.compute_wing_fuel_volume(0, 20, 0.05, 0.05, 0.25);
+                SubsystemsL2.compute_wing_fuel_volume_roskam(0, 20, 0.05, 0.05, 0.25);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -160,12 +160,12 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             end
             fprintf('  [L2] testComputeWingFuelVolumeGuardsPositivity (S=0): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.compute_wing_fuel_volume(0, 20, 0.05, 0.05, 0.25), ...
+            tc.verifyError(@() SubsystemsL2.compute_wing_fuel_volume_roskam(0, 20, 0.05, 0.05, 0.25), ...
                 'MATLAB:validators:mustBePositive');
 
             expectedErrId = 'MATLAB:validators:mustBePositive';
             try
-                SubsystemsL2.compute_wing_fuel_volume(100, 20, 0, 0.05, 0.25);
+                SubsystemsL2.compute_wing_fuel_volume_roskam(100, 20, 0, 0.05, 0.25);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -174,34 +174,34 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             end
             fprintf('  [L2] testComputeWingFuelVolumeGuardsPositivity (tc_r=0): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.compute_wing_fuel_volume(100, 20, 0, 0.05, 0.25), ...
+            tc.verifyError(@() SubsystemsL2.compute_wing_fuel_volume_roskam(100, 20, 0, 0.05, 0.25), ...
                 'MATLAB:validators:mustBePositive');
         end
 
         function testLookupPackagingFactorAllFiveRows(tc)
         % [Nicolai & Carichner, p.210, unnumbered "Fuel Tank Packaging
         % Factors" table]. Full 5-row table.
-            received1 = SubsystemsL2.lookup_packaging_factor('Integral tank — shallow fuselage');
+            received1 = SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — shallow fuselage');
             expected1 = 0.80;
             fprintf('  [L2] testLookupPackagingFactorAllFiveRows: [shallow fuselage] expected=%.6g, received=%.6g\n', expected1, received1);
             tc.verifyEqual(received1, expected1, 'AbsTol', 1e-9);
 
-            received2 = SubsystemsL2.lookup_packaging_factor('Integral tank — deep fuselage');
+            received2 = SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — deep fuselage');
             expected2 = 0.85;
             fprintf('  [L2] testLookupPackagingFactorAllFiveRows: [deep fuselage] expected=%.6g, received=%.6g\n', expected2, received2);
             tc.verifyEqual(received2, expected2, 'AbsTol', 1e-9);
 
-            received3 = SubsystemsL2.lookup_packaging_factor('Integral tank — wing');
+            received3 = SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — wing');
             expected3 = 0.75;
             fprintf('  [L2] testLookupPackagingFactorAllFiveRows: [integral wing] expected=%.6g, received=%.6g\n', expected3, received3);
             tc.verifyEqual(received3, expected3, 'AbsTol', 1e-9);
 
-            received4 = SubsystemsL2.lookup_packaging_factor('Bladder tank — fuselage');
+            received4 = SubsystemsL2.lookup_packaging_factor_nicolai('Bladder tank — fuselage');
             expected4 = 0.75;
             fprintf('  [L2] testLookupPackagingFactorAllFiveRows: [bladder fuselage] expected=%.6g, received=%.6g\n', expected4, received4);
             tc.verifyEqual(received4, expected4, 'AbsTol', 1e-9);
 
-            received5 = SubsystemsL2.lookup_packaging_factor('Bladder tank — wing');
+            received5 = SubsystemsL2.lookup_packaging_factor_nicolai('Bladder tank — wing');
             expected5 = 0.65;
             fprintf('  [L2] testLookupPackagingFactorAllFiveRows: [bladder wing] expected=%.6g, received=%.6g\n', expected5, received5);
             tc.verifyEqual(received5, expected5, 'AbsTol', 1e-9);
@@ -210,7 +210,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         function testLookupPackagingFactorUnknownCategoryErrors(tc)
             expectedErrId = 'SubsystemsL2:unknownPackagingCategory';
             try
-                SubsystemsL2.lookup_packaging_factor('Integral tank — nose');
+                SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — nose');
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -219,7 +219,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             end
             fprintf('  [L2] testLookupPackagingFactorUnknownCategoryErrors: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.lookup_packaging_factor('Integral tank — nose'), ...
+            tc.verifyError(@() SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — nose'), ...
                 'SubsystemsL2:unknownPackagingCategory');
         end
 
@@ -472,7 +472,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         % DELIBERATE TODO -- battery volumetric energy density. NOT a failure
         % to fix -- this test PINS the documented, correctly-erroring
         % citation-gap behavior:
-        % SubsystemsL2.battery_volume must refuse to fabricate a coefficient
+        % SubsystemsL2.compute_battery_volume must refuse to fabricate a coefficient
         % and must error with its documented identifier. If this test ever
         % goes red because battery_volume stops erroring, that means someone
         % implemented a real formula without updating this test -- update
@@ -491,7 +491,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   open (Casey, 2026-08-03) after re-scanning all the
         %   reference-extract files.
         %
-        %   HOW THIS TEST DOCUMENTS IT: SubsystemsL2.battery_volume (and
+        %   HOW THIS TEST DOCUMENTS IT: SubsystemsL2.compute_battery_volume (and
         %   SubsystemsL3.battery_volume, which reuses it identically) is
         %   documented to error rather than fabricate a coefficient. This
         %   test PINS that correct, current behavior with the documented
@@ -506,7 +506,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   doing that.
             expectedErrId = 'SubsystemsL2:batteryVolumetricDensityNotAvailable';
             try
-                SubsystemsL2.battery_volume(struct(), 10);
+                SubsystemsL2.compute_battery_volume(10);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -516,7 +516,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             fprintf(['  [L2] testTODO_BatteryVolumetricEnergyDensityNotInRepo (DELIBERATE TODO, ' ...
                 'EXPECTED to error): expected_error=%s, received_error=%s (%s)\n'], ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.battery_volume(struct(), 10), ...
+            tc.verifyError(@() SubsystemsL2.compute_battery_volume(10), ...
                 'SubsystemsL2:batteryVolumetricDensityNotAvailable', ...
                 ['TODO (documented gap, EXPECTED to error): no citable battery volumetric ' ...
                  'energy density exists in this repo.']);

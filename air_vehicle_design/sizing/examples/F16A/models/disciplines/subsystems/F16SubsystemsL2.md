@@ -1,84 +1,72 @@
 # F16SubsystemsL2
 
-F-16A Block 10/15 Level-2 subsystems student class (`classdef F16SubsystemsL2 < SubsystemsModelL2`).
-Every abstract method is a single delegation line into the `SubsystemsL2` static toolbox — no
-equations are duplicated here. See `src/disciplines/subsystems/SubsystemsL2.md` for the full
-equation/citation detail; this file covers the F-16-specific wiring and the design decisions the
-original step-9 subsystems design left open.
+F-16A Block 10/15 Level-2 subsystems class (`classdef F16SubsystemsL2 < SubsystemsModelL2`).
+Geometry-derived fuel and avionics volumes. Equations live in `SubsystemsL2`; see
+`src/disciplines/subsystems/SubsystemsL2.md`.
 
 ---
 
-## 1. Role
-
-Geometry-derived fuel/avionics volume estimate: fuselage-internal raw volume off the injected L2
-geometry's envelope ellipse, wing-internal volume off the wing planform, avionics volume off a
-weight fraction of `W_empty`.
-
-## 2. Inputs (3) + 2 injected objects
+## 1. Inputs
 
 | Property | Value | Source |
 |---|---|---|
 | `fuel_type` | `'JP-8'` | `f16a_L2.json` `.subsystems.fuel.fuel_type` |
 | `packaging_factor_category` | `'Integral tank — shallow fuselage'` | `f16a_L2.json` `.subsystems.fuel.packaging_factor_category` |
 | `avionics_table_row` | `'Fighters'` | `f16a_L2.json` `.subsystems.avionics.aircraft_category_table_row` |
-| `geom` | injected | `(1,1) GeometryModelL2` — supplies `S_ref`, `b_wing`, `tc_r_wing`, `tc_t_wing`, `lambda_wing` (wing-volume term) and `L_fuselage`, `W_max_fuselage`, `H_max_fuselage` (fuselage-volume term) |
-| `fuel_weight_source` | injected | `(1,1) WeightsBase` — see §3 below |
+| `fuselage_packaging_factor_category` | `'Integral tank — shallow fuselage'` | class default, not read from JSON |
+| `wing_packaging_factor_category` | `'Integral tank — wing'` | class default, not read from JSON |
+| `geom` | injected `(1,1) GeometryModelL2` | wing planform and fuselage envelope |
+| `fuel_weight_source` | injected `(1,1) WeightsBase` | `W_energy` and `W_TO`/`OEW` |
 
-## 3. Judgment call: `fuel_weight_source`
+Constructor `F16SubsystemsL2(json_path, geom, fuel_weight_source)`, all three required, no default.
 
-The original step-9 subsystems design names this constructor argument
-`fuel_weight_source` and says it may be "mission analysis or `F16WeightsL2` — pick whichever exposes
-it most directly," without pinning down which. **No mission-analysis discipline exists in this repo
-yet.** `F16WeightsL2`/`F16WeightsL3` already expose BOTH quantities this class needs:
+`fuel_weight_source` is typed to the `WeightsBase` enforcer, not to `F16WeightsL2`, so one
+collaborator supplies both the required fuel weight and `W_empty`.
 
-- `W_energy` (STATE — the required internal-fuel weight, set by mission analysis once it lands),
-  used by `fuel_volume_check`.
-- `OEW(W_TO)` (via `W_TO`, also STATE), used as `W_empty` for the avionics-weight term.
+## 2. Derived properties
 
-**Decision**: type the injected argument as `(1,1) WeightsBase` (the abstract Tier-1 enforcer, not
-`F16WeightsL2` concretely) so one collaborator serves both roles, matching the DI-guard convention
-used elsewhere (guard at the tier that declares the members actually read — here, `WeightsBase`
-declares both `W_energy` and `W_TO`/`OEW`). This avoids injecting two separate weights-shaped objects
-into one discipline for what is really one underlying "the current candidate weights state" concept.
+Nine `Dependent` getters, recomputed on read: `avionics_weight_fraction`, `avionics_density`,
+`avionics_weight`, `avionics_volume`, `fuel_density`, `fuselage_raw_volume`,
+`fuselage_usable_fuel_volume`, `wing_fuel_volume`, `fuel_volume`. `SubsystemsModelL2` declares
+`avionics_weight`, `avionics_volume` and `wing_fuel_volume` abstract.
 
-## 4. Derived
+## 3. Methods
 
-`battery_volume(E_required_kWh)` stays a method because it takes an externally-varying argument. The
-other eight quantities take zero extra arguments and read only `obj`'s stored inputs / injected
-collaborators (`fuel_type`, `avionics_table_row`, `geom`, `fuel_weight_source`), structurally
-identical to `F16WeightsL2`'s `W_wings`/`W_tail`/`W_fuselage`/... split, so they are
-`properties (Dependent)` getters; `SubsystemsModelL2` declares them as abstract properties.
-`internal_volume` and `fuel_volume_check` remain methods (the Tier-1 orchestrator contract on
-`SubsystemsBase`).
-
-| Member | Kind | Formula |
+| Method | Arguments | Outputs |
 |---|---|---|
-| `avionics_weight_fraction` | Dependent property | Raymer Table 11.6 midpoint, 0.055 |
-| `avionics_density` | Dependent property | 45 lb/ft³ [Nicolai Sec.8.1.11] |
-| `avionics_weight` | Dependent property | fraction × `fuel_weight_source.OEW(fuel_weight_source.W_TO)` |
-| `avionics_volume` | Dependent property | weight / density |
-| `fuel_density` | Dependent property | 50.0 lb/ft³ [Nicolai Table 8.6, JP-8] |
-| `fuselage_raw_volume` | Dependent property | Raymer Eq. 7.14 |
-| `fuselage_usable_fuel_volume` | Dependent property | raw × 0.80 packaging factor |
-| `wing_fuel_volume` | Dependent property | Roskam Eq. 6.2/6.3 |
-| `fuel_volume` | Dependent property (added 2026-08-03, `SubsystemsBase`) | `fuselage_usable_fuel_volume + wing_fuel_volume` — `fuel_volume_check`'s own `available_vol_ft3` figure, exposed as a named property |
-| `fuel_volume_from_weight(fuel_weight_lb)` | Method (added 2026-08-03, `SubsystemsBase`) | `fuel_weight_lb / fuel_density` — the definitional conversion `fuel_volume_check` uses for `required_vol_ft3`; same signature at every level, no packaging factor |
-| `battery_volume(E_required_kWh)` | Method | **ALWAYS ERRORS** — citation GAP; stays a method both because it takes a genuine external argument and because a Dependent getter must never be allowed to throw (MATLAB's object-display machinery evaluates every Dependent getter eagerly) |
-| `internal_volume()` | Method (Tier-1 contract) | `fuel_volume() + avionics_volume()` (gear bay NOT summed, see §5) |
-| `fuel_volume_check()` | Method (Tier-1 contract) | `fuel_volume()` vs. `fuel_volume_from_weight(fuel_weight_source.W_energy)` |
+| `get_total_avionics_weight_statistical` | `W_empty` [lbf] | avionics weight [lbf], Table 11.6 midpoint x `W_empty` |
+| `get_total_avionics_volume_statistical` | `W_empty` [lbf] | avionics volume [ft^3] at 45 lb/ft^3 |
+| `get_wing_fuel_volume_available` | none | wing fuel volume [ft^3] |
+| `get_fuselage_internal_volume` | none | raw fuselage volume [ft^3], no packaging factor |
+| `get_total_fuel_volume_available` | none | wing + packaged fuselage fuel volume [ft^3] |
+| `get_internal_volume` | `W_empty` [lbf] | wing fuel + raw fuselage volume [ft^3] |
+| `battery_volume` | `E_required_kWh` | always errors, citation gap |
+| `fuel_volume_from_weight` | `fuel_weight_lb` [lbf] | volume [ft^3] at `fuel_density` |
+| `internal_volume` | none | total internal volume [ft^3] |
+| `fuel_volume_check` | none | struct: available, required, sufficient |
 
-## 5. Judgment call: landing-gear bay volume is NOT auto-summed into `internal_volume()`
+The avionics weight fraction is the Table 11.6 range midpoint, 0.055 for `Fighters`, not the low
+end. Both avionics methods use `SubsystemsL1`'s fraction lookup and weight equation, since no L2
+equivalent exists, but the density is L2's own 45 lb/ft^3.
 
-The original step-9 design's goal ("producing a bay volume that also feeds the internal-volume total") is
-aspirational and blocked on item 11's citation gap — `F16LandingGearL2.bay_volume()` always errors
-(no textbook tire+strut stowage-volume formula exists anywhere in this repo). Auto-summing an
-always-erroring term into `internal_volume()` would make every call to `internal_volume()` fail hard,
-defeating the purpose of shipping the fuel/avionics volume estimate now. **Decision**: `internal_volume()`
-sums only the two modeled terms (fuel + avionics); a caller wanting the gear-bay contribution once
-item 11 is resolved should call `F16LandingGearL2.bay_volume()` directly and add it in.
+## 4. Landing-gear bay volume is not summed
 
-## 6. Constructor
+`F16LandingGearL2.bay_volume()` always errors: no textbook tire and strut stowage formula exists in
+this repo. Summing it would make every internal-volume call fail. A caller who wants the term calls
+that method directly and adds it.
 
-`F16SubsystemsL2(json_path, geom, fuel_weight_source)` — all three REQUIRED, no silent default
-(mirrors `F16WeightsL2`/`F16GeomL2`'s DI convention — a defaulted injection would silently re-freeze
-geometry or weights data).
+## 5. Known breakage
+
+The class constructs, but these members do not run yet.
+
+| Member | Fault |
+|---|---|
+| `get_wing_fuel_volume_available` | reads `obj.S_ref_wing`, `obj.b_wing`, `obj.tc_r_wing`, `obj.tc_t_wing`, `obj.lambda_wing`; they belong to `obj.geom`, and the first is `S_ref` there |
+| `get_fuselage_internal_volume` | reads `obj.L_fus`, `obj.W_max`, `obj.H_max`; they belong to `obj.geom`, and the last two are `W_max_fuselage` / `H_max_fuselage` |
+| `get_internal_volume` | fails through `get_wing_fuel_volume_available`. Also omits the avionics term the `SubsystemsBase` contract requires, and mixes raw fuselage volume with usable wing volume |
+| `get_total_fuel_volume_available` | calls `obj.get_wing_fuel_volume()`, which is now `get_wing_fuel_volume_available` |
+| `get_total_avionics_weight_statistical`, `get_total_avionics_volume_statistical` | take `W_empty`, but the `SubsystemsModelL2` bridges call them with no argument |
+| `fuel_volume_from_weight`, `internal_volume`, and all nine getters | delegate to `SubsystemsL2` statics that no longer exist |
+| `fuel_volume_check` | passes `obj` to a static that now takes two scalars. Returns a struct with the object in `required_vol_ft3` rather than erroring |
+
+`fuselage_packaging_factor_category` and `wing_packaging_factor_category` have no reader.

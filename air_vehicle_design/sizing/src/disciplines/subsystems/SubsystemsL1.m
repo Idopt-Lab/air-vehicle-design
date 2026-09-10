@@ -33,13 +33,6 @@ classdef SubsystemsL1
             val = avi_WF * W_empty;
         end
 
-        function val = compute_avionics_volume(W_avionics)
-        %AVIONICS_VOLUME  W_avionics / avionics_density [ft^3].
-        % ARGS
-        %   W_avionics = Weight of avionics (lbf)
-            val = W_avionics / SubsystemsL1.AVIONICS_DENSITY;
-        end
-
         function range = lookup_avionics_weight_fraction_range(aircraft_category)
         %LOOKUP_AVIONICS_WEIGHT_FRACTION_RANGE  [low, high] fraction of
         %   W_empty by category. Full 8-row table, verbatim.

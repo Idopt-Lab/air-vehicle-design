@@ -1,81 +1,57 @@
 # SubsystemsL2
 
-Level-2 subsystems static toolbox (`classdef SubsystemsL2`, `methods (Static)` only). Called as
-`SubsystemsL2.method(...)`; never instantiated and not in the inheritance chain. `F16SubsystemsL2`
-inherits `SubsystemsModelL2` and delegates here.
-
-**L2 is geometry-derived**: fuselage-internal raw volume off the injected L2 geometry's envelope
-ellipse, wing-internal fuel volume off the wing planform, avionics volume off a weight fraction.
-Fuel density and the avionics weight-fraction lookup are level-agnostic and are reused directly from
-`SubsystemsL1` rather than duplicated.
+Level-2 subsystems static toolbox. Called as `SubsystemsL2.method(...)`; never instantiated, not in
+the inheritance chain. Holds the L2 volume equations on scalars, one coefficient table, one
+constant. The design class assembles them.
 
 ---
 
-## 1. Role
+## 1. Constant
 
-| Layer | Members |
-|---|---|
-| High-level — take the concrete object | `avionics_weight_fraction`, `avionics_density`, `avionics_weight`, `avionics_volume`, `fuel_density`, `fuselage_raw_volume`, `fuselage_usable_fuel_volume`, `wing_fuel_volume`, `fuel_volume`, `fuel_volume_from_weight`, `battery_volume`, `internal_volume`, `fuel_volume_check` |
-| Low-level — scalars only | `compute_raymer_fuselage_volume`, `compute_envelope_projected_areas`, `compute_wing_fuel_volume`, `lookup_packaging_factor` |
+| Name | Value | Citation |
+|---|---|---|
+| `AVIONICS_DENSITY` | 45 lb/ft^3 | Nicolai & Carichner Sec. 8.1.11, p. 210 |
+
+L1 uses 37.5 (Raymer's 30-45 average). The tiers differ on purpose.
 
 ## 2. Methods
 
-| Method | Returns | Source |
-|---|---|---|
-| `avionics_weight_fraction(obj)` | fraction of `W_empty` | Raymer 6th ed. Table 11.6 (reused from `SubsystemsL1`) |
-| `avionics_density(obj)` | 45 lb/ft³ | Nicolai & Carichner Sec.8.1.11, p.210 |
-| `avionics_weight(obj)` | lbf | fraction × `fuel_weight_source.OEW(fuel_weight_source.W_TO)` |
-| `avionics_volume(obj)` | ft³ | `weight_to_volume` |
-| `fuel_density(obj)` | lb/ft³ | Nicolai & Carichner Table 8.6 (reused from `SubsystemsL1`) |
-| `fuselage_raw_volume(obj)` | ft³ | Raymer 6th ed. Eq. 7.14, off `geom`'s envelope ellipse |
-| `fuselage_usable_fuel_volume(obj)` | ft³ | `fuselage_raw_volume` × packaging factor |
-| `wing_fuel_volume(obj)` | ft³ | Roskam Airplane Design Part II Eq. 6.2/6.3 |
-| `fuel_volume(obj)` | ft³ | `fuselage_usable_fuel_volume + wing_fuel_volume` — the total `fuel_volume_check` reports as `available_vol_ft3`. Declared on `SubsystemsBase`. |
-| `fuel_volume_from_weight(obj, fuel_weight_lb)` | ft³ | `fuel_weight_lb / fuel_density` — the definitional weight→volume conversion. Declared on `SubsystemsBase`. No packaging factor (that applies only to the geometric `fuselage_usable_fuel_volume`). |
-| `battery_volume(obj, E_required_kWh)` | — | **ALWAYS ERRORS** — citation GAP, item 7 |
-| `internal_volume(obj)` | ft³ | `fuel_volume(obj) + avionics_volume(obj)` |
-| `fuel_volume_check(obj)` | struct | `fuel_volume(obj)` vs. `fuel_volume_from_weight(obj, fuel_weight_source.W_energy)` |
+| Method | Arguments | Outputs | Citation |
+|---|---|---|---|
+| `compute_fuselage_volume_raymer` | `A_top` [ft^2], `A_side` [ft^2], `L_fus` [ft] | raw fuselage volume [ft^3] | Raymer 6th ed. Eq. 7.14 |
+| `compute_envelope_projected_areas` | `L_fus`, `W_max`, `H_max` [ft] | `[A_top, A_side]` [ft^2] | none, see §3 |
+| `compute_wing_fuel_volume_roskam` | `S` [ft^2], `b` [ft], `tc_r`, `tc_t`, `lambda_w` | wing fuel volume [ft^3] | Roskam Part II, Ch. 6, p. 153, Eq. 6.2/6.3 |
+| `lookup_packaging_factor_nicolai` | `category` | packaging factor | Nicolai p. 210, unnumbered table |
+| `fuel_volume_check` | `fuel_vol_required`, `fuel_vol_available` [ft^3] | struct: `available_vol_ft3`, `required_vol_ft3`, `sufficient` | none, a comparison |
+| `compute_battery_volume` | `E_required_kWh` | always errors, see §5 | Nicolai Table 14.2, p. 363 |
 
 ## 3. Equations
 
-**Fuselage raw volume** — Raymer 6th ed. Eq. 7.14:
+Fuselage raw volume [Raymer Eq. 7.14]:
 
 $$V_{fus,raw} = \frac{3.4\,(A_{top}\,A_{side})}{4\,L}$$
 
-$A_{top}$/$A_{side}$ are this toolbox's own elliptical-envelope footprint estimate (no separate
-equation number — the natural lengthwise extension of `F16GeomL2.compute_Amax_elliptical`'s
-existing $(\pi/4)WH$ cross-section-ellipse assumption to the top-view and side-view projections):
+`compute_envelope_projected_areas` supplies its `A_top` / `A_side`. No equation number: it extends
+`F16GeomL2.compute_Amax_elliptical`'s $(\pi/4)WH$ ellipse lengthwise, same citation status.
 
 $$A_{top} = \frac{\pi}{4} L_{fus} W_{max} \qquad A_{side} = \frac{\pi}{4} L_{fus} H_{max}$$
 
-**Fuselage usable fuel volume** — packaging factor applied before any sufficiency comparison:
-
-$$V_{fus,usable} = V_{fus,raw} \times PF(category)$$
-
-**Wing fuel volume** — Roskam Airplane Design Part II, Ch.6, p.153, Eq. 6.2/6.3 (attributed by
-Roskam to Torenbeek, Ref.17, Eqn. B-12):
+Wing fuel volume [Roskam Eq. 6.2/6.3, attributed to Torenbeek Ref. 17 Eqn. B-12]:
 
 $$V_{WF} = 0.54\,\frac{S^2}{b}\,(t/c)_r\,
   \frac{1 + \lambda_w \sqrt{\tau_w} + \lambda_w^2 \tau_w}{(1+\lambda_w)^2}
-  \qquad \tau_w = \frac{(t/c)_t}{(t/c)_r}\ \text{[Eq. 6.3]}$$
+  \qquad \tau_w = \frac{(t/c)_t}{(t/c)_r}$$
 
-**⚠ τ_w CONVENTION WARNING**: Eq. 6.3's $\tau_w$ is **tip/root**, the *opposite* of the geometry
-discipline's Roskam Vol. II Eq. 12.1 $\tau$ = root/tip. Implemented per Eq. 6.3's stated definition —
-Roskam does not use one consistent $\tau$ across his equations. Do not "fix" this to match Eq. 12.1.
+**TAU WARNING.** Eq. 6.3's $\tau_w$ is tip/root, the opposite of Roskam Vol. II Eq. 12.1's root/tip.
+Do not "fix" it to match.
 
-**Fuel-volume sufficiency check** — sums both fuselage-internal and wing-internal volume, never just
-one:
-
-$$V_{available} = V_{fus,usable} + V_{WF} \qquad
-  V_{required} = \frac{W_{energy}}{\rho_{fuel}(type)} \qquad
-  \text{sufficient} \iff V_{available} \geq V_{required}$$
+No packaging factor on the wing term: Roskam already returns a usable volume.
 
 ## 4. Coefficients
 
-`lookup_packaging_factor` — Nicolai & Carichner, p.210, unnumbered "Fuel Tank Packaging Factors"
-table, full 5-row table reproduced verbatim:
+`lookup_packaging_factor_nicolai` [Nicolai p. 210], all five rows verbatim:
 
-| Category | Packaging factor |
+| Category | Factor |
 |---|---|
 | Integral tank — shallow fuselage | 0.80 |
 | Integral tank — deep fuselage | 0.85 |
@@ -83,15 +59,19 @@ table, full 5-row table reproduced verbatim:
 | Bladder tank — fuselage | 0.75 |
 | Bladder tank — wing | 0.65 |
 
-F-16 example uses **"Integral tank — shallow fuselage" (0.80)**, the row that multiplies the
-**fuselage** raw volume. "Shallow" vs. "deep" has no numerical threshold in Nicolai; "shallow" is
-taken as more representative of a slender fighter fuselage.
+Unlisted category raises `SubsystemsL2:unknownPackagingCategory`.
 
-Every lookup errors (`SubsystemsL2:unknownPackagingCategory`) for an unlisted category.
+Nicolai's form is `Tank volume = (fuel volume) / (packaging factor)`, covering structure, pumps,
+baffles, fuel lines and tank inefficiency. The code applies the reciprocal, `usable = raw * PF`.
 
-## 5. To-dos (documented citation gaps — ship as deliberately-failing tests)
+**Shallow versus deep is undefined.** Those words appear once in Nicolai Vol. I, as these two row
+labels. No threshold is given there or anywhere in this repo. Picking a row is a judgment call.
 
-| Item | Guard |
-|---|---|
-| **Battery volumetric energy density** — no citable kWh/ft³, kWh/L, or lb/ft³ pack density exists in this repo; only gravimetric specific energy is cited (Nicolai & Carichner Table 14.2, p.363, 0.27 kWh/lb). `battery_volume` errors with `SubsystemsL2:batteryVolumetricDensityNotAvailable` rather than fabricate a coefficient. | `TestSubsystemsL2.testTODO_BatteryVolumetricDensityNotInRepo` |
-| **Landing-gear bay-volume packaging** — no textbook tire+strut stowage-volume formula exists in this repo. Lives on `F16LandingGearL2.bay_volume` (`F16LandingGearL2:bayVolumeNotAvailable`), not this toolbox — `internal_volume()` deliberately does NOT auto-sum a gear-bay term. | `TestF16LandingGearL2.testTODO_BayVolumePackagingNotInRepo` |
+**A wing row applied to a fuselage volume is a silent error.** The lookup cannot detect it.
+
+## 5. Citation gap
+
+`compute_battery_volume` raises `SubsystemsL2:batteryVolumetricDensityNotAvailable`. Only
+gravimetric specific energy is cited in this repo (Nicolai Table 14.2, p. 363, 0.27 kWh/lb); no
+volumetric energy density or pack density exists, so energy cannot become volume. Full record:
+`f16a_L2.json` `.subsystems._TODO_battery_specific_volume`.

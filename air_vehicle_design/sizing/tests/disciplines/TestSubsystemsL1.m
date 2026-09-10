@@ -19,7 +19,6 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 %   No SubsystemsL1 static takes a design object any more, so every toolbox
 %   test below calls with LITERALS. A test that needs a design object's own
 %   wiring builds a real F16SubsystemsL1 instead of a stand-in struct.
-%   Mod (09/07/2026) (Claude)
 %
 %   Sources: fuel-type density / packaging factors [Nicolai & Carichner
 %   Ch.8, p.210]; avionics weight fraction [Raymer 6th ed. Table 11.6,
@@ -38,8 +37,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
     methods (Test)
 
         % ================================================================== %
-        % LOW-LEVEL LOOKUPS -- pure tables, hand-verified against the original
-        % step-9 design's transcription of the physical books.
+        % LOW-LEVEL LOOKUPS
         % ================================================================== %
 
         function testLookupFuelDensityAllFourTypes(tc)
@@ -159,7 +157,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testLookupAvionicsWeightFractionIsRangeMidpoint(tc)
         % DECIDED (Casey, 2026-08-03): the row's own range midpoint, not the
         % legacy code's low-end 0.03. The toolbox returns the RANGE and the
-        % caller takes the midpoint. Mod (09/07/2026) (Claude)
+        % caller takes the midpoint. 
         % Hand-computed midpoints:
         %   Fighters:      (0.03+0.08)/2 = 0.055
         %   Jet transport: (0.01+0.02)/2 = 0.015
@@ -196,7 +194,6 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testAvionicsWeightFractionHighLevel(tc)
         % The design class joins lookup and midpoint, so assert its wiring:
         % the JSON's 'Fighters' row must give the Table 11.6 midpoint.
-        % Mod (09/07/2026) (Claude)
             received = F16SubsystemsL1(f16a_spec_path(1)).avionics_weight_fraction;
             expected = 0.055;
             fprintf('  [L1] testAvionicsWeightFractionHighLevel: expected=%.6g, received=%.6g\n', expected, received);
@@ -207,7 +204,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % [Raymer 6th ed. Ch.11 p.375 prose]: "about 30-45 lb/ft^3" -> mean = 37.5.
         % Distinct from L2/L3's flat Nicolai 45 -- this is the fidelity-split
         % guard.
-            received = SubsystemsL1.AVIONICS_DENSITY;   % Mod (09/07/2026) (Claude)
+            received = SubsystemsL1.AVIONICS_DENSITY;
             expected = 37.5;
             fprintf('  [L1] testAvionicsDensityL1IsRaymerRangeAverage: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -222,7 +219,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % W_avionics = fraction * W_empty. Fighters fraction = 0.055.
         %   W_empty = 10,000 lb (independently chosen, NOT the F-16's own
         %   OEW) -> 0.055*10000 = 550 lbf exactly.
-            received = SubsystemsL1.compute_avionics_weight(0.055, 10000);   % Mod (09/07/2026) (Claude)
+            received = SubsystemsL1.compute_avionics_weight(0.055, 10000);
             expected = 550;
             fprintf('  [L1] testAvionicsWeightHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -231,14 +228,13 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testAvionicsVolumeHandComputed(tc)
         % Vol = W_avionics / density = 550 / 37.5 = 14.6666666667 ft^3 (= 44/3).
             expected = 44/3;
-            received = SubsystemsL1.compute_avionics_volume(550);   % Mod (09/07/2026) (Claude)
+            received = SubsystemsBase.compute_avionics_volume(550, SubsystemsL1.AVIONICS_DENSITY);
             fprintf('  [L1] testAvionicsVolumeHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         function testFuelDensityHighLevel(tc)
         % Design-class wiring: fuel_type selects the Table 8.6 row.
-        % Mod (09/07/2026) (Claude)
             obj = F16SubsystemsL1(f16a_spec_path(1));
             received = obj.fuel_density;
             expected = 50.0;
@@ -258,7 +254,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         %   JP-8: 500 / 50.0  = 10.0 ft^3 exactly.
         %   JP-4: 486 / 48.6  = 10.0 ft^3 exactly (chosen so both cases give
         %   a clean round number, independent of each other).
-            obj = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            obj = F16SubsystemsL1(f16a_spec_path(1));
             received = obj.fuel_volume_from_weight(500);
             expected = 10.0;
             fprintf('  [L1] testFuelVolumeFromWeightHandComputed (JP-8): expected=%.6g, received=%.6g\n', expected, received);
@@ -274,7 +270,6 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testInternalVolumeL1EqualsAvionicsVolumeOnly(tc)
         % L1 has no fuel-bay/gear-bay geometry -- get_internal_volume() must
         % be EXACTLY the avionics term, no more, no less (Fidelity split).
-        % Mod (09/07/2026) (Claude)
             obj = F16SubsystemsL1(f16a_spec_path(1));
             received = obj.get_internal_volume(10000);
             expected = obj.get_avionics_volume(10000);
@@ -286,7 +281,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % No fuel-bay geometry exists at L1 -- 'available' must be reported
         % as 0, not guessed, while 'required' is still computed so a caller
         % can see how much volume WOULD be needed.
-            obj    = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            obj    = F16SubsystemsL1(f16a_spec_path(1));
             result = obj.fuel_volume_check(500);
 
             received = result.available_vol_ft3;
@@ -305,7 +300,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         end
 
         function testFuelVolumeCheckL1TrivialSufficientAtZeroRequired(tc)
-            obj    = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            obj    = F16SubsystemsL1(f16a_spec_path(1));
             result = obj.fuel_volume_check(0);
             fprintf('  [L1] testFuelVolumeCheckL1TrivialSufficientAtZeroRequired (sufficient): expected=true, received=%s\n', mat2str(result.sufficient));
             tc.verifyTrue(result.sufficient, ...
@@ -316,7 +311,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % No fuselage geometry exists at L1 (SubsystemsBase.m header note,
         % 2026-08-03) -- 0, not guessed. Declared on SubsystemsBase so every
         % fidelity level provides this member.
-            obj = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            obj = F16SubsystemsL1(f16a_spec_path(1));
             received = obj.fuselage_raw_volume;
             expected = 0;
             fprintf('  [L1] testFuselageRawVolumeL1IsHonestlyZero: expected=%.6g, received=%.6g\n', expected, received);
@@ -327,16 +322,12 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         % No fuel-bay geometry exists at L1 -- same rationale as
         % fuselage_raw_volume. Must equal fuel_volume_check's own
         % available_vol_ft3 answer (also 0 at L1).
-            obj = F16SubsystemsL1(f16a_spec_path(1));   % Mod (09/07/2026) (Claude)
+            obj = F16SubsystemsL1(f16a_spec_path(1));
             received = obj.fuel_volume;
             expected = 0;
             fprintf('  [L1] testFuelVolumeL1IsHonestlyZero: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
-
-        % ================================================================== %
-        % SubsystemsBase.weight_to_volume -- shared identity + guards.
-        % ================================================================== %
 
         function testWeightToVolumeGenericIdentity(tc)
         % vol = W/density.  100 lb / 50 lb/ft^3 = 2.0 ft^3 exactly.

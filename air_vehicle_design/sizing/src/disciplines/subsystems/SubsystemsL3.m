@@ -53,14 +53,14 @@ classdef SubsystemsL3
             g = obj.geom;
             [A_top, A_side] = SubsystemsL3.compute_frame_integrated_projected_areas( ...
                 g.frames_normalized, g.L_fuselage, g.W_max_fuselage, g.H_max_fuselage);
-            val = SubsystemsL2.compute_raymer_fuselage_volume(A_top, A_side, g.L_fuselage);
+            val = SubsystemsL2.compute_fuselage_volume_raymer(A_top, A_side, g.L_fuselage);
         end
 
         function val = fuselage_usable_fuel_volume(obj)
         %FUSELAGE_USABLE_FUEL_VOLUME  fuselage_raw_volume * packaging_factor
         %   [ft^3]. Packaging-factor lookup is reused from SubsystemsL2, but
         %   fuselage_raw_volume above is L3's own frame-integrated figure.
-            pf = SubsystemsL2.lookup_packaging_factor(obj.packaging_factor_category);
+            pf = SubsystemsL2.lookup_packaging_factor_nicolai(obj.packaging_factor_category);
             val = SubsystemsL3.fuselage_raw_volume(obj) * pf;
         end
 
@@ -88,7 +88,7 @@ classdef SubsystemsL3
         function val = battery_volume(obj, E_required_kWh)
         %BATTERY_VOLUME  NOT IMPLEMENTED -- same documented citation gap as
         %   L2; reused from SubsystemsL2 (errors identically).
-            val = SubsystemsL2.battery_volume(obj, E_required_kWh);
+            val = SubsystemsL2.compute_battery_volume(E_required_kWh);
         end
 
         function val = internal_volume(obj)

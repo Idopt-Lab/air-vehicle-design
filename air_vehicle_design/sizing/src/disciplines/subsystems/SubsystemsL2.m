@@ -19,89 +19,15 @@ classdef SubsystemsL2
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL2.md
 
+    properties (Constant)
+        %AVIONICS_DENSITY  L2/L3 flat density [lb/ft^3].
+        %  [Nicolai & Carichner Sec.8.1.11, p.210]
+        AVIONICS_DENSITY = 45
+    end
+
     methods (Static)
 
-        % ================================================================== %
-        % HIGH-LEVEL: take the object, return the result.
-        % ================================================================== %
-
-        function val = avionics_weight_fraction(obj)
-        %AVIONICS_WEIGHT_FRACTION  Level-agnostic Raymer Table 11.6 lookup,
-        %   reused from SubsystemsL1.
-            val = SubsystemsL1.lookup_avionics_weight_fraction(obj.avionics_table_row);
-        end
-
-        function val = avionics_density(obj) %#ok<INUSD>
-        %AVIONICS_DENSITY  Flat 45 lb/ft^3, the L2/L3 figure, distinct from
-        %   L1's Raymer range average (~37.5).
-        %   [Nicolai & Carichner, Sec.8.1.11, p.210]
-            val = 45.0;
-        end
-
-        function val = avionics_weight(obj)
-        %AVIONICS_WEIGHT  fraction * W_empty [lbf]. W_empty =
-        %   fuel_weight_source.get_OEW(fuel_weight_source.W_TO); zero extra args.
-            ws = obj.fuel_weight_source;
-            W_empty = ws.get_OEW(ws.W_TO);
-            val = SubsystemsL2.avionics_weight_fraction(obj) * W_empty;
-        end
-
-        function val = avionics_volume(obj)
-        %AVIONICS_VOLUME  avionics_weight / avionics_density [ft^3].
-            val = SubsystemsBase.weight_to_volume( ...
-                SubsystemsL2.avionics_weight(obj), SubsystemsL2.avionics_density(obj));
-        end
-
-        function val = fuel_density(obj)
-        %FUEL_DENSITY  Level-agnostic Nicolai Table 8.6 lookup, reused from
-        %   SubsystemsL1.
-            val = SubsystemsL1.lookup_fuel_density(obj.fuel_type);
-        end
-
-        function val = fuselage_raw_volume(obj)
-        %FUSELAGE_RAW_VOLUME  [Raymer 6th ed. Eq. 7.14], A_top/A_side from
-        %   obj.geom's fuselage-envelope ellipse.
-            g = obj.geom;
-            [A_top, A_side] = SubsystemsL2.compute_envelope_projected_areas( ...
-                g.L_fuselage, g.W_max_fuselage, g.H_max_fuselage);
-            val = SubsystemsL2.compute_raymer_fuselage_volume(A_top, A_side, g.L_fuselage);
-        end
-
-        function val = fuselage_usable_fuel_volume(obj)
-        %FUSELAGE_USABLE_FUEL_VOLUME  fuselage_raw_volume * packaging_factor
-        %   [ft^3]. Packaging factor is applied before any comparison against
-        %   a required fuel volume.
-            pf = SubsystemsL2.lookup_packaging_factor(obj.packaging_factor_category);
-            val = SubsystemsL2.fuselage_raw_volume(obj) * pf;
-        end
-
-        function val = wing_fuel_volume(obj)
-        %WING_FUEL_VOLUME  [Roskam Eq. 6.2/6.3] off obj.geom's wing planform.
-            g = obj.geom;
-            val = SubsystemsL2.compute_wing_fuel_volume( ...
-                g.S_ref, g.b_wing, g.tc_r_wing, g.tc_t_wing, g.lambda_wing);
-        end
-
-        function val = fuel_volume_from_weight(obj, fuel_weight_lb)
-        %FUEL_VOLUME_FROM_WEIGHT  fuel_weight_lb / fuel_density [ft^3]. The
-        %   definitional weight/density conversion, level-agnostic. No
-        %   packaging factor: that applies only to the geometric raw volume
-        %   (fuselage_usable_fuel_volume). This is a weight-derived figure.
-            arguments
-                obj
-                fuel_weight_lb (1,1) double {mustBeNonnegative}
-            end
-            val = SubsystemsBase.weight_to_volume(fuel_weight_lb, SubsystemsL2.fuel_density(obj));
-        end
-
-        function val = fuel_volume(obj)
-        %FUEL_VOLUME  Total usable fuel volume [ft^3] = fuselage-internal
-        %   (packaged) + wing-internal. Same sum fuel_volume_check reports as
-        %   'available_vol_ft3', exposed as its own member.
-            val = SubsystemsL2.fuselage_usable_fuel_volume(obj) + SubsystemsL2.wing_fuel_volume(obj);
-        end
-
-        function val = battery_volume(obj, E_required_kWh) %#ok<INUSD,STOUT>
+        function val = compute_battery_volume(E_required_kWh) %#ok<INUSD,STOUT>
         %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation gap. Only
         %   gravimetric specific energy is cited [Nicolai & Carichner,
         %   Table 14.2, p.363, batteries 0.27 kWh/lb]; no citable volumetric
@@ -117,41 +43,27 @@ classdef SubsystemsL2
                  'record.']);
         end
 
-        function val = internal_volume(obj)
-        %INTERNAL_VOLUME  Total usable internal volume [ft^3] = fuselage
-        %   usable fuel volume + wing fuel volume + avionics volume.
-        %   Landing-gear bay volume is deliberately NOT summed: its citation
-        %   gap makes that term always error, so auto-summing it would fail
-        %   every call. See F16SubsystemsL2.md "Landing-gear bay volume".
-            val = SubsystemsL2.fuel_volume(obj) + SubsystemsL2.avionics_volume(obj);
-        end
 
-        function result = fuel_volume_check(obj)
+        function result = fuel_volume_check(fuel_vol_required, fuel_vol_available)
         %FUEL_VOLUME_CHECK  Compares fuel_volume(obj) (fuselage-internal
         %   packaged + wing-internal, never just one) against
         %   obj.fuel_weight_source.W_energy, converted to a required volume
         %   via fuel_volume_from_weight. Errors if W_energy is not yet set.
-            available = SubsystemsL2.fuel_volume(obj);
-            W_energy = obj.fuel_weight_source.W_energy;
-            if ~isfinite(W_energy)
-                error('SubsystemsL2:fuelWeightNotSet', ...
-                    ['fuel_weight_source.W_energy is NaN -- mission analysis ' ...
-                     'has not set the required internal-fuel weight yet. Set ' ...
-                     'it on the injected weights object before calling ' ...
-                     'fuel_volume_check.']);
+            if (isnan(fuel_vol_required) || isnan(fuel_vol_available))
+                error("fuel_volume_check: NaN in argument")
+            else
+                result = struct('available_vol_ft3', fuel_vol_available, ...
+                        'required_vol_ft3', fuel_vol_required, ...
+                        'sufficient', fuel_vol_available >= fuel_vol_required);
             end
-            required_vol = SubsystemsL2.fuel_volume_from_weight(obj, W_energy);
-            result = struct('available_vol_ft3', available, ...
-                             'required_vol_ft3', required_vol, ...
-                             'sufficient', available >= required_vol);
         end
 
         % ================================================================== %
-        % LOW-LEVEL: pure math/lookups -- scalars only, no object access.
+        % LOW-LEVEL: pure math/lookups
         % ================================================================== %
 
-        function val = compute_raymer_fuselage_volume(A_top, A_side, L_fus)
-        %COMPUTE_RAYMER_FUSELAGE_VOLUME  Raw fuselage internal volume [ft^3].
+        function val = compute_fuselage_volume_raymer(A_top, A_side, L_fus)
+        %COMPUTE_FUSELAGE_VOLUME_RAYMER  Raw fuselage internal volume [ft^3].
         %   [Raymer 6th ed. Eq. 7.14]  V = 3.4*(A_top*A_side)/(4*L).
             arguments
                 A_top  (1,1) double {mustBePositive}
@@ -178,8 +90,8 @@ classdef SubsystemsL2
             A_side = (pi/4) * L_fus * H_max;
         end
 
-        function val = compute_wing_fuel_volume(S, b, tc_r, tc_t, lambda_w)
-        %COMPUTE_WING_FUEL_VOLUME  Wing-internal fuel volume [ft^3].
+        function val = compute_wing_fuel_volume_roskam(S, b, tc_r, tc_t, lambda_w)
+        %COMPUTE_WING_FUEL_VOLUME_ROSKAM  Wing-internal fuel volume [ft^3].
         %   [Roskam, Airplane Design Part II, Ch.6, p.153, Eq. 6.2/6.3,
         %   attributed by Roskam to Torenbeek Ref.17 Eqn. B-12]
         %   tau_w = (t/c)_tip / (t/c)_root [Eq. 6.3] -- see this class's
@@ -196,8 +108,8 @@ classdef SubsystemsL2
                 * (1 + lambda_w*sqrt(tau_w) + lambda_w^2*tau_w) / (1 + lambda_w)^2;
         end
 
-        function pf = lookup_packaging_factor(category)
-        %LOOKUP_PACKAGING_FACTOR  Fuel-tank usable-volume packaging factor by
+        function pf = lookup_packaging_factor_nicolai(category)
+        %LOOKUP_PACKAGING_FACTOR_NICOLAI  Fuel-tank usable-volume packaging factor by
         %   construction/location category. Full 5-row table, verbatim.
         %   [Nicolai & Carichner, p.210, "Fuel Tank Packaging Factors" table]
             switch category

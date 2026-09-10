@@ -38,6 +38,11 @@ classdef (Abstract) SubsystemsBase < handle
         %   (packaged) + wing-internal at L2/L3; 0 at L1. Equals
         %   fuel_volume_check's 'available_vol_ft3', exposed as a property.
         fuel_volume
+
+        % TO ADD/REPLACE:
+        % total_fuel_volume_required
+        % total_internal_volume_available
+        % total_avionics_volume_required
     end
 
     methods (Abstract)
@@ -50,10 +55,7 @@ classdef (Abstract) SubsystemsBase < handle
         % val = get_energy_storage_volume(energy_medium_density, energy_medium_weight)
 
         %INTERNAL_VOLUME  Total usable internal volume [ft^3] for this level.
-        %   L1: avionics volume only. L2/L3: fuselage-internal (packaged) fuel
-        %   volume + wing-internal fuel volume + avionics volume. Landing-gear
-        %   bay volume is not auto-summed (citation gap) -- see
-        %   F16SubsystemsL2.md/F16SubsystemsL3.md.
+        %   L1/2/3: Fuselage + main wings (raw, no packing factor)
         val = get_internal_volume(obj, W_empty)
 
         %FUEL_VOLUME_CHECK  Does available fuel volume cover the required fuel
@@ -72,18 +74,15 @@ classdef (Abstract) SubsystemsBase < handle
 
     methods (Static)
 
-        % TODO (9/7/2026)(Casey): Unsure about keeping this here.
-        % Useful for L1/2, unsure about L3. Depends on if Nicolai
-        % or anyone has anything better.
-        function vol = weight_to_volume(W_lb, density_lb_per_ft3)
-        %WEIGHT_TO_VOLUME  Generic weight -> volume conversion [ft^3].
-        %   Definitional (vol = W/density); the citation belongs to whichever
-        %   density value the caller supplies, not to this identity.
+        function val = compute_avionics_volume(W_avionics, density_lb_per_ft3)
+        %COMPUTE_AVIONICS_VOLUME  Avionics volume [ft^3]. The density is the
+        %   caller's choice: L1 uses Raymer's range average, L2/L3 Nicolai's
+        %   flat 45.
             arguments
-                W_lb               (1,1) double {mustBeNonnegative}
+                W_avionics               (1,1) double {mustBeNonnegative}
                 density_lb_per_ft3 (1,1) double {mustBePositive}
             end
-            vol = W_lb / density_lb_per_ft3;
+            val = W_avionics / density_lb_per_ft3;
         end
 
         function d = lookup_fuel_density_lb_per_ft_3(fuel_type)
@@ -103,10 +102,8 @@ classdef (Abstract) SubsystemsBase < handle
         end
 
         function d = lookup_fuel_density_lb_per_gal(fuel_type)
-        %LOOKUP_FUEL_DENSITY_LB_PER_GAL  Fuel density [lb/gal] by type, for
-        %   consistency-checking against the input JSON's density_lb_per_gal.
-        %   The volume math uses lookup_fuel_density (lb/ft^3), not this
-        %   figure. [Nicolai & Carichner, Table 8.6, p.210]
+        %LOOKUP_FUEL_DENSITY_LB_PER_GAL  Fuel density [lb/gal] by type
+        %  [Nicolai & Carichner, Table 8.6, p.210]
             switch fuel_type
                 case 'JP-4',          d = 6.5;
                 case 'JP-5',          d = 6.8;

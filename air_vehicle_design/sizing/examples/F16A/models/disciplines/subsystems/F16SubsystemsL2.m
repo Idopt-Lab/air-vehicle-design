@@ -53,6 +53,8 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L2.json .subsystems.fuel.packaging_factor_category]
         avionics_table_row        = 'Fighters'                          % [f16a_L2.json .subsystems.avionics.aircraft_category_table_row]
 
+        fuselage_packaging_factor_category = 'Integral tank — shallow fuselage'
+        wing_packaging_factor_category = 'Integral tank — wing'
         % ----- Injected collaborators (NOT numeric spec data) ------------- %
         geom                % (1,1) GeometryModelL2 -- supplies fuselage/wing geometry for the volume terms
         fuel_weight_source  % (1,1) WeightsBase -- supplies W_energy (fuel sufficiency check) and OEW/W_TO (avionics W_empty)
@@ -99,13 +101,53 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         end
 
         % ================================================================== %
-        % Methods required by the abstract contract that take a genuine
-        % external argument, or are the Tier-1 orchestrator contract -- each
-        % a single delegation into the SubsystemsL2 static toolbox.
+        % Methods required by the abstract contract
         % ================================================================== %
 
+        % Note (9/8/2026)(Casey): Using L1 methods because no suitable L2 methods could be found.
+        function val = get_total_avionics_weight_statistical(obj, W_empty)
+            avi_WF = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
+            avi_WF = mean(avi_WF);
+            val = SubsystemsL1.compute_avionics_weight(avi_WF, W_empty);
+        end
+
+        function val = get_total_avionics_volume_statistical(obj, W_empty)
+            avi_weight = obj.get_total_avionics_weight_statistical(W_empty);
+            val = SubsystemsBase.compute_avionics_volume(avi_weight, SubsystemsL2.AVIONICS_DENSITY);
+        end
+
+        function val = get_internal_volume(obj, W_empty)
+            vol_wing = obj.get_wing_fuel_volume_available();
+            vol_fuselage = obj.get_fuselage_internal_volume();
+            val = vol_wing + vol_fuselage;
+        end
+
+        function val = get_wing_fuel_volume_available(obj)
+            val = SubsystemsL2.compute_wing_fuel_volume_roskam(obj.S_ref_wing, obj.b_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
+        end
+
+        function val = get_fuselage_internal_volume(obj)
+            [A_top, A_side] = SubsystemsL2.compute_envelope_projected_areas(obj.L_fus, obj.W_max, obj.H_max);
+            val = SubsystemsL2.compute_fuselage_volume_raymer(A_top, A_side, obj.L_fus);
+        end
+
+        function val = get_total_fuel_volume_available(obj)
+            % GET FUEL-USEABLE VOLUME - WINGS
+            Vol_fuel_wings = obj.get_wing_fuel_volume();
+
+            % GET FUEL-USEABLE VOLUME - FUSELAGE
+            % Get internal volume of fuselage
+            Vol_fuselage = obj.get_fuselage_internal_volume();
+            % Get AVAILABLE fuel volume of fuselage
+            pf = SubsystemsL2.lookup_packaging_factor_nicolai(obj.packaging_factor_category);
+            Vol_fuel_fuselage = pf*Vol_fuselage;
+
+            % Sum the components
+            val = Vol_fuel_wings + Vol_fuel_fuselage;
+        end
+
         function val = battery_volume(obj, E_required_kWh)
-            val = SubsystemsL2.battery_volume(obj, E_required_kWh);
+            val = SubsystemsL2.compute_battery_volume(E_required_kWh);
         end
 
         function val = fuel_volume_from_weight(obj, fuel_weight_lb)
@@ -121,9 +163,7 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         end
 
         % ================================================================== %
-        % DERIVED-property getters required by the abstract contract -- each a
-        % single delegation into the SubsystemsL2 static toolbox, recomputed
-        % live on every read.
+        % DERIVED-property getters required by the abstract contract
         % ================================================================== %
 
         function val = get.avionics_weight_fraction(obj)
