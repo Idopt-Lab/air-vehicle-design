@@ -48,6 +48,14 @@ classdef (Abstract) SubsystemsModelL3 < SubsystemsBase
         %   L2. Stays a METHOD -- see SubsystemsModelL2.battery_volume.
         val = battery_volume(obj, E_required_kWh)
 
+        val = get_avionics_weight_component_buildup(obj)
+
+    end
+
+    methods
+        function v = get_avionics_weight(obj)
+            v = obj.get_avionics_weight_component_buildup();
+        end
     end
 
 end

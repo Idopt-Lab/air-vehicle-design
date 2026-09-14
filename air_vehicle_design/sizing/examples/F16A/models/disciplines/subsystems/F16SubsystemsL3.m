@@ -13,9 +13,9 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
 %   reuses SubsystemsL2's statics directly for every level-agnostic equation
 %   -- see SubsystemsL3.m's header.
 %
-%   internal_volume() and the "landing-gear bay volume not auto-summed" note
-%   are identical to F16SubsystemsL2 -- see that class's header for the full
-%   rationale (item 11's citation gap; Objectives §3 is aspirational).
+%   The "landing-gear bay volume not auto-summed" note is identical to
+%   F16SubsystemsL2 -- see that class's header for the full rationale
+%   (item 11's citation gap; Objectives §3 is aspirational).
 %
 %   DEPENDENCY INJECTION -- identical shape to F16SubsystemsL2, but geom is
 %   typed to GeometryModelL3 (guarded at the L3 ENFORCER), and
@@ -43,16 +43,18 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         fuel_weight_source  % (1,1) WeightsBase -- supplies W_energy (fuel sufficiency check) and OEW/W_TO (avionics W_empty)
     end
 
-    % DERIVED (9) -- same rationale as F16SubsystemsL2: zero-extra-arg
-    % quantities that read only the inputs/injected collaborators above,
-    % implemented as Dependent getters, not methods.
+    % AVIONICS COMPONENTS, read from f16a_L3.json
+    % .subsystems.unclassified_avionics_equipment.components.
+    properties
+        avionics_components = {}
+    end
+
     properties (Dependent)
         avionics_weight_fraction
         avionics_density
         avionics_weight
         avionics_volume
         fuel_density
-        fuselage_raw_volume
         fuselage_usable_fuel_volume
         wing_fuel_volume
         fuel_volume  % = L3's own fuselage_usable_fuel_volume + wing_fuel_volume [SubsystemsBase.m]
@@ -78,12 +80,11 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
             obj.fuel_type                 = char(J.subsystems.fuel.fuel_type);
             obj.packaging_factor_category = char(J.subsystems.fuel.packaging_factor_category);
             obj.avionics_table_row        = char(J.subsystems.avionics.aircraft_category_table_row);
+            obj.avionics_components       = J.subsystems.unclassified_avionics_equipment.components;   % Mod (09/11/2026) (Claude)
         end
 
         % ================================================================== %
-        % Methods required by the abstract contract that take a genuine
-        % external argument, or are the Tier-1 orchestrator contract -- each
-        % a single delegation into the SubsystemsL3 static toolbox.
+        % Methods required by the abstract contract 
         % ================================================================== %
 
         function val = battery_volume(obj, E_required_kWh)
@@ -94,54 +95,93 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
             val = SubsystemsL3.fuel_volume_from_weight(obj, fuel_weight_lb);
         end
 
-        function val = internal_volume(obj)
-            val = SubsystemsL3.internal_volume(obj);
-        end
-
         function result = fuel_volume_check(obj)
             result = SubsystemsL3.fuel_volume_check(obj);
         end
 
+        % Estimate the total weight of avionics equipment onboard.
+        function [val, parts] = get_avionics_weight_component_buildup(obj)
+            C  = obj.avionics_components;
+            nm = strings(numel(C), 1);
+            W  = nan(numel(C), 1);
+            V  = W;
+            Pw = W;
+            for i = 1:numel(C)
+                nm(i) = string(C{i}.name);
+                [W(i), V(i), Pw(i)] = F16SubsystemsL3.box(C{i});
+            end
+            parts = table(categorical(nm, nm, 'Ordinal', true), W, V, Pw, ...
+                'VariableNames', {'Component', 'Weight_lbf', 'Volume_ft3', 'Power_W'});
+            val = sum(W(isfinite(W)));
+        end
+
+        function val = get_internal_volume(obj)
+        %GET_INTERNAL_VOLUME  Fuselage internal volume [ft^3] from the injected
+        %   geometry's station table. The table is stored normalized, so it is
+        %   rescaled by the fuselage envelope first.
+            [frame_x, frame_w, frame_h] = GeomL3.denormalize_frames( ...
+                obj.geom.frames_normalized, obj.geom.L_fus, ...
+                obj.geom.W_max_fuselage, obj.geom.H_max_fuselage);
+
+            val = SubsystemsL3.compute_volume_from_control_stations( ...
+                      frame_x, frame_w, frame_h);
+        end
+
         % ================================================================== %
-        % DERIVED-property getters required by the abstract contract -- each a
-        % single delegation into the SubsystemsL3 static toolbox, recomputed
-        % live on every read.
+        % DERIVED-property getters required by the abstract contract
         % ================================================================== %
 
-        function val = get.avionics_weight_fraction(obj)
-            val = SubsystemsL3.avionics_weight_fraction(obj);
+    end
+
+    methods (Static, Access = private)
+
+        function [w, v, p] = box(c)
+        %BOX  Weight [lbf], volume [ft^3] and power [W] for one box.
+        %   Whichever of the three the JSON gives drives the other two
+        %   through Table 8.8, which inverts in every direction. A sourced
+        %   figure is never overwritten by an estimate. Without a category
+        %   the box keeps only what the JSON gives it. A "a + b" category is
+        %   one box holding both functions, so its known quantity splits
+        %   evenly between the two rows. Mod (09/11/2026) (Claude)
+            w = NaN; v = NaN; p = NaN;
+            if isfinite(c.weight_lb),  w = c.weight_lb;  end
+            if isfinite(c.volume_ft3), v = c.volume_ft3; end
+            if isfinite(c.power_W),    p = c.power_W;    end
+            if isempty(c.category), return; end
+
+            rows = strtrim(split(string(c.category), '+'));
+            n    = numel(rows);
+            if     isfinite(w), src = 'w'; x = w / n;
+            elseif isfinite(v), src = 'v'; x = v / n;
+            elseif isfinite(p), src = 'p'; x = p / n;
+            else,  return
+            end
+
+            wt = 0; vol = 0; pw = 0;
+            for k = 1:n
+                r = char(rows(k));
+                switch src
+                    case 'w', wk = x;
+                    case 'v', wk = SubsystemsL3.compute_avionics_weight_statistical(r, [], x);
+                    case 'p', wk = SubsystemsL3.compute_avionics_weight_statistical(r, x, []);
+                end
+                wt  = wt  + wk;
+                vol = vol + F16SubsystemsL3.attempt(@() SubsystemsL3.compute_avionics_volume_statistical(r, [], wk));
+                pw  = pw  + F16SubsystemsL3.attempt(@() SubsystemsL3.compute_avionics_power_statistical(r, wk, []));
+            end
+            if ~isfinite(w), w = wt;  end
+            if ~isfinite(v), v = vol; end
+            if ~isfinite(p), p = pw;  end
         end
 
-        function val = get.avionics_density(obj)
-            val = SubsystemsL3.avionics_density(obj);
-        end
-
-        function val = get.avionics_weight(obj)
-            val = SubsystemsL3.avionics_weight(obj);
-        end
-
-        function val = get.avionics_volume(obj)
-            val = SubsystemsL3.avionics_volume(obj);
-        end
-
-        function val = get.fuel_density(obj)
-            val = SubsystemsL3.fuel_density(obj);
-        end
-
-        function val = get.fuselage_raw_volume(obj)
-            val = SubsystemsL3.fuselage_raw_volume(obj);
-        end
-
-        function val = get.fuselage_usable_fuel_volume(obj)
-            val = SubsystemsL3.fuselage_usable_fuel_volume(obj);
-        end
-
-        function val = get.wing_fuel_volume(obj)
-            val = SubsystemsL3.wing_fuel_volume(obj);
-        end
-
-        function val = get.fuel_volume(obj)
-            val = SubsystemsL3.fuel_volume(obj);
+        function y = attempt(f)
+        %ATTEMPT  Evaluate f, or NaN where the fit has no valid inverse
+        %   (a linear row below its intercept).
+            try
+                y = f();
+            catch
+                y = NaN;
+            end
         end
 
     end
