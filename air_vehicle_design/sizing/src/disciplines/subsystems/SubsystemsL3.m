@@ -1,13 +1,34 @@
 classdef SubsystemsL3
-%SUBSYSTEMSL3  Level-3 subsystems static toolbox.
+%SUBSYSTEMSL3  Level-3 subsystems static toolbox: station-table volumes and
+%   avionics equipment statistics.
 %
-%   Call as SubsystemsL3.method(...); never instantiated. F16SubsystemsL3
-%   delegates here.
+%   Call as SubsystemsL3.method(...); never instantiated.
 %
-%   L3 differs from L2 in one respect: the fuselage raw-volume term (Raymer
-%   Eq. 7.14) is fed A_top/A_side from GeomL3's frame-integrated station table
-%   instead of GeomL2's envelope-ellipse approximation. Every other equation
-%   is level-agnostic and is reused from SubsystemsL2, not duplicated.
+%   Methods (Static):
+%       fuel_volume_check: required against available fuel volume (ft^3),
+%           returns a struct.
+%       compute_frame_integrated_projected_areas: top and side projected
+%           areas (ft^2) from the normalized station table.
+%       compute_volume_from_control_stations: internal volume (ft^3) as the
+%           area under the cross-section-area curve.
+%       compute_avionics_weight_statistical: avionics weight (lbf) from power
+%           (W) or volume (ft^3).
+%       compute_avionics_power_statistical: avionics power (W) from weight
+%           (lbf) or volume (ft^3).
+%       compute_avionics_volume_statistical: avionics volume (ft^3) from power
+%           (W) or weight (lbf).
+%       lookup_avionics_coeffs: both Table 8.8 fits for one system, plus that
+%           row's volume unit.
+%       compute_<system>_weight / _power / _volume: the three named entry
+%           points for each of the nine Table 8.8 systems. Systems: radar,
+%           doppler_nav, inertial_nav, tacan, receiver, transmitter,
+%           identification, computer, ecm.
+%
+%   Every avionics method takes two optional inputs. Supply one; pass [] for
+%   the other.
+%
+%   Sources: Raymer 6th ed. Fig. 7.38 p.207 (volume from the area curve);
+%   Nicolai & Carichner Table 8.8 p.212 (avionics statistics).
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL3.md
 
@@ -97,10 +118,11 @@ classdef SubsystemsL3
  
         % ================================================================== %
         % AVIONICS EQUIPMENT STATISTICS [Nicolai & Carichner Table 8.8, p.212]
-        % Supply exactly ONE input; pass [] for the other.
+        % Supply exactly ONE input. Pass [] for the other.
+        % Examples:
         %   compute_radar_weight(1200, [])   weight from power
         %   compute_radar_weight([], 3.5)    weight from volume
-        % Mod (09/07/2026) (Claude)
+        %
         % ================================================================== %
 
         function W = compute_radar_weight(power_W, volume_ft3)

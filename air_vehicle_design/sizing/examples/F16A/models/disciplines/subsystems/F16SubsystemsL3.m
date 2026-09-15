@@ -1,33 +1,63 @@
 classdef F16SubsystemsL3 < SubsystemsModelL3
 %F16SUBSYSTEMSL3  F-16A Block 10/15 Level-3 subsystems student class.
 %
-%   Inherits from SubsystemsModelL3 (abstract enforcer). Every abstract
-%   method is satisfied by a single delegation line to SubsystemsL3 statics
-%   -- no equations are duplicated here.
+%   Inherits from SubsystemsModelL3. The fuselage volume comes from the
+%   injected geometry's station table. The avionics group is built one box at
+%   a time from the input JSON.
 %
-%   Same equations as F16SubsystemsL2 (Raymer Eq. 7.14 fuselage volume,
-%   Roskam Eq. 6.2/6.3 wing volume, Nicolai fuel/avionics tables); the ONLY
-%   difference is that the fuselage raw-volume term is fed A_top/A_side from
-%   the injected L3 geometry's frame-integrated station table instead of
-%   L2's envelope-ellipse approximation (Fidelity split). SubsystemsL3
-%   reuses SubsystemsL2's statics directly for every level-agnostic equation
-%   -- see SubsystemsL3.m's header.
+%   Properties:
+%       fuel_type (char): fuel selecting the density table row.
+%       packaging_factor_category (char): tank type. Unused.
+%       avionics_table_row (char): Raymer Table 11.6 row.
+%       fuselage_packaging_factor_category (char): tank type selecting the
+%           fuselage packaging factor.
+%       wing_packaging_factor_category (char): tank type. Unused.
+%       geom (GeometryModelL3): injected. Supplies frames_normalized, L_fus,
+%           W_max_fuselage, H_max_fuselage, S_ref, b_wing, tc_r_wing,
+%           tc_t_wing, lambda_wing.
+%       fuel_weight_source (WeightsBase): injected. Supplies W_energy and
+%           OEW(W_TO).
+%       avionics_components (cell): one struct per avionics box, read from the
+%           input JSON.
 %
-%   The "landing-gear bay volume not auto-summed" note is identical to
-%   F16SubsystemsL2 -- see that class's header for the full rationale
-%   (item 11's citation gap; Objectives §3 is aspirational).
+%   Properties (Dependent):
+%       avionics_weight_fraction (double): fraction of W_empty.
+%       avionics_density (double): avionics weight / avionics volume (lb/ft^3).
+%       avionics_weight (double): avionics weight (lbf).
+%       total_avionics_volume_occupied (double): avionics volume (ft^3).
+%       fuel_density (double): fuel density (lb/ft^3).
+%       fuselage_usable_fuel_volume (double): fuselage volume x packaging
+%           factor (ft^3).
+%       wing_fuel_volume (double): wing fuel volume (ft^3).
+%       total_fuel_volume_occupied (double): volume the fuel occupies (ft^3).
+%       total_design_volume (double): wing fuel volume + fuselage volume (ft^3).
 %
-%   DEPENDENCY INJECTION -- identical shape to F16SubsystemsL2, but geom is
-%   typed to GeometryModelL3 (guarded at the L3 ENFORCER), and
-%   fuel_weight_source is typically an F16WeightsL3 instance (also a
-%   WeightsBase). See F16SubsystemsL2.m for the full fuel_weight_source
-%   rationale (one injected object serves both the fuel-sufficiency check
-%   and the avionics W_empty term).
+%   Methods:
+%       get_fuselage_volume: fuselage internal volume (ft^3) from the station
+%           table.
+%       get_fuselage_fuel_volume_available: fuselage volume x packaging factor
+%           (ft^3).
+%       get_wing_fuel_volume_available: wing fuel volume (ft^3).
+%       get_total_fuel_volume_available: wing + fuselage usable fuel volume (ft^3).
+%       get_total_fuel_volume_occupied: fuel weight / density (ft^3).
+%       get_design_total_volume: wing fuel volume + fuselage volume (ft^3).
+%       get_avionics_weight_component_buildup: avionics weight (lbf) and the
+%           per-box table.
+%       get_total_avionics_volume_component_buildup: avionics volume (ft^3)
+%           and the per-box table.
+%       fuel_volume_from_weight: BROKEN. Calls a SubsystemsL3 static that does
+%           not exist.
+%       fuel_volume_check: BROKEN. Passes the design object to a two-scalar
+%           static.
 %
-%   CONSTRUCTOR: F16SubsystemsL3(json_path, geom, fuel_weight_source). All
-%   three REQUIRED, no silent default.
+%   Constructor: F16SubsystemsL3(json_path, geom, fuel_weight_source). All
+%   three required.
 %
-%   SOURCES: same as F16SubsystemsL2 -- see that class's header.
+%   Landing-gear bay volume is NOT summed into any volume here.
+%
+%   Sources: Raymer 6th ed. Fig. 7.38 p.207, Table 11.6 p.375; Roskam Airplane
+%   Design Part II Ch.6 Eq. 6.2/6.3 p.153; Nicolai & Carichner Ch.8 p.210,
+%   Table 8.8 p.212.
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL3.md
 
@@ -37,7 +67,8 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         fuel_type                 = 'JP-8'                              % [f16a_L3.json .subsystems.fuel.fuel_type]
         packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L3.json .subsystems.fuel.packaging_factor_category]
         avionics_table_row        = 'Fighters'                          % [f16a_L3.json .subsystems.avionics.aircraft_category_table_row]
-
+        fuselage_packaging_factor_category = 'Integral tank — shallow fuselage'
+        wing_packaging_factor_category = 'Integral tank — wing'
         % ----- Injected collaborators (NOT numeric spec data) ------------- %
         geom                % (1,1) GeometryModelL3 -- supplies fuselage/wing geometry for the volume terms
         fuel_weight_source  % (1,1) WeightsBase -- supplies W_energy (fuel sufficiency check) and OEW/W_TO (avionics W_empty)
@@ -53,11 +84,12 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         avionics_weight_fraction
         avionics_density
         avionics_weight
-        avionics_volume
+        total_avionics_volume_occupied
         fuel_density
         fuselage_usable_fuel_volume
         wing_fuel_volume
-        fuel_volume  % = L3's own fuselage_usable_fuel_volume + wing_fuel_volume [SubsystemsBase.m]
+        total_fuel_volume_occupied  % = L3's own fuselage_usable_fuel_volume + wing_fuel_volume [SubsystemsBase.m]
+        total_design_volume
     end
 
     methods
@@ -87,10 +119,6 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         % Methods required by the abstract contract 
         % ================================================================== %
 
-        function val = battery_volume(obj, E_required_kWh)
-            val = SubsystemsL3.battery_volume(obj, E_required_kWh);
-        end
-
         function val = fuel_volume_from_weight(obj, fuel_weight_lb)
             val = SubsystemsL3.fuel_volume_from_weight(obj, fuel_weight_lb);
         end
@@ -99,23 +127,52 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
             result = SubsystemsL3.fuel_volume_check(obj);
         end
 
-        % Estimate the total weight of avionics equipment onboard.
-        function [val, parts] = get_avionics_weight_component_buildup(obj)
-            C  = obj.avionics_components;
-            nm = strings(numel(C), 1);
-            W  = nan(numel(C), 1);
-            V  = W;
-            Pw = W;
-            for i = 1:numel(C)
-                nm(i) = string(C{i}.name);
-                [W(i), V(i), Pw(i)] = F16SubsystemsL3.box(C{i});
-            end
-            parts = table(categorical(nm, nm, 'Ordinal', true), W, V, Pw, ...
-                'VariableNames', {'Component', 'Weight_lbf', 'Volume_ft3', 'Power_W'});
-            val = sum(W(isfinite(W)));
+        function val = get_wing_fuel_volume_available(obj)
+            val = SubsystemsL2.compute_wing_fuel_volume_roskam(obj.geom.S_ref, ...
+                      obj.geom.b_wing, obj.geom.tc_r_wing, obj.geom.tc_t_wing, ...
+                      obj.geom.lambda_wing);
         end
 
-        function val = get_internal_volume(obj)
+        function val = get_total_fuel_volume_available(obj)
+            fuel_vol_wing = obj.get_wing_fuel_volume_available();
+            fuel_vol_fuselage = obj.get_fuselage_fuel_volume_available();
+            
+            % Sum the components
+            val = fuel_vol_wing + fuel_vol_fuselage;
+        end
+
+        function val = get_fuselage_fuel_volume_available(obj)
+            vol_fuselage = obj.get_fuselage_volume();
+            pf = SubsystemsL2.lookup_packaging_factor_nicolai(obj.fuselage_packaging_factor_category);
+            fuel_vol_fuselage = vol_fuselage*pf;
+            val = fuel_vol_fuselage;
+        end
+
+        function val = get_design_total_volume(obj)
+            vol_wing = obj.get_wing_fuel_volume_available(); % N.B: This is the fuel volume, which is closer to the wing's actual volume than guessing "0".
+            vol_fuselage = obj.get_fuselage_volume();
+            
+            % Sum the components
+            val = vol_wing + vol_fuselage;
+        end
+
+        % Estimate the total weight of avionics equipment onboard.
+        function [val, parts] = get_avionics_weight_component_buildup(obj)
+            parts = obj.avionics_parts();
+            val   = sum(parts.Weight_lbf(isfinite(parts.Weight_lbf)));
+        end
+
+        % Estimate the total volume of avionics equipment onboard.
+        function [val, parts] = get_total_avionics_volume_component_buildup(obj)
+            parts = obj.avionics_parts();
+            val   = sum(parts.Volume_ft3(isfinite(parts.Volume_ft3)));
+        end
+
+        function val = get_total_fuel_volume_occupied(obj, fuel_weight_lb)
+            val = fuel_weight_lb / obj.fuel_density;
+        end
+
+        function val = get_fuselage_volume(obj)
         %GET_INTERNAL_VOLUME  Fuselage internal volume [ft^3] from the injected
         %   geometry's station table. The table is stored normalized, so it is
         %   rescaled by the fuselage envelope first.
@@ -130,6 +187,66 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         % ================================================================== %
         % DERIVED-property getters required by the abstract contract
         % ================================================================== %
+
+        function val = get.avionics_weight_fraction(obj)
+            range = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
+            val   = mean(range);
+        end
+
+        function val = get.avionics_density(obj)
+        % L3 weighs real boxes, so the density is an OUTPUT of the buildup.
+        % It is not read from a table. Mod (09/15/2026) (Claude)
+            val = obj.avionics_weight / obj.total_avionics_volume_occupied;
+        end
+
+        function val = get.avionics_weight(obj)
+            val = obj.get_avionics_weight_component_buildup();
+        end
+
+        function val = get.total_avionics_volume_occupied(obj)
+            val = obj.get_total_avionics_volume_component_buildup();
+        end
+
+        function val = get.fuel_density(obj)
+            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
+        end
+
+        function val = get.fuselage_usable_fuel_volume(obj)
+            val = obj.get_fuselage_fuel_volume_available();
+        end
+
+        function val = get.wing_fuel_volume(obj)
+            val = obj.get_wing_fuel_volume_available();
+        end
+
+        function val = get.total_fuel_volume_occupied(obj)
+            val = obj.get_total_fuel_volume_occupied(obj.fuel_weight_source.W_energy);
+        end
+
+        function val = get.total_design_volume(obj)
+            val = obj.get_design_total_volume();
+        end
+
+    end
+
+    methods (Access = private)
+
+        function parts = avionics_parts(obj)
+        %AVIONICS_PARTS  One row per avionics box: weight [lbf], volume [ft^3]
+        %   and power [W]. A box resolves its missing quantities through
+        %   F16SubsystemsL3.box. Mod (09/15/2026) (Claude)
+            C  = obj.avionics_components;
+            nm = strings(numel(C), 1);
+            W  = nan(numel(C), 1);
+            V  = W;
+            Pw = W;
+            for i = 1:numel(C)
+                nm(i) = string(C{i}.name);
+                [W(i), V(i), Pw(i)] = F16SubsystemsL3.box(C{i});
+            end
+            parts = table(categorical(nm, nm, 'Ordinal', true), W, V, Pw, ...
+                'VariableNames', {'Component', 'Weight_lbf', 'Volume_ft3', 'Power_W'});
+        end
 
     end
 

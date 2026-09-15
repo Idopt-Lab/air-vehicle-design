@@ -1,60 +1,82 @@
 classdef (Abstract) SubsystemsModelL3 < SubsystemsBase
 %SUBSYSTEMSMODELL3  Tier-2 abstract enforcer for Level-3 subsystems.
 %
-%   Inherits SubsystemsBase directly. Same abstract contract as
-%   SubsystemsModelL2; L3 refines the fuselage raw-volume term with GeomL3's
-%   frame-integrated station areas instead of GeomL2's envelope ellipse. Kept
-%   separate from SubsystemsModelL2 only because geom is typed to
-%   GeometryModelL3 (enforced by the concrete class's constructor).
+%   Inherits SubsystemsBase directly.
 %
-%   History and rationale: docs/decision_log.md
-%   Toolbox companion: src/disciplines/subsystems/SubsystemsL3.md
+%   Properties (Abstract):
+%       fuel_type (char): fuel selecting the density table row.
+%       packaging_factor_category (char): tank type selecting the packaging factor.
+%       avionics_table_row (char): Raymer Table 11.6 row.
+%       avionics_weight (double): avionics weight (lbf).
+%       wing_fuel_volume (double): wing fuel volume (ft^3).
+%       total_design_volume (double): total volume of the design (ft^3).
+%
+%   Methods (Abstract):
+%       get_avionics_weight_component_buildup: avionics weight (lbf), one box
+%           at a time.
+%       get_total_avionics_volume_component_buildup: avionics volume (ft^3),
+%           one box at a time.
+%       get_wing_fuel_volume_available: fuel-usable volume of the main wings (ft^3).
+%       get_total_fuel_volume_available: fuel-usable volume of the whole
+%           aircraft (ft^3).
+%       get_design_total_volume: total volume of the design (ft^3).
+%
+%   Methods:
+%       get_avionics_weight: bridge to get_avionics_weight_component_buildup.
+%       get_total_avionics_volume_occupied: bridge to
+%           get_total_avionics_volume_component_buildup.
+%
+%   Companion doc: src/disciplines/subsystems/SubsystemsL3.md
 
     properties (Abstract)
         fuel_type                  % string, e.g. 'JP-8' [Nicolai & Carichner Table 8.6]
         packaging_factor_category  % string, e.g. 'Integral tank — shallow fuselage' [Nicolai & Carichner p.210]
         avionics_table_row         % string, e.g. 'Fighters' [Raymer 6th ed. Table 11.6]
-
-        % ----- Injected collaborators (NOT numeric spec data) ------------- %
-        geom                % (1,1) GeometryModelL3
-        fuel_weight_source  % (1,1) WeightsBase
     end
 
-    % ======================================================================= %
-    % avionics_weight_fraction, avionics_density, fuel_density,
-    % fuselage_raw_volume and fuel_volume are declared on SubsystemsBase. As in
-    % SubsystemsModelL2, each member below takes zero extra arguments and reads
-    % only obj's own inputs/collaborators, so it is an abstract PROPERTY.
-    % ======================================================================= %
+
     properties (Abstract)
         %AVIONICS_WEIGHT  fraction * W_empty, self-referencing the injected
         %   fuel_weight_source.
         avionics_weight
 
-        %AVIONICS_VOLUME  MUST be summed into internal_volume().
-        avionics_volume
-
-        %FUSELAGE_USABLE_FUEL_VOLUME  fuselage_raw_volume * packaging_factor.
-        %   Packaging factor MUST be applied before comparison.
-        fuselage_usable_fuel_volume
-
         %WING_FUEL_VOLUME  [Roskam Eq. 6.2/6.3] off obj.geom's wing planform.
+        % Wing volume usable for fuel.
         wing_fuel_volume
+
+        %TOTAL_DESIGN_VOLUME
+        % Entire design's volume (fuselage + wings)
+        total_design_volume
     end
 
     methods (Abstract)
 
-        %BATTERY_VOLUME  NOT IMPLEMENTED -- documented citation gap, same as
-        %   L2. Stays a METHOD -- see SubsystemsModelL2.battery_volume.
-        val = battery_volume(obj, E_required_kWh)
-
+        % Estimate the weight of individual avionics components available
         val = get_avionics_weight_component_buildup(obj)
 
+        % Estimate the fuel-useable volume of the aircraft's main wings.
+        % This can be the fuselage (tube-and-wing) or just the wings (flying wing).
+        val = get_wing_fuel_volume_available(obj)
+
+        % Estimate the fuel-useable volume of the entire aircraft.
+        val = get_total_fuel_volume_available(obj)
+
+        % Estimate the design's total avionics volume.
+        val = get_total_avionics_volume_component_buildup(obj)
+
+        % GET_DESIGN_TOTAL_VOLUME
+        % Estimate the design's total volume using rough geometric methods by Raymer and/or Roskam.
+        % User is expected to estimate internal volumes of major aircraft parts, such as the main wings and fuselage.
+        val = get_design_total_volume(obj)
     end
 
     methods
         function v = get_avionics_weight(obj)
             v = obj.get_avionics_weight_component_buildup();
+        end
+
+        function v = get_total_avionics_volume_occupied(obj)
+            v = obj.get_total_avionics_volume_component_buildup();
         end
     end
 

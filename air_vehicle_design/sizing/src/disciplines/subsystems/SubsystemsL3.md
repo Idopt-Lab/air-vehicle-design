@@ -14,7 +14,7 @@ avionics equipment statistics. 34 public statics, 6 private helpers.
 |---|---|---|---|
 | `fuel_volume_check` | `fuel_vol_required`, `fuel_vol_available` [ft^3] | struct `available_vol_ft3`, `required_vol_ft3`, `sufficient` | none, a comparison |
 
-Two scalars, no design object. Errors on a `NaN` argument.
+Two scalars, no design object. Errors on a `NaN` argument, with no identifier.
 
 ## 2. Frame-integrated projected areas
 
@@ -109,6 +109,7 @@ supplied when it is a finite scalar.
 
 | Identifier | Raised when |
 |---|---|
+| `SubsystemsL3:frameVectorLengthMismatch` | `frame_x`/`frame_w`/`frame_h` differ in length |
 | `SubsystemsL3:oneInputRequired` | neither of the two optional inputs is a finite scalar |
 | `SubsystemsL3:unknownAvionicsSystem` | the system name matches no Table 8.8 row |
 | `SubsystemsL3:fitOutOfRange` | a fit inverts to a non-positive quantity, which happens on a `lin` row at or below its intercept |
