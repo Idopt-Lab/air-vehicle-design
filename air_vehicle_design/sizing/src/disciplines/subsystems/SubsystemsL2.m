@@ -1,28 +1,38 @@
 classdef SubsystemsL2
 %SUBSYSTEMSL2  Level-2 subsystems static toolbox: geometry-derived volumes.
 %
-%   Call as SubsystemsL2.method(...); never instantiated. F16SubsystemsL2
-%   delegates here.
+%   Call as SubsystemsL2.method(...).
 %
-%   Formulas: fuselage raw volume [Raymer 6th ed. Eq. 7.14]; wing fuel volume
-%   [Roskam, Airplane Design Part II, Ch.6, Eq. 6.2/6.3]; packaging factor and
-%   fuel density [Nicolai & Carichner, Ch.8, p.210]; avionics weight fraction
-%   [Raymer 6th ed. Table 11.6] with L2's flat Nicolai avionics density
-%   (45 lb/ft^3). Fuel density and the avionics weight-fraction lookup are
-%   level-agnostic and are reused from SubsystemsL1, not duplicated.
+%   Properties (Constant):
+%       AVIONICS_DENSITY (double): avionics packing density, 37.5 lb/ft^3.
+%
+%   Methods (Static):
+%       compute_battery_volume: NOT IMPLEMENTED. Errors: no citable battery
+%           volumetric energy density exists in this repository.
+%       fuel_volume_check: compares required against available fuel volume,
+%           returns a struct.
+%       compute_fuselage_volume_raymer: fuselage raw volume (ft^3) from the
+%           projected areas and length.
+%       compute_envelope_projected_areas: top and side projected areas (ft^2)
+%           of the fuselage envelope ellipse.
+%       compute_wing_fuel_volume_roskam: wing fuel volume (ft^3) from the wing
+%           planform.
+%       lookup_packaging_factor_nicolai: usable fraction of a tank's raw volume.
+%
+%   Sources: Raymer 6th ed. Eq. 7.14; Roskam Airplane Design Part II Ch.6
+%   Eq. 6.2/6.3; Nicolai & Carichner Ch.8 p.210.
 %
 %   ROSKAM tau_w CONVENTION WARNING: Eq. 6.3 defines tau_w = (t/c)_tip /
 %   (t/c)_root -- the OPPOSITE of the geometry discipline's Roskam Vol. II
 %   Eq. 12.1, which uses tau = (t/c)_root/(t/c)_tip. Implemented per Eq. 6.3's
-%   stated definition; do NOT "fix" it to match Eq. 12.1 -- Roskam does not
-%   use one consistent tau across his equations.
+%   stated definition; do NOT "fix" it.
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL2.md
 
     properties (Constant)
-        %AVIONICS_DENSITY  L2/L3 flat density [lb/ft^3].
-        %  [Nicolai & Carichner Sec.8.1.11, p.210]
-        AVIONICS_DENSITY = 45
+        %AVIONICS_DENSITY  L1 range-average density [lb/ft^3]. 
+        %   Source: Raymer 6th ed. Ch.11 p.375, just before Table 11.6
+        AVIONICS_DENSITY = mean([30, 45]) % lbf/ft^3
     end
 
     methods (Static)

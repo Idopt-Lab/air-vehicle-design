@@ -1,58 +1,62 @@
 classdef F16SubsystemsL2 < SubsystemsModelL2
 %F16SUBSYSTEMSL2  F-16A Block 10/15 Level-2 subsystems student class.
 %
-%   Inherits from SubsystemsModelL2 (abstract enforcer). Every abstract
-%   method is satisfied by a single delegation line to SubsystemsL2 statics
-%   -- no equations are duplicated here.
+%   Inherits from SubsystemsModelL2. Incorporates geometry into design analysis.
+%   Re-uses parts of SubsystemsL1 because they're still relevant and there's no
+%   L2 equivalent.
 %
-%   METHOD: fuselage-internal raw volume [Raymer 6th ed. Eq. 7.14] off the
-%   injected L2 geometry's envelope-ellipse A_top/A_side, x fuel-tank
-%   packaging factor [Nicolai & Carichner p.210]; wing-internal fuel volume
-%   [Roskam Eq. 6.2/6.3]; avionics volume from a weight fraction of W_empty
-%   [Raymer Table 11.6] x Nicolai's flat 45 lb/ft^3 density. Battery-electric
-%   volume is a documented citation GAP (see battery_volume).
+%   Properties:
+%       fuel_type (char): fuel selecting the density table row.
+%       avionics_table_row (char): Raymer Table 11.6 row.
+%       packaging_factor_category (char): tank type selecting the packaging factor.
+%       fuselage_packaging_factor_category (char): unused.
+%       wing_packaging_factor_category (char): unused.
+%       geom (GeometryModelL2): injected. Supplies S_ref, b_wing, tc_r_wing,
+%           tc_t_wing, lambda_wing, L_fus, W_max_fuselage, H_max_fuselage.
+%       fuel_weight_source (WeightsBase): injected. Supplies W_energy and
+%           OEW(W_TO).
 %
-%   internal_volume() = fuselage_usable_fuel_volume + wing_fuel_volume +
-%   avionics_volume. Landing-gear bay volume is deliberately NOT summed in
-%   here -- see the "Landing-gear bay volume" note below.
+%   Properties (Dependent):
+%       avionics_weight_fraction (double): fraction of W_empty.
+%       avionics_density (double): avionics packing density (lb/ft^3).
+%       avionics_weight (double): avionics weight (lbf).
+%       total_avionics_volume_occupied (double): avionics volume (ft^3).
+%       fuel_density (double): fuel density (lb/ft^3).
+%       fuselage_fuel_volume (double): usable fuselage fuel volume (ft^3).
+%       wing_fuel_volume (double): wing fuel volume (ft^3).
+%       total_design_volume (double): wing fuel volume + raw fuselage volume (ft^3).
+%       total_fuel_volume_occupied (double): volume the fuel occupies (ft^3).
 %
-%   DEPENDENCY INJECTION (mirrors F16WeightsL2's geom/prop DI pattern):
-%     geom               -- (1,1) GeometryModelL2, guarded at the L2 enforcer
-%                           so a wrong-tier object fails at construction. Only
-%                           S_ref, b_wing, tc_r_wing, tc_t_wing, lambda_wing
-%                           (wing-volume term) and L_fuselage, W_max_fuselage,
-%                           H_max_fuselage (fuselage-volume term) are read.
-%     fuel_weight_source -- (1,1) WeightsBase. Supplies both the required fuel
-%                           weight for fuel_volume_check (W_energy) and W_empty
-%                           for the avionics-weight term (OEW(W_TO)). One
-%                           injected object serves both roles.
-%   No silent default on either argument.
+%   Methods:
+%       get_avionics_weight_fraction: fraction of W_empty for the table row.
+%       get_avionics_weight_categorical: avionics weight (lbf) from W_empty.
+%       get_total_avionics_volume_categorical: avionics volume (ft^3) from W_empty.
+%       get_wing_fuel_volume_available: wing fuel volume (ft^3).
+%       get_fuselage_internal_volume: raw fuselage volume (ft^3), no packaging factor.
+%       get_fuselage_fuel_volume: raw fuselage volume x packaging factor (ft^3).
+%       get_fuel_volume_available: wing + fuselage usable fuel volume (ft^3).
+%       get_total_fuel_volume_occupied: fuel weight / density (ft^3).
+%       get_total_design_volume: wing fuel volume + raw fuselage volume (ft^3).
+%       get_fuel_density: fuel density (lb/ft^3) for the stored fuel type.
+%       fuel_volume_check: required against available fuel volume, returns a struct.
 %
-%   LANDING-GEAR BAY VOLUME -- not auto-summed. Blocked on item 11's citation
-%   gap (no textbook bay-volume packaging formula exists in this repo --
-%   F16LandingGearL2.bay_volume always errors). A caller wanting the gear
-%   contribution should call F16LandingGearL2.bay_volume() directly and add it.
-%
-%   CONSTRUCTOR: F16SubsystemsL2(json_path, geom, fuel_weight_source). All
+%   Constructor: F16SubsystemsL2(json_path, geom, fuel_weight_source). All
 %   three required.
 %
-%   SOURCES:
-%     [Raymer] D.P. Raymer, Aircraft Design 6th/7th ed., Eq. 7.14, Table 11.6.
-%     [Roskam] J. Roskam, Airplane Design Part II, Ch.6, Eq. 6.2/6.3.
-%     [Nicolai] Nicolai & Carichner, Ch.8, p.210 (fuel packaging/density
-%               table; avionics density Sec.8.1.11); Table 14.2, p.363
-%               (battery gravimetric specific energy -- the cited half of
-%               item 7's GAP).
+%   Landing-gear bay volume is NOT summed into any volume here.
+%   F16LandingGearL2.bay_volume errors on a citation gap; a caller wanting the
+%   gear contribution adds it.
+%
+%   Sources: Raymer 6th ed. Eq. 7.14, Table 11.6; Roskam Airplane Design
+%   Part II Ch.6 Eq. 6.2/6.3; Nicolai & Carichner Ch.8 p.210.
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL2.md
 
-    % INPUTS (3) + 2 injected objects -- plain mutable properties, set once by
-    % the constructor. Authoritative table: F16SubsystemsL2.md §2.
+
     properties
         fuel_type                 = 'JP-8'                              % [f16a_L2.json .subsystems.fuel.fuel_type]
-        packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L2.json .subsystems.fuel.packaging_factor_category]
         avionics_table_row        = 'Fighters'                          % [f16a_L2.json .subsystems.avionics.aircraft_category_table_row]
-
+        packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L2.json .subsystems.fuel.packaging_factor_category]
         fuselage_packaging_factor_category = 'Integral tank — shallow fuselage'
         wing_packaging_factor_category = 'Integral tank — wing'
         % ----- Injected collaborators (NOT numeric spec data) ------------- %
@@ -60,21 +64,17 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         fuel_weight_source  % (1,1) WeightsBase -- supplies W_energy (fuel sufficiency check) and OEW/W_TO (avionics W_empty)
     end
 
-    % DERIVED (9) -- zero-extra-arg quantities that read only the inputs/
-    % injected collaborators above. Dependent getters, recomputed live on every
-    % read; SubsystemsBase/SubsystemsModelL2 declare these as abstract
-    % PROPERTIES. battery_volume and fuel_volume_from_weight stay methods (both
-    % take an external argument, and battery_volume deliberately errors).
+
     properties (Dependent)
         avionics_weight_fraction
         avionics_density
         avionics_weight
-        avionics_volume
+        total_avionics_volume_occupied
         fuel_density
-        fuselage_raw_volume
-        fuselage_usable_fuel_volume
+        fuselage_fuel_volume
         wing_fuel_volume
-        fuel_volume  % = fuselage_usable_fuel_volume + wing_fuel_volume [SubsystemsBase.m]
+        total_design_volume  % = fuselage_usable_fuel_volume + wing_fuel_volume [SubsystemsBase.m]
+        total_fuel_volume_occupied
     end
 
     methods
@@ -104,62 +104,76 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         % Methods required by the abstract contract
         % ================================================================== %
 
+        function val = get_avionics_weight_fraction(obj)
+            range = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
+            avi_WF = mean(range);
+            val = avi_WF;
+        end
+
+        function val = get_fuel_density(obj)
+        %GET_FUEL_DENSITY  Fuel density [lb/ft^3] for the stored fuel type.
+        %   No write-back: fuel_density is Dependent, so it recomputes on read.
+            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
+        end
+
         % Note (9/8/2026)(Casey): Using L1 methods because no suitable L2 methods could be found.
-        function val = get_total_avionics_weight_statistical(obj, W_empty)
-            avi_WF = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
-            avi_WF = mean(avi_WF);
+        function val = get_avionics_weight_categorical(obj, W_empty)
+            avi_WF = obj.get_avionics_weight_fraction();
             val = SubsystemsL1.compute_avionics_weight(avi_WF, W_empty);
         end
 
-        function val = get_total_avionics_volume_statistical(obj, W_empty)
-            avi_weight = obj.get_total_avionics_weight_statistical(W_empty);
-            val = SubsystemsBase.compute_avionics_volume(avi_weight, SubsystemsL2.AVIONICS_DENSITY);
+        function val = get_total_avionics_volume_categorical(obj, W_empty)
+            avi_weight = obj.get_avionics_weight_categorical(W_empty);
+            val = SubsystemsL1.compute_avionics_volume(avi_weight, SubsystemsL2.AVIONICS_DENSITY);
         end
 
-        function val = get_internal_volume(obj, W_empty)
+        function val = get_total_design_volume(obj)
             vol_wing = obj.get_wing_fuel_volume_available();
             vol_fuselage = obj.get_fuselage_internal_volume();
             val = vol_wing + vol_fuselage;
         end
 
         function val = get_wing_fuel_volume_available(obj)
-            val = SubsystemsL2.compute_wing_fuel_volume_roskam(obj.S_ref_wing, obj.b_wing, obj.tc_r_wing, obj.tc_t_wing, obj.lambda_wing);
+            val = SubsystemsL2.compute_wing_fuel_volume_roskam(obj.geom.S_ref, ...
+                      obj.geom.b_wing, obj.geom.tc_r_wing, obj.geom.tc_t_wing, ...
+                      obj.geom.lambda_wing);
         end
 
         function val = get_fuselage_internal_volume(obj)
-            [A_top, A_side] = SubsystemsL2.compute_envelope_projected_areas(obj.L_fus, obj.W_max, obj.H_max);
-            val = SubsystemsL2.compute_fuselage_volume_raymer(A_top, A_side, obj.L_fus);
+            [A_top, A_side] = SubsystemsL2.compute_envelope_projected_areas( ...
+                      obj.geom.L_fus, obj.geom.W_max_fuselage, obj.geom.H_max_fuselage);
+            val = SubsystemsL2.compute_fuselage_volume_raymer(A_top, A_side, obj.geom.L_fus);
         end
 
-        function val = get_total_fuel_volume_available(obj)
+        function val = get_fuselage_fuel_volume(obj)
+            fuselage_vol = obj.get_fuselage_internal_volume();
+            pf = SubsystemsL2.lookup_packaging_factor_nicolai(obj.packaging_factor_category);
+            val = pf*fuselage_vol;
+        end
+
+        function val = get_fuel_volume_available(obj)
             % GET FUEL-USEABLE VOLUME - WINGS
-            Vol_fuel_wings = obj.get_wing_fuel_volume();
+            Vol_fuel_wings = obj.wing_fuel_volume;
 
             % GET FUEL-USEABLE VOLUME - FUSELAGE
             % Get internal volume of fuselage
-            Vol_fuselage = obj.get_fuselage_internal_volume();
             % Get AVAILABLE fuel volume of fuselage
-            pf = SubsystemsL2.lookup_packaging_factor_nicolai(obj.packaging_factor_category);
-            Vol_fuel_fuselage = pf*Vol_fuselage;
+            Vol_fuel_fuselage = obj.get_fuselage_fuel_volume();
 
             % Sum the components
             val = Vol_fuel_wings + Vol_fuel_fuselage;
         end
 
-        function val = battery_volume(obj, E_required_kWh)
-            val = SubsystemsL2.compute_battery_volume(E_required_kWh);
+        function val = get_total_fuel_volume_occupied(obj, fuel_weight_lb)
+        %GET_FUEL_VOLUME_OCCUPIED  Volume the fuel itself takes up [ft^3].
+        %   No packaging factor: that belongs to the tank, not the fuel.
+            val = fuel_weight_lb / obj.fuel_density;
         end
 
-        function val = fuel_volume_from_weight(obj, fuel_weight_lb)
-            val = SubsystemsL2.fuel_volume_from_weight(obj, fuel_weight_lb);
-        end
 
-        function val = internal_volume(obj)
-            val = SubsystemsL2.internal_volume(obj);
-        end
-
-        function result = fuel_volume_check(obj)
-            result = SubsystemsL2.fuel_volume_check(obj);
+        function result = fuel_volume_check(obj, fuel_weight_lb)
+            result = SubsystemsL2.fuel_volume_check(obj.get_total_fuel_volume_occupied(fuel_weight_lb), ...
+                                                    obj.get_fuel_volume_available());
         end
 
         % ================================================================== %
@@ -167,39 +181,45 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         % ================================================================== %
 
         function val = get.avionics_weight_fraction(obj)
-            val = SubsystemsL2.avionics_weight_fraction(obj);
+            range = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
+            val   = mean(range);
         end
 
-        function val = get.avionics_density(obj)
-            val = SubsystemsL2.avionics_density(obj);
+        function val = get.avionics_density(obj) %#ok<MANU>
+            val = SubsystemsL2.AVIONICS_DENSITY;
         end
 
         function val = get.avionics_weight(obj)
-            val = SubsystemsL2.avionics_weight(obj);
+            ws  = obj.fuel_weight_source;
+            val = SubsystemsL1.compute_avionics_weight( ...
+                      obj.avionics_weight_fraction, ws.get_OEW(ws.W_TO));
         end
 
-        function val = get.avionics_volume(obj)
-            val = SubsystemsL2.avionics_volume(obj);
-        end
-
-        function val = get.fuel_density(obj)
-            val = SubsystemsL2.fuel_density(obj);
-        end
-
-        function val = get.fuselage_raw_volume(obj)
-            val = SubsystemsL2.fuselage_raw_volume(obj);
-        end
-
-        function val = get.fuselage_usable_fuel_volume(obj)
-            val = SubsystemsL2.fuselage_usable_fuel_volume(obj);
+        function val = get.total_avionics_volume_occupied(obj)
+            val = SubsystemsL1.compute_avionics_volume( ...
+                      obj.avionics_weight, obj.avionics_density);
         end
 
         function val = get.wing_fuel_volume(obj)
-            val = SubsystemsL2.wing_fuel_volume(obj);
+            val = SubsystemsL2.compute_wing_fuel_volume_roskam(obj.geom.S_ref, ...
+                      obj.geom.b_wing, obj.geom.tc_r_wing, obj.geom.tc_t_wing, ...
+                      obj.geom.lambda_wing);
         end
 
-        function val = get.fuel_volume(obj)
-            val = SubsystemsL2.fuel_volume(obj);
+        function val = get.fuel_density(obj)
+            val = obj.get_fuel_density();
+        end
+
+        function val = get.fuselage_fuel_volume(obj)
+            val = obj.get_fuselage_fuel_volume();
+        end
+
+        function val = get.total_design_volume(obj)
+            val = obj.get_total_design_volume();
+        end
+
+        function val = get.total_fuel_volume_occupied(obj)
+            val = obj.get_total_fuel_volume_occupied(obj.fuel_weight_source.W_energy);
         end
 
     end
