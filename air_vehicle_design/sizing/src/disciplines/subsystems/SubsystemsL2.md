@@ -22,7 +22,7 @@ This is exactly the same as in L1. Intentional.
 |---|---|---|---|
 | `compute_fuselage_volume_raymer` | `A_top`, `A_side` [ft^2], `L_fus` [ft] | raw fuselage volume [ft^3] | Raymer 6th ed. Eq. 7.14 |
 | `compute_envelope_projected_areas` | `L_fus`, `W_max`, `H_max` [ft] | `A_top`, `A_side` [ft^2] | envelope ellipse |
-| `compute_wing_fuel_volume_roskam` | `S`, `b`, `tc_r`, `tc_t`, `lambda_w` | wing fuel volume [ft^3] | Roskam Part II Eq. 6.2/6.3 |
+| `compute_wing_fuel_volume_roskam` | `S`, `b`, `tc_r`, `tc_t`, `lambda_w` | wing fuel volume [ft^3] | Roskam Part II Eq. 6.2/6.3, p.153 (Torenbeek Ref.17 Eqn. B-12) |
 | `lookup_packaging_factor_nicolai` | `category` | usable fraction of raw volume | Nicolai & Carichner p.210 |
 | `fuel_volume_check` | `fuel_vol_required`, `fuel_vol_available` [ft^3] | struct: `available_vol_ft3`, `required_vol_ft3`, `sufficient` | none, a comparison |
 | `compute_battery_volume` | `E_required_kWh` | none, always errors | see §5 |
