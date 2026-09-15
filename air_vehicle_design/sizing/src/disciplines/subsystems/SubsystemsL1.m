@@ -1,13 +1,20 @@
 classdef SubsystemsL1
 %SUBSYSTEMSL1  Level-1 subsystems static toolbox: tabulation-only lookups.
 %
-%   Call as SubsystemsL1.method(...); never instantiated. F16SubsystemsL1
-%   delegates here. L1 is a pure tabulation tier: no geometry, no injected
-%   collaborators. Each high-level method takes an explicit weight argument.
+%   Call as SubsystemsL1.method(...). Holds the Raymer
+%   avionics content only.
 %
-%   Sources: fuel density [Nicolai & Carichner Ch.8 p.210]; avionics weight
-%   fraction [Raymer 6th ed. Table 11.6 p.375]. L1 avionics density is
-%   Raymer's own range average (~37.5 lb/ft^3); L2/L3 use Nicolai's flat 45.
+%   Properties (Constant):
+%       AVIONICS_DENSITY (double): avionics packing density, 37.5 lb/ft^3.
+%
+%   Methods (Static):
+%       compute_avionics_weight: fraction x W_empty, returns avionics weight (lbf).
+%       compute_avionics_volume: weight / density, returns avionics volume (ft^3).
+%           Density is an argument.
+%       lookup_avionics_weight_fraction_range: [low, high] fraction of W_empty
+%           for one aircraft category. Raymer Table 11.6, all 8 rows verbatim.
+%
+%   Source: Raymer 6th ed. Table 11.6 p.375; density from the paragraph before it.
 %
 %   Companion doc: src/disciplines/subsystems/SubsystemsL1.md
 
@@ -33,6 +40,17 @@ classdef SubsystemsL1
             val = avi_WF * W_empty;
         end
 
+        function val = compute_avionics_volume(W_avionics, density_lb_per_ft3)
+        %COMPUTE_AVIONICS_VOLUME  Avionics volume [ft^3]. The density is the
+        %   caller's choice: L1 uses Raymer's range average, L2/L3 Nicolai's
+        %   flat 45.
+            arguments
+                W_avionics               (1,1) double {mustBeNonnegative}
+                density_lb_per_ft3 (1,1) double {mustBePositive}
+            end
+            val = W_avionics / density_lb_per_ft3;
+        end
+
         function range = lookup_avionics_weight_fraction_range(aircraft_category)
         %LOOKUP_AVIONICS_WEIGHT_FRACTION_RANGE  [low, high] fraction of
         %   W_empty by category. Full 8-row table, verbatim.
@@ -43,7 +61,6 @@ classdef SubsystemsL1
                 case 'Turboprop transport',             range = [0.02, 0.04];
                 case 'Business jet',                    range = [0.04, 0.05];
                 case 'Jet transport',                   range = [0.01, 0.02];
-                % Mod (09/07/2026) (Claude)
                 case 'Fighters',                        range = [0.03, 0.08];
                 case 'Bombers',                         range = [0.06, 0.08];
                 case 'Jet trainers',                    range = [0.03, 0.04];
@@ -55,13 +72,6 @@ classdef SubsystemsL1
                          'Jet transport, Fighters, Bombers, Jet trainers.'], aircraft_category);
             end
         end
-
-        % function val = lookup_avionics_weight_fraction(table_row)
-        % %LOOKUP_AVIONICS_WEIGHT_FRACTION  Fraction = the row's range midpoint.
-        % %   [Raymer 6th ed. Table 11.6, p.375]
-        %     range = SubsystemsL1.lookup_avionics_weight_fraction_range(table_row);
-        %     val   = mean(range);
-        % end
 
     end
 end

@@ -9,7 +9,7 @@ classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL1.md
 
     properties (Abstract)
-        fuel_type          % string, e.g. 'JP-8' -- selects SubsystemsL1.lookup_fuel_density [Nicolai & Carichner Table 8.6]
+        fuel_type % String. Select from a list of jet fuel, or enter "ELECTRIC" if design is electric.
         avionics_table_row % string, e.g. 'Fighters' -- selects SubsystemsL1.lookup_avionics_weight_fraction [Raymer 6th ed. Table 11.6]
     end
 
@@ -22,21 +22,23 @@ classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
     % ======================================================================= %
     methods (Abstract)
 
+        %GET_AVIONICS_WEIGHT_FRACTION
+        val = get_avionics_weight_fraction(obj)
+
         %AVIONICS_WEIGHT  W_avionics = fraction * W_empty [lbf].
         val = get_avionics_weight_categorical(obj, W_empty)
 
         %AVIONICS_VOLUME  W_avionics / avionics_density [ft^3]. MUST be
         %   summed into internal_volume() -- see SubsystemsBase header.
         val = get_avionics_volume_categorical(obj, W_empty)
-
     end
 
     methods
         function v = get_avionics_weight(obj, W_empty)
             v = obj.get_avionics_weight_categorical(W_empty);
         end
-
-        function v = get_avionics_volume(obj, W_empty)
+        
+        function v = get_total_avionics_volume_occupied(obj, W_empty)
             v = obj.get_avionics_volume_categorical(W_empty);
         end
     end

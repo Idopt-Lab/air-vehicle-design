@@ -40,7 +40,7 @@ W_TO_guess = 30000;
 % Mod (09/07/2026) (Claude)
 % f16_sizing_L1 builds no subsystems object, so make one from the same L1
 % spec file. L1 subsystems is a tabulation tier: no geometry, no collaborators.
-subs = F16SubsystemsL1(f16a_spec_path(1));
+subs = F16SubsystemsL1(f16a_spec_path(1), objs.wts);
 
 % (WS_opt, TW_opt) = the constraint-diagram-optimal wing-loading/thrust-
 % ratio SizingLoopL1.run() solves ONCE (before iterating, via
@@ -110,7 +110,6 @@ Fuel_final = result.history(end).W_fuel;
 
 % Avionics weight is a FRACTION OF OEW [Raymer Table 11.6]. Its bar is a
 % subset of the OEW bar, not a fifth item to add to it.
-% Mod (09/07/2026) (Claude)
 W_avionics = subs.get_avionics_weight(OEW_final);
 
 weightLabelList = {'OEW', 'Mission Fuel', 'Fixed Payload', 'Expendable Payload', 'Avionics (in OEW)'};
@@ -177,7 +176,7 @@ grid on; ylabel('L/D'); title('F-16A Level 1 L/D by Mission Segment (from the mi
 % Mod (09/07/2026) (Claude)
 
 fuel_check   = subs.fuel_volume_check(Fuel_final);
-vol_avionics = subs.get_avionics_volume(OEW_final);
+vol_avionics = subs.get_total_avionics_volume_occupied(OEW_final);
 
 volLabelList = {'Fuel Required', 'Avionics'};
 volLabels = categorical(volLabelList, volLabelList, 'Ordinal', true);
@@ -195,10 +194,10 @@ fprintf('Avionics volume       = %.2f ft^3 (%.1f lbf at %.1f lb/ft^3)\n', ...
 fprintf('Available fuel volume = %.2f ft^3 -- no fuel-bay geometry at L1, so sufficient = %d\n', ...
     fuel_check.available_vol_ft3, fuel_check.sufficient);
 
+
 %% Final summary
 fprintf('\n=== F-16A Level 1 Final Summary ===\n');
 fprintf('  W_TO = %.1f lbf, OEW = %.1f lbf, W_fuel = %.1f lbf, S_ref = %.2f ft^2, T_SL = %.1f lbf\n', ...
     result.W_TO, OEW_final, Fuel_final, result.S_ref, result.T_SL);
-% Mod (09/07/2026) (Claude)
-fprintf('  W_avionics = %.1f lbf, V_avionics = %.2f ft^3, V_fuel required = %.2f ft^3\n', ...
+    fprintf('  W_avionics = %.1f lbf, V_avionics = %.2f ft^3, V_fuel required = %.2f ft^3\n', ...
     W_avionics, vol_avionics, fuel_check.required_vol_ft3);

@@ -33,6 +33,11 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
     properties
         fuel_type          = 'JP-8'      % selects SubsystemsL1.lookup_fuel_density [Nicolai & Carichner Table 8.6; f16a_L1.json .subsystems.fuel.fuel_type]
         avionics_table_row = 'Fighters'  % selects SubsystemsL1.lookup_avionics_weight_fraction [Raymer 6th ed. Table 11.6; f16a_L1.json .subsystems.avionics.aircraft_category_table_row]
+
+        % OPTIONAL injected collaborator. Supplies W_energy and OEW(W_TO) to
+        % the two zero-arg volume getters. Without it they read NaN; the
+        % W_empty-taking methods work either way.
+        fuel_weight_source = []   % (1,1) WeightsBase
     end
 
     % DERIVED (5) -- zero-extra-arg quantities that read only the inputs above.
@@ -44,27 +49,34 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
         avionics_weight_fraction
         avionics_density
         fuel_density
-        fuselage_raw_volume  % honestly 0 at L1 -- SubsystemsBase.m header note
-        fuel_volume          % honestly 0 at L1 -- SubsystemsBase.m header note
+        total_fuel_volume_occupied
+        total_avionics_volume_occupied
     end
 
     methods
 
-        function obj = F16SubsystemsL1(json_path)
+        function obj = F16SubsystemsL1(json_path, fuel_weight_source)
         %F16SUBSYSTEMSL1  Construct from a required unified L1 input JSON
         %   path (f16a_spec_path(1)); reads its .subsystems block. NO silent
         %   default: the path must be supplied.
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
+                fuel_weight_source = []
             end
             J = jsondecode(fileread(json_path));
             obj.fuel_type          = char(J.subsystems.fuel.fuel_type);                    % [f16a_L1.json .subsystems.fuel.fuel_type]
             obj.avionics_table_row = char(J.subsystems.avionics.aircraft_category_table_row); % [f16a_L1.json .subsystems.avionics.aircraft_category_table_row]
+            obj.fuel_weight_source = fuel_weight_source;
         end
 
         % ================================================================== %
         % Methods required by the abstract contract
         % ================================================================== %
+
+        function val = get_avionics_weight_fraction(obj)
+            range = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
+            val = mean(range);
+        end
 
         function val = get_avionics_weight_categorical(obj, W_empty)
             range = SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row);
@@ -74,23 +86,17 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
 
         function vol_avionics = get_avionics_volume_categorical(obj, W_empty)
             W_avionics = obj.get_avionics_weight_categorical(W_empty);
-            vol_avionics = SubsystemsBase.compute_avionics_volume(W_avionics, SubsystemsL1.AVIONICS_DENSITY);
+            vol_avionics = SubsystemsL1.compute_avionics_volume(W_avionics, SubsystemsL1.AVIONICS_DENSITY);
         end
 
-        function val = fuel_volume_from_weight(obj, fuel_weight_lb)
+        function val = get_total_fuel_volume_occupied(obj, fuel_weight_lb)
         %FUEL_VOLUME_FROM_WEIGHT  No packaging factor: L1 has no raw volume.
-            fuel_density = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
-            val = fuel_weight_lb/fuel_density;
-        end
-
-        function val = get_internal_volume(obj, W_empty)
-        %GET_INTERNAL_VOLUME  Avionics volume only: no fuel or gear bay at L1.
-            val = obj.get_avionics_volume_categorical(W_empty);
+            val = fuel_weight_lb / obj.fuel_density;
         end
 
         function result = fuel_volume_check(obj, required_weight_lb)
         %FUEL_VOLUME_CHECK  Available is honestly 0: L1 has no fuel-bay geometry.
-            required_vol = obj.fuel_volume_from_weight(required_weight_lb);
+            required_vol = obj.get_total_fuel_volume_occupied(required_weight_lb);
             result = struct('available_vol_ft3', 0, ...
                             'required_vol_ft3',  required_vol, ...
                             'sufficient',        required_vol <= 0);
@@ -106,7 +112,7 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
             val = mean(SubsystemsL1.lookup_avionics_weight_fraction_range(obj.avionics_table_row));
         end
 
-        function val = get.avionics_density(obj)
+        function val = get.avionics_density(obj) %#ok<MANU>
             val = SubsystemsL1.AVIONICS_DENSITY;
         end
 
@@ -114,12 +120,18 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
             val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
         end
 
-        function val = get.fuselage_raw_volume(obj) %#ok<MANU>
-            val = 0;   % L1 has no fuselage geometry
+        % Both need a weight, so they read the injected collaborator. NaN
+        % when nothing is injected; the W_empty-taking methods still work.
+
+        function val = get.total_fuel_volume_occupied(obj)
+            if isempty(obj.fuel_weight_source), val = NaN; return; end
+            val = obj.get_total_fuel_volume_occupied(obj.fuel_weight_source.W_energy);
         end
 
-        function val = get.fuel_volume(obj) %#ok<MANU>
-            val = 0;   % L1 has no fuel-bay geometry
+        function val = get.total_avionics_volume_occupied(obj)
+            if isempty(obj.fuel_weight_source), val = NaN; return; end
+            ws  = obj.fuel_weight_source;
+            val = obj.get_avionics_volume_categorical(ws.get_OEW(ws.W_TO));
         end
 
     end
