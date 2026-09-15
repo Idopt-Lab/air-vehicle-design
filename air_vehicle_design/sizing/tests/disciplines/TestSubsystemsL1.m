@@ -228,7 +228,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testAvionicsVolumeHandComputed(tc)
         % Vol = W_avionics / density = 550 / 37.5 = 14.6666666667 ft^3 (= 44/3).
             expected = 44/3;
-            received = SubsystemsBase.compute_avionics_volume(550, SubsystemsL1.AVIONICS_DENSITY);
+            received = SubsystemsL1.compute_avionics_volume(550, SubsystemsL1.AVIONICS_DENSITY);
             fprintf('  [L1] testAvionicsVolumeHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
@@ -248,33 +248,38 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
-        function testFuelVolumeFromWeightHandComputed(tc)
+        function testTotalFuelVolumeOccupiedHandComputed(tc)
         % No packaging factor at L1 (not usable -- no geometric raw volume
         % exists yet).
         %   JP-8: 500 / 50.0  = 10.0 ft^3 exactly.
         %   JP-4: 486 / 48.6  = 10.0 ft^3 exactly (chosen so both cases give
         %   a clean round number, independent of each other).
             obj = F16SubsystemsL1(f16a_spec_path(1));
-            received = obj.fuel_volume_from_weight(500);
+            received = obj.get_total_fuel_volume_occupied(500);
             expected = 10.0;
-            fprintf('  [L1] testFuelVolumeFromWeightHandComputed (JP-8): expected=%.6g, received=%.6g\n', expected, received);
+            fprintf('  [L1] testTotalFuelVolumeOccupiedHandComputed (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
             obj.fuel_type = 'JP-4';
-            received = obj.fuel_volume_from_weight(486);
+            received = obj.get_total_fuel_volume_occupied(486);
             expected = 10.0;
-            fprintf('  [L1] testFuelVolumeFromWeightHandComputed (JP-4): expected=%.6g, received=%.6g\n', expected, received);
+            fprintf('  [L1] testTotalFuelVolumeOccupiedHandComputed (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
-        function testInternalVolumeL1EqualsAvionicsVolumeOnly(tc)
-        % L1 has no fuel-bay/gear-bay geometry -- get_internal_volume() must
-        % be EXACTLY the avionics term, no more, no less (Fidelity split).
+        function testAvionicsVolumeCategoricalIsFractionThenDensity(tc)
+        % L1 holds no geometry, so the avionics group is the only volume it
+        % can report. The two steps are the Table 11.6 fraction and the
+        % Raymer range-average density, joined in the design class.
+        %   0.055*10000 = 550 lbf; 550/37.5 = 44/3 ft^3.
             obj = F16SubsystemsL1(f16a_spec_path(1));
-            received = obj.get_internal_volume(10000);
-            expected = obj.get_avionics_volume(10000);
-            fprintf('  [L1] testInternalVolumeL1EqualsAvionicsVolumeOnly: expected=%.6g, received=%.6g\n', expected, received);
+            received = obj.get_avionics_volume_categorical(10000);
+            expected = SubsystemsL1.compute_avionics_volume( ...
+                           SubsystemsL1.compute_avionics_weight(0.055, 10000), ...
+                           SubsystemsL1.AVIONICS_DENSITY);
+            fprintf('  [L1] testAvionicsVolumeCategoricalIsFractionThenDensity: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+            tc.verifyEqual(received, 44/3, 'AbsTol', 1e-9);
         end
 
         function testFuelVolumeCheckL1AvailableIsHonestlyZero(tc)
@@ -307,31 +312,37 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
                 'Zero required fuel is the one case L1''s zero-available check can honestly call sufficient.');
         end
 
-        function testFuselageRawVolumeL1IsHonestlyZero(tc)
-        % No fuselage geometry exists at L1 (SubsystemsBase.m header note,
-        % 2026-08-03) -- 0, not guessed. Declared on SubsystemsBase so every
-        % fidelity level provides this member.
-            obj = F16SubsystemsL1(f16a_spec_path(1));
-            received = obj.fuselage_raw_volume;
-            expected = 0;
-            fprintf('  [L1] testFuselageRawVolumeL1IsHonestlyZero: expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+        function testL1DeclaresNoGeometryDerivedVolumeMember(tc)
+        % L1 is tabulation-only. It holds no geometry, so it must not offer a
+        % fuselage or wing volume at all, rather than answer one with a guess.
+            names = {meta.class.fromName('F16SubsystemsL1').PropertyList.Name};
+            absent = {'fuselage_raw_volume', 'fuselage_fuel_volume', ...
+                      'wing_fuel_volume', 'total_design_volume'};
+            for i = 1:numel(absent)
+                present = any(strcmp(names, absent{i}));
+                fprintf('  [L1] testL1DeclaresNoGeometryDerivedVolumeMember (%s): expected=absent, received present=%s\n', ...
+                    absent{i}, mat2str(present));
+                tc.verifyFalse(present);
+            end
         end
 
-        function testFuelVolumeL1IsHonestlyZero(tc)
-        % No fuel-bay geometry exists at L1 -- same rationale as
-        % fuselage_raw_volume. Must equal fuel_volume_check's own
-        % available_vol_ft3 answer (also 0 at L1).
+        function testVolumeGettersReadNaNWithoutAnInjectedWeightSource(tc)
+        % Both zero-argument volume getters need a weight, which L1 does not
+        % hold. Without the injected collaborator they read NaN rather than
+        % guess a number. The W_empty-taking methods still work.
             obj = F16SubsystemsL1(f16a_spec_path(1));
-            received = obj.fuel_volume;
-            expected = 0;
-            fprintf('  [L1] testFuelVolumeL1IsHonestlyZero: expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+            fprintf('  [L1] testVolumeGettersReadNaNWithoutAnInjectedWeightSource (fuel): expected=NaN, received=%.6g\n', obj.total_fuel_volume_occupied);
+            tc.verifyTrue(isnan(obj.total_fuel_volume_occupied));
+            fprintf('  [L1] testVolumeGettersReadNaNWithoutAnInjectedWeightSource (avionics): expected=NaN, received=%.6g\n', obj.total_avionics_volume_occupied);
+            tc.verifyTrue(isnan(obj.total_avionics_volume_occupied));
+
+            fprintf('  [L1] testVolumeGettersReadNaNWithoutAnInjectedWeightSource (method still works): received=%.6g\n', obj.get_avionics_volume_categorical(10000));
+            tc.verifyEqual(obj.get_avionics_volume_categorical(10000), 44/3, 'AbsTol', 1e-9);
         end
 
         function testWeightToVolumeGenericIdentity(tc)
         % vol = W/density.  100 lb / 50 lb/ft^3 = 2.0 ft^3 exactly.
-            received = SubsystemsBase.weight_to_volume(100, 50);
+            received = SubsystemsL1.compute_avionics_volume(100, 50);
             expected = 2.0;
             fprintf('  [L1] testWeightToVolumeGenericIdentity: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
@@ -340,7 +351,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testWeightToVolumeRejectsNegativeWeight(tc)
             expectedErrId = 'MATLAB:validators:mustBeNonnegative';
             try
-                SubsystemsBase.weight_to_volume(-1, 50);
+                SubsystemsL1.compute_avionics_volume(-1, 50);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -349,14 +360,14 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             end
             fprintf('  [L1] testWeightToVolumeRejectsNegativeWeight: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsBase.weight_to_volume(-1, 50), ...
+            tc.verifyError(@() SubsystemsL1.compute_avionics_volume(-1, 50), ...
                 expectedErrId);
         end
 
         function testWeightToVolumeRejectsNonPositiveDensity(tc)
             expectedErrId = 'MATLAB:validators:mustBePositive';
             try
-                SubsystemsBase.weight_to_volume(100, 0);
+                SubsystemsL1.compute_avionics_volume(100, 0);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -365,7 +376,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             end
             fprintf('  [L1] testWeightToVolumeRejectsNonPositiveDensity: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsBase.weight_to_volume(100, 0), ...
+            tc.verifyError(@() SubsystemsL1.compute_avionics_volume(100, 0), ...
                 expectedErrId);
         end
 
@@ -479,45 +490,49 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             tc.verifyError(@() setfield(g, 'avionics_density', 999), expectedErrId);
 
             try
-                setfield(g, 'fuselage_raw_volume', 999); %#ok<STFLD>
+                setfield(g, 'total_fuel_volume_occupied', 999); %#ok<STFLD>
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
                 actualErrId = ME.identifier;
                 actualErrMsg = ME.message;
             end
-            fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesAreReadOnly (fuselage_raw_volume): expected_error=%s, received_error=%s (%s)\n', ...
+            fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesAreReadOnly (total_fuel_volume_occupied): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() setfield(g, 'fuselage_raw_volume', 999), expectedErrId);
+            tc.verifyError(@() setfield(g, 'total_fuel_volume_occupied', 999), expectedErrId);
 
             try
-                setfield(g, 'fuel_volume', 999); %#ok<STFLD>
+                setfield(g, 'total_avionics_volume_occupied', 999); %#ok<STFLD>
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
                 actualErrId = ME.identifier;
                 actualErrMsg = ME.message;
             end
-            fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesAreReadOnly (fuel_volume): expected_error=%s, received_error=%s (%s)\n', ...
+            fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesAreReadOnly (total_avionics_volume_occupied): expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() setfield(g, 'fuel_volume', 999), expectedErrId);
+            tc.verifyError(@() setfield(g, 'total_avionics_volume_occupied', 999), expectedErrId);
         end
 
-        function testF16SubsystemsL1FuselageRawVolumeAndFuelVolumeAreZero(tc)
-        % Base-level contract added 2026-08-03: every fidelity level provides
-        % fuselage_raw_volume/fuel_volume; L1 honestly answers 0 for both (no
-        % fuselage/fuel-bay geometry exists at this tier).
-            g = F16SubsystemsL1(f16a_spec_path(1));
+        function testF16SubsystemsL1VolumeGettersUseTheInjectedWeightSource(tc)
+        % A getter takes no argument, so both volume getters read the weight
+        % off the injected collaborator. The mock supplies W_energy and
+        % get_OEW(W_TO), the two members the getters name.
+            ws = struct('W_energy', 5000, 'W_TO', 25000, 'get_OEW', @(~) 15000);
+            g  = F16SubsystemsL1(f16a_spec_path(1), ws);
 
-            received = g.fuselage_raw_volume;
-            expected = 0;
-            fprintf('  [L1] testF16SubsystemsL1FuselageRawVolumeAndFuelVolumeAreZero (fuselage_raw_volume): expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+            expected_fuel = 5000 / 50.0;
+            fprintf('  [L1] testF16SubsystemsL1VolumeGettersUseTheInjectedWeightSource (fuel): expected=%.6g, received=%.6g\n', expected_fuel, g.total_fuel_volume_occupied);
+            tc.verifyEqual(g.total_fuel_volume_occupied, expected_fuel, 'AbsTol', 1e-9);
 
-            received = g.fuel_volume;
-            expected = 0;
-            fprintf('  [L1] testF16SubsystemsL1FuselageRawVolumeAndFuelVolumeAreZero (fuel_volume): expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+            expected_av = g.get_avionics_volume_categorical(15000);
+            fprintf('  [L1] testF16SubsystemsL1VolumeGettersUseTheInjectedWeightSource (avionics): expected=%.6g, received=%.6g\n', expected_av, g.total_avionics_volume_occupied);
+            tc.verifyEqual(g.total_avionics_volume_occupied, expected_av, 'AbsTol', 1e-9);
+
+            % Live, not cached.
+            g.fuel_type = 'JP-4';
+            fprintf('  [L1] testF16SubsystemsL1VolumeGettersUseTheInjectedWeightSource (live after JP-4): expected=%.6g, received=%.6g\n', 5000/48.6, g.total_fuel_volume_occupied);
+            tc.verifyEqual(g.total_fuel_volume_occupied, 5000/48.6, 'AbsTol', 1e-9);
         end
 
         function testF16SubsystemsL1IsaChecks(tc)
