@@ -14,20 +14,16 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
 %   objects to check the DI plumbing and the optimization-ready property
 %   design, not to re-derive a formula).
 %
-%   Low-level statics (compute_fuselage_volume_raymer, compute_wing_fuel_volume_roskam,
-%   compute_envelope_projected_areas, lookup_packaging_factor_nicolai) take a plain
-%   STRUCT standing in for "obj" where the toolbox method only reads
-%   properties (no method calls) -- dot-indexing a struct field behaves
-%   identically to a real object property read. Where a method calls
-%   obj.fuel_weight_source.get_OEW(...), the struct's field holds an anonymous
-%   function handle (struct.get_OEW = @(w) ...; struct.get_OEW(x) invokes it) so no
-%   real WeightsBase-typed object is needed for those cases either.
+%   No SubsystemsL2 static takes a design object any more, so every toolbox
+%   test below calls with LITERALS. A test that needs a design object's own
+%   wiring builds a real F16SubsystemsL2 instead of a stand-in struct.
 %
 %   Sources: fuselage-internal raw volume [Raymer 6th ed. Eq. 7.14]; wing-
-%   internal fuel volume [Roskam, Airplane Design Part II, Ch.6, Eq. 6.2/6.3];
-%   fuel-tank packaging factor / fuel density [Nicolai & Carichner, Ch.8,
-%   p.210]; avionics weight fraction [Raymer Table 11.6] with L2's own flat
-%   Nicolai avionics density (45 lb/ft^3, Sec.8.1.11).
+%   internal fuel volume [Roskam, Airplane Design Part II, Ch.6, Eq. 6.2/6.3,
+%   p.153]; fuel-tank packaging factor [Nicolai & Carichner, Ch.8, p.210];
+%   fuel density [Nicolai & Carichner Table 8.6, p.210]; avionics weight
+%   fraction [Raymer Table 11.6, p.375] with the Raymer range-average
+%   avionics density (30 to 45 lb/ft^3 -> 37.5).
 
     methods (TestClassSetup)
 
@@ -224,17 +220,17 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
-        % HIGH-LEVEL toolbox statics -- struct-based "obj", geom sub-struct.
+        % COMPOSITION of the low-level statics -- literals, no design object.
         % ================================================================== %
 
-        function testFuselageRawVolumeHighLevel(tc)
+        function testFuselageRawVolumeComposesTheTwoStatics(tc)
         % Composition of the two low-level statics above:
         %   L=10, W=4, H=2 -> A_top=10*pi, A_side=5*pi
         %   V = 3.4*(10*pi*5*pi)/(4*10) = 3.4*50*pi^2/40 = 4.25*pi^2 ft^3.
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2);
+            [A_top, A_side] = SubsystemsL2.compute_envelope_projected_areas(10, 4, 2);
+            received = SubsystemsL2.compute_fuselage_volume_raymer(A_top, A_side, 10);
             expected = 4.25*pi^2;
-            received = SubsystemsL2.fuselage_raw_volume(obj);
-            fprintf('  [L2] testFuselageRawVolumeHighLevel: expected=%.6g, received=%.6g\n', expected, received);
+            fprintf('  [L2] testFuselageRawVolumeComposesTheTwoStatics: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
@@ -245,147 +241,161 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   raw = 4.25*pi^2 (from the test above).
         %   shallow fuselage (0.80) -> 3.4*pi^2
         %   deep fuselage    (0.85) -> 3.6125*pi^2
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2);
-            raw = 4.25*pi^2;
+            [A_top, A_side] = SubsystemsL2.compute_envelope_projected_areas(10, 4, 2);
+            raw = SubsystemsL2.compute_fuselage_volume_raymer(A_top, A_side, 10);
 
-            obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-            received_shallow = SubsystemsL2.fuselage_usable_fuel_volume(obj);
-            expected_shallow = raw*0.80;
+            pf_shallow = SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — shallow fuselage');
+            received_shallow = raw * pf_shallow;
+            expected_shallow = 4.25*pi^2*0.80;
             fprintf('  [L2] testFuselageUsableFuelVolumeAppliesPackagingFactor: [shallow] expected=%.6g, received=%.6g\n', expected_shallow, received_shallow);
             tc.verifyEqual(received_shallow, expected_shallow, 'AbsTol', 1e-9);
 
-            obj.packaging_factor_category = 'Integral tank — deep fuselage';
-            received_deep = SubsystemsL2.fuselage_usable_fuel_volume(obj);
-            expected_deep = raw*0.85;
+            pf_deep = SubsystemsL2.lookup_packaging_factor_nicolai('Integral tank — deep fuselage');
+            received_deep = raw * pf_deep;
+            expected_deep = 4.25*pi^2*0.85;
             fprintf('  [L2] testFuselageUsableFuelVolumeAppliesPackagingFactor: [deep] expected=%.6g, received=%.6g\n', expected_deep, received_deep);
             tc.verifyEqual(received_deep, expected_deep, 'AbsTol', 1e-9);
 
-            % Regression guard: must not equal the raw (unpackaged) volume.
-            received_deep2 = SubsystemsL2.fuselage_usable_fuel_volume(obj);
-            fprintf('  [L2] testFuselageUsableFuelVolumeAppliesPackagingFactor: [regression] raw=%.6g, received (must differ)=%.6g\n', raw, received_deep2);
-            tc.verifyNotEqual(received_deep2, raw, ...
-                'fuselage_usable_fuel_volume must not silently equal the raw geometric volume.');
+            % Regression guard, through the real class: the usable fuselage
+            % volume must not silently equal the raw geometric volume.
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            fprintf('  [L2] testFuselageUsableFuelVolumeAppliesPackagingFactor: [regression] raw=%.6g, usable (must differ)=%.6g\n', s2.get_fuselage_internal_volume(), s2.fuselage_fuel_volume);
+            tc.verifyNotEqual(s2.fuselage_fuel_volume, s2.get_fuselage_internal_volume(), ...
+                'fuselage_fuel_volume must not silently equal the raw geometric volume.');
+            tc.verifyLessThan(s2.fuselage_fuel_volume, s2.get_fuselage_internal_volume());
         end
 
-        function testWingFuelVolumeHighLevel(tc)
-            obj.geom = struct('S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            received = SubsystemsL2.wing_fuel_volume(obj);
-            expected = 11.34;
-            fprintf('  [L2] testWingFuelVolumeHighLevel: expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+        function testWingFuelVolumeWiring(tc)
+        % The design class chooses the planform; the toolbox evaluates the
+        % equation. Assert the property is exactly that call.
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            expected = SubsystemsL2.compute_wing_fuel_volume_roskam(g2.S_ref, ...
+                           g2.b_wing, g2.tc_r_wing, g2.tc_t_wing, g2.lambda_wing);
+            fprintf('  [L2] testWingFuelVolumeWiring: expected=%.6g, received=%.6g\n', expected, s2.wing_fuel_volume);
+            tc.verifyEqual(s2.wing_fuel_volume, expected, 'AbsTol', 1e-9);
         end
 
         function testAvionicsWeightFractionReusesL1Lookup(tc)
-        % Level-agnostic -- must equal SubsystemsL1's own lookup, not a
-        % duplicated/independent table.
-            obj = struct('avionics_table_row', 'Fighters');
-            received = SubsystemsL2.avionics_weight_fraction(obj);
-            expected = 0.055;
-            fprintf('  [L2] testAvionicsWeightFractionReusesL1Lookup: expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+        % Level-agnostic -- the L2 class must read SubsystemsL1's own table,
+        % not a duplicated one. Fighters = (0.03+0.08)/2 = 0.055.
+            expected = mean(SubsystemsL1.lookup_avionics_weight_fraction_range('Fighters'));
+            fprintf('  [L2] testAvionicsWeightFractionReusesL1Lookup: expected=%.6g, received=%.6g\n', 0.055, expected);
+            tc.verifyEqual(expected, 0.055, 'AbsTol', 1e-9);
+
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            fprintf('  [L2] testAvionicsWeightFractionReusesL1Lookup: property expected=%.6g, received=%.6g\n', expected, s2.avionics_weight_fraction);
+            tc.verifyEqual(s2.avionics_weight_fraction, expected, 'AbsTol', 1e-9);
         end
 
-        function testAvionicsDensityL2IsFlatNicolai45(tc)
-        % [Nicolai & Carichner, Sec.8.1.11, p.210] flat 45 lb/ft^3 -- distinct
-        % from L1's Raymer-range-average 37.5 (fidelity-split guard).
-            obj = struct();
-            received = SubsystemsL2.avionics_density(obj);
-            expected = 45.0;
-            fprintf('  [L2] testAvionicsDensityL2IsFlatNicolai45: expected=%.6g, received=%.6g\n', expected, received);
+        function testAvionicsDensityL2IsTheRaymerRangeAverage(tc)
+        % [Raymer 6th ed. Ch.11 p.375 prose] "about 30-45 lb/ft^3" -> 37.5.
+        % L2 holds its own copy of the constant, deliberately identical to
+        % L1's: nothing in this repository uses Nicolai's flat 45.
+            received = SubsystemsL2.AVIONICS_DENSITY;
+            expected = 37.5;
+            fprintf('  [L2] testAvionicsDensityL2IsTheRaymerRangeAverage: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+            fprintf('  [L2] testAvionicsDensityL2IsTheRaymerRangeAverage: L1 constant=%.6g (deliberate duplicate)\n', SubsystemsL1.AVIONICS_DENSITY);
+            tc.verifyEqual(received, SubsystemsL1.AVIONICS_DENSITY, 'AbsTol', 1e-9);
+
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            fprintf('  [L2] testAvionicsDensityL2IsTheRaymerRangeAverage: property expected=%.6g, received=%.6g\n', expected, s2.avionics_density);
+            tc.verifyEqual(s2.avionics_density, expected, 'AbsTol', 1e-9);
         end
 
         function testAvionicsWeightAndVolumeHandComputed(tc)
-        % avionics_weight = fraction * W_empty, W_empty read via
-        % obj.fuel_weight_source.get_OEW(obj.fuel_weight_source.W_TO) --
-        % mocked with a struct field holding an anonymous function handle.
-        %   fraction (Fighters) = 0.055; W_empty (mocked) = 12000
-        %   -> W_avionics = 660 lbf exactly; Vol = 660/45 = 14.6666666667 ft^3.
-            obj.avionics_table_row = 'Fighters';
-            obj.fuel_weight_source = struct('W_TO', 20000, 'get_OEW', @(~) 12000);
-            received_weight = SubsystemsL2.avionics_weight(obj);
+        % fraction (Fighters) = 0.055; W_empty = 12000 (independently chosen,
+        % NOT the F-16's own OEW)
+        %   -> W_avionics = 660 lbf exactly; Vol = 660/37.5 = 17.6 ft^3 exactly.
+            received_weight = SubsystemsL1.compute_avionics_weight(0.055, 12000);
             expected_weight = 660;
             fprintf('  [L2] testAvionicsWeightAndVolumeHandComputed: weight expected=%.6g, received=%.6g\n', expected_weight, received_weight);
             tc.verifyEqual(received_weight, expected_weight, 'AbsTol', 1e-9);
 
-            received_vol = SubsystemsL2.avionics_volume(obj);
-            expected_vol = 660/45;
+            received_vol = SubsystemsL1.compute_avionics_volume(received_weight, SubsystemsL2.AVIONICS_DENSITY);
+            expected_vol = 17.6;
             fprintf('  [L2] testAvionicsWeightAndVolumeHandComputed: volume expected=%.6g, received=%.6g\n', expected_vol, received_vol);
             tc.verifyEqual(received_vol, expected_vol, 'AbsTol', 1e-9);
+
+            % The class joins the same two steps off its injected weights object.
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            expected_class_weight = SubsystemsL1.compute_avionics_weight( ...
+                                        s2.avionics_weight_fraction, w2.get_OEW(w2.W_TO));
+            fprintf('  [L2] testAvionicsWeightAndVolumeHandComputed: class weight expected=%.6g, received=%.6g\n', expected_class_weight, s2.avionics_weight);
+            tc.verifyEqual(s2.avionics_weight, expected_class_weight, 'AbsTol', 1e-9);
+            fprintf('  [L2] testAvionicsWeightAndVolumeHandComputed: class volume expected=%.6g, received=%.6g\n', s2.avionics_weight/37.5, s2.total_avionics_volume_occupied);
+            tc.verifyEqual(s2.total_avionics_volume_occupied, s2.avionics_weight/37.5, 'AbsTol', 1e-9);
         end
 
-        function testFuelDensityL2ReusesL1Table(tc)
-            obj = struct('fuel_type', 'JP-5');
-            received = SubsystemsL2.fuel_density(obj);
+        function testFuelDensityL2ReusesTheBaseTable(tc)
+        % [Nicolai & Carichner Table 8.6, p.210]. The table lives on
+        % SubsystemsBase because fuel density does not vary with fidelity.
             expected = 51.1;
-            fprintf('  [L2] testFuelDensityL2ReusesL1Table: expected=%.6g, received=%.6g\n', expected, received);
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-5');
+            fprintf('  [L2] testFuelDensityL2ReusesTheBaseTable: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
+
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            fprintf('  [L2] testFuelDensityL2ReusesTheBaseTable: property (JP-8) expected=%.6g, received=%.6g\n', 50.0, s2.fuel_density);
+            tc.verifyEqual(s2.fuel_density, 50.0, 'AbsTol', 1e-9);
         end
 
-        function testFuelVolumeFromWeightHandComputed(tc)
-        % Definitional weight/density conversion -- declared on
-        % SubsystemsBase (2026-08-03). NO packaging factor applied (that
-        % only applies to the GEOMETRIC raw volume, a different quantity).
+        function testTotalFuelVolumeOccupiedHandComputed(tc)
+        % Definitional weight/density conversion. NO packaging factor applied
+        % (that only applies to the GEOMETRIC raw volume, a different
+        % quantity).
         %   JP-8 (density 50.0): 400 / 50.0 = 8.0 ft^3 exactly.
-            obj = struct('fuel_type', 'JP-8');
-            received = SubsystemsL2.fuel_volume_from_weight(obj, 400);
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            received = s2.get_total_fuel_volume_occupied(400);
             expected = 8.0;
-            fprintf('  [L2] testFuelVolumeFromWeightHandComputed: expected=%.6g, received=%.6g\n', expected, received);
+            fprintf('  [L2] testTotalFuelVolumeOccupiedHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
-        function testFuelVolumeIsSumOfFuselageAndWingTerms(tc)
-        % fuel_volume(obj) = fuselage_usable_fuel_volume + wing_fuel_volume --
-        % the SAME sum fuel_volume_check reports as available_vol_ft3, now
-        % exposed as its own SubsystemsBase-declared property.
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2, ...
-                               'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-
-            fus_term  = SubsystemsL2.fuselage_usable_fuel_volume(obj);
-            wing_term = SubsystemsL2.wing_fuel_volume(obj);
-            received = SubsystemsL2.fuel_volume(obj);
-            expected = fus_term + wing_term;
-            fprintf('  [L2] testFuelVolumeIsSumOfFuselageAndWingTerms: expected=%.6g, received=%.6g\n', expected, received);
+        function testFuelVolumeAvailableIsSumOfFuselageAndWingTerms(tc)
+        % get_fuel_volume_available = fuselage_fuel_volume + wing_fuel_volume,
+        % the SAME sum fuel_volume_check reports as available_vol_ft3.
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            fus_term  = s2.fuselage_fuel_volume;
+            wing_term = s2.wing_fuel_volume;
+            received  = s2.get_fuel_volume_available();
+            expected  = fus_term + wing_term;
+            fprintf('  [L2] testFuelVolumeAvailableIsSumOfFuselageAndWingTerms: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
         % ================================================================== %
-        % internal_volume / fuel_volume_check -- the legacy-bug guards.
+        % Volume consolidation / fuel_volume_check -- the legacy-bug guards.
         % "assert fuel_volume_check sums BOTH fuselage AND wing volume, never
-        % just one" and "avionics volume is actually present and non-zero in
-        % whatever total is returned, not silently dropped."
+        % just one" and "avionics volume is actually present and non-zero",
+        % not silently dropped.
         % ================================================================== %
 
-        function testInternalVolumeSumsAllThreeTermsIncludingAvionics(tc)
-        % LEGACY BUG 1 GUARD: avionics volume computed-but-dropped.
-        %   fuselage_usable = 4.25*pi^2*0.80 = 3.4*pi^2
-        %   wing            = 11.34
-        %   avionics        = 660/45 = 14.6666666667
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2, ...
-                               'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-            obj.avionics_table_row        = 'Fighters';
-            obj.fuel_weight_source        = struct('W_TO', 20000, 'get_OEW', @(~) 12000);
+        function testTotalDesignVolumeSumsWingAndFuselage(tc)
+        % LEGACY BUG 1 GUARD, in its current shape. total_design_volume is
+        % the airframe volume: the wing fuel volume plus the RAW fuselage
+        % internal volume. The avionics group is a separate quantity and
+        % must be reported, not dropped, but it is not folded in here.
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
 
-            fus_term = SubsystemsL2.fuselage_usable_fuel_volume(obj);
-            wing_term = SubsystemsL2.wing_fuel_volume(obj);
-            av_term  = SubsystemsL2.avionics_volume(obj);
+            expected = s2.get_wing_fuel_volume_available() + s2.get_fuselage_internal_volume();
+            fprintf('  [L2] testTotalDesignVolumeSumsWingAndFuselage: expected=%.6g, received=%.6g\n', expected, s2.total_design_volume);
+            tc.verifyEqual(s2.total_design_volume, expected, 'AbsTol', 1e-9);
 
-            fprintf('  [L2] testInternalVolumeSumsAllThreeTermsIncludingAvionics: av_term (must be >0) received=%.6g\n', av_term);
+            av_term = s2.total_avionics_volume_occupied;
+            fprintf('  [L2] testTotalDesignVolumeSumsWingAndFuselage: avionics volume (must be >0) received=%.6g\n', av_term);
             tc.verifyGreaterThan(av_term, 0, 'Avionics volume term must be nonzero.');
-
-            received = SubsystemsL2.internal_volume(obj);
-            expected = fus_term + wing_term + av_term;
-            fprintf('  [L2] testInternalVolumeSumsAllThreeTermsIncludingAvionics: expected=%.6g, received=%.6g\n', expected, received);
-            tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
-
-            % LEGACY BUG 1, explicit guard: total must be STRICTLY greater
-            % than fuselage+wing alone -- avionics must not have been
-            % silently dropped from the sum.
-            fprintf('  [L2] testInternalVolumeSumsAllThreeTermsIncludingAvionics: received=%.6g must exceed fus+wing=%.6g\n', received, fus_term + wing_term);
-            tc.verifyGreaterThan(received, fus_term + wing_term, ...
-                'internal_volume must include a nonzero avionics contribution -- legacy code dropped this term.');
+            fprintf('  [L2] testTotalDesignVolumeSumsWingAndFuselage: design volume=%.6g must exclude avionics=%.6g\n', s2.total_design_volume, av_term);
+            tc.verifyNotEqual(s2.total_design_volume, expected + av_term);
         end
 
         function testFuelVolumeCheckSumsFuselageAndWingNeverJustOne(tc)
@@ -393,16 +403,13 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         % (unpackaged) fuselage volume directly, and never demonstrably
         % summed fuselage+wing together. Assert 'available' equals the SUM
         % and differs from EITHER term alone.
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2, ...
-                               'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-            obj.fuel_type                 = 'JP-8';
-            obj.fuel_weight_source        = struct('W_energy', 2000);
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
 
-            fus_term  = SubsystemsL2.fuselage_usable_fuel_volume(obj);   % 3.4*pi^2 = 33.5566549637
-            wing_term = SubsystemsL2.wing_fuel_volume(obj);              % 11.34
+            fus_term  = s2.fuselage_fuel_volume;
+            wing_term = s2.wing_fuel_volume;
 
-            result = SubsystemsL2.fuel_volume_check(obj);
+            result = s2.fuel_volume_check(2000);
             expected_available = fus_term + wing_term;
             fprintf('  [L2] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: available expected=%.6g, received=%.6g\n', expected_available, result.available_vol_ft3);
             tc.verifyEqual(result.available_vol_ft3, expected_available, 'AbsTol', 1e-9);
@@ -414,58 +421,46 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             tc.verifyNotEqual(result.available_vol_ft3, wing_term, ...
                 'fuel_volume_check must not check wing volume alone.');
 
-            % Consolidation check (2026-08-03): available_vol_ft3 must now
-            % equal the standalone fuel_volume(obj) property exactly -- both
-            % are the same sum, computed once.
-            fuel_volume_prop = SubsystemsL2.fuel_volume(obj);
-            fprintf('  [L2] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: consolidation, available=%.6g vs fuel_volume(obj)=%.6g\n', result.available_vol_ft3, fuel_volume_prop);
-            tc.verifyEqual(result.available_vol_ft3, fuel_volume_prop, 'AbsTol', 1e-9);
+            % Consolidation: available_vol_ft3 must equal the standalone
+            % get_fuel_volume_available() answer exactly -- the same sum.
+            fprintf('  [L2] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: consolidation, available=%.6g vs get_fuel_volume_available=%.6g\n', result.available_vol_ft3, s2.get_fuel_volume_available());
+            tc.verifyEqual(result.available_vol_ft3, s2.get_fuel_volume_available(), 'AbsTol', 1e-9);
 
-            % required_vol_ft3 = W_energy/density = 2000/50 = 40; 44.8967 >= 40 -> sufficient.
+            % required_vol_ft3 = 2000/50 = 40 ft^3.
             fprintf('  [L2] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: required expected=%.6g, received=%.6g\n', 40.0, result.required_vol_ft3);
             tc.verifyEqual(result.required_vol_ft3, 40.0, 'AbsTol', 1e-9);
-            expected_required_via_method = SubsystemsL2.fuel_volume_from_weight(obj, obj.fuel_weight_source.W_energy);
-            fprintf('  [L2] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: required (method) expected=%.6g, received=%.6g\n', expected_required_via_method, result.required_vol_ft3);
-            tc.verifyEqual(result.required_vol_ft3, expected_required_via_method, 'AbsTol', 1e-9);
             fprintf('  [L2] testFuelVolumeCheckSumsFuselageAndWingNeverJustOne: expecting sufficient=true (available=%.6g, required=%.6g)\n', result.available_vol_ft3, result.required_vol_ft3);
-            tc.verifyTrue(result.sufficient, 'available (44.90 ft^3) should exceed required (40 ft^3).');
+            tc.verifyTrue(result.sufficient);
         end
 
         function testFuelVolumeCheckInsufficientCase(tc)
-        % Same geometry as above, but a larger required fuel weight (3000 lb
-        % -> required = 60 ft^3) exceeds available (~44.90 ft^3) -> false.
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2, ...
-                               'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-            obj.fuel_type                 = 'JP-8';
-            obj.fuel_weight_source        = struct('W_energy', 3000);
+        % A fuel weight far beyond what the airframe can hold must report
+        % sufficient = false, not silently pass.
+            [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
+            s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
+            required_weight = 2 * s2.get_fuel_volume_available() * s2.fuel_density;
 
-            result = SubsystemsL2.fuel_volume_check(obj);
-            fprintf('  [L2] testFuelVolumeCheckInsufficientCase: required expected=%.6g, received=%.6g\n', 60.0, result.required_vol_ft3);
-            tc.verifyEqual(result.required_vol_ft3, 60.0, 'AbsTol', 1e-9);
-            fprintf('  [L2] testFuelVolumeCheckInsufficientCase: expecting sufficient=false (available~44.90, required=%.6g)\n', result.required_vol_ft3);
-            tc.verifyFalse(result.sufficient, 'required (60 ft^3) exceeds available (~44.90 ft^3).');
+            result = s2.fuel_volume_check(required_weight);
+            fprintf('  [L2] testFuelVolumeCheckInsufficientCase: required expected=%.6g, received=%.6g\n', required_weight/50.0, result.required_vol_ft3);
+            tc.verifyEqual(result.required_vol_ft3, required_weight/50.0, 'AbsTol', 1e-9);
+            fprintf('  [L2] testFuelVolumeCheckInsufficientCase: expecting sufficient=false (available=%.6g, required=%.6g)\n', result.available_vol_ft3, result.required_vol_ft3);
+            tc.verifyFalse(result.sufficient);
         end
 
-        function testFuelVolumeCheckErrorsWhenWEnergyNaN(tc)
-            obj.geom = struct('L_fuselage', 10, 'W_max_fuselage', 4, 'H_max_fuselage', 2, ...
-                               'S_ref', 100, 'b_wing', 20, 'tc_r_wing', 0.05, 'tc_t_wing', 0.05, 'lambda_wing', 0.25);
-            obj.packaging_factor_category = 'Integral tank — shallow fuselage';
-            obj.fuel_type                 = 'JP-8';
-            obj.fuel_weight_source        = struct('W_energy', NaN);
-
-            expectedErrId = 'SubsystemsL2:fuelWeightNotSet';
+        function testFuelVolumeCheckErrorsOnNaN(tc)
+        % W_energy is NaN until a sizing run sets it, so a NaN required
+        % volume must not be silently reported as "sufficient".
+            threw = false;
+            msg   = '(none thrown)';
             try
-                SubsystemsL2.fuel_volume_check(obj);
-                actualErrId = '(none thrown)';
-                actualErrMsg = '(none thrown)';
+                SubsystemsL2.fuel_volume_check(NaN, 100);
             catch ME
-                actualErrId = ME.identifier;
-                actualErrMsg = ME.message;
+                threw = true;
+                msg   = ME.message;
             end
-            fprintf('  [L2] testFuelVolumeCheckErrorsWhenWEnergyNaN: expected_error=%s, received_error=%s (%s)\n', ...
-                expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsL2.fuel_volume_check(obj), 'SubsystemsL2:fuelWeightNotSet');
+            fprintf('  [L2] testFuelVolumeCheckErrorsOnNaN: expected=error, received=%s (%s)\n', mat2str(threw), msg);
+            tc.verifyTrue(threw, 'fuel_volume_check must reject a NaN required volume.');
+            tc.verifySubstring(msg, 'NaN');
         end
 
         % ------------------------------------------------------------------ %
@@ -492,14 +487,18 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         %   reference-extract files.
         %
         %   HOW THIS TEST DOCUMENTS IT: SubsystemsL2.compute_battery_volume (and
-        %   SubsystemsL3.battery_volume, which reuses it identically) is
-        %   documented to error rather than fabricate a coefficient. This
+        %   L3 has no battery entry point of its own) is
+        %   documented to error rather than fabricate a coefficient. L3 adds
+        %   no battery path of its own and calls this one. This
         %   test PINS that correct, current behavior with the documented
         %   identifier -- matching the convention of
         %   TestWeightsL1.testTODO_RaymerTable61CoefficientsNotInRepo (a
         %   clearly-labeled marker for an open citation gap), adapted to
         %   this gap's shape: a live error() call rather than a comment-only
-        %   TODO. Resolving the gap means supplying a citable volumetric
+        %   TODO. CANDIDATE SOURCE FOUND 2026-09-15: Raymer 6th ed. Table
+        %   20.1, p.748 lists battery energy density in Wh/L for 20
+        %   chemistries, which is exactly the missing coefficient.
+        %   Resolving the gap means supplying a citable volumetric
         %   energy/pack density, implementing the real formula, and
         %   REPLACING this test's verifyError with a hand-computed
         %   expected-value check -- do not silently delete this test without
@@ -628,13 +627,13 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         % with NO reconstruction.
             [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
             s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
-            v0 = s2.fuselage_usable_fuel_volume;
+            v0 = s2.fuselage_fuel_volume;
 
             g2.W_max_fuselage = g2.W_max_fuselage + 1;   % optimizer-style mutation
-            v1 = s2.fuselage_usable_fuel_volume;
-            fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesLiveRecompute: fuselage_usable_fuel_volume before=%.6g, after mutation (must differ)=%.6g\n', v0, v1);
+            v1 = s2.fuselage_fuel_volume;
+            fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesLiveRecompute: fuselage_fuel_volume before=%.6g, after mutation (must differ)=%.6g\n', v0, v1);
             tc.verifyNotEqual(v1, v0, ...
-                'fuselage_usable_fuel_volume must recompute live after geom.W_max_fuselage mutates.');
+                'fuselage_fuel_volume must recompute live after geom.W_max_fuselage mutates.');
 
             fd0 = s2.fuel_density;
             s2.fuel_type = 'JP-5';
@@ -650,92 +649,57 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
             s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
             expectedErrId = 'MATLAB:class:noSetMethod';
-            try
-                setfield(s2, 'fuselage_raw_volume', 999); %#ok<SFLD>
-                actualErrId = '(none thrown)';
-                actualErrMsg = '(none thrown)';
-            catch ME
-                actualErrId = ME.identifier;
-                actualErrMsg = ME.message;
+            propsToCheck = {'fuselage_fuel_volume', 'wing_fuel_volume', ...
+                            'total_avionics_volume_occupied', ...
+                            'total_fuel_volume_occupied', 'total_design_volume'};
+            for i = 1:numel(propsToCheck)
+                try
+                    setfield(s2, propsToCheck{i}, 999); %#ok<STFLD,SFLD>
+                    actualErrId = '(none thrown)';
+                    actualErrMsg = '(none thrown)';
+                catch ME
+                    actualErrId = ME.identifier;
+                    actualErrMsg = ME.message;
+                end
+                fprintf(['  [L2] testF16SubsystemsL2DerivedPropertiesAreReadOnly (%s): expected_error=%s, ' ...
+                    'received_error=%s (%s)\n'], propsToCheck{i}, expectedErrId, actualErrId, actualErrMsg);
+                tc.verifyError(@() setfield(s2, propsToCheck{i}, 999), expectedErrId);
             end
-            fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesAreReadOnly (fuselage_raw_volume): expected_error=%s, received_error=%s (%s)\n', ...
-                expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() setfield(s2, 'fuselage_raw_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
-
-            try
-                setfield(s2, 'wing_fuel_volume', 999); %#ok<SFLD>
-                actualErrId = '(none thrown)';
-                actualErrMsg = '(none thrown)';
-            catch ME
-                actualErrId = ME.identifier;
-                actualErrMsg = ME.message;
-            end
-            fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesAreReadOnly (wing_fuel_volume): expected_error=%s, received_error=%s (%s)\n', ...
-                expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() setfield(s2, 'wing_fuel_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
-
-            try
-                setfield(s2, 'avionics_volume', 999); %#ok<SFLD>
-                actualErrId = '(none thrown)';
-                actualErrMsg = '(none thrown)';
-            catch ME
-                actualErrId = ME.identifier;
-                actualErrMsg = ME.message;
-            end
-            fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesAreReadOnly (avionics_volume): expected_error=%s, received_error=%s (%s)\n', ...
-                expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() setfield(s2, 'avionics_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
-
-            try
-                setfield(s2, 'fuel_volume', 999); %#ok<SFLD>
-                actualErrId = '(none thrown)';
-                actualErrMsg = '(none thrown)';
-            catch ME
-                actualErrId = ME.identifier;
-                actualErrMsg = ME.message;
-            end
-            fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesAreReadOnly (fuel_volume): expected_error=%s, received_error=%s (%s)\n', ...
-                expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() setfield(s2, 'fuel_volume', 999), 'MATLAB:class:noSetMethod'); %#ok<SFLD>
         end
 
-        function testF16SubsystemsL2InternalVolumeIncludesAvionics(tc)
-        % End-to-end guard for Legacy Bug 1 through the REAL Tier-3 class.
+        function testF16SubsystemsL2AvionicsVolumeIsReportedNotDropped(tc)
+        % End-to-end guard for Legacy Bug 1 through the REAL Tier-3 class:
+        % the avionics volume must be a live, nonzero quantity of its own.
             [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
             s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
-            av_vol = s2.avionics_volume;
-            fprintf('  [L2] testF16SubsystemsL2InternalVolumeIncludesAvionics: avionics_volume (must be >0) received=%.6g\n', av_vol);
+            av_vol = s2.total_avionics_volume_occupied;
+            fprintf('  [L2] testF16SubsystemsL2AvionicsVolumeIsReportedNotDropped: avionics volume (must be >0) received=%.6g\n', av_vol);
             tc.verifyGreaterThan(av_vol, 0);
-            internal_vol = s2.internal_volume;
-            fus_plus_wing = s2.fuselage_usable_fuel_volume + s2.wing_fuel_volume;
-            fprintf('  [L2] testF16SubsystemsL2InternalVolumeIncludesAvionics: internal_volume=%.6g must exceed fus+wing=%.6g\n', internal_vol, fus_plus_wing);
-            tc.verifyGreaterThan(internal_vol, fus_plus_wing);
+            expected = s2.get_total_avionics_volume_categorical(w2.get_OEW(w2.W_TO));
+            fprintf('  [L2] testF16SubsystemsL2AvionicsVolumeIsReportedNotDropped: expected=%.6g, received=%.6g\n', expected, av_vol);
+            tc.verifyEqual(av_vol, expected, 'AbsTol', 1e-9);
         end
 
-        function testF16SubsystemsL2FuelVolumePropertyAndInternalVolumeConsolidation(tc)
-        % fuel_volume (added 2026-08-03, SubsystemsBase) must equal
-        % fuselage_usable_fuel_volume + wing_fuel_volume exactly, and
-        % internal_volume must equal fuel_volume + avionics_volume exactly --
-        % the consolidated form internal_volume() now uses internally.
+        function testF16SubsystemsL2FuelVolumeOccupiedTracksWEnergy(tc)
+        % A getter takes no argument, so the fuel weight is read off the
+        % injected weights object. It must not be cached.
             [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
             s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
-            received_fv = s2.fuel_volume;
-            expected_fv = s2.fuselage_usable_fuel_volume + s2.wing_fuel_volume;
-            fprintf('  [L2] testF16SubsystemsL2FuelVolumePropertyAndInternalVolumeConsolidation: fuel_volume expected=%.6g, received=%.6g\n', expected_fv, received_fv);
-            tc.verifyEqual(received_fv, expected_fv, 'AbsTol', 1e-9);
+            expected = w2.W_energy / s2.fuel_density;
+            fprintf('  [L2] testF16SubsystemsL2FuelVolumeOccupiedTracksWEnergy: expected=%.6g, received=%.6g\n', expected, s2.total_fuel_volume_occupied);
+            tc.verifyEqual(s2.total_fuel_volume_occupied, expected, 'AbsTol', 1e-9);
 
-            received_iv = s2.internal_volume;
-            expected_iv = s2.fuel_volume + s2.avionics_volume;
-            fprintf('  [L2] testF16SubsystemsL2FuelVolumePropertyAndInternalVolumeConsolidation: internal_volume expected=%.6g, received=%.6g\n', expected_iv, received_iv);
-            tc.verifyEqual(received_iv, expected_iv, 'AbsTol', 1e-9);
+            w2.W_energy = 7000;
+            fprintf('  [L2] testF16SubsystemsL2FuelVolumeOccupiedTracksWEnergy: after W_energy=7000 expected=%.6g, received=%.6g\n', 140.0, s2.total_fuel_volume_occupied);
+            tc.verifyEqual(s2.total_fuel_volume_occupied, 140.0, 'AbsTol', 1e-9);
         end
 
-        function testF16SubsystemsL2FuelVolumeFromWeightMethod(tc)
+        function testF16SubsystemsL2TotalFuelVolumeOccupiedMethod(tc)
             [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
             s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
-            received = s2.fuel_volume_from_weight(500);
+            received = s2.get_total_fuel_volume_occupied(500);
             expected = 500 / s2.fuel_density;
-            fprintf('  [L2] testF16SubsystemsL2FuelVolumeFromWeightMethod: expected=%.6g, received=%.6g\n', expected, received);
+            fprintf('  [L2] testF16SubsystemsL2TotalFuelVolumeOccupiedMethod: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
