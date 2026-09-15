@@ -112,7 +112,7 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         function testFuelDensityReusesTheBaseTable(tc)
         % [Nicolai & Carichner Table 8.6, p.210] JP-8 = 50 lb/ft^3.
             expected = 50.0;
-            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-8');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'JP-8');
             fprintf('  [L3] testFuelDensityReusesTheBaseTable: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
@@ -179,9 +179,9 @@ classdef TestSubsystemsL3 < matlab.unittest.TestCase
         function testF16SubsystemsL3ReadsJSON(tc)
             [g3, w3] = TestSubsystemsL3.makeGeomAndWeights();
             s3 = F16SubsystemsL3(f16a_spec_path(3), g3, w3);
-            expected_fuel_type = 'JP-8';
-            fprintf('  [L3] testF16SubsystemsL3ReadsJSON: fuel_type expected=%s, received=%s\n', expected_fuel_type, s3.fuel_type);
-            tc.verifyEqual(s3.fuel_type, expected_fuel_type);
+            expected_fuel_name = 'JP-8';
+            fprintf('  [L3] testF16SubsystemsL3ReadsJSON: fuel_name expected=%s, received=%s\n', expected_fuel_name, s3.fuel_name);
+            tc.verifyEqual(s3.fuel_name, expected_fuel_name);
             expected_pkg_category = 'Integral tank — shallow fuselage';
             fprintf('  [L3] testF16SubsystemsL3ReadsJSON: packaging_factor_category expected=%s, received=%s\n', expected_pkg_category, s3.packaging_factor_category);
             tc.verifyEqual(s3.packaging_factor_category, expected_pkg_category);

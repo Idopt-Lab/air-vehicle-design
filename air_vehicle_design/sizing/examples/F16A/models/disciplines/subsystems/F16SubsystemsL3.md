@@ -12,7 +12,8 @@ still error.
 
 | Property | Value | Source |
 |---|---|---|
-| `fuel_type` | `'JP-8'` | `f16a_L3.json` `.subsystems.fuel.fuel_type` |
+| `fuel_type` | `"hydrocarbon"` | class default. Selects the density table. |
+| `fuel_name` | `'JP-8'` | `f16a_L3.json` `.subsystems.fuel.fuel_type` |
 | `packaging_factor_category` | `'Integral tank — shallow fuselage'` | `f16a_L3.json` `.subsystems.fuel.packaging_factor_category`. **Read, never used.** |
 | `fuselage_packaging_factor_category` | `'Integral tank — shallow fuselage'` | class default. Drives `get_fuselage_fuel_volume_available`. |
 | `wing_packaging_factor_category` | `'Integral tank — wing'` | class default. **Unused.** |
@@ -29,6 +30,9 @@ fuselage volume comes from `GeomL3`'s station table.
 **The JSON packaging factor is ignored.** `packaging_factor_category` is loaded from the JSON and
 read by nothing. The fuselage term uses the class-default `fuselage_packaging_factor_category`.
 
+**The JSON key is `fuel_type` but holds a fuel name.** The constructor reads it into `fuel_name`;
+`fuel_type` stays at the class default. Logged in `SubsystemsBase.md` §7.
+
 ## 2. Derived properties
 
 Nine `Dependent` getters, recomputed on read.
@@ -39,7 +43,7 @@ Nine `Dependent` getters, recomputed on read.
 | `avionics_density` | 54.3676 lb/ft^3 | `avionics_weight / total_avionics_volume_occupied` |
 | `avionics_weight` | 1081.0925 lbf | the component buildup |
 | `total_avionics_volume_occupied` | 19.8849 ft^3 | the component buildup |
-| `fuel_density` | 50.0 lb/ft^3 | `fuel_type` |
+| `fuel_density` | 50.0 lb/ft^3 | `fuel_type`, `fuel_name` |
 | `fuselage_usable_fuel_volume` | 611.2656 ft^3 | `geom` station table, packaging factor |
 | `wing_fuel_volume` | 55.0161 ft^3 | `geom` wing planform |
 | `total_fuel_volume_occupied` | `W_energy / fuel_density` | `fuel_weight_source.W_energy` |

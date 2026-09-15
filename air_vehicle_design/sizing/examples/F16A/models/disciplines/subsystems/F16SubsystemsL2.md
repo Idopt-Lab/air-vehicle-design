@@ -11,7 +11,8 @@ Every member works. L2 is the first tier with real geometry, so available fuel v
 
 | Property | Value | Source |
 |---|---|---|
-| `fuel_type` | `'JP-8'` | `f16a_L2.json` `.subsystems.fuel.fuel_type` |
+| `fuel_type` | `"hydrocarbon"` | class default. Selects the density table. |
+| `fuel_name` | `'JP-8'` | `f16a_L2.json` `.subsystems.fuel.fuel_type` |
 | `avionics_table_row` | `'Fighters'` | `f16a_L2.json` `.subsystems.avionics.aircraft_category_table_row` |
 | `packaging_factor_category` | `'Integral tank — shallow fuselage'` | `f16a_L2.json` `.subsystems.fuel.packaging_factor_category` |
 | `fuselage_packaging_factor_category` | `'Integral tank — shallow fuselage'` | class default. **Unused.** |
@@ -33,7 +34,7 @@ Nine `Dependent` getters, recomputed on read.
 | `avionics_density` | 37.5 lb/ft^3 | `SubsystemsL2.AVIONICS_DENSITY` |
 | `avionics_weight` | 781.0460 lbf | `get_OEW(W_TO)` |
 | `total_avionics_volume_occupied` | 20.8279 ft^3 | `avionics_weight`, `avionics_density` |
-| `fuel_density` | 50.0 lb/ft^3 | `fuel_type` |
+| `fuel_density` | 50.0 lb/ft^3 | `fuel_type`, `fuel_name` |
 | `fuselage_fuel_volume` | 682.6682 ft^3 | `geom`, packaging factor |
 | `wing_fuel_volume` | 55.0161 ft^3 | `geom` |
 | `total_design_volume` | 908.3513 ft^3 | `geom` |
@@ -84,8 +85,11 @@ volume: 55.02 + 853.34 = 908.35 ft^3. Its property comment describes a third thi
 **Landing-gear bay volume is not summed into any volume here.** `F16LandingGearL2.bay_volume`
 errors on a citation gap, so a caller wanting the gear contribution adds it.
 
-**`avionics_density` is 37.5, not Nicolai's 45.** `SubsystemsL2.AVIONICS_DENSITY` duplicates
-`SubsystemsL1`'s Raymer range average. Nothing in the repository reaches Nicolai's flat 45.
+**`avionics_density` is 37.5.** `SubsystemsL2.AVIONICS_DENSITY` duplicates `SubsystemsL1`'s
+Raymer range average. Nothing in the repository reaches Nicolai's flat 45.
+
+**The JSON key is `fuel_type` but holds a fuel name.** The constructor reads it into `fuel_name`;
+`fuel_type` stays at the class default. Logged in `SubsystemsBase.md` §7.
 
 ## 6. The SubsystemsModelL2 bridges are unreached
 

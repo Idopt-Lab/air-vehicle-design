@@ -12,7 +12,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 %   from the production code's own output, and NOT the same F-16 numbers the
 %   production JSON carries (except the small number of explicit "wiring"
 %   tests that read the JSON directly and assert against the JSON's own
-%   independently-known values -- e.g. that fuel_type is literally 'JP-8').
+%   independently-known values -- e.g. that fuel_name is literally 'JP-8').
 %
 %   L1 is tabulation-only (Fidelity split): no geometry, no fuel-tank
 %   packaging factor, no landing-gear counterpart.
@@ -42,79 +42,79 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
 
         function testLookupFuelDensityAllFourTypes(tc)
         % [Nicolai & Carichner Table 8.6, p.210] lb/ft^3 by type.
-            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-4');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'JP-4');
             expected = 48.6;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-5');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'JP-5');
             expected = 51.1;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (JP-5): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-8');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'JP-8');
             expected = 50.0;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('Aviation gas');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'Aviation gas');
             expected = 44.9;
             fprintf('  [L1] testLookupFuelDensityAllFourTypes (Aviation gas): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
-        function testLookupFuelDensityUnknownTypeErrors(tc)
-            expectedErrId = 'SubsystemsL1:unknownFuelType';
+        function testLookupFuelDensityUnknownNameErrors(tc)
+            expectedErrId = 'SubsystemsL1:unknownFuelName';
             try
-                SubsystemsBase.lookup_fuel_density_lb_per_ft_3('Diesel');
+                SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'Diesel');
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
                 actualErrId = ME.identifier;
                 actualErrMsg = ME.message;
             end
-            fprintf('  [L1] testLookupFuelDensityUnknownTypeErrors: expected_error=%s, received_error=%s (%s)\n', ...
+            fprintf('  [L1] testLookupFuelDensityUnknownNameErrors: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsBase.lookup_fuel_density_lb_per_ft_3('Diesel'), ...
+            tc.verifyError(@() SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'Diesel'), ...
                 expectedErrId);
         end
 
         function testLookupFuelDensityLbPerGalAllFourTypes(tc)
         % [Nicolai & Carichner Table 8.6, p.210] lb/gal by type.
-            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('JP-4');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('hydrocarbon', 'JP-4');
             expected = 6.5;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (JP-4): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('JP-5');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('hydrocarbon', 'JP-5');
             expected = 6.8;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (JP-5): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('JP-8');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('hydrocarbon', 'JP-8');
             expected = 6.7;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('Aviation gas');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_gal('hydrocarbon', 'Aviation gas');
             expected = 6.0;
             fprintf('  [L1] testLookupFuelDensityLbPerGalAllFourTypes (Aviation gas): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
         end
 
-        function testLookupFuelDensityLbPerGalUnknownTypeErrors(tc)
-            expectedErrId = 'SubsystemsL1:unknownFuelType';
+        function testLookupFuelDensityLbPerGalUnknownNameErrors(tc)
+            expectedErrId = 'SubsystemsL1:unknownFuelName';
             try
-                SubsystemsBase.lookup_fuel_density_lb_per_gal('Diesel');
+                SubsystemsBase.lookup_fuel_density_lb_per_gal('hydrocarbon', 'Diesel');
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
                 actualErrId = ME.identifier;
                 actualErrMsg = ME.message;
             end
-            fprintf('  [L1] testLookupFuelDensityLbPerGalUnknownTypeErrors: expected_error=%s, received_error=%s (%s)\n', ...
+            fprintf('  [L1] testLookupFuelDensityLbPerGalUnknownNameErrors: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SubsystemsBase.lookup_fuel_density_lb_per_gal('Diesel'), ...
+            tc.verifyError(@() SubsystemsBase.lookup_fuel_density_lb_per_gal('hydrocarbon', 'Diesel'), ...
                 expectedErrId);
         end
 
@@ -234,14 +234,14 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         end
 
         function testFuelDensityHighLevel(tc)
-        % Design-class wiring: fuel_type selects the Table 8.6 row.
+        % Design-class wiring: fuel_name selects the Table 8.6 row.
             obj = F16SubsystemsL1(f16a_spec_path(1));
             received = obj.fuel_density;
             expected = 50.0;
             fprintf('  [L1] testFuelDensityHighLevel (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            obj.fuel_type = 'JP-4';
+            obj.fuel_name = 'JP-4';
             received = obj.fuel_density;
             expected = 48.6;
             fprintf('  [L1] testFuelDensityHighLevel (JP-4): expected=%.6g, received=%.6g\n', expected, received);
@@ -260,7 +260,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             fprintf('  [L1] testTotalFuelVolumeOccupiedHandComputed (JP-8): expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
-            obj.fuel_type = 'JP-4';
+            obj.fuel_name = 'JP-4';
             received = obj.get_total_fuel_volume_occupied(486);
             expected = 10.0;
             fprintf('  [L1] testTotalFuelVolumeOccupiedHandComputed (JP-4): expected=%.6g, received=%.6g\n', expected, received);
@@ -389,9 +389,9 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
         function testF16SubsystemsL1ReadsJSONFuelAndAvionicsRow(tc)
             g = F16SubsystemsL1(f16a_spec_path(1));
 
-            received = g.fuel_type;
+            received = g.fuel_name;
             expected = 'JP-8';
-            fprintf('  [L1] testF16SubsystemsL1ReadsJSONFuelAndAvionicsRow (fuel_type): expected=%s, received=%s\n', expected, received);
+            fprintf('  [L1] testF16SubsystemsL1ReadsJSONFuelAndAvionicsRow (fuel_name): expected=%s, received=%s\n', expected, received);
             tc.verifyEqual(received, expected, ...
                 'f16a_L1.json .subsystems.fuel.fuel_type must be JP-8 (T.O. 1F-16A-1 nominal internal fuel).');
 
@@ -428,13 +428,13 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesLiveRecompute (fuel_density, JP-8 initial): expected=50, received=%.6g\n', fd0);
             tc.verifyEqual(fd0, 50.0, 'AbsTol', 1e-9);   % JP-8
 
-            g.fuel_type = 'JP-5';   % optimizer-style in-place mutation
+            g.fuel_name = 'JP-5';   % optimizer-style in-place mutation
             received = g.fuel_density;
             fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesLiveRecompute (fuel_density after JP-5 mutation): expected=51.1, received=%.6g\n', received);
             tc.verifyEqual(received, 51.1, 'AbsTol', 1e-9, ...
-                'fuel_density must recompute live from the mutated fuel_type.');
+                'fuel_density must recompute live from the mutated fuel_name.');
             fprintf('  [L1] testF16SubsystemsL1DerivedPropertiesLiveRecompute (fuel_density changed from initial): initial=%.6g, received=%.6g\n', fd0, received);
-            tc.verifyNotEqual(received, fd0, 'fuel_density must change after fuel_type mutation.');
+            tc.verifyNotEqual(received, fd0, 'fuel_density must change after fuel_name mutation.');
 
             g.avionics_table_row = 'Bombers';
             received = g.avionics_weight_fraction;
@@ -530,7 +530,7 @@ classdef TestSubsystemsL1 < matlab.unittest.TestCase
             tc.verifyEqual(g.total_avionics_volume_occupied, expected_av, 'AbsTol', 1e-9);
 
             % Live, not cached.
-            g.fuel_type = 'JP-4';
+            g.fuel_name = 'JP-4';
             fprintf('  [L1] testF16SubsystemsL1VolumeGettersUseTheInjectedWeightSource (live after JP-4): expected=%.6g, received=%.6g\n', 5000/48.6, g.total_fuel_volume_occupied);
             tc.verifyEqual(g.total_fuel_volume_occupied, 5000/48.6, 'AbsTol', 1e-9);
         end

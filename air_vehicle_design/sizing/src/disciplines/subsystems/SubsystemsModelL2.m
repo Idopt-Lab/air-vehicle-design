@@ -22,7 +22,6 @@ classdef (Abstract) SubsystemsModelL2 < SubsystemsBase
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL2.md
 
     properties (Abstract)
-        fuel_type                  % string, e.g. 'JP-8' -- selects SubsystemsL2.lookup_fuel_density [Nicolai & Carichner Table 8.6]
         packaging_factor_category  % string, e.g. 'Integral tank — shallow fuselage' -- selects SubsystemsL2.lookup_packaging_factor_nicolai [Nicolai & Carichner p.210]
 
         avionics_table_row         % string, e.g. 'Fighters' -- selects SubsystemsL2.lookup_avionics_weight_fraction [Raymer 6th ed. Table 11.6]

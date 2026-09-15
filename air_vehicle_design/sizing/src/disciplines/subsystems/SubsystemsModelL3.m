@@ -4,7 +4,8 @@ classdef (Abstract) SubsystemsModelL3 < SubsystemsBase
 %   Inherits SubsystemsBase directly.
 %
 %   Properties (Abstract):
-%       fuel_type (char): fuel selecting the density table row.
+%       fuel_type (char): energy medium, hydrocarbon or battery.
+%       fuel_name (char): fuel or battery chemistry selecting the table row.
 %       packaging_factor_category (char): tank type selecting the packaging factor.
 %       avionics_table_row (char): Raymer Table 11.6 row.
 %       avionics_weight (double): avionics weight (lbf).
@@ -29,7 +30,6 @@ classdef (Abstract) SubsystemsModelL3 < SubsystemsBase
 %   Companion doc: src/disciplines/subsystems/SubsystemsL3.md
 
     properties (Abstract)
-        fuel_type                  % string, e.g. 'JP-8' [Nicolai & Carichner Table 8.6]
         packaging_factor_category  % string, e.g. 'Integral tank — shallow fuselage' [Nicolai & Carichner p.210]
         avionics_table_row         % string, e.g. 'Fighters' [Raymer 6th ed. Table 11.6]
     end

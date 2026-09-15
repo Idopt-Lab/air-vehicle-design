@@ -11,7 +11,8 @@ Every member works. L1 is tabulation only, so there is no geometry and no availa
 
 | Property | Value | Source |
 |---|---|---|
-| `fuel_type` | `'JP-8'` | `f16a_L1.json` `.subsystems.fuel.fuel_type` |
+| `fuel_type` | `"hydrocarbon"` | class default. Selects the density table. |
+| `fuel_name` | `'JP-8'` | `f16a_L1.json` `.subsystems.fuel.fuel_type` |
 | `avionics_table_row` | `'Fighters'` | `f16a_L1.json` `.subsystems.avionics.aircraft_category_table_row` |
 | `fuel_weight_source` | injected, **optional** | a `WeightsBase`; supplies `W_energy` and `get_OEW(W_TO)` |
 
@@ -73,5 +74,8 @@ none. `get_total_fuel_volume_occupied` returns the volume the fuel itself occupi
 **`get_avionics_weight_categorical` repeats the lookup-and-mean** that
 `get_avionics_weight_fraction` already does, rather than calling it. The two agree.
 
-**`avionics_density` reads 37.5 and that is correct here.** See `SubsystemsL1.md` §4 for the
-name collision with L2's 45.
+**`avionics_density` is 37.5**, Raymer's 30 to 45 range average. `SubsystemsL2` holds the same
+constant.
+
+**The JSON key is `fuel_type` but holds a fuel name.** The constructor reads it into `fuel_name`;
+`fuel_type` stays at the class default. Logged in `SubsystemsBase.md` §7.

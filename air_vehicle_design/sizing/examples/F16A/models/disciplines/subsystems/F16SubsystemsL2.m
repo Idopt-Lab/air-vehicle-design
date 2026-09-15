@@ -6,7 +6,8 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %   L2 equivalent.
 %
 %   Properties:
-%       fuel_type (char): fuel selecting the density table row.
+%       fuel_type (char): energy medium, hydrocarbon or battery.
+%       fuel_name (char): fuel or battery chemistry selecting the table row.
 %       avionics_table_row (char): Raymer Table 11.6 row.
 %       packaging_factor_category (char): tank type selecting the packaging factor.
 %       fuselage_packaging_factor_category (char): unused.
@@ -37,7 +38,7 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 %       get_fuel_volume_available: wing + fuselage usable fuel volume (ft^3).
 %       get_total_fuel_volume_occupied: fuel weight / density (ft^3).
 %       get_total_design_volume: wing fuel volume + raw fuselage volume (ft^3).
-%       get_fuel_density: fuel density (lb/ft^3) for the stored fuel type.
+%       get_fuel_density: fuel density (lb/ft^3) for the stored fuel.
 %       fuel_volume_check: required against available fuel volume, returns a struct.
 %
 %   Constructor: F16SubsystemsL2(json_path, geom, fuel_weight_source). All
@@ -54,7 +55,8 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
 
 
     properties
-        fuel_type                 = 'JP-8'                              % [f16a_L2.json .subsystems.fuel.fuel_type]
+        fuel_type = "hydrocarbon"
+        fuel_name                 = 'JP-8'                              % [f16a_L2.json .subsystems.fuel.fuel_type]
         avionics_table_row        = 'Fighters'                          % [f16a_L2.json .subsystems.avionics.aircraft_category_table_row]
         packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L2.json .subsystems.fuel.packaging_factor_category]
         fuselage_packaging_factor_category = 'Integral tank — shallow fuselage'
@@ -95,7 +97,7 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
             obj.geom               = geom;
             obj.fuel_weight_source = fuel_weight_source;
 
-            obj.fuel_type                 = char(J.subsystems.fuel.fuel_type);
+            obj.fuel_name                 = char(J.subsystems.fuel.fuel_type);
             obj.packaging_factor_category = char(J.subsystems.fuel.packaging_factor_category);
             obj.avionics_table_row        = char(J.subsystems.avionics.aircraft_category_table_row);
         end
@@ -113,7 +115,7 @@ classdef F16SubsystemsL2 < SubsystemsModelL2
         function val = get_fuel_density(obj)
         %GET_FUEL_DENSITY  Fuel density [lb/ft^3] for the stored fuel type.
         %   No write-back: fuel_density is Dependent, so it recomputes on read.
-            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
+            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type, obj.fuel_name);
         end
 
         % Note (9/8/2026)(Casey): Using L1 methods because no suitable L2 methods could be found.

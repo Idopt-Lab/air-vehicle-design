@@ -336,7 +336,7 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
         % [Nicolai & Carichner Table 8.6, p.210]. The table lives on
         % SubsystemsBase because fuel density does not vary with fidelity.
             expected = 51.1;
-            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('JP-5');
+            received = SubsystemsBase.lookup_fuel_density_lb_per_ft_3('hydrocarbon', 'JP-5');
             fprintf('  [L2] testFuelDensityL2ReusesTheBaseTable: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9);
 
@@ -529,10 +529,10 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
             [g2, w2] = TestSubsystemsL2.makeGeomAndWeights();
             s2 = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
 
-            received_fuel_type = s2.fuel_type;
-            expected_fuel_type = 'JP-8';
-            fprintf('  [L2] testF16SubsystemsL2ReadsJSON: fuel_type expected=%s, received=%s\n', expected_fuel_type, received_fuel_type);
-            tc.verifyEqual(received_fuel_type, expected_fuel_type);
+            received_fuel_name = s2.fuel_name;
+            expected_fuel_name = 'JP-8';
+            fprintf('  [L2] testF16SubsystemsL2ReadsJSON: fuel_name expected=%s, received=%s\n', expected_fuel_name, received_fuel_name);
+            tc.verifyEqual(received_fuel_name, expected_fuel_name);
 
             received_packaging = s2.packaging_factor_category;
             expected_packaging = 'Integral tank — shallow fuselage';
@@ -636,13 +636,13 @@ classdef TestSubsystemsL2 < matlab.unittest.TestCase
                 'fuselage_fuel_volume must recompute live after geom.W_max_fuselage mutates.');
 
             fd0 = s2.fuel_density;
-            s2.fuel_type = 'JP-5';
+            s2.fuel_name = 'JP-5';
             fd1 = s2.fuel_density;
             expected_fd1 = 51.1;
             fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesLiveRecompute: fuel_density expected=%.6g, received=%.6g\n', expected_fd1, fd1);
             tc.verifyEqual(fd1, expected_fd1, 'AbsTol', 1e-9);
             fprintf('  [L2] testF16SubsystemsL2DerivedPropertiesLiveRecompute: fuel_density before=%.6g, after mutation (must differ)=%.6g\n', fd0, fd1);
-            tc.verifyNotEqual(fd1, fd0, 'fuel_density must recompute live after fuel_type mutates.');
+            tc.verifyNotEqual(fd1, fd0, 'fuel_density must recompute live after fuel_name mutates.');
         end
 
         function testF16SubsystemsL2DerivedPropertiesAreReadOnly(tc)

@@ -1,37 +1,46 @@
 classdef F16SubsystemsL1 < SubsystemsModelL1
 %F16SUBSYSTEMSL1  F-16A Block 10/15 Level-1 subsystems student class.
 %
-%   Inherits from SubsystemsModelL1 (abstract enforcer). Every abstract
-%   method is satisfied by a single delegation line to SubsystemsL1 statics
-%   -- no equations are duplicated here.
+%   Inherits from SubsystemsModelL1. L1 is tabulation only: no geometry, so
+%   no available volume and no packaging factor.
 %
-%   L1 is tabulation-only: fuel-type density [Nicolai & Carichner Table 8.6]
-%   and avionics weight-fraction/density [Raymer 6th ed. Table 11.6 + its
-%   own following-paragraph density-range average, ~37.5 lb/ft^3]. No
-%   geometry, no injected collaborators -- methods that need an external
-%   weight (W_empty, a required fuel weight) take it as an explicit
-%   argument, exactly as F16WeightsL1.get_OEW(obj, W_TO) does.
+%   Properties:
+%       fuel_type (char): energy medium, hydrocarbon or battery.
+%       fuel_name (char): fuel or battery chemistry selecting the table row.
+%       avionics_table_row (char): Raymer Table 11.6 row.
+%       fuel_weight_source (WeightsBase): injected, OPTIONAL. Supplies
+%           W_energy and OEW(W_TO).
 %
-%   No fuel-tank packaging factor is applied here (not usable at L1 -- no
-%   geometric raw volume exists yet) and there is no landing-gear
-%   counterpart at this tier at all.
+%   Properties (Dependent):
+%       avionics_weight_fraction (double): fraction of W_empty.
+%       avionics_density (double): avionics packing density (lb/ft^3).
+%       fuel_density (double): fuel density (lb/ft^3).
+%       total_fuel_volume_occupied (double): volume the fuel occupies (ft^3).
+%           NaN without the injected collaborator.
+%       total_avionics_volume_occupied (double): avionics volume (ft^3).
+%           NaN without the injected collaborator.
 %
-%   CONSTRUCTOR: F16SubsystemsL1(json_path). Reads the .subsystems block of
-%   a required unified L1 input JSON (f16a_spec_path(1)). NO silent default.
+%   Methods:
+%       get_avionics_weight_fraction: fraction of W_empty for the table row.
+%       get_avionics_weight_categorical: avionics weight (lbf) from W_empty.
+%       get_avionics_volume_categorical: avionics volume (ft^3) from W_empty.
+%       get_total_fuel_volume_occupied: fuel weight / density (ft^3).
+%       fuel_volume_check: required against available fuel volume, returns a
+%           struct. Available is 0 at L1.
 %
-%   SOURCES:
-%     [Nicolai] Nicolai & Carichner, "Fundamentals of Aircraft and Airship
-%               Design," Ch.8, p.210 (fuel density Table 8.6; avionics
-%               density Sec.8.1.11 -- not used at L1, see avionics_density).
-%     [Raymer]  D.P. Raymer, Aircraft Design 6th ed., Table 11.6, p.375
-%               (avionics weight fraction + following-paragraph density range).
+%   Constructor: F16SubsystemsL1(json_path, fuel_weight_source). The path is
+%   required; the collaborator is not.
+%
+%   Sources: Nicolai & Carichner Table 8.6 p.210; Raymer 6th ed. Table 11.6
+%   p.375 and the density range in the paragraph before it.
 %
 %   Companion doc: examples/F16A/models/disciplines/subsystems/F16SubsystemsL1.md
 
     % INPUTS (2) -- plain mutable properties, set once by the constructor.
     % Authoritative table with all citations: F16SubsystemsL1.md §2.
     properties
-        fuel_type          = 'JP-8'      % selects SubsystemsL1.lookup_fuel_density [Nicolai & Carichner Table 8.6; f16a_L1.json .subsystems.fuel.fuel_type]
+        fuel_type = "hydrocarbon"
+        fuel_name          = 'JP-8'      % [Nicolai & Carichner Table 8.6; f16a_L1.json .subsystems.fuel.fuel_type]
         avionics_table_row = 'Fighters'  % selects SubsystemsL1.lookup_avionics_weight_fraction [Raymer 6th ed. Table 11.6; f16a_L1.json .subsystems.avionics.aircraft_category_table_row]
 
         % OPTIONAL injected collaborator. Supplies W_energy and OEW(W_TO) to
@@ -64,7 +73,7 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
                 fuel_weight_source = []
             end
             J = jsondecode(fileread(json_path));
-            obj.fuel_type          = char(J.subsystems.fuel.fuel_type);                    % [f16a_L1.json .subsystems.fuel.fuel_type]
+            obj.fuel_name          = char(J.subsystems.fuel.fuel_type);                    % [f16a_L1.json .subsystems.fuel.fuel_type]
             obj.avionics_table_row = char(J.subsystems.avionics.aircraft_category_table_row); % [f16a_L1.json .subsystems.avionics.aircraft_category_table_row]
             obj.fuel_weight_source = fuel_weight_source;
         end
@@ -117,7 +126,7 @@ classdef F16SubsystemsL1 < SubsystemsModelL1
         end
 
         function val = get.fuel_density(obj)
-            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
+            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type, obj.fuel_name);
         end
 
         % Both need a weight, so they read the injected collaborator. NaN

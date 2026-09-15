@@ -9,7 +9,6 @@ classdef (Abstract) SubsystemsModelL1 < SubsystemsBase
 %   Toolbox companion: src/disciplines/subsystems/SubsystemsL1.md
 
     properties (Abstract)
-        fuel_type % String. Select from a list of jet fuel, or enter "ELECTRIC" if design is electric.
         avionics_table_row % string, e.g. 'Fighters' -- selects SubsystemsL1.lookup_avionics_weight_fraction [Raymer 6th ed. Table 11.6]
     end
 

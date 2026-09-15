@@ -6,7 +6,8 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
 %   a time from the input JSON.
 %
 %   Properties:
-%       fuel_type (char): fuel selecting the density table row.
+%       fuel_type (char): energy medium, hydrocarbon or battery.
+%       fuel_name (char): fuel or battery chemistry selecting the table row.
 %       packaging_factor_category (char): tank type. Unused.
 %       avionics_table_row (char): Raymer Table 11.6 row.
 %       fuselage_packaging_factor_category (char): tank type selecting the
@@ -64,7 +65,8 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
     % INPUTS (3) + 2 injected objects -- plain mutable properties, set once by
     % the constructor. Authoritative table: F16SubsystemsL3.md §2.
     properties
-        fuel_type                 = 'JP-8'                              % [f16a_L3.json .subsystems.fuel.fuel_type]
+        fuel_type = "hydrocarbon"
+        fuel_name                 = 'JP-8'                              % [f16a_L3.json .subsystems.fuel.fuel_type]
         packaging_factor_category = 'Integral tank — shallow fuselage'   % [f16a_L3.json .subsystems.fuel.packaging_factor_category]
         avionics_table_row        = 'Fighters'                          % [f16a_L3.json .subsystems.avionics.aircraft_category_table_row]
         fuselage_packaging_factor_category = 'Integral tank — shallow fuselage'
@@ -109,7 +111,7 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
             obj.geom               = geom;
             obj.fuel_weight_source = fuel_weight_source;
 
-            obj.fuel_type                 = char(J.subsystems.fuel.fuel_type);
+            obj.fuel_name                 = char(J.subsystems.fuel.fuel_type);
             obj.packaging_factor_category = char(J.subsystems.fuel.packaging_factor_category);
             obj.avionics_table_row        = char(J.subsystems.avionics.aircraft_category_table_row);
             obj.avionics_components       = J.subsystems.unclassified_avionics_equipment.components;   % Mod (09/11/2026) (Claude)
@@ -208,7 +210,7 @@ classdef F16SubsystemsL3 < SubsystemsModelL3
         end
 
         function val = get.fuel_density(obj)
-            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type);
+            val = SubsystemsBase.lookup_fuel_density_lb_per_ft_3(obj.fuel_type, obj.fuel_name);
         end
 
         function val = get.fuselage_usable_fuel_volume(obj)
