@@ -123,14 +123,11 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % ================================================================ %
 
         function testSizeMatchesHandComputedFormula(tc)
-        % A plain struct suffices as `obj` -- TailL1.size only reads
-        % obj.c_HT/obj.c_VT via dot access, which structs support.
         %   c_HT=0.45, c_VT=0.08, S_ref=250, b=28, cbar=9.5, L_fus=40
         %   L_HT=L_VT=0.475*40=19
         %   S_ht = 0.45*9.5*250/19 = 56.25 EXACTLY (see testComputeSHTFormula)
         %   S_vt = 0.08*28*250/19  = 29.473684210526315... (see testComputeSVTFormula)
-            obj = struct('c_HT', 0.45, 'c_VT', 0.08);
-            result = TailL1.size(obj, 250, 28, 9.5, 40);
+            result = TailL1.size(0.45, 0.08, 250, 28, 9.5, 40);
             fprintf('\n    TailL1.size: S_ht received=%.9f expected=56.250000000 | S_vt received=%.9f expected=29.473684211\n', ...
                 result.S_ht, result.S_vt);
             tc.verifyEqual(result.S_ht, 56.25, 'AbsTol', 1e-9, ...
@@ -142,8 +139,7 @@ classdef TestTailL1 < matlab.unittest.TestCase
         function testResultFieldNamesAreLowercase(tc)
         % Field names must be S_ht/S_vt (matching GeometryBase-derived
         % classes' own property casing, e.g. F16GeomL2.S_ht/S_vt).
-            obj = struct('c_HT', 0.4, 'c_VT', 0.07);
-            result = TailL1.size(obj, 300, 30, 11, 46.5);
+            result = TailL1.size(0.4, 0.07, 300, 30, 11, 46.5);
             tc.verifyTrue(isfield(result, 'S_ht'));
             tc.verifyTrue(isfield(result, 'S_vt'));
         end
@@ -152,9 +148,8 @@ classdef TestTailL1 < matlab.unittest.TestCase
         % Both S_ht and S_vt are directly proportional to S_ref with
         % everything else held fixed -- a structural invariant of the
         % formula, independent of the exact coefficient values.
-            obj = struct('c_HT', 0.4, 'c_VT', 0.07);
-            r1 = TailL1.size(obj, 300, 30, 11, 46.5);
-            r2 = TailL1.size(obj, 600, 30, 11, 46.5);
+            r1 = TailL1.size(0.4, 0.07, 300, 30, 11, 46.5);
+            r2 = TailL1.size(0.4, 0.07, 600, 30, 11, 46.5);
             tc.verifyEqual(r2.S_ht, 2 * r1.S_ht, 'RelTol', 1e-12);
             tc.verifyEqual(r2.S_vt, 2 * r1.S_vt, 'RelTol', 1e-12);
         end

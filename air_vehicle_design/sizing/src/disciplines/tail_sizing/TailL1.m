@@ -23,15 +23,17 @@ classdef TailL1
     methods (Static)
 
         % ================================================================== %
-        % HIGH-LEVEL: take the concrete object, return the result.
+        % HIGH-LEVEL: joins the pieces below. Scalars only, no design object.
         % ================================================================== %
 
-        function result = size(obj, S_ref, b, cbar, L_fus)
+        function result = size(c_HT, c_VT, S_ref, b, cbar, L_fus)
         %SIZE  HT and VT reference areas [ft^2].  [Raymer 7th ed. Table 6.4
-        %   + text]  obj must expose corrected c_HT/c_VT (see F16TailL1).
+        %   + text]  c_HT/c_VT must already carry their text corrections
+        %   (see compute_tail_volume_coeffs).
         %   Returns struct('S_ht', S_ht, 'S_vt', S_vt).
             arguments
-                obj
+                c_HT  (1,1) double {mustBePositive}
+                c_VT  (1,1) double {mustBePositive}
                 S_ref (1,1) double {mustBePositive}
                 b     (1,1) double {mustBePositive}
                 cbar  (1,1) double {mustBePositive}
@@ -39,8 +41,8 @@ classdef TailL1
             end
             L_HT = TailL1.compute_tail_arm(L_fus);
             L_VT = L_HT;
-            S_ht = TailL1.compute_S_HT(obj.c_HT, cbar, S_ref, L_HT);
-            S_vt = TailL1.compute_S_VT(obj.c_VT, b, S_ref, L_VT);
+            S_ht = TailL1.compute_S_HT(c_HT, cbar, S_ref, L_HT);
+            S_vt = TailL1.compute_S_VT(c_VT, b, S_ref, L_VT);
             result = struct('S_ht', S_ht, 'S_vt', S_vt);
         end
 
