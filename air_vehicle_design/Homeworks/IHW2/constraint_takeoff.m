@@ -31,13 +31,12 @@ function [WP_max, TOP23] = constraint_takeoff(WS, obj, con_no)
 
     CLmax_TO = obj.aero.get_CLmax(state, con);
 
-    % Coefficients of S_TGR = 4.9 TOP23 + 0.009 TOP23^2
-    a = 0.009;
-    b = 4.9;
-    c = -con.distance_ft;
+    % S_TGR = 4.9 TOP23 + 0.009 TOP23^2, written as a polynomial in TOP23:
+    %   0.009 TOP23^2 + 4.9 TOP23 - S_TGR = 0
+    poly_TOP = [0.009, 4.9, -con.distance_ft];
 
-    % TOP23 solution; the other root is negative
-    TOP23 = (-b + sqrt(b^2 - 4*a*c)) / (2*a);
+    % Two roots; the physical one is positive, so take the larger
+    TOP23 = max(roots(poly_TOP));
 
     WP_max = TOP23 * state.sigma * CLmax_TO ./ WS;
 

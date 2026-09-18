@@ -140,6 +140,15 @@ classdef TtpaAero < AerodynamicsBase
 
         %% Oswald Efficiency
         function e = get.e(obj)
+        %GET.E  Oswald span efficiency factor [-].
+        %       e = 1.78 (1 - 0.045 AR^0.68) - 0.64
+        %   [Raymer 6th ed. Eq. 12.48, the STRAIGHT-WING form, valid for a
+        %   leading-edge sweep below 30 deg. The TTPA is unswept, so this is
+        %   the right branch; Eq. 12.49 is the swept-wing form.]
+        %
+        %   Carried over from IHW1/IHW2 unchanged. The citation is new -
+        %   the equation was in the earlier homeworks with no source
+        %   attached to it.
             e = 1.78 * (1 - 0.045 * obj.AR^0.68) - 0.64;
         end
 

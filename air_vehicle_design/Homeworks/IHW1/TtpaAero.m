@@ -1,4 +1,4 @@
-classdef TtpaAero < AerodynamicsBase
+    classdef TtpaAero < AerodynamicsBase
 %TTPAAERO  Test Twin Propeller Aircraft Level-1 aerodynamic model.
 %
 %   Geometry/design inputs are read from the requirements JSON.
@@ -33,7 +33,7 @@ classdef TtpaAero < AerodynamicsBase
 
         %% Oswald Efficiency
         function e = get.e(obj)
-            e = 1.78 * (1 - 0.045 * obj.AR^0.68) - 0.64;
+                e = 1.78 * (1 - 0.045 * obj.AR^0.68) - 0.64;
         end
 
 

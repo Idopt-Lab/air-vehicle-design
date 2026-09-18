@@ -43,6 +43,28 @@ classdef TtpaProp < PropulsionBase2
         % Takeoff power / maximum continuous power [-].
     end
 
+    methods (Access = private)
+
+        %% Rating Factor
+        function f = rating_factor(obj, rating)
+        %RATING_FACTOR  Power of the rating, divided by the takeoff power [-].
+            switch string(rating)
+
+                case "takeoff"
+                    f = 1;
+
+                case "max_continuous"
+                    f = 1 / obj.P_TO_over_P_max_continuous;
+
+                otherwise
+                    error('TtpaProp:UndefinedRating', ...
+                        'Power rating "%s" is not defined.', string(rating));
+
+            end
+        end
+
+    end
+
     methods
 
         %% Constructor
@@ -84,7 +106,13 @@ classdef TtpaProp < PropulsionBase2
             %
             %   Multiply by P_SL to get shaft power in hp.
 
-            alpha = (1.132 * state.sigma - 0.132) * obj.rating_factor(rating);
+            % altitude term: normally aspirated piston engine
+            alpha_altitude = 1.132 * state.sigma - 0.132;
+
+            % rating term: full takeoff power, or the max-continuous derate
+            f_rating = obj.rating_factor(rating);
+
+            alpha = alpha_altitude * f_rating;
 
         end
 
@@ -107,13 +135,13 @@ classdef TtpaProp < PropulsionBase2
                 rating = "takeoff";
             end
 
-            kP = obj.power_lapse(state, rating);
-
+            % one engine of n_engines when the engine-out flag is set
+            f_oei = 1;
             if con.oei
-                kP = kP / obj.n_engines;
+                f_oei = 1 / obj.n_engines;
             end
 
-            kP = kP * con.power_setting;
+            kP = obj.power_lapse(state, rating) * f_oei * con.power_setting;
 
         end
 
@@ -160,26 +188,5 @@ classdef TtpaProp < PropulsionBase2
 
     end
 
-    methods (Access = private)
-
-        %% Rating Factor
-        function f = rating_factor(obj, rating)
-        %RATING_FACTOR  Power of the rating, divided by the takeoff power [-].
-            switch string(rating)
-
-                case "takeoff"
-                    f = 1;
-
-                case "max_continuous"
-                    f = 1 / obj.P_TO_over_P_max_continuous;
-
-                otherwise
-                    error('TtpaProp:UndefinedRating', ...
-                        'Power rating "%s" is not defined.', string(rating));
-
-            end
-        end
-
-    end
 
 end

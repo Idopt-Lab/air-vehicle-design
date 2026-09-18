@@ -23,6 +23,18 @@ classdef TtpaProp < PropulsionBase2
 
     end
 
+    methods (Access = private)
+
+        %% Rating Factor
+        function f = rating_factor(obj, rating)
+        %RATING_FACTOR  Power of the rating, divided by the takeoff power [-].
+
+            % TODO: "takeoff" and "max_continuous", and an error otherwise
+
+        end
+
+    end
+
     methods
 
         %% Constructor
@@ -44,6 +56,12 @@ classdef TtpaProp < PropulsionBase2
         %   sea-level takeoff power of all engines [-].
         %   Nicolai & Carichner Eq. 14.5: 1.132*sigma - 0.132
 
+            % altitude term: normally aspirated piston engine
+            alpha_altitude = ;
+
+            % rating term: full takeoff power, or the max-continuous derate
+            f_rating = ;
+
             alpha = ;
 
         end
@@ -60,9 +78,13 @@ classdef TtpaProp < PropulsionBase2
 
             % TODO: pick the rating from con.max_continuous
 
-            kP = ;
+            % one engine of n_engines when the engine-out flag is set
+            f_oei = 1;
+            if con.oei
+                f_oei = ;
+            end
 
-            % TODO: the engine-out split, then the throttle setting
+            kP = ;      % lapse x f_oei x throttle, in one line
 
         end
 
@@ -98,16 +120,5 @@ classdef TtpaProp < PropulsionBase2
 
     end
 
-    methods (Access = private)
-
-        %% Rating Factor
-        function f = rating_factor(obj, rating)
-        %RATING_FACTOR  Power of the rating, divided by the takeoff power [-].
-
-            % TODO: "takeoff" and "max_continuous", and an error otherwise
-
-        end
-
-    end
 
 end

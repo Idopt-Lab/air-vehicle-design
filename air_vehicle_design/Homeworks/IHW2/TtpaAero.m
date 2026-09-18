@@ -137,26 +137,32 @@ classdef TtpaAero < AerodynamicsBase
         function cfg = get_config_polar(obj, state, con)
         %GET_CONFIG_POLAR  Drag polar and CLmax of a configuration.
         %
+        %   Starts from the CLEAN polar this class already provides, through
+        %   drag_polar, and adds the increments of the configuration on top,
+        %   so the clean polar stays the single source of the clean values.
+        %
         %   cfg = get_config_polar(obj, state, con) returns
         %       cfg.CD0       clean CD0 plus the flap, the gear and, when
         %                     the condition asks for it, the stopped
         %                     propeller increment
         %       cfg.e         clean Oswald efficiency plus the flap increment
         %       cfg.K1        1/(pi*AR*e) of the configuration
-        %       cfg.K2        0 at this level of fidelity
+        %       cfg.K2        the clean K2, 0 at this level of fidelity
         %       cfg.CLmax     CLmax of the configuration
         %       cfg.CL_climb  CLmax minus the stall margin, the lift
         %                     coefficient a climb is flown at
         %
         %   Increments: Roskam Part I, Table 3.6 and Sec. 3.3.
 
-            dCD0 = 0;
-            de   = 0;
+            % Start from the CLEAN polar this class already provides, then
+            % add the high-lift increments of this configuration.
+            polar = obj.drag_polar(state);
 
             switch string(con.config)
 
                 case "clean"
-                    % no high-lift increment
+                    dCD0 = 0;
+                    de   = 0;
 
                 case "takeoff_flaps_gear_up"
                     dCD0 = obj.dCD0_flaps_takeoff;
@@ -187,10 +193,10 @@ classdef TtpaAero < AerodynamicsBase
             end
 
             cfg.config = string(con.config);
-            cfg.CD0    = obj.CD0 + dCD0;
+            cfg.CD0    = polar.CD0 + dCD0;
             cfg.e      = obj.e + de;
             cfg.K1     = 1 / (pi * obj.AR * cfg.e);
-            cfg.K2     = 0;
+            cfg.K2     = polar.K2;
             cfg.CLmax  = obj.get_CLmax(state, con);
 
             cfg.CL_climb = cfg.CLmax - obj.CL_stall_margin;

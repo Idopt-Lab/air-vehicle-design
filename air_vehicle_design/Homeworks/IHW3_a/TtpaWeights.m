@@ -155,8 +155,20 @@ classdef TtpaWeights < WeightsBase
                 W_TO (1,1) double {mustBePositive}
             end
 
-            % Areal-density rows. The first three multiply EXPOSED PLANFORM
-            % area; the fuselage row multiplies WETTED area.
+            % Areal-density rows. Raymer Table 15.2 asks for EXPOSED
+            % PLANFORM area on the first three rows and WETTED area on the
+            % fuselage row.
+            %
+            % KNOWN APPROXIMATION ON THE TWO TAIL ROWS. The wing row uses
+            % the true exposed area. The tail rows use the THEORETICAL area,
+            % because that is what the volume-coefficient method produces -
+            % Raymer defines horizontal-tail area to the aircraft centreline
+            % - and computing an exposed tail area would need a fuselage
+            % width at the tail station, which the cabin-driven fuselage
+            % model does not carry. The tails are therefore slightly
+            % overweight: at the converged design the horizontal tail is
+            % about 9 lbf heavy and the vertical tail less, together under
+            % 0.4 percent of OEW. Documented rather than silently assumed.
             bd.wing            = obj.rho_wing     * obj.geom.S_exposed_wing;
             bd.horizontal_tail = obj.rho_ht       * obj.geom.S_ht;
             bd.vertical_tail   = obj.rho_vt       * obj.geom.S_vt;

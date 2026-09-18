@@ -96,13 +96,20 @@ classdef TtpaAero < AerodynamicsBase
         function cfg = get_config_polar(obj, state, con)
         %GET_CONFIG_POLAR  Drag polar and CLmax of the configuration.
 
-            dCD0 = 0;
-            de   = 0;
+            % Start from the CLEAN polar this class already provides, then
+            % add the high-lift increments of this configuration.
+            polar = obj.drag_polar(state);
 
             switch string(con.config)
 
-                % TODO: set dCD0 and de for each configuration.
-                %       The gear increment adds on top of the flap increment.
+                case "clean"
+                    dCD0 = ;      % no high-lift increment
+                    de   = ;
+
+                % TODO: one case per remaining configuration name, each
+                %       setting dCD0 and de. The gear increment adds on top
+                %       of the flap increment. End with an otherwise branch
+                %       that errors on an unknown configuration.
 
             end
 
@@ -110,10 +117,10 @@ classdef TtpaAero < AerodynamicsBase
             %       sets con.propeller_stopped
 
             cfg.config   = string(con.config);
-            cfg.CD0      = ;
+            cfg.CD0      = ;      % start from polar.CD0
             cfg.e        = ;
             cfg.K1       = ;
-            cfg.K2       = 0;
+            cfg.K2       = polar.K2;
             cfg.CLmax    = ;
             cfg.CL_climb = ;
 

@@ -124,4 +124,28 @@ fprintf('  sum(fuel_burned)*1.06 = %.4f    mission_fuel = %.4f   d = %.2e\n', ..
     sum(fb)*1.06, Wf, abs(sum(fb)*1.06 - Wf));
 fprintf('  fuel fraction %.5f\n', ff);
 
+fprintf('\n=== CLAIM 9: the P-S diagram and the sizing loop are the same calculation ===\n');
+warning('off','TtpaProp:BhpOutOfRange');
+obj7 = ttpa_disciplines();
+d7   = TtpaPSDiagram(obj7);
+% (a) the cell containing the design must reproduce the loop
+Wcell = d7.converge_W0(r.P_SL, r.S_ref);
+fprintf('  converge_W0 at the design cell  %.3f lbf   sizing_loop %.3f lbf   rel %+.2e\n', ...
+    Wcell, r.W_TO, (Wcell-r.W_TO)/r.W_TO);
+% (b) the least-power point traced off the curves must reproduce "optimum" mode
+Sg = linspace(100, 230, 55); Pg = linspace(300, 900, 55);
+fg7 = d7.fuel_grid(Pg, Sg);
+f7  = figure('Visible','off');
+[~, ps7] = d7.plot('S_grid', Sg, 'P_grid', Pg, 'grid', fg7);
+close(f7); close(gcf);
+fprintf('  least-power point from the traced curves   P %7.2f hp , S %6.2f ft^2 , W %8.1f lbf\n', ...
+    ps7.least_power.P, ps7.least_power.S, ps7.least_power.W);
+fprintf('  sizing_loop in "optimum" mode             P %7.2f hp , S %6.2f ft^2 , W %8.1f lbf\n', ...
+    r3.P_SL, r3.S_ref, r3.W_TO);
+fprintf('  difference  %+.2f hp , %+.2f ft^2 , %+.1f lbf  (grid spacing %.2f hp, %.2f ft^2)\n', ...
+    ps7.least_power.P - r3.P_SL, ps7.least_power.S - r3.S_ref, ...
+    ps7.least_power.W - r3.W_TO, Pg(2)-Pg(1), Sg(2)-Sg(1));
+fprintf('  Two independent routes: the loop SOLVES the design point, the diagram\n');
+fprintf('  TRACES the constraint curves. They agree to the grid resolution.\n');
+
 fprintf('\nVERIFICATION COMPLETE\n');

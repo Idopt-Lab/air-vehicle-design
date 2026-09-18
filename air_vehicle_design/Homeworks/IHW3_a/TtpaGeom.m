@@ -47,8 +47,10 @@ classdef TtpaGeom < GeometryBase
 %       Span                            AR = b^2/S_ref, definitional
 %       y_MAC                           b(1+2*lambda)/(6(1+lambda))
 %       Tail areas                      volume-coefficient method: Raymer
-%                                       Sec. 6.5, Roskam Part II Ch. 8,
-%                                       Nicolai and Carichner Ch. 11
+%                                       Eqs. 6.29 (HT) and 6.28 (VT),
+%                                       coefficients Raymer Table 6.4,
+%                                       Roskam Part II Ch. 8, Nicolai and
+%                                       Carichner Table 11.1
 %       Lifting-surface wetted area     Raymer Eqs. 7.11 and 7.12
 %       Fuselage wetted area            Raymer Eq. 7.13
 %       Wing fuel volume                Torenbeek, in wing_fuel_volume()
@@ -292,9 +294,21 @@ classdef TtpaGeom < GeometryBase
         %       V_h  = S_ht * L_ht / ( S_ref * MAC )     so
         %       S_ht = V_h * S_ref * MAC / L_ht
         %
-        %   [Raymer Sec. 6.5; Roskam Part II Ch. 8; Nicolai and Carichner
-        %   Ch. 11]. Both S_ref and MAC follow the wing, so the tail grows
-        %   with the wing on every iteration of the sizing loop.
+        %   [Raymer Eq. 6.29, p. 159; coefficient from Raymer Table 6.4,
+        %   which prints 0.80 for a general-aviation twin - an exact match
+        %   to the Roskam Part II Table 8.3 value the course uses. Nicolai
+        %   and Carichner Table 11.1 reports 0.64 to 1.07 for the same
+        %   class.]
+        %
+        %   THIS IS THE THEORETICAL AREA, carried through to the aircraft
+        %   centreline. That is the convention the volume-coefficient method
+        %   is defined in - Raymer states it explicitly alongside Eq. 6.27 -
+        %   so it is the right area here. It is NOT the exposed area that
+        %   the Raymer Table 15.2 weight row asks for; see the note in
+        %   TtpaWeights.OEW_breakdown.
+        %
+        %   Both S_ref and MAC follow the wing, so the tail grows with the
+        %   wing on every iteration of the sizing loop.
             val = obj.V_ht * obj.S_ref * obj.MAC / obj.L_ht;
         end
 
@@ -326,6 +340,11 @@ classdef TtpaGeom < GeometryBase
         %
         %       V_v  = S_vt * L_vt / ( S_ref * b )       so
         %       S_vt = V_v * S_ref * b / L_vt
+        %
+        %   [Raymer Eq. 6.28, p. 159. Raymer Table 6.4 prints 0.07 for a
+        %   general-aviation twin; the course uses 0.065, inside the 0.045
+        %   to 0.080 band Nicolai and Carichner Table 11.1 reports for the
+        %   same class.]
         %
         %   The length scale is the wing SPAN, not the MAC. That is the one
         %   difference between the two tail-volume definitions.
