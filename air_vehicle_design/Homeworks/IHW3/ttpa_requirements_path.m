@@ -14,12 +14,12 @@ function [p] = ttpa_requirements_path()
 
     here = fileparts(mfilename('fullpath'));
 
-    local = fullfile(here, 'Ttpa_requirements_IHW2.json');
+    local = fullfile(here, 'Ttpa_requirements.json');
 
     if isfile(local)
         p = string(local);
     else
-        p = string(fullfile(here, '..', 'Ttpa_requirements_IHW2.json'));
+        p = string(fullfile(here, '..', 'Ttpa_requirements.json'));
     end
 
 end

@@ -35,6 +35,11 @@ classdef TtpaAero < AerodynamicsBase
 
         de_flaps_takeoff        % e increment, takeoff flaps
         de_flaps_landing        % e increment, landing flaps
+
+        C_fe = 0.0045;           % Coefficient of Friction, Raymer, TBl 12.3, Light twin
+
+        % ----- Injected collaborators ----- %
+        geom            % imports 
     end
 
     properties (Dependent)
@@ -46,9 +51,10 @@ classdef TtpaAero < AerodynamicsBase
     methods
 
         %% Constructor
-        function obj = TtpaAero(json_path)
+        function obj = TtpaAero(json_path, geom)
             arguments
                 json_path {mustBeTextScalar, mustBeNonzeroLengthText}
+                geom (1,1) GeometryBase
             end
 
             % Read requirements JSON
@@ -73,6 +79,9 @@ classdef TtpaAero < AerodynamicsBase
 
             obj.de_flaps_takeoff = A.delta_e_flaps_takeoff;
             obj.de_flaps_landing = A.delta_e_flaps_landing;
+
+            % Import Geometry from TtpaGeom
+            obj.geom = geom;
         end
 
 
@@ -204,6 +213,14 @@ classdef TtpaAero < AerodynamicsBase
             LD_max = 1 / (2 * sqrt(obj.CD0 * obj.K));
 
         end
+
+        %% Parasitic Drag Coefficinet
+        function CD0 = get.CD0(obj)
+
+            CD0 = obj.C_fe * obj.geom.S_wet/obj.geom.S_ref;
+
+        end
+
 
     end
 

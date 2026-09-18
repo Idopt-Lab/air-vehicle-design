@@ -40,7 +40,7 @@ disp('% -- Disciplines Loaded Successfully -- %')
 
 W_TO = 5000;   % initial guess, lbs
 
-[W_TO_final, beta_mission, ~, fuel_fraction, empty_weight_fraction, ...
+[W_TO_final, ~, fuel_fraction, empty_weight_fraction, ...
     ~, ~, segment_weight, ~] = missionAnalysis(obj, W_TO, opts);
 
 % Weight fraction at the start of cruise, that is after startup, taxi,

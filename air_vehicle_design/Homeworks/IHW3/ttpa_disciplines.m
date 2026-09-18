@@ -20,10 +20,10 @@ function [obj] = ttpa_disciplines()
 
     json_path = ttpa_requirements_path();
 
-    aero = TtpaAero(json_path);
     geom = TtpaGeom();
+    aero = TtpaAero(json_path, geom);
     prop = TtpaProp(json_path);
-    wts  = TtpaWeights();
+    wts  = TtpaWeights(geom, prop);
     miss = MissionProfileReader.read_profile(json_path, 'std_mission');
     cons = ConstraintSetImporter.read_conditions(json_path);
 
