@@ -145,7 +145,7 @@ fprintf('  installed power  P_SL   %8.1f hp total , %.1f hp per engine (%d engin
         result.P_SL, result.P_engine, obj.prop.n_engines);
 fprintf('  bare engine weight      %8.1f lbf each  [Raymer Table 10.4, opposed]\n', bd.engine_bare_each);
 fprintf('  bare engine length      %8.2f ft        nacelle %.2f ft\n', ...
-        obj.prop.engine_length(), obj.geom.l_nacelle);
+        obj.geom.l_engine(), obj.geom.l_nacelle);
 
 fprintf('\nAERODYNAMICS\n');
 fprintf('  wetted area      S_wet  %8.2f ft^2      S_wet/S_ref  %5.3f\n', obj.geom.S_wet, obj.geom.S_wet_over_S_ref);

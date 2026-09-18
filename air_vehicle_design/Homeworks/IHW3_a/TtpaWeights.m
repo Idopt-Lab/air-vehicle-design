@@ -181,7 +181,7 @@ classdef TtpaWeights < WeightsBase
             % Installed engines: the Table 15.2 factor times the BARE
             % engine weight, which the propulsion model scales from P_SL
             % through Raymer Table 10.4.
-            [W_bare_total, W_bare_each] = obj.prop.engine_weight();
+            [W_bare_total, W_bare_each] = obj.engine_weight();
             bd.engine_bare_each  = W_bare_each;
             bd.engine_bare_total = W_bare_total;
             bd.installed_engine  = obj.f_installed_engine * W_bare_total;
@@ -218,6 +218,32 @@ classdef TtpaWeights < WeightsBase
         %PAYLOAD  Total payload [lbf]. The number the closure solves for.
             W = obj.W_payload_fixed + obj.W_payload_expendable;
         end
+
+        %% Engine Weight  (NEW IN IHW3a)
+        function [W_total, W_each] = engine_weight(obj)
+        %ENGINE_WEIGHT  BARE engine weight [lbf].
+        %
+        %   [W_total, W_each] = engine_weight(obj)
+        %
+        %     W_each   bare weight of ONE engine [lbf]
+        %     W_total  bare weight of ALL engines [lbf]
+        %
+        %   [Raymer Table 10.4, British, horizontally-opposed column]
+        %       W_engine = 5.47 * bhp^0.780
+        %
+        %   with bhp the rated power of ONE engine. This is the BARE
+        %   engine. TtpaWeights multiplies it by the Raymer Table 15.2
+        %   installed-engine factor, 1.4 for general aviation, to get the
+        %   installed weight - do NOT apply that factor here as well.
+            bhp = obj.prop.P_engine;
+
+            W_each  = obj.prop.eng_sizing.k_W_engine * bhp .^ obj.prop.eng_sizing.n_W_engine;
+            W_total = obj.prop.n_engines * W_each;
+        end
+
+
+
+
 
     end
 

@@ -54,12 +54,7 @@ classdef TtpaProp < PropulsionBase2
         % Takeoff power / maximum continuous power [-].
 
         % --- engine-size regression, Raymer Table 10.4 (NEW IN IHW3a) ---
-        engine_scaling_class        % <- J.propulsion.engine_scaling_class
-        k_W_engine                  % <- J.propulsion.engine_weight_coefficient
-        n_W_engine                  % <- J.propulsion.engine_weight_exponent
-        k_L_engine                  % <- J.propulsion.engine_length_coefficient
-        n_L_engine                  % <- J.propulsion.engine_length_exponent
-        bhp_range                   % <- J.propulsion.bhp_range_of_validity
+        eng_sizing
     end
 
     properties (Dependent)
@@ -138,12 +133,12 @@ classdef TtpaProp < PropulsionBase2
             obj.P_TO_over_P_max_continuous = P.P_TO_over_P_max_continuous;
 
             % Engine-size regression
-            obj.engine_scaling_class = string(P.engine_scaling_class);
-            obj.k_W_engine = P.engine_weight_coefficient;
-            obj.n_W_engine = P.engine_weight_exponent;
-            obj.k_L_engine = P.engine_length_coefficient;
-            obj.n_L_engine = P.engine_length_exponent;
-            obj.bhp_range  = P.bhp_range_of_validity;
+            obj.eng_sizing.engine_scaling_class = string(P.engine_scaling_class);
+            obj.eng_sizing.k_W_engine = P.engine_weight_coefficient;
+            obj.eng_sizing.n_W_engine = P.engine_weight_exponent;
+            obj.eng_sizing.k_L_engine = P.engine_length_coefficient;
+            obj.eng_sizing.n_L_engine = P.engine_length_exponent;
+            obj.eng_sizing.bhp_range  = P.bhp_range_of_validity;
         end
 
 
@@ -212,48 +207,6 @@ classdef TtpaProp < PropulsionBase2
             kP = obj.power_lapse(state, rating) * f_oei * con.power_setting;
 
         end
-
-
-        %% Engine Weight  (NEW IN IHW3a)
-        function [W_total, W_each] = engine_weight(obj)
-        %ENGINE_WEIGHT  BARE engine weight [lbf].
-        %
-        %   [W_total, W_each] = engine_weight(obj)
-        %
-        %     W_each   bare weight of ONE engine [lbf]
-        %     W_total  bare weight of ALL engines [lbf]
-        %
-        %   [Raymer Table 10.4, British, horizontally-opposed column]
-        %       W_engine = 5.47 * bhp^0.780
-        %
-        %   with bhp the rated power of ONE engine. This is the BARE
-        %   engine. TtpaWeights multiplies it by the Raymer Table 15.2
-        %   installed-engine factor, 1.4 for general aviation, to get the
-        %   installed weight - do NOT apply that factor here as well.
-            bhp = obj.rated_bhp_per_engine();
-
-            W_each  = obj.k_W_engine * bhp .^ obj.n_W_engine;
-            W_total = obj.n_engines * W_each;
-        end
-
-
-        %% Engine Length  (NEW IN IHW3a)
-        function L = engine_length(obj)
-        %ENGINE_LENGTH  Bare length of ONE engine [ft].
-        %
-        %   [Raymer Table 10.4, British, horizontally-opposed column]
-        %       L_engine = 0.32 * bhp^0.424
-        %
-        %   TtpaGeom stretches this into a nacelle length and turns that
-        %   into wetted area. The engine WIDTH and HEIGHT are not scaled:
-        %   Raymer Table 10.3 states that both vary insignificantly over a
-        %   +50 percent power change, which is why the nacelle diameter is
-        %   a fixed input in the geometry block.
-            bhp = obj.rated_bhp_per_engine();
-
-            L = obj.k_L_engine * bhp .^ obj.n_L_engine;
-        end
-
 
         %% BSFC
         function C_bhp = C_bhp(obj, state)

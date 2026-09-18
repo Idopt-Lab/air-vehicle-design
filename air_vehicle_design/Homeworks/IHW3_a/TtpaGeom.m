@@ -140,7 +140,8 @@ classdef TtpaGeom < GeometryBase
         fineness_ratio              % l_fus / max diameter [-]
         S_wet_fuselage              % [ft^2]
 
-        % --- nacelle ---
+        % --- engine/nacelle ---
+        l_engine
         l_nacelle                   % ONE nacelle [ft]
         S_wet_nacelle               % ALL nacelles [ft^2]
 
@@ -412,13 +413,29 @@ classdef TtpaGeom < GeometryBase
 
         %% ---------------- Nacelles ----------------
 
+        function L = get.l_engine(obj)
+        %ENGINE_LENGTH  Bare length of ONE engine [ft].
+        %
+        %   [Raymer Table 10.4, British, horizontally-opposed column]
+        %       L_engine = 0.32 * bhp^0.424
+        %
+        %   TtpaGeom stretches this into a nacelle length and turns that
+        %   into wetted area. The engine WIDTH and HEIGHT are not scaled:
+        %   Raymer Table 10.3 states that both vary insignificantly over a
+        %   +50 percent power change, which is why the nacelle diameter is
+        %   a fixed input in the geometry block.
+            bhp = obj.prop.P_engine;
+
+            L = obj.prop.eng_sizing.k_L_engine * bhp .^ obj.prop.eng_sizing.n_L_engine;
+        end
+
         function val = get.l_nacelle(obj)
         %GET.L_NACELLE  Length of ONE nacelle [ft].
         %   The bare engine length comes from the propulsion model, which
         %   scales it from the rated power per engine. The cowl runs from
         %   the spinner bulkhead to the aft fairing, so the nacelle is
         %   longer than the engine by k_nacelle_length.
-            val = obj.k_nacelle_length * obj.prop.engine_length();
+            val = obj.k_nacelle_length * obj.l_engine;
         end
 
         function val = get.S_wet_nacelle(obj)
