@@ -188,6 +188,32 @@ bar(detailLabels, detailValues);
 grid on; ylabel('Weight [lbf]'); xtickangle(45);
 title('F-16A Level 3 Detailed Engine-Section / Systems / Misc Subcomponent Weight Breakdown');
 
+% ---- Avionics component buildup --------------------------------------- %
+% One Nicolai Table 8.8 estimate per avionics box
+% [F16SubsystemsL3.get_avionics_weight_component_buildup]. Any ONE sourced
+% figure of weight, volume or power resolves a box. A box with none reads
+% NaN and is left out of the net, so the net is a FLOOR, not the whole
+% avionics group.
+% Mod (09/11/2026) (Claude)
+subs = F16SubsystemsL3(f16a_spec_path(3), objs.geom, w);
+[W_avionics_net, avionicsTable] = subs.get_avionics_weight_component_buildup();
+
+disp('Level 3 avionics component weight buildup (Nicolai Table 8.8):');
+disp(avionicsTable);
+
+n_missing = sum(~isfinite(avionicsTable.Weight_lbf));
+fprintf('  Net avionics weight = %.2f lbf, from %d of %d boxes (%d have no sourced figure)\n', ...
+    W_avionics_net, height(avionicsTable) - n_missing, height(avionicsTable), n_missing);
+
+avionicsLabelList = [cellstr(string(avionicsTable.Component))', {'NET'}];
+avionicsLabels = categorical(avionicsLabelList, avionicsLabelList, 'Ordinal', true);
+avionicsValues = [avionicsTable.Weight_lbf', W_avionics_net];
+
+figure('Name', 'L3 Avionics Component Weight Buildup', 'Position', [100 100 1500 700]);
+bar(avionicsLabels, avionicsValues);
+grid on; ylabel('Weight [lbf]'); xtickangle(45);
+title('F-16A Level 3 Avionics Component Weight Buildup (Nicolai Table 8.8; NaN = no sourced figure)');
+
 %% Mission fuel + key drivers by segment
 % MissionAnalysisL2 (the mission fidelity paired with the L3 discipline stack --
 % there is no L3 mission tier) calls the injected F16AeroL3/F16PropL2 per leg,

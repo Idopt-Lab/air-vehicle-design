@@ -92,9 +92,9 @@ W_avionics_brandt = gt_weights.engine_and_systems.avionics.value;   % 2541.54 [B
 
 % ── L1: tabulation only ──────────────────────────────────────────────── %
 s1 = F16SubsystemsL1(f16a_spec_path(1));
-r1_internal_volume = s1.internal_volume(OEW_brandt);
-r1_avionics_volume = s1.avionics_volume(OEW_brandt);
-r1_avionics_weight  = s1.avionics_weight(OEW_brandt);
+r1_internal_volume = s1.get_internal_volume(OEW_brandt);   % Mod (09/07/2026) (Claude)
+r1_avionics_volume = s1.get_avionics_volume(OEW_brandt);   % Mod (09/07/2026) (Claude)
+r1_avionics_weight  = s1.get_avionics_weight(OEW_brandt);  % Mod (09/07/2026) (Claude)
 r1_fuel_check       = s1.fuel_volume_check(W_fuel_brandt);
 
 % ── L2: geometry-derived ─────────────────────────────────────────────── %
@@ -105,7 +105,7 @@ w2.W_TO     = W_TO_brandt;
 w2.W_energy = W_fuel_brandt;
 s2  = F16SubsystemsL2(f16a_spec_path(2), g2, w2);
 lg2 = F16LandingGearL2(f16a_spec_path(2), w2);
-r2_fuel_check = s2.fuel_volume_check();
+r2_fuel_check = s2.fuel_volume_check(W_fuel_brandt);
 
 % ── L3: refined geometry-derived ─────────────────────────────────────── %
 g3 = F16GeomL3(f16a_spec_path(3), prop2, f16a_requirements_path());   % no L3 propulsion tier -- F16PropL2 is reused

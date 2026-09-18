@@ -1,79 +1,181 @@
 classdef (Abstract) SubsystemsBase < handle
 %SUBSYSTEMSBASE  Tier-1 abstract enforcer for all subsystems discipline classes.
 %
-%   Declares the contract orchestrators call -- internal_volume (total usable
-%   internal volume, ft^3) and fuel_volume_check (fuel/battery sufficiency
-%   against that volume) -- plus one fidelity-independent utility.
+%   Properties (Abstract):
+%       fuel_type (char): energy medium, hydrocarbon or battery.
+%       fuel_name (char): fuel or battery chemistry selecting the table row.
+%       total_fuel_volume_occupied (double): volume the energy medium occupies (ft^3).
+%       total_avionics_volume_occupied (double): volume the avionics occupy (ft^3).
 %
-%   Inheritance: SubsystemsBase -> SubsystemsModelLN (abstract) -> F16SubsystemsLN.
-%   The SubsystemsLN static toolboxes are not in this chain.
+%   Methods (Abstract):
+%       get_total_avionics_volume_occupied: user must obtain the avionics volume (ft^3).
+%       get_total_fuel_volume_occupied: user must obtain the energy-medium volume (ft^3).
 %
-%   The two abstract methods below are declared at their widest signature (the
-%   one L1 needs); L2/L3 override with the zero-extra-arg form and read an
-%   injected weights collaborator live. Every internal_volume()
-%   implementation must sum its avionics-volume term.
+%   Methods (Static):
+%       lookup_fuel_density_lb_per_ft_3: fuel density (lb/ft^3), or battery
+%           energy density (Wh/ft^3), by type and name.
+%       lookup_fuel_density_lb_per_gal: the same two tables per US gallon.
+%
+%   Both lookups return a MASS density for hydrocarbon and an ENERGY density
+%   for battery. See SubsystemsBase.md.
+%
+%   Sources: Nicolai & Carichner Table 8.6 p.210 (fuel); Raymer 6th ed.
+%   Table 20.1 p.748 (battery).
 %
 %   Companion doc: src/base/SubsystemsBase.md.
 %   History and rationale: docs/decision_log.md.
+
     properties (Abstract)
-        %AVIONICS_WEIGHT_FRACTION  Fraction of W_empty.
-        %   [Raymer 6th ed. Table 11.6, p.375]
-        avionics_weight_fraction
+        fuel_type % Type of fuel: hydrocarbon or electric
+        fuel_name % Name of fuel: if hydrocarbon, give the name of the gas. If electric, state the battery chemistry.
 
-        %AVIONICS_DENSITY  Avionics packing density [lb/ft^3]. Same name at
-        %   every level, different cited value: L1 uses Raymer's range average
-        %   (~37.5); L2/L3 use Nicolai's flat 45 [Sec.8.1.11].
-        avionics_density
+        %FUEL_VOLUME_OCCUPIED  Total volume occupied by chosen energy storage medium [ft^3]
+        % Internal + external stores.
+        total_fuel_volume_occupied
 
-        %FUEL_DENSITY  Fuel density [lb/ft^3] for obj.fuel_type.
-        %   [Nicolai & Carichner Table 8.6, p.210]
-        fuel_density
-
-        %FUSELAGE_RAW_VOLUME  Raw geometric fuselage-internal volume [ft^3],
-        %   before any fuel-tank packaging factor. [Raymer 6th ed. Eq. 7.14]
-        %   at L2/L3. Honestly 0 at L1 (no fuselage geometry).
-        fuselage_raw_volume
-
-        %FUEL_VOLUME  Total usable fuel volume [ft^3] -- fuselage-internal
-        %   (packaged) + wing-internal at L2/L3; 0 at L1. Equals
-        %   fuel_volume_check's 'available_vol_ft3', exposed as a property.
-        fuel_volume
+        %TOTAL_AVIONICS_VOLUME_OCCUPIED
+        % The total volume occupied by avionics equipment [ft^3]
+        total_avionics_volume_occupied
     end
 
     methods (Abstract)
-        %INTERNAL_VOLUME  Total usable internal volume [ft^3] for this level.
-        %   L1: avionics volume only. L2/L3: fuselage-internal (packaged) fuel
-        %   volume + wing-internal fuel volume + avionics volume. Landing-gear
-        %   bay volume is not auto-summed (citation gap) -- see
-        %   F16SubsystemsL2.md/F16SubsystemsL3.md.
-        val = internal_volume(obj, W_empty)
+        %GET_TOTAL_AVIONICS_VOLUME_OCCUPIED
+        % Obtain the total volume taken up by avionics equipment [ft^3]
+        val = get_total_avionics_volume_occupied(obj)
 
-        %FUEL_VOLUME_CHECK  Does available fuel volume cover the required fuel
-        %   weight, converted through this class's fuel-density path? Returns a
-        %   struct with 'available_vol_ft3', 'required_vol_ft3', 'sufficient'.
-        %   L1 callers pass required_weight_lb; L2/L3 read it live from an
-        %   injected fuel_weight_source.
-        result = fuel_volume_check(obj, required_weight_lb)
-
-        %FUEL_VOLUME_FROM_WEIGHT  Volume [ft^3] a fuel weight [lbf] occupies at
-        %   this class's fuel_density -- the definitional conversion, fuel path.
-        %   No packaging factor applied (that applies only to the geometric raw
-        %   volume).
-        val = fuel_volume_from_weight(obj, fuel_weight_lb)
+        % GET_TOTAL_FUEL_VOLUME_OCCUPIED
+        % This should be agnostic enough to include both hydrocarbon and electric aircraft,
+        % while allowing for both designs to use this function.
+        val = get_total_fuel_volume_occupied(fuel_density, energy_medium_weight)
     end
 
     methods (Static)
 
-        function vol = weight_to_volume(W_lb, density_lb_per_ft3)
-        %WEIGHT_TO_VOLUME  Generic weight -> volume conversion [ft^3].
-        %   Definitional (vol = W/density); the citation belongs to whichever
-        %   density value the caller supplies, not to this identity.
-            arguments
-                W_lb               (1,1) double {mustBeNonnegative}
-                density_lb_per_ft3 (1,1) double {mustBePositive}
+        function d = lookup_fuel_density_lb_per_ft_3(fuel_type, fuel_name)
+        %LOOKUP_FUEL_DENSITY  Energy-medium density by type and name.
+        %   hydrocarbon -> mass density [lb/ft^3]
+        %       [Nicolai & Carichner Table 8.6, p.210]
+        %   battery -> volumetric energy density [Wh/ft^3]
+        %       [Raymer 6th ed. Table 20.1, p.748]
+        %   The two branches return different units. See SubsystemsBase.md.
+            if fuel_type == "hydrocarbon"
+                switch fuel_name
+                    case 'JP-4',          d = 48.6;
+                    case 'JP-5',          d = 51.1;
+                    case 'JP-8',          d = 50.0;
+                    case 'Aviation gas',  d = 44.9;
+                    otherwise
+                        error('SubsystemsL1:unknownFuelName', ...
+                            ['Unknown fuel type "%s". Known names (Nicolai & ' ...
+                            'Carichner Table 8.6): JP-4, JP-5, JP-8, Aviation gas.'], ...
+                            fuel_type);
+                end
+            elseif fuel_type == "battery"
+                % Table 20.1 "Energy Density" column, Wh/L, all 20 chemistries.
+                % Source: Table 20.1, Raymer 6th edition, page 748.
+                switch fuel_name
+                    case 'Lead-acid',        d = 100;
+                    case 'Alkaline',         d = 300;
+                    case 'NiFe',             d = 30;
+                    case 'NiCd',             d = 150;
+                    case 'NiH',              d = 60;
+                    case 'NiMH',             d = 300;
+                    case 'NiZn',             d = 280;
+                    case 'Li-ion',           d = mean([250, 700]);
+                    case 'Li-ion Polymer',   d = mean([250, 730]);
+                    case 'LiFePO4',          d = 170;
+                    case 'LiNiMnCoO2 (NMC)', d = 500;
+                    case 'Li-S',             d = 250;
+                    case 'Licerion (US)',    d = 1000;
+                    case 'Li-titanate',      d = 170;
+                    case 'Li-air',           d = 200;
+                    case 'Na-ion',           d = 50;
+                    case 'Molten salt',      d = 290;
+                    case 'Silver Zinc',      d = 700;
+                    case {'LiCoO2', 'LiMn2O4'}
+                        error('SubsystemsBase:batteryEnergyDensityNotPrinted', ...
+                            ['Raymer Table 20.1 prints no energy density for "%s", ' ...
+                             'only its specific energy in Wh/kg.'], fuel_name);
+                    otherwise
+                        error('SubsystemsBase:unknownBatteryChemistry', ...
+                            ['Unknown battery chemistry "%s". Known chemistries ' ...
+                             '(Raymer 6th ed. Table 20.1): Lead-acid, Alkaline, ' ...
+                             'NiFe, NiCd, NiH, NiMH, NiZn, Li-ion, Li-ion Polymer, ' ...
+                             'LiCoO2, LiFePO4, LiMn2O4, LiNiMnCoO2 (NMC), Li-S, ' ...
+                             'Licerion (US), Li-titanate, Li-air, Na-ion, ' ...
+                             'Molten salt, Silver Zinc.'], fuel_name);
+                end
+                d = d * 28.316846592;   % Wh/L -> Wh/ft^3. 1 ft^3 = 28.316846592 L.
+            else
+                error('SubsystemsBase:unknownFuelType', ...
+                    'Unknown fuel type "%s". Known types: hydrocarbon, battery.', ...
+                    fuel_type);
             end
-            vol = W_lb / density_lb_per_ft3;
         end
+    
+
+        function d = lookup_fuel_density_lb_per_gal(fuel_type, fuel_name)
+        %LOOKUP_FUEL_DENSITY_LB_PER_GAL  Energy-medium density by type and name.
+        %   hydrocarbon -> mass density [lb/gal]
+        %       [Nicolai & Carichner Table 8.6, p.210]
+        %   battery -> volumetric energy density [Wh/gal]
+        %       [Raymer 6th ed. Table 20.1, p.748]
+        %   The two branches return different units. See SubsystemsBase.md.
+            if fuel_type == "hydrocarbon"
+                switch fuel_name
+                    case 'JP-4',          d = 6.5;
+                    case 'JP-5',          d = 6.8;
+                    case 'JP-8',          d = 6.7;
+                    case 'Aviation gas',  d = 6.0;
+                    otherwise
+                        error('SubsystemsL1:unknownFuelName', ...
+                            ['Unknown fuel type "%s". Known names (Nicolai & ' ...
+                            'Carichner Table 8.6): JP-4, JP-5, JP-8, Aviation gas.'], ...
+                            fuel_name);
+                end
+            elseif fuel_type == "battery"
+                % Table 20.1 "Energy Density" column, Wh/L, all 20 chemistries.
+                % Source: Table 20.1, Raymer 6th edition, page 748.
+                switch fuel_name
+                    case 'Lead-acid',        d = 100;
+                    case 'Alkaline',         d = 300;
+                    case 'NiFe',             d = 30;
+                    case 'NiCd',             d = 150;
+                    case 'NiH',              d = 60;
+                    case 'NiMH',             d = 300;
+                    case 'NiZn',             d = 280;
+                    case 'Li-ion',           d = mean([250, 700]);
+                    case 'Li-ion Polymer',   d = mean([250, 730]);
+                    case 'LiFePO4',          d = 170;
+                    case 'LiNiMnCoO2 (NMC)', d = 500;
+                    case 'Li-S',             d = 250;
+                    case 'Licerion (US)',    d = 1000;
+                    case 'Li-titanate',      d = 170;
+                    case 'Li-air',           d = 200;
+                    case 'Na-ion',           d = 50;
+                    case 'Molten salt',      d = 290;
+                    case 'Silver Zinc',      d = 700;
+                    case {'LiCoO2', 'LiMn2O4'}
+                        error('SubsystemsBase:batteryEnergyDensityNotPrinted', ...
+                            ['Raymer Table 20.1 prints no energy density for "%s", ' ...
+                             'only its specific energy in Wh/kg.'], fuel_name);
+                    otherwise
+                        error('SubsystemsBase:unknownBatteryChemistry', ...
+                            ['Unknown battery chemistry "%s". Known chemistries ' ...
+                             '(Raymer 6th ed. Table 20.1): Lead-acid, Alkaline, ' ...
+                             'NiFe, NiCd, NiH, NiMH, NiZn, Li-ion, Li-ion Polymer, ' ...
+                             'LiCoO2, LiFePO4, LiMn2O4, LiNiMnCoO2 (NMC), Li-S, ' ...
+                             'Licerion (US), Li-titanate, Li-air, Na-ion, ' ...
+                             'Molten salt, Silver Zinc.'], fuel_name);
+                end
+                d = d * 3.785411784;    % Wh/L -> Wh/gal. 1 US gal = 3.785411784 L.
+            else
+                error('SubsystemsBase:unknownFuelType', ...
+                    'Unknown fuel type "%s". Known types: hydrocarbon, battery.', ...
+                    fuel_type);
+            end
+        end
+
 
     end
 end

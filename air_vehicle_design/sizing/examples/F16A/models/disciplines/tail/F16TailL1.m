@@ -49,8 +49,8 @@ classdef F16TailL1 < TailSizingModelL1
         %SIZE  Horizontal- and vertical-tail reference areas [ft^2].
         %   [Raymer 7th ed. Table 6.4 + text]  Reads obj.geom live; returns
         %   struct('S_ht', S_ht, 'S_vt', S_vt). See TailL1.size for the formula.
-            result = TailL1.size(obj, obj.geom.S_ref, obj.geom.b_wing, ...
-                                 obj.geom.cbar_wing, obj.geom.L_fus);
+            result = TailL1.size(obj.c_HT, obj.c_VT, obj.geom.S_ref, ...
+                                 obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
         end
 
     end

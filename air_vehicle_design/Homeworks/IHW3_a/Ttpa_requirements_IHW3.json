@@ -25,7 +25,7 @@
       "taper_ratio": 0.75,
       "thickness_ratio": 0.12,
       "sweep_quarter_chord_deg": 10,
-      "_src": "Volume coefficient and moment arm from Roskam Part II Table 8.3(a); the value 0.8 sits inside the 0.64-1.07 band Nicolai and Carichner Table 11.1 reports for twin-engine light reciprocating-propeller airplanes. Planform from Roskam Part II Table 8.13. NACA 0012 airfoil, hence t/c = 0.12. S_ht = V_h * S_ref * MAC / arm, so the tail GROWS with the wing on every iteration - this is one of the two couplings the sizing loop exists to capture."
+      "_src": "Volume coefficient and moment arm from Roskam Part II Table 8.3(a). CORROBORATED BY TWO INDEPENDENT SOURCES: Raymer Table 6.4 prints 0.80 for a general-aviation twin engine - an exact match - and Nicolai and Carichner Table 11.1 reports 0.64 to 1.07 across fourteen twin light reciprocating-propeller airplanes. Planform from Roskam Part II Table 8.13. NACA 0012 airfoil, hence t/c = 0.12. Equation: S_ht = V_h * S_ref * MAC / arm [Raymer Eq. 6.29, p. 159]. The area is THEORETICAL, carried to the aircraft centreline, which is the convention the method is defined in. The tail GROWS with the wing on every iteration - one of the two couplings the sizing loop exists to capture."
     },
     "vertical_tail": {
       "volume_coefficient": 0.065,
@@ -34,7 +34,7 @@
       "taper_ratio": 0.55,
       "thickness_ratio": 0.12,
       "sweep_quarter_chord_deg": 30,
-      "_src": "Volume coefficient and moment arm from Roskam Part II Table 8.3(b); the value 0.065 sits inside the 0.045-0.08 band of Nicolai and Carichner Table 11.1 for twin light reciprocating-propeller airplanes. Planform from Roskam Part II Table 8.13, NACA 0012. S_vt = V_v * S_ref * b / arm."
+      "_src": "Volume coefficient and moment arm from Roskam Part II Table 8.3(b). CORROBORATED: Raymer Table 6.4 prints 0.07 for a general-aviation twin engine, and the 0.065 used here sits inside the 0.045 to 0.080 band of Nicolai and Carichner Table 11.1 for the same class. Planform from Roskam Part II Table 8.13, NACA 0012. Equation: S_vt = V_v * S_ref * b / arm [Raymer Eq. 6.28, p. 159]. Note the length scale is the wing SPAN, not the MAC - that is the only difference between the two tail-volume definitions."
     },
     "fuselage": {
       "_comment": "The fuselage is CABIN-DRIVEN, not weight-driven: two-abreast seating, three rows, six occupants. It therefore does NOT change during the sizing loop, which is what keeps the loop well behaved - the fuselage contributes a constant to the empty weight and to the wetted area while the wing and the tails grow. Every length below is fixed by the cabin layout and by the two fineness ratios, not by W_TO.",
@@ -133,7 +133,7 @@
     "statistical_OEW_exponent": 0.947,
     "_src_statistical_OEW": "The IHW1 empty-weight regression, OEW = 0.911 * W_TO^0.947, from the Nicolai light-propeller-airplane trend. KEPT AS A CROSS-CHECK ONLY. TtpaWeights.OEW now returns the component build-up; TtpaWeights.OEW_statistical returns this, and the run script prints both. They should agree within a few percent. If they do not, the geometry is wrong.",
     "fuel_density_lb_per_ft3": 47.8,
-    "_src_fuel_density_lb_per_ft3": "100LL avgas at low temperature. Used only after the loop converges, to turn the Torenbeek wing fuel VOLUME into a fuel WEIGHT capacity and compare it with the fuel the mission actually needs."
+    "_src_fuel_density_lb_per_ft3": "BACK-DERIVED, NOT AN INDEPENDENT MEASUREMENT. The course wing-layout notebook states that a 37 ft^3 wing holds 1770 lb of 100LL 'at low temperature', and 1770/37 = 47.8 lb/ft^3. That value is adopted here so the fuel-volume check reproduces the course number. For reference, 100LL at 15 degC is about 6.0 lb/US gal = 44.9 lb/ft^3, which would give 1562 lb of capacity instead of 1663 lb - still far above the roughly 1019 lb the mission needs, so the conclusion of the check does not depend on which figure is used. Used only AFTER the loop converges."
   },
   "design_range_nmi": 1200,
   "_src_design_range_nmi": "Design mission range 1,200 nmi. Fixed payload assumes single pilot crew and 5 additional passengers assumed to be 200 lb each.",

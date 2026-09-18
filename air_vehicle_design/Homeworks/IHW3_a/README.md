@@ -65,6 +65,8 @@ One iteration, in order — **the order matters**:
 | `SizingSteps.m` | `togw_update` (the closure) and `relax` (the damping) |
 | `solve_design_point.m` | re-solves the design point each iteration, `selected` or `optimum` |
 | `mission_fuel.m` | total mission fuel at a weight — IHW1's loop body, lifted out |
+| `TtpaPSDiagram.m` | the **P–S sizing diagram** — every (power, wing) cell sized |
+| `run_ttpa_PS_diagram.m` | standalone P–S study on a finer grid, exports png/json/md |
 | `wing_fuel_check.m` | post-convergence: does the wing hold the fuel? |
 | `landing_gear_loads.m` | post-convergence: static gear loads |
 | `plot_sizing_convergence.m` | four-panel convergence history |
@@ -108,6 +110,57 @@ Against the IHW1/IHW2 baseline (`W_TO` held at 5354): −4.0 % weight, −5.6 % 
 weight, −4.0 % wing area and power. That movement is the expected result of
 replacing a regression that cannot see the airplane with a build-up that can, not
 an error.
+
+## The P–S sizing diagram
+
+`run_ttpa_sizing` ends with it; `run_ttpa_PS_diagram` draws it on a finer grid
+and exports `output/ttpa_PS_diagram.{png,json,md}`. It is the propeller form of
+the metabook T–S diagram (Fig. 4.7), and the framework's `src/sizing/TSDiagram.m`
+is the jet original.
+
+**Every cell of the grid is a separately sized airplane.** `converge_W0(P, S)`
+prescribes the engine and the wing and closes the takeoff weight there — the same
+fixed point `sizing_loop` runs, with the design-point solve removed because
+(P, S) is given.
+
+Reading it:
+
+| | |
+| --- | --- |
+| **blue** | a sized airplane that meets every requirement |
+| **white** | a sized airplane that fails at least one requirement |
+| **gray** | the weight does not close — no airplane exists there |
+| **curves** | the least engine each requirement allows, at that wing |
+
+**The feasible region is *above* the curves**, the opposite of the IHW2 matching
+diagram. On the matching diagram feasible is *below* the W/P envelope, because a
+small W/P is a big engine. Dividing through by weight to get power turns that
+upside down: more power is always allowed.
+
+Three things follow from `P = W / (W/P)` rather than the jet's `T = (T/W)·W`:
+
+- the curve-tracing step **divides** where the framework multiplies
+- Takeoff gives `P ≥ W²/(S·TOP23·σ·CLmax_TO)` — power **falls** as the wing grows
+- Cruise gives `P ≥ S·σ·Ip³/kP` — power **rises** linearly with the wing
+
+so the two binding constraints run in opposite directions, and the feasible
+region is a wedge whose tip is the least-power airplane. That tip is marked
+automatically, and it is the dimensional twin of the IHW2 corner at
+(W/S, W/P) = (37.37, 10.50):
+
+```
+least-power airplane   467.1 hp , 131.3 ft^2 , 4900.4 lbf
+IHW3a design           555.5 hp , 128.5 ft^2 , 5138.7 lbf
+cost of the margin      +88.4 hp ,  -2.8 ft^2 ,  +238.3 lbf
+```
+
+Gray never appears on the default grid: TTPA closure fails near 1500 hp, far
+above any readable range, so the legend entry is omitted when the region is
+empty. The grid ceiling is a readability choice, not a physical one.
+
+Note that `TtpaPSDiagram` **mutates the discipline bundle** — after a scan
+`geom.S_ref` and `prop.P_SL` hold the last cell visited, not the design.
+`run_ttpa_sizing` writes the converged values back afterwards.
 
 ## Equations and sources
 
@@ -172,4 +225,15 @@ that the geometry at `S_ref = 134 ft²` reproduces the IHW3 reference notebooks:
 b 32.74 ft (33)   c_root 5.85 (5.8)   c_tip 2.34 (2.3)   MAC 4.34 (4.3)
 y_MAC 7.02 (7)    V_wf 37.07 ft^3 (37)
 S_ht 31.04 ft^2 (31)   S_vt 16.78 ft^2 (17)   b_ht 13.07 ft (13)
+```
+
+It also checks that the P–S diagram and the sizing loop are the same
+calculation reached two different ways — the loop *solves* the design point,
+the diagram *traces* the constraint curves:
+
+```
+converge_W0 at the design cell   5138.654 lbf   vs loop 5138.651 lbf   (+6.6e-07)
+least-power point, traced        467.13 hp , 131.30 ft^2 , 4900.4 lbf
+sizing_loop in "optimum" mode    466.13 hp , 131.01 ft^2 , 4896.6 lbf
+                                 well inside the 11.1 hp x 2.4 ft^2 grid spacing
 ```

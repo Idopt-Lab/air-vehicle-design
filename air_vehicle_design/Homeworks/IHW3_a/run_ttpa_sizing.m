@@ -13,10 +13,17 @@
 %     6  prints three independent cross-checks
 %     7  runs the two post-convergence checks: wing fuel volume, gear loads
 %     8  plots the convergence history
+%     9  plots the P-S sizing diagram - the whole design space the converged
+%        airplane sits in
 %
 %  Run it from this folder.  No arguments, no edits needed.
 
 clear; clc; close all
+
+% Step 9 sizes a few thousand airplanes, one per grid cell, and takes about
+% 15 seconds. Set this false to skip it. run_ttpa_PS_diagram.m draws the same
+% diagram on a finer grid and exports it.
+MAKE_PS_DIAGRAM = true;
 
 %% ---------------------------------------------------------------- 1. build
 obj = ttpa_disciplines();
@@ -207,5 +214,65 @@ fprintf('  main gear, per strut          %7.1f lbf   -> Raymer Table 11.2 for th
 
 %% ------------------------------------------------------------------ 8. plot
 plot_sizing_convergence(result);
+
+%% --------------------------------------------------- 9. P-S sizing diagram
+%  The sizing loop answers "what airplane meets the requirements?". The P-S
+%  diagram answers the wider question: of every (power, wing) combination,
+%  which ones give an airplane that closes AND meets the requirements, and
+%  what does each one cost in fuel? The converged design is one point in it.
+%
+%  Every cell is a separately sized airplane, so this is the expensive part
+%  of the script.
+if MAKE_PS_DIAGRAM
+    fprintf('\n=========================== P-S SIZING DIAGRAM ===========================\n');
+
+    d = TtpaPSDiagram(obj);
+
+    % Bracket the converged design. Coarser than run_ttpa_PS_diagram.m uses,
+    % to keep this script quick.
+    S_grid = linspace(100, 230, 45);    % ft^2
+    P_grid = linspace(300, 900, 45);    % hp
+
+    fprintf('\n  sizing %d x %d = %d airplanes, one per cell ...\n', ...
+            numel(P_grid), numel(S_grid), numel(P_grid)*numel(S_grid));
+    t0 = tic;
+    fg = d.fuel_grid(P_grid, S_grid);
+    fprintf('  done in %.1f s.  %d of %d cells are feasible', ...
+            toc(t0), nnz(fg.feasible), numel(fg.feasible));
+    if any(~isfinite(fg.W0), 'all')
+        fprintf('; %d do not close at all', nnz(~isfinite(fg.W0)));
+    end
+    fprintf('.\n');
+
+    markers = struct( ...
+        'P', {result.P_SL, 5354 / opts.selected.WP}, ...
+        'S', {result.S_ref, 5354 / opts.selected.WS}, ...
+        'label', {sprintf('IHW3a sized  (%.0f hp, %.0f ft^2)', result.P_SL, result.S_ref), ...
+                  sprintf('IHW1/IHW2 baseline  (%.0f hp, %.0f ft^2)', ...
+                          5354/opts.selected.WP, 5354/opts.selected.WS)});
+
+    [~, ps] = d.plot('S_grid', S_grid, 'P_grid', P_grid, ...
+                     'markers', markers, 'grid', fg);
+
+    lp = ps.least_power;
+    fprintf('\n  least-power airplane    P %7.1f hp , S %6.1f ft^2 , W_TO %7.1f lbf\n', ...
+            lp.P, lp.S, lp.W);
+    fprintf('  IHW3a design            P %7.1f hp , S %6.1f ft^2 , W_TO %7.1f lbf\n', ...
+            result.P_SL, result.S_ref, result.W_TO);
+    fprintf('  cost of the margin      %+7.1f hp , %+6.1f ft^2 , %+7.1f lbf\n', ...
+            result.P_SL - lp.P, result.S_ref - lp.S, result.W_TO - lp.W);
+    fprintf('\n  The least-power point is where Takeoff (power falling with wing\n');
+    fprintf('  area) crosses Cruise Speed (power rising with it). It is the same\n');
+    fprintf('  corner the IHW2 matching diagram finds at (W/S, W/P) = (%.2f, %.2f),\n', ...
+            result.design_point.WS_optimum, result.design_point.WP_optimum);
+    fprintf('  now in dimensional form. Sizing to it instead would give the lighter\n');
+    fprintf('  airplane above - with zero margin on every requirement.\n');
+
+    % TtpaPSDiagram MUTATES the discipline bundle: it leaves geom/prop at the
+    % LAST CELL VISITED. Put the converged design back, so anything that
+    % inspects obj after this script still sees the airplane that was sized.
+    obj.geom.S_ref = result.S_ref;
+    obj.prop.P_SL  = result.P_SL;
+end
 
 fprintf('\nDone.\n');

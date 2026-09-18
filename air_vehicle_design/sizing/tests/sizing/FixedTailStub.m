@@ -24,8 +24,8 @@ classdef FixedTailStub < TailSizingModelL1
         function result = size(obj)
         %SIZE  Delegates to TailL1's real statics (0.475*L_fus arm), reading
         %   the injected geometry, with this stub's arbitrary c_HT/c_VT.
-            result = TailL1.size(obj, obj.geom.S_ref, obj.geom.b_wing, ...
-                                 obj.geom.cbar_wing, obj.geom.L_fus);
+            result = TailL1.size(obj.c_HT, obj.c_VT, obj.geom.S_ref, ...
+                                 obj.geom.b_wing, obj.geom.cbar_wing, obj.geom.L_fus);
         end
 
     end

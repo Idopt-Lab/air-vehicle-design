@@ -66,6 +66,32 @@ Footnotes as printed:
   additional drag.
 
 ---
+### Step 6.x — Wing fuel volume check
+*[Roskam Part II, Ch. 6, p. 153]* (transcribed 2026-09-15 from a page scan; this section was
+missing from the first pass of this extract, which captured only Tables 6.1-6.12.)
+
+Compare the computed wing fuel volume against the total fuel volume the mission requires, as
+determined by the preliminary sizing of Part I.
+
+Roskam gives Torenbeek's preliminary-design estimate, attributed to *Ref. 17, Eqn. B-12*:
+
+**Eq (6.2)**:
+```
+V_WF = 0.54 * (S^2 / b) * (t/c)_r * { (1 + lam_w*tau_w^(1/2) + lam_w^2*tau_w) / (1 + lam_w)^2 }
+```
+
+**Eq (6.3)**:
+```
+tau_w = (t/c)_t / (t/c)_r
+```
+
+Note the convention: `tau_w` is TIP over ROOT. This is the opposite of Roskam Eq. 12.1, which the
+geometry discipline uses. Roskam does not keep one `tau` convention across his equations.
+
+As printed: "This equation is based on statistical data and presumably accounts for any required
+dry bays as well as for the lightning strike problem."
+
+---
 
 ## Tables 6.1 – 6.12 — Wing Geometric Data by Airplane Category
 
