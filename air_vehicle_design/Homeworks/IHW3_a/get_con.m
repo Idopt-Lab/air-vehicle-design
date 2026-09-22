@@ -39,6 +39,14 @@ function [con] = get_con(con_no, cons)
     con.propeller_stopped = logical(get_field(cons(con_no), 'propeller_stopped', false));
     con.max_continuous    = logical(get_field(cons(con_no), 'max_continuous',    false));
 
+    % Optional per-condition METHOD selector (IHW3a). Lets one condition
+    % choose between two formulations of the same requirement - the cruise
+    % condition uses it to pick "power_index" (the Roskam correlation of
+    % IHW2) or "drag_based" (the actual power balance). Absent means the
+    % condition has only one formulation, so the constraint function's own
+    % default applies.
+    con.method            = string(get_field(cons(con_no), 'method', ""));
+
 end
 
 %% Supporting Functions

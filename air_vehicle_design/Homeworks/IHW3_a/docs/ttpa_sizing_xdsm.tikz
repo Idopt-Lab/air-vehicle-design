@@ -1,0 +1,197 @@
+
+%%% Preamble Requirements %%%
+% \usepackage{geometry}
+% \usepackage{amsfonts}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{tikz}
+
+% Optional packages such as sfmath set through python interface
+% \usepackage{sfmath}
+
+% \usetikzlibrary{arrows,chains,positioning,scopes,shapes.geometric,shapes.misc,shadows}
+
+%%% End Preamble Requirements %%%
+
+\input{"C:/Users/krish/AppData/Local/Programs/Python/Python310/lib/site-packages/pyxdsm/diagram_styles"}
+\begin{tikzpicture}
+
+\matrix[MatrixSetup]{
+%Row 0
+&
+\node [DataIO] (output_solver) {$W_{0,guess},\ P_{0,guess}$};&
+\node [DataIO] (output_prop) {$n_{eng},\ c_{bhp},\ \eta_p$};&
+\node [DataIO] (output_geom) {$\begin{array}{c}\mathbf{S_{ref}},\ AR,\ \lambda \\ L_{fus},\ D_{fus},\ V_h,\ V_v\end{array}$};&
+\node [DataIO] (output_aero) {$C_{fe},\ \Delta C_{D_0},\ C_{L_{max}}$};&
+\node [DataIO] (output_ddiag) {$s_{FL},\ G,\ I_p,\ \beta$};&
+\node [DataIO] (output_miss) {$R,\ V,\ \text{profile}$};&
+\node [DataIO] (output_wts) {$\text{Raymer Tbl 15.2 / 15.46}$};&
+\node [DataIO] (output_close) {$W_{payload}$};&
+\\
+%Row 1
+\node [DataIO] (left_output_solver) {$W_{TO},\ P_{SL},\ S_{ref}$};&
+\node [MDA] (solver) {$\begin{array}{c}\text{0,8}\rightarrow\text{1:} \\ \texttt{sizing\_loop} \\ \text{states } W_0,\ P_0\end{array}$};&
+\node [DataInter] (solver-prop) {$P_0$};&
+&
+&
+\node [DataInter] (solver-ddiag) {$W_0/S_{ref}$};&
+\node [DataInter] (solver-miss) {$W_0$};&
+\node [DataInter] (solver-wts) {$W_0$};&
+&
+\\
+%Row 2
+&
+&
+\node [Function] (prop) {$\begin{array}{c}\text{1: } \texttt{TtpaProp} \\ \text{engine wt, length, lapse}\end{array}$};&
+\node [DataInter] (prop-geom) {$L_{engine}$};&
+&
+\node [DataInter] (prop-ddiag) {$k_P,\ \eta_p$};&
+\node [DataInter] (prop-miss) {$c_{bhp},\ \eta_p$};&
+\node [DataInter] (prop-wts) {$W_{engine}$};&
+&
+\\
+%Row 3
+&
+&
+&
+\node [Function] (geom) {$\begin{array}{c}\text{2: } \texttt{TtpaGeom} \\ \text{planform, tails, } S_{wet}\end{array}$};&
+\node [DataInter] (geom-aero) {$S_{wet}/S_{ref}$};&
+&
+\node [DataInter] (geom-miss) {$S_{ref}$};&
+\node [DataInter] (geom-wts) {$\begin{array}{c}S_{exp},\ S_{ht}, \\ S_{vt},\ S_{wet,fus}\end{array}$};&
+&
+\\
+%Row 4
+&
+&
+&
+&
+\node [Function] (aero) {$\begin{array}{c}\text{3: } \texttt{TtpaAero} \\ \text{drag polar II}\end{array}$};&
+\node [DataInter] (aero-ddiag) {$C_{D_0},\ K$};&
+\node [DataInter] (aero-miss) {$C_{D_0},\ K$};&
+&
+&
+\\
+%Row 5
+&
+\node [DataInter] (ddiag-solver) {$(W/P) \Rightarrow P_0^{new}$};&
+&
+&
+&
+\node [Function] (ddiag) {$\begin{array}{c}\text{4: } \texttt{design\_diagram} \\ \text{read at one } W/S\end{array}$};&
+&
+&
+&
+\\
+%Row 6
+\node [DataIO] (left_output_miss) {$\text{fuel burn}$};&
+&
+&
+&
+&
+&
+\node [Function] (miss) {$\begin{array}{c}\text{5: } \texttt{mission\_fuel} \\ \texttt{run\_mission\_L2}\end{array}$};&
+&
+\node [DataInter] (miss-close) {$W_f$};&
+\\
+%Row 7
+&
+&
+&
+&
+&
+&
+&
+\node [Function] (wts) {$\begin{array}{c}\text{6: } \texttt{TtpaWeights} \\ \text{empty weight II/III}\end{array}$};&
+\node [DataInter] (wts-close) {$W_e$};&
+\\
+%Row 8
+&
+\node [DataInter] (close-solver) {$W_0^{new}$};&
+&
+&
+&
+&
+&
+&
+\node [Function] (close) {$\begin{array}{c}\text{7: } \texttt{SizingSteps} \\ \texttt{.togw\_update}\end{array}$};&
+\\
+%Row 9
+&
+&
+&
+&
+&
+&
+&
+&
+&
+\\
+};
+
+% XDSM process chains
+{ [start chain=process]
+ \begin{pgfonlayer}{process} 
+\chainin (solver);
+\chainin (prop) [join=by ProcessHVA];
+\chainin (geom) [join=by ProcessHVA];
+\chainin (aero) [join=by ProcessHVA];
+\chainin (ddiag) [join=by ProcessHVA];
+\chainin (miss) [join=by ProcessHVA];
+\chainin (wts) [join=by ProcessHVA];
+\chainin (close) [join=by ProcessHVA];
+\chainin (solver) [join=by ProcessHVA];
+\end{pgfonlayer}
+}
+
+\begin{pgfonlayer}{data}
+\path
+% Horizontal edges
+(solver) edge [DataLine] (solver-prop)
+(solver) edge [DataLine] (solver-ddiag)
+(solver) edge [DataLine] (solver-miss)
+(solver) edge [DataLine] (solver-wts)
+(prop) edge [DataLine] (prop-geom)
+(prop) edge [DataLine] (prop-ddiag)
+(prop) edge [DataLine] (prop-miss)
+(prop) edge [DataLine] (prop-wts)
+(geom) edge [DataLine] (geom-aero)
+(geom) edge [DataLine] (geom-miss)
+(geom) edge [DataLine] (geom-wts)
+(aero) edge [DataLine] (aero-ddiag)
+(aero) edge [DataLine] (aero-miss)
+(miss) edge [DataLine] (miss-close)
+(wts) edge [DataLine] (wts-close)
+(ddiag) edge [DataLine] (ddiag-solver)
+(close) edge [DataLine] (close-solver)
+(solver) edge [DataLine] (left_output_solver)
+(miss) edge [DataLine] (left_output_miss)
+% Vertical edges
+(solver-prop) edge [DataLine] (prop)
+(solver-ddiag) edge [DataLine] (ddiag)
+(solver-miss) edge [DataLine] (miss)
+(solver-wts) edge [DataLine] (wts)
+(prop-geom) edge [DataLine] (geom)
+(prop-ddiag) edge [DataLine] (ddiag)
+(prop-miss) edge [DataLine] (miss)
+(prop-wts) edge [DataLine] (wts)
+(geom-aero) edge [DataLine] (aero)
+(geom-miss) edge [DataLine] (miss)
+(geom-wts) edge [DataLine] (wts)
+(aero-ddiag) edge [DataLine] (ddiag)
+(aero-miss) edge [DataLine] (miss)
+(miss-close) edge [DataLine] (close)
+(wts-close) edge [DataLine] (close)
+(ddiag-solver) edge [DataLine] (solver)
+(close-solver) edge [DataLine] (solver)
+(solver) edge [DataLine] (output_solver)
+(prop) edge [DataLine] (output_prop)
+(geom) edge [DataLine] (output_geom)
+(aero) edge [DataLine] (output_aero)
+(ddiag) edge [DataLine] (output_ddiag)
+(miss) edge [DataLine] (output_miss)
+(wts) edge [DataLine] (output_wts)
+(close) edge [DataLine] (output_close);
+\end{pgfonlayer}
+
+\end{tikzpicture}

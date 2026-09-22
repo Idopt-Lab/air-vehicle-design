@@ -1,239 +1,193 @@
-# IHW3a — TTPA sizing loop
+# IHW3a — TTPA sizing on the preliminary design framework
 
 **AOE 4065 · Test Twin Propeller Aircraft**
 
-Couples the IHW1 mission analysis and the IHW2 constraint analysis into one
-calculation and iterates it to a converged airplane.
-
-```matlab
-run_ttpa_sizing
+```bash
+matlab -batch run_ttpa_sizing          # size the airplane, end to end
+matlab -batch run_ttpa_trade_studies   # sweep the design variables
+matlab -batch verify_ihw3a             # check the sizing/geometry claims
+matlab -batch verify_framework         # check the framework claims
 ```
-
-No arguments, no edits. Run it from this folder.
 
 ---
 
-## What changed, and why the loop is needed
+## The framework
 
-Three numbers were **fixed** in the earlier homeworks and are **outputs** here.
+This implements the **preliminary design framework** of the sizing-refinement
+lecture, in propeller form. Every box, and the file it lives in:
 
-| | IHW1 / IHW2 | IHW3a |
-| --- | --- | --- |
-| `W_TO` | 5354 lbf, converged in IHW1 and typed into the IHW2 driver by hand | a state of the loop |
-| `S_ref`, `P_SL` | computed **once** at the end, from that fixed `W_TO` | rewritten every iteration |
-| `OEW` | `0.911·W_TO^0.947` — sees only the weight | Raymer Table 15.2 component build-up over real geometry |
-| `CD0` | `0.028`, frozen | `Cfe·S_wet/S_ref` — follows the geometry |
-| reserve fuel | `1.06` typed into the loop | read from the requirements file |
+| Lecture box | Inputs | Output | File |
+| --- | --- | --- | --- |
+| Tail sizing | `S_ref`, `L_fus`, `D_fus` | `S_ht`, `S_vt` | `TtpaGeom` (Dependent) |
+| Drag polar II | `S_ref`, fuselage, tails, `AR`, `e` | `C_D0`, `K` | `TtpaAero.CD0` |
+| Wing loading | `S_ref`, `W_0` | `W_0/S_ref` | `sizing_loop` step 3 |
+| Design diagram | `C_D0`, `K`, `W_0/S_ref`, `s_FL`,`G`,`CLmax` | `(W/P)` required | `design_diagram` |
+| Fuel fraction | `c`, `R`, `V`, polar, **`W_0/S_ref`** | `W_f/W_0` | `mission_fuel` |
+| Empty weight II/III | `S_ref`, fuselage, tails, `P_0`, `W_0`, (III: `AR`) | `W_e/W_0` | `TtpaWeights` |
+| MTOW iteration | `W_e/W_0`, `W_f/W_0` | `W_0` ↺ | `SizingSteps.togw_update` |
+| P₀ iteration | `(W/P)`, `W_0` | `P_0` ↺ | `sizing_loop` step 5 |
 
-The first three are the reason the loop exists. At Level 1 the mission analysis
-and the constraint analysis genuinely *are* independent — an empty-weight
-regression that knows only `W_TO` doesn't care how big the wing is, and the
-constraint analysis works in ratios. Once the empty weight is built up from real
-areas and the drag comes from real wetted area, the geometry depends on the
-weight and the weight depends on the geometry. That circle has to be closed by
+Two red loops, exactly as the lecture draws them: `W_0,guess` closed by the MTOW
+iteration, and `P_0,guess` (the lecture's `T_0,guess`) closed by the power
 iteration.
 
-## The loop
+**`S_ref` is a green input.** The wing loading is *computed*, `W/S = W_0/S_ref`,
+and the design diagram is read at that **one** wing loading — the lecture's own
+note on the box: *"You don't need to draw the entire chart because W/S is
+fixed."* That is what makes the trade studies possible.
 
-Two states, `(W_TO, P_SL)`. A jet loop uses `(W_TO, T_SL)` with
-`T_SL = (T/W)·W_TO`; a propeller airplane works in power loading, which is
-inverted — a *bigger* `W/P` means a *smaller* engine — so the second state is
-`P_SL = W_TO/(W/P)`. Both must converge.
+## Four switches, all in the requirements file
 
-One iteration, in order — **the order matters**:
+Every one is **measured**, not asserted. `run_ttpa_sizing` prints the comparison
+table; the numbers below are from it.
 
-1. **Wing** — `S_ref = W_TO/(W/S)`. Writing this one number resizes the span,
-   the chords, the MAC, the exposed area, both tails through their volume
-   coefficients, and every wetted area.
-2. **Engine** — `P_SL` is written *before* the design point is solved, so the
-   solve reads this iteration's engine. This is the classic ordering trap.
-3. **Design point** — re-solve the matching envelope on the airplane as it now
-   stands.
-4. **Power** — `P_SL_new = W_TO/(W/P)`.
-5. **Closure** — mission fuel and empty weight at the current weight, then
-   `W_TO = W_payload / (1 − W_fuel/W_TO − OEW/W_TO)`.
-6. **Test** both residuals, then **relax** both states.
+| Switch | Options | W_TO |
+| --- | --- | --- |
+| `sizing.mode` | `fixed_wing_area` (lecture) / `design_point` (IHW2) | 5322 / 5434 |
+| `missions.…method` | `L2` (improved) / `L1` (IHW1) | 5322 / 4933 |
+| `weights.method` | `table_15_2` (EW-II) / `raymer_ga_III` (EW-III) | 5322 / 6268 |
+| cruise `method` | `power_index` (Roskam) / `drag_based` | 5322 / 5443 |
+
+### `sizing.mode`
+`fixed_wing_area` is the lecture: `S_ref` in, `W/S` computed, engine sized
+**exactly** to the binding constraint. `design_point` is the IHW2 route — solve
+the matching diagram, `S_ref` comes out — and it is what the framework's own
+`SizingLoopL2` does for the F-16 and the 777. The second is the special case of
+the first where `S_ref` lands on the envelope corner, and `verify_framework`
+proves it: the two modes rebuild the *identical* airplane to **1.3 × 10⁻⁷**.
+
+### `missions.method` — the biggest single error in the old code
+IHW1 flies cruise at `L/D_max`. But 200 KTAS at 8000 ft with `W/S ≈ 39` pins
+`C_L = 0.366`, where the real `L/D` is **10.53**, not 13.45 — the model was
+**27.6 % optimistic**. Best-L/D speed is 139 kt and the requirement is 200 kt, so
+the airplane genuinely cruises well below best L/D. In loiter the error runs the
+other way: 120 KTAS at 4000 ft lands almost exactly on best L/D, so the `0.866`
+factor is 13 % pessimistic. Net effect on mission fuel: **+12.1 %**.
+
+This is the lecture's "no correlation between L/D and the estimated drag polar",
+and the `W_0/S_ref → Fuel fraction` arrow is the fix. `run_mission_L2` segments
+the cruise (12 sub-segments), recomputes `C_L` in each, uses an energy-method
+climb, and flies loiter at its actual condition. `run_mission.m` (IHW1) is
+untouched and still selectable.
+
+**One lecture rule deliberately not adopted.** The 15-min-idle ground-fuel rule
+is written for a jet. Applied to this piston twin with a constant BSFC it gives
+**6.5 lbf** for start, taxi and takeoff against Roskam's **82 lbf**, because
+piston SFC at idle is far worse than at cruise and a constant-BSFC model cannot
+see it. The lecture says to use the idle fuel flow *"for your particular
+engine"* — data this model does not carry. Roskam's GA-calibrated fraction is
+the better answer, and the lecture makes the same call for descent and landing.
+The rule is implemented and available as `lecture_idle_rule`.
+
+### `weights.method` — and the lecture's own trade study, reproduced
+Empty weight II is Raymer Table 15.2: an areal density times an area, with **no
+aspect ratio in it**. Empty weight III swaps two rows for the Raymer §15.3.3 GA
+statistical equations — **Eq. 15.46** for the wing, which carries
+`(A/cos²Λ)^0.6`, and **Eq. 15.52** for the installed engine, which *includes the
+propeller* (Table 15.2's `1.4 ×` factor models no propeller at all).
+
+`run_ttpa_trade_studies` reproduces the lecture's aspect-ratio slide exactly:
+
+| AR | EW-II MTOW | EW-III MTOW |
+| --- | --- | --- |
+| 6 | 5511.7 | 6292.6 |
+| 7.5 | ~5340 | **6262.9 ← minimum** |
+| 10 | 5268.1 | 6328.3 |
+| 12 | **5240.4 ← still falling** | 6425.8 |
+
+Empty weight II says *more AR is always better*. Empty weight III produces a
+real interior minimum at **AR = 7.5** — the lecture's own answer. Note the
+objective must be **MTOW**, not fuel: fuel falls with AR under both models,
+because a longer span always cuts induced drag. It is the takeoff weight that
+shows the trade.
+
+### cruise `method`
+The Roskam power index does not read the drag polar, which is why the TTPA
+design point never moves. Replacing it with the actual power balance:
+
+```
+at W/S = 40:   power_index  W/P <= 11.243      drag_based  W/P <= 8.670
+envelope corner: (37.375, 10.505)    ->    (43.196, 9.066)
+```
+
+So the IHW2 design point of 9.25 is about **6 % short of 200 KTAS at the
+specified 80 % power setting** — it makes the speed at full throttle with 17 %
+margin. Either the `Ip = 1.4` reading or the 0.8 power setting is optimistic.
+Under `drag_based` the corner genuinely moves as the geometry changes.
 
 ## Files
 
-**The sizing code — this is what IHW3a adds**
+**Framework** — `sizing_loop` · `design_diagram` · `SizingSteps` ·
+`mission_fuel` · `run_mission_L2` · `solve_design_point`
+**Disciplines** — `TtpaGeom` · `TtpaAero` · `TtpaProp` · `TtpaWeights` ·
+`ttpa_disciplines` · `Ttpa_requirements_IHW3.json`
+**Studies** — `run_ttpa_sizing` · `run_ttpa_trade_studies` ·
+`run_ttpa_PS_diagram` · `TtpaPSDiagram` · `plot_sizing_convergence`
+**Checks** — `wing_fuel_check` · `landing_gear_loads` · `verify_ihw3a` ·
+`verify_framework` · `sens.m` · `slice.m`
+**Unchanged from IHW1/IHW2** — `run_mission` · `get_miss_seg` ·
+`constraint_takeoff/landing/climb` · `run_constraints` · `matching_envelope` ·
+`design_point_check` · `get_con` · the four base classes · `AircraftState` ·
+the two readers
 
-| File | What it does |
-| --- | --- |
-| `run_ttpa_sizing.m` | **the run file.** Builds, iterates, reports, checks, plots |
-| `sizing_loop.m` | the two-state `(W_TO, P_SL)` loop |
-| `SizingSteps.m` | `togw_update` (the closure) and `relax` (the damping) |
-| `solve_design_point.m` | re-solves the design point each iteration, `selected` or `optimum` |
-| `mission_fuel.m` | total mission fuel at a weight — IHW1's loop body, lifted out |
-| `TtpaPSDiagram.m` | the **P–S sizing diagram** — every (power, wing) cell sized |
-| `run_ttpa_PS_diagram.m` | standalone P–S study on a finer grid, exports png/json/md |
-| `wing_fuel_check.m` | post-convergence: does the wing hold the fuel? |
-| `landing_gear_loads.m` | post-convergence: static gear loads |
-| `plot_sizing_convergence.m` | four-panel convergence history |
-| `verify_ihw3a.m` | checks every claim made in this file and in the comments |
-
-**Discipline models — upgraded from IHW2**
-
-| File | What changed |
-| --- | --- |
-| `TtpaGeom.m` | was two NaNs. Now the whole L2 planform, all Dependent on `S_ref` |
-| `TtpaWeights.m` | statistical regression → Raymer Table 15.2 component build-up |
-| `TtpaAero.m` | `CD0` fixed → Dependent, `Cfe·S_wet/S_ref` (Raymer Eq. 12.23) |
-| `TtpaProp.m` | IHW2 plus `engine_weight()` and `engine_length()` (Raymer Table 10.4) |
-| `Ttpa_requirements_IHW3.json` | IHW2 blocks plus `geometry`, `weights`, `sizing` |
-| `ttpa_disciplines.m` | now injects: `prop → geom → aero → wts` |
-| `ttpa_requirements_path.m` | points at the IHW3 file |
-
-**Carried over unchanged** — `run_mission.m` and `get_miss_seg.m` from IHW1;
-`constraint_*.m`, `run_constraints.m`, `matching_envelope.m`,
-`design_point_check.m`, `get_con.m`, `get_state.m` from IHW2; plus the four base
-classes, `AircraftState`, `MissionProfileReader`, `ConstraintSetImporter`,
-`json_as_struct_array`.
-
-`run_mission.m` needed **no change at all**. It reads `obj.aero.LD_max`, which is
-now Dependent on the geometry, so the Breguet segments automatically use the drag
-of the airplane the loop has just laid out.
+`constraint_cruise_speed` and `get_con` gained a method switch; `get_state`
+gained a memo (bit-identical, 18× faster — the L2 mission and the P–S scan make
+roughly a million atmosphere calls without it).
 
 ## Converged answer
 
-Design point `(40, 9.25)`, starting guess 5000 lbf, 30 iterations:
+Default configuration (`fixed_wing_area`, mission L2, weights II, power index),
+`S_ref = 128.47 ft²`:
 
 ```
-W_TO      5138.7 lbf      S_ref   128.47 ft^2      b      32.06 ft
-OEW       2919.7 lbf      S_ht     29.14 ft^2      MAC     4.25 ft
-fuel      1018.9 lbf      S_vt     15.75 ft^2      CD0   0.02817
-payload   1200.0 lbf      P_SL    555.5 hp        L/D max 13.446
-                                  277.8 hp/engine
+W_TO   5322.0 lbf    W/S   41.43 psf     CD0   0.02819    L/D max 13.44
+OEW    2957.4 lbf    W/P    9.492 lb/hp  S_ht  29.14 ft²  b      32.06 ft
+fuel   1164.6 lbf    P_SL  560.7 hp      S_vt  15.75 ft²
 ```
 
-Against the IHW1/IHW2 baseline (`W_TO` held at 5354): −4.0 % weight, −5.6 % empty
-weight, −4.0 % wing area and power. That movement is the expected result of
-replacing a regression that cannot see the airplane with a build-up that can, not
-an error.
+Against the IHW1/IHW2 baseline of 5354 lbf: **−0.6 %** on takeoff weight. Two
+large corrections nearly cancel — the improved fuel fractions add weight, the
+component build-up removes it.
 
-## The P–S sizing diagram
+## Numerical behaviour
 
-`run_ttpa_sizing` ends with it; `run_ttpa_PS_diagram` draws it on a finer grid
-and exports `output/ttpa_PS_diagram.{png,json,md}`. It is the propeller form of
-the metabook T–S diagram (Fig. 4.7), and the framework's `src/sizing/TSDiagram.m`
-is the jet original.
+**Relaxation is mode-dependent, and measurably so.** `fixed_wing_area` rings:
+a heavier airplane raises `W/S`, which the takeoff constraint answers with a
+lower allowed `W/P`, which is a bigger and heavier engine. At 0.5 it takes ~110
+iterations with a visible oscillation; at **0.40** it takes ~60.
+`design_point` is well behaved at **0.50** (~32 iterations).
 
-**Every cell of the grid is a separately sized airplane.** `converge_W0(P, S)`
-prescribes the engine and the wing and closes the takeoff weight there — the same
-fixed point `sizing_loop` runs, with the design-point solve removed because
-(P, S) is given.
-
-Reading it:
-
-| | |
-| --- | --- |
-| **blue** | a sized airplane that meets every requirement |
-| **white** | a sized airplane that fails at least one requirement |
-| **gray** | the weight does not close — no airplane exists there |
-| **curves** | the least engine each requirement allows, at that wing |
-
-**The feasible region is *above* the curves**, the opposite of the IHW2 matching
-diagram. On the matching diagram feasible is *below* the W/P envelope, because a
-small W/P is a big engine. Dividing through by weight to get power turns that
-upside down: more power is always allowed.
-
-Three things follow from `P = W / (W/P)` rather than the jet's `T = (T/W)·W`:
-
-- the curve-tracing step **divides** where the framework multiplies
-- Takeoff gives `P ≥ W²/(S·TOP23·σ·CLmax_TO)` — power **falls** as the wing grows
-- Cruise gives `P ≥ S·σ·Ip³/kP` — power **rises** linearly with the wing
-
-so the two binding constraints run in opposite directions, and the feasible
-region is a wedge whose tip is the least-power airplane. That tip is marked
-automatically, and it is the dimensional twin of the IHW2 corner at
-(W/S, W/P) = (37.37, 10.50):
-
-```
-least-power airplane   467.1 hp , 131.3 ft^2 , 4900.4 lbf
-IHW3a design           555.5 hp , 128.5 ft^2 , 5138.7 lbf
-cost of the margin      +88.4 hp ,  -2.8 ft^2 ,  +238.3 lbf
-```
-
-Gray never appears on the default grid: TTPA closure fails near 1500 hp, far
-above any readable range, so the legend entry is omitted when the region is
-empty. The grid ceiling is a readability choice, not a physical one.
-
-Note that `TtpaPSDiagram` **mutates the discipline bundle** — after a scan
-`geom.S_ref` and `prop.P_SL` hold the last cell visited, not the design.
-`run_ttpa_sizing` writes the converged values back afterwards.
-
-## Equations and sources
-
-| Quantity | Source |
-| --- | --- |
-| TOGW closure | metabook Ch. 2 Algorithm 1; Raymer Eq. 3.4 |
-| Root/tip chord, MAC | Raymer Eqs. 7.6, 7.7, 7.8 |
-| Lifting-surface wetted area | Raymer Eqs. 7.11, 7.12 |
-| Fuselage wetted area | Raymer Eq. 7.13 |
-| `CD0 = Cfe·S_wet/S_ref`, `Cfe = 0.0045` | Raymer Eq. 12.23, Table 12.3 (light twin) |
-| Tail areas by volume coefficient | Raymer §6.5; Roskam Part II Ch. 8; Nicolai & Carichner Table 11.1 |
-| Component weight build-up | Raymer Table 15.2, **General Aviation** column |
-| Engine weight and length vs bhp | Raymer Table 10.4, horizontally-opposed |
-| Wing fuel volume | Torenbeek |
-| Landing-gear static loads | Raymer Ch. 11 |
-| Mission weight fractions | Roskam Part I Table 2.2 (unchanged from IHW1) |
-| Constraint methods | Roskam Part I §3.1, 3.2, 3.3, 3.6 (unchanged from IHW2) |
-
-Two numbers in the geometry block are **layout assumptions, not textbook
-values**, and are flagged as such in the JSON: the nacelle length factor (2.0)
-and the fuselage nose/cabin/cone split. The nacelle factor is the weakest number
-in the model — change it and the parasite drag moves.
-
-## Three things worth knowing
-
-**Under-relaxation is not optional.** At `relax = 1` the loop dies with
-`closureInfeasible` from every starting guess tested (2500, 5000, 8000 lbf): a
-full step overshoots into the region where the empty and fuel fractions consume
-the whole takeoff weight. At `relax = 0.5` it converges from all 31 guesses
-between 2500 and 10000 lbf, in 29–40 iterations, to within 0.003 lbf of the same
-answer. The error is a *design* result, not a coding mistake, which is why the
-loop raises it rather than returning a negative weight.
-
-**The design point does not actually move.** The loop re-solves it every
-iteration — that is the correct Level-2 structure — but for the TTPA the corner
-stays at `(37.3747, 10.5049)` and the wall at `43.2404` regardless of how the
-geometry changes. Of the six conditions, only Takeoff and Cruise Speed ever set
-the envelope, and neither reads the drag polar: Takeoff reads only `CLmax_TO`,
-Cruise Speed only the power index. The three climb curves *do* move with `CD0`,
-but they are not binding. `result.history` carries the evidence rather than the
-assumption. If you want the design point to respond to the geometry, the cruise
-constraint has to be rewritten from Roskam's power-index correlation to the
-actual power balance — that is a Level-2 upgrade IHW3a does not make.
-
-**The cross-checks are the real answer key.** `run_ttpa_sizing` prints four:
-the geometry-driven `CD0` against IHW2's frozen `0.028` (+0.6 %), the component
-build-up against the IHW1 regression (−1.9 %), the four weights summing to
-`W_TO` (residual ~1e-4 lbf), and the whole airplane against the IHW1/IHW2
-baseline. Two independent methods agreeing within a couple of percent is the
-evidence the geometry is right; if they diverge, look at the geometry first.
+**Guess robustness** (2500–10000 lbf, 16 guesses): `design_point` **16/16**,
+`fixed_wing_area` **15/16** (fails only at 2500, a 2× underestimate). Both
+converge to within 5 × 10⁻³ lbf of the same answer. A transient-recovery guard
+in `sizing_loop` catches both failure modes — a non-closing denominator and a
+mission that cannot climb on the engine a low trial weight implies.
 
 ## Verification
 
-`verify_ihw3a` checks all of it and prints the results: convergence from 31
-starting guesses, the `relax = 1` failure, that the design point is stationary,
-that `optimum` mode runs (and costs 242 lbf and 89 hp less than the selected
-point — the price of the margin), that every Dependent property tracks `S_ref`,
-that all seven weight rows and `CD0` reproduce by hand to machine precision, and
-that the geometry at `S_ref = 134 ft²` reproduces the IHW3 reference notebooks:
+`verify_ihw3a` (9 claims) and `verify_framework` (6 claims). Highlights:
 
-```
-b 32.74 ft (33)   c_root 5.85 (5.8)   c_tip 2.34 (2.3)   MAC 4.34 (4.3)
-y_MAC 7.02 (7)    V_wf 37.07 ft^3 (37)
-S_ht 31.04 ft^2 (31)   S_vt 16.78 ft^2 (17)   b_ht 13.07 ft (13)
-```
+- the two sizing modes rebuild the identical airplane to **1.3 × 10⁻⁷**
+- the L2 cruise `C_L`/`L/D` match a hand calculation exactly (0.3661 / 10.534)
+- EW-II gives an edge minimum, EW-III an interior one at **AR = 7.5**
+- all seven weight rows and `CD0` reproduce by hand to machine precision
+- geometry at `S_ref = 134 ft²` reproduces the IHW3 notebooks (b 32.74 vs 33,
+  MAC 4.34 vs 4.3, `V_wf` 37.07 vs 37, `S_ht` 31.04 vs 31)
+- the P–S diagram and the loop agree to the grid resolution
+- `get_state` memoisation is bit-identical, σ at sea level exactly 1
 
-It also checks that the P–S diagram and the sizing loop are the same
-calculation reached two different ways — the loop *solves* the design point,
-the diagram *traces* the constraint curves:
+`sens.m` quantifies the uncited modelling assumptions (nacelle length factor,
+tail-cone closure, fuselage split): all move `W_TO` by **≤ 2 %** over generous
+ranges.
 
-```
-converge_W0 at the design cell   5138.654 lbf   vs loop 5138.651 lbf   (+6.6e-07)
-least-power point, traced        467.13 hp , 131.30 ft^2 , 4900.4 lbf
-sizing_loop in "optimum" mode    466.13 hp , 131.01 ft^2 , 4896.6 lbf
-                                 well inside the 11.1 hp x 2.4 ft^2 grid spacing
-```
+## Known approximations
+
+- Tail **weight** rows use theoretical area, not exposed — the volume-coefficient
+  method defines area to the centreline, and an exposed tail area needs a
+  fuselage width at the tail station the cabin-driven model does not carry.
+  Worth about 9 lbf, under 0.4 % of OEW.
+- Empty weight III swaps only the wing and engine rows; the other five stay at
+  Table 15.2. Swapping them needs a dozen new inputs for a few percent, and the
+  lecture's point is about the wing.
+- The nacelle length factor (2.0) is a layout assumption, not a textbook value —
+  the weakest input in the model.

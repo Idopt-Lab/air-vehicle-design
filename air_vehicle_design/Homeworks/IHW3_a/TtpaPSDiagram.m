@@ -611,6 +611,21 @@ classdef TtpaPSDiagram < handle
             info = struct('curves', {curves}, 'wall_curves', {wall_curves}, ...
                           'least_power', struct('S', NaN, 'P', NaN, 'W', NaN));
             if ~isempty(curves)
+                % The envelope is the LARGEST producer curve at each wing
+                % area - but only where EVERY producer is known. If one curve
+                % failed to trace at some S (the weight does not close on the
+                % engine that constraint demands there), the envelope at that
+                % S is UNKNOWN, not "the max of the rest". Taking the max of
+                % the survivors silently drops the binding constraint and
+                % invents a feasible point that is not one: with the L2
+                % mission the cruise curve stops converging past about
+                % 200 ft^2, and without this guard the reported least-power
+                % point jumped to the edge of the grid.
+                known = true(1, n_S);
+                for kk = 1:numel(curves)
+                    known = known & isfinite(curves{kk}.P);
+                end
+
                 env = -inf(1, n_S);
                 envW = NaN(1, n_S);
                 for kk = 1:numel(curves)
@@ -619,6 +634,8 @@ classdef TtpaPSDiagram < handle
                     envW(take) = curves{kk}.W(take);
                 end
                 env(~isfinite(env)) = NaN;
+                env(~known)  = NaN;
+                envW(~known) = NaN;
                 % Apply the wall: at each S, the wall forbids wing areas below
                 % the S it demands at that power.
                 for kk = 1:numel(wall_curves)
@@ -824,14 +841,18 @@ classdef TtpaPSDiagram < handle
         function c = quiet_scan_(~)
         %QUIET_SCAN_  Mute the per-cell chatter for the duration of a scan.
         %   A grid scan deliberately visits cells with absurd engines and
-        %   wings, so the out-of-range warning from the Raymer Table 10.4
-        %   regression and the per-cell infeasibility warning would fire
-        %   thousands of times and bury the real output. They are restored
+        %   wings, so three warnings would fire thousands of times and bury
+        %   the real output: the Raymer Table 10.4 out-of-range warning, the
+        %   per-cell infeasibility warning, and - once the L2 mission is in
+        %   use - the sub-segment accuracy warning, which is EXPECTED at
+        %   cells with a tiny wing where the lift coefficient is enormous and
+        %   the cruise fraction runs deep. They are restored
         %   by the onCleanup object when the caller returns, so a SINGLE
         %   call to converge_W0 still warns normally.
             s1 = warning('off', 'TtpaProp:BhpOutOfRange');
             s2 = warning('off', 'TtpaPSDiagram:cellInfeasible');
-            c  = onCleanup(@() warning([s1, s2]));
+            s3 = warning('off', 'run_mission_L2:SegmentTooCoarse');
+            c  = onCleanup(@() warning([s1, s2, s3]));
         end
 
     end
