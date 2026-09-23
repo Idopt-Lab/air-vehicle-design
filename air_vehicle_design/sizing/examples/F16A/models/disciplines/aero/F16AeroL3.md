@@ -43,13 +43,12 @@ Plain mutable `properties` — aero constants only, from the JSON. **No geometry
 | `is_body_comp` | logical | selects the body form factor (Eq. 12.31) |
 | `k` | ft | equivalent surface roughness, smooth paint [Raymer Table 12.4/12.5] |
 | `E_WD` | 2.2 | wave-drag efficiency factor — a **tuned calibration input** [Raymer Eq. 12.45] |
-| `CD0_LandP` | 0.0010 | leakage & protuberance allowance [Raymer §12.5] |
 | `Dq_gun_port` / `Dq_hook_USAF` | 0.20 / 0.10 ft² | misc drag areas [Raymer Table 12.7] |
 
 `properties (Constant)` additionally hold the flaperon estimates (as `F16AeroL2`), the LE-flap
 estimates (`hld_LE`, `c_lef_over_c`, `eta_lef_in/out`, `F_lef`, `delta_lef_*`, `k_lef`) and the
 landing-gear buildup inputs (`Dq_wheels`, `Dq_strut_*`, `strut_ref_length`, wheel/leg counts)
-[Raymer Table 12.6].
+[Raymer Table 12.6], and `LandP_rowname` = `"non-stealth fighter"` [Raymer Table 12.8].
 
 ## 3. Derived (`Dependent`)
 
@@ -75,8 +74,8 @@ Read live from `obj.geom` on every read — no stored copy, read-only.
 | Group | Methods | Source |
 |---|---|---|
 | Contract | `drag_polar(state)`, `get_CLmax(state)` | `AeroL3.drag_polar`; Raymer Eq. 12.15 via `AeroL2.CLmax_clean` |
-| Build-up + wave drag | `CD0_buildup` (the Eq. 12.24 sum plus `CD0_misc` and `CD0_LandP`), `get_CD0_component_buildup` (adds `compute_CD0_wave` for M ≥ 1.2), `compute_CD0_wave` | Raymer Eq. 12.24, 12.44/12.45 |
-| Misc / leakage | `get_CD0_misc`, `get_CD0_LandP` | declared abstract by `AeroModelL3`; both are empty stubs, so either returns an unassigned output if called |
+| Build-up + wave drag | `CD0_buildup` (the Eq. 12.24 sum plus `CD0_misc`), `get_CD0_component_buildup` (adds `compute_CD0_wave` for M ≥ 1.2, then `get_CD0_LandP` on the total), `compute_CD0_wave` | Raymer Eq. 12.24, 12.44/12.45 |
+| Misc / leakage | `get_CD0_LandP(CD0_parasite)` = `AeroL3.lookup_LandP_frac(LandP_rowname) · CD0_parasite` (0.125 for the F-16); `get_CD0_misc` is an empty stub | Raymer Table 12.8 |
 | Accessors | `get_K1`, `get_K2`, `get_CL_alpha`, `get_CL_minD`, `get_e_osw`, `compute_Re` | Raymer Eq. 12.50/12.51, 12.6, 12.48/12.49, 12.25 |
 | Config | `get_config_polar(config)` | six config strings routed through the TO/landing deltas |
 | TE flap | `Delta_CD0_flap`, `Delta_CDi_flap`, `Delta_CLmax_flap`, `compute_S_flapped_ratio` | Raymer Eq. 12.61/12.62, Table 12.2 + Eq. 12.21 |
@@ -111,7 +110,12 @@ area-ruled `Amax`, `CD0_wave` is 0.0253630 at M 1.5, −0.54 % from the Brandt-r
 | `E_WD` = 2.2 is a tuned calibration knob back-checked to Brandt, not a measured F-16 datum | `TestAeroL3.testTODO_EWDCalibrationInput` |
 | Surface-roughness table is Raymer 12.4/12.5, not 12.2 (citation drift) | `TestAeroL3.testTODO_RoughnessTableCitation` |
 | `alpha_L0`, `cl_max_2D`, `cl_alpha_2D` unverified (shared with L2) | `TestAeroL2.testTODO_{AlphaL0,ClMax2D,ClAlpha2D}Unverified` |
-| `strut_ref_length` = 0.3 ft is an estimate | in-code TODO |
-| Flaperon and LEF estimates unverified against T.O. 1F-16A-1 | in-code TODO |
+| `strut_ref_length` = 0.3 ft is an estimated strut diameter. Verify | none |
+| (8/26/2026)(Casey) Try the "suction method" for K-values [Raymer 6th ed. §12.6.2]. `K1`/`K2` now come from Eqs. 12.48-12.51 | none |
+| Flaperon and LEF estimates unverified against T.O. 1F-16A-1. The LEF is auto-scheduled by AoA and Mach; `delta_lef_TO/L_deg` = 17 is a stand-in near the rotation/touchdown condition | none |
+| (8/26/2026)(Casey) Compute `f_lam_comp` live: Re from the state and each body's reference length, then split the length into laminar and turbulent parts | none |
+| S-19 (`first_pass_findings.md`): the constructor accepts `GeometryModelL2` or `GeometryModelL3`. With L2, `Amax` becomes the envelope ellipse (27.4889, not 24.7037) and wave drag rises about 23% with no warning | none |
+| (8/14/2026) `get_K1`, `get_K2`, `get_CL_alpha`: artefacts of the subclass era. Relocate to the F-16 example class if not done already | none |
+| (8/26/2026)(Casey) `get_CD0_misc`: compute the CD0 contribution of every physical object in the "miscellaneous" component | none |
 | `L_aircraft` = 47.65 ft is traceable to no in-repo document | `TestGeomL3.testTODO_OverallLengthCitationNotPinned`; todo §6 |
 | `Amax`'s frame-rescaling assumption and its `π·D²/5` deduction are uncited | todo §4b, §5 |

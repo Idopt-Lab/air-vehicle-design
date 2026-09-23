@@ -94,5 +94,24 @@ classdef AeroL3
             CD0_component = D_q/S_ref;
         end
 
+        function LandP_frac = lookup_LandP_frac(LandP_rowname)
+            % Looks up the fraction for estimating 
+            % the drag component due to leakages and protuberances.
+            % ARGS:
+            %   LandP_rowname: (string) The aircraft type corresponding to the row name in Table 12.8, Raymer 6th edition.
+            % RETURNS:
+            %   LandP_frac: (double) Percent of drag that is due to leakages and protuberances (should be added to the total CD0 value)
+
+            switch LandP_rowname
+                case "propeller aircraft", LandP_frac = [0.05, 0.10];
+                case "jet transport", LandP_frac = [0.02, 0.05];
+                case "bomber", LandP_frac = [0.02, 0.05];
+                case "non-stealth fighter", LandP_frac = [0.10, 0.15];
+                case "stealth fighter", LandP_frac = [0.03, 0.05];
+                otherwise
+                    error("lookup_LandP_fraction:AeroL3 - failed to identify aircraft type. Accepted types are given by Table 12.8, Raymer, 6th edition. Accepted types are: 'propeller aircraft', 'jet transport', 'bomber', 'non-stealth fighter', & 'stealth fighter'.");
+            end
+        end
+
     end
 end

@@ -45,7 +45,6 @@ classdef F16AeroL3 < AeroModelL3
 
         k                 % ft  — equivalent surface roughness (smooth paint) [Raymer Table 12.4/12.5]
         E_WD              % — wave-drag efficiency factor (TUNED calibration input) [Raymer Eq. 12.45]
-        CD0_LandP         % — leakage & protuberance allowance [Raymer Sec. 12.5]
 
         % Miscellaneous drag areas (D/q, ft^2) composing CD0_misc [Raymer Table 12.7].
         Dq_gun_port       % single cannon port
@@ -70,11 +69,6 @@ classdef F16AeroL3 < AeroModelL3
         % --- Leading-edge flap (LEF) estimates. The F-16 has a leading-edge
         % FLAP, not a slat: Raymer Table 12.2 gives 0.3 for a leading-edge
         % flap and 0.4*(c'/c) for a slat, so the row matters.
-        % TODO: verify vs T.O. 1F-16A-1. The LEF is auto-scheduled by the flight
-        % control computer as a function of AoA and Mach, not a fixed TO/L
-        % value. delta_lef_TO/L_deg = 17 is a stand-in for the LEF position
-        % near the high-AoA rotation/touchdown condition these CLmax_TO/CLmax_L
-        % values represent. Still unpinned against a primary schedule.
         hld_LE            = "leading-edge flap"   % Raymer Table 12.2 row name, p. 415
         c_lef_over_c     = 0.15
         eta_lef_in       = 0.0
@@ -88,10 +82,13 @@ classdef F16AeroL3 < AeroModelL3
         Dq_wheels        = 0.18     % regular wheel + tire
         Dq_strut_highRE  = 0.30     % round strut, high Re
         Dq_strut_lowRE   = 1.17     % round strut, low Re
-        strut_ref_length = 0.3      % ft (estimated strut diameter) -- TODO verify
+        strut_ref_length = 0.3      % ft (estimated strut diameter)
         n_nosewheel      = 1
         n_mainwheel      = 2
         n_gear_legs      = 3
+
+        % --- Leakages and Protuberances --- 
+        LandP_rowname = "non-stealth fighter"
     end
 
     % DERIVED -- geometry read live from obj.geom on every read (no cache).
@@ -158,14 +155,13 @@ classdef F16AeroL3 < AeroModelL3
                                 J.interference_factor_Q.fuselage, J.interference_factor_Q.duct];
             obj.f_lam_comp   = [J.laminar_fraction_f_lam.wing, J.laminar_fraction_f_lam.horizontal_tail, ...
                                 J.laminar_fraction_f_lam.vertical_tail, J.laminar_fraction_f_lam.strake, ...
-                                J.laminar_fraction_f_lam.fuselage, J.laminar_fraction_f_lam.duct]; % TODO (8/26/2026)(Casey): These should be computed live, using the current aerodynamic state, the physical body's reference length, and computing the reynolds number across it. After obtaining that, it should split the length into two parts, one that is laminar, and another that is turbulent.
+                                J.laminar_fraction_f_lam.fuselage, J.laminar_fraction_f_lam.duct];
             obj.is_body_comp = logical([J.is_body.wing, J.is_body.horizontal_tail, ...
                                 J.is_body.vertical_tail, J.is_body.strake, ...
                                 J.is_body.fuselage, J.is_body.duct]);
             obj.k            = J.surface_roughness_k_ft.wing;   % uniform roughness
             obj.E_WD         = J.wave_drag_factor_E_WD;
             % Amax_ft2 / L_aircraft_ft are Dependent on obj.geom, not read here.
-            obj.CD0_LandP    = J.CD0_LandP;
             obj.Dq_gun_port  = J.misc_drag_areas.Dq_gun_port_ft2;
             obj.Dq_hook_USAF = J.misc_drag_areas.Dq_hook_USAF_ft2;
         end
@@ -182,12 +178,6 @@ classdef F16AeroL3 < AeroModelL3
         %   geometry class, so this reads the toolbox directly. D_fus is the
         %   equivalent diameter (W+H)/2, NOT the max width -- passing the width
         %   reads about 12.8% high.
-        %
-        %   _TODO -- S-19 in first_pass_findings.md is still open. The
-        %   constructor accepts GeometryModelL2 OR GeometryModelL3. With an L2
-        %   object, Amax silently becomes the envelope ellipse (27.4889) instead
-        %   of the area-ruled buildup (24.7037), which inflates wave drag by
-        %   about 23% with no warning. Resolve in the gate-4b sweep.
         function v = get.S_wet_comp(obj)
             % Mod (08/19/2026) (Claude) -- every term is a DI read off the
             % injected F16GeomL3. This class no longer calls a GeomL2 static, so
@@ -311,8 +301,6 @@ classdef F16AeroL3 < AeroModelL3
             e = AeroL2.oswald_eff(obj.AR_wing, obj.LE_sweep_wing);
         end
 
-        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
-        % if it hasn't been done already.
         function val = get_K1(obj, M)
         %GET_K1  Induced-drag factor at Mach M (subsonic/supersonic branch).
             regime = AeroL2.flight_regime(M);
@@ -327,16 +315,12 @@ classdef F16AeroL3 < AeroModelL3
             end
         end
 
-        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
-        % if it hasn't been done already.
         function val = get_K2(obj, K1_sub, M)
             CL_alpha_M = obj.get_CL_alpha(M);
             CL_minD    = AeroL2.compute_CL_minD(CL_alpha_M, obj.alpha_L0);
             val        = AeroL2.K2_value(K1_sub, CL_minD, M);
         end
 
-        % TODO (8/14/2026): Again, flagging as artefact of the subclass era. Relocate to F-16 example class,
-        % if it hasn't been done already.
         function val = get_CL_alpha(obj, M)
             val = AeroL2.CL_alpha(obj.AR_wing, obj.QC_sweep_wing, M, [], [], [], obj.cl_alpha_2D);
         end
@@ -353,19 +337,22 @@ classdef F16AeroL3 < AeroModelL3
         %get_CD0_component_buildup  Generic Raymer Eq. 12.24 buildup (AeroL3) + the F-16's
         %   own supersonic wave-drag term (Eq. 12.41), added only for M >= 1.2
         %   (Eq. 12.41's own domain). No transonic fairing (1.0 < M < 1.2).
+        %   Leakage & protuberance drag goes last, on the finished total.
             val = obj.CD0_buildup(state);
             if state.mach >= 1.2
                 val = val + obj.compute_CD0_wave(state);
             end
+            val = val + obj.get_CD0_LandP(val);
         end
 
-        % TODO (8/26/2026)(Casey): A function that computes the CD0 contribution of every physical
-        % object that contributes to the "leakages and protuberances" component.
-        function val = get_CD0_LandP(obj)
+        function val = get_CD0_LandP(obj, CD0_parasite)
+        %GET_CD0_LANDP  Leakage & protuberance drag [Raymer 6th ed. Tbl 12.8, p. 431].
+        %   CD0_parasite is the finished total. Passed in, because recomputing it
+        %   here would recurse through get_CD0_component_buildup.
+        LandP_fraction = mean(AeroL3.lookup_LandP_frac(obj.LandP_rowname));
+            val = LandP_fraction * CD0_parasite;
         end
 
-        % TODO (8/26/2026)(Casey): A function that computes the CD0 contribution of every physical
-        % object that contributes to the "miscellaneous" component.
         function val = get_CD0_misc(obj)
         end
 
@@ -397,7 +384,7 @@ classdef F16AeroL3 < AeroModelL3
                 end
                 cd0_sum = cd0_sum + cf_eff * ff_i * obj.Q_comp(i) * obj.S_wet_comp(i);
             end
-            val = cd0_sum / obj.S_ref + obj.CD0_misc + obj.CD0_LandP;
+            val = cd0_sum / obj.S_ref + obj.CD0_misc;
         end
 
         function val = compute_CD0_wave(obj, state)

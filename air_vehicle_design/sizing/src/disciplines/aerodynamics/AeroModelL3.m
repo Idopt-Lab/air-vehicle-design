@@ -7,6 +7,10 @@ classdef (Abstract) AeroModelL3 < AerodynamicsBase
 %   members. See docs/decision_log.md.
 %   Toolbox companion: src/disciplines/aerodynamics/AeroL3.md
 
+properties (Constant, Abstract)
+    LandP_rowname % The aircraft type corresponding to the closest-matching row in Table 12.8, Raymer, 6th edition.
+end
+
 methods (Abstract)
     val = get_CD0_component_buildup(obj, state)
     val = get_CD0_LandP(obj) % Compute the CD0 contribution of leakages and protuberances

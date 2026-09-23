@@ -47,7 +47,7 @@ the contract, so a wrong tier yields plausible numbers rather than an error.
 | L1 | `AeroL1.mattingly_polar` (interp) | `CD0(M)` from the fighter "Current" type-curve | Mattingly: Aircraft Engine Design, 2nd edition Fig. 2.10, Eq. 2.9 |
 | L2 subsonic | `AeroL2.get_CD0` | `Cfe·(S_wet/S_ref)` | Raymer Eq. 12.23 |
 | L2 supersonic | `AeroL2.get_CD0_supersonic` | `Cf(Re,M)·(S_wet/S_ref)` | Raymer Eq. 12.27 (Cf), 12.23 (form) |
-| L3 | `AeroL3.get_CD0_buildup` | `Σ(Cf_eff·FF·Q·S_wet)/S_ref + CD0_misc + CD0_LandP` | Raymer Eq. 12.24 |
+| L3 | `F16AeroL3.get_CD0_component_buildup` | `(Σ(Cf_eff·FF·Q·S_wet)/S_ref + CD0_misc + CD0_wave)·(1 + AeroL3.lookup_LandP_frac(LandP_rowname))` | Raymer Eq. 12.24, Table 12.8 |
 | L3, M ≥ 1.2 | `F16AeroL3.compute_CD0_wave` | Sears-Haack + sweep/Mach correction on whole-aircraft `Amax`/`L_aircraft` | Raymer Eq. 12.44 / 12.45 |
 
 `Cfe` = 0.0035 is **not** a JSON input: it is the `aircraft_category`-selected Raymer Table 12.3 row
