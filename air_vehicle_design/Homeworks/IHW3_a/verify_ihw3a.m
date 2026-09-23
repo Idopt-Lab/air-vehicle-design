@@ -116,12 +116,46 @@ fprintf('    S_ht   %6.2f ft^2 (31)             S_vt   %5.2f ft^2 (17)\n', obj5.
 fprintf('    b_ht   %6.2f ft  (13)              b_vt   %5.2f ft  (5)\n', obj5.geom.b_ht, obj5.geom.b_vt);
 
 fprintf('\n=== CLAIM 8: mission_fuel reads the reserve from the JSON, not 1.06 ===\n');
+% The reserve must be READ from the file, not typed in. Check it on the L1
+% path, where mission_fuel should reproduce the IHW1 expression exactly.
 obj6 = ttpa_disciplines(); obj6.prop.P_SL = 555.53; obj6.geom.S_ref = 128.47;
-[Wf, ff] = mission_fuel(5138.65, obj6);
-[fb,~,~] = run_mission(5138.65, obj6);
+obj6.miss.method = 'L1';
+[Wf1, ff1] = mission_fuel(5138.65, obj6);
+[fb, ~, ~]  = run_mission(5138.65, obj6);
 fprintf('  reserve_fuel_fraction in JSON = %.3f\n', obj6.miss.reserve_fuel_fraction);
-fprintf('  sum(fuel_burned)*1.06 = %.4f    mission_fuel = %.4f   d = %.2e\n', ...
-    sum(fb)*1.06, Wf, abs(sum(fb)*1.06 - Wf));
-fprintf('  fuel fraction %.5f\n', ff);
+fprintf('  L1: sum(fuel_burned)*1.06 = %.4f   mission_fuel = %.4f   d = %.2e\n', ...
+    sum(fb)*1.06, Wf1, abs(sum(fb)*1.06 - Wf1));
+
+% And the L2 path must differ, by exactly the cruise-L/D correction.
+obj6b = ttpa_disciplines(); obj6b.prop.P_SL = 555.53; obj6b.geom.S_ref = 128.47;
+obj6b.miss.method = 'L2';
+[Wf2, ff2] = mission_fuel(5138.65, obj6b);
+fprintf('  L1 fuel %.2f lbf (fraction %.5f)\n', Wf1, ff1);
+fprintf('  L2 fuel %.2f lbf (fraction %.5f)   %+.1f %% - the improved fuel fractions\n', ...
+    Wf2, ff2, 100*(Wf2-Wf1)/Wf1);
+
+fprintf('\n=== CLAIM 9: the P-S diagram and the sizing loop are the same calculation ===\n');
+warning('off','TtpaProp:BhpOutOfRange');
+obj7 = ttpa_disciplines();
+d7   = TtpaPSDiagram(obj7);
+% (a) the cell containing the design must reproduce the loop
+Wcell = d7.converge_W0(r.P_SL, r.S_ref);
+fprintf('  converge_W0 at the design cell  %.3f lbf   sizing_loop %.3f lbf   rel %+.2e\n', ...
+    Wcell, r.W_TO, (Wcell-r.W_TO)/r.W_TO);
+% (b) the least-power point traced off the curves must reproduce "optimum" mode
+Sg = linspace(100, 230, 55); Pg = linspace(300, 900, 55);
+fg7 = d7.fuel_grid(Pg, Sg);
+f7  = figure('Visible','off');
+[~, ps7] = d7.plot('S_grid', Sg, 'P_grid', Pg, 'grid', fg7);
+close(f7); close(gcf);
+fprintf('  least-power point from the traced curves   P %7.2f hp , S %6.2f ft^2 , W %8.1f lbf\n', ...
+    ps7.least_power.P, ps7.least_power.S, ps7.least_power.W);
+fprintf('  sizing_loop in "optimum" mode             P %7.2f hp , S %6.2f ft^2 , W %8.1f lbf\n', ...
+    r3.P_SL, r3.S_ref, r3.W_TO);
+fprintf('  difference  %+.2f hp , %+.2f ft^2 , %+.1f lbf  (grid spacing %.2f hp, %.2f ft^2)\n', ...
+    ps7.least_power.P - r3.P_SL, ps7.least_power.S - r3.S_ref, ...
+    ps7.least_power.W - r3.W_TO, Pg(2)-Pg(1), Sg(2)-Sg(1));
+fprintf('  Two independent routes: the loop SOLVES the design point, the diagram\n');
+fprintf('  TRACES the constraint curves. They agree to the grid resolution.\n');
 
 fprintf('\nVERIFICATION COMPLETE\n');

@@ -9,10 +9,10 @@ con      = ;
 state    = ;
 CLmax_TO = ;
 
-% --- Milestone 2: solve the quadratic for TOP23, positive root ---
-a = 0.009;
-b = 4.9;
-c = ;
+% --- Milestone 2: solve the quadratic for TOP23, keep the positive root ---
+% Write S_TGR = 4.9*TOP23 + 0.009*TOP23^2 as a polynomial in TOP23 and hand
+% the coefficient vector, highest power first, to MATLAB's roots.
+poly_TOP = ;
 
 TOP23 = ;
 
