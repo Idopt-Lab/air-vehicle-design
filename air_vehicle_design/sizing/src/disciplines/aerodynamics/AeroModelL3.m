@@ -1,11 +1,19 @@
 classdef (Abstract) AeroModelL3 < AerodynamicsBase
 %AEROMODELL3  Tier-2 abstract enforcer for Level-3 aerodynamics.
-%   L3 replaces L2's type-based Cfe with a per-component Reynolds /
-%   skin-friction / form-factor buildup, plus a supersonic wave-drag term in
-%   the concrete class; geometry is read from an injected object. The base
-%   declares drag_polar and get_CLmax; this enforcer adds no further abstract
-%   members. See docs/decision_log.md.
-%   Toolbox companion: src/disciplines/aerodynamics/AeroL3.md
+%
+%   Properties (Constant, Abstract):
+%       LandP_rowname (string): aircraft-type row of Raymer 6th ed. Table 12.8.
+%
+%   Methods (Abstract):
+%       get_CD0_component_buildup(state): component-buildup CD0 at a flight state.
+%       get_CD0_LandP(CD0_parasite): leakage and protuberance CD0.
+%       get_CD0_misc: miscellaneous-object CD0.
+%
+%   Methods:
+%       get_CD0(state): returns get_CD0_component_buildup(state).
+%
+%   Companion doc: src/disciplines/aerodynamics/AeroL3.md.
+%   History and rationale: docs/decision_log.md.
 
 properties (Constant, Abstract)
     LandP_rowname % The aircraft type corresponding to the closest-matching row in Table 12.8, Raymer, 6th edition.
@@ -13,13 +21,11 @@ end
 
 methods (Abstract)
     val = get_CD0_component_buildup(obj, state)
-    val = get_CD0_LandP(obj) % Compute the CD0 contribution of leakages and protuberances
+    val = get_CD0_LandP(obj, CD0_parasite) % Compute the CD0 contribution of leakages and protuberances
     val = get_CD0_misc(obj) % Compute the CD0 contribution of miscellaneous objects
 end
 
-% This makes it so that subclasses of AeroModelL1 have to use the "rough" version of the CD0 estimation.
-% "Rough," for now, unless it's changed to the Mattingly CD0 curve.
-methods 
+methods
     function val = get_CD0(obj, state) % At this point, CD0 IS a function of aerodynamic state.
         val = obj.get_CD0_component_buildup(state);
     end

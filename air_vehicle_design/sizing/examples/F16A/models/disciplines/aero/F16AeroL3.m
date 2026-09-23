@@ -349,7 +349,7 @@ classdef F16AeroL3 < AeroModelL3
         %GET_CD0_LANDP  Leakage & protuberance drag [Raymer 6th ed. Tbl 12.8, p. 431].
         %   CD0_parasite is the finished total. Passed in, because recomputing it
         %   here would recurse through get_CD0_component_buildup.
-        LandP_fraction = mean(AeroL3.lookup_LandP_frac(obj.LandP_rowname));
+        LandP_fraction = min(AeroL3.lookup_LandP_frac(obj.LandP_rowname));
             val = LandP_fraction * CD0_parasite;
         end
 

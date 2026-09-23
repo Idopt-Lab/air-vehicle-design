@@ -300,12 +300,13 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % At M=1.5 (>=1.2) the override is the component buildup PLUS
             % compute_CD0_wave. Removing the wave term must land back on the
             % sub-1.2 skin-friction level (additive; confirms it is not a no-op).
-            % The L&P multiplier scales the whole total, so divide it out first.
+            % L&P scales the whole total, wave drag included [Raymer Eq. 12.41].
+            % f is the low end of the Table 12.8 range, as in get_CD0_LandP.
             g       = TestAeroL3.makeAero();
-            f       = 1 + AeroL3.lookup_LandP_frac(g.LandP_rowname);
-            without = g.get_CD0_component_buildup(AircraftState(0, 1.5)) / f ...
+            f       = min(AeroL3.lookup_LandP_frac(g.LandP_rowname));
+            without = g.get_CD0_component_buildup(AircraftState(0, 1.5)) / (1 + f) ...
                     - g.compute_CD0_wave(AircraftState(0, 1.5));
-            below   = g.get_CD0_component_buildup(AircraftState(0, 1.19)) / f;
+            below   = g.get_CD0_component_buildup(AircraftState(0, 1.19)) / (1 + f);
             tc.verifyEqual(without, below, 'RelTol', 0.10, ...
                 'get_CD0_component_buildup above M=1.2 must be the sub-1.2 buildup plus exactly compute_CD0_wave.');
         end

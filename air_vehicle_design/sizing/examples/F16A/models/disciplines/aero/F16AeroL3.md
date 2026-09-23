@@ -75,7 +75,7 @@ Read live from `obj.geom` on every read — no stored copy, read-only.
 |---|---|---|
 | Contract | `drag_polar(state)`, `get_CLmax(state)` | `AeroL3.drag_polar`; Raymer Eq. 12.15 via `AeroL2.CLmax_clean` |
 | Build-up + wave drag | `CD0_buildup` (the Eq. 12.24 sum plus `CD0_misc`), `get_CD0_component_buildup` (adds `compute_CD0_wave` for M ≥ 1.2, then `get_CD0_LandP` on the total), `compute_CD0_wave` | Raymer Eq. 12.24, 12.44/12.45 |
-| Misc / leakage | `get_CD0_LandP(CD0_parasite)` = `AeroL3.lookup_LandP_frac(LandP_rowname) · CD0_parasite` (0.125 for the F-16); `get_CD0_misc` is an empty stub | Raymer Table 12.8 |
+| Misc / leakage | `get_CD0_LandP(CD0_parasite)` = `min(AeroL3.lookup_LandP_frac(LandP_rowname)) · CD0_parasite` (0.10 for the F-16); `get_CD0_misc` is an empty stub | Raymer Table 12.8 |
 | Accessors | `get_K1`, `get_K2`, `get_CL_alpha`, `get_CL_minD`, `get_e_osw`, `compute_Re` | Raymer Eq. 12.50/12.51, 12.6, 12.48/12.49, 12.25 |
 | Config | `get_config_polar(config)` | six config strings routed through the TO/landing deltas |
 | TE flap | `Delta_CD0_flap`, `Delta_CDi_flap`, `Delta_CLmax_flap`, `compute_S_flapped_ratio` | Raymer Eq. 12.61/12.62, Table 12.2 + Eq. 12.21 |

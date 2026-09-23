@@ -24,15 +24,15 @@ object. A toolbox has no constructor, no inputs and no derived properties.
 | `FF_body` | `(L_body, D_body)` | body form factor | Raymer 6th ed. Eq. 12.31 |
 | `compute_CD0_misc_CD_pi` | `(CD_pi, frontal_area, S_ref)` | misc-item CD0 contribution | Raymer 6th ed. Table 12.6 |
 | `compute_CD0_misc_DQ` | `(D_q, S_ref)` | misc-item CD0 contribution | Raymer 6th ed. Table 12.7 |
-| `lookup_LandP_frac` | `(LandP_rowname)` | L&P fraction of total parasite drag, band midpoint | Raymer 6th ed. Table 12.8 |
+| `lookup_LandP_frac` | `(LandP_rowname)` | L&P fraction of total parasite drag, `[low, high]` | Raymer 6th ed. Table 12.8 |
 
 `compute_Re` is a one-line forward to the identical L2 equation, so the primitive has one home.
 
 Table 12.6 tabulates a dimensionless `CD_pi` = (D/q)/frontal area, so it needs the item's own
 frontal area; Table 12.7 gives D/q [ft²] directly.
 
-`lookup_LandP_frac` rows: `"propeller aircraft"` 0.075, `"jet transport"` 0.035, `"bomber"` 0.035,
-`"non-stealth fighter"` 0.125, `"stealth fighter"` 0.040. Raymer prints jet transports and bombers
+`lookup_LandP_frac` rows: `"propeller aircraft"` [0.05, 0.10], `"jet transport"` [0.02, 0.05],
+`"bomber"` [0.02, 0.05], `"non-stealth fighter"` [0.10, 0.15], `"stealth fighter"` [0.03, 0.05]. Raymer prints jet transports and bombers
 as one row; the split is for input only.
 
 **The component summation is not here.** `F16AeroL3.CD0_buildup` assembles it, together with the
