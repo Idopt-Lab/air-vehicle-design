@@ -2,7 +2,7 @@
 
 F-16A Block 10/15 Level-3 stability & control student class
 (`classdef F16SandCL3 < SandCModelL3`). Every abstract member is satisfied by a single delegation
-into the `SandCL2`/`SandCL3` static toolboxes — no equations are duplicated here; this file is
+into `StabControlBase.compute_weighted_cg` or the `SandCL3` static toolbox — no equations are duplicated here; this file is
 DI/unit-conversion glue only. See `src/disciplines/stability_control/SandCL3.md` for the full
 equation/citation detail.
 
@@ -14,7 +14,7 @@ The Raymer 6th ed. Ch. 16 Sec. 16.3 longitudinal-static-stability set:
 
 | Quantity | Status |
 |---|---|
-| `x_cg` | fully implemented — SAME static (`SandCL2.weighted_cg`) `F16SandCL2` uses |
+| `x_cg` | fully implemented — `get_x_cg`, the SAME static (`StabControlBase.compute_weighted_cg`) `F16SandCL2` uses |
 | `x_acw` | fully implemented — [Eq. 16.12] |
 | `x_ach` | fully implemented — quarter-MAC identity, no Mach-shift term (documented simplification) |
 | `CL_alpha_wing` | fully implemented — read directly from Aero, not re-derived |

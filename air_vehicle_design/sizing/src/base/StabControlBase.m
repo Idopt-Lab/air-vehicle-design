@@ -25,13 +25,44 @@ classdef (Abstract) StabControlBase < handle
         %     x_cg = Sum(W_i * x_i) / Sum(W_i)
         %   [standard weighted-average CG identity; matches
         %   VnV/BrandtF16A/readme_bsc.md's "CG closure" formula]. Computed by
-        %   the level-agnostic SandCL2.weighted_cg static, called by both
-        %   F16SandCL2 and F16SandCL3.
+        %   compute_weighted_cg below, called by both F16SandCL2 and
+        %   F16SandCL3.
         %
         %   Must propagate NaN gracefully, never error, when a component weight
         %   is not yet available (in particular the 'fuel' group's W_energy,
         %   NaN until the mission/sizing loop sets it -- see WeightsBase.m).
         x_cg
+    end
+
+    methods (Abstract)
+
+        x_cg = get_x_cg(obj)
+    end
+
+    methods (Static)
+        
+        function x_cg = compute_weighted_cg(weights_vec, x_vec)
+            %COMPUTE_WEIGHTED_CG  Aircraft center-of-gravity x-station [ft].
+            %   [no separate Raymer/Roskam equation number -- standard weighted-
+            %   average CG identity; matches VnV/BrandtF16A/readme_bsc.md's own
+            %   "CG closure" formula]:
+            %     x_cg = Sum(W_i * x_i) / Sum(W_i)
+            %
+            %   No NaN-rejecting validator on weights_vec: a NaN component weight
+            %   (e.g. the fuel group's W_energy before the mission/sizing loop
+            %   sets it -- see WeightsBase.m) propagates through IEEE arithmetic
+            %   into x_cg. This graceful NaN signal is by design, not an error.
+                arguments
+                    weights_vec (1,:) double {mustBeReal}
+                    x_vec       (1,:) double {mustBeReal}
+                end
+                if numel(weights_vec) ~= numel(x_vec)
+                    error('StabControlBase:sizeMismatch', ...
+                        ['weights_vec (n=%d) and x_vec (n=%d) must have the same ' ...
+                        'number of components.'], numel(weights_vec), numel(x_vec));
+                end
+            x_cg = sum(weights_vec .* x_vec) / sum(weights_vec);
+        end
     end
 
 end

@@ -5,7 +5,7 @@ classdef F16SandCL2 < SandCModelL2
 %   aircraft center-of-gravity x-station, x_cg: F16GeomL2 exposes no x-station
 %   properties, so none of Eqs. 16.4-16.15 are computable at this fidelity.
 %
-%   METHOD:  x_cg = Sum(W_i * x_i) / Sum(W_i)  [SandCL2.weighted_cg]
+%   METHOD:  x_cg = Sum(W_i * x_i) / Sum(W_i)  [StabControlBase.compute_weighted_cg]
 %   over the 10 WeightsL2-matched component groups (wing, horizontal_tail,
 %   vertical_tail, fuselage, landing_gear, installed_engine, subsystems_lump,
 %   strake, payload, fuel) in
@@ -25,7 +25,7 @@ classdef F16SandCL2 < SandCModelL2
 %
 %   x_cg propagates NaN gracefully for the 'fuel' group: W_energy reads NaN
 %   until the mission/sizing loop sets it, and IEEE arithmetic inside
-%   SandCL2.weighted_cg propagates that NaN with no error. Other groups
+%   StabControlBase.compute_weighted_cg propagates that NaN with no error. Other groups
 %   (landing_gear, subsystems_lump) need obj.weights.W_TO set first and error
 %   loudly through F16WeightsL2.requireWTO if it is not.
 %
@@ -62,7 +62,7 @@ classdef F16SandCL2 < SandCModelL2
     % read (no cache, never stale). Read-only (no set-method).
     % ======================================================================= %
     properties (Dependent)
-        x_cg   % ft  [StabControlBase contract] = SandCL2.weighted_cg(component_weights, component_cg_x_ft)
+        x_cg   % ft  [StabControlBase contract] = StabControlBase.compute_weighted_cg(component_weights, component_cg_x_ft)
     end
 
     methods
@@ -88,12 +88,16 @@ classdef F16SandCL2 < SandCModelL2
             obj.component_cg_x_ft = x;
         end
 
+        function x_cg = get_x_cg(obj)
+            x_cg = StabControlBase.compute_weighted_cg(obj.component_weights(), obj.component_cg_x_ft);
+        end
+
         % ================================================================== %
         % DERIVED-property getter -- recomputes live on every read.
         % ================================================================== %
 
         function v = get.x_cg(obj)
-            v = SandCL2.weighted_cg(obj.component_weights(), obj.component_cg_x_ft);
+            v = obj.get_x_cg();
         end
 
     end
