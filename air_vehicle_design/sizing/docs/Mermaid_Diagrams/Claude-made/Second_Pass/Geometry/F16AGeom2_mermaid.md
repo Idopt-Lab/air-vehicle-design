@@ -60,8 +60,9 @@ the end of the list:
   `no toolbox call` marker.
 - **One marker is left.** Only `get_S_ref` reaches it, because injectors are
   exempt. The exempt getters are `get.tc_r_wing`, `get.tc_t_wing`, `get.tc_ht`,
-  `get.tc_vt`, `get.b_vt`, `get.D_fus`, `get.L_fuselage`, `get.T_AB_SLS_lb` and
-  `get.D_exit`: nine short derived reads, each magenta, none of them a finding.
+  `get.tc_vt`, `get.b_vt`, `get.D_fus`, `get.L_fuselage`, `get.T_AB_SLS_lb`,
+  `get.D_exit` and `get.S_exposed_strake`: ten short derived reads, each
+  magenta, none of them a finding.
 - A black node with a red dashed border marks NO UPSTREAM CALL: a static of a
   toolbox THIS CLASS CALLS that `F16GeomL2` itself never calls. It does not mean
   "unreachable from here" in general, or every unrelated file would qualify. A
@@ -103,7 +104,7 @@ flowchart LR
     subgraph CLASS["F16GeomL2 (Tier 3, concrete)"]
         direction TB
 
-        CTOR["Constructor<br/>F16GeomL2(json_path, prop)<br/>in: json_path, prop<br/>out: wing / HT / VT / fuselage / engine inputs,<br/>stored prop handle"]
+        CTOR["Constructor<br/>F16GeomL2(json_path, prop)<br/>in: json_path, prop<br/>out: wing / HT / VT / strake / fuselage / engine inputs,<br/>stored prop handle"]
 
         subgraph WING["Wing"]
             W1["get.b_wing<br/>in: AR_wing, S_ref<br/>out: b_wing"]
@@ -112,10 +113,14 @@ flowchart LR
             W4["get.cbar_wing<br/>in: c_root_wing, lambda_wing<br/>out: cbar_wing"]
             W5["get.QC_sweep_wing<br/>in: LE_sweep_wing, AR_wing, lambda_wing<br/>out: QC_sweep_wing"]
             W6["get.TE_sweep_wing<br/>in: LE_sweep_wing, AR_wing, lambda_wing<br/>out: TE_sweep_wing"]
-            W7["get.S_exposed_wing<br/>in: c_root_wing, c_tip_wing, b_wing, W_max_fuselage<br/>out: S_exposed_wing"]
+            W7["get.S_exposed_wing<br/>out: S_exposed_wing"]
             W8["get.tc_r_wing<br/>in: tc_wing<br/>out: tc_r_wing"]
             W9["get.tc_t_wing<br/>in: tc_wing<br/>out: tc_t_wing"]
             SWW["get.S_wet_wing<br/>in: S_exposed_wing, tc_r_wing, tc_t_wing, lambda_wing<br/>out: S_wet_wing"]
+        end
+
+        subgraph STRK["Strake"]
+            K1["get.S_exposed_strake<br/>in: S_strake<br/>out: S_exposed_strake"]
         end
 
         subgraph HT["Horizontal tail"]
@@ -192,6 +197,7 @@ flowchart LR
     J -->|"vertical_tail: S_ft2, AR, taper, sweep_LE_deg, tc_root, tc_tip, x_le_ft"| CTOR
     J -->|"fuselage: length_ft, max_width_ft, max_height_ft, overall_length_ft"| CTOR
     J -->|"engine: duct_length_ft, n_engines"| CTOR
+    J -->|"strake: S_ft2"| CTOR
     PROP -->|"prop handle stored, not copied"| CTOR
 
     CTOR -->|"AR_wing, S_ref"| W1
@@ -203,10 +209,7 @@ flowchart LR
     CTOR -->|"lambda_wing"| W4
     CTOR -->|"LE_sweep_wing, AR_wing, lambda_wing"| W5
     CTOR -->|"LE_sweep_wing, AR_wing, lambda_wing"| W6
-    W1 -->|"b_wing/2"| W7
-    W2 -->|"c_root_wing"| W7
-    W3 -->|"c_tip_wing"| W7
-    CTOR -->|"W_max_fuselage/2"| W7
+    CTOR -->|"S_strake"| K1
 
     CTOR -->|"AR_ht, S_ht"| H1
     H1 -->|"b_ht"| H2
@@ -254,7 +257,7 @@ flowchart LR
     W4 -->|"get.cbar_wing: obj.c_root_wing, obj.lambda_wing"| TB4
     W5 -->|"get.QC_sweep_wing: obj.LE_sweep_wing, obj.AR_wing, obj.lambda_wing, 0.25"| TB5
     W6 -->|"get.TE_sweep_wing: obj.LE_sweep_wing, obj.AR_wing, obj.lambda_wing, 1.0"| TB5
-    W7 -->|"get.S_exposed_wing: obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, fw"| G1
+    W7 -->|"get.S_exposed_wing: no arguments"| GSEW
 
     H1 -->|"get.b_ht: obj.AR_ht, obj.S_ht"| TB1
     H2 -->|"get.c_root_ht: obj.S_ht, obj.b_ht, obj.lambda_ht"| TB2
@@ -316,13 +319,13 @@ flowchart LR
     CTOR -->|"W_max_fuselage/2"| GSEW
     GSEW -->|"get_S_exposed_wing: obj.c_root_wing, obj.c_tip_wing, obj.b_wing/2, obj.W_max_fuselage/2"| G1
 
-    linkStyle 0,1,2,3,4,5 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
-    linkStyle 44,47,48,49,50,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,95,98,101,105,106,107,108,109,110 stroke:#33cc33,color:#33cc33,stroke-width:2px
-    linkStyle 45,46,51 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,80,81,82,83,84,85,86,89,90,91,94,96,97,99,100,102,104 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
-    linkStyle 43,92,93,103 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 87 stroke:#ffe100,color:#ffe100,stroke-width:2px
-    linkStyle 88 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
+    linkStyle 0,1,2,3,4,5,6 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
+    linkStyle 42,45,46,47,48,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,93,96,99,103,104,105,106,107,108 stroke:#33cc33,color:#33cc33,stroke-width:2px
+    linkStyle 43,44,49 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
+    linkStyle 7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,78,79,80,81,82,83,84,87,88,89,92,94,95,97,98,100,102 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
+    linkStyle 41,90,91,101 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
+    linkStyle 85 stroke:#ffe100,color:#ffe100,stroke-width:2px
+    linkStyle 86 stroke:#ffe100,color:#ffe100,stroke-width:2px,stroke-dasharray:5 4
 
     classDef ctorWork fill:#000000,stroke:#00e5ff,stroke-width:3px,color:#00e5ff
     classDef funcWork fill:#000000,stroke:#33cc33,stroke-width:2px,color:#33cc33
@@ -333,7 +336,7 @@ flowchart LR
     class CTOR ctorWork
     class AGG,GSEW,G1,G2,G3,G4,G5,S1,S2,TB1,TB2,TB3,TB4,TB5,TB6 funcWork
     class E1,F1,F2,F3,H1,H2,H3,H4,H5,H6,H7,PSW,SWD,SWH,SWV,SWW,V1,V2,V3,V4,V5,V6,V7,W1,W2,W3,W4,W5,W6,W7 injectorWork
-    class E2,E3,F4,W8,W9 injectorRelay
+    class E2,E3,F4,W8,W9,K1 injectorRelay
     class GSR,NCF passthroughRelay
     class D1,D2,D3 deadWork
 ```
@@ -354,18 +357,13 @@ flowchart LR
    `T_AB_SLS_lb` to `D_inlet` to `S_wet_duct`, so a thrust change moves CD0
    instead of leaving a frozen copy behind.
 
-## Two nodes into `G1`, and that is a duplicate
+## One node into `G1` for the exposed wing
 
-`W7` (`get.S_exposed_wing`) and `GSEW` (`get_S_exposed_wing`) both hold the same
-four-argument call into `compute_S_exposed_horizontal`. The getter computes the
-fuselage half-width into a local `fw` first; the method inlines
-`obj.W_max_fuselage/2`. Same numbers, 196.2260692464 ft² either way.
-
-**This is the shape that produced the `W_max_fuselage` bug at gate 2**: one
-equation written in two places, so a fix has to be made twice. The cheap
-correction is to make the getter delegate, `v = obj.get_S_exposed_wing()`, which
-is what `get.S_wet` already does with `get_design_S_wet_components`. Not changed
-here, because it is a code edit and this pass is the chart.
+`W7` (`get.S_exposed_wing`) delegates to `GSEW` (`get_S_exposed_wing`), so
+the exposed-wing equation has one call into `compute_S_exposed_horizontal`,
+196.2260692464 ft². The strake is a body surface, so `get.S_exposed_strake`
+returns `S_strake` unchanged, with no fuselage clip. Nothing in this class
+reads it, and the L2 total `S_wet` does not include it.
 
 ## Field-by-field notes
 

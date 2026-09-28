@@ -436,7 +436,7 @@ flowchart LR
 | `N_z` | `.weights.N_z` | 13.5 | = 1.5 x 9 g limit, the ULTIMATE load factor Sec. 15.3.1 wants. Brandt's psf model uses `n_ult` = 9. Two different models. |
 | `K_rht` | `.weights.horizontal_tail.K_rht` | 1.047 | Applied to **Eq. 15.3 (VT)**, not 15.2, exactly as the book defines it. The JSON keys it under the HT block because the FLAG describes the HT. |
 | `W_TO` | Sizing loop, mutated in place | `NaN` until set | Read only by the Dependent group totals, through `requireWTO`. |
-| `W_landing` | Sizing loop, from the mission | `NaN` until written | The one input that does not come from a JSON file. Converges to 15,870.0 lbf, or 0.608 x `W_TO`. Brandt's own Wt!B41 ratio is 0.659. |
+| `W_landing` | Sizing loop, from the mission | `NaN` until written | The one input that does not come from a JSON file. Converges to 16,098.6 lbf, or 0.602 x `W_TO`. Brandt's own Wt!B41 ratio is 0.659. |
 | `W_payload_fixed`, `W_payload_expendable` | `.weights` | 700, 4400 lbf | Brandt Wt!B4/B5. The expendable value is no longer inert: Table 15.3's pylon-and-launcher term is `0.12 x W_payload_expendable`. |
 | `S_strake`, `k_strake` | `.weights.strake` | 20.0 ft^2, 4.5 lbf/ft^2 | Brandt Main!D18 / Wt!H7. `S_strake` feeds Eq. 15.1; `k_strake` feeds only `get.W_strake`. |
 | `S_w`, `AR_w`, `tc_root`, `lambda_w`, `Lambda_LE_w`, `S_csw` | `geom` | 196.2261 ft^2, 3.0, 0.04, 0.2275, 40 deg, 68.03 ft^2 | EXPOSED wing planform. |
@@ -458,7 +458,7 @@ flowchart LR
 | Strake, Eq. 15.1 | Computed | 880.362 lbf | 44.02 psf against the wing's own 12.21 psf. Eq. 15.1's `S_w^0.622` is sub-linear, so a 20 ft^2 surface comes out heavy per unit area. |
 | `W_strake`, Brandt | Computed | 90.00 lbf | `4.5 x 20`. Never summed. |
 | `get_OEW(31377)` | Computed | **17,184.640 lbf** | The sum of the ten terms above. |
-| L3 sizing closure | Computed | `W_TO` 26,082.4, `T_SL` 17,843.3, `S_ref` 203.83 ft^2, OEW 14,737.1, `W_fuel` 6245.3 lbf, 28 iterations | |
+| L3 sizing closure | Computed | `W_TO` 26,729.3, `T_SL` 19,059.5, `S_ref` 200.00 ft^2, OEW 14,939.4, `W_fuel` 6689.8 lbf, 20 iterations | |
 | Ground truth, for context only | | Brandt Wt!B12 = 19,980.70 lbf | The agreement check lives in `weights_brandt_comparison`, not in the unit tier. |
 | `K_d = 0` | `.weights.engine_section.K_d` | 1.0 as configured | `K_d = 0` is a LEGAL straight-duct value that silently zeroes the 227.54 lbf air-induction term, because `0^0.182 = 0`. No error, no warning, not even NaN. Left unguarded by decision. |
 

@@ -209,8 +209,10 @@ flowchart LR
 
 ## Enforcer hops not drawn
 
-`AeroModelL1` declares the abstract contract that `drag_polar`, `get_CLmax` and the delta methods
-satisfy. It holds no equation and adds no data, so it is recorded here rather than drawn as a box.
+`AerodynamicsBase` declares `drag_polar`, `get_CLmax` and `get_CD0` abstract. `AeroModelL1` declares
+`get_CD0_rough(obj, state)` abstract, which `P2` satisfies, and supplies a concrete
+`get_CD0(obj, state)` that forwards to it. Nothing in the repo calls `get_CD0` on an L1 object. The
+enforcer holds no equation and adds no data, so it is recorded here rather than drawn as a box.
 
 `get_CLmax(obj, ~)` keeps an ignored state slot to match `AerodynamicsBase`. Dropping it broke 59
 tests once, so the ignored argument is part of the contract, not an oversight.

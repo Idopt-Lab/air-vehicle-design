@@ -63,7 +63,7 @@ flowchart LR
     subgraph CLASS["F16SubsystemsL2 (Tier 3)"]
         direction TB
 
-        CTOR["Constructor<br/>F16SubsystemsL2(json_path, geom, fuel_weight_source)<br/>in: json_path, geom, fuel_weight_source<br/>out: fuel_type, packaging_factor_category, avionics_table_row"]
+        CTOR["Constructor<br/>F16SubsystemsL2(json_path, geom, fuel_weight_source)<br/>in: json_path, geom, fuel_weight_source<br/>out: fuel_name, packaging_factor_category, avionics_table_row"]
 
         subgraph INJ["Injectors (Dependent getters)"]
             G1["get.avionics_weight_fraction<br/>in: avionics_table_row<br/>out: fraction"]
@@ -88,12 +88,12 @@ flowchart LR
             M8["get_total_fuel_volume_occupied(obj, fuel_weight_lb)<br/>in: fuel_weight_lb, fuel_density<br/>out: volume occupied"]
             M9["get_total_design_volume(obj)<br/>in: wing fuel volume, raw fuselage volume<br/>out: sum"]
             M10["fuel_volume_check(obj, fuel_weight_lb)<br/>in: occupied, available<br/>out: struct"]
-            M11["get_fuel_density(obj)<br/>in: fuel_type<br/>out: density"]
+            M11["get_fuel_density(obj)<br/>in: fuel_type, fuel_name<br/>out: density"]
         end
     end
 
     subgraph TB1["SubsystemsBase"]
-        TB_C["lookup_fuel_density_lb_per_ft_3(fuel_type)<br/>in: fuel_type<br/>out: density<br/>Nicolai and Carichner Table 8.6 p.210"]
+        TB_C["lookup_fuel_density_lb_per_ft_3(fuel_type, fuel_name)<br/>in: fuel_type, fuel_name<br/>out: density<br/>Nicolai and Carichner Table 8.6 p.210,<br/>Raymer 6th ed. Table 20.1 p.748"]
     end
 
     subgraph TL1["SubsystemsL1 toolbox"]
@@ -118,7 +118,7 @@ flowchart LR
 
     CTOR -->|"avionics_table_row"| M1
     CTOR -->|"avionics_table_row"| G1
-    CTOR -->|"fuel_type"| M11
+    CTOR -->|"fuel_name, fuel_type is a class default"| M11
     CTOR -->|"packaging_factor_category"| M6
     GEOM -->|"S_ref, b_wing, tc_r_wing, tc_t_wing, lambda_wing"| G6
     GEOM -->|"S_ref, b_wing, tc_r_wing, tc_t_wing, lambda_wing"| M4
@@ -153,7 +153,7 @@ flowchart LR
     M10 -->|"get_total_fuel_volume_occupied: fuel_weight_lb"| M8
     M10 -->|"get_fuel_volume_available"| M7
     M10 -->|"fuel_volume_check: required, available"| T9
-    M11 -->|"lookup_fuel_density_lb_per_ft_3: fuel_type"| TB_C
+    M11 -->|"lookup_fuel_density_lb_per_ft_3: fuel_type, fuel_name"| TB_C
 
     linkStyle 0,1,2,3 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
     linkStyle 4,6,7,9,10,13,14,15,17,21,22,23,24,25,26,27,28,29,30,32,34,35,36,37,38,39 stroke:#33cc33,color:#33cc33,stroke-width:2px
@@ -222,7 +222,8 @@ the L2 path, and they are not drawn.
 
 | Class member | Source | Value / note |
 | --- | --- | --- |
-| `fuel_type` | `f16a_L2.json` `.subsystems.fuel.fuel_type` | `JP-8` |
+| `fuel_type` | class default | `hydrocarbon` |
+| `fuel_name` | `f16a_L2.json` `.subsystems.fuel.fuel_type` | `JP-8`. The JSON key says type; the value is a name. |
 | `packaging_factor_category` | `.subsystems.fuel.packaging_factor_category` | `Integral tank — shallow fuselage`, factor 0.8000 |
 | `avionics_table_row` | `.subsystems.avionics.aircraft_category_table_row` | `Fighters`, range `[0.03, 0.08]`, mean 0.0550 |
 | `fuselage_packaging_factor_category` | class default | INERT. No member reads it. |
