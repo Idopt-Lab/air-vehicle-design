@@ -35,7 +35,7 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
         %   10000^0.302 = 10^(4*0.302) = 10^1.208 = 16.1436 (derived via
         %   ln/e^x expansion, cross-checked via log10 decomposition)
         %   D = 1.59*16.1436 = 25.6683 in.
-            received = F16LandingGearL2.tire_diameter(1.59, 0.302, 10000);
+            received = landinggearL2.tire_diameter(1.59, 0.302, 10000);
             tc.verifyEqual(received, 25.6683, 'RelTol', 1e-3);
         end
 
@@ -43,19 +43,19 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
         % Width = A'*W_w^B', Jet fighter/trainer row (A'=0.0980, B'=0.467).
         %   W_w = 10,000 lb: 10000^0.467 = 10^1.868 = 73.790
         %   Width = 0.0980*73.790 = 7.2314 in.
-            received = F16LandingGearL2.tire_width(0.0980, 0.467, 10000);
+            received = landinggearL2.tire_width(0.0980, 0.467, 10000);
             tc.verifyEqual(received, 7.2314, 'RelTol', 1e-3);
         end
 
         function testTireDiameterGuardsPositivity(tc)
-            tc.verifyError(@() F16LandingGearL2.tire_diameter(0, 0.302, 10000), ...
+            tc.verifyError(@() landinggearL2.tire_diameter(0, 0.302, 10000), ...
                 'MATLAB:validators:mustBePositive');
-            tc.verifyError(@() F16LandingGearL2.tire_diameter(1.59, 0.302, 0), ...
+            tc.verifyError(@() landinggearL2.tire_diameter(1.59, 0.302, 0), ...
                 'MATLAB:validators:mustBePositive');
         end
 
         function testTireWidthGuardsPositivity(tc)
-            tc.verifyError(@() F16LandingGearL2.tire_width(0.0980, 0.467, -5), ...
+            tc.verifyError(@() landinggearL2.tire_width(0.0980, 0.467, -5), ...
                 'MATLAB:validators:mustBePositive');
         end
 
@@ -63,21 +63,21 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
         % [Raymer 6th ed. Table 11.1, p.344] Full 4-row table, transcribed
         % independently from the original step-9 subsystems design's own
         % reproduction (Equations & Citations item 9/9b).
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs('General aviation');
+            c = landinggearL2.lookup_tire_sizing_coeffs('General aviation');
             tc.verifyEqual([c.A_d, c.B_d, c.A_w, c.B_w], [1.51, 0.349, 0.7150, 0.312], 'AbsTol', 1e-9);
 
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs('Business twin');
+            c = landinggearL2.lookup_tire_sizing_coeffs('Business twin');
             tc.verifyEqual([c.A_d, c.B_d, c.A_w, c.B_w], [2.69, 0.251, 1.170, 0.216], 'AbsTol', 1e-9);
 
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs('Transport/bomber');
+            c = landinggearL2.lookup_tire_sizing_coeffs('Transport/bomber');
             tc.verifyEqual([c.A_d, c.B_d, c.A_w, c.B_w], [1.63, 0.315, 0.1043, 0.480], 'AbsTol', 1e-9);
 
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs('Jet fighter/trainer');
+            c = landinggearL2.lookup_tire_sizing_coeffs('Jet fighter/trainer');
             tc.verifyEqual([c.A_d, c.B_d, c.A_w, c.B_w], [1.59, 0.302, 0.0980, 0.467], 'AbsTol', 1e-9);
         end
 
         function testLookupTireSizingCoeffsUnknownRowErrors(tc)
-            tc.verifyError(@() F16LandingGearL2.lookup_tire_sizing_coeffs('Glider'), ...
+            tc.verifyError(@() landinggearL2.lookup_tire_sizing_coeffs('Glider'), ...
                 'F16LandingGearL2:unknownTireCategory');
         end
 
@@ -106,11 +106,11 @@ classdef TestF16LandingGearL2 < matlab.unittest.TestCase
         % right W_w), not a re-derivation of the power-law arithmetic
         % (already hand-verified above on the bare Static methods).
             lg = TestF16LandingGearL2.makeLG(20000);
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs('Jet fighter/trainer');
+            c = landinggearL2.lookup_tire_sizing_coeffs('Jet fighter/trainer');
             tc.verifyEqual(lg.tire_diameter_main, ...
-                F16LandingGearL2.tire_diameter(c.A_d, c.B_d, lg.W_w_main), 'AbsTol', 1e-9);
+                landinggearL2.tire_diameter(c.A_d, c.B_d, lg.W_w_main), 'AbsTol', 1e-9);
             tc.verifyEqual(lg.tire_width_main, ...
-                F16LandingGearL2.tire_width(c.A_w, c.B_w, lg.W_w_main), 'AbsTol', 1e-9);
+                landinggearL2.tire_width(c.A_w, c.B_w, lg.W_w_main), 'AbsTol', 1e-9);
         end
 
         function testNoseTireIsDecidedFractionOfMain(tc)

@@ -97,13 +97,13 @@ classdef F16LandingGearL3 < handle
         end
 
         function val = get.tire_diameter_main(obj)
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
-            val = F16LandingGearL2.tire_diameter(c.A_d, c.B_d, obj.W_w_main);
+            c = landinggearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
+            val = landinggearL2.tire_diameter(c.A_d, c.B_d, obj.W_w_main);
         end
 
         function val = get.tire_width_main(obj)
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
-            val = F16LandingGearL2.tire_width(c.A_w, c.B_w, obj.W_w_main);
+            c = landinggearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
+            val = landinggearL2.tire_width(c.A_w, c.B_w, obj.W_w_main);
         end
 
         function val = get.tire_diameter_nose(obj)

@@ -166,6 +166,42 @@ classdef WeightsL2
             W = 0.199 * T_AB_SLS;
         end
 
+        function x = compute_cg_x_loc_wing(x_root, MAC)
+            % Computes the x-loc of a wing's cg.
+            %
+            % ARGS:
+            %   x_root (double): x-location of wing root, measured downstream from nose (ft)
+            %   MAC (double): Mean aerodynamic chord
+            %
+            % RETURNS:
+            %   x (double): x-location of wing cg, measured downstream from nose (ft)
+            % Source: Raymer 6th ed, Table 15.2
+            % Code begins below.
+
+            x = x_root + 0.4*MAC;
+        end
+
+        function x = compute_cg_x_loc_fuselage(L_fus)
+            % Computes the x-location of the fuselage's cg. Assumes the 
+            % CG acts at 50-pct of the total length.
+            % You really don't need this much documentation for this.
+            x = L_fus/2;
+        end
+
+        function x = compute_cg_x_loc_engine(x_eng, L_eng)
+            % Computes the x-location of the engine
+            %
+            % ARGS:
+            %   x_eng (double): x-location of the engine's foremost face/edge (ft)
+            %   L_eng (double): length of engine (ft)
+            %
+            % RETURNS:
+            %   x (double): x-location of the engine's cg
+            % Source: Raymer 6th ed, Table 15.2
+            % Code begins below.
+
+            x = x_eng + L_eng/2;
+        end
     end
 
     methods (Static, Access = private)

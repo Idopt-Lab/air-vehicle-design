@@ -179,6 +179,15 @@ grid on; ylabel('L/D'); title('F-16A Level 2 L/D by Mission Segment');
 % volume equation (Raymer Eq. 15.9, V_t-dependent, is L3-only).
 fprintf('\nInternal fuel-volume check: not modeled at L2 (no V_t/V_i/V_p on F16WeightsL2; see F16WeightsL3 at L3).\n');
 
+%% Tipback angle check
+% Check if tipback angle is satisfied.
+% These will change as the wing is resized.
+f16lg = F16LandingGearL2(f16a_spec_path(2), objs.wts);
+tipback_angle = f16lg.get_tipback_angle();
+isTipBackAngleSatisfied = f16lg.check_tipback_angle(tipback_angle);
+
+
+
 %% Final summary
 fprintf('\n=== F-16A Level 2 Final Summary ===\n');
 fprintf('  W_TO = %.1f lbf, OEW = %.1f lbf, W_fuel = %.1f lbf, S_ref = %.2f ft^2, T_SL = %.1f lbf\n', ...
