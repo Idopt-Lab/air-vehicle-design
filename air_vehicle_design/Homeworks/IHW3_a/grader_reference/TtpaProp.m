@@ -2,9 +2,9 @@ classdef TtpaProp < PropulsionBase2
 %TTPAPROP  Preliminary piston-propeller propulsion model.
 %
 %   Provides shaft-power availability, brake-specific fuel consumption,
-%   propeller efficiency and - new in IHW3a - engine SIZE for the TTPA.
+%   propeller efficiency and - new in IHW3 - engine SIZE for the TTPA.
 %
-%   IHW3a UPDATE
+%   IHW3 UPDATE
 %   IHW2 asked one question of the engine: how much power does it MAKE.
 %   That is power_lapse and power_ratio, and both are unchanged here. A
 %   sizing loop asks two more:
@@ -53,7 +53,7 @@ classdef TtpaProp < PropulsionBase2
         P_TO_over_P_max_continuous
         % Takeoff power / maximum continuous power [-].
 
-        % --- engine-size regression, Raymer Table 10.4 (NEW IN IHW3a) ---
+        % --- engine-size regression, Raymer Table 10.4 (NEW IN IHW3) ---
         engine_scaling_class        % <- J.propulsion.engine_scaling_class
         k_W_engine                  % <- J.propulsion.engine_weight_coefficient
         n_W_engine                  % <- J.propulsion.engine_weight_exponent
@@ -226,7 +226,7 @@ classdef TtpaProp < PropulsionBase2
         end
 
 
-        %% Engine Weight  (NEW IN IHW3a)
+        %% Engine Weight  (NEW IN IHW3)
         function [W_total, W_each] = engine_weight(obj)
         %ENGINE_WEIGHT  BARE engine weight [lbf].
         %
@@ -249,7 +249,7 @@ classdef TtpaProp < PropulsionBase2
         end
 
 
-        %% Engine Length  (NEW IN IHW3a)
+        %% Engine Length  (NEW IN IHW3)
         function L = engine_length(obj)
         %ENGINE_LENGTH  Bare length of ONE engine [ft].
         %

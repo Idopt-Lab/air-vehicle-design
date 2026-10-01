@@ -1,7 +1,7 @@
 classdef TtpaWeights < WeightsBase
 %TTPAWEIGHTS  Test Twin Propeller Aircraft Level-2 weight model.
 %
-%   IHW3a
+%   IHW3
 %   In IHW1 and IHW2 the whole empty weight was one line, OEW =
 %   0.911*W_TO^0.947, a statistical regression on light propeller airplanes.
 %   It is a good first estimate, but it knows ONLY the takeoff weight: double
@@ -67,13 +67,16 @@ classdef TtpaWeights < WeightsBase
         W_energy             = NaN   % lbf, total internal fuel weight
         W_payload_expendable = 0     % lbf, expendable payload (stores)
         W_payload_fixed      = 1200  % lbf, fixed payload, including crew
+
+        method                       % <- J.weights.method
+        % "table_15_2" (Empty weight II) or "raymer_ga_III" (Empty weight
+        % III). Settable, so one bundle can be re-weighed both ways:
+        %     obj.wts.method = "raymer_ga_III";
     end
 
     properties (SetAccess = immutable)
         geom                         % injected TtpaGeom
         prop                         % injected TtpaProp
-
-        method                       % <- J.weights.method
 
         % --- Raymer Table 15.2, General Aviation column ---
         rho_wing

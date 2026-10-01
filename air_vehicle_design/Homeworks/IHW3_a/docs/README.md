@@ -1,17 +1,23 @@
-# IHW3a — XDSM of the sizing framework
+# IHW3a — XDSMs of the two sizing loops
 
-`ttpa_sizing_xdsm.pdf` (and `.png`) is the IHW3a sizing framework drawn as an
-eXtended Design Structure Matrix (Lambe & Martins, 2012). It is the same
-information as the lecture's preliminary-design-framework block diagram, but in
-the form that shows the *loop structure* rather than the physical layout.
+**Two** diagrams, one per driver, both drawn as eXtended Design Structure
+Matrices (Lambe & Martins, 2012). An XDSM carries the same information as a
+block diagram but shows the *loop structure* rather than the physical layout.
 
-Regenerate with:
+| file | driver | what it draws |
+| --- | --- | --- |
+| `ttpa_sizing_xdsm` | `run_ttpa_sizing` | the **lecture** framework: `S_ref` is an input, two states |
+| `ttpa_mainloop_xdsm` | `run_ttpa_sizing_mainloop` | the **whiteboard** framework: `S_ref` is an output, three states |
+
+Regenerate either with:
 
 ```bash
 python xdsm_ttpa_sizing.py
+python xdsm_ttpa_mainloop.py
 ```
 
-Needs `pyxdsm` and a LaTeX install; writes `.tex`, `.tikz` and `.pdf`.
+Needs `pyxdsm` and a LaTeX install; writes `.tex`, `.tikz` and `.pdf`. To make
+the `.png`: `pdftocairo -png -r 200 -singlefile <name>.pdf <name>`.
 
 ## How to read it
 
@@ -47,3 +53,41 @@ The vertical stacks of forward data show which blocks are genuinely coupled:
 fuel consumption, engine weight), and `TtpaGeom` feeds three (drag, mission,
 weights). Those are the couplings the loop exists to resolve — in IHW1 and IHW2
 most of them did not exist, which is why neither needed a loop.
+
+---
+
+## `ttpa_mainloop_xdsm` — the main loop, where `S_ref` is an output
+
+Same eight blocks, arranged the same way. **Three differences, and they are the
+whole story.**
+
+**1. The solver carries three states, not two.** `W_0`, `P_0` *and* `S_ref` all
+sit inside the orange block. In the lecture diagram `S_ref` is a green input at
+the top; here it comes out at the bottom left, in bold, because producing it is
+the point of the loop.
+
+**2. `AR` and `λ` are the bold inputs instead.** They are what you hold constant
+while the loop solves for everything else — the whiteboard writes "constant"
+next to them for exactly this reason.
+
+**3. There are three feedback entries below the diagonal, not two.** The extra
+one is `(W/S) ⇒ S_ref^new`, and it is what turns the wing area from something
+you choose into something the analysis returns. The other two are the same two
+red loops as before: `(W/P) ⇒ P_0^new` and `W_0^new` from the closure.
+
+One more structural difference, in block 4. The lecture diagram calls
+`design_diagram`, which reads the matching chart at **one** wing loading,
+because a chosen `S_ref` fixes `W/S`. Here block 4 is `matching_envelope`,
+which solves the **whole** chart on every pass and returns its least-engine
+corner. That is more work per pass, and it is unavoidable: if you do not know
+`W/S` in advance you cannot read the chart at a single point.
+
+### What the diagram cannot show
+
+The vertical stacks tell you `TtpaProp` feeds four downstream blocks and
+`TtpaGeom` feeds three, so the couplings are real. What the topology does *not*
+tell you is whether the `(W/S) ⇒ S_ref` feedback carries any information, and on
+this airplane it mostly does not: the corner sits pinned on the landing wall at
+43.240 psf in the default configuration, so `S_ref` is `W_TO` divided by a
+constant. The arrow exists and is correctly drawn; the physics behind it is
+degenerate. See the main README for the measured detail.

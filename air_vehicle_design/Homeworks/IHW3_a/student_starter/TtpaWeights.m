@@ -1,7 +1,7 @@
 classdef TtpaWeights < WeightsBase
 %TTPAWEIGHTS  Test Twin Propeller Aircraft Level-2 weight model.
 %
-%   IHW3a
+%   IHW3
 %   In IHW1 and IHW2 the whole empty weight was one line, OEW =
 %   0.911*W_TO^0.947, a statistical regression on light propeller airplanes.
 %   It is a good first estimate, but it knows ONLY the takeoff weight: double
@@ -67,13 +67,16 @@ classdef TtpaWeights < WeightsBase
         W_energy             = NaN   % lbf, total internal fuel weight
         W_payload_expendable = 0     % lbf, expendable payload (stores)
         W_payload_fixed      = 1200  % lbf, fixed payload, including crew
+
+        method                       % <- J.weights.method
+        % "table_15_2" (Empty weight II) or "raymer_ga_III" (Empty weight
+        % III). Settable, so one bundle can be re-weighed both ways:
+        %     obj.wts.method = "raymer_ga_III";
     end
 
     properties (SetAccess = immutable)
         geom                         % injected TtpaGeom
         prop                         % injected TtpaProp
-
-        method                       % <- J.weights.method
 
         % --- Raymer Table 15.2, General Aviation column ---
         rho_wing
@@ -157,9 +160,8 @@ classdef TtpaWeights < WeightsBase
                 obj
                 W_TO (1,1) double {mustBePositive}
             end
-
-            bd = obj.OEW_breakdown(W_TO);
-            oew = bd.total;
+            bd  = ;
+            oew = ;
         end
 
 
@@ -176,54 +178,33 @@ classdef TtpaWeights < WeightsBase
                 obj
                 W_TO (1,1) double {mustBePositive}
             end
-
-            [W_bare_total, W_bare_each] = obj.prop.engine_weight();
+            % --- Milestone 1: the bare engines, from the propulsion model -------
+            [W_bare_total, W_bare_each] = ;
             bd.method            = obj.method;
             bd.engine_bare_each  = W_bare_each;
             bd.engine_bare_total = W_bare_total;
 
-            % ---- rows that are the same under both methods ----------------
-            % Raymer Table 15.2 asks for EXPOSED PLANFORM area on the tail
-            % rows and WETTED area on the fuselage row.
-            %
-            % KNOWN APPROXIMATION ON THE TWO TAIL ROWS. The wing row uses the
-            % true exposed area. The tail rows use the THEORETICAL area,
-            % because that is what the volume-coefficient method produces -
-            % Raymer defines horizontal-tail area to the aircraft centreline -
-            % and an exposed tail area would need a fuselage width at the tail
-            % station, which the cabin-driven fuselage model does not carry.
-            % The tails are therefore slightly overweight: about 9 lbf on the
-            % horizontal tail at the converged design, under 0.4 percent of
-            % OEW. Documented rather than silently assumed.
-            bd.horizontal_tail = obj.rho_ht       * obj.geom.S_ht;
-            bd.vertical_tail   = obj.rho_vt       * obj.geom.S_vt;
-            bd.fuselage        = obj.rho_fuselage * obj.geom.S_wet_fuselage;
-            bd.landing_gear    = obj.f_landing_gear   * W_TO;
-            bd.all_else_empty  = obj.f_all_else_empty * W_TO;
+            % --- Milestone 2: the five rows both methods share ------------------
+            bd.horizontal_tail = ;
+            bd.vertical_tail   = ;
+            bd.fuselage        = ;
+            bd.landing_gear    = ;     % at the PASSED W_TO, never obj.W_TO
+            bd.all_else_empty  = ;
 
-            % ---- the two rows the method selects --------------------------
+            % --- Milestone 3: the two rows the method selects -------------------
             switch obj.method
-
                 case "table_15_2"
-                    % [Raymer Table 15.2, General Aviation]
-                    bd.wing             = obj.rho_wing * obj.geom.S_exposed_wing;
-                    bd.installed_engine = obj.f_installed_engine * W_bare_total;
-
+                    bd.wing             = ;
+                    bd.installed_engine = ;
                 case "raymer_ga_III"
-                    bd.wing             = obj.wing_weight_raymer_ga_(W_TO);
-                    % [Raymer Eq. 15.52] includes the propeller and the mounts
-                    bd.installed_engine = 2.575 * W_bare_each^0.922 * obj.prop.n_engines;
-
+                    bd.wing             = ;      % wing_weight_raymer_ga_
+                    bd.installed_engine = ;
                 otherwise
-                    error('TtpaWeights:UndefinedMethod', ...
-                        ['Weight method "%s" is not defined. Use ', ...
-                         '"table_15_2" (Empty weight II) or "raymer_ga_III" ', ...
-                         '(Empty weight III).'], obj.method);
+                    % error with the identifier 'TtpaWeights:UndefinedMethod'
             end
 
-            bd.total = bd.wing + bd.horizontal_tail + bd.vertical_tail ...
-                     + bd.fuselage + bd.landing_gear ...
-                     + bd.installed_engine + bd.all_else_empty;
+            % --- Milestone 4: the total -----------------------------------------
+            bd.total = ;
         end
 
 
@@ -281,22 +262,17 @@ classdef TtpaWeights < WeightsBase
         %   what this equation is here for.
             g = obj.geom;
 
+            % --- Milestone 1: the wing-fuel term, ignored until fuel is known ---
             if isfinite(obj.W_energy) && obj.W_energy > 0
-                W_fw_term = obj.W_energy ^ 0.0035;
+                W_fw_term = ;
             else
-                W_fw_term = 1;            % Raymer: ignore the term
+                W_fw_term = 1;
             end
 
-            A_over_cos2 = g.AR / cosd(g.sweep_qc_deg)^2;
+            % --- Milestone 2: Raymer Eq. 15.46 ----------------------------------
+            A_over_cos2 = ;
 
-            W = 0.036 ...
-              * g.S_ref^0.758 ...
-              * W_fw_term ...
-              * A_over_cos2^0.6 ...
-              * obj.q_cruise^0.006 ...
-              * g.taper^0.04 ...
-              * (100 * g.tc_root)^(-0.3) ...
-              * (obj.N_z * W_dg)^0.49;
+            W = ;
         end
 
     end

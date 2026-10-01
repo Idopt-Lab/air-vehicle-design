@@ -26,7 +26,7 @@
 %
 %  Run it from this folder. No arguments, no edits needed.
 
-clear; clc; close all
+% clear; clc; close all
 
 MAKE_PS_DIAGRAM = true;    % step 10 sizes a few thousand airplanes (~1 min)
 RUN_COMPARISON  = true;    % step 7 re-sizes the airplane four more times
