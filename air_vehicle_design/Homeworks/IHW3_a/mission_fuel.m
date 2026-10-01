@@ -1,7 +1,7 @@
-function [W_fuel, fuel_fraction, fuel_burned, segment_weight, segment_wf] = mission_fuel(W_TO, obj)
+function [W_fuel, fuel_fraction, fuel_burned, segment_weight, segment_wf, detail] = mission_fuel(W_TO, obj)
 %MISSION_FUEL  Total mission fuel at a candidate takeoff weight.
 %
-%   [W_fuel, fuel_fraction, fuel_burned, segment_weight, segment_wf] = ...
+%   [W_fuel, fuel_fraction, fuel_burned, segment_weight, segment_wf, detail] = ...
 %       mission_fuel(W_TO, obj)
 %
 %   Inputs
@@ -13,36 +13,66 @@ function [W_fuel, fuel_fraction, fuel_burned, segment_weight, segment_wf] = miss
 %     fuel_burned    fuel burned in each segment [lbf], 1x8
 %     segment_weight weight at each segment boundary [lbf], 1x9
 %     segment_wf     weight fraction of each segment [-], 1x8
+%     detail         per-segment C_L, L/D, speed, time  (L2 method only;
+%                    empty for L1, which does not compute them)
 %
-%   This is the two lines that used to live INSIDE the IHW1 iteration loop,
-%   lifted out into a function of their own:
+%   This is the "Fuel fraction" box of the preliminary design framework. The
+%   sizing loop calls it once per iteration, so it has to be a clean function
+%   of W_TO with no state of its own.
 %
-%       [fuel_burned, ...] = run_mission(W_TO, obj);
-%       fuel_fraction = sum(fuel_burned) * 1.06 / W_TO;
+%   TWO METHODS, selected by missions.std_mission.method in the requirements
+%   file:
 %
-%   The sizing loop calls this once per iteration, so it has to be a clean
-%   function of W_TO with no state of its own. run_mission itself is the
-%   IHW1 file, UNCHANGED - which is the point. Because TtpaAero.LD_max is
-%   now a Dependent property that follows the geometry, the Breguet cruise
-%   and loiter segments inside run_mission automatically use the drag of
-%   the airplane the sizing loop has just laid out. Not one line of the
-%   mission analysis had to be touched to make that happen.
+%     "L1"  run_mission      - the IHW1 file, UNCHANGED. Roskam Table 2.2
+%                              fractions, cruise at L/D_max, loiter at
+%                              0.866 L/D_max.
+%     "L2"  run_mission_L2   - the improved fuel fractions of the
+%                              sizing-refinement lecture. The lift
+%                              coefficient is computed from the ACTUAL wing
+%                              loading at each condition, so the fuel
+%                              responds to the wing.
 %
-%   THE 1.06 IS GONE. IHW1 typed the 6 percent reserve and trapped-fuel
-%   allowance straight into the loop as a literal. It is a requirement, so
-%   it belongs in the requirements file, and it is read from there now:
-%   J.missions.std_mission.reserve_fuel_fraction. Change the requirement
-%   and the analysis follows.
+%   The lecture draws the difference as an arrow: W_0/S_ref feeds the Fuel
+%   fraction box. Under L1 that arrow does not exist - the fuel fraction is
+%   the same number whatever wing the airplane has. That is the defect, and
+%   on this airplane it is worth 27 percent of the cruise L/D. Run both and
+%   compare; run_ttpa_sizing prints the pair.
+%
+%   THE RESERVE IS READ, NOT TYPED. IHW1 hardcoded a 6 percent reserve and
+%   trapped-fuel allowance as a literal 1.06 inside its loop. It is a
+%   requirement, so it lives in the requirements file:
+%   J.missions.std_mission.reserve_fuel_fraction. Both methods apply it the
+%   same way.
 
     arguments
         W_TO (1,1) double {mustBePositive}
         obj  (1,1) struct
     end
 
-    [fuel_burned, segment_weight, segment_wf] = run_mission(W_TO, obj);
+    if isfield(obj.miss, 'method') && ~isempty(obj.miss.method)
+        method = string(obj.miss.method);
+    else
+        method = "L1";     % the IHW1 behaviour, if the file does not say
+    end
 
-    % Reserve and trapped-fuel allowance, applied on top of the full
-    % mission. Read from the mission profile, not typed in here.
+    detail = struct([]);
+
+    switch method
+
+        case "L1"
+            [fuel_burned, segment_weight, segment_wf] = run_mission(W_TO, obj);
+
+        case "L2"
+            [fuel_burned, segment_weight, segment_wf, detail] = run_mission_L2(W_TO, obj);
+
+        otherwise
+            error('mission_fuel:UndefinedMethod', ...
+                ['Mission method "%s" is not defined. Use "L1" (the IHW1 ', ...
+                 'fixed-fraction mission) or "L2" (the improved fuel ', ...
+                 'fractions).'], method);
+    end
+
+    % Reserve and trapped-fuel allowance, applied on top of the full mission.
     if isfield(obj.miss, 'reserve_fuel_fraction') && ~isempty(obj.miss.reserve_fuel_fraction)
         f_reserve = obj.miss.reserve_fuel_fraction;
     else

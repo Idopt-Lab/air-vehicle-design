@@ -83,12 +83,24 @@ classdef TtpaProp < PropulsionBase2
         end
 
 
+    end
+
+
+    methods
+
         %% Regression Guard
         function bhp = rated_bhp_per_engine(obj)
         %RATED_BHP_PER_ENGINE  Power per engine, range-checked [hp].
         %   Warns, and does not error, outside the band Raymer Table 10.4
         %   is printed for: a sizing iterate can pass through an
         %   unreasonable power on its way to the answer.
+        %
+        %   PUBLIC. P_SL is an OUTPUT of the sizing loop, not an input, so
+        %   whether the CONVERGED engine falls inside the band the
+        %   regression is printed for is a post-convergence check a driver
+        %   has to be able to make. Keeping the guard private forced every
+        %   driver to re-implement the comparison against bhp_range, which
+        %   is the class's own business.
             bhp = obj.P_engine;
 
             if isnan(bhp)
