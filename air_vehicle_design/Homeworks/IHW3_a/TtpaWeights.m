@@ -264,7 +264,8 @@ classdef TtpaWeights < WeightsBase
         %
         %   S_w      trapezoidal reference area [ft^2]
         %   W_fw     weight of fuel in the WING [lbf]
-        %   A        aspect ratio           <- THE TERM THAT MATTERS
+        %   A        aspect ratio           <- this is what would drive the
+        %                                           sizing
         %   Lambda   quarter-chord sweep
         %   q        dynamic pressure at cruise [lbf/ft^2]
         %   lambda   taper ratio

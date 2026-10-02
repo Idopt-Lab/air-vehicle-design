@@ -2,9 +2,9 @@ classdef TtpaProp < PropulsionBase2
 %TTPAPROP  Preliminary piston-propeller propulsion model.
 %
 %   Provides shaft-power availability, brake-specific fuel consumption,
-%   propeller efficiency and - new in IHW3a - engine SIZE for the TTPA.
+%   propeller efficiency and - new in IHW3 - engine SIZE for the TTPA.
 %
-%   IHW3a UPDATE
+%   IHW3 UPDATE
 %   IHW2 asked one question of the engine: how much power does it MAKE.
 %   That is power_lapse and power_ratio, and both are unchanged here. A
 %   sizing loop asks two more:
@@ -53,7 +53,7 @@ classdef TtpaProp < PropulsionBase2
         P_TO_over_P_max_continuous
         % Takeoff power / maximum continuous power [-].
 
-        % --- engine-size regression, Raymer Table 10.4 (NEW IN IHW3a) ---
+        % --- engine-size regression, Raymer Table 10.4 (NEW IN IHW3) ---
         engine_scaling_class        % <- J.propulsion.engine_scaling_class
         k_W_engine                  % <- J.propulsion.engine_weight_coefficient
         n_W_engine                  % <- J.propulsion.engine_weight_exponent
@@ -106,23 +106,14 @@ classdef TtpaProp < PropulsionBase2
         %   has to be able to make. Keeping the guard private forced every
         %   driver to re-implement the comparison against bhp_range, which
         %   is the class's own business.
-            bhp = obj.P_engine;
+            % --- Milestone 1: the rated power of ONE engine ---------------------
+            bhp = ;
 
-            if isnan(bhp)
-                error('TtpaProp:PowerNotSet', ...
-                    ['P_SL is NaN, so the engine cannot be sized. The ', ...
-                     'sizing loop writes P_SL at the start of every ', ...
-                     'iteration - call this only after it has.']);
-            end
+            % --- Milestone 2: stop if nobody has set P_SL yet --------------------
+            % error with the identifier 'TtpaProp:PowerNotSet' when bhp is NaN
 
-            if bhp < obj.bhp_range(1) || bhp > obj.bhp_range(2)
-                warning('TtpaProp:BhpOutOfRange', ...
-                    ['Rated power per engine is %.1f hp, outside the %.0f-%.0f hp ', ...
-                     'band that the Raymer Table 10.4 opposed-piston regression is ', ...
-                     'printed for. The value is still returned; check it if the ', ...
-                     'CONVERGED answer is outside the band.'], ...
-                    bhp, obj.bhp_range(1), obj.bhp_range(2));
-            end
+            % --- Milestone 3: WARN, do not error, outside bhp_range --------------
+            % warning with the identifier 'TtpaProp:BhpOutOfRange'
         end
 
     end
@@ -149,13 +140,9 @@ classdef TtpaProp < PropulsionBase2
 
             obj.P_TO_over_P_max_continuous = P.P_TO_over_P_max_continuous;
 
-            % Engine-size regression
-            obj.engine_scaling_class = string(P.engine_scaling_class);
-            obj.k_W_engine = P.engine_weight_coefficient;
-            obj.n_W_engine = P.engine_weight_exponent;
-            obj.k_L_engine = P.engine_length_coefficient;
-            obj.n_L_engine = P.engine_length_exponent;
-            obj.bhp_range  = P.bhp_range_of_validity;
+            % TODO (IHW3): read the engine-size regression, Raymer Table 10.4.
+            %   The six properties are declared above, each with the key it
+            %   is read from. engine_scaling_class is text: wrap it in string().
         end
 
 
@@ -226,7 +213,7 @@ classdef TtpaProp < PropulsionBase2
         end
 
 
-        %% Engine Weight  (NEW IN IHW3a)
+        %% Engine Weight  (NEW IN IHW3)
         function [W_total, W_each] = engine_weight(obj)
         %ENGINE_WEIGHT  BARE engine weight [lbf].
         %
@@ -242,14 +229,14 @@ classdef TtpaProp < PropulsionBase2
         %   engine. TtpaWeights multiplies it by the Raymer Table 15.2
         %   installed-engine factor, 1.4 for general aviation, to get the
         %   installed weight - do NOT apply that factor here as well.
-            bhp = obj.rated_bhp_per_engine();
+            bhp = ;          % from rated_bhp_per_engine, so the range guard runs
 
-            W_each  = obj.k_W_engine * bhp .^ obj.n_W_engine;
-            W_total = obj.n_engines * W_each;
+            W_each  = ;
+            W_total = ;
         end
 
 
-        %% Engine Length  (NEW IN IHW3a)
+        %% Engine Length  (NEW IN IHW3)
         function L = engine_length(obj)
         %ENGINE_LENGTH  Bare length of ONE engine [ft].
         %
@@ -261,9 +248,9 @@ classdef TtpaProp < PropulsionBase2
         %   Raymer Table 10.3 states that both vary insignificantly over a
         %   +50 percent power change, which is why the nacelle diameter is
         %   a fixed input in the geometry block.
-            bhp = obj.rated_bhp_per_engine();
+            bhp = ;
 
-            L = obj.k_L_engine * bhp .^ obj.n_L_engine;
+            L = ;
         end
 
 

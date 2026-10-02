@@ -1,0 +1,229 @@
+
+%%% Preamble Requirements %%%
+% \usepackage{geometry}
+% \usepackage{amsfonts}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{tikz}
+
+% Optional packages such as sfmath set through python interface
+% \usepackage{sfmath}
+
+% \usetikzlibrary{arrows,chains,positioning,scopes,shapes.geometric,shapes.misc,shadows}
+
+%%% End Preamble Requirements %%%
+
+\input{"C:/Users/krish/AppData/Local/Programs/Python/Python310/lib/site-packages/pyxdsm/diagram_styles"}
+\begin{tikzpicture}
+
+\matrix[MatrixSetup]{
+%Row 0
+&
+\node [DataIO] (output_loop) {$\begin{array}{c}\text{Guesses, tol, relax} \\ W_0,\ P_0,\ S_0,\ w\end{array}$};&
+\node [DataIO] (output_prop) {$\begin{array}{c}\text{Raymer Tbl 10.4} \\ n_{eng}\end{array}$};&
+\node [DataIO] (output_geom) {$\begin{array}{c}AR,\ \lambda\ \text{(constant)} \\ \text{tails, fuselage, nacelle}\end{array}$};&
+\node [DataIO] (output_aero) {$C_{fe}$};&
+\node [DataIO] (output_ca) {$\begin{array}{c}\text{Requirements} \\ \text{field, climb, cruise}\end{array}$};&
+&
+\node [DataIO] (output_miss) {$\begin{array}{c}\text{Mission profile} \\ \text{range, speed, loiter, reserve}\end{array}$};&
+\node [DataIO] (output_wts) {$\begin{array}{c}\text{Raymer Tbl 15.2} \\ \text{unit weights}\end{array}$};&
+\node [DataIO] (output_close) {$W_{payload}$};&
+\\
+%Row 1
+\node [DataIO] (left_output_loop) {$\begin{array}{c}\text{Converged airplane} \\ W_{TO},\ P_{SL},\ S_{ref}\end{array}$};&
+\node [MDA] (loop) {$\begin{array}{c}\text{Sizing loop (P12)} \\ W_0,\ P_0,\ S_{ref}\end{array}$};&
+\node [DataInter] (loop-prop) {$P_0$};&
+\node [DataInter] (loop-geom) {$S_{ref}$};&
+&
+&
+\node [DataInter] (loop-size) {$W_0$};&
+\node [DataInter] (loop-miss) {$W_0$};&
+\node [DataInter] (loop-wts) {$W_0$};&
+\node [DataInter] (loop-close) {$W_0$};&
+\\
+%Row 2
+&
+&
+\node [Function] (prop) {$\begin{array}{c}\text{Propulsion (P1)} \\ \text{engine weight, length}\end{array}$};&
+\node [DataInter] (prop-geom) {$L_{eng}$};&
+&
+\node [DataInter] (prop-ca) {$k_P$};&
+&
+\node [DataInter] (prop-miss) {$P_{SL},\ c,\ \eta_p$};&
+\node [DataInter] (prop-wts) {$W_{eng}$};&
+&
+\\
+%Row 3
+&
+&
+&
+\node [Function] (geom) {$\begin{array}{c}\text{Geometry (P2)} \\ \text{planform, tails, wetted area}\end{array}$};&
+\node [DataInter] (geom-aero) {$S_{wet}/S_{ref}$};&
+&
+&
+\node [DataInter] (geom-miss) {$S_{ref}$};&
+\node [DataInter] (geom-wts) {$S_{exp},\ S_{ht},\ S_{vt},\ S_{wet,fus}$};&
+&
+\\
+%Row 4
+&
+&
+&
+&
+\node [Function] (aero) {$\begin{array}{c}\text{Aerodynamics (P3)} \\ C_{D_0} = C_{fe}\,S_{wet}/S_{ref}\end{array}$};&
+\node [DataInter] (aero-ca) {$C_{D_0},\ K$};&
+&
+\node [DataInter] (aero-miss) {$C_{D_0},\ K$};&
+&
+&
+\\
+%Row 5
+&
+&
+&
+&
+&
+\node [Function] (ca) {$\begin{array}{c}\text{Constraint analysis} \\ \text{+ cruise, Level 2 (P5)}\end{array}$};&
+\node [DataInter] (ca-size) {$(W/S),\ (W/P)$};&
+&
+&
+&
+\\
+%Row 6
+&
+\node [DataInter] (size-loop) {$S^{new},\ P^{new}$};&
+&
+&
+&
+&
+\node [Function] (size) {$\begin{array}{c}\text{Size wing, engine (P11)} \\ S = W_0/(W/S),\ P = W_0/(W/P)\end{array}$};&
+&
+&
+&
+\\
+%Row 7
+\node [DataIO] (left_output_miss) {$\text{fuel burn}$};&
+&
+&
+&
+&
+&
+&
+\node [Function] (miss) {$\begin{array}{c}\text{Mission, Level 2} \\ \text{(P6, P7, P8, P9)}\end{array}$};&
+\node [DataInter] (miss-wts) {$W_f$};&
+\node [DataInter] (miss-close) {$W_f$};&
+\\
+%Row 8
+\node [DataIO] (left_output_wts) {$\text{7 weight rows}$};&
+&
+&
+&
+&
+&
+&
+&
+\node [Function] (wts) {$\begin{array}{c}\text{Weights (P4)} \\ \text{component build-up}\end{array}$};&
+\node [DataInter] (wts-close) {$OEW$};&
+\\
+%Row 9
+&
+\node [DataInter] (close-loop) {$W_0^{new}$};&
+&
+&
+&
+&
+&
+&
+&
+\node [Function] (close) {$\begin{array}{c}\text{TOGW closure (P10)} \\ W_0^{new} = W_{pay}/(1 - W_f/W_0 - OEW/W_0)\end{array}$};&
+\\
+%Row 10
+&
+&
+&
+&
+&
+&
+&
+&
+&
+&
+\\
+};
+
+% XDSM process chains
+{ [start chain=process]
+ \begin{pgfonlayer}{process} 
+\chainin (loop);
+\chainin (prop) [join=by ProcessHVA];
+\chainin (geom) [join=by ProcessHVA];
+\chainin (aero) [join=by ProcessHVA];
+\chainin (ca) [join=by ProcessHVA];
+\chainin (size) [join=by ProcessHVA];
+\chainin (miss) [join=by ProcessHVA];
+\chainin (wts) [join=by ProcessHVA];
+\chainin (close) [join=by ProcessHVA];
+\chainin (loop) [join=by ProcessHVA];
+\end{pgfonlayer}
+}
+
+\begin{pgfonlayer}{data}
+\path
+% Horizontal edges
+(loop) edge [DataLine] (loop-prop)
+(loop) edge [DataLine] (loop-geom)
+(loop) edge [DataLine] (loop-size)
+(loop) edge [DataLine] (loop-miss)
+(loop) edge [DataLine] (loop-wts)
+(loop) edge [DataLine] (loop-close)
+(prop) edge [DataLine] (prop-geom)
+(prop) edge [DataLine] (prop-ca)
+(prop) edge [DataLine] (prop-miss)
+(prop) edge [DataLine] (prop-wts)
+(geom) edge [DataLine] (geom-aero)
+(geom) edge [DataLine] (geom-miss)
+(geom) edge [DataLine] (geom-wts)
+(aero) edge [DataLine] (aero-ca)
+(aero) edge [DataLine] (aero-miss)
+(ca) edge [DataLine] (ca-size)
+(miss) edge [DataLine] (miss-wts)
+(miss) edge [DataLine] (miss-close)
+(wts) edge [DataLine] (wts-close)
+(size) edge [DataLine] (size-loop)
+(close) edge [DataLine] (close-loop)
+(loop) edge [DataLine] (left_output_loop)
+(miss) edge [DataLine] (left_output_miss)
+(wts) edge [DataLine] (left_output_wts)
+% Vertical edges
+(loop-prop) edge [DataLine] (prop)
+(loop-geom) edge [DataLine] (geom)
+(loop-size) edge [DataLine] (size)
+(loop-miss) edge [DataLine] (miss)
+(loop-wts) edge [DataLine] (wts)
+(loop-close) edge [DataLine] (close)
+(prop-geom) edge [DataLine] (geom)
+(prop-ca) edge [DataLine] (ca)
+(prop-miss) edge [DataLine] (miss)
+(prop-wts) edge [DataLine] (wts)
+(geom-aero) edge [DataLine] (aero)
+(geom-miss) edge [DataLine] (miss)
+(geom-wts) edge [DataLine] (wts)
+(aero-ca) edge [DataLine] (ca)
+(aero-miss) edge [DataLine] (miss)
+(ca-size) edge [DataLine] (size)
+(miss-wts) edge [DataLine] (wts)
+(miss-close) edge [DataLine] (close)
+(wts-close) edge [DataLine] (close)
+(size-loop) edge [DataLine] (loop)
+(close-loop) edge [DataLine] (loop)
+(loop) edge [DataLine] (output_loop)
+(prop) edge [DataLine] (output_prop)
+(geom) edge [DataLine] (output_geom)
+(aero) edge [DataLine] (output_aero)
+(ca) edge [DataLine] (output_ca)
+(miss) edge [DataLine] (output_miss)
+(wts) edge [DataLine] (output_wts)
+(close) edge [DataLine] (output_close);
+\end{pgfonlayer}
+
+\end{tikzpicture}
