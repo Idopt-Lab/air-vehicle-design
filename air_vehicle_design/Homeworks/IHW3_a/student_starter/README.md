@@ -9,8 +9,8 @@ all agree?**
 
 It takes two moves. First, raise every model to **Level 2** so it responds to the airplane's
 size — the wing area `S_ref` and the engine power `P_SL` (Problems 1–9). Then **iterate**
-until size and weight stop changing (Problems 10–12). The loop's XDSM is
-`ttpa_mainloop_xdsm.png` in this folder.
+until size and weight stop changing (Problems 10–12). `ihw3_homework_xdsm.png` in this
+folder shows the whole loop, with every block labelled by the problem that builds it.
 
 ## Given
 
@@ -40,7 +40,7 @@ Each one is already here as a template with the blanks marked. Fill them in.
 | 1 | `TtpaProp.m` | engine weight and length from the power — Raymer Table 10.4 |
 | 2 | `TtpaGeom.m` | the Level-2 airplane: planform, tails, wetted areas, nacelles |
 | 3 | `TtpaAero.m` | `C_D0 = C_fe*S_wet/S_ref` — the drag follows the geometry |
-| 4 | `TtpaWeights.m` | the component build-up, Raymer Table 15.2 and Sec. 15.3.3 |
+| 4 | `TtpaWeights.m` | the component build-up, Raymer Table 15.2 |
 | 5 | `constraint_cruise_speed.m` | the drag-based cruise constraint |
 | 6 | `segment_cruise_L2.m` | cruise at the real lift coefficient |
 | 7 | `segment_loiter_L2.m` | loiter at the real lift coefficient |

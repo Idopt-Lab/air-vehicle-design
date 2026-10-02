@@ -49,10 +49,15 @@ function [fuel_burned, segment_weight, segment_wf, detail] = run_mission_L2(W_TO
             case "takeoff"
                 [W, fuel_burned(k), segment_wf(k)] = fixed_fraction_(W, 0.984);
 
-            % TODO: one case per remaining segment type - climb, cruise,
-            %   descent, loiter, landing. Call the Level-2 segment function
-            %   (which also returns info as a fourth output), or
-            %   fixed_fraction_ with the Roskam Table 2.1 value.
+            % TODO: one case per remaining segment type. k is the loop index
+            %   AND the seg_no the segment functions take. The six labels are
+            %   "takeoff" "climb" "cruise" "descent" "loiter" "landing".
+            %
+            %   climb, cruise, loiter - the Level-2 segment functions, which
+            %   return info as a 4th output:
+            %       [W, fuel_burned(k), segment_wf(k), info] = segment_xxxxx_L2(W, obj, k);
+            %   descent, landing - fixed fractions, Roskam Table 2.1, 0.992:
+            %       [W, fuel_burned(k), segment_wf(k)] = fixed_fraction_(W, 0.992);
 
             otherwise
                 error('run_mission_L2:UndefinedSegment', ...
