@@ -7,7 +7,9 @@ function make_student_package(opts)
 %     2. converts every mlx_src/*.m plain-text Live Script into a real .mlx
 %        inside the package
 %     3. runs a smoke test on the package, standing outside the repo path
-%     4. writes student_package.zip next to the package folder
+%     4. writes <lesson>.zip next to the package folder. The archive root is
+%        the lesson folder name, so students unpack into l1-l2-sizing/ rather
+%        than into a folder called student_package.
 %
 %   MAKE_STUDENT_PACKAGE(steps = ["framework" "mlx"]) runs only those steps.
 %   Valid steps: "framework", "mlx", "guide", "smoke", "zip".
@@ -394,12 +396,33 @@ end
 
 % ------------------------------------------------------------------------
 function zip_package(here, pkg)
+%ZIP_PACKAGE  Archive the package under the LESSON name, not the build name.
+%
+%   Students unzip this on their own machine, so the folder the archive
+%   creates is the name they live with. "student_package" says nothing on a
+%   Canvas file list, and a second lesson would unpack to the same folder and
+%   collide. The archive root is therefore the lesson folder name --
+%   l1-l2-sizing -- while the repo folder stays student_package/, which is
+%   what it is: the build target.
+%
+%   Done by staging a renamed copy rather than renaming the real folder, so
+%   there is never a moment when student_package/ is missing or misnamed.
+
     fprintf('[zip]\n');
-    out = fullfile(here, 'student_package.zip');
+    [~, lesson] = fileparts(here);          % the lesson folder name
+
+    stage = tempname;
+    mkdir(stage);
+    cleaner = onCleanup(@() rmdir(stage, 's')); %#ok<NASGU>
+    copyfile(pkg, fullfile(stage, lesson));
+
+    out = fullfile(here, [lesson '.zip']);
     if isfile(out), delete(out); end
-    zip(out, pkg);
+    zip(out, lesson, stage);                % paths relative to stage
+
     d = dir(out);
     fprintf('      %s  (%.1f MB)\n', out, d.bytes/1e6);
+    fprintf('      unpacks to:  %s%s\n', lesson, filesep);
 end
 
 % ------------------------------------------------------------------------
