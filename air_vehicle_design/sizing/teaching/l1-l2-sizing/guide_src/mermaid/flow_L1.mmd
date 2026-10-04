@@ -1,0 +1,33 @@
+---
+title: SizingLoopL1 - control flow (src/sizing/SizingLoopL1.m)
+---
+flowchart TD
+    START(["run(W_TO_guess)"]) --> OPT["con.optimal_point_continuous()<br/>ONE time, before the loop<br/>gives WS and TW"]
+    OPT --> INIT["W0 = W_TO_guess"]
+    INIT --> ITER{{"for iter = 1 : max_iter"}}
+
+    ITER --> S1["1. geom.S_ref = W0 / WS"]
+    S1  --> S1b["geom.W_TO = W0<br/>only if the geometry has that property"]
+    S1b --> S2["2. prop.T_SL = TW * W0<br/>written, never read back at L1"]
+    S2  --> S3["3. W_fuel = miss.total_fuel(W0)"]
+    S3  --> S4["4. W_OEW = wts.get_OEW(W0)"]
+    S4  --> S5["wts.W_TO = W0<br/>wts.W_energy = W_fuel"]
+    S5  --> S6["W_payload = wts.W_payload_fixed<br/>+ wts.W_payload_expendable"]
+    S6  --> S7["5. SizingSteps.togw_update<br/>denom  = 1 - W_OEW/W0 - W_fuel/W0<br/>W0_new = W_payload / denom"]
+    S7  --> NANQ{"is W0_new NaN?<br/>(denom &lt;= 0)"}
+    NANQ -- yes --> ERR(["error<br/>SizingLoopL1:closureInfeasible"])
+    NANQ -- no  --> HIST["history(iter) = row<br/>6 fields"]
+    HIST --> CONV{"abs(W0_new - W0) / W0_new<br/>&lt; tol_rel"}
+    CONV -- no --> RELAX["W0 = SizingSteps.relax(W0, W0_new, relaxation)<br/>= W0 + w*(W0_new - W0)"]
+    RELAX -.->|"next pass"| ITER
+    CONV -- yes --> DONE["W0 = W0_new<br/>converged = true"]
+
+    ITER -.->|"max_iter reached"| WARN["warning<br/>SizingLoopL1:notConverged<br/>returns the unconverged state"]
+    WARN --> POST
+    DONE --> POST["final write-through at the converged W0<br/>geom.S_ref, prop.T_SL, fuel, OEW<br/>NOTE: the design point is NOT re-solved"]
+    POST --> RESULT(["result: W_TO, W_fuel, W_OEW, S_ref,<br/>T_SL, WS, TW, n_iter, converged, history"])
+
+    classDef orch fill:#cfe4ff,stroke:#2b6cb0,color:#000
+    classDef bad  fill:#ffd9d0,stroke:#c0482a,color:#000
+    class OPT,S3,S4,S7 orch
+    class ERR,WARN bad

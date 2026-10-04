@@ -1,0 +1,104 @@
+% XDSM of SizingLoopL1 -- one state variable, W_TO.
+% Built from src/sizing/SizingLoopL1.m. Citation: Martins, design slide 6.
+\documentclass[border=6pt, tikz]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\input{xdsm_style}
+
+\begin{document}
+\begin{tikzpicture}
+
+\matrix[XMatrix] (xdsm) {
+% ------ 1 driver ---- 2 aero ------- 3 constraint -- 4 geom ------ 5 prop ------- 6 mission ---- 7 weights ---- 8 closure
+  |[Driver]| {\textbf{Sizing loop}\\ \textsc{SizingLoopL1}\\ state: $W_{TO}$}
+  & &
+  & |[Data]| {$W_{TO}$}
+  & |[Data]| {$W_{TO}$}
+  & |[Data]| {$W_{TO}$}
+  & |[Data]| {$W_{TO}$}
+  & |[Data]| {$W_{payload}$} \\
+%
+  &
+  |[Analysis]| {\textbf{Aerodynamics}\\ \textsc{AeroL1}\\ \emph{no geometry in}}
+  & |[Data]| {$C_{D0},K_1,K_2$\\ $C_{L_{max}}$}
+  & & &
+  |[Data]| {$C_{D0},K_1,K_2$}
+  & & \\
+%
+  & &
+  |[Analysis]| {\textbf{Constraint analysis}\\ \textsc{optimal\_point}\\ \emph{solved ONCE}}
+  & |[Data]| {$(W/S)^*$}
+  & |[Data]| {$(T/W)^*$}
+  & & & \\
+%
+  & & &
+  |[Analysis]| {\textbf{Geometry}\\ \textsc{geom.S\_ref}}
+  & &
+  |[Data]| {$S_{ref}$}
+  & & \\
+%
+  & & & &
+  |[Analysis]| {\textbf{Propulsion}\\ \textsc{prop.T\_SL}\\ \emph{no reader at L1}}
+  & & & \\
+%
+  & & & & &
+  |[Analysis]| {\textbf{Mission analysis}\\ \textsc{total\_fuel}}
+  & &
+  |[Data]| {$W_{fuel}$} \\
+%
+  & & & & & &
+  |[Analysis]| {\textbf{Weights}\\ \textsc{get\_OEW}}
+  & |[Data]| {$W_{OEW}$} \\
+%
+  |[Data]| {$W_{TO}^{new}$}
+  & & & & & & &
+  |[Function]| {\textbf{Weight closure}\\ Raymer Eq.~3.4\\ \textsc{togw\_update}} \\
+};
+
+% ---- data highway: feed-forward ----------------------------------------
+\xdata{1}{4}\xdata{1}{5}\xdata{1}{6}\xdata{1}{7}\xdata{1}{8}
+\xdata{2}{3}\xdata{2}{6}
+\xdata{3}{4}\xdata{3}{5}
+\xdata{4}{6}
+\xdata{6}{8}
+\xdata{7}{8}
+
+% ---- the one feedback edge: this is why it is a loop --------------------
+\xfeedback{8}{1}
+
+% ---- process order ------------------------------------------------------
+\xstep{1}{1}{0}
+\xstep{3}{3}{1}
+\xstep{4}{4}{2}
+\xstep{5}{5}{3}
+\xstep{6}{6}{4}
+\xstep{7}{7}{5}
+\xstep{8}{8}{6}
+
+% ---- the repeat bracket -------------------------------------------------
+\node[draw, dashed, thick, rounded corners, inner sep=3.5mm,
+      fit=(xdsm-4-4)(xdsm-8-8)(xdsm-4-6)(xdsm-7-8)] (rpt) {};
+\node[font=\scriptsize\itshape, anchor=north east]
+      at ([yshift=-1.5mm]rpt.south east)
+      {repeat steps 2--6 until $|W^{new}-W| \,/\, W^{new} < 10^{-6}$};
+
+% ---- outputs ------------------------------------------------------------
+\node[Output, above=6mm of xdsm-1-1] (out) {$W_{TO}$, $S_{ref}$, $T_{SL}$};
+\draw[DataLine] (xdsm-1-1) -- (out);
+
+% ---- the teaching note --------------------------------------------------
+\node[align=left, font=\scriptsize, anchor=north west, text width=72mm,
+      draw=black!30, fill=black!3, rounded corners, inner sep=3mm]
+  at ([yshift=-8mm]xdsm-8-1.south west)
+  {\textbf{Read the two things Level 1 assumes.}\\[2pt]
+   1.~The constraint block runs at step~1 only, outside the repeat bracket.
+   That is legal here because \textsc{AeroL1} takes no geometry, so nothing
+   the loop changes can move a constraint curve.\\[2pt]
+   2.~The propulsion block has no outgoing data. At Level~1 $T_{SL}$ is
+   written and never read back, so it is an output, not an unknown.};
+
+\node[anchor=north west, font=\scriptsize] at ([yshift=-40mm]xdsm-8-1.south west) {\xdsmlegend};
+
+\end{tikzpicture}
+\end{document}

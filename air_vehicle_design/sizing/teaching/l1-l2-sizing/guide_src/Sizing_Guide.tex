@@ -1,0 +1,844 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=22mm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\usepackage[ruled, vlined, linesnumbered]{algorithm2e}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{pdflscape}
+
+\graphicspath{{figures/}}
+
+\definecolor{codebg}{RGB}{247,247,247}
+\definecolor{accent}{RGB}{43,108,176}
+\definecolor{warn}{RGB}{192,72,40}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single, rulecolor=\color{black!20},
+  breaklines=true, columns=fullflexible,
+  keywordstyle=\color{accent}\bfseries,
+  commentstyle=\color{black!55}\itshape,
+  language=Matlab, showstringspaces=false,
+  xleftmargin=2mm, framexleftmargin=2mm,
+}
+
+\newtcolorbox{keybox}[1]{colback=blue!4, colframe=accent, fonttitle=\bfseries,
+  title=#1, boxrule=0.6pt, arc=2pt, left=3mm, right=3mm, top=2mm, bottom=2mm}
+\newtcolorbox{warnbox}[1]{colback=red!3, colframe=warn, fonttitle=\bfseries,
+  title=#1, boxrule=0.6pt, arc=2pt, left=3mm, right=3mm, top=2mm, bottom=2mm}
+
+\title{\vspace{-14mm}\textbf{Aircraft Sizing}\\[2mm]
+       \large The closure loop, and what a second level of fidelity buys}
+\author{AOE 4065 --- Air Vehicle Design}
+\date{}
+
+% Long \texttt{} identifiers and file paths cannot hyphenate, so let TeX
+% stretch the interword space rather than push them into the margin.
+\sloppy
+\emergencystretch=3em
+
+\begin{document}
+\maketitle
+\vspace{-8mm}
+
+\begin{keybox}{What this guide covers}
+How a conceptual-design sizing loop works, in five different pictures of the
+same thing: an algorithm, a flowchart, an XDSM, a design structure matrix, and
+a fixed-point plot. It then compares the two sizing loops in the course
+framework, \texttt{SizingLoopL1} and \texttt{SizingLoopL2}, on the same
+aircraft, with numbers.
+
+Companion material: \texttt{lecture/L01}--\texttt{L07} (Boeing 777-200LR,
+instructor walkthrough) and \texttt{lab/LAB00}--\texttt{LAB01} (F-16A, your
+turn). Every number quoted here is reproduced by those files.
+
+Every diagram in this guide is also in \texttt{guide/diagrams.html}, where you
+can zoom into it. Useful for the tall flowcharts.
+\end{keybox}
+
+\tableofcontents
+\vspace{4mm}
+
+% =========================================================================
+\section{The sizing problem}
+
+Sizing answers one question: \emph{what is the smallest aircraft that can fly
+this mission and meet these requirements?} Three numbers come out of it.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Symbol & Meaning & Units \\
+\midrule
+$W_{TO}$  & takeoff gross weight & lbf \\
+$S_{ref}$ & wing reference area  & ft$^2$ \\
+$T_{SL}$  & sea-level static thrust & lbf \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Everything else in conceptual design hangs off those three.
+
+The difficulty is circularity. Start from the only statement you can write
+down with confidence, which is bookkeeping:
+\begin{equation}
+W_{TO} = W_{empty} + W_{fuel} + W_{payload}
+\label{eq:book}
+\end{equation}
+Payload is a requirement, so it is known. The other two are not, and worse,
+both of them \emph{depend on $W_{TO}$}:
+
+\begin{itemize}[nosep]
+  \item a heavier aircraft needs a bigger wing and a bigger engine, so it has
+        more structure, so $W_{empty}$ rises;
+  \item a heavier aircraft makes more drag at the same lift coefficient, so it
+        burns more fuel over the same mission, so $W_{fuel}$ rises.
+\end{itemize}
+
+\noindent You cannot evaluate the right-hand side of Eq.~\ref{eq:book} without
+already knowing the left-hand side. That is what makes sizing a loop rather
+than a calculation.
+
+\begin{keybox}{The one sentence to remember}
+Sizing is a fixed-point problem. Guess a takeoff weight, ask the discipline
+models what that aircraft would actually weigh, and keep going until the
+answer equals the question.
+\end{keybox}
+
+% =========================================================================
+\section{The three governing relations}
+
+The loop is built from three pieces. Each one is a separate body of theory,
+and each one is a separate object in the code.
+
+\subsection{Closure: the weight equation}
+
+Divide Eq.~\ref{eq:book} through by $W_{TO}$ and solve for the takeoff weight
+the payload requires:
+\begin{equation}
+\boxed{\;W_{TO}^{new} = \frac{W_{payload}}
+       {1 - \dfrac{W_{empty}}{W_{TO}} - \dfrac{W_{fuel}}{W_{TO}}}\;}
+\label{eq:closure}
+\end{equation}
+
+\noindent Reference: Raymer, \emph{Aircraft Design: A Conceptual Approach},
+6th ed., Eq.~3.4; Martins design metabook, Algorithm~1. In the code this is
+\texttt{SizingSteps.togw\_update}, and the denominator is returned alongside
+the answer because it carries so much information.
+
+\begin{warnbox}{Watch the denominator}
+If the empty fraction and the fuel fraction together reach 1, the denominator
+hits zero and no positive $W_{TO}$ closes the payload. The function returns
+\texttt{NaN} and the sizing loops raise
+\texttt{SizingLoopL1:closureInfeasible}. Physically this says: this aircraft,
+at this design point, is all structure and fuel and has nothing left to carry.
+\end{warnbox}
+
+\subsection{The design point: constraint analysis}
+
+Eq.~\ref{eq:closure} gives a weight, not a shape. The shape comes from the
+performance requirements. Each requirement becomes one curve in the
+thrust-to-weight against wing-loading plane. Most of them are \emph{producers}
+built on the Mattingly master equation,
+\begin{equation}
+\frac{T}{W} = \frac{A}{W/S} + B\,\frac{W}{S} + C + D,
+\qquad
+\begin{aligned}
+A &= \frac{q\,C_{D0}}{\alpha}, &
+B &= \frac{q}{\alpha}K_1\!\left(\frac{n\beta}{q}\right)^{\!2},\\
+C &= \frac{K_2\,n\,\beta}{\alpha}, &
+D &= \frac{\beta}{\alpha}\,\frac{P_s}{V},
+\end{aligned}
+\label{eq:master}
+\end{equation}
+and a few are \emph{walls}, which cap $W/S$ and say nothing about thrust.
+Landing field length is the usual wall. Reference: Mattingly,
+\emph{Aircraft Engine Design}, 2nd ed.; Raymer ch.~5.
+
+A feasible design sits above every producer and left of every wall. The
+\emph{design point} $\left((W/S)^*, (T/W)^*\right)$ is the best corner of that
+region: for a jet, the smallest engine, so the lowest $T/W$, and then the
+highest $W/S$ that still reaches it. In the code,
+\texttt{ConstraintAnalysis.optimal\_point\_continuous} finds it with
+\texttt{fmincon}, minimising $T/W$ subject to every signed residual
+$g_i = \text{required} - \text{available} \le 0$.
+
+Given the design point, a weight fixes both sizes:
+\begin{equation}
+S_{ref} = \frac{W_{TO}}{(W/S)^*}, \qquad T_{SL} = (T/W)^* \, W_{TO}.
+\label{eq:slaved}
+\end{equation}
+
+\begin{keybox}{The most useful output of constraint analysis}
+\texttt{[WS, TW, info] = con.optimal\_point\_continuous()} returns
+\texttt{info.active\_names}: the requirements whose residual is exactly zero at
+the optimum. Those are the ones holding the design where it is. Everything else
+is satisfied with margin and is not driving anything.
+
+For the Boeing 777 in this package there is exactly one:
+\emph{Climb 3 (2nd segment, FAR 25.121)}. For the F-16A at Level 2 there are
+two: \emph{Max Mach} and \emph{Landing}.
+\end{keybox}
+
+\subsection{The fuel fraction: mission analysis}
+
+The mission model walks the flight profile leg by leg, threading the weight
+through. Cruise and loiter legs use Breguet; startup, taxi, takeoff, climb,
+descent and landing use historical fractions (Roskam Part~I Table~2.1). A
+reserve markup is applied to the total. In the code,
+\texttt{[W\_fuel, breakdown] = miss.total\_fuel(W\_TO)}.
+
+Note that the mission profile lives in the \textbf{requirements} file, not in
+any discipline model. That separation matters: a \emph{spec} file says what the
+aircraft \emph{is}; a \emph{requirements} file says what it must \emph{do}.
+Sizing changes the spec until it satisfies the requirements.
+
+% =========================================================================
+\section{Algorithm form}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\DontPrintSemicolon
+\KwIn{$W_{TO}^{guess}$; tolerance $\varepsilon = 10^{-6}$; relaxation $w = 0.5$}
+\KwOut{$W_{TO}$, $S_{ref}$, $T_{SL}$}
+$\left((W/S)^*, (T/W)^*\right) \leftarrow$ \texttt{con.optimal\_point\_continuous()}
+   \tcp*{ONCE, outside the loop}
+$W \leftarrow W_{TO}^{guess}$\;
+\For{$k = 1$ \KwTo $k_{max}$}{
+  $S_{ref} \leftarrow W / (W/S)^*$ \tcp*{write into geom}
+  $T_{SL}  \leftarrow (T/W)^* \cdot W$ \tcp*{write into prop}
+  $W_{fuel} \leftarrow$ \texttt{miss.total\_fuel}$(W)$\;
+  $W_{OEW}  \leftarrow$ \texttt{wts.get\_OEW}$(W)$\;
+  $\mathrm{denom} \leftarrow 1 - W_{OEW}/W - W_{fuel}/W$\;
+  \lIf{$\mathrm{denom} \le 0$}{\textbf{error}: the closure is infeasible}
+  $W^{new} \leftarrow W_{payload} / \mathrm{denom}$ \tcp*{Raymer Eq.\ 3.4}
+  \lIf{$|W^{new} - W| / W^{new} < \varepsilon$}{$W \leftarrow W^{new}$; \textbf{converged}; \textbf{break}}
+  $W \leftarrow W + w\,(W^{new} - W)$ \tcp*{under-relax}
+}
+\caption{\texttt{SizingLoopL1} --- one state variable. [Martins slide 6]}
+\end{algorithm}
+
+\vspace{3mm}
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\DontPrintSemicolon
+\KwIn{$W_{TO}^{guess}$, $T_{SL}^{guess}$; $\varepsilon = 10^{-6}$; $w_W = w_T = 0.5$}
+\KwOut{$W_{TO}$, $T_{SL}$, $S_{ref}$, $S_{ht}$, $S_{vt}$}
+$W \leftarrow W_{TO}^{guess}$; \; $T \leftarrow T_{SL}^{guess}$\;
+\texttt{prop.T\_SL} $\leftarrow T$ \tcp*{seed BEFORE the first solve}
+$\left((W/S)^*, (T/W)^*\right) \leftarrow$ \texttt{con.optimal\_point\_continuous()}\;
+\For{$k = 1$ \KwTo $k_{max}$}{
+  $S_{ref} \leftarrow W / (W/S)^*$ \tcp*{1. wing}
+  $(S_{ht}, S_{vt}) \leftarrow$ \texttt{tail.size()} \tcp*{2. tail, before the weights}
+  \texttt{prop.T\_SL} $\leftarrow T$ \tcp*{3. thrust, before the solve}
+  $\left((W/S)^*, (T/W)^*\right) \leftarrow$ \texttt{optimal\_point\_continuous}$([\,(W/S)^*, (T/W)^*\,])$ \tcp*{4. EVERY pass}
+  $T^{new} \leftarrow (T/W)^* \cdot W$\;
+  $W_{fuel} \leftarrow$ \texttt{miss.total\_fuel}$(W)$ \quad
+  $W_{OEW} \leftarrow$ \texttt{wts.get\_OEW}$(W)$ \tcp*{5.}
+  $W^{new} \leftarrow W_{payload} / (1 - W_{OEW}/W - W_{fuel}/W)$ \tcp*{6.}
+  \lIf{$|W^{new}-W|/W^{new} < \varepsilon$ \textbf{and} $|T^{new}-T|/T^{new} < \varepsilon$}{\textbf{converged}; \textbf{break}}
+  $W \leftarrow W + w_W (W^{new} - W)$ \quad
+  $T \leftarrow T + w_T (T^{new} - T)$\;
+}
+\caption{\texttt{SizingLoopL2} --- two state variables. [Martins slide 8]}
+\end{algorithm}
+
+\begin{warnbox}{Three details in Algorithm 2 that are easy to get wrong}
+\begin{enumerate}[nosep, leftmargin=*]
+  \item \textbf{Order.} Wing, then tail, then thrust, \emph{then} the design-point
+        solve. Sizing the tail after the weights means the weights read last
+        pass's tail. Writing the thrust after the solve means the solve reads
+        last pass's drag.
+  \item \textbf{$T^{new} = (T/W)^* W$.} The new thrust demand comes from the
+        design point and the current weight, not from the relaxed state $T$.
+  \item \textbf{The convergence test is \emph{and}, not \emph{or}.} Stopping when
+        the weight settles leaves the thrust still moving.
+\end{enumerate}
+\end{warnbox}
+
+\subsection{Under-relaxation}
+
+Both loops end the pass with
+\begin{equation}
+x \leftarrow x + w\,(x^{new} - x),
+\label{eq:relax}
+\end{equation}
+which is \texttt{SizingSteps.relax(x\_old, x\_new, w)}.
+
+\begin{warnbox}{The argument order}
+$w$ weights the \textbf{new} value. $w = 1$ takes the full undamped step;
+$w = 0.5$, the default, goes halfway. Writing
+$x \leftarrow w\,x + (1-w)\,x^{new}$ is the opposite convention and is the most
+common mistake in this lab.
+\end{warnbox}
+
+% =========================================================================
+\section{Flowchart: the control flow}
+
+The algorithm as a flowchart, including the branches and the two ways each
+loop can fail. Section~\ref{sec:l1l2} explains the differences; here just note
+that Level 2 has more inside the box.
+
+\begin{figure}[p]
+\centering
+\includegraphics[height=0.87\textheight]{flow_L1.png}
+\caption{\texttt{SizingLoopL1}. One state variable. The design point is solved
+before the loop and never revisited.}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[height=0.87\textheight]{flow_L2.png}
+\caption{\texttt{SizingLoopL2}. Two state variables, a tail-sizing step, and
+the design point re-solved inside the loop. Yellow marks what Level 1 does not
+have.}
+\end{figure}
+
+\clearpage
+
+% =========================================================================
+\section{XDSM: the data flow}
+
+A flowchart shows what happens next. It does not show what data goes where, and
+in a coupled problem that is the thing you need. The XDSM does.
+
+\begin{keybox}{Reading an XDSM}
+\emph{Lambe and Martins, ``Extensions to the Design Structure Matrix\ldots'',
+Structural and Multidisciplinary Optimization 46 (2012) 273--284.}
+\begin{itemize}[nosep, leftmargin=*]
+  \item Cells on the diagonal are \textbf{components}: something that computes.
+  \item Cells off the diagonal are \textbf{data}. Row $i$, column $j$ carries
+        data produced by component $i$ and consumed by component $j$.
+  \item \textbf{Above} the diagonal is feed-forward. \textbf{Below} the diagonal
+        is feedback, drawn here in red.
+  \item The grey highway is the data path: out of a component along its row,
+        then along the consumer's column.
+  \item The number at the corner of a component is its place in the process.
+\end{itemize}
+\end{keybox}
+
+\begin{landscape}
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth, height=0.90\textheight, keepaspectratio]{xdsm_L1.png}
+\caption{XDSM of \texttt{SizingLoopL1}. One red edge: the weight closure.}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth, height=0.90\textheight, keepaspectratio]{xdsm_L2.png}
+\caption{XDSM of \texttt{SizingLoopL2}. Five red edges. Each extra one is a
+coupling Level 1 assumed away.}
+\end{figure}
+\end{landscape}
+
+% =========================================================================
+\section{Design structure matrix: where the feedback is}
+
+The XDSM carries the data labels. Strip them away and you get a plain
+$n \times n$ design structure matrix, which answers one question very fast:
+\emph{how many feedback couplings are there, and where?}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{n2_L1_L2.png}
+\caption{Design structure matrices for the two loops. Red marks below the
+diagonal are feedback. Level 1 has one; Level 2 has five.}
+\end{figure}
+
+\begin{keybox}{Why this diagram is worth drawing}
+A process with no feedback is not a loop, it is a checklist: run the components
+in order and you are done. Every mark below the diagonal is a place where a
+later component sends something back to an earlier one, which one pass cannot
+satisfy. Count the marks below the diagonal and you have counted the reasons
+the process must iterate.
+\end{keybox}
+
+\clearpage
+
+% =========================================================================
+\section{One pass, as a sequence}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{sequence_L2.png}
+\caption{One pass of \texttt{SizingLoopL2}, in the order the calls actually
+happen. Note how much of the coupling travels through shared handles rather
+than through arguments.}
+\end{figure}
+
+\begin{warnbox}{Handle semantics}
+Every discipline object is a MATLAB \texttt{handle}. The sizing loop does not
+return a new aircraft; it \textbf{writes into the objects you gave it}. Derived
+geometry properties are \texttt{Dependent} and recompute on every read, so a
+change to \texttt{geom.S\_ref} is visible to the aerodynamics model
+immediately, with no argument passing anything.
+
+The practical consequence: \textbf{build a fresh stack before every run}. A
+second run on a used stack starts from the first run's leftovers.
+\end{warnbox}
+
+% =========================================================================
+\section{The fixed point}
+
+Everything above is one equation, $W = f(W)$, where $f$ is a single closure
+pass. Plot $f$ against the 45-degree line and the whole method becomes visible.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\linewidth]{cobweb_b777.png}
+\caption{The Boeing 777 closure map. Where $f$ crosses the 45-degree line,
+input equals output and the aircraft is sized. The staircase is the iteration.
+Produced by \texttt{lecture/L04}.}
+\end{figure}
+
+The slope of $f$ at the crossing carries two separate meanings.
+
+\paragraph{It decides whether the iteration converges.} An error $e$ becomes
+$f'e$ after one plain pass. If $|f'| < 1$ the error shrinks; if $|f'| > 1$ it
+grows and plain substitution diverges. Under-relaxation changes the effective
+slope to
+\begin{equation}
+f'_{\text{eff}} = 1 + w\,(f' - 1),
+\end{equation}
+which is how a smaller $w$ rescues a steep map.
+
+\paragraph{It is the growth factor.} $f'$ is also how many pounds of takeoff
+weight one extra pound of payload buys. See Section~\ref{sec:growth}.
+
+\begin{keybox}{A worked case: the 777 diverges without relaxation}
+\texttt{lecture/L04} runs plain substitution on the Boeing 777. It does not
+converge. The first eight passes go
+\[
+700{,}000 \rightarrow 822{,}000 \rightarrow 630{,}000 \rightarrow 1{,}066{,}000
+\rightarrow 480{,}000 \rightarrow 10{,}349{,}000 \rightarrow 272{,}000
+\rightarrow \texttt{NaN}.
+\]
+The slope estimated from the first two passes is
+$(629{,}500 - 822{,}400)/(822{,}400 - 700{,}000) \approx -1.58$: steeper than
+1 in magnitude, and negative, so the error grows and flips sign every pass. By
+pass 7 the denominator has gone negative and there is no such aircraft.
+
+At $w = 0.5$ the effective slope becomes $1 + 0.5(-1.58 - 1) = -0.29$, and the
+same problem converges in 14 passes.
+\end{keybox}
+
+\clearpage
+
+% =========================================================================
+\section{Level 1 against Level 2}
+\label{sec:l1l2}
+
+\subsection{Two different things are called ``Level 2''}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{fidelity_ladder.png}
+\caption{The two axes. Nothing forces them to agree.}
+\end{figure}
+
+\textbf{Loop fidelity} is how many unknowns the sizing loop solves for and what
+it re-solves on every pass: \texttt{SizingLoopL1} against
+\texttt{SizingLoopL2}. \textbf{Discipline fidelity} is how one model computes
+its own answer: a statistical regression, a component build-up, or a detailed
+physical geometry.
+
+The Boeing 777 example in this package runs a \emph{Level-2 loop} over
+\emph{Level-2 geometry and weights} but \emph{Level-1 aerodynamics and
+propulsion}. That mix is deliberate, because for a transport it is the empty
+weight that drives the answer.
+
+There is no \texttt{SizingLoopL3}. Sizing has no equations of its own that
+change with fidelity, only a count of unknowns, so the same
+\texttt{SizingLoopL2} class drives the Level-3 F-16 rung as well.
+
+\subsection{What changes in the loop}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}p{42mm}p{48mm}p{62mm}@{}}
+\toprule
+& \textbf{\texttt{SizingLoopL1}} & \textbf{\texttt{SizingLoopL2}} \\
+\midrule
+Injected objects & 6 & \textbf{7} --- adds \texttt{tail} \\
+State variables & $W_{TO}$ & \textbf{$W_{TO}$ and $T_{SL}$} \\
+Design point $\left((W/S)^*,(T/W)^*\right)$
+  & \textbf{frozen}: solved once, before the loop, and not even re-solved after it
+  & \textbf{freed}: re-solved every pass, warm-started from the last one, plus once more at the end \\
+$T_{SL}$ inside the loop
+  & slaved, $(T/W)^* W$, write-only, nothing reads it back
+  & an independent under-relaxed state; read by geometry (nacelle $\rightarrow$ $C_{D0}$), by weights (engine weight), and by the mission \\
+Tail & never sized & \texttt{tail.size()} every pass $\rightarrow$ \texttt{geom.S\_ht}, \texttt{geom.S\_vt} \\
+Mission breakdown & discarded & consumed $\rightarrow$ \texttt{wts.W\_landing} (Level 3 only) \\
+Convergence test & $|\Delta W|/W^{new} < \varepsilon$ & the same \textbf{and} the same test on $T_{SL}$ \\
+\texttt{history} fields & 6 & 13 \\
+Feedback couplings & 1 & 5 \\
+Citation & Martins slide 6 & Martins slide 8 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Why Level 1 is allowed to freeze the design point}
+
+Because at Level 1 the aerodynamics object takes \textbf{no geometry}. It reads
+aspect ratio and sweep as plain numbers from the spec file. Nothing the loop
+changes can move a drag polar, so nothing can move a constraint curve, so the
+design point genuinely cannot change.
+
+At Level 2 the aerodynamics object \emph{holds} the geometry object, and
+$C_{D0} = C_{fe} S_{wet} / S_{ref}$. Both of the things the loop writes ---
+the wing area and the thrust, through the nacelle --- move the wetted area.
+Measured on the 777 in \texttt{lecture/L06}: shrink the wing by a quarter and
+$C_{D0}$ goes from $0.01597$ to $0.01956$, moving the design point from
+$(161\ \mathrm{psf},\ 0.2657)$ to $(165\ \mathrm{psf},\ 0.2722)$.
+
+\subsection{What it actually buys, measured}
+
+Same aircraft, same discipline models, same starting guess. From
+\texttt{lecture/L06}:
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Boeing 777-200LR & \textbf{Level-1 loop} & \textbf{Level-2 loop} & Real aircraft \\
+\midrule
+$W_{TO}$ [lbf]     & 740{,}125 & 740{,}060 & 766{,}800 \\
+$T_{SL}$ [lbf]     & 196{,}671 & 196{,}674 & 220{,}000 \\
+$S_{ref}$ [ft$^2$] & 4{,}597   & 4{,}598.5 & 4{,}605 \\
+$(W/S)^*$ [psf]    & 161.00    & 160.93    & 142.45 \\
+$(T/W)^*$          & 0.26573   & 0.26575   & 0.28691 \\
+$S_{ht}$ [ft$^2$]  & \emph{never sized} & 907.8 & --- \\
+$S_{vt}$ [ft$^2$]  & \emph{never sized} & 800.7 & --- \\
+passes             & 14        & 52        & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three things to take from that table.
+
+\paragraph{1. The answer barely moved.} Less than a hundredth of a percent on
+takeoff weight. Say this out loud in class: extra fidelity did \emph{not} change
+the answer here. The reason is visible in the spec file --- the wing area
+already in it was 4{,}605 ft$^2$ and the loop converged to 4{,}598 ft$^2$. The
+starting aircraft was already the finished aircraft, so Level 1 froze its design
+point in the right place and got away with it.
+
+\begin{warnbox}{Sized is not the same as consumed}
+It is tempting to go on and say \emph{and the empty weight sees the new tail}.
+On this aircraft that is \textbf{false}. \texttt{B777GeomL2} derives its exposed
+tail areas from the fixed Chapter-7 trapezoids, not from the loop-written
+reference areas, so on the 777 the tail resize is \textbf{write-only}. Double
+\texttt{geom.S\_ht} and \texttt{S\_exposed\_ht}, \texttt{S\_wet},
+\texttt{W\_tail} and \texttt{get\_OEW} all move by exactly zero.
+
+On the \textbf{F-16A} the same test moves every one of them, because
+\texttt{F16GeomL2} builds its tail chords and span from \texttt{S\_ht}. Same
+loop, same step, different coupling, because the two geometry models were
+built to different plans. Section~\ref{sec:trace} shows both.
+\end{warnbox}
+
+\paragraph{2. Level 2 sized the tail; Level 1 could not.} There is no tail
+object in \texttt{SizingLoopL1}, and the 777 geometry file does not carry tail
+areas, so after a Level-1 run they are still undefined.
+
+\paragraph{3. Now start from the wrong aircraft.} Put 2{,}600 ft$^2$ in the
+spec instead of 4{,}605 and change nothing else:
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& L1, good start & L1, \textbf{bad start} & L2, good start & L2, \textbf{bad start} \\
+\midrule
+$W_{TO}$ [lbf]  & 740{,}125 & \textbf{761{,}614} & 740{,}060 & 739{,}821 \\
+$(W/S)^*$ [psf] & 161.00    & \textbf{170.00}    & 160.93    & 160.75 \\
+$(T/W)^*$       & 0.26573   & \textbf{0.28068}   & 0.26575   & 0.26574 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keybox}{What Level 2 is really for}
+Level 1 moved by 2.9\% and reported a design point that is plainly wrong: 170
+psf and 0.281 against a true optimum near 161 psf and 0.266. Level 2 landed
+within a few hundred pounds of where it was before.
+
+So the value of the Level-2 loop is not a better number on a good day. It is
+\textbf{not depending on the guess you started from}. In real design work you
+do not know the answer in advance, which is exactly the situation the bad-start
+column reproduces.
+
+The cost is real: 52 passes against 14, each one running \texttt{fmincon}
+instead of reusing a frozen answer.
+\end{keybox}
+
+\clearpage
+
+% =========================================================================
+\section{What actually moves, pass by pass}
+\label{sec:trace}
+
+\subsection{Two unknowns, three outputs}
+
+Sizing produces three numbers, so it is natural to assume the loop iterates on
+three unknowns. It does not.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Quantity & Kind & How it is produced \\
+\midrule
+$W_{TO}$  & \textbf{STATE}  & under-relaxed each pass from the weight closure \\
+$T_{SL}$  & \textbf{STATE}  & under-relaxed each pass from $(T/W)^*\,W_{TO}$ \\
+$S_{ref}$ & \textbf{SLAVED} & recomputed, never iterated: $S_{ref} = W_{TO}/(W/S)^*$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All three \emph{change} on every pass, but only two are unknowns.
+\texttt{SizingLoopL2} under-relaxes exactly two quantities and tests exactly two
+residuals. The wing area moves for two reasons at once: the weight it carries
+changes, \emph{and} the design point it is sized against changes. The second
+reason is the one Level 1 does not have.
+
+\subsection{Tracing the loop}
+
+\texttt{SizingLoopL2} logs 13 quantities per pass, which is enough to know
+whether it converged and not enough to know why. The package ships
+\texttt{helpers/trace\_sizing\_L2.m}, a replica of the loop body that records
+about thirty. It checks itself against the class at the end of every call and
+errors if the two have drifted, so the trace is the real loop.
+
+\begin{lstlisting}
+T = trace_sizing_L2(@build_f16_stack_L2, 30000, 20000);
+plot_sizing_history(T);      % twelve panels
+plot_weight_history(T);      % the component build-up, pass by pass
+plot_what_changed(T);        % one bar chart: what moved, what did not
+\end{lstlisting}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{history_f16.png}
+\caption{F-16A, Level-2 loop, 14 passes. Panel 4 is the one to look at: if the
+design point were flat there, a Level-1 loop would have been good enough. Here
+$(T/W)^*$ moves 24\%.}
+\end{figure}
+
+\subsection{Smaller is draggier}
+
+Follow the chain in panels 7 to 10. The wing shrinks, so the exposed and wetted
+areas shrink --- but $S_{ref}$ shrinks \emph{faster} than $S_{wet}$ does,
+because the fuselage and the inlet duct do not shrink at all. The ratio
+$S_{wet}/S_{ref}$ therefore \textbf{rises}, 5.09 to 6.18. Since
+$C_{D0} = C_{fe} S_{wet}/S_{ref}$, parasite drag rises 21\%, $L/D_{max}$ falls
+from 11.0 to 9.9, every constraint curve lifts, and the design point demands
+more thrust.
+
+That is a real conceptual-design effect and it is worth a minute of class time:
+\textbf{a smaller aeroplane is a draggier aeroplane, per unit of wing.} It is
+one reason fighters do not shrink indefinitely.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{weights_f16.png}
+\caption{The empty-weight build-up. Wing and tail track the areas the loop is
+changing; gear and \emph{all else} track gross weight; the fuselage does not
+move at all, because it is a fixed input at this fidelity.}
+\end{figure}
+
+\begin{keybox}{A flat band is information}
+A component that does not move is one the loop has no lever on. Any error in it
+passes straight through to $W_{OEW}$ without being traded against anything
+else. Knowing which components are inert is as useful as knowing which are
+active.
+\end{keybox}
+
+\clearpage
+
+\subsection{One chart per aircraft}
+
+Every traced quantity, as a percentage change from the first pass to the last,
+coloured by what kind of thing it is.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\linewidth]{changed_f16.png}
+\caption{F-16A. Everything is coupled: the tail areas move, and so do the
+exposed tail area and the tail weight.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\linewidth]{changed_b777.png}
+\caption{B777-200LR. \texttt{S\_ht} and \texttt{S\_vt} move $+8.8\%$, but
+\texttt{S\_exp\_ht}, \texttt{S\_exp\_vt} and \texttt{W\_tail} all read
+\emph{did not move}. On this aircraft the tail resize is write-only.}
+\end{figure}
+
+\begin{warnbox}{Trace before you trust}
+Both aircraft converge. Both look healthy. Only one of them has the tail
+coupling you would have assumed from reading the loop. The converged answer
+cannot tell you this; the trace can.
+\end{warnbox}
+
+\clearpage
+
+% =========================================================================
+\section{Growth factor}
+\label{sec:growth}
+
+Add one pound of payload to a sized aircraft and the takeoff weight goes up by
+more than one pound, because the loop settles at a new and heavier fixed point.
+The amplification is the \textbf{growth factor}, and it is the most useful
+single number conceptual design produces.
+
+If the empty and fuel fractions held still, the growth factor would be exactly
+$1/\mathrm{denom}$. They do not hold still. For the 777, $1/\mathrm{denom} =
+9.4$, but re-sizing with 5{,}000 lbf more payload gives a measured growth
+factor of \textbf{3.3}. The gap is real physics, not a mistake: follow the
+\texttt{denom} column in the \texttt{lecture/L04} table and it \emph{rises} with
+aircraft size (0.074 at 630{,}000 lbf, 0.107 at 740{,}000, 0.164 at
+1{,}070{,}000). Each pound of growth buys a little less growth than the pound
+before it, so the runaway damps itself.
+
+Keep $1/\mathrm{denom}$ anyway, as a warning light. A small denominator means
+structure and fuel have eaten nearly the whole aircraft, and such a design is
+violently sensitive to everything.
+
+\subsection{Which requirements are expensive}
+
+\texttt{lecture/L07} nudges four inputs by $\pm 10\%$ and re-sizes each time.
+Dividing by the input change gives an \emph{elasticity}: percent change in
+$W_{TO}$ per percent change in the input.
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Input (Boeing 777) & $W_{TO}$ at $-10\%$ & $W_{TO}$ at $+10\%$ & elasticity (up) \\
+\midrule
+cruise TSFC            & $-9.66\%$ & $+10.38\%$ & \textbf{1.04} \\
+cruise range           & $-9.42\%$ & $+10.09\%$ & \textbf{1.01} \\
+skin friction $C_{fe}$ & $-4.79\%$ & $+4.67\%$  & 0.47 \\
+payload                & $-3.57\%$ & $+3.47\%$  & 0.35 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keybox}{Reading the table}
+Cruise range and cruise TSFC both come out near 1.0. A one percent longer
+mission, or a one percent thirstier engine, buys a one percent heavier
+aeroplane. Those are the expensive knobs, and they are the ones worth an
+argument with the customer or with the engine supplier.
+
+Payload comes out near 0.35, which does \emph{not} contradict the growth factor
+of 3.3. Each \emph{pound} of payload still costs 3.3 lbf of aircraft, but
+payload is only about 11\% of the takeoff weight, so ten percent of it is not
+many pounds. Growth factor and elasticity answer different questions --- one per
+pound, one per percent --- and design work needs both.
+
+Note also that technology knobs (TSFC, $C_{fe}$) and requirement knobs (payload,
+range) land on the same axis in the same units. That is how conceptual design
+decides whether to buy a better engine or to renegotiate the mission.
+\end{keybox}
+
+% =========================================================================
+\section{Where each equation lives in the code}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}p{42mm}p{54mm}p{50mm}@{}}
+\toprule
+\textbf{What} & \textbf{File} & \textbf{Reference} \\
+\midrule
+Weight closure, under-relaxation
+  & \texttt{src/sizing/SizingSteps.m}
+  & Raymer 6th ed.\ Eq.~3.4; metabook Algorithm~1 \\
+One-state loop
+  & \texttt{src/sizing/SizingLoopL1.m}
+  & Martins slide 6 \\
+Two-state loop
+  & \texttt{src/sizing/SizingLoopL2.m}
+  & Martins slide 8 \\
+Design point, \texttt{fmincon}
+  & \texttt{src/constraints/ConstraintAnalysis.m}
+  & Raymer ch.~5 \\
+Master equation curves
+  & \texttt{src/constraints/MasterEquationConstraint.m}
+  & Mattingly 2nd ed. \\
+Mission fuel
+  & \texttt{src/core/mission/}
+  & Roskam Part~I Eqs.~2.10--2.15 \\
+Tail volume coefficients
+  & \texttt{src/disciplines/tail\_sizing/TailL1.m}
+  & Raymer 7th ed.\ Table~6.4 \\
+Standard atmosphere
+  & \texttt{src/core/AircraftState.m}
+  & ICAO 1993, via \texttt{atmosisa} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keybox}{Toolboxes}
+The sizing path needs two: \textbf{Aerospace Toolbox} for \texttt{atmosisa},
+which builds every flight condition, and \textbf{Optimization Toolbox} for
+\texttt{fmincon}, which both loops use to find the design point.
+\texttt{START\_HERE.mlx} checks for both.
+\end{keybox}
+
+% =========================================================================
+\section{Running the material}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}p{52mm}p{100mm}@{}}
+\toprule
+\texttt{START\_HERE.mlx} & path setup, toolbox check, and a smoke solve \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{\texttt{lecture/} --- Boeing 777-200LR, instructor walkthrough}} \\
+\texttt{L01\_build\_the\_stack}      & the six objects, and why the construction order is forced \\
+\texttt{L02\_constraint\_design\_point} & ten requirements $\rightarrow$ one design point \\
+\texttt{L03\_fuel\_and\_empty\_weight}  & the two questions the closure asks \\
+\texttt{L04\_one\_closure\_step\_by\_hand} & one pass, every number on screen; divergence; under-relaxation \\
+\texttt{L05\_run\_the\_L1\_loop}     & the Level-1 loop to convergence \\
+\texttt{L06\_run\_the\_L2\_loop}     & the Level-2 loop, and the bad-start test \\
+\texttt{L07\_sensitivity\_growth\_factor} & growth factor and elasticities \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{\texttt{lab/} --- F-16A, your turn}} \\
+\texttt{LAB00\_warmup\_L1\_loop}     & complete and runnable; read every line \\
+\texttt{LAB01\_write\_the\_L2\_loop} & six \texttt{TODO}s; a checker grades your loop against \texttt{SizingLoopL2} \\
+\texttt{LAB\_worksheet.pdf}          & experiments to run on the loop you wrote \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{warnbox}{On the F-16A numbers}
+The lab converges to roughly 23{,}300 lbf against a Brandt F-16A reference of
+31{,}377 lbf. That gap is a statement about the textbook discipline models and
+the requirement set, \textbf{not} about your loop. The lab grades one thing:
+does your loop reproduce \texttt{SizingLoopL2} to within a pound? Agreement with
+a real aircraft is a separate question and the framework keeps the two
+deliberately apart.
+\end{warnbox}
+
+\vfill
+\begin{center}
+\footnotesize\itshape
+Every number in this guide is reproduced by the Live Scripts in this package.
+\end{center}
+
+\end{document}

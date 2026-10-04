@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AOE 4065 - Sizing diagrams</title>
+<style>
+  :root { --bg:#f7f7f8; --panel:#fff; --line:#d9dce1; --txt:#1c1f23; --dim:#6b7280; --acc:#2b6cb0; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt);
+               font:14px/1.55 "Segoe UI", system-ui, sans-serif; }
+  body { display:flex; flex-direction:column; }
+  header { flex:0 0 auto; padding:10px 14px; background:var(--panel);
+           border-bottom:1px solid var(--line); display:flex; gap:8px;
+           align-items:center; flex-wrap:wrap; }
+  header b { color:var(--acc); font-size:15px; margin-right:6px; }
+  button { background:#eef1f5; color:var(--txt); border:1px solid var(--line);
+           border-radius:6px; padding:5px 11px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--acc); color:var(--acc); }
+  button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .sep { flex:1 1 auto; }
+  #cap { color:var(--dim); font-size:12.5px; }
+  #stage { flex:1 1 auto; position:relative; overflow:hidden; background:#fff;
+           border-top:1px solid var(--line); cursor:grab; }
+  #stage.drag { cursor:grabbing; }
+  #wrap { position:absolute; left:0; top:0; transform-origin:0 0; }
+  #wrap img { display:block; max-width:none; }
+  footer { flex:0 0 auto; padding:7px 14px; background:var(--panel);
+           border-top:1px solid var(--line); color:var(--dim); font-size:12.5px; }
+  kbd { background:#eef1f5; border:1px solid var(--line); border-radius:3px;
+        padding:0 5px; font-family:Consolas, monospace; font-size:11.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <b>AOE 4065 &mdash; Sizing diagrams</b>
+  <button data-src="xdsm_L1.png"       data-cap="XDSM of SizingLoopL1. One feedback edge: the weight closure.">XDSM L1</button>
+  <button data-src="xdsm_L2.png"       data-cap="XDSM of SizingLoopL2. Five feedback edges.">XDSM L2</button>
+  <button data-src="n2_L1_L2.png"      data-cap="Design structure matrices. Red marks below the diagonal are feedback.">N2 / DSM</button>
+  <button data-src="flow_L1.svg"       data-cap="SizingLoopL1 control flow.">Flow L1</button>
+  <button data-src="flow_L2.svg"       data-cap="SizingLoopL2 control flow. Yellow marks what Level 1 does not have.">Flow L2</button>
+  <button data-src="sequence_L2.svg"   data-cap="One pass of SizingLoopL2, in call order.">Sequence</button>
+  <button data-src="fidelity_ladder.svg" data-cap="Loop fidelity and discipline fidelity are two different axes.">Fidelity</button>
+  <button data-src="cobweb_b777.png"   data-cap="The Boeing 777 closure map against the 45-degree line.">Fixed point</button>
+  <span class="sep"></span>
+  <button id="fit">Fit</button>
+  <button id="one">100%</button>
+</header>
+
+<div id="stage"><div id="wrap"><img id="img" alt="diagram"></div></div>
+
+<footer>
+  <span id="cap">Pick a diagram above.</span>
+  &nbsp;&middot;&nbsp; wheel to zoom, drag to pan
+  &nbsp;&middot;&nbsp; <kbd>f</kbd> fit &nbsp;<kbd>0</kbd> 100% &nbsp;<kbd>+</kbd> <kbd>-</kbd> zoom
+  &nbsp;&middot;&nbsp; everything is local; no internet needed
+</footer>
+
+<script>
+// Deliberately dependency-free: the students get this in a zip and it has to
+// work with no network and nothing installed.
+(function () {
+  const stage = document.getElementById('stage');
+  const wrap  = document.getElementById('wrap');
+  const img   = document.getElementById('img');
+  const cap   = document.getElementById('cap');
+  const btns  = [...document.querySelectorAll('header button[data-src]')];
+
+  let scale = 1, tx = 0, ty = 0;
+
+  function apply() {
+    wrap.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+  // An SVG with width="100%" and no height reports naturalWidth/Height as 0.
+  // Fall back to a sane box rather than scaling by infinity and vanishing.
+  function dims() {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (w > 0 && h > 0) return [w, h];
+    return [1200, 900];
+  }
+  function fit() {
+    const sw = stage.clientWidth, sh = stage.clientHeight;
+    const [iw, ih] = dims();
+    scale = Math.min(sw / iw, sh / ih) * 0.96;
+    tx = (sw - iw * scale) / 2;
+    ty = (sh - ih * scale) / 2;
+    wrap.style.width  = iw + 'px';
+    wrap.style.height = ih + 'px';
+    img.style.width   = iw + 'px';
+    img.style.height  = ih + 'px';
+    apply();
+  }
+  function actual() {
+    const [iw, ih] = dims();
+    scale = 1;
+    tx = (stage.clientWidth  - iw) / 2;
+    ty = (stage.clientHeight - ih) / 2;
+    apply();
+  }
+  function show(btn) {
+    btns.forEach(b => b.classList.toggle('on', b === btn));
+    cap.textContent = btn.dataset.cap;
+    img.onload  = fit;
+    img.onerror = () => { cap.textContent = 'Could not load figures/' + btn.dataset.src; };
+    img.removeAttribute('style');
+    img.src = 'figures/' + btn.dataset.src;
+    if (img.complete) fit();          // cached images fire no load event
+  }
+
+  btns.forEach(b => b.addEventListener('click', () => show(b)));
+  document.getElementById('fit').addEventListener('click', fit);
+  document.getElementById('one').addEventListener('click', actual);
+
+  stage.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const k  = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const ns = Math.max(0.03, Math.min(12, scale * k));
+    tx = mx - (mx - tx) * (ns / scale);
+    ty = my - (my - ty) * (ns / scale);
+    scale = ns;
+    apply();
+  }, { passive: false });
+
+  let down = false, px = 0, py = 0;
+  stage.addEventListener('pointerdown', e => {
+    down = true; px = e.clientX; py = e.clientY;
+    stage.classList.add('drag'); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!down) return;
+    tx += e.clientX - px; ty += e.clientY - py;
+    px = e.clientX; py = e.clientY;
+    apply();
+  });
+  stage.addEventListener('pointerup', e => {
+    down = false; stage.classList.remove('drag'); stage.releasePointerCapture(e.pointerId);
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'f') fit();
+    else if (e.key === '0') actual();
+    else if (e.key === '+' || e.key === '=') { scale *= 1.2; apply(); }
+    else if (e.key === '-') { scale /= 1.2; apply(); }
+  });
+  window.addEventListener('resize', fit);
+
+  show(btns[0]);
+})();
+</script>
+</body>
+</html>

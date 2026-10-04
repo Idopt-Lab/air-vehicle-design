@@ -1,0 +1,34 @@
+---
+title: SizingLoopL2 - control flow (src/sizing/SizingLoopL2.m)
+---
+flowchart TD
+    START(["run(W_TO_guess, T_SL_guess)"]) --> INIT["W0 = W_TO_guess<br/>T_SL = T_SL_guess"]
+    INIT --> SEED["prop.T_SL = T_SL<br/>THEN con.optimal_point_continuous()<br/>seed order matters: the solve must see this thrust"]
+    SEED --> ITER{{"for iter = 1 : max_iter"}}
+
+    ITER --> A1["1. geom.S_ref = W0 / WS"]
+    A1 --> A2["2. tail_result = tail.size()<br/>NO arguments; it reads geom live<br/>geom.S_ht, geom.S_vt = tail_result"]
+    A2 --> A3["3. prop.T_SL = T_SL<br/>BEFORE the constraint solve"]
+    A3 --> A4["4. con.optimal_point_continuous([WS, TW])<br/>EVERY pass, warm-started<br/>T_SL_new = TW * W0"]
+    A4 --> A4b{"is T_SL_new finite and positive?"}
+    A4b -- no --> ERRT(["error<br/>SizingLoopL2:badThrust"])
+    A4b -- yes --> A5["5. [W_fuel, breakdown] = miss.total_fuel(W0)<br/>wts.W_landing = breakdown.W_landing (L3 only)<br/>W_OEW = wts.get_OEW(W0)"]
+    A5 --> A5b["wts.W_TO = W0<br/>wts.W_energy = W_fuel"]
+    A5b --> A6["6. SizingSteps.togw_update<br/>W0_new = W_payload / denom"]
+    A6 --> NANQ{"is W0_new NaN?"}
+    NANQ -- yes --> ERRC(["error<br/>SizingLoopL2:closureInfeasible"])
+    NANQ -- no --> HIST["history(iter) = row<br/>13 fields"]
+    HIST --> CONV{"BOTH states settled?<br/>W test AND T test"}
+    CONV -- no --> RELAX["W0   = relax(W0,   W0_new,   relax_W)<br/>T_SL = relax(T_SL, T_SL_new, relax_T)"]
+    RELAX -.->|"next pass"| ITER
+    CONV -- yes --> DONE["W0 = W0_new<br/>T_SL = T_SL_new<br/>converged = true"]
+
+    DONE --> POST["final write-through:<br/>S_ref, tail.size(), prop.T_SL,<br/>AND one more design-point solve<br/>(Level 1 does not do this one)"]
+    POST --> RESULT(["result: W_TO, T_SL, S_ref, WS, TW,<br/>S_ht, S_vt, W_fuel, W_OEW,<br/>n_iter, converged, history"])
+
+    classDef orch fill:#cfe4ff,stroke:#2b6cb0,color:#000
+    classDef new  fill:#fff2cc,stroke:#b7791f,color:#000
+    classDef bad  fill:#ffd9d0,stroke:#c0482a,color:#000
+    class A5,A6 orch
+    class A2,A3,A4,CONV,SEED new
+    class ERRT,ERRC bad
