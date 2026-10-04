@@ -1,10 +1,9 @@
 # F16SandCL2
 
 F-16A Block 10/15 Level-2 stability & control student class
-(`classdef F16SandCL2 < SandCModelL2`). The abstract `x_cg` member is satisfied by a single
-delegation into the `SandCL2` static toolbox — no equations are duplicated here. See
-`src/disciplines/stability_control/SandCL2.md` for the full equation/citation detail; this file
-covers the F-16-specific wiring.
+(`classdef F16SandCL2 < SandCModelL2`). `get.x_cg` calls `get_x_cg`, which calls
+`StabControlBase.compute_weighted_cg`. No equation is duplicated here. See
+`src/base/StabControlBase.md` for the equation and citation. This file covers the F-16 wiring.
 
 ---
 
@@ -57,7 +56,7 @@ launch instruction's own "Inject F16WeightsL2" wording.
 ## 5. NaN handling: why `fuel` is graceful and `landing_gear`/`subsystems_lump` are not
 
 `W_energy` is a **plain** property (never a computed/guarded getter) — reading it before mission
-analysis sets it simply returns `NaN`, and `SandCL2.weighted_cg`'s ordinary IEEE arithmetic
+analysis sets it simply returns `NaN`, and `StabControlBase.compute_weighted_cg`'s ordinary IEEE arithmetic
 propagates that `NaN` straight into `x_cg`, with no error. This is the ONE graceful-NaN case the
 original stability-and-control design asks for.
 

@@ -14,7 +14,7 @@ object. A toolbox has no constructor, no inputs and no derived properties.
 
 ## 1. Methods
 
-| Static | Signature | Returns | Source |
+| Method | Arguments | Outputs | Citation |
 |---|---|---|---|
 | `compute_Re` | `(state, l_ref)` | Reynolds number | forwards to `AeroL2.compute_Re`, Raymer Eq. 12.25 |
 | `Re_cutoff_sub` | `(l, k)` | roughness-limited Re, subsonic | Raymer 6th ed. Eq. 12.28 |
@@ -24,11 +24,16 @@ object. A toolbox has no constructor, no inputs and no derived properties.
 | `FF_body` | `(L_body, D_body)` | body form factor | Raymer 6th ed. Eq. 12.31 |
 | `compute_CD0_misc_CD_pi` | `(CD_pi, frontal_area, S_ref)` | misc-item CD0 contribution | Raymer 6th ed. Table 12.6 |
 | `compute_CD0_misc_DQ` | `(D_q, S_ref)` | misc-item CD0 contribution | Raymer 6th ed. Table 12.7 |
+| `lookup_LandP_frac` | `(LandP_rowname)` | L&P fraction of total parasite drag, `[low, high]` | Raymer 6th ed. Table 12.8 |
 
 `compute_Re` is a one-line forward to the identical L2 equation, so the primitive has one home.
 
 Table 12.6 tabulates a dimensionless `CD_pi` = (D/q)/frontal area, so it needs the item's own
 frontal area; Table 12.7 gives D/q [ft²] directly.
+
+`lookup_LandP_frac` rows: `"propeller aircraft"` [0.05, 0.10], `"jet transport"` [0.02, 0.05],
+`"bomber"` [0.02, 0.05], `"non-stealth fighter"` [0.10, 0.15], `"stealth fighter"` [0.03, 0.05]. Raymer prints jet transports and bombers
+as one row; the split is for input only.
 
 **The component summation is not here.** `F16AeroL3.CD0_buildup` assembles it, together with the
 turbulent `Cf` from `AeroL2` and the aircraft-specific wave-drag term.
@@ -37,8 +42,10 @@ turbulent `Cf` from `AeroL2` and the aircraft-specific wave-drag term.
 
 **Component buildup** [Raymer 6th ed. Eq. 12.24], assembled by the concrete class:
 
-$$C_{D_0} = \frac{\sum_c C_{f,c}\,FF_c\,Q_c\,S_{wet,c}}{S_{ref}}
-  + C_{D_0,misc} + C_{D_0,L\&P}$$
+$$C_{D_0} = \left(\frac{\sum_c C_{f,c}\,FF_c\,Q_c\,S_{wet,c}}{S_{ref}}
+  + C_{D_0,misc} + C_{D_0,wave}\right)\left(1 + f_{L\&P}\right)$$
+
+$f_{L\&P}$ is a fraction of the finished total [Table 12.8], so it goes last.
 
 **Skin friction**, laminar here [Eq. 12.26] and turbulent from `AeroL2` [Eq. 12.27]. The effective
 $C_f$ blends the two by the per-component laminar fraction:
@@ -65,7 +72,13 @@ $$FF = 1 + \frac{5}{f^{1.5}} + \frac{f}{400} \quad (f \le 6)
 Supersonic wave drag [Eq. 12.41, $M \ge 1.2$] is aircraft-specific and lives on the concrete class.
 The transonic band is not modelled; see `AeroL2.md`.
 
-## 3. Guards
+## 3. Enforcer
+
+`AeroModelL3` declares `LandP_rowname` (Constant, Abstract) and the abstract methods
+`get_CD0_component_buildup(obj, state)`, `get_CD0_LandP(obj)` and `get_CD0_misc(obj)`. Its concrete
+`get_CD0(obj, state)` forwards to `get_CD0_component_buildup`.
+
+## 4. Guards
 
 - `Cf_laminar` requires a positive Reynolds number.
 - `FF_surface` guards `x_c_max` positive: it is the `0.6/x_c_max` denominator.
@@ -74,7 +87,7 @@ The transonic band is not modelled; see `AeroL2.md`.
   `NaN` `CD0` makes every constraint comparison false, so the point would report satisfied rather
   than unevaluable.
 
-## 4. Per-component constants
+## 5. Per-component constants
 
 The concrete class supplies these from its `.aerodynamics` JSON block:
 
@@ -86,7 +99,7 @@ The concrete class supplies these from its `.aerodynamics` JSON block:
 | surface roughness $k$ | Raymer 6th ed. Table 12.5 |
 | body-or-surface flag | selects Eq. 12.31 over Eq. 12.30 |
 
-## 5. To-dos
+## 6. To-dos
 
 | Item | Guard |
 |---|---|

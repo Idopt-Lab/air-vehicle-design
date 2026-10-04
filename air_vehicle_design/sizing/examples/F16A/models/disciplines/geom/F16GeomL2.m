@@ -71,6 +71,7 @@ classdef F16GeomL2 < GeometryModelL2
 
         % ── Body strake / LERX ───────────────────────────────────────────── %
         S_strake       = 20.0      % ft^2  reference planform area [Brandt Main!D18]
+        cbar_strake    = 4.8667
 
         % ── Fuselage (equivalent cylindrical midsection) ─────────────────── %
         L_fus          = 46.5      % ft    [Brandt Main!B32]

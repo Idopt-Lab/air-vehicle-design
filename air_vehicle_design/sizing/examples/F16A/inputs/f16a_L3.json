@@ -202,7 +202,7 @@
     "_total_control_surface_area_ft2_src": "S_cs, ft2 = flaperon + HT + rudder + LEF [estimate, unpinned]; feeds Raymer Eq. 15.17. todo 2026-07-24 GeomL3 \u00a76 / 2026-07-25 \u00a712."
   },
   "aerodynamics": {
-    "_src": "per-component x_c_max, Q, f_lam, is_body [Raymer Tbl 12.6]; surface_roughness_k_ft [Raymer Tbl 12.4/12.5 'smooth paint']; wave_drag_factor_E_WD [Raymer Eq. 12.41, tuned to Brandt aero.Ewd]; CD0_LandP [Raymer Sec. 12.5]; misc_drag_areas [Raymer Tbl 12.7]",
+    "_src": "per-component x_c_max, Q, f_lam, is_body [Raymer Tbl 12.6]; surface_roughness_k_ft [Raymer Tbl 12.4/12.5 'smooth paint']; wave_drag_factor_E_WD [Raymer Eq. 12.41, tuned to Brandt aero.Ewd]; misc_drag_areas [Raymer Tbl 12.7]",
     "airfoil": {
       "_src": "NACA 64A204 section data [TO Fig. 1-2 for the designation]; same values as f16a_L2.json .aerodynamics.airfoil; alpha_L0_deg see f16a_L2.json's _cite_alpha_L0_deg (updated 2026-07-30, -1.01 -> -1.33)",
       "name": "NACA 64A204",
@@ -258,7 +258,6 @@
     "wave_drag_factor_E_WD": 2.2,
     "_TODO_wave_drag_factor_E_WD": "E_WD = 2.2 is a tuned wave-drag multiplier back-checked to Brandt/Casey, not a measured F-16 datum; remove this key when sourced or accepted as a calibration knob. Guard: TestAeroL3.testTODO_EWDCalibrationInput.",
     "_amax_via_DI": "Amax and L_aircraft are NOT aero inputs: both arrive by DI from the geometry object (Amax a Dependent, area-ruled at L3; L_aircraft = .geometry.overall_length_ft). F16GeomL3.md \u00a74.",
-    "CD0_LandP": 0.001,
     "misc_drag_areas": {
       "Dq_gun_port_ft2": 0.2,
       "Dq_hook_USAF_ft2": 0.1

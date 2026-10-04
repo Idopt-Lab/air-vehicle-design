@@ -93,6 +93,46 @@ classdef F16LandingGearL2 < handle
             obj.nose_tire_fraction_of_main  = LG.nose_tire_fraction_of_main;
         end
 
+        function tipback_angle = get_tipback_angle(obj)
+            x_le_mac_wing = 23.3;   % ft
+            x_le_mac_ht   = 39.8;   % ft
+            x_le_mac_vt   = 38.8; % ft
+            x_le_mac_strake = 12; % ft
+            L_eng = PropL2.engine_length_AB(obj.weights.prop.T_SL, obj.weights.design_mach);
+
+            x_cg_wing = WeightsL2.compute_cg_x_loc_wing(x_le_mac_wing, obj.weights.geom.cbar_wing);
+            x_cg_HT   = WeightsL2.compute_cg_x_loc_wing(x_le_mac_ht, GeometryBase.compute_mac(obj.weights.geom.c_root_ht, obj.weights.geom.lambda_ht));
+            x_cg_VT   = WeightsL2.compute_cg_x_loc_wing(x_le_mac_vt, GeometryBase.compute_mac(obj.weights.geom.c_root_vt, obj.weights.geom.lambda_vt));
+            x_cg_fus  = WeightsL2.compute_cg_x_loc_fuselage(obj.weights.geom.L_fus);
+            x_cg_eng  = WeightsL2.compute_cg_x_loc_engine(obj.weights.geom.L_fus - L_eng, L_eng);
+            x_cg_strake = WeightsL2.compute_cg_x_loc_wing(x_le_mac_strake, obj.weights.geom.cbar_strake);
+            x_cg_lg_nose = 15.5264; % ft
+            x_cg_lg_main = 30.5677; % ft
+            x_cg_lg = (x_cg_lg_nose + x_cg_lg_main*2)/3;
+
+            component_weight_vector = [obj.weights.W_wings, obj.weights.W_tail.HT, obj.weights.W_tail.VT, obj.weights.W_fuselage, obj.weights.W_landing_gear, obj.weights.W_installed_engine, obj.weights.W_strake]; % Assume these all sit on the longitudinal axis.
+            component_weight_x_locs = [x_cg_wing, x_cg_HT, x_cg_VT, x_cg_fus, x_cg_lg, x_cg_eng, x_cg_strake];
+            cg_x = StabControlBase.compute_weighted_cg(component_weight_vector, component_weight_x_locs);
+            cg_y = 0; % Assumed zero due to focus on longitidunal static stability (for now, 9/28/2026)
+            cg_loc = [cg_x, cg_y];
+
+            % construct main gear location as vector from origin (nose)
+            maingear_loc = [x_cg_lg_main, -4.3668]; % ft (measured from longitudinal)
+
+            % Compute the tipback angle
+            tipback_angle = landinggearL2.compute_tipback_angle(cg_loc, maingear_loc);
+        end
+
+        function isTipBackAngleSatisfied = check_tipback_angle(obj, tipback_angle)
+            isTipBackAngleSatisfied = landinggearL2.check_tipback_angle(tipback_angle);
+            fprintf('\nTipback angle: %.1f deg', tipback_angle);
+            if (isTipBackAngleSatisfied == true)
+                fprintf('\nTipback angle satisfied\n')
+            else
+                warning('Tipback angle is outside 15<x<25 deg')
+            end
+        end
+
         % ================================================================== %
         % DERIVED-property getters: read obj's own inputs + the injected
         % weights object, recomputed live on every read.
@@ -122,15 +162,15 @@ classdef F16LandingGearL2 < handle
         function val = get.tire_diameter_main(obj)
         %TIRE_DIAMETER_MAIN  Main-tire diameter [in].
         %   [Raymer 6th ed. Table 11.1, p.344, Jet fighter/trainer row]
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
-            val = F16LandingGearL2.tire_diameter(c.A_d, c.B_d, obj.W_w_main);
+            c = landinggearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
+            val = landinggearL2.tire_diameter(c.A_d, c.B_d, obj.W_w_main);
         end
 
         function val = get.tire_width_main(obj)
         %TIRE_WIDTH_MAIN  Main-tire width [in].
         %   [Raymer 6th ed. Table 11.1, p.344, Jet fighter/trainer row]
-            c = F16LandingGearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
-            val = F16LandingGearL2.tire_width(c.A_w, c.B_w, obj.W_w_main);
+            c = landinggearL2.lookup_tire_sizing_coeffs(obj.aircraft_category_table_row);
+            val = landinggearL2.tire_width(c.A_w, c.B_w, obj.W_w_main);
         end
 
         function val = get.tire_diameter_nose(obj)
@@ -162,60 +202,6 @@ classdef F16LandingGearL2 < handle
                  'See examples/F16A/inputs/f16a_L2.json ' ...
                  '.subsystems._TODO_gear_bay_volume_packaging for the full ' ...
                  'gap record.']);
-        end
-
-        % ================================================================== %
-        % LOW-LEVEL: pure math/lookups -- scalars/strings only.
-        % ================================================================== %
-
-    end
-
-    methods (Static)
-
-        function d = tire_diameter(A, B, W_w)
-        %TIRE_DIAMETER  Static tire diameter [in].
-        %   [Raymer 6th ed. Table 11.1, p.344]  D = A * W_w^B.
-            arguments
-                A   (1,1) double {mustBePositive}
-                B   (1,1) double {mustBePositive}
-                W_w (1,1) double {mustBePositive}
-            end
-            d = A * W_w^B;
-        end
-
-        function w = tire_width(A, B, W_w)
-        %TIRE_WIDTH  Static tire width [in].
-        %   [Raymer 6th ed. Table 11.1, p.344]  Width = A * W_w^B.
-            arguments
-                A   (1,1) double {mustBePositive}
-                B   (1,1) double {mustBePositive}
-                W_w (1,1) double {mustBePositive}
-            end
-            w = A * W_w^B;
-        end
-
-        function c = lookup_tire_sizing_coeffs(table_row)
-        %LOOKUP_TIRE_SIZING_COEFFS  Diameter/width coefficient pairs by
-        %   aircraft category. [Raymer 6th ed. Table 11.1 "Statistical Tire
-        %   Sizing," p.344]. Full 4-row table, reproduced verbatim -- do not
-        %   read A_d/A_w from a mismatched row (each row's diameter and
-        %   width coefficients must travel together).
-            switch table_row
-                case 'General aviation'
-                    c = struct('A_d', 1.51, 'B_d', 0.349, 'A_w', 0.7150, 'B_w', 0.312);
-                case 'Business twin'
-                    c = struct('A_d', 2.69, 'B_d', 0.251, 'A_w', 1.170,  'B_w', 0.216);
-                case 'Transport/bomber'
-                    c = struct('A_d', 1.63, 'B_d', 0.315, 'A_w', 0.1043, 'B_w', 0.480);
-                case 'Jet fighter/trainer'
-                    c = struct('A_d', 1.59, 'B_d', 0.302, 'A_w', 0.0980, 'B_w', 0.467);
-                otherwise
-                    error('F16LandingGearL2:unknownTireCategory', ...
-                        ['Unknown tire-sizing table row "%s". Known rows ' ...
-                         '(Raymer 6th ed. Table 11.1): General aviation, ' ...
-                         'Business twin, Transport/bomber, Jet fighter/trainer.'], ...
-                        table_row);
-            end
         end
 
     end

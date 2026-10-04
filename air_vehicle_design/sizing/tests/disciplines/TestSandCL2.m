@@ -1,5 +1,5 @@
 classdef TestSandCL2 < matlab.unittest.TestCase
-%TESTSANDCL2  Unit tests for SandCL2 (the weighted-CG static toolbox) and
+%TESTSANDCL2  Unit tests for StabControlBase.compute_weighted_cg and
 %   F16SandCL2 (the F-16 CG-only concrete class).
 %
 %   TIER 1 (unit/correctness) per CLAUDE.md's two-tier-tests-never-blended
@@ -10,12 +10,12 @@ classdef TestSandCL2 < matlab.unittest.TestCase
 %
 %   SCOPE: F16SandCL2 computes ONLY x_cg = Sum(W_i*x_i)/Sum(W_i) over the 10
 %   WeightsL2-matched component groups -- see F16SandCL2.m's own header.
-%   Every test below either (a) exercises SandCL2.weighted_cg directly with
+%   Every test below either (a) exercises StabControlBase.compute_weighted_cg directly with
 %   synthetic arrays (pure-math, no DI), or (b) constructs a REAL F16WeightsL2
 %   object (per CLAUDE.md's "never self-referential" rule, the expected value
 %   in the integration test is independently re-derived by re-reading the
 %   SAME public weight getters F16SandCL2 itself reads and re-transcribing
-%   the JSON's own cg_x_ft stations -- NOT by calling SandCL2.weighted_cg or
+%   the JSON's own cg_x_ft stations -- NOT by calling StabControlBase.compute_weighted_cg or
 %   F16SandCL2's private component_weights/group_weight helpers a second
 %   time, so a bug in either the mapping or the toolbox static would still be
 %   caught).
@@ -33,7 +33,7 @@ classdef TestSandCL2 < matlab.unittest.TestCase
     methods (Test)
 
         % ================================================================== %
-        % SandCL2.weighted_cg -- pure-math, no DI, no JSON.
+        % StabControlBase.compute_weighted_cg -- pure-math, no DI, no JSON.
         % ================================================================== %
 
         function testWeightedCgHandComputed(tc)
@@ -43,19 +43,19 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         %    weights_vec = [10, 20, 30], x_vec = [5, 10, 15]
         %    x_cg = (10*5 + 20*10 + 30*15) / (10+20+30)
         %         = (50 + 200 + 450) / 60 = 700/60 = 11.666666...7
-            received = SandCL2.weighted_cg([10, 20, 30], [5, 10, 15]);
+            received = StabControlBase.compute_weighted_cg([10, 20, 30], [5, 10, 15]);
             expected = 700/60;
             fprintf('  [L2-S&C] testWeightedCgHandComputed: expected=%.6g, received=%.6g\n', expected, received);
             tc.verifyEqual(received, expected, 'AbsTol', 1e-9, ...
-                'weighted_cg must equal the hand-computed Sum(w_i*x_i)/Sum(w_i).');
+                'compute_weighted_cg must equal the hand-computed Sum(w_i*x_i)/Sum(w_i).');
         end
 
         function testWeightedCgSizeMismatchErrors(tc)
         % Guard condition: mismatched vector lengths must error, not silently
         % broadcast or truncate.
-            expectedErrId = 'SandCL2:sizeMismatch';
+            expectedErrId = 'StabControlBase:sizeMismatch';
             try
-                SandCL2.weighted_cg([1, 2, 3], [1, 2]);
+                StabControlBase.compute_weighted_cg([1, 2, 3], [1, 2]);
                 actualErrId = '(none thrown)';
                 actualErrMsg = '(none thrown)';
             catch ME
@@ -64,17 +64,17 @@ classdef TestSandCL2 < matlab.unittest.TestCase
             end
             fprintf('  [L2-S&C] testWeightedCgSizeMismatchErrors: expected_error=%s, received_error=%s (%s)\n', ...
                 expectedErrId, actualErrId, actualErrMsg);
-            tc.verifyError(@() SandCL2.weighted_cg([1, 2, 3], [1, 2]), ...
+            tc.verifyError(@() StabControlBase.compute_weighted_cg([1, 2, 3], [1, 2]), ...
                 expectedErrId);
         end
 
         function testWeightedCgPropagatesNaNGracefully(tc)
-        % Documented behavior (StabControlBase.m, SandCL2.weighted_cg's own
+        % Documented behavior (StabControlBase.compute_weighted_cg's own
         % header): a NaN component weight (the 'fuel' group pre-mission)
         % must propagate to a NaN x_cg via ordinary IEEE arithmetic, NOT
         % error. weights_vec = [10, NaN], x_vec = [5, 10] -> NaN, not an
         % error thrown by a mustBeNonnegative-style validator.
-            received = SandCL2.weighted_cg([10, NaN], [5, 10]);
+            received = StabControlBase.compute_weighted_cg([10, NaN], [5, 10]);
             fprintf('  [L2-S&C] testWeightedCgPropagatesNaNGracefully: expected=NaN, received=%s\n', mat2str(received));
             tc.verifyTrue(isnan(received), ...
                 'A NaN component weight must propagate to a NaN x_cg, not error.');
@@ -94,7 +94,7 @@ classdef TestSandCL2 < matlab.unittest.TestCase
         % vertical_tail/fuselage/landing_gear/installed_engine/
         % subsystems_lump/strake/payload/fuel), then compute the weighted
         % average by hand (sum(w.*x)/sum(w)) in THIS test -- not by calling
-        % SandCL2.weighted_cg. This still catches a wrong-property-name or
+        % StabControlBase.compute_weighted_cg. This still catches a wrong-property-name or
         % wrong-group-order bug in F16SandCL2.group_weight/component_cg_x_ft,
         % which is the actual DI-wiring risk this class carries (the
         % weighted-average identity itself is separately unit-tested above).

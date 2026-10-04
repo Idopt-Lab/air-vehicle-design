@@ -53,6 +53,7 @@ classdef ControlSurfaceSizer < handle
             obj.b_rud_frac  = b_rud_frac;
         end
 
+
         function result = size(obj, geom)
         %SIZE  Aileron/elevator/rudder areas [ft^2] from geom.S_ref/S_ht/S_vt.
         %   geom is duck-typed: S_ht/S_vt are an L2/L3 convention, not part
@@ -65,6 +66,30 @@ classdef ControlSurfaceSizer < handle
             result = struct('S_ail', S_ail, 'S_elev', S_elev, 'S_rud', S_rud);
         end
 
+    end
+
+    methods (Static)
+
+                function [ce_c, cr_c] = lookup_cs_coefficients(aircraft_category)
+            % ARGS:
+            %   aircraft_category (str) = type of aircraft (fighter/attack, jet transport, jet trainer, business jet, GA single, GA twin, Sailplane)
+            % RETURNS:
+            %   ce_c = c_e/c, where "c_e" is the elevator's root chord length & "c" is the wing's root chord length.
+            %   cr_c = c_r/c, where "c_r" is the rudder's root chord length & "c" is the wing's root chord length.
+
+            switch aircraft_category
+                case "fighter", ce_c = 0.30; cr_c = 0.30;
+                case "attack", ce_c = 0.30; cr_c = 0.30;
+                case "jet transport", ce_c = 0.25; cr_c = 0.32;
+                case "jet trainer", ce_c = 0.35; cr_c = 0.35;
+                case "business jet", ce_c = 0.32; cr_c = 0.30;
+                case "GA single", ce_c = 0.45; cr_c = 0.40;
+                case "GA twin", ce_c = 0.36; cr_c = 0.46;
+                case "sailplane", ce_c = 0.43; cr_c = 0.40;
+                otherwise
+                    error("ControlSurfaceSizer:lookup_cs_coefficient, unknown aircraft type.")
+            end
+        end
     end
 
 end

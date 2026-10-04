@@ -1,8 +1,8 @@
 # StabControlBase
 
 Tier-1 abstract enforcer (`classdef (Abstract) StabControlBase < handle`) for every stability &
-control discipline class. Declares the ONE quantity every fidelity level genuinely provides today.
-No equations beyond that — the full Raymer 6th ed. Ch. 16 set lives in `SandCModelL3`/`SandCL3`.
+control discipline class. Declares the ONE quantity every fidelity level genuinely provides today, and holds
+the one static that computes it. No equations beyond that — the full Raymer 6th ed. Ch. 16 set lives in `SandCModelL3`/`SandCL3`.
 
 ---
 
@@ -33,14 +33,30 @@ can honestly provide is `x_cg` — so that is the entire Tier-1 contract.
 
 | Property | Meaning |
 |---|---|
-| `x_cg` | Aircraft center-of-gravity x-station [ft]. `x_cg = Sum(W_i * x_i) / Sum(W_i)` — no separate Raymer/Roskam equation number (standard weighted-average CG identity; matches `VnV/BrandtF16A/readme_bsc.md`'s own "CG closure" formula). Computed by the level-agnostic `SandCL2.weighted_cg` static, called by **both** `F16SandCL2` and `F16SandCL3` (the equation itself does not vary with fidelity level, only the component weight/x-station data fed into it does). |
+| `x_cg` | Aircraft center-of-gravity x-station [ft]. `x_cg = Sum(W_i * x_i) / Sum(W_i)` — no separate Raymer/Roskam equation number (standard weighted-average CG identity; matches `VnV/BrandtF16A/readme_bsc.md`'s own "CG closure" formula). Computed by `compute_weighted_cg` (§3a) through each concrete class's `get_x_cg`, at **both** L2 and L3 (the equation itself does not vary with fidelity level, only the component weight/x-station data fed into it does). |
 
 **MUST propagate NaN gracefully, never error**, when a component weight is not yet available — in
 particular the `fuel` group's `W_energy`, a mission-analysis STATE that reads NaN until the
 mission/sizing loop sets it (see `WeightsBase.m`). Ordinary IEEE arithmetic handles this: reading
-`W_energy` is a plain property access (never a computed/guarded getter), so `weighted_cg`'s
+`W_energy` is a plain property access (never a computed/guarded getter), so `compute_weighted_cg`'s
 `sum(weights_vec .* x_vec) / sum(weights_vec)` naturally returns NaN with no error when any weight is
 NaN — no special-case code is needed or present.
+
+| Method | Arguments | Outputs |
+|---|---|---|
+| `get_x_cg` (abstract) | `obj` | `x_cg` [ft] |
+
+## 3a. Static methods
+
+| Method | Arguments | Outputs | Citation |
+|---|---|---|---|
+| `compute_weighted_cg` | `weights_vec`, `x_vec` | `x_cg` [ft] | No Raymer/Roskam equation number. Standard weighted-average CG identity; matches `VnV/BrandtF16A/readme_bsc.md`'s "CG closure" formula |
+
+$$x_{cg} = rac{\sum_i W_i x_i}{\sum_i W_i}$$
+
+The `arguments` block uses `mustBeReal` only. A `mustBeNonnegative` validator would reject the
+pre-mission `W_energy = NaN` and break the graceful NaN rule above. A length mismatch between
+`weights_vec` and `x_vec` is a caller bug, so it errors with `StabControlBase:sizeMismatch`.
 
 ## 4. Scope (applies to every SandCModelLN/F16SandCLN)
 

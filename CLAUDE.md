@@ -45,6 +45,22 @@ Process, with two hard human-approval gates before autonomous looping starts:
 
 See `.claude/agents/*.md` for each role's full brief.
 
+### `sizing/teaching/` — in-class packages (added 2026-09-20)
+
+One folder per lesson: `teaching/<lesson>/`. The first is `teaching/l1-l2-sizing/`, covering the two **sizing loops** (`SizingLoopL1`, `SizingLoopL2`). A lesson consumes the framework unchanged — **nothing under `src/`, `examples/` or `tests/` is modified for it**, and nothing outside `teaching/` may be modified to serve it. Add a new lesson by copying the folder shape, not by editing this one.
+
+Each lesson folder holds:
+- `student_package/` — the folder you zip for Canvas. It is **built**, not hand-edited. Most of it is gitignored; only `README.md`, `setup_sizing_path.m`, `helpers/*.m` and `output/.gitkeep` are tracked. **`student_package/framework/` is a pruned copy of `src/` + two examples and must never be committed.**
+- `mlx_src/` — plain `%%`-celled `.m` Live Script sources, converted to `.mlx` at build time. Students get `.mlx` only.
+- `guide_src/` — LaTeX + TikZ XDSM/N2 + Mermaid, compiled to `Sizing_Guide.pdf`.
+- `make_student_package.m` — rebuild everything. It resolves the sizing root as `fileparts(fileparts(here))`, so the file must stay exactly one level below `teaching/`; it asserts this. It copies the framework, regenerates the Live Scripts, builds the guide, runs a smoke test **outside the repo path**, and zips. It aborts if the smoke test fails.
+- The zip is gitignored. Rebuild it rather than committing it.
+- The package excludes `VnV/` (55 MB), every `sanity_checks/`, `generators/`, `studies/`, and the three `f16_*brandt*` drivers that construct VnV classes. T–S diagram material is deliberately out of scope.
+- `.mlx` → `.m` conversion uses `matlab.desktop.editor.openDocument(...).saveAs(...)`. Do **not** use `matlab.internal.liveeditor.openAndSave` for a plain-text Live Code source: it recognises the source as Live Code and copies it verbatim, producing a text file with an `.mlx` extension.
+- **The B777 tail resize is write-only** (found 2026-09-22 by tracing, verified by perturbation). `SizingLoopL2` writes `geom.S_ht`/`S_vt` every pass, but `B777GeomL2` derives its exposed tail areas from the fixed metabook Table-7.2 trapezoids, so doubling `geom.S_ht` moves `S_exposed_ht`, `S_wet`, `W_tail` and `get_OEW` by exactly zero. `F16GeomL2` builds its tail chords and span from `S_ht`, so there the same step is fully coupled. Do not state the tail→weights coupling as a general property of `SizingLoopL2`; it is a property of the geometry model.
+- `helpers/trace_sizing_L2.m` in the teaching package is a replica of the L2 loop body that records ~30 quantities per pass and **self-checks against `SizingLoopL2`**, erroring if the two drift by more than a pound. If you change `SizingLoopL2`, that check will fire and the replica needs the same change.
+- `docs/Mermaid_Diagrams/sizing_loop_dependency_diagrams.md` was rewritten 2026-09-20 because the 2026-08-13 version was wrong in eleven places (inverted relaxation convention, a `MIN_DENOM`/Nicolai fallback that does not exist, `ctrl.size()` inside the L2 loop, 8-arg L2 constructor, `optimal_point()` for `optimal_point_continuous()`). Its section 14 is the errata table.
+
 ## Running tests
 
 From MATLAB, with the working directory anywhere in the repo:

@@ -1,0 +1,49 @@
+---
+title: One pass of SizingLoopL2, in call order
+---
+sequenceDiagram
+    autonumber
+    participant L as SizingLoopL2
+    participant G as geom
+    participant T as tail
+    participant P as prop
+    participant C as con
+    participant A as aero
+    participant M as miss
+    participant W as wts
+
+    Note over L: state going in: W0, T_SL, WS, TW
+
+    L->>G: S_ref = W0 / WS
+    Note right of G: every Dependent geometry property<br/>recomputes on the next read:<br/>span, chords, exposed areas, S_wet
+
+    L->>T: size()
+    T->>G: read S_ref, b_wing, cbar_wing, L_fus
+    T-->>L: S_ht, S_vt
+    L->>G: write S_ht, S_vt
+
+    L->>P: T_SL = T_SL
+    Note right of P: this reaches geom too:<br/>nacelle diameter is Dependent on T_SL
+
+    L->>C: optimal_point_continuous([WS, TW])
+    C->>A: drag_polar(state)
+    A->>G: read S_ref, S_wet, AR, sweeps
+    A-->>C: CD0, K1, K2
+    C->>P: get_thrust_lapse(state)
+    P-->>C: alpha
+    C-->>L: WS, TW
+    Note over L: T_SL_new = TW * W0
+
+    L->>M: total_fuel(W0)
+    M->>A: drag_polar per segment
+    M->>G: get_S_ref()
+    M->>P: TSFC, thrust
+    M-->>L: W_fuel, breakdown
+
+    L->>W: get_OEW(W0)
+    W->>G: read exposed areas, S_ht, S_vt
+    W->>P: read T_SL for the engine weight
+    W-->>L: W_OEW
+
+    Note over L: W0_new = W_payload / (1 - W_OEW/W0 - W_fuel/W0)
+    Note over L: under-relax BOTH states, then go again

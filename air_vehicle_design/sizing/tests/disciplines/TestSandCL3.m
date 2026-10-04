@@ -12,7 +12,7 @@ classdef TestSandCL3 < matlab.unittest.TestCase
 %   Every hand-computed "expected" value below is derived independently, by
 %   plugging the CITED formula (see each SandCL3 static's own header) into a
 %   synthetic set of small, round numbers and computing the arithmetic by
-%   hand in this file's comments -- NEVER by calling the SandCL3/SandCL2
+%   hand in this file's comments -- NEVER by calling the SandCL3/StabControlBase
 %   static under test a second time and calling that "expected" (CLAUDE.md's
 %   "never self-referential" rule).
 
@@ -32,8 +32,8 @@ classdef TestSandCL3 < matlab.unittest.TestCase
     methods (Test)
 
         % ================================================================== %
-        % weighted_cg reuse -- F16SandCL3.x_cg calls SandCL2.weighted_cg
-        % directly (confirmed by reading F16SandCL3.m's get.x_cg), the SAME
+        % compute_weighted_cg reuse -- F16SandCL3.get_x_cg calls
+        % StabControlBase.compute_weighted_cg (confirmed by reading F16SandCL3.m), the SAME
         % static F16SandCL2 uses (fidelity-collapse rule: the identity itself
         % is level-agnostic). Style mirrors TestSandCL2's own integration
         % test.
@@ -47,7 +47,7 @@ classdef TestSandCL3 < matlab.unittest.TestCase
         % examples/F16A/inputs/f16a_L3.json .stability_control
         % .component_x_stations.groups -- IDENTICAL values to f16a_L2.json's,
         % per that file's own note), then computes the weighted average by
-        % hand here, NOT via SandCL2.weighted_cg or F16SandCL3's own private
+        % hand here, NOT via StabControlBase.compute_weighted_cg or F16SandCL3's own private
         % group_weight switch.
             [g3, w3, a3, prop, ctrl] = TestSandCL3.makeF16Objects();
             s3 = F16SandCL3(f16a_spec_path(3), g3, w3, a3, prop, ctrl);

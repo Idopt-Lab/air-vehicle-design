@@ -841,6 +841,30 @@ classdef TestGeomL3 < matlab.unittest.TestCase
         end
 
         % ================================================================== %
+        % Station-table wetted area -- nose closure at x = 0
+        % ================================================================== %
+
+        function testStationSwetNoseClosure(tc)
+        % Constant section (w = 4, h = 3, no chine), perimeter P.
+        % Without a user x = 0 station, the helper closes the nose to a point:
+        %   S_wet = 0.5*5*P + 25*P            (stations 5, 10, 20, 30)
+        % With a user x = 0 station, the added (0, 0) station has zero width,
+        % so it adds no area:
+        %   S_wet = 30*P                      (stations 0, 5, 10, 20, 30)
+            P = GeomL3.compute_frame_perimeter(4, 3, 0, 0);
+
+            x = [5 10 20 30];  o = ones(size(x));
+            tc.verifyEqual(GeomL3.compute_s_wet_from_control_stations( ...
+                x, 0*o, 0*o, 4*o, 3*o), 0.5*5*P + 25*P, 'RelTol', 1e-12, ...
+                'Without an x = 0 station, the nose must close to a point at x = 0.');
+
+            x = [0 5 10 20 30];  o = ones(size(x));
+            tc.verifyEqual(GeomL3.compute_s_wet_from_control_stations( ...
+                x, 0*o, 0*o, 4*o, 3*o), 30*P, 'RelTol', 1e-12, ...
+                'A user x = 0 station must not be counted twice.');
+        end
+
+        % ================================================================== %
         % Inheritance / interface compliance
         % ================================================================== %
 

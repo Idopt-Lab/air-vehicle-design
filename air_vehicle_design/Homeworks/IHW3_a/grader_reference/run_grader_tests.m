@@ -25,11 +25,9 @@ function results = run_grader_tests(only)
         'P03', 1, 'Injection and the constructor', 2, @t_P03_T1
         'P03', 2, 'C_D0 and the polar at S_ref = 130, P_SL = 600', 3, @t_P03_T2
         'P03', 3, 'C_D0 follows the wing and the engine', 2, @t_P03_T3
-        'P04', 1, 'Empty weight II, all seven rows', 4, @t_P04_T1
-        'P04', 2, 'Evaluated at the PASSED weight', 2, @t_P04_T2
-        'P04', 3, 'The build-up follows the geometry', 2, @t_P04_T3
-        'P04', 4, 'Empty weight III', 3, @t_P04_T4
-        'P04', 5, 'An unknown method stops the analysis', 1, @t_P04_T5
+        'P04', 1, 'The seven rows', 6, @t_P04_T1
+        'P04', 2, 'Evaluated at the PASSED weight', 3, @t_P04_T2
+        'P04', 3, 'The build-up follows the airplane', 3, @t_P04_T3
         'P05', 1, 'The power-index method is unchanged', 2, @t_P05_T1
         'P05', 2, 'The drag-based power balance', 3, @t_P05_T2
         'P05', 3, 'The limit follows the drag polar', 2, @t_P05_T3
@@ -44,9 +42,11 @@ function results = run_grader_tests(only)
         'P08', 3, 'The climb follows the engine', 2, @t_P08_T3
         'P08', 4, 'A climb that gains no height burns nothing', 1, @t_P08_T4
         'P08', 5, 'Too little power to climb', 2, @t_P08_T5
-        'P09', 1, 'The eight segment fractions', 3, @t_P09_T1
-        'P09', 2, 'Bookkeeping and the reserve', 2, @t_P09_T2
-        'P09', 3, 'Dispatch on the type, not the position', 1, @t_P09_T3
+        'P09', 1, 'The fixed-fraction segments', 1, @t_P09_T1
+        'P09', 2, 'The climb and cruise cases call the Level-2 segments', 1, @t_P09_T2
+        'P09', 3, 'The full eight-segment mission', 2, @t_P09_T3
+        'P09', 4, 'Bookkeeping and the reserve', 1, @t_P09_T4
+        'P09', 5, 'Dispatch on the type, not the position', 1, @t_P09_T5
         'P10', 1, 'The takeoff-weight closure', 2, @t_P10_T1
         'P10', 2, 'A closure that cannot close', 1, @t_P10_T2
         'P10', 3, 'Relaxation', 2, @t_P10_T3
@@ -241,7 +241,7 @@ function t_P03_T3()
 end
 
 function t_P04_T1()
-% Problem 4, Test 1 - Empty weight II, all seven rows
+% Problem 4, Test 1 - The seven rows
     obj = ttpa_disciplines();
     obj.geom.S_ref = 130;
     obj.prop.P_SL  = 600;
@@ -270,7 +270,7 @@ function t_P04_T2()
 end
 
 function t_P04_T3()
-% Problem 4, Test 3 - The build-up follows the geometry
+% Problem 4, Test 3 - The build-up follows the airplane
     obj = ttpa_disciplines();
     obj.geom.S_ref = 150;
     obj.prop.P_SL  = 600;
@@ -279,37 +279,11 @@ function t_P04_T3()
     assert(abs(bd.horizontal_tail - 73.523789) <= 1e-4*73.523789, 'the tail rows must follow S_ref');
     assert(abs(bd.fuselage - 536.5115) <= 1e-4*536.5115, 'the fuselage row must not follow S_ref');
     assert(abs(bd.total - 3108.681484) <= 1e-4*3108.681484, 'the total at S_ref = 150 is wrong');
-end
-
-function t_P04_T4()
-% Problem 4, Test 4 - Empty weight III
-    obj = ttpa_disciplines();
-    obj.geom.S_ref   = 130;
-    obj.prop.P_SL    = 600;
-    obj.wts.method   = "raymer_ga_III";
-    obj.wts.W_energy = 1150;
-    bd = obj.wts.OEW_breakdown(5400);
-    assert(abs(bd.wing - 338.963531) <= 1e-4*338.963531, 'Raymer Eq. 15.46 wing weight is wrong');
-    assert(abs(bd.installed_engine - 1491.688239) <= 1e-4*1491.688239, 'Raymer Eq. 15.52: 2.575 W_en^0.922 N_en, with W_en ONE bare engine');
-    assert(abs(bd.total - 3306.343266) <= 1e-4*3306.343266, 'the Empty weight III total is wrong');
-    obj.wts.W_energy = NaN;
-    bd = obj.wts.OEW_breakdown(5400);
-    assert(abs(bd.wing - 330.704826) <= 1e-4*330.704826, 'with no fuel weight yet the W_fw term is ignored (set to 1)');
-end
-
-function t_P04_T5()
-% Problem 4, Test 5 - An unknown method stops the analysis
-    obj = ttpa_disciplines();
     obj.geom.S_ref = 130;
-    obj.prop.P_SL  = 600;
-    obj.wts.method = "napkin";
-    threw = false;
-    try
-        obj.wts.OEW_breakdown(5400);
-    catch ME
-        threw = strcmp(ME.identifier, 'TtpaWeights:UndefinedMethod');
-    end
-    assert(threw, 'an unknown weight method must error, with identifier TtpaWeights:UndefinedMethod');
+    obj.prop.P_SL  = 700;
+    bd = obj.wts.OEW_breakdown(5400);
+    assert(abs(bd.installed_engine - 1477.469) <= 1e-4*1477.469, 'the installed-engine row must follow P_SL');
+    assert(abs(bd.wing - 256.363770) <= 1e-4*256.363770, 'the wing row must not follow P_SL');
 end
 
 function t_P05_T1()
@@ -483,7 +457,32 @@ function t_P08_T5()
 end
 
 function t_P09_T1()
-% Problem 9, Test 1 - The eight segment fractions
+% Problem 9, Test 1 - The fixed-fraction segments
+    obj = ttpa_disciplines();
+    obj.geom.S_ref = 130;
+    obj.prop.P_SL  = 600;
+    obj.miss.segments = obj.miss.segments([1 4 8]);
+    [fuel_burned, segment_weight, segment_wf] = run_mission_L2(5000, obj);
+    assert(isequal(size(segment_wf), [1 3]), 'one weight fraction per segment');
+    assert(all(abs(segment_wf - [0.984 0.992 0.992]) <= 1e-12), 'takeoff is 0.984; descent and landing are 0.992 (Roskam Table 2.1)');
+    assert(all(abs(fuel_burned - [80 39.36 39.04512]) <= 1e-9), 'fuel_burned(k) = W_in * (1 - WF), each segment starting from the weight the last one ended at');
+    assert(abs(segment_weight(end) - 4841.59488) <= 1e-9, 'the final weight is W_TO times the three fractions');
+end
+
+function t_P09_T2()
+% Problem 9, Test 2 - The climb and cruise cases call the Level-2 segments
+    obj = ttpa_disciplines();
+    obj.geom.S_ref = 130;
+    obj.prop.P_SL  = 600;
+    obj.miss.segments = obj.miss.segments([1 2 3]);
+    [fuel_burned, segment_weight, segment_wf] = run_mission_L2(5000, obj);
+    assert(all(abs(segment_wf - [0.984 0.99695603 0.83206056]) <= 1e-6), 'climb must call segment_climb_L2(W, obj, k) and cruise segment_cruise_L2(W, obj, k): the segment number is the loop index k');
+    assert(all(abs(fuel_burned - [80 14.976315 823.746944]) <= 1e-4*[80 14.976315 823.746944]), 'the climb and cruise fuel are wrong');
+    assert(abs(segment_weight(end) - 4081.276741) <= 1e-6*4081.276741, 'each Level-2 segment must write its output weight back into W');
+end
+
+function t_P09_T3()
+% Problem 9, Test 3 - The full eight-segment mission
     obj = ttpa_disciplines();
     obj.geom.S_ref = 130;
     obj.prop.P_SL  = 600;
@@ -495,8 +494,8 @@ function t_P09_T1()
     assert(abs(segment_weight(end) - 3933.732907) <= 1e-4*3933.732907, 'the final weight is wrong');
 end
 
-function t_P09_T2()
-% Problem 9, Test 2 - Bookkeeping and the reserve
+function t_P09_T4()
+% Problem 9, Test 4 - Bookkeeping and the reserve
     obj = ttpa_disciplines();
     obj.geom.S_ref = 130;
     obj.prop.P_SL  = 600;
@@ -508,8 +507,8 @@ function t_P09_T2()
     assert(abs(W_fuel - 1130.243119) <= 1e-4*1130.243119, 'mission_fuel must see YOUR segment fuel; it adds the 6 % reserve');
 end
 
-function t_P09_T3()
-% Problem 9, Test 3 - Dispatch on the type, not the position
+function t_P09_T5()
+% Problem 9, Test 5 - Dispatch on the type, not the position
     obj = ttpa_disciplines();
     obj.geom.S_ref = 130;
     obj.prop.P_SL  = 600;

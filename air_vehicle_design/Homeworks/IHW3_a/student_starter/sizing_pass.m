@@ -55,7 +55,7 @@ function row = sizing_pass(obj, W0, P0, S0, WS_sweep)
     % ---- STEP 3: mission fuel ----------------------------------------------
     [W_fuel, fuel_fraction] = ;
     obj.wts.W_TO     = W0;
-    obj.wts.W_energy = W_fuel;          % the wing-fuel term of Raymer Eq. 15.46
+    obj.wts.W_energy = W_fuel;          % record the fuel: W_TO = OEW + W_energy + payload
 
     % ---- STEP 4: empty weight ----------------------------------------------
     bd = ;

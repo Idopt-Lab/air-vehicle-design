@@ -74,7 +74,7 @@ flowchart TD
     subgraph CLASS["F16SubsystemsL1 (Tier 3)"]
         direction TD
 
-        CTOR["Constructor<br/>F16SubsystemsL1(json_path, fuel_weight_source)<br/>in: json_path, fuel_weight_source<br/>out: fuel_type, avionics_table_row, fuel_weight_source"]
+        CTOR["Constructor<br/>F16SubsystemsL1(json_path, fuel_weight_source)<br/>in: json_path, fuel_weight_source<br/>out: fuel_name, avionics_table_row, fuel_weight_source"]
 
         subgraph ARG["Argument-taking methods"]
             M1["get_avionics_weight_fraction(obj)<br/>in: avionics_table_row<br/>out: fraction of W_empty"]
@@ -87,14 +87,14 @@ flowchart TD
         subgraph INJ["Injectors (Dependent getters)"]
             G1["get.avionics_weight_fraction<br/>in: avionics_table_row<br/>out: fraction"]
             G2["get.avionics_density<br/>out: 37.5 lb/ft^3"]
-            G3["get.fuel_density<br/>in: fuel_type<br/>out: density"]
+            G3["get.fuel_density<br/>in: fuel_type, fuel_name<br/>out: density"]
             G4["get.total_fuel_volume_occupied<br/>in: W_energy<br/>out: fuel volume, NaN if not injected"]
             G5["get.total_avionics_volume_occupied<br/>in: OEW(W_TO)<br/>out: avionics volume, NaN if not injected"]
         end
     end
 
     subgraph TB1["SubsystemsBase (level-agnostic statics)"]
-        T4["lookup_fuel_density_lb_per_ft_3(fuel_type)<br/>in: fuel_type<br/>out: density<br/>Nicolai and Carichner Table 8.6 p.210"]
+        T4["lookup_fuel_density_lb_per_ft_3(fuel_type, fuel_name)<br/>in: fuel_type, fuel_name<br/>out: density<br/>Nicolai and Carichner Table 8.6 p.210,<br/>Raymer 6th ed. Table 20.1 p.748"]
     end
 
     subgraph TL1["SubsystemsL1 toolbox (static methods)"]
@@ -117,7 +117,7 @@ flowchart TD
     CTOR -->|"avionics_table_row"| M1
     CTOR -->|"avionics_table_row"| M2
     CTOR -->|"avionics_table_row"| G1
-    CTOR -->|"fuel_type"| G3
+    CTOR -->|"fuel_name, fuel_type is a class default"| G3
     CTOR -.->|"fuel_weight_source"| G4
     CTOR -.->|"fuel_weight_source"| G5
 
@@ -130,7 +130,7 @@ flowchart TD
     M5 -->|"get_total_fuel_volume_occupied: required_weight_lb"| M4
 
     G1 -->|"lookup_avionics_weight_fraction_range: avionics_table_row"| T1
-    G3 -->|"lookup_fuel_density_lb_per_ft_3: fuel_type"| T4
+    G3 -->|"lookup_fuel_density_lb_per_ft_3: fuel_type, fuel_name"| T4
     G4 -.->|"get_total_fuel_volume_occupied: W_energy"| M4
     G5 -.->|"get_avionics_volume_categorical: OEW(W_TO)"| M3
 
@@ -154,7 +154,8 @@ flowchart TD
 
 | Class member | Source | Value / note |
 | --- | --- | --- |
-| `fuel_type` | `f16a_L1.json` `.subsystems.fuel.fuel_type` | `JP-8`, density 50.0 lb/ft^3 |
+| `fuel_type` | class default | `hydrocarbon` |
+| `fuel_name` | `f16a_L1.json` `.subsystems.fuel.fuel_type` | `JP-8`, density 50.0 lb/ft^3. The JSON key says type; the value is a name. |
 | `avionics_table_row` | `.subsystems.avionics.aircraft_category_table_row` | `Fighters`, Raymer's printed plural row name |
 | `fuel_weight_source` | injected, OPTIONAL | `F16WeightsL1` in the report; `[]` elsewhere |
 | `AVIONICS_DENSITY` | `SubsystemsL1` constant | `mean([30, 45])` = 37.5 lb/ft^3, Raymer Ch.11 p.375, the paragraph before Table 11.6 |

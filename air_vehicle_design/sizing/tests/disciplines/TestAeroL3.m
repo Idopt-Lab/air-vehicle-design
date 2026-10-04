@@ -3,7 +3,7 @@ classdef TestAeroL3 < matlab.unittest.TestCase
 %
 %   L3 is the Raymer Eq. 12.24 component drag build-up plus the F16's own
 %   supersonic wave-drag term (Eqs. 12.44/12.45, M>=1.2):
-%     CD0 = [sum_c (Cf_c*FF_c*Q_c*S_wet_c)]/S_ref + CD0_misc + CD0_LandP
+%     CD0 = ([sum_c (Cf_c*FF_c*Q_c*S_wet_c)]/S_ref + CD0_misc + CD_wave)*(1 + f_LandP)
 %       Cf_lam  = 1.328/sqrt(Re)                        Eq. 12.26
 %       Cf_turb = 0.455/[(log10 Re)^2.58*(1+0.144*M^2)^0.65]  Eq. 12.27
 %       Re_cut  = 38.21*(l/k)^1.053 (sub) / 44.62*(l/k)^1.053*M^1.16 (sup)  Eq. 12.28/29
@@ -300,10 +300,13 @@ classdef TestAeroL3 < matlab.unittest.TestCase
             % At M=1.5 (>=1.2) the override is the component buildup PLUS
             % compute_CD0_wave. Removing the wave term must land back on the
             % sub-1.2 skin-friction level (additive; confirms it is not a no-op).
+            % L&P scales the whole total, wave drag included [Raymer Eq. 12.41].
+            % f is the low end of the Table 12.8 range, as in get_CD0_LandP.
             g       = TestAeroL3.makeAero();
-            without = g.get_CD0_component_buildup(AircraftState(0, 1.5)) ...
+            f       = min(AeroL3.lookup_LandP_frac(g.LandP_rowname));
+            without = g.get_CD0_component_buildup(AircraftState(0, 1.5)) / (1 + f) ...
                     - g.compute_CD0_wave(AircraftState(0, 1.5));
-            below   = g.get_CD0_component_buildup(AircraftState(0, 1.19));
+            below   = g.get_CD0_component_buildup(AircraftState(0, 1.19)) / (1 + f);
             tc.verifyEqual(without, below, 'RelTol', 0.10, ...
                 'get_CD0_component_buildup above M=1.2 must be the sub-1.2 buildup plus exactly compute_CD0_wave.');
         end

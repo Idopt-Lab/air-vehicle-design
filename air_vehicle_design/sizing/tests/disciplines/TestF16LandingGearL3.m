@@ -27,15 +27,15 @@ classdef TestF16LandingGearL3 < matlab.unittest.TestCase
         function testTireSizingReusesF16LandingGearL2StaticsExactly(tc)
         % Structural guard: L3 must not carry its own copy of Table 11.1 or
         % the power-law formula -- both must be bit-identical to L2's.
-            c2 = F16LandingGearL2.lookup_tire_sizing_coeffs('Jet fighter/trainer');
+            c2 = landinggearL2.lookup_tire_sizing_coeffs('Jet fighter/trainer');
             lg3 = TestF16LandingGearL3.makeLG(20000);
-            c3 = F16LandingGearL2.lookup_tire_sizing_coeffs(lg3.aircraft_category_table_row);
+            c3 = landinggearL2.lookup_tire_sizing_coeffs(lg3.aircraft_category_table_row);
             tc.verifyEqual([c3.A_d, c3.B_d, c3.A_w, c3.B_w], [c2.A_d, c2.B_d, c2.A_w, c2.B_w], 'AbsTol', 1e-9);
 
             tc.verifyEqual(lg3.tire_diameter_main, ...
-                F16LandingGearL2.tire_diameter(c2.A_d, c2.B_d, lg3.W_w_main), 'AbsTol', 1e-9);
+                landinggearL2.tire_diameter(c2.A_d, c2.B_d, lg3.W_w_main), 'AbsTol', 1e-9);
             tc.verifyEqual(lg3.tire_width_main, ...
-                F16LandingGearL2.tire_width(c2.A_w, c2.B_w, lg3.W_w_main), 'AbsTol', 1e-9);
+                landinggearL2.tire_width(c2.A_w, c2.B_w, lg3.W_w_main), 'AbsTol', 1e-9);
         end
 
         function testGearLoadSplitArithmeticHandComputed(tc)

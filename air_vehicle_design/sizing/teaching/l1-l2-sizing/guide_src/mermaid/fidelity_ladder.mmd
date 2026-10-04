@@ -1,0 +1,40 @@
+---
+title: Two axes of fidelity - do not confuse them
+---
+flowchart LR
+    subgraph LOOP["LOOP fidelity: how many unknowns, and what is re-solved"]
+        direction TB
+        SL1["SizingLoopL1<br/>1 state: W_TO<br/>design point frozen<br/>no tail sizing<br/>Martins slide 6"]
+        SL2["SizingLoopL2<br/>2 states: W_TO, T_SL<br/>design point re-solved each pass<br/>tail resized each pass<br/>Martins slide 8"]
+        SL1 --> SL2
+    end
+
+    subgraph DISC["DISCIPLINE fidelity: how one model gets its answer"]
+        direction TB
+        D1["Level 1<br/>statistical regression<br/>e.g. OEW/W_TO from a table<br/>CD0 from a wetted-area factor"]
+        D2["Level 2<br/>component build-up<br/>e.g. wing + tail + fuselage + gear<br/>drag from a per-component sum"]
+        D3["Level 3<br/>detailed physical geometry<br/>area-ruled wave drag,<br/>control-surface areas in the weights"]
+        D1 --> D2 --> D3
+    end
+
+    subgraph USED["What the three examples actually use"]
+        direction TB
+        B777["B777-200LR<br/>LOOP: L2<br/>geom L2, weights L2<br/>aero L1, prop L1"]
+        F16L1["F-16A warm-up<br/>LOOP: L1<br/>every discipline L1"]
+        F16L2["F-16A lab<br/>LOOP: L2<br/>geom L2, aero L2,<br/>prop L2, weights L2"]
+    end
+
+    LOOP -.-> USED
+    DISC -.-> USED
+
+    NOTE["Nothing forces the two axes to agree.<br/>The 777 runs a Level-2 LOOP over Level-1 aero and propulsion<br/>because for a transport the empty weight is what drives the answer.<br/>There is no SizingLoopL3: sizing has no equations of its own<br/>that change with fidelity, only a count of unknowns."]
+    USED --- NOTE
+
+    classDef loopc fill:#cfe4ff,stroke:#2b6cb0,color:#000
+    classDef discc fill:#d6f5d6,stroke:#2f855a,color:#000
+    classDef usedc fill:#fff2cc,stroke:#b7791f,color:#000
+    classDef notec fill:#f5f5f5,stroke:#888,color:#000
+    class SL1,SL2 loopc
+    class D1,D2,D3 discc
+    class B777,F16L1,F16L2 usedc
+    class NOTE notec

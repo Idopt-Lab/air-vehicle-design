@@ -33,7 +33,6 @@ function [result, hist] = run_ttpa_sizing_mainloop(varargin)
 %
 %     'cruise'    "" = as the requirements file says (default)
 %                 | "drag_based" | "power_index"
-%     'weights'   "" (default) | "table_15_2" | "raymer_ga_III"
 %     'mission'   "" (default) | "L1" | "L2"
 %     'W_guess'   lbf,  default sizing.W_TO_guess_lbf
 %     'S_guess'   ft^2, default sizing.S_ref_guess_ft2
@@ -47,7 +46,7 @@ function [result, hist] = run_ttpa_sizing_mainloop(varargin)
 %
 %   Examples
 %     run_ttpa_sizing_mainloop
-%     run_ttpa_sizing_mainloop('weights', "raymer_ga_III", 'trace', "all")
+%     run_ttpa_sizing_mainloop('cruise', "power_index", 'trace', "all")
 %     run_ttpa_sizing_mainloop('relax', 1)        % watch it fail
 %
 %   OUTPUTS
@@ -59,7 +58,6 @@ function [result, hist] = run_ttpa_sizing_mainloop(varargin)
 %% -------------------------------------------------------------- 0. options
 p = inputParser;
 p.addParameter('cruise',   "", @(s) any(string(s) == ["","drag_based","power_index"]));
-p.addParameter('weights',  "", @(s) any(string(s) == ["","table_15_2","raymer_ga_III"]));
 p.addParameter('mission',  "", @(s) any(string(s) == ["","L1","L2"]));
 p.addParameter('W_guess',  [], @(x) isempty(x) || (isscalar(x) && x > 0));
 p.addParameter('S_guess',  [], @(x) isempty(x) || (isscalar(x) && x > 0));
@@ -72,7 +70,6 @@ p.addParameter('plot',     true,  @okflag_);
 p.parse(varargin{:});
 A         = p.Results;
 A.cruise  = string(A.cruise);
-A.weights = string(A.weights);
 A.mission = string(A.mission);
 A.trace   = string(A.trace);
 A.compare = tological_(A.compare);
@@ -84,7 +81,7 @@ J         = jsondecode(fileread(json_path));
 Sz        = J.sizing;
 Cn        = J.constraints;
 
-[obj, used] = build_bundle_(json_path, A.cruise, A.weights, A.mission);
+[obj, used] = build_bundle_(json_path, A.cruise, A.mission);
 
 W_guess  = pick_(A.W_guess,  Sz.W_TO_guess_lbf);
 S_guess  = pick_(A.S_guess,  Sz.S_ref_guess_ft2);
@@ -107,7 +104,6 @@ fprintf('\n  held CONSTANT     AR %.3f    taper %.3f    t/c root %.3f    sweep %
 fprintf('  GUESSES           W_0 %.1f lbf    P_0 %.1f hp    S_0 %.2f ft^2\n', ...
         W_guess, W_guess/WP_design, S_guess);
 fprintf('\n  cruise method     %-14s %s\n', used.cruise,  cruise_note_(used.cruise));
-fprintf('  weight method     %-14s %s\n', used.weights, weights_note_(used.weights));
 fprintf('  mission method    %-14s %s\n', used.mission, mission_note_(used.mission));
 fprintf('  tol %.1e   max_iter %d   relaxation %.2f on all three states\n', ...
         tol, max_iter, relax);
@@ -458,7 +454,7 @@ function print_result_(r, obj, h)
     fprintf('    C_D0 %8.5f    e %7.5f    K %8.5f    L/D max %7.4f\n', ...
             r.CD0, r.e, r.K, r.LD_max);
 
-    fprintf('\n  WEIGHT BUILD-UP  [%s]\n', r.OEW_breakdown.method);
+    fprintf('\n  WEIGHT BUILD-UP  [Raymer Table 15.2]\n');
     bd = r.OEW_breakdown;
     rows = {'wing', bd.wing; 'horizontal tail', bd.horizontal_tail; ...
             'vertical tail', bd.vertical_tail; 'fuselage', bd.fuselage; ...
@@ -525,20 +521,12 @@ function print_checks_(r, obj)
         fprintf('    OK - inside the band the regression is printed for.\n');
     end
 
-    fprintf('\n  Weight method\n');
+    fprintf('\n  Weight build-up\n');
     bd = r.OEW_breakdown;
     fprintf('    installed engine is %.1f %% of OEW, the largest single row.\n', ...
             100*bd.installed_engine/bd.total);
-    if bd.method == "table_15_2"
-        fprintf('    *** Under Raymer Table 15.2 that row is 1.4 x the bare engine\n');
-        fprintf('        weight, which models NO PROPELLER at all. On a propeller\n');
-        fprintf('        airplane whose largest empty-weight row is the engine that\n');
-        fprintf('        is the weakest number in the build-up. Empty weight III\n');
-        fprintf('        (Raymer Eq. 15.52) includes the propeller and the mounts -\n');
-        fprintf('        run with ''weights'', ''raymer_ga_III'' and compare.\n');
-    else
-        fprintf('    Raymer Eq. 15.52 - includes the propeller and the engine mounts.\n');
-    end
+    fprintf('    regression cross-check %.1f lbf, %+.1f %% against the build-up.\n', ...
+            r.OEW_statistical, 100*(r.OEW_statistical - bd.total)/bd.total);
 
     fprintf('\n  Wing-loading wall\n');
     if r.WS_margin >= 0
@@ -567,8 +555,6 @@ function print_comparison_(json_path, A, lo)
       'baseline (as configured above)',            struct(); ...
       'cruise: drag based (power balance)',        struct('cruise', "drag_based"); ...
       'cruise: power index (Roskam correlation)',  struct('cruise', "power_index"); ...
-      'weights II  (Raymer Table 15.2)',           struct('weights', "table_15_2"); ...
-      'weights III (Raymer Sec. 15.3.3, has AR)',  struct('weights', "raymer_ga_III"); ...
       'mission L1  (IHW1 fixed fractions)',        struct('mission', "L1"); ...
       'mission L2  (improved fuel fractions)',     struct('mission', "L2")};
 
@@ -598,26 +584,21 @@ function print_comparison_(json_path, A, lo)
     fprintf('                  airplane at C_L about 0.37, well below best L/D. The\n');
     fprintf('                  wing shrinks until the LANDING WALL stops it, so\n');
     fprintf('                  W/S = 43.240 psf on every pass. S_ref = W_TO/43.240.\n');
-    fprintf('    weights III   heavier airplane, more wing, and the corner finally\n');
-    fprintf('                  comes off the wall: W/S 42.42, driven by Takeoff. Only\n');
-    fprintf('                  there is S_ref set by a trade rather than by one\n');
-    fprintf('                  requirement.\n');
-    fprintf('\n  So on THIS airplane the honest statement is that S_ref is set by a\n');
-    fprintf('  single binding requirement in most configurations - the landing field\n');
-    fprintf('  length under drag_based, the cruise correlation under power_index - and\n');
-    fprintf('  not by an aerodynamics-against-weight optimum. The loop is still the\n');
-    fprintf('  correct closure; it just has less to say about the wing than the block\n');
-    fprintf('  diagram suggests. run_ttpa_sizing_optim is the file for a true optimum.\n');
+    fprintf('\n  So on THIS airplane S_ref is set by a single binding requirement in\n');
+    fprintf('  every configuration above - the landing field length under drag_based,\n');
+    fprintf('  the cruise correlation under power_index - and not by an\n');
+    fprintf('  aerodynamics-against-weight optimum. The loop is still the correct\n');
+    fprintf('  closure; it just has less to say about the wing than the block\n');
+    fprintf('  diagram suggests.\n');
 end
 
 
 function rv = variant_(json_path, A, lo, change)
 %VARIANT_  One re-close with a switch moved. Silent.
     cruise  = A.cruise;   if isfield(change,'cruise'),  cruise  = change.cruise;  end
-    weights = A.weights;  if isfield(change,'weights'), weights = change.weights; end
     mission = A.mission;  if isfield(change,'mission'), mission = change.mission; end
 
-    [ob, used] = build_bundle_(json_path, cruise, weights, mission);
+    [ob, used] = build_bundle_(json_path, cruise, mission);
 
     o = lo;
     [h, conv, st] = sizing_mainloop(ob, o);
@@ -704,14 +685,13 @@ end
 %% ========================================================================
 %  HELPERS
 %  ========================================================================
-function [obj, used] = build_bundle_(json_path, cruise, weights, mission)
+function [obj, used] = build_bundle_(json_path, cruise, mission)
 %BUILD_BUNDLE_  A discipline bundle with the method switches applied.
 %   Writes a temporary requirements file rather than mutating anything on
 %   disk, so the project JSON, run_ttpa_sizing and every discipline class
 %   are untouched. Same pattern run_ttpa_sizing uses for its own comparison.
     J = jsondecode(fileread(json_path));
 
-    if strlength(weights) > 0, J.weights.method = char(weights); end
     if strlength(mission) > 0, J.missions.std_mission.method = char(mission); end
     if strlength(cruise) > 0
         for k = 1:numel(J.constraints.conditions)
@@ -747,7 +727,6 @@ function [obj, used] = build_bundle_(json_path, cruise, weights, mission)
             end
         end
     end
-    used.weights = string(wts.method);
     used.mission = string(miss.method);
 end
 
@@ -758,14 +737,6 @@ function s = cruise_note_(m)
         s = 'reads the polar - the corner MOVES with S_ref';
     else
         s = 'Roskam correlation - the corner is FROZEN (IHW2)';
-    end
-end
-
-function s = weights_note_(m)
-    if m == "raymer_ga_III"
-        s = 'Empty weight III - Eq. 15.46 carries AR, Eq. 15.52 has the propeller';
-    else
-        s = 'Empty weight II - areal densities, no AR, no propeller';
     end
 end
 

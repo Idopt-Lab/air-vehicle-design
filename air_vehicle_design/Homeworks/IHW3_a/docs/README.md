@@ -8,12 +8,14 @@ block diagram but shows the *loop structure* rather than the physical layout.
 | --- | --- | --- |
 | `ttpa_sizing_xdsm` | `run_ttpa_sizing` | the **lecture** framework: `S_ref` is an input, two states |
 | `ttpa_mainloop_xdsm` | `run_ttpa_sizing_mainloop` | the **whiteboard** framework: `S_ref` is an output, three states |
+| `ihw3_homework_xdsm` | the IHW3 homework | the same loop, each block labelled with the problem (P1–P12) that builds it |
 
 Regenerate either with:
 
 ```bash
 python xdsm_ttpa_sizing.py
 python xdsm_ttpa_mainloop.py
+python xdsm_ihw3_homework.py
 ```
 
 Needs `pyxdsm` and a LaTeX install; writes `.tex`, `.tikz` and `.pdf`. To make

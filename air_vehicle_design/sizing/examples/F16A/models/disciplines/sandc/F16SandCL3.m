@@ -168,13 +168,17 @@ classdef F16SandCL3 < SandCModelL3
             % (0.90, 1.0) -- see the class header for the full citation.
         end
 
+        function x_cg = get_x_cg(obj)
+            x_cg = StabControlBase.compute_weighted_cg(obj.component_weights(), obj.component_cg_x_ft);
+        end
+
         % ================================================================== %
         % DERIVED-property getters -- each recomputes live from the injected
         % collaborators' CURRENT state on every read.
         % ================================================================== %
 
         function v = get.x_cg(obj)
-            v = SandCL2.weighted_cg(obj.component_weights(), obj.component_cg_x_ft);
+            v = obj.get_x_cg();
         end
 
         function v = get.x_acw(obj)

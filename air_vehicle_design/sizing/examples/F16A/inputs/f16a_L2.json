@@ -115,6 +115,12 @@
         "width_coeff_B": 0.467,
         "_cite_tire_sizing": "[Raymer 6th ed., Ch. 11, Table 11.1 'Statistical Tire Sizing,' p.344] Jet fighter/trainer row: D_main[in] = diameter_coeff_A * W_w^diameter_coeff_B, Width_main[in] = width_coeff_A * W_w^width_coeff_B, W_w = static load on one main wheel [lb] (docs/subplans/09_subsystems.md Equations & Citations §9/§9b). The table's other three rows (General aviation A=1.51/B=0.349, Business twin A=2.69/B=0.251, Transport/bomber A=1.63/B=0.315, plus their width coefficients) belong in the future F16LandingGearL2 toolbox code as the full Table 11.1 Constant (same JSON/code split as AeroL1.CLmax_table); this key only records the F-16's own applicable row."
       },
+      "coordinates": {
+        "nose_xy": 15.52,
+        "main_xy": 30.57,
+        "units": "feet",
+        "notes": "Both computed by hand using a ruler for scale and USAF's F16 manual, figure 1-2 (sheet 1), page 1-8, PDF page 36."
+      },
       "nose_tire_fraction_of_main": 0.8,
       "_cite_nose_tire_fraction_of_main": "[Raymer 6th ed., Ch. 11, Table 11.1 page, prose]: nose tire assumed 60-100% of main-tire size, no F-16-specific point value given (docs/subplans/09_subsystems.md Equations & Citations §9c). DECIDED (Casey, 2026-08-03): use the range midpoint, 0.80 -- the subplan itself calls this 'a designer's choice within a stated range, not a citable point value.' Comparison-report data point: VnV/BrandtF16A/GroundTruth/f16a_subsystems_ground_truth.json's landing_gear_tire_diameter block gives d_nose_ft=1.5 / d_main_ft=2.0, i.e. ratio 0.75 -- close to, but not verification of, this 0.80 pick (that block carries two open provenance/load-split caveats of its own)."
     },

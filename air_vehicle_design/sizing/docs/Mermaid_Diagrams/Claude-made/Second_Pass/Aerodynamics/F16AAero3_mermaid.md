@@ -36,15 +36,16 @@ there is no second copy of the diagram to keep in step.
   at a glance. Magenta beats every other node colour, and an injector is EXEMPT
   from the `no toolbox call` marker, because for a getter that is the normal
   case. RED means calling it ERRORS.
-- THERE ARE TWO RED NODES, and they are the headline. `get_CD0_LandP` and
-  `get_CD0_misc` are EMPTY function bodies. They satisfy the `AeroModelL3`
-  abstract contract and assign no output, so calling either raises "Output
-  argument val not assigned". Casey's two TODOs of 2026-08-26 record what each
-  is meant to compute.
-- THE BUILDUP DOES NOT CALL THOSE TWO. `CD0_buildup` reads the PROPERTIES
-  `obj.CD0_misc` and `obj.CD0_LandP` instead, and those are live: `CD0_misc`
-  has a Dependent getter over the Raymer Table 12.7 drag areas, and `CD0_LandP`
-  is a plain JSON input. So the drag polar is unaffected by the two red nodes.
+- THERE IS ONE RED NODE. `get_CD0_misc` is an EMPTY function body. It
+  satisfies the `AeroModelL3` abstract contract and assigns no output, so
+  calling it raises "Output argument val not assigned". The companion doc's
+  to-do table records what it is meant to compute.
+- THE BUILDUP DOES NOT CALL IT. `CD0_buildup` reads the `obj.CD0_misc`
+  PROPERTY instead, a live Dependent getter over the Raymer Table 12.7 drag
+  areas.
+- LEAKAGE AND PROTUBERANCE DRAG GOES LAST. `get_CD0_component_buildup` adds the
+  wave term above M 1.2, then passes the total to `get_CD0_LandP`, which
+  multiplies it by the LOW end of the Table 12.8 band for `LandP_rowname`.
 - FIVE GETTERS ARE PURE RELAYS. `S_ref`, `AR_wing`, `LE_sweep_wing`,
   `QC_sweep_wing` and `lambda_wing` each return one geometry field unchanged.
 - SIX COMPONENT ARRAYS drive the buildup: wing, HT, VT, strake, duct and
@@ -73,7 +74,7 @@ flowchart LR
     subgraph CLASS["F16AeroL3 (Tier 3)"]
         direction LR
 
-        CTOR["Constructor<br/>F16AeroL3(geom, json_path)<br/>in: geom, json_path<br/>out: airfoil block, per-component constants,<br/>k, E_WD, CD0_LandP, Dq areas,<br/>stored geom handle"]
+        CTOR["Constructor<br/>F16AeroL3(geom, json_path)<br/>in: geom, json_path<br/>out: airfoil block, per-component constants,<br/>k, E_WD, Dq areas,<br/>stored geom handle"]
 
         subgraph DERG["Injected planform (pure relays)"]
             R1["get.S_ref<br/>in: geom.S_ref<br/>out: S_ref"]
@@ -105,8 +106,8 @@ flowchart LR
 
         subgraph POLAR["Drag polar"]
             P1["drag_polar(obj, state)<br/>required by AerodynamicsBase<br/>in: state<br/>out: struct(CD0, K1, K2)"]
-            P2["get_CD0_component_buildup(obj, state)<br/>in: state<br/>out: CD0, dispatches to CD0_buildup"]
-            P3["CD0_buildup(obj, state)<br/>in: component arrays, CD0_misc, CD0_LandP, state<br/>out: CD0<br/>Raymer 6th ed. Eq. 12.24"]
+            P2["get_CD0_component_buildup(obj, state)<br/>in: state<br/>out: CD0, buildup + wave + L&amp;P"]
+            P3["CD0_buildup(obj, state)<br/>in: component arrays, CD0_misc, state<br/>out: CD0<br/>Raymer 6th ed. Eq. 12.24"]
             P4["compute_CD0_wave(obj, state)<br/>in: Amax_ft2, L_aircraft_ft, S_ref, E_WD, state<br/>out: wave-drag CD0<br/>Raymer 6th ed. Eq. 12.44 and 12.45"]
             P5["compute_Re(~, state, l_ref)<br/>in: state, l_ref<br/>out: Reynolds number"]
             P6["get_K1(obj, M)<br/>in: e_osw, AR_wing, LE_sweep_wing, M<br/>out: K1"]
@@ -114,10 +115,10 @@ flowchart LR
             P8["get_CL_alpha(obj, M)<br/>in: AR_wing, QC_sweep_wing, cl_alpha_2D, M<br/>out: CL_alpha"]
             P9["get_CL_minD(obj, M)<br/>in: alpha_L0, CL_alpha<br/>out: CL_minD"]
             P10["get_e_osw(obj)<br/>in: AR_wing, LE_sweep_wing<br/>out: 0.908619"]
+            X1["get_CD0_LandP(obj, CD0_parasite)<br/>required by AeroModelL3<br/>in: CD0_parasite, LandP_rowname<br/>out: L&amp;P increment<br/>Raymer 6th ed. Table 12.8"]
         end
 
         subgraph STUB["Unimplemented contract stubs"]
-            X1["get_CD0_LandP(obj)<br/>required by AeroModelL3<br/>EMPTY BODY, assigns no output"]
             X2["get_CD0_misc(obj)<br/>required by AeroModelL3<br/>EMPTY BODY, assigns no output"]
         end
 
@@ -154,6 +155,7 @@ flowchart LR
         T3["FF_surface(x_c_max, tc, M, Lambda_m)<br/>Raymer 6th ed. Eq. 12.30"]
         T4["FF_body(f)<br/>Raymer 6th ed. Eq. 12.31"]
         T5["compute_Re(state, l_ref)<br/>Reynolds number"]
+        T6["lookup_LandP_frac(LandP_rowname)<br/>Raymer 6th ed. Table 12.8"]
     end
 
     subgraph TOOL2["AeroL2 toolbox (statics reused by L3)"]
@@ -178,7 +180,7 @@ flowchart LR
         U1["Delta_CD0(config)<br/>gear and flap CD0 increments"]
     end
 
-    J -->|"airfoil block, per-component constants,<br/>k, E_WD, CD0_LandP, Dq areas"| CTOR
+    J -->|"airfoil block, per-component constants,<br/>k, E_WD, Dq areas"| CTOR
     GEOM -->|"geom"| CTOR
 
     GEOM -->|"geom.S_ref"| R1
@@ -220,7 +222,7 @@ flowchart LR
     B6 -->|"tc_comp"| P3
     B7 -->|"Lambda_m_comp"| P3
     B4 -->|"CD0_misc"| P3
-    CTOR -->|"CD0_LandP, k, Q_comp, f_lam_comp, is_body_comp"| P3
+    CTOR -->|"k, Q_comp, f_lam_comp, is_body_comp"| P3
     R1 -->|"S_ref"| P3
     P3 -->|"compute_Re: state, l_ref"| P5
     P5 -->|"compute_Re: state, l_ref"| T5
@@ -286,14 +288,15 @@ flowchart LR
     S2 -->|"Delta CD0"| S6
     S5 -->|"CLmax_TO, CLmax_L"| S6
 
-    X1 -.->|"get_CD0_LandP: empty body"| X2
+    P2 -->|"get_CD0_component_buildup: buildup + wave"| X1
+    CTOR -->|"LandP_rowname"| X1
+    X1 -->|"get_CD0_LandP: LandP_rowname, keeps the minimum"| T6
 
     linkStyle 0,1 stroke:#00e5ff,color:#00e5ff,stroke-width:2px
     linkStyle 2,3,4,5,6,7,8,9,10,11,12,19,20,21,22,23,25,26 stroke:#ff44cc,color:#ff44cc,stroke-width:2px
     linkStyle 13,14,15,16,17,18,24,27 stroke:#ff44cc,color:#ff44cc,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 30,31,32,33,38,39,41,42,43,44,45,46,47,48,49,50,51,53,54,57,58,59,60,63,64,65,66,67,68,69,72,73,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99 stroke:#33cc33,color:#33cc33,stroke-width:2px
+    linkStyle 30,31,32,33,38,39,41,42,43,44,45,46,47,48,49,50,51,53,54,57,58,59,60,63,64,65,66,67,68,69,72,73,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102 stroke:#33cc33,color:#33cc33,stroke-width:2px
     linkStyle 28,29,34,35,36,37,40,52,55,56,61,62,70,71,74 stroke:#33cc33,color:#33cc33,stroke-width:2px,stroke-dasharray:5 4
-    linkStyle 100 stroke:#ff4040,color:#ff4040,stroke-width:2px
 
     classDef dead fill:#000000,stroke:#ff4040,stroke-width:3px,color:#ff4040,stroke-dasharray: 6 4
     classDef ctorWork fill:#000000,stroke:#00e5ff,stroke-width:3px,color:#00e5ff
@@ -302,10 +305,10 @@ flowchart LR
     classDef injectorRelay fill:#000000,stroke:#ff44cc,stroke-width:3px,color:#ff44cc,stroke-dasharray: 5 4
     classDef deadWork fill:#000000,stroke:#ff4040,stroke-width:3px,color:#ff4040
     class CTOR ctorWork
-    class P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,C1,F1,F2,F3,F4,F5,F6,S1,S2,S3,S4,S5,S6,V1,T1,T2,T3,T4,T5,W1,W2,W3,W4,W5,W6,W7,W8,W9,W10,Z1,Z2,U1 funcWork
+    class P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,C1,F1,F2,F3,F4,F5,F6,S1,S2,S3,S4,S5,S6,V1,T1,T2,T3,T4,T5,W1,W2,W3,W4,W5,W6,W7,W8,W9,W10,Z1,Z2,U1,X1,T6 funcWork
     class B1,B4,B5 injectorWork
     class R1,RA,RL,RQ,RT,A1,A2,A3,A4,A5,A6,B2,B3,B6,B7,B8 injectorRelay
-    class X1,X2 deadWork
+    class X2 deadWork
 ```
 
 ## Field-by-field notes
@@ -316,41 +319,40 @@ flowchart LR
 | `aircraft_category` | `f16a_L3.json`, top-level field | NOT used by any L3 aero equation. Exposed so mission analysis can read it by DI. |
 | `S_wet_comp` | The six surface getters | 6-vector summing to 1472.0228 ft^2. Component order is wing, HT, VT, strake, duct, fuselage. |
 | `CD0_misc` (Dependent) | `Dq_gun_port`, `Dq_hook_USAF`, `S_ref` | Raymer Table 12.7 drag areas over the reference area. LIVE, and the buildup reads this rather than the empty `get_CD0_misc`. |
-| `CD0_LandP` | `f16a_L3.json` | A plain input allowance, Raymer Sec. 12.5. LIVE, read directly by `CD0_buildup`. |
+| `LandP_rowname` | Constant | `non-stealth fighter`. `lookup_LandP_frac` returns `[0.10, 0.15]`; `get_CD0_LandP` keeps 0.10. |
 | `Amax_ft2` | `geom.Amax` | 24.7037 ft^2, the area-ruled buildup. TIER-SPECIFIC: L2 uses the envelope ellipse 27.4889. |
 | `L_aircraft_ft` | `geom.L_aircraft` | 47.65 ft. Feeds only the Sears-Haack term. |
 | `E_WD` | `f16a_L3.json` | Wave-drag efficiency factor. A TUNED calibration input, guarded by a deliberately-red `testTODO_EWDCalibrationInput`. |
 | `k` | `f16a_L3.json` | Equivalent surface roughness, Raymer Table 12.4 and 12.5. Its citation is guarded by a deliberately-red `testTODO_RoughnessTableCitation`. |
-| Clean polar at 36 kft, M 0.87 | Computed | `CD0` 0.016119, `K1` 0.116774, `K2` -0.006849. `K1` and `K2` match L2 exactly, because both tiers use the same `AeroL2` induced-drag statics. |
+| Clean polar at 36 kft, M 0.87 | Computed | `CD0` 0.016631 (buildup 0.015119 + L&P 0.001512), `K1` 0.116774, `K2` -0.006849. `K1` and `K2` match L2 exactly, because both tiers use the same `AeroL2` induced-drag statics. |
 | Clean `CLmax` | Computed | 0.9141, identical to L2 for the same reason. |
 | `e_osw` | Computed | 0.908619, identical to L2. |
 | `CLmax_TO`, `CLmax_L` | Computed | 1.3663 and 1.5170, both HIGHER than L2's 1.2431 and 1.3528, because L3 adds a leading-edge-flap term L2 does not model. |
-| Config polars | `get_config_polar` | `takeoff_flaps_gear_down` and `landing_flaps_gear_down` both give `CD0` 0.064676. See the open item below. |
+| Config polars | `get_config_polar` | `takeoff_flaps_gear_down` and `landing_flaps_gear_down` both give `CD0` 0.065184. See the open item below. |
 
 ## Two open items on this class
 
-**`get_CD0_LandP` and `get_CD0_misc` are empty.** Both satisfy an
-`AeroModelL3` abstract declaration with a body that assigns nothing, so calling
-either raises "Output argument val not assigned a value". Nothing live calls
-them: `CD0_buildup` reads the `CD0_misc` and `CD0_LandP` PROPERTIES instead.
-Casey's two TODOs of 2026-08-26 say each should compute the contribution of
-every physical object in its category, which would replace the flat input
-allowance and the two-term drag-area sum with a real buildup.
+**`get_CD0_misc` is empty.** It satisfies an `AeroModelL3` abstract
+declaration with a body that assigns nothing, so calling it raises "Output
+argument val not assigned a value". Nothing live calls it: `CD0_buildup` reads
+the `CD0_misc` PROPERTY instead. Casey's TODO of 2026-08-26 says it should
+compute the contribution of every physical object in its category, which would
+replace the two-term drag-area sum with a real buildup.
 
 **`get_Delta_CD0_TO` and `get_Delta_CD0_L` return the same number.** Both give
 0.048604 at 36 kft, M 0.87, so `get_config_polar` produces an identical `CD0`
-of 0.064676 for the takeoff and landing configurations. L2 separates them,
+of 0.065184 for the takeoff and landing configurations. L2 separates them,
 0.034400 against 0.048800. Whether the L3 gear-down and flap-deflection
 schedules are meant to coincide is not recorded anywhere in the class.
 
 ## Methods with no upstream call at L3
 
-None. Every method and every static drawn is reached, except the two empty
-stubs above, which are drawn red precisely because they are reachable by
-contract and fail when reached.
+None. Every method and every static drawn is reached, except the empty stub
+above, which is drawn red precisely because it is reachable by contract and
+fails when reached.
 
 `AeroL3.get_e_osw`, `AeroL3.get_K1`, `AeroL3.get_K2` and
-`AeroL3.get_CL_alpha` appear only inside comments at lines 427 to 439. The
+`AeroL3.get_CL_alpha` appear only inside comments at lines 412 to 424. The
 statics were removed in the aerodynamics trim and no live line calls them, so
 they are absent from the chart rather than drawn dead.
 

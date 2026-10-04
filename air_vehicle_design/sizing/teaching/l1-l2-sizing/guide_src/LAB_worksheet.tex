@@ -1,0 +1,216 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=22mm]{geometry}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{accent}{RGB}{43,108,176}
+\definecolor{warn}{RGB}{192,72,40}
+\newtcolorbox{keybox}[1]{colback=blue!4, colframe=accent, fonttitle=\bfseries,
+  title=#1, boxrule=0.6pt, arc=2pt, left=3mm, right=3mm, top=2mm, bottom=2mm}
+\newtcolorbox{warnbox}[1]{colback=red!3, colframe=warn, fonttitle=\bfseries,
+  title=#1, boxrule=0.6pt, arc=2pt, left=3mm, right=3mm, top=2mm, bottom=2mm}
+
+\newcommand{\answerspace}[1]{\vspace{#1}\noindent\rule{\linewidth}{0.3pt}\\[2mm]
+  \noindent\rule{\linewidth}{0.3pt}\\[2mm]\noindent\rule{\linewidth}{0.3pt}\vspace{3mm}}
+
+\sloppy
+\title{\vspace{-14mm}\textbf{Sizing Lab Worksheet}\\[2mm]
+  \large F-16A, the two-state sizing loop}
+\author{AOE 4065 --- Air Vehicle Design}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-6mm}
+
+\begin{keybox}{Before you start}
+Finish \texttt{lab/LAB01\_write\_the\_L2\_loop.mlx} and get a \textbf{PASS}
+from the checker. Every question below is an experiment you run on the loop
+you wrote, so you need a working one first.
+
+Work in a copy of your file. Put the setting back after each experiment,
+otherwise the next one starts from the last one.
+\end{keybox}
+
+% ------------------------------------------------------------------
+\section*{Part A --- Under-relaxation}
+
+Your loop ends each pass with
+\[
+W \leftarrow W + w_W\,(W^{new} - W), \qquad
+T \leftarrow T + w_T\,(T^{new} - T).
+\]
+
+\begin{enumerate}[leftmargin=*, itemsep=3mm]
+
+\item Set \texttt{relax\_W = 1} and \texttt{relax\_T = 1}, which takes the full
+undamped step. Record what happens: the iteration count, whether it converges,
+and any error identifier you get.
+\answerspace{4mm}
+
+\item Now set both to \texttt{0.1}. Record the iteration count and the answer.
+Compare with the default \texttt{0.5}. Fill this in:
+
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+$w$ & converged? & passes & $W_{TO}$ [lbf] \\
+\midrule
+1.0  & & & \\[2mm]
+0.5  & & & \\[2mm]
+0.1  & & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\item A smaller $w$ took more passes but got there. Explain, in terms of the
+slope of the closure map, why damping the step can turn a diverging iteration
+into a converging one. Section 8 of the guide gives you the relation you need.
+\answerspace{12mm}
+
+\item The \texttt{SizingSteps.relax} docstring says an aircraft whose empty
+weight is mostly \emph{fixed} equipment, rather than scaling with size, needs a
+smaller $w$. Explain why, using the closure equation.
+\answerspace{12mm}
+
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section*{Part B --- Order inside the loop}
+
+\begin{enumerate}[leftmargin=*, itemsep=3mm, resume]
+
+\item Move step 3 (\texttt{prop.T\_SL = T\_SL}) so that it runs \emph{after}
+step 4 (the design-point solve) instead of before. Re-run. By how much does
+$W_{TO}$ change? Does the checker still pass?
+\answerspace{6mm}
+
+\item That change is small, but it is still wrong. Say precisely what the
+design-point solve is now reading, and why it is stale. Which physical chain
+connects \texttt{prop.T\_SL} to the constraint curves on the F-16?
+\answerspace{12mm}
+
+\item Move step 2 (the tail sizing) to \emph{after} step 5 (the weights call).
+Re-run. What changes, and which quantity is now one pass out of date?
+\answerspace{8mm}
+
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section*{Part C --- When no aircraft closes}
+
+\begin{enumerate}[leftmargin=*, itemsep=3mm, resume]
+
+\item Before the loop, multiply the payload by 3:
+\begin{center}
+\texttt{wts.W\_payload\_fixed = 3 * wts.W\_payload\_fixed;}
+\end{center}
+Re-run and record the error identifier and the reported \texttt{denom}.
+\answerspace{6mm}
+
+\item State what a non-positive denominator means \emph{physically}. Your
+answer should not contain the word ``denominator''.
+\answerspace{12mm}
+
+\item Increase the payload gradually and find roughly where the loop stops
+closing. Report the largest payload that still converges, and the $W_{TO}$
+there. What has happened to the empty and fuel fractions at that point?
+\answerspace{10mm}
+
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section*{Part D --- Growth factor}
+
+\begin{enumerate}[leftmargin=*, itemsep=3mm, resume]
+
+\item Size the baseline aircraft, then size it again with 200 lbf more payload.
+Compute
+\[
+\text{growth factor} = \frac{\Delta W_{TO}}{\Delta W_{payload}}.
+\]
+Report your number. Build a \textbf{fresh stack} for each run.
+\answerspace{6mm}
+
+\item Compare it with $1/\mathrm{denom}$ at the baseline. Which is larger?
+Section 10 of the guide explains why the two differ for the Boeing 777 --- does
+the same explanation apply to the F-16A, or does this aircraft behave the other
+way? Look at how \texttt{denom} moves with $W_{TO}$ in your history table.
+\answerspace{14mm}
+
+\item The F-16A growth factor is larger than the 777's. Give one reason rooted
+in the weight breakdown of a fighter against a transport.
+\answerspace{12mm}
+
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section*{Part E --- Level 1 against Level 2}
+
+\begin{enumerate}[leftmargin=*, itemsep=3mm, resume]
+
+\item Run \texttt{LAB00} (Level-1 loop) and your \texttt{LAB01} (Level-2 loop)
+and fill in:
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+& Level-1 loop & Level-2 loop \\
+\midrule
+$W_{TO}$ [lbf]  & & \\[2mm]
+$T_{SL}$ [lbf]  & & \\[2mm]
+$S_{ref}$ [ft$^2$] & & \\[2mm]
+$S_{ht}$ [ft$^2$]  & & \\[2mm]
+passes          & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Note that the two use different \emph{discipline} models as well as different
+loops, so this is not a clean comparison of the loops alone. Say which
+differences you can and cannot attribute to the loop.
+\answerspace{12mm}
+
+\item In \texttt{LAB01}, set \texttt{geom.S\_ref = 120} immediately after
+building the stack, then run. Do the same in \texttt{LAB00}. Which loop is more
+disturbed by the bad starting wing, and why?
+\answerspace{12mm}
+
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section*{Part F --- Reading the result}
+
+\begin{enumerate}[leftmargin=*, itemsep=3mm, resume]
+
+\item After a converged run, call
+\begin{center}
+\texttt{[\textasciitilde, \textasciitilde, info] = con.optimal\_point\_continuous([WS, TW]);}
+\end{center}
+and look at \texttt{info.active\_names}. Which requirements are binding? What
+would happen to the sized aircraft if you relaxed one of them, and what would
+happen if you relaxed one that is \emph{not} in the list?
+\answerspace{14mm}
+
+\item Your loop converges to roughly 23{,}300 lbf. The Brandt F-16A reference
+is 31{,}377 lbf. Give two distinct reasons for the gap that have nothing to do
+with whether your loop is correct.
+\answerspace{14mm}
+
+\end{enumerate}
+
+\vfill
+\begin{warnbox}{A reminder about handles}
+The discipline objects are handles, and a sizing run writes into them. If two
+of your experiments disagree with each other, the first thing to check is
+whether you rebuilt the stack in between.
+\end{warnbox}
+
+\end{document}
