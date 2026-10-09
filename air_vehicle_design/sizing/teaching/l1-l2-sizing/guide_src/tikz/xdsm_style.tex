@@ -29,6 +29,7 @@
 \definecolor{xdsmData}{RGB}{245, 245, 245}     % grey   -- data in transit
 \definecolor{xdsmLine}{RGB}{140, 140, 140}
 \definecolor{xdsmFeedback}{RGB}{192, 72, 40}
+\definecolor{xdsmCoupling}{RGB}{204, 120, 0}   % amber -- a coupling, not a state
 
 % ---- node styles --------------------------------------------------------
 \tikzset{
@@ -47,6 +48,8 @@
   Output/.style       = {Data, fill=white, draw=black!55, dashed},
   DataLine/.style     = {line width=1.5pt, color=xdsmLine},
   FeedbackLine/.style = {line width=1.5pt, color=xdsmFeedback},
+  CouplingLine/.style = {line width=1.5pt, color=xdsmCoupling,
+                         dash pattern=on 4pt off 2.5pt},
   StepNo/.style       = {font=\scriptsize\bfseries, inner sep=1pt,
                          fill=white, draw=black!40, rounded corners=1pt},
   XMatrix/.style      = {matrix of nodes, nodes in empty cells,
@@ -62,10 +65,20 @@
     \draw[DataLine] (xdsm-#1-#1) -- (xdsm-#1-#2) -- (xdsm-#2-#2);
   \end{scope}}
 
-% \xfeedback{i}{j}  the same path, drawn in the feedback colour.
+% \xfeedback{i}{j}  the same path, drawn in the feedback colour. Use ONLY for a
+%                   state the loop iterates (its feedback returns to the driver).
 \newcommand{\xfeedback}[2]{%
   \begin{scope}[on background layer]
     \draw[FeedbackLine] (xdsm-#1-#1) -- (xdsm-#1-#2) -- (xdsm-#2-#2);
+  \end{scope}}
+
+% \xcoupling{i}{j}  a below-diagonal edge that is NOT one of the solver's
+%                   states: an inter-component coupling the SAME loop closes by
+%                   substitution (its feedback returns to a component, not the
+%                   driver). Dashed amber, so it never reads as a second solver.
+\newcommand{\xcoupling}[2]{%
+  \begin{scope}[on background layer]
+    \draw[CouplingLine] (xdsm-#1-#1) -- (xdsm-#1-#2) -- (xdsm-#2-#2);
   \end{scope}}
 
 % \xstep{row}{col}{n}  put a process number on the block at (row,col).
@@ -80,5 +93,6 @@
     \node[Function, text width=20mm, minimum height=6mm, font=\tiny, right=3mm of b] (c) {equation};
     \node[Data,     text width=18mm, minimum height=6mm, font=\tiny, right=3mm of c] (d) {data};
     \draw[DataLine]     ([xshift=4mm]d.east) -- ++(9mm,0) node[right, font=\tiny, black] {feed-forward};
-    \draw[FeedbackLine] ([xshift=4mm,yshift=-4mm]d.east) -- ++(9mm,0) node[right, font=\tiny, black] {feedback};
+    \draw[FeedbackLine] ([xshift=4mm,yshift=-4mm]d.east) -- ++(9mm,0) node[right, font=\tiny, black] {feedback (state, to the loop)};
+    \draw[CouplingLine] ([xshift=4mm,yshift=-8mm]d.east) -- ++(9mm,0) node[right, font=\tiny, black] {coupling (same loop, to a component)};
   \end{tikzpicture}}

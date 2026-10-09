@@ -28,14 +28,14 @@
   & |[Data]| {$S_{ref}, S_{wet}$\\ $AR$, sweeps}
   &
   & |[Data]| {$S_{ref}$}
-  & |[Data]| {exposed areas\\ $S_{ht}, S_{vt}$}
+  & |[Data]| {wing \& fuselage\\ geometry}
   & \\
 %
-  & |[Data]| {$S_{ht}, S_{vt}$}
+  &
   & |[Analysis]| {\textbf{Tail sizing}\\ \textsc{tail.size()}}
-  & & & & & & \\
+  & & & & & |[Data]| {$S_{ht}, S_{vt}$} & \\
 %
-  & |[Data]| {$T_{SL} \rightarrow D_{inlet}$}
+  &
   & &
   |[Analysis]| {\textbf{Propulsion}\\ \textsc{prop.T\_SL}}
   &
@@ -72,17 +72,17 @@
 % ---- feed-forward -------------------------------------------------------
 \xdata{1}{2}\xdata{1}{4}\xdata{1}{7}\xdata{1}{8}\xdata{1}{9}
 \xdata{2}{3}\xdata{2}{5}\xdata{2}{7}\xdata{2}{8}
+\xdata{3}{8}                       % tail areas -> weights (forward, NOT a loop)
 \xdata{4}{6}\xdata{4}{7}\xdata{4}{8}
 \xdata{5}{6}\xdata{5}{7}
 \xdata{7}{9}
 \xdata{8}{9}
 
-% ---- feedback: every one of these is a coupling L1 did not have ---------
-\xfeedback{3}{2}   % tail areas written back into geometry
-\xfeedback{4}{2}   % thrust sizes the nacelle, hence the wetted area, hence CD0
-\xfeedback{6}{2}   % the design point resizes the wing on the NEXT pass
-\xfeedback{6}{1}   % (T/W)* sets the new thrust demand
-\xfeedback{9}{1}   % the weight closure, as at Level 1
+% ---- feedback: the TWO states (solid red, return to the loop) ------------
+\xfeedback{6}{1}   % (T/W)* sets the new thrust demand -> T_SL state
+\xfeedback{9}{1}   % the weight closure -> W_TO state, as at Level 1
+% ---- coupling: ONE inter-component edge the same loop closes (amber) -----
+\xcoupling{6}{2}   % (W/S)* resizes the wing next pass; NOT a monitored state
 
 % ---- process order ------------------------------------------------------
 \xstep{1}{1}{0}
@@ -109,20 +109,25 @@
 \node[align=left, font=\scriptsize, anchor=north west, text width=96mm,
       draw=black!30, fill=black!3, rounded corners, inner sep=3mm]
   at ([yshift=-9mm]xdsm-9-1.south west)
-  {\textbf{Count the red edges. That is the whole difference.}\\[3pt]
-   Level~1 had one feedback edge: the weight closure. Level~2 has five, and
-   every extra one is a coupling Level~1 assumed away.\\[3pt]
-   $\bullet$~\textbf{Tail $\rightarrow$ geometry.} The tail areas are written back, and the
-   empty weight reads them.\\
-   $\bullet$~\textbf{Propulsion $\rightarrow$ geometry.} Thrust sizes the nacelle, the nacelle
-   changes the wetted area, the wetted area changes $C_{D0}$.\\
-   $\bullet$~\textbf{Constraint $\rightarrow$ geometry and constraint $\rightarrow$ loop.} The design
-   point is now an unknown too, re-solved on every pass.\\[3pt]
-   Note also that the constraint block has moved \emph{inside} the repeat
-   bracket, and that the aerodynamics block now has geometry feeding into it.
-   Those two facts are the same fact.};
+  {\textbf{One solver, two states --- and one coupling, not a second solver.}\\[3pt]
+   The loop is a single fixed-point solver. It carries exactly two STATES,
+   $W_{TO}$ and $T_{SL}$ (under-relaxed, tested to $10^{-6}$). Their feedback
+   returns to the \emph{loop} --- the two solid red edges:\\[3pt]
+   $\bullet$~\textbf{Closure $\rightarrow$ loop}: the new $W_{TO}$, as at Level~1.\\
+   $\bullet$~\textbf{Constraint $\rightarrow$ loop}: $(T/W)^*$ sets the thrust,
+   $T_{SL}=(T/W)^*\,W_{TO}$.\\[3pt]
+   The \textbf{dashed amber} edge returns to a \emph{component}, not the loop. It
+   is a coupling the \emph{same} solver closes by substitution --- not a monitored
+   state, not a second solver:\\[3pt]
+   $\bullet$~\textbf{Constraint $\rightarrow$ geometry}: $(W/S)^*$ resizes the wing
+   next pass. It exists only because the Level-2 aero holds the geometry, so
+   $C_{D0}$ moves as the wing shrinks ($C_{D0}\ 0.018\!\rightarrow\!0.022$,
+   $S_{ref}\ 234\!\rightarrow\!175$~ft$^2$).\\[3pt]
+   \textbf{Not feedback at all:} tail areas ($S_{ht},S_{vt}$) and the nacelle
+   ($T_{SL}\!\rightarrow\!D_{inlet}\!\rightarrow\!C_{D0}$) flow \emph{forward}; both run
+   once per pass, and nothing earlier reads them.};
 
-\node[anchor=north west, font=\scriptsize] at ([yshift=-68mm]xdsm-9-1.south west) {\xdsmlegend};
+\node[anchor=north west, font=\scriptsize] at ([yshift=-76mm]xdsm-9-1.south west) {\xdsmlegend};
 
 \end{tikzpicture}
 \end{document}

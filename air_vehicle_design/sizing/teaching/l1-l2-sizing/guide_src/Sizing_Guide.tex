@@ -341,8 +341,10 @@ Structural and Multidisciplinary Optimization 46 (2012) 273--284.}
 \begin{figure}[p]
 \centering
 \includegraphics[width=\linewidth, height=0.90\textheight, keepaspectratio]{xdsm_L2.png}
-\caption{XDSM of \texttt{SizingLoopL2}. Five red edges. Each extra one is a
-coupling Level 1 assumed away.}
+\caption{XDSM of \texttt{SizingLoopL2}. One solver, three couplings: two
+\emph{states} (solid red, $W_{TO}$ and $T_{SL}$, returning to the loop) and one
+\emph{coupling} (dashed amber, $W/S$, returning to geometry --- closed by the
+same loop, not a second solver).}
 \end{figure}
 \end{landscape}
 
@@ -356,8 +358,10 @@ $n \times n$ design structure matrix, which answers one question very fast:
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{n2_L1_L2.png}
-\caption{Design structure matrices for the two loops. Red marks below the
-diagonal are feedback. Level 1 has one; Level 2 has five.}
+\caption{Design structure matrices for the two loops. Below-diagonal marks are
+iteration, all closed by one solver: red returns to the loop (a state), amber
+returns to a component (a coupling). Level 1 has one red; Level 2 has two red
+plus one amber.}
 \end{figure}
 
 \begin{keybox}{Why this diagram is worth drawing}
@@ -486,7 +490,7 @@ Tail & never sized & \texttt{tail.size()} every pass $\rightarrow$ \texttt{geom.
 Mission breakdown & discarded & consumed $\rightarrow$ \texttt{wts.W\_landing} (Level 3 only) \\
 Convergence test & $|\Delta W|/W^{new} < \varepsilon$ & the same \textbf{and} the same test on $T_{SL}$ \\
 \texttt{history} fields & 6 & 13 \\
-Feedback couplings & 1 & 5 \\
+Feedback couplings & 1 & \textbf{3}: two states $+$ one coupling \\
 Citation & Martins slide 6 & Martins slide 8 \\
 \bottomrule
 \end{tabular}

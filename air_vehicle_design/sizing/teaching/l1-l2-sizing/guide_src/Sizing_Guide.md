@@ -292,7 +292,7 @@ Level-3 F-16 rung as well.
 | Mission breakdown | discarded | consumed → `wts.W_landing` (Level 3 only) |
 | Convergence test | `abs(dW)/W_new < tol` | the same **and** the same test on `T_SL` |
 | `history` fields | 6 | 13 |
-| Feedback couplings | 1 | 5 |
+| Feedback couplings | 1 | 3 (2 states + 1 coupling) |
 | Citation | Martins slide 6 | Martins slide 8 |
 
 ### 9.3 Why Level 1 is allowed to freeze the design point

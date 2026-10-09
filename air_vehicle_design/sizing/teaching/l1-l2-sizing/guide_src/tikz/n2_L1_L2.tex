@@ -2,8 +2,9 @@
 %
 % Reading rule: the cell in row i, column j is marked when component i sends
 % something to component j. Marks ABOVE the diagonal are feed-forward. Marks
-% BELOW the diagonal are FEEDBACK, and every one of them is a reason the
-% process has to iterate.
+% BELOW the diagonal are iteration, all closed by ONE solver: RED marks return
+% to the loop (its states), AMBER marks return to a component (a coupling the
+% same loop closes by substitution, not a separate solver).
 \documentclass[border=8pt, tikz]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
@@ -13,12 +14,14 @@
 \definecolor{n2Comp}{RGB}{200, 221, 242}
 \definecolor{n2Fwd}{RGB}{212, 239, 213}
 \definecolor{n2Back}{RGB}{240, 168, 148}
+\definecolor{n2Coup}{RGB}{245, 200, 110}   % amber -- a coupling, not a state
 
 \tikzset{
   Cell/.style   = {draw=black!25, minimum size=9.5mm, anchor=center, font=\scriptsize},
   Comp/.style   = {Cell, fill=n2Comp, font=\scriptsize\bfseries},
   Fwd/.style    = {Cell, fill=n2Fwd},
   Back/.style   = {Cell, fill=n2Back, font=\scriptsize\bfseries},
+  Coup/.style   = {Cell, fill=n2Coup, font=\scriptsize\bfseries},
   Empty/.style  = {Cell, fill=white},
   RowLab/.style = {font=\scriptsize, anchor=east, inner sep=2.5pt},
   ColLab/.style = {font=\scriptsize, anchor=west, rotate=55, inner sep=2.5pt},
@@ -63,12 +66,13 @@
       \node[ColLab] at (\i*\gs - 3mm, 3.5mm) {\lab};
       \node[Comp]   at (\i*\gs, -\i*\gs) {\i};
   }
-  \foreach \a/\b in {1/2, 1/4, 1/7, 1/8, 1/9, 2/3, 2/5, 2/7, 2/8,
+  \foreach \a/\b in {1/2, 1/4, 1/7, 1/8, 1/9, 2/3, 2/5, 2/7, 2/8, 3/8,
                      4/6, 4/7, 4/8, 5/6, 5/7, 7/9, 8/9}
       \node[Fwd] at (\b*\gs, -\a*\gs) {$\bullet$};
-  \foreach \a/\b in {3/2, 4/2, 6/1, 6/2, 9/1}
+  \foreach \a/\b in {6/1, 9/1}
       \node[Back] at (\b*\gs, -\a*\gs) {$\bullet$};
-  \node[Ttl] at (5mm, 20mm) {Level 2: two states, $W_{TO}$ and $T_{SL}$ -- \textbf{5} feedbacks};
+  \node[Coup] at (2*\gs, -6*\gs) {$\bullet$};   % 6/2: W/S coupling, not a state
+  \node[Ttl] at (5mm, 20mm) {Level 2: two states ($W_{TO}$, $T_{SL}$) + one coupling ($W/S$)};
 \end{scope}
 
 % ======================= caption =========================================
@@ -78,16 +82,21 @@
   {\textbf{How to read it.} Components sit on the diagonal, numbered in the
    order the process runs them. A mark in row~$i$, column~$j$ says component
    $i$ sends something to component~$j$.\\[3pt]
-   \textbf{Green, above the diagonal:} feed-forward. Work that flows downhill,
+   \textbf{Green, above the diagonal:} feed-forward --- work that flows downhill,
    in the order you already planned to do it.\\[2pt]
-   \textbf{Red, below the diagonal:} feedback. Component $i$ sends data back to
-   a component that has \emph{already run}. One pass cannot satisfy it, so you
-   must iterate. \emph{A design structure matrix with no red marks is not a
-   loop at all. It is a checklist.}\\[3pt]
-   Level~1 has exactly one red mark, the weight closure, and that single mark
-   is the entire reason the Level-1 loop exists. Level~2 has five, because it
-   stops pretending that the tail, the nacelle and the design point hold still
-   while the aircraft resizes.};
+   \textbf{Below the diagonal: iteration, closed by ONE solver.} The number of
+   marks is the number of couplings that single loop reconciles, \emph{not} the
+   number of solvers. \textbf{Red} marks return to the \emph{loop} (column~1):
+   the solver's \textbf{states}, under-relaxed and convergence-tested.
+   \textbf{Amber} marks return to a \emph{component}: a \textbf{coupling} the same
+   solver closes by substitution, not a monitored state.\\[3pt]
+   Level~1 has one red mark --- the weight closure --- and that is the whole reason
+   the loop exists. Level~2 has \textbf{two red}, the states $W_{TO}$ and
+   $T_{SL}$, and \textbf{one amber}, the design point $W/S$. The amber coupling
+   exists only because the Level-2 aerodynamics holds the geometry, so $C_{D0}$
+   moves as the wing resizes. The tail and the nacelle resize too, but their
+   areas flow \emph{forward} into the weights and the drag; neither is a feedback
+   into geometry.};
 
 \end{tikzpicture}
 \end{document}
