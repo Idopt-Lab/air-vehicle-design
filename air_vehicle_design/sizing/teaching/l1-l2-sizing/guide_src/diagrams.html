@@ -97,13 +97,21 @@
     ty = (stage.clientHeight - ih) / 2;
     apply();
   }
+  // The built copy (student_package/guide) has every image in figures/.
+  // The source copy (guide_src) has no figures/; its images stay in the
+  // folders that make them. Try those next, so the source copy also works.
+  const DIRS = ['figures/', 'tikz/', 'mermaid/', 'figures_matlab/'];
   function show(btn) {
     btns.forEach(b => b.classList.toggle('on', b === btn));
     cap.textContent = btn.dataset.cap;
+    let i = 0;
     img.onload  = fit;
-    img.onerror = () => { cap.textContent = 'Could not load figures/' + btn.dataset.src; };
+    img.onerror = () => {
+      if (++i < DIRS.length) { img.src = DIRS[i] + btn.dataset.src; return; }
+      cap.textContent = 'Could not load ' + btn.dataset.src;
+    };
     img.removeAttribute('style');
-    img.src = 'figures/' + btn.dataset.src;
+    img.src = DIRS[0] + btn.dataset.src;
     if (img.complete) fit();          // cached images fire no load event
   }
 
