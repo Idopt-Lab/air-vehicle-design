@@ -1,0 +1,11 @@
+{
+  "_comment": "Images for the Live Scripts. A source line '%[text] ![alt](text:image:ID)' gets the file below embedded by make_student_package.m at build time. width = display width in pixels (keep it <= 760 so it fits the page).",
+  "nicolai_tableF1":  {"file": "nicolai_tableF1.jpg", "width": 746,
+                       "source": "Nicolai & Carichner, Fundamentals of Aircraft and Airship Design, Vol. I (2010), Table F.1"},
+  "avd_naca4412":     {"file": "avd_naca4412.jpg", "width": 760,
+                       "source": "Abbott & von Doenhoff, Theory of Wing Sections, App. IV, pp. 488-489 (NACA 4412), with instructor annotations"},
+  "nicolai_table7_1": {"file": "nicolai_table7_1.png", "width": 720,
+                       "source": "Nicolai & Carichner (2010), Table 7.1, p. 193 (lecture deck slide 108)"},
+  "nicolai_fig2_9":   {"file": "nicolai_fig2_9.png", "width": 600,
+                       "source": "Nicolai & Carichner (2010), Fig. 2.9, p. 44"}
+}
