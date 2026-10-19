@@ -47,9 +47,9 @@ See `.claude/agents/*.md` for each role's full brief.
 
 ### `sizing/teaching/` — in-class packages (added 2026-09-20)
 
-One folder per lesson: `teaching/<lesson>/`. The first is `teaching/l1-l2-sizing/`, covering the two **sizing loops** (`SizingLoopL1`, `SizingLoopL2`). A lesson consumes the framework unchanged — **nothing under `src/`, `examples/` or `tests/` is modified for it**, and nothing outside `teaching/` may be modified to serve it. Add a new lesson by copying the folder shape, not by editing this one.
+One folder per lesson: `teaching/<lesson>/`. The first is `teaching/l1-l2-sizing/`, covering the two **sizing loops** (`SizingLoopL1`, `SizingLoopL2`); the second is `teaching/aero-wing-design/` (own section below). A lesson consumes the framework unchanged — **nothing under `src/`, `examples/` or `tests/` is modified for it**, and nothing outside `teaching/` may be modified to serve it. Add a new lesson by copying the folder shape, not by editing this one.
 
-Each lesson folder holds:
+Each lesson folder holds (as in `l1-l2-sizing/`; `aero-wing-design/` differs where its section says so):
 - `student_package/` — the folder you zip for Canvas. It is **built**, not hand-edited. Most of it is gitignored; only `README.md`, `setup_sizing_path.m`, `helpers/*.m` and `output/.gitkeep` are tracked. **`student_package/framework/` is a pruned copy of `src/` + two examples and must never be committed.**
 - `mlx_src/` — plain `%%`-celled `.m` Live Script sources, converted to `.mlx` at build time. Students get `.mlx` only.
 - `guide_src/` — LaTeX + TikZ XDSM/N2 + Mermaid, compiled to `Sizing_Guide.pdf`.
@@ -60,6 +60,20 @@ Each lesson folder holds:
 - **The B777 tail resize is write-only** (found 2026-09-22 by tracing, verified by perturbation). `SizingLoopL2` writes `geom.S_ht`/`S_vt` every pass, but `B777GeomL2` derives its exposed tail areas from the fixed metabook Table-7.2 trapezoids, so doubling `geom.S_ht` moves `S_exposed_ht`, `S_wet`, `W_tail` and `get_OEW` by exactly zero. `F16GeomL2` builds its tail chords and span from `S_ht`, so there the same step is fully coupled. Do not state the tail→weights coupling as a general property of `SizingLoopL2`; it is a property of the geometry model.
 - `helpers/trace_sizing_L2.m` in the teaching package is a replica of the L2 loop body that records ~30 quantities per pass and **self-checks against `SizingLoopL2`**, erroring if the two drift by more than a pound. If you change `SizingLoopL2`, that check will fire and the replica needs the same change.
 - `docs/Mermaid_Diagrams/sizing_loop_dependency_diagrams.md` was rewritten 2026-09-20 because the 2026-08-13 version was wrong in eleven places (inverted relaxation convention, a `MIN_DENOM`/Nicolai fallback that does not exist, `ctrl.size()` inside the L2 loop, 8-arg L2 constructor, `optimal_point()` for `optimal_point_continuous()`). Its section 14 is the errata table.
+
+#### `teaching/aero-wing-design/` — aerodynamics and wing design, Boeing 737 MAX 8 (added 2026-10-18)
+
+About 50 min lecture (`lecture/L01`–`L05`) and 20 min lab (`lab/LAB01_pick_the_AR`). SI units. It replaces the old 737 homework notebook; student-facing text must never mention an "old homework". The approved plan is `~/.claude/plans/find-the-current-plan-modular-snowflake.md`; decisions and the review-change log are in `SOURCES.md` §1 and §8.
+- **Differences from `l1-l2-sizing/`:** no framework copy and no guide. The lesson has its own short, cited SI helpers in `student_package/helpers/` (`b737_baseline.m` = inputs, `book_data.m` = digitized book data). No toolbox is necessary (`isa_si` implements USSA 1976).
+- **Data:** Boeing ACAP Rev K and the EASA TCDS. The wing is the JSR 737-800 reference wing (S 124.6 m², AR 9.44, λ 0.278, Λc/4 25°), because Boeing publishes no MAX wing area. A "published 127 m²" value does not exist; do not bring it back.
+- **Methods:** Level-2 e = Kroo/Shevell (Nita & Scholz 2012, Eqs 6–8); Raymer Eqs 12.48/12.49 are shown as the method that fails (e ≈ 0.40). Level-3 K = leading-edge suction (Raymer Eqs 12.56–12.58). The F-16 / supersonic section and the forward-sweep part were removed at review; do not add them back.
+- **Instructor-only files (tracked, never zipped):** `SOURCES.md` (citations, inputs, decisions), `FRAMEWORK_FINDINGS.md` (15 `src/` findings, for approval only — not fixed), `crosscheck_framework.m` (lesson helpers vs. the framework statics in `src/`; needs the Aerospace Toolbox), `check_lesson_numbers.m` (re-derives every number the text quotes; run it after any helper change), `tests/TestHelpers.m`, and `mlx_src/lab/LAB01_SOLUTION.m`. The solution builds to the gitignored `instructor_package/`; the build stops if a SOLUTION file gets into the package or the zip. The Canvas quiz is in the solution only.
+- **Build:** `make_student_package` steps `mlx`, `instructor`, `smoke`, `zip`; the `only` option rebuilds named scripts. Images live in `mlx_src/images/` with an `images.json` manifest; a source line `%[text] ![alt](text:image:ID)` gets its base64 appendix block at build time.
+- **Review workflow:** the user reviews by editing the BUILT `.mlx`. `.mlx_build_stamps.mat` (gitignored) makes the build stop if a built `.mlx` changed after the last build, and the build stops (it does not close the tab) if a target is open in the Editor. Before a rebuild: convert the saved `.mlx` to `.m` with `openDocument(f, Visible=0).saveAs(m)`, diff it against `mlx_src/`, port the edits into `mlx_src/`, then delete the built `.mlx`.
+- **Plain-text Live Code rendering rules** (the build's `check_rendering` enforces them): write every LaTeX backslash in a `%[text]` line as `\\` (a single `\r` or `\n` becomes a line break, so `\right` and `\rho` break); inside `$…$` write `\_`, `\[` and `\]`; no `\,` `\;` `\&` `\{` `\}`; no `°` in math (use `\\degree`); no math inside `**bold**`; a final ` \` on the last list item only, and on every list; no blank lines except the one before `%[appendix]`; no `$$…$$` and no Markdown tables.
+- **TODO (Casey):**
+  1. Run `crosscheck_framework` and review `FRAMEWORK_FINDINGS.md` (on 2026-10-18, 8 of 11 rows agree; FF fuselage, C_Lα and the Raymer e fit do not). A fix to `src/` needs approval first, then `run_all_tests`.
+  2. Cross-check every digitized value in `student_package/helpers/book_data.m` against the printed figure or table (the list is in its header).
 
 ## Running tests
 
