@@ -5,8 +5,10 @@ classdef SatkReadinessTest < matlab.unittest.TestCase
     %   problem ("Unrecognized function or variable 'model_overview'") but is
     %   not. Run it in whatever MATLAB session Claude is attached to.
     %
-    %   Failures here mean startup.m did not run -- usually because MATLAB was
-    %   not started in the repo root. Run `startup` manually to recover.
+    %   The tool entry points come from the Simulink Agentic Toolkit Add-On
+    %   (installed by the MathWorks Agentic Toolkits installer); if they do not
+    %   resolve, reinstall the toolkit. If only the models fail to resolve,
+    %   startup.m did not run -- run `startup` from the repo root to recover.
 
     properties (Constant)
         % One entry point per tool declared in the SATK tools.json extension.
@@ -19,11 +21,6 @@ classdef SatkReadinessTest < matlab.unittest.TestCase
     end
 
     methods (Test)
-
-        function satkIsInitialized(testCase)
-            testCase.verifyNotEmpty(which('satk_initialize'), ...
-                'SATK is not on the path. Run startup from the repo root.');
-        end
 
         function allToolEntryPointsResolve(testCase)
             for name = testCase.ToolEntryPoints
