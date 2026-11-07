@@ -62,29 +62,29 @@ mbse/examples/f16a/
 ├─ functions/                            F layer — TWO artifacts, two metaclasses (D-059)
 │   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx   the capability tree (no ports)
 │   ├─ F16A_MissionActivity.slx + ~mdl.slmx      the mission as an ACTIVITY diagram
-│   ├─ F16A_MissionUsesCapability.mldatx phase → capability (mechanism allocation, semantic use)
 │   ├─ F16AMissionAnalysis.m             the printed walk over the ten phases (5 steps)
 │   ├─ F16AMissionSegment.m              one phase's numbers — each action's BehaviorDefinition
 │   └─ F16AMissionReference.m            calls /sizing/ BrandtMission once, and remembers
 ├─ logical/                              L layer
-│   ├─ F16A_Logical.slx + .sldd + ~mdl.slmx
+│   ├─ F16A_Logical.slx + ~mdl.slmx      roles and their kinds (no ports)
 │   ├─ F16A_LogicalOptions.xml           stereotype profile (Selected, DecisionRef)
 │   ├─ F16A_FunctionToLogical.mldatx     capability → logical allocation (7 edges)
 │   └─ F16A_KillChainToLogical.mldatx    kill-chain action → logical allocation (7 edges)
 ├─ physical/                             P layer
-│   ├─ F16A_Physical.slx + .sldd + ~mdl.slmx
+│   ├─ F16A_Physical.slx + ~mdl.slmx     parts and candidates (no ports)
 │   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit,
 │   │                                    Material, FuelTank, Rationale, and one candidate
 │   │                                    stereotype per trade — Engine, Airframe, FlightControl)
 │   ├─ F16ASourceKind.m                  enum: why a part exists
 │   ├─ F16ADataProvenance.m              enum: where a number came from
-│   ├─ F16A_LogicalToPhysical.mldatx     logical → physical realization (14 edges)
+│   ├─ F16A_LogicalToPhysical.mldatx     logical → physical realization (14 edges;
+│   │                                    each candidate is allocated from its kind)
 │   ├─ F16AEngineTradeStudy.m            thrust / mass / TRL      → REQ_F16A_L01
 │   ├─ F16AAirframeTradeStudy.m          aero / mass / TRL        → REQ_F16A_L03
 │   ├─ F16AFlightControlsTradeStudy.m    handling / mass / TRL    → REQ_F16A_L02
 │   │                                    each: open, read, score, pick (steps 1-4)
 │   ├─ F16ARecordTradeDecision.m         steps 5-6, shared: write the decision into P, L and R
-│   ├─ F16AKindOf.m                      which logical kind a physical candidate realizes
+│   ├─ F16AKindOf.m                      a candidate's kind, read from the L→P allocation
 │   ├─ F16APhysicalMassRollup.m          part masses → OEW      (6 printed steps)
 │   ├─ F16APhysicalMaterialsRollup.m     composite fraction     (5 printed steps)
 │   ├─ F16APhysicalFuelRollup.m          available fuel         (4 printed steps)
