@@ -153,7 +153,7 @@ else
 end
 fprintf("  Read that carefully: it shows the roll-up and the constraint check work.\n");
 fprintf("  It is NOT evidence about the real F-16A, whose airframe is essentially not\n");
-fprintf("  composite at all. The fractions are teaching estimates (D-030, D-031).\n\n");
+fprintf("  composite at all. The fractions are teaching estimates (D-030).\n\n");
 
 end
 

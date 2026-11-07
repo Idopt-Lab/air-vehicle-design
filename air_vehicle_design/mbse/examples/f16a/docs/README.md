@@ -1,230 +1,163 @@
 # F-16A RFLP MBSE Example
 
-A teaching example that builds a **Model-Based Systems Engineering (MBSE)** model of the
-**F-16A** using the **RFLP** framework in MathWorks tools (System Composer +
-Requirements Toolbox, MATLAB R2026a).
-
-RFLP structures a system model into four connected layers:
+A teaching model of the **F-16A** built with the **RFLP** framework in System Composer and
+Requirements Toolbox (MATLAB R2026b). It shows two things: **traceability** from a requirement down
+to a part, and **trade studies** that choose between competing designs and record the decision in
+the model.
 
 ```mermaid
 graph LR
   R["<b>R</b><br/>Requirements<br/><i>what is needed</i>"]
   F["<b>F</b><br/>Functions<br/><i>what it must do</i>"]
-  L["<b>L</b><br/>Logical<br/><i>how, in solution roles</i>"]
-  P["<b>P</b><br/>Physical<br/><i>concrete components</i>"]
-  R -->|implemented by| F -->|allocated to| L -->|realized by| P
+  L["<b>L</b><br/>Logical<br/><i>roles and kinds</i>"]
+  P["<b>P</b><br/>Physical<br/><i>parts and candidates</i>"]
+  R -->|implemented by| F -->|allocated to| L -->|allocated to| P
+  P -. "trade decides the kind" .-> L
 ```
 
-Each layer is a separate artifact; the layers are tied together by **traceability
-links** (requirement → function) and **allocation sets** (function → logical → physical). That
-traceability is the whole point of MBSE: you can always answer "why does this part exist?" and
-"where is this requirement satisfied?".
+Each layer is its own artifact. Links and allocation sets tie them together, so the model can always
+answer *"why does this part exist?"* and *"where is this requirement satisfied?"*.
 
-## Status
+## Open it
 
-| Layer | Artifact |
-|-------|----------|
-| **R** – Requirements | `requirements/f16a.slreqx` (26 requirements) |
-| **F** – Functions | `functions/F16A_Functional.slx` (9 capabilities) **and** `functions/F16A_MissionActivity.slx` (the mission as 10 activity **actions**, each bound to the `/sizing/` analysis); 39 links |
-| **L** – Logical | `logical/F16A_Logical.slx` (9 roles, 3 presenting technology-neutral **kinds** — the choice between them is decided at P; 14 allocation edges across two sets) |
-| **P** – Physical | `physical/F16A_Physical.slx` (30 components incl. 7 candidates across 3 variant roles; a **trade study** that scores them, decides, and writes the decision back to L and to REQ_F16A_L01–L03; realization allocation; mass/materials/fuel roll-ups; OEW, mission, and cost/life-cycle-cost MoMs) |
+```matlab
+openProject("f16a.prj")
+F16AOpenForReview      % loads every model, requirement set and link set; opens the Requirements Editor
+```
 
-All four layers are built. Three requirements carry a "verified by" test, and they are in
-**two different states** — see [below](#three-requirements-two-verification-states).
+## Walk through it
 
-## Documentation map
+| Step | Look at | Open with | The idea |
+|---|---|---|---|
+| **1 · R** | 26 requirements from the Brandt F-16A sizing model, plus derived sets | `slreq.editor` | Only spreadsheet *inputs* become requirements ([01](01_requirements.md)) |
+| **2 · F** | 9 capabilities and the 10-phase mission activity | `systemcomposer.openModel("F16A_Functional")`, `systemcomposer.openActivity("F16A_MissionActivity")` | Capabilities are structure; the mission is behaviour ([02](02_functions.md)) |
+| **3 · L** | 9 solution roles; 3 hold two competing **kinds** | `systemcomposer.openModel("F16A_Logical")` | L presents options, it does not pick ([04](04_logical.md)) |
+| **4 · Trade** | one script per decision | `F16AEngineTradeStudy` (also Airframe, FlightControls) | Score the P candidates, write the winner into P, L and R ([05](05_physical.md#trade-studies)) |
+| **5 · P** | 30 parts, 7 candidates, and each candidate's kind | `systemcomposer.openModel("F16A_Physical")`, `systemcomposer.allocation.editor` | Roll-ups compute emergent totals ([05](05_physical.md)) |
+| **6 · Verify** | three requirements with tests | `runtests("verification")` | Met, and not met, are both results ([below](#three-requirements-two-verification-states)) |
 
-| Document | Contents |
-|----------|----------|
-| [`01_requirements.md`](01_requirements.md) | The R layer: how the requirements were derived from the Brandt F-16A sizing model, how they are organized, and the two student exercises. |
-| [`02_functions.md`](02_functions.md) | The F layer: the functional architecture, the F2T2EA combat kill chain, the shared capability tree, the interfaces. |
-| [`03_traceability.md`](03_traceability.md) | The requirement → function link matrix, the derived placeholder requirements, coverage gaps. |
-| [`04_logical.md`](04_logical.md) | The L layer: solution roles, the function → logical allocation, the requirements L owns, and the variant roles presenting competing technology-neutral kinds. |
-| [`05_physical.md`](05_physical.md) | The P layer: the decomposition and its 7 trade candidates, the trade study, the roll-ups, the Measures of Merit, the `Rationale` and `DataProvenance` every part carries, the L→P realization. |
-| [`06_methodology.md`](06_methodology.md) | **Why the trade lives at P and not at L**: the kind-vs-candidate boundary rule, its grounding in ARCADIA, OOSEM, morphological analysis and set-based design — and a candid account of what weighted-sum scoring does *not* justify. |
-| [`07_decision_log.md`](07_decision_log.md) | Every decision (D-001 …), including the decisions *not* to do something. **D-030 is the inventory of every invented number** — what every `Estimate` tag points at. |
-| [`08_agent_team.md`](08_agent_team.md) | The agent team that maintains this example, the **house rules**, and the measured R2026a API findings that drove design choices. |
+Every trade and roll-up prints its steps and every number it reads, so you can check the arithmetic
+by hand. `F16AEngineTradeStudy(Record=false)` scores without writing anything.
+
+## Traceability at a glance
+
+| Relationship | From → to | Stored in | Count |
+|---|---|---|:-:|
+| Implement | capability / mission action → requirement | `functions/*~mdl.slmx` | 21 + 18 |
+| Allocation | capability → role · kill-chain action → role | `logical/F16A_FunctionToLogical.mldatx` · `F16A_KillChainToLogical.mldatx` | 7 + 7 |
+| Implement | role or kind → requirement | `logical/F16A_Logical~mdl.slmx` | 7 |
+| Allocation | role → part · **kind → candidate** | `physical/F16A_LogicalToPhysical.mldatx` | 14 |
+| Implement | part → requirement | `physical/F16A_Physical~mdl.slmx` | 4 |
+| Verify | test → requirement | `verification/*~m.slmx` | 3 requirements |
+
+**A link lives with the artifact it starts from, not with the requirement.** Open `f16a.slreqx` on
+its own and every requirement looks unimplemented, because the links ship with the models and the
+tests. Loading those is what `F16AOpenForReview` does.
+
+**The kind → candidate edges are the bridge for the trade.** `SingleEngine` is allocated to both
+`F100_PW_200` and `LowThrustSingle_Surrogate`, and `TwinEngine` to `TwinEngine_Surrogate`. When a
+candidate wins, the trade follows its edge back to the kind and makes that kind active at L.
+
+Six requirements have no function to trace to, because they constrain the solution rather than the
+behaviour: 020, 023, 024 and 025 trace to L roles; 022 and 026 trace to P parts.
+
+## Three requirements, two verification states
+
+```matlab
+runtests("F16AMaterialsVerificationTest")      % REQ_F16A_022 — green
+runtests("F16AFuelVerificationTest")           % REQ_F16A_P01 — green
+runtests("F16AStaticMarginVerificationTest")   % REQ_F16A_025 — 2 pass, 1 RED BY DESIGN
+```
+
+| Requirement | State | What it teaches |
+|---|---|---|
+| `REQ_F16A_022` composite ≤ 20% | 🟢 met | the evidence is a roll-up over the model itself |
+| `REQ_F16A_P01` fuel volume | 🟢 met | 6,300 lb of tankage against 5,960 lb of mission fuel from the `/sizing/` analysis |
+| `REQ_F16A_025` static margin | 🔴 **violated** | the requirement *was* evaluated, and the design does not meet it |
+
+**One red is the expected state; a second is a regression.** `testAnalysisProducedUsableMargins`
+passing is what proves the analysis ran, so the landing red is a verdict, not a broken tool. It is a
+property of the simplified reference model, not of the real F-16A
+([01](01_requirements.md#025--static-margin)).
+
+A Verify link records that a requirement is checked, and by what, not that the check passed.
+
+## Exercises
+
+1. **Write the missing criteria.** `REQ_F16A_D01`–`D09` state a need with `TBD` acceptance criteria.
+   Nothing external defines them, so the blanks are the assignment.
+2. **Settle the gear angles.** `REQ_F16A_023`/`024` are blank because Brandt's angles may not use
+   the convention the specifications use. The brief is in [01](01_requirements.md#023--024--the-gear-angle-exercise).
+3. **Add a fourth engine.** Add a choice under `F16A_Physical/Aircraft/Propulsion/Engine`, apply
+   `EngineCandidate`, fill in its properties and `DataProvenance`, allocate it from a kind in the
+   L→P allocation set, and run `F16AEngineTradeStudy`. If you skip the allocation, the trade stops
+   and tells you which candidate has no kind.
+4. **Move a weight.** Change a weight in a trade's criteria table. How far can it move before the
+   winner changes?
+5. **Go further:**
+   - Name the criterion that decides *regardless of rival* (D-034).
+   - Bound the ratio value functions (D-035).
+   - Search the 2×2×2 combinations instead of three separate pairs (D-016).
+   - Draw the F2T2EA kill chain as a sequence diagram: `addInteraction` is available in R2026b.
 
 ## Folder layout
 
 ```
-mbse/examples/f16a/
-├─ f16a.prj                              Simulink Project (open this first)
-├─ f16aRoot.m                            path anchor: absolute path to the example root
-├─ F16AOpenForReview.m                   load all models + requirement sets, open the editor
-├─ F16ARunAnalyses.m                     changed a number? re-run every trade and analysis
-├─ docs/                                 <- you are here
-├─ requirements/                         R layer
-│   ├─ f16a.slreqx                       sizing-derived requirements (pristine)
-│   ├─ f16a_functional_derived.slreqx    derived placeholders (D01–D09)
-│   ├─ f16a_logical_derived.slreqx       decision requirements (L01–L03)
-│   └─ f16a_physical_derived.slreqx      physical requirements (P01 fuel, P02 life-cycle cost)
-├─ functions/                            F layer — TWO artifacts, two metaclasses (D-059)
-│   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx   the capability tree (no ports)
-│   ├─ F16A_MissionActivity.slx + ~mdl.slmx      the mission as an ACTIVITY diagram
-│   ├─ F16AMissionAnalysis.m             the printed walk over the ten phases (5 steps)
-│   ├─ F16AMissionSegment.m              one phase's numbers — each action's BehaviorDefinition
-│   └─ F16AMissionReference.m            calls /sizing/ BrandtMission once, and remembers
-├─ logical/                              L layer
-│   ├─ F16A_Logical.slx + ~mdl.slmx      roles and their kinds (no ports)
-│   ├─ F16A_LogicalOptions.xml           stereotype profile (Selected, DecisionRef)
-│   ├─ F16A_FunctionToLogical.mldatx     capability → logical allocation (7 edges)
-│   └─ F16A_KillChainToLogical.mldatx    kill-chain action → logical allocation (7 edges)
-├─ physical/                             P layer
-│   ├─ F16A_Physical.slx + ~mdl.slmx     parts and candidates (no ports)
-│   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit,
-│   │                                    Material, FuelTank, Rationale, and one candidate
-│   │                                    stereotype per trade — Engine, Airframe, FlightControl)
-│   ├─ F16ASourceKind.m                  enum: why a part exists
-│   ├─ F16ADataProvenance.m              enum: where a number came from
-│   ├─ F16A_LogicalToPhysical.mldatx     logical → physical realization (14 edges;
-│   │                                    each candidate is allocated from its kind)
-│   ├─ F16AEngineTradeStudy.m            thrust / mass / TRL      → REQ_F16A_L01
-│   ├─ F16AAirframeTradeStudy.m          aero / mass / TRL        → REQ_F16A_L03
-│   ├─ F16AFlightControlsTradeStudy.m    handling / mass / TRL    → REQ_F16A_L02
-│   │                                    each: open, read, score, pick (steps 1-4)
-│   ├─ F16ARecordTradeDecision.m         steps 5-6, shared: write the decision into P, L and R
-│   ├─ F16AKindOf.m                      a candidate's kind, read from the L→P allocation
-│   ├─ F16APhysicalMassRollup.m          part masses → OEW      (6 printed steps)
-│   ├─ F16APhysicalMaterialsRollup.m     composite fraction     (5 printed steps)
-│   ├─ F16APhysicalFuelRollup.m          available fuel         (4 printed steps)
-│   │                                    each standalone: the walk is in the file that uses it
-│   ├─ F16APhysicalCostModel.m           calls BrandtCost: flyaway, O&M, LCC (needs /sizing/)
-│   └─ F16APhysicalMissionFuel.m         reads MissionFuel_lb off the model (P01's required side)
-├─ tests_for_ai_coding/                  regression guard rails, not teaching
-│   ├─ README.md                         what these are, and why they are not verification/
-│   ├─ F16ABaselineTest.m                every trade score and analysis number vs its baseline
-│   └─ run_ai_tests.m                    runs it; must be green after any model edit
-└─ verification/                         requirement-verification tests — the teaching payload
-    ├─ F16AMaterialsVerificationTest.m   REQ_F16A_022 — green
-    ├─ F16AFuelVerificationTest.m        REQ_F16A_P01 — green since D-060
-    ├─ F16AStaticMarginVerificationTest.m  REQ_F16A_025 — 2 pass, 1 red by design
-    └─ *VerificationTest~m.slmx          manual verify link sets (requirement → test)
+f16a/
+├─ f16a.prj · f16aRoot.m · F16AOpenForReview.m
+├─ F16ARunAnalyses.m          changed a number? re-run every trade and analysis
+├─ requirements/              f16a (26) · functional_derived (D01–D09) · logical_derived (L01–L03)
+│                             · physical_derived (P01, P02)
+├─ functions/                 F16A_Functional.slx (+ .sldd for the activity's flows)
+│                             · F16A_MissionActivity.slx · F16AMission{Analysis,Segment,Reference}.m
+├─ logical/                   F16A_Logical.slx · F16A_LogicalOptions.xml · two F→L allocation sets
+├─ physical/                  F16A_Physical.slx · F16A_PhysicalProps.xml · F16A_LogicalToPhysical.mldatx
+│                             · F16A{Engine,Airframe,FlightControls}TradeStudy.m (steps 1–4)
+│                             · F16ARecordTradeDecision.m (steps 5–6, shared) · F16AKindOf.m
+│                             · F16APhysical{Mass,Materials,Fuel}Rollup.m · F16APhysicalCostModel.m
+│                             · F16APhysicalMissionFuel.m · F16ASourceKind.m · F16ADataProvenance.m
+├─ verification/              one test per verified requirement, with its Verify link set
+└─ tests_for_ai_coding/       F16ABaselineTest: have any numbers moved? (not teaching material)
 ```
 
-Every script derives sibling paths from `f16aRoot.m`, so it works regardless of which layer
-folder it sits in. Each layer folder is on the **project path**, so `openProject` makes every
-trade, roll-up and test resolvable by name. That path is load-bearing for more than
-convenience: `F16ASourceKind.m` and `F16ADataProvenance.m` type two stereotype properties and
-must be on the MATLAB path whenever `F16A_PhysicalProps` loads.
-
-## How to open and run
-
-```matlab
-openProject("f16a.prj")
-```
-
-The models, requirement sets and allocation sets are the source of truth: open and edit them
-directly. After changing a number, re-run every trade and analysis so the models agree:
-
-```matlab
-F16ARunAnalyses        % trades -> roll-ups -> mission -> cost, written into the models
-```
-
-Open the models and run the tests:
-
-```matlab
-systemcomposer.openModel("F16A_Physical")   % or F16A_Functional / F16A_Logical
-systemcomposer.allocation.editor            % the F→L and L→P allocation matrices
-F16APhysicalMassRollup                      % ONE roll-up: the mass tree, step by step, to OEW
-F16AEngineTradeStudy                        % re-run ONE trade; six printed steps, start here
-
-run_ai_tests                                   % have any numbers moved? all green
-
-runtests("F16AMaterialsVerificationTest")      % REQ_F16A_022 — green
-runtests("F16AStaticMarginVerificationTest")   % REQ_F16A_025 — 2 pass, 1 RED BY DESIGN
-runtests("F16AFuelVerificationTest")           % REQ_F16A_P01 — passes since D-060
-```
-
-The two kinds are run separately on purpose. `run_ai_tests` asks *have any numbers
-moved?* and **every one of its cases must pass** — a red there is a
-regression. The three verification suites ask *does the design meet this
-requirement?*, and one of them is red by design. See
-[`../tests_for_ai_coding/README.md`](../tests_for_ai_coding/README.md).
-
-**One red is the expected state.** A second failure is a regression. A run that reports
-"1 test fails" and stops has missed the point:
-
-### Three requirements, two verification states
-
-| Requirement | Test | State | What it teaches |
-|---|---|---|---|
-| `REQ_F16A_022` composite ≤ 20% | `F16AMaterialsVerificationTest` | 🟢 **met** | the requirement holds, and the evidence is a roll-up over the model itself |
-| `REQ_F16A_P01` fuel volume | `F16AFuelVerificationTest` | 🟢 **met** | 6300 lb of tankage against 5960 lb of mission fuel — evidence that leaves the model entirely, and comes back from the `/sizing/` analysis (D-059) |
-| `REQ_F16A_025` static margin | `F16AStaticMarginVerificationTest` | 🔴 **violated** | the requirement *was* evaluated, against a real number, and **the design does not meet it** (D-051) |
-
-A requirement can be met, not met, or not yet judged. **The third state used to be shipped:**
-`REQ_F16A_P01` was deliberately unevaluated — traceable, linked, and comparing against `NaN` — until
-D-059 gave the model a real mission and D-060 turned it green. That was a real loss, argued in the
-decision log; the `UNEVALUATED` branch survives inside the roll-up guards and
-`F16AMaterialsVerificationTest`, so the state is still reachable, just no longer demonstrated by a
-failing test. Two consequences worth holding on to:
-
-- **A failing verification is not a broken tool.** `REQ_F16A_025` says something quite specific
-  about the aircraft's balance, and the analysis behind it is working correctly.
-- **`testAnalysisProducedUsableMargins` passing is what separates them.** It was built so that
-  "the aircraft violates `REQ_F16A_025`" and "the analysis that evaluates it is broken" could
-  never arrive looking identical. It is green while its two siblings split 1–1, so the landing
-  margin is a number the model really produced.
-- **The landing failure is a property of the reference model, not of the F-16A.** Brandt's
-  neutral point is a simplified approximation, and the CG crosses it as fuel burns off. Read
-  [`01_requirements.md`](01_requirements.md) before quoting it as a fact about the aeroplane.
-
-The tests are split two ways on purpose: `F16ABaselineTest` is a **regression** guard, and the
-three `*VerificationTest` files are **requirement verification**, one per requirement. One
-combined suite would report a failure count and hide what the failures mean.
-
-## Reviewing requirement traceability
-
-```matlab
-F16AOpenForReview      % loads the 3 models, the 4 requirement sets and every verification
-                       % link set, reports what is verified, then opens the Requirements Editor
-```
-
-This matters because of **where Requirements Toolbox stores a link: in the link set of the
-artifact that MAKES it, not in the requirement set.** So an Implement link (component →
-requirement) lives in the implementing *model's* link set — open `f16a.slreqx` alone and
-requirements look un-implemented. `REQ_F16A_L01–L03` illustrate the rule twice over: they are
-Implement-linked from the winning **kind** in `F16A_Logical.slx` by the *physical* trade study,
-so their links live in the **L** model's link set.
-
-### Verification links are added manually
-
-The Implement links ship in each model's link set. **"Verified by" links must be added by hand** in the
-Requirements Editor, because of one R2026a limitation: **a MATLAB test file cannot be a link
-*source***, so the programmatic `slreq` API cannot mint a working "Verified by" for a unit test.
-
-| Requirement | Verified by |
-|-------------|-------------|
-| `REQ_F16A_022` | `F16AMaterialsVerificationTest` |
-| `REQ_F16A_P01` | `F16AFuelVerificationTest` |
-| `REQ_F16A_025` | `F16AStaticMarginVerificationTest` |
-
-All three are linked; the table stays because the next verified requirement needs the same
-hand-made link. Three things worth knowing about them:
-
-- **A hand-made link is not fragile.** It resolves through the requirement's SID, which
-  editing the requirement's text does not change.
-- **A link that seems missing is usually just unloaded** — it lives in
-  `verification/<TestName>~m.slmx`, and until that set is loaded the requirement reads
-  Implement-only. Loading them is what `F16AOpenForReview` is for. (Project artifact tracking is
-  *not* what makes them work; that was measured.) The tool **globs** `verification/*~m.slmx` and
-  reports what it finds, so no requirement id or test name is typed into it and the table above
-  cannot drift from the tool.
-- **A red test is still a linked test.** Two of these three fail by design, and both are
-  traceable from requirement to evidence. Verification traceability records *that the requirement
-  was checked* — not that it passed.
-
-## Prerequisites
-
-MATLAB R2026a · Simulink · System Composer · Requirements Toolbox
+| Document | Contents |
+|---|---|
+| [`01_requirements.md`](01_requirements.md) | R: provenance, structure, the derived sets, the gear-angle and static-margin cases |
+| [`02_functions.md`](02_functions.md) | F: capabilities, the mission activity, F2T2EA, R→F links |
+| [`04_logical.md`](04_logical.md) | L: roles, F→L allocation, the kinds and how the decision comes back |
+| [`05_physical.md`](05_physical.md) | P: parts, kind→candidate allocation, trade studies, roll-ups, MoMs |
+| [`06_methodology.md`](06_methodology.md) | Why the trade lives at P, its sources, and what weighted-sum scoring does not justify |
+| [`07_decision_log.md`](07_decision_log.md) | Standing decisions (D-0xx); **D-030 lists every invented number** |
 
 ## Maintaining the model
 
-Edit the models directly, in the editor or through the System Composer API, then run
-`F16ARunAnalyses` to update every derived number and `run_ai_tests` to see which moved. **Never
-rebuild a model from scratch:** the allocation sets and the hand-made Verify links point at
-element SIDs, and a rebuilt model has new ones.
+The models, requirement sets and allocation sets are the source of truth. Edit them in the editors
+or through the API, then:
 
-Open work is in [`../TODO.md`](../TODO.md); house rules in
-[`08_agent_team.md`](08_agent_team.md).
+```matlab
+F16ARunAnalyses     % trades → roll-ups → mission → cost, written back into the models
+run_ai_tests        % F16ABaselineTest: every number against its baseline; must be green
+```
+
+- **Never rebuild a model from scratch.** Allocation sets and Verify links point at element SIDs, and
+  a rebuilt model has new ones.
+- **Add, move or delete files through the project** (`addFile`/`removeFile`), then expect
+  `runChecks(currentProject)` to report 12/12. `removeFile` also stages the git deletion.
+- `F16ASourceKind.m` and `F16ADataProvenance.m` type two stereotype properties, so they must be on
+  the path whenever `F16A_PhysicalProps` loads. The project path takes care of this.
+
+API behaviour measured on this model (R2026b):
+
+| Topic | Behaviour |
+|---|---|
+| String and enum stereotype properties | stored as expressions: write `"'TBD'"`, read back `'TBD'` with quotes; strip with `erase(…, "'")` |
+| Variant choices | reach them with `getChoices` only; they are not in the parent's `Architecture.Components` |
+| Analysis instance | holds only the active choice, flattened under the variant node |
+| Decision links | `slreq.load("F16A_Logical")` before linking, or links into L01–L03 duplicate |
+| Requirement link from an activity action | `slreq.createLink(action.SimulinkHandle, req)`; allocation takes the action object |
+| Activity nodes | `addNode(name, type)`, name first; `connect` lives on the nodes; an action whose behaviour is an activity has no settable `Duration` |
+| Verify link from a test | `slreq.createLink(slreq.createTextRange(testFile, lines), req)`, then set `Type = "Verify"`. The three shipped links were made by hand before this worked |
+| `NaN` into a property | `string(NaN)` is `<missing>`, which `setProperty` rejects; use `string(num2str(NaN))` |
+
+Prerequisites: MATLAB R2026b · Simulink · System Composer · Requirements Toolbox. The cost model, the
+mission and the static-margin test also call `sizing/VnV/BrandtF16A/`, three folders up.
