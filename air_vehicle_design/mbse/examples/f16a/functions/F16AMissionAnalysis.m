@@ -5,17 +5,13 @@ function results = F16AMissionAnalysis()
 %
 %   RESULTS fields: TotalFuel_lb, TotalTime_min, Phases, Table.
 %
-%   It runs as five printed steps -- name the phases, run the analysis, check
-%   nothing was lost, read each phase, report -- and prints every number it
-%   reads and the running total, so a reader can add the phases up by hand.
+%   It prints every number it reads and the running total, so the phases can
+%   be added up by hand, and stops if the totals drift more than 1% off the
+%   Brandt spreadsheet the /sizing/ analysis reproduces.
 %
 %   THE MODEL FLIES TEN PHASES; THE ANALYSIS WALKS FOURTEEN SEGMENTS. Step 3
-%   proves the four the model omits are free -- zero fuel AND zero time -- so
-%   the shorter list costs the same mission. If that ever stops being true the
-%   run stops, because then the model would be flying a cheaper mission than
-%   the one it claims (D-059).
-%
-%   Feeds MeasureOfMerit.MissionFuel_lb, and through it the cost model.
+%   checks that the four the model omits cost zero fuel and zero time.
+%   F16ARunAnalyses writes the totals into the aircraft's Measures of Merit.
 %
 %   See also F16AMISSIONSEGMENT, F16AMISSIONREFERENCE, F16APHYSICALFUELROLLUP.
 
@@ -108,9 +104,8 @@ fprintf("  Mission time : %8.2f min  (Miss!O8 ref %.2f, %+.2f%%)\n", ...
     r.total_time_min, REF_TIME_MIN, 100*(r.total_time_min/REF_TIME_MIN - 1));
 checkAgainstReference(r, REF_FUEL_LB, REF_TIME_MIN, TOL);
 
-% The total is BrandtMission's own, not this walk's sum. They agree here only
-% because Landing burns nothing: the total excludes Landing by construction
-% (BrandtMission.m:292). Saying so is cheaper than a reader discovering it.
+% The total is BrandtMission's own, which excludes Landing; it agrees with
+% this walk's sum only because Landing burns nothing.
 fprintf("\n  The ten phases above sum to %.2f lb. The reported total is the\n", total);
 fprintf("  analysis's own, which EXCLUDES Landing -- they agree only because\n");
 fprintf("  Landing burns %.1f lb. Combat's %.0f lb weapons release is already\n", ...
@@ -128,8 +123,8 @@ for nm = omitted'
         error("F16AMissionAnalysis:omittedSegmentIsNotFree", ...
             "Segment '%s' is not in the model's ten phases but now costs " + ...
             "%.2f lb and %.2f min. The model would be flying a cheaper " + ...
-            "mission than the one it claims -- add the phase to the activity " + ...
-            "or explain the omission (D-059).", nm, r.fuel_lb(k), r.time_min(k));
+            "mission than the one it claims -- add the phase to the activity.", ...
+            nm, r.fuel_lb(k), r.time_min(k));
     end
 end
 end

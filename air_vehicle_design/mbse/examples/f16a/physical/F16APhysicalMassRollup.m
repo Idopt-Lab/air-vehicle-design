@@ -7,24 +7,15 @@ function results = F16APhysicalMassRollup(options)
 %   aircraft's MeasureOfMerit.OEW_lb and saves.
 %
 %   RESULTS = F16APHYSICALMASSROLLUP(Persist=false) returns the same numbers
-%   and WRITES NOTHING. Tests use it: a test may not re-save the artifact it
-%   is asserting against (D-029).
+%   and writes nothing. RESULTS fields: OEW, Airframe, Propulsion, Engine,
+%   AirframeLessEngine, Table (per-assembly subtotals).
 %
-%   RESULTS fields: OEW, Airframe, Propulsion, Engine, AirframeLessEngine,
-%   Table (per-assembly subtotals).
-%
-%   It runs as six printed steps and prints every mass it reads and every
-%   subtotal it forms, so a reader can add the tree up by hand and check it.
-%   The instance holds only the ACTIVE choice of each variant role, so the
-%   rejected candidates are not in the sum -- step 2 prints which ones were
-%   dropped, and that is the whole of D-012 (see also D-058).
-%
-%   Requires physical/F16A_Physical.slx.
+%   It prints every mass it reads and every subtotal it forms, so the tree can
+%   be added up by hand. Only the ACTIVE choice of each variant role is in the
+%   sum; step 2 prints which candidates were dropped (D-012).
 
 arguments
-    % Write the OEW Measure of Merit back into the model and save it. True for
-    % F16ARunAnalyses, false for anything that is only asking what the model says.
-    options.Persist (1,1) logical = true
+    options.Persist (1,1) logical = true   % write OEW_lb into the model and save
 end
 
 % ---------------------------------------------------------------------
@@ -45,16 +36,6 @@ fprintf("==========================================================\n");
 % STEP 1 -- OPEN THE MODEL
 % =====================================================================
 fprintf("\n[STEP 1] OPEN THE MODEL\n");
-
-root      = f16aRoot();                    % the example root, via the anchor file
-physDir   = fullfile(root, "physical");
-modelFile = fullfile(physDir, MODEL + ".slx");
-addpath(physDir);
-
-if ~isfile(modelFile)
-    error("F16APhysicalMassRollup:noPhysicalModel", ...
-        "Missing %s. It is the source of truth; restore it from git.", modelFile);
-end
 
 m = systemcomposer.loadModel(MODEL);
 fprintf("  Model    : %s\n", MODEL);
@@ -106,10 +87,8 @@ fprintf("\n  The last line is the Operating Empty Weight: %.2f lb.\n", OEW);
 % =====================================================================
 fprintf("\n[STEP 4] WHAT EACH ASSEMBLY CONTRIBUTES\n");
 
-% Ask the aircraft what it is made of rather than holding a list of names: a
-% hard-coded list silently drops a newly added assembly from this table while
-% OEW (taken at the root) grows to include it, so the table stops summing to
-% the total printed beneath it (D-054).
+% Ask the aircraft what it is made of rather than keeping a list of names, so
+% a newly added assembly shows up here without editing this file.
 kids = aircraft.Components;
 if isempty(kids)
     error("F16APhysicalMassRollup:noAssemblies", ...
@@ -127,9 +106,7 @@ fprintf("  %s %9.2f lb  <- and that is the same %.2f the walk arrived at\n", ...
 
 T = table(assemblies, asmMass, 'VariableNames', {'Assembly','Mass_lb'});
 
-% The three figures the docs and the cost model quote, read straight off the
-% instance by name -- no path strings, so there is no second path space to
-% keep straight.
+% The figures the docs quote, read off the instance by name.
 airframeNode   = childNode(aircraft, "Airframe");
 propulsionNode = childNode(aircraft, "Propulsion");
 engineNode     = childNode(propulsionNode, "Engine");
@@ -162,7 +139,7 @@ end
 % =====================================================================
 fprintf("\n[STEP 6] SAVE\n");
 if options.Persist
-    save_system(MODEL, char(modelFile));
+    save_system(MODEL);
     fprintf("  Saved %s.slx.\n", MODEL);
 else
     fprintf("  Read-only: nothing saved. The model on disk is untouched.\n");
@@ -219,8 +196,7 @@ function nDropped = printChoices(comp)
 %   still exist -- the instance built in step 2 has already dropped them.
 nDropped = 0;
 if isa(comp, "systemcomposer.arch.VariantComponent")
-    % getChoices, never comp.Architecture.Components: the latter returns ZERO
-    % choices on a saved-and-reloaded model.
+    % getChoices, not comp.Architecture.Components, which is empty on a saved model.
     active  = getActiveChoice(comp);
     choices = arrayfun(@(c) string(c.Name), getChoices(comp));
     dropped = choices(choices ~= string(active.Name));

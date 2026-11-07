@@ -7,17 +7,12 @@ function results = F16APhysicalMaterialsRollup()
 %
 %   RESULTS fields: CompositeFraction (0..1), CompositeMass_lb, AirframeMass_lb,
 %   ActiveCandidate, Table (per-part mass, fraction, composite mass).
+%   It prints every number it reads and every product it forms, and the plain
+%   average beside the weighted one, so you can see what "mass-weighted" buys.
 %
-%   It runs as five printed steps and prints every number it reads and every
-%   product it forms, including the plain unweighted average alongside the
-%   weighted one, so a reader can see what "mass-weighted" bought.
-%
-%   This backs REQ_F16A_022 (airframe composite fraction <= 20%). Unlike OEW
-%   and cost -- Measures of Merit to minimize -- this is a CONSTRAINT with an
-%   upper bound, so it is checked by a "verified by" test.
-%
-%   IT FOLLOWS THE ACTIVE CANDIDATE, IT DOES NOT ASSUME ONE (D-003). The walk
-%   is at the bottom of this file, on purpose (D-057).
+%   This backs REQ_F16A_022 (composite fraction <= 20%). Unlike OEW and cost,
+%   which are Measures of Merit to minimize, it is a CONSTRAINT, so it is
+%   checked by a verification test (F16AMaterialsVerificationTest).
 %
 %   See also F16APHYSICALFUELROLLUP, F16APHYSICALMASSROLLUP.
 
@@ -42,8 +37,6 @@ fprintf("==========================================================\n");
 % =====================================================================
 fprintf("\n[STEP 1] OPEN THE MODEL\n");
 
-root = f16aRoot();   % the example root, via the anchor file
-addpath(fullfile(root, "physical"));
 m = systemcomposer.loadModel(MODEL);
 
 fprintf("  Model     : %s\n", MODEL);
@@ -83,10 +76,8 @@ fprintf("  Asking every part below %s: do you carry a %s stereotype?\n\n", ...
 
 fprintf("\n  -> %d part(s) answered yes.\n", numel(names));
 
-% Same rule as the fuel roll-up: no parts, or a part whose numbers cannot be
-% read, means REQ_F16A_022 has no value to check -- not a value of zero and not
-% a NaN the verify test would compare against the cap as if it were an answer
-% (D-054).
+% No parts, or a number that cannot be read, means there is no value to check
+% REQ_F16A_022 against -- not a value of zero.
 if isempty(names)
     error("F16APhysicalMaterialsRollup:noMaterialParts", ...
         "No part under the active airframe candidate %s carries a Material " + ...
@@ -125,9 +116,8 @@ fraction  = sum(compMass) / totalMass;
 fprintf("\n  Composite mass / airframe mass = %.2f / %.2f = %.4f\n", ...
     sum(compMass), totalMass, fraction);
 
-% The unweighted average printed beside the weighted one, and the reason they
-% differ read off the data rather than asserted -- so the sentence cannot go
-% stale when a mass changes.
+% Why the two averages differ is read off the data, so it stays true when a
+% mass changes.
 fprintf("  The plain average of the %d fractions, ignoring mass, would be %.4f.\n", ...
     numel(cf), mean(cf));
 if numel(names) >= 2
@@ -179,9 +169,7 @@ cf     = zeros(0,1);
 indent = repmat(' ', 1, 4 + 2*depth);
 
 % A variant role is replaced by its ACTIVE choice, never expanded into all of
-% them -- otherwise a rejected candidate's parts would be counted. Its children
-% are never reached through .Architecture.Components, which returns zero on a
-% saved-and-reloaded model.
+% them -- otherwise a rejected candidate's parts would be counted.
 if isa(comp, "systemcomposer.arch.VariantComponent")
     active = getActiveChoice(comp);
     fprintf("%s%-20s variant role -- following the active choice, %s\n", ...

@@ -7,12 +7,9 @@ function r = F16AMissionReference(options)
 %
 %   F16AMISSIONREFERENCE(Reset=true) forgets the cached answer and re-runs.
 %
-%   The answer is CACHED because every mission-phase action asks for it
-%   (F16AMissionSegment is bound to all ten), and running the chain once per
-%   action would be ten identical analyses per model update.
-%
-%   The cache holds the RESULT STRUCT, not the Brandt objects, so nothing
-%   outlives the path guard and no handle into /sizing/ is left behind.
+%   The result is CACHED because every mission-phase action asks for it
+%   (F16AMissionSegment is bound to all ten); without the cache that would be
+%   ten identical analyses per model update.
 %
 %   See also F16AMISSIONSEGMENT, F16AMISSIONANALYSIS.
 
@@ -31,9 +28,8 @@ end
 
 SIZING_POINT_LB = 31377;   % Wt!B3, the same point the cost model prices
 
-% /sizing/ is three levels above the example root and is reached by PATH, never
-% by project membership (D-047). The guard puts the path back on return; a bare
-% addpath would leave sizing/ resolvable for every later suite in the session.
+% /sizing/ is three levels above the example root. The guard puts the path
+% back on return, so sizing/ does not stay on it.
 avd  = fileparts(fileparts(fileparts(f16aRoot())));
 bDir = fullfile(avd, "sizing", "VnV", "BrandtF16A");
 if ~isfolder(bDir)
@@ -43,7 +39,7 @@ if ~isfolder(bDir)
         "the folder has to be present.", bDir);
 end
 oldPath = path();
-guard   = onCleanup(@() path(oldPath));  %#ok<NASGU> held until this function returns
+guard   = onCleanup(@() path(oldPath));  % held until this function returns
 addpath(bDir);
 
 % Argument order is (aero, eng, geom) -- BrandtMission is the one class in that

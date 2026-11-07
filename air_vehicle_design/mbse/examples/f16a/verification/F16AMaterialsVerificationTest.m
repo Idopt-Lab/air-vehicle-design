@@ -15,7 +15,7 @@ classdef F16AMaterialsVerificationTest < matlab.unittest.TestCase
         function setup(testCase)
             import matlab.unittest.fixtures.PathFixture
             % A PathFixture, not a bare addpath: the suite leaves the path as
-            % it found it (D-047).
+            % it found it.
             testCase.applyFixture(PathFixture({f16aRoot(), fullfile(f16aRoot(),"physical")}));
             % Close only the model this suite's roll-up loads. bdclose("all")
             % would also discard whatever else the user had open.

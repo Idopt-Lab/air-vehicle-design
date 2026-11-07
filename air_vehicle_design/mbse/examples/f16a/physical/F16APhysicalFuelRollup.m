@@ -5,18 +5,12 @@ function results = F16APhysicalFuelRollup()
 %
 %   RESULTS fields: AvailableFuel_lb (total), Table (per-tank capacity).
 %
-%   It runs as four printed steps -- open the model, find the parts that hold
-%   fuel, add them up, report -- and prints every capacity it reads and the
-%   running total, so a reader can add the tanks up by hand and check it.
+%   It prints every capacity it reads and the running total, so the tanks can
+%   be added up by hand.
 %
-%   This is the "available" side of REQ_F16A_P01. The "required" side comes
-%   from F16APhysicalMissionFuel, and the verify test compares the two.
-%   Capacity is expressed as fuel WEIGHT (lb) so it compares directly with
-%   mission fuel burn (D-041) -- which since D-059 is a real number.
-%
-%   It asks the model which parts hold fuel instead of assuming a list of
-%   names (D-038). The walk is at the bottom of this file, on purpose: this
-%   file is meant to be read straight through (D-057).
+%   This is the "available" side of REQ_F16A_P01; the "required" side comes
+%   from F16APhysicalMissionFuel, and F16AFuelVerificationTest compares them.
+%   Capacity is fuel WEIGHT (lb), so it compares directly with fuel burn.
 %
 %   See also F16APHYSICALMATERIALSROLLUP, F16APHYSICALMASSROLLUP.
 
@@ -39,8 +33,6 @@ fprintf("==========================================================\n");
 % =====================================================================
 fprintf("\n[STEP 1] OPEN THE MODEL\n");
 
-root = f16aRoot();   % the example root, via the anchor file
-addpath(fullfile(root, "physical"));
 m = systemcomposer.loadModel(MODEL);
 
 fuelSys = lookup(m, Path=char(STARTAT));
@@ -53,8 +45,7 @@ fprintf("  Property  : %s\n", CAPPROP);
 %
 % Nothing here knows a tank's name. Each part is asked whether it carries the
 % FuelTank stereotype; the ones that say yes are the tanks. Add a fourth tank
-% to the model and it is counted on the next run without editing this file
-% (D-038).
+% to the model and it is counted on the next run without editing this file.
 % =====================================================================
 fprintf("\n[STEP 2] FIND THE PARTS THAT HOLD FUEL\n");
 fprintf("  Asking every part below %s: do you carry a %s stereotype?\n\n", ...
@@ -64,10 +55,8 @@ fprintf("  Asking every part below %s: do you carry a %s stereotype?\n\n", ...
 
 fprintf("\n  -> %d part(s) answered yes.\n", numel(names));
 
-% A silent 0 is the failure D-038 removed, and it must not come back in either
-% of its two disguises: an empty walk, or an unreadable capacity that sums to
-% NaN. Both mean REQ_F16A_P01's available side has no value, and a NaN would
-% travel into the verify test and be compared as if it were one (D-054).
+% No tanks, or a capacity that cannot be read, means there is no available
+% side to check REQ_F16A_P01 against -- not an available side of zero.
 if isempty(names)
     error("F16APhysicalFuelRollup:noFuelTanks", ...
         "No part under %s carries a FuelTank stereotype -- the available-fuel " + ...
@@ -101,9 +90,8 @@ fprintf("  Total available internal fuel: %.0f lb, in %d tanks.\n", total, numel
 fprintf("  This is a plain SUM: tanks do not interact, so capacity simply adds.\n\n");
 fprintf("  It is only half of REQ_F16A_P01. The other half -- how much fuel the\n");
 fprintf("  mission REQUIRES -- comes from F16APhysicalMissionFuel, which reads the\n");
-fprintf("  mission the /sizing/ analysis flew into this model (D-059). The two are\n");
-fprintf("  compared by F16AFuelVerificationTest, which passes: the tanks hold more\n");
-fprintf("  than the mission burns.\n\n");
+fprintf("  mission the /sizing/ analysis flew into this model. The two are\n");
+fprintf("  compared by F16AFuelVerificationTest.\n\n");
 
 end
 
@@ -118,9 +106,7 @@ cap    = zeros(0,1);
 indent = repmat(' ', 1, 4 + 2*depth);
 
 % A variant role is replaced by its ACTIVE choice, never expanded into all of
-% them -- otherwise a rejected candidate's tanks would be counted. Its children
-% are never reached through .Architecture.Components, which returns zero on a
-% saved-and-reloaded model.
+% them -- otherwise a rejected candidate's tanks would be counted.
 if isa(comp, "systemcomposer.arch.VariantComponent")
     active = getActiveChoice(comp);
     fprintf("%s%-24s variant role -- following the active choice, %s\n", ...

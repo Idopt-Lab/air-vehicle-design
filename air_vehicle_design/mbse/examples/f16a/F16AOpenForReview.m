@@ -6,35 +6,23 @@ function F16AOpenForReview()
 %   requirements.
 %
 %   WHY THIS IS NEEDED: a link lives in the link set of the artifact it points
-%   FROM, never in the requirement set. An "Implemented by" link therefore ships
-%   with the MODEL and a "Verified by" link with the TEST, so a requirement set
-%   opened on its own shows neither -- REQ_F16A_020/023/024/025 (L) and
-%   REQ_F16A_022/026 + REQ_F16A_P01/P02 (P) read as un-implemented, and every
-%   Verify link is invisible. Loading the models and the test link sets makes
-%   them appear.
+%   FROM, never in the requirement set. An "Implemented by" link ships with the
+%   MODEL and a "Verified by" link with the TEST, so a requirement set opened
+%   on its own shows neither. Loading the models (including the mission
+%   activity, whose actions implement the mission-phase requirements) and the
+%   test link sets makes them appear.
 %
-%   THE MISSION ACTIVITY IS NOT OPTIONAL HERE. Since D-059 eighteen links --
-%   REQ_F16A_001-010, the phase-specific half of 017/018, 021 and D05-D09 --
-%   point from ACTIONS in F16A_MissionActivity. Leave it unloaded and every
-%   mission-phase requirement reads as un-implemented, which is the exact
-%   failure this function exists to prevent.
-%
-%   The closing report is READ from the artifacts, not asserted: it names the
-%   requirements that carry a Verify link and the tests still waiting for one to
-%   be made by hand (docs/README.md, "Verification links are added manually").
+%   The closing report is read from the artifacts: the requirements that carry
+%   a Verify link, and any test still waiting for one to be made by hand.
 
-thisDir = f16aRoot();   % example root, via anchor (f16aRoot.m) -- not this file's folder
+thisDir = f16aRoot();
 vDir    = fullfile(thisDir,"verification");
-addpath(thisDir, ...
-    fullfile(thisDir,"requirements"), fullfile(thisDir,"functions"), ...
-    fullfile(thisDir,"logical"), fullfile(thisDir,"physical"), vDir);
 
 % Loading a model loads its requirement link set (the Implement links).
 systemcomposer.loadModel("F16A_Functional");
 systemcomposer.loadModel("F16A_Logical");
 systemcomposer.loadModel("F16A_Physical");
-% The activity is opened with openActivity, not loadModel -- it is an activity
-% diagram model, and it carries 18 of the 39 Implement links.
+% An activity diagram is opened with openActivity, not loadModel.
 systemcomposer.openActivity("F16A_MissionActivity");
 
 % Load every requirement set (base + the three derived sets).
@@ -44,10 +32,8 @@ for f = reqFiles
     slreq.load(fullfile(thisDir,"requirements",f));
 end
 
-% Load the TESTS' link sets -- the Verify links. Globbed rather than named on
-% purpose: a test's link set exists only once its Verify link has been made by
-% hand, so a literal filename would error on a checkout where it has not been,
-% and a fourth verification test would need an edit here to be seen.
+% Load the TESTS' link sets -- the Verify links. Globbed, because a test's
+% link set exists only once its Verify link has been made by hand.
 lnkSets = dir(fullfile(vDir,"*~m.slmx"));
 for k = 1:numel(lnkSets)
     slreq.load(fullfile(lnkSets(k).folder, lnkSets(k).name));
@@ -63,13 +49,8 @@ end
 
 % =====================================================================
 function reportVerifyLinks(vDir)
-%REPORTVERIFYLINKS Report the Verify links as they are, not as they were.
-%   Two halves, both measured from what is loaded rather than from a typed list
-%   that would drift: the requirements now carrying an inbound Verify link, and
-%   the verification tests with no link set at all -- i.e. whose link nobody has
-%   made yet. In R2026a a MATLAB test cannot be a link SOURCE programmatically,
-%   so the second list is hand work in the Requirements Editor and nothing here
-%   can close it.
+%REPORTVERIFYLINKS The requirements carrying a Verify link, and the tests without one.
+%   Both are read from what is loaded, not from a typed list that would drift.
 verified = strings(1,0);
 reqs = slreq.find(Type="Requirement");
 for i = 1:numel(reqs)

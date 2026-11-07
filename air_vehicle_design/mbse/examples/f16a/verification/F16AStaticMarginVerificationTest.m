@@ -1,36 +1,27 @@
 classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
     %F16ASTATICMARGINVERIFICATIONTEST Verify REQ_F16A_025 (relaxed static stability).
-    %   Checks SM = (x_np - x_cg)/MAC against REQ_F16A_025's criterion,
-    %   -6 %MAC <= SM < 0, at takeoff AND at landing weight -- "across the
-    %   operational CG range" (D-046). The upper end is STRICT: neutral is not
-    %   negative.
+    %   Checks SM = (x_np - x_cg)/MAC against -6 %MAC <= SM < 0 at takeoff AND
+    %   at landing weight -- "across the operational CG range". The upper end is
+    %   STRICT: neutral is not negative.
     %
-    %   THIS SUITE IS EXPECTED TO BE RED -- 2 pass, 1 fail, the LANDING case.
-    %   SM_TO = -0.26 %MAC (MET), SM_land = +0.21 %MAC (VIOLATED): burning fuel
-    %   and releasing stores moves the CG forward, so landing is the most-stable
-    %   end of the range, and that is where a relaxed-stability requirement
-    %   bites. Do not make it pass -- a Verify-linked test reporting green while
-    %   its requirement is violated is the dishonesty this example teaches against.
+    %   EXPECTED RED -- 2 pass, 1 fail, the LANDING case, the example's only
+    %   intentional red. Burning fuel and releasing stores moves the CG forward,
+    %   so landing is the most-stable end, where relaxed stability bites. Do not
+    %   make it pass: a Verify-linked test reporting green while its requirement
+    %   is violated is the dishonesty this example teaches against.
+    %   testAnalysisProducedUsableMargins must stay GREEN: it separates "the
+    %   design violates this requirement" from "the analysis is broken".
     %
-    %   testAnalysisProducedUsableMargins must stay GREEN: it is what separates
-    %   "the design violates this requirement" from "the analysis is broken"
-    %   (D-051). Since D-060 this is the example's ONLY intentional red.
-    %
-    %   The -6 %MAC figure is an illustrative teaching value, not sourced data
-    %   (D-030). That sentence is canonical (D-048) -- do not reword it. P holds
-    %   no neutral point, CG or MAC, so this delegates read-only to
-    %   sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m, by PATH (D-047).
+    %   The -6 %MAC figure is an illustrative teaching value (D-030). P holds no
+    %   neutral point, CG or MAC, so this delegates read-only to
+    %   sizing/VnV/BrandtF16A/BrandtBalanceStabControl.m.
 
     properties (Constant)
-        % REQ_F16A_025's criterion (D-046), as FRACTIONS of MAC to match run()'s
+        % REQ_F16A_025's criterion, as FRACTIONS of MAC to match run()'s
         % SM_TO / SM_land -- so -0.06 is -6 %MAC. The two ends are compared
         % DIFFERENTLY and the names say which: at least the lower bound
-        % (inclusive), strictly BELOW the upper one. Declared once each so a
-        % bound cannot be relaxed for the failing case and left alone elsewhere
-        % (D-047 guarantee 5): the constraint and every message line that names a
-        % criterion INTERPOLATE these, none retypes them. SMLower_fracMAC is
-        % Estimate-class, inventoried in D-030; its canonical label is in the
-        % help block above and is not repeated here.
+        % (inclusive), strictly BELOW the upper one. Declared once, so the
+        % constraint and every message interpolate the same bounds.
         SMLower_fracMAC       = -0.06
         SMMustBeBelow_fracMAC =  0
 
@@ -63,7 +54,7 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
                 "test that stops verifying must not report success.");
 
             % A PathFixture, not a bare addpath: leaving sizing/ (three levels
-            % outside the project) on the path makes results order-dependent (D-047).
+            % outside the project) on the path makes results order-dependent.
             testCase.applyFixture(PathFixture(brandtDir));
 
             % Read-only -- these compute in memory and write no file.
@@ -77,18 +68,15 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
         function testAnalysisProducedUsableMargins(testCase)
             % A dependency check run before the requirement is judged: it separates
             % "the aircraft violates REQ_F16A_025" from "the analysis that evaluates
-            % it is broken" (D-047 guarantee 3). A NaN margin is not a violation.
-            % Now load-bearing rather than precautionary: this suite ships one
-            % genuine failure, and this test staying GREEN is what proves the
-            % landing red is a violation and not a broken run.
+            % it is broken". A NaN margin is not a violation. This test staying
+            % GREEN is what shows the landing red is a violation, not a broken run.
             testCase.assertTrue(isfield(testCase.Balance, "SM_TO") && ...
                 isfield(testCase.Balance, "SM_land"), ...
                 "BrandtBalanceStabControl.run did not return SM_TO / SM_land. The " + ...
                 "sizing model's interface has changed and this verification is reading " + ...
                 "the wrong fields -- fix the reader, do not reinterpret the result.");
-            % string(num2str(x)), NOT string(x) -- do not revert. string(NaN) is
-            % <missing>, which the diagnostic framework rejects, so the obvious
-            % spelling deletes this message on the input it exists for (08_agent_team).
+            % string(num2str(x)), not string(x): string(NaN) is <missing>, which
+            % the diagnostic framework rejects -- on the very input this is for.
             testCase.verifyTrue(isfinite(testCase.Balance.SM_TO), ...
                 "Static margin at takeoff is not finite (" + ...
                 string(num2str(testCase.Balance.SM_TO)) + "). This is a broken " + ...
@@ -113,8 +101,7 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
             % stable end. EXPECTED TO FAIL -- SM_land is positive and
             % REQ_F16A_025 is violated. "Across the operational CG range" is
             % what puts this end in scope: checking only takeoff verifies half a
-            % requirement and would report this design compliant (D-047
-            % guarantee 4).
+            % requirement and would report this design compliant.
             testCase.verifyThat(testCase.Balance.SM_land, ...
                 testCase.criterionConstraint(), ...
                 testCase.criterionMessage("landing", testCase.Balance.SM_land));
@@ -128,9 +115,7 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
             %   Not named "inBand": the two ends are compared differently.
             %   IsGreaterThanOrEqualTo at the lower end, IsLessThan -- NOT
             %   IsLessThanOrEqualTo -- at the upper, because a margin of exactly
-            %   zero is neutral, and neutral is not negative. Zero sat in the
-            %   interior of the old -6 .. +1 %MAC band, so nothing before now
-            %   depended on which comparison was used there.
+            %   zero is neutral, and neutral is not negative.
             import matlab.unittest.constraints.IsGreaterThanOrEqualTo
             import matlab.unittest.constraints.IsLessThan
             c = IsGreaterThanOrEqualTo(testCase.SMLower_fracMAC) & ...
@@ -145,8 +130,8 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
             %   ceiling is not relaxed at all -- plus two further outcomes:
             %   satisfied, which this is never SHOWN for but is BUILT for on
             %   every call and so must stay true, and non-finite, a broken
-            %   analysis. That last branch is a bug fix: `NaN < x` is false, so a
-            %   NaN margin fell to the else and was reported as a verdict.
+            %   analysis -- checked first, because `NaN < x` is false and a NaN
+            %   would otherwise fall through and be reported as a verdict.
 
             % Both bounds are INTERPOLATED from the constants, never typed:
             % literal text here would name one criterion while "Required:" below
@@ -175,8 +160,7 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
                     "fly-by-wire selection was justified by. The margin printed above " + ...
                     "is a finite number, so the analysis RAN and the requirement WAS " + ...
                     "evaluated: this red is a genuine VIOLATION, not a broken run, " + ...
-                    "and since D-060 it is the only intentional red the example " + ...
-                    "ships", upperPct);
+                    "and it is the only intentional red the example ships", upperPct);
             else
                 why = sprintf( ...
                     "within [%g, %g) %%MAC and therefore SATISFIES REQ_F16A_025 here. " + ...
@@ -196,8 +180,8 @@ classdef F16AStaticMarginVerificationTest < matlab.unittest.TestCase
                     "three fuel thirds: W_land = W_empty + perm_payload, about " + ...
                     "20,678 lb computed", testCase.W_TO_lb);
             else
-                % Unknown rather than defaulting to W_TO -- defaulting is how the
-                % landing message came to name the wrong weight.
+                % Unknown rather than defaulting to W_TO, which would name the
+                % wrong weight.
                 atWeight = sprintf( ...
                     "run() called at sizing point W_TO = %d lb; the weight of " + ...
                     "condition '%s' is not characterised by this test", ...

@@ -82,7 +82,9 @@ mbse/examples/f16a/
 │   ├─ F16AEngineTradeStudy.m            thrust / mass / TRL      → REQ_F16A_L01
 │   ├─ F16AAirframeTradeStudy.m          aero / mass / TRL        → REQ_F16A_L03
 │   ├─ F16AFlightControlsTradeStudy.m    handling / mass / TRL    → REQ_F16A_L02
-│   │                                    each standalone: open, read, score, decide, write back
+│   │                                    each: open, read, score, pick (steps 1-4)
+│   ├─ F16ARecordTradeDecision.m         steps 5-6, shared: write the decision into P, L and R
+│   ├─ F16AKindOf.m                      which logical kind a physical candidate realizes
 │   ├─ F16APhysicalMassRollup.m          part masses → OEW      (6 printed steps)
 │   ├─ F16APhysicalMaterialsRollup.m     composite fraction     (5 printed steps)
 │   ├─ F16APhysicalFuelRollup.m          available fuel         (4 printed steps)

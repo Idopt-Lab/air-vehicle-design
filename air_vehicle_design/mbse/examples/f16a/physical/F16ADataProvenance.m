@@ -1,13 +1,9 @@
 classdef F16ADataProvenance
 %F16ADATAPROVENANCE Where a number came from -- the provenance vocabulary.
-%   The controlled vocabulary for the DataProvenance property, which every
-%   value-bearing P stereotype declares: the three candidate stereotypes
-%   (D-007, D-056), FuelTank (D-023), Material (D-031) and PhysicalItem
-%   (D-052). P is the only layer
-%   that carries numbers, so it is the layer that must say where each came
-%   from. An Estimate is permitted, but every Estimate must also be listed in
-%   docs/07_decision_log.md -- an unexplained guess and a sourced figure must
-%   not look alike in the model.
+%   The vocabulary for the DataProvenance property that every value-bearing
+%   P stereotype declares. P is the only layer that carries numbers, so it is
+%   the layer that must say where each came from: an unexplained guess and a
+%   sourced figure must not look alike in the model.
 %
 %   The four members, strongest evidence first:
 %     Datasheet    A manufacturer or programme datasheet figure.
@@ -17,9 +13,7 @@ classdef F16ADataProvenance
 %     Estimate     An illustrative teaching value. NOT F-16 data, and must
 %                  never be cited as such.
 %
-%   Write/read convention: identical to F16ASourceKind, which documents it.
-%
-%   See also F16ASOURCEKIND.
+%   Written and read like F16ASourceKind; see also F16ASOURCEKIND.
 
     enumeration
         Datasheet

@@ -1,9 +1,8 @@
 classdef F16ASourceKind
 %F16ASOURCEKIND Why a physical part exists -- the Rationale vocabulary.
-%   The controlled vocabulary for F16A_PhysicalProps.Rationale.SourceKind, the
-%   property that makes "why does this part exist?" a QUERYABLE fact about the
-%   model instead of a code comment (D-006). Every component in
-%   physical/F16A_Physical.slx carries exactly one of these six answers:
+%   The vocabulary for F16A_PhysicalProps.Rationale.SourceKind, which makes
+%   "why does this part exist?" a queryable fact about the model. Every
+%   component in physical/F16A_Physical.slx carries one of these six answers:
 %     RealizesFunction         A logical role, and through it a function, has
 %                              to be realized by something concrete.
 %     SatisfiesRequirement     A requirement demands the part directly.
@@ -13,12 +12,8 @@ classdef F16ASourceKind
 %     ConstraintDriven         Building an airplane at all requires it.
 %     SupportingInfrastructure It serves OTHER parts and realizes no role.
 %
-%   WRITE/READ CONVENTION (measured, R2026a). Write fully qualified and
-%   unquoted, "F16ASourceKind.SupportingInfrastructure", or as a quoted bare
-%   member, "'SupportingInfrastructure'"; anything else errors. It reads back
-%   WITH quotes, so strip them: erase(string(getProperty(c, "...")), "'").
-%
-%   See also F16ADATAPROVENANCE.
+%   Write "F16ASourceKind.TradeWinner" or "'TradeWinner'". It reads back WITH
+%   quotes: erase(string(getProperty(c, "...")), "'"). See F16ADATAPROVENANCE.
 
     enumeration
         RealizesFunction

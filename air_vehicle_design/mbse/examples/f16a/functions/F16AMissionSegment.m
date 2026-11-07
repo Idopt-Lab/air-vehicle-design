@@ -8,11 +8,8 @@ function s = F16AMissionSegment(phaseName)
 %   THIS IS THE ANALYSIS LINK. Every phase action in F16A_MissionActivity
 %   carries F16AMissionSegment('<its name>') as its BehaviorDefinition, so the
 %   model records HOW each number is computed instead of storing the number.
-%   Re-run the analysis and the model follows it.
-%
-%   The numbers are not computed here. They are read from the /sizing/ mission
-%   analysis (F16AMissionReference); the segment equations have one home, and
-%   it is not this repository's MBSE example.
+%   The numbers are not computed here: they come from the /sizing/ mission
+%   analysis (F16AMissionReference), the one home of the segment equations.
 %
 %   See also F16AMISSIONREFERENCE, F16AMISSIONANALYSIS.
 

@@ -5,17 +5,11 @@ classdef F16AFuelVerificationTest < matlab.unittest.TestCase
     %   ~5960 lb from the /sizing/ mission analysis). It passes, with about
     %   340 lb of margin.
     %
-    %   IT USED TO FAIL BY DESIGN. Until D-060 the required side was NaN, so
-    %   nothing was compared and REQ_F16A_P01 was UNEVALUATED -- a deliberate
-    %   teaching artifact showing verification that is set up and traceable but
-    %   not yet satisfied. D-059 connected the mission analysis, so there is now
-    %   a real number to compare and the requirement is answered.
-    %
-    %   THE EXAMPLE STILL SHIPS ONE INTENTIONAL RED, and it is a different
-    %   state: F16AStaticMarginVerificationTest's landing case is VIOLATED --
-    %   both sides are finite, the comparison was genuinely made, and the design
-    %   lost (D-051). Met and violated are not the same as unevaluated, and the
-    %   UNEVALUATED branch survives in the roll-up guards (D-054).
+    %   Compare F16AStaticMarginVerificationTest, whose landing case is the
+    %   example's one intentional red: there both sides are finite, the
+    %   comparison was genuinely made, and the design lost. Met and violated are
+    %   both answers; a NaN on either side would be neither (UNEVALUATED), and
+    %   the roll-ups stop with an error rather than return one.
     %
     %   See also F16AMATERIALSVERIFICATIONTEST, F16ASTATICMARGINVERIFICATIONTEST.
 
@@ -23,7 +17,7 @@ classdef F16AFuelVerificationTest < matlab.unittest.TestCase
         function setup(testCase)
             import matlab.unittest.fixtures.PathFixture
             % A PathFixture, not a bare addpath: the suite leaves the path as
-            % it found it (D-047).
+            % it found it.
             testCase.applyFixture(PathFixture({f16aRoot(), fullfile(f16aRoot(),"physical")}));
             % Close only the model this suite's roll-up loads. bdclose("all")
             % would also discard whatever else the user had open.
