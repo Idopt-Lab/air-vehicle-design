@@ -7,8 +7,7 @@ classdef F16AMaterialsVerificationTest < matlab.unittest.TestCase
     %
     %   This file is deliberately kept to ONLY the REQ_F16A_022 check, separate
     %   from:
-    %     * F16APhysicalArchitectureTest  -- machinery: the model is built right,
-    %       stereotypes/links exist, roll-ups are self-consistent.
+    %     * F16ABaselineTest              -- regression: the numbers have not moved.
     %     * F16AFuelVerificationTest      -- the other requirement (REQ_F16A_P01).
     %   so "is REQ_022 met?" is a single, self-contained, all-green suite.
 

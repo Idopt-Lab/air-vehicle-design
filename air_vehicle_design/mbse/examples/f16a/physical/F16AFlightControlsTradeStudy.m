@@ -1,4 +1,4 @@
-function ranked = F16AFlightControlsTradeStudy()
+function ranked = F16AFlightControlsTradeStudy(options)
 %F16AFLIGHTCONTROLSTRADESTUDY Choose the F-16A flight control system and record it.
 %   RANKED = F16AFLIGHTCONTROLSTRADESTUDY() scores every choice of the
 %   FlightControls variant on handling qualities, mass and maturity, picks the
@@ -12,12 +12,19 @@ function ranked = F16AFlightControlsTradeStudy()
 %
 %   RANKED is the scored table, best first. Re-running is idempotent.
 %
+%   RANKED = F16AFLIGHTCONTROLSTRADESTUDY(Record=false) stops after STEP 4: it scores
+%   and ranks, but writes nothing to any model (F16ABaselineTest runs it so).
+%
 %   ONE TRADE, ONE FILE, ONE STEREOTYPE (D-056). Its siblings are
 %   F16AEngineTradeStudy and F16AAirframeTradeStudy; F16APhysicalTradeStudy runs
 %   all three. Nothing here is shared with them on purpose: this file is meant to
 %   be read straight through without opening another one.
 %
 %   Requires F16A_Physical.slx, F16A_Logical.slx and f16a_logical_derived.slreqx.
+
+arguments
+    options.Record (1,1) logical = true   % false: score and rank only
+end
 
 % ---------------------------------------------------------------------
 % WHAT THIS TRADE IS ABOUT. Four names and a criteria table; the rest of the
@@ -260,6 +267,10 @@ ranked.Score    = score;
 ranked.Rank     = rankOf;
 ranked.Selected = (rankOf == 1);
 ranked = sortrows(ranked, "Rank");
+
+if ~options.Record
+    return   % scored and ranked; nothing written
+end
 
 % =====================================================================
 % STEP 5 -- TELL THE MODEL WHAT WAS DECIDED

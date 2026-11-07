@@ -1,4 +1,4 @@
-function ranked = F16AAirframeTradeStudy()
+function ranked = F16AAirframeTradeStudy(options)
 %F16AAIRFRAMETRADESTUDY Choose the F-16A airframe and write the choice into the model.
 %   RANKED = F16AAIRFRAMETRADESTUDY() scores every choice of the Airframe variant
 %   on aerodynamic merit, mass and maturity, picks the best, and records that
@@ -11,12 +11,19 @@ function ranked = F16AAirframeTradeStudy()
 %
 %   RANKED is the scored table, best first. Re-running is idempotent.
 %
+%   RANKED = F16AAIRFRAMETRADESTUDY(Record=false) stops after STEP 4: it scores
+%   and ranks, but writes nothing to any model (F16ABaselineTest runs it so).
+%
 %   ONE TRADE, ONE FILE, ONE STEREOTYPE (D-056). Its siblings are
 %   F16AEngineTradeStudy and F16AFlightControlsTradeStudy; F16APhysicalTradeStudy
 %   runs all three. Nothing here is shared with them on purpose: this file is
 %   meant to be read straight through without opening another one.
 %
 %   Requires F16A_Physical.slx, F16A_Logical.slx and f16a_logical_derived.slreqx.
+
+arguments
+    options.Record (1,1) logical = true   % false: score and rank only
+end
 
 % ---------------------------------------------------------------------
 % WHAT THIS TRADE IS ABOUT. Four names and a criteria table; the rest of the
@@ -259,6 +266,10 @@ ranked.Score    = score;
 ranked.Rank     = rankOf;
 ranked.Selected = (rankOf == 1);
 ranked = sortrows(ranked, "Rank");
+
+if ~options.Record
+    return   % scored and ranked; nothing written
+end
 
 % =====================================================================
 % STEP 5 -- TELL THE MODEL WHAT WAS DECIDED
