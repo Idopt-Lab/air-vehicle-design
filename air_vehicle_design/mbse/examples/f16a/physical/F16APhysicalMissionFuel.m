@@ -9,7 +9,7 @@ function requiredFuel_lb = F16APhysicalMissionFuel()
 %
 %   It READS MeasureOfMerit.MissionFuel_lb off the model rather than re-running
 %   the analysis, which is what makes it symmetric with the available side:
-%   both ask the model, and the model is what section 9c wrote (D-059).
+%   both ask the model, and F16ARunAnalyses wrote it there (D-059).
 %
 %   It returned NaN by design until D-060. The example now carries a mission
 %   the model can actually fly, so the requirement is answered rather than
@@ -34,7 +34,7 @@ if ~isfinite(requiredFuel_lb) || requiredFuel_lb <= 0
     error("F16APhysicalMissionFuel:missionNotAnalysed", ...
         "MissionFuel_lb on the aircraft is %s. The mission has not been " + ...
         "analysed into this model, so the required side of REQ_F16A_P01 " + ...
-        "cannot be evaluated -- run generate_f16a_physical (section 9c).", ...
+        "cannot be evaluated -- run F16ARunAnalyses.", ...
         string(num2str(requiredFuel_lb)));
 end
 

@@ -19,10 +19,6 @@ function F16AOpenForReview()
 %   mission-phase requirement reads as un-implemented, which is the exact
 %   failure this function exists to prevent.
 %
-%   Regenerating is link-safe: slreq.new builds each requirement set from
-%   scratch, but a full rebuild of all four was measured to leave the hand-made
-%   Verify links still resolving. Regenerate without fear for them.
-%
 %   The closing report is READ from the artifacts, not asserted: it names the
 %   requirements that carry a Verify link and the tests still waiting for one to
 %   be made by hand (docs/README.md, "Verification links are added manually").

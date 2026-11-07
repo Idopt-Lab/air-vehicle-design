@@ -4,7 +4,7 @@ function r = f16aRoot()
 %   (the folder that contains f16a.prj, docs/, requirements/, functions/,
 %   logical/, physical/, and verification/).
 %
-%   The single location ANCHOR for the example: every generator, roll-up and
+%   The single location ANCHOR for the example: every trade, roll-up and
 %   test derives sibling-folder paths from it rather than from its own file
 %   location, so a script works wherever it sits.
 %

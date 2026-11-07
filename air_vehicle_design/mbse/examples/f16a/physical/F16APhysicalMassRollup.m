@@ -19,11 +19,11 @@ function results = F16APhysicalMassRollup(options)
 %   rejected candidates are not in the sum -- step 2 prints which ones were
 %   dropped, and that is the whole of D-012 (see also D-058).
 %
-%   Requires physical/F16A_Physical.slx (run generate_f16a_physical).
+%   Requires physical/F16A_Physical.slx.
 
 arguments
     % Write the OEW Measure of Merit back into the model and save it. True for
-    % the generator, false for anything that is only asking what the model says.
+    % F16ARunAnalyses, false for anything that is only asking what the model says.
     options.Persist (1,1) logical = true
 end
 
@@ -53,7 +53,7 @@ addpath(physDir);
 
 if ~isfile(modelFile)
     error("F16APhysicalMassRollup:noPhysicalModel", ...
-        "Missing %s. Run generate_f16a_physical first.", modelFile);
+        "Missing %s. It is the source of truth; restore it from git.", modelFile);
 end
 
 m = systemcomposer.loadModel(MODEL);

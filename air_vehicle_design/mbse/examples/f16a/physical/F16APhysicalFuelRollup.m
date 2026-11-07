@@ -53,7 +53,7 @@ fprintf("  Property  : %s\n", CAPPROP);
 %
 % Nothing here knows a tank's name. Each part is asked whether it carries the
 % FuelTank stereotype; the ones that say yes are the tanks. Add a fourth tank
-% to the generator and it is counted on the next run without editing this file
+% to the model and it is counted on the next run without editing this file
 % (D-038).
 % =====================================================================
 fprintf("\n[STEP 2] FIND THE PARTS THAT HOLD FUEL\n");

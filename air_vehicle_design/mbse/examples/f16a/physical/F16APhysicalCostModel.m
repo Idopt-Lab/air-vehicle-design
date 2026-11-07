@@ -5,9 +5,9 @@ function costs = F16APhysicalCostModel(m, options)
 %
 %   F16APHYSICALCOSTMODEL(M, PreconditionOnly=true) checks only that the DAPCA
 %   constants still describe this aircraft, and returns a struct of NaN without
-%   pricing. The generator calls it that way as soon as the trade has a winner,
-%   so a build that CANNOT be priced stops there instead of saving a model
-%   whose cost Measures of Merit it will never fill in.
+%   pricing. F16ARunAnalyses calls it that way as soon as the trades have a
+%   winner, so a run that CANNOT be priced stops before it writes any
+%   Measure of Merit.
 %
 %   Teaching point: OEW is a bottom-up ROLL-UP of the parts
 %   (F16APhysicalMassRollup), but cost is not a sum of part costs -- it is the
@@ -16,15 +16,15 @@ function costs = F16APhysicalCostModel(m, options)
 %   It CALLS sizing/VnV/BrandtF16A/BrandtCost.m rather than restating DAPCA IV,
 %   handing it THIS model's rolled-up OEW and THIS model's mission fuel, so the
 %   results are Simulations and BrandtCost's own figures stay real
-%   cross-checks. It runs AFTER the mass roll-up and after section 9c: an unset
+%   cross-checks. It runs AFTER the mass roll-up and the mission analysis: an unset
 %   OEW or mission is an error here, not a cheap aeroplane (D-043, D-059).
 %
 %   See also F16APHYSICALMASSROLLUP, F16AMISSIONANALYSIS, F16ADATAPROVENANCE.
 
 arguments
     m (1,1) systemcomposer.arch.Model
-    % Check the DAPCA precondition and return; price nothing. Lets the
-    % generator fail at the cause, before the sections that save the model.
+    % Check the DAPCA precondition and return; price nothing. Lets
+    % F16ARunAnalyses fail at the cause, before it writes any number.
     options.PreconditionOnly (1,1) logical = false
 end
 
@@ -38,8 +38,8 @@ SIZING_POINT_LB = 31377;   % Wt!B3, the same point the other /sizing/ callers us
 inp = costObj.inp;                         % the same JSON the reference is built from
 
 % --- Cross-check: is this still the aeroplane those constants price? ------
-% Checked FIRST, because it needs no OEW and it is the precondition the
-% generator wants answered before it saves anything. Post-D-053 the winning
+% Checked FIRST, because it needs no OEW and it is the precondition
+% F16ARunAnalyses wants answered before it writes anything. Post-D-053 the winning
 % engine carries its own Thrust_SL_lb, so the architecture can be asked whether it
 % still matches the reference. The DAPCA constants describe the REFERENCE
 % aircraft; if the trade ever selects a different engine they stop applying,
@@ -66,12 +66,12 @@ We = readMoM(aircraft, profileName, "OEW_lb");
 if ~isfinite(We) || We <= 0
     error("F16APhysicalCostModel:oewNotRolledUp", ...
         "The aircraft's OEW Measure of Merit is %s, so there is no empty weight " + ...
-        "to price. Run F16APhysicalMassRollup before the cost model -- this is " + ...
-        "the section 8 / section 9 ordering D-043 corrected.", string(num2str(We)));
+        "to price. Run F16APhysicalMassRollup before the cost model, as " + ...
+        "F16ARunAnalyses does (D-043).", string(num2str(We)));
 end
 
 % --- The mission THIS model flies, read back off the aircraft --------------
-% Not recomputed here: section 9c wrote it, and the cost model prices what the
+% Not recomputed here: F16ARunAnalyses wrote it, and the cost model prices what the
 % model says it flies. total_time_min is a DIVISOR in BrandtCost.m:128 with no
 % zero guard of its own, so a non-positive time is rejected here rather than
 % silently returning an infinite life-cycle cost.
@@ -81,7 +81,7 @@ if ~isfinite(fuel_lb) || fuel_lb <= 0 || ~isfinite(time_min) || time_min <= 0
     error("F16APhysicalCostModel:missionNotAnalysed", ...
         "The aircraft's mission Measures of Merit are %s lb over %s min, so " + ...
         "there is no sortie to cost. Run F16AMissionAnalysis and write them " + ...
-        "before the cost model -- this is the section 9c / 9d ordering (D-059).", ...
+        "before the cost model, as F16ARunAnalyses does (D-059).", ...
         string(num2str(fuel_lb)), string(num2str(time_min)));
 end
 
@@ -142,8 +142,8 @@ avd = fileparts(fileparts(fileparts(f16aRoot())));
 bDir = fullfile(avd, "sizing", "VnV", "BrandtF16A");
 if ~isfolder(bDir)
     error("F16APhysicalCostModel:noSizingModel", ...
-        "The Brandt cost model was not found at %s. The generator chain needs " + ...
-        "/sizing/ present at build time (D-043) -- restating the DAPCA IV " + ...
+        "The Brandt cost model was not found at %s. The cost model needs " + ...
+        "/sizing/ present (D-043) -- restating the DAPCA IV " + ...
         "formulation here instead is not an option.", bDir);
 end
 oldPath = path();

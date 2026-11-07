@@ -19,7 +19,7 @@ classdef F16ADataProvenance
 %
 %   Write/read convention: identical to F16ASourceKind, which documents it.
 %
-%   See also F16ASOURCEKIND, generate_f16a_physical.
+%   See also F16ASOURCEKIND.
 
     enumeration
         Datasheet

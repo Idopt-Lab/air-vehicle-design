@@ -52,18 +52,16 @@ mbse/examples/f16a/
 ├─ f16a.prj                              Simulink Project (open this first)
 ├─ f16aRoot.m                            path anchor: absolute path to the example root
 ├─ F16AOpenForReview.m                   load all models + requirement sets, open the editor
+├─ F16ARunAnalyses.m                     changed a number? re-run every trade and analysis
 ├─ docs/                                 <- you are here
 ├─ requirements/                         R layer
 │   ├─ f16a.slreqx                       sizing-derived requirements (pristine)
 │   ├─ f16a_functional_derived.slreqx    derived placeholders (D01–D09)
 │   ├─ f16a_logical_derived.slreqx       decision requirements (L01–L03)
-│   ├─ f16a_physical_derived.slreqx      physical requirements (P01 fuel, P02 life-cycle cost)
-│   └─ generate_f16a_*requirements.m     one generator per set
+│   └─ f16a_physical_derived.slreqx      physical requirements (P01 fuel, P02 life-cycle cost)
 ├─ functions/                            F layer — TWO artifacts, two metaclasses (D-059)
 │   ├─ F16A_Functional.slx + .sldd + ~mdl.slmx   the capability tree (no ports)
-│   ├─ generate_f16a_functional.m        builds it, then calls the activity generator
 │   ├─ F16A_MissionActivity.slx + ~mdl.slmx      the mission as an ACTIVITY diagram
-│   ├─ generate_f16a_mission_activity.m  10 actions, F2T2EA child activity, 18 links
 │   ├─ F16A_MissionUsesCapability.mldatx phase → capability (mechanism allocation, semantic use)
 │   ├─ F16AMissionAnalysis.m             the printed walk over the ten phases (5 steps)
 │   ├─ F16AMissionSegment.m              one phase's numbers — each action's BehaviorDefinition
@@ -72,8 +70,7 @@ mbse/examples/f16a/
 │   ├─ F16A_Logical.slx + .sldd + ~mdl.slmx
 │   ├─ F16A_LogicalOptions.xml           stereotype profile (Selected, DecisionRef)
 │   ├─ F16A_FunctionToLogical.mldatx     capability → logical allocation (7 edges)
-│   ├─ F16A_KillChainToLogical.mldatx    kill-chain action → logical allocation (7 edges)
-│   └─ generate_f16a_logical.m
+│   └─ F16A_KillChainToLogical.mldatx    kill-chain action → logical allocation (7 edges)
 ├─ physical/                             P layer
 │   ├─ F16A_Physical.slx + .sldd + ~mdl.slmx
 │   ├─ F16A_PhysicalProps.xml            stereotype profile (PhysicalItem, MeasureOfMerit,
@@ -82,26 +79,20 @@ mbse/examples/f16a/
 │   ├─ F16ASourceKind.m                  enum: why a part exists
 │   ├─ F16ADataProvenance.m              enum: where a number came from
 │   ├─ F16A_LogicalToPhysical.mldatx     logical → physical realization (14 edges)
-│   ├─ generate_f16a_physical.m          builds P, RUNS THE TRADES, then the roll-ups
 │   ├─ F16AEngineTradeStudy.m            thrust / mass / TRL      → REQ_F16A_L01
 │   ├─ F16AAirframeTradeStudy.m          aero / mass / TRL        → REQ_F16A_L03
 │   ├─ F16AFlightControlsTradeStudy.m    handling / mass / TRL    → REQ_F16A_L02
 │   │                                    each standalone: open, read, score, decide, write back
-│   ├─ F16APhysicalTradeStudy.m          15-line runner: calls all three
 │   ├─ F16APhysicalMassRollup.m          part masses → OEW      (6 printed steps)
 │   ├─ F16APhysicalMaterialsRollup.m     composite fraction     (5 printed steps)
 │   ├─ F16APhysicalFuelRollup.m          available fuel         (4 printed steps)
 │   │                                    each standalone: the walk is in the file that uses it
-│   ├─ F16APhysicalRollups.m             runner: calls all three, read-only by default
 │   ├─ F16APhysicalCostModel.m           calls BrandtCost: flyaway, O&M, LCC (needs /sizing/)
 │   └─ F16APhysicalMissionFuel.m         reads MissionFuel_lb off the model (P01's required side)
-├─ tests_for_ai_coding/                  MACHINERY tests — guard rails, not teaching (D-055)
+├─ tests_for_ai_coding/                  regression guard rails, not teaching
 │   ├─ README.md                         what these are, and why they are not verification/
-│   ├─ F16ATestCase.m                    shared base: the walk, the readers, verifyNoOffenders
-│   ├─ F16A{Requirements,FunctionalArchitecture,LogicalArchitecture}Test.m
-│   ├─ F16AMission{Activity,Analysis}Test.m  the mission is wired / the mission is right
-│   ├─ F16APhysicalArchitectureTest.m    the P model is built correctly
-│   └─ run_ai_tests.m                    runs all six; every one must be green
+│   ├─ F16ABaselineTest.m                every trade score and analysis number vs its baseline
+│   └─ run_ai_tests.m                    runs it; must be green after any model edit
 └─ verification/                         requirement-verification tests — the teaching payload
     ├─ F16AMaterialsVerificationTest.m   REQ_F16A_022 — green
     ├─ F16AFuelVerificationTest.m        REQ_F16A_P01 — green since D-060
@@ -111,7 +102,7 @@ mbse/examples/f16a/
 
 Every script derives sibling paths from `f16aRoot.m`, so it works regardless of which layer
 folder it sits in. Each layer folder is on the **project path**, so `openProject` makes every
-generator, roll-up and test resolvable by name. That path is load-bearing for more than
+trade, roll-up and test resolvable by name. That path is load-bearing for more than
 convenience: `F16ASourceKind.m` and `F16ADataProvenance.m` type two stereotype properties and
 must be on the MATLAB path whenever `F16A_PhysicalProps` loads.
 
@@ -121,19 +112,11 @@ must be on the MATLAB path whenever `F16A_PhysicalProps` loads.
 openProject("f16a.prj")
 ```
 
-Regenerate the artifacts — **order matters**, because each generator links into artifacts the
-earlier ones create:
+The models, requirement sets and allocation sets are the source of truth: open and edit them
+directly. After changing a number, re-run every trade and analysis so the models agree:
 
 ```matlab
-generate_f16a_requirements                  % -> requirements/f16a.slreqx
-generate_f16a_derived_requirements          % -> f16a_functional_derived.slreqx
-generate_f16a_functional                    % -> F16A_Functional.slx + links
-generate_f16a_logical_derived_requirements  % -> f16a_logical_derived.slreqx (L01–L03)
-generate_f16a_logical                       % -> F16A_Logical.slx (ships UNRESOLVED)
-generate_f16a_physical_derived_requirements % -> f16a_physical_derived.slreqx (P01)
-generate_f16a_physical                      % -> F16A_Physical.slx, RUNS THE THREE TRADE
-                                            %    STUDIES (which resolve L and link L01–L03),
-                                            %    then the roll-ups and the Implement links
+F16ARunAnalyses        % trades -> roll-ups -> mission -> cost, written into the models
 ```
 
 Open the models and run the tests:
@@ -142,19 +125,17 @@ Open the models and run the tests:
 systemcomposer.openModel("F16A_Physical")   % or F16A_Functional / F16A_Logical
 systemcomposer.allocation.editor            % the F→L and L→P allocation matrices
 F16APhysicalMassRollup                      % ONE roll-up: the mass tree, step by step, to OEW
-F16APhysicalRollups                         % all three roll-ups; read-only, writes nothing
 F16AEngineTradeStudy                        % re-run ONE trade; six printed steps, start here
-F16APhysicalTradeStudy                      % re-run all three
 
-run_ai_tests                                   % MACHINERY: all six suites, all green
+run_ai_tests                                   % have any numbers moved? all green
 
 runtests("F16AMaterialsVerificationTest")      % REQ_F16A_022 — green
 runtests("F16AStaticMarginVerificationTest")   % REQ_F16A_025 — 2 pass, 1 RED BY DESIGN
 runtests("F16AFuelVerificationTest")           % REQ_F16A_P01 — passes since D-060
 ```
 
-The two kinds are run separately on purpose. `run_ai_tests` asks *is the model
-built correctly?* and **every one of its cases must pass** — a red there is a
+The two kinds are run separately on purpose. `run_ai_tests` asks *have any numbers
+moved?* and **every one of its cases must pass** — a red there is a
 regression. The three verification suites ask *does the design meet this
 requirement?*, and one of them is red by design. See
 [`../tests_for_ai_coding/README.md`](../tests_for_ai_coding/README.md).
@@ -187,12 +168,9 @@ failing test. Two consequences worth holding on to:
   neutral point is a simplified approximation, and the CG crosses it as fuel burns off. Read
   [`01_requirements.md`](01_requirements.md) before quoting it as a fact about the aeroplane.
 
-The P layer's tests are split two ways on purpose: `F16APhysicalArchitectureTest` is
-**machinery**, and the three `*VerificationTest` files are **requirement verification**, one per
-requirement. One combined suite would report a failure count and hide what the failures mean —
-which is also why the machinery suites live in their own folder (D-055). There used to be
-a third, `F16APhysicalTradeGuardsTest`, feeding a shared guard class bad data and watching it
-refuse; D-056 moved the guards inline into the three trade scripts and retired it.
+The tests are split two ways on purpose: `F16ABaselineTest` is a **regression** guard, and the
+three `*VerificationTest` files are **requirement verification**, one per requirement. One
+combined suite would report a failure count and hide what the failures mean.
 
 ## Reviewing requirement traceability
 
@@ -210,7 +188,7 @@ so their links live in the **L** model's link set.
 
 ### Verification links are added manually
 
-The generators create Implement links only. **"Verified by" links must be added by hand** in the
+The Implement links ship in each model's link set. **"Verified by" links must be added by hand** in the
 Requirements Editor, because of one R2026a limitation: **a MATLAB test file cannot be a link
 *source***, so the programmatic `slreq` API cannot mint a working "Verified by" for a unit test.
 
@@ -223,9 +201,8 @@ Requirements Editor, because of one R2026a limitation: **a MATLAB test file cann
 All three are linked; the table stays because the next verified requirement needs the same
 hand-made link. Three things worth knowing about them:
 
-- **A hand-made link is not fragile.** Measured after regenerating all four requirement sets:
-  the links still resolve. `slreq.new` builds a fresh set, but with requirement ids and their
-  order unchanged the SIDs are preserved. Regeneration is not a reason to defer making one.
+- **A hand-made link is not fragile.** It resolves through the requirement's SID, which
+  editing the requirement's text does not change.
 - **A link that seems missing is usually just unloaded** — it lives in
   `verification/<TestName>~m.slmx`, and until that set is loaded the requirement reads
   Implement-only. Loading them is what `F16AOpenForReview` is for. (Project artifact tracking is
@@ -242,10 +219,10 @@ MATLAB R2026a · Simulink · System Composer · Requirements Toolbox
 
 ## Maintaining the model
 
-The generators are **idempotent** — re-run any of them to rebuild that artifact from scratch;
-never hand-edit a `.slx`, `.sldd`, `.xml` profile or `.mldatx`. One R2026a gotcha if you edit a
-generator: connect ports with the **two-argument** `connect(srcPort, dstPort)`. The
-three-argument form returns a connector object but silently leaves the ports unwired.
+Edit the models directly, in the editor or through the System Composer API, then run
+`F16ARunAnalyses` to update every derived number and `run_ai_tests` to see which moved. **Never
+rebuild a model from scratch:** the allocation sets and the hand-made Verify links point at
+element SIDs, and a rebuilt model has new ones.
 
 Open work is in [`../TODO.md`](../TODO.md); house rules in
 [`08_agent_team.md`](08_agent_team.md).

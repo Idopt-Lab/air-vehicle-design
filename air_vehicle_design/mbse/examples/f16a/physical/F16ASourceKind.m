@@ -18,7 +18,7 @@ classdef F16ASourceKind
 %   member, "'SupportingInfrastructure'"; anything else errors. It reads back
 %   WITH quotes, so strip them: erase(string(getProperty(c, "...")), "'").
 %
-%   See also F16ADATAPROVENANCE, generate_f16a_physical.
+%   See also F16ADATAPROVENANCE.
 
     enumeration
         RealizesFunction

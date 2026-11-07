@@ -15,7 +15,7 @@ function ranked = F16AEngineTradeStudy(options)
 %   and ranks, but writes nothing to any model (F16ABaselineTest runs it so).
 %
 %   ONE TRADE, ONE FILE, ONE STEREOTYPE (D-056). Its siblings are
-%   F16AAirframeTradeStudy and F16AFlightControlsTradeStudy; F16APhysicalTradeStudy
+%   F16AAirframeTradeStudy and F16AFlightControlsTradeStudy; F16ARunAnalyses
 %   runs all three. Nothing here is shared with them on purpose: this file is
 %   meant to be read straight through without opening another one.
 %
@@ -75,11 +75,11 @@ addpath(fullfile(root, "physical"), fullfile(root, "logical"), fullfile(root, "r
 
 if ~isfile(physFile)
     error("F16AEngineTradeStudy:noPhysicalModel", ...
-        "Missing %s. Run generate_f16a_physical first.", physFile);
+        "Missing %s. It is the source of truth; restore it from git.", physFile);
 end
 if ~isfile(logiFile)
     error("F16AEngineTradeStudy:noLogicalModel", ...
-        "Missing %s. Run generate_f16a_logical first.", logiFile);
+        "Missing %s. It is the source of truth; restore it from git.", logiFile);
 end
 if ~isfile(derFile)
     error("F16AEngineTradeStudy:noDecisionRequirements", ...
@@ -121,7 +121,7 @@ raw   = nan(n, nCrit);                       % columns follow crit, in order
 for i = 1:n
     c = choices(i);
     % EVERY choice must carry the stereotype. This is what stops an option being
-    % silently left out of its own trade: add a fourth engine to the generator
+    % silently left out of its own trade: add a fourth engine to the model
     % and it is scored here, or this run stops and says which one is missing.
     applied = reshape(string(getStereotypes(c)), 1, []);
     if ~any(applied == profileName + "." + STEREOTYPE)
@@ -444,7 +444,7 @@ function saveLogicalLinkSets(logiName)
 %SAVELOGICALLINKSETS Save only the F16A_Logical MODEL link set.
 %   The functional layer's link set must not be re-written by a run that did not
 %   change it, and the requirement-set link sets are left alone because they can
-%   hold MANUAL Verify links no generator should touch. The match is
+%   hold MANUAL Verify links no script should touch. The match is
 %   case-sensitive, so the lowercase f16a_logical_derived.slreqx link set is not
 %   caught by it.
 lnkSets = slreq.find(Type="LinkSet");
@@ -459,7 +459,7 @@ end
 function base = standingRationale(comp, profileName, sentinel)
 %STANDINGRATIONALE The part's own "why do I exist" text, minus any old verdict.
 %   Everything before the sentinel was written by a previous run and is
-%   discarded; everything after it is what the generator wrote and is carried
+%   discarded; everything after it is the standing rationale and is carried
 %   through unchanged. That is what makes the rewrite idempotent.
 %
 %   THE UNQUOTE IS EXACT HERE, not the usual erase(..., "'"). A string property
