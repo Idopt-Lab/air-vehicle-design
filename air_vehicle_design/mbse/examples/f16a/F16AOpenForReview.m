@@ -13,7 +13,8 @@ function F16AOpenForReview()
 %   test link sets makes them appear.
 %
 %   The closing report is read from the artifacts: the requirements that carry
-%   a Verify link, and any test still waiting for one to be made by hand.
+%   a Verify link, any test still waiting for one to be made by hand, and a
+%   warning if a test file has CRLF line endings (its links would be off).
 
 thisDir = f16aRoot();
 vDir    = fullfile(thisDir,"verification");
@@ -69,12 +70,24 @@ else
 end
 
 unlinked = strings(1,0);
+crlf     = strings(1,0);
 tests = dir(fullfile(vDir,"*VerificationTest.m"));
 for i = 1:numel(tests)
     [~, name] = fileparts(tests(i).name);
     if ~isfile(fullfile(vDir, name + "~m.slmx"))
         unlinked(end+1) = string(name);             %#ok<AGROW>
     end
+    if any(fileread(fullfile(vDir, tests(i).name)) == char(13))
+        crlf(end+1) = string(name);                 %#ok<AGROW>
+    end
+end
+% A Verify link is a character offset into the test file, so CRLF line
+% endings move it off its test method and runTests reports a false fail.
+if ~isempty(crlf)
+    warning("F16AOpenForReview:crlfTestFile", "CRLF line endings in %s, so " + ...
+        "its Verify links point at the wrong lines. Restore LF: check that " + ...
+        ".gitattributes has '*.m text eol=lf', delete the file and git " + ...
+        "checkout it again.", strjoin(sort(crlf), ", "));
 end
 if ~isempty(unlinked)
     fprintf("Still to link BY HAND in the Requirements Editor: %s " + ...

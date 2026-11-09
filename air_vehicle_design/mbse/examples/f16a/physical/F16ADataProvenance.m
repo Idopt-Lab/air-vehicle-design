@@ -5,7 +5,8 @@ classdef F16ADataProvenance
 %   the layer that must say where each came from: an unexplained guess and a
 %   sourced figure must not look alike in the model.
 %
-%   The four members, strongest evidence first:
+%   The four members, strongest evidence first (the enumeration block
+%   below lists them in a different order, which carries no meaning):
 %     Datasheet    A manufacturer or programme datasheet figure.
 %     Reference    Traceable to the Brandt F-16A ground truth in
 %                  sizing/VnV/BrandtF16A/ (this repo's reference aircraft).
