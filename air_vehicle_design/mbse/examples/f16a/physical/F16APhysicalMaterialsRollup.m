@@ -1,35 +1,37 @@
 function results = F16APhysicalMaterialsRollup()
-%F16APHYSICALMATERIALSROLLUP Roll up the airframe composite material fraction.
-%   RESULTS = F16APHYSICALMATERIALSROLLUP() computes the MASS-WEIGHTED
-%   composite fraction of the ACTIVE airframe candidate --
-%   sum(Mass_lb .* CompositeFraction) / sum(Mass_lb) over the parts carrying a
-%   Material stereotype.
+%F16APHYSICALMATERIALSROLLUP Roll up the composite material fraction of the airframe.
+%   RESULTS = F16APHYSICALMATERIALSROLLUP() computes the mass-weighted
+%   composite fraction of the active airframe candidate. The equation is
+%   sum(Mass_lb .* CompositeFraction) / sum(Mass_lb), over the parts that
+%   have a Material stereotype.
 %
 %   RESULTS fields: CompositeFraction (0..1), CompositeMass_lb, AirframeMass_lb,
 %   ActiveCandidate, Table (per-part mass, fraction, composite mass).
-%   It prints every number it reads and every product it forms, and the plain
-%   average beside the weighted one, so you can see what "mass-weighted" buys.
+%   It prints each number that it reads and each product that it calculates.
+%   It also prints the plain average next to the weighted average, so that
+%   you can see the effect of "mass-weighted".
 %
-%   This backs REQ_F16A_022 (composite fraction <= 20%). Unlike OEW and cost,
-%   which are Measures of Merit to minimize, it is a CONSTRAINT, so it is
-%   checked by a verification test (F16AMaterialsVerificationTest).
+%   This value supports REQ_F16A_022 (composite fraction <= 20%). OEW and cost
+%   are Measures of Merit to minimize. This value is different: it is a
+%   constraint, so a verification test (F16AMaterialsVerificationTest) checks
+%   it.
 %
 %   See also F16APHYSICALFUELROLLUP, F16APHYSICALMASSROLLUP.
 
 % ---------------------------------------------------------------------
-% WHAT THIS ROLL-UP IS ABOUT. Four names; the rest of the file is the walk.
+% THE SUBJECT OF THIS ROLL-UP: five names and the cap. The rest of the file goes through the tree.
 % ---------------------------------------------------------------------
 MODEL      = "F16A_Physical";
-STARTAT    = "F16A_Physical/Aircraft/Airframe";                 % the airframe ROLE
-STEREOTYPE = "Material";                                        % what marks a part as declaring one
+STARTAT    = "F16A_Physical/Aircraft/Airframe";                 % the airframe role
+STEREOTYPE = "Material";                                        % the stereotype of a part that declares a material
 MASSPROP   = "F16A_PhysicalProps.PhysicalItem.Mass_lb";
 CFPROP     = "F16A_PhysicalProps.Material.CompositeFraction";
-CAP        = 0.20;                                              % REQ_F16A_022's upper bound
+CAP        = 0.20;                                              % the upper bound of REQ_F16A_022
 
 fprintf("\n==========================================================\n");
 fprintf("  AIRFRAME MATERIALS ROLL-UP\n");
 fprintf("  Question: what fraction of the airframe is composite?\n");
-fprintf("  Backs: REQ_F16A_022 (cap %.0f%%)\n", 100*CAP);
+fprintf("  Supports: REQ_F16A_022 (cap %.0f%%)\n", 100*CAP);
 fprintf("==========================================================\n");
 
 % =====================================================================
@@ -46,9 +48,9 @@ fprintf("  Properties: %s\n            : %s\n", MASSPROP, CFPROP);
 % =====================================================================
 % STEP 2 -- WHICH AIRFRAME?
 %
-% The airframe is a variant role holding two candidates, so "what fraction of
-% the airframe is composite" has no answer until the model says which airframe.
-% Ask it rather than assuming.
+% The airframe is a variant role with two candidates. Thus the question "what
+% fraction of the airframe is composite" has no answer until the model gives
+% the airframe. Get the airframe from the model. Do not assume it.
 % =====================================================================
 fprintf("\n[STEP 2] WHICH AIRFRAME?\n");
 
@@ -58,10 +60,10 @@ if isa(airframe, "systemcomposer.arch.VariantComponent")
     others    = arrayfun(@(c) string(c.Name), getChoices(airframe));
     others    = others(others ~= string(candidate.Name));
     fprintf("  %s is a variant role with %d candidates.\n", STARTAT, numel(others) + 1);
-    fprintf("  Active   : %s  <- this is the one measured\n", string(candidate.Name));
+    fprintf("  Active   : %s  <- this candidate is measured\n", string(candidate.Name));
     fprintf("  Rejected : %s  (its parts are NOT counted below)\n", strjoin(others, ", "));
 else
-    candidate = airframe;   % tolerate a non-variant airframe
+    candidate = airframe;   % also accept an airframe that is not a variant
     fprintf("  %s is a plain component, not a variant. Measuring it directly.\n", STARTAT);
 end
 
@@ -69,19 +71,20 @@ end
 % STEP 3 -- FIND THE PARTS THAT DECLARE A MATERIAL
 % =====================================================================
 fprintf("\n[STEP 3] FIND THE PARTS THAT DECLARE A MATERIAL\n");
-fprintf("  Asking every part below %s: do you carry a %s stereotype?\n\n", ...
+fprintf("  Question to each part below %s: do you have a %s stereotype?\n\n", ...
     string(candidate.Name), STEREOTYPE);
 
 [names, mass, cf] = findMaterialParts(candidate, 0, STEREOTYPE, MASSPROP, CFPROP);
 
 fprintf("\n  -> %d part(s) answered yes.\n", numel(names));
 
-% No parts, or a number that cannot be read, means there is no value to check
-% REQ_F16A_022 against -- not a value of zero.
+% If there are no parts, or if a number cannot be read, there is no value to
+% check REQ_F16A_022 against. This is not a value of zero.
 if isempty(names)
     error("F16APhysicalMaterialsRollup:noMaterialParts", ...
-        "No part under the active airframe candidate %s carries a Material " + ...
-        "stereotype -- REQ_F16A_022 cannot be evaluated for it.", string(candidate.Name));
+        "No part under the active airframe candidate %s has a Material " + ...
+        "stereotype. Thus REQ_F16A_022 cannot be evaluated for this candidate.", ...
+        string(candidate.Name));
 end
 unreadable = ~isfinite(mass) | ~isfinite(cf);
 if any(unreadable)
@@ -93,9 +96,9 @@ end
 % =====================================================================
 % STEP 4 -- WEIGHT THE AVERAGE
 %
-% This is the one roll-up that is not a plain sum. A heavy part made of metal
-% pulls the fraction down harder than a light part made of composite pulls it
-% up, so each part's fraction counts in proportion to its mass.
+% This is the only roll-up that is not a plain sum. A heavy metal part
+% decreases the fraction more than a light composite part increases it. Thus
+% the fraction of each part counts in proportion to its mass.
 % =====================================================================
 fprintf("\n[STEP 4] WEIGHT THE AVERAGE BY MASS\n");
 fprintf("  Each part contributes mass x fraction pounds of composite:\n\n");
@@ -116,18 +119,18 @@ fraction  = sum(compMass) / totalMass;
 fprintf("\n  Composite mass / airframe mass = %.2f / %.2f = %.4f\n", ...
     sum(compMass), totalMass, fraction);
 
-% Why the two averages differ is read off the data, so it stays true when a
-% mass changes.
-fprintf("  The plain average of the %d fractions, ignoring mass, would be %.4f.\n", ...
+% The reason that the two averages are different comes from the data. Thus
+% the text stays true when a mass changes.
+fprintf("  The plain average of the %d fractions, without mass, would be %.4f.\n", ...
     numel(cf), mean(cf));
 if numel(names) >= 2
     [~, heaviest] = sort(mass, "descend");
     top2 = heaviest(1:2);
-    fprintf("  They differ because %s and %s carry %.0f%% of the airframe mass\n", ...
+    fprintf("  They are different because %s and %s together have %.0f%% of the airframe\n", ...
         names(top2(1)), names(top2(2)), 100*sum(mass(top2))/totalMass);
-    fprintf("  between them at only %.0f%% and %.0f%% composite, while the parts that are\n", ...
+    fprintf("  mass, with only %.0f%% and %.0f%% composite. The parts that are mostly\n", ...
         100*cf(top2(1)), 100*cf(top2(2)));
-    fprintf("  mostly composite are light. That is what weighting by mass is for.\n");
+    fprintf("  composite are light. This is the purpose of weighting by mass.\n");
 end
 
 T = table(names, mass, cf, compMass, ...
@@ -151,46 +154,47 @@ if fraction <= CAP
 else
     fprintf("  -> %.2f%% > %.0f%%, so REQ_F16A_022 is NOT MET.\n\n", 100*fraction, 100*CAP);
 end
-fprintf("  Read that carefully: it shows the roll-up and the constraint check work.\n");
-fprintf("  It is NOT evidence about the real F-16A, whose airframe is essentially not\n");
-fprintf("  composite at all. The fractions are teaching estimates (D-030).\n\n");
+fprintf("  Read this carefully. It shows that the roll-up and the constraint check work.\n");
+fprintf("  It is NOT evidence about the real F-16A, whose airframe has almost no\n");
+fprintf("  composite. The fractions are teaching estimates (D-030).\n\n");
 
 end
 
 % =====================================================================
 function [names, mass, cf] = findMaterialParts(comp, depth, stereotype, massProp, cfProp)
-%FINDMATERIALPARTS Parts at or under COMP that carry the Material stereotype.
-%   Prints each part it looks at. A part carrying the stereotype IS a leaf and
-%   is not descended into, so a lumped part stating one whole-block value and a
-%   decomposed group stating one per cell use the same walk.
+%FINDMATERIALPARTS Find the parts at or under COMP that have the Material stereotype.
+%   It prints each part that it examines. A part with the stereotype is a
+%   leaf, and the search does not go into it. Thus a lumped part with one
+%   value for the whole block, and a decomposed group with one value for each
+%   cell, use the same search.
 names  = strings(0,1);
 mass   = zeros(0,1);
 cf     = zeros(0,1);
 indent = repmat(' ', 1, 4 + 2*depth);
 
-% A variant role is replaced by its ACTIVE choice, never expanded into all of
-% them -- otherwise a rejected candidate's parts would be counted.
+% Replace a variant role with its active choice. Never expand it into all of
+% its choices. If you do, the parts of a rejected candidate are counted.
 if isa(comp, "systemcomposer.arch.VariantComponent")
     active = getActiveChoice(comp);
-    fprintf("%s%-20s variant role -- following the active choice, %s\n", ...
+    fprintf("%s%-20s variant role. Following the active choice, %s\n", ...
         indent, string(comp.Name), string(active.Name));
     [names, mass, cf] = findMaterialParts(active, depth, stereotype, massProp, cfProp);
     return
 end
 
-% getStereotypes returns '<profile>.<stereotype>', so compare on the tail.
+% getStereotypes returns '<profile>.<stereotype>', so compare the end of the text.
 applied = reshape(string(getStereotypes(comp)), 1, []);
 if any(endsWith(applied, "." + stereotype))
     names = string(comp.Name);
     mass  = str2double(string(getProperty(comp, char(massProp))));
     cf    = str2double(string(getProperty(comp, char(cfProp))));
-    fprintf("%s%-20s YES -- %8.2f lb, %.0f%% composite\n", ...
+    fprintf("%s%-20s YES. %8.2f lb, %.0f%% composite\n", ...
         indent, string(comp.Name), mass, 100*cf);
     return
 end
 
 kids = comp.Architecture.Components;
-fprintf("%s%-20s no %s stereotype, looking inside its %d part(s)\n", ...
+fprintf("%s%-20s no %s stereotype. Looking inside its %d part(s)\n", ...
     indent, string(comp.Name), stereotype, numel(kids));
 for k = kids
     [n, mm, cc] = findMaterialParts(k, depth + 1, stereotype, massProp, cfProp);

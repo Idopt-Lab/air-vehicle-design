@@ -1,31 +1,32 @@
 function results = F16APhysicalFuelRollup()
-%F16APHYSICALFUELROLLUP Add up the total available internal fuel capacity.
-%   RESULTS = F16APHYSICALFUELROLLUP() adds FuelCapacity_lb over every part
-%   under the FuelSystem role that CARRIES a FuelTank stereotype.
+%F16APHYSICALFUELROLLUP Add the tank capacities to get the total available internal fuel.
+%   RESULTS = F16APHYSICALFUELROLLUP() adds FuelCapacity_lb over each part
+%   under the FuelSystem role that has a FuelTank stereotype.
 %
 %   RESULTS fields: AvailableFuel_lb (total), Table (per-tank capacity).
 %
-%   It prints every capacity it reads and the running total, so the tanks can
-%   be added up by hand.
+%   It prints each capacity that it reads and the running total, so that you
+%   can add the tanks by hand.
 %
-%   This is the "available" side of REQ_F16A_P01; the "required" side comes
-%   from F16APhysicalMissionFuel, and F16AFuelVerificationTest compares them.
-%   Capacity is fuel WEIGHT (lb), so it compares directly with fuel burn.
+%   This value is the "available" side of REQ_F16A_P01. The "required" side
+%   comes from F16APhysicalMissionFuel. F16AFuelVerificationTest compares the
+%   two sides. Capacity is a fuel weight (lb), so you can compare it directly
+%   with fuel burn.
 %
 %   See also F16APHYSICALMATERIALSROLLUP, F16APHYSICALMASSROLLUP.
 
 % ---------------------------------------------------------------------
-% WHAT THIS ROLL-UP IS ABOUT. Three names; the rest of the file is the walk.
+% THE SUBJECT OF THIS ROLL-UP: four names. The rest of the file goes through the tree.
 % ---------------------------------------------------------------------
 MODEL      = "F16A_Physical";
-STARTAT    = "F16A_Physical/Aircraft/FuelSystem";              % where the walk begins
-STEREOTYPE = "FuelTank";                                       % what marks a part as holding fuel
-CAPPROP    = "F16A_PhysicalProps.FuelTank.FuelCapacity_lb";    % what those parts carry
+STARTAT    = "F16A_Physical/Aircraft/FuelSystem";              % where the search starts
+STEREOTYPE = "FuelTank";                                       % the stereotype of a part that holds fuel
+CAPPROP    = "F16A_PhysicalProps.FuelTank.FuelCapacity_lb";    % the property of those parts
 
 fprintf("\n==========================================================\n");
 fprintf("  AVAILABLE FUEL ROLL-UP\n");
 fprintf("  Question: how much fuel can this aeroplane carry?\n");
-fprintf("  Backs: REQ_F16A_P01 (the 'available' side)\n");
+fprintf("  Supports: REQ_F16A_P01 (the 'available' side)\n");
 fprintf("==========================================================\n");
 
 % =====================================================================
@@ -43,23 +44,25 @@ fprintf("  Property  : %s\n", CAPPROP);
 % =====================================================================
 % STEP 2 -- FIND THE PARTS THAT HOLD FUEL
 %
-% Nothing here knows a tank's name. Each part is asked whether it carries the
-% FuelTank stereotype; the ones that say yes are the tanks. Add a fourth tank
-% to the model and it is counted on the next run without editing this file.
+% This code does not know the name of a tank. It asks each part if it has the
+% FuelTank stereotype. The parts that have it are the tanks. If you add a
+% fourth tank to the model, the next run counts it, and you do not have to
+% edit this file.
 % =====================================================================
 fprintf("\n[STEP 2] FIND THE PARTS THAT HOLD FUEL\n");
-fprintf("  Asking every part below %s: do you carry a %s stereotype?\n\n", ...
+fprintf("  Question to each part below %s: do you have a %s stereotype?\n\n", ...
     string(fuelSys.Name), STEREOTYPE);
 
 [names, cap] = findFuelTanks(fuelSys, 0, STEREOTYPE, CAPPROP);
 
 fprintf("\n  -> %d part(s) answered yes.\n", numel(names));
 
-% No tanks, or a capacity that cannot be read, means there is no available
-% side to check REQ_F16A_P01 against -- not an available side of zero.
+% If there are no tanks, or if a capacity cannot be read, there is no
+% available side to check REQ_F16A_P01 against. This is not an available side
+% of zero.
 if isempty(names)
     error("F16APhysicalFuelRollup:noFuelTanks", ...
-        "No part under %s carries a FuelTank stereotype -- the available-fuel " + ...
+        "No part under %s has a FuelTank stereotype. Thus the available-fuel " + ...
         "side of REQ_F16A_P01 cannot be evaluated.", string(fuelSys.Name));
 end
 if any(~isfinite(cap))
@@ -69,9 +72,9 @@ if any(~isfinite(cap))
 end
 
 % =====================================================================
-% STEP 3 -- ADD THEM UP
+% STEP 3 -- ADD THE CAPACITIES
 % =====================================================================
-fprintf("\n[STEP 3] ADD THEM UP\n");
+fprintf("\n[STEP 3] ADD THE CAPACITIES\n");
 total = 0;
 for i = 1:numel(names)
     total = total + cap(i);
@@ -87,45 +90,45 @@ results = struct(AvailableFuel_lb = total, Table = T);
 % =====================================================================
 fprintf("\n[STEP 4] REPORT\n");
 fprintf("  Total available internal fuel: %.0f lb, in %d tanks.\n", total, numel(names));
-fprintf("  This is a plain SUM: tanks do not interact, so capacity simply adds.\n\n");
-fprintf("  It is only half of REQ_F16A_P01. The other half -- how much fuel the\n");
-fprintf("  mission REQUIRES -- comes from F16APhysicalMissionFuel, which reads the\n");
-fprintf("  mission the /sizing/ analysis flew into this model. The two are\n");
-fprintf("  compared by F16AFuelVerificationTest.\n\n");
+fprintf("  This is a plain SUM. The tanks do not interact, so their capacities add.\n\n");
+fprintf("  This is only half of REQ_F16A_P01. The other half is the fuel that the\n");
+fprintf("  mission requires. It comes from F16APhysicalMissionFuel, which reads the\n");
+fprintf("  mission that the /sizing/ analysis wrote into this model.\n");
+fprintf("  F16AFuelVerificationTest compares the two halves.\n\n");
 
 end
 
 % =====================================================================
 function [names, cap] = findFuelTanks(comp, depth, stereotype, capProp)
-%FINDFUELTANKS Parts at or under COMP that carry the FuelTank stereotype.
-%   Prints each part it looks at. A part carrying the stereotype IS a tank and
-%   is not descended into, so one lumped tank and a group of cells both work
-%   without a list of names anywhere.
+%FINDFUELTANKS Find the parts at or under COMP that have the FuelTank stereotype.
+%   It prints each part that it examines. A part with the stereotype is a
+%   tank, and the search does not go into it. Thus one lumped tank and a
+%   group of cells both operate correctly, without a list of names.
 names  = strings(0,1);
 cap    = zeros(0,1);
 indent = repmat(' ', 1, 4 + 2*depth);
 
-% A variant role is replaced by its ACTIVE choice, never expanded into all of
-% them -- otherwise a rejected candidate's tanks would be counted.
+% Replace a variant role with its active choice. Never expand it into all of
+% its choices. If you do, the tanks of a rejected candidate are counted.
 if isa(comp, "systemcomposer.arch.VariantComponent")
     active = getActiveChoice(comp);
-    fprintf("%s%-24s variant role -- following the active choice, %s\n", ...
+    fprintf("%s%-24s variant role. Following the active choice, %s\n", ...
         indent, string(comp.Name), string(active.Name));
     [names, cap] = findFuelTanks(active, depth, stereotype, capProp);
     return
 end
 
-% getStereotypes returns '<profile>.<stereotype>', so compare on the tail.
+% getStereotypes returns '<profile>.<stereotype>', so compare the end of the text.
 applied = reshape(string(getStereotypes(comp)), 1, []);
 if any(endsWith(applied, "." + stereotype))
     names = string(comp.Name);
     cap   = str2double(string(getProperty(comp, char(capProp))));
-    fprintf("%s%-24s YES -- holds %.0f lb of fuel\n", indent, string(comp.Name), cap);
+    fprintf("%s%-24s YES. Holds %.0f lb of fuel\n", indent, string(comp.Name), cap);
     return
 end
 
 kids = comp.Architecture.Components;
-fprintf("%s%-24s no %s stereotype, looking inside its %d part(s)\n", ...
+fprintf("%s%-24s no %s stereotype. Looking inside its %d part(s)\n", ...
     indent, string(comp.Name), stereotype, numel(kids));
 for k = kids
     [n, c] = findFuelTanks(k, depth + 1, stereotype, capProp);

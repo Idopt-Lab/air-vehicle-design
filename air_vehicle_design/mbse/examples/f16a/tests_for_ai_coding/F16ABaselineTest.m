@@ -1,18 +1,20 @@
 classdef F16ABaselineTest < matlab.unittest.TestCase
-    %F16ABASELINETEST The F-16A numbers have not moved.
-    %   Re-runs every analysis in the example -- the three trade studies, the
-    %   mass, materials and fuel roll-ups, the mission and the cost model --
-    %   without writing to any model, and compares each result with the
-    %   baseline recorded below. The last test checks the Measures of Merit
-    %   stored on the Physical model, which is what a student actually sees.
+    %F16ABASELINETEST Check that the F-16A numbers have not changed.
+    %   This test runs all analyses in the example again, and writes to no
+    %   model. The analyses are the three trade studies, the mass, materials
+    %   and fuel roll-ups, the mission and the cost model. The test compares
+    %   each result with the baseline recorded below. The last test checks the
+    %   Measures of Merit stored on the Physical model. These are the values
+    %   that a student sees.
     %
-    %   A failure means a number changed. If the change was intended, update
-    %   the baseline here in the same commit; if not, it is a regression.
+    %   A failure means that a number changed. If you intended the change,
+    %   update the baseline here in the same commit. If you did not, the change
+    %   is a regression.
     %
     %   Run: run_ai_tests, or runtests("F16ABaselineTest").
 
     properties (Constant)
-        % The analyses are deterministic, so any real change is far larger.
+        % The analyses are deterministic, so a real change is much larger than this tolerance.
         RelTol = 1e-6
 
         Baseline = struct( ...
@@ -28,7 +30,7 @@ classdef F16ABaselineTest < matlab.unittest.TestCase
     end
 
     properties (TestParameter)
-        % Each trade: its candidates best first, their scores, and where the
+        % Each trade: its candidates (best first), their scores, and where the
         % decision shows in P (active candidate) and in L (active kind).
         Trade = struct( ...
             "Engine", struct("Run", @F16AEngineTradeStudy, ...
@@ -53,10 +55,10 @@ classdef F16ABaselineTest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function closeWhatThisSuiteOpens(testCase)
-            % Models the user already had open stay open.
+            % Models that the user had open before this test stay open.
             before = string(find_system("type", "block_diagram"));
             testCase.addTeardown(@() closeAllBut(before));
-            % The mission reference is cached; start from a fresh run.
+            % The mission reference is cached. Start from a new run.
             F16AMissionReference(Reset=true);
         end
     end
@@ -103,8 +105,9 @@ classdef F16ABaselineTest < matlab.unittest.TestCase
         end
 
         function testModelShowsTheseNumbers(testCase)
-            % The Measures of Merit stored on the aircraft. These go stale
-            % when a model is edited and its analyses are not re-run.
+            % The Measures of Merit stored on the aircraft. These values become
+            % out of date when someone edits a model and does not run its
+            % analyses again.
             m  = systemcomposer.loadModel("F16A_Physical");
             ac = lookup(m, Path="F16A_Physical/Aircraft");
             for name = ["OEW_lb", "MissionFuel_lb", "MissionTime_min", "UnitCost_USD", ...
@@ -120,14 +123,14 @@ classdef F16ABaselineTest < matlab.unittest.TestCase
     methods (Access = private)
         function verifyBaseline(testCase, actual, name)
             testCase.verifyEqual(actual, testCase.Baseline.(name), ...
-                name + " moved off its baseline.", "RelTol", testCase.RelTol);
+                name + " changed from its baseline.", "RelTol", testCase.RelTol);
         end
     end
 end
 
 % =====================================================================
 function out = quiet(fn) %#ok<STOUT,INUSD> evalc assigns both
-%QUIET Run an analysis without its printed walk-through in the test log.
+%QUIET Run an analysis, and do not show its printed steps in the test log.
 evalc("out = fn();");
 end
 

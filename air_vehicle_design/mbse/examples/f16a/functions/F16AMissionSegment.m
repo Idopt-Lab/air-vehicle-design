@@ -1,15 +1,17 @@
 function s = F16AMissionSegment(phaseName)
-%F16AMISSIONSEGMENT What one mission phase costs. The behaviour of each action.
-%   S = F16AMISSIONSEGMENT(PHASENAME) returns the flight condition and the fuel
-%   and time for one phase of F16A_MissionActivity, e.g. "Cruise".
+%F16AMISSIONSEGMENT Return the fuel and time of one mission phase (the behaviour of each action).
+%   S = F16AMISSIONSEGMENT(PHASENAME) returns the flight condition, the fuel
+%   and the time for one phase of F16A_MissionActivity, for example "Cruise".
 %
 %   S fields: Fuel_lb, Time_min, Dist_nm, Alt_ft, Mach, PctAB.
 %
-%   THIS IS THE ANALYSIS LINK. Every phase action in F16A_MissionActivity
-%   carries F16AMissionSegment('<its name>') as its BehaviorDefinition, so the
-%   model records HOW each number is computed instead of storing the number.
-%   The numbers are not computed here: they come from the /sizing/ mission
-%   analysis (F16AMissionReference), the one home of the segment equations.
+%   This function is the link to the analysis. Each phase action in
+%   F16A_MissionActivity has F16AMissionSegment('<its name>') as its
+%   BehaviorDefinition. Thus the model records how each number is computed,
+%   and does not store the number. This function does not compute the
+%   numbers. They come from the /sizing/ mission analysis
+%   (F16AMissionReference), which is the only location of the segment
+%   equations.
 %
 %   See also F16AMISSIONREFERENCE, F16AMISSIONANALYSIS.
 
@@ -23,7 +25,7 @@ k     = find(names == phaseName, 1);
 
 if isempty(k)
     error("F16AMissionSegment:noSuchPhase", ...
-        "The mission analysis has no segment called '%s'. It knows: %s.", ...
+        "The mission analysis has no segment named '%s'. Its segments are: %s.", ...
         phaseName, strjoin(names, ", "));
 end
 
