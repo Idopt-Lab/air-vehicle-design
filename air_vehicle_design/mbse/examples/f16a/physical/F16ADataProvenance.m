@@ -5,7 +5,8 @@ classdef F16ADataProvenance
 %   numbers. Thus P must give the source of each number. In the model, an
 %   unexplained guess and a sourced figure must not look the same.
 %
-%   The four members, from the strongest evidence to the weakest:
+%   The four members, from the strongest evidence to the weakest (the
+%   enumeration block below uses a different order, which has no meaning):
 %     Datasheet    A figure from a manufacturer or programme datasheet.
 %     Reference    Traceable to the Brandt F-16A ground truth in
 %                  sizing/VnV/BrandtF16A/ (the reference aircraft of this

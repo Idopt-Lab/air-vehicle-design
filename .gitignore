@@ -35,6 +35,10 @@ codegen/
 # buildtool cache folder
 .buildtool/
 
+# MATLAB project digital-thread cache (derived/digital_thread_project_*.db),
+# written by R2026b projects when tests or requirements are run
+air_vehicle_design/mbse/examples/*/derived/
+
 # MATLAB/Simulink project dependency-analysis cache (regenerated on open/analysis)
 *.dmr
 *.dmr.old*

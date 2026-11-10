@@ -124,7 +124,10 @@ f16a/
 │                             · F16APhysical{Mass,Materials,Fuel}Rollup.m · F16APhysicalCostModel.m
 │                             · F16APhysicalMissionFuel.m · F16ASourceKind.m · F16ADataProvenance.m
 ├─ verification/              one test for each verified requirement, with its Verify link set
-└─ tests_for_ai_coding/       F16ABaselineTest: did a number change? (not teaching material)
+├─ tests_for_ai_coding/       F16ABaselineTest: did a number change? · F16AVerifyLinksTest: is each
+│                             Verify link still on its test method? (not teaching material)
+├─ resources/                 MATLAB project metadata (file registry, labels, path). Change it through the project
+└─ derived/                   cache that the project writes when tests or requirements run. Git ignores it
 ```
 
 | Document | Contents |
@@ -143,13 +146,19 @@ or through the API. Then run:
 
 ```matlab
 F16ARunAnalyses     % trades → roll-ups → mission → cost, written back into the models
-run_ai_tests        % F16ABaselineTest: each number against its baseline; must pass
+run_ai_tests        % each number against its baseline, each Verify link on its method; must pass
 ```
 
 - **Never build a model again from the start.** Allocation sets and Verify links point at element
   SIDs, and a new model has new SIDs.
 - **Add, move or delete files through the project** (`addFile`/`removeFile`). Then
   `runChecks(currentProject)` must report 12/12. `removeFile` also stages the git deletion.
+- **Keep `.m` files LF, also on Windows.** A Verify link stores a character offset into its test
+  file. CRLF adds one character to each line, and this moves the link off its method. Then
+  `runTests` on a requirement set reports incorrect failures. `.gitattributes` sets
+  `*.m text eol=lf`. `F16AVerifyLinksTest` fails if a test file has CRLF or if a link has moved (for
+  example, after an edit to a test). To re-point a link, use `setLineRange` on
+  `slreq.getTextRanges(file)`. Then save the link set of the test.
 - `F16ASourceKind.m` and `F16ADataProvenance.m` give the types of two stereotype properties. Thus
   they must be on the path when `F16A_PhysicalProps` loads. The project path does this.
 
@@ -163,7 +172,7 @@ API behaviour measured on this model (R2026b):
 | Decision links | run `slreq.load("F16A_Logical")` before linking. If not, the links into L01–L03 are duplicated |
 | Requirement link from an activity action | `slreq.createLink(action.SimulinkHandle, req)`. Allocation takes the action object |
 | Activity nodes | `addNode(name, type)`, name first. `connect` is a method of the nodes. An action whose behaviour is an activity has no settable `Duration` |
-| Verify link from a test | `slreq.createLink(slreq.createTextRange(testFile, lines), req)`, then set `Type = "Verify"`. The three shipped links were made by hand before this method worked |
+| Verify link from a test | `slreq.createLink(slreq.createTextRange(testFile, lines), req)`, then set `Type = "Verify"`. The shipped links were made by hand before this method worked. The range is a character offset, so the test file must be LF |
 | `NaN` into a property | `string(NaN)` is `<missing>`, and `setProperty` rejects it. Use `string(num2str(NaN))` |
 
 Prerequisites: MATLAB R2026b · Simulink · System Composer · Requirements Toolbox. The cost model, the

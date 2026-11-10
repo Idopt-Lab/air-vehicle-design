@@ -80,7 +80,7 @@ have the same meaning as in the specifications.**
 
 `BrandtBalanceStabControl` computes `rollover_deg = atand(h_main_ft / d_axis)`, measured **from the
 horizontal**. The standard overturn angle (Raymer §11.4, Currey) is measured **from the vertical**.
-With the shipped inputs, `d_axis` = 1.497 ft. Thus the Brandt angle is **74.2°**, and its complement
+With the shipped inputs, `d_axis` = 1.499 ft. Thus the Brandt angle is **74.2°**, and its complement
 is **15.8°**. Against the 63° limit, the standard angle passes easily and the Brandt angle fails.
 **The same number supports opposite verdicts.**
 

@@ -1,5 +1,13 @@
 * text=auto
 
+# MATLAB code is LF in the working tree on every OS, whatever core.autocrlf says.
+# Requirements Toolbox Verify links (verification/*~m.slmx) locate a test method
+# by CHARACTER OFFSET into its .m file; a CRLF checkout adds one character per
+# line, so the offsets land in the wrong place and runTests on a requirement set
+# reports every verified requirement as failed. tests_for_ai_coding/
+# F16AVerifyLinksTest guards this.
+*.m text eol=lf
+
 *.fig binary
 *.mat binary
 *.mdl binary diff merge=mlAutoMerge
